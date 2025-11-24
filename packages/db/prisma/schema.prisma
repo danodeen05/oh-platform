@@ -1,0 +1,213 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id        String     @id @default(cuid())
+  name      String
+  slug      String     @unique
+  
+  // Branding
+  brandName String?
+  logoUrl   String?
+  primaryColor String?  @default("#1d4ed8")
+  domain    String?    @unique
+  
+  // Business
+  stripeAccountId String?
+  subscriptionStatus SubscriptionStatus @default(TRIAL)
+  subscriptionTier String? @default("starter")
+  
+  // Settings
+  settings  Json?
+  
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  
+  // Relations
+  locations Location[]
+  menuItems MenuItem[]
+  orders    Order[]
+  users     TenantUser[]
+}
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  SUSPENDED
+}
+
+model TenantUser {
+  id        String   @id @default(cuid())
+  email     String
+  name      String?
+  role      TenantRole @default(STAFF)
+  
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@unique([email, tenantId])
+}
+
+enum TenantRole {
+  OWNER
+  ADMIN
+  MANAGER
+  STAFF
+}
+
+model Location {
+  id        String          @id @default(cuid())
+  name      String
+  city      String?
+  address   String?
+  lat       Float?
+  lng       Float?
+  createdAt DateTime        @default(now())
+  tenantId  String
+  tenant    Tenant          @relation(fields: [tenantId], references: [id])
+  seats     Seat[]
+  orders    Order[]
+  stats     LocationStats?
+}
+
+model LocationStats {
+  id              String   @id @default(cuid())
+  locationId      String   @unique
+  location        Location @relation(fields: [locationId], references: [id])
+  
+  totalSeats      Int      @default(0)
+  availableSeats  Int      @default(0)
+  occupiedSeats   Int      @default(0)
+  reservedSeats   Int      @default(0)
+  
+  avgWaitMinutes  Int      @default(0)
+  
+  updatedAt       DateTime @updatedAt
+}
+
+model MenuItem {
+  id         String      @id @default(cuid())
+  name       String
+  priceCents Int
+  createdAt  DateTime    @default(now())
+  tenantId   String
+  tenant     Tenant      @relation(fields: [tenantId], references: [id])
+  orderItems OrderItem[]
+}
+
+model Seat {
+  id         String      @id @default(cuid())
+  number     String
+  qrCode     String      @unique
+  status     SeatStatus  @default(AVAILABLE)
+  locationId String
+  location   Location    @relation(fields: [locationId], references: [id])
+  orders     Order[]
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  @@unique([locationId, number])
+}
+
+enum SeatStatus {
+  AVAILABLE
+  OCCUPIED
+  RESERVED
+  CLEANING
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  orderNumber     String      @unique
+  status          OrderStatus @default(PENDING_PAYMENT)
+  
+  totalCents      Int
+  items           OrderItem[]
+  customizations  Json?
+  
+  fulfillmentType FulfillmentType @default(PRE_ORDER)
+  estimatedArrival DateTime?
+  prepStartTime   DateTime?
+  readyTime       DateTime?
+  
+  seatId          String?
+  seat            Seat?        @relation(fields: [seatId], references: [id])
+  locationId      String?
+  location        Location?    @relation(fields: [locationId], references: [id])
+  tenantId        String
+  tenant          Tenant       @relation(fields: [tenantId], references: [id])
+  userId          String?
+  
+  paymentStatus   PaymentStatus @default(PENDING)
+  stripePaymentId String?
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  PAID
+  QUEUED
+  PREPPING
+  READY
+  SERVED
+  CANCELLED
+}
+
+enum FulfillmentType {
+  PRE_ORDER
+  WALK_IN
+  PICKUP
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+model OrderItem {
+  id          String   @id @default(cuid())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItemId  String
+  menuItem    MenuItem @relation(fields: [menuItemId], references: [id])
+  quantity    Int      @default(1)
+  priceCents  Int
+  createdAt   DateTime @default(now())
+}
+
+model PlatformTransaction {
+  id              String   @id @default(cuid())
+  tenantId        String
+  orderId         String?
+  
+  type            TransactionType
+  amountCents     Int
+  platformFeeCents Int
+  tenantNetCents  Int
+  
+  stripeChargeId  String?
+  status          String   @default("completed")
+  
+  createdAt       DateTime @default(now())
+}
+
+enum TransactionType {
+  ORDER
+  SUBSCRIPTION
+  REFUND
+}

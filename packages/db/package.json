@@ -1,0 +1,15 @@
+{
+  "name": "@oh/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "prisma": "prisma"
+  },
+  "dependencies": {
+    "@prisma/client": "5.19.1"
+  },
+  "devDependencies": {
+    "prisma": "5.19.1"
+  }
+}
