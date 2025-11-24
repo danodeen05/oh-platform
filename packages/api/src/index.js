@@ -209,21 +209,43 @@ app.get("/orders", async (req) => {
   });
 });
 
-// NEW: Update order status
+// PATCH /orders/:id - Update order status
 app.patch("/orders/:id", async (req, reply) => {
   const { id } = req.params;
-  const { status } = req.body || {};
-  if (!status) return reply.code(400).send({ error: "status required" });
+  const { status, paymentStatus } = req.body || {};
+
+  const data = {};
+  if (status) data.status = status;
+  if (paymentStatus) data.paymentStatus = paymentStatus;
+
+  if (!Object.keys(data).length) {
+    return reply.code(400).send({ error: "status or paymentStatus required" });
+  }
 
   return prisma.order.update({
     where: { id },
-    data: { status },
+    data,
     include: {
       items: { include: { menuItem: true } },
       seat: true,
       location: true,
     },
   });
+});
+
+// GET /orders/:id - Get single order
+app.get("/orders/:id", async (req, reply) => {
+  const { id } = req.params;
+  const order = await prisma.order.findUnique({
+    where: { id },
+    include: {
+      items: { include: { menuItem: true } },
+      seat: true,
+      location: true,
+    },
+  });
+  if (!order) return reply.code(404).send({ error: "Order not found" });
+  return order;
 });
 
 // Start server (MUST be at the end)
