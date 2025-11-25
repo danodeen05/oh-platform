@@ -22,8 +22,7 @@ function calculateDistance(
   lat2: number,
   lon2: number
 ) {
-  // Haversine formula
-  const R = 3959; // Earth's radius in miles
+  const R = 3959;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
   const a =
@@ -38,8 +37,10 @@ function calculateDistance(
 
 export default function LocationSelector({
   locations,
+  referralCode,
 }: {
   locations: Location[];
+  referralCode?: string;
 }) {
   const router = useRouter();
   const [userLat, setUserLat] = useState<number | null>(null);
@@ -47,7 +48,6 @@ export default function LocationSelector({
   const [sortedLocations, setSortedLocations] = useState(locations);
 
   useEffect(() => {
-    // Get user's location
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -62,7 +62,6 @@ export default function LocationSelector({
   }, []);
 
   useEffect(() => {
-    // Sort locations by distance when user location is available
     if (userLat && userLng) {
       const withDistance = locations.map((loc) => ({
         ...loc,
@@ -74,6 +73,10 @@ export default function LocationSelector({
   }, [userLat, userLng, locations]);
 
   function selectLocation(locationId: string) {
+    // Store referral code in localStorage if provided
+    if (referralCode) {
+      localStorage.setItem("pendingReferralCode", referralCode);
+    }
     router.push(`/order/location/${locationId}`);
   }
 
@@ -84,14 +87,14 @@ export default function LocationSelector({
           ? (loc.stats.availableSeats / loc.stats.totalSeats) * 100
           : 100;
 
-        let statusColor = "#22c55e"; // green
+        let statusColor = "#22c55e";
         let statusText = "Available";
 
         if (availabilityPct < 30) {
-          statusColor = "#ef4444"; // red
+          statusColor = "#ef4444";
           statusText = "Busy";
         } else if (availabilityPct < 60) {
-          statusColor = "#f59e0b"; // orange
+          statusColor = "#f59e0b";
           statusText = "Moderate Wait";
         }
 

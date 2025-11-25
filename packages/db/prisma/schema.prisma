@@ -1,3 +1,6 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,33 +10,30 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ==========================================
+// TENANT & MULTI-TENANCY
+// ==========================================
+
 model Tenant {
-  id        String     @id @default(cuid())
-  name      String
-  slug      String     @unique
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  brandName     String
+  logoUrl       String?
+  primaryColor  String   @default("#667eea")
+  domain        String?
   
-  // Branding
-  brandName String?
-  logoUrl   String?
-  primaryColor String?  @default("#1d4ed8")
-  domain    String?    @unique
+  stripeAccountId      String?
+  subscriptionStatus   SubscriptionStatus @default(TRIAL)
+  subscriptionTier     String             @default("starter")
   
-  // Business
-  stripeAccountId String?
-  subscriptionStatus SubscriptionStatus @default(TRIAL)
-  subscriptionTier String? @default("starter")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
   
-  // Settings
-  settings  Json?
-  
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-  
-  // Relations
-  locations Location[]
-  menuItems MenuItem[]
-  orders    Order[]
-  users     TenantUser[]
+  locations     Location[]
+  menuItems     MenuItem[]
+  orders        Order[]
+  users         TenantUser[]
+  transactions  PlatformTransaction[]
 }
 
 enum SubscriptionStatus {
@@ -45,18 +45,16 @@ enum SubscriptionStatus {
 }
 
 model TenantUser {
-  id        String   @id @default(cuid())
+  id        String     @id @default(cuid())
+  tenantId  String
+  tenant    Tenant     @relation(fields: [tenantId], references: [id])
+  
   email     String
-  name      String?
   role      TenantRole @default(STAFF)
   
-  tenantId  String
-  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt DateTime   @default(now())
   
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  @@unique([email, tenantId])
+  @@unique([tenantId, email])
 }
 
 enum TenantRole {
@@ -66,16 +64,24 @@ enum TenantRole {
   STAFF
 }
 
+// ==========================================
+// LOCATIONS
+// ==========================================
+
 model Location {
-  id        String          @id @default(cuid())
-  name      String
-  city      String?
-  address   String?
-  lat       Float?
-  lng       Float?
-  createdAt DateTime        @default(now())
+  id        String   @id @default(cuid())
   tenantId  String
-  tenant    Tenant          @relation(fields: [tenantId], references: [id])
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  
+  name      String
+  city      String
+  address   String
+  lat       Float
+  lng       Float
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
   seats     Seat[]
   orders    Order[]
   stats     LocationStats?
@@ -89,35 +95,46 @@ model LocationStats {
   totalSeats      Int      @default(0)
   availableSeats  Int      @default(0)
   occupiedSeats   Int      @default(0)
-  reservedSeats   Int      @default(0)
-  
   avgWaitMinutes  Int      @default(0)
   
   updatedAt       DateTime @updatedAt
 }
 
+// ==========================================
+// MENU
+// ==========================================
+
 model MenuItem {
-  id         String      @id @default(cuid())
+  id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  
   name       String
   priceCents Int
-  createdAt  DateTime    @default(now())
-  tenantId   String
-  tenant     Tenant      @relation(fields: [tenantId], references: [id])
+  
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
   orderItems OrderItem[]
 }
 
-model Seat {
-  id         String      @id @default(cuid())
-  number     String
-  qrCode     String      @unique
-  status     SeatStatus  @default(AVAILABLE)
-  locationId String
-  location   Location    @relation(fields: [locationId], references: [id])
-  orders     Order[]
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
+// ==========================================
+// SEATING
+// ==========================================
 
-  @@unique([locationId, number])
+model Seat {
+  id         String     @id @default(cuid())
+  locationId String
+  location   Location   @relation(fields: [locationId], references: [id])
+  
+  number     String
+  qrCode     String     @unique
+  status     SeatStatus @default(AVAILABLE)
+  
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  
+  orders     Order[]
 }
 
 enum SeatStatus {
@@ -126,6 +143,10 @@ enum SeatStatus {
   RESERVED
   CLEANING
 }
+
+// ==========================================
+// ORDERS
+// ==========================================
 
 model Order {
   id              String      @id @default(cuid())
@@ -140,6 +161,7 @@ model Order {
   estimatedArrival DateTime?
   prepStartTime   DateTime?
   readyTime       DateTime?
+  completedTime   DateTime?
   
   seatId          String?
   seat            Seat?        @relation(fields: [seatId], references: [id])
@@ -147,10 +169,14 @@ model Order {
   location        Location?    @relation(fields: [locationId], references: [id])
   tenantId        String
   tenant          Tenant       @relation(fields: [tenantId], references: [id])
+  
   userId          String?
+  user            User?        @relation(fields: [userId], references: [id])
   
   paymentStatus   PaymentStatus @default(PENDING)
   stripePaymentId String?
+  
+  creditEvents    CreditEvent[]
   
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
@@ -162,7 +188,7 @@ enum OrderStatus {
   QUEUED
   PREPPING
   READY
-  SERVED
+  COMPLETED
   CANCELLED
 }
 
@@ -180,30 +206,178 @@ enum PaymentStatus {
 }
 
 model OrderItem {
-  id          String   @id @default(cuid())
-  orderId     String
-  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  menuItemId  String
-  menuItem    MenuItem @relation(fields: [menuItemId], references: [id])
-  quantity    Int      @default(1)
-  priceCents  Int
-  createdAt   DateTime @default(now())
+  id         String    @id @default(cuid())
+  orderId    String
+  order      Order     @relation(fields: [orderId], references: [id])
+  
+  menuItemId String
+  menuItem   MenuItem  @relation(fields: [menuItemId], references: [id])
+  
+  quantity   Int
+  priceCents Int
+  
+  createdAt  DateTime  @default(now())
 }
 
+// ==========================================
+// USERS & REFERRALS
+// ==========================================
+
+model User {
+  id            String   @id @default(cuid())
+  email         String?  @unique
+  phone         String?  @unique
+  name          String?
+  
+  // Referral system
+  referralCode  String   @unique @default(cuid())
+  referredById  String?
+  referredBy    User?    @relation("Referrals", fields: [referredById], references: [id])
+  referrals     User[]   @relation("Referrals")
+  
+  creditsCents  Int      @default(0)
+  
+  // Membership tier system
+  membershipTier      MembershipTier @default(CHOPSTICK)
+  tierProgressOrders  Int            @default(0)
+  tierProgressReferrals Int          @default(0)
+  lifetimeOrderCount  Int            @default(0)
+  lifetimeSpentCents  Int            @default(0)
+  currentStreak       Int            @default(0)
+  longestStreak       Int            @default(0)
+  lastOrderDate       DateTime?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  orders        Order[]
+  creditEvents  CreditEvent[]
+  badges        UserBadge[]
+  challenges    UserChallenge[]
+}
+
+enum MembershipTier {
+  CHOPSTICK
+  NOODLE_MASTER
+  BEEF_BOSS
+}
+
+model CreditEvent {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  
+  type          CreditEventType
+  amountCents   Int
+  
+  orderId       String?
+  order         Order?   @relation(fields: [orderId], references: [id])
+  
+  description   String?
+  metadata      Json?
+  
+  createdAt     DateTime @default(now())
+}
+
+enum CreditEventType {
+  REFERRAL_SIGNUP
+  REFERRAL_ORDER
+  CREDIT_APPLIED
+  CREDIT_EXPIRED
+  ADMIN_ADJUSTMENT
+}
+
+// ==========================================
+// GAMIFICATION
+// ==========================================
+
+model Badge {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String
+  iconEmoji   String
+  category    BadgeCategory
+  isActive    Boolean  @default(true)
+  
+  createdAt   DateTime @default(now())
+  
+  userBadges  UserBadge[]
+}
+
+enum BadgeCategory {
+  MILESTONE
+  CHALLENGE
+  REFERRAL
+  SPECIAL
+  STREAK
+}
+
+model UserBadge {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  badgeId   String
+  badge     Badge    @relation(fields: [badgeId], references: [id])
+  
+  earnedAt  DateTime @default(now())
+  
+  @@unique([userId, badgeId])
+}
+
+model Challenge {
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  name          String
+  description   String
+  rewardCents   Int
+  iconEmoji     String
+  
+  requirements  Json
+  
+  startsAt      DateTime?
+  endsAt        DateTime?
+  isActive      Boolean  @default(true)
+  
+  createdAt     DateTime @default(now())
+  
+  userChallenges UserChallenge[]
+}
+
+model UserChallenge {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  challengeId String
+  challenge   Challenge @relation(fields: [challengeId], references: [id])
+  
+  progress    Json
+  completedAt DateTime?
+  rewardClaimed Boolean @default(false)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([userId, challengeId])
+}
+
+// ==========================================
+// PLATFORM REVENUE
+// ==========================================
+
 model PlatformTransaction {
-  id              String   @id @default(cuid())
+  id              String          @id @default(cuid())
   tenantId        String
-  orderId         String?
+  tenant          Tenant          @relation(fields: [tenantId], references: [id])
   
   type            TransactionType
   amountCents     Int
   platformFeeCents Int
   tenantNetCents  Int
   
-  stripeChargeId  String?
-  status          String   @default("completed")
+  metadata        Json?
   
-  createdAt       DateTime @default(now())
+  createdAt       DateTime        @default(now())
 }
 
 enum TransactionType {
