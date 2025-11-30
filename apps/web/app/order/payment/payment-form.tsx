@@ -78,6 +78,7 @@ export default function PaymentForm({
       setUserId(userData.id);
       setUserCredits(userData.creditsCents || 0);
       localStorage.setItem("userId", userData.id);
+      localStorage.setItem("referralCode", userData.referralCode);
       setEmailSubmitted(true);
 
       // Clear the pending referral code

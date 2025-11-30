@@ -24,17 +24,17 @@ async function getLocationAndMenu(locationId: string) {
 export default async function LocationMenuPage({
   params,
 }: {
-  params: { locationId: string };
+  params: Promise<{ locationId: string }>;
 }) {
-  const { location, menu } = await getLocationAndMenu(params.locationId);
+  const { locationId } = await params;
+  const { location, menu } = await getLocationAndMenu(locationId);
 
   if (!location) {
     return (
       <main style={{ padding: 24, textAlign: "center" }}>
-        <h1>Location Not Found</h1>
-        <a href="/order" style={{ color: "#667eea" }}>
-          ← Back to locations
-        </a>
+        <h1>Location not found</h1>
+        <p>The location you're looking for doesn't exist.</p>
+        <a href="/order">← Back to locations</a>
       </main>
     );
   }

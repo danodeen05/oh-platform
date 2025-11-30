@@ -2,7 +2,11 @@ import PaymentForm from "./payment-form";
 
 async function getOrder(orderId: string) {
   const base = process.env.NEXT_PUBLIC_API_URL!;
-  const res = await fetch(`${base}/orders/${orderId}`, { cache: "no-store" });
+  const res = await fetch(`${base}/orders/${orderId}`, {
+    cache: "no-store",
+    headers: { "x-tenant-slug": "oh" },
+  });
+
   if (!res.ok) return null;
   return res.json();
 }
@@ -10,37 +14,70 @@ async function getOrder(orderId: string) {
 export default async function PaymentPage({
   searchParams,
 }: {
-  searchParams: { orderId?: string; orderNumber?: string; total?: string };
+  searchParams: Promise<{
+    orderId?: string;
+    orderNumber?: string;
+    total?: string;
+  }>;
 }) {
-  const orderId = searchParams.orderId;
-  const orderNumber = searchParams.orderNumber || "UNKNOWN";
-  const total = searchParams.total ? parseInt(searchParams.total) : 0;
+  const params = await searchParams;
+  const orderId = params.orderId;
+  const orderNumber = params.orderNumber;
+  const totalCents = params.total ? parseInt(params.total) : 0;
 
-  if (!orderId) {
+  if (!orderId || !orderNumber) {
     return (
       <main style={{ padding: 24, textAlign: "center" }}>
         <h1>Invalid Order</h1>
-        <a href="/order" style={{ color: "#667eea" }}>
-          ← Back to order
-        </a>
+        <p>Missing order information</p>
+        <a href="/order">← Start a new order</a>
       </main>
     );
   }
 
   const order = await getOrder(orderId);
 
-  return (
-    <main style={{ padding: 24, maxWidth: 600, margin: "0 auto" }}>
-      <h1 style={{ marginBottom: 8 }}>Complete Your Order</h1>
-      <p style={{ color: "#666", marginBottom: 32 }}>Order #{orderNumber}</p>
+  if (!order) {
+    return (
+      <main style={{ padding: 24, textAlign: "center" }}>
+        <h1>Order Not Found</h1>
+        <p>We couldn't find this order</p>
+        <a href="/order">← Start a new order</a>
+      </main>
+    );
+  }
 
-      {order && (
+  return (
+    <main
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        padding: 24,
+      }}
+    >
+      <div
+        style={{
+          maxWidth: 500,
+          width: "100%",
+          background: "white",
+          borderRadius: 16,
+          padding: 32,
+          boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+        }}
+      >
+        <h1 style={{ margin: 0, marginBottom: 8 }}>Complete Your Order</h1>
+        <p style={{ color: "#666", marginBottom: 24 }}>Order #{orderNumber}</p>
+
+        {/* Order Summary */}
         <div
           style={{
             background: "#f9fafb",
-            padding: 24,
             borderRadius: 12,
-            marginBottom: 32,
+            padding: 20,
+            marginBottom: 24,
           }}
         >
           <h3 style={{ margin: 0, marginBottom: 16 }}>Order Summary</h3>
@@ -52,15 +89,19 @@ export default async function PaymentPage({
                 display: "flex",
                 justifyContent: "space-between",
                 marginBottom: 8,
-                fontSize: "0.9rem",
+                paddingBottom: 8,
+                borderBottom: "1px solid #e5e7eb",
               }}
             >
-              <span>
-                {item.quantity}x {item.menuItem.name}
-              </span>
-              <span>
+              <div>
+                <div style={{ fontWeight: "bold" }}>{item.menuItem.name}</div>
+                <div style={{ fontSize: "0.85rem", color: "#666" }}>
+                  Qty: {item.quantity}
+                </div>
+              </div>
+              <div style={{ fontWeight: "bold" }}>
                 ${((item.priceCents * item.quantity) / 100).toFixed(2)}
-              </span>
+              </div>
             </div>
           ))}
 
@@ -74,38 +115,38 @@ export default async function PaymentPage({
                 color: "#666",
               }}
             >
-              <strong>Estimated arrival:</strong>{" "}
+              <strong>Estimated Ready Time:</strong>
+              <br />
               {new Date(order.estimatedArrival).toLocaleTimeString("en-US", {
                 hour: "numeric",
                 minute: "2-digit",
+                hour12: true,
               })}
             </div>
           )}
 
           <div
             style={{
-              borderTop: "1px solid #e5e7eb",
-              marginTop: 12,
-              paddingTop: 12,
               display: "flex",
               justifyContent: "space-between",
-              fontWeight: "bold",
+              marginTop: 16,
+              paddingTop: 16,
+              borderTop: "2px solid #e5e7eb",
               fontSize: "1.2rem",
+              fontWeight: "bold",
             }}
           >
-            <span>Total:</span>
-            <span style={{ color: "#667eea" }}>
-              ${(total / 100).toFixed(2)}
-            </span>
+            <span>Total</span>
+            <span>${(totalCents / 100).toFixed(2)}</span>
           </div>
         </div>
-      )}
 
-      <PaymentForm
-        orderId={orderId}
-        totalCents={total}
-        orderNumber={orderNumber}
-      />
+        <PaymentForm
+          orderId={orderId}
+          totalCents={totalCents}
+          orderNumber={orderNumber}
+        />
+      </div>
     </main>
   );
 }

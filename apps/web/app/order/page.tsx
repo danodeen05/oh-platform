@@ -14,10 +14,11 @@ async function getLocations() {
 export default async function OrderPage({
   searchParams,
 }: {
-  searchParams: { ref?: string };
+  searchParams: Promise<{ ref?: string }>;
 }) {
   const locations = await getLocations();
-  const referralCode = searchParams.ref;
+  const params = await searchParams;
+  const referralCode = params.ref;
 
   return (
     <main style={{ padding: 24, maxWidth: 1200, margin: "0 auto" }}>

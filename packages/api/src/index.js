@@ -355,13 +355,48 @@ app.patch("/orders/:id", async (req, reply) => {
   if (paymentStatus === "PAID" && order.user) {
     const user = order.user;
 
-    // Update lifetime stats
+    // Calculate streak
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let newStreak = 1;
+    let newLongestStreak = user.longestStreak;
+
+    if (user.lastOrderDate) {
+      const lastOrder = new Date(user.lastOrderDate);
+      lastOrder.setHours(0, 0, 0, 0);
+
+      const daysDiff = Math.floor(
+        (today.getTime() - lastOrder.getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      if (daysDiff === 0) {
+        // Same day - keep current streak
+        newStreak = user.currentStreak;
+      } else if (daysDiff === 1) {
+        // Consecutive day - increment streak
+        newStreak = user.currentStreak + 1;
+      } else {
+        // Gap > 1 day - reset streak
+        newStreak = 1;
+      }
+    }
+
+    // Update longest streak if current is higher
+    if (newStreak > newLongestStreak) {
+      newLongestStreak = newStreak;
+    }
+
+    // Update lifetime stats and streak
     await prisma.user.update({
       where: { id: user.id },
       data: {
         lifetimeOrderCount: { increment: 1 },
         lifetimeSpentCents: { increment: order.totalCents },
         tierProgressOrders: { increment: 1 },
+        currentStreak: newStreak,
+        longestStreak: newLongestStreak,
+        lastOrderDate: new Date(),
       },
     });
 

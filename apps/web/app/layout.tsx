@@ -1,9 +1,20 @@
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+import { ClerkProvider } from "@clerk/nextjs";
+
+export const metadata = {
+  title: "Oh! Beef Noodle Soup",
+  description: "Order ahead. Skip the wait.",
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html lang="en">
-      <body style={{fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial'}}>
-        {children}
-      </body>
-    </html>
-  )
+    <ClerkProvider>
+      <html lang="en">
+        <body>{children}</body>
+      </html>
+    </ClerkProvider>
+  );
 }
