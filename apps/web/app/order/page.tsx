@@ -1,4 +1,6 @@
+import { Suspense } from "react";
 import LocationSelector from "./location-selector";
+import ReferralHandler from "./referral-handler";
 
 async function getLocations() {
   const base = process.env.NEXT_PUBLIC_API_URL!;
@@ -22,6 +24,10 @@ export default async function OrderPage({
 
   return (
     <main style={{ padding: 24, maxWidth: 1200, margin: "0 auto" }}>
+      <Suspense fallback={null}>
+        <ReferralHandler />
+      </Suspense>
+
       <h1 style={{ marginBottom: 8 }}>Choose Your Location</h1>
       <p style={{ color: "#666", marginBottom: 32 }}>
         Select a location to view the menu and current wait time

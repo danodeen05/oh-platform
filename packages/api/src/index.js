@@ -479,6 +479,8 @@ app.patch("/orders/:id", async (req, reply) => {
 app.post("/users", async (req, reply) => {
   const { email, phone, name, referredByCode } = req.body || {};
 
+  console.log("POST /users - Received:", { email, phone, name, referredByCode });
+
   if (!email && !phone) {
     return reply.code(400).send({ error: "email or phone required" });
   }
@@ -492,17 +494,71 @@ app.post("/users", async (req, reply) => {
     },
   });
 
-  if (existing) return existing;
+  if (existing) {
+    console.log("⚠️ User already exists:", existing.id);
+    console.log("  - existing.email:", existing.email);
+    console.log("  - existing.creditsCents:", existing.creditsCents);
+    console.log("  - existing.referredById:", existing.referredById);
+    console.log("  - NEW referredByCode param:", referredByCode);
+
+    // If existing user has NO referrer but a referral code is provided, apply it
+    if (!existing.referredById && referredByCode) {
+      console.log("🎯 Existing user has no referrer, applying new referral code!");
+
+      // Find referrer
+      const referrer = await prisma.user.findUnique({
+        where: { referralCode: referredByCode },
+      });
+
+      if (referrer) {
+        console.log("✅ Found referrer:", referrer.id, referrer.email);
+
+        // Update existing user with referrer and add $5 welcome bonus
+        const updatedUser = await prisma.user.update({
+          where: { id: existing.id },
+          data: {
+            referredById: referrer.id,
+            creditsCents: (existing.creditsCents || 0) + 500,
+          },
+        });
+
+        // Create credit event
+        await prisma.creditEvent.create({
+          data: {
+            userId: existing.id,
+            type: "REFERRAL_SIGNUP",
+            amountCents: 500,
+            description: "Welcome bonus - referred by a friend!",
+          },
+        });
+
+        console.log("✅ Updated existing user with referral. New credits:", updatedUser.creditsCents);
+        return { ...updatedUser, referralJustApplied: true };
+      } else {
+        console.log("❌ Referrer not found for code:", referredByCode);
+      }
+    } else {
+      console.log("ℹ️ Existing user already has referrer or no new referral code provided");
+    }
+
+    return existing;
+  }
 
   // Find referrer if code provided
   let referredById = null;
   if (referredByCode) {
+    console.log("Looking up referrer with code:", referredByCode);
     const referrer = await prisma.user.findUnique({
       where: { referralCode: referredByCode },
     });
     if (referrer) {
+      console.log("Found referrer:", referrer.id, referrer.email);
       referredById = referrer.id;
+    } else {
+      console.log("No referrer found with that code");
     }
+  } else {
+    console.log("No referral code provided");
   }
 
   // Create new user with $5 welcome bonus if referred
@@ -526,6 +582,7 @@ app.post("/users", async (req, reply) => {
         description: "Welcome bonus - referred by a friend!",
       },
     });
+    return { ...user, referralJustApplied: true };
   }
 
   return user;

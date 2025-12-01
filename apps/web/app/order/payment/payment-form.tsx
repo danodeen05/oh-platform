@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useUser, SignInButton } from "@clerk/nextjs";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "";
 
@@ -14,106 +15,125 @@ export default function PaymentForm({
   orderNumber: string;
 }) {
   const router = useRouter();
+  const { user, isLoaded, isSignedIn } = useUser();
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState("");
-  const [email, setEmail] = useState("");
   const [hasReferral, setHasReferral] = useState(false);
+  const [referralNotApplied, setReferralNotApplied] = useState(false);
   const [userCredits, setUserCredits] = useState(0);
   const [userId, setUserId] = useState<string | null>(null);
   const [loadingCredits, setLoadingCredits] = useState(false);
-  const [emailSubmitted, setEmailSubmitted] = useState(false);
+  const [userInitialized, setUserInitialized] = useState(false);
 
   useEffect(() => {
     // Check if there's a pending referral code
+    // NOTE: We don't set hasReferral here anymore - we only set it when the API
+    // confirms the referral was just applied (referralJustApplied === true)
     const referralCode = localStorage.getItem("pendingReferralCode");
     if (referralCode) {
-      setHasReferral(true);
-    }
-
-    // Check if user already exists
-    const savedUserId = localStorage.getItem("userId");
-    if (savedUserId) {
-      setUserId(savedUserId);
-      setEmailSubmitted(true);
-      loadUserCredits(savedUserId);
+      console.log("Found pending referral code:", referralCode);
     }
   }, []);
 
-  async function loadUserCredits(uid: string) {
-    try {
-      setLoadingCredits(true);
-      const response = await fetch(`${BASE}/users/${uid}/credits`);
-      if (!response.ok) {
-        // User doesn't exist, clear from localStorage
-        localStorage.removeItem("userId");
-        localStorage.removeItem("referralCode");
-        setUserId(null);
-        setEmailSubmitted(false);
-        setLoadingCredits(false);
-        return;
-      }
-      const data = await response.json();
-      setUserCredits(data.balance);
-      setLoadingCredits(false);
-    } catch (err) {
-      console.error("Failed to load credits:", err);
-      // Clear invalid user data
-      localStorage.removeItem("userId");
-      localStorage.removeItem("referralCode");
-      setUserId(null);
-      setEmailSubmitted(false);
-      setLoadingCredits(false);
+  useEffect(() => {
+    // Initialize user in our system when Clerk user is available
+    if (isLoaded && isSignedIn && user && !userInitialized) {
+      initializeUser();
     }
-  }
+  }, [isLoaded, isSignedIn, user, userInitialized]);
 
-  async function handleEmailSubmit() {
-    if (!email) {
-      setError("Please enter your email");
-      return;
-    }
+  async function initializeUser() {
+    if (!user?.primaryEmailAddress?.emailAddress) return;
+
+    console.log("=== 💳 PAYMENT FORM: initializeUser() called ===");
+    console.log("Clerk user email:", user.primaryEmailAddress.emailAddress);
+    console.log("Clerk user name:", user.fullName || user.firstName);
 
     setLoadingCredits(true);
-    setError("");
-
     try {
       // Get referral code from localStorage
       const referralCode = localStorage.getItem("pendingReferralCode");
+      console.log("📦 localStorage state before API call:");
+      console.log("  - pendingReferralCode:", referralCode);
+      console.log("  - userId:", localStorage.getItem("userId"));
+      console.log("  - referralCode:", localStorage.getItem("referralCode"));
 
-      // Create or get user
+      console.log("🚀 Calling POST /users API with:");
+      console.log("  - email:", user.primaryEmailAddress.emailAddress);
+      console.log("  - name:", user.fullName || user.firstName || undefined);
+      console.log("  - referredByCode:", referralCode);
+
+      // Create or get user in our system
       const userResponse = await fetch(`${BASE}/users`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email,
+          email: user.primaryEmailAddress.emailAddress,
+          name: user.fullName || user.firstName || undefined,
           referredByCode: referralCode,
         }),
       });
+
+      if (!userResponse.ok) {
+        throw new Error("Failed to initialize user");
+      }
+
       const userData = await userResponse.json();
+      console.log("✅ API Response received:");
+      console.log("  - userId:", userData.id);
+      console.log("  - creditsCents:", userData.creditsCents);
+      console.log("  - referralCode:", userData.referralCode);
+      console.log("  - referredById:", userData.referredById);
+      console.log("  - referralJustApplied:", userData.referralJustApplied);
+      console.log("  - Full user data:", userData);
+
       setUserId(userData.id);
       setUserCredits(userData.creditsCents || 0);
       localStorage.setItem("userId", userData.id);
       localStorage.setItem("referralCode", userData.referralCode);
-      setEmailSubmitted(true);
+      setUserInitialized(true);
 
-      // Clear the pending referral code
+      console.log("💰 Credits set to:", userData.creditsCents || 0);
+
+      // Check if referral code was provided but not applied
+      // This happens when user already had a referrer from their first order
+      if (referralCode && !userData.referralJustApplied && userData.referredById) {
+        console.log("ℹ️ Referral code provided but user already used their first-order referral");
+        setReferralNotApplied(true);
+      }
+
+      // If referral was just applied, ensure hasReferral is set
+      if (userData.referralJustApplied) {
+        console.log("🎉 Referral just applied!");
+        setHasReferral(true);
+      }
+
+      // Clear the pending referral code after successful user creation
       if (referralCode) {
+        console.log("🧹 Clearing pendingReferralCode from localStorage");
         localStorage.removeItem("pendingReferralCode");
       }
 
       setLoadingCredits(false);
     } catch (err: any) {
-      setError(err.message || "Failed to create account");
+      console.error("❌ Failed to initialize user:", err);
+      setError(err.message || "Failed to load user account");
       setLoadingCredits(false);
     }
   }
 
   async function handleTestPayment() {
+    if (!userId) {
+      setError("Please wait while we load your account...");
+      return;
+    }
+
     setProcessing(true);
     setError("");
 
     try {
       // Apply credits to order if user has any
-      if (userCredits > 0 && userId) {
+      if (userCredits > 0) {
         const creditsToApply = Math.min(userCredits, totalCents);
         await fetch(`${BASE}/orders/${orderId}/apply-credits`, {
           method: "POST",
@@ -125,16 +145,14 @@ export default function PaymentForm({
         });
       }
 
-      // Mark order as paid and optionally link to user (if user exists)
-      const body: any = { paymentStatus: "PAID" };
-      if (userId) {
-        body.userId = userId;
-      }
-
+      // Mark order as paid and link to user
       const response = await fetch(`${BASE}/orders/${orderId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({
+          paymentStatus: "PAID",
+          userId: userId,
+        }),
       });
 
       if (!response.ok) throw new Error("Payment failed");
@@ -152,66 +170,90 @@ export default function PaymentForm({
   }
 
   // Ensure totalCents is a valid number
-  const validTotalCents = typeof totalCents === 'number' && !isNaN(totalCents) ? totalCents : 0;
+  const validTotalCents =
+    typeof totalCents === "number" && !isNaN(totalCents) ? totalCents : 0;
   const creditsApplied = Math.min(userCredits, validTotalCents);
   const discountedTotal = validTotalCents - creditsApplied;
   const showCreditsBreakdown = creditsApplied > 0;
 
-  return (
-    <div>
-      {/* Email Input */}
-      {!emailSubmitted && (
-        <div style={{ marginBottom: 24 }}>
-          <label
-            style={{ display: "block", fontWeight: "bold", marginBottom: 8 }}
-          >
-            Email Address
-          </label>
-          <input
-            type="email"
-            placeholder="your@email.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            onKeyPress={(e) => {
-              if (e.key === "Enter") handleEmailSubmit();
-            }}
-            style={{
-              width: "100%",
-              padding: 12,
-              border: "1px solid #e5e7eb",
-              borderRadius: 8,
-              fontSize: "1rem",
-              marginBottom: 12,
-            }}
-          />
+  // Show sign-in prompt if not authenticated
+  if (!isLoaded) {
+    return (
+      <div style={{ textAlign: "center", padding: "40px 0" }}>
+        <div style={{ fontSize: "1.5rem", marginBottom: 16 }}>⏳</div>
+        <p style={{ color: "#666" }}>Loading...</p>
+      </div>
+    );
+  }
+
+  if (!isSignedIn) {
+    return (
+      <div
+        style={{
+          background: "#f0f4ff",
+          border: "2px solid #667eea",
+          borderRadius: 12,
+          padding: 32,
+          textAlign: "center",
+        }}
+      >
+        <div style={{ fontSize: "2.5rem", marginBottom: 16 }}>🔐</div>
+        <h3 style={{ marginBottom: 12 }}>Sign in to complete your order</h3>
+        <p style={{ color: "#666", marginBottom: 24, lineHeight: 1.6 }}>
+          You'll need to sign in to track your order, earn rewards, and use
+          referral credits.
+          {hasReferral && (
+            <span style={{ color: "#22c55e", fontWeight: "bold", display: "block", marginTop: 8 }}>
+              🎉 You have a referral discount waiting!
+            </span>
+          )}
+        </p>
+        <SignInButton mode="modal">
           <button
-            onClick={handleEmailSubmit}
-            disabled={loadingCredits}
             style={{
-              width: "100%",
-              padding: 12,
-              background: loadingCredits ? "#d1d5db" : "#667eea",
+              padding: "16px 32px",
+              background: "#667eea",
               color: "white",
               border: "none",
-              borderRadius: 8,
-              fontSize: "1rem",
+              borderRadius: 12,
+              fontSize: "1.1rem",
               fontWeight: "bold",
-              cursor: loadingCredits ? "not-allowed" : "pointer",
+              cursor: "pointer",
+              transition: "all 0.2s",
             }}
           >
-            {loadingCredits ? "Loading..." : "Continue to Payment"}
+            Sign In / Sign Up
           </button>
-          <p style={{ fontSize: "0.85rem", color: "#666", marginTop: 8 }}>
-            We'll use this to track your order and rewards
+        </SignInButton>
+      </div>
+    );
+  }
+
+  // User is signed in, show payment form
+  return (
+    <div>
+      {loadingCredits && (
+        <div
+          style={{
+            background: "#f0f4ff",
+            border: "1px solid #667eea",
+            borderRadius: 8,
+            padding: 16,
+            marginBottom: 24,
+            textAlign: "center",
+          }}
+        >
+          <div style={{ fontSize: "1.5rem", marginBottom: 8 }}>⏳</div>
+          <p style={{ color: "#666", margin: 0 }}>
+            Loading your account and rewards...
           </p>
         </div>
       )}
 
-      {/* Show rest of payment form only after email submitted */}
-      {emailSubmitted && (
+      {userInitialized && (
         <>
-          {/* Referral Banner */}
-          {hasReferral && userCredits > 0 && (
+          {/* Referral Banner - Only show if referral was JUST applied */}
+          {hasReferral && userCredits > 0 && !referralNotApplied && (
             <div
               style={{
                 background: "#d1fae5",
@@ -230,14 +272,41 @@ export default function PaymentForm({
                   Welcome! You've been referred
                 </div>
                 <div style={{ fontSize: "0.85rem", color: "#047857" }}>
-                  You got $5 in credits to use on this order
+                  You got ${(userCredits / 100).toFixed(2)} in credits to use on
+                  this order
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Referral Not Applied Message */}
+          {referralNotApplied && (
+            <div
+              style={{
+                background: "#fef3c7",
+                border: "1px solid #f59e0b",
+                borderRadius: 8,
+                padding: 16,
+                marginBottom: 24,
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+              }}
+            >
+              <div style={{ fontSize: "1.5rem" }}>ℹ️</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: "bold", color: "#92400e" }}>
+                  Referral credit already used
+                </div>
+                <div style={{ fontSize: "0.85rem", color: "#b45309", lineHeight: 1.5 }}>
+                  Thanks for checking us out again! Referral credits are only applied to your first order. You can still earn credits by referring friends using your personal referral link.
                 </div>
               </div>
             </div>
           )}
 
           {/* Credits Balance */}
-          {userCredits > 0 && (
+          {userCredits > 0 && !hasReferral && (
             <div
               style={{
                 background: "#f0f4ff",
@@ -385,17 +454,17 @@ export default function PaymentForm({
 
           <button
             onClick={handleTestPayment}
-            disabled={processing}
+            disabled={processing || loadingCredits}
             style={{
               width: "100%",
               padding: 16,
-              background: processing ? "#d1d5db" : "#22c55e",
+              background: processing || loadingCredits ? "#d1d5db" : "#22c55e",
               color: "white",
               border: "none",
               borderRadius: 12,
               fontSize: "1.1rem",
               fontWeight: "bold",
-              cursor: processing ? "not-allowed" : "pointer",
+              cursor: processing || loadingCredits ? "not-allowed" : "pointer",
               transition: "all 0.2s",
             }}
           >

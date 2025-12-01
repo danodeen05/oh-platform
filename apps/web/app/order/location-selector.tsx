@@ -75,7 +75,10 @@ export default function LocationSelector({
   function selectLocation(locationId: string) {
     // Store referral code in localStorage if provided
     if (referralCode) {
+      console.log("Storing referral code:", referralCode);
       localStorage.setItem("pendingReferralCode", referralCode);
+    } else {
+      console.log("No referral code to store");
     }
     router.push(`/order/location/${locationId}`);
   }
