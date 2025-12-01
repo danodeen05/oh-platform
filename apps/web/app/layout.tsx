@@ -5,7 +5,7 @@ export const metadata = {
   description: "Order your favorite noodle soup",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
