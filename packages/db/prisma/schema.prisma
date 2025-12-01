@@ -110,7 +110,15 @@ model MenuItem {
   tenant     Tenant   @relation(fields: [tenantId], references: [id])
   
   name       String
-  priceCents Int
+  
+  // Flexible pricing system
+  basePriceCents      Int      // Base price (can be $0 for included items)
+  additionalPriceCents Int     @default(0) // Price for extra servings
+  includedQuantity    Int      @default(0) // Number of servings included (1 for baby bok choy, 0 for others)
+  
+  category   String?  // e.g., "protein", "vegetables", "noodles"
+  description String?
+  isAvailable Boolean  @default(true)
   
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
