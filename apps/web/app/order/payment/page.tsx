@@ -23,7 +23,6 @@ export default async function PaymentPage({
   const params = await searchParams;
   const orderId = params.orderId;
   const orderNumber = params.orderNumber;
-  const totalCents = params.total ? parseInt(params.total) : 0;
 
   if (!orderId || !orderNumber) {
     return (
@@ -46,6 +45,9 @@ export default async function PaymentPage({
       </main>
     );
   }
+
+  // Get total from the order data, not from URL param
+  const totalCents = order.totalCents;
 
   return (
     <main
@@ -100,7 +102,7 @@ export default async function PaymentPage({
                 </div>
               </div>
               <div style={{ fontWeight: "bold" }}>
-                ${((item.priceCents * item.quantity) / 100).toFixed(2)}
+                ${(item.priceCents / 100).toFixed(2)}
               </div>
             </div>
           ))}

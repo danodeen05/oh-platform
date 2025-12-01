@@ -270,18 +270,35 @@ app.post("/orders", async (req, reply) => {
     },
   });
 
+  // Helper function to calculate item price with flexible pricing
+  function calculateItemPrice(menuItem, quantity) {
+    // If quantity is within included amount, price is 0
+    if (quantity <= menuItem.includedQuantity) {
+      return 0;
+    }
+
+    // If there's an included quantity, only charge for extras
+    if (menuItem.includedQuantity > 0) {
+      const extraQuantity = quantity - menuItem.includedQuantity;
+      return menuItem.basePriceCents + menuItem.additionalPriceCents * (extraQuantity - 1);
+    }
+
+    // Standard pricing: base + additional for each extra
+    return menuItem.basePriceCents + menuItem.additionalPriceCents * (quantity - 1);
+  }
+
   let totalCents = 0;
   const orderItems = items.map((item) => {
     const menuItem = menuItems.find((m) => m.id === item.menuItemId);
     if (!menuItem) throw new Error(`Menu item ${item.menuItemId} not found`);
 
-    const itemTotal = menuItem.priceCents * item.quantity;
+    const itemTotal = calculateItemPrice(menuItem, item.quantity);
     totalCents += itemTotal;
 
     return {
       menuItemId: item.menuItemId,
       quantity: item.quantity,
-      priceCents: menuItem.priceCents,
+      priceCents: itemTotal,
     };
   });
 

@@ -7,7 +7,12 @@ const BASE = process.env.NEXT_PUBLIC_API_URL || "";
 type MenuItem = {
   id: string;
   name: string;
-  priceCents: number;
+  basePriceCents: number;
+  additionalPriceCents: number;
+  includedQuantity: number;
+  category?: string;
+  description?: string;
+  isAvailable: boolean;
 };
 
 type CartItem = {
@@ -27,6 +32,23 @@ export default function MenuBuilder({
   const [step, setStep] = useState<"menu" | "time">("menu");
   const [arrivalTime, setArrivalTime] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
+
+  // Calculate price for an item based on flexible pricing
+  function getItemPrice(item: MenuItem, quantity: number): number {
+    // If quantity is within included amount, price is 0
+    if (quantity <= item.includedQuantity) {
+      return 0;
+    }
+
+    // If there's an included quantity, only charge for extras
+    if (item.includedQuantity > 0) {
+      const extraQuantity = quantity - item.includedQuantity;
+      return item.basePriceCents + item.additionalPriceCents * (extraQuantity - 1);
+    }
+
+    // Standard pricing: base + additional for each extra
+    return item.basePriceCents + item.additionalPriceCents * (quantity - 1);
+  }
 
   // Separate menu into bases and add-ons
   const bases = menu.filter(
@@ -50,7 +72,7 @@ export default function MenuBuilder({
 
   const totalCents = Object.entries(cart).reduce((sum, [itemId, qty]) => {
     const item = menu.find((m) => m.id === itemId);
-    return sum + (item ? item.priceCents * qty : 0);
+    return sum + (item ? getItemPrice(item, qty) : 0);
   }, 0);
 
   const hasBase = bases.some((base) => cart[base.id] > 0);
@@ -215,6 +237,7 @@ export default function MenuBuilder({
           {Object.entries(cart).map(([itemId, qty]) => {
             const item = menu.find((m) => m.id === itemId);
             if (!item || qty === 0) return null;
+            const itemTotal = getItemPrice(item, qty);
             return (
               <div
                 key={itemId}
@@ -227,8 +250,13 @@ export default function MenuBuilder({
               >
                 <span>
                   {qty}x {item.name}
+                  {item.includedQuantity > 0 && qty <= item.includedQuantity && (
+                    <span style={{ color: "#22c55e", marginLeft: 4 }}>
+                      (included)
+                    </span>
+                  )}
                 </span>
-                <span>${((item.priceCents * qty) / 100).toFixed(2)}</span>
+                <span>${(itemTotal / 100).toFixed(2)}</span>
               </div>
             );
           })}
@@ -309,7 +337,18 @@ export default function MenuBuilder({
                         margin: 0,
                       }}
                     >
-                      ${(item.priceCents / 100).toFixed(2)}
+                      {item.includedQuantity > 0 ? (
+                        <>
+                          Included (1st) • ${(item.additionalPriceCents / 100).toFixed(2)} each extra
+                        </>
+                      ) : (
+                        <>
+                          ${(item.basePriceCents / 100).toFixed(2)}
+                          {item.additionalPriceCents > 0 && (
+                            <> • +${(item.additionalPriceCents / 100).toFixed(2)} each extra</>
+                          )}
+                        </>
+                      )}
                     </p>
                   </div>
 
@@ -391,7 +430,18 @@ export default function MenuBuilder({
                   <span
                     style={{ color: "#666", marginLeft: 8, fontSize: "0.9rem" }}
                   >
-                    +${(item.priceCents / 100).toFixed(2)}
+                    {item.includedQuantity > 0 ? (
+                      <>
+                        Included (1st) • +${(item.additionalPriceCents / 100).toFixed(2)} each extra
+                      </>
+                    ) : (
+                      <>
+                        +${(item.basePriceCents / 100).toFixed(2)}
+                        {item.additionalPriceCents > 0 && (
+                          <> • +${(item.additionalPriceCents / 100).toFixed(2)} each extra</>
+                        )}
+                      </>
+                    )}
                   </span>
                 </div>
 

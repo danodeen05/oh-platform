@@ -43,11 +43,25 @@ export default function PaymentForm({
     try {
       setLoadingCredits(true);
       const response = await fetch(`${BASE}/users/${uid}/credits`);
+      if (!response.ok) {
+        // User doesn't exist, clear from localStorage
+        localStorage.removeItem("userId");
+        localStorage.removeItem("referralCode");
+        setUserId(null);
+        setEmailSubmitted(false);
+        setLoadingCredits(false);
+        return;
+      }
       const data = await response.json();
       setUserCredits(data.balance);
       setLoadingCredits(false);
     } catch (err) {
       console.error("Failed to load credits:", err);
+      // Clear invalid user data
+      localStorage.removeItem("userId");
+      localStorage.removeItem("referralCode");
+      setUserId(null);
+      setEmailSubmitted(false);
       setLoadingCredits(false);
     }
   }
@@ -94,17 +108,12 @@ export default function PaymentForm({
   }
 
   async function handleTestPayment() {
-    if (!userId) {
-      setError("Please enter your email first");
-      return;
-    }
-
     setProcessing(true);
     setError("");
 
     try {
       // Apply credits to order if user has any
-      if (userCredits > 0) {
+      if (userCredits > 0 && userId) {
         const creditsToApply = Math.min(userCredits, totalCents);
         await fetch(`${BASE}/orders/${orderId}/apply-credits`, {
           method: "POST",
@@ -116,14 +125,16 @@ export default function PaymentForm({
         });
       }
 
-      // Mark order as paid and link to user
+      // Mark order as paid and optionally link to user (if user exists)
+      const body: any = { paymentStatus: "PAID" };
+      if (userId) {
+        body.userId = userId;
+      }
+
       const response = await fetch(`${BASE}/orders/${orderId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          paymentStatus: "PAID",
-          userId: userId,
-        }),
+        body: JSON.stringify(body),
       });
 
       if (!response.ok) throw new Error("Payment failed");
@@ -140,8 +151,10 @@ export default function PaymentForm({
     }
   }
 
-  const creditsApplied = Math.min(userCredits, totalCents);
-  const discountedTotal = totalCents - creditsApplied;
+  // Ensure totalCents is a valid number
+  const validTotalCents = typeof totalCents === 'number' && !isNaN(totalCents) ? totalCents : 0;
+  const creditsApplied = Math.min(userCredits, validTotalCents);
+  const discountedTotal = validTotalCents - creditsApplied;
   const showCreditsBreakdown = creditsApplied > 0;
 
   return (
