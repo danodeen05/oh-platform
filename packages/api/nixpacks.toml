@@ -1,0 +1,16 @@
+[phases.setup]
+nixPkgs = ["nodejs_20", "npm-9_x"]
+
+[phases.install]
+cmds = [
+  "npm install -g pnpm@9.15.9",
+  "pnpm install --frozen-lockfile"
+]
+
+[phases.build]
+cmds = [
+  "pnpm prisma generate"
+]
+
+[start]
+cmd = "node src/index.js"
