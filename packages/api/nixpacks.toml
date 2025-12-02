@@ -1,15 +1,17 @@
 [phases.setup]
-nixPkgs = ["nodejs_20", "npm-9_x"]
+nixPkgs = ["nodejs_20"]
+aptPkgs = ["..."]
 
 [phases.install]
 cmds = [
-  "npm install -g pnpm@9.15.9",
-  "pnpm install --frozen-lockfile"
+  "corepack enable",
+  "corepack prepare pnpm@9.15.9 --activate",
+  "pnpm install --prod=false"
 ]
 
 [phases.build]
 cmds = [
-  "pnpm prisma generate"
+  "npx prisma generate"
 ]
 
 [start]
