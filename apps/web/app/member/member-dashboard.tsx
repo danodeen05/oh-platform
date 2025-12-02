@@ -426,11 +426,22 @@ export default function MemberDashboard() {
           }}
         >
           <div
+            onClick={() => router.push("/member/orders")}
             style={{
               background: "white",
               borderRadius: 12,
               padding: 20,
               textAlign: "center",
+              cursor: "pointer",
+              transition: "transform 0.2s, box-shadow 0.2s",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "scale(1.05)";
+              e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "scale(1)";
+              e.currentTarget.style.boxShadow = "none";
             }}
           >
             <div
@@ -444,17 +455,28 @@ export default function MemberDashboard() {
           </div>
 
           <div
+            onClick={() => router.push("/member/credits")}
             style={{
               background: "white",
               borderRadius: 12,
               padding: 20,
               textAlign: "center",
+              cursor: "pointer",
+              transition: "transform 0.2s, box-shadow 0.2s",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "scale(1.05)";
+              e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "scale(1)";
+              e.currentTarget.style.boxShadow = "none";
             }}
           >
             <div
               style={{ fontSize: "2rem", fontWeight: "bold", color: tierColor }}
             >
-              ${(profile.creditsCents / 100).toFixed(0)}
+              ${(profile.creditsCents / 100).toFixed(2)}
             </div>
             <div style={{ fontSize: "0.85rem", color: "#666" }}>Credits</div>
           </div>

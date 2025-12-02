@@ -2,99 +2,96 @@ import Link from "next/link";
 
 export default function HomePage() {
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "24px",
-        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-        color: "white",
-        textAlign: "center",
-      }}
-    >
-      <h1
-        style={{
-          fontSize: "3.5rem",
-          fontWeight: "bold",
-          marginBottom: "16px",
-          textShadow: "2px 2px 4px rgba(0,0,0,0.3)",
-        }}
-      >
-        哦 Oh! Beef Noodle Soup
+    <main style={{ padding: "48px", maxWidth: "1200px", margin: "0 auto" }}>
+      <h1 style={{ fontSize: "2.5rem", marginBottom: "8px" }}>
+        Oh Platform Admin
       </h1>
-
-      <p
-        style={{
-          fontSize: "1.25rem",
-          marginBottom: "48px",
-          maxWidth: "600px",
-          lineHeight: "1.6",
-        }}
-      >
-        Order ahead. Skip the wait. Enjoy premium beef noodles in private dining
-        cubicles.
+      <p style={{ color: "#666", marginBottom: "48px", fontSize: "1.1rem" }}>
+        Manage your restaurant operations
       </p>
-
-      <Link
-        href="/order"
-        style={{
-          padding: "20px 48px",
-          fontSize: "1.25rem",
-          fontWeight: "bold",
-          background: "white",
-          color: "#667eea",
-          borderRadius: "12px",
-          textDecoration: "none",
-          boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
-          transition: "transform 0.2s",
-          display: "inline-block",
-        }}
-        onMouseEnter={(e) => (e.currentTarget.style.transform = "scale(1.05)")}
-        onMouseLeave={(e) => (e.currentTarget.style.transform = "scale(1)")}
-      >
-        Order Now →
-      </Link>
 
       <div
         style={{
-          marginTop: "64px",
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-          gap: "32px",
-          maxWidth: "800px",
-          width: "100%",
+          gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+          gap: "24px",
         }}
       >
-        <div>
-          <div style={{ fontSize: "2rem", marginBottom: "8px" }}>🍜</div>
-          <div style={{ fontWeight: "bold", marginBottom: "4px" }}>
-            30-Year Recipe
-          </div>
-          <div style={{ fontSize: "0.9rem", opacity: 0.9 }}>
-            Perfected beef noodle soup
-          </div>
-        </div>
-        <div>
-          <div style={{ fontSize: "2rem", marginBottom: "8px" }}>🥩</div>
-          <div style={{ fontWeight: "bold", marginBottom: "4px" }}>
-            Premium Beef
-          </div>
-          <div style={{ fontSize: "0.9rem", opacity: 0.9 }}>
-            A5 Wagyu available
-          </div>
-        </div>
-        <div>
-          <div style={{ fontSize: "2rem", marginBottom: "8px" }}>🚀</div>
-          <div style={{ fontWeight: "bold", marginBottom: "4px" }}>
-            Tech-First
-          </div>
-          <div style={{ fontSize: "0.9rem", opacity: 0.9 }}>
-            Order ahead, earn rewards
-          </div>
-        </div>
+        <Link
+          href="/tenants"
+          style={{
+            padding: "32px",
+            background: "white",
+            border: "2px solid #e5e7eb",
+            borderRadius: "12px",
+            textDecoration: "none",
+            color: "inherit",
+            transition: "all 0.2s",
+          }}
+        >
+          <div style={{ fontSize: "2.5rem", marginBottom: "16px" }}>🏢</div>
+          <h2 style={{ fontSize: "1.5rem", marginBottom: "8px" }}>Tenants</h2>
+          <p style={{ color: "#666", fontSize: "0.95rem" }}>
+            Manage restaurant tenants and subscriptions
+          </p>
+        </Link>
+
+        <Link
+          href="/locations"
+          style={{
+            padding: "32px",
+            background: "white",
+            border: "2px solid #e5e7eb",
+            borderRadius: "12px",
+            textDecoration: "none",
+            color: "inherit",
+            transition: "all 0.2s",
+          }}
+        >
+          <div style={{ fontSize: "2.5rem", marginBottom: "16px" }}>📍</div>
+          <h2 style={{ fontSize: "1.5rem", marginBottom: "8px" }}>Locations</h2>
+          <p style={{ color: "#666", fontSize: "0.95rem" }}>
+            Manage restaurant locations and seating
+          </p>
+        </Link>
+
+        <Link
+          href="/menu"
+          style={{
+            padding: "32px",
+            background: "white",
+            border: "2px solid #e5e7eb",
+            borderRadius: "12px",
+            textDecoration: "none",
+            color: "inherit",
+            transition: "all 0.2s",
+          }}
+        >
+          <div style={{ fontSize: "2.5rem", marginBottom: "16px" }}>🍜</div>
+          <h2 style={{ fontSize: "1.5rem", marginBottom: "8px" }}>Menu</h2>
+          <p style={{ color: "#666", fontSize: "0.95rem" }}>
+            Manage menu items and pricing
+          </p>
+        </Link>
+
+        <Link
+          href="/kitchen"
+          style={{
+            padding: "32px",
+            background: "white",
+            border: "2px solid #e5e7eb",
+            borderRadius: "12px",
+            textDecoration: "none",
+            color: "inherit",
+            transition: "all 0.2s",
+          }}
+        >
+          <div style={{ fontSize: "2.5rem", marginBottom: "16px" }}>👨‍🍳</div>
+          <h2 style={{ fontSize: "1.5rem", marginBottom: "8px" }}>Kitchen Display</h2>
+          <p style={{ color: "#666", fontSize: "0.95rem" }}>
+            View and manage incoming orders
+          </p>
+        </Link>
       </div>
     </main>
   );

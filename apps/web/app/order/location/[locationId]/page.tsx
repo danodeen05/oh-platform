@@ -23,10 +23,13 @@ async function getLocationAndMenu(locationId: string) {
 
 export default async function LocationMenuPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locationId: string }>;
+  searchParams: Promise<{ reorderId?: string }>;
 }) {
   const { locationId } = await params;
+  const { reorderId } = await searchParams;
   const { location, menu } = await getLocationAndMenu(locationId);
 
   if (!location) {
@@ -77,7 +80,7 @@ export default async function LocationMenuPage({
         )}
       </div>
 
-      <MenuBuilder location={location} menu={menu} />
+      <MenuBuilder location={location} menu={menu} reorderId={reorderId} />
     </main>
   );
 }

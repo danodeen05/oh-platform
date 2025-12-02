@@ -337,7 +337,7 @@ app.post("/orders", async (req, reply) => {
 // PATCH /orders/:id - Update order status
 app.patch("/orders/:id", async (req, reply) => {
   const { id } = req.params;
-  const { status, paymentStatus, userId, totalCents } = req.body || {};
+  const { status, paymentStatus, userId, totalCents, estimatedArrival } = req.body || {};
 
   const data = {};
   if (status) data.status = status;
@@ -350,11 +350,12 @@ app.patch("/orders/:id", async (req, reply) => {
   }
   if (userId) data.userId = userId;
   if (totalCents !== undefined) data.totalCents = totalCents;
+  if (estimatedArrival) data.estimatedArrival = new Date(estimatedArrival);
 
   if (!Object.keys(data).length) {
     return reply
       .code(400)
-      .send({ error: "status, paymentStatus, userId, or totalCents required" });
+      .send({ error: "status, paymentStatus, userId, totalCents, or estimatedArrival required" });
   }
 
   const order = await prisma.order.update({
@@ -465,6 +466,29 @@ app.patch("/orders/:id", async (req, reply) => {
           await checkTierUpgrade(user.referredById);
         }
       }
+    }
+
+    // Award cashback credits based on user's tier
+    const tierBenefits = getTierBenefits(user.membershipTier);
+    const cashbackAmount = Math.floor((order.totalCents * tierBenefits.cashbackPercent) / 100);
+
+    if (cashbackAmount > 0) {
+      await prisma.creditEvent.create({
+        data: {
+          userId: user.id,
+          type: "CASHBACK",
+          amountCents: cashbackAmount,
+          orderId: order.id,
+          description: `${tierBenefits.cashbackPercent}% cashback on order`,
+        },
+      });
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          creditsCents: { increment: cashbackAmount },
+        },
+      });
     }
   }
 
@@ -754,6 +778,32 @@ app.get("/users/:id/challenges", async (req, reply) => {
   return userChallenges;
 });
 
+// Get user's order history
+app.get("/users/:id/orders", async (req, reply) => {
+  const { id } = req.params;
+
+  const orders = await prisma.order.findMany({
+    where: {
+      userId: id,
+      paymentStatus: "PAID", // Only show paid orders
+    },
+    include: {
+      items: {
+        include: {
+          menuItem: true,
+        },
+      },
+      location: true,
+      seat: true,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
+  return orders;
+});
+
 // ====================
 // KITCHEN DISPLAY SYSTEM
 // ====================
@@ -890,22 +940,22 @@ function getTierBenefits(tier) {
       perks: ["Base referral rewards", "1% cashback"],
     },
     NOODLE_MASTER: {
-      referralBonus: 700,
+      referralBonus: 500,
       cashbackPercent: 2,
       birthdayBonus: 2000,
       perks: [
-        "Higher referral rewards",
+        "Referral rewards",
         "2% cashback",
         "Early menu access",
         "Priority seating",
       ],
     },
     BEEF_BOSS: {
-      referralBonus: 1000,
+      referralBonus: 500,
       cashbackPercent: 3,
       birthdayBonus: 5000,
       perks: [
-        "Maximum referral rewards",
+        "Referral rewards",
         "3% cashback",
         "Free delivery",
         "Exclusive items",

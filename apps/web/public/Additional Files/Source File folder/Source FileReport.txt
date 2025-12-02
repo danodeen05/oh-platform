@@ -1,0 +1,34 @@
+Report created: 
+	4/29/2024	10:50:25 AM
+
+Project name: Source File.aep
+
+Source files collected to: 
+	F:\01_Fiverr Clients\danodeen\Additional Files\Source File folder
+
+Source files collected: For all comps
+
+Collected comps:  
+	Oh Logo Animation
+	Chopstick 1
+	Chopstick 2
+	Soup Bowl
+	Spoon
+	H right leg
+	H side middle
+	
+Number of collected files:  1
+
+Size of collected files:  678 KB
+
+Collected source files: 
+	F:\01_Fiverr Clients\danodeen\Oh Logo Animation.ai
+	
+Rendering plug-ins:
+	Classic 3D
+	
+Effects used:  1
+
+Effect:  
+	
+

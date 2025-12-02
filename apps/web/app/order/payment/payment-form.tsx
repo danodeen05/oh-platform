@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useUser, SignInButton } from "@clerk/nextjs";
 
@@ -24,6 +24,7 @@ export default function PaymentForm({
   const [userId, setUserId] = useState<string | null>(null);
   const [loadingCredits, setLoadingCredits] = useState(false);
   const [userInitialized, setUserInitialized] = useState(false);
+  const initializingRef = useRef(false); // Prevent concurrent initialization calls
 
   useEffect(() => {
     // Check if there's a pending referral code
@@ -37,7 +38,7 @@ export default function PaymentForm({
 
   useEffect(() => {
     // Initialize user in our system when Clerk user is available
-    if (isLoaded && isSignedIn && user && !userInitialized) {
+    if (isLoaded && isSignedIn && user && !userInitialized && !initializingRef.current) {
       initializeUser();
     }
   }, [isLoaded, isSignedIn, user, userInitialized]);
@@ -45,6 +46,13 @@ export default function PaymentForm({
   async function initializeUser() {
     if (!user?.primaryEmailAddress?.emailAddress) return;
 
+    // Prevent concurrent calls
+    if (initializingRef.current) {
+      console.log("⚠️ initializeUser already running, skipping duplicate call");
+      return;
+    }
+
+    initializingRef.current = true;
     console.log("=== 💳 PAYMENT FORM: initializeUser() called ===");
     console.log("Clerk user email:", user.primaryEmailAddress.emailAddress);
     console.log("Clerk user name:", user.fullName || user.firstName);
@@ -115,10 +123,12 @@ export default function PaymentForm({
       }
 
       setLoadingCredits(false);
+      initializingRef.current = false;
     } catch (err: any) {
       console.error("❌ Failed to initialize user:", err);
       setError(err.message || "Failed to load user account");
       setLoadingCredits(false);
+      initializingRef.current = false;
     }
   }
 

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "";
@@ -23,15 +23,51 @@ type CartItem = {
 export default function MenuBuilder({
   location,
   menu,
+  reorderId,
 }: {
   location: any;
   menu: MenuItem[];
+  reorderId?: string;
 }) {
   const router = useRouter();
   const [cart, setCart] = useState<Record<string, number>>({});
   const [step, setStep] = useState<"menu" | "time">("menu");
   const [arrivalTime, setArrivalTime] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
+  const [loading, setLoading] = useState(!!reorderId);
+  const [existingOrderId, setExistingOrderId] = useState<string | null>(reorderId || null);
+
+  // If reorderId is provided, load the order and skip to time selection
+  useEffect(() => {
+    if (!reorderId) return;
+
+    async function loadReorder() {
+      try {
+        const response = await fetch(`${BASE}/orders/${reorderId}`);
+        if (!response.ok) {
+          throw new Error("Failed to load order");
+        }
+
+        const order = await response.json();
+
+        // Populate cart from order items
+        const cartData: Record<string, number> = {};
+        order.items.forEach((item: any) => {
+          cartData[item.menuItem.id] = item.quantity;
+        });
+
+        setCart(cartData);
+        setStep("time");
+        setLoading(false);
+      } catch (error) {
+        console.error("Failed to load reorder:", error);
+        alert("Failed to load your previous order. Please try again.");
+        router.push("/member/orders");
+      }
+    }
+
+    loadReorder();
+  }, [reorderId]);
 
   // Calculate price for an item based on flexible pricing
   function getItemPrice(item: MenuItem, quantity: number): number {
@@ -93,10 +129,6 @@ export default function MenuBuilder({
 
     setSubmitting(true);
 
-    const items: CartItem[] = Object.entries(cart)
-      .filter(([_, qty]) => qty > 0)
-      .map(([menuItemId, quantity]) => ({ menuItemId, quantity }));
-
     // Calculate estimated arrival timestamp
     let estimatedArrival = new Date();
     if (arrivalTime !== "asap") {
@@ -104,25 +136,72 @@ export default function MenuBuilder({
       estimatedArrival = new Date(Date.now() + minutes * 60 * 1000);
     }
 
-    // Create the order
-    const response = await fetch(`${BASE}/orders`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        locationId: location.id,
-        tenantId: location.tenantId,
-        items,
-        estimatedArrival: estimatedArrival.toISOString(),
-        fulfillmentType: "PRE_ORDER",
-      }),
-    });
+    let order;
 
-    const order = await response.json();
+    if (existingOrderId) {
+      // Update existing order with estimated arrival time
+      const response = await fetch(`${BASE}/orders/${existingOrderId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          estimatedArrival: estimatedArrival.toISOString(),
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Failed to update order:", errorData);
+        alert("Failed to update order. Please try again.");
+        setSubmitting(false);
+        return;
+      }
+
+      order = await response.json();
+    } else {
+      // Create a new order
+      const items: CartItem[] = Object.entries(cart)
+        .filter(([_, qty]) => qty > 0)
+        .map(([menuItemId, quantity]) => ({ menuItemId, quantity }));
+
+      const response = await fetch(`${BASE}/orders`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          locationId: location.id,
+          tenantId: location.tenantId,
+          items,
+          estimatedArrival: estimatedArrival.toISOString(),
+          fulfillmentType: "PRE_ORDER",
+        }),
+      });
+
+      order = await response.json();
+    }
+
     setSubmitting(false);
 
-    // Redirect to payment (we'll build this next)
+    // Redirect to payment - use order.totalCents from server response
     router.push(
-      `/order/payment?orderId=${order.id}&orderNumber=${order.orderNumber}&total=${totalCents}`
+      `/order/payment?orderId=${order.id}&orderNumber=${order.orderNumber}&total=${order.totalCents}`
+    );
+  }
+
+  // Show loading state while loading reorder
+  if (loading) {
+    return (
+      <div
+        style={{
+          minHeight: "400px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: "3rem", marginBottom: 16 }}>🍜</div>
+          <div>Loading your order...</div>
+        </div>
+      </div>
     );
   }
 
@@ -138,20 +217,23 @@ export default function MenuBuilder({
   if (step === "time") {
     return (
       <div>
-        <button
-          onClick={() => setStep("menu")}
-          style={{
-            marginBottom: 24,
-            padding: "8px 16px",
-            background: "transparent",
-            border: "1px solid #667eea",
-            color: "#667eea",
-            borderRadius: 8,
-            cursor: "pointer",
-          }}
-        >
-          ← Back to Menu
-        </button>
+        {/* Only show back button if not in reorder mode */}
+        {!existingOrderId && (
+          <button
+            onClick={() => setStep("menu")}
+            style={{
+              marginBottom: 24,
+              padding: "8px 16px",
+              background: "transparent",
+              border: "1px solid #667eea",
+              color: "#667eea",
+              borderRadius: 8,
+              cursor: "pointer",
+            }}
+          >
+            ← Back to Menu
+          </button>
+        )}
 
         <h2 style={{ marginBottom: 24 }}>When will you arrive?</h2>
 
