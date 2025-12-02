@@ -12,7 +12,7 @@ await app.register(cors, {
 });
 await app.register(formbody);
 
-const PORT = process.env.API_PORT || 4000;
+const PORT = process.env.PORT || process.env.API_PORT || 4000;
 
 // Helper to get tenant from request
 function getTenantContext(req) {
