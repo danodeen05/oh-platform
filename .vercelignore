@@ -1,0 +1,4 @@
+# Vercel build ignore patterns
+.vercel
+node_modules
+.git
