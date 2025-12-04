@@ -84,28 +84,36 @@ export default async function PaymentPage({
         >
           <h3 style={{ margin: 0, marginBottom: 16 }}>Order Summary</h3>
 
-          {order.items.map((item: any) => (
-            <div
-              key={item.id}
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                marginBottom: 8,
-                paddingBottom: 8,
-                borderBottom: "1px solid #e5e7eb",
-              }}
-            >
-              <div>
-                <div style={{ fontWeight: "bold" }}>{item.menuItem.name}</div>
-                <div style={{ fontSize: "0.85rem", color: "#666" }}>
-                  Qty: {item.quantity}
+          {order.items.map((item: any) => {
+            // For slider items, show the label instead of quantity
+            const isSlider = item.menuItem.selectionMode === 'SLIDER';
+            const sliderLabel = isSlider && item.menuItem.sliderConfig?.labels?.[item.quantity]
+              ? item.menuItem.sliderConfig.labels[item.quantity]
+              : null;
+
+            return (
+              <div
+                key={item.id}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginBottom: 8,
+                  paddingBottom: 8,
+                  borderBottom: "1px solid #e5e7eb",
+                }}
+              >
+                <div>
+                  <div style={{ fontWeight: "bold" }}>{item.menuItem.name}</div>
+                  <div style={{ fontSize: "0.85rem", color: "#666" }}>
+                    {sliderLabel ? sliderLabel : `Qty: ${item.quantity}`}
+                  </div>
+                </div>
+                <div style={{ fontWeight: "bold" }}>
+                  ${(item.priceCents / 100).toFixed(2)}
                 </div>
               </div>
-              <div style={{ fontWeight: "bold" }}>
-                ${(item.priceCents / 100).toFixed(2)}
-              </div>
-            </div>
-          ))}
+            );
+          })}
 
           {order.estimatedArrival && (
             <div
