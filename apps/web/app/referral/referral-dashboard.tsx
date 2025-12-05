@@ -82,7 +82,7 @@ export default function ReferralDashboard() {
           style={{
             width: "100%",
             padding: 12,
-            background: "#667eea",
+            background: "#7C7A67",
             color: "white",
             border: "none",
             borderRadius: 8,
@@ -104,7 +104,7 @@ export default function ReferralDashboard() {
       {/* Credits Balance */}
       <div
         style={{
-          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+          background: "#7C7A67",
           color: "white",
           padding: 32,
           borderRadius: 12,
@@ -149,7 +149,7 @@ export default function ReferralDashboard() {
               border: "none",
               outline: "none",
               fontSize: "0.9rem",
-              color: "#667eea",
+              color: "#7C7A67",
             }}
           />
           <button
@@ -159,7 +159,7 @@ export default function ReferralDashboard() {
             }}
             style={{
               padding: "8px 16px",
-              background: "#667eea",
+              background: "#7C7A67",
               color: "white",
               border: "none",
               borderRadius: 6,
@@ -218,7 +218,7 @@ export default function ReferralDashboard() {
                 <div
                   style={{
                     fontWeight: "bold",
-                    color: event.amountCents > 0 ? "#22c55e" : "#ef4444",
+                    color: event.amountCents > 0 ? "#7C7A67" : "#222222",
                   }}
                 >
                   {event.amountCents > 0 ? "+" : ""}$

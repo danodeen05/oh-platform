@@ -202,7 +202,7 @@ export default function PaymentForm({
     return (
       <div
         style={{
-          background: "#f0f4ff",
+          background: "rgba(124, 122, 103, 0.1)",
           border: "2px solid #7C7A67",
           borderRadius: 12,
           padding: 32,
@@ -215,7 +215,7 @@ export default function PaymentForm({
           You'll need to sign in to track your order, earn rewards, and use
           referral credits.
           {hasReferral && (
-            <span style={{ color: "#22c55e", fontWeight: "bold", display: "block", marginTop: 8 }}>
+            <span style={{ color: "#7C7A67", fontWeight: "bold", display: "block", marginTop: 8 }}>
               🎉 You have a referral discount waiting!
             </span>
           )}
@@ -247,7 +247,7 @@ export default function PaymentForm({
       {loadingCredits && (
         <div
           style={{
-            background: "#f0f4ff",
+            background: "rgba(124, 122, 103, 0.1)",
             border: "1px solid #7C7A67",
             borderRadius: 8,
             padding: 16,
@@ -268,8 +268,8 @@ export default function PaymentForm({
           {hasReferral && userCredits > 0 && !referralNotApplied && (
             <div
               style={{
-                background: "#d1fae5",
-                border: "1px solid #22c55e",
+                background: "rgba(199, 168, 120, 0.2)",
+                border: "2px solid #C7A878",
                 borderRadius: 8,
                 padding: 16,
                 marginBottom: 24,
@@ -280,10 +280,10 @@ export default function PaymentForm({
             >
               <div style={{ fontSize: "1.5rem" }}>🎉</div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: "bold", color: "#065f46" }}>
+                <div style={{ fontWeight: "bold", color: "#222222" }}>
                   Welcome! You've been referred
                 </div>
-                <div style={{ fontSize: "0.85rem", color: "#047857" }}>
+                <div style={{ fontSize: "0.85rem", color: "#7C7A67" }}>
                   You got ${(userCredits / 100).toFixed(2)} in credits to use on
                   this order
                 </div>
@@ -321,7 +321,7 @@ export default function PaymentForm({
           {userCredits > 0 && !hasReferral && (
             <div
               style={{
-                background: "#f0f4ff",
+                background: "rgba(124, 122, 103, 0.1)",
                 border: "1px solid #7C7A67",
                 borderRadius: 8,
                 padding: 16,
@@ -331,13 +331,13 @@ export default function PaymentForm({
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
                 <div style={{ fontSize: "1.5rem" }}>💰</div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: "bold", color: "#4338ca" }}>
+                  <div style={{ fontWeight: "bold", color: "#222222" }}>
                     Available Credits
                   </div>
-                  <div style={{ fontSize: "0.85rem", color: "#6366f1" }}>
+                  <div style={{ fontSize: "0.85rem", color: "#7C7A67" }}>
                     You have ${(userCredits / 100).toFixed(2)} in credits
                   </div>
-                  <div style={{ fontSize: "0.75rem", color: "#6366f1", marginTop: 4 }}>
+                  <div style={{ fontSize: "0.75rem", color: "#7C7A67", marginTop: 4 }}>
                     You can apply up to $5 in credit to a single order
                   </div>
                 </div>
@@ -365,7 +365,7 @@ export default function PaymentForm({
                     cursor: "pointer",
                   }}
                 />
-                <span style={{ fontSize: "0.9rem", color: "#4338ca" }}>
+                <span style={{ fontSize: "0.9rem", color: "#222222" }}>
                   Apply {Math.min(userCredits, MAX_CREDITS_PER_ORDER) === MAX_CREDITS_PER_ORDER ? '$5.00' : `$${(userCredits / 100).toFixed(2)}`} to this order
                 </span>
               </label>
@@ -398,7 +398,7 @@ export default function PaymentForm({
                   display: "flex",
                   justifyContent: "space-between",
                   marginBottom: 8,
-                  color: "#22c55e",
+                  color: "#7C7A67",
                   fontWeight: "bold",
                 }}
               >
@@ -430,7 +430,7 @@ export default function PaymentForm({
                 border: "2px solid #7C7A67",
                 borderRadius: 12,
                 padding: 20,
-                background: "#f0f4ff",
+                background: "rgba(124, 122, 103, 0.1)",
               }}
             >
               <div
@@ -499,7 +499,7 @@ export default function PaymentForm({
             style={{
               width: "100%",
               padding: 16,
-              background: processing || loadingCredits ? "#d1d5db" : "#22c55e",
+              background: processing || loadingCredits ? "#d1d5db" : "#7C7A67",
               color: "white",
               border: "none",
               borderRadius: 12,

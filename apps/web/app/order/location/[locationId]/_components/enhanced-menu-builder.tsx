@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { SliderControl } from "./slider-control";
 import { RadioGroup } from "./radio-group";
@@ -30,7 +30,6 @@ type MenuSection = {
   items?: MenuItem[];
   sliderConfig?: any;
   item?: MenuItem;
-  maxQuantity?: number;
 };
 
 type MenuStep = {
@@ -137,8 +136,7 @@ export default function EnhancedMenuBuilder({
       return item.basePriceCents + item.additionalPriceCents * (extraQuantity - 1);
     }
 
-    // For add-ons with no included quantity: simple multiplication
-    return item.basePriceCents * quantity;
+    return item.basePriceCents + item.additionalPriceCents * (quantity - 1);
   }
 
   // Get all menu items for price calculation
@@ -156,8 +154,8 @@ export default function EnhancedMenuBuilder({
     return items;
   }
 
-  // Calculate total with useMemo for proper React reactivity
-  const totalCents = useMemo(() => {
+  // Calculate total
+  const totalCents = (() => {
     const allItems = getAllMenuItems();
     let total = 0;
 
@@ -178,7 +176,7 @@ export default function EnhancedMenuBuilder({
     });
 
     return total;
-  }, [cart, selections, menuSteps]);
+  })();
 
   // Handle radio selection
   function handleRadioSelect(sectionId: string, itemId: string) {
@@ -201,7 +199,10 @@ export default function EnhancedMenuBuilder({
   // Handle slider change
   function handleSliderChange(itemId: string, value: number) {
     setCart(prev => {
-      // Keep 0 values in cart to allow "None" selection
+      if (value === 0) {
+        const { [itemId]: _, ...rest } = prev;
+        return rest;
+      }
       return { ...prev, [itemId]: value };
     });
   }
@@ -287,29 +288,10 @@ export default function EnhancedMenuBuilder({
         items.push({ menuItemId: itemId, quantity: 1 });
       });
 
-      // Add ALL slider items (with default values if not in cart)
-      const customizeStep = menuSteps.find(s => s.id === 'customize');
-      if (customizeStep) {
-        customizeStep.sections.forEach(section => {
-          if (section.item && section.sliderConfig) {
-            const itemId = section.item.id;
-            const qty = cart[itemId] !== undefined
-              ? cart[itemId]
-              : (section.sliderConfig.default ?? 0);
-            items.push({ menuItemId: itemId, quantity: qty });
-          }
-        });
-      }
-
-      // Add cart items (checkboxes only - sliders already added above)
+      // Add cart items
       Object.entries(cart).forEach(([itemId, qty]) => {
         if (qty > 0) {
-          const allItems = getAllMenuItems();
-          const item = allItems.find(i => i.id === itemId);
-          // Skip sliders - they were already added above
-          if (item && item.selectionMode !== 'SLIDER') {
-            items.push({ menuItemId: itemId, quantity: qty });
-          }
+          items.push({ menuItemId: itemId, quantity: qty });
         }
       });
 
@@ -433,64 +415,7 @@ export default function EnhancedMenuBuilder({
         {/* Order Summary */}
         <div style={{ background: "#f9fafb", padding: 24, borderRadius: 12, marginBottom: 24 }}>
           <h3 style={{ margin: 0, marginBottom: 16 }}>Order Summary</h3>
-
-          {/* Radio selections */}
-          {Object.entries(selections).map(([sectionId, itemId]) => {
-            const allItems = getAllMenuItems();
-            const item = allItems.find(i => i.id === itemId);
-            if (!item) return null;
-
-            return (
-              <div key={sectionId} style={{ marginBottom: 8, display: "flex", justifyContent: "space-between" }}>
-                <span>{item.name}</span>
-                <span style={{ color: "#7C7A67" }}>
-                  {item.basePriceCents > 0 ? `$${(item.basePriceCents / 100).toFixed(2)}` : "Included"}
-                </span>
-              </div>
-            );
-          })}
-
-          {/* Slider items - show ALL sliders with their current values (from cart or default) */}
-          {menuSteps.find(s => s.id === 'customize')?.sections.map(section => {
-            if (!section.item || !section.sliderConfig) return null;
-
-            const itemId = section.item.id;
-            const qty = cart[itemId] !== undefined ? cart[itemId] : (section.sliderConfig.default ?? 0);
-            const label = section.sliderConfig.labels?.[qty] || qty;
-            const price = getItemPrice(section.item, qty);
-
-            return (
-              <div key={itemId} style={{ marginBottom: 8, display: "flex", justifyContent: "space-between" }}>
-                <span>{section.item.name}: {label}</span>
-                <span style={{ color: "#7C7A67" }}>
-                  {price > 0 ? `$${(price / 100).toFixed(2)}` : "Included"}
-                </span>
-              </div>
-            );
-          })}
-
-          {/* Checkbox items (add-ons, sides, drinks, desserts) - only show non-zero quantities */}
-          {Object.entries(cart).map(([itemId, qty]) => {
-            if (qty === 0) return null;
-
-            const allItems = getAllMenuItems();
-            const item = allItems.find(i => i.id === itemId);
-            if (!item) return null;
-
-            // Skip sliders (already shown above)
-            if (item.selectionMode === 'SLIDER') return null;
-
-            const price = getItemPrice(item, qty);
-            return (
-              <div key={itemId} style={{ marginBottom: 8, display: "flex", justifyContent: "space-between" }}>
-                <span>{item.name} (Qty: {qty})</span>
-                <span style={{ color: "#7C7A67" }}>
-                  {price > 0 ? `$${(price / 100).toFixed(2)}` : "Included"}
-                </span>
-              </div>
-            );
-          })}
-
+          {/* TODO: Render order summary */}
           <div style={{ borderTop: "1px solid #e5e7eb", marginTop: 12, paddingTop: 12, display: "flex", justifyContent: "space-between", fontWeight: "bold", fontSize: "1.1rem" }}>
             <span>Total:</span>
             <span style={{ color: "#7C7A67" }}>${(totalCents / 100).toFixed(2)}</span>
@@ -561,10 +486,7 @@ export default function EnhancedMenuBuilder({
         }
 
         if (section.selectionMode === 'SLIDER' && section.item && section.sliderConfig) {
-          // Use explicit undefined check to allow 0 values
-          const value = cart[section.item.id] !== undefined
-            ? cart[section.item.id]
-            : (section.sliderConfig.default ?? 0);
+          const value = cart[section.item.id] || section.sliderConfig.default || 0;
           return (
             <div key={section.id} style={{ marginBottom: 16 }}>
               <SliderControl
@@ -591,7 +513,6 @@ export default function EnhancedMenuBuilder({
               items={section.items}
               quantities={cart}
               onUpdateQuantity={handleQuantityUpdate}
-              maxQuantity={section.maxQuantity || 99}
             />
           );
         }
@@ -600,10 +521,10 @@ export default function EnhancedMenuBuilder({
       })}
 
       {/* Navigation */}
-      <div style={{ position: "sticky", bottom: 0, background: "white", borderTop: "2px solid #e5e7eb", padding: "24px 0", marginTop: 32 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
-          <strong style={{ fontSize: "1.1rem" }}>Total:</strong>
-          <strong style={{ fontSize: "1.1rem", color: "#7C7A67" }}>
+      <div style={{ position: "sticky", bottom: 0, background: "white", border: "1px solid rgba(124, 122, 103, 0.2)", borderRadius: "16px", padding: "24px 32px", marginTop: 32, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <strong style={{ fontSize: "1.1rem", color: "#222222" }}>Total:</strong>
+          <strong style={{ fontSize: "1.8rem", color: "#7C7A67", paddingRight: "8px" }}>
             ${(totalCents / 100).toFixed(2)}
           </strong>
         </div>

@@ -100,7 +100,7 @@ function ConfirmationContent() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "linear-gradient(135deg, #7C7A67 0%, #764ba2 100%)",
+        background: "#E5E5E5",
         padding: 24,
       }}
     >
@@ -191,7 +191,7 @@ function ConfirmationContent() {
         {/* Social Sharing Section */}
         <div
           style={{
-            background: "linear-gradient(135deg, #7C7A6720 0%, #764ba220 100%)",
+            background: "rgba(124, 122, 103, 0.1)",
             border: "2px solid #7C7A67",
             borderRadius: 12,
             padding: 20,
@@ -413,10 +413,10 @@ export default function ConfirmationPage() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: "linear-gradient(135deg, #7C7A67 0%, #764ba2 100%)",
+            background: "#E5E5E5",
           }}
         >
-          <div style={{ color: "white", fontSize: "1.2rem" }}>Loading...</div>
+          <div style={{ color: "#222222", fontSize: "1.2rem" }}>Loading...</div>
         </div>
       }
     >

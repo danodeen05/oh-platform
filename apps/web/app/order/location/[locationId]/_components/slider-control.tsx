@@ -37,11 +37,11 @@ export function SliderControl({
   return (
     <div
       style={{
-        border: "1px solid rgba(124, 122, 103, 0.2)",
-        borderRadius: 4,
-        padding: 24,
-        background: value > min ? "rgba(199, 168, 120, 0.05)" : "rgba(255, 255, 255, 0.5)",
-        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+        border: "1px solid #e5e7eb",
+        borderRadius: 12,
+        padding: 20,
+        background: value > min ? "#f9fafb" : "white",
+        transition: "all 0.2s",
       }}
     >
       <div style={{ marginBottom: 16 }}>
@@ -53,33 +53,30 @@ export function SliderControl({
             marginBottom: 4,
           }}
         >
-          <strong style={{ fontSize: "1rem", color: "#222222", fontWeight: "400", letterSpacing: "0.5px" }}>
-            {name}
-          </strong>
+          <strong style={{ fontSize: "1rem" }}>{name}</strong>
           <span
             style={{
-              fontWeight: "500",
+              fontWeight: "bold",
               color: "#7C7A67",
               fontSize: "0.95rem",
-              letterSpacing: "0.5px",
             }}
           >
             {labels[value] || value}
           </span>
         </div>
         {description && (
-          <div style={{ fontSize: "0.85rem", color: "#666666", marginBottom: 8, fontWeight: "300" }}>
+          <div style={{ fontSize: "0.85rem", color: "#666", marginBottom: 8 }}>
             {description}
           </div>
         )}
         {pricingInfo && pricingInfo.includedQuantity > 0 && (
           <div style={{ fontSize: "0.85rem" }}>
             {value <= pricingInfo.includedQuantity ? (
-              <span style={{ color: "#7C7A67" }}>
+              <span style={{ color: "#22c55e" }}>
                 ✓ Included (up to {pricingInfo.includedQuantity})
               </span>
             ) : (
-              <span style={{ color: "#C7A878" }}>
+              <span style={{ color: "#7C7A67" }}>
                 +${((pricingInfo.additionalPriceCents * (value - pricingInfo.includedQuantity)) / 100).toFixed(2)}
               </span>
             )}
@@ -97,9 +94,9 @@ export function SliderControl({
         onChange={(e) => onChange(parseInt(e.target.value))}
         style={{
           width: "100%",
-          height: 6,
-          borderRadius: 3,
-          background: `linear-gradient(to right, #7C7A67 0%, #7C7A67 ${percentage}%, rgba(124, 122, 103, 0.2) ${percentage}%, rgba(124, 122, 103, 0.2) 100%)`,
+          height: 8,
+          borderRadius: 4,
+          background: `linear-gradient(to right, #7C7A67 0%, #7C7A67 ${percentage}%, #e5e7eb ${percentage}%, #e5e7eb 100%)`,
           outline: "none",
           cursor: "pointer",
           appearance: "none",
@@ -114,9 +111,8 @@ export function SliderControl({
           display: "flex",
           justifyContent: "space-between",
           fontSize: "0.75rem",
-          color: "#999999",
+          color: "#999",
           marginTop: 8,
-          letterSpacing: "0.3px",
         }}
       >
         {labelPositions ? (
@@ -141,32 +137,20 @@ export function SliderControl({
           width: 20px;
           height: 20px;
           border-radius: 50%;
-          background: #C7A878;
-          cursor: pointer;
-          border: 2px solid #E5E5E5;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
-          transition: all 0.2s ease;
-        }
-
-        .slider-input::-webkit-slider-thumb:hover {
           background: #7C7A67;
-          transform: scale(1.1);
+          cursor: pointer;
+          border: 2px solid white;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
 
         .slider-input::-moz-range-thumb {
           width: 20px;
           height: 20px;
           border-radius: 50%;
-          background: #C7A878;
-          cursor: pointer;
-          border: 2px solid #E5E5E5;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
-          transition: all 0.2s ease;
-        }
-
-        .slider-input::-moz-range-thumb:hover {
           background: #7C7A67;
-          transform: scale(1.1);
+          cursor: pointer;
+          border: 2px solid white;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
       `}</style>
     </div>

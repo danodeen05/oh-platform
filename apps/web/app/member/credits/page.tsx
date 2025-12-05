@@ -140,7 +140,7 @@ export default function CreditsPage() {
       <div style={{ padding: 24 }}>
         <div
           style={{
-            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            background: "linear-gradient(135deg, #7C7A67 0%, #7C7A67 100%)",
             borderRadius: 16,
             padding: 32,
             marginBottom: 24,
