@@ -108,22 +108,44 @@ model MenuItem {
   id         String   @id @default(cuid())
   tenantId   String
   tenant     Tenant   @relation(fields: [tenantId], references: [id])
-  
+
   name       String
-  
+
   // Flexible pricing system
   basePriceCents      Int      // Base price (can be $0 for included items)
   additionalPriceCents Int     @default(0) // Price for extra servings
   includedQuantity    Int      @default(0) // Number of servings included (1 for baby bok choy, 0 for others)
-  
-  category   String?  // e.g., "protein", "vegetables", "noodles"
+
+  category   String?  // e.g., "protein", "vegetables", "noodles", "main01", "slider01", etc.
   description String?
   isAvailable Boolean  @default(true)
-  
+
+  // Enhanced menu organization
+  categoryType     CategoryType?  // Type of category (MAIN, SLIDER, ADDON, etc.)
+  selectionMode    SelectionMode  @default(MULTIPLE) // How users select this item
+  displayOrder     Int            @default(0) // Sort order within category
+  sliderConfig     Json?          // Slider metadata: {min, max, default, labels, step}
+
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
-  
+
   orderItems OrderItem[]
+}
+
+enum CategoryType {
+  MAIN
+  SLIDER
+  ADDON
+  SIDE
+  DRINK
+  DESSERT
+}
+
+enum SelectionMode {
+  SINGLE      // Only one selection allowed (main01, main02)
+  MULTIPLE    // Multiple selections allowed (add-ons, sides, drinks)
+  SLIDER      // Slider control with levels (slider01-08)
+  INCLUDED    // Automatically included, can't be removed
 }
 
 // ==========================================
