@@ -64,7 +64,7 @@ export default function Header() {
             }}
           >
             <Image
-              src="/Oh Logo with elements.svg"
+              src="/Oh_Logo_Mark_Web.png"
               alt="Oh Logo"
               width={60}
               height={60}
