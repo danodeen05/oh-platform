@@ -365,8 +365,8 @@ export default function EnhancedMenuBuilder({
               marginBottom: 24,
               padding: "8px 16px",
               background: "transparent",
-              border: "1px solid #667eea",
-              color: "#667eea",
+              border: "1px solid #7C7A67",
+              color: "#7C7A67",
               borderRadius: 8,
               cursor: "pointer",
             }}
@@ -391,7 +391,7 @@ export default function EnhancedMenuBuilder({
                 key={option.value}
                 onClick={() => setArrivalTime(option.value)}
                 style={{
-                  border: `2px solid ${isSelected ? "#667eea" : "#e5e7eb"}`,
+                  border: `2px solid ${isSelected ? "#7C7A67" : "#e5e7eb"}`,
                   borderRadius: 12,
                   padding: 20,
                   background: isSelected ? "#f0f4ff" : "white",
@@ -414,7 +414,7 @@ export default function EnhancedMenuBuilder({
                         width: 24,
                         height: 24,
                         borderRadius: "50%",
-                        background: "#667eea",
+                        background: "#7C7A67",
                         color: "white",
                         display: "flex",
                         alignItems: "center",
@@ -443,7 +443,7 @@ export default function EnhancedMenuBuilder({
             return (
               <div key={sectionId} style={{ marginBottom: 8, display: "flex", justifyContent: "space-between" }}>
                 <span>{item.name}</span>
-                <span style={{ color: "#667eea" }}>
+                <span style={{ color: "#7C7A67" }}>
                   {item.basePriceCents > 0 ? `$${(item.basePriceCents / 100).toFixed(2)}` : "Included"}
                 </span>
               </div>
@@ -462,7 +462,7 @@ export default function EnhancedMenuBuilder({
             return (
               <div key={itemId} style={{ marginBottom: 8, display: "flex", justifyContent: "space-between" }}>
                 <span>{section.item.name}: {label}</span>
-                <span style={{ color: "#667eea" }}>
+                <span style={{ color: "#7C7A67" }}>
                   {price > 0 ? `$${(price / 100).toFixed(2)}` : "Included"}
                 </span>
               </div>
@@ -484,7 +484,7 @@ export default function EnhancedMenuBuilder({
             return (
               <div key={itemId} style={{ marginBottom: 8, display: "flex", justifyContent: "space-between" }}>
                 <span>{item.name} (Qty: {qty})</span>
-                <span style={{ color: "#667eea" }}>
+                <span style={{ color: "#7C7A67" }}>
                   {price > 0 ? `$${(price / 100).toFixed(2)}` : "Included"}
                 </span>
               </div>
@@ -493,7 +493,7 @@ export default function EnhancedMenuBuilder({
 
           <div style={{ borderTop: "1px solid #e5e7eb", marginTop: 12, paddingTop: 12, display: "flex", justifyContent: "space-between", fontWeight: "bold", fontSize: "1.1rem" }}>
             <span>Total:</span>
-            <span style={{ color: "#667eea" }}>${(totalCents / 100).toFixed(2)}</span>
+            <span style={{ color: "#7C7A67" }}>${(totalCents / 100).toFixed(2)}</span>
           </div>
         </div>
 
@@ -503,7 +503,7 @@ export default function EnhancedMenuBuilder({
           style={{
             width: "100%",
             padding: 16,
-            background: arrivalTime ? "#667eea" : "#d1d5db",
+            background: arrivalTime ? "#7C7A67" : "#d1d5db",
             color: "white",
             border: "none",
             borderRadius: 12,
@@ -533,7 +533,7 @@ export default function EnhancedMenuBuilder({
                 flex: 1,
                 height: 4,
                 borderRadius: 2,
-                background: idx <= currentStepIndex ? "#667eea" : "#e5e7eb",
+                background: idx <= currentStepIndex ? "#7C7A67" : "#e5e7eb",
               }}
             />
           ))}
@@ -603,7 +603,7 @@ export default function EnhancedMenuBuilder({
       <div style={{ position: "sticky", bottom: 0, background: "white", borderTop: "2px solid #e5e7eb", padding: "24px 0", marginTop: 32 }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
           <strong style={{ fontSize: "1.1rem" }}>Total:</strong>
-          <strong style={{ fontSize: "1.1rem", color: "#667eea" }}>
+          <strong style={{ fontSize: "1.1rem", color: "#7C7A67" }}>
             ${(totalCents / 100).toFixed(2)}
           </strong>
         </div>
@@ -616,8 +616,8 @@ export default function EnhancedMenuBuilder({
                 flex: 1,
                 padding: 16,
                 background: "white",
-                color: "#667eea",
-                border: "2px solid #667eea",
+                color: "#7C7A67",
+                border: "2px solid #7C7A67",
                 borderRadius: 12,
                 fontSize: "1.1rem",
                 fontWeight: "bold",
@@ -633,7 +633,7 @@ export default function EnhancedMenuBuilder({
             style={{
               flex: 2,
               padding: 16,
-              background: isStepComplete(currentStep) ? "#667eea" : "#d1d5db",
+              background: isStepComplete(currentStep) ? "#7C7A67" : "#d1d5db",
               color: "white",
               border: "none",
               borderRadius: 12,

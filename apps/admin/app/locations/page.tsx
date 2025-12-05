@@ -3,7 +3,10 @@ import { LocationRowActions } from "../_components/row-actions";
 
 async function getData(base: string) {
   const [r1, r2] = await Promise.all([
-    fetch(base + "/locations", { cache: "no-store" }),
+    fetch(base + "/locations", {
+      cache: "no-store",
+      headers: { "x-tenant-slug": "oh" }
+    }),
     fetch(base + "/tenants", { cache: "no-store" }),
   ]);
   const [loc, tenants] = await Promise.all([r1.json(), r2.json()]);
@@ -19,12 +22,13 @@ export default async function Page() {
       </pre>
     );
 
-  const { loc, tenants } = await getData(base);
+  const { loc, tenants} = await getData(base);
   const tenantOptions = Array.isArray(tenants) ? tenants : [];
+  const currentTenant = tenantOptions.find((t: any) => t.slug === "oh");
 
   return (
     <main style={{ padding: 24 }}>
-      <h2>Locations</h2>
+      <h2>{currentTenant?.brandName || "Oh"} Admin - Locations</h2>
 
       {/* create without leaving the page */}
       <div style={{ margin: "16px 0" }}>
@@ -38,8 +42,11 @@ export default async function Page() {
         <thead>
           <tr>
             <th>Name</th>
+            <th>Address</th>
             <th>City</th>
-            <th>Tenant</th>
+            <th>State</th>
+            <th>Phone</th>
+            <th>Status</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -48,11 +55,11 @@ export default async function Page() {
             loc.map((l: any) => (
               <tr key={l.id}>
                 <td>{l.name}</td>
+                <td>{l.address || ""}</td>
                 <td>{l.city || ""}</td>
-                <td>
-                  {tenantOptions.find((t: any) => t.id === l.tenantId)?.name ||
-                    l.tenantId}
-                </td>
+                <td>{l.state || ""}</td>
+                <td>{l.phone || ""}</td>
+                <td>{l.isActive ? "Active" : "Inactive"}</td>
                 <td>
                   <LocationRowActions row={l} />
                 </td>

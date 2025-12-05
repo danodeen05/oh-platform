@@ -43,7 +43,7 @@ export function CheckboxGroup({
             <div
               key={item.id}
               style={{
-                border: `1px solid ${isSelected ? "#667eea" : "#e5e7eb"}`,
+                border: `1px solid ${isSelected ? "#7C7A67" : "#e5e7eb"}`,
                 borderRadius: 12,
                 padding: 16,
                 background: isSelected ? "#f9fafb" : "white",
@@ -66,13 +66,13 @@ export function CheckboxGroup({
                       {item.description}
                     </div>
                   )}
-                  <div style={{ fontSize: "0.875rem", color: "#667eea", fontWeight: "600" }}>
+                  <div style={{ fontSize: "0.875rem", color: "#7C7A67", fontWeight: "600" }}>
                     +${(item.basePriceCents / 100).toFixed(2)} each
                   </div>
                   {isSelected && itemPrice > 0 && (
                     <div
                       style={{
-                        color: "#667eea",
+                        color: "#7C7A67",
                         fontWeight: "600",
                         fontSize: "0.95rem",
                         marginTop: 4,
@@ -123,7 +123,7 @@ export function CheckboxGroup({
                       height: 36,
                       borderRadius: "50%",
                       border: "none",
-                      background: qty >= maxQuantity ? "#d1d5db" : "#667eea",
+                      background: qty >= maxQuantity ? "#d1d5db" : "#7C7A67",
                       color: "white",
                       cursor: qty >= maxQuantity ? "not-allowed" : "pointer",
                       fontSize: "1.2rem",

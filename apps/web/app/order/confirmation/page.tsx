@@ -100,7 +100,7 @@ function ConfirmationContent() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        background: "linear-gradient(135deg, #7C7A67 0%, #764ba2 100%)",
         padding: 24,
       }}
     >
@@ -191,8 +191,8 @@ function ConfirmationContent() {
         {/* Social Sharing Section */}
         <div
           style={{
-            background: "linear-gradient(135deg, #667eea20 0%, #764ba220 100%)",
-            border: "2px solid #667eea",
+            background: "linear-gradient(135deg, #7C7A6720 0%, #764ba220 100%)",
+            border: "2px solid #7C7A67",
             borderRadius: 12,
             padding: 20,
             marginBottom: 24,
@@ -317,7 +317,7 @@ function ConfirmationContent() {
                 style={{
                   width: "100%",
                   padding: 12,
-                  background: "#667eea",
+                  background: "#7C7A67",
                   color: "white",
                   border: "none",
                   borderRadius: 8,
@@ -354,7 +354,7 @@ function ConfirmationContent() {
             style={{
               width: "100%",
               padding: 14,
-              background: "#667eea",
+              background: "#7C7A67",
               color: "white",
               border: "none",
               borderRadius: 8,
@@ -372,8 +372,8 @@ function ConfirmationContent() {
               width: "100%",
               padding: 14,
               background: "white",
-              color: "#667eea",
-              border: "2px solid #667eea",
+              color: "#7C7A67",
+              border: "2px solid #7C7A67",
               borderRadius: 8,
               fontSize: "1rem",
               fontWeight: "bold",
@@ -413,7 +413,7 @@ export default function ConfirmationPage() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            background: "linear-gradient(135deg, #7C7A67 0%, #764ba2 100%)",
           }}
         >
           <div style={{ color: "white", fontSize: "1.2rem" }}>Loading...</div>

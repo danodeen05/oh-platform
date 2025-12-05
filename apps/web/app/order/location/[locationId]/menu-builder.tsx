@@ -225,8 +225,8 @@ export default function MenuBuilder({
               marginBottom: 24,
               padding: "8px 16px",
               background: "transparent",
-              border: "1px solid #667eea",
-              color: "#667eea",
+              border: "1px solid #7C7A67",
+              color: "#7C7A67",
               borderRadius: 8,
               cursor: "pointer",
             }}
@@ -253,7 +253,7 @@ export default function MenuBuilder({
                 key={option.value}
                 onClick={() => setArrivalTime(option.value)}
                 style={{
-                  border: `2px solid ${isSelected ? "#667eea" : "#e5e7eb"}`,
+                  border: `2px solid ${isSelected ? "#7C7A67" : "#e5e7eb"}`,
                   borderRadius: 12,
                   padding: 20,
                   background: isSelected ? "#f0f4ff" : "white",
@@ -289,7 +289,7 @@ export default function MenuBuilder({
                         width: 24,
                         height: 24,
                         borderRadius: "50%",
-                        background: "#667eea",
+                        background: "#7C7A67",
                         color: "white",
                         display: "flex",
                         alignItems: "center",
@@ -354,7 +354,7 @@ export default function MenuBuilder({
             }}
           >
             <span>Total:</span>
-            <span style={{ color: "#667eea" }}>
+            <span style={{ color: "#7C7A67" }}>
               ${(totalCents / 100).toFixed(2)}
             </span>
           </div>
@@ -366,7 +366,7 @@ export default function MenuBuilder({
           style={{
             width: "100%",
             padding: 16,
-            background: arrivalTime ? "#667eea" : "#d1d5db",
+            background: arrivalTime ? "#7C7A67" : "#d1d5db",
             color: "white",
             border: "none",
             borderRadius: 12,
@@ -396,7 +396,7 @@ export default function MenuBuilder({
               <div
                 key={item.id}
                 style={{
-                  border: `2px solid ${isSelected ? "#667eea" : "#e5e7eb"}`,
+                  border: `2px solid ${isSelected ? "#7C7A67" : "#e5e7eb"}`,
                   borderRadius: 12,
                   padding: 20,
                   background: isSelected ? "#f0f4ff" : "white",
@@ -414,7 +414,7 @@ export default function MenuBuilder({
                     <h3 style={{ margin: 0, marginBottom: 4 }}>{item.name}</h3>
                     <p
                       style={{
-                        color: "#667eea",
+                        color: "#7C7A67",
                         fontWeight: "bold",
                         margin: 0,
                       }}
@@ -445,9 +445,9 @@ export default function MenuBuilder({
                             width: 36,
                             height: 36,
                             borderRadius: "50%",
-                            border: "2px solid #667eea",
+                            border: "2px solid #7C7A67",
                             background: "white",
-                            color: "#667eea",
+                            color: "#7C7A67",
                             fontSize: "1.2rem",
                             cursor: "pointer",
                           }}
@@ -472,7 +472,7 @@ export default function MenuBuilder({
                         height: 36,
                         borderRadius: "50%",
                         border: "none",
-                        background: "#667eea",
+                        background: "#7C7A67",
                         color: "white",
                         fontSize: "1.2rem",
                         cursor: "pointer",
@@ -555,7 +555,7 @@ export default function MenuBuilder({
                       height: 32,
                       borderRadius: "50%",
                       border: "none",
-                      background: "#667eea",
+                      background: "#7C7A67",
                       color: "white",
                       cursor: "pointer",
                     }}
@@ -589,7 +589,7 @@ export default function MenuBuilder({
             }}
           >
             <strong style={{ fontSize: "1.1rem" }}>Total:</strong>
-            <strong style={{ fontSize: "1.1rem", color: "#667eea" }}>
+            <strong style={{ fontSize: "1.1rem", color: "#7C7A67" }}>
               ${(totalCents / 100).toFixed(2)}
             </strong>
           </div>
@@ -600,7 +600,7 @@ export default function MenuBuilder({
             style={{
               width: "100%",
               padding: 16,
-              background: hasBase ? "#667eea" : "#d1d5db",
+              background: hasBase ? "#7C7A67" : "#d1d5db",
               color: "white",
               border: "none",
               borderRadius: 12,

@@ -56,7 +56,7 @@ export default async function PaymentPage({
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        background: "linear-gradient(135deg, #7C7A67 0%, #764ba2 100%)",
         padding: 24,
       }}
     >

@@ -28,7 +28,7 @@ export function RadioGroup({ title, items, selectedId, onSelect }: RadioGroupPro
               key={item.id}
               onClick={() => onSelect(item.id)}
               style={{
-                border: `2px solid ${isSelected ? "#667eea" : "#e5e7eb"}`,
+                border: `2px solid ${isSelected ? "#7C7A67" : "#e5e7eb"}`,
                 borderRadius: 12,
                 padding: 16,
                 background: isSelected ? "#f0f4ff" : "white",
@@ -53,7 +53,7 @@ export function RadioGroup({ title, items, selectedId, onSelect }: RadioGroupPro
                       {item.description}
                     </div>
                   )}
-                  <div style={{ color: "#667eea", fontWeight: "600", fontSize: "0.95rem" }}>
+                  <div style={{ color: "#7C7A67", fontWeight: "600", fontSize: "0.95rem" }}>
                     {item.basePriceCents > 0
                       ? `$${(item.basePriceCents / 100).toFixed(2)}`
                       : "Included"}
@@ -65,7 +65,7 @@ export function RadioGroup({ title, items, selectedId, onSelect }: RadioGroupPro
                       width: 28,
                       height: 28,
                       borderRadius: "50%",
-                      background: "#667eea",
+                      background: "#7C7A67",
                       color: "white",
                       display: "flex",
                       alignItems: "center",
