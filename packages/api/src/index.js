@@ -38,6 +38,60 @@ app.get("/tenants", async (req, reply) => {
   return tenants;
 });
 
+app.post("/tenants", async (req, reply) => {
+  const { slug, brandName, logoUrl, primaryColor } = req.body || {};
+
+  if (!slug || !brandName) {
+    return reply.code(400).send({ error: "slug and brandName required" });
+  }
+
+  const tenant = await prisma.tenant.create({
+    data: {
+      slug,
+      brandName,
+      logoUrl: logoUrl || null,
+      primaryColor: primaryColor || null,
+    },
+  });
+
+  return tenant;
+});
+
+app.patch("/tenants/:id", async (req, reply) => {
+  const { id } = req.params;
+  const { slug, brandName, logoUrl, primaryColor } = req.body || {};
+
+  const data = {};
+  if (slug) data.slug = slug;
+  if (brandName) data.brandName = brandName;
+  if (logoUrl !== undefined) data.logoUrl = logoUrl || null;
+  if (primaryColor !== undefined) data.primaryColor = primaryColor || null;
+
+  if (!Object.keys(data).length) {
+    return reply.code(400).send({ error: "At least one field required" });
+  }
+
+  const tenant = await prisma.tenant.update({
+    where: { id },
+    data,
+  });
+
+  return tenant;
+});
+
+app.delete("/tenants/:id", async (req, reply) => {
+  const { id } = req.params;
+  try {
+    await prisma.tenant.delete({ where: { id } });
+    return { success: true };
+  } catch (error) {
+    if (error.code === 'P2003') {
+      return reply.code(400).send({ error: "Cannot delete tenant with associated locations or menu items" });
+    }
+    throw error;
+  }
+});
+
 // ====================
 // LOCATIONS
 // ====================
@@ -59,7 +113,7 @@ app.get("/locations", async (req, reply) => {
 });
 
 app.post("/locations", async (req, reply) => {
-  const { name, city, address, lat, lng, tenantId } = req.body || {};
+  const { name, city, address, state, zipCode, country, lat, lng, phone, email, customMessage, operatingHours, isActive, tenantId } = req.body || {};
 
   if (!name || !city || !tenantId) {
     return reply.code(400).send({ error: "name, city, and tenantId required" });
@@ -70,8 +124,16 @@ app.post("/locations", async (req, reply) => {
       name,
       city,
       address: address || "",
+      state: state || null,
+      zipCode: zipCode || null,
+      country: country || "US",
       lat: lat || 0,
       lng: lng || 0,
+      phone: phone || null,
+      email: email || null,
+      customMessage: customMessage || null,
+      operatingHours: operatingHours || null,
+      isActive: isActive !== undefined ? isActive : true,
       tenantId,
     },
   });
@@ -81,14 +143,22 @@ app.post("/locations", async (req, reply) => {
 
 app.patch("/locations/:id", async (req, reply) => {
   const { id } = req.params;
-  const { name, city, address, lat, lng } = req.body || {};
+  const { name, city, address, state, zipCode, country, lat, lng, phone, email, customMessage, operatingHours, isActive } = req.body || {};
 
   const data = {};
-  if (name) data.name = name;
-  if (city) data.city = city;
-  if (address) data.address = address;
+  if (name !== undefined) data.name = name;
+  if (city !== undefined) data.city = city;
+  if (address !== undefined) data.address = address;
+  if (state !== undefined) data.state = state;
+  if (zipCode !== undefined) data.zipCode = zipCode;
+  if (country !== undefined) data.country = country;
   if (lat !== undefined) data.lat = lat;
   if (lng !== undefined) data.lng = lng;
+  if (phone !== undefined) data.phone = phone;
+  if (email !== undefined) data.email = email;
+  if (customMessage !== undefined) data.customMessage = customMessage;
+  if (operatingHours !== undefined) data.operatingHours = operatingHours;
+  if (isActive !== undefined) data.isActive = isActive;
 
   if (!Object.keys(data).length) {
     return reply.code(400).send({ error: "At least one field required" });
@@ -104,8 +174,132 @@ app.patch("/locations/:id", async (req, reply) => {
 
 app.delete("/locations/:id", async (req, reply) => {
   const { id } = req.params;
-  await prisma.location.delete({ where: { id } });
-  return { success: true };
+  try {
+    await prisma.location.delete({ where: { id } });
+    return { success: true };
+  } catch (error) {
+    if (error.code === 'P2003') {
+      return reply.code(400).send({ error: "Cannot delete location with associated orders or seats" });
+    }
+    throw error;
+  }
+});
+
+// Geocode an address to get lat/lng
+app.post("/locations/geocode", async (req, reply) => {
+  const { address, city, state, zipCode, country } = req.body || {};
+
+  if (!address || !city) {
+    return reply.code(400).send({ error: "address and city required" });
+  }
+
+  // Build full address string
+  const addressParts = [address, city, state, zipCode, country || "US"].filter(Boolean);
+  const fullAddress = addressParts.join(", ");
+
+  try {
+    // Use Nominatim (OpenStreetMap) geocoding - free, no API key required
+    const encodedAddress = encodeURIComponent(fullAddress);
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=1`,
+      {
+        headers: {
+          'User-Agent': 'Oh-Platform/1.0' // Required by Nominatim
+        }
+      }
+    );
+
+    if (!response.ok) {
+      return reply.code(500).send({ error: "Geocoding service error" });
+    }
+
+    const data = await response.json();
+
+    if (!data || data.length === 0) {
+      return reply.code(404).send({ error: "Address not found" });
+    }
+
+    const result = data[0];
+    return {
+      lat: parseFloat(result.lat),
+      lng: parseFloat(result.lon),
+      displayName: result.display_name
+    };
+  } catch (error) {
+    app.log.error(error);
+    return reply.code(500).send({ error: "Failed to geocode address" });
+  }
+});
+
+// Validate and autocomplete address
+app.post("/locations/validate-address", async (req, reply) => {
+  const { address, city, state, zipCode, country } = req.body || {};
+
+  if (!address || !city) {
+    return reply.code(400).send({ error: "address and city required" });
+  }
+
+  // Build full address string
+  const addressParts = [address, city, state, zipCode, country || "US"].filter(Boolean);
+  const fullAddress = addressParts.join(", ");
+
+  try {
+    // Use Nominatim for address validation and autocomplete
+    const encodedAddress = encodeURIComponent(fullAddress);
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&addressdetails=1&limit=5`,
+      {
+        headers: {
+          'User-Agent': 'Oh-Platform/1.0'
+        }
+      }
+    );
+
+    if (!response.ok) {
+      return reply.code(500).send({ error: "Address validation service error" });
+    }
+
+    const data = await response.json();
+
+    if (!data || data.length === 0) {
+      return {
+        valid: false,
+        message: "Address not found. Please verify the address.",
+        suggestions: []
+      };
+    }
+
+    // Parse address components from the first result
+    const result = data[0];
+    const addr = result.address || {};
+
+    return {
+      valid: true,
+      message: "Address validated successfully",
+      normalized: {
+        address: addr.road || addr.street || address,
+        city: addr.city || addr.town || addr.village || city,
+        state: addr.state || state,
+        zipCode: addr.postcode || zipCode,
+        country: addr.country_code?.toUpperCase() || country || "US",
+        lat: parseFloat(result.lat),
+        lng: parseFloat(result.lon)
+      },
+      displayName: result.display_name,
+      suggestions: data.slice(0, 5).map(item => ({
+        displayName: item.display_name,
+        address: item.address?.road || item.address?.street || '',
+        city: item.address?.city || item.address?.town || item.address?.village || '',
+        state: item.address?.state || '',
+        zipCode: item.address?.postcode || '',
+        lat: parseFloat(item.lat),
+        lng: parseFloat(item.lon)
+      }))
+    };
+  } catch (error) {
+    app.log.error(error);
+    return reply.code(500).send({ error: "Failed to validate address" });
+  }
 });
 
 // ====================
@@ -121,23 +315,162 @@ app.get("/menu", async (req, reply) => {
   if (!tenant) return reply.code(404).send({ error: "Tenant not found" });
 
   const items = await prisma.menuItem.findMany({
-    where: { tenantId: tenant.id },
+    where: { tenantId: tenant.id, isAvailable: true },
+    orderBy: [
+      { categoryType: 'asc' },
+      { displayOrder: 'asc' },
+      { name: 'asc' }
+    ]
   });
 
   return items;
 });
 
-app.post("/menu", async (req, reply) => {
-  const { name, priceCents, tenantId } = req.body || {};
+// GET /menu/steps - Returns structured menu for multi-step order builder
+app.get("/menu/steps", async (req, reply) => {
+  const tenantSlug = getTenantContext(req);
+  const tenant = await prisma.tenant.findUnique({
+    where: { slug: tenantSlug },
+  });
 
-  if (!name || !priceCents || !tenantId) {
+  if (!tenant) return reply.code(404).send({ error: "Tenant not found" });
+
+  const items = await prisma.menuItem.findMany({
+    where: { tenantId: tenant.id, isAvailable: true },
+    orderBy: [
+      { categoryType: 'asc' },
+      { displayOrder: 'asc' },
+      { name: 'asc' }
+    ]
+  });
+
+  // Group items by category for easier frontend rendering
+  const main01 = items.filter(i => i.category === 'main01');
+  const main02 = items.filter(i => i.category === 'main02');
+  const sliders = items.filter(i => i.categoryType === 'SLIDER');
+  const addons = items.filter(i => i.categoryType === 'ADDON');
+  const sides = items.filter(i => i.categoryType === 'SIDE');
+  const drinks = items.filter(i => i.categoryType === 'DRINK');
+  const desserts = items.filter(i => i.categoryType === 'DESSERT');
+
+  return {
+    steps: [
+      {
+        id: 'bowl',
+        title: 'Build the Foundation',
+        sections: [
+          {
+            id: 'soup',
+            name: 'Choose Your Soup',
+            selectionMode: 'SINGLE',
+            required: true,
+            items: main01
+          },
+          {
+            id: 'noodles',
+            name: 'Choose Your Noodles',
+            selectionMode: 'SINGLE',
+            required: true,
+            items: main02
+          }
+        ]
+      },
+      {
+        id: 'customize',
+        title: 'Customize Your Bowl',
+        sections: sliders.map(item => ({
+          id: item.id,
+          name: item.name,
+          description: item.description,
+          selectionMode: 'SLIDER',
+          required: false,
+          sliderConfig: item.sliderConfig,
+          item
+        }))
+      },
+      {
+        id: 'extras',
+        title: 'Add-Ons & Sides',
+        sections: [
+          {
+            id: 'addons',
+            name: 'Premium Add-ons',
+            selectionMode: 'MULTIPLE',
+            required: false,
+            maxQuantity: 3,
+            items: addons
+          },
+          {
+            id: 'sides',
+            name: 'Side Dishes',
+            selectionMode: 'MULTIPLE',
+            required: false,
+            maxQuantity: 3,
+            items: sides
+          }
+        ]
+      },
+      {
+        id: 'drinks-desserts',
+        title: 'Drinks & Dessert',
+        sections: [
+          {
+            id: 'drinks',
+            name: 'Beverages',
+            selectionMode: 'MULTIPLE',
+            required: false,
+            maxQuantity: 1,
+            items: drinks
+          },
+          {
+            id: 'desserts',
+            name: 'Dessert',
+            selectionMode: 'MULTIPLE',
+            required: false,
+            maxQuantity: 1,
+            items: desserts
+          }
+        ]
+      }
+    ]
+  };
+});
+
+app.post("/menu", async (req, reply) => {
+  const {
+    name,
+    category,
+    categoryType,
+    selectionMode,
+    displayOrder,
+    description,
+    basePriceCents,
+    additionalPriceCents,
+    includedQuantity,
+    sliderConfig,
+    tenantId
+  } = req.body || {};
+
+  if (!name || basePriceCents === undefined || !tenantId) {
     return reply
       .code(400)
-      .send({ error: "name, priceCents, and tenantId required" });
+      .send({ error: "name, basePriceCents, and tenantId required" });
   }
 
   const item = await prisma.menuItem.create({
-    data: { name, priceCents, tenantId },
+    data: {
+      name,
+      category: category || null,
+      categoryType: categoryType || null,
+      selectionMode: selectionMode || 'MULTIPLE',
+      displayOrder: displayOrder || 0,
+      description: description || null,
+      basePriceCents,
+      additionalPriceCents: additionalPriceCents || 0,
+      includedQuantity: includedQuantity || 0,
+      sliderConfig: sliderConfig || null,
+      tenantId
+    },
   });
 
   return item;
@@ -145,11 +478,26 @@ app.post("/menu", async (req, reply) => {
 
 app.patch("/menu/:id", async (req, reply) => {
   const { id } = req.params;
-  const { name, priceCents } = req.body || {};
+  const {
+    name,
+    category,
+    description,
+    basePriceCents,
+    additionalPriceCents,
+    includedQuantity,
+    priceCents // legacy support
+  } = req.body || {};
 
   const data = {};
-  if (name) data.name = name;
-  if (priceCents !== undefined) data.priceCents = priceCents;
+  if (name !== undefined) data.name = name;
+  if (category !== undefined) data.category = category;
+  if (description !== undefined) data.description = description;
+  if (additionalPriceCents !== undefined) data.additionalPriceCents = additionalPriceCents;
+  if (includedQuantity !== undefined) data.includedQuantity = includedQuantity;
+
+  // Support both priceCents (legacy) and basePriceCents (new schema)
+  if (basePriceCents !== undefined) data.basePriceCents = basePriceCents;
+  else if (priceCents !== undefined) data.basePriceCents = priceCents;
 
   if (!Object.keys(data).length) {
     return reply.code(400).send({ error: "At least one field required" });
@@ -165,8 +513,15 @@ app.patch("/menu/:id", async (req, reply) => {
 
 app.delete("/menu/:id", async (req, reply) => {
   const { id } = req.params;
-  await prisma.menuItem.delete({ where: { id } });
-  return { success: true };
+  try {
+    await prisma.menuItem.delete({ where: { id } });
+    return { success: true };
+  } catch (error) {
+    if (error.code === 'P2003') {
+      return reply.code(400).send({ error: "Cannot delete menu item with associated order items" });
+    }
+    throw error;
+  }
 });
 
 // ====================
