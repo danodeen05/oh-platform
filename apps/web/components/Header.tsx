@@ -83,6 +83,7 @@ export default function Header() {
           }}
           className="desktop-nav"
         >
+          {/* Temporarily commented out - pages not yet created
           <Link
             href="/menu"
             style={{
@@ -158,6 +159,7 @@ export default function Header() {
           >
             Loyalty Program
           </Link>
+          */}
         </div>
 
         {/* User Button */}
@@ -190,6 +192,7 @@ export default function Header() {
               gap: "20px",
             }}
           >
+            {/* Temporarily commented out - pages not yet created
             <Link
               href="/menu"
               onClick={() => setMobileMenuOpen(false)}
@@ -264,6 +267,7 @@ export default function Header() {
             >
               Loyalty Program
             </Link>
+            */}
           </div>
         </div>
       )}

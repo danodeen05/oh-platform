@@ -297,6 +297,7 @@ export default function Footer() {
             marginBottom: "32px",
           }}
         >
+          {/* Temporarily commented out - pages not yet created
           <Link
             href="/accessibility"
             style={{
@@ -366,6 +367,7 @@ export default function Footer() {
           >
             Privacy Policy
           </Link>
+          */}
         </div>
 
         {/* Copyright */}
