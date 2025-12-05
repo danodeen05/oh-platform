@@ -218,7 +218,7 @@ export default function ReferralDashboard() {
                 <div
                   style={{
                     fontWeight: "bold",
-                    color: event.amountCents > 0 ? "#22c55e" : "#ef4444",
+                    color: event.amountCents > 0 ? "#7C7A67" : "#222222",
                   }}
                 >
                   {event.amountCents > 0 ? "+" : ""}$

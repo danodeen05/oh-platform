@@ -521,10 +521,10 @@ export default function EnhancedMenuBuilder({
       })}
 
       {/* Navigation */}
-      <div style={{ position: "sticky", bottom: 0, background: "white", border: "1px solid rgba(124, 122, 103, 0.2)", borderRadius: "16px", padding: "24px", marginTop: 32, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
-          <strong style={{ fontSize: "1.1rem" }}>Total:</strong>
-          <strong style={{ fontSize: "1.1rem", color: "#7C7A67" }}>
+      <div style={{ position: "sticky", bottom: 0, background: "white", border: "1px solid rgba(124, 122, 103, 0.2)", borderRadius: "16px", padding: "24px 32px", marginTop: 32, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <strong style={{ fontSize: "1.1rem", color: "#222222" }}>Total:</strong>
+          <strong style={{ fontSize: "1.8rem", color: "#7C7A67", paddingRight: "8px" }}>
             ${(totalCents / 100).toFixed(2)}
           </strong>
         </div>
@@ -537,8 +537,8 @@ export default function EnhancedMenuBuilder({
                 flex: 1,
                 padding: 16,
                 background: "white",
-                color: "#667eea",
-                border: "2px solid #667eea",
+                color: "#7C7A67",
+                border: "2px solid #7C7A67",
                 borderRadius: 12,
                 fontSize: "1.1rem",
                 fontWeight: "bold",
@@ -554,7 +554,7 @@ export default function EnhancedMenuBuilder({
             style={{
               flex: 2,
               padding: 16,
-              background: isStepComplete(currentStep) ? "#667eea" : "#d1d5db",
+              background: isStepComplete(currentStep) ? "#7C7A67" : "#d1d5db",
               color: "white",
               border: "none",
               borderRadius: 12,

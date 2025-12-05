@@ -110,9 +110,9 @@ export default function MemberDashboard() {
 
   function getTierColor(tier: string) {
     const colors = {
-      CHOPSTICK: "#f59e0b",
-      NOODLE_MASTER: "#8b5cf6",
-      BEEF_BOSS: "#ef4444",
+      CHOPSTICK: "#C7A878", // Natural Tan
+      NOODLE_MASTER: "#7C7A67", // Subtle Olive
+      BEEF_BOSS: "#222222", // Soft Black
     };
     return colors[tier as keyof typeof colors] || "#7C7A67";
   }
