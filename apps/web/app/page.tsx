@@ -5,7 +5,7 @@ import Link from "next/link";
 
 export default function HomePage() {
   return (
-    <div style={{ background: "#ffffff" }}>
+    <div style={{ background: "#E5E5E5" }}>
       {/* Hero Section */}
       <section
         style={{
@@ -17,30 +17,27 @@ export default function HomePage() {
           padding: "40px 24px",
           textAlign: "center",
           position: "relative",
+          background: "linear-gradient(135deg, #E5E5E5 0%, #f5f5f5 100%)",
         }}
       >
-        {/* Logo Animation */}
+        {/* Logo */}
         <div
           style={{
-            width: "clamp(400px, 60vw, 600px)",
-            marginBottom: "32px",
+            width: "clamp(200px, 40vw, 400px)",
+            marginBottom: "48px",
             opacity: 0,
             animation: "fadeInUp 1.2s ease forwards",
           }}
         >
-          <video
-            autoPlay
-            loop
-            muted
-            playsInline
+          <img
+            src="/Oh_Logo_Mark_Web.png"
+            alt="Oh! Beef Noodle Soup"
             style={{
               width: "100%",
               height: "auto",
               display: "block",
             }}
-          >
-            <source src="/Additional Files/4K.mp4" type="video/mp4" />
-          </video>
+          />
         </div>
 
         <h1
@@ -48,7 +45,7 @@ export default function HomePage() {
             fontSize: "clamp(2.5rem, 8vw, 5rem)",
             fontWeight: "300",
             marginBottom: "24px",
-            color: "#2a2a2a",
+            color: "#222222",
             letterSpacing: "2px",
             opacity: 0,
             animation: "fadeInUp 1.2s ease 0.2s forwards",
@@ -63,7 +60,7 @@ export default function HomePage() {
             marginBottom: "56px",
             maxWidth: "700px",
             lineHeight: "1.8",
-            color: "#666",
+            color: "#7C7A67",
             fontWeight: "300",
             opacity: 0,
             animation: "fadeInUp 1.2s ease 0.5s forwards",
@@ -86,20 +83,20 @@ export default function HomePage() {
                   padding: "18px 56px",
                   fontSize: "1.1rem",
                   fontWeight: "400",
-                  background: "#2a2a2a",
+                  background: "#7C7A67",
                   color: "#ffffff",
-                  borderRadius: "4px",
+                  borderRadius: "8px",
                   border: "none",
                   cursor: "pointer",
                   transition: "all 0.4s ease",
                   letterSpacing: "1px",
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "#1a1a1a";
+                  e.currentTarget.style.background = "#C7A878";
                   e.currentTarget.style.transform = "translateY(-2px)";
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "#2a2a2a";
+                  e.currentTarget.style.background = "#7C7A67";
                   e.currentTarget.style.transform = "translateY(0)";
                 }}
               >
@@ -115,20 +112,20 @@ export default function HomePage() {
                 padding: "18px 56px",
                 fontSize: "1.1rem",
                 fontWeight: "400",
-                background: "#2a2a2a",
+                background: "#7C7A67",
                 color: "#ffffff",
-                borderRadius: "4px",
+                borderRadius: "8px",
                 textDecoration: "none",
                 transition: "all 0.4s ease",
                 display: "inline-block",
                 letterSpacing: "1px",
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = "#1a1a1a";
+                e.currentTarget.style.background = "#C7A878";
                 e.currentTarget.style.transform = "translateY(-2px)";
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = "#2a2a2a";
+                e.currentTarget.style.background = "#7C7A67";
                 e.currentTarget.style.transform = "translateY(0)";
               }}
             >
@@ -142,7 +139,7 @@ export default function HomePage() {
       <section
         style={{
           padding: "120px 24px",
-          background: "#f9f9f9",
+          background: "white",
         }}
       >
         <div
@@ -181,7 +178,7 @@ export default function HomePage() {
                 fontSize: "1.3rem",
                 fontWeight: "400",
                 marginBottom: "16px",
-                color: "#2a2a2a",
+                color: "#222222",
                 letterSpacing: "1px",
               }}
             >
@@ -190,7 +187,7 @@ export default function HomePage() {
             <p
               style={{
                 fontSize: "1rem",
-                color: "#666",
+                color: "#7C7A67",
                 lineHeight: "1.6",
                 fontWeight: "300",
               }}
@@ -226,7 +223,7 @@ export default function HomePage() {
                 fontSize: "1.3rem",
                 fontWeight: "400",
                 marginBottom: "16px",
-                color: "#2a2a2a",
+                color: "#222222",
                 letterSpacing: "1px",
               }}
             >
@@ -235,7 +232,7 @@ export default function HomePage() {
             <p
               style={{
                 fontSize: "1rem",
-                color: "#666",
+                color: "#7C7A67",
                 lineHeight: "1.6",
                 fontWeight: "300",
               }}
@@ -271,7 +268,7 @@ export default function HomePage() {
                 fontSize: "1.3rem",
                 fontWeight: "400",
                 marginBottom: "16px",
-                color: "#2a2a2a",
+                color: "#222222",
                 letterSpacing: "1px",
               }}
             >
@@ -280,7 +277,7 @@ export default function HomePage() {
             <p
               style={{
                 fontSize: "1rem",
-                color: "#666",
+                color: "#7C7A67",
                 lineHeight: "1.6",
                 fontWeight: "300",
               }}

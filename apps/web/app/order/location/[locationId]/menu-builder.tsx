@@ -86,13 +86,28 @@ export default function MenuBuilder({
     return item.basePriceCents + item.additionalPriceCents * (quantity - 1);
   }
 
-  // Separate menu into bases and add-ons
-  const bases = menu.filter(
-    (item) => item.name.includes("Noodles") || item.name.includes("Soup")
-  );
-  const addons = menu.filter(
-    (item) => !item.name.includes("Noodles") && !item.name.includes("Soup")
-  );
+  // Separate menu by category
+  const bases = menu.filter((item) => item.category === "base");
+  const proteins = menu.filter((item) => item.category === "protein");
+  const vegetables = menu.filter((item) => item.category === "vegetables");
+  const toppings = menu.filter((item) => item.category === "toppings");
+  const extras = menu.filter((item) => item.category === "extras");
+
+  // Select base (radio button behavior - only one base allowed)
+  function selectBase(itemId: string) {
+    setCart((prev) => {
+      // Remove all other bases from cart
+      const newCart = { ...prev };
+      bases.forEach((base) => {
+        if (base.id !== itemId) {
+          delete newCart[base.id];
+        }
+      });
+      // Set the selected base to quantity 1
+      newCart[itemId] = 1;
+      return newCart;
+    });
+  }
 
   function updateQuantity(itemId: string, delta: number) {
     setCart((prev) => {
@@ -103,6 +118,17 @@ export default function MenuBuilder({
         return rest;
       }
       return { ...prev, [itemId]: newQty };
+    });
+  }
+
+  // Set quantity directly (for slider)
+  function setQuantity(itemId: string, quantity: number) {
+    setCart((prev) => {
+      if (quantity === 0) {
+        const { [itemId]: _, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [itemId]: quantity };
     });
   }
 
@@ -225,8 +251,8 @@ export default function MenuBuilder({
               marginBottom: 24,
               padding: "8px 16px",
               background: "transparent",
-              border: "1px solid #667eea",
-              color: "#667eea",
+              border: "1px solid #7C7A67",
+              color: "#7C7A67",
               borderRadius: 8,
               cursor: "pointer",
             }}
@@ -253,7 +279,7 @@ export default function MenuBuilder({
                 key={option.value}
                 onClick={() => setArrivalTime(option.value)}
                 style={{
-                  border: `2px solid ${isSelected ? "#667eea" : "#e5e7eb"}`,
+                  border: `2px solid ${isSelected ? "#7C7A67" : "#e5e7eb"}`,
                   borderRadius: 12,
                   padding: 20,
                   background: isSelected ? "#f0f4ff" : "white",
@@ -289,7 +315,7 @@ export default function MenuBuilder({
                         width: 24,
                         height: 24,
                         borderRadius: "50%",
-                        background: "#667eea",
+                        background: "#7C7A67",
                         color: "white",
                         display: "flex",
                         alignItems: "center",
@@ -354,7 +380,7 @@ export default function MenuBuilder({
             }}
           >
             <span>Total:</span>
-            <span style={{ color: "#667eea" }}>
+            <span style={{ color: "#7C7A67" }}>
               ${(totalCents / 100).toFixed(2)}
             </span>
           </div>
@@ -366,7 +392,7 @@ export default function MenuBuilder({
           style={{
             width: "100%",
             padding: 16,
-            background: arrivalTime ? "#667eea" : "#d1d5db",
+            background: arrivalTime ? "#7C7A67" : "#d1d5db",
             color: "white",
             border: "none",
             borderRadius: 12,
@@ -382,118 +408,123 @@ export default function MenuBuilder({
     );
   }
 
-  // Menu step (existing code)
-  return (
-    <div>
-      {/* Base Dishes Section */}
+  // Render helper for category sections with different controls
+  function renderCategorySection(
+    title: string,
+    items: MenuItem[],
+    controlType: "radio" | "counter" | "slider"
+  ) {
+    if (items.length === 0) return null;
+
+    return (
       <section style={{ marginBottom: 48 }}>
-        <h2 style={{ marginBottom: 16 }}>Choose Your Base</h2>
-        <div style={{ display: "grid", gap: 16 }}>
-          {bases.map((item) => {
+        <h2 style={{ marginBottom: 16 }}>{title}</h2>
+        <div style={{ display: "grid", gap: controlType === "radio" ? 16 : 12 }}>
+          {items.map((item) => {
             const qty = cart[item.id] || 0;
             const isSelected = qty > 0;
-            return (
-              <div
-                key={item.id}
-                style={{
-                  border: `2px solid ${isSelected ? "#667eea" : "#e5e7eb"}`,
-                  borderRadius: 12,
-                  padding: 20,
-                  background: isSelected ? "#f0f4ff" : "white",
-                  transition: "all 0.2s",
-                }}
-              >
-                <div
+
+            // Radio button for base selection
+            if (controlType === "radio") {
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => selectBase(item.id)}
                   style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
+                    border: `2px solid ${isSelected ? "#7C7A67" : "#e5e7eb"}`,
+                    borderRadius: 12,
+                    padding: 20,
+                    background: isSelected ? "#f0f4ff" : "white",
+                    cursor: "pointer",
+                    textAlign: "left",
+                    transition: "all 0.2s",
                   }}
                 >
-                  <div>
-                    <h3 style={{ margin: 0, marginBottom: 4 }}>{item.name}</h3>
-                    <p
-                      style={{
-                        color: "#667eea",
-                        fontWeight: "bold",
-                        margin: 0,
-                      }}
-                    >
-                      {item.includedQuantity > 0 ? (
-                        <>
-                          Included (1st) • ${(item.additionalPriceCents / 100).toFixed(2)} each extra
-                        </>
-                      ) : (
-                        <>
-                          ${(item.basePriceCents / 100).toFixed(2)}
-                          {item.additionalPriceCents > 0 && (
-                            <> • +${(item.additionalPriceCents / 100).toFixed(2)} each extra</>
-                          )}
-                        </>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <h3 style={{ margin: 0, marginBottom: 4 }}>{item.name}</h3>
+                      {item.description && (
+                        <p style={{ color: "#666", fontSize: "0.9rem", margin: "4px 0" }}>
+                          {item.description}
+                        </p>
                       )}
-                    </p>
-                  </div>
-
-                  <div
-                    style={{ display: "flex", gap: 8, alignItems: "center" }}
-                  >
-                    {qty > 0 && (
-                      <>
-                        <button
-                          onClick={() => updateQuantity(item.id, -1)}
-                          style={{
-                            width: 36,
-                            height: 36,
-                            borderRadius: "50%",
-                            border: "2px solid #667eea",
-                            background: "white",
-                            color: "#667eea",
-                            fontSize: "1.2rem",
-                            cursor: "pointer",
-                          }}
-                        >
-                          −
-                        </button>
-                        <span
-                          style={{
-                            minWidth: 24,
-                            textAlign: "center",
-                            fontWeight: "bold",
-                          }}
-                        >
-                          {qty}
-                        </span>
-                      </>
-                    )}
-                    <button
-                      onClick={() => updateQuantity(item.id, 1)}
-                      style={{
-                        width: 36,
-                        height: 36,
+                      <p style={{ color: "#7C7A67", fontWeight: "bold", margin: 0 }}>
+                        ${(item.basePriceCents / 100).toFixed(2)}
+                      </p>
+                    </div>
+                    {isSelected && (
+                      <div style={{
+                        width: 28,
+                        height: 28,
                         borderRadius: "50%",
-                        border: "none",
-                        background: "#667eea",
+                        background: "#7C7A67",
                         color: "white",
-                        fontSize: "1.2rem",
-                        cursor: "pointer",
-                      }}
-                    >
-                      +
-                    </button>
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center"
+                      }}>
+                        ✓
+                      </div>
+                    )}
+                  </div>
+                </button>
+              );
+            }
+
+            // Slider for vegetables (especially useful for included quantities)
+            if (controlType === "slider") {
+              const maxQty = 5;
+              return (
+                <div
+                  key={item.id}
+                  style={{
+                    border: "1px solid #e5e7eb",
+                    borderRadius: 8,
+                    padding: 16,
+                    background: qty > 0 ? "#f9fafb" : "white",
+                  }}
+                >
+                  <div style={{ marginBottom: 12 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                      <strong>{item.name}</strong>
+                      <span style={{ fontWeight: "bold", color: "#7C7A67" }}>
+                        {qty > 0 ? `${qty}x` : "—"}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: "0.85rem", color: "#666" }}>
+                      {item.includedQuantity > 0 ? (
+                        <span style={{ color: "#22c55e" }}>
+                          {item.includedQuantity} included • +${(item.additionalPriceCents / 100).toFixed(2)} each extra
+                        </span>
+                      ) : (
+                        <span>+${(item.basePriceCents / 100).toFixed(2)} each</span>
+                      )}
+                    </div>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max={maxQty}
+                    value={qty}
+                    onChange={(e) => setQuantity(item.id, parseInt(e.target.value))}
+                    style={{
+                      width: "100%",
+                      height: 6,
+                      borderRadius: 3,
+                      background: `linear-gradient(to right, #7C7A67 0%, #7C7A67 ${(qty / maxQty) * 100}%, #e5e7eb ${(qty / maxQty) * 100}%, #e5e7eb 100%)`,
+                      outline: "none",
+                      cursor: "pointer",
+                    }}
+                  />
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "#999", marginTop: 4 }}>
+                    <span>0</span>
+                    <span>{maxQty}</span>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
+              );
+            }
 
-      {/* Add-ons Section */}
-      <section style={{ marginBottom: 48 }}>
-        <h2 style={{ marginBottom: 16 }}>Premium Add-ons</h2>
-        <div style={{ display: "grid", gap: 12 }}>
-          {addons.map((item) => {
-            const qty = cart[item.id] || 0;
+            // Counter for proteins and other add-ons
             return (
               <div
                 key={item.id}
@@ -509,24 +540,10 @@ export default function MenuBuilder({
               >
                 <div>
                   <strong>{item.name}</strong>
-                  <span
-                    style={{ color: "#666", marginLeft: 8, fontSize: "0.9rem" }}
-                  >
-                    {item.includedQuantity > 0 ? (
-                      <>
-                        Included (1st) • +${(item.additionalPriceCents / 100).toFixed(2)} each extra
-                      </>
-                    ) : (
-                      <>
-                        +${(item.basePriceCents / 100).toFixed(2)}
-                        {item.additionalPriceCents > 0 && (
-                          <> • +${(item.additionalPriceCents / 100).toFixed(2)} each extra</>
-                        )}
-                      </>
-                    )}
+                  <span style={{ color: "#666", marginLeft: 8, fontSize: "0.9rem" }}>
+                    +${(item.basePriceCents / 100).toFixed(2)}
                   </span>
                 </div>
-
                 <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                   {qty > 0 && (
                     <>
@@ -543,9 +560,7 @@ export default function MenuBuilder({
                       >
                         −
                       </button>
-                      <span style={{ minWidth: 20, textAlign: "center" }}>
-                        {qty}
-                      </span>
+                      <span style={{ minWidth: 20, textAlign: "center" }}>{qty}</span>
                     </>
                   )}
                   <button
@@ -555,7 +570,7 @@ export default function MenuBuilder({
                       height: 32,
                       borderRadius: "50%",
                       border: "none",
-                      background: "#667eea",
+                      background: "#7C7A67",
                       color: "white",
                       cursor: "pointer",
                     }}
@@ -568,6 +583,17 @@ export default function MenuBuilder({
           })}
         </div>
       </section>
+    );
+  }
+
+  // Menu step with category-based organization
+  return (
+    <div>
+      {renderCategorySection("Step 1: Choose Your Base", bases, "radio")}
+      {renderCategorySection("Step 2: Add Protein", proteins, "counter")}
+      {renderCategorySection("Step 3: Add Vegetables", vegetables, "slider")}
+      {renderCategorySection("Toppings", toppings, "counter")}
+      {renderCategorySection("Extras", extras, "counter")}
 
       {/* Cart Summary - Sticky Bottom */}
       {Object.keys(cart).length > 0 && (
@@ -589,7 +615,7 @@ export default function MenuBuilder({
             }}
           >
             <strong style={{ fontSize: "1.1rem" }}>Total:</strong>
-            <strong style={{ fontSize: "1.1rem", color: "#667eea" }}>
+            <strong style={{ fontSize: "1.1rem", color: "#7C7A67" }}>
               ${(totalCents / 100).toFixed(2)}
             </strong>
           </div>
@@ -600,7 +626,7 @@ export default function MenuBuilder({
             style={{
               width: "100%",
               padding: 16,
-              background: hasBase ? "#667eea" : "#d1d5db",
+              background: hasBase ? "#7C7A67" : "#d1d5db",
               color: "white",
               border: "none",
               borderRadius: 12,

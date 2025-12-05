@@ -190,7 +190,7 @@ export default function OrdersPage() {
             <button
               onClick={() => router.push("/order")}
               style={{
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                background: "linear-gradient(135deg, #7C7A67 0%, #7C7A67 100%)",
                 color: "white",
                 border: "none",
                 borderRadius: 8,
@@ -291,7 +291,7 @@ export default function OrdersPage() {
                     onClick={() => handleReorder(order)}
                     disabled={reordering === order.id}
                     style={{
-                      background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                      background: "linear-gradient(135deg, #7C7A67 0%, #7C7A67 100%)",
                       color: "white",
                       border: "none",
                       borderRadius: 8,

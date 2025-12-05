@@ -24,7 +24,9 @@ export default function PaymentForm({
   const [userId, setUserId] = useState<string | null>(null);
   const [loadingCredits, setLoadingCredits] = useState(false);
   const [userInitialized, setUserInitialized] = useState(false);
+  const [applyCredits, setApplyCredits] = useState(true); // Allow user to choose whether to apply credits
   const initializingRef = useRef(false); // Prevent concurrent initialization calls
+  const MAX_CREDITS_PER_ORDER = 500; // $5.00 limit in cents
 
   useEffect(() => {
     // Check if there's a pending referral code
@@ -142,9 +144,9 @@ export default function PaymentForm({
     setError("");
 
     try {
-      // Apply credits to order if user has any
-      if (userCredits > 0) {
-        const creditsToApply = Math.min(userCredits, totalCents);
+      // Apply credits to order if user has any AND they chose to apply them
+      if (applyCredits && userCredits > 0) {
+        const creditsToApply = Math.min(userCredits, totalCents, MAX_CREDITS_PER_ORDER);
         await fetch(`${BASE}/orders/${orderId}/apply-credits`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -182,9 +184,9 @@ export default function PaymentForm({
   // Ensure totalCents is a valid number
   const validTotalCents =
     typeof totalCents === "number" && !isNaN(totalCents) ? totalCents : 0;
-  const creditsApplied = Math.min(userCredits, validTotalCents);
+  const creditsApplied = applyCredits ? Math.min(userCredits, validTotalCents, MAX_CREDITS_PER_ORDER) : 0;
   const discountedTotal = validTotalCents - creditsApplied;
-  const showCreditsBreakdown = creditsApplied > 0;
+  const showCreditsBreakdown = applyCredits && creditsApplied > 0;
 
   // Show sign-in prompt if not authenticated
   if (!isLoaded) {
@@ -200,8 +202,8 @@ export default function PaymentForm({
     return (
       <div
         style={{
-          background: "#f0f4ff",
-          border: "2px solid #667eea",
+          background: "rgba(124, 122, 103, 0.1)",
+          border: "2px solid #7C7A67",
           borderRadius: 12,
           padding: 32,
           textAlign: "center",
@@ -213,7 +215,7 @@ export default function PaymentForm({
           You'll need to sign in to track your order, earn rewards, and use
           referral credits.
           {hasReferral && (
-            <span style={{ color: "#22c55e", fontWeight: "bold", display: "block", marginTop: 8 }}>
+            <span style={{ color: "#7C7A67", fontWeight: "bold", display: "block", marginTop: 8 }}>
               🎉 You have a referral discount waiting!
             </span>
           )}
@@ -222,7 +224,7 @@ export default function PaymentForm({
           <button
             style={{
               padding: "16px 32px",
-              background: "#667eea",
+              background: "#7C7A67",
               color: "white",
               border: "none",
               borderRadius: 12,
@@ -245,8 +247,8 @@ export default function PaymentForm({
       {loadingCredits && (
         <div
           style={{
-            background: "#f0f4ff",
-            border: "1px solid #667eea",
+            background: "rgba(124, 122, 103, 0.1)",
+            border: "1px solid #7C7A67",
             borderRadius: 8,
             padding: 16,
             marginBottom: 24,
@@ -266,8 +268,8 @@ export default function PaymentForm({
           {hasReferral && userCredits > 0 && !referralNotApplied && (
             <div
               style={{
-                background: "#d1fae5",
-                border: "1px solid #22c55e",
+                background: "rgba(199, 168, 120, 0.2)",
+                border: "2px solid #C7A878",
                 borderRadius: 8,
                 padding: 16,
                 marginBottom: 24,
@@ -278,10 +280,10 @@ export default function PaymentForm({
             >
               <div style={{ fontSize: "1.5rem" }}>🎉</div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: "bold", color: "#065f46" }}>
+                <div style={{ fontWeight: "bold", color: "#222222" }}>
                   Welcome! You've been referred
                 </div>
-                <div style={{ fontSize: "0.85rem", color: "#047857" }}>
+                <div style={{ fontSize: "0.85rem", color: "#7C7A67" }}>
                   You got ${(userCredits / 100).toFixed(2)} in credits to use on
                   this order
                 </div>
@@ -319,25 +321,54 @@ export default function PaymentForm({
           {userCredits > 0 && !hasReferral && (
             <div
               style={{
-                background: "#f0f4ff",
-                border: "1px solid #667eea",
+                background: "rgba(124, 122, 103, 0.1)",
+                border: "1px solid #7C7A67",
                 borderRadius: 8,
                 padding: 16,
                 marginBottom: 24,
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
               }}
             >
-              <div style={{ fontSize: "1.5rem" }}>💰</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: "bold", color: "#4338ca" }}>
-                  Available Credits
-                </div>
-                <div style={{ fontSize: "0.85rem", color: "#6366f1" }}>
-                  You have ${(userCredits / 100).toFixed(2)} in credits
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                <div style={{ fontSize: "1.5rem" }}>💰</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: "bold", color: "#222222" }}>
+                    Available Credits
+                  </div>
+                  <div style={{ fontSize: "0.85rem", color: "#7C7A67" }}>
+                    You have ${(userCredits / 100).toFixed(2)} in credits
+                  </div>
+                  <div style={{ fontSize: "0.75rem", color: "#7C7A67", marginTop: 4 }}>
+                    You can apply up to $5 in credit to a single order
+                  </div>
                 </div>
               </div>
+
+              {/* Checkbox to apply credits */}
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  cursor: "pointer",
+                  padding: 8,
+                  background: "white",
+                  borderRadius: 6,
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={applyCredits}
+                  onChange={(e) => setApplyCredits(e.target.checked)}
+                  style={{
+                    width: 18,
+                    height: 18,
+                    cursor: "pointer",
+                  }}
+                />
+                <span style={{ fontSize: "0.9rem", color: "#222222" }}>
+                  Apply {Math.min(userCredits, MAX_CREDITS_PER_ORDER) === MAX_CREDITS_PER_ORDER ? '$5.00' : `$${(userCredits / 100).toFixed(2)}`} to this order
+                </span>
+              </label>
             </div>
           )}
 
@@ -367,7 +398,7 @@ export default function PaymentForm({
                   display: "flex",
                   justifyContent: "space-between",
                   marginBottom: 8,
-                  color: "#22c55e",
+                  color: "#7C7A67",
                   fontWeight: "bold",
                 }}
               >
@@ -396,10 +427,10 @@ export default function PaymentForm({
 
             <div
               style={{
-                border: "2px solid #667eea",
+                border: "2px solid #7C7A67",
                 borderRadius: 12,
                 padding: 20,
-                background: "#f0f4ff",
+                background: "rgba(124, 122, 103, 0.1)",
               }}
             >
               <div
@@ -468,7 +499,7 @@ export default function PaymentForm({
             style={{
               width: "100%",
               padding: 16,
-              background: processing || loadingCredits ? "#d1d5db" : "#22c55e",
+              background: processing || loadingCredits ? "#d1d5db" : "#7C7A67",
               color: "white",
               border: "none",
               borderRadius: 12,

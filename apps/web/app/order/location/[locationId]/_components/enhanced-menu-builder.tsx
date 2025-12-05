@@ -347,8 +347,8 @@ export default function EnhancedMenuBuilder({
               marginBottom: 24,
               padding: "8px 16px",
               background: "transparent",
-              border: "1px solid #667eea",
-              color: "#667eea",
+              border: "1px solid #7C7A67",
+              color: "#7C7A67",
               borderRadius: 8,
               cursor: "pointer",
             }}
@@ -373,7 +373,7 @@ export default function EnhancedMenuBuilder({
                 key={option.value}
                 onClick={() => setArrivalTime(option.value)}
                 style={{
-                  border: `2px solid ${isSelected ? "#667eea" : "#e5e7eb"}`,
+                  border: `2px solid ${isSelected ? "#7C7A67" : "#e5e7eb"}`,
                   borderRadius: 12,
                   padding: 20,
                   background: isSelected ? "#f0f4ff" : "white",
@@ -396,7 +396,7 @@ export default function EnhancedMenuBuilder({
                         width: 24,
                         height: 24,
                         borderRadius: "50%",
-                        background: "#667eea",
+                        background: "#7C7A67",
                         color: "white",
                         display: "flex",
                         alignItems: "center",
@@ -418,7 +418,7 @@ export default function EnhancedMenuBuilder({
           {/* TODO: Render order summary */}
           <div style={{ borderTop: "1px solid #e5e7eb", marginTop: 12, paddingTop: 12, display: "flex", justifyContent: "space-between", fontWeight: "bold", fontSize: "1.1rem" }}>
             <span>Total:</span>
-            <span style={{ color: "#667eea" }}>${(totalCents / 100).toFixed(2)}</span>
+            <span style={{ color: "#7C7A67" }}>${(totalCents / 100).toFixed(2)}</span>
           </div>
         </div>
 
@@ -428,7 +428,7 @@ export default function EnhancedMenuBuilder({
           style={{
             width: "100%",
             padding: 16,
-            background: arrivalTime ? "#667eea" : "#d1d5db",
+            background: arrivalTime ? "#7C7A67" : "#d1d5db",
             color: "white",
             border: "none",
             borderRadius: 12,
@@ -458,7 +458,7 @@ export default function EnhancedMenuBuilder({
                 flex: 1,
                 height: 4,
                 borderRadius: 2,
-                background: idx <= currentStepIndex ? "#667eea" : "#e5e7eb",
+                background: idx <= currentStepIndex ? "#7C7A67" : "#e5e7eb",
               }}
             />
           ))}
