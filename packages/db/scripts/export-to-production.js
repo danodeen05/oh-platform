@@ -64,13 +64,14 @@ async function exportToProduction() {
     // ==========================================
     console.log('\n📤 Importing data to production...\n');
 
-    // Import Tenants
+    // Import Tenants - track ID mapping for foreign keys
     console.log('Importing tenants...');
+    const tenantIdMap = {}; // Maps local tenant ID -> production tenant ID
+
     for (const tenant of tenants) {
-      await prodPrisma.tenant.upsert({
-        where: { id: tenant.id },
+      const result = await prodPrisma.tenant.upsert({
+        where: { slug: tenant.slug },
         update: {
-          slug: tenant.slug,
           brandName: tenant.brandName,
           logoUrl: tenant.logoUrl,
           primaryColor: tenant.primaryColor,
@@ -91,16 +92,18 @@ async function exportToProduction() {
           subscriptionTier: tenant.subscriptionTier,
         }
       });
-      console.log(`  ✓ ${tenant.brandName}`);
+      tenantIdMap[tenant.id] = result.id;
+      console.log(`  ✓ ${tenant.brandName} (${result.id === tenant.id ? 'same ID' : 'remapped ID'})`);
     }
 
     // Import Locations
     console.log('\nImporting locations...');
     for (const location of locations) {
+      const mappedTenantId = tenantIdMap[location.tenantId];
       await prodPrisma.location.upsert({
         where: { id: location.id },
         update: {
-          tenantId: location.tenantId,
+          tenantId: mappedTenantId,
           name: location.name,
           city: location.city,
           address: location.address,
@@ -109,7 +112,7 @@ async function exportToProduction() {
         },
         create: {
           id: location.id,
-          tenantId: location.tenantId,
+          tenantId: mappedTenantId,
           name: location.name,
           city: location.city,
           address: location.address,
@@ -123,10 +126,11 @@ async function exportToProduction() {
     // Import Menu Items
     console.log('\nImporting menu items...');
     for (const item of menuItems) {
+      const mappedTenantId = tenantIdMap[item.tenantId];
       await prodPrisma.menuItem.upsert({
         where: { id: item.id },
         update: {
-          tenantId: item.tenantId,
+          tenantId: mappedTenantId,
           name: item.name,
           basePriceCents: item.basePriceCents,
           additionalPriceCents: item.additionalPriceCents,
@@ -141,7 +145,7 @@ async function exportToProduction() {
         },
         create: {
           id: item.id,
-          tenantId: item.tenantId,
+          tenantId: mappedTenantId,
           name: item.name,
           basePriceCents: item.basePriceCents,
           additionalPriceCents: item.additionalPriceCents,
