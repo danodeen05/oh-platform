@@ -1,0 +1,176 @@
+/* Design System - Oh Beef Noodle Soup */
+:root {
+  /* Color Palette */
+  --color-soft-black: #222222;
+  --color-mist-gray: #E5E5E5;
+  --color-subtle-olive: #7C7A67;
+  --color-natural-tan: #C7A878;
+
+  /* Semantic Colors */
+  --color-primary: var(--color-soft-black);
+  --color-background: var(--color-mist-gray);
+  --color-accent: var(--color-subtle-olive);
+  --color-accent-warm: var(--color-natural-tan);
+  --color-text: var(--color-soft-black);
+  --color-text-light: #666666;
+  --color-border: rgba(124, 122, 103, 0.15);
+
+  /* Spacing */
+  --spacing-xs: 8px;
+  --spacing-sm: 16px;
+  --spacing-md: 24px;
+  --spacing-lg: 40px;
+  --spacing-xl: 64px;
+  --spacing-2xl: 96px;
+
+  /* Typography */
+  --font-primary: 'Raleway', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-heading: 'Noto Serif TC', serif;
+
+  /* Transitions */
+  --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-gentle: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-primary);
+  color: var(--color-text);
+  background: var(--color-background);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Utility Classes */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--spacing-md);
+}
+
+.section-padding {
+  padding: var(--spacing-xl) 0;
+}
+
+.fade-in {
+  animation: fadeIn var(--transition-gentle) ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Button Styles */
+button,
+.button {
+  font-family: var(--font-primary);
+  font-weight: 400;
+  letter-spacing: 0.5px;
+  transition: all var(--transition-smooth);
+  cursor: pointer;
+  border: none;
+  outline: none;
+}
+
+.button-primary {
+  background: var(--color-soft-black);
+  color: var(--color-mist-gray);
+  padding: 14px 32px;
+  border-radius: 2px;
+}
+
+.button-primary:hover {
+  background: var(--color-accent);
+  transform: translateY(-1px);
+}
+
+.button-secondary {
+  background: transparent;
+  color: var(--color-soft-black);
+  padding: 14px 32px;
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+}
+
+.button-secondary:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+/* Form Elements */
+input,
+textarea,
+select {
+  font-family: var(--font-primary);
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  padding: 12px 16px;
+  border-radius: 2px;
+  transition: all var(--transition-smooth);
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  background: rgba(255, 255, 255, 0.8);
+}
+
+/* Links */
+a {
+  color: var(--color-accent);
+  text-decoration: none;
+  transition: color var(--transition-smooth);
+}
+
+a:hover {
+  color: var(--color-accent-warm);
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 400;
+  letter-spacing: 0.5px;
+  margin-bottom: var(--spacing-sm);
+  color: var(--color-soft-black);
+}
+
+h1 {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-family: var(--font-heading);
+}
+
+h2 {
+  font-size: clamp(1.5rem, 4vw, 2.5rem);
+}
+
+h3 {
+  font-size: clamp(1.25rem, 3vw, 1.75rem);
+}
+
+p {
+  margin-bottom: var(--spacing-sm);
+  color: var(--color-text-light);
+}
+
+/* Subtle borders and dividers */
+.divider {
+  height: 1px;
+  background: var(--color-border);
+  margin: var(--spacing-lg) 0;
+}

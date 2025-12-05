@@ -1,6 +1,7 @@
 import { ClerkProvider } from "@clerk/nextjs";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import "./globals.css";
 
 export const metadata = {
   title: "Oh Beef Noodle Soup",
@@ -37,18 +38,7 @@ export default async function RootLayout({
             rel="stylesheet"
           />
         </head>
-        <body
-          style={{
-            margin: 0,
-            padding: 0,
-            background: "#ffffff",
-            color: "#2a2a2a",
-            fontFamily: '"Raleway", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-            minHeight: "100vh",
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
+        <body>
           <Header />
           <main style={{ flex: 1 }}>{children}</main>
           <Footer />
