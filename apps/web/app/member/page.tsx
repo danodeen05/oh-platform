@@ -5,7 +5,7 @@ export default function MemberPage() {
     <main
       style={{
         minHeight: "100vh",
-        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        background: "#E5E5E5",
         padding: 0,
       }}
     >
