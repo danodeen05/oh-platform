@@ -4,12 +4,18 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "prisma": "prisma"
+    "prisma": "prisma",
+    "seed:prod": "tsx scripts/export-to-production.js",
+    "seed:prod:preview": "tsx scripts/preview-export.js"
   },
   "dependencies": {
     "@prisma/client": "5.19.1"
   },
   "devDependencies": {
-    "prisma": "5.19.1"
+    "prisma": "5.19.1",
+    "tsx": "^4.19.2"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   }
 }
