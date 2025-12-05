@@ -228,21 +228,21 @@ export default function MemberDashboard() {
       {/* Header */}
       <div
         style={{
-          background: "rgba(0,0,0,0.2)",
+          background: "#222222",
           padding: "16px 24px",
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
         }}
       >
-        <h1 style={{ margin: 0, color: "white", fontSize: "1.3rem" }}>
+        <h1 style={{ margin: 0, color: "#E5E5E5", fontSize: "1.3rem" }}>
           My Membership
         </h1>
         <button
           onClick={() => router.push("/")}
           style={{
-            background: "rgba(255,255,255,0.2)",
-            color: "white",
+            background: "#7C7A67",
+            color: "#E5E5E5",
             border: "none",
             padding: "8px 16px",
             borderRadius: 8,
@@ -535,9 +535,9 @@ export default function MemberDashboard() {
                     alignItems: "center",
                     gap: 12,
                     padding: 12,
-                    background: earned ? "#f0fdf4" : "#f9fafb",
+                    background: earned ? "rgba(124, 122, 103, 0.1)" : "#f9fafb",
                     borderRadius: 12,
-                    border: earned ? "2px solid #22c55e" : "1px solid #e5e7eb",
+                    border: earned ? "2px solid #7C7A67" : "1px solid #e5e7eb",
                     opacity: earned ? 1 : 0.5,
                   }}
                 >
@@ -549,7 +549,7 @@ export default function MemberDashboard() {
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      background: earned ? "#dcfce7" : "#f3f4f6",
+                      background: earned ? "rgba(199, 168, 120, 0.2)" : "#f3f4f6",
                       borderRadius: 12,
                     }}
                   >
@@ -559,7 +559,7 @@ export default function MemberDashboard() {
                     <div style={{ fontWeight: "bold", marginBottom: 2 }}>
                       {badge.name}
                       {earned && (
-                        <span style={{ color: "#22c55e", marginLeft: 8 }}>
+                        <span style={{ color: "#7C7A67", marginLeft: 8 }}>
                           ✓
                         </span>
                       )}
