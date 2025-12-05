@@ -114,7 +114,7 @@ export default function MemberDashboard() {
       NOODLE_MASTER: "#8b5cf6",
       BEEF_BOSS: "#ef4444",
     };
-    return colors[tier as keyof typeof colors] || "#667eea";
+    return colors[tier as keyof typeof colors] || "#7C7A67";
   }
 
   function getTierName(tier: string) {
@@ -185,7 +185,7 @@ export default function MemberDashboard() {
             style={{
               width: "100%",
               padding: 14,
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              background: "#7C7A67",
               color: "white",
               border: "none",
               borderRadius: 8,

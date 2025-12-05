@@ -1,24 +1,17 @@
-import MenuBuilder from "./menu-builder";
+import EnhancedMenuBuilder from "./_components/enhanced-menu-builder";
 
-async function getLocationAndMenu(locationId: string) {
+async function getLocation(locationId: string) {
   const base = process.env.NEXT_PUBLIC_API_URL!;
 
-  const [locRes, menuRes] = await Promise.all([
-    fetch(`${base}/locations`, {
-      cache: "no-store",
-      headers: { "x-tenant-slug": "oh" },
-    }),
-    fetch(`${base}/menu`, {
-      cache: "no-store",
-      headers: { "x-tenant-slug": "oh" },
-    }),
-  ]);
+  const locRes = await fetch(`${base}/locations`, {
+    cache: "no-store",
+    headers: { "x-tenant-slug": "oh" },
+  });
 
   const locations = await locRes.json();
-  const menu = await menuRes.json();
   const location = locations.find((l: any) => l.id === locationId);
 
-  return { location, menu };
+  return { location };
 }
 
 export default async function LocationMenuPage({
@@ -30,7 +23,7 @@ export default async function LocationMenuPage({
 }) {
   const { locationId } = await params;
   const { reorderId } = await searchParams;
-  const { location, menu } = await getLocationAndMenu(locationId);
+  const { location } = await getLocation(locationId);
 
   if (!location) {
     return (
@@ -45,7 +38,7 @@ export default async function LocationMenuPage({
   return (
     <main style={{ padding: 24, maxWidth: 800, margin: "0 auto" }}>
       <div style={{ marginBottom: 32 }}>
-        <a href="/order" style={{ color: "#667eea", textDecoration: "none" }}>
+        <a href="/order" style={{ color: "#7C7A67", textDecoration: "none" }}>
           ← Back to locations
         </a>
       </div>
@@ -80,7 +73,7 @@ export default async function LocationMenuPage({
         )}
       </div>
 
-      <MenuBuilder location={location} menu={menu} reorderId={reorderId} />
+      <EnhancedMenuBuilder location={location} reorderId={reorderId} />
     </main>
   );
 }
