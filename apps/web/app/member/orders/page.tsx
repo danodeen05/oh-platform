@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "";
+const MAX_FAVORITES = 3;
 
 type MenuItem = {
   id: string;
@@ -42,6 +43,7 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<Order[]>([]);
   const [reordering, setReordering] = useState<string | null>(null);
+  const [favorites, setFavorites] = useState<string[]>([]);
 
   useEffect(() => {
     const userId = localStorage.getItem("userId");
@@ -49,6 +51,13 @@ export default function OrdersPage() {
       router.push("/member");
       return;
     }
+
+    // Load favorites from localStorage
+    const savedFavorites = localStorage.getItem(`favorites_${userId}`);
+    if (savedFavorites) {
+      setFavorites(JSON.parse(savedFavorites));
+    }
+
     loadOrders(userId);
   }, []);
 
@@ -62,6 +71,28 @@ export default function OrdersPage() {
       console.error("Failed to load orders:", error);
       setLoading(false);
     }
+  }
+
+  function toggleFavorite(orderId: string) {
+    const userId = localStorage.getItem("userId");
+    if (!userId) return;
+
+    let newFavorites: string[];
+
+    if (favorites.includes(orderId)) {
+      // Remove from favorites
+      newFavorites = favorites.filter(id => id !== orderId);
+    } else {
+      // Add to favorites (if under limit)
+      if (favorites.length >= MAX_FAVORITES) {
+        alert(`You can only have up to ${MAX_FAVORITES} favorite orders. Please remove one first.`);
+        return;
+      }
+      newFavorites = [...favorites, orderId];
+    }
+
+    setFavorites(newFavorites);
+    localStorage.setItem(`favorites_${userId}`, JSON.stringify(newFavorites));
   }
 
   async function handleReorder(order: Order) {
@@ -124,6 +155,217 @@ export default function OrdersPage() {
       hour: "2-digit",
       minute: "2-digit",
     });
+  }
+
+  // Separate orders into favorites and regular
+  const favoriteOrders = orders.filter(order => favorites.includes(order.id));
+  const regularOrders = orders.filter(order => !favorites.includes(order.id));
+
+  // Order card component to avoid duplication
+  function OrderCard({ order, isFavorite }: { order: Order; isFavorite: boolean }) {
+    return (
+      <div
+        style={{
+          background: "white",
+          borderRadius: 12,
+          padding: 20,
+          boxShadow: isFavorite
+            ? "0 2px 8px rgba(199, 168, 120, 0.3)"
+            : "0 1px 3px rgba(0,0,0,0.1)",
+          border: isFavorite ? "2px solid #C7A878" : "none",
+          position: "relative",
+        }}
+      >
+        {/* Favorite Button */}
+        <button
+          onClick={() => toggleFavorite(order.id)}
+          style={{
+            position: "absolute",
+            top: 12,
+            right: 12,
+            background: "transparent",
+            border: "none",
+            fontSize: "1.4rem",
+            cursor: "pointer",
+            padding: 4,
+            lineHeight: 1,
+            transition: "transform 0.2s ease",
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.2)"}
+          onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
+          title={isFavorite ? "Remove from favorites" : favorites.length >= MAX_FAVORITES ? `Maximum ${MAX_FAVORITES} favorites reached` : "Add to favorites"}
+        >
+          {isFavorite ? "⭐" : "☆"}
+        </button>
+
+        {/* Order Header */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "start",
+            marginBottom: 16,
+            paddingBottom: 16,
+            borderBottom: "1px solid #f3f4f6",
+            paddingRight: 36, // Make room for the star
+          }}
+        >
+          <div>
+            <div style={{ fontWeight: "bold", fontSize: "1.1rem", marginBottom: 4 }}>
+              Order #{order.orderNumber}
+            </div>
+            <div style={{ fontSize: "0.85rem", color: "#666", marginBottom: 4 }}>
+              {order.location.name}
+            </div>
+            <div style={{ fontSize: "0.85rem", color: "#666" }}>
+              {formatDate(order.createdAt)}
+            </div>
+          </div>
+          <div
+            style={{
+              background: getStatusColor(order.status) + "20",
+              color: getStatusColor(order.status),
+              padding: "6px 12px",
+              borderRadius: 6,
+              fontSize: "0.85rem",
+              fontWeight: "bold",
+            }}
+          >
+            {order.status}
+          </div>
+        </div>
+
+        {/* Order Items - grouped by category */}
+        {(() => {
+          const bowlItems = order.items.filter((item: OrderItem) => {
+            const cat = item.menuItem.category || "";
+            return cat.startsWith("main") || cat.startsWith("slider");
+          });
+          const extrasItems = order.items.filter((item: OrderItem) => {
+            const cat = item.menuItem.category || "";
+            return cat.startsWith("add-on") || cat.startsWith("side") || cat.startsWith("drink") || cat.startsWith("dessert");
+          });
+
+          return (
+            <>
+              {/* The Bowl - Step 1 & 2 items */}
+              {bowlItems.length > 0 && (
+                <div style={{ marginBottom: extrasItems.length > 0 ? 12 : 12 }}>
+                  <div style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#7C7A67", marginBottom: 6 }}>
+                    The Bowl
+                  </div>
+                  <div
+                    style={{
+                      background: "rgba(124, 122, 103, 0.08)",
+                      borderRadius: 8,
+                      padding: 10,
+                    }}
+                  >
+                    {bowlItems.map((item: OrderItem) => (
+                      <div
+                        key={item.id}
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          padding: "2px 0",
+                          fontSize: "0.85rem",
+                        }}
+                      >
+                        <span>
+                          {item.menuItem.name}
+                          <span style={{ color: "#666", marginLeft: 6 }}>
+                            ({item.selectedValue || `Qty: ${item.quantity}`})
+                          </span>
+                        </span>
+                        {item.priceCents > 0 && (
+                          <span style={{ color: "#666" }}>
+                            ${(item.priceCents / 100).toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Extras - Step 3 & 4 items */}
+              {extrasItems.length > 0 && (
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#7C7A67", marginBottom: 6 }}>
+                    Add-ons & Extras
+                  </div>
+                  <div
+                    style={{
+                      background: "rgba(199, 168, 120, 0.1)",
+                      borderRadius: 8,
+                      padding: 10,
+                    }}
+                  >
+                    {extrasItems.map((item: OrderItem) => (
+                      <div
+                        key={item.id}
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          padding: "2px 0",
+                          fontSize: "0.85rem",
+                        }}
+                      >
+                        <span>
+                          {item.menuItem.name}
+                          <span style={{ color: "#666", marginLeft: 6 }}>
+                            (Qty: {item.quantity})
+                          </span>
+                        </span>
+                        {item.priceCents > 0 && (
+                          <span style={{ color: "#666" }}>
+                            ${(item.priceCents / 100).toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          );
+        })()}
+
+        {/* Order Footer */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            paddingTop: 12,
+            borderTop: "1px solid #f3f4f6",
+          }}
+        >
+          <div style={{ fontWeight: "bold", fontSize: "1rem" }}>
+            Total: ${(order.totalCents / 100).toFixed(2)}
+          </div>
+          <button
+            onClick={() => handleReorder(order)}
+            disabled={reordering === order.id}
+            style={{
+              background: "linear-gradient(135deg, #7C7A67 0%, #7C7A67 100%)",
+              color: "white",
+              border: "none",
+              borderRadius: 8,
+              padding: "10px 20px",
+              fontSize: "0.9rem",
+              fontWeight: "bold",
+              cursor: reordering === order.id ? "not-allowed" : "pointer",
+              opacity: reordering === order.id ? 0.6 : 1,
+            }}
+          >
+            {reordering === order.id ? "Reordering..." : "Reorder"}
+          </button>
+        </div>
+      </div>
+    );
   }
 
   if (loading) {
@@ -207,185 +449,91 @@ export default function OrdersPage() {
             </button>
           </div>
         ) : (
-          <div style={{ display: "grid", gap: 16 }}>
-            {orders.map((order) => (
-              <div
-                key={order.id}
-                style={{
-                  background: "white",
-                  borderRadius: 12,
-                  padding: 20,
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-                }}
-              >
-                {/* Order Header */}
+          <>
+            {/* Favorites Section */}
+            {favoriteOrders.length > 0 && (
+              <div style={{ marginBottom: 32 }}>
                 <div
                   style={{
                     display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "start",
-                    marginBottom: 16,
-                    paddingBottom: 16,
-                    borderBottom: "1px solid #f3f4f6",
-                  }}
-                >
-                  <div>
-                    <div style={{ fontWeight: "bold", fontSize: "1.1rem", marginBottom: 4 }}>
-                      Order #{order.orderNumber}
-                    </div>
-                    <div style={{ fontSize: "0.85rem", color: "#666", marginBottom: 4 }}>
-                      {order.location.name}
-                    </div>
-                    <div style={{ fontSize: "0.85rem", color: "#666" }}>
-                      {formatDate(order.createdAt)}
-                    </div>
-                  </div>
-                  <div
-                    style={{
-                      background: getStatusColor(order.status) + "20",
-                      color: getStatusColor(order.status),
-                      padding: "6px 12px",
-                      borderRadius: 6,
-                      fontSize: "0.85rem",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    {order.status}
-                  </div>
-                </div>
-
-                {/* Order Items - grouped by category */}
-                {(() => {
-                  const bowlItems = order.items.filter((item: OrderItem) => {
-                    const cat = item.menuItem.category || "";
-                    return cat.startsWith("main") || cat.startsWith("slider");
-                  });
-                  const extrasItems = order.items.filter((item: OrderItem) => {
-                    const cat = item.menuItem.category || "";
-                    return cat.startsWith("add-on") || cat.startsWith("side") || cat.startsWith("drink") || cat.startsWith("dessert");
-                  });
-
-                  return (
-                    <>
-                      {/* The Bowl - Step 1 & 2 items */}
-                      {bowlItems.length > 0 && (
-                        <div style={{ marginBottom: extrasItems.length > 0 ? 12 : 12 }}>
-                          <div style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#7C7A67", marginBottom: 6 }}>
-                            The Bowl
-                          </div>
-                          <div
-                            style={{
-                              background: "rgba(124, 122, 103, 0.08)",
-                              borderRadius: 8,
-                              padding: 10,
-                            }}
-                          >
-                            {bowlItems.map((item: OrderItem) => (
-                              <div
-                                key={item.id}
-                                style={{
-                                  display: "flex",
-                                  justifyContent: "space-between",
-                                  alignItems: "center",
-                                  padding: "2px 0",
-                                  fontSize: "0.85rem",
-                                }}
-                              >
-                                <span>
-                                  {item.menuItem.name}
-                                  <span style={{ color: "#666", marginLeft: 6 }}>
-                                    ({item.selectedValue || `Qty: ${item.quantity}`})
-                                  </span>
-                                </span>
-                                {item.priceCents > 0 && (
-                                  <span style={{ color: "#666" }}>
-                                    ${(item.priceCents / 100).toFixed(2)}
-                                  </span>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Extras - Step 3 & 4 items */}
-                      {extrasItems.length > 0 && (
-                        <div style={{ marginBottom: 12 }}>
-                          <div style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#7C7A67", marginBottom: 6 }}>
-                            Add-ons & Extras
-                          </div>
-                          <div
-                            style={{
-                              background: "rgba(199, 168, 120, 0.1)",
-                              borderRadius: 8,
-                              padding: 10,
-                            }}
-                          >
-                            {extrasItems.map((item: OrderItem) => (
-                              <div
-                                key={item.id}
-                                style={{
-                                  display: "flex",
-                                  justifyContent: "space-between",
-                                  alignItems: "center",
-                                  padding: "2px 0",
-                                  fontSize: "0.85rem",
-                                }}
-                              >
-                                <span>
-                                  {item.menuItem.name}
-                                  <span style={{ color: "#666", marginLeft: 6 }}>
-                                    (Qty: {item.quantity})
-                                  </span>
-                                </span>
-                                {item.priceCents > 0 && (
-                                  <span style={{ color: "#666" }}>
-                                    ${(item.priceCents / 100).toFixed(2)}
-                                  </span>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  );
-                })()}
-
-                {/* Order Footer */}
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
                     alignItems: "center",
-                    paddingTop: 12,
-                    borderTop: "1px solid #f3f4f6",
+                    gap: 8,
+                    marginBottom: 16,
                   }}
                 >
-                  <div style={{ fontWeight: "bold", fontSize: "1rem" }}>
-                    Total: ${(order.totalCents / 100).toFixed(2)}
-                  </div>
-                  <button
-                    onClick={() => handleReorder(order)}
-                    disabled={reordering === order.id}
+                  <span style={{ fontSize: "1.3rem" }}>⭐</span>
+                  <h2 style={{ margin: 0, fontSize: "1.1rem", fontWeight: "600", color: "#222" }}>
+                    My Favorites
+                  </h2>
+                  <span
                     style={{
-                      background: "linear-gradient(135deg, #7C7A67 0%, #7C7A67 100%)",
+                      background: "#C7A878",
                       color: "white",
-                      border: "none",
-                      borderRadius: 8,
-                      padding: "10px 20px",
-                      fontSize: "0.9rem",
+                      fontSize: "0.75rem",
                       fontWeight: "bold",
-                      cursor: reordering === order.id ? "not-allowed" : "pointer",
-                      opacity: reordering === order.id ? 0.6 : 1,
+                      padding: "2px 8px",
+                      borderRadius: 10,
                     }}
                   >
-                    {reordering === order.id ? "Reordering..." : "Reorder"}
-                  </button>
+                    {favoriteOrders.length}/{MAX_FAVORITES}
+                  </span>
+                </div>
+                <div style={{ display: "grid", gap: 16 }}>
+                  {favoriteOrders.map((order) => (
+                    <OrderCard key={order.id} order={order} isFavorite={true} />
+                  ))}
                 </div>
               </div>
-            ))}
-          </div>
+            )}
+
+            {/* Order History Section */}
+            {regularOrders.length > 0 && (
+              <div>
+                {favoriteOrders.length > 0 && (
+                  <h2
+                    style={{
+                      margin: "0 0 16px 0",
+                      fontSize: "1.1rem",
+                      fontWeight: "600",
+                      color: "#222",
+                    }}
+                  >
+                    Order History
+                  </h2>
+                )}
+                <div style={{ display: "grid", gap: 16 }}>
+                  {regularOrders.map((order) => (
+                    <OrderCard key={order.id} order={order} isFavorite={false} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Tip about favorites */}
+            {favoriteOrders.length === 0 && (
+              <div
+                style={{
+                  background: "rgba(199, 168, 120, 0.1)",
+                  borderRadius: 8,
+                  padding: 16,
+                  marginTop: 16,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                }}
+              >
+                <span style={{ fontSize: "1.5rem" }}>💡</span>
+                <div>
+                  <div style={{ fontWeight: "600", fontSize: "0.9rem", color: "#222", marginBottom: 2 }}>
+                    Tip: Add favorites for quick reordering
+                  </div>
+                  <div style={{ fontSize: "0.85rem", color: "#666" }}>
+                    Click the ☆ on any order to save up to {MAX_FAVORITES} favorites
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

@@ -128,7 +128,16 @@ export default function Header() {
               alignItems: "center",
             }}
           >
-            <UserButton>
+            <UserButton
+              appearance={{
+                elements: {
+                  avatarBox: {
+                    width: "40px",
+                    height: "40px",
+                  },
+                },
+              }}
+            >
               <UserButton.MenuItems>
                 <UserButton.Link
                   label="My Oh! Account"

@@ -1,6 +1,7 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "";
 
@@ -38,12 +39,220 @@ type UserProfile = {
   badges: Array<{ badge: Badge; earnedAt: string }>;
 };
 
+type Order = {
+  id: string;
+  createdAt: string;
+};
+
+// Mini Calendar Component for Member Page - matches stats card width
+function OrderCalendar({ orders, tierColor }: { orders: Order[]; tierColor: string }) {
+  const [viewDate, setViewDate] = useState(new Date());
+  const today = new Date();
+
+  // Check if we're viewing current month (to disable forward nav)
+  const isCurrentMonth = viewDate.getMonth() === today.getMonth() &&
+                         viewDate.getFullYear() === today.getFullYear();
+
+  const goToPreviousMonth = () => {
+    setViewDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+  };
+
+  const goToNextMonth = () => {
+    if (!isCurrentMonth) {
+      setViewDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+    }
+  };
+
+  const orderDaysThisMonth = useMemo(() => {
+    const year = viewDate.getFullYear();
+    const month = viewDate.getMonth();
+    const days = new Set<number>();
+
+    orders.forEach(order => {
+      const orderDate = new Date(order.createdAt);
+      if (orderDate.getFullYear() === year && orderDate.getMonth() === month) {
+        days.add(orderDate.getDate());
+      }
+    });
+
+    return days;
+  }, [orders, viewDate]);
+
+  const calendarData = useMemo(() => {
+    const year = viewDate.getFullYear();
+    const month = viewDate.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDay = firstDay.getDay();
+
+    return { year, month, daysInMonth, startingDay };
+  }, [viewDate]);
+
+  const monthNames = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+  ];
+
+  const dayNames = ["S", "M", "T", "W", "T", "F", "S"];
+  const isToday = (day: number) =>
+    today.getDate() === day &&
+    today.getMonth() === calendarData.month &&
+    today.getFullYear() === calendarData.year;
+
+  const calendarDays: (number | null)[] = [];
+  for (let i = 0; i < calendarData.startingDay; i++) {
+    calendarDays.push(null);
+  }
+  for (let day = 1; day <= calendarData.daysInMonth; day++) {
+    calendarDays.push(day);
+  }
+
+  const orderCount = orderDaysThisMonth.size;
+
+  return (
+    <div
+      style={{
+        background: "white",
+        borderRadius: 12,
+        padding: 12,
+        textAlign: "center",
+      }}
+    >
+      {/* Month/Year with navigation arrows */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 2 }}>
+        <button
+          onClick={goToPreviousMonth}
+          style={{
+            background: "transparent",
+            border: "none",
+            fontSize: "1.8rem",
+            cursor: "pointer",
+            color: tierColor,
+            padding: "2px 6px",
+            lineHeight: 1,
+          }}
+        >
+          ‹
+        </button>
+        <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: tierColor }}>
+          {monthNames[calendarData.month]} {calendarData.year}
+        </div>
+        <button
+          onClick={goToNextMonth}
+          disabled={isCurrentMonth}
+          style={{
+            background: "transparent",
+            border: "none",
+            fontSize: "1.8rem",
+            cursor: isCurrentMonth ? "default" : "pointer",
+            color: isCurrentMonth ? "#ddd" : tierColor,
+            padding: "2px 6px",
+            lineHeight: 1,
+          }}
+        >
+          ›
+        </button>
+      </div>
+      <div style={{ fontSize: "1rem", color: "#666", marginBottom: 6 }}>
+        {orderCount} {orderCount === 1 ? "visit" : "visits"} this month
+      </div>
+
+      {/* Day Headers */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(7, 1fr)",
+          gap: 0,
+        }}
+      >
+        {dayNames.map((day, idx) => (
+          <div
+            key={idx}
+            style={{
+              textAlign: "center",
+              fontSize: "0.85rem",
+              fontWeight: "600",
+              color: "#888",
+              padding: "2px 0",
+            }}
+          >
+            {day}
+          </div>
+        ))}
+      </div>
+
+      {/* Calendar Grid - compact cells */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(7, 1fr)",
+          gap: 2,
+        }}
+      >
+        {calendarDays.map((day, index) => {
+          if (day === null) {
+            return <div key={`empty-${index}`} style={{ height: 24 }} />;
+          }
+
+          const hasOrder = orderDaysThisMonth.has(day);
+          const isTodayCell = isToday(day);
+
+          return (
+            <div
+              key={day}
+              style={{
+                height: 24,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: 4,
+                padding: 2,
+                background: hasOrder
+                  ? "linear-gradient(135deg, #C7A878 0%, #7C7A67 100%)"
+                  : isTodayCell
+                    ? "rgba(124, 122, 103, 0.15)"
+                    : "transparent",
+                border: isTodayCell && !hasOrder ? "1px solid #7C7A67" : "none",
+              }}
+            >
+              {hasOrder ? (
+                <Image
+                  src="/Oh_Logo_Mark_Web.png"
+                  alt="Order day"
+                  width={20}
+                  height={20}
+                  style={{
+                    objectFit: "contain",
+                    filter: "brightness(0) invert(1)",
+                  }}
+                />
+              ) : (
+                <span
+                  style={{
+                    fontSize: "0.8rem",
+                    fontWeight: isTodayCell ? "700" : "400",
+                    color: isTodayCell ? "#7C7A67" : "#888",
+                  }}
+                >
+                  {day}
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function MemberDashboard() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [userId, setUserId] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [allBadges, setAllBadges] = useState<Badge[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -51,6 +260,7 @@ export default function MemberDashboard() {
     if (savedUserId) {
       setUserId(savedUserId);
       loadProfile(savedUserId);
+      loadOrders(savedUserId);
     }
     loadAllBadges();
   }, []);
@@ -82,6 +292,16 @@ export default function MemberDashboard() {
       setAllBadges(data);
     } catch (error) {
       console.error("Failed to load badges:", error);
+    }
+  }
+
+  async function loadOrders(uid: string) {
+    try {
+      const response = await fetch(`${BASE}/users/${uid}/orders`);
+      const data = await response.json();
+      setOrders(data);
+    } catch (error) {
+      console.error("Failed to load orders:", error);
     }
   }
 
@@ -497,21 +717,8 @@ export default function MemberDashboard() {
             <div style={{ fontSize: "0.85rem", color: "#666" }}>Day Streak</div>
           </div>
 
-          <div
-            style={{
-              background: "white",
-              borderRadius: 12,
-              padding: 20,
-              textAlign: "center",
-            }}
-          >
-            <div
-              style={{ fontSize: "2rem", fontWeight: "bold", color: tierColor }}
-            >
-              {(profile.badges || []).length}
-            </div>
-            <div style={{ fontSize: "0.85rem", color: "#666" }}>Badges</div>
-          </div>
+          {/* Order Calendar - replaces Badges stat */}
+          <OrderCalendar orders={orders} tierColor={tierColor} />
         </div>
 
         {/* Badges */}
