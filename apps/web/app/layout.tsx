@@ -18,13 +18,20 @@ export const metadata = {
   },
 };
 
+// Customize Clerk text labels
+const clerkLocalization = {
+  userButton: {
+    action__manageAccount: "Manage Profile",
+  },
+};
+
 export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <ClerkProvider>
+    <ClerkProvider localization={clerkLocalization}>
       <html lang="en">
         <head>
           <link rel="preconnect" href="https://fonts.googleapis.com" />

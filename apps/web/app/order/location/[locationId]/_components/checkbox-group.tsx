@@ -14,6 +14,7 @@ type CheckboxGroupProps = {
   items: MenuItem[];
   quantities: Record<string, number>;
   onUpdateQuantity: (itemId: string, delta: number) => void;
+  maxQuantity?: number;
 };
 
 export function CheckboxGroup({
@@ -21,6 +22,7 @@ export function CheckboxGroup({
   items,
   quantities,
   onUpdateQuantity,
+  maxQuantity,
 }: CheckboxGroupProps) {
   if (items.length === 0) return null;
 
@@ -88,9 +90,7 @@ export function CheckboxGroup({
                       </span>
                     ) : (
                       <span style={{ color: "#7C7A67", fontWeight: "600" }}>
-                        +${(item.basePriceCents / 100).toFixed(2)}
-                        {item.additionalPriceCents > 0 &&
-                          `, +$${(item.additionalPriceCents / 100).toFixed(2)} each extra`}
+                        +${(item.basePriceCents / 100).toFixed(2)} each
                       </span>
                     )}
                   </div>
@@ -142,14 +142,15 @@ export function CheckboxGroup({
                   )}
                   <button
                     onClick={() => onUpdateQuantity(item.id, 1)}
+                    disabled={maxQuantity !== undefined && qty >= maxQuantity}
                     style={{
                       width: 36,
                       height: 36,
                       borderRadius: "50%",
                       border: "none",
-                      background: "#7C7A67",
+                      background: maxQuantity !== undefined && qty >= maxQuantity ? "#d1d5db" : "#7C7A67",
                       color: "white",
-                      cursor: "pointer",
+                      cursor: maxQuantity !== undefined && qty >= maxQuantity ? "not-allowed" : "pointer",
                       fontSize: "1.2rem",
                       display: "flex",
                       alignItems: "center",

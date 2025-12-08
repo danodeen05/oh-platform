@@ -155,12 +155,13 @@ function ConfirmationContent() {
             width: 80,
             height: 80,
             borderRadius: "50%",
-            background: isPaid ? "#d1fae5" : "#fef3c7",
+            background: isPaid ? "#7C7A67" : "#fef3c7",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             margin: "0 auto 24px",
             fontSize: "2.5rem",
+            color: isPaid ? "white" : "inherit",
           }}
         >
           {isPaid ? "✓" : "⏳"}
@@ -188,126 +189,6 @@ function ConfirmationContent() {
             ? "Payment processed successfully"
             : "Waiting for payment confirmation"}
         </p>
-
-        {/* Order Details */}
-        <div
-          style={{
-            background: "#f9fafb",
-            borderRadius: 12,
-            padding: 16,
-            marginBottom: 24,
-            textAlign: "left",
-          }}
-        >
-          {/* The Bowl - Step 1 & 2 items */}
-          {bowlItems.length > 0 && (
-            <div style={{ marginBottom: extrasItems.length > 0 ? 12 : 0 }}>
-              <div style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#7C7A67", marginBottom: 6 }}>
-                The Bowl
-              </div>
-              <div
-                style={{
-                  background: "rgba(124, 122, 103, 0.08)",
-                  borderRadius: 8,
-                  padding: 10,
-                }}
-              >
-                {bowlItems.map((item: any) => (
-                  <div
-                    key={item.id}
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      padding: "2px 0",
-                      fontSize: "0.85rem",
-                    }}
-                  >
-                    <span>
-                      {item.menuItem.name}
-                      <span style={{ color: "#666", marginLeft: 6 }}>
-                        ({item.selectedValue || `Qty: ${item.quantity}`})
-                      </span>
-                    </span>
-                    {item.priceCents > 0 && (
-                      <span style={{ color: "#666" }}>
-                        ${(item.priceCents / 100).toFixed(2)}
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Extras - Step 3 & 4 items */}
-          {extrasItems.length > 0 && (
-            <div>
-              <div style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#7C7A67", marginBottom: 6 }}>
-                Add-ons & Extras
-              </div>
-              <div
-                style={{
-                  background: "rgba(199, 168, 120, 0.1)",
-                  borderRadius: 8,
-                  padding: 10,
-                }}
-              >
-                {extrasItems.map((item: any) => (
-                  <div
-                    key={item.id}
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      padding: "2px 0",
-                      fontSize: "0.85rem",
-                    }}
-                  >
-                    <span>
-                      {item.menuItem.name}
-                      <span style={{ color: "#666", marginLeft: 6 }}>
-                        (Qty: {item.quantity})
-                      </span>
-                    </span>
-                    {item.priceCents > 0 && (
-                      <span style={{ color: "#666" }}>
-                        ${(item.priceCents / 100).toFixed(2)}
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              fontSize: "0.85rem",
-              marginTop: 8,
-            }}
-          >
-            <span style={{ color: "#666" }}>Order</span>
-            <span>#{orderNumber}</span>
-          </div>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              marginTop: 8,
-              paddingTop: 8,
-              borderTop: "1px solid #e5e7eb",
-              fontWeight: "bold",
-            }}
-          >
-            <span>Total</span>
-            <span style={{ color: "#22c55e" }}>
-              ${totalAmount}
-            </span>
-          </div>
-        </div>
 
         {/* Social Sharing Section */}
         <div
@@ -467,6 +348,126 @@ function ConfirmationContent() {
             💡 Your referral link is included! Friends get $5 off their first order.
             You earn $5 when they order $20+ (credited on the 1st or 16th).
           </p>
+        </div>
+
+        {/* Order Summary */}
+        <div
+          style={{
+            background: "#f9fafb",
+            borderRadius: 12,
+            padding: 16,
+            marginBottom: 24,
+            textAlign: "left",
+          }}
+        >
+          {/* The Bowl - Step 1 & 2 items */}
+          {bowlItems.length > 0 && (
+            <div style={{ marginBottom: extrasItems.length > 0 ? 12 : 0 }}>
+              <div style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#7C7A67", marginBottom: 6 }}>
+                The Bowl
+              </div>
+              <div
+                style={{
+                  background: "rgba(124, 122, 103, 0.08)",
+                  borderRadius: 8,
+                  padding: 10,
+                }}
+              >
+                {bowlItems.map((item: any) => (
+                  <div
+                    key={item.id}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: "2px 0",
+                      fontSize: "0.85rem",
+                    }}
+                  >
+                    <span>
+                      {item.menuItem.name}
+                      <span style={{ color: "#666", marginLeft: 6 }}>
+                        ({item.selectedValue || `Qty: ${item.quantity}`})
+                      </span>
+                    </span>
+                    {item.priceCents > 0 && (
+                      <span style={{ color: "#666" }}>
+                        ${(item.priceCents / 100).toFixed(2)}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Extras - Step 3 & 4 items */}
+          {extrasItems.length > 0 && (
+            <div>
+              <div style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#7C7A67", marginBottom: 6 }}>
+                Add-ons & Extras
+              </div>
+              <div
+                style={{
+                  background: "rgba(199, 168, 120, 0.1)",
+                  borderRadius: 8,
+                  padding: 10,
+                }}
+              >
+                {extrasItems.map((item: any) => (
+                  <div
+                    key={item.id}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: "2px 0",
+                      fontSize: "0.85rem",
+                    }}
+                  >
+                    <span>
+                      {item.menuItem.name}
+                      <span style={{ color: "#666", marginLeft: 6 }}>
+                        (Qty: {item.quantity})
+                      </span>
+                    </span>
+                    {item.priceCents > 0 && (
+                      <span style={{ color: "#666" }}>
+                        ${(item.priceCents / 100).toFixed(2)}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              fontSize: "0.85rem",
+              marginTop: 8,
+            }}
+          >
+            <span style={{ color: "#666" }}>Order</span>
+            <span>#{orderNumber}</span>
+          </div>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              marginTop: 8,
+              paddingTop: 8,
+              borderTop: "1px solid #e5e7eb",
+              fontWeight: "bold",
+            }}
+          >
+            <span>Total</span>
+            <span style={{ color: "#7C7A67" }}>
+              ${totalAmount}
+            </span>
+          </div>
         </div>
 
         {/* Action Buttons */}

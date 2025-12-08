@@ -30,6 +30,7 @@ type MenuSection = {
   items?: MenuItem[];
   sliderConfig?: any;
   item?: MenuItem;
+  maxQuantity?: number;
 };
 
 type MenuStep = {
@@ -321,7 +322,10 @@ export default function EnhancedMenuBuilder({
 
       // Add cart items (with selectedValue for sliders)
       Object.entries(cart).forEach(([itemId, qty]) => {
-        if (qty > 0) {
+        const isSliderItem = itemId in sliderLabels;
+        // For slider items: always include (even when qty/value is 0, e.g., "Light", "None")
+        // For non-slider items (checkboxes): only include if qty > 0
+        if (isSliderItem || qty > 0) {
           const selectedValue = sliderLabels[itemId]; // Will be undefined for non-slider items
           items.push({ menuItemId: itemId, quantity: qty, selectedValue });
         }
@@ -459,16 +463,6 @@ export default function EnhancedMenuBuilder({
           })}
         </div>
 
-        {/* Order Summary */}
-        <div style={{ background: "#f9fafb", padding: 24, borderRadius: 12, marginBottom: 24 }}>
-          <h3 style={{ margin: 0, marginBottom: 16 }}>Order Summary</h3>
-          {/* TODO: Render order summary */}
-          <div style={{ borderTop: "1px solid #e5e7eb", marginTop: 12, paddingTop: 12, display: "flex", justifyContent: "space-between", fontWeight: "bold", fontSize: "1.1rem" }}>
-            <span>Total:</span>
-            <span style={{ color: "#7C7A67" }}>${(totalCents / 100).toFixed(2)}</span>
-          </div>
-        </div>
-
         <button
           onClick={proceedToPayment}
           disabled={submitting || !arrivalTime}
@@ -484,7 +478,7 @@ export default function EnhancedMenuBuilder({
             cursor: arrivalTime && !submitting ? "pointer" : "not-allowed",
           }}
         >
-          {submitting ? "Processing..." : "Continue to Payment →"}
+          {submitting ? "Processing..." : "Review Order & Payment →"}
         </button>
       </div>
     );
@@ -564,6 +558,7 @@ export default function EnhancedMenuBuilder({
               items={section.items}
               quantities={cart}
               onUpdateQuantity={handleQuantityUpdate}
+              maxQuantity={section.maxQuantity}
             />
           );
         }
@@ -614,7 +609,7 @@ export default function EnhancedMenuBuilder({
               cursor: isStepComplete(currentStep) ? "pointer" : "not-allowed",
             }}
           >
-            {currentStepIndex === menuSteps.length - 1 ? "Review Order" : "Continue"} →
+            Continue →
           </button>
         </div>
       </div>
