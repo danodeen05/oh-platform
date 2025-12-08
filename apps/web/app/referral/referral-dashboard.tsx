@@ -7,6 +7,7 @@ export default function ReferralDashboard() {
   const [email, setEmail] = useState("");
   const [user, setUser] = useState<any>(null);
   const [credits, setCredits] = useState<any>(null);
+  const [pendingCredits, setPendingCredits] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
   async function createUser() {
@@ -25,6 +26,7 @@ export default function ReferralDashboard() {
     setUser(userData);
     localStorage.setItem("userId", userData.id);
     loadCredits(userData.id);
+    loadPendingCredits(userData.id);
     setLoading(false);
   }
 
@@ -32,6 +34,16 @@ export default function ReferralDashboard() {
     const response = await fetch(`${BASE}/users/${userId}/credits`);
     const data = await response.json();
     setCredits(data);
+  }
+
+  async function loadPendingCredits(userId: string) {
+    try {
+      const response = await fetch(`${BASE}/users/${userId}/pending-credits`);
+      const data = await response.json();
+      setPendingCredits(data);
+    } catch (err) {
+      console.error("Failed to load pending credits:", err);
+    }
   }
 
   useEffect(() => {
@@ -43,6 +55,8 @@ export default function ReferralDashboard() {
           setCredits(data);
           setUser({ id: savedUserId });
         });
+      // Also load pending credits
+      loadPendingCredits(savedUserId);
     }
   }, []);
 
@@ -112,13 +126,62 @@ export default function ReferralDashboard() {
         }}
       >
         <div style={{ fontSize: "0.9rem", opacity: 0.9, marginBottom: 8 }}>
-          Your Credits
+          Available Credits
         </div>
         <div style={{ fontSize: "3rem", fontWeight: "bold", marginBottom: 4 }}>
           ${((credits?.balance || 0) / 100).toFixed(2)}
         </div>
-        <div style={{ fontSize: "0.85rem", opacity: 0.8 }}>Use at checkout</div>
+        <div style={{ fontSize: "0.85rem", opacity: 0.8 }}>
+          Use up to $5 per order at checkout
+        </div>
       </div>
+
+      {/* Pending Credits */}
+      {pendingCredits && pendingCredits.totalPendingCents > 0 && (
+        <div
+          style={{
+            background: "rgba(199, 168, 120, 0.2)",
+            border: "2px solid #C7A878",
+            padding: 24,
+            borderRadius: 12,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+            <div style={{ fontSize: "1.5rem" }}>⏳</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: "bold", color: "#222", fontSize: "1.1rem" }}>
+                Pending Credits
+              </div>
+              <div style={{ fontSize: "0.85rem", color: "#666" }}>
+                Scheduled for disbursement
+              </div>
+            </div>
+            <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#7C7A67" }}>
+              ${(pendingCredits.totalPendingCents / 100).toFixed(2)}
+            </div>
+          </div>
+          {pendingCredits.nextDisbursement && (
+            <div
+              style={{
+                background: "white",
+                padding: 12,
+                borderRadius: 8,
+                fontSize: "0.85rem",
+                color: "#666",
+                textAlign: "center",
+              }}
+            >
+              Next disbursement: <strong style={{ color: "#222" }}>
+                {new Date(pendingCredits.nextDisbursement).toLocaleDateString("en-US", {
+                  month: "long",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </strong>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Referral Link */}
       <div
@@ -179,7 +242,7 @@ export default function ReferralDashboard() {
             marginTop: 12,
           }}
         >
-          Share this link to earn $5 for every friend who orders
+          Share this link to earn $5 for every friend who places an order of $20+
         </p>
       </div>
 

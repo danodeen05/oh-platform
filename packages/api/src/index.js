@@ -654,6 +654,8 @@ app.post("/orders", async (req, reply) => {
       menuItemId: item.menuItemId,
       quantity: item.quantity,
       priceCents: itemTotal,
+      // Store the display label for slider items (e.g., "Light", "Medium")
+      selectedValue: item.selectedValue || null,
     };
   });
 
@@ -779,7 +781,7 @@ app.patch("/orders/:id", async (req, reply) => {
     // Award badges
     await checkAndAwardBadges(user.id);
 
-    // If user was referred, grant credits to referrer
+    // If user was referred, queue credits for referrer (scheduled disbursement)
     if (user.referredById) {
       const paidOrderCount = await prisma.order.count({
         where: {
@@ -789,36 +791,62 @@ app.patch("/orders/:id", async (req, reply) => {
       });
 
       if (paidOrderCount === 1) {
-        // This is their first order - grant referrer credits
-        const referrer = await prisma.user.findUnique({
-          where: { id: user.referredById },
-        });
+        // This is their first order - check $20 minimum requirement
+        const MINIMUM_ORDER_FOR_REFERRAL = 2000; // $20.00 in cents
 
-        if (referrer) {
-          // Get referrer's tier benefits
-          const tierBenefits = getTierBenefits(referrer.membershipTier);
-          const referralBonus = tierBenefits.referralBonus;
-
-          await prisma.creditEvent.create({
-            data: {
-              userId: user.referredById,
-              type: "REFERRAL_ORDER",
-              amountCents: referralBonus,
-              orderId: order.id,
-              description: "Friend completed first order",
-            },
-          });
-
-          await prisma.user.update({
+        if (order.totalCents >= MINIMUM_ORDER_FOR_REFERRAL) {
+          // Order meets minimum - queue credits for referrer
+          const referrer = await prisma.user.findUnique({
             where: { id: user.referredById },
-            data: {
-              creditsCents: { increment: referralBonus },
-              tierProgressReferrals: { increment: 1 },
-            },
           });
 
-          // Check if referrer should be upgraded
-          await checkTierUpgrade(user.referredById);
+          if (referrer) {
+            // Get referrer's tier benefits
+            const tierBenefits = getTierBenefits(referrer.membershipTier);
+            const referralBonus = tierBenefits.referralBonus;
+
+            // Calculate next disbursement date (1st or 16th of month)
+            const scheduledFor = getNextDisbursementDate();
+
+            // Create pending credit instead of immediate credit
+            await prisma.pendingCredit.create({
+              data: {
+                userId: user.referredById,
+                type: "REFERRAL_ORDER",
+                amountCents: referralBonus,
+                sourceUserId: user.id,
+                sourceOrderId: order.id,
+                description: `Referral bonus - friend's first order (scheduled for ${scheduledFor.toLocaleDateString()})`,
+                scheduledFor,
+              },
+            });
+
+            // Create a credit event to track this (but don't add to balance yet)
+            await prisma.creditEvent.create({
+              data: {
+                userId: user.referredById,
+                type: "REFERRAL_ORDER_PENDING",
+                amountCents: referralBonus,
+                orderId: order.id,
+                description: `Referral bonus pending - scheduled for ${scheduledFor.toLocaleDateString()}`,
+              },
+            });
+
+            // Still increment referral progress for tier tracking
+            await prisma.user.update({
+              where: { id: user.referredById },
+              data: {
+                tierProgressReferrals: { increment: 1 },
+              },
+            });
+
+            // Check if referrer should be upgraded
+            await checkTierUpgrade(user.referredById);
+
+            console.log(`📅 Referral credit of $${referralBonus / 100} queued for ${referrer.email}, scheduled for ${scheduledFor.toLocaleDateString()}`);
+          }
+        } else {
+          console.log(`❌ Referral credit not awarded - order total $${order.totalCents / 100} below $20 minimum`);
         }
       }
     }
@@ -1012,7 +1040,9 @@ app.post("/orders/:id/apply-credits", async (req, reply) => {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) return reply.code(404).send({ error: "User not found" });
 
-  const maxCredits = Math.min(user.creditsCents, creditsCents);
+  // Limit credits to $5 (500 cents) per order
+  const MAX_CREDITS_PER_ORDER = 500;
+  const maxCredits = Math.min(user.creditsCents, creditsCents, MAX_CREDITS_PER_ORDER);
   if (maxCredits <= 0) {
     return reply.code(400).send({ error: "Insufficient credits" });
   }
@@ -1131,6 +1161,109 @@ app.get("/users/:id/challenges", async (req, reply) => {
   });
 
   return userChallenges;
+});
+
+// Get user's pending credits
+app.get("/users/:id/pending-credits", async (req, reply) => {
+  const { id } = req.params;
+
+  const pendingCredits = await prisma.pendingCredit.findMany({
+    where: {
+      userId: id,
+      disbursedAt: null, // Only show undisbursed credits
+    },
+    orderBy: { scheduledFor: "asc" },
+  });
+
+  // Calculate total pending
+  const totalPendingCents = pendingCredits.reduce((sum, pc) => sum + pc.amountCents, 0);
+
+  // Get next disbursement date
+  const nextDisbursement = pendingCredits.length > 0 ? pendingCredits[0].scheduledFor : null;
+
+  return {
+    pendingCredits,
+    totalPendingCents,
+    nextDisbursement,
+  };
+});
+
+// ====================
+// CRON ENDPOINTS
+// ====================
+
+// Disburse pending credits - should be called by cron on 1st and 16th of each month
+// POST /cron/disburse-credits
+// Headers: x-cron-secret: <secret> (for basic auth)
+app.post("/cron/disburse-credits", async (req, reply) => {
+  // Basic security check - in production, use proper auth
+  const cronSecret = req.headers["x-cron-secret"];
+  const expectedSecret = process.env.CRON_SECRET || "dev-cron-secret";
+
+  if (cronSecret !== expectedSecret) {
+    return reply.code(401).send({ error: "Unauthorized" });
+  }
+
+  const now = new Date();
+
+  // Find all pending credits scheduled for today or earlier
+  const pendingCredits = await prisma.pendingCredit.findMany({
+    where: {
+      disbursedAt: null,
+      scheduledFor: { lte: now },
+    },
+    include: {
+      user: true,
+    },
+  });
+
+  console.log(`💰 Disbursing ${pendingCredits.length} pending credits...`);
+
+  const results = {
+    processed: 0,
+    totalAmountCents: 0,
+    errors: [],
+  };
+
+  for (const pending of pendingCredits) {
+    try {
+      // Add credits to user's balance
+      await prisma.user.update({
+        where: { id: pending.userId },
+        data: {
+          creditsCents: { increment: pending.amountCents },
+        },
+      });
+
+      // Create credit event
+      await prisma.creditEvent.create({
+        data: {
+          userId: pending.userId,
+          type: "REFERRAL_ORDER",
+          amountCents: pending.amountCents,
+          description: "Referral bonus disbursed",
+        },
+      });
+
+      // Mark pending credit as disbursed
+      await prisma.pendingCredit.update({
+        where: { id: pending.id },
+        data: { disbursedAt: now },
+      });
+
+      results.processed++;
+      results.totalAmountCents += pending.amountCents;
+
+      console.log(`✅ Disbursed $${pending.amountCents / 100} to ${pending.user.email}`);
+    } catch (error) {
+      console.error(`❌ Failed to disburse credit ${pending.id}:`, error);
+      results.errors.push({ id: pending.id, error: error.message });
+    }
+  }
+
+  console.log(`💰 Disbursement complete: ${results.processed} credits totaling $${results.totalAmountCents / 100}`);
+
+  return results;
 });
 
 // Get user's order history
@@ -1285,6 +1418,22 @@ app.get("/kitchen/stats", async (req, reply) => {
 // ====================
 // HELPER FUNCTIONS
 // ====================
+
+// Calculate the next disbursement date (1st or 16th of month)
+function getNextDisbursementDate() {
+  const now = new Date();
+  const currentDay = now.getDate();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+
+  if (currentDay < 16) {
+    // Next disbursement is the 16th of this month
+    return new Date(currentYear, currentMonth, 16, 0, 0, 0);
+  } else {
+    // Next disbursement is the 1st of next month
+    return new Date(currentYear, currentMonth + 1, 1, 0, 0, 0);
+  }
+}
 
 function getTierBenefits(tier) {
   const benefits = {

@@ -171,9 +171,9 @@ export default function PaymentForm({
 
       const updatedOrder = await response.json();
 
-      // Redirect to confirmation with the final total
+      // Redirect to confirmation with the final total and orderId for fetching details
       router.push(
-        `/order/confirmation?orderNumber=${orderNumber}&total=${updatedOrder.totalCents}&paid=true`
+        `/order/confirmation?orderId=${orderId}&orderNumber=${orderNumber}&total=${updatedOrder.totalCents}&paid=true`
       );
     } catch (err: any) {
       setError(err.message || "Payment failed");

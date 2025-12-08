@@ -239,13 +239,16 @@ model OrderItem {
   id         String    @id @default(cuid())
   orderId    String
   order      Order     @relation(fields: [orderId], references: [id])
-  
+
   menuItemId String
   menuItem   MenuItem  @relation(fields: [menuItemId], references: [id])
-  
+
   quantity   Int
   priceCents Int
-  
+
+  // For slider items, store the display label (e.g., "Light", "Medium", "Rich")
+  selectedValue String?
+
   createdAt  DateTime  @default(now())
 }
 
@@ -280,10 +283,11 @@ model User {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   
-  orders        Order[]
-  creditEvents  CreditEvent[]
-  badges        UserBadge[]
-  challenges    UserChallenge[]
+  orders         Order[]
+  creditEvents   CreditEvent[]
+  pendingCredits PendingCredit[]
+  badges         UserBadge[]
+  challenges     UserChallenge[]
 }
 
 enum MembershipTier {
@@ -312,10 +316,40 @@ model CreditEvent {
 enum CreditEventType {
   REFERRAL_SIGNUP
   REFERRAL_ORDER
+  REFERRAL_ORDER_PENDING  // Credit queued for next disbursement
   CASHBACK
   CREDIT_APPLIED
   CREDIT_EXPIRED
   ADMIN_ADJUSTMENT
+}
+
+// ==========================================
+// PENDING CREDITS (Scheduled Disbursement)
+// ==========================================
+
+model PendingCredit {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+
+  type          PendingCreditType
+  amountCents   Int
+
+  // Reference to what triggered this credit
+  sourceUserId  String?  // The referred user who placed the order
+  sourceOrderId String?  // The order that triggered this credit
+
+  description   String?
+
+  // Scheduling
+  scheduledFor  DateTime // Next disbursement date (1st or 16th)
+  disbursedAt   DateTime?
+
+  createdAt     DateTime @default(now())
+}
+
+enum PendingCreditType {
+  REFERRAL_ORDER  // Credit from referred friend's first order
 }
 
 // ==========================================

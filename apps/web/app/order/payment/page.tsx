@@ -49,6 +49,16 @@ export default async function PaymentPage({
   // Get total from the order data, not from URL param
   const totalCents = order.totalCents;
 
+  // Group items by category: Bowl (main, slider) vs Extras (add-on, side, drink, dessert)
+  const bowlItems = order.items.filter((item: any) => {
+    const cat = item.menuItem.category || "";
+    return cat.startsWith("main") || cat.startsWith("slider");
+  });
+  const extrasItems = order.items.filter((item: any) => {
+    const cat = item.menuItem.category || "";
+    return cat.startsWith("add-on") || cat.startsWith("side") || cat.startsWith("drink") || cat.startsWith("dessert");
+  });
+
   return (
     <main
       style={{
@@ -78,52 +88,110 @@ export default async function PaymentPage({
           style={{
             background: "#f9fafb",
             borderRadius: 12,
-            padding: 20,
+            padding: 16,
             marginBottom: 24,
           }}
         >
-          <h3 style={{ margin: 0, marginBottom: 16 }}>Order Summary</h3>
-
-          {order.items.map((item: any) => (
-            <div
-              key={item.id}
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                marginBottom: 8,
-                paddingBottom: 8,
-                borderBottom: "1px solid #e5e7eb",
-              }}
-            >
-              <div>
-                <div style={{ fontWeight: "bold" }}>{item.menuItem.name}</div>
-                <div style={{ fontSize: "0.85rem", color: "#666" }}>
-                  Qty: {item.quantity}
-                </div>
+          {/* The Bowl - Step 1 & 2 items */}
+          {bowlItems.length > 0 && (
+            <div style={{ marginBottom: extrasItems.length > 0 ? 12 : 0 }}>
+              <div style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#7C7A67", marginBottom: 6 }}>
+                The Bowl
               </div>
-              <div style={{ fontWeight: "bold" }}>
-                ${(item.priceCents / 100).toFixed(2)}
+              <div
+                style={{
+                  background: "rgba(124, 122, 103, 0.08)",
+                  borderRadius: 8,
+                  padding: 10,
+                }}
+              >
+                {bowlItems.map((item: any) => (
+                  <div
+                    key={item.id}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: "2px 0",
+                      fontSize: "0.85rem",
+                    }}
+                  >
+                    <span>
+                      {item.menuItem.name}
+                      <span style={{ color: "#666", marginLeft: 6 }}>
+                        ({item.selectedValue || `Qty: ${item.quantity}`})
+                      </span>
+                    </span>
+                    {item.priceCents > 0 && (
+                      <span style={{ color: "#666" }}>
+                        ${(item.priceCents / 100).toFixed(2)}
+                      </span>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
-          ))}
+          )}
+
+          {/* Extras - Step 3 & 4 items */}
+          {extrasItems.length > 0 && (
+            <div>
+              <div style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#7C7A67", marginBottom: 6 }}>
+                Add-ons & Extras
+              </div>
+              <div
+                style={{
+                  background: "rgba(199, 168, 120, 0.1)",
+                  borderRadius: 8,
+                  padding: 10,
+                }}
+              >
+                {extrasItems.map((item: any) => (
+                  <div
+                    key={item.id}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: "2px 0",
+                      fontSize: "0.85rem",
+                    }}
+                  >
+                    <span>
+                      {item.menuItem.name}
+                      <span style={{ color: "#666", marginLeft: 6 }}>
+                        (Qty: {item.quantity})
+                      </span>
+                    </span>
+                    {item.priceCents > 0 && (
+                      <span style={{ color: "#666" }}>
+                        ${(item.priceCents / 100).toFixed(2)}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {order.estimatedArrival && (
             <div
               style={{
-                marginTop: 16,
-                paddingTop: 16,
-                borderTop: "1px solid #e5e7eb",
-                fontSize: "0.9rem",
+                display: "flex",
+                justifyContent: "space-between",
+                fontSize: "0.85rem",
                 color: "#666",
+                marginTop: 8,
               }}
             >
-              <strong>Estimated Ready Time:</strong>
-              <br />
-              {new Date(order.estimatedArrival).toLocaleTimeString("en-US", {
-                hour: "numeric",
-                minute: "2-digit",
-                hour12: true,
-              })}
+              <span>Ready by</span>
+              <span>
+                {new Date(order.estimatedArrival).toLocaleTimeString("en-US", {
+                  hour: "numeric",
+                  minute: "2-digit",
+                  hour12: true,
+                })}
+              </span>
             </div>
           )}
 
@@ -131,10 +199,10 @@ export default async function PaymentPage({
             style={{
               display: "flex",
               justifyContent: "space-between",
-              marginTop: 16,
-              paddingTop: 16,
-              borderTop: "2px solid #e5e7eb",
-              fontSize: "1.2rem",
+              marginTop: 10,
+              paddingTop: 10,
+              borderTop: "1px solid #e5e7eb",
+              fontSize: "1.1rem",
               fontWeight: "bold",
             }}
           >

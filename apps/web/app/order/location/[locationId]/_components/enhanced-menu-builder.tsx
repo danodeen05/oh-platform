@@ -55,6 +55,9 @@ export default function EnhancedMenuBuilder({
   // Cart state: { menuItemId: quantity } for counters, or { menuItemId: sliderValue } for sliders
   const [cart, setCart] = useState<Record<string, number>>({});
 
+  // Slider labels: { menuItemId: label } for displaying selected value (e.g., "Light", "Medium")
+  const [sliderLabels, setSliderLabels] = useState<Record<string, string>>({});
+
   // Selections for single-choice sections (radio groups)
   const [selections, setSelections] = useState<Record<string, string>>({});
 
@@ -71,6 +74,24 @@ export default function EnhancedMenuBuilder({
         });
         const data = await response.json();
         setMenuSteps(data.steps);
+
+        // Initialize cart with slider default values and labels
+        const initialCart: Record<string, number> = {};
+        const initialLabels: Record<string, string> = {};
+        data.steps.forEach((step: MenuStep) => {
+          step.sections.forEach((section: MenuSection) => {
+            if (section.selectionMode === 'SLIDER' && section.item && section.sliderConfig) {
+              const defaultValue = section.sliderConfig.default ?? 0;
+              initialCart[section.item.id] = defaultValue;
+              // Get the label for the default value
+              const labels = section.sliderConfig.labels || [];
+              initialLabels[section.item.id] = labels[defaultValue] || String(defaultValue);
+            }
+          });
+        });
+        setCart(initialCart);
+        setSliderLabels(initialLabels);
+
         setLoading(false);
       } catch (error) {
         console.error("Failed to load menu:", error);
@@ -92,13 +113,19 @@ export default function EnhancedMenuBuilder({
 
         const order = await response.json();
 
-        // Populate cart from order items
+        // Populate cart and sliderLabels from order items
         const cartData: Record<string, number> = {};
+        const labelData: Record<string, string> = {};
         order.items.forEach((item: any) => {
           cartData[item.menuItem.id] = item.quantity;
+          // Populate sliderLabels from the order's selectedValue
+          if (item.selectedValue) {
+            labelData[item.menuItem.id] = item.selectedValue;
+          }
         });
 
         setCart(cartData);
+        setSliderLabels(labelData);
         // Skip to time selection
         setCurrentStepIndex(menuSteps.length);
         setLoading(false);
@@ -196,15 +223,10 @@ export default function EnhancedMenuBuilder({
     });
   }
 
-  // Handle slider change
-  function handleSliderChange(itemId: string, value: number) {
-    setCart(prev => {
-      if (value === 0) {
-        const { [itemId]: _, ...rest } = prev;
-        return rest;
-      }
-      return { ...prev, [itemId]: value };
-    });
+  // Handle slider change - always store the value (don't remove on 0 like checkboxes)
+  function handleSliderChange(itemId: string, value: number, label: string) {
+    setCart(prev => ({ ...prev, [itemId]: value }));
+    setSliderLabels(prev => ({ ...prev, [itemId]: label }));
   }
 
   // Check if current step is complete
@@ -240,10 +262,19 @@ export default function EnhancedMenuBuilder({
       // Last menu step, move to time selection
       setCurrentStepIndex(menuSteps.length);
     }
+
+    // Scroll to top when advancing to next step (setTimeout for Safari compatibility)
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+    }, 0);
   }
 
   function previousStep() {
     setCurrentStepIndex(prev => Math.max(0, prev - 1));
+    // Scroll to top when going back (setTimeout for Safari compatibility)
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+    }, 0);
   }
 
   async function proceedToPayment() {
@@ -281,17 +312,18 @@ export default function EnhancedMenuBuilder({
       order = await response.json();
     } else {
       // Build items array from selections and cart
-      const items: Array<{ menuItemId: string; quantity: number }> = [];
+      const items: Array<{ menuItemId: string; quantity: number; selectedValue?: string }> = [];
 
       // Add radio selections
       Object.values(selections).forEach(itemId => {
         items.push({ menuItemId: itemId, quantity: 1 });
       });
 
-      // Add cart items
+      // Add cart items (with selectedValue for sliders)
       Object.entries(cart).forEach(([itemId, qty]) => {
         if (qty > 0) {
-          items.push({ menuItemId: itemId, quantity: qty });
+          const selectedValue = sliderLabels[itemId]; // Will be undefined for non-slider items
+          items.push({ menuItemId: itemId, quantity: qty, selectedValue });
         }
       });
 
@@ -307,7 +339,22 @@ export default function EnhancedMenuBuilder({
         }),
       });
 
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error("Order creation failed:", response.status, errorData);
+        alert("Failed to create order. Please try again.");
+        setSubmitting(false);
+        return;
+      }
+
       order = await response.json();
+    }
+
+    if (!order || !order.id || !order.orderNumber) {
+      console.error("Invalid order response:", order);
+      alert("Failed to create order. Please try again.");
+      setSubmitting(false);
+      return;
     }
 
     setSubmitting(false);
@@ -486,14 +533,18 @@ export default function EnhancedMenuBuilder({
         }
 
         if (section.selectionMode === 'SLIDER' && section.item && section.sliderConfig) {
-          const value = cart[section.item.id] || section.sliderConfig.default || 0;
+          const value = cart[section.item.id] ?? section.sliderConfig.default ?? 0;
+          const labels = section.sliderConfig.labels || [];
           return (
             <div key={section.id} style={{ marginBottom: 16 }}>
               <SliderControl
                 name={section.name}
                 description={section.description}
                 value={value}
-                onChange={(val) => handleSliderChange(section.item!.id, val)}
+                onChange={(val) => {
+                  const label = labels[val] || String(val);
+                  handleSliderChange(section.item!.id, val, label);
+                }}
                 config={section.sliderConfig}
                 pricingInfo={{
                   basePriceCents: section.item.basePriceCents,

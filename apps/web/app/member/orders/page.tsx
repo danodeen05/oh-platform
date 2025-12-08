@@ -8,6 +8,7 @@ type MenuItem = {
   id: string;
   name: string;
   priceCents: number;
+  category: string;
 };
 
 type OrderItem = {
@@ -16,6 +17,7 @@ type OrderItem = {
   priceCents: number;
   menuItem: MenuItem;
   selectedOptions?: any;
+  selectedValue?: string;
 };
 
 type Location = {
@@ -75,6 +77,7 @@ export default function OrdersPage() {
           quantity: item.quantity,
           priceCents: item.priceCents,
           selectedOptions: item.selectedOptions || {},
+          selectedValue: item.selectedValue || null,
         })),
       };
 
@@ -251,28 +254,103 @@ export default function OrdersPage() {
                   </div>
                 </div>
 
-                {/* Order Items */}
-                <div style={{ marginBottom: 16 }}>
-                  {order.items.map((item) => (
-                    <div
-                      key={item.id}
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        padding: "8px 0",
-                        fontSize: "0.9rem",
-                      }}
-                    >
-                      <div>
-                        <span style={{ fontWeight: "500" }}>{item.quantity}x</span>{" "}
-                        {item.menuItem.name}
-                      </div>
-                      <div style={{ color: "#666" }}>
-                        ${(item.priceCents / 100).toFixed(2)}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                {/* Order Items - grouped by category */}
+                {(() => {
+                  const bowlItems = order.items.filter((item: OrderItem) => {
+                    const cat = item.menuItem.category || "";
+                    return cat.startsWith("main") || cat.startsWith("slider");
+                  });
+                  const extrasItems = order.items.filter((item: OrderItem) => {
+                    const cat = item.menuItem.category || "";
+                    return cat.startsWith("add-on") || cat.startsWith("side") || cat.startsWith("drink") || cat.startsWith("dessert");
+                  });
+
+                  return (
+                    <>
+                      {/* The Bowl - Step 1 & 2 items */}
+                      {bowlItems.length > 0 && (
+                        <div style={{ marginBottom: extrasItems.length > 0 ? 12 : 12 }}>
+                          <div style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#7C7A67", marginBottom: 6 }}>
+                            The Bowl
+                          </div>
+                          <div
+                            style={{
+                              background: "rgba(124, 122, 103, 0.08)",
+                              borderRadius: 8,
+                              padding: 10,
+                            }}
+                          >
+                            {bowlItems.map((item: OrderItem) => (
+                              <div
+                                key={item.id}
+                                style={{
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center",
+                                  padding: "2px 0",
+                                  fontSize: "0.85rem",
+                                }}
+                              >
+                                <span>
+                                  {item.menuItem.name}
+                                  <span style={{ color: "#666", marginLeft: 6 }}>
+                                    ({item.selectedValue || `Qty: ${item.quantity}`})
+                                  </span>
+                                </span>
+                                {item.priceCents > 0 && (
+                                  <span style={{ color: "#666" }}>
+                                    ${(item.priceCents / 100).toFixed(2)}
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Extras - Step 3 & 4 items */}
+                      {extrasItems.length > 0 && (
+                        <div style={{ marginBottom: 12 }}>
+                          <div style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#7C7A67", marginBottom: 6 }}>
+                            Add-ons & Extras
+                          </div>
+                          <div
+                            style={{
+                              background: "rgba(199, 168, 120, 0.1)",
+                              borderRadius: 8,
+                              padding: 10,
+                            }}
+                          >
+                            {extrasItems.map((item: OrderItem) => (
+                              <div
+                                key={item.id}
+                                style={{
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  alignItems: "center",
+                                  padding: "2px 0",
+                                  fontSize: "0.85rem",
+                                }}
+                              >
+                                <span>
+                                  {item.menuItem.name}
+                                  <span style={{ color: "#666", marginLeft: 6 }}>
+                                    (Qty: {item.quantity})
+                                  </span>
+                                </span>
+                                {item.priceCents > 0 && (
+                                  <span style={{ color: "#666" }}>
+                                    ${(item.priceCents / 100).toFixed(2)}
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
 
                 {/* Order Footer */}
                 <div
@@ -280,11 +358,11 @@ export default function OrdersPage() {
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
-                    paddingTop: 16,
+                    paddingTop: 12,
                     borderTop: "1px solid #f3f4f6",
                   }}
                 >
-                  <div style={{ fontWeight: "bold", fontSize: "1.1rem" }}>
+                  <div style={{ fontWeight: "bold", fontSize: "1rem" }}>
                     Total: ${(order.totalCents / 100).toFixed(2)}
                   </div>
                   <button
