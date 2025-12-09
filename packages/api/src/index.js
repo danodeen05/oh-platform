@@ -1440,31 +1440,32 @@ function getTierBenefits(tier) {
     CHOPSTICK: {
       referralBonus: 500,
       cashbackPercent: 1,
-      birthdayBonus: 1000,
-      perks: ["Base referral rewards", "1% cashback"],
+      perks: [
+        "$5 referral bonus per friend",
+        "1% cashback on orders",
+        "Early access to new menu items",
+      ],
     },
     NOODLE_MASTER: {
       referralBonus: 500,
       cashbackPercent: 2,
-      birthdayBonus: 2000,
       perks: [
-        "Referral rewards",
-        "2% cashback",
-        "Early menu access",
+        "$5 referral bonus per friend",
+        "2% cashback on orders",
         "Priority seating",
+        "Exclusive member events",
+        "Free bowl on tier upgrade",
       ],
     },
     BEEF_BOSS: {
       referralBonus: 500,
       cashbackPercent: 3,
-      birthdayBonus: 5000,
       perks: [
-        "Referral rewards",
-        "3% cashback",
-        "Free delivery",
-        "Exclusive items",
-        "VIP events",
-        "Noodle Concierge",
+        "$5 referral bonus per friend",
+        "3% cashback on orders",
+        "Exclusive merchandise drops",
+        "Complimentary premium add-ons",
+        "Annual VIP Gift & Recognition",
       ],
     },
   };
@@ -1474,7 +1475,7 @@ function getTierBenefits(tier) {
 function getNextTier(currentTier) {
   const tiers = {
     CHOPSTICK: { next: "NOODLE_MASTER", ordersNeeded: 10, referralsNeeded: 5 },
-    NOODLE_MASTER: { next: "BEEF_BOSS", ordersNeeded: 50, referralsNeeded: 20 },
+    NOODLE_MASTER: { next: "BEEF_BOSS", ordersNeeded: 25, referralsNeeded: 10 },
     BEEF_BOSS: null, // Max tier
   };
   return tiers[currentTier];

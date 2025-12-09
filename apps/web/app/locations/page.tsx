@@ -63,8 +63,8 @@ export default function LocationsPage() {
             maxWidth: "600px",
             margin: "0 auto",
             lineHeight: "1.8",
-            opacity: 0.9,
             fontWeight: "300",
+            color: "#C7A878",
           }}
         >
           Experience Oh! in person. Find a location near you or discover where we&apos;re opening next.

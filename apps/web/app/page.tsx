@@ -94,8 +94,8 @@ export default function HomePage() {
 
         <h1
           style={{
-            fontSize: "clamp(2.5rem, 8vw, 5rem)",
-            fontWeight: "300",
+            fontSize: "clamp(1.8rem, 5vw, 3rem)",
+            fontWeight: "400",
             marginBottom: "24px",
             color: "#222222",
             letterSpacing: "2px",
@@ -103,7 +103,8 @@ export default function HomePage() {
             animation: "fadeInUp 1.2s ease 0.2s forwards",
           }}
         >
-          <span style={{ fontFamily: '"Noto Serif TC", serif' }}>哦</span> Oh! Beef Noodle Soup
+          <span style={{ fontFamily: '"Ma Shan Zheng", cursive', fontSize: '1.2em' }}>哦</span>{" "}
+          <span style={{ fontFamily: '"Bebas Neue", sans-serif' }}>Oh! Beef Noodle Soup</span>
         </h1>
 
         <p
@@ -119,7 +120,7 @@ export default function HomePage() {
           }}
         >
           Order ahead. Skip the wait. Enjoy premium beef noodles in private
-          dining cubicles.
+          dining pods.
         </p>
 
         <div

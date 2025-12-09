@@ -80,7 +80,9 @@ function mapStepsToDisplaySections(steps: MenuStep[]): DisplaySection[] {
   for (const step of steps) {
     for (const section of step.sections) {
       // Skip slider sections - they're customization options, not menu items
+      // Skip Beverages section - not needed on menu page
       if (section.selectionMode === "SLIDER") continue;
+      if (section.name === "Beverages") continue;
 
       const items = (section.items || [])
         .filter((item) => item.isAvailable && item.name !== "No Noodles")
@@ -123,10 +125,6 @@ function mapStepsToDisplaySections(steps: MenuStep[]): DisplaySection[] {
           case "Side Dishes":
             subtitle = "Complete Your Experience";
             description = "Traditional accompaniments that complement the main attraction.";
-            break;
-          case "Beverages":
-            subtitle = "Carefully Curated Drinks";
-            description = "The perfect pairing for your meal.";
             break;
           case "Dessert":
             subtitle = "Sweet Endings";
@@ -273,8 +271,8 @@ export default function MenuPage() {
             maxWidth: "600px",
             margin: "0 auto 32px",
             lineHeight: "1.8",
-            opacity: 0.9,
             fontWeight: "300",
+            color: "#C7A878",
           }}
         >
           Crafted with a 30-year family recipe, every bowl tells a story of tradition,
@@ -345,62 +343,6 @@ export default function MenuPage() {
         </div>
       </nav>
 
-      {/* Customization Banner */}
-      {customizations.length > 0 && (
-        <section
-          style={{
-            background: "rgba(199, 168, 120, 0.15)",
-            padding: "32px 24px",
-            borderBottom: "1px solid rgba(199, 168, 120, 0.3)",
-          }}
-        >
-          <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
-            <h2
-              style={{
-                fontSize: "1.3rem",
-                fontWeight: "600",
-                color: "#222222",
-                marginBottom: "8px",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-              }}
-            >
-              <span style={{ fontSize: "1.5rem" }}>🎛️</span>
-              Fully Customizable
-            </h2>
-            <p style={{ color: "#666", marginBottom: "20px", fontSize: "0.95rem" }}>
-              Every bowl is made to order. Adjust your preferences to create your perfect bowl.
-            </p>
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: "12px",
-              }}
-            >
-              {customizations.map((custom) => (
-                <div
-                  key={custom.name}
-                  style={{
-                    background: "white",
-                    padding: "12px 16px",
-                    borderRadius: "8px",
-                    border: "1px solid rgba(124, 122, 103, 0.2)",
-                  }}
-                >
-                  <div style={{ fontWeight: "600", fontSize: "0.9rem", color: "#222222", marginBottom: "4px" }}>
-                    {custom.name}
-                  </div>
-                  <div style={{ fontSize: "0.75rem", color: "#7C7A67" }}>
-                    {custom.options.join(" • ")}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* Menu Sections */}
       <main style={{ maxWidth: "1200px", margin: "0 auto", padding: "0 24px" }}>
@@ -658,10 +600,10 @@ export default function MenuPage() {
             style={{
               fontSize: "1.1rem",
               lineHeight: "1.8",
-              opacity: 0.9,
               marginBottom: "48px",
               maxWidth: "700px",
               margin: "0 auto 48px",
+              color: "#C7A878",
             }}
           >
             We believe the perfect bowl of beef noodle soup deserves the perfect dining experience.
@@ -673,45 +615,45 @@ export default function MenuPage() {
               display: "grid",
               gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
               gap: "32px",
-              textAlign: "left",
+              textAlign: "center",
             }}
           >
             <div>
               <div style={{ fontSize: "2rem", marginBottom: "16px" }}>🎯</div>
-              <h3 style={{ fontSize: "1.2rem", fontWeight: "500", marginBottom: "8px" }}>
+              <h3 style={{ fontSize: "1.2rem", fontWeight: "500", marginBottom: "8px", color: "#C7A878" }}>
                 Tech-First Experience
               </h3>
-              <p style={{ fontSize: "0.95rem", opacity: 0.8, lineHeight: "1.6" }}>
+              <p style={{ fontSize: "0.95rem", lineHeight: "1.6", color: "#C7A878" }}>
                 Order ahead on your phone. Skip the wait. Your bowl is ready the moment you arrive.
               </p>
             </div>
 
             <div>
               <div style={{ fontSize: "2rem", marginBottom: "16px" }}>🏠</div>
-              <h3 style={{ fontSize: "1.2rem", fontWeight: "500", marginBottom: "8px" }}>
+              <h3 style={{ fontSize: "1.2rem", fontWeight: "500", marginBottom: "8px", color: "#C7A878" }}>
                 Private Dining Pods
               </h3>
-              <p style={{ fontSize: "0.95rem", opacity: 0.8, lineHeight: "1.6" }}>
+              <p style={{ fontSize: "0.95rem", lineHeight: "1.6", color: "#C7A878" }}>
                 Enjoy your soup in peaceful solitude. Our private cubicles let you focus on what matters—the incredible flavors.
               </p>
             </div>
 
             <div>
               <div style={{ fontSize: "2rem", marginBottom: "16px" }}>⚡</div>
-              <h3 style={{ fontSize: "1.2rem", fontWeight: "500", marginBottom: "8px" }}>
+              <h3 style={{ fontSize: "1.2rem", fontWeight: "500", marginBottom: "8px", color: "#C7A878" }}>
                 Seamless Service
               </h3>
-              <p style={{ fontSize: "0.95rem", opacity: 0.8, lineHeight: "1.6" }}>
+              <p style={{ fontSize: "0.95rem", lineHeight: "1.6", color: "#C7A878" }}>
                 Minimal interruptions, maximum enjoyment. Our automated systems mean your meal is about the food, not the service.
               </p>
             </div>
 
             <div>
               <div style={{ fontSize: "2rem", marginBottom: "16px" }}>🏆</div>
-              <h3 style={{ fontSize: "1.2rem", fontWeight: "500", marginBottom: "8px" }}>
+              <h3 style={{ fontSize: "1.2rem", fontWeight: "500", marginBottom: "8px", color: "#C7A878" }}>
                 Rewarding Loyalty
               </h3>
-              <p style={{ fontSize: "0.95rem", opacity: 0.8, lineHeight: "1.6" }}>
+              <p style={{ fontSize: "0.95rem", lineHeight: "1.6", color: "#C7A878" }}>
                 Earn credits, unlock badges, and level up your membership. Every visit brings you closer to free bowls and exclusive perks.
               </p>
             </div>

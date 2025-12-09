@@ -37,8 +37,8 @@ export default function GiftCardsPage() {
             maxWidth: "600px",
             margin: "0 auto",
             lineHeight: "1.8",
-            opacity: 0.9,
             fontWeight: "300",
+            color: "#C7A878",
           }}
         >
           Share the warmth of the perfect bowl. Send a digital gift card instantly to anyone who deserves a delicious experience.
