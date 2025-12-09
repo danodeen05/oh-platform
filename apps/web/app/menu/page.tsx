@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
+import { getMenuItemImage, isNoNoodlesItem } from "@/lib/menu-images";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
 
@@ -81,7 +83,7 @@ function mapStepsToDisplaySections(steps: MenuStep[]): DisplaySection[] {
       if (section.selectionMode === "SLIDER") continue;
 
       const items = (section.items || [])
-        .filter((item) => item.isAvailable)
+        .filter((item) => item.isAvailable && item.name !== "No Noodles")
         .map((item) => {
           const tags: string[] = [];
 
@@ -474,7 +476,7 @@ export default function MenuPage() {
                     e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.08)";
                   }}
                 >
-                  {/* Image Placeholder */}
+                  {/* Menu Item Image */}
                   <div
                     style={{
                       height: "180px",
@@ -483,9 +485,69 @@ export default function MenuPage() {
                       alignItems: "center",
                       justifyContent: "center",
                       position: "relative",
+                      overflow: "hidden",
                     }}
                   >
-                    <span style={{ fontSize: "4rem", opacity: 0.3 }}>🍜</span>
+                    {getMenuItemImage(item.name) ? (
+                      <Image
+                        src={getMenuItemImage(item.name)!}
+                        alt={item.name}
+                        fill
+                        style={{ objectFit: "cover" }}
+                        sizes="(max-width: 768px) 100vw, 300px"
+                      />
+                    ) : isNoNoodlesItem(item.name) ? (
+                      <>
+                        <Image
+                          src="/menu images/Ramen Noodles.png"
+                          alt="No Noodles"
+                          fill
+                          style={{ objectFit: "cover", opacity: 0.4, filter: "grayscale(100%)" }}
+                          sizes="(max-width: 768px) 100vw, 300px"
+                        />
+                        {/* Professional diagonal cross */}
+                        <div
+                          style={{
+                            position: "absolute",
+                            inset: 0,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: "140%",
+                              height: 6,
+                              background: "#dc2626",
+                              transform: "rotate(-45deg)",
+                              boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
+                            }}
+                          />
+                        </div>
+                        <div
+                          style={{
+                            position: "absolute",
+                            inset: 0,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: "140%",
+                              height: 6,
+                              background: "#dc2626",
+                              transform: "rotate(45deg)",
+                              boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
+                            }}
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <span style={{ fontSize: "4rem", opacity: 0.3 }}>🍜</span>
+                    )}
                     {/* Tags overlay */}
                     {item.tags.length > 0 && (
                       <div

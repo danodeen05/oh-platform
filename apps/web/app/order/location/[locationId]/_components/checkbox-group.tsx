@@ -1,5 +1,8 @@
 "use client";
 
+import Image from "next/image";
+import { getMenuItemImage } from "@/lib/menu-images";
+
 type MenuItem = {
   id: string;
   name: string;
@@ -57,108 +60,138 @@ export function CheckboxGroup({
               style={{
                 border: `1px solid ${isSelected ? "#7C7A67" : "#e5e7eb"}`,
                 borderRadius: 12,
-                padding: 16,
                 background: isSelected ? "#f9fafb" : "white",
                 transition: "all 0.2s",
+                overflow: "hidden",
               }}
             >
               <div
                 style={{
                   display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
+                  alignItems: "stretch",
                 }}
               >
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: "600", fontSize: "1rem", marginBottom: 4 }}>
-                    {item.name}
-                  </div>
-                  {item.description && (
-                    <div style={{ color: "#666", fontSize: "0.875rem", marginBottom: 4 }}>
-                      {item.description}
-                    </div>
-                  )}
-                  <div style={{ fontSize: "0.875rem" }}>
-                    {item.includedQuantity > 0 ? (
-                      <span style={{ color: "#22c55e" }}>
-                        {item.includedQuantity} included
-                        {item.additionalPriceCents > 0 && (
-                          <span style={{ color: "#666" }}>
-                            {" "}• +${(item.additionalPriceCents / 100).toFixed(2)} each extra
-                          </span>
-                        )}
-                      </span>
-                    ) : (
-                      <span style={{ color: "#7C7A67", fontWeight: "600" }}>
-                        +${(item.basePriceCents / 100).toFixed(2)} each
-                      </span>
-                    )}
-                  </div>
-                  {isSelected && itemPrice > 0 && (
-                    <div
-                      style={{
-                        color: "#7C7A67",
-                        fontWeight: "600",
-                        fontSize: "0.95rem",
-                        marginTop: 4,
-                      }}
-                    >
-                      Subtotal: ${(itemPrice / 100).toFixed(2)}
-                    </div>
-                  )}
-                </div>
-
-                <div style={{ display: "flex", gap: 8, alignItems: "center", marginLeft: 12 }}>
-                  {isSelected && (
-                    <>
-                      <button
-                        onClick={() => onUpdateQuantity(item.id, -1)}
-                        style={{
-                          width: 36,
-                          height: 36,
-                          borderRadius: "50%",
-                          border: "1px solid #d1d5db",
-                          background: "white",
-                          cursor: "pointer",
-                          fontSize: "1.2rem",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
-                        −
-                      </button>
-                      <span
-                        style={{
-                          minWidth: 24,
-                          textAlign: "center",
-                          fontWeight: "600",
-                          fontSize: "1rem",
-                        }}
-                      >
-                        {qty}
-                      </span>
-                    </>
-                  )}
-                  <button
-                    onClick={() => onUpdateQuantity(item.id, 1)}
-                    disabled={maxQuantity !== undefined && qty >= maxQuantity}
+                {/* Image */}
+                {getMenuItemImage(item.name) && (
+                  <div
                     style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: "50%",
-                      border: "none",
-                      background: maxQuantity !== undefined && qty >= maxQuantity ? "#d1d5db" : "#7C7A67",
-                      color: "white",
-                      cursor: maxQuantity !== undefined && qty >= maxQuantity ? "not-allowed" : "pointer",
-                      fontSize: "1.2rem",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
+                      width: 80,
+                      minHeight: 80,
+                      position: "relative",
+                      flexShrink: 0,
+                      background: "#f5f5f5",
                     }}
                   >
-                    +
-                  </button>
+                    <Image
+                      src={getMenuItemImage(item.name)!}
+                      alt={item.name}
+                      fill
+                      style={{ objectFit: "cover" }}
+                      sizes="80px"
+                    />
+                  </div>
+                )}
+                {/* Content */}
+                <div
+                  style={{
+                    flex: 1,
+                    padding: 16,
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: "600", fontSize: "1rem", marginBottom: 4 }}>
+                      {item.name}
+                    </div>
+                    {item.description && (
+                      <div style={{ color: "#666", fontSize: "0.875rem", marginBottom: 4 }}>
+                        {item.description}
+                      </div>
+                    )}
+                    <div style={{ fontSize: "0.875rem" }}>
+                      {item.includedQuantity > 0 ? (
+                        <span style={{ color: "#22c55e" }}>
+                          {item.includedQuantity} included
+                          {item.additionalPriceCents > 0 && (
+                            <span style={{ color: "#666" }}>
+                              {" "}• +${(item.additionalPriceCents / 100).toFixed(2)} each extra
+                            </span>
+                          )}
+                        </span>
+                      ) : (
+                        <span style={{ color: "#7C7A67", fontWeight: "600" }}>
+                          +${(item.basePriceCents / 100).toFixed(2)} each
+                        </span>
+                      )}
+                    </div>
+                    {isSelected && itemPrice > 0 && (
+                      <div
+                        style={{
+                          color: "#7C7A67",
+                          fontWeight: "600",
+                          fontSize: "0.95rem",
+                          marginTop: 4,
+                        }}
+                      >
+                        Subtotal: ${(itemPrice / 100).toFixed(2)}
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", marginLeft: 12 }}>
+                    {isSelected && (
+                      <>
+                        <button
+                          onClick={() => onUpdateQuantity(item.id, -1)}
+                          style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: "50%",
+                            border: "1px solid #d1d5db",
+                            background: "white",
+                            cursor: "pointer",
+                            fontSize: "1.2rem",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          −
+                        </button>
+                        <span
+                          style={{
+                            minWidth: 24,
+                            textAlign: "center",
+                            fontWeight: "600",
+                            fontSize: "1rem",
+                          }}
+                        >
+                          {qty}
+                        </span>
+                      </>
+                    )}
+                    <button
+                      onClick={() => onUpdateQuantity(item.id, 1)}
+                      disabled={maxQuantity !== undefined && qty >= maxQuantity}
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: "50%",
+                        border: "none",
+                        background: maxQuantity !== undefined && qty >= maxQuantity ? "#d1d5db" : "#7C7A67",
+                        color: "white",
+                        cursor: maxQuantity !== undefined && qty >= maxQuantity ? "not-allowed" : "pointer",
+                        fontSize: "1.2rem",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

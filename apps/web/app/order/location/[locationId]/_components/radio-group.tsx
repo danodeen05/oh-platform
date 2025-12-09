@@ -1,5 +1,8 @@
 "use client";
 
+import Image from "next/image";
+import { getMenuItemImage, isNoNoodlesItem } from "@/lib/menu-images";
+
 type MenuItem = {
   id: string;
   name: string;
@@ -30,54 +33,145 @@ export function RadioGroup({ title, items, selectedId, onSelect }: RadioGroupPro
               style={{
                 border: `2px solid ${isSelected ? "#7C7A67" : "#e5e7eb"}`,
                 borderRadius: 12,
-                padding: 16,
-                background: isSelected ? "#f0f4ff" : "white",
+                padding: 0,
+                background: isSelected ? "#f9fafb" : "white",
                 cursor: "pointer",
                 textAlign: "left",
                 transition: "all 0.2s",
+                overflow: "hidden",
               }}
             >
               <div
                 style={{
                   display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
+                  alignItems: "stretch",
                 }}
               >
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: "600", fontSize: "1rem", marginBottom: 4 }}>
-                    {item.name}
-                  </div>
-                  {item.description && (
-                    <div style={{ color: "#666", fontSize: "0.875rem", marginBottom: 4 }}>
-                      {item.description}
-                    </div>
-                  )}
-                  <div style={{ color: "#7C7A67", fontWeight: "600", fontSize: "0.95rem" }}>
-                    {item.basePriceCents > 0
-                      ? `$${(item.basePriceCents / 100).toFixed(2)}`
-                      : "Included"}
-                  </div>
-                </div>
-                {isSelected && (
+                {/* Image */}
+                {getMenuItemImage(item.name) && (
                   <div
                     style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: "50%",
-                      background: "#7C7A67",
-                      color: "white",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "1rem",
+                      width: 100,
+                      minHeight: 80,
+                      position: "relative",
                       flexShrink: 0,
-                      marginLeft: 12,
+                      background: "#f5f5f5",
                     }}
                   >
-                    ✓
+                    <Image
+                      src={getMenuItemImage(item.name)!}
+                      alt={item.name}
+                      fill
+                      style={{ objectFit: "cover" }}
+                      sizes="100px"
+                    />
                   </div>
                 )}
+                {/* No Noodles - special crossed-out image */}
+                {isNoNoodlesItem(item.name) && (
+                  <div
+                    style={{
+                      width: 100,
+                      minHeight: 80,
+                      position: "relative",
+                      flexShrink: 0,
+                      background: "#f5f5f5",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <Image
+                      src="/menu images/Ramen Noodles.png"
+                      alt="No Noodles"
+                      fill
+                      style={{ objectFit: "cover", opacity: 0.4, filter: "grayscale(100%)" }}
+                      sizes="100px"
+                    />
+                    {/* Professional diagonal cross */}
+                    <div
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: "140%",
+                          height: 4,
+                          background: "#dc2626",
+                          transform: "rotate(-45deg)",
+                          boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
+                        }}
+                      />
+                    </div>
+                    <div
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: "140%",
+                          height: 4,
+                          background: "#dc2626",
+                          transform: "rotate(45deg)",
+                          boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+                {/* Content */}
+                <div
+                  style={{
+                    flex: 1,
+                    padding: 16,
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: "600", fontSize: "1rem", marginBottom: 4 }}>
+                      {item.name}
+                    </div>
+                    {item.description && (
+                      <div style={{ color: "#666", fontSize: "0.875rem", marginBottom: 4 }}>
+                        {item.description}
+                      </div>
+                    )}
+                    <div style={{ color: "#7C7A67", fontWeight: "600", fontSize: "0.95rem" }}>
+                      {item.basePriceCents > 0
+                        ? `$${(item.basePriceCents / 100).toFixed(2)}`
+                        : "Included"}
+                    </div>
+                  </div>
+                  {isSelected && (
+                    <div
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: "50%",
+                        background: "#7C7A67",
+                        color: "white",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "1rem",
+                        flexShrink: 0,
+                        marginLeft: 12,
+                      }}
+                    >
+                      ✓
+                    </div>
+                  )}
+                </div>
               </div>
             </button>
           );
