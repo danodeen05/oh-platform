@@ -177,7 +177,7 @@ export default function LocationSelector({
                 <div>
                   <span style={{ color: "#9ca3af" }}>Available: </span>
                   <strong>
-                    {loc.stats.availableSeats}/{loc.stats.totalSeats} seats
+                    {loc.stats.availableSeats}/{loc.stats.totalSeats} pods
                   </strong>
                 </div>
                 <div>

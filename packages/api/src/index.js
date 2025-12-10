@@ -22,6 +22,130 @@ function getTenantContext(req) {
 }
 
 // ====================
+// QUEUE PROCESSING & NOTIFICATIONS
+// ====================
+
+// Process queue and assign next customer to available pod
+async function processQueue(locationId) {
+  console.log(`Processing queue for location ${locationId}`);
+
+  // Get available pods
+  const availablePods = await prisma.seat.findMany({
+    where: {
+      locationId,
+      status: "AVAILABLE",
+    },
+    orderBy: {
+      number: "asc",
+    },
+  });
+
+  if (availablePods.length === 0) {
+    console.log("No available pods");
+    return { assigned: 0 };
+  }
+
+  // Get queue sorted by priority (highest first)
+  const queueEntries = await prisma.waitQueue.findMany({
+    where: {
+      locationId,
+      status: "WAITING",
+    },
+    orderBy: {
+      priority: "desc",
+    },
+    take: availablePods.length, // Only get as many as we can assign
+    include: {
+      order: {
+        include: {
+          user: true,
+        },
+      },
+    },
+  });
+
+  if (queueEntries.length === 0) {
+    console.log("Queue is empty");
+    return { assigned: 0 };
+  }
+
+  const assigned = [];
+
+  // Assign pods to top N people in queue
+  for (let i = 0; i < Math.min(availablePods.length, queueEntries.length); i++) {
+    const queueEntry = queueEntries[i];
+    const pod = availablePods[i];
+
+    try {
+      // Assign pod and update statuses
+      const [updatedOrder, updatedSeat, updatedQueue] = await prisma.$transaction([
+        prisma.order.update({
+          where: { id: queueEntry.orderId },
+          data: {
+            seatId: pod.id,
+            podAssignedAt: new Date(),
+            podSelectionMethod: "AUTO",
+            queuePosition: null, // Remove from queue position
+          },
+          include: {
+            seat: true,
+            user: true,
+          },
+        }),
+        prisma.seat.update({
+          where: { id: pod.id },
+          data: { status: "RESERVED" },
+        }),
+        prisma.waitQueue.update({
+          where: { id: queueEntry.id },
+          data: {
+            status: "ASSIGNED",
+            assignedAt: new Date(),
+          },
+        }),
+      ]);
+
+      // Send notification to customer
+      await notifyPodReady(updatedOrder);
+
+      assigned.push({
+        orderId: updatedOrder.id,
+        podNumber: pod.number,
+      });
+
+      console.log(`Assigned order ${updatedOrder.kitchenOrderNumber || updatedOrder.orderNumber.slice(-6)} to Pod ${pod.number}`);
+    } catch (error) {
+      console.error(`Error assigning pod to queue entry ${queueEntry.id}:`, error);
+    }
+  }
+
+  return { assigned: assigned.length, assignments: assigned };
+}
+
+// Send notification when pod is ready (placeholder for now)
+async function notifyPodReady(order) {
+  const notificationMethod = "SYSTEM"; // Will be PUSH/SMS/EMAIL when implemented
+
+  // Update order with notification timestamp
+  await prisma.order.update({
+    where: { id: order.id },
+    data: {
+      notifiedAt: new Date(),
+      notificationMethod,
+    },
+  });
+
+  // TODO: Implement actual notifications
+  // - Push notification via web push API / Firebase
+  // - SMS via Twilio
+  // - Email via SendGrid
+
+  console.log(`[NOTIFICATION] Order ${order.kitchenOrderNumber || order.orderNumber.slice(-6)}: Pod ${order.seat.number} is ready!`);
+
+  return { sent: true, method: notificationMethod };
+}
+
+// ====================
 // HEALTH CHECK
 // ====================
 
@@ -106,10 +230,41 @@ app.get("/locations", async (req, reply) => {
 
   const locations = await prisma.location.findMany({
     where: { tenantId: tenant.id },
-    include: { stats: true },
+    include: {
+      stats: true,
+      seats: true, // Include all pods
+    },
   });
 
-  return locations;
+  // Calculate real-time pod availability and wait times for each location
+  const locationsWithRealTimeStats = await Promise.all(
+    locations.map(async (location) => {
+      const totalSeats = location.seats.length;
+      const availableSeats = location.seats.filter(s => s.status === 'AVAILABLE').length;
+
+      // Calculate average wait time based on current queue
+      const queuedOrders = await prisma.waitQueue.count({
+        where: {
+          locationId: location.id,
+          assignedAt: null, // Not yet assigned to a pod
+        }
+      });
+
+      // Estimate: 15 minutes per order in queue, max 60 minutes
+      const avgWaitMinutes = Math.min(queuedOrders * 15, 60);
+
+      return {
+        ...location,
+        stats: {
+          availableSeats,
+          totalSeats,
+          avgWaitMinutes,
+        }
+      };
+    })
+  );
+
+  return locationsWithRealTimeStats;
 });
 
 app.post("/locations", async (req, reply) => {
@@ -558,6 +713,606 @@ app.get("/seats/:qrCode", async (req, reply) => {
   return seat;
 });
 
+// POST /seats - Create a new pod/seat
+app.post("/seats", async (req, reply) => {
+  const { locationId, number } = req.body || {};
+
+  if (!locationId || !number) {
+    return reply.code(400).send({ error: "locationId and number required" });
+  }
+
+  // Generate unique QR code for pod
+  const qrCode = `POD-${locationId}-${number}-${Date.now()}`;
+
+  try {
+    const seat = await prisma.seat.create({
+      data: {
+        locationId,
+        number,
+        qrCode,
+      },
+      include: {
+        location: true,
+      },
+    });
+
+    return seat;
+  } catch (error) {
+    if (error.code === "P2002") {
+      return reply.code(400).send({ error: "Pod number already exists for this location" });
+    }
+    throw error;
+  }
+});
+
+// PATCH /seats/:id - Update pod status or details
+app.patch("/seats/:id", async (req, reply) => {
+  const { id } = req.params;
+  const { status, number } = req.body || {};
+
+  const data = {};
+  if (status) data.status = status;
+  if (number) data.number = number;
+
+  if (!Object.keys(data).length) {
+    return reply.code(400).send({ error: "status or number required" });
+  }
+
+  const seat = await prisma.seat.update({
+    where: { id },
+    data,
+    include: {
+      location: true,
+    },
+  });
+
+  return seat;
+});
+
+// DELETE /seats/:id - Delete a pod
+app.delete("/seats/:id", async (req, reply) => {
+  const { id } = req.params;
+
+  // Check if seat has any orders
+  const orderCount = await prisma.order.count({
+    where: { seatId: id },
+  });
+
+  if (orderCount > 0) {
+    return reply.code(400).send({
+      error: "Cannot delete pod with existing orders"
+    });
+  }
+
+  await prisma.seat.delete({
+    where: { id },
+  });
+
+  return { success: true };
+});
+
+// GET /locations/:id/seats - Get all pods for a location
+app.get("/locations/:id/seats", async (req, reply) => {
+  const { id } = req.params;
+
+  const seats = await prisma.seat.findMany({
+    where: { locationId: id },
+    include: {
+      orders: {
+        where: {
+          status: {
+            in: ["QUEUED", "PREPPING", "READY", "SERVING"],
+          },
+        },
+        include: {
+          items: {
+            include: {
+              menuItem: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+        take: 1,
+      },
+    },
+    orderBy: {
+      number: "asc",
+    },
+  });
+
+  return seats;
+});
+
+// POST /orders/check-in - Customer arrives and scans order QR at kiosk
+app.post("/orders/check-in", async (req, reply) => {
+  const { orderQrCode } = req.body || {};
+
+  if (!orderQrCode) {
+    return reply.code(400).send({ error: "orderQrCode required" });
+  }
+
+  // Find order by QR code
+  const order = await prisma.order.findUnique({
+    where: { orderQrCode },
+    include: {
+      user: true,
+      location: true,
+      seat: true,
+    },
+  });
+
+  if (!order) {
+    return reply.code(404).send({ error: "Order not found" });
+  }
+
+  if (order.paymentStatus !== "PAID") {
+    return reply.code(400).send({ error: "Order must be paid before check-in" });
+  }
+
+  if (order.arrivedAt) {
+    return reply.code(400).send({ error: "Order already checked in" });
+  }
+
+  const now = new Date();
+
+  // Calculate arrival deviation (minutes early/late vs estimated)
+  let arrivalDeviation = null;
+  if (order.estimatedArrival) {
+    arrivalDeviation = Math.round((now - order.estimatedArrival) / 60000);
+  }
+
+  // Check for available pods at this location
+  const availablePods = await prisma.seat.findMany({
+    where: {
+      locationId: order.locationId,
+      status: "AVAILABLE",
+    },
+    orderBy: {
+      number: "asc",
+    },
+  });
+
+  if (availablePods.length > 0) {
+    // Pod available! Auto-assign immediately
+    const pod = availablePods[0];
+
+    const [updatedOrder, updatedSeat] = await prisma.$transaction([
+      prisma.order.update({
+        where: { id: order.id },
+        data: {
+          arrivedAt: now,
+          arrivalDeviation,
+          seatId: pod.id,
+          podAssignedAt: now,
+          podSelectionMethod: "AUTO",
+          status: "QUEUED",
+          paidAt: order.paidAt || now, // Set paidAt if not already set
+        },
+        include: {
+          seat: true,
+          location: true,
+          items: {
+            include: {
+              menuItem: true,
+            },
+          },
+        },
+      }),
+      prisma.seat.update({
+        where: { id: pod.id },
+        data: { status: "RESERVED" },
+      }),
+    ]);
+
+    return {
+      status: "ASSIGNED",
+      message: `Go to Pod ${pod.number}`,
+      order: updatedOrder,
+      podNumber: pod.number,
+    };
+  }
+
+  // No pods available - add to queue
+  // Calculate priority score
+  const waitMinutes = 0; // Just arrived
+  let tierBoost = 0;
+  if (order.user) {
+    if (order.user.membershipTier === "BEEF_BOSS") tierBoost = 50;
+    else if (order.user.membershipTier === "NOODLE_MASTER") tierBoost = 25;
+    else if (order.user.membershipTier === "CHOPSTICK") tierBoost = 10;
+  }
+
+  const arrivalBonus = Math.abs(arrivalDeviation || 0) <= 5 ? 20 : 0;
+  const lateBonus = (arrivalDeviation || 0) > 15 ? 30 : 0;
+  const orderValueBonus = order.totalCents > 5000 ? 5 : 0;
+
+  const priority = waitMinutes + tierBoost + arrivalBonus + lateBonus + orderValueBonus;
+
+  // Get current queue count for position
+  const queueCount = await prisma.waitQueue.count({
+    where: {
+      locationId: order.locationId,
+      status: "WAITING",
+    },
+  });
+
+  const queuePosition = queueCount + 1;
+
+  // Estimate wait time (rough: 15 min per person ahead)
+  const estimatedWaitMinutes = queuePosition * 15;
+
+  // Create queue entry and update order
+  const [queueEntry, updatedOrder] = await prisma.$transaction([
+    prisma.waitQueue.create({
+      data: {
+        orderId: order.id,
+        locationId: order.locationId,
+        arrivedAt: now,
+        estimatedArrival: order.estimatedArrival,
+        priority,
+        status: "WAITING",
+      },
+    }),
+    prisma.order.update({
+      where: { id: order.id },
+      data: {
+        arrivedAt: now,
+        arrivalDeviation,
+        queuedAt: now,
+        queuePosition,
+        estimatedWaitMinutes,
+        status: "QUEUED",
+        paidAt: order.paidAt || now,
+      },
+      include: {
+        location: true,
+        items: {
+          include: {
+            menuItem: true,
+          },
+        },
+      },
+    }),
+  ]);
+
+  // Update user arrival metrics
+  if (order.user && arrivalDeviation !== null) {
+    const isOnTime = Math.abs(arrivalDeviation) <= 5;
+    const newOnTimeCount = order.user.onTimeArrivals + (isOnTime ? 1 : 0);
+    const newTotalOrders = order.user.lifetimeOrderCount + 1;
+
+    await prisma.user.update({
+      where: { id: order.user.id },
+      data: {
+        onTimeArrivals: newOnTimeCount,
+        arrivalAccuracy: newOnTimeCount / newTotalOrders,
+        avgArrivalDeviation:
+          ((order.user.avgArrivalDeviation || 0) * order.user.lifetimeOrderCount + arrivalDeviation) /
+          newTotalOrders,
+      },
+    });
+  }
+
+  return {
+    status: "QUEUED",
+    message: `All pods occupied. You're #${queuePosition} in queue.`,
+    order: updatedOrder,
+    queuePosition,
+    estimatedWaitMinutes,
+  };
+});
+
+// GET /orders/status - Get real-time order status by QR code
+app.get("/orders/status", async (req, reply) => {
+  const { orderQrCode } = req.query || {};
+
+  if (!orderQrCode) {
+    return reply.code(400).send({ error: "orderQrCode required" });
+  }
+
+  const order = await prisma.order.findUnique({
+    where: { orderQrCode },
+    include: {
+      seat: true,
+      location: true,
+      items: {
+        include: {
+          menuItem: true,
+        },
+      },
+      user: true,
+      waitQueueEntry: true,
+    },
+  });
+
+  if (!order) {
+    return reply.code(404).send({ error: "Order not found" });
+  }
+
+  // Build response with status info
+  const response = {
+    order: {
+      id: order.id,
+      orderNumber: order.orderNumber,
+      kitchenOrderNumber: order.kitchenOrderNumber,
+      orderQrCode: order.orderQrCode,
+      status: order.status,
+      totalCents: order.totalCents,
+      estimatedArrival: order.estimatedArrival,
+
+      // Timestamps
+      paidAt: order.paidAt,
+      arrivedAt: order.arrivedAt,
+      queuedAt: order.queuedAt,
+      prepStartTime: order.prepStartTime,
+      readyTime: order.readyTime,
+      deliveredAt: order.deliveredAt,
+      completedTime: order.completedTime,
+
+      // Pod info
+      podNumber: order.seat?.number,
+      podAssignedAt: order.podAssignedAt,
+      podConfirmedAt: order.podConfirmedAt,
+
+      // Queue info
+      queuePosition: order.queuePosition,
+      estimatedWaitMinutes: order.estimatedWaitMinutes,
+
+      // Location
+      location: {
+        id: order.location.id,
+        name: order.location.name,
+        city: order.location.city,
+      },
+
+      // Items
+      items: order.items.map((item) => ({
+        id: item.id,
+        name: item.menuItem.name,
+        quantity: item.quantity,
+        selectedValue: item.selectedValue,
+        priceCents: item.priceCents,
+      })),
+    },
+  };
+
+  return response;
+});
+
+// POST /orders/confirm-pod - Confirm customer arrived at assigned pod
+app.post("/orders/confirm-pod", async (req, reply) => {
+  const { orderQrCode } = req.body || {};
+
+  if (!orderQrCode) {
+    return reply.code(400).send({ error: "orderQrCode required" });
+  }
+
+  const order = await prisma.order.findUnique({
+    where: { orderQrCode },
+    include: { seat: true, location: true },
+  });
+
+  if (!order) {
+    return reply.code(404).send({ error: "Order not found" });
+  }
+
+  if (!order.seatId) {
+    return reply.code(400).send({ error: "No pod assigned to this order. Please check in at the kiosk first." });
+  }
+
+  if (order.podConfirmedAt) {
+    return reply.code(400).send({ error: "Pod arrival already confirmed" });
+  }
+
+  // Mark pod as confirmed and occupied
+  const [updatedOrder, updatedSeat] = await prisma.$transaction([
+    prisma.order.update({
+      where: { id: order.id },
+      data: {
+        podConfirmedAt: new Date(),
+      },
+      include: { seat: true, location: true, items: { include: { menuItem: true } } },
+    }),
+    prisma.seat.update({
+      where: { id: order.seatId },
+      data: { status: "OCCUPIED" },
+    }),
+  ]);
+
+  console.log(`Order ${order.kitchenOrderNumber}: Customer confirmed arrival at Pod ${order.seat.number}`);
+
+  return {
+    success: true,
+    message: `Welcome to Pod ${order.seat.number}! Your order is being prepared.`,
+    order: updatedOrder,
+  };
+});
+
+// POST /orders/:id/assign-pod - Assign available pod to order
+app.post("/orders/:id/assign-pod", async (req, reply) => {
+  const { id } = req.params;
+  const { seatId } = req.body || {};
+
+  const order = await prisma.order.findUnique({
+    where: { id },
+    include: { location: true },
+  });
+
+  if (!order) {
+    return reply.code(404).send({ error: "Order not found" });
+  }
+
+  if (order.seatId) {
+    return reply.code(400).send({ error: "Order already has a pod assigned" });
+  }
+
+  let seat;
+
+  if (seatId) {
+    // Specific pod requested
+    seat = await prisma.seat.findUnique({
+      where: { id: seatId },
+    });
+
+    if (!seat) {
+      return reply.code(404).send({ error: "Pod not found" });
+    }
+
+    if (seat.status !== "AVAILABLE") {
+      return reply.code(400).send({ error: "Pod is not available" });
+    }
+  } else {
+    // Auto-assign: Find first available pod at this location
+    seat = await prisma.seat.findFirst({
+      where: {
+        locationId: order.locationId,
+        status: "AVAILABLE",
+      },
+      orderBy: {
+        number: "asc",
+      },
+    });
+
+    if (!seat) {
+      return reply.code(400).send({ error: "No available pods at this location" });
+    }
+  }
+
+  // Assign pod and mark as RESERVED
+  const [updatedOrder, updatedSeat] = await prisma.$transaction([
+    prisma.order.update({
+      where: { id },
+      data: {
+        seatId: seat.id,
+        podAssignedAt: new Date(),
+      },
+      include: {
+        seat: true,
+        location: true,
+        items: {
+          include: {
+            menuItem: true,
+          },
+        },
+      },
+    }),
+    prisma.seat.update({
+      where: { id: seat.id },
+      data: {
+        status: "RESERVED",
+      },
+    }),
+  ]);
+
+  return updatedOrder;
+});
+
+// POST /orders/:id/confirm-pod - Customer confirms pod by scanning QR
+app.post("/orders/:id/confirm-pod", async (req, reply) => {
+  const { id } = req.params;
+  const { qrCode } = req.body || {};
+
+  if (!qrCode) {
+    return reply.code(400).send({ error: "qrCode required" });
+  }
+
+  const order = await prisma.order.findUnique({
+    where: { id },
+    include: { seat: true },
+  });
+
+  if (!order) {
+    return reply.code(404).send({ error: "Order not found" });
+  }
+
+  if (!order.seatId) {
+    return reply.code(400).send({ error: "Order does not have a pod assigned" });
+  }
+
+  if (order.seat.qrCode !== qrCode) {
+    return reply.code(400).send({ error: "QR code does not match assigned pod" });
+  }
+
+  if (order.podConfirmedAt) {
+    return reply.code(400).send({ error: "Pod already confirmed" });
+  }
+
+  // Confirm pod and mark seat as OCCUPIED
+  const [updatedOrder, updatedSeat] = await prisma.$transaction([
+    prisma.order.update({
+      where: { id },
+      data: {
+        podConfirmedAt: new Date(),
+      },
+      include: {
+        seat: true,
+        location: true,
+        items: {
+          include: {
+            menuItem: true,
+          },
+        },
+      },
+    }),
+    prisma.seat.update({
+      where: { id: order.seatId },
+      data: {
+        status: "OCCUPIED",
+      },
+    }),
+  ]);
+
+  return updatedOrder;
+});
+
+// POST /orders/:id/release-pod - Release pod when order is completed
+app.post("/orders/:id/release-pod", async (req, reply) => {
+  const { id } = req.params;
+
+  const order = await prisma.order.findUnique({
+    where: { id },
+    include: { seat: true },
+  });
+
+  if (!order) {
+    return reply.code(404).send({ error: "Order not found" });
+  }
+
+  if (!order.seatId) {
+    return reply.code(400).send({ error: "Order does not have a pod assigned" });
+  }
+
+  // Release pod and mark as CLEANING
+  const updatedSeat = await prisma.seat.update({
+    where: { id: order.seatId },
+    data: {
+      status: "CLEANING",
+    },
+  });
+
+  return { success: true, seat: updatedSeat };
+});
+
+// PATCH /seats/:id/clean - Mark pod as clean and available
+app.patch("/seats/:id/clean", async (req, reply) => {
+  const { id } = req.params;
+
+  const seat = await prisma.seat.update({
+    where: { id },
+    data: {
+      status: "AVAILABLE",
+    },
+  });
+
+  // Automatically process queue when pod becomes available
+  console.log(`Pod ${seat.number} cleaned, processing queue for location ${seat.locationId}`);
+  await processQueue(seat.locationId);
+
+  return seat;
+});
+
 // ====================
 // ORDERS
 // ====================
@@ -659,15 +1414,44 @@ app.post("/orders", async (req, reply) => {
     };
   });
 
-  // Generate order number
+  // Generate unique order number (long format)
   const orderNumber = `ORD-${Date.now()}-${Math.random()
     .toString(36)
     .substr(2, 6)
     .toUpperCase()}`;
 
+  // Generate order QR code for customer scanning (at kiosk and pod)
+  const orderQrCode = `ORDER-${locationId.slice(-8)}-${Date.now()}-${Math.random()
+    .toString(36)
+    .substr(2, 6)
+    .toUpperCase()}`;
+
+  // Generate daily kitchen order number (0001-9999 per location per day)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  // Count today's PAID orders for this location to get next number
+  const todaysOrderCount = await prisma.order.count({
+    where: {
+      locationId,
+      paymentStatus: "PAID",
+      createdAt: {
+        gte: today,
+        lt: tomorrow,
+      },
+    },
+  });
+
+  // Format as 4-digit string (e.g., "0001", "0042", "0234")
+  const kitchenOrderNumber = String(todaysOrderCount + 1).padStart(4, "0");
+
   const order = await prisma.order.create({
     data: {
       orderNumber,
+      orderQrCode,
+      kitchenOrderNumber,
       tenantId,
       locationId,
       seatId,
@@ -1309,6 +2093,7 @@ app.get("/kitchen/orders", async (req, reply) => {
   const where = {
     tenantId: tenant.id,
     paymentStatus: "PAID", // Only show paid orders
+    podConfirmedAt: { not: null }, // Only show orders where customer has confirmed pod arrival
   };
 
   if (locationId) {
@@ -1317,8 +2102,8 @@ app.get("/kitchen/orders", async (req, reply) => {
 
   if (status) {
     if (status === "active") {
-      // Active orders = QUEUED, PREPPING, or READY
-      where.status = { in: ["QUEUED", "PREPPING", "READY"] };
+      // Active orders = QUEUED, PREPPING, READY, or SERVING
+      where.status = { in: ["QUEUED", "PREPPING", "READY", "SERVING"] };
     } else {
       where.status = status;
     }
@@ -1361,6 +2146,9 @@ app.patch("/kitchen/orders/:id/status", async (req, reply) => {
   if (status === "READY") {
     data.readyTime = new Date();
   }
+  if (status === "SERVING") {
+    data.deliveredAt = new Date();
+  }
   if (status === "COMPLETED") {
     data.completedTime = new Date();
   }
@@ -1379,6 +2167,20 @@ app.patch("/kitchen/orders/:id/status", async (req, reply) => {
     },
   });
 
+  // When order is completed, release the pod and process queue
+  if (status === "COMPLETED" && order.seatId) {
+    console.log(`Order ${order.kitchenOrderNumber} completed, releasing pod ${order.seat?.number}`);
+
+    // Mark pod as needs cleaning
+    await prisma.seat.update({
+      where: { id: order.seatId },
+      data: { status: "CLEANING" },
+    });
+
+    // Note: Staff will mark pod as AVAILABLE via /seats/:id/clean
+    // which will automatically trigger queue processing
+  }
+
   return order;
 });
 
@@ -1395,23 +2197,139 @@ app.get("/kitchen/stats", async (req, reply) => {
   const where = {
     tenantId: tenant.id,
     paymentStatus: "PAID",
+    podConfirmedAt: { not: null }, // Only count orders where customer has confirmed pod arrival
   };
 
   if (locationId) {
     where.locationId = locationId;
   }
 
-  const [queued, prepping, ready] = await Promise.all([
+  const [queued, prepping, ready, serving] = await Promise.all([
     prisma.order.count({ where: { ...where, status: "QUEUED" } }),
     prisma.order.count({ where: { ...where, status: "PREPPING" } }),
     prisma.order.count({ where: { ...where, status: "READY" } }),
+    prisma.order.count({ where: { ...where, status: "SERVING" } }),
   ]);
 
   return {
     queued,
     prepping,
     ready,
-    total: queued + prepping + ready,
+    serving,
+    total: queued + prepping + ready + serving,
+  };
+});
+
+// GET /kitchen/average-processing-time - Get average time from QUEUED to SERVING for today
+app.get("/kitchen/average-processing-time", async (req, reply) => {
+  const { locationId } = req.query || {};
+  const tenantSlug = getTenantContext(req);
+
+  const tenant = await prisma.tenant.findUnique({
+    where: { slug: tenantSlug },
+  });
+  if (!tenant) return reply.code(404).send({ error: "Tenant not found" });
+
+  // Get start of today
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+
+  const where = {
+    tenantId: tenant.id,
+    status: "SERVING", // Only completed orders that reached SERVING
+    queuedAt: { not: null },
+    deliveredAt: { not: null },
+    createdAt: { gte: startOfToday }, // Orders from today
+  };
+
+  if (locationId) {
+    where.locationId = locationId;
+  }
+
+  const orders = await prisma.order.findMany({
+    where,
+    select: {
+      queuedAt: true,
+      deliveredAt: true,
+    },
+  });
+
+  if (orders.length === 0) {
+    return { averageSeconds: 0, averageMinutes: 0, count: 0 };
+  }
+
+  // Calculate average processing time
+  const totalSeconds = orders.reduce((sum, order) => {
+    const queuedTime = new Date(order.queuedAt).getTime();
+    const deliveredTime = new Date(order.deliveredAt).getTime();
+    const diffSeconds = (deliveredTime - queuedTime) / 1000;
+    return sum + diffSeconds;
+  }, 0);
+
+  const averageSeconds = Math.floor(totalSeconds / orders.length);
+  const averageMinutes = averageSeconds / 60;
+
+  return {
+    averageSeconds,
+    averageMinutes: parseFloat(averageMinutes.toFixed(2)),
+    count: orders.length,
+  };
+});
+
+// GET /cleaning/average-time - Get average cleaning time for today
+app.get("/cleaning/average-time", async (req, reply) => {
+  const { locationId } = req.query || {};
+  const tenantSlug = getTenantContext(req);
+
+  const tenant = await prisma.tenant.findUnique({
+    where: { slug: tenantSlug },
+  });
+  if (!tenant) return reply.code(404).send({ error: "Tenant not found" });
+
+  // Get start of today
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+
+  const where = {
+    tenantId: tenant.id,
+    status: "COMPLETED",
+    completedTime: { not: null },
+    createdAt: { gte: startOfToday }, // Orders from today
+  };
+
+  if (locationId) {
+    where.locationId = locationId;
+  }
+
+  const orders = await prisma.order.findMany({
+    where,
+    select: {
+      completedTime: true,
+      updatedAt: true,
+    },
+  });
+
+  if (orders.length === 0) {
+    return { averageSeconds: 0, averageMinutes: 0, count: 0 };
+  }
+
+  // Calculate average cleaning time (from COMPLETED status change to now)
+  // Note: We're using updatedAt as a proxy for when the pod became AVAILABLE
+  // This is the time between order completion and pod being marked clean
+  const totalSeconds = orders.reduce((sum, order) => {
+    const completedTime = new Date(order.completedTime).getTime();
+    const cleanedTime = new Date(order.updatedAt).getTime();
+    const diffSeconds = (cleanedTime - completedTime) / 1000;
+    return sum + diffSeconds;
+  }, 0);
+
+  const averageSeconds = Math.floor(totalSeconds / orders.length);
+  const averageMinutes = averageSeconds / 60;
+
+  return {
+    averageSeconds,
+    averageMinutes: parseFloat(averageMinutes.toFixed(2)),
+    count: orders.length,
   };
 });
 
