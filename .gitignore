@@ -34,3 +34,5 @@ yarn-error.log*
 # OS
 Thumbs.db
 .vercel
+.env.production
+PRODUCTION_CREDENTIALS.md

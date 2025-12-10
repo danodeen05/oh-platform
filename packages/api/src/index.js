@@ -243,12 +243,18 @@ app.get("/locations", async (req, reply) => {
       const availableSeats = location.seats.filter(s => s.status === 'AVAILABLE').length;
 
       // Calculate average wait time based on current queue
-      const queuedOrders = await prisma.waitQueue.count({
-        where: {
-          locationId: location.id,
-          assignedAt: null, // Not yet assigned to a pod
-        }
-      });
+      let queuedOrders = 0;
+      try {
+        queuedOrders = await prisma.waitQueue.count({
+          where: {
+            locationId: location.id,
+            assignedAt: null, // Not yet assigned to a pod
+          }
+        });
+      } catch (error) {
+        // If WaitQueue doesn't exist yet (old Prisma client), default to 0
+        console.error('WaitQueue query failed:', error.message);
+      }
 
       // Estimate: 15 minutes per order in queue, max 60 minutes
       const avgWaitMinutes = Math.min(queuedOrders * 15, 60);
