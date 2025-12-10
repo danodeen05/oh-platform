@@ -3,14 +3,14 @@ nixPkgs = ["nodejs_20"]
 
 [phases.install]
 cmds = [
-  "npm install",
-  "cd ../db && npm install && cd ../api"
+  "cd packages/db && npm install",
+  "cd packages/api && npm install"
 ]
 
 [phases.build]
 cmds = [
-  "cd ../db && npx prisma generate && cd ../api"
+  "cd packages/db && npx prisma generate"
 ]
 
 [start]
-cmd = "node src/index.js"
+cmd = "cd packages/api && node src/index.js"
