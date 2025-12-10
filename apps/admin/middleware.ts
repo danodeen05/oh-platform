@@ -10,12 +10,7 @@ export default clerkMiddleware(async (auth, request) => {
   }
 
   // Protect all other routes - require authentication
-  const { userId } = await auth()
-
-  if (!userId) {
-    // Not signed in - redirect to sign-in
-    return auth().redirectToSignIn()
-  }
+  await auth.protect()
 
   // TODO: Add admin role check here when you set up admin roles in Clerk
   // For now, any authenticated user can access admin (you can restrict this later)
