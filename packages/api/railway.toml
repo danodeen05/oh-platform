@@ -1,5 +1,6 @@
 [build]
-builder = "NIXPACKS"
+builder = "DOCKERFILE"
+dockerfilePath = "packages/api/Dockerfile"
 watchPaths = ["packages/api/**", "packages/db/**"]
 
 [deploy]
