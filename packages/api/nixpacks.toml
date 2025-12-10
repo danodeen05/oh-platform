@@ -1,15 +1,14 @@
 [phases.setup]
-nixPkgs = ["nodejs_20"]
+nixPkgs = ["nodejs_20", "pnpm-9_x"]
 
 [phases.install]
 cmds = [
-  "cd packages/db && npm install",
-  "cd packages/api && npm install"
+  "pnpm install --filter @oh/db --filter @oh/api"
 ]
 
 [phases.build]
 cmds = [
-  "cd packages/db && npx prisma generate"
+  "pnpm --filter @oh/db prisma generate"
 ]
 
 [start]
