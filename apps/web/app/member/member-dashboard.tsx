@@ -700,25 +700,19 @@ export default function MemberDashboard() {
             </div>
             <div style={{ fontSize: "0.85rem", color: "#666" }}>Credits</div>
           </div>
+        </div>
 
-          <div
-            style={{
-              background: "white",
-              borderRadius: 12,
-              padding: 20,
-              textAlign: "center",
-            }}
-          >
-            <div
-              style={{ fontSize: "2rem", fontWeight: "bold", color: tierColor }}
-            >
-              {profile.currentStreak}
-            </div>
-            <div style={{ fontSize: "0.85rem", color: "#666" }}>Day Streak</div>
+        {/* Order Calendar - Centered below stats */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            marginBottom: 16,
+          }}
+        >
+          <div style={{ width: "100%", maxWidth: 400 }}>
+            <OrderCalendar orders={orders} tierColor={tierColor} />
           </div>
-
-          {/* Order Calendar - replaces Badges stat */}
-          <OrderCalendar orders={orders} tierColor={tierColor} />
         </div>
 
         {/* Badges */}
