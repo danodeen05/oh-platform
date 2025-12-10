@@ -382,7 +382,8 @@ export default function EnhancedMenuBuilder({
   // Time selection view
   if (currentStepIndex >= menuSteps.length) {
     const timeOptions = [
-      { value: "asap", label: "ASAP (15-20 min)", minutes: 15 },
+      { value: "asap", label: "ASAP (between now and 5 minutes)", minutes: 0 },
+      { value: "15", label: "15 minutes", minutes: 15 },
       { value: "30", label: "30 minutes", minutes: 30 },
       { value: "45", label: "45 minutes", minutes: 45 },
       { value: "60", label: "1 hour", minutes: 60 },

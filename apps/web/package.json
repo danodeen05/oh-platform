@@ -12,6 +12,7 @@
     "@stripe/stripe-js": "^8.5.3",
     "lottie-react": "^2.4.1",
     "next": "16.0.7",
+    "qrcode.react": "^4.2.0",
     "react": "19.0.0-rc.1",
     "react-dom": "19.0.0-rc.1",
     "stripe": "^20.0.0"

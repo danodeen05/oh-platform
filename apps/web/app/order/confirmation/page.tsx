@@ -1,6 +1,7 @@
 "use client";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
+import { QRCodeSVG } from "qrcode.react";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "";
 
@@ -350,6 +351,188 @@ function ConfirmationContent() {
           </p>
         </div>
 
+        {/* Order QR Code Section - For Check-In at Location */}
+        {order?.orderQrCode && !order?.arrivedAt && (
+          <div
+            style={{
+              background: "#7C7A67",
+              borderRadius: 12,
+              padding: 24,
+              marginBottom: 24,
+              textAlign: "center",
+            }}
+          >
+            <div style={{ fontSize: "1.5rem", marginBottom: 8 }}>🎫</div>
+            <h3 style={{ margin: 0, marginBottom: 8, fontSize: "1.3rem", color: "white" }}>
+              Your Order QR Code
+            </h3>
+            <p style={{ fontSize: "0.9rem", marginBottom: 16, color: "rgba(255,255,255,0.9)" }}>
+              Scan this at the kiosk when you arrive to get your pod assignment
+            </p>
+
+            {/* QR Code Display */}
+            <div
+              style={{
+                background: "white",
+                padding: 20,
+                borderRadius: 12,
+                marginBottom: 16,
+                display: "inline-block",
+              }}
+            >
+              <QRCodeSVG
+                value={order.orderQrCode}
+                size={200}
+                level="H"
+                includeMargin={false}
+              />
+            </div>
+
+            {/* Order Code Text */}
+            <div
+              style={{
+                fontFamily: "monospace",
+                fontSize: "0.75rem",
+                color: "rgba(255,255,255,0.8)",
+                marginBottom: 12,
+                letterSpacing: "0.5px",
+              }}
+            >
+              {order.orderQrCode}
+            </div>
+
+            {/* Arrival Time */}
+            {order.estimatedArrival && (
+              <p style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.9)", marginTop: 12, marginBottom: 16 }}>
+                Expected arrival: {new Date(order.estimatedArrival).toLocaleTimeString()}
+              </p>
+            )}
+
+            <div style={{ display: "grid", gap: 8 }}>
+              <button
+                onClick={() =>
+                  router.push(
+                    `/order/check-in?orderQrCode=${encodeURIComponent(
+                      order.orderQrCode
+                    )}`
+                  )
+                }
+                style={{
+                  width: "100%",
+                  padding: 12,
+                  background: "white",
+                  color: "#7C7A67",
+                  border: "none",
+                  borderRadius: 8,
+                  fontSize: "0.9rem",
+                  fontWeight: "bold",
+                  cursor: "pointer",
+                }}
+              >
+                🎫 Check In Now (Simulate Kiosk)
+              </button>
+
+              <button
+                onClick={() =>
+                  router.push(
+                    `/order/status?orderQrCode=${encodeURIComponent(
+                      order.orderQrCode
+                    )}`
+                  )
+                }
+                style={{
+                  width: "100%",
+                  padding: 12,
+                  background: "rgba(255,255,255,0.2)",
+                  color: "white",
+                  border: "2px solid white",
+                  borderRadius: 8,
+                  fontSize: "0.9rem",
+                  fontWeight: "bold",
+                  cursor: "pointer",
+                }}
+              >
+                📍 Track Order Status
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Pod Assignment Section */}
+        {order?.seat && (
+          <div
+            style={{
+              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              borderRadius: 12,
+              padding: 24,
+              marginBottom: 24,
+              color: "white",
+              textAlign: "center",
+            }}
+          >
+            <div style={{ fontSize: "1.5rem", marginBottom: 8 }}>🪑</div>
+            <h3 style={{ margin: 0, marginBottom: 8, fontSize: "1.3rem" }}>
+              Your Pod is Ready!
+            </h3>
+            <div
+              style={{
+                fontSize: "3rem",
+                fontWeight: "bold",
+                margin: "16px 0",
+                letterSpacing: "0.1em",
+              }}
+            >
+              POD {order.seat.number}
+            </div>
+            <p style={{ fontSize: "0.9rem", marginBottom: 16, opacity: 0.9 }}>
+              {order.podConfirmedAt
+                ? "You're checked in! Your order is being prepared."
+                : "Head to your pod and scan the QR code on the table to start your order."}
+            </p>
+
+            {!order.podConfirmedAt && (
+              <button
+                onClick={() => router.push(`/order/scan?orderId=${orderId}`)}
+                style={{
+                  width: "100%",
+                  padding: 14,
+                  background: "white",
+                  color: "#667eea",
+                  border: "none",
+                  borderRadius: 8,
+                  fontSize: "1rem",
+                  fontWeight: "bold",
+                  cursor: "pointer",
+                  marginTop: 8,
+                }}
+              >
+                📱 Scan Pod QR Code
+              </button>
+            )}
+
+            {order.podConfirmedAt && (
+              <div
+                style={{
+                  background: "rgba(255,255,255,0.2)",
+                  padding: 12,
+                  borderRadius: 8,
+                  marginTop: 12,
+                }}
+              >
+                <div style={{ fontSize: "0.85rem", marginBottom: 4 }}>
+                  Order Status
+                </div>
+                <div style={{ fontSize: "1.1rem", fontWeight: "bold" }}>
+                  {order.status === "QUEUED" && "⏳ In Queue"}
+                  {order.status === "PREPPING" && "👨‍🍳 Preparing"}
+                  {order.status === "READY" && "✅ Ready!"}
+                  {order.status === "COMPLETED" && "🎉 Enjoy!"}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Order Summary */}
         <div
           style={{
@@ -472,6 +655,31 @@ function ConfirmationContent() {
 
         {/* Action Buttons */}
         <div style={{ display: "grid", gap: 12 }}>
+          {order?.orderQrCode && (
+            <button
+              onClick={() =>
+                router.push(
+                  `/order/status?orderQrCode=${encodeURIComponent(
+                    order.orderQrCode
+                  )}`
+                )
+              }
+              style={{
+                width: "100%",
+                padding: 14,
+                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                color: "white",
+                border: "none",
+                borderRadius: 8,
+                fontSize: "1rem",
+                fontWeight: "bold",
+                cursor: "pointer",
+              }}
+            >
+              📍 Track Order Status
+            </button>
+          )}
+
           <button
             onClick={() => router.push("/member")}
             style={{

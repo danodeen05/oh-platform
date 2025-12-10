@@ -103,7 +103,8 @@ export default function HomePage() {
             animation: "fadeInUp 1.2s ease 0.2s forwards",
           }}
         >
-          <span style={{ fontFamily: '"Noto Serif TC", serif' }}>哦</span> Oh! Beef Noodle Soup
+          <span style={{ fontFamily: '"Ma Shan Zheng", cursive' }}>哦</span>{" "}
+          <span style={{ fontFamily: '"Bebas Neue", sans-serif', fontWeight: "400" }}>Oh! Beef Noodle Soup</span>
         </h1>
 
         <p

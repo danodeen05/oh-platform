@@ -18,63 +18,6 @@ export default function HomePage() {
         }}
       >
         <Link
-          href="/tenants"
-          style={{
-            padding: "32px",
-            background: "white",
-            border: "2px solid #e5e7eb",
-            borderRadius: "12px",
-            textDecoration: "none",
-            color: "inherit",
-            transition: "all 0.2s",
-          }}
-        >
-          <div style={{ fontSize: "2.5rem", marginBottom: "16px" }}>🏢</div>
-          <h2 style={{ fontSize: "1.5rem", marginBottom: "8px" }}>Tenants</h2>
-          <p style={{ color: "#666", fontSize: "0.95rem" }}>
-            Manage restaurant tenants and subscriptions
-          </p>
-        </Link>
-
-        <Link
-          href="/locations"
-          style={{
-            padding: "32px",
-            background: "white",
-            border: "2px solid #e5e7eb",
-            borderRadius: "12px",
-            textDecoration: "none",
-            color: "inherit",
-            transition: "all 0.2s",
-          }}
-        >
-          <div style={{ fontSize: "2.5rem", marginBottom: "16px" }}>📍</div>
-          <h2 style={{ fontSize: "1.5rem", marginBottom: "8px" }}>Locations</h2>
-          <p style={{ color: "#666", fontSize: "0.95rem" }}>
-            Manage restaurant locations and seating
-          </p>
-        </Link>
-
-        <Link
-          href="/menu"
-          style={{
-            padding: "32px",
-            background: "white",
-            border: "2px solid #e5e7eb",
-            borderRadius: "12px",
-            textDecoration: "none",
-            color: "inherit",
-            transition: "all 0.2s",
-          }}
-        >
-          <div style={{ fontSize: "2.5rem", marginBottom: "16px" }}>🍜</div>
-          <h2 style={{ fontSize: "1.5rem", marginBottom: "8px" }}>Menu</h2>
-          <p style={{ color: "#666", fontSize: "0.95rem" }}>
-            Manage menu items and pricing
-          </p>
-        </Link>
-
-        <Link
           href="/kitchen"
           style={{
             padding: "32px",
@@ -90,6 +33,25 @@ export default function HomePage() {
           <h2 style={{ fontSize: "1.5rem", marginBottom: "8px" }}>Kitchen Display</h2>
           <p style={{ color: "#666", fontSize: "0.95rem" }}>
             View and manage incoming orders
+          </p>
+        </Link>
+
+        <Link
+          href="/pods"
+          style={{
+            padding: "32px",
+            background: "white",
+            border: "2px solid #e5e7eb",
+            borderRadius: "12px",
+            textDecoration: "none",
+            color: "inherit",
+            transition: "all 0.2s",
+          }}
+        >
+          <div style={{ fontSize: "2.5rem", marginBottom: "16px" }}>🧹</div>
+          <h2 style={{ fontSize: "1.5rem", marginBottom: "8px" }}>Cleaning Management</h2>
+          <p style={{ color: "#666", fontSize: "0.95rem" }}>
+            Track pod cleaning and customer service
           </p>
         </Link>
       </div>

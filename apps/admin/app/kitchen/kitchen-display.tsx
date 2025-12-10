@@ -6,16 +6,20 @@ const BASE = process.env.NEXT_PUBLIC_API_URL || "";
 type Order = {
   id: string;
   orderNumber: string;
+  kitchenOrderNumber?: string;
   status: string;
   totalCents: number;
   createdAt: string;
   estimatedArrival?: string;
   prepStartTime?: string;
+  fulfillmentType: string;
   items: Array<{
     id: string;
     quantity: number;
+    selectedValue?: string;
     menuItem: {
       name: string;
+      categoryType?: string;
     };
   }>;
   seat?: {
@@ -33,9 +37,15 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
     queued: 0,
     prepping: 0,
     ready: 0,
+    serving: 0,
     total: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [avgProcessingTime, setAvgProcessingTime] = useState({
+    averageSeconds: 0,
+    averageMinutes: 0,
+    count: 0,
+  });
 
   async function loadOrders() {
     try {
@@ -83,11 +93,32 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
         queued: data.queued || 0,
         prepping: data.prepping || 0,
         ready: data.ready || 0,
+        serving: data.serving || 0,
         total: data.total || 0,
       });
     } catch (error) {
       console.error("Failed to load stats:", error);
-      setStats({ queued: 0, prepping: 0, ready: 0, total: 0 });
+      setStats({ queued: 0, prepping: 0, ready: 0, serving: 0, total: 0 });
+    }
+  }
+
+  async function loadAvgProcessingTime() {
+    try {
+      const params = new URLSearchParams();
+      if (selectedLocation !== "all") {
+        params.append("locationId", selectedLocation);
+      }
+      const queryString = params.toString();
+      const response = await fetch(
+        `${BASE}/kitchen/average-processing-time${queryString ? `?${queryString}` : ""}`,
+        {
+          headers: { "x-tenant-slug": "oh" },
+        }
+      );
+      const data = await response.json();
+      setAvgProcessingTime(data);
+    } catch (error) {
+      console.error("Failed to load average processing time:", error);
     }
   }
 
@@ -111,11 +142,13 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
   useEffect(() => {
     loadOrders();
     loadStats();
+    loadAvgProcessingTime();
 
     // Auto-refresh every 10 seconds
     const interval = setInterval(() => {
       loadOrders();
       loadStats();
+      loadAvgProcessingTime();
     }, 10000);
 
     return () => clearInterval(interval);
@@ -145,9 +178,74 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
   const queuedOrders = orders.filter((o) => o.status === "QUEUED");
   const preppingOrders = orders.filter((o) => o.status === "PREPPING");
   const readyOrders = orders.filter((o) => o.status === "READY");
+  const servingOrders = orders.filter((o) => o.status === "SERVING");
+
+  // Calculate color for average processing time
+  const getProcessingTimeColor = () => {
+    const mins = avgProcessingTime.averageMinutes;
+    if (mins >= 7) return "#ef4444"; // Red for 7+ minutes
+    if (mins >= 4) return "#f59e0b"; // Orange for 4-7 minutes
+    return "#22c55e"; // Green for < 4 minutes
+  };
+
+  // Format average time as M:SS
+  const formatAvgProcessingTime = () => {
+    const minutes = Math.floor(avgProcessingTime.averageSeconds / 60);
+    const seconds = avgProcessingTime.averageSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+  };
 
   function OrderCard({ order }: { order: Order }) {
     const ageColor = getAgeColor(order.createdAt);
+
+    // Split items into bowl configuration (MAIN + SLIDER) vs add-ons (ADDON, SIDE, DRINK, DESSERT)
+    const bowlItems = order.items.filter(
+      (item) =>
+        item.menuItem.categoryType === "MAIN" ||
+        item.menuItem.categoryType === "SLIDER"
+    );
+    const addonItems = order.items.filter(
+      (item) =>
+        item.menuItem.categoryType === "ADDON" ||
+        item.menuItem.categoryType === "SIDE" ||
+        item.menuItem.categoryType === "DRINK" ||
+        item.menuItem.categoryType === "DESSERT"
+    );
+
+    // Helper to determine if item should show quantity
+    const shouldShowQty = (categoryType?: string) => {
+      return (
+        categoryType === "ADDON" ||
+        categoryType === "SIDE" ||
+        categoryType === "DESSERT"
+      );
+    };
+
+    const renderItem = (item: any, showQty: boolean) => (
+      <div
+        style={{
+          padding: "4px 0",
+          fontSize: "0.85rem",
+        }}
+      >
+        {item.selectedValue ? (
+          // Combine menu item with selection on same line
+          <div>
+            <span style={{ color: "#9ca3af" }}>{item.menuItem.name}: </span>
+            <span style={{ fontWeight: "bold" }}>
+              {showQty && item.quantity > 0 && `${item.quantity}x `}
+              {item.selectedValue}
+            </span>
+          </div>
+        ) : (
+          // No selection, just show item name
+          <div style={{ fontWeight: "bold" }}>
+            {showQty && item.quantity > 0 && `${item.quantity}x `}
+            {item.menuItem.name}
+          </div>
+        )}
+      </div>
+    );
 
     return (
       <div
@@ -165,22 +263,21 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
             display: "flex",
             justifyContent: "space-between",
             alignItems: "start",
-            marginBottom: 12,
+            marginBottom: 10,
           }}
         >
           <div>
+            <div style={{ fontSize: "0.9rem", color: "#9ca3af", marginBottom: 2 }}>
+              #{order.kitchenOrderNumber || order.orderNumber.slice(-6)}
+            </div>
             <div
               style={{
-                fontSize: "1.2rem",
+                fontSize: "1.5rem",
                 fontWeight: "bold",
-                marginBottom: 4,
+                color: "#3b82f6",
               }}
             >
-              #{order.orderNumber}
-            </div>
-            <div style={{ fontSize: "0.85rem", color: "#9ca3af" }}>
-              {order.seat ? `Seat ${order.seat.number}` : "Pickup"} •{" "}
-              {order.location.name}
+              {order.seat ? `Pod ${order.seat.number}` : "Dine-In"}
             </div>
           </div>
           <div
@@ -197,42 +294,61 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
           </div>
         </div>
 
-        {/* Items */}
-        <div style={{ marginBottom: 12 }}>
-          {order.items.map((item, idx) => (
+        {/* Bowl Configuration Section */}
+        {bowlItems.length > 0 && (
+          <div
+            style={{
+              background: "#111827",
+              padding: 10,
+              borderRadius: 6,
+              marginBottom: 10,
+            }}
+          >
             <div
-              key={idx}
               style={{
-                padding: "8px 0",
-                borderBottom:
-                  idx < order.items.length - 1 ? "1px solid #374151" : "none",
-                display: "flex",
-                gap: 12,
+                fontSize: "0.7rem",
+                color: "#9ca3af",
+                fontWeight: "bold",
+                marginBottom: 6,
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
               }}
             >
-              <div
-                style={{
-                  background: "#374151",
-                  color: "white",
-                  width: 28,
-                  height: 28,
-                  borderRadius: 6,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontWeight: "bold",
-                  fontSize: "0.9rem",
-                  flexShrink: 0,
-                }}
-              >
-                {item.quantity}
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: "bold" }}>{item.menuItem.name}</div>
-              </div>
+              Bowl Configuration
             </div>
-          ))}
-        </div>
+            {bowlItems.map((item, idx) =>
+              renderItem(item, shouldShowQty(item.menuItem.categoryType))
+            )}
+          </div>
+        )}
+
+        {/* Add-ons Section */}
+        {addonItems.length > 0 && (
+          <div
+            style={{
+              background: "#111827",
+              padding: 10,
+              borderRadius: 6,
+              marginBottom: 10,
+            }}
+          >
+            <div
+              style={{
+                fontSize: "0.7rem",
+                color: "#9ca3af",
+                fontWeight: "bold",
+                marginBottom: 6,
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
+              Add-ons & Extras
+            </div>
+            {addonItems.map((item, idx) =>
+              renderItem(item, shouldShowQty(item.menuItem.categoryType))
+            )}
+          </div>
+        )}
 
         {/* Action Buttons */}
         <div style={{ display: "flex", gap: 8 }}>
@@ -276,11 +392,11 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
 
           {order.status === "READY" && (
             <button
-              onClick={() => updateOrderStatus(order.id, "COMPLETED")}
+              onClick={() => updateOrderStatus(order.id, "SERVING")}
               style={{
                 flex: 1,
                 padding: 12,
-                background: "#6b7280",
+                background: "#8b5cf6",
                 color: "white",
                 border: "none",
                 borderRadius: 8,
@@ -289,7 +405,7 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
                 fontSize: "0.9rem",
               }}
             >
-              Complete
+              Deliver to Pod
             </button>
           )}
         </div>
@@ -297,23 +413,49 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
     );
   }
 
+  const selectedLocationName = selectedLocation === "all"
+    ? "All Locations"
+    : locations.find(l => l.id === selectedLocation)?.name || "Unknown";
+
   return (
-    <div style={{ padding: 24 }}>
-      {/* Location Filter & Stats */}
+    <div>
+      {/* Header with Location Name */}
       <div
         style={{
-          marginBottom: 24,
+          background: "#1f2937",
+          padding: "16px 24px",
+          borderBottom: "1px solid #374151",
           display: "flex",
-          gap: 16,
+          justifyContent: "space-between",
           alignItems: "center",
         }}
       >
+        <h1 style={{ margin: 0, fontSize: "1.5rem", fontWeight: "bold" }}>
+          🍜 Kitchen Display for {selectedLocationName}
+        </h1>
+        <div style={{ fontSize: "0.9rem", color: "#9ca3af" }}>
+          {new Date().toLocaleTimeString()}
+        </div>
+      </div>
+
+      {/* Location Selector - Above Kitchen Display */}
+      <div style={{
+        background: "#1f2937",
+        padding: "16px 24px",
+        borderBottom: "1px solid #374151",
+        display: "flex",
+        gap: 16,
+        alignItems: "center"
+      }}>
+        <label style={{ color: "#9ca3af", fontSize: "0.9rem" }}>
+          Location:
+        </label>
         <select
           value={selectedLocation}
           onChange={(e) => setSelectedLocation(e.target.value)}
           style={{
             padding: "8px 16px",
-            background: "#1f2937",
+            background: "#111827",
             color: "white",
             border: "1px solid #374151",
             borderRadius: 8,
@@ -328,7 +470,23 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
           ))}
         </select>
 
-        <div style={{ display: "flex", gap: 16, marginLeft: "auto" }}>
+        {/* Average Processing Time */}
+        <div style={{ marginLeft: "auto", textAlign: "center" }}>
+          <div style={{ fontSize: "0.75rem", color: "#9ca3af", marginBottom: 4 }}>
+            Average Order Processing Time
+          </div>
+          <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: getProcessingTimeColor() }}>
+            {avgProcessingTime.count > 0 ? formatAvgProcessingTime() : "--:--"}
+          </div>
+          {avgProcessingTime.count > 0 && (
+            <div style={{ fontSize: "0.7rem", color: "#9ca3af" }}>
+              ({avgProcessingTime.count} orders)
+            </div>
+          )}
+        </div>
+
+        {/* Stats */}
+        <div style={{ display: "flex", gap: 16 }}>
           <div style={{ textAlign: "center" }}>
             <div
               style={{ fontSize: "2rem", fontWeight: "bold", color: "#f59e0b" }}
@@ -355,8 +513,18 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
             </div>
             <div style={{ fontSize: "0.75rem", color: "#9ca3af" }}>READY</div>
           </div>
+          <div style={{ textAlign: "center" }}>
+            <div
+              style={{ fontSize: "2rem", fontWeight: "bold", color: "#8b5cf6" }}
+            >
+              {stats.serving}
+            </div>
+            <div style={{ fontSize: "0.75rem", color: "#9ca3af" }}>SERVING</div>
+          </div>
         </div>
       </div>
+
+      <div style={{ padding: 24 }}>
 
       {/* Order Columns */}
       {loading ? (
@@ -371,7 +539,7 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
+            gridTemplateColumns: "repeat(4, 1fr)",
             gap: 24,
           }}
         >
@@ -434,8 +602,29 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
               <OrderCard key={order.id} order={order} />
             ))}
           </div>
+
+          {/* Serving Column */}
+          <div>
+            <div
+              style={{
+                background: "#8b5cf620",
+                color: "#8b5cf6",
+                padding: 12,
+                borderRadius: 8,
+                fontWeight: "bold",
+                marginBottom: 16,
+                textAlign: "center",
+              }}
+            >
+              SERVING ({servingOrders.length})
+            </div>
+            {servingOrders.map((order) => (
+              <OrderCard key={order.id} order={order} />
+            ))}
+          </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
