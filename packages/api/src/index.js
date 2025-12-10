@@ -1439,16 +1439,23 @@ app.post("/orders", async (req, reply) => {
   tomorrow.setDate(tomorrow.getDate() + 1);
 
   // Count today's PAID orders for this location to get next number
-  const todaysOrderCount = await prisma.order.count({
-    where: {
-      locationId,
-      paymentStatus: "PAID",
-      createdAt: {
-        gte: today,
-        lt: tomorrow,
+  let todaysOrderCount = 0;
+  try {
+    todaysOrderCount = await prisma.order.count({
+      where: {
+        locationId,
+        paymentStatus: "PAID",
+        createdAt: {
+          gte: today,
+          lt: tomorrow,
+        },
       },
-    },
-  });
+    });
+  } catch (error) {
+    console.error('Failed to count orders for kitchen number:', error.message);
+    // Fallback: use timestamp-based number
+    todaysOrderCount = 0;
+  }
 
   // Format as 4-digit string (e.g., "0001", "0042", "0234")
   const kitchenOrderNumber = String(todaysOrderCount + 1).padStart(4, "0");
