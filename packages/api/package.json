@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "node --env-file=../../.env --watch src/index.js",
-    "start": "cd ../db && npx prisma generate && cd ../api && node src/index.js"
+    "start": "node src/index.js"
   },
   "dependencies": {
     "@fastify/cors": "9.0.1",
