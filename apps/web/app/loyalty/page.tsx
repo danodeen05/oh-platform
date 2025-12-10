@@ -11,7 +11,6 @@ const tiers = [
     benefits: [
       "$5 referral bonus per friend",
       "1% cashback on orders",
-      "$5 birthday reward",
       "Early access to new menu items",
     ],
   },
@@ -19,11 +18,10 @@ const tiers = [
     name: "Noodle Master",
     emoji: "🍜",
     color: "#7C7A67",
-    requirement: "10 orders + 3 referrals",
+    requirement: "10 orders + 5 referrals",
     benefits: [
-      "$7.50 referral bonus per friend",
-      "3% cashback on orders",
-      "$10 birthday reward",
+      "$5 referral bonus per friend",
+      "2% cashback on orders",
       "Priority seating",
       "Exclusive member events",
       "Free bowl on tier upgrade",
@@ -35,14 +33,11 @@ const tiers = [
     color: "#222222",
     requirement: "25 orders + 10 referrals",
     benefits: [
-      "$10 referral bonus per friend",
-      "5% cashback on orders",
-      "$20 birthday reward",
-      "VIP pod access",
+      "$5 referral bonus per friend",
+      "3% cashback on orders",
       "Exclusive merchandise drops",
       "Complimentary premium add-ons",
-      "Direct line to our team",
-      "Free bowl every month",
+      "Annual VIP Gift & Recognition",
     ],
   },
 ];
@@ -87,8 +82,8 @@ export default function LoyaltyPage() {
             maxWidth: "650px",
             margin: "0 auto 32px",
             lineHeight: "1.8",
-            opacity: 0.9,
             fontWeight: "300",
+            color: "#C7A878",
           }}
         >
           Every bowl brings you closer to something special. Earn credits, unlock badges, and level up your membership with every visit.
@@ -128,8 +123,10 @@ export default function LoyaltyPage() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+              gridTemplateColumns: "repeat(2, 1fr)",
               gap: "40px",
+              maxWidth: "800px",
+              margin: "0 auto",
             }}
           >
             <div style={{ textAlign: "center" }}>

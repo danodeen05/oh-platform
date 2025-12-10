@@ -108,8 +108,8 @@ export default function StorePage() {
             maxWidth: "600px",
             margin: "0 auto",
             lineHeight: "1.8",
-            opacity: 0.9,
             fontWeight: "300",
+            color: "#C7A878",
           }}
         >
           Bring the Oh! experience home. From at-home kits to premium merchandise, find everything you need to fuel your noodle obsession.
