@@ -2,36 +2,8 @@
 
 import { SignInButton, SignedIn, SignedOut } from "@clerk/nextjs";
 import Link from "next/link";
-import { useState, useRef, useEffect } from "react";
 
 export default function HomePage() {
-  const [showStaticLogo, setShowStaticLogo] = useState(false);
-  const [videoFading, setVideoFading] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const loopCountRef = useRef(0);
-
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    const handleEnded = () => {
-      loopCountRef.current += 1;
-      if (loopCountRef.current < 2) {
-        // Play again for the second loop
-        video.currentTime = 0;
-        video.play();
-      } else {
-        // After 2 loops, fade out video and show static logo
-        setVideoFading(true);
-        setTimeout(() => {
-          setShowStaticLogo(true);
-        }, 500); // Match the fade duration
-      }
-    };
-
-    video.addEventListener("ended", handleEnded);
-    return () => video.removeEventListener("ended", handleEnded);
-  }, []);
   return (
     <div style={{ background: "#ffffff" }}>
       {/* Hero Section */}
@@ -58,38 +30,15 @@ export default function HomePage() {
             justifyContent: "center",
           }}
         >
-          {/* Video Logo - plays twice then fades (2x size) */}
-          {!showStaticLogo && (
-            <video
-              ref={videoRef}
-              autoPlay
-              muted
-              playsInline
-              style={{
-                width: "clamp(600px, 80vw, 1200px)",
-                height: "auto",
-                display: "block",
-                opacity: videoFading ? 0 : 1,
-                transition: "opacity 0.5s ease",
-              }}
-            >
-              <source src="/Additional Files/4K.mp4" type="video/mp4" />
-            </video>
-          )}
-          {/* Static Logo - fades in after video (0.5x size) */}
-          {showStaticLogo && (
-            <img
-              src="/Oh_Logo_Mark_Web.png"
-              alt="Oh! Beef Noodle Soup"
-              style={{
-                width: "clamp(200px, 30vw, 400px)",
-                height: "auto",
-                display: "block",
-                opacity: 0,
-                animation: "fadeIn 0.5s ease forwards",
-              }}
-            />
-          )}
+          <img
+            src="/Oh_Logo_Mark_Web.png"
+            alt="Oh! Beef Noodle Soup"
+            style={{
+              width: "clamp(200px, 30vw, 400px)",
+              height: "auto",
+              display: "block",
+            }}
+          />
         </div>
 
         <h1
@@ -525,14 +474,6 @@ export default function HomePage() {
           to {
             opacity: 1;
             transform: translateY(0);
-          }
-        }
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-          }
-          to {
-            opacity: 1;
           }
         }
       `}</style>

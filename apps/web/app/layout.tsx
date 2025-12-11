@@ -1,6 +1,7 @@
 import { ClerkProvider } from "@clerk/nextjs";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import ActiveOrderBanner from "@/components/ActiveOrderBanner";
 import "./globals.css";
 
 export const metadata = {
@@ -47,6 +48,7 @@ export default async function RootLayout({
         </head>
         <body>
           <Header />
+          <ActiveOrderBanner />
           <main style={{ flex: 1 }}>{children}</main>
           <Footer />
         </body>

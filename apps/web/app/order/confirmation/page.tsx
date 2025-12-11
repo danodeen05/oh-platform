@@ -37,6 +37,13 @@ function ConfirmationContent() {
     fetchOrder();
   }, [orderId]);
 
+  // Store active order QR code in localStorage for the banner
+  useEffect(() => {
+    if (order?.orderQrCode) {
+      localStorage.setItem("activeOrderQrCode", order.orderQrCode);
+    }
+  }, [order?.orderQrCode]);
+
   useEffect(() => {
     // Get user's referral code from localStorage
     const referralCode = localStorage.getItem("referralCode");

@@ -20,8 +20,31 @@ type Pod = {
       quantity: number;
       menuItem: { name: string };
     }>;
+    user?: {
+      id: string;
+      name?: string;
+      membershipTier?: "CHOPSTICK" | "NOODLE_MASTER" | "BEEF_BOSS";
+    };
   }>;
 };
+
+// Helper to get tier emoji
+function getTierEmoji(tier?: string): string {
+  switch (tier) {
+    case "BEEF_BOSS":
+      return "🥩";
+    case "NOODLE_MASTER":
+      return "🍜";
+    case "CHOPSTICK":
+    default:
+      return "🥢";
+  }
+}
+
+// Helper to check if VIP
+function isVIP(tier?: string): boolean {
+  return tier === "BEEF_BOSS";
+}
 
 type Location = {
   id: string;
@@ -71,9 +94,7 @@ function TimeInPod({ podConfirmedAt }: { podConfirmedAt?: string }) {
 }
 
 export default function PodsManager({ locations }: { locations: Location[] }) {
-  const [selectedLocation, setSelectedLocation] = useState<string>(
-    locations[0]?.id || ""
-  );
+  const [selectedLocation, setSelectedLocation] = useState<string>("all");
   const [pods, setPods] = useState<Pod[]>([]);
   const [loading, setLoading] = useState(true);
   const [avgCleaningTime, setAvgCleaningTime] = useState({
@@ -87,11 +108,25 @@ export default function PodsManager({ locations }: { locations: Location[] }) {
 
     try {
       setLoading(true);
-      const response = await fetch(`${BASE}/locations/${selectedLocation}/seats`, {
-        headers: { "x-tenant-slug": "oh" },
-      });
-      const data = await response.json();
-      setPods(data);
+
+      if (selectedLocation === "all") {
+        // Fetch pods from all locations
+        const allPods: Pod[] = [];
+        for (const loc of locations) {
+          const response = await fetch(`${BASE}/locations/${loc.id}/seats`, {
+            headers: { "x-tenant-slug": "oh" },
+          });
+          const data = await response.json();
+          allPods.push(...data);
+        }
+        setPods(allPods);
+      } else {
+        const response = await fetch(`${BASE}/locations/${selectedLocation}/seats`, {
+          headers: { "x-tenant-slug": "oh" },
+        });
+        const data = await response.json();
+        setPods(data);
+      }
     } catch (error) {
       console.error("Failed to load pods:", error);
     } finally {
@@ -174,7 +209,9 @@ export default function PodsManager({ locations }: { locations: Location[] }) {
   }
 
   const selectedLocationName =
-    locations.find((l) => l.id === selectedLocation)?.name || "Unknown";
+    selectedLocation === "all"
+      ? "All Locations"
+      : locations.find((l) => l.id === selectedLocation)?.name || "Unknown";
 
   // Calculate color for average cleaning time
   const getCleaningTimeColor = () => {
@@ -244,6 +281,7 @@ export default function PodsManager({ locations }: { locations: Location[] }) {
             fontSize: "1rem",
           }}
         >
+          <option value="all">All Locations</option>
           {locations.map((loc) => (
             <option key={loc.id} value={loc.id}>
               {loc.name}
@@ -268,6 +306,14 @@ export default function PodsManager({ locations }: { locations: Location[] }) {
 
         {/* Stats Summary */}
         <div style={{ display: "flex", gap: 24 }}>
+          <div style={{ textAlign: "center" }}>
+            <div
+              style={{ fontSize: "2rem", fontWeight: "bold", color: "#f59e0b" }}
+            >
+              {podsByStatus.RESERVED.length}
+            </div>
+            <div style={{ fontSize: "0.75rem", color: "#9ca3af" }}>ARRIVING</div>
+          </div>
           <div style={{ textAlign: "center" }}>
             <div
               style={{ fontSize: "2rem", fontWeight: "bold", color: "#ef4444" }}
@@ -309,10 +355,109 @@ export default function PodsManager({ locations }: { locations: Location[] }) {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(3, 1fr)",
+              gridTemplateColumns: "repeat(4, 1fr)",
               gap: 24,
             }}
           >
+            {/* Arriving/Reserved Column */}
+            <div>
+              <div
+                style={{
+                  background: "#f59e0b20",
+                  color: "#f59e0b",
+                  padding: 12,
+                  borderRadius: 8,
+                  fontWeight: "bold",
+                  marginBottom: 16,
+                  textAlign: "center",
+                }}
+              >
+                ARRIVING ({podsByStatus.RESERVED.length})
+              </div>
+              {podsByStatus.RESERVED.map((pod) => {
+                const currentOrder = pod.orders?.[0];
+                const customerIsVIP = isVIP(currentOrder?.user?.membershipTier);
+                const tierEmoji = getTierEmoji(currentOrder?.user?.membershipTier);
+
+                return (
+                  <div
+                    key={pod.id}
+                    style={{
+                      background: customerIsVIP ? "#2d1f1f" : "#1f2937",
+                      border: customerIsVIP ? "2px solid #dc2626" : "2px solid #f59e0b",
+                      borderRadius: 12,
+                      padding: 16,
+                      marginBottom: 12,
+                      boxShadow: customerIsVIP
+                        ? "0 0 15px rgba(220, 38, 38, 0.5), 0 0 30px rgba(220, 38, 38, 0.3)"
+                        : "none",
+                      position: "relative" as const,
+                    }}
+                  >
+                    {/* Tier Emoji Badge (Top Right) */}
+                    {currentOrder?.user && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: 8,
+                          right: 8,
+                          fontSize: "1.5rem",
+                          filter: customerIsVIP ? "drop-shadow(0 0 4px rgba(220, 38, 38, 0.8))" : "none",
+                        }}
+                        title={`${currentOrder.user.membershipTier || "CHOPSTICK"} tier`}
+                      >
+                        {tierEmoji}
+                      </div>
+                    )}
+
+                    {/* Arriving Banner */}
+                    <div
+                      style={{
+                        background: customerIsVIP ? "#dc2626" : "#f59e0b",
+                        color: customerIsVIP ? "#fff" : "#000",
+                        padding: "6px 12px",
+                        borderRadius: 6,
+                        fontSize: "0.75rem",
+                        fontWeight: "bold",
+                        textAlign: "center",
+                        marginBottom: 12,
+                        textTransform: "uppercase",
+                        letterSpacing: "1px",
+                      }}
+                    >
+                      {customerIsVIP ? "🥩 VIP Arriving" : "⏳ Customer Arriving"}
+                    </div>
+
+                    {/* Pod Number */}
+                    <div
+                      style={{
+                        fontSize: "2rem",
+                        fontWeight: "bold",
+                        textAlign: "center",
+                        marginBottom: 8,
+                        color: customerIsVIP ? "#dc2626" : "#f59e0b",
+                      }}
+                    >
+                      Pod {pod.number}
+                    </div>
+
+                    {/* Order Number */}
+                    {currentOrder && (
+                      <div
+                        style={{
+                          fontSize: "0.85rem",
+                          color: "#9ca3af",
+                          textAlign: "center",
+                        }}
+                      >
+                        Order #{currentOrder.kitchenOrderNumber || currentOrder.orderNumber?.slice(-6)}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
             {/* Occupied Column */}
             <div>
               <div
@@ -351,17 +496,41 @@ export default function PodsManager({ locations }: { locations: Location[] }) {
                   ? statusColors[currentOrder.status] || "#9ca3af"
                   : "#9ca3af";
 
+                // Check if customer is VIP
+                const customerIsVIP = isVIP(currentOrder?.user?.membershipTier);
+                const tierEmoji = getTierEmoji(currentOrder?.user?.membershipTier);
+
                 return (
                   <div
                     key={pod.id}
                     style={{
-                      background: "#1f2937",
-                      border: "2px solid #374151",
+                      background: customerIsVIP ? "#2d1f1f" : "#1f2937",
+                      border: customerIsVIP ? "2px solid #dc2626" : "2px solid #374151",
                       borderRadius: 12,
                       padding: 20,
                       marginBottom: 12,
+                      boxShadow: customerIsVIP
+                        ? "0 0 15px rgba(220, 38, 38, 0.5), 0 0 30px rgba(220, 38, 38, 0.3)"
+                        : "none",
+                      position: "relative" as const,
                     }}
                   >
+                    {/* Tier Emoji Badge (Top Right) */}
+                    {currentOrder?.user && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: 8,
+                          right: 8,
+                          fontSize: "1.5rem",
+                          filter: customerIsVIP ? "drop-shadow(0 0 4px rgba(220, 38, 38, 0.8))" : "none",
+                        }}
+                        title={`${currentOrder.user.membershipTier || "CHOPSTICK"} tier`}
+                      >
+                        {tierEmoji}
+                      </div>
+                    )}
+
                     {/* Pod Number - Large */}
                     <div
                       style={{
@@ -369,6 +538,7 @@ export default function PodsManager({ locations }: { locations: Location[] }) {
                         fontWeight: "bold",
                         textAlign: "center",
                         marginBottom: 16,
+                        color: customerIsVIP ? "#dc2626" : "#ffffff",
                       }}
                     >
                       Pod {pod.number}

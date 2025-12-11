@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { SliderControl } from "./slider-control";
 import { RadioGroup } from "./radio-group";
 import { CheckboxGroup } from "./checkbox-group";
+import SeatingMap, { Seat } from "@/components/SeatingMap";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "";
 
@@ -65,6 +66,12 @@ export default function EnhancedMenuBuilder({
   const [arrivalTime, setArrivalTime] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
   const [existingOrderId, setExistingOrderId] = useState<string | null>(reorderId || null);
+
+  // Seat selection state
+  const [seats, setSeats] = useState<Seat[]>([]);
+  const [selectedSeatId, setSelectedSeatId] = useState<string | null>(null);
+  const [loadingSeats, setLoadingSeats] = useState(false);
+  const [showSeatSelection, setShowSeatSelection] = useState(false);
 
   // Load menu structure
   useEffect(() => {
@@ -139,6 +146,49 @@ export default function EnhancedMenuBuilder({
 
     loadReorder();
   }, [reorderId, menuSteps.length]);
+
+  // Load seats when ASAP is selected
+  useEffect(() => {
+    if (arrivalTime !== "asap") {
+      setShowSeatSelection(false);
+      setSelectedSeatId(null);
+      return;
+    }
+
+    async function loadSeats() {
+      setLoadingSeats(true);
+      try {
+        const response = await fetch(`${BASE}/locations/${location.id}/seats`, {
+          headers: { "x-tenant-slug": "oh" },
+        });
+        if (!response.ok) throw new Error("Failed to load seats");
+
+        const seatsData = await response.json();
+        // Map API response to Seat type
+        const mappedSeats: Seat[] = seatsData.map((s: any) => ({
+          id: s.id,
+          number: s.number,
+          status: s.status,
+          side: s.side || "left",
+          row: s.row || 0,
+          col: s.col || 0,
+        }));
+
+        setSeats(mappedSeats);
+
+        // Show seat selection if there are available seats
+        const hasAvailable = mappedSeats.some(s => s.status === "AVAILABLE");
+        setShowSeatSelection(hasAvailable);
+      } catch (error) {
+        console.error("Failed to load seats:", error);
+        setShowSeatSelection(false);
+      } finally {
+        setLoadingSeats(false);
+      }
+    }
+
+    loadSeats();
+  }, [arrivalTime, location.id]);
 
   // Calculate price for an item
   function getItemPrice(item: MenuItem, quantity: number): number {
@@ -331,16 +381,25 @@ export default function EnhancedMenuBuilder({
         }
       });
 
+      // Build order payload - include seatId if customer selected one
+      const orderPayload: any = {
+        locationId: location.id,
+        tenantId: location.tenantId,
+        items,
+        estimatedArrival: estimatedArrival.toISOString(),
+        fulfillmentType: "PRE_ORDER",
+      };
+
+      // If customer selected a seat (ASAP arrival with seat selection)
+      if (selectedSeatId && arrivalTime === "asap") {
+        orderPayload.seatId = selectedSeatId;
+        orderPayload.podSelectionMethod = "CUSTOMER_SELECTED";
+      }
+
       const response = await fetch(`${BASE}/orders`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          locationId: location.id,
-          tenantId: location.tenantId,
-          items,
-          estimatedArrival: estimatedArrival.toISOString(),
-          fulfillmentType: "PRE_ORDER",
-        }),
+        body: JSON.stringify(orderPayload),
       });
 
       if (!response.ok) {
@@ -463,6 +522,72 @@ export default function EnhancedMenuBuilder({
             );
           })}
         </div>
+
+        {/* Seat Selection - shown when ASAP is selected and seats available */}
+        {arrivalTime === "asap" && showSeatSelection && (
+          <div
+            style={{
+              marginBottom: 32,
+              padding: 24,
+              background: "#f9fafb",
+              borderRadius: 12,
+              border: "1px solid #e5e7eb",
+            }}
+          >
+            <h3 style={{ marginBottom: 8, fontSize: "1.1rem" }}>
+              Choose Your Pod (Optional)
+            </h3>
+            <p style={{ color: "#666", fontSize: "0.9rem", marginBottom: 16 }}>
+              Since you're arriving soon, you can pick your preferred pod now.
+              Skip this to be auto-assigned when you check in.
+            </p>
+
+            {loadingSeats ? (
+              <div style={{ textAlign: "center", padding: 40 }}>
+                Loading seats...
+              </div>
+            ) : (
+              <SeatingMap
+                seats={seats}
+                selectedSeatId={selectedSeatId}
+                onSelectSeat={(seat) => setSelectedSeatId(seat.id)}
+              />
+            )}
+
+            {selectedSeatId && (
+              <div style={{ textAlign: "center", marginTop: 16 }}>
+                <button
+                  onClick={() => setSelectedSeatId(null)}
+                  style={{
+                    padding: "8px 16px",
+                    background: "transparent",
+                    border: "1px solid #d1d5db",
+                    borderRadius: 8,
+                    color: "#666",
+                    cursor: "pointer",
+                    fontSize: "0.9rem",
+                  }}
+                >
+                  Clear Selection (Auto-assign instead)
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {arrivalTime === "asap" && loadingSeats && (
+          <div
+            style={{
+              marginBottom: 32,
+              padding: 24,
+              background: "#f9fafb",
+              borderRadius: 12,
+              textAlign: "center",
+            }}
+          >
+            <div style={{ color: "#666" }}>Checking seat availability...</div>
+          </div>
+        )}
 
         <button
           onClick={proceedToPayment}

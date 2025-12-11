@@ -40,6 +40,33 @@ interface OrderStatus {
   };
 }
 
+interface Fortune {
+  fortune: string;
+  luckyNumbers: number[];
+  thisDayInHistory: {
+    year: number;
+    event: string;
+  } | null;
+  learnChinese: {
+    traditional: string;
+    pinyin: string;
+    english: string;
+    category: string;
+    funFact: string;
+    source: string;
+  } | null;
+  source: string;
+  orderNumber: string;
+  customerName: string | null;
+}
+
+interface OrderRoast {
+  roast: string;
+  highlights: string[];
+  source: string;
+  customerName: string | null;
+}
+
 function StatusContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -48,6 +75,12 @@ function StatusContent() {
   const [status, setStatus] = useState<OrderStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fortune, setFortune] = useState<Fortune | null>(null);
+  const [fortuneLoading, setFortuneLoading] = useState(false);
+  const [fortuneOpened, setFortuneOpened] = useState(false);
+  const [roast, setRoast] = useState<OrderRoast | null>(null);
+  const [roastLoading, setRoastLoading] = useState(false);
+  const [roastOpened, setRoastOpened] = useState(false);
 
   // Fetch order status
   async function fetchStatus() {
@@ -65,6 +98,11 @@ function StatusContent() {
         const data = await response.json();
         setStatus(data);
         setError(null);
+
+        // Clear active order from localStorage when completed
+        if (data.order?.status === "COMPLETED") {
+          localStorage.removeItem("activeOrderQrCode");
+        }
       } else {
         setError("Order not found");
       }
@@ -73,6 +111,54 @@ function StatusContent() {
       setError("Failed to load order status");
     } finally {
       setLoading(false);
+    }
+  }
+
+  // Fetch fortune cookie
+  async function fetchFortune() {
+    if (!orderQrCode || fortune || fortuneLoading) return;
+
+    setFortuneLoading(true);
+    try {
+      const response = await fetch(
+        `${BASE}/orders/fortune?orderQrCode=${encodeURIComponent(orderQrCode)}`,
+        {
+          headers: { "x-tenant-slug": "oh" },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setFortune(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch fortune:", err);
+    } finally {
+      setFortuneLoading(false);
+    }
+  }
+
+  // Fetch order roast
+  async function fetchRoast() {
+    if (!orderQrCode || roast || roastLoading) return;
+
+    setRoastLoading(true);
+    try {
+      const response = await fetch(
+        `${BASE}/orders/roast?orderQrCode=${encodeURIComponent(orderQrCode)}`,
+        {
+          headers: { "x-tenant-slug": "oh" },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setRoast(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch roast:", err);
+    } finally {
+      setRoastLoading(false);
     }
   }
 
@@ -196,15 +282,15 @@ function StatusContent() {
       case "PENDING_PAYMENT":
         return { icon: "💳", label: "Pending Payment", color: "#f59e0b" };
       case "PAID":
-        return { icon: "✅", label: "Paid", color: "#10b981" };
+        return { icon: "✅", label: "Paid", color: "#7C7A67" };
       case "QUEUED":
         return { icon: "⏳", label: "In Queue", color: "#6366f1" };
       case "PREPPING":
         return { icon: "👨‍🍳", label: "Preparing", color: "#f59e0b" };
       case "READY":
-        return { icon: "🔔", label: "Ready for Delivery", color: "#10b981" };
+        return { icon: "🔔", label: "Ready for Delivery", color: "#7C7A67" };
       case "SERVING":
-        return { icon: "🍜", label: "Enjoy Your Meal!", color: "#10b981" };
+        return { icon: "🍜", label: "Enjoy Your Meal!", color: "#7C7A67" };
       case "COMPLETED":
         return { icon: "🎉", label: "Completed", color: "#6b7280" };
       default:
@@ -278,7 +364,7 @@ function StatusContent() {
           >
             <div
               style={{
-                background: "linear-gradient(90deg, #667eea 0%, #764ba2 100%)",
+                background: "linear-gradient(90deg, #7C7A67 0%, #5a584a 100%)",
                 height: "100%",
                 width: `${getProgress()}%`,
                 transition: "width 0.3s ease",
@@ -290,7 +376,7 @@ function StatusContent() {
           {order.podNumber && (
             <div
               style={{
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                background: "linear-gradient(135deg, #7C7A67 0%, #5a584a 100%)",
                 borderRadius: 12,
                 padding: 20,
                 color: "white",
@@ -325,7 +411,7 @@ function StatusContent() {
                       marginTop: 12,
                       padding: "10px 20px",
                       background: "white",
-                      color: "#667eea",
+                      color: "#5a584a",
                       border: "none",
                       borderRadius: 8,
                       fontSize: "0.9rem",
@@ -404,7 +490,7 @@ function StatusContent() {
                       width: 8,
                       height: 8,
                       borderRadius: "50%",
-                      background: "#10b981",
+                      background: "#7C7A67",
                     }}
                   />
                   <div style={{ flex: 1, fontSize: "0.85rem" }}>
@@ -422,7 +508,7 @@ function StatusContent() {
                       width: 8,
                       height: 8,
                       borderRadius: "50%",
-                      background: "#10b981",
+                      background: "#7C7A67",
                     }}
                   />
                   <div style={{ flex: 1, fontSize: "0.85rem" }}>
@@ -440,11 +526,11 @@ function StatusContent() {
                       width: 8,
                       height: 8,
                       borderRadius: "50%",
-                      background: "#10b981",
+                      background: "#7C7A67",
                     }}
                   />
                   <div style={{ flex: 1, fontSize: "0.85rem" }}>
-                    <span style={{ fontWeight: 500 }}>Cooking Started</span>
+                    <span style={{ fontWeight: 500 }}>Order Started</span>
                     <span style={{ color: "#666", marginLeft: 8 }}>
                       {new Date(order.prepStartTime).toLocaleTimeString()}
                     </span>
@@ -458,11 +544,11 @@ function StatusContent() {
                       width: 8,
                       height: 8,
                       borderRadius: "50%",
-                      background: "#10b981",
+                      background: "#7C7A67",
                     }}
                   />
                   <div style={{ flex: 1, fontSize: "0.85rem" }}>
-                    <span style={{ fontWeight: 500 }}>Ready</span>
+                    <span style={{ fontWeight: 500 }}>Order Quality Check</span>
                     <span style={{ color: "#666", marginLeft: 8 }}>
                       {new Date(order.readyTime).toLocaleTimeString()}
                     </span>
@@ -476,7 +562,7 @@ function StatusContent() {
                       width: 8,
                       height: 8,
                       borderRadius: "50%",
-                      background: "#10b981",
+                      background: "#7C7A67",
                     }}
                   />
                   <div style={{ flex: 1, fontSize: "0.85rem" }}>
@@ -485,6 +571,34 @@ function StatusContent() {
                       {new Date(order.deliveredAt).toLocaleTimeString()}
                     </span>
                   </div>
+                </div>
+              )}
+              {/* Total Time - from payment to delivery */}
+              {order.paidAt && order.deliveredAt && (
+                <div
+                  style={{
+                    marginTop: 12,
+                    paddingTop: 12,
+                    borderTop: "1px solid #e5e7eb",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <span style={{ fontWeight: 700, fontSize: "0.9rem" }}>Total Time</span>
+                  <span style={{ fontWeight: 700, fontSize: "0.9rem", color: "#7C7A67" }}>
+                    {(() => {
+                      const paidTime = new Date(order.paidAt).getTime();
+                      const deliveredTime = new Date(order.deliveredAt).getTime();
+                      const totalMinutes = Math.round((deliveredTime - paidTime) / 60000);
+                      if (totalMinutes < 60) {
+                        return `${totalMinutes} min`;
+                      }
+                      const hours = Math.floor(totalMinutes / 60);
+                      const mins = totalMinutes % 60;
+                      return `${hours}h ${mins}m`;
+                    })()}
+                  </span>
                 </div>
               )}
             </div>
@@ -519,6 +633,505 @@ function StatusContent() {
           </div>
         </div>
 
+        {/* Fortune Cookie - Show after pod check-in to pass time while waiting */}
+        {order.podConfirmedAt && (
+          <div
+            style={{
+              background: "linear-gradient(135deg, #f5f5f0 0%, #e8e6dc 100%)",
+              borderRadius: 16,
+              padding: 24,
+              marginBottom: 16,
+              boxShadow: "0 4px 12px rgba(124, 122, 103, 0.15)",
+              textAlign: "center",
+              position: "relative",
+              overflow: "hidden",
+              border: "1px solid #d4d2c7",
+            }}
+          >
+            {!fortuneOpened ? (
+              <>
+                <div style={{ fontSize: "4rem", marginBottom: 16 }}>
+                  🥠
+                </div>
+                <h3
+                  style={{
+                    margin: 0,
+                    marginBottom: 8,
+                    fontSize: "1.3rem",
+                    color: "#5a584a",
+                  }}
+                >
+                  Your Digital Fortune Cookie
+                </h3>
+                <p
+                  style={{
+                    color: "#7C7A67",
+                    fontSize: "0.9rem",
+                    margin: 0,
+                    marginBottom: 16,
+                  }}
+                >
+                  While you wait, crack open your personalized fortune
+                </p>
+                <button
+                  onClick={() => {
+                    setFortuneOpened(true);
+                    fetchFortune();
+                  }}
+                  style={{
+                    padding: "12px 32px",
+                    background: "#7C7A67",
+                    color: "white",
+                    border: "none",
+                    borderRadius: 8,
+                    fontSize: "1rem",
+                    fontWeight: "bold",
+                    cursor: "pointer",
+                    boxShadow: "0 4px 12px rgba(124, 122, 103, 0.3)",
+                  }}
+                >
+                  🥠 Crack It Open
+                </button>
+              </>
+            ) : fortuneLoading ? (
+              <>
+                <div
+                  style={{
+                    fontSize: "3rem",
+                    marginBottom: 16,
+                    animation: "pulse 1s infinite",
+                  }}
+                >
+                  ✨
+                </div>
+                <p style={{ color: "#5a584a", fontSize: "1rem" }}>
+                  Reading your fortune...
+                </p>
+              </>
+            ) : fortune ? (
+              <>
+                <div style={{ fontSize: "2.5rem", marginBottom: 16 }}>
+                  🥠✨
+                </div>
+
+                {/* Fortune Message */}
+                <div
+                  style={{
+                    background: "white",
+                    borderRadius: 12,
+                    padding: 20,
+                    marginBottom: 16,
+                    boxShadow: "inset 0 2px 4px rgba(0,0,0,0.05)",
+                    border: "1px solid #e8e6dc",
+                  }}
+                >
+                  <p
+                    style={{
+                      fontStyle: "italic",
+                      fontSize: "1.1rem",
+                      color: "#3d3c35",
+                      margin: 0,
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    "{fortune.fortune}"
+                  </p>
+                </div>
+
+                {/* Lucky Numbers */}
+                <div style={{ marginBottom: 16 }}>
+                  <div
+                    style={{
+                      fontSize: "0.75rem",
+                      fontWeight: "bold",
+                      color: "#5a584a",
+                      marginBottom: 8,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.1em",
+                    }}
+                  >
+                    Lucky Numbers
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "center",
+                      gap: 8,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    {fortune.luckyNumbers.map((num, i) => (
+                      <span
+                        key={i}
+                        style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: "50%",
+                          background: "#7C7A67",
+                          color: "white",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontWeight: "bold",
+                          fontSize: "0.9rem",
+                        }}
+                      >
+                        {num}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* This Day in History */}
+                {fortune.thisDayInHistory && (
+                  <div
+                    style={{
+                      background: "rgba(124, 122, 103, 0.1)",
+                      borderRadius: 8,
+                      padding: 12,
+                      fontSize: "0.85rem",
+                      color: "#5a584a",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontWeight: "bold",
+                        marginBottom: 4,
+                        fontSize: "0.75rem",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                      }}
+                    >
+                      📜 This Day in History ({fortune.thisDayInHistory.year})
+                    </div>
+                    <div style={{ lineHeight: 1.5 }}>
+                      {fortune.thisDayInHistory.event}
+                    </div>
+                  </div>
+                )}
+
+                {/* Learn Chinese */}
+                {fortune.learnChinese && (
+                  <div
+                    style={{
+                      background: "linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)",
+                      borderRadius: 12,
+                      padding: 16,
+                      marginTop: 16,
+                      color: "white",
+                      position: "relative",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {/* Decorative background pattern */}
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        right: 0,
+                        bottom: 0,
+                        width: "30%",
+                        background: "rgba(255,255,255,0.05)",
+                        clipPath: "polygon(30% 0, 100% 0, 100% 100%, 0% 100%)",
+                      }}
+                    />
+
+                    <div
+                      style={{
+                        fontWeight: "bold",
+                        marginBottom: 12,
+                        fontSize: "0.75rem",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.1em",
+                        opacity: 0.9,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                      }}
+                    >
+                      📖 Learn Chinese
+                    </div>
+
+                    {/* Main Chinese Character(s) with audio button */}
+                    <button
+                      onClick={() => {
+                        if ('speechSynthesis' in window) {
+                          const utterance = new SpeechSynthesisUtterance(fortune.learnChinese!.traditional);
+                          utterance.lang = 'zh-TW';
+                          utterance.rate = 0.8;
+                          // Try to find a Chinese voice
+                          const voices = speechSynthesis.getVoices();
+                          const chineseVoice = voices.find(v =>
+                            v.lang.startsWith('zh') || v.lang.includes('Chinese')
+                          );
+                          if (chineseVoice) {
+                            utterance.voice = chineseVoice;
+                          }
+                          speechSynthesis.speak(utterance);
+                        }
+                      }}
+                      style={{
+                        background: "rgba(255,255,255,0.15)",
+                        border: "2px solid rgba(255,255,255,0.3)",
+                        borderRadius: 12,
+                        padding: "16px 24px",
+                        width: "100%",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 16,
+                        marginBottom: 12,
+                        transition: "all 0.2s ease",
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = "rgba(255,255,255,0.25)";
+                        e.currentTarget.style.transform = "scale(1.02)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = "rgba(255,255,255,0.15)";
+                        e.currentTarget.style.transform = "scale(1)";
+                      }}
+                      title="Tap to hear pronunciation"
+                    >
+                      <span
+                        style={{
+                          fontSize: "2.5rem",
+                          fontWeight: "bold",
+                          color: "white",
+                          textShadow: "2px 2px 4px rgba(0,0,0,0.2)",
+                        }}
+                      >
+                        {fortune.learnChinese.traditional}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: "1.5rem",
+                          opacity: 0.9,
+                        }}
+                      >
+                        🔊
+                      </span>
+                    </button>
+
+                    {/* Pinyin and English */}
+                    <div style={{ textAlign: "center", marginBottom: 12 }}>
+                      <div
+                        style={{
+                          fontSize: "1.1rem",
+                          fontWeight: "600",
+                          marginBottom: 4,
+                          letterSpacing: "0.05em",
+                        }}
+                      >
+                        {fortune.learnChinese.pinyin}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "0.95rem",
+                          opacity: 0.9,
+                        }}
+                      >
+                        {fortune.learnChinese.english}
+                      </div>
+                    </div>
+
+                    {/* Fun Fact */}
+                    <div
+                      style={{
+                        background: "rgba(0,0,0,0.2)",
+                        borderRadius: 8,
+                        padding: 10,
+                        fontSize: "0.8rem",
+                        lineHeight: 1.5,
+                        opacity: 0.95,
+                      }}
+                    >
+                      <span style={{ marginRight: 6 }}>💡</span>
+                      {fortune.learnChinese.funFact}
+                    </div>
+
+                    {/* Category badge */}
+                    <div
+                      style={{
+                        marginTop: 10,
+                        display: "flex",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <span
+                        style={{
+                          background: "rgba(255,255,255,0.2)",
+                          padding: "4px 12px",
+                          borderRadius: 12,
+                          fontSize: "0.7rem",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.05em",
+                        }}
+                      >
+                        {fortune.learnChinese.category}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: "2.5rem", marginBottom: 16 }}>🥠</div>
+                <p style={{ color: "#7C7A67", fontSize: "0.9rem" }}>
+                  Fortune unavailable - but your meal is still going to be amazing!
+                </p>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Order Roast - Sarcastic analysis of their choices */}
+        {order.podConfirmedAt && (
+          <div
+            style={{
+              background: "linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)",
+              borderRadius: 16,
+              padding: 24,
+              marginBottom: 16,
+              boxShadow: "0 4px 12px rgba(245, 158, 11, 0.2)",
+              textAlign: "center",
+              position: "relative",
+              overflow: "hidden",
+              border: "1px solid #fcd34d",
+            }}
+          >
+            {!roastOpened ? (
+              <>
+                <div style={{ fontSize: "3.5rem", marginBottom: 12 }}>
+                  🔥
+                </div>
+                <h3
+                  style={{
+                    margin: 0,
+                    marginBottom: 8,
+                    fontSize: "1.2rem",
+                    color: "#92400e",
+                  }}
+                >
+                  The Roast Zone
+                </h3>
+                <p
+                  style={{
+                    color: "#b45309",
+                    fontSize: "0.85rem",
+                    margin: 0,
+                    marginBottom: 16,
+                  }}
+                >
+                  Want our brutally honest (and hilarious) take on your order choices?
+                </p>
+                <button
+                  onClick={() => {
+                    setRoastOpened(true);
+                    fetchRoast();
+                  }}
+                  style={{
+                    padding: "12px 28px",
+                    background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+                    color: "white",
+                    border: "none",
+                    borderRadius: 8,
+                    fontSize: "0.95rem",
+                    fontWeight: "bold",
+                    cursor: "pointer",
+                    boxShadow: "0 4px 12px rgba(245, 158, 11, 0.4)",
+                  }}
+                >
+                  🔥 Roast My Order
+                </button>
+              </>
+            ) : roastLoading ? (
+              <>
+                <div
+                  style={{
+                    fontSize: "3rem",
+                    marginBottom: 16,
+                    animation: "pulse 1s infinite",
+                  }}
+                >
+                  🤔
+                </div>
+                <p style={{ color: "#92400e", fontSize: "1rem" }}>
+                  Analyzing your life choices...
+                </p>
+              </>
+            ) : roast ? (
+              <>
+                <div style={{ fontSize: "2.5rem", marginBottom: 12 }}>
+                  🔥😏
+                </div>
+
+                {/* Roast Message */}
+                <div
+                  style={{
+                    background: "white",
+                    borderRadius: 12,
+                    padding: 20,
+                    marginBottom: 12,
+                    boxShadow: "inset 0 2px 4px rgba(0,0,0,0.05)",
+                    border: "1px solid #fde68a",
+                  }}
+                >
+                  <p
+                    style={{
+                      fontSize: "1.05rem",
+                      color: "#78350f",
+                      margin: 0,
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    {roast.roast}
+                  </p>
+                </div>
+
+                {/* Roast Highlights */}
+                {roast.highlights && roast.highlights.length > 0 && (
+                  <div
+                    style={{
+                      background: "rgba(146, 64, 14, 0.1)",
+                      borderRadius: 8,
+                      padding: 12,
+                      fontSize: "0.8rem",
+                      color: "#92400e",
+                      textAlign: "left",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontWeight: "bold",
+                        marginBottom: 6,
+                        fontSize: "0.7rem",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                      }}
+                    >
+                      🎯 What caught our attention:
+                    </div>
+                    <ul style={{ margin: 0, paddingLeft: 16, lineHeight: 1.6 }}>
+                      {roast.highlights.map((highlight, i) => (
+                        <li key={i}>{highlight}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: "2.5rem", marginBottom: 16 }}>🔥</div>
+                <p style={{ color: "#b45309", fontSize: "0.9rem" }}>
+                  Our roast chef is on break. Your order is probably fine. Probably.
+                </p>
+              </>
+            )}
+          </div>
+        )}
+
         {/* Action Buttons */}
         <div style={{ display: "grid", gap: 12 }}>
           {/* Show "I'm Done Eating" button when order is SERVING */}
@@ -545,14 +1158,14 @@ function StatusContent() {
               style={{
                 width: "100%",
                 padding: 16,
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                background: "linear-gradient(135deg, #7C7A67 0%, #5a584a 100%)",
                 color: "white",
                 border: "none",
                 borderRadius: 8,
                 fontSize: "1.1rem",
                 fontWeight: "bold",
                 cursor: "pointer",
-                boxShadow: "0 4px 12px rgba(102, 126, 234, 0.4)",
+                boxShadow: "0 4px 12px rgba(124, 122, 103, 0.4)",
               }}
             >
               ✓ I'm Done Eating
