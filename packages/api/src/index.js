@@ -2,9 +2,13 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import formbody from "@fastify/formbody";
 import { PrismaClient } from "@prisma/client";
+import Anthropic from "@anthropic-ai/sdk";
 
 const prisma = new PrismaClient();
 const app = Fastify({ logger: true });
+
+// Initialize Anthropic client (uses ANTHROPIC_API_KEY env var automatically)
+const anthropic = process.env.ANTHROPIC_API_KEY ? new Anthropic() : null;
 
 // Register plugins
 await app.register(cors, {
@@ -816,6 +820,13 @@ app.get("/locations/:id/seats", async (req, reply) => {
               menuItem: true,
             },
           },
+          user: {
+            select: {
+              id: true,
+              name: true,
+              membershipTier: true,
+            },
+          },
         },
         orderBy: {
           createdAt: "desc",
@@ -869,7 +880,55 @@ app.post("/orders/check-in", async (req, reply) => {
     arrivalDeviation = Math.round((now - order.estimatedArrival) / 60000);
   }
 
-  // Check for available pods at this location
+  // CASE 1: Customer pre-selected a seat during online ordering
+  if (order.seatId && order.podSelectionMethod === "CUSTOMER_SELECTED") {
+    // Check if their pre-selected pod is still available or reserved (for them)
+    const preSelectedPod = await prisma.seat.findUnique({
+      where: { id: order.seatId },
+    });
+
+    // Pod is valid if it's AVAILABLE or RESERVED (reserved for this customer on payment)
+    if (preSelectedPod && (preSelectedPod.status === "AVAILABLE" || preSelectedPod.status === "RESERVED")) {
+      // Honor the customer's selection
+      const [updatedOrder, updatedSeat] = await prisma.$transaction([
+        prisma.order.update({
+          where: { id: order.id },
+          data: {
+            arrivedAt: now,
+            arrivalDeviation,
+            podAssignedAt: now,
+            status: "QUEUED",
+            queuedAt: now, // Track when order entered kitchen queue
+            paidAt: order.paidAt || now,
+          },
+          include: {
+            seat: true,
+            location: true,
+            items: {
+              include: {
+                menuItem: true,
+              },
+            },
+          },
+        }),
+        prisma.seat.update({
+          where: { id: order.seatId },
+          data: { status: "RESERVED" },
+        }),
+      ]);
+
+      return {
+        status: "ASSIGNED",
+        message: `Go to your selected Pod ${preSelectedPod.number}`,
+        order: updatedOrder,
+        podNumber: preSelectedPod.number,
+        preSelected: true,
+      };
+    }
+    // If pre-selected pod is OCCUPIED or CLEANING, fall through to normal assignment
+  }
+
+  // CASE 2: Check for available pods at this location
   const availablePods = await prisma.seat.findMany({
     where: {
       locationId: order.locationId,
@@ -894,6 +953,7 @@ app.post("/orders/check-in", async (req, reply) => {
           podAssignedAt: now,
           podSelectionMethod: "AUTO",
           status: "QUEUED",
+          queuedAt: now, // Track when order entered kitchen queue
           paidAt: order.paidAt || now, // Set paidAt if not already set
         },
         include: {
@@ -1112,12 +1172,18 @@ app.post("/orders/confirm-pod", async (req, reply) => {
     return reply.code(400).send({ error: "Pod arrival already confirmed" });
   }
 
+  const now = new Date();
+
   // Mark pod as confirmed and occupied
+  // Also handle case where customer bypassed kiosk check-in (no arrivedAt yet)
   const [updatedOrder, updatedSeat] = await prisma.$transaction([
     prisma.order.update({
       where: { id: order.id },
       data: {
-        podConfirmedAt: new Date(),
+        podConfirmedAt: now,
+        arrivedAt: order.arrivedAt || now, // Set arrivedAt if bypassed kiosk
+        queuedAt: order.queuedAt || now, // Set queuedAt if not already set
+        status: order.status === "PAID" ? "QUEUED" : order.status, // Move to QUEUED if still PAID
       },
       include: { seat: true, location: true, items: { include: { menuItem: true } } },
     }),
@@ -1133,6 +1199,173 @@ app.post("/orders/confirm-pod", async (req, reply) => {
     success: true,
     message: `Welcome to Pod ${order.seat.number}! Your order is being prepared.`,
     order: updatedOrder,
+  };
+});
+
+// POST /pods/confirm-arrival - Customer scans pod QR code to confirm arrival
+// This is the endpoint called when a customer scans the QR code on their pod table
+app.post("/pods/confirm-arrival", async (req, reply) => {
+  const { podQrCode, userId } = req.body || {};
+
+  if (!podQrCode) {
+    return reply.code(400).send({ error: "podQrCode required" });
+  }
+
+  // Find the pod by QR code
+  const pod = await prisma.seat.findFirst({
+    where: { qrCode: podQrCode },
+    include: { location: true },
+  });
+
+  if (!pod) {
+    return reply.code(404).send({ error: "Pod not found. Please check the QR code." });
+  }
+
+  // Find the order assigned to this pod that hasn't been confirmed yet
+  // Priority: 1) Orders for this specific user, 2) Any order assigned to this pod
+  let order;
+
+  if (userId) {
+    // First try to find an order for this user at this pod
+    order = await prisma.order.findFirst({
+      where: {
+        seatId: pod.id,
+        userId: userId,
+        paymentStatus: "PAID",
+        podConfirmedAt: null,
+        status: { notIn: ["COMPLETED", "CANCELLED"] },
+      },
+      include: { seat: true, location: true, items: { include: { menuItem: true } } },
+    });
+  }
+
+  if (!order) {
+    // Fall back to any order assigned to this pod
+    order = await prisma.order.findFirst({
+      where: {
+        seatId: pod.id,
+        paymentStatus: "PAID",
+        podConfirmedAt: null,
+        status: { notIn: ["COMPLETED", "CANCELLED"] },
+      },
+      include: { seat: true, location: true, items: { include: { menuItem: true } } },
+    });
+  }
+
+  if (!order) {
+    return reply.code(404).send({
+      error: "No pending order found for this pod",
+      podNumber: pod.number,
+      locationName: pod.location.name,
+      hint: "Make sure you've selected this pod during checkout or been assigned to it at the kiosk.",
+    });
+  }
+
+  // Verify pod matches order (security check)
+  if (order.seat.qrCode !== podQrCode) {
+    return reply.code(400).send({ error: "Pod QR code doesn't match your assigned pod" });
+  }
+
+  if (order.podConfirmedAt) {
+    return reply.code(400).send({ error: "You've already confirmed arrival at this pod" });
+  }
+
+  const now = new Date();
+
+  // Confirm arrival and mark seat as occupied
+  // Also set order to QUEUED status so kitchen can start preparing
+  const [updatedOrder, updatedSeat] = await prisma.$transaction([
+    prisma.order.update({
+      where: { id: order.id },
+      data: {
+        podConfirmedAt: now,
+        arrivedAt: order.arrivedAt || now, // Set arrivedAt if not already set
+        queuedAt: order.queuedAt || now, // Set queuedAt if not already set
+        status: order.status === "PAID" ? "QUEUED" : order.status, // Move to QUEUED if still PAID
+        paidAt: order.paidAt || now, // Ensure paidAt is set
+      },
+      include: { seat: true, location: true, items: { include: { menuItem: true } } },
+    }),
+    prisma.seat.update({
+      where: { id: pod.id },
+      data: { status: "OCCUPIED" },
+    }),
+  ]);
+
+  console.log(`Order ${order.kitchenOrderNumber}: Customer confirmed arrival at Pod ${pod.number} via QR scan (bypassed kiosk)`);
+
+  return {
+    success: true,
+    message: `Welcome to Pod ${pod.number}! Your order is being prepared.`,
+    order: {
+      id: updatedOrder.id,
+      orderNumber: updatedOrder.orderNumber,
+      kitchenOrderNumber: updatedOrder.kitchenOrderNumber,
+      orderQrCode: updatedOrder.orderQrCode,
+      podNumber: pod.number,
+      locationName: pod.location.name,
+      status: updatedOrder.status,
+    },
+  };
+});
+
+// GET /pods/info - Get pod info by QR code (for displaying pod details before confirming)
+app.get("/pods/info", async (req, reply) => {
+  const { qrCode } = req.query || {};
+
+  if (!qrCode) {
+    return reply.code(400).send({ error: "qrCode required" });
+  }
+
+  const pod = await prisma.seat.findFirst({
+    where: { qrCode },
+    include: { location: true },
+  });
+
+  if (!pod) {
+    return reply.code(404).send({ error: "Pod not found" });
+  }
+
+  // Check if there's an active order at this pod
+  const activeOrder = await prisma.order.findFirst({
+    where: {
+      seatId: pod.id,
+      paymentStatus: "PAID",
+      status: { notIn: ["COMPLETED", "CANCELLED"] },
+    },
+    select: {
+      id: true,
+      orderNumber: true,
+      kitchenOrderNumber: true,
+      orderQrCode: true,
+      podConfirmedAt: true,
+      userId: true,
+    },
+  });
+
+  return {
+    pod: {
+      id: pod.id,
+      number: pod.number,
+      qrCode: pod.qrCode,
+      status: pod.status,
+    },
+    location: {
+      id: pod.location.id,
+      name: pod.location.name,
+      city: pod.location.city,
+    },
+    hasActiveOrder: !!activeOrder,
+    activeOrder: activeOrder
+      ? {
+          id: activeOrder.id,
+          orderNumber: activeOrder.orderNumber,
+          kitchenOrderNumber: activeOrder.kitchenOrderNumber,
+          orderQrCode: activeOrder.orderQrCode,
+          alreadyConfirmed: !!activeOrder.podConfirmedAt,
+          userId: activeOrder.userId,
+        }
+      : null,
   };
 });
 
@@ -1304,11 +1537,25 @@ app.post("/orders/:id/release-pod", async (req, reply) => {
 // PATCH /seats/:id/clean - Mark pod as clean and available
 app.patch("/seats/:id/clean", async (req, reply) => {
   const { id } = req.params;
+  const cleanedAt = new Date();
 
   const seat = await prisma.seat.update({
     where: { id },
     data: {
       status: "AVAILABLE",
+    },
+  });
+
+  // Update the most recent COMPLETED order for this seat with podCleanedAt
+  // This tracks when cleaning was finished for average cleaning time calculation
+  await prisma.order.updateMany({
+    where: {
+      seatId: id,
+      status: "COMPLETED",
+      podCleanedAt: null,
+    },
+    data: {
+      podCleanedAt: cleanedAt,
     },
   });
 
@@ -1370,7 +1617,7 @@ app.get("/orders/:id", async (req, reply) => {
 });
 
 app.post("/orders", async (req, reply) => {
-  const { locationId, tenantId, items, seatId, estimatedArrival } =
+  const { locationId, tenantId, items, seatId, estimatedArrival, podSelectionMethod } =
     req.body || {};
 
   if (!locationId || !tenantId || !items || !items.length) {
@@ -1468,6 +1715,8 @@ app.post("/orders", async (req, reply) => {
       tenantId,
       locationId,
       seatId,
+      podSelectionMethod: seatId ? (podSelectionMethod || "CUSTOMER_SELECTED") : null,
+      podAssignedAt: seatId ? new Date() : null,
       totalCents,
       estimatedArrival: estimatedArrival ? new Date(estimatedArrival) : null,
       items: {
@@ -1512,6 +1761,12 @@ app.patch("/orders/:id", async (req, reply) => {
       .send({ error: "status, paymentStatus, userId, totalCents, or estimatedArrival required" });
   }
 
+  // If setting payment to PAID, also set paidAt timestamp and reservation expiry
+  if (paymentStatus === "PAID") {
+    data.paidAt = new Date();
+    data.queuedAt = new Date(); // Track when it entered the kitchen queue
+  }
+
   const order = await prisma.order.update({
     where: { id },
     data,
@@ -1522,6 +1777,27 @@ app.patch("/orders/:id", async (req, reply) => {
       user: true,
     },
   });
+
+  // If order just got paid and has a pre-selected seat, reserve it
+  if (paymentStatus === "PAID" && order.seatId) {
+    // Set 15-minute reservation expiry (advertised as 10 min, grace period of 5 min)
+    const expiryTime = new Date();
+    expiryTime.setMinutes(expiryTime.getMinutes() + 15);
+
+    // Reserve the seat and set expiry on the order
+    await Promise.all([
+      prisma.seat.update({
+        where: { id: order.seatId },
+        data: { status: "RESERVED" },
+      }),
+      prisma.order.update({
+        where: { id: order.id },
+        data: { podReservationExpiry: expiryTime },
+      }),
+    ]);
+
+    console.log(`Pod ${order.seat?.number} reserved for order ${order.kitchenOrderNumber}, expires at ${expiryTime.toISOString()}`);
+  }
 
   // If order just got paid, update user progress
   if (paymentStatus === "PAID" && order.user) {
@@ -2106,7 +2382,15 @@ app.get("/kitchen/orders", async (req, reply) => {
   const where = {
     tenantId: tenant.id,
     paymentStatus: "PAID", // Only show paid orders
-    podConfirmedAt: { not: null }, // Only show orders where customer has confirmed pod arrival
+    // Show orders that have confirmed pod arrival OR are arriving (reserved but not confirmed)
+    OR: [
+      { podConfirmedAt: { not: null } }, // Customer confirmed at pod
+      {
+        seatId: { not: null }, // Has reserved seat
+        podConfirmedAt: null,  // Not confirmed yet
+        arrivedAt: null,       // Not checked in yet (arriving)
+      },
+    ],
   };
 
   if (locationId) {
@@ -2132,6 +2416,13 @@ app.get("/kitchen/orders", async (req, reply) => {
       },
       seat: true,
       location: true,
+      user: {
+        select: {
+          id: true,
+          name: true,
+          membershipTier: true,
+        },
+      },
     },
     orderBy: {
       createdAt: "asc", // Oldest orders first
@@ -2249,7 +2540,7 @@ app.get("/kitchen/average-processing-time", async (req, reply) => {
 
   const where = {
     tenantId: tenant.id,
-    status: "SERVING", // Only completed orders that reached SERVING
+    status: { in: ["SERVING", "COMPLETED"] }, // Orders that reached SERVING or are fully completed
     queuedAt: { not: null },
     deliveredAt: { not: null },
     createdAt: { gte: startOfToday }, // Orders from today
@@ -2307,6 +2598,7 @@ app.get("/cleaning/average-time", async (req, reply) => {
     tenantId: tenant.id,
     status: "COMPLETED",
     completedTime: { not: null },
+    podCleanedAt: { not: null }, // Only count orders where cleaning has been completed
     createdAt: { gte: startOfToday }, // Orders from today
   };
 
@@ -2318,7 +2610,7 @@ app.get("/cleaning/average-time", async (req, reply) => {
     where,
     select: {
       completedTime: true,
-      updatedAt: true,
+      podCleanedAt: true,
     },
   });
 
@@ -2326,12 +2618,10 @@ app.get("/cleaning/average-time", async (req, reply) => {
     return { averageSeconds: 0, averageMinutes: 0, count: 0 };
   }
 
-  // Calculate average cleaning time (from COMPLETED status change to now)
-  // Note: We're using updatedAt as a proxy for when the pod became AVAILABLE
-  // This is the time between order completion and pod being marked clean
+  // Calculate average cleaning time (from COMPLETED to pod cleaned)
   const totalSeconds = orders.reduce((sum, order) => {
     const completedTime = new Date(order.completedTime).getTime();
-    const cleanedTime = new Date(order.updatedAt).getTime();
+    const cleanedTime = new Date(order.podCleanedAt).getTime();
     const diffSeconds = (cleanedTime - completedTime) / 1000;
     return sum + diffSeconds;
   }, 0);
@@ -2556,6 +2846,642 @@ async function checkAndAwardBadges(userId) {
 }
 
 // ====================
+// BACKGROUND JOBS
+// ====================
+
+// Release expired pod reservations
+// Runs every minute to check for reservations that have passed their 15-minute expiry
+// (advertised as 10 min to customers, with 5 min grace period)
+async function releaseExpiredReservations() {
+  const now = new Date();
+
+  try {
+    // Find orders with expired reservations that haven't checked in yet
+    const expiredOrders = await prisma.order.findMany({
+      where: {
+        podReservationExpiry: { lt: now },
+        arrivedAt: null, // Customer hasn't checked in
+        seatId: { not: null },
+        status: "QUEUED", // Still waiting
+      },
+      include: {
+        seat: true,
+        user: true,
+      },
+    });
+
+    for (const order of expiredOrders) {
+      if (order.seat && order.seat.status === "RESERVED") {
+        const releasedPodNumber = order.seat.number;
+        console.log(`⏰ Reservation expired for order ${order.kitchenOrderNumber}, releasing pod ${releasedPodNumber}`);
+
+        // Release the seat
+        await prisma.seat.update({
+          where: { id: order.seatId },
+          data: { status: "AVAILABLE" },
+        });
+
+        // Clear the seat assignment and mark pod as released
+        await prisma.order.update({
+          where: { id: order.id },
+          data: {
+            seatId: null,
+            podSelectionMethod: null,
+            podReservationExpiry: null,
+            podReleasedAt: now, // Track when pod was released
+            podReleasedNumber: releasedPodNumber, // Track which pod was released
+          },
+        });
+
+        // TODO: Send email notification to customer about pod release
+        // For now, log the notification that should be sent
+        if (order.user?.email) {
+          console.log(`📧 [EMAIL] Would notify ${order.user.email}: Your reserved Pod ${releasedPodNumber} has been released because you didn't arrive within 10 minutes. You'll be assigned a new pod when you check in.`);
+        }
+
+        // Process queue for this location to potentially assign the now-available pod
+        await processQueue(order.locationId);
+      }
+    }
+
+    if (expiredOrders.length > 0) {
+      console.log(`⏰ Released ${expiredOrders.length} expired pod reservation(s)`);
+    }
+  } catch (error) {
+    console.error("Error releasing expired reservations:", error);
+  }
+}
+
+// Run reservation cleanup every minute
+setInterval(releaseExpiredReservations, 60 * 1000);
+
+// ====================
+// FORTUNE COOKIE
+// ====================
+
+// Get "This Day in History" facts
+function getThisDayInHistory() {
+  const today = new Date();
+  const month = today.getMonth();
+  const day = today.getDate();
+
+  // A collection of interesting historical facts for each day
+  // This is a small sample - in production you might use an external API
+  const historicalFacts = [
+    { date: "January 1", year: 1863, event: "The Emancipation Proclamation was issued by President Lincoln" },
+    { date: "January 1", year: 2002, event: "The Euro became the official currency of 12 European countries" },
+    { date: "February 14", year: 1929, event: "The St. Valentine's Day Massacre occurred in Chicago" },
+    { date: "March 14", year: 1879, event: "Albert Einstein was born" },
+    { date: "April 15", year: 1912, event: "The Titanic sank after hitting an iceberg" },
+    { date: "May 5", year: 1961, event: "Alan Shepard became the first American in space" },
+    { date: "June 28", year: 1914, event: "Archduke Franz Ferdinand was assassinated, triggering WWI" },
+    { date: "July 4", year: 1776, event: "The Declaration of Independence was adopted" },
+    { date: "July 20", year: 1969, event: "Neil Armstrong became the first human to walk on the Moon" },
+    { date: "August 6", year: 1991, event: "The World Wide Web became publicly available" },
+    { date: "September 11", year: 2001, event: "The September 11 attacks occurred in the United States" },
+    { date: "October 31", year: 1517, event: "Martin Luther posted his 95 Theses" },
+    { date: "November 9", year: 1989, event: "The Berlin Wall fell" },
+    { date: "December 10", year: 1901, event: "The first Nobel Prizes were awarded" },
+    { date: "December 17", year: 1903, event: "The Wright Brothers achieved the first powered flight" },
+  ];
+
+  const monthNames = ["January", "February", "March", "April", "May", "June",
+                      "July", "August", "September", "October", "November", "December"];
+  const todayStr = `${monthNames[month]} ${day}`;
+
+  // Find facts for today (or return null if none found)
+  const todayFacts = historicalFacts.filter(f => f.date === todayStr);
+  if (todayFacts.length > 0) {
+    return todayFacts[Math.floor(Math.random() * todayFacts.length)];
+  }
+
+  // If no fact for today, return a random one
+  return historicalFacts[Math.floor(Math.random() * historicalFacts.length)];
+}
+
+// Generate lucky numbers based on order details
+function generateLuckyNumbers(orderId, userName, orderDate) {
+  // Create a seed from order details for pseudo-random but consistent numbers
+  const seed = orderId + (userName || "guest") + orderDate;
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = ((hash << 5) - hash) + seed.charCodeAt(i);
+    hash = hash & hash; // Convert to 32bit integer
+  }
+
+  const numbers = [];
+  const used = new Set();
+
+  for (let i = 0; i < 6; i++) {
+    let num = Math.abs((hash * (i + 1) * 31) % 49) + 1;
+    while (used.has(num)) {
+      num = (num % 49) + 1;
+    }
+    used.add(num);
+    numbers.push(num);
+  }
+
+  return numbers.sort((a, b) => a - b);
+}
+
+// Fallback Chinese words for Learn Chinese feature
+const fallbackChineseWords = [
+  {
+    traditional: "牛肉麵",
+    pinyin: "niú ròu miàn",
+    english: "Beef Noodle Soup",
+    category: "food",
+    funFact: "Taiwan's national comfort food! There's even an annual beef noodle soup festival.",
+  },
+  {
+    traditional: "好吃",
+    pinyin: "hǎo chī",
+    english: "Delicious",
+    category: "food",
+    funFact: "Literally means 'good eat' - use it to compliment any meal!",
+  },
+  {
+    traditional: "謝謝",
+    pinyin: "xiè xiè",
+    english: "Thank you",
+    category: "essential",
+    funFact: "One of the most useful phrases - works everywhere in Chinese-speaking areas.",
+  },
+  {
+    traditional: "加油",
+    pinyin: "jiā yóu",
+    english: "Keep going! / You can do it!",
+    category: "encouragement",
+    funFact: "Literally means 'add oil' - shouted at sports events and to encourage friends.",
+  },
+  {
+    traditional: "乾杯",
+    pinyin: "gān bēi",
+    english: "Cheers! (Bottoms up)",
+    category: "social",
+    funFact: "Literally means 'dry cup' - finish your drink when you say this!",
+  },
+  {
+    traditional: "厲害",
+    pinyin: "lì hài",
+    english: "Awesome / Impressive",
+    category: "slang",
+    funFact: "Use this when someone does something cool - very common in casual speech.",
+  },
+  {
+    traditional: "辣",
+    pinyin: "là",
+    english: "Spicy",
+    category: "food",
+    funFact: "If you ordered extra spicy, you'll definitely need this word!",
+  },
+  {
+    traditional: "飽了",
+    pinyin: "bǎo le",
+    english: "I'm full",
+    category: "food",
+    funFact: "The polite way to say you've had enough food - very useful at big dinners!",
+  },
+  {
+    traditional: "朋友",
+    pinyin: "péng yǒu",
+    english: "Friend",
+    category: "social",
+    funFact: "Call someone péngyou and you've just made them feel welcome.",
+  },
+  {
+    traditional: "緣分",
+    pinyin: "yuán fèn",
+    english: "Fate / Destiny (that brings people together)",
+    category: "culture",
+    funFact: "A beautiful concept - the destined connection between people who meet.",
+  },
+  {
+    traditional: "福",
+    pinyin: "fú",
+    english: "Good fortune / Blessing",
+    category: "culture",
+    funFact: "Often hung upside down on doors because 'upside down' sounds like 'arrived' in Chinese!",
+  },
+  {
+    traditional: "龍",
+    pinyin: "lóng",
+    english: "Dragon",
+    category: "culture",
+    funFact: "In Chinese culture, dragons are symbols of power, luck, and prosperity - not scary monsters!",
+  },
+];
+
+// Generate AI-powered Chinese word based on current events/trends
+async function generateChineseWord(anthropic) {
+  if (!anthropic) return null;
+
+  try {
+    const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+    const prompt = `You are a Chinese language teacher creating a "Word of the Day" for an American audience at a beef noodle soup restaurant.
+
+Today's date: ${today}
+
+Pick ONE interesting Chinese word or short phrase that could be:
+- Related to current events, trending topics, or pop culture (movies, music, sports, tech)
+- A useful food-related term
+- A fun slang expression popular with young people
+- A culturally significant term
+- Something seasonally relevant
+
+Requirements:
+- Use TRADITIONAL Chinese characters (Taiwan style, not simplified)
+- Include proper pinyin with tone marks (ā, á, ǎ, à, ē, é, ě, è, ī, í, ǐ, ì, ō, ó, ǒ, ò, ū, ú, ǔ, ù, ǖ, ǘ, ǚ, ǜ)
+- Keep it to 1-4 characters
+- Make it fun and memorable
+- Include a brief, engaging explanation of why it's relevant today
+
+Return ONLY valid JSON in this exact format (no markdown, no explanation):
+{"traditional":"字","pinyin":"zì","english":"Character/Word","category":"culture","funFact":"Brief engaging fact about why this word is interesting or relevant today"}`;
+
+    const message = await anthropic.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 300,
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    const responseText = message.content[0]?.text?.trim();
+
+    // Parse the JSON response
+    const parsed = JSON.parse(responseText);
+
+    // Validate required fields
+    if (parsed.traditional && parsed.pinyin && parsed.english) {
+      return parsed;
+    }
+    return null;
+  } catch (error) {
+    console.error("AI Chinese word generation failed:", error);
+    return null;
+  }
+}
+
+// Fallback fortunes if AI is not available (funnier versions)
+const fallbackFortunes = [
+  "Your slurping technique has been rated 'professional' by the pod walls.",
+  "The noodles have spoken: you are the chosen one. No refunds.",
+  "Breaking news: local pod declares you their favorite human today.",
+  "Scientists confirm: ordering beef noodle soup was the best decision you made this week.",
+  "Your future is as bright as the broth you just conquered.",
+  "The universe wanted you to have this meal. Don't question the universe.",
+  "Rumor has it, the kitchen staff high-fived after making your order.",
+  "Pro tip: telling friends about Oh! increases your luck by 47%. It's science.",
+  "You've unlocked the secret level of dining. Achievement: Beef Boss Royalty.",
+  "Plot twist: you were the main character all along. Now with beef noodle soup.",
+  "The pod will remember this moment fondly. It told us.",
+  "Your chopstick skills are now legendary. At least in this zip code.",
+];
+
+// Generate fortune cookie for an order
+app.get("/orders/fortune", async (req, reply) => {
+  const { orderQrCode, orderId } = req.query || {};
+
+  if (!orderQrCode && !orderId) {
+    return reply.status(400).send({ error: "Order QR code or ID required" });
+  }
+
+  try {
+    // Find the order
+    const order = await prisma.order.findFirst({
+      where: orderQrCode
+        ? { orderQrCode }
+        : { id: orderId },
+      include: {
+        user: true,
+        items: {
+          include: {
+            menuItem: true,
+          },
+        },
+        seat: true,
+        location: true,
+      },
+    });
+
+    if (!order) {
+      return reply.status(404).send({ error: "Order not found" });
+    }
+
+    // Get user's name (first name only for personalization)
+    const firstName = order.user?.name?.split(" ")[0] || order.guestName?.split(" ")[0] || null;
+
+    // Get order details for personalization
+    const itemNames = order.items.map(item => item.menuItem?.name || item.name).filter(Boolean);
+    const mainItem = itemNames[0] || "noodles";
+
+    // Get user's tier if available
+    const tier = order.user?.membershipTier || "CHOPSTICK";
+
+    // Generate lucky numbers
+    const luckyNumbers = generateLuckyNumbers(order.id, firstName, order.createdAt.toISOString());
+
+    // Get historical fact
+    const historyFact = getThisDayInHistory();
+
+    // Try to generate AI fortune if API key is available
+    let fortune = null;
+    let source = "ai";
+
+    if (anthropic) {
+      try {
+        const tierJokes = {
+          "CHOPSTICK": "They're a Chopstick tier member (beginner level - still learning to hold chopsticks without launching noodles across the room)",
+          "NOODLE_MASTER": "They're a Noodle Master tier member (intermediate - can slurp without splashing, truly impressive)",
+          "BEEF_BOSS": "They're a legendary BEEF BOSS tier VIP (the beef noodle soup illuminati, they've probably eaten more bowls than some small countries)",
+        };
+
+        const prompt = `You are a HILARIOUS fortune cookie writer for Oh!, a trendy beef noodle soup restaurant with private dining pods. Your job is to make customers laugh out loud and feel special.
+
+CUSTOMER CONTEXT (use ALL of this creatively):
+${firstName ? `- Customer's name: ${firstName} (USE THEIR NAME in a funny way!)` : "- Guest customer (roast them gently for not signing up)"}
+- They ordered: ${mainItem} ${itemNames.length > 1 ? `and ${itemNames.length - 1} other item(s)` : ""}
+- ${tierJokes[tier] || "They're dining at Oh!"}
+- They're in a private pod (like a VIP booth for beef noodle soup enthusiasts)
+- Pod number: ${order.seat?.number || "unknown"}
+
+STYLE REQUIREMENTS:
+1. BE ACTUALLY FUNNY - think stand-up comedian, not Hallmark card
+2. Must be personalized - reference their name, their order, their tier level
+3. Can be slightly absurd, punny, or self-aware
+4. Keep it SHORT (1-2 sentences, under 150 chars)
+5. Make it memorable - they should want to screenshot and share it
+
+EXAMPLES OF THE HUMOR LEVEL WE WANT:
+- "${firstName || "Dear stranger"}, your beef noodle soup consumption has been noted by the noodle gods. They approve."
+- "Pod ${order.seat?.number || "X"} has never seen such elite slurping. The walls are impressed."
+- "As a ${tier === "BEEF_BOSS" ? "Beef Boss" : "future Beef Boss"}, you're legally required to tell 3 friends about us."
+
+Now write ONE fortune that will make ${firstName || "this customer"} laugh. Be bold. Be weird. Be memorable.
+
+Return ONLY the fortune text. No quotes, no explanation.`;
+
+        const message = await anthropic.messages.create({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 100,
+          messages: [{ role: "user", content: prompt }],
+        });
+
+        fortune = message.content[0]?.text?.trim();
+      } catch (aiError) {
+        console.error("AI fortune generation failed:", aiError);
+        source = "fallback";
+      }
+    } else {
+      source = "fallback";
+    }
+
+    // Use fallback if AI didn't work
+    if (!fortune) {
+      fortune = fallbackFortunes[Math.floor(Math.random() * fallbackFortunes.length)];
+      // Personalize fallback if we have a name
+      if (firstName) {
+        fortune = fortune.replace("Your", `${firstName}, your`);
+      }
+    }
+
+    // Generate Learn Chinese word
+    let chineseWord = null;
+    let chineseWordSource = "ai";
+
+    // Try AI-generated word first
+    if (anthropic) {
+      chineseWord = await generateChineseWord(anthropic);
+    }
+
+    // Fall back to curated list if AI fails
+    if (!chineseWord) {
+      chineseWord = fallbackChineseWords[Math.floor(Math.random() * fallbackChineseWords.length)];
+      chineseWordSource = "fallback";
+    }
+
+    return reply.send({
+      fortune,
+      luckyNumbers,
+      thisDayInHistory: historyFact ? {
+        year: historyFact.year,
+        event: historyFact.event,
+      } : null,
+      learnChinese: chineseWord ? {
+        traditional: chineseWord.traditional,
+        pinyin: chineseWord.pinyin,
+        english: chineseWord.english,
+        category: chineseWord.category,
+        funFact: chineseWord.funFact,
+        source: chineseWordSource,
+      } : null,
+      source,
+      orderNumber: order.kitchenOrderNumber || order.orderNumber?.slice(-6),
+      customerName: firstName,
+    });
+  } catch (error) {
+    console.error("Error generating fortune:", error);
+    return reply.status(500).send({ error: "Failed to generate fortune" });
+  }
+});
+
+// Fallback roasts for when AI is unavailable
+const fallbackRoasts = [
+  "We analyzed your order and determined you have... opinions. Strong ones.",
+  "Your order tells a story. We're not sure what story, but it's definitely a story.",
+  "The kitchen looked at your order and said 'interesting choice.' That's a compliment. Probably.",
+  "Your customizations suggest you've either been here before or you're a culinary rebel. Either way, respect.",
+  "This order screams 'I know what I want' — or possibly 'I just hit random buttons.' We may never know.",
+  "Based on your order, our AI concluded: you're definitely a human who eats food.",
+  "Your choices today are being entered into our database of 'unique individuals.'",
+  "Somewhere, a chef is looking at this order and nodding appreciatively. Or laughing. One of those.",
+];
+
+// Generate sarcastic order roast/analysis
+app.get("/orders/roast", async (req, reply) => {
+  const { orderQrCode, orderId } = req.query || {};
+
+  if (!orderQrCode && !orderId) {
+    return reply.status(400).send({ error: "Order QR code or ID required" });
+  }
+
+  try {
+    // Find the order with detailed items
+    const order = await prisma.order.findFirst({
+      where: orderQrCode
+        ? { orderQrCode }
+        : { id: orderId },
+      include: {
+        user: true,
+        items: {
+          include: {
+            menuItem: true,
+          },
+        },
+        seat: true,
+        location: true,
+      },
+    });
+
+    if (!order) {
+      return reply.status(404).send({ error: "Order not found" });
+    }
+
+    // Get user's name
+    const firstName = order.user?.name?.split(" ")[0] || order.guestName?.split(" ")[0] || null;
+
+    // Build detailed order analysis
+    const orderDetails = [];
+    const roastableChoices = [];
+
+    for (const item of order.items) {
+      const itemName = item.menuItem?.name || item.name;
+      const selectedValue = item.selectedValue;
+
+      // Track the choice for roasting
+      if (itemName && selectedValue !== null && selectedValue !== undefined) {
+        orderDetails.push({ name: itemName, value: selectedValue });
+
+        // Identify particularly roastable choices
+        if (itemName.toLowerCase().includes("spice")) {
+          if (selectedValue === "Extra Spicy" || selectedValue === "4") {
+            roastableChoices.push(`EXTREME spice level (${selectedValue}) - they think they're tough`);
+          } else if (selectedValue === "None" || selectedValue === "0") {
+            roastableChoices.push(`NO spice - they're playing it extremely safe`);
+          }
+        }
+
+        if (itemName.toLowerCase().includes("cilantro")) {
+          if (selectedValue === "None" || selectedValue === "0") {
+            roastableChoices.push(`NO cilantro - probably has that gene that makes it taste like soap, or just afraid of flavor`);
+          } else if (selectedValue === "Extra" || selectedValue === "3") {
+            roastableChoices.push(`EXTRA cilantro - a true herbivore`);
+          }
+        }
+
+        if (itemName.toLowerCase().includes("pickled")) {
+          if (selectedValue === "None" || selectedValue === "0") {
+            roastableChoices.push(`NO pickled greens - refusing to try something new, how adventurous`);
+          } else if (selectedValue === "Extra" || selectedValue === "3") {
+            roastableChoices.push(`EXTRA pickled greens - a person of refined, tangy taste`);
+          }
+        }
+
+        if (itemName.toLowerCase().includes("soup richness") || itemName.toLowerCase().includes("richness")) {
+          if (selectedValue === "Extra Rich" || selectedValue === "3") {
+            roastableChoices.push(`EXTRA RICH soup - they came here for a broth experience, not a light snack`);
+          } else if (selectedValue === "Light" || selectedValue === "0") {
+            roastableChoices.push(`LIGHT soup - are they on a diet or something?`);
+          }
+        }
+
+        if (itemName.toLowerCase().includes("noodle texture") || itemName.toLowerCase().includes("texture")) {
+          if (selectedValue === "Firm" || selectedValue === "0") {
+            roastableChoices.push(`FIRM noodles - al dente perfectionist alert`);
+          } else if (selectedValue === "Soft" || selectedValue === "2") {
+            roastableChoices.push(`SOFT noodles - they like their noodles pre-chewed, apparently`);
+          }
+        }
+
+        if (itemName.toLowerCase().includes("sprouts")) {
+          if (selectedValue === "None" || selectedValue === "0") {
+            roastableChoices.push(`NO sprouts - sprout-phobic, interesting`);
+          }
+        }
+
+        if (itemName.toLowerCase().includes("bok choy")) {
+          if (selectedValue === "Extra" || selectedValue === "3") {
+            roastableChoices.push(`EXTRA baby bok choy - going heavy on the greens, health-conscious or just really likes tiny cabbages`);
+          } else if (selectedValue === "None" || selectedValue === "0") {
+            roastableChoices.push(`NO bok choy - turning down free vegetables, bold move`);
+          }
+        }
+      }
+    }
+
+    // Get main items ordered
+    const mainItems = order.items
+      .filter(i => i.menuItem?.categoryType === "MAIN")
+      .map(i => i.menuItem?.name || i.name);
+
+    // Try to generate AI roast if API key is available
+    let roast = null;
+    let source = "ai";
+
+    if (anthropic && roastableChoices.length > 0) {
+      try {
+        const prompt = `You are a HILARIOUSLY SARCASTIC food critic analyzing a customer's beef noodle soup order at Oh!, a trendy restaurant with private dining pods. Your job is to lovingly roast their choices in a way that makes them laugh.
+
+CUSTOMER INFO:
+${firstName ? `- Name: ${firstName}` : "- Guest (didn't even sign up, the mystery person)"}
+- Main dish: ${mainItems.join(", ") || "Beef Noodle Soup"}
+- Pod: ${order.seat?.number || "unknown"}
+
+THEIR NOTABLE CUSTOMIZATIONS (this is the GOLD - use these!):
+${roastableChoices.map(c => `- ${c}`).join("\n")}
+
+ALL ORDER DETAILS:
+${orderDetails.map(d => `- ${d.name}: ${d.value}`).join("\n")}
+
+YOUR TASK:
+Write a SHORT (2-3 sentences, max 200 chars) sarcastic but affectionate roast of their order choices.
+
+STYLE:
+- Think snarky best friend, not mean critic
+- Heavy on sarcasm and playful jabs
+- Reference their SPECIFIC choices (spice levels, skipped toppings, etc.)
+- If they skipped something, playfully question their life choices
+- If they maxed something out, praise their commitment sarcastically
+- Be BOLD and FUNNY
+- End with something that shows you're on their team
+
+EXAMPLES:
+- "No cilantro AND no pickled greens? ${firstName || "Friend"}, are we afraid of flavor? Don't worry, the beef will carry this. Barely."
+- "Extra Spicy? Look at you, thinking you're invincible. The bathroom will remember this. But respect."
+- "Light soup and firm noodles — someone's training for something. Or just very particular. We don't judge. Much."
+
+Write the roast. Be savage but lovable. No quotes around it.`;
+
+        const message = await anthropic.messages.create({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 150,
+          messages: [{ role: "user", content: prompt }],
+        });
+
+        roast = message.content[0]?.text?.trim();
+      } catch (aiError) {
+        console.error("AI roast generation failed:", aiError);
+        source = "fallback";
+      }
+    } else if (!anthropic) {
+      source = "fallback";
+    } else {
+      // No roastable choices, give a generic compliment-roast
+      source = "fallback";
+    }
+
+    // Use fallback if AI didn't work or no roastable choices
+    if (!roast) {
+      roast = fallbackRoasts[Math.floor(Math.random() * fallbackRoasts.length)];
+      if (firstName) {
+        roast = `${firstName}, ` + roast.charAt(0).toLowerCase() + roast.slice(1);
+      }
+    }
+
+    return reply.send({
+      roast,
+      highlights: roastableChoices.slice(0, 3), // Top 3 most roastable choices
+      source,
+      orderDetails: orderDetails.slice(0, 10), // Limit for response size
+      customerName: firstName,
+    });
+  } catch (error) {
+    console.error("Error generating roast:", error);
+    return reply.status(500).send({ error: "Failed to generate roast" });
+  }
+});
+
+// ====================
 // START SERVER
 // ====================
 
@@ -2565,4 +3491,7 @@ app.listen({ port: PORT, host: "0.0.0.0" }, (err) => {
     process.exit(1);
   }
   console.log(`🚀 API server running on http://localhost:${PORT}`);
+
+  // Run initial cleanup on startup
+  releaseExpiredReservations();
 });

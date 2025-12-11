@@ -158,9 +158,15 @@ model Seat {
   locationId String
   location   Location   @relation(fields: [locationId], references: [id])
 
-  number     String     // Pod number (e.g., "001", "002", "A01", "B12")
+  number     String     // Pod number (e.g., "01", "02", "03")
   qrCode     String     @unique // QR code for pod verification
   status     SeatStatus @default(AVAILABLE)
+
+  // Position in the seating layout (for visual map)
+  // U-shape: left side (entrance), bottom, right side (exit)
+  row        Int        @default(0)  // 0=left, 1=bottom, 2=right
+  col        Int        @default(0)  // Position within the row
+  side       String     @default("left") // "left", "bottom", "right" for U-shape
 
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
@@ -203,6 +209,7 @@ model Order {
   readyTime       DateTime?    // When food finished cooking
   deliveredAt     DateTime?    // When food brought to table
   completedTime   DateTime?    // When customer finished
+  podCleanedAt    DateTime?    // When pod was cleaned after customer left
 
   // Pod/Seat Assignment
   seatId          String?
@@ -211,6 +218,8 @@ model Order {
   podConfirmedAt  DateTime?    // When customer scanned QR to confirm pod
   podReservationExpiry DateTime? // When reservation expires if not confirmed
   podSelectionMethod String?   // "AUTO" | "CUSTOMER_SELECTED" | "STAFF_ASSIGNED"
+  podReleasedAt   DateTime?    // When pod reservation was auto-released due to no-show
+  podReleasedNumber String?    // Which pod was released (for notification display)
 
   // Queue Management
   queuePosition   Int?         // Current position in queue
