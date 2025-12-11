@@ -13,6 +13,8 @@ type Order = {
   estimatedArrival?: string;
   prepStartTime?: string;
   fulfillmentType: string;
+  arrivedAt?: string; // When customer checked in at kiosk
+  podConfirmedAt?: string; // When customer confirmed arrival at pod
   items: Array<{
     id: string;
     quantity: number;
@@ -28,7 +30,30 @@ type Order = {
   location: {
     name: string;
   };
+  user?: {
+    id: string;
+    name?: string;
+    membershipTier?: "CHOPSTICK" | "NOODLE_MASTER" | "BEEF_BOSS";
+  };
 };
+
+// Helper to get tier emoji
+function getTierEmoji(tier?: string): string {
+  switch (tier) {
+    case "BEEF_BOSS":
+      return "🥩";
+    case "NOODLE_MASTER":
+      return "🍜";
+    case "CHOPSTICK":
+    default:
+      return "🥢";
+  }
+}
+
+// Helper to check if VIP
+function isVIP(tier?: string): boolean {
+  return tier === "BEEF_BOSS";
+}
 
 export default function KitchenDisplay({ locations }: { locations: any[] }) {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -198,6 +223,13 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
   function OrderCard({ order }: { order: Order }) {
     const ageColor = getAgeColor(order.createdAt);
 
+    // Check if customer hasn't arrived at pod yet (order paid, pod reserved, but not confirmed)
+    const isArriving = order.status === "QUEUED" && !order.podConfirmedAt && order.seat;
+
+    // Check if customer is a VIP (Beef Boss tier)
+    const customerIsVIP = isVIP(order.user?.membershipTier);
+    const tierEmoji = getTierEmoji(order.user?.membershipTier);
+
     // Split items into bowl configuration (MAIN + SLIDER) vs add-ons (ADDON, SIDE, DRINK, DESSERT)
     const bowlItems = order.items.filter(
       (item) =>
@@ -250,13 +282,58 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
     return (
       <div
         style={{
-          background: "#1f2937",
-          border: "2px solid #374151",
+          background: isArriving ? "#1e293b" : customerIsVIP ? "#2d1f1f" : "#1f2937",
+          border: isArriving
+            ? "2px solid #f59e0b"
+            : customerIsVIP
+              ? "2px solid #dc2626"
+              : "2px solid #374151",
           borderRadius: 12,
           padding: 16,
           marginBottom: 12,
+          opacity: isArriving ? 0.85 : 1,
+          boxShadow: customerIsVIP && !isArriving
+            ? "0 0 15px rgba(220, 38, 38, 0.5), 0 0 30px rgba(220, 38, 38, 0.3)"
+            : "none",
+          position: "relative" as const,
         }}
       >
+        {/* Arriving Banner */}
+        {isArriving && (
+          <div
+            style={{
+              background: "#f59e0b",
+              color: "#000",
+              padding: "6px 12px",
+              borderRadius: 6,
+              fontSize: "0.75rem",
+              fontWeight: "bold",
+              textAlign: "center",
+              marginBottom: 10,
+              textTransform: "uppercase",
+              letterSpacing: "1px",
+            }}
+          >
+            ⏳ Customer Arriving - Do Not Prep
+          </div>
+        )}
+
+        {/* Tier Emoji Badge (Top Right) */}
+        {order.user && (
+          <div
+            style={{
+              position: "absolute",
+              top: 8,
+              right: 8,
+              fontSize: "1.5rem",
+              filter: customerIsVIP ? "drop-shadow(0 0 4px rgba(220, 38, 38, 0.8))" : "none",
+            }}
+            title={`${order.user.membershipTier || "CHOPSTICK"} tier`}
+          >
+            {tierEmoji}
+          </div>
+        )}
+
         {/* Header */}
         <div
           style={{
@@ -264,6 +341,7 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
             justifyContent: "space-between",
             alignItems: "start",
             marginBottom: 10,
+            paddingRight: order.user ? 40 : 0, // Make room for tier emoji
           }}
         >
           <div>
@@ -274,7 +352,7 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
               style={{
                 fontSize: "1.5rem",
                 fontWeight: "bold",
-                color: "#3b82f6",
+                color: isArriving ? "#f59e0b" : customerIsVIP ? "#dc2626" : "#3b82f6",
               }}
             >
               {order.seat ? `Pod ${order.seat.number}` : "Dine-In"}
@@ -316,9 +394,9 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
             >
               Bowl Configuration
             </div>
-            {bowlItems.map((item, idx) =>
-              renderItem(item, shouldShowQty(item.menuItem.categoryType))
-            )}
+            {bowlItems.map((item) => (
+              <div key={item.id}>{renderItem(item, shouldShowQty(item.menuItem.categoryType))}</div>
+            ))}
           </div>
         )}
 
@@ -344,15 +422,15 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
             >
               Add-ons & Extras
             </div>
-            {addonItems.map((item, idx) =>
-              renderItem(item, shouldShowQty(item.menuItem.categoryType))
-            )}
+            {addonItems.map((item) => (
+              <div key={item.id}>{renderItem(item, shouldShowQty(item.menuItem.categoryType))}</div>
+            ))}
           </div>
         )}
 
         {/* Action Buttons */}
         <div style={{ display: "flex", gap: 8 }}>
-          {order.status === "QUEUED" && (
+          {order.status === "QUEUED" && !isArriving && (
             <button
               onClick={() => updateOrderStatus(order.id, "PREPPING")}
               style={{
@@ -368,6 +446,25 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
               }}
             >
               Start Prep
+            </button>
+          )}
+
+          {order.status === "QUEUED" && isArriving && (
+            <button
+              disabled
+              style={{
+                flex: 1,
+                padding: 12,
+                background: "#4b5563",
+                color: "#9ca3af",
+                border: "none",
+                borderRadius: 8,
+                fontWeight: "bold",
+                cursor: "not-allowed",
+                fontSize: "0.9rem",
+              }}
+            >
+              Waiting for Customer...
             </button>
           )}
 
