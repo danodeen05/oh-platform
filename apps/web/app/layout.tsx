@@ -1,4 +1,5 @@
 import { ClerkProvider } from "@clerk/nextjs";
+import GoogleAnalytics from "@/components/GoogleAnalytics";
 import "./globals.css";
 
 export const metadata = {
@@ -25,6 +26,7 @@ export default function RootLayout({
     <ClerkProvider>
       <html>
         <head>
+          <GoogleAnalytics />
           <link rel="preconnect" href="https://fonts.googleapis.com" />
           <link
             rel="preconnect"
