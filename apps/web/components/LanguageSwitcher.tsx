@@ -5,6 +5,27 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 import { locales, localeNames, type Locale } from "@/i18n/config";
 
+// Language icon - matches site's olive color scheme
+const LanguageIcon = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="#7C7A67"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M5 8l6 6" />
+    <path d="M4 14l6-6 2-3" />
+    <path d="M2 5h12" />
+    <path d="M7 2h1" />
+    <path d="M22 22l-5-10-5 10" />
+    <path d="M14 18h6" />
+  </svg>
+);
+
 export default function LanguageSwitcher() {
   const locale = useLocale();
   const router = useRouter();
@@ -57,7 +78,7 @@ export default function LanguageSwitcher() {
         }}
         aria-label="Select language"
       >
-        <span style={{ fontSize: "1rem" }}>🌐</span>
+        <LanguageIcon />
         <span>{localeNames[locale as Locale]}</span>
         <span style={{ fontSize: "0.7rem", marginLeft: "2px" }}>
           {isOpen ? "▲" : "▼"}
