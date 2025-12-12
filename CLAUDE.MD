@@ -108,3 +108,10 @@ Current working branch: `nervous-lichterman`
 3. Check TypeScript compilation before committing
 4. Ensure Prisma schema is pushed before testing database features
 5. Follow the existing monorepo structure when adding new packages
+
+## Git & Deployment
+- You are working in a **git worktree** on a separate branch (not main)
+- Railway deploys from `main` branch
+- When pushing changes for deployment, use: `git push origin <branch>:main`
+- This pushes the current worktree branch directly to main to trigger Railway deployment
+- Do NOT try to checkout main (it's already checked out in the main repo)
