@@ -4357,6 +4357,702 @@ function generateFallbackOneLiner(insight) {
 }
 
 // ====================
+// ANALYTICS ENDPOINTS
+// ====================
+
+// Helper to parse period and get date range
+function getDateRange(period = "week") {
+  const now = new Date();
+  const end = new Date(now);
+  let start;
+
+  switch (period) {
+    case "today":
+      start = new Date(now.setHours(0, 0, 0, 0));
+      break;
+    case "yesterday":
+      start = new Date(now);
+      start.setDate(start.getDate() - 1);
+      start.setHours(0, 0, 0, 0);
+      end.setDate(end.getDate() - 1);
+      end.setHours(23, 59, 59, 999);
+      break;
+    case "week":
+      start = new Date(now);
+      start.setDate(start.getDate() - 7);
+      break;
+    case "month":
+      start = new Date(now);
+      start.setMonth(start.getMonth() - 1);
+      break;
+    case "quarter":
+      start = new Date(now);
+      start.setMonth(start.getMonth() - 3);
+      break;
+    case "year":
+      start = new Date(now);
+      start.setFullYear(start.getFullYear() - 1);
+      break;
+    case "all":
+      start = new Date(0);
+      break;
+    default:
+      start = new Date(now);
+      start.setDate(start.getDate() - 7);
+  }
+
+  return { start, end };
+}
+
+// Analytics Overview - Key KPIs
+app.get("/analytics/overview", async (req, reply) => {
+  const tenantSlug = getTenantContext(req);
+  const { period = "week", locationId } = req.query;
+  const { start, end } = getDateRange(period);
+
+  try {
+    const tenant = await prisma.tenant.findUnique({ where: { slug: tenantSlug } });
+    if (!tenant) {
+      return reply.status(404).send({ error: "Tenant not found" });
+    }
+
+    const whereClause = {
+      tenantId: tenant.id,
+      createdAt: { gte: start, lte: end },
+      status: { in: ["COMPLETED", "PAID", "QUEUED", "PREPPING", "READY", "SERVING"] },
+    };
+    if (locationId) whereClause.locationId = locationId;
+
+    // Previous period for comparison
+    const periodMs = end.getTime() - start.getTime();
+    const prevStart = new Date(start.getTime() - periodMs);
+    const prevEnd = new Date(start);
+
+    const prevWhereClause = {
+      ...whereClause,
+      createdAt: { gte: prevStart, lte: prevEnd },
+    };
+
+    // Current period stats
+    const [orders, prevOrders, customers, prevCustomers] = await Promise.all([
+      prisma.order.findMany({
+        where: whereClause,
+        select: { totalCents: true, createdAt: true, userId: true },
+      }),
+      prisma.order.findMany({
+        where: prevWhereClause,
+        select: { totalCents: true },
+      }),
+      prisma.order.groupBy({
+        by: ["userId"],
+        where: { ...whereClause, userId: { not: null } },
+      }),
+      prisma.order.groupBy({
+        by: ["userId"],
+        where: { ...prevWhereClause, userId: { not: null } },
+      }),
+    ]);
+
+    const totalRevenue = orders.reduce((sum, o) => sum + (o.totalCents || 0), 0);
+    const prevTotalRevenue = prevOrders.reduce((sum, o) => sum + (o.totalCents || 0), 0);
+    const avgOrderValue = orders.length > 0 ? totalRevenue / orders.length : 0;
+    const prevAvgOrderValue = prevOrders.length > 0 ? prevTotalRevenue / prevOrders.length : 0;
+
+    // Calculate percentage changes
+    const revenueChange = prevTotalRevenue > 0
+      ? ((totalRevenue - prevTotalRevenue) / prevTotalRevenue) * 100
+      : 0;
+    const ordersChange = prevOrders.length > 0
+      ? ((orders.length - prevOrders.length) / prevOrders.length) * 100
+      : 0;
+    const aovChange = prevAvgOrderValue > 0
+      ? ((avgOrderValue - prevAvgOrderValue) / prevAvgOrderValue) * 100
+      : 0;
+    const customersChange = prevCustomers.length > 0
+      ? ((customers.length - prevCustomers.length) / prevCustomers.length) * 100
+      : 0;
+
+    return reply.send({
+      period,
+      dateRange: { start, end },
+      metrics: {
+        totalRevenue: {
+          value: totalRevenue,
+          formatted: `$${(totalRevenue / 100).toFixed(2)}`,
+          change: revenueChange.toFixed(1),
+        },
+        totalOrders: {
+          value: orders.length,
+          change: ordersChange.toFixed(1),
+        },
+        averageOrderValue: {
+          value: avgOrderValue,
+          formatted: `$${(avgOrderValue / 100).toFixed(2)}`,
+          change: aovChange.toFixed(1),
+        },
+        uniqueCustomers: {
+          value: customers.length,
+          change: customersChange.toFixed(1),
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Analytics overview error:", error);
+    return reply.status(500).send({ error: "Failed to fetch analytics overview" });
+  }
+});
+
+// Revenue Analytics
+app.get("/analytics/revenue", async (req, reply) => {
+  const tenantSlug = getTenantContext(req);
+  const { period = "week", locationId, groupBy = "day" } = req.query;
+  const { start, end } = getDateRange(period);
+
+  try {
+    const tenant = await prisma.tenant.findUnique({ where: { slug: tenantSlug } });
+    if (!tenant) {
+      return reply.status(404).send({ error: "Tenant not found" });
+    }
+
+    const whereClause = {
+      tenantId: tenant.id,
+      createdAt: { gte: start, lte: end },
+      status: { in: ["COMPLETED", "PAID", "QUEUED", "PREPPING", "READY", "SERVING"] },
+    };
+    if (locationId) whereClause.locationId = locationId;
+
+    const orders = await prisma.order.findMany({
+      where: whereClause,
+      select: {
+        totalCents: true,
+        createdAt: true,
+        location: { select: { id: true, name: true } },
+      },
+      orderBy: { createdAt: "asc" },
+    });
+
+    // Group revenue by time period
+    const revenueByPeriod = {};
+    const revenueByLocation = {};
+
+    for (const order of orders) {
+      let key;
+      const date = new Date(order.createdAt);
+
+      switch (groupBy) {
+        case "hour":
+          key = `${date.toISOString().split("T")[0]} ${date.getHours().toString().padStart(2, "0")}:00`;
+          break;
+        case "day":
+          key = date.toISOString().split("T")[0];
+          break;
+        case "week":
+          const weekStart = new Date(date);
+          weekStart.setDate(date.getDate() - date.getDay());
+          key = weekStart.toISOString().split("T")[0];
+          break;
+        case "month":
+          key = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, "0")}`;
+          break;
+        default:
+          key = date.toISOString().split("T")[0];
+      }
+
+      if (!revenueByPeriod[key]) {
+        revenueByPeriod[key] = { revenue: 0, orders: 0 };
+      }
+      revenueByPeriod[key].revenue += order.totalCents || 0;
+      revenueByPeriod[key].orders += 1;
+
+      // By location
+      if (order.location) {
+        const locKey = order.location.id;
+        if (!revenueByLocation[locKey]) {
+          revenueByLocation[locKey] = { name: order.location.name, revenue: 0, orders: 0 };
+        }
+        revenueByLocation[locKey].revenue += order.totalCents || 0;
+        revenueByLocation[locKey].orders += 1;
+      }
+    }
+
+    // Convert to arrays and format
+    const timeline = Object.entries(revenueByPeriod).map(([date, data]) => ({
+      date,
+      revenue: data.revenue,
+      revenueFormatted: `$${(data.revenue / 100).toFixed(2)}`,
+      orders: data.orders,
+    }));
+
+    const byLocation = Object.entries(revenueByLocation)
+      .map(([id, data]) => ({
+        locationId: id,
+        name: data.name,
+        revenue: data.revenue,
+        revenueFormatted: `$${(data.revenue / 100).toFixed(2)}`,
+        orders: data.orders,
+      }))
+      .sort((a, b) => b.revenue - a.revenue);
+
+    const totalRevenue = orders.reduce((sum, o) => sum + (o.totalCents || 0), 0);
+
+    return reply.send({
+      period,
+      groupBy,
+      dateRange: { start, end },
+      summary: {
+        totalRevenue,
+        totalRevenueFormatted: `$${(totalRevenue / 100).toFixed(2)}`,
+        totalOrders: orders.length,
+        averageOrderValue: orders.length > 0 ? totalRevenue / orders.length : 0,
+        averageOrderValueFormatted: orders.length > 0
+          ? `$${((totalRevenue / orders.length) / 100).toFixed(2)}`
+          : "$0.00",
+      },
+      timeline,
+      byLocation,
+    });
+  } catch (error) {
+    console.error("Revenue analytics error:", error);
+    return reply.status(500).send({ error: "Failed to fetch revenue analytics" });
+  }
+});
+
+// Operations Analytics
+app.get("/analytics/operations", async (req, reply) => {
+  const tenantSlug = getTenantContext(req);
+  const { period = "week", locationId } = req.query;
+  const { start, end } = getDateRange(period);
+
+  try {
+    const tenant = await prisma.tenant.findUnique({ where: { slug: tenantSlug } });
+    if (!tenant) {
+      return reply.status(404).send({ error: "Tenant not found" });
+    }
+
+    const whereClause = {
+      tenantId: tenant.id,
+      createdAt: { gte: start, lte: end },
+    };
+    if (locationId) whereClause.locationId = locationId;
+
+    const orders = await prisma.order.findMany({
+      where: whereClause,
+      select: {
+        status: true,
+        createdAt: true,
+        prepStartTime: true,
+        readyTime: true,
+        deliveredAt: true,
+        completedTime: true,
+        arrivedAt: true,
+        estimatedArrival: true,
+        queuedAt: true,
+        podAssignedAt: true,
+        podConfirmedAt: true,
+        arrivalDeviation: true,
+      },
+    });
+
+    // Calculate operational metrics
+    let totalPrepTime = 0;
+    let prepTimeCount = 0;
+    let totalWaitTime = 0;
+    let waitTimeCount = 0;
+    let totalTurnaroundTime = 0;
+    let turnaroundCount = 0;
+    let onTimeArrivals = 0;
+    let arrivalCount = 0;
+
+    const statusCounts = {};
+    const hourlyDistribution = {};
+
+    for (const order of orders) {
+      // Status counts
+      statusCounts[order.status] = (statusCounts[order.status] || 0) + 1;
+
+      // Hourly distribution
+      const hour = new Date(order.createdAt).getHours();
+      hourlyDistribution[hour] = (hourlyDistribution[hour] || 0) + 1;
+
+      // Prep time (prepStart to ready)
+      if (order.prepStartTime && order.readyTime) {
+        const prepTime = (new Date(order.readyTime) - new Date(order.prepStartTime)) / 1000 / 60;
+        if (prepTime > 0 && prepTime < 120) {
+          totalPrepTime += prepTime;
+          prepTimeCount++;
+        }
+      }
+
+      // Wait time (queued to prep start)
+      if (order.queuedAt && order.prepStartTime) {
+        const waitTime = (new Date(order.prepStartTime) - new Date(order.queuedAt)) / 1000 / 60;
+        if (waitTime >= 0 && waitTime < 120) {
+          totalWaitTime += waitTime;
+          waitTimeCount++;
+        }
+      }
+
+      // Total turnaround (order created to delivered/completed)
+      const endTime = order.deliveredAt || order.completedTime;
+      if (endTime) {
+        const turnaround = (new Date(endTime) - new Date(order.createdAt)) / 1000 / 60;
+        if (turnaround > 0 && turnaround < 180) {
+          totalTurnaroundTime += turnaround;
+          turnaroundCount++;
+        }
+      }
+
+      // On-time arrivals
+      if (order.arrivalDeviation !== null) {
+        arrivalCount++;
+        if (Math.abs(order.arrivalDeviation) <= 5) {
+          onTimeArrivals++;
+        }
+      }
+    }
+
+    // Peak hours analysis
+    const peakHours = Object.entries(hourlyDistribution)
+      .map(([hour, count]) => ({ hour: parseInt(hour), count }))
+      .sort((a, b) => b.count - a.count);
+
+    return reply.send({
+      period,
+      dateRange: { start, end },
+      metrics: {
+        averagePrepTime: {
+          value: prepTimeCount > 0 ? (totalPrepTime / prepTimeCount).toFixed(1) : 0,
+          unit: "minutes",
+          sampleSize: prepTimeCount,
+        },
+        averageWaitTime: {
+          value: waitTimeCount > 0 ? (totalWaitTime / waitTimeCount).toFixed(1) : 0,
+          unit: "minutes",
+          sampleSize: waitTimeCount,
+        },
+        averageTurnaroundTime: {
+          value: turnaroundCount > 0 ? (totalTurnaroundTime / turnaroundCount).toFixed(1) : 0,
+          unit: "minutes",
+          sampleSize: turnaroundCount,
+        },
+        onTimeArrivalRate: {
+          value: arrivalCount > 0 ? ((onTimeArrivals / arrivalCount) * 100).toFixed(1) : 0,
+          unit: "percent",
+          sampleSize: arrivalCount,
+        },
+      },
+      statusBreakdown: statusCounts,
+      peakHours: peakHours.slice(0, 5),
+      hourlyDistribution: Object.fromEntries(
+        Array.from({ length: 24 }, (_, i) => [i, hourlyDistribution[i] || 0])
+      ),
+    });
+  } catch (error) {
+    console.error("Operations analytics error:", error);
+    return reply.status(500).send({ error: "Failed to fetch operations analytics" });
+  }
+});
+
+// Customer Analytics
+app.get("/analytics/customers", async (req, reply) => {
+  const tenantSlug = getTenantContext(req);
+  const { period = "month" } = req.query;
+  const { start, end } = getDateRange(period);
+
+  try {
+    const tenant = await prisma.tenant.findUnique({ where: { slug: tenantSlug } });
+    if (!tenant) {
+      return reply.status(404).send({ error: "Tenant not found" });
+    }
+
+    // Get all users with orders in this period
+    const usersWithOrders = await prisma.user.findMany({
+      where: {
+        orders: {
+          some: {
+            tenantId: tenant.id,
+            createdAt: { gte: start, lte: end },
+          },
+        },
+      },
+      select: {
+        id: true,
+        membershipTier: true,
+        lifetimeOrderCount: true,
+        lifetimeSpentCents: true,
+        createdAt: true,
+        orders: {
+          where: {
+            tenantId: tenant.id,
+            createdAt: { gte: start, lte: end },
+          },
+          select: {
+            id: true,
+            totalCents: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
+
+    // Calculate metrics
+    const tierDistribution = { CHOPSTICK: 0, NOODLE_MASTER: 0, BEEF_BOSS: 0 };
+    let newCustomers = 0;
+    let returningCustomers = 0;
+    let totalLifetimeValue = 0;
+
+    for (const user of usersWithOrders) {
+      tierDistribution[user.membershipTier || "CHOPSTICK"]++;
+      totalLifetimeValue += user.lifetimeSpentCents || 0;
+
+      // Check if customer is new (created within period)
+      if (new Date(user.createdAt) >= start) {
+        newCustomers++;
+      } else {
+        returningCustomers++;
+      }
+    }
+
+    // Get repeat customers (multiple orders in period)
+    const repeatCustomers = usersWithOrders.filter(u => u.orders.length > 1).length;
+
+    // Top customers by spend in period
+    const topCustomers = usersWithOrders
+      .map(user => ({
+        id: user.id,
+        orderCount: user.orders.length,
+        periodSpend: user.orders.reduce((sum, o) => sum + (o.totalCents || 0), 0),
+        lifetimeSpend: user.lifetimeSpentCents || 0,
+        tier: user.membershipTier,
+      }))
+      .sort((a, b) => b.periodSpend - a.periodSpend)
+      .slice(0, 10);
+
+    return reply.send({
+      period,
+      dateRange: { start, end },
+      summary: {
+        totalCustomers: usersWithOrders.length,
+        newCustomers,
+        returningCustomers,
+        repeatCustomers,
+        repeatRate: usersWithOrders.length > 0
+          ? ((repeatCustomers / usersWithOrders.length) * 100).toFixed(1)
+          : 0,
+        averageLifetimeValue: usersWithOrders.length > 0
+          ? `$${((totalLifetimeValue / usersWithOrders.length) / 100).toFixed(2)}`
+          : "$0.00",
+      },
+      tierDistribution,
+      topCustomers: topCustomers.map(c => ({
+        ...c,
+        periodSpendFormatted: `$${(c.periodSpend / 100).toFixed(2)}`,
+        lifetimeSpendFormatted: `$${(c.lifetimeSpend / 100).toFixed(2)}`,
+      })),
+    });
+  } catch (error) {
+    console.error("Customer analytics error:", error);
+    return reply.status(500).send({ error: "Failed to fetch customer analytics" });
+  }
+});
+
+// Menu Performance Analytics
+app.get("/analytics/menu", async (req, reply) => {
+  const tenantSlug = getTenantContext(req);
+  const { period = "week", locationId } = req.query;
+  const { start, end } = getDateRange(period);
+
+  try {
+    const tenant = await prisma.tenant.findUnique({ where: { slug: tenantSlug } });
+    if (!tenant) {
+      return reply.status(404).send({ error: "Tenant not found" });
+    }
+
+    const orderWhereClause = {
+      tenantId: tenant.id,
+      createdAt: { gte: start, lte: end },
+      status: { in: ["COMPLETED", "PAID", "QUEUED", "PREPPING", "READY", "SERVING"] },
+    };
+    if (locationId) orderWhereClause.locationId = locationId;
+
+    // First get the order IDs that match our criteria
+    const orders = await prisma.order.findMany({
+      where: orderWhereClause,
+      select: { id: true },
+    });
+
+    const orderIds = orders.map(o => o.id);
+
+    // If no orders, return empty data
+    if (orderIds.length === 0) {
+      return reply.send({
+        period,
+        dateRange: { start, end },
+        summary: {
+          totalItemsSold: 0,
+          totalRevenue: 0,
+          totalRevenueFormatted: "$0.00",
+          uniqueItems: 0,
+        },
+        topByQuantity: [],
+        topByRevenue: [],
+        byCategory: [],
+      });
+    }
+
+    // Get order items with menu item details
+    const orderItems = await prisma.orderItem.findMany({
+      where: {
+        orderId: { in: orderIds },
+      },
+      include: {
+        menuItem: {
+          select: {
+            id: true,
+            name: true,
+            category: true,
+            basePriceCents: true,
+          },
+        },
+      },
+    });
+
+    // Aggregate by menu item
+    const itemStats = {};
+    const categoryStats = {};
+
+    for (const item of orderItems) {
+      if (!item.menuItem) continue;
+
+      const itemId = item.menuItem.id;
+      const category = item.menuItem.category || "Other";
+
+      if (!itemStats[itemId]) {
+        itemStats[itemId] = {
+          id: itemId,
+          name: item.menuItem.name,
+          category,
+          quantity: 0,
+          revenue: 0,
+        };
+      }
+      itemStats[itemId].quantity += item.quantity;
+      itemStats[itemId].revenue += (item.priceCents || item.menuItem.basePriceCents || 0) * item.quantity;
+
+      if (!categoryStats[category]) {
+        categoryStats[category] = { quantity: 0, revenue: 0, items: 0 };
+      }
+      categoryStats[category].quantity += item.quantity;
+      categoryStats[category].revenue += (item.priceCents || item.menuItem.basePriceCents || 0) * item.quantity;
+    }
+
+    // Sort by quantity and revenue
+    const topByQuantity = Object.values(itemStats)
+      .sort((a, b) => b.quantity - a.quantity)
+      .slice(0, 10);
+
+    const topByRevenue = Object.values(itemStats)
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 10);
+
+    const totalRevenue = Object.values(itemStats).reduce((sum, i) => sum + i.revenue, 0);
+    const totalQuantity = Object.values(itemStats).reduce((sum, i) => sum + i.quantity, 0);
+
+    return reply.send({
+      period,
+      dateRange: { start, end },
+      summary: {
+        totalItemsSold: totalQuantity,
+        totalRevenue,
+        totalRevenueFormatted: `$${(totalRevenue / 100).toFixed(2)}`,
+        uniqueItems: Object.keys(itemStats).length,
+      },
+      topByQuantity: topByQuantity.map(i => ({
+        ...i,
+        revenueFormatted: `$${(i.revenue / 100).toFixed(2)}`,
+      })),
+      topByRevenue: topByRevenue.map(i => ({
+        ...i,
+        revenueFormatted: `$${(i.revenue / 100).toFixed(2)}`,
+      })),
+      byCategory: Object.entries(categoryStats)
+        .map(([name, data]) => ({
+          category: name,
+          quantity: data.quantity,
+          revenue: data.revenue,
+          revenueFormatted: `$${(data.revenue / 100).toFixed(2)}`,
+          percentOfRevenue: totalRevenue > 0 ? ((data.revenue / totalRevenue) * 100).toFixed(1) : 0,
+        }))
+        .sort((a, b) => b.revenue - a.revenue),
+    });
+  } catch (error) {
+    console.error("Menu analytics error:", error);
+    return reply.status(500).send({ error: "Failed to fetch menu analytics" });
+  }
+});
+
+// Real-time dashboard stats (for live dashboard)
+app.get("/analytics/realtime", async (req, reply) => {
+  const tenantSlug = getTenantContext(req);
+  const { locationId } = req.query;
+
+  try {
+    const tenant = await prisma.tenant.findUnique({ where: { slug: tenantSlug } });
+    if (!tenant) {
+      return reply.status(404).send({ error: "Tenant not found" });
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const whereClause = {
+      tenantId: tenant.id,
+      createdAt: { gte: today },
+    };
+    if (locationId) whereClause.locationId = locationId;
+
+    const [todayOrders, activeOrders, queueStats] = await Promise.all([
+      prisma.order.findMany({
+        where: whereClause,
+        select: { totalCents: true, status: true },
+      }),
+      prisma.order.count({
+        where: {
+          ...whereClause,
+          status: { in: ["QUEUED", "PREPPING", "READY", "SERVING"] },
+        },
+      }),
+      prisma.waitQueue.count({
+        where: {
+          ...(locationId ? { locationId } : {}),
+          status: "WAITING",
+        },
+      }),
+    ]);
+
+    const todayRevenue = todayOrders.reduce((sum, o) => sum + (o.totalCents || 0), 0);
+    const completedToday = todayOrders.filter(o => o.status === "COMPLETED").length;
+
+    return reply.send({
+      timestamp: new Date().toISOString(),
+      today: {
+        orders: todayOrders.length,
+        revenue: todayRevenue,
+        revenueFormatted: `$${(todayRevenue / 100).toFixed(2)}`,
+        completed: completedToday,
+      },
+      live: {
+        activeOrders,
+        queueLength: queueStats,
+      },
+    });
+  } catch (error) {
+    console.error("Realtime analytics error:", error);
+    return reply.status(500).send({ error: "Failed to fetch realtime analytics" });
+  }
+});
+
+// ====================
 // START SERVER
 // ====================
 
