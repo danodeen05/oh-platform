@@ -1,7 +1,7 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import formbody from "@fastify/formbody";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@oh/db";
 import Anthropic from "@anthropic-ai/sdk";
 
 const prisma = new PrismaClient();

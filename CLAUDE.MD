@@ -30,8 +30,8 @@ oh-platform/
 This is a pnpm workspace monorepo with the following packages:
 - `@oh/web` - Main web application
 - `@oh/admin` - Admin dashboard
-- `@oh/db` - Database schema and Prisma client
-- `@oh/api` - API utilities
+- `@oh/db` - **Single source of truth for Prisma schema and client** (all packages import from here)
+- `@oh/api` - Fastify API server (imports PrismaClient from `@oh/db`)
 
 ## Development Commands
 
@@ -50,7 +50,17 @@ pnpm db:push       # Push Prisma schema to database
 pnpm db:studio     # Open Prisma Studio
 ```
 
+## Database Architecture
+
+**IMPORTANT**: The Prisma schema lives ONLY in `packages/db/prisma/schema.prisma`.
+- All packages that need database access should import from `@oh/db`
+- Example: `import { PrismaClient } from "@oh/db";`
+- NEVER create separate Prisma schemas in other packages
+- Run `npx prisma generate` in `packages/db` after schema changes
+- For production migrations, use `DATABASE_PUBLIC_URL` from local machine
+
 ## Recent Major Changes
+- **Consolidated Prisma Schema**: API now uses shared `@oh/db` package (no duplicate schemas)
 - **React 19 Upgrade**: Recently upgraded to React 19 RC with TypeScript support
 - **Clerk Integration**: Authentication system implemented with Clerk
 - **Flexible Pricing**: Added flexible pricing system for menu items (baby bok choy use case)
@@ -80,6 +90,14 @@ pnpm db:studio     # Open Prisma Studio
 - Database operations should use the `@oh/db` package
 - Port 3000 is used for the main web application
 - API runs on port 4001 in development
+
+## Production Database (Railway)
+```
+DATABASE_URL=postgresql://postgres:kSmXgCyAMdHNuATuRYRTxxESkuyhkEHZ@postgres.railway.internal:5432/railway
+DATABASE_PUBLIC_URL=postgresql://postgres:kSmXgCyAMdHNuATuRYRTxxESkuyhkEHZ@yamabiko.proxy.rlwy.net:55841/railway
+```
+- Use `DATABASE_URL` (internal) when running from within Railway
+- Use `DATABASE_PUBLIC_URL` (public) when running migrations locally
 
 ## Git Branch
 Current working branch: `nervous-lichterman`
