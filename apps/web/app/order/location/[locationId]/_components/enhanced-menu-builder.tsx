@@ -1,12 +1,30 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
 import { SliderControl } from "./slider-control";
 import { RadioGroup } from "./radio-group";
 import { CheckboxGroup } from "./checkbox-group";
 import SeatingMap, { Seat } from "@/components/SeatingMap";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "";
+
+// Order Whisperer - Witty insights from order history
+type OrderInsight = {
+  type: string;
+  trigger: string;
+  oneLiner: string;
+  item?: string;
+  items?: string[];
+  count?: number;
+  tone: string;
+};
+
+type OrderPatterns = {
+  hasPatterns: boolean;
+  orderCount: number;
+  insights: OrderInsight[];
+};
 
 type MenuItem = {
   id: string;
@@ -50,9 +68,16 @@ export default function EnhancedMenuBuilder({
   reorderId,
 }: EnhancedMenuBuilderProps) {
   const router = useRouter();
+  const { user, isLoaded: userLoaded } = useUser();
   const [menuSteps, setMenuSteps] = useState<MenuStep[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
+
+  // Order Whisperer state
+  const [orderPatterns, setOrderPatterns] = useState<OrderPatterns | null>(null);
+  const [shownWhispers, setShownWhispers] = useState<Set<string>>(new Set());
+  const [currentWhisper, setCurrentWhisper] = useState<string | null>(null);
+  const [whisperVisible, setWhisperVisible] = useState(false);
 
   // Cart state: { menuItemId: quantity } for counters, or { menuItemId: sliderValue } for sliders
   const [cart, setCart] = useState<Record<string, number>>({});
@@ -146,6 +171,76 @@ export default function EnhancedMenuBuilder({
 
     loadReorder();
   }, [reorderId, menuSteps.length]);
+
+  // Load order patterns for returning customers (Order Whisperer)
+  useEffect(() => {
+    if (!userLoaded || !user?.primaryEmailAddress?.emailAddress) return;
+
+    async function loadOrderPatterns() {
+      try {
+        const email = user?.primaryEmailAddress?.emailAddress;
+        const response = await fetch(`${BASE}/users/by-email/${encodeURIComponent(email!)}/order-patterns`, {
+          headers: { "x-tenant-slug": "oh" },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.hasPatterns) {
+            setOrderPatterns(data);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load order patterns:", error);
+      }
+    }
+
+    loadOrderPatterns();
+  }, [userLoaded, user?.primaryEmailAddress?.emailAddress]);
+
+  // Map step index to trigger type for Order Whisperer
+  const getStepTrigger = useCallback((stepIndex: number): string | null => {
+    // Based on actual menu step structure:
+    // Step 0: Bowl (soup + noodles) -> "bowl_step" (also handles "noodle_step" insights)
+    // Step 1: Customize (sliders) -> "customize_step"
+    // Step 2: Extras/Add-ons/Sides -> "extras_step"
+    // Step 3: Drinks/Desserts -> "drinks_step"
+    const stepTriggers: Record<number, string> = {
+      0: "bowl_step",       // Soup & noodle selection
+      1: "customize_step",  // Sliders for texture, richness, spice, toppings
+      2: "extras_step",     // Add-ons and sides
+      3: "drinks_step",     // Drinks and desserts
+    };
+    return stepTriggers[stepIndex] || null;
+  }, []);
+
+  // Show whisper for current step if available and not already shown
+  useEffect(() => {
+    if (!orderPatterns?.hasPatterns) return;
+
+    const trigger = getStepTrigger(currentStepIndex);
+    if (!trigger) return;
+
+    // Find an insight that matches this trigger and hasn't been shown
+    const matchingInsight = orderPatterns.insights.find(
+      (insight) => insight.trigger === trigger && !shownWhispers.has(insight.type)
+    );
+
+    if (matchingInsight && matchingInsight.oneLiner) {
+      // Mark as shown
+      setShownWhispers((prev) => new Set([...prev, matchingInsight.type]));
+
+      // Show the whisper with animation
+      setCurrentWhisper(matchingInsight.oneLiner);
+      setWhisperVisible(true);
+
+      // Auto-hide after 6 seconds
+      const timer = setTimeout(() => {
+        setWhisperVisible(false);
+        setTimeout(() => setCurrentWhisper(null), 300); // Wait for fade out
+      }, 6000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [currentStepIndex, orderPatterns, shownWhispers, getStepTrigger]);
 
   // Load seats when ASAP is selected
   useEffect(() => {
@@ -636,7 +731,54 @@ export default function EnhancedMenuBuilder({
         </div>
       </div>
 
-      <h2 style={{ marginBottom: 24 }}>{currentStep.title}</h2>
+      <h2 style={{ marginBottom: currentWhisper ? 12 : 24 }}>{currentStep.title}</h2>
+
+      {/* Order Whisperer - Witty one-liner based on order history */}
+      {currentWhisper && (
+        <div
+          style={{
+            marginBottom: 24,
+            padding: "12px 16px",
+            background: "linear-gradient(135deg, #f5f3ef 0%, #ebe8e2 100%)",
+            borderRadius: 8,
+            borderLeft: "3px solid #C7A878",
+            opacity: whisperVisible ? 1 : 0,
+            transform: whisperVisible ? "translateY(0)" : "translateY(-8px)",
+            transition: "opacity 0.3s ease, transform 0.3s ease",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+            }}
+          >
+            <span style={{ fontSize: "0.9rem", color: "#7C7A67", fontStyle: "italic" }}>
+              {currentWhisper}
+            </span>
+            <button
+              onClick={() => {
+                setWhisperVisible(false);
+                setTimeout(() => setCurrentWhisper(null), 300);
+              }}
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: 4,
+                color: "#999",
+                fontSize: "0.8rem",
+                marginLeft: "auto",
+                flexShrink: 0,
+              }}
+              aria-label="Dismiss"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Render sections */}
       {currentStep.sections.map((section) => {
