@@ -574,7 +574,7 @@ export default function HomePage() {
             }}
           >
             <img
-              src="/pod.PNG"
+              src="/pod.png"
               alt="Private dining pod at Oh!"
               style={{
                 width: "100%",

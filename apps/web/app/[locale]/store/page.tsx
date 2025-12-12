@@ -1,140 +1,237 @@
 "use client";
 
+import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 
 const products = [
   {
-    id: "instant-noodle-kit",
+    id: "home-kit",
     name: "Oh! Home Kit",
     category: "Food",
     description: "Everything you need to make our signature beef noodle soup at home. Includes broth base, noodles, and spice packets.",
-    price: "$34.99",
+    price: 34.99,
     badge: "Best Seller",
-    available: false,
+    image: "/store/HomeKit.png",
   },
   {
     id: "chili-oil",
     name: "Signature Chili Oil",
     category: "Condiments",
     description: "Our house-made chili oil with Szechuan peppercorns. Perfect for adding heat to any dish.",
-    price: "$14.99",
+    price: 14.99,
     badge: null,
-    available: false,
+    image: "/store/SignatureChiliOil.png",
   },
   {
     id: "broth-concentrate",
     name: "Beef Bone Broth Concentrate",
     category: "Food",
     description: "Rich, concentrated beef broth made from our 48-hour recipe. Just add water for restaurant-quality broth.",
-    price: "$24.99",
+    price: 24.99,
     badge: "New",
-    available: false,
+    image: "/store/BeefBoneBrothConcentrate.png",
   },
   {
-    id: "ramen-bowl",
+    id: "ceramic-bowl",
     name: "Oh! Ceramic Bowl",
     category: "Merchandise",
     description: "Premium ceramic bowl designed for the perfect noodle experience. Heat-retaining, hand-glazed.",
-    price: "$42.00",
+    price: 42.00,
     badge: null,
-    available: false,
+    image: "/store/CeramicBowl.png",
   },
   {
-    id: "chopsticks-set",
+    id: "chopsticks",
     name: "Premium Chopstick Set",
     category: "Merchandise",
     description: "Handcrafted wooden chopsticks with matching rest. Comes in a beautiful gift box.",
-    price: "$28.00",
+    price: 28.00,
     badge: null,
-    available: false,
+    image: "/store/Chopsticks.png",
   },
   {
     id: "tshirt",
     name: "Oh! Classic Tee",
     category: "Apparel",
     description: "Soft cotton tee with our signature logo. Available in black and white.",
-    price: "$32.00",
+    price: 32.00,
     badge: null,
-    available: false,
+    image: "/store/T-Shirt.png",
   },
   {
     id: "hoodie",
     name: "Oh! Comfort Hoodie",
     category: "Apparel",
     description: "Premium heavyweight hoodie with embroidered logo. Perfect for cozy soup weather.",
-    price: "$68.00",
+    price: 68.00,
     badge: null,
-    available: false,
+    image: "/store/ComfortHoodie.png",
   },
   {
     id: "apron",
     name: "Chef's Apron",
     category: "Merchandise",
     description: "Canvas apron with leather straps and our logo. For the home chef who takes noodles seriously.",
-    price: "$45.00",
+    price: 45.00,
     badge: null,
-    available: false,
+    image: "/store/ChefsApron.png",
+  },
+  {
+    id: "wooden-bowl",
+    name: "Artisan Wood Bowl",
+    category: "Limited Edition",
+    description: "One-of-a-kind hand-turned wooden bowl with organic shape. Each piece features unique grain patterns and our laser-engraved logo.",
+    price: 145.00,
+    badge: "Limited",
+    image: "/store/ArtisanWoodenSoupBowl.png",
   },
 ];
 
-const categories = ["All", "Food", "Condiments", "Merchandise", "Apparel"];
+const categories = ["All", "Food", "Condiments", "Merchandise", "Apparel", "Limited Edition"];
 
 export default function StorePage() {
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [hoveredProduct, setHoveredProduct] = useState<string | null>(null);
+
+  const filteredProducts = selectedCategory === "All"
+    ? products
+    : products.filter(p => p.category === selectedCategory);
+
   return (
-    <div style={{ background: "#E5E5E5", minHeight: "100vh" }}>
+    <div style={{ background: "#faf9f7", minHeight: "100vh" }}>
       {/* Hero Section */}
       <section
         style={{
-          background: "linear-gradient(180deg, #222222 0%, #333333 100%)",
-          color: "#E5E5E5",
-          padding: "80px 24px 60px",
-          textAlign: "center",
+          position: "relative",
+          minHeight: "70vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "linear-gradient(180deg, #222222 0%, #333333 50%, #faf9f7 100%)",
+          padding: "120px 24px 100px",
+          overflow: "hidden",
         }}
       >
-        <h1
+        {/* Decorative elements */}
+        <div
           style={{
-            fontSize: "clamp(2rem, 6vw, 3.5rem)",
-            fontWeight: "300",
-            marginBottom: "16px",
-            letterSpacing: "2px",
-            color: "#E5E5E5",
+            position: "absolute",
+            top: "15%",
+            left: "10%",
+            width: "250px",
+            height: "250px",
+            background: "radial-gradient(circle, rgba(199, 168, 120, 0.1) 0%, transparent 70%)",
+            borderRadius: "50%",
           }}
-        >
-          The Oh! Store
-        </h1>
-        <p
+        />
+        <div
           style={{
-            fontSize: "clamp(1rem, 2.5vw, 1.2rem)",
-            maxWidth: "600px",
-            margin: "0 auto",
-            lineHeight: "1.8",
-            fontWeight: "300",
-            color: "#C7A878",
+            position: "absolute",
+            bottom: "30%",
+            right: "15%",
+            width: "180px",
+            height: "180px",
+            background: "radial-gradient(circle, rgba(124, 122, 103, 0.1) 0%, transparent 70%)",
+            borderRadius: "50%",
           }}
-        >
-          Bring the Oh! experience home. From at-home kits to premium merchandise, find everything you need to fuel your noodle obsession.
-        </p>
+        />
+
+        <div style={{ maxWidth: "800px", textAlign: "center", position: "relative", zIndex: 1 }}>
+          {/* Large Logo */}
+          <div
+            style={{
+              position: "relative",
+              width: "180px",
+              height: "180px",
+              margin: "0 auto 32px",
+              animation: "float 4s ease-in-out infinite",
+            }}
+          >
+            <Image
+              src="/Oh_Logo_Large.png"
+              alt="Oh!"
+              fill
+              sizes="180px"
+              style={{
+                objectFit: "contain",
+                filter: "brightness(0) invert(1)",
+                opacity: 0.95,
+              }}
+            />
+          </div>
+
+          <p
+            style={{
+              fontSize: "0.9rem",
+              textTransform: "uppercase",
+              letterSpacing: "4px",
+              color: "#C7A878",
+              marginBottom: "16px",
+              fontWeight: "500",
+            }}
+          >
+            Bring Oh! Home
+          </p>
+          <h1
+            style={{
+              fontSize: "clamp(2rem, 6vw, 3.5rem)",
+              fontWeight: "300",
+              marginBottom: "24px",
+              letterSpacing: "3px",
+              color: "white",
+              textShadow: "0 2px 20px rgba(0,0,0,0.3)",
+            }}
+          >
+            The Official Store
+          </h1>
+          <p
+            style={{
+              fontSize: "clamp(1rem, 2.5vw, 1.3rem)",
+              maxWidth: "600px",
+              margin: "0 auto",
+              lineHeight: "1.8",
+              fontWeight: "300",
+              color: "rgba(255,255,255,0.8)",
+            }}
+          >
+            From at-home kits to premium merchandise, find everything you need to fuel your noodle obsession
+          </p>
+
+          {/* Scroll indicator */}
+          <div
+            style={{
+              marginTop: "60px",
+              color: "rgba(255,255,255,0.5)",
+              animation: "bounce 2s infinite",
+            }}
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 5v14M19 12l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
       </section>
 
       {/* Coming Soon Banner */}
       <section
         style={{
-          background: "#C7A878",
-          padding: "20px 24px",
+          background: "linear-gradient(135deg, #C7A878 0%, #a08860 100%)",
+          padding: "24px 24px",
           textAlign: "center",
         }}
       >
-        <p style={{ color: "#222222", fontWeight: "500", margin: 0 }}>
-          🚀 Online store launching soon! Sign up below to be notified.
+        <p style={{ color: "#222222", fontWeight: "500", margin: 0, fontSize: "1.05rem" }}>
+          Online store launching soon! Use your earned rewards credit on any item.
         </p>
       </section>
 
       {/* Category Filter */}
-      <section style={{ maxWidth: "1200px", margin: "0 auto", padding: "32px 24px 0" }}>
+      <section style={{ maxWidth: "1200px", margin: "0 auto", padding: "48px 24px 0" }}>
         <div
           style={{
             display: "flex",
-            gap: "8px",
+            gap: "12px",
             flexWrap: "wrap",
             justifyContent: "center",
           }}
@@ -142,16 +239,20 @@ export default function StorePage() {
           {categories.map((category) => (
             <button
               key={category}
+              onClick={() => setSelectedCategory(category)}
               style={{
-                padding: "10px 24px",
-                background: category === "All" ? "#7C7A67" : "white",
-                color: category === "All" ? "white" : "#7C7A67",
-                border: "1px solid #7C7A67",
-                borderRadius: "24px",
+                padding: "12px 28px",
+                background: selectedCategory === category ? "#7C7A67" : "white",
+                color: selectedCategory === category ? "white" : "#7C7A67",
+                border: "2px solid #7C7A67",
+                borderRadius: "30px",
                 cursor: "pointer",
-                fontSize: "0.9rem",
+                fontSize: "0.95rem",
                 fontWeight: "500",
-                transition: "all 0.2s ease",
+                transition: "all 0.3s ease",
+                boxShadow: selectedCategory === category
+                  ? "0 4px 12px rgba(124, 122, 103, 0.3)"
+                  : "0 2px 8px rgba(0,0,0,0.05)",
               }}
             >
               {category}
@@ -161,57 +262,67 @@ export default function StorePage() {
       </section>
 
       {/* Products Grid */}
-      <section style={{ maxWidth: "1200px", margin: "0 auto", padding: "40px 24px 80px" }}>
+      <section style={{ maxWidth: "1300px", margin: "0 auto", padding: "48px 24px 100px" }}>
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-            gap: "24px",
+            gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+            gap: "32px",
           }}
         >
-          {products.map((product) => (
+          {filteredProducts.map((product) => (
             <div
               key={product.id}
+              onMouseEnter={() => setHoveredProduct(product.id)}
+              onMouseLeave={() => setHoveredProduct(null)}
               style={{
                 background: "white",
-                borderRadius: "16px",
+                borderRadius: "20px",
                 overflow: "hidden",
-                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)",
-                transition: "transform 0.3s ease, box-shadow 0.3s ease",
-                opacity: product.available ? 1 : 0.8,
+                boxShadow: hoveredProduct === product.id
+                  ? "0 20px 40px rgba(0, 0, 0, 0.15)"
+                  : "0 4px 20px rgba(0, 0, 0, 0.08)",
+                transition: "all 0.4s ease",
+                transform: hoveredProduct === product.id ? "translateY(-8px)" : "translateY(0)",
               }}
             >
-              {/* Product Image Placeholder */}
+              {/* Product Image */}
               <div
                 style={{
-                  height: "220px",
-                  background: "linear-gradient(135deg, #f5f5f5 0%, #e5e5e5 100%)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
                   position: "relative",
+                  height: "320px",
+                  background: "linear-gradient(135deg, #f8f8f6 0%, #eeeee8 100%)",
+                  overflow: "hidden",
                 }}
               >
-                <span style={{ fontSize: "4rem", opacity: 0.3 }}>
-                  {product.category === "Food" || product.category === "Condiments" ? "🍜" :
-                   product.category === "Apparel" ? "👕" : "🥢"}
-                </span>
+                <Image
+                  src={product.image}
+                  alt={product.name}
+                  fill
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  style={{
+                    objectFit: "cover",
+                    transition: "transform 0.5s ease",
+                    transform: hoveredProduct === product.id ? "scale(1.05)" : "scale(1)",
+                  }}
+                />
 
                 {/* Badge */}
                 {product.badge && (
                   <span
                     style={{
                       position: "absolute",
-                      top: "12px",
-                      left: "12px",
-                      background: product.badge === "Best Seller" ? "#7C7A67" :
-                                 product.badge === "New" ? "#C7A878" : "#222222",
+                      top: "16px",
+                      left: "16px",
+                      background: product.badge === "Best Seller" ? "#7C7A67" : product.badge === "Limited" ? "#222222" : "#C7A878",
                       color: "white",
-                      padding: "6px 14px",
-                      borderRadius: "16px",
+                      padding: "8px 16px",
+                      borderRadius: "20px",
                       fontSize: "0.75rem",
                       fontWeight: "600",
                       textTransform: "uppercase",
+                      letterSpacing: "1px",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
                     }}
                   >
                     {product.badge}
@@ -219,55 +330,55 @@ export default function StorePage() {
                 )}
 
                 {/* Coming Soon Overlay */}
-                {!product.available && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      bottom: "12px",
-                      right: "12px",
-                      background: "rgba(34, 34, 34, 0.9)",
-                      color: "#E5E5E5",
-                      padding: "6px 14px",
-                      borderRadius: "16px",
-                      fontSize: "0.75rem",
-                      fontWeight: "500",
-                    }}
-                  >
-                    Coming Soon
-                  </div>
-                )}
+                <div
+                  style={{
+                    position: "absolute",
+                    bottom: "16px",
+                    right: "16px",
+                    background: "rgba(34, 34, 34, 0.9)",
+                    color: "#E5E5E5",
+                    padding: "8px 16px",
+                    borderRadius: "20px",
+                    fontSize: "0.75rem",
+                    fontWeight: "500",
+                    letterSpacing: "0.5px",
+                  }}
+                >
+                  Coming Soon
+                </div>
               </div>
 
               {/* Product Info */}
-              <div style={{ padding: "20px" }}>
+              <div style={{ padding: "28px" }}>
                 <p
                   style={{
                     fontSize: "0.75rem",
                     color: "#C7A878",
                     textTransform: "uppercase",
-                    letterSpacing: "1px",
-                    marginBottom: "8px",
-                    fontWeight: "500",
+                    letterSpacing: "2px",
+                    marginBottom: "10px",
+                    fontWeight: "600",
                   }}
                 >
                   {product.category}
                 </p>
                 <h3
                   style={{
-                    fontSize: "1.1rem",
+                    fontSize: "1.3rem",
                     fontWeight: "600",
                     color: "#222222",
-                    marginBottom: "8px",
+                    marginBottom: "12px",
                   }}
                 >
                   {product.name}
                 </h3>
                 <p
                   style={{
-                    fontSize: "0.9rem",
+                    fontSize: "0.95rem",
                     color: "#666",
-                    lineHeight: "1.5",
-                    marginBottom: "16px",
+                    lineHeight: "1.6",
+                    marginBottom: "20px",
+                    minHeight: "48px",
                   }}
                 >
                   {product.description}
@@ -277,31 +388,34 @@ export default function StorePage() {
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
+                    paddingTop: "16px",
+                    borderTop: "1px solid #eee",
                   }}
                 >
                   <span
                     style={{
-                      fontSize: "1.2rem",
+                      fontSize: "1.4rem",
                       fontWeight: "600",
                       color: "#7C7A67",
                     }}
                   >
-                    {product.price}
+                    ${product.price.toFixed(2)}
                   </span>
                   <button
-                    disabled={!product.available}
                     style={{
-                      padding: "10px 20px",
-                      background: product.available ? "#7C7A67" : "#d1d5db",
+                      padding: "12px 24px",
+                      background: "#7C7A67",
                       color: "white",
                       border: "none",
-                      borderRadius: "8px",
-                      cursor: product.available ? "pointer" : "not-allowed",
+                      borderRadius: "10px",
+                      cursor: "pointer",
                       fontSize: "0.9rem",
-                      fontWeight: "500",
+                      fontWeight: "600",
+                      transition: "all 0.3s ease",
+                      boxShadow: "0 4px 12px rgba(124, 122, 103, 0.25)",
                     }}
                   >
-                    {product.available ? "Add to Cart" : "Notify Me"}
+                    Notify Me
                   </button>
                 </div>
               </div>
@@ -310,21 +424,132 @@ export default function StorePage() {
         </div>
       </section>
 
-      {/* Newsletter Section */}
-      <section
-        style={{
-          background: "#222222",
-          color: "#E5E5E5",
-          padding: "80px 24px",
-        }}
-      >
-        <div style={{ maxWidth: "600px", margin: "0 auto", textAlign: "center" }}>
+      {/* Why Shop Oh! Section - The Oh! Way style */}
+      <section style={{ background: "#222", color: "white", padding: "100px 24px" }}>
+        <div style={{ maxWidth: "1000px", margin: "0 auto", textAlign: "center" }}>
+          <p
+            style={{
+              fontSize: "0.85rem",
+              textTransform: "uppercase",
+              letterSpacing: "4px",
+              color: "#C7A878",
+              marginBottom: "20px",
+            }}
+          >
+            Why Shop Oh!
+          </p>
           <h2
             style={{
-              fontSize: "clamp(1.5rem, 4vw, 2rem)",
+              fontSize: "clamp(2rem, 5vw, 3rem)",
               fontWeight: "300",
+              marginBottom: "60px",
+              lineHeight: "1.3",
+              color: "rgba(255,255,255,0.95)",
+            }}
+          >
+            The Oh! Experience, delivered to your door
+          </h2>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: "48px",
+              textAlign: "center",
+            }}
+          >
+            {[
+              {
+                icon: (
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <rect x="1" y="3" width="15" height="13" rx="2" />
+                    <path d="M16 8h4l3 3v5a2 2 0 01-2 2h-5" />
+                    <circle cx="5.5" cy="18.5" r="2.5" />
+                    <circle cx="18.5" cy="18.5" r="2.5" />
+                  </svg>
+                ),
+                title: "Free Shipping",
+                desc: "On all orders over $20. Fast, reliable delivery right to your doorstep.",
+              },
+              {
+                icon: (
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M12 6v6l4 2" />
+                  </svg>
+                ),
+                title: "Use Your Credit",
+                desc: "Apply your earned rewards credit from dining to any store purchase.",
+              },
+              {
+                icon: (
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                  </svg>
+                ),
+                title: "Member Rewards",
+                desc: "Earn points on every purchase. Stack rewards across in-store and online.",
+              },
+              {
+                icon: (
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path d="M3 12h4l3-9 4 18 3-9h4" />
+                  </svg>
+                ),
+                title: "Easy Returns",
+                desc: "30-day hassle-free returns. Not satisfied? We'll make it right.",
+              },
+            ].map((feature, idx) => (
+              <div key={idx}>
+                <div
+                  style={{
+                    width: "64px",
+                    height: "64px",
+                    borderRadius: "16px",
+                    background: "rgba(199, 168, 120, 0.2)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    margin: "0 auto 20px",
+                    color: "#C7A878",
+                  }}
+                >
+                  {feature.icon}
+                </div>
+                <h3 style={{ fontSize: "1.2rem", fontWeight: "500", marginBottom: "12px", color: "rgba(255,255,255,0.95)" }}>
+                  {feature.title}
+                </h3>
+                <p style={{ fontSize: "0.95rem", color: "rgba(255,255,255,0.7)", lineHeight: "1.7" }}>
+                  {feature.desc}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Newsletter Section */}
+      <section style={{ background: "#faf9f7", padding: "100px 24px" }}>
+        <div style={{ maxWidth: "600px", margin: "0 auto", textAlign: "center" }}>
+          <p
+            style={{
+              fontSize: "0.85rem",
+              color: "#C7A878",
+              textTransform: "uppercase",
+              letterSpacing: "3px",
+              marginBottom: "12px",
+              fontWeight: "600",
+            }}
+          >
+            Stay Updated
+          </p>
+          <h2
+            style={{
+              fontSize: "clamp(1.8rem, 5vw, 2.5rem)",
+              fontWeight: "400",
+              color: "#222",
               marginBottom: "16px",
-              letterSpacing: "1px",
+              lineHeight: "1.2",
             }}
           >
             Be the First to Know
@@ -332,37 +557,47 @@ export default function StorePage() {
           <p
             style={{
               fontSize: "1.1rem",
-              opacity: 0.9,
+              color: "#666",
               marginBottom: "32px",
               lineHeight: "1.7",
             }}
           >
             Get early access to new products, exclusive drops, and member-only deals.
           </p>
-          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", justifyContent: "center" }}>
+          <div
+            style={{
+              display: "flex",
+              gap: "12px",
+              flexWrap: "wrap",
+              justifyContent: "center",
+            }}
+          >
             <input
               type="email"
               placeholder="your@email.com"
               style={{
                 flex: "1 1 200px",
                 maxWidth: "300px",
-                padding: "14px 20px",
-                border: "none",
-                borderRadius: "8px",
+                padding: "16px 24px",
+                border: "2px solid #e5e7eb",
+                borderRadius: "12px",
                 fontSize: "1rem",
                 outline: "none",
+                transition: "border-color 0.2s ease",
               }}
             />
             <button
               style={{
-                padding: "14px 32px",
-                background: "#C7A878",
-                color: "#222222",
+                padding: "16px 40px",
+                background: "#7C7A67",
+                color: "white",
                 border: "none",
-                borderRadius: "8px",
+                borderRadius: "12px",
                 cursor: "pointer",
-                fontWeight: "500",
+                fontWeight: "600",
                 fontSize: "1rem",
+                transition: "all 0.3s ease",
+                boxShadow: "0 4px 12px rgba(124, 122, 103, 0.3)",
               }}
             >
               Notify Me
@@ -371,56 +606,58 @@ export default function StorePage() {
         </div>
       </section>
 
-      {/* Benefits */}
-      <section style={{ background: "white", padding: "80px 24px" }}>
-        <div style={{ maxWidth: "1000px", margin: "0 auto" }}>
-          <div
+      {/* Bottom CTA */}
+      <section
+        style={{
+          background: "linear-gradient(135deg, #7C7A67 0%, #5a584a 100%)",
+          padding: "80px 24px",
+          textAlign: "center",
+        }}
+      >
+        <div style={{ maxWidth: "600px", margin: "0 auto" }}>
+          <h2
             style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-              gap: "40px",
-              textAlign: "center",
+              fontSize: "clamp(1.8rem, 4vw, 2.5rem)",
+              fontWeight: "400",
+              color: "white",
+              marginBottom: "24px",
             }}
           >
-            <div>
-              <div style={{ fontSize: "2.5rem", marginBottom: "16px" }}>🚚</div>
-              <h3 style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "8px", color: "#222222" }}>
-                Free Shipping
-              </h3>
-              <p style={{ color: "#666", fontSize: "0.95rem" }}>
-                On all orders over $50
-              </p>
-            </div>
-            <div>
-              <div style={{ fontSize: "2.5rem", marginBottom: "16px" }}>🏆</div>
-              <h3 style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "8px", color: "#222222" }}>
-                Member Rewards
-              </h3>
-              <p style={{ color: "#666", fontSize: "0.95rem" }}>
-                Earn points on every purchase
-              </p>
-            </div>
-            <div>
-              <div style={{ fontSize: "2.5rem", marginBottom: "16px" }}>💝</div>
-              <h3 style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "8px", color: "#222222" }}>
-                Gift Wrapping
-              </h3>
-              <p style={{ color: "#666", fontSize: "0.95rem" }}>
-                Complimentary on all orders
-              </p>
-            </div>
-            <div>
-              <div style={{ fontSize: "2.5rem", marginBottom: "16px" }}>↩️</div>
-              <h3 style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "8px", color: "#222222" }}>
-                Easy Returns
-              </h3>
-              <p style={{ color: "#666", fontSize: "0.95rem" }}>
-                30-day hassle-free returns
-              </p>
-            </div>
-          </div>
+            Can't wait for the store?
+          </h2>
+          <p style={{ color: "rgba(255,255,255,0.8)", marginBottom: "32px", fontSize: "1.1rem" }}>
+            Visit us in person and experience the perfect bowl today.
+          </p>
+          <Link
+            href="/locations"
+            style={{
+              display: "inline-block",
+              padding: "18px 48px",
+              background: "white",
+              color: "#7C7A67",
+              borderRadius: "8px",
+              textDecoration: "none",
+              fontWeight: "600",
+              fontSize: "1.1rem",
+              transition: "all 0.3s ease",
+            }}
+          >
+            Find a Location
+          </Link>
         </div>
       </section>
+
+      <style jsx>{`
+        @keyframes bounce {
+          0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+          40% { transform: translateY(-10px); }
+          60% { transform: translateY(-5px); }
+        }
+        @keyframes float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-12px); }
+        }
+      `}</style>
     </div>
   );
 }

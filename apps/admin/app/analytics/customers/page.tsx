@@ -26,6 +26,8 @@ type CustomerData = {
   };
   topCustomers: Array<{
     id: string;
+    name: string;
+    email: string | null;
     orderCount: number;
     periodSpend: number;
     periodSpendFormatted: string;
@@ -79,6 +81,15 @@ export default function CustomersPage() {
 
   const topCustomersTableData = data?.topCustomers?.map((c, i) => ({
     rank: `#${i + 1}`,
+    name: c.name,
+    email: c.email ? (
+      <a
+        href={`mailto:${c.email}`}
+        style={{ color: "#3b82f6", textDecoration: "none" }}
+      >
+        {c.email}
+      </a>
+    ) : "—",
     tier: tierIcons[c.tier] || c.tier,
     orders: c.orderCount,
     periodSpend: c.periodSpendFormatted,
@@ -284,6 +295,8 @@ export default function CustomersPage() {
         title="Top Customers (by period spend)"
         columns={[
           { key: "rank", label: "Rank" },
+          { key: "name", label: "Name" },
+          { key: "email", label: "Email" },
           { key: "tier", label: "Tier" },
           { key: "orders", label: "Orders", align: "right" },
           { key: "periodSpend", label: "Period Spend", align: "right" },

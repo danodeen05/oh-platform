@@ -1,498 +1,690 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
+import { useState, useEffect } from "react";
 
-// Location data - will be replaced with API data
-const locations = [
-  {
-    id: "flagship",
-    name: "Oh! Flagship",
-    city: "San Francisco",
-    area: "SOMA District",
-    address: "123 Innovation Way",
-    state: "CA",
-    zipCode: "94105",
-    phone: "(415) 555-0123",
-    status: "Coming Soon",
-    openingDate: "Spring 2025",
-    features: ["Private Dining Pods", "Tech-Enabled Ordering", "Premium Seating"],
-    hours: {
-      weekday: "11:00 AM - 10:00 PM",
-      weekend: "10:00 AM - 11:00 PM",
-    },
-    description: "Our flagship location featuring 24 private dining pods, state-of-the-art ordering technology, and the full Oh! experience.",
-    image: "/locations/sf-flagship.jpg",
+const BASE = process.env.NEXT_PUBLIC_API_URL || "";
+
+type Location = {
+  id: string;
+  name: string;
+  city: string;
+  address: string;
+  lat: number;
+  lng: number;
+};
+
+// Location-specific data
+const locationDetails: Record<string, {
+  image: string;
+  tagline: string;
+  description: string;
+  mallDescription: string;
+  nearbyLandmarks: string[];
+  parking: string;
+}> = {
+  "City Creek Mall": {
+    image: "/locations/CityCreekSaltLake.jpg",
+    tagline: "Downtown Salt Lake",
+    description: "Our flagship Utah location in the heart of downtown Salt Lake City. Steps from Temple Square and the city's business district.",
+    mallDescription: "City Creek Center is Salt Lake's premier shopping destination, featuring a retractable glass roof, creek running through the property, and over 100 stores and restaurants.",
+    nearbyLandmarks: ["Temple Square", "Salt Palace Convention Center", "TRAX Light Rail"],
+    parking: "Validated parking available in City Creek parking structure",
   },
-];
-
-// Expansion cities
-const upcomingCities = [
-  { city: "Los Angeles", state: "CA", target: "2025" },
-  { city: "Seattle", state: "WA", target: "2025" },
-  { city: "Austin", state: "TX", target: "2026" },
-  { city: "New York", state: "NY", target: "2026" },
-  { city: "Chicago", state: "IL", target: "2026" },
-];
+  "University Place": {
+    image: "/locations/UniversityPlaceOrem.jpg",
+    tagline: "Utah Valley",
+    description: "Serving the Utah Valley community in Orem. Convenient for students, families, and anyone craving authentic beef noodle soup.",
+    mallDescription: "University Place is Utah Valley's largest open-air shopping center, located at the crossroads of Orem and Provo with easy access from I-15.",
+    nearbyLandmarks: ["Utah Valley University", "BYU Campus", "Provo Canyon"],
+    parking: "Free surface parking throughout the center",
+  },
+};
 
 export default function LocationsPage() {
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeLocation, setActiveLocation] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchLocations() {
+      try {
+        const response = await fetch(`${BASE}/locations`, {
+          headers: { "x-tenant-slug": "oh" },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          const ohLocations = data.filter((loc: Location) =>
+            loc.name === "City Creek Mall" || loc.name === "University Place"
+          );
+          setLocations(ohLocations);
+          if (ohLocations.length > 0) {
+            setActiveLocation(ohLocations[0].name);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch locations:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchLocations();
+  }, []);
+
+  const activeLocationData = locations.find(l => l.name === activeLocation);
+  const activeDetails = activeLocation ? locationDetails[activeLocation] : null;
+
   return (
-    <div style={{ background: "#E5E5E5", minHeight: "100vh" }}>
-      {/* Hero Section */}
-      <section
-        style={{
-          background: "linear-gradient(180deg, #222222 0%, #333333 100%)",
-          color: "#E5E5E5",
-          padding: "80px 24px 60px",
-          textAlign: "center",
-        }}
-      >
-        <h1
-          style={{
-            fontSize: "clamp(2rem, 6vw, 3.5rem)",
-            fontWeight: "300",
-            marginBottom: "16px",
-            letterSpacing: "2px",
-            color: "#E5E5E5",
-          }}
-        >
-          Our Locations
-        </h1>
-        <p
-          style={{
-            fontSize: "clamp(1rem, 2.5vw, 1.2rem)",
-            maxWidth: "600px",
-            margin: "0 auto",
-            lineHeight: "1.8",
-            fontWeight: "300",
-            color: "#C7A878",
-          }}
-        >
-          Experience Oh! in person. Find a location near you or discover where we&apos;re opening next.
-        </p>
-      </section>
-
-      {/* Current Locations */}
-      <section style={{ maxWidth: "1200px", margin: "0 auto", padding: "60px 24px" }}>
-        <h2
-          style={{
-            fontSize: "clamp(1.5rem, 4vw, 2rem)",
-            fontWeight: "400",
-            color: "#222222",
-            marginBottom: "32px",
-            textAlign: "center",
-          }}
-        >
-          Flagship Location
-        </h2>
-
-        {locations.map((location) => (
-          <div
-            key={location.id}
-            style={{
-              background: "white",
-              borderRadius: "20px",
-              overflow: "hidden",
-              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
-              marginBottom: "32px",
-            }}
-          >
-            {/* Location Image/Map Placeholder */}
+    <div style={{ background: "#faf9f7", minHeight: "100vh" }}>
+      {/* Hero with Featured Location Image */}
+      <section style={{ position: "relative", height: "70vh", minHeight: "500px", overflow: "hidden" }}>
+        {activeDetails && (
+          <>
+            <Image
+              src={activeDetails.image}
+              alt={activeLocation || "Location"}
+              fill
+              style={{ objectFit: "cover" }}
+              priority
+            />
+            {/* Gradient overlay */}
             <div
               style={{
-                height: "300px",
-                background: "linear-gradient(135deg, #7C7A67 0%, #222222 100%)",
+                position: "absolute",
+                inset: 0,
+                background: "linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.6) 100%)",
+              }}
+            />
+          </>
+        )}
+
+        {/* Hero Content */}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            alignItems: "center",
+            textAlign: "center",
+            padding: "24px",
+            color: "white",
+          }}
+        >
+          <p
+            style={{
+              fontSize: "0.9rem",
+              textTransform: "uppercase",
+              letterSpacing: "4px",
+              color: "#C7A878",
+              marginBottom: "16px",
+              fontWeight: "500",
+              textShadow: "0 1px 8px rgba(0,0,0,0.3)",
+            }}
+          >
+            Find Us
+          </p>
+          <h1
+            style={{
+              fontSize: "clamp(2.5rem, 8vw, 5rem)",
+              fontWeight: "300",
+              marginBottom: "24px",
+              letterSpacing: "2px",
+              color: "white",
+              textShadow: "0 2px 20px rgba(0,0,0,0.5)",
+            }}
+          >
+            Our Locations
+          </h1>
+          <p
+            style={{
+              fontSize: "clamp(1rem, 2.5vw, 1.3rem)",
+              maxWidth: "600px",
+              lineHeight: "1.8",
+              fontWeight: "300",
+              color: "rgba(255,255,255,0.9)",
+              textShadow: "0 1px 10px rgba(0,0,0,0.4)",
+            }}
+          >
+            Two locations in Utah. Private pods. No tipping.
+            Just you and the perfect bowl.
+          </p>
+
+          {/* Location Toggle */}
+          {!loading && locations.length > 1 && (
+            <div
+              style={{
                 display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                position: "relative",
+                gap: "8px",
+                marginTop: "40px",
+                background: "rgba(255,255,255,0.1)",
+                backdropFilter: "blur(10px)",
+                padding: "6px",
+                borderRadius: "40px",
               }}
             >
-              <div style={{ textAlign: "center", color: "#E5E5E5" }}>
-                <span style={{ fontSize: "4rem", marginBottom: "16px", display: "block" }}>📍</span>
-                <span style={{ fontSize: "1.2rem", opacity: 0.9 }}>{location.city}, {location.state}</span>
-              </div>
+              {locations.map((loc) => (
+                <button
+                  key={loc.id}
+                  onClick={() => setActiveLocation(loc.name)}
+                  style={{
+                    padding: "12px 28px",
+                    borderRadius: "30px",
+                    border: "none",
+                    background: activeLocation === loc.name ? "white" : "transparent",
+                    color: activeLocation === loc.name ? "#222" : "white",
+                    fontWeight: "500",
+                    cursor: "pointer",
+                    transition: "all 0.3s ease",
+                    fontSize: "0.95rem",
+                  }}
+                >
+                  {loc.city}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
-              {/* Status Badge */}
-              <div
+        {/* Scroll indicator */}
+        <div
+          style={{
+            position: "absolute",
+            bottom: "30px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            color: "white",
+            opacity: 0.7,
+            animation: "bounce 2s infinite",
+          }}
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M12 5v14M19 12l-7 7-7-7" />
+          </svg>
+        </div>
+      </section>
+
+      {/* Location Details */}
+      {activeLocationData && activeDetails && (
+        <section style={{ maxWidth: "1200px", margin: "0 auto", padding: "80px 24px" }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+              gap: "60px",
+              alignItems: "start",
+            }}
+          >
+            {/* Left Column - Info */}
+            <div>
+              <p
                 style={{
-                  position: "absolute",
-                  top: "20px",
-                  right: "20px",
-                  background: "#C7A878",
-                  color: "#222222",
-                  padding: "8px 20px",
-                  borderRadius: "20px",
-                  fontWeight: "600",
                   fontSize: "0.85rem",
+                  color: "#C7A878",
+                  textTransform: "uppercase",
+                  letterSpacing: "3px",
+                  marginBottom: "12px",
+                  fontWeight: "600",
                 }}
               >
-                {location.status}
-              </div>
-            </div>
+                {activeDetails.tagline}
+              </p>
+              <h2
+                style={{
+                  fontSize: "clamp(2rem, 5vw, 3rem)",
+                  fontWeight: "400",
+                  color: "#222",
+                  marginBottom: "24px",
+                  lineHeight: "1.2",
+                }}
+              >
+                {activeLocationData.name}
+              </h2>
+              <p
+                style={{
+                  fontSize: "1.1rem",
+                  color: "#555",
+                  lineHeight: "1.8",
+                  marginBottom: "32px",
+                }}
+              >
+                {activeDetails.description}
+              </p>
 
-            {/* Location Details */}
-            <div style={{ padding: "32px" }}>
-              <div style={{ display: "grid", gap: "24px", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }}>
-                {/* Main Info */}
-                <div>
-                  <p
+              {/* Address Card */}
+              <div
+                style={{
+                  background: "white",
+                  borderRadius: "16px",
+                  padding: "28px",
+                  boxShadow: "0 4px 20px rgba(0,0,0,0.06)",
+                  marginBottom: "24px",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "flex-start", gap: "16px", marginBottom: "20px" }}>
+                  <div
                     style={{
-                      fontSize: "0.85rem",
-                      color: "#C7A878",
-                      textTransform: "uppercase",
-                      letterSpacing: "2px",
-                      marginBottom: "8px",
-                      fontWeight: "500",
+                      width: "44px",
+                      height: "44px",
+                      borderRadius: "12px",
+                      background: "rgba(124, 122, 103, 0.1)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
                     }}
                   >
-                    {location.area}
-                  </p>
-                  <h3
-                    style={{
-                      fontSize: "1.8rem",
-                      fontWeight: "500",
-                      color: "#222222",
-                      marginBottom: "16px",
-                    }}
-                  >
-                    {location.name}
-                  </h3>
-                  <p style={{ color: "#666", lineHeight: "1.6", marginBottom: "16px" }}>
-                    {location.description}
-                  </p>
-
-                  {/* Features */}
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "16px" }}>
-                    {location.features.map((feature, idx) => (
-                      <span
-                        key={idx}
-                        style={{
-                          background: "rgba(124, 122, 103, 0.1)",
-                          color: "#7C7A67",
-                          padding: "6px 14px",
-                          borderRadius: "16px",
-                          fontSize: "0.8rem",
-                          fontWeight: "500",
-                        }}
-                      >
-                        {feature}
-                      </span>
-                    ))}
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C7A67" strokeWidth="2">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                      <circle cx="12" cy="10" r="3" />
+                    </svg>
                   </div>
-                </div>
-
-                {/* Contact & Hours */}
-                <div>
-                  <div style={{ marginBottom: "24px" }}>
-                    <h4 style={{ fontSize: "0.9rem", fontWeight: "600", color: "#222222", marginBottom: "12px" }}>
+                  <div>
+                    <h4 style={{ fontSize: "0.8rem", color: "#999", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "6px" }}>
                       Address
                     </h4>
-                    <p style={{ color: "#666", lineHeight: "1.6" }}>
-                      {location.address}<br />
-                      {location.city}, {location.state} {location.zipCode}
+                    <p style={{ color: "#222", fontSize: "1rem", lineHeight: "1.5" }}>
+                      {activeLocationData.address}
                     </p>
                   </div>
+                </div>
 
-                  <div style={{ marginBottom: "24px" }}>
-                    <h4 style={{ fontSize: "0.9rem", fontWeight: "600", color: "#222222", marginBottom: "12px" }}>
-                      Opening
-                    </h4>
-                    <p style={{ color: "#C7A878", fontWeight: "600", fontSize: "1.1rem" }}>
-                      {location.openingDate}
-                    </p>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: "16px", marginBottom: "20px" }}>
+                  <div
+                    style={{
+                      width: "44px",
+                      height: "44px",
+                      borderRadius: "12px",
+                      background: "rgba(124, 122, 103, 0.1)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C7A67" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10" />
+                      <polyline points="12 6 12 12 16 14" />
+                    </svg>
                   </div>
-
                   <div>
-                    <h4 style={{ fontSize: "0.9rem", fontWeight: "600", color: "#222222", marginBottom: "12px" }}>
-                      Hours (Planned)
+                    <h4 style={{ fontSize: "0.8rem", color: "#999", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "6px" }}>
+                      Hours
                     </h4>
-                    <p style={{ color: "#666", fontSize: "0.9rem" }}>
-                      Mon - Fri: {location.hours.weekday}<br />
-                      Sat - Sun: {location.hours.weekend}
+                    <p style={{ color: "#222", fontSize: "1rem", lineHeight: "1.6" }}>
+                      Monday – Thursday: 11am – 9pm<br />
+                      Friday – Saturday: 11am – 10pm<br />
+                      Sunday: 12pm – 8pm
+                    </p>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "flex-start", gap: "16px" }}>
+                  <div
+                    style={{
+                      width: "44px",
+                      height: "44px",
+                      borderRadius: "12px",
+                      background: "rgba(124, 122, 103, 0.1)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7C7A67" strokeWidth="2">
+                      <rect x="3" y="3" width="18" height="18" rx="2" />
+                      <path d="M3 9h18M9 21V9" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h4 style={{ fontSize: "0.8rem", color: "#999", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "6px" }}>
+                      Parking
+                    </h4>
+                    <p style={{ color: "#222", fontSize: "1rem" }}>
+                      {activeDetails.parking}
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* CTA */}
-              <div
-                style={{
-                  marginTop: "32px",
-                  paddingTop: "24px",
-                  borderTop: "1px solid #e5e7eb",
-                  display: "flex",
-                  gap: "16px",
-                  flexWrap: "wrap",
-                }}
-              >
+              {/* CTA Buttons */}
+              <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
                 <Link
-                  href="/order"
+                  href={`/order/location/${activeLocationData.id}`}
                   style={{
-                    padding: "14px 32px",
+                    padding: "16px 36px",
                     background: "#7C7A67",
                     color: "white",
                     borderRadius: "8px",
                     textDecoration: "none",
                     fontWeight: "500",
+                    fontSize: "1rem",
                     transition: "all 0.3s ease",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "8px",
                   }}
                 >
-                  Pre-Order Now
+                  Order Ahead
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M5 12h14M12 5l7 7-7 7" />
+                  </svg>
                 </Link>
-                <button
+                <a
+                  href={`https://maps.google.com/?q=${encodeURIComponent(activeLocationData.address)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   style={{
-                    padding: "14px 32px",
+                    padding: "16px 36px",
                     background: "transparent",
                     color: "#7C7A67",
                     border: "2px solid #7C7A67",
                     borderRadius: "8px",
-                    cursor: "pointer",
+                    textDecoration: "none",
                     fontWeight: "500",
+                    fontSize: "1rem",
                     transition: "all 0.3s ease",
                   }}
                 >
-                  Get Notified
-                </button>
+                  Get Directions
+                </a>
+              </div>
+            </div>
+
+            {/* Right Column - About the Mall */}
+            <div>
+              <div
+                style={{
+                  background: "#222",
+                  borderRadius: "20px",
+                  padding: "40px",
+                  color: "white",
+                }}
+              >
+                <h3
+                  style={{
+                    fontSize: "1.4rem",
+                    fontWeight: "400",
+                    marginBottom: "20px",
+                    color: "#C7A878",
+                  }}
+                >
+                  About {activeLocationData.name}
+                </h3>
+                <p style={{ fontSize: "1rem", lineHeight: "1.8", opacity: 0.85, marginBottom: "28px" }}>
+                  {activeDetails.mallDescription}
+                </p>
+
+                <h4
+                  style={{
+                    fontSize: "0.8rem",
+                    textTransform: "uppercase",
+                    letterSpacing: "2px",
+                    color: "#C7A878",
+                    marginBottom: "16px",
+                  }}
+                >
+                  Nearby
+                </h4>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+                  {activeDetails.nearbyLandmarks.map((landmark, idx) => (
+                    <span
+                      key={idx}
+                      style={{
+                        padding: "8px 16px",
+                        background: "rgba(255,255,255,0.1)",
+                        borderRadius: "20px",
+                        fontSize: "0.85rem",
+                        color: "rgba(255,255,255,0.8)",
+                      }}
+                    >
+                      {landmark}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Features */}
+              <div style={{ marginTop: "32px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                {[
+                  { icon: "🥢", label: "12 Private Pods" },
+                  { icon: "📱", label: "Order Ahead" },
+                  { icon: "💳", label: "No Tipping" },
+                  { icon: "♿", label: "Accessible" },
+                ].map((feature, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      background: "white",
+                      borderRadius: "12px",
+                      padding: "20px",
+                      textAlign: "center",
+                      boxShadow: "0 2px 12px rgba(0,0,0,0.04)",
+                    }}
+                  >
+                    <span style={{ fontSize: "1.5rem", display: "block", marginBottom: "8px" }}>{feature.icon}</span>
+                    <span style={{ fontSize: "0.85rem", color: "#555", fontWeight: "500" }}>{feature.label}</span>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
-        ))}
-      </section>
+        </section>
+      )}
 
-      {/* Expansion Plans */}
-      <section
-        style={{
-          background: "white",
-          padding: "80px 24px",
-        }}
-      >
-        <div style={{ maxWidth: "900px", margin: "0 auto", textAlign: "center" }}>
-          <h2
-            style={{
-              fontSize: "clamp(1.5rem, 4vw, 2rem)",
-              fontWeight: "400",
-              color: "#222222",
-              marginBottom: "16px",
-            }}
-          >
-            Coming to Your City
-          </h2>
+      {/* Loading State */}
+      {loading && (
+        <section style={{ padding: "120px 24px", textAlign: "center" }}>
+          <div style={{ fontSize: "3rem", marginBottom: "16px" }}>🍜</div>
+          <p style={{ color: "#666" }}>Finding our locations...</p>
+        </section>
+      )}
+
+      {/* The Oh! Way Section */}
+      <section style={{ background: "#222", color: "white", padding: "100px 24px" }}>
+        <div style={{ maxWidth: "1000px", margin: "0 auto", textAlign: "center" }}>
           <p
             style={{
-              fontSize: "1.1rem",
-              color: "#666",
-              marginBottom: "48px",
-              maxWidth: "600px",
-              margin: "0 auto 48px",
+              fontSize: "0.85rem",
+              textTransform: "uppercase",
+              letterSpacing: "4px",
+              color: "#C7A878",
+              marginBottom: "20px",
             }}
           >
-            We&apos;re expanding across the country. Sign up to be the first to know when Oh! opens near you.
+            The Oh! Way
           </p>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-              gap: "16px",
-            }}
-          >
-            {upcomingCities.map((city, idx) => (
-              <div
-                key={idx}
-                style={{
-                  background: "#f9fafb",
-                  padding: "24px",
-                  borderRadius: "12px",
-                  border: "1px solid #e5e7eb",
-                  transition: "all 0.3s ease",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = "#7C7A67";
-                  e.currentTarget.style.transform = "translateY(-2px)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = "#e5e7eb";
-                  e.currentTarget.style.transform = "translateY(0)";
-                }}
-              >
-                <div style={{ fontSize: "1.2rem", fontWeight: "600", color: "#222222", marginBottom: "4px" }}>
-                  {city.city}
-                </div>
-                <div style={{ fontSize: "0.9rem", color: "#7C7A67" }}>
-                  {city.state} • {city.target}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* The Experience Section */}
-      <section
-        style={{
-          background: "#222222",
-          color: "#E5E5E5",
-          padding: "80px 24px",
-        }}
-      >
-        <div style={{ maxWidth: "1000px", margin: "0 auto" }}>
           <h2
             style={{
-              fontSize: "clamp(1.8rem, 5vw, 2.5rem)",
+              fontSize: "clamp(2rem, 5vw, 3rem)",
               fontWeight: "300",
-              marginBottom: "48px",
-              textAlign: "center",
-              letterSpacing: "2px",
+              marginBottom: "60px",
+              lineHeight: "1.3",
+              color: "rgba(255,255,255,0.95)",
             }}
           >
-            What to Expect
+            A different kind of dining experience
           </h2>
 
           <div
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-              gap: "40px",
+              gap: "48px",
+              textAlign: "left",
             }}
           >
             <div>
               <div
                 style={{
-                  width: "60px",
-                  height: "60px",
-                  background: "rgba(199, 168, 120, 0.2)",
+                  width: "48px",
+                  height: "48px",
                   borderRadius: "12px",
+                  background: "rgba(199, 168, 120, 0.2)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   marginBottom: "20px",
-                  fontSize: "1.8rem",
+                  fontSize: "1.4rem",
+                }}
+              >
+                🎯
+              </div>
+              <h3 style={{ fontSize: "1.2rem", fontWeight: "500", marginBottom: "12px", color: "rgba(255,255,255,0.95)" }}>
+                Order at the Kiosk
+              </h3>
+              <p style={{ fontSize: "0.95rem", color: "rgba(255,255,255,0.7)", lineHeight: "1.7" }}>
+                Customize every detail of your bowl at our touchscreen kiosks.
+                No pressure, take your time. Or order ahead from your phone.
+              </p>
+            </div>
+
+            <div>
+              <div
+                style={{
+                  width: "48px",
+                  height: "48px",
+                  borderRadius: "12px",
+                  background: "rgba(199, 168, 120, 0.2)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginBottom: "20px",
+                  fontSize: "1.4rem",
                 }}
               >
                 🏠
               </div>
-              <h3 style={{ fontSize: "1.2rem", fontWeight: "500", marginBottom: "12px" }}>
-                Private Dining Pods
+              <h3 style={{ fontSize: "1.2rem", fontWeight: "500", marginBottom: "12px", color: "rgba(255,255,255,0.95)" }}>
+                Your Private Pod
               </h3>
-              <p style={{ fontSize: "0.95rem", opacity: 0.8, lineHeight: "1.7" }}>
-                Inspired by Japanese solo dining concepts. Individual cubicles designed for focused,
-                distraction-free enjoyment of your meal. Perfect for solo diners or those who want a moment of peace.
+              <p style={{ fontSize: "0.95rem", color: "rgba(255,255,255,0.7)", lineHeight: "1.7" }}>
+                Inspired by Japan's ichiran ramen. Individual pods let you focus
+                entirely on your meal. Peace, privacy, perfect soup.
               </p>
             </div>
 
             <div>
               <div
                 style={{
-                  width: "60px",
-                  height: "60px",
-                  background: "rgba(199, 168, 120, 0.2)",
+                  width: "48px",
+                  height: "48px",
                   borderRadius: "12px",
+                  background: "rgba(199, 168, 120, 0.2)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   marginBottom: "20px",
-                  fontSize: "1.8rem",
+                  fontSize: "1.4rem",
                 }}
               >
-                📱
+                ❤️
               </div>
-              <h3 style={{ fontSize: "1.2rem", fontWeight: "500", marginBottom: "12px" }}>
-                Seamless Technology
+              <h3 style={{ fontSize: "1.2rem", fontWeight: "500", marginBottom: "12px", color: "rgba(255,255,255,0.95)" }}>
+                No Tips, Ever
               </h3>
-              <p style={{ fontSize: "0.95rem", opacity: 0.8, lineHeight: "1.7" }}>
-                Order ahead through our app. Your bowl is prepared and ready when you arrive.
-                No waiting in line, no flagging down servers. Just you and your perfect soup.
-              </p>
-            </div>
-
-            <div>
-              <div
-                style={{
-                  width: "60px",
-                  height: "60px",
-                  background: "rgba(199, 168, 120, 0.2)",
-                  borderRadius: "12px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginBottom: "20px",
-                  fontSize: "1.8rem",
-                }}
-              >
-                ✨
-              </div>
-              <h3 style={{ fontSize: "1.2rem", fontWeight: "500", marginBottom: "12px" }}>
-                Automated Service
-              </h3>
-              <p style={{ fontSize: "0.95rem", opacity: 0.8, lineHeight: "1.7" }}>
-                Our automated delivery system brings your meal directly to your pod.
-                Minimal human interaction means maximum focus on the incredible flavors in front of you.
+              <p style={{ fontSize: "0.95rem", color: "rgba(255,255,255,0.7)", lineHeight: "1.7" }}>
+                We pay our team well so you don't have to calculate tips.
+                The price you see is the price you pay.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Newsletter Signup */}
-      <section
-        style={{
-          background: "#C7A878",
-          padding: "60px 24px",
-          textAlign: "center",
-        }}
-      >
-        <div style={{ maxWidth: "500px", margin: "0 auto" }}>
+      {/* Coming Soon */}
+      <section style={{ background: "#faf9f7", padding: "80px 24px" }}>
+        <div style={{ maxWidth: "800px", margin: "0 auto", textAlign: "center" }}>
           <h2
             style={{
               fontSize: "clamp(1.5rem, 4vw, 2rem)",
               fontWeight: "400",
-              color: "#222222",
+              color: "#222",
               marginBottom: "16px",
             }}
           >
-            Stay in the Loop
+            More locations coming soon
           </h2>
-          <p
+          <p style={{ color: "#666", marginBottom: "40px", fontSize: "1.1rem" }}>
+            We're growing across Utah. Want Oh! in your neighborhood?
+          </p>
+          <div
             style={{
-              fontSize: "1rem",
-              color: "#222222",
-              marginBottom: "24px",
-              opacity: 0.8,
+              display: "inline-flex",
+              gap: "24px",
+              flexWrap: "wrap",
+              justifyContent: "center",
             }}
           >
-            Be the first to know about new locations, special offers, and exclusive events.
-          </p>
-          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", justifyContent: "center" }}>
-            <input
-              type="email"
-              placeholder="your@email.com"
-              style={{
-                flex: "1 1 200px",
-                maxWidth: "300px",
-                padding: "14px 20px",
-                border: "none",
-                borderRadius: "8px",
-                fontSize: "1rem",
-                outline: "none",
-              }}
-            />
-            <button
-              style={{
-                padding: "14px 32px",
-                background: "#222222",
-                color: "#E5E5E5",
-                border: "none",
-                borderRadius: "8px",
-                cursor: "pointer",
-                fontWeight: "500",
-                fontSize: "1rem",
-              }}
-            >
-              Notify Me
-            </button>
+            {["Provo", "Draper", "Park City"].map((city) => (
+              <span
+                key={city}
+                style={{
+                  padding: "12px 24px",
+                  border: "1px dashed #ccc",
+                  borderRadius: "30px",
+                  color: "#888",
+                  fontSize: "0.95rem",
+                }}
+              >
+                {city} • Coming Soon
+              </span>
+            ))}
           </div>
         </div>
       </section>
+
+      {/* Bottom CTA */}
+      <section
+        style={{
+          background: "linear-gradient(135deg, #7C7A67 0%, #5a584a 100%)",
+          padding: "80px 24px",
+          textAlign: "center",
+        }}
+      >
+        <div style={{ maxWidth: "600px", margin: "0 auto" }}>
+          <h2
+            style={{
+              fontSize: "clamp(1.8rem, 4vw, 2.5rem)",
+              fontWeight: "400",
+              color: "white",
+              marginBottom: "24px",
+            }}
+          >
+            Ready to experience Oh!?
+          </h2>
+          <p style={{ color: "rgba(255,255,255,0.8)", marginBottom: "32px", fontSize: "1.1rem" }}>
+            Skip the line. Order ahead and have your bowl ready when you arrive.
+          </p>
+          <Link
+            href="/order"
+            style={{
+              display: "inline-block",
+              padding: "18px 48px",
+              background: "white",
+              color: "#7C7A67",
+              borderRadius: "8px",
+              textDecoration: "none",
+              fontWeight: "600",
+              fontSize: "1.1rem",
+              transition: "all 0.3s ease",
+            }}
+          >
+            Start Your Order
+          </Link>
+        </div>
+      </section>
+
+      <style jsx>{`
+        @keyframes bounce {
+          0%, 20%, 50%, 80%, 100% { transform: translateX(-50%) translateY(0); }
+          40% { transform: translateX(-50%) translateY(-10px); }
+          60% { transform: translateX(-50%) translateY(-5px); }
+        }
+      `}</style>
     </div>
   );
 }
