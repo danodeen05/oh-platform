@@ -1,0 +1,194 @@
+{
+  "common": {
+    "signIn": "登入",
+    "signInToOrder": "登入訂購",
+    "orderNow": "立即訂購",
+    "loading": "載入中...",
+    "error": "發生錯誤",
+    "included": "已包含",
+    "learnMore": "了解更多",
+    "viewAll": "查看全部",
+    "close": "關閉"
+  },
+  "navigation": {
+    "menu": "菜單",
+    "locations": "門市地點",
+    "giftCards": "禮品卡",
+    "store": "商店",
+    "loyalty": "會員獎勵",
+    "myAccount": "我的哦!帳戶"
+  },
+  "home": {
+    "brandName": "哦！牛肉麵",
+    "tagline": "提前點餐，免排隊。在私人包廂中享用頂級牛肉麵。",
+    "features": {
+      "recipe": {
+        "title": "30年傳承配方",
+        "description": "代代相傳、精心熬製的牛肉麵"
+      },
+      "beef": {
+        "title": "頂級牛肉",
+        "description": "嚴選A5和牛及優質牛肉，品質卓越"
+      },
+      "tech": {
+        "title": "科技化體驗",
+        "description": "提前點餐、累積獎勵、享受無縫服務"
+      }
+    },
+    "pods": {
+      "title": "私人用餐包廂",
+      "description": "體驗前所未有的用餐方式。我們的獨立包廂提供寧靜、無干擾的空間，讓您細細品嚐每一口。沒有擁擠的餐桌，沒有噪音——只有您和完美的一碗牛肉麵。",
+      "features": {
+        "space": {
+          "title": "專屬空間",
+          "description": "配有氛圍照明和音樂控制的私人包廂"
+        },
+        "focus": {
+          "title": "零干擾",
+          "description": "專心享用美食，遠離傳統餐廳的喧囂"
+        },
+        "fast": {
+          "title": "快速新鮮",
+          "description": "餐點直送包廂，熱騰騰上桌"
+        }
+      }
+    },
+    "noTipping": {
+      "title": "永不收小費",
+      "description": "在哦!，您看到的價格就是您支付的價格。我們相信團隊成員值得穩定、公平的薪資——而非不可預測的小費。因此，我們為廚房和清潔人員提供具競爭力的薪資和福利。",
+      "benefits": {
+        "wages": "公平薪資",
+        "math": "無需計算小費",
+        "checkout": "簡單結帳"
+      }
+    }
+  },
+  "footer": {
+    "copyright": "© {year} 哦！牛肉麵。保留所有權利。",
+    "links": {
+      "accessibility": "無障礙服務",
+      "careers": "職業機會",
+      "contact": "聯絡我們",
+      "press": "媒體專區",
+      "privacy": "隱私政策"
+    }
+  },
+  "languages": {
+    "en": "English",
+    "zh-TW": "繁體中文",
+    "zh-CN": "简体中文",
+    "es": "Español",
+    "selectLanguage": "語言"
+  },
+  "menu": {
+    "title": "我們的菜單",
+    "description": "探索我們精選的頂級牛肉麵和配菜",
+    "categories": {
+      "soups": "湯品",
+      "noodles": "麵條",
+      "addons": "加購",
+      "sides": "配菜",
+      "drinks": "飲品",
+      "desserts": "甜點"
+    }
+  },
+  "locations": {
+    "title": "門市地點",
+    "description": "尋找您附近的哦!門市",
+    "hours": "營業時間",
+    "weekday": "平日",
+    "weekend": "週末",
+    "comingSoon": "即將開幕",
+    "openNow": "營業中",
+    "features": "特色服務",
+    "upcomingCities": "即將進駐您的城市"
+  },
+  "loyalty": {
+    "title": "哦！獎勵",
+    "description": "每次光臨都能累積獎勵",
+    "tiers": {
+      "chopstick": {
+        "name": "筷子會員",
+        "description": "歡迎加入哦！獎勵"
+      },
+      "noodleMaster": {
+        "name": "麵條大師",
+        "description": "您已成為常客！"
+      },
+      "beefBoss": {
+        "name": "牛肉達人",
+        "description": "真正的麵食皇族"
+      }
+    },
+    "benefits": "會員福利",
+    "requirements": "升級條件"
+  },
+  "order": {
+    "chooseLocation": "選擇門市",
+    "selectLocationPrompt": "選擇門市查看菜單和目前等候時間",
+    "referralApplied": "已套用$5推薦優惠！",
+    "waitTime": "目前等候時間",
+    "minutes": "分鐘",
+    "addToOrder": "加入訂單",
+    "viewOrder": "查看訂單",
+    "checkout": "結帳",
+    "total": "總計",
+    "subtotal": "小計",
+    "tax": "稅金",
+    "orderPlaced": "已下單",
+    "orderConfirmed": "訂單確認",
+    "preparing": "準備中",
+    "ready": "準備完成",
+    "completed": "完成"
+  },
+  "member": {
+    "dashboard": "會員中心",
+    "orders": "訂單記錄",
+    "credits": "點數",
+    "favorites": "我的最愛",
+    "visits": "到訪次數",
+    "currentTier": "目前等級",
+    "nextTier": "下一等級",
+    "pointsToNext": "點數即可升級"
+  },
+  "giftCards": {
+    "title": "禮品卡",
+    "description": "與親朋好友分享哦!的美味",
+    "buyNow": "立即購買",
+    "checkBalance": "查詢餘額"
+  },
+  "store": {
+    "title": "哦！商店",
+    "description": "把哦!帶回家",
+    "merchandise": "週邊商品",
+    "comingSoon": "即將推出"
+  },
+  "careers": {
+    "title": "職業機會",
+    "description": "加入哦！大家庭",
+    "openPositions": "開放職缺",
+    "applyNow": "立即申請"
+  },
+  "contact": {
+    "title": "聯絡我們",
+    "description": "我們很樂意聽取您的意見",
+    "email": "電子郵件",
+    "phone": "電話",
+    "address": "地址",
+    "sendMessage": "發送訊息"
+  },
+  "press": {
+    "title": "媒體專區",
+    "description": "哦！新聞報導",
+    "mediaKit": "媒體資料包",
+    "pressInquiries": "媒體諮詢"
+  },
+  "privacy": {
+    "title": "隱私政策",
+    "lastUpdated": "最後更新"
+  },
+  "accessibility": {
+    "title": "無障礙服務",
+    "description": "我們對無障礙的承諾"
+  }
+}

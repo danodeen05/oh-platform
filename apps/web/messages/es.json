@@ -1,0 +1,194 @@
+{
+  "common": {
+    "signIn": "Iniciar sesión",
+    "signInToOrder": "INICIAR SESIÓN PARA ORDENAR",
+    "orderNow": "ORDENAR AHORA",
+    "loading": "Cargando...",
+    "error": "Algo salió mal",
+    "included": "Incluido",
+    "learnMore": "Más información",
+    "viewAll": "Ver todo",
+    "close": "Cerrar"
+  },
+  "navigation": {
+    "menu": "Menú",
+    "locations": "Ubicaciones",
+    "giftCards": "Tarjetas de regalo",
+    "store": "Tienda",
+    "loyalty": "Recompensas",
+    "myAccount": "Mi cuenta Oh!"
+  },
+  "home": {
+    "brandName": "Oh! Beef Noodle Soup",
+    "tagline": "Ordena con anticipación. Evita la espera. Disfruta de fideos con carne premium en cabinas privadas.",
+    "features": {
+      "recipe": {
+        "title": "Receta de 30 años",
+        "description": "Sopa de fideos con carne perfeccionada, transmitida por generaciones"
+      },
+      "beef": {
+        "title": "Carne Premium",
+        "description": "Wagyu A5 y cortes premium seleccionados por su calidad excepcional"
+      },
+      "tech": {
+        "title": "Experiencia tecnológica",
+        "description": "Ordena con anticipación, gana recompensas y disfruta de un servicio impecable"
+      }
+    },
+    "pods": {
+      "title": "Cabinas de comedor privadas",
+      "description": "Experimenta una forma de comer como nunca antes. Nuestras cabinas individuales ofrecen un espacio tranquilo y sin distracciones para saborear cada sorbo. Sin mesas abarrotadas, sin ruido — solo tú y tu tazón perfecto de sopa de fideos con carne.",
+      "features": {
+        "space": {
+          "title": "Tu espacio",
+          "description": "Cabina personal con iluminación ambiental y control de música"
+        },
+        "focus": {
+          "title": "Cero distracciones",
+          "description": "Concéntrate en tu comida sin el ajetreo de los restaurantes tradicionales"
+        },
+        "fast": {
+          "title": "Rápido y fresco",
+          "description": "Comida entregada directamente a tu cabina, caliente y lista"
+        }
+      }
+    },
+    "noTipping": {
+      "title": "Sin propinas. Nunca.",
+      "description": "En Oh!, el precio que ves es el precio que pagas. Creemos que nuestro equipo merece salarios justos y estables, no propinas impredecibles. Por eso pagamos a nuestro personal de cocina y limpieza salarios competitivos con beneficios.",
+      "benefits": {
+        "wages": "Salarios justos para todos",
+        "math": "Sin cálculos incómodos",
+        "checkout": "Pago simple"
+      }
+    }
+  },
+  "footer": {
+    "copyright": "© {year} Oh! Beef Noodle Soup. Todos los derechos reservados.",
+    "links": {
+      "accessibility": "Accesibilidad",
+      "careers": "Empleo",
+      "contact": "Contacto",
+      "press": "Prensa",
+      "privacy": "Política de privacidad"
+    }
+  },
+  "languages": {
+    "en": "English",
+    "zh-TW": "繁體中文",
+    "zh-CN": "简体中文",
+    "es": "Español",
+    "selectLanguage": "Idioma"
+  },
+  "menu": {
+    "title": "Nuestro menú",
+    "description": "Explora nuestra selección de sopas de fideos con carne premium y acompañamientos",
+    "categories": {
+      "soups": "Sopas",
+      "noodles": "Fideos",
+      "addons": "Extras",
+      "sides": "Acompañamientos",
+      "drinks": "Bebidas",
+      "desserts": "Postres"
+    }
+  },
+  "locations": {
+    "title": "Nuestras ubicaciones",
+    "description": "Encuentra un Oh! cerca de ti",
+    "hours": "Horario",
+    "weekday": "Entre semana",
+    "weekend": "Fin de semana",
+    "comingSoon": "Próximamente",
+    "openNow": "Abierto ahora",
+    "features": "Características",
+    "upcomingCities": "Llegando a tu ciudad"
+  },
+  "loyalty": {
+    "title": "Recompensas Oh!",
+    "description": "Gana recompensas con cada visita",
+    "tiers": {
+      "chopstick": {
+        "name": "Palillos",
+        "description": "Bienvenido a Recompensas Oh!"
+      },
+      "noodleMaster": {
+        "name": "Maestro de fideos",
+        "description": "¡Te estás convirtiendo en un habitual!"
+      },
+      "beefBoss": {
+        "name": "Jefe de la carne",
+        "description": "Verdadera realeza de los fideos"
+      }
+    },
+    "benefits": "Beneficios",
+    "requirements": "Requisitos"
+  },
+  "order": {
+    "chooseLocation": "Elige tu ubicación",
+    "selectLocationPrompt": "Selecciona una ubicación para ver el menú y el tiempo de espera actual",
+    "referralApplied": "¡Se aplicará un descuento de $5 por referido!",
+    "waitTime": "Espera actual",
+    "minutes": "min",
+    "addToOrder": "Agregar al pedido",
+    "viewOrder": "Ver pedido",
+    "checkout": "Pagar",
+    "total": "Total",
+    "subtotal": "Subtotal",
+    "tax": "Impuesto",
+    "orderPlaced": "Pedido realizado",
+    "orderConfirmed": "Pedido confirmado",
+    "preparing": "Preparando",
+    "ready": "Listo",
+    "completed": "Completado"
+  },
+  "member": {
+    "dashboard": "Panel de control",
+    "orders": "Pedidos",
+    "credits": "Créditos",
+    "favorites": "Favoritos",
+    "visits": "Visitas",
+    "currentTier": "Nivel actual",
+    "nextTier": "Siguiente nivel",
+    "pointsToNext": "puntos para el siguiente nivel"
+  },
+  "giftCards": {
+    "title": "Tarjetas de regalo",
+    "description": "Comparte el regalo de Oh! con amigos y familiares",
+    "buyNow": "Comprar ahora",
+    "checkBalance": "Consultar saldo"
+  },
+  "store": {
+    "title": "Tienda Oh!",
+    "description": "Llévate un pedacito de Oh! a casa",
+    "merchandise": "Mercancía",
+    "comingSoon": "Próximamente"
+  },
+  "careers": {
+    "title": "Empleo",
+    "description": "Únete a la familia Oh!",
+    "openPositions": "Posiciones abiertas",
+    "applyNow": "Aplicar ahora"
+  },
+  "contact": {
+    "title": "Contáctanos",
+    "description": "Nos encantaría saber de ti",
+    "email": "Correo electrónico",
+    "phone": "Teléfono",
+    "address": "Dirección",
+    "sendMessage": "Enviar mensaje"
+  },
+  "press": {
+    "title": "Prensa",
+    "description": "Oh! en las noticias",
+    "mediaKit": "Kit de medios",
+    "pressInquiries": "Consultas de prensa"
+  },
+  "privacy": {
+    "title": "Política de privacidad",
+    "lastUpdated": "Última actualización"
+  },
+  "accessibility": {
+    "title": "Accesibilidad",
+    "description": "Nuestro compromiso con la accesibilidad"
+  }
+}

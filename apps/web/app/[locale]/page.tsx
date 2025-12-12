@@ -2,8 +2,13 @@
 
 import { SignInButton, SignedIn, SignedOut } from "@clerk/nextjs";
 import Link from "next/link";
+import { useTranslations, useLocale } from "next-intl";
 
 export default function HomePage() {
+  const t = useTranslations("home");
+  const tCommon = useTranslations("common");
+  const locale = useLocale();
+
   return (
     <div style={{ background: "#ffffff" }}>
       {/* Hero Section */}
@@ -32,7 +37,7 @@ export default function HomePage() {
         >
           <img
             src="/Oh_Logo_Mark_Web.png"
-            alt="Oh! Beef Noodle Soup"
+            alt={t("brandName")}
             style={{
               width: "clamp(200px, 30vw, 400px)",
               height: "auto",
@@ -53,7 +58,7 @@ export default function HomePage() {
           }}
         >
           <span style={{ fontFamily: '"Ma Shan Zheng", cursive', fontSize: '1.2em' }}>哦</span>{" "}
-          <span style={{ fontFamily: '"Bebas Neue", sans-serif' }}>Oh! Beef Noodle Soup</span>
+          <span style={{ fontFamily: '"Bebas Neue", sans-serif' }}>{t("brandName")}</span>
         </h1>
 
         <p
@@ -68,8 +73,7 @@ export default function HomePage() {
             animation: "fadeInUp 1.2s ease 0.5s forwards",
           }}
         >
-          Order ahead. Skip the wait. Enjoy premium beef noodles in private
-          dining pods.
+          {t("tagline")}
         </p>
 
         <div
@@ -102,14 +106,14 @@ export default function HomePage() {
                   e.currentTarget.style.transform = "translateY(0)";
                 }}
               >
-                SIGN IN TO ORDER
+                {tCommon("signInToOrder")}
               </button>
             </SignInButton>
           </SignedOut>
 
           <SignedIn>
             <Link
-              href="/order"
+              href={`/${locale}/order`}
               style={{
                 padding: "18px 56px",
                 fontSize: "1.1rem",
@@ -131,7 +135,7 @@ export default function HomePage() {
                 e.currentTarget.style.transform = "translateY(0)";
               }}
             >
-              ORDER NOW
+              {tCommon("orderNow")}
             </Link>
           </SignedIn>
         </div>
@@ -184,7 +188,7 @@ export default function HomePage() {
                 letterSpacing: "1px",
               }}
             >
-              30-Year Recipe
+              {t("features.recipe.title")}
             </h3>
             <p
               style={{
@@ -194,7 +198,7 @@ export default function HomePage() {
                 fontWeight: "300",
               }}
             >
-              Perfected beef noodle soup, passed down through generations
+              {t("features.recipe.description")}
             </p>
           </div>
 
@@ -229,7 +233,7 @@ export default function HomePage() {
                 letterSpacing: "1px",
               }}
             >
-              Premium Beef
+              {t("features.beef.title")}
             </h3>
             <p
               style={{
@@ -239,7 +243,7 @@ export default function HomePage() {
                 fontWeight: "300",
               }}
             >
-              A5 Wagyu and premium cuts sourced for exceptional quality
+              {t("features.beef.description")}
             </p>
           </div>
 
@@ -274,7 +278,7 @@ export default function HomePage() {
                 letterSpacing: "1px",
               }}
             >
-              Tech-First Experience
+              {t("features.tech.title")}
             </h3>
             <p
               style={{
@@ -284,7 +288,7 @@ export default function HomePage() {
                 fontWeight: "300",
               }}
             >
-              Order ahead, earn rewards, and enjoy seamless service
+              {t("features.tech.description")}
             </p>
           </div>
         </div>
@@ -321,7 +325,7 @@ export default function HomePage() {
               letterSpacing: "1px",
             }}
           >
-            Private Dining Pods
+            {t("pods.title")}
           </h2>
           <p
             style={{
@@ -334,9 +338,7 @@ export default function HomePage() {
               margin: "0 auto 32px",
             }}
           >
-            Experience dining like never before. Our individual pods offer a peaceful,
-            distraction-free space to savor every slurp. No crowded tables, no noise —
-            just you and your perfect bowl of beef noodle soup.
+            {t("pods.description")}
           </p>
           <div
             style={{
@@ -349,28 +351,28 @@ export default function HomePage() {
             <div style={{ textAlign: "center" }}>
               <div style={{ fontSize: "2rem", marginBottom: "12px" }}>🎧</div>
               <h4 style={{ color: "#E5E5E5", fontWeight: "400", marginBottom: "8px" }}>
-                Your Space
+                {t("pods.features.space.title")}
               </h4>
               <p style={{ color: "#7C7A67", fontSize: "0.9rem", lineHeight: "1.5" }}>
-                Personal pod with ambient lighting and music controls
+                {t("pods.features.space.description")}
               </p>
             </div>
             <div style={{ textAlign: "center" }}>
               <div style={{ fontSize: "2rem", marginBottom: "12px" }}>🔕</div>
               <h4 style={{ color: "#E5E5E5", fontWeight: "400", marginBottom: "8px" }}>
-                Zero Distractions
+                {t("pods.features.focus.title")}
               </h4>
               <p style={{ color: "#7C7A67", fontSize: "0.9rem", lineHeight: "1.5" }}>
-                Focus on your meal without the bustle of traditional dining
+                {t("pods.features.focus.description")}
               </p>
             </div>
             <div style={{ textAlign: "center" }}>
               <div style={{ fontSize: "2rem", marginBottom: "12px" }}>⚡</div>
               <h4 style={{ color: "#E5E5E5", fontWeight: "400", marginBottom: "8px" }}>
-                Fast & Fresh
+                {t("pods.features.fast.title")}
               </h4>
               <p style={{ color: "#7C7A67", fontSize: "0.9rem", lineHeight: "1.5" }}>
-                Food delivered directly to your pod, hot and ready
+                {t("pods.features.fast.description")}
               </p>
             </div>
           </div>
@@ -408,7 +410,7 @@ export default function HomePage() {
               letterSpacing: "1px",
             }}
           >
-            No Tipping. Ever.
+            {t("noTipping.title")}
           </h2>
           <p
             style={{
@@ -420,9 +422,7 @@ export default function HomePage() {
               margin: "0 auto 32px",
             }}
           >
-            At Oh!, the price you see is the price you pay. We believe our team deserves
-            fair, stable wages — not unpredictable tips. That's why we pay our kitchen and
-            cleaning staff competitive salaries with benefits.
+            {t("noTipping.description")}
           </p>
           <div
             style={{
@@ -445,19 +445,19 @@ export default function HomePage() {
               <div style={{ textAlign: "center" }}>
                 <div style={{ fontSize: "1.5rem", marginBottom: "4px" }}>✓</div>
                 <p style={{ color: "#7C7A67", fontSize: "0.9rem", fontWeight: "500" }}>
-                  Fair wages for all
+                  {t("noTipping.benefits.wages")}
                 </p>
               </div>
               <div style={{ textAlign: "center" }}>
                 <div style={{ fontSize: "1.5rem", marginBottom: "4px" }}>✓</div>
                 <p style={{ color: "#7C7A67", fontSize: "0.9rem", fontWeight: "500" }}>
-                  No awkward math
+                  {t("noTipping.benefits.math")}
                 </p>
               </div>
               <div style={{ textAlign: "center" }}>
                 <div style={{ fontSize: "1.5rem", marginBottom: "4px" }}>✓</div>
                 <p style={{ color: "#7C7A67", fontSize: "0.9rem", fontWeight: "500" }}>
-                  Simple checkout
+                  {t("noTipping.benefits.checkout")}
                 </p>
               </div>
             </div>
