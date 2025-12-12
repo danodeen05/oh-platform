@@ -90,15 +90,12 @@ importers:
       '@fastify/formbody':
         specifier: ^7.4.0
         version: 7.4.0
-      '@prisma/client':
-        specifier: 5.19.1
-        version: 5.19.1(prisma@5.19.1)
+      '@oh/db':
+        specifier: workspace:*
+        version: link:../db
       fastify:
         specifier: 4.28.1
         version: 4.28.1
-      prisma:
-        specifier: 5.19.1
-        version: 5.19.1
 
   packages/db:
     dependencies:
