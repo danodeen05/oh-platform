@@ -1140,6 +1140,7 @@ app.get("/orders/status", async (req, reply) => {
         quantity: item.quantity,
         selectedValue: item.selectedValue,
         priceCents: item.priceCents,
+        categoryType: item.menuItem.categoryType,
       })),
     },
   };
@@ -1564,6 +1565,532 @@ app.patch("/seats/:id/clean", async (req, reply) => {
   await processQueue(seat.locationId);
 
   return seat;
+});
+
+// ====================
+// POD CALLS (Customer requesting staff assistance)
+// ====================
+
+// POST /orders/:id/call-staff - Customer calls for staff assistance
+app.post("/orders/:id/call-staff", async (req, reply) => {
+  const { id } = req.params;
+  const { reason } = req.body || {};
+
+  const order = await prisma.order.findUnique({
+    where: { id },
+    include: { seat: true, location: true },
+  });
+
+  if (!order) {
+    return reply.code(404).send({ error: "Order not found" });
+  }
+
+  if (!order.seatId) {
+    return reply.code(400).send({ error: "Order does not have a pod assigned" });
+  }
+
+  // Check if there's already a pending call for this order
+  const existingCall = await prisma.podCall.findFirst({
+    where: {
+      orderId: id,
+      status: "PENDING",
+    },
+  });
+
+  if (existingCall) {
+    return reply.code(400).send({
+      error: "You already have a pending call. Staff will be with you shortly.",
+      call: existingCall
+    });
+  }
+
+  // Create the pod call
+  const podCall = await prisma.podCall.create({
+    data: {
+      orderId: id,
+      seatId: order.seatId,
+      locationId: order.locationId,
+      reason: reason || "GENERAL",
+    },
+    include: {
+      seat: true,
+      order: {
+        select: {
+          orderNumber: true,
+          kitchenOrderNumber: true,
+        },
+      },
+    },
+  });
+
+  console.log(`[POD CALL] Pod ${order.seat.number} requesting staff - Reason: ${reason || "GENERAL"}`);
+
+  return {
+    success: true,
+    message: "Staff has been notified. Someone will be with you shortly.",
+    call: podCall,
+  };
+});
+
+// GET /pod-calls - Get all pending pod calls for a location
+app.get("/pod-calls", async (req, reply) => {
+  const { locationId, status } = req.query || {};
+
+  const where = {};
+  if (locationId) where.locationId = locationId;
+  if (status) {
+    where.status = status;
+  } else {
+    // Default to pending and acknowledged (active calls)
+    where.status = { in: ["PENDING", "ACKNOWLEDGED"] };
+  }
+
+  const calls = await prisma.podCall.findMany({
+    where,
+    include: {
+      seat: true,
+      order: {
+        select: {
+          id: true,
+          orderNumber: true,
+          kitchenOrderNumber: true,
+          status: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "asc",
+    },
+  });
+
+  return calls;
+});
+
+// PATCH /pod-calls/:id/acknowledge - Staff acknowledges a pod call
+app.patch("/pod-calls/:id/acknowledge", async (req, reply) => {
+  const { id } = req.params;
+
+  const call = await prisma.podCall.update({
+    where: { id },
+    data: {
+      status: "ACKNOWLEDGED",
+      acknowledgedAt: new Date(),
+    },
+    include: {
+      seat: true,
+    },
+  });
+
+  console.log(`[POD CALL] Pod ${call.seat.number} call acknowledged`);
+
+  return call;
+});
+
+// PATCH /pod-calls/:id/resolve - Staff resolves/completes a pod call
+app.patch("/pod-calls/:id/resolve", async (req, reply) => {
+  const { id } = req.params;
+
+  const call = await prisma.podCall.update({
+    where: { id },
+    data: {
+      status: "RESOLVED",
+      resolvedAt: new Date(),
+    },
+    include: {
+      seat: true,
+    },
+  });
+
+  console.log(`[POD CALL] Pod ${call.seat.number} call resolved`);
+
+  return call;
+});
+
+// DELETE /pod-calls/:id - Customer cancels their own call
+app.delete("/pod-calls/:id", async (req, reply) => {
+  const { id } = req.params;
+
+  const call = await prisma.podCall.update({
+    where: { id },
+    data: {
+      status: "CANCELLED",
+    },
+  });
+
+  return { success: true, message: "Call cancelled" };
+});
+
+// ====================
+// ADD-ON ORDERS (Customer ordering additional items during meal)
+// ====================
+
+// GET /orders/:id/available-addons - Get available add-on items for an order
+app.get("/orders/:id/available-addons", async (req, reply) => {
+  const { id } = req.params;
+
+  const order = await prisma.order.findUnique({
+    where: { id },
+    include: {
+      items: {
+        include: { menuItem: true },
+      },
+    },
+  });
+
+  if (!order) {
+    return reply.code(404).send({ error: "Order not found" });
+  }
+
+  // Get all menu items organized by category type
+  const menuItems = await prisma.menuItem.findMany({
+    where: {
+      tenantId: order.tenantId,
+      isAvailable: true,
+    },
+    orderBy: [
+      { categoryType: "asc" },
+      { displayOrder: "asc" },
+    ],
+  });
+
+  // Get drink IDs from original order (covered by refill section)
+  const orderedDrinkIds = new Set(
+    order.items
+      .filter(item => item.menuItem.categoryType === "DRINK")
+      .map(item => item.menuItem.id)
+  );
+
+  // Organize by add-on type for the UI
+  const addons = {
+    // Paid add-ons: ADDON, SIDE, DRINK, DESSERT categories
+    // Exclude drinks that are already in the order (covered by refills)
+    paidAddons: menuItems.filter(item =>
+      ["ADDON", "SIDE", "DRINK", "DESSERT"].includes(item.categoryType) &&
+      item.basePriceCents > 0 &&
+      !orderedDrinkIds.has(item.id)
+    ),
+
+    // Drinks for refills (only drinks that were in the original order)
+    refillableDrinks: order.items
+      .filter(item => item.menuItem.categoryType === "DRINK")
+      .map(item => item.menuItem),
+
+    // Extra vegetables: SLIDER items (free extras)
+    // Filter out Soup Richness and Noodle Texture (not addable during meal)
+    // Rename Spice Level to "Chili Oil (Spicy)" for clarity
+    extraVegetables: menuItems
+      .filter(item =>
+        (item.categoryType === "SLIDER" || item.selectionMode === "SLIDER") &&
+        !item.name.includes("Soup Richness") &&
+        !item.name.includes("Noodle Texture")
+      )
+      .map(item => ({
+        ...item,
+        // Rename Spice Level for add-on context
+        name: item.name === "Spice Level" ? "Chili Oil (Spicy)" : item.name,
+      })),
+  };
+
+  return addons;
+});
+
+// POST /orders/:id/refill - Request a free drink refill
+app.post("/orders/:id/refill", async (req, reply) => {
+  const { id } = req.params;
+  const { drinkMenuItemId, notes } = req.body || {};
+
+  const order = await prisma.order.findUnique({
+    where: { id },
+    include: {
+      seat: true,
+      items: {
+        include: { menuItem: true },
+      },
+    },
+  });
+
+  if (!order) {
+    return reply.code(404).send({ error: "Order not found" });
+  }
+
+  if (!order.seatId) {
+    return reply.code(400).send({ error: "Order does not have a pod assigned" });
+  }
+
+  // Verify the drink was in the original order (optional, can be relaxed)
+  let drinkItem = null;
+  if (drinkMenuItemId) {
+    drinkItem = await prisma.menuItem.findUnique({ where: { id: drinkMenuItemId } });
+    if (!drinkItem) {
+      return reply.code(404).send({ error: "Drink not found" });
+    }
+  }
+
+  // Generate order number for the refill
+  const refillOrderNumber = `REF-${Date.now()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
+
+  // Create a child order for the refill
+  // Add-on orders start as PREPPING since customer is already at pod
+  const refillOrder = await prisma.order.create({
+    data: {
+      orderNumber: refillOrderNumber,
+      tenantId: order.tenantId,
+      locationId: order.locationId,
+      seatId: order.seatId,
+      parentOrderId: order.id,
+      addOnType: "REFILL",
+      status: "PREPPING", // Skip QUEUED - customer is already at pod
+      podConfirmedAt: new Date(), // Customer already confirmed at pod
+      paymentStatus: "PAID", // Free
+      totalCents: 0,
+      customizations: notes ? { notes } : null,
+      items: drinkItem ? {
+        create: [{
+          menuItemId: drinkItem.id,
+          quantity: 1,
+          priceCents: 0,
+          selectedValue: "Refill",
+        }],
+      } : undefined,
+    },
+    include: {
+      seat: true,
+      items: {
+        include: { menuItem: true },
+      },
+    },
+  });
+
+  console.log(`[REFILL] Pod ${order.seat.number} requested drink refill`);
+
+  return {
+    success: true,
+    message: "Drink refill requested. It will be brought to your pod shortly.",
+    order: refillOrder,
+  };
+});
+
+// POST /orders/:id/extra-vegetables - Request free extra vegetables
+app.post("/orders/:id/extra-vegetables", async (req, reply) => {
+  const { id } = req.params;
+  const { items, notes } = req.body || {}; // items: [{menuItemId, selectedValue}]
+
+  const order = await prisma.order.findUnique({
+    where: { id },
+    include: { seat: true },
+  });
+
+  if (!order) {
+    return reply.code(404).send({ error: "Order not found" });
+  }
+
+  if (!order.seatId) {
+    return reply.code(400).send({ error: "Order does not have a pod assigned" });
+  }
+
+  if (!items || items.length === 0) {
+    return reply.code(400).send({ error: "At least one vegetable item required" });
+  }
+
+  // Generate order number for the extra veggies
+  const extraOrderNumber = `VEG-${Date.now()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
+
+  // Create order items for the veggies
+  const orderItems = items.map(item => ({
+    menuItemId: item.menuItemId,
+    quantity: 1,
+    priceCents: 0,
+    selectedValue: item.selectedValue || "Extra",
+  }));
+
+  // Create a child order for the extra vegetables
+  // Add-on orders start as PREPPING since customer is already at pod
+  const extraVegOrder = await prisma.order.create({
+    data: {
+      orderNumber: extraOrderNumber,
+      tenantId: order.tenantId,
+      locationId: order.locationId,
+      seatId: order.seatId,
+      parentOrderId: order.id,
+      addOnType: "EXTRA_VEG",
+      status: "PREPPING", // Skip QUEUED - customer is already at pod
+      podConfirmedAt: new Date(), // Customer already confirmed at pod
+      paymentStatus: "PAID", // Free
+      totalCents: 0,
+      customizations: notes ? { notes } : null,
+      items: {
+        create: orderItems,
+      },
+    },
+    include: {
+      seat: true,
+      items: {
+        include: { menuItem: true },
+      },
+    },
+  });
+
+  console.log(`[EXTRA VEG] Pod ${order.seat.number} requested extra vegetables`);
+
+  return {
+    success: true,
+    message: "Extra vegetables requested. They will be brought to your pod shortly.",
+    order: extraVegOrder,
+  };
+});
+
+// POST /orders/:id/dessert-ready - Customer is ready for their dessert
+app.post("/orders/:id/dessert-ready", async (req, reply) => {
+  const { id } = req.params;
+
+  const order = await prisma.order.findUnique({
+    where: { id },
+    include: {
+      seat: true,
+      items: {
+        include: { menuItem: true },
+      },
+    },
+  });
+
+  if (!order) {
+    return reply.code(404).send({ error: "Order not found" });
+  }
+
+  if (!order.seatId) {
+    return reply.code(400).send({ error: "Order does not have a pod assigned" });
+  }
+
+  // Check if the order has a dessert item
+  const dessertItem = order.items.find(
+    item => item.menuItem.categoryType === "DESSERT"
+  );
+
+  if (!dessertItem) {
+    return reply.code(400).send({ error: "No dessert in this order" });
+  }
+
+  // Create a child order for the dessert delivery (similar to refill flow)
+  const dessertOrderNumber = `DES-${Date.now()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
+
+  const dessertOrder = await prisma.order.create({
+    data: {
+      orderNumber: dessertOrderNumber,
+      tenantId: order.tenantId,
+      locationId: order.locationId,
+      seatId: order.seatId,
+      parentOrderId: order.id,
+      addOnType: "DESSERT_READY",
+      status: "PREPPING", // Skip QUEUED - customer is already at pod
+      podConfirmedAt: new Date(), // Customer already confirmed at pod
+      paymentStatus: "PAID", // Complimentary
+      totalCents: 0,
+      items: {
+        create: [{
+          menuItemId: dessertItem.menuItem.id,
+          quantity: dessertItem.quantity,
+          priceCents: 0,
+          selectedValue: "Ready for Dessert",
+        }],
+      },
+    },
+    include: {
+      seat: true,
+      items: {
+        include: { menuItem: true },
+      },
+    },
+  });
+
+  console.log(`[DESSERT] Pod ${order.seat.number} is ready for dessert`);
+
+  return {
+    success: true,
+    message: "The kitchen has been notified. Your dessert will be delivered shortly!",
+    order: dessertOrder,
+  };
+});
+
+// POST /orders/:id/addons - Create a paid add-on order
+app.post("/orders/:id/addons", async (req, reply) => {
+  const { id } = req.params;
+  const { items, notes } = req.body || {}; // items: [{menuItemId, quantity}]
+
+  const order = await prisma.order.findUnique({
+    where: { id },
+    include: { seat: true },
+  });
+
+  if (!order) {
+    return reply.code(404).send({ error: "Order not found" });
+  }
+
+  if (!order.seatId) {
+    return reply.code(400).send({ error: "Order does not have a pod assigned" });
+  }
+
+  if (!items || items.length === 0) {
+    return reply.code(400).send({ error: "At least one item required" });
+  }
+
+  // Calculate total for the add-on items
+  const menuItemIds = items.map(item => item.menuItemId);
+  const menuItems = await prisma.menuItem.findMany({
+    where: { id: { in: menuItemIds } },
+  });
+
+  let totalCents = 0;
+  const orderItems = items.map(item => {
+    const menuItem = menuItems.find(m => m.id === item.menuItemId);
+    if (!menuItem) throw new Error(`Menu item ${item.menuItemId} not found`);
+
+    const itemPrice = menuItem.basePriceCents * (item.quantity || 1);
+    totalCents += itemPrice;
+
+    return {
+      menuItemId: item.menuItemId,
+      quantity: item.quantity || 1,
+      priceCents: itemPrice,
+      selectedValue: item.selectedValue || null,
+    };
+  });
+
+  // Generate order number for the add-on
+  const addonOrderNumber = `ADD-${Date.now()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
+
+  // Create the add-on order (initially PENDING_PAYMENT)
+  const addonOrder = await prisma.order.create({
+    data: {
+      orderNumber: addonOrderNumber,
+      tenantId: order.tenantId,
+      locationId: order.locationId,
+      seatId: order.seatId,
+      parentOrderId: order.id,
+      addOnType: "PAID_ADDON",
+      status: "PENDING_PAYMENT",
+      paymentStatus: "PENDING",
+      totalCents,
+      customizations: notes ? { notes } : null,
+      items: {
+        create: orderItems,
+      },
+    },
+    include: {
+      seat: true,
+      items: {
+        include: { menuItem: true },
+      },
+    },
+  });
+
+  console.log(`[ADD-ON] Pod ${order.seat.number} created paid add-on order for $${(totalCents / 100).toFixed(2)}`);
+
+  return {
+    success: true,
+    order: addonOrder,
+    totalCents,
+    // Client should now redirect to Stripe payment
+  };
 });
 
 // ====================
@@ -2343,10 +2870,13 @@ app.post("/cron/disburse-credits", async (req, reply) => {
 app.get("/users/:id/orders", async (req, reply) => {
   const { id } = req.params;
 
+  // Only get parent orders (no child/add-on orders)
+  // Child orders have a parentOrderId set
   const orders = await prisma.order.findMany({
     where: {
       userId: id,
       paymentStatus: "PAID", // Only show paid orders
+      parentOrderId: null, // Exclude child/add-on orders
     },
     include: {
       items: {
@@ -2356,6 +2886,22 @@ app.get("/users/:id/orders", async (req, reply) => {
       },
       location: true,
       seat: true,
+      // Include child orders (add-ons, refills, extra veg) with their items
+      childOrders: {
+        where: {
+          paymentStatus: "PAID",
+        },
+        include: {
+          items: {
+            include: {
+              menuItem: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+      },
     },
     orderBy: {
       createdAt: "desc",
@@ -5049,6 +5595,184 @@ app.get("/analytics/realtime", async (req, reply) => {
   } catch (error) {
     console.error("Realtime analytics error:", error);
     return reply.status(500).send({ error: "Failed to fetch realtime analytics" });
+  }
+});
+
+// GET /analytics/upselling - Track add-on orders, revenue, and item popularity
+app.get("/analytics/upselling", async (req, reply) => {
+  const tenantSlug = getTenantContext(req);
+  const { period = "week", locationId } = req.query;
+  const { start, end } = getDateRange(period);
+
+  try {
+    const tenant = await prisma.tenant.findUnique({ where: { slug: tenantSlug } });
+    if (!tenant) {
+      return reply.status(404).send({ error: "Tenant not found" });
+    }
+
+    const baseWhereClause = {
+      tenantId: tenant.id,
+      createdAt: { gte: start, lte: end },
+    };
+    if (locationId) baseWhereClause.locationId = locationId;
+
+    // Get all add-on orders (orders with parentOrderId and addOnType)
+    const addOnOrders = await prisma.order.findMany({
+      where: {
+        ...baseWhereClause,
+        parentOrderId: { not: null },
+        addOnType: { not: null },
+      },
+      include: {
+        items: {
+          include: {
+            menuItem: {
+              select: {
+                id: true,
+                name: true,
+                category: true,
+                categoryType: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // Get total parent orders count for conversion rate
+    const totalParentOrders = await prisma.order.count({
+      where: {
+        ...baseWhereClause,
+        parentOrderId: null,
+        status: { in: ["COMPLETED", "PAID", "QUEUED", "PREPPING", "READY", "SERVING"] },
+      },
+    });
+
+    // Count unique parent orders that have at least one add-on
+    const parentOrdersWithAddons = new Set(addOnOrders.map(o => o.parentOrderId));
+
+    // Aggregate by add-on type
+    const byType = {
+      PAID_ADDON: { count: 0, revenue: 0 },
+      REFILL: { count: 0, revenue: 0 },
+      EXTRA_VEG: { count: 0, revenue: 0 },
+      DESSERT_READY: { count: 0, revenue: 0 },
+    };
+
+    // Aggregate by menu item for popularity
+    const itemStats = {};
+
+    let totalAddOnRevenue = 0;
+
+    for (const order of addOnOrders) {
+      const type = order.addOnType || "PAID_ADDON";
+      if (byType[type]) {
+        byType[type].count += 1;
+        byType[type].revenue += order.totalCents || 0;
+      }
+      totalAddOnRevenue += order.totalCents || 0;
+
+      // Track item popularity
+      for (const item of order.items) {
+        if (!item.menuItem) continue;
+        const itemId = item.menuItem.id;
+        if (!itemStats[itemId]) {
+          itemStats[itemId] = {
+            id: itemId,
+            name: item.menuItem.name,
+            category: item.menuItem.category || "Other",
+            categoryType: item.menuItem.categoryType,
+            quantity: 0,
+            revenue: 0,
+            orderCount: 0,
+          };
+        }
+        itemStats[itemId].quantity += item.quantity;
+        itemStats[itemId].revenue += item.priceCents * item.quantity;
+        itemStats[itemId].orderCount += 1;
+      }
+    }
+
+    // Sort items by popularity (order count)
+    const topAddOnItems = Object.values(itemStats)
+      .sort((a, b) => b.orderCount - a.orderCount)
+      .slice(0, 10)
+      .map(item => ({
+        ...item,
+        revenueFormatted: `$${(item.revenue / 100).toFixed(2)}`,
+      }));
+
+    // Sort items by revenue
+    const topByRevenue = Object.values(itemStats)
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 10)
+      .map(item => ({
+        ...item,
+        revenueFormatted: `$${(item.revenue / 100).toFixed(2)}`,
+      }));
+
+    // Calculate conversion rate
+    const conversionRate = totalParentOrders > 0
+      ? ((parentOrdersWithAddons.size / totalParentOrders) * 100).toFixed(1)
+      : "0.0";
+
+    // Format type breakdown
+    const typeBreakdown = [
+      {
+        type: "PAID_ADDON",
+        label: "Paid Add-Ons",
+        emoji: "🛒",
+        count: byType.PAID_ADDON.count,
+        revenue: byType.PAID_ADDON.revenue,
+        revenueFormatted: `$${(byType.PAID_ADDON.revenue / 100).toFixed(2)}`,
+      },
+      {
+        type: "REFILL",
+        label: "Drink Refills",
+        emoji: "🥤",
+        count: byType.REFILL.count,
+        revenue: byType.REFILL.revenue,
+        revenueFormatted: `$${(byType.REFILL.revenue / 100).toFixed(2)}`,
+      },
+      {
+        type: "EXTRA_VEG",
+        label: "Extra Vegetables",
+        emoji: "🥬",
+        count: byType.EXTRA_VEG.count,
+        revenue: byType.EXTRA_VEG.revenue,
+        revenueFormatted: `$${(byType.EXTRA_VEG.revenue / 100).toFixed(2)}`,
+      },
+      {
+        type: "DESSERT_READY",
+        label: "Dessert Deliveries",
+        emoji: "🍨",
+        count: byType.DESSERT_READY.count,
+        revenue: byType.DESSERT_READY.revenue,
+        revenueFormatted: `$${(byType.DESSERT_READY.revenue / 100).toFixed(2)}`,
+      },
+    ];
+
+    return reply.send({
+      period,
+      dateRange: { start, end },
+      summary: {
+        totalAddOnOrders: addOnOrders.length,
+        totalAddOnRevenue,
+        totalAddOnRevenueFormatted: `$${(totalAddOnRevenue / 100).toFixed(2)}`,
+        ordersWithAddons: parentOrdersWithAddons.size,
+        totalParentOrders,
+        conversionRate: `${conversionRate}%`,
+        averageAddOnValue: addOnOrders.length > 0
+          ? `$${((totalAddOnRevenue / addOnOrders.length) / 100).toFixed(2)}`
+          : "$0.00",
+      },
+      byType: typeBreakdown,
+      topByPopularity: topAddOnItems,
+      topByRevenue,
+    });
+  } catch (error) {
+    console.error("Upselling analytics error:", error);
+    return reply.status(500).send({ error: "Failed to fetch upselling analytics" });
   }
 });
 

@@ -172,6 +172,7 @@ model Seat {
   updatedAt  DateTime   @updatedAt
 
   orders     Order[]
+  podCalls   PodCall[]
 
   @@unique([locationId, number]) // Ensure unique pod numbers per location
 }
@@ -245,6 +246,9 @@ model Order {
   parentOrderId   String?
   parentOrder     Order?       @relation("OrderAddOns", fields: [parentOrderId], references: [id])
   childOrders     Order[]      @relation("OrderAddOns")
+  addOnType       AddOnType?   // Type of add-on for kitchen display color coding
+
+  podCalls        PodCall[]
 
   creditEvents    CreditEvent[]
   waitQueueEntry  WaitQueue?
@@ -504,6 +508,61 @@ enum QueueStatus {
   ASSIGNED        // Pod assigned, heading there
   CONFIRMED       // At pod, confirmed
   EXPIRED         // No-show or cancelled
+}
+
+// ==========================================
+// POD CALLS (Customer requesting staff assistance)
+// ==========================================
+
+model PodCall {
+  id          String       @id @default(cuid())
+  orderId     String
+  order       Order        @relation(fields: [orderId], references: [id])
+  seatId      String
+  seat        Seat         @relation(fields: [seatId], references: [id])
+  locationId  String
+
+  reason      PodCallReason @default(GENERAL)
+  status      PodCallStatus @default(PENDING)
+
+  // Timestamps
+  createdAt   DateTime     @default(now())
+  acknowledgedAt DateTime?  // When staff acknowledged the call
+  resolvedAt  DateTime?    // When staff resolved/completed the call
+
+  @@index([locationId, status])
+  @@index([seatId])
+}
+
+enum PodCallReason {
+  GENERAL      // Generic "call staff" request
+  REFILL       // Drink refill request
+  ASSISTANCE   // Need help/question
+  CHECK        // Request check/bill
+  CLEANUP      // Spill or cleanup needed
+}
+
+enum PodCallStatus {
+  PENDING      // Not yet seen by staff
+  ACKNOWLEDGED // Staff has seen it, on their way
+  RESOLVED     // Completed
+  CANCELLED    // Customer cancelled the request
+}
+
+// ==========================================
+// ADD-ON ORDER TYPES (for kitchen display color coding)
+// ==========================================
+
+// Note: Add-on orders use the existing Order model with:
+// - parentOrderId pointing to the original order
+// - addOnType to indicate the type of add-on (for kitchen display color coding)
+// Add this enum for use in a new field on Order
+
+enum AddOnType {
+  PAID_ADDON     // Amber - paid add-ons (extra meat, sides)
+  REFILL         // Blue - free drink refill
+  EXTRA_VEG      // Green - free extra vegetables
+  DESSERT_READY  // Pink - customer is ready for dessert
 }
 
 // ==========================================

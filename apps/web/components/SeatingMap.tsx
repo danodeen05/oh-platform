@@ -25,9 +25,12 @@ export default function SeatingMap({
   disabled = false,
 }: SeatingMapProps) {
   // Group seats by side
+  // Left: top to bottom (col ascending)
+  // Bottom: left to right (col ascending)
+  // Right: bottom to top (col descending) - to continue the U-shape flow
   const leftSeats = seats.filter((s) => s.side === "left").sort((a, b) => a.col - b.col);
   const bottomSeats = seats.filter((s) => s.side === "bottom").sort((a, b) => a.col - b.col);
-  const rightSeats = seats.filter((s) => s.side === "right").sort((a, b) => a.col - b.col);
+  const rightSeats = seats.filter((s) => s.side === "right").sort((a, b) => b.col - a.col);
 
   const getSeatStyle = (seat: Seat) => {
     const isSelected = seat.id === selectedSeatId;
