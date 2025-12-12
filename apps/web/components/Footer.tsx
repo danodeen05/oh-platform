@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useTranslations, useLocale } from "next-intl";
 
 // SVG icons for social platforms - dark olive (#7C7A67) fill
 const SocialIcons = {
@@ -51,12 +52,15 @@ const SocialIcons = {
 };
 
 export default function Footer() {
+  const t = useTranslations("footer");
+  const locale = useLocale();
+
   const footerLinks = [
-    { href: "/accessibility", label: "Accessibility" },
-    { href: "/careers", label: "Careers" },
-    { href: "/contact", label: "Contact" },
-    { href: "/press", label: "Press" },
-    { href: "/privacy", label: "Privacy Policy" },
+    { href: `/${locale}/accessibility`, labelKey: "links.accessibility" },
+    { href: `/${locale}/careers`, labelKey: "links.careers" },
+    { href: `/${locale}/contact`, labelKey: "links.contact" },
+    { href: `/${locale}/press`, labelKey: "links.press" },
+    { href: `/${locale}/privacy`, labelKey: "links.privacy" },
   ];
 
   const socialLinks = [
@@ -152,7 +156,7 @@ export default function Footer() {
                 onMouseEnter={(e) => (e.currentTarget.style.color = "#C7A878")}
                 onMouseLeave={(e) => (e.currentTarget.style.color = "#999")}
               >
-                {link.label}
+                {t(link.labelKey)}
               </Link>
               {index < footerLinks.length - 1 && (
                 <span style={{ color: "#555" }}>•</span>
@@ -170,7 +174,7 @@ export default function Footer() {
             letterSpacing: "0.5px",
           }}
         >
-          © {new Date().getFullYear()} Oh! Beef Noodle Soup. All rights reserved.
+          {t("copyright", { year: new Date().getFullYear() })}
         </div>
       </div>
     </footer>

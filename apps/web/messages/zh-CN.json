@@ -1,0 +1,194 @@
+{
+  "common": {
+    "signIn": "登录",
+    "signInToOrder": "登录订购",
+    "orderNow": "立即订购",
+    "loading": "加载中...",
+    "error": "发生错误",
+    "included": "已包含",
+    "learnMore": "了解更多",
+    "viewAll": "查看全部",
+    "close": "关闭"
+  },
+  "navigation": {
+    "menu": "菜单",
+    "locations": "门店地点",
+    "giftCards": "礼品卡",
+    "store": "商店",
+    "loyalty": "会员奖励",
+    "myAccount": "我的哦!账户"
+  },
+  "home": {
+    "brandName": "哦！牛肉面",
+    "tagline": "提前点餐，免排队。在私人包厢中享用顶级牛肉面。",
+    "features": {
+      "recipe": {
+        "title": "30年传承配方",
+        "description": "代代相传、精心熬制的牛肉面"
+      },
+      "beef": {
+        "title": "顶级牛肉",
+        "description": "严选A5和牛及优质牛肉，品质卓越"
+      },
+      "tech": {
+        "title": "科技化体验",
+        "description": "提前点餐、累积奖励、享受无缝服务"
+      }
+    },
+    "pods": {
+      "title": "私人用餐包厢",
+      "description": "体验前所未有的用餐方式。我们的独立包厢提供宁静、无干扰的空间，让您细细品尝每一口。没有拥挤的餐桌，没有噪音——只有您和完美的一碗牛肉面。",
+      "features": {
+        "space": {
+          "title": "专属空间",
+          "description": "配有氛围照明和音乐控制的私人包厢"
+        },
+        "focus": {
+          "title": "零干扰",
+          "description": "专心享用美食，远离传统餐厅的喧嚣"
+        },
+        "fast": {
+          "title": "快速新鲜",
+          "description": "餐点直送包厢，热腾腾上桌"
+        }
+      }
+    },
+    "noTipping": {
+      "title": "永不收小费",
+      "description": "在哦!，您看到的价格就是您支付的价格。我们相信团队成员值得稳定、公平的薪资——而非不可预测的小费。因此，我们为厨房和清洁人员提供具竞争力的薪资和福利。",
+      "benefits": {
+        "wages": "公平薪资",
+        "math": "无需计算小费",
+        "checkout": "简单结账"
+      }
+    }
+  },
+  "footer": {
+    "copyright": "© {year} 哦！牛肉面。保留所有权利。",
+    "links": {
+      "accessibility": "无障碍服务",
+      "careers": "职业机会",
+      "contact": "联系我们",
+      "press": "媒体专区",
+      "privacy": "隐私政策"
+    }
+  },
+  "languages": {
+    "en": "English",
+    "zh-TW": "繁體中文",
+    "zh-CN": "简体中文",
+    "es": "Español",
+    "selectLanguage": "语言"
+  },
+  "menu": {
+    "title": "我们的菜单",
+    "description": "探索我们精选的顶级牛肉面和配菜",
+    "categories": {
+      "soups": "汤品",
+      "noodles": "面条",
+      "addons": "加购",
+      "sides": "配菜",
+      "drinks": "饮品",
+      "desserts": "甜点"
+    }
+  },
+  "locations": {
+    "title": "门店地点",
+    "description": "寻找您附近的哦!门店",
+    "hours": "营业时间",
+    "weekday": "工作日",
+    "weekend": "周末",
+    "comingSoon": "即将开业",
+    "openNow": "营业中",
+    "features": "特色服务",
+    "upcomingCities": "即将进驻您的城市"
+  },
+  "loyalty": {
+    "title": "哦！奖励",
+    "description": "每次光临都能累积奖励",
+    "tiers": {
+      "chopstick": {
+        "name": "筷子会员",
+        "description": "欢迎加入哦！奖励"
+      },
+      "noodleMaster": {
+        "name": "面条大师",
+        "description": "您已成为常客！"
+      },
+      "beefBoss": {
+        "name": "牛肉达人",
+        "description": "真正的面食皇族"
+      }
+    },
+    "benefits": "会员福利",
+    "requirements": "升级条件"
+  },
+  "order": {
+    "chooseLocation": "选择门店",
+    "selectLocationPrompt": "选择门店查看菜单和当前等候时间",
+    "referralApplied": "已应用$5推荐优惠！",
+    "waitTime": "当前等候时间",
+    "minutes": "分钟",
+    "addToOrder": "加入订单",
+    "viewOrder": "查看订单",
+    "checkout": "结账",
+    "total": "总计",
+    "subtotal": "小计",
+    "tax": "税金",
+    "orderPlaced": "已下单",
+    "orderConfirmed": "订单确认",
+    "preparing": "准备中",
+    "ready": "准备完成",
+    "completed": "完成"
+  },
+  "member": {
+    "dashboard": "会员中心",
+    "orders": "订单记录",
+    "credits": "积分",
+    "favorites": "我的收藏",
+    "visits": "到访次数",
+    "currentTier": "当前等级",
+    "nextTier": "下一等级",
+    "pointsToNext": "积分即可升级"
+  },
+  "giftCards": {
+    "title": "礼品卡",
+    "description": "与亲朋好友分享哦!的美味",
+    "buyNow": "立即购买",
+    "checkBalance": "查询余额"
+  },
+  "store": {
+    "title": "哦！商店",
+    "description": "把哦!带回家",
+    "merchandise": "周边商品",
+    "comingSoon": "即将推出"
+  },
+  "careers": {
+    "title": "职业机会",
+    "description": "加入哦！大家庭",
+    "openPositions": "开放职位",
+    "applyNow": "立即申请"
+  },
+  "contact": {
+    "title": "联系我们",
+    "description": "我们很乐意听取您的意见",
+    "email": "电子邮件",
+    "phone": "电话",
+    "address": "地址",
+    "sendMessage": "发送消息"
+  },
+  "press": {
+    "title": "媒体专区",
+    "description": "哦！新闻报道",
+    "mediaKit": "媒体资料包",
+    "pressInquiries": "媒体咨询"
+  },
+  "privacy": {
+    "title": "隐私政策",
+    "lastUpdated": "最后更新"
+  },
+  "accessibility": {
+    "title": "无障碍服务",
+    "description": "我们对无障碍的承诺"
+  }
+}

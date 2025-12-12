@@ -3,6 +3,8 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { SignedIn, UserButton } from "@clerk/nextjs";
+import { useTranslations, useLocale } from "next-intl";
+import LanguageSwitcher from "./LanguageSwitcher";
 
 // Custom icon for the Oh! Account menu item
 const OhAccountIcon = () => (
@@ -13,13 +15,15 @@ const OhAccountIcon = () => (
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const t = useTranslations("navigation");
+  const locale = useLocale();
 
   const navLinks = [
-    { href: "/menu", label: "Menu" },
-    { href: "/locations", label: "Locations" },
-    { href: "/gift-cards", label: "Gift Cards" },
-    { href: "/store", label: "Store" },
-    { href: "/loyalty", label: "Loyalty" },
+    { href: `/${locale}/menu`, label: t("menu") },
+    { href: `/${locale}/locations`, label: t("locations") },
+    { href: `/${locale}/gift-cards`, label: t("giftCards") },
+    { href: `/${locale}/store`, label: t("store") },
+    { href: `/${locale}/loyalty`, label: t("loyalty") },
   ];
 
   return (
@@ -71,7 +75,7 @@ export default function Header() {
 
           {/* Logo */}
           <Link
-            href="/"
+            href={`/${locale}`}
             style={{
               display: "flex",
               alignItems: "center",
@@ -120,34 +124,44 @@ export default function Header() {
           ))}
         </div>
 
-        {/* User Button */}
-        <SignedIn>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-            }}
-          >
-            <UserButton
-              appearance={{
-                elements: {
-                  avatarBox: {
-                    width: "40px",
-                    height: "40px",
-                  },
-                },
+        {/* Right side: Language Switcher and User Button */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "16px",
+          }}
+        >
+          <LanguageSwitcher />
+
+          <SignedIn>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
               }}
             >
-              <UserButton.MenuItems>
-                <UserButton.Link
-                  label="My Oh! Account"
-                  labelIcon={<OhAccountIcon />}
-                  href="/member"
-                />
-              </UserButton.MenuItems>
-            </UserButton>
-          </div>
-        </SignedIn>
+              <UserButton
+                appearance={{
+                  elements: {
+                    avatarBox: {
+                      width: "40px",
+                      height: "40px",
+                    },
+                  },
+                }}
+              >
+                <UserButton.MenuItems>
+                  <UserButton.Link
+                    label={t("myAccount")}
+                    labelIcon={<OhAccountIcon />}
+                    href={`/${locale}/member`}
+                  />
+                </UserButton.MenuItems>
+              </UserButton>
+            </div>
+          </SignedIn>
+        </div>
       </nav>
 
       {/* Mobile Menu */}

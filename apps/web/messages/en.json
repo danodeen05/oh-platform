@@ -1,0 +1,194 @@
+{
+  "common": {
+    "signIn": "Sign In",
+    "signInToOrder": "SIGN IN TO ORDER",
+    "orderNow": "ORDER NOW",
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "included": "Included",
+    "learnMore": "Learn More",
+    "viewAll": "View All",
+    "close": "Close"
+  },
+  "navigation": {
+    "menu": "Menu",
+    "locations": "Locations",
+    "giftCards": "Gift Cards",
+    "store": "Store",
+    "loyalty": "Loyalty",
+    "myAccount": "My Oh! Account"
+  },
+  "home": {
+    "brandName": "Oh! Beef Noodle Soup",
+    "tagline": "Order ahead. Skip the wait. Enjoy premium beef noodles in private dining pods.",
+    "features": {
+      "recipe": {
+        "title": "30-Year Recipe",
+        "description": "Perfected beef noodle soup, passed down through generations"
+      },
+      "beef": {
+        "title": "Premium Beef",
+        "description": "A5 Wagyu and premium cuts sourced for exceptional quality"
+      },
+      "tech": {
+        "title": "Tech-First Experience",
+        "description": "Order ahead, earn rewards, and enjoy seamless service"
+      }
+    },
+    "pods": {
+      "title": "Private Dining Pods",
+      "description": "Experience dining like never before. Our individual pods offer a peaceful, distraction-free space to savor every slurp. No crowded tables, no noise — just you and your perfect bowl of beef noodle soup.",
+      "features": {
+        "space": {
+          "title": "Your Space",
+          "description": "Personal pod with ambient lighting and music controls"
+        },
+        "focus": {
+          "title": "Zero Distractions",
+          "description": "Focus on your meal without the bustle of traditional dining"
+        },
+        "fast": {
+          "title": "Fast & Fresh",
+          "description": "Food delivered directly to your pod, hot and ready"
+        }
+      }
+    },
+    "noTipping": {
+      "title": "No Tipping. Ever.",
+      "description": "At Oh!, the price you see is the price you pay. We believe our team deserves fair, stable wages — not unpredictable tips. That's why we pay our kitchen and cleaning staff competitive salaries with benefits.",
+      "benefits": {
+        "wages": "Fair wages for all",
+        "math": "No awkward math",
+        "checkout": "Simple checkout"
+      }
+    }
+  },
+  "footer": {
+    "copyright": "© {year} Oh! Beef Noodle Soup. All rights reserved.",
+    "links": {
+      "accessibility": "Accessibility",
+      "careers": "Careers",
+      "contact": "Contact",
+      "press": "Press",
+      "privacy": "Privacy Policy"
+    }
+  },
+  "languages": {
+    "en": "English",
+    "zh-TW": "繁體中文",
+    "zh-CN": "简体中文",
+    "es": "Español",
+    "selectLanguage": "Language"
+  },
+  "menu": {
+    "title": "Our Menu",
+    "description": "Explore our selection of premium beef noodle soups and accompaniments",
+    "categories": {
+      "soups": "Soups",
+      "noodles": "Noodles",
+      "addons": "Add-ons",
+      "sides": "Sides",
+      "drinks": "Drinks",
+      "desserts": "Desserts"
+    }
+  },
+  "locations": {
+    "title": "Our Locations",
+    "description": "Find an Oh! near you",
+    "hours": "Hours",
+    "weekday": "Weekday",
+    "weekend": "Weekend",
+    "comingSoon": "Coming Soon",
+    "openNow": "Open Now",
+    "features": "Features",
+    "upcomingCities": "Coming to Your City"
+  },
+  "loyalty": {
+    "title": "Oh! Rewards",
+    "description": "Earn rewards with every visit",
+    "tiers": {
+      "chopstick": {
+        "name": "Chopstick",
+        "description": "Welcome to Oh! Rewards"
+      },
+      "noodleMaster": {
+        "name": "Noodle Master",
+        "description": "You're becoming a regular!"
+      },
+      "beefBoss": {
+        "name": "Beef Boss",
+        "description": "True noodle royalty"
+      }
+    },
+    "benefits": "Benefits",
+    "requirements": "Requirements"
+  },
+  "order": {
+    "chooseLocation": "Choose Your Location",
+    "selectLocationPrompt": "Select a location to view the menu and current wait time",
+    "referralApplied": "$5 referral discount will be applied!",
+    "waitTime": "Current Wait",
+    "minutes": "min",
+    "addToOrder": "Add to Order",
+    "viewOrder": "View Order",
+    "checkout": "Checkout",
+    "total": "Total",
+    "subtotal": "Subtotal",
+    "tax": "Tax",
+    "orderPlaced": "Order Placed",
+    "orderConfirmed": "Order Confirmed",
+    "preparing": "Preparing",
+    "ready": "Ready",
+    "completed": "Completed"
+  },
+  "member": {
+    "dashboard": "Dashboard",
+    "orders": "Orders",
+    "credits": "Credits",
+    "favorites": "Favorites",
+    "visits": "Visits",
+    "currentTier": "Current Tier",
+    "nextTier": "Next Tier",
+    "pointsToNext": "points to next tier"
+  },
+  "giftCards": {
+    "title": "Gift Cards",
+    "description": "Share the gift of Oh! with friends and family",
+    "buyNow": "Buy Now",
+    "checkBalance": "Check Balance"
+  },
+  "store": {
+    "title": "Oh! Store",
+    "description": "Take a piece of Oh! home with you",
+    "merchandise": "Merchandise",
+    "comingSoon": "Coming Soon"
+  },
+  "careers": {
+    "title": "Careers",
+    "description": "Join the Oh! family",
+    "openPositions": "Open Positions",
+    "applyNow": "Apply Now"
+  },
+  "contact": {
+    "title": "Contact Us",
+    "description": "We'd love to hear from you",
+    "email": "Email",
+    "phone": "Phone",
+    "address": "Address",
+    "sendMessage": "Send Message"
+  },
+  "press": {
+    "title": "Press",
+    "description": "Oh! in the news",
+    "mediaKit": "Media Kit",
+    "pressInquiries": "Press Inquiries"
+  },
+  "privacy": {
+    "title": "Privacy Policy",
+    "lastUpdated": "Last Updated"
+  },
+  "accessibility": {
+    "title": "Accessibility",
+    "description": "Our commitment to accessibility"
+  }
+}
