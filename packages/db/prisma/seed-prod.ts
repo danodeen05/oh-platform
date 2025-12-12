@@ -20,16 +20,53 @@ async function main() {
   });
   console.log('✓ Tenant created:', tenant.slug);
 
-  // Create location
-  console.log('\nCreating location...');
+  // Create locations
+  console.log('\nCreating locations...');
+
+  // City Creek Mall - Salt Lake City
+  const cityCreekLocation = await prisma.location.upsert({
+    where: { id: 'cmip6jbz700022nnnxxpmm5hf' },
+    update: {
+      lat: 40.7685,
+      lng: -111.8910
+    },
+    create: {
+      id: 'cmip6jbz700022nnnxxpmm5hf',
+      tenantId: tenant.id,
+      name: 'City Creek Mall',
+      city: 'Salt Lake City',
+      address: '50 S Main St, Salt Lake City, UT 84101',
+      lat: 40.7685,
+      lng: -111.8910
+    }
+  });
+  console.log('✓ Location created:', cityCreekLocation.name);
+
+  // University Place - Orem
+  const universityPlaceLocation = await prisma.location.upsert({
+    where: { id: 'cmip6jbza00042nnnf4nc0dvh' },
+    update: {},
+    create: {
+      id: 'cmip6jbza00042nnnf4nc0dvh',
+      tenantId: tenant.id,
+      name: 'University Place',
+      city: 'Orem',
+      address: '575 E University Pkwy, Orem, UT 84097',
+      lat: 40.2338,
+      lng: -111.6585
+    }
+  });
+  console.log('✓ Location created:', universityPlaceLocation.name);
+
+  // Legacy main-location (for backwards compatibility)
   const location = await prisma.location.upsert({
     where: { id: 'main-location' },
     update: {},
     create: {
       id: 'main-location',
       tenantId: tenant.id,
-      name: 'Oh Beef - Main Location',
-      city: 'City',
+      name: 'Tosh Tokyo',
+      city: 'Tokyo',
       address: '123 Main St, City, State 12345',
       lat: 40.7128,
       lng: -74.0060
