@@ -3122,20 +3122,35 @@ Return ONLY valid JSON in this exact format (no markdown, no explanation):
   }
 }
 
-// Fallback fortunes if AI is not available (funnier versions)
+// Fallback fortunes - modern, punchy, screenshot-worthy
 const fallbackFortunes = [
-  "Your slurping technique has been rated 'professional' by the pod walls.",
-  "The noodles have spoken: you are the chosen one. No refunds.",
-  "Breaking news: local pod declares you their favorite human today.",
-  "Scientists confirm: ordering beef noodle soup was the best decision you made this week.",
-  "Your future is as bright as the broth you just conquered.",
-  "The universe wanted you to have this meal. Don't question the universe.",
-  "Rumor has it, the kitchen staff high-fived after making your order.",
-  "Pro tip: telling friends about Oh! increases your luck by 47%. It's science.",
-  "You've unlocked the secret level of dining. Achievement: Beef Boss Royalty.",
-  "Plot twist: you were the main character all along. Now with beef noodle soup.",
-  "The pod will remember this moment fondly. It told us.",
-  "Your chopstick skills are now legendary. At least in this zip code.",
+  // Delightfully Weird
+  "Somewhere, a door is opening for you. It might be a fridge. Start there.",
+  "The universe is rearranging itself around your next decision. No pressure.",
+  "A stranger will compliment something you almost didn't wear today.",
+  "Something you planted and forgot about is about to bloom.",
+  "The chaos is not random. Pay attention.",
+
+  // Aspirational but Real
+  "The room you're afraid to walk into? They're going to love you in there.",
+  "Your next level will require a version of you that doesn't exist yet. Start building them.",
+  "The hardest part is almost over. The best part is almost beginning.",
+  "Stop asking if you're ready. Start asking if you're willing.",
+  "You've survived every bad day so far. The odds are in your favor.",
+
+  // Playfully Cryptic
+  "Something lucky happened today. You just haven't noticed it yet.",
+  "A small yes will lead to a big yes. Say yes.",
+  "Someone is about to pleasantly surprise you. It might be yourself.",
+  "The thing you're putting off? It's easier than you think.",
+  "Your intuition already texted you the answer. Stop leaving it on read.",
+
+  // Gently Provocative
+  "Your backup plan is blocking your main character energy.",
+  "The right people won't need the full explanation.",
+  "Some chapters don't need to end gracefully. They just need to end.",
+  "Rest is not a reward. It's a prerequisite.",
+  "Stop romanticizing who you were. Start meeting who you're becoming.",
 ];
 
 // Generate fortune cookie for an order
@@ -3190,36 +3205,35 @@ app.get("/orders/fortune", async (req, reply) => {
 
     if (anthropic) {
       try {
-        const tierJokes = {
-          "CHOPSTICK": "They're a Chopstick tier member (beginner level - still learning to hold chopsticks without launching noodles across the room)",
-          "NOODLE_MASTER": "They're a Noodle Master tier member (intermediate - can slurp without splashing, truly impressive)",
-          "BEEF_BOSS": "They're a legendary BEEF BOSS tier VIP (the beef noodle soup illuminati, they've probably eaten more bowls than some small countries)",
-        };
+        const prompt = `You are a modern fortune cookie writer. Your fortunes are the kind people screenshot, share, and think about later. NOT about food, restaurants, or noodles. These are REAL fortunes about LIFE.
 
-        const prompt = `You are a HILARIOUS fortune cookie writer for Oh!, a trendy beef noodle soup restaurant with private dining pods. Your job is to make customers laugh out loud and feel special.
+YOUR STYLE MIX (pick one approach per fortune):
 
-CUSTOMER CONTEXT (use ALL of this creatively):
-${firstName ? `- Customer's name: ${firstName} (USE THEIR NAME in a funny way!)` : "- Guest customer (roast them gently for not signing up)"}
-- They ordered: ${mainItem} ${itemNames.length > 1 ? `and ${itemNames.length - 1} other item(s)` : ""}
-- ${tierJokes[tier] || "They're dining at Oh!"}
-- They're in a private pod (like a VIP booth for beef noodle soup enthusiasts)
-- Pod number: ${order.seat?.number || "unknown"}
+1. DELIGHTFULLY WEIRD - Unexpected, slightly surreal, makes them smile
+   - "Somewhere, a door is opening for you. It might be a fridge. Start there."
+   - "The universe is rearranging itself around your next decision. No pressure."
+   - "A stranger will compliment something you almost didn't wear today."
 
-STYLE REQUIREMENTS:
-1. BE ACTUALLY FUNNY - think stand-up comedian, not Hallmark card
-2. Must be personalized - reference their name, their order, their tier level
-3. Can be slightly absurd, punny, or self-aware
-4. Keep it SHORT (1-2 sentences, under 150 chars)
-5. Make it memorable - they should want to screenshot and share it
+2. ASPIRATIONAL BUT REAL - Hopeful without being cheesy, grounded
+   - "The room you're afraid to walk into? They're going to love you in there."
+   - "Your next level will require a version of you that doesn't exist yet. Start building them."
+   - "The hardest part is almost over. The best part is almost beginning."
 
-EXAMPLES OF THE HUMOR LEVEL WE WANT:
-- "${firstName || "Dear stranger"}, your beef noodle soup consumption has been noted by the noodle gods. They approve."
-- "Pod ${order.seat?.number || "X"} has never seen such elite slurping. The walls are impressed."
-- "As a ${tier === "BEEF_BOSS" ? "Beef Boss" : "future Beef Boss"}, you're legally required to tell 3 friends about us."
+3. PLAYFULLY CRYPTIC - Intriguing, makes them pause and think
+   - "Something lucky happened today. You just haven't noticed it yet."
+   - "A small yes will lead to a big yes. Say yes."
+   - "The chaos is not random. Pay attention."
+   - "Your intuition already texted you the answer. Stop leaving it on read."
 
-Now write ONE fortune that will make ${firstName || "this customer"} laugh. Be bold. Be weird. Be memorable.
+REQUIREMENTS:
+- ONE sentence only, under 100 characters ideal
+- Modern language (can reference texts, algorithms, main character energy, etc.)
+- Must feel like genuine wisdom, not a joke
+- Should be screenshot-worthy
+- NO food references, NO restaurant references, NO noodles
+- NO generic platitudes like "good things come to those who wait"
 
-Return ONLY the fortune text. No quotes, no explanation.`;
+Write ONE fortune. Return ONLY the fortune text. No quotes, no explanation.`;
 
         const message = await anthropic.messages.create({
           model: "claude-sonnet-4-20250514",
@@ -3239,10 +3253,6 @@ Return ONLY the fortune text. No quotes, no explanation.`;
     // Use fallback if AI didn't work
     if (!fortune) {
       fortune = fallbackFortunes[Math.floor(Math.random() * fallbackFortunes.length)];
-      // Personalize fallback if we have a name
-      if (firstName) {
-        fortune = fortune.replace("Your", `${firstName}, your`);
-      }
     }
 
     // Generate Learn Chinese word
@@ -3297,7 +3307,7 @@ const fallbackRoasts = [
   "Somewhere, a chef is looking at this order and nodding appreciatively. Or laughing. One of those.",
 ];
 
-// Generate sarcastic order roast/analysis
+// Generate sarcastic order roast/analysis - DEEPLY PERSONALIZED
 app.get("/orders/roast", async (req, reply) => {
   const { orderQrCode, orderId } = req.query || {};
 
@@ -3330,121 +3340,156 @@ app.get("/orders/roast", async (req, reply) => {
     // Get user's name
     const firstName = order.user?.name?.split(" ")[0] || order.guestName?.split(" ")[0] || null;
 
-    // Build detailed order analysis
-    const orderDetails = [];
-    const roastableChoices = [];
+    // Use the comprehensive buildOrderSummary helper
+    const summary = buildOrderSummary(order);
 
-    for (const item of order.items) {
-      const itemName = item.menuItem?.name || item.name;
-      const selectedValue = item.selectedValue;
+    // Build hyper-specific roastable insights from the full order
+    const roastInsights = [];
 
-      // Track the choice for roasting
-      if (itemName && selectedValue !== null && selectedValue !== undefined) {
-        orderDetails.push({ name: itemName, value: selectedValue });
+    // BOWL CONFIG ROASTS
+    if (summary.mainDish) {
+      roastInsights.push(`BOWL: ${summary.mainDish}`);
+    }
 
-        // Identify particularly roastable choices
-        if (itemName.toLowerCase().includes("spice")) {
-          if (selectedValue === "Extra Spicy" || selectedValue === "4") {
-            roastableChoices.push(`EXTREME spice level (${selectedValue}) - they think they're tough`);
-          } else if (selectedValue === "None" || selectedValue === "0") {
-            roastableChoices.push(`NO spice - they're playing it extremely safe`);
-          }
-        }
+    // Note: No separate protein selection - the soup type includes the protein (e.g., "A5 Wagyu Beef Noodle Soup")
 
-        if (itemName.toLowerCase().includes("cilantro")) {
-          if (selectedValue === "None" || selectedValue === "0") {
-            roastableChoices.push(`NO cilantro - probably has that gene that makes it taste like soap, or just afraid of flavor`);
-          } else if (selectedValue === "Extra" || selectedValue === "3") {
-            roastableChoices.push(`EXTRA cilantro - a true herbivore`);
-          }
-        }
+    if (summary.noodleType) {
+      const noodleRoast = summary.noodleType.toLowerCase().includes("no noodle")
+        ? `chose NO NOODLES - came to a noodle shop and said "hold the noodles." Iconic.`
+        : summary.noodleType.toLowerCase().includes("ramen")
+        ? `went with RAMEN noodles - classic choice, nothing wrong with playing it safe`
+        : summary.noodleType.toLowerCase().includes("shaved")
+        ? `chose SHAVED NOODLES - a person of culture who knows the good stuff`
+        : summary.noodleType.toLowerCase().includes("wide")
+        ? `picked WIDE NOODLES - likes something substantial to slurp, we respect that`
+        : `NOODLE TYPE: ${summary.noodleType}`;
+      roastInsights.push(noodleRoast);
+    }
 
-        if (itemName.toLowerCase().includes("pickled")) {
-          if (selectedValue === "None" || selectedValue === "0") {
-            roastableChoices.push(`NO pickled greens - refusing to try something new, how adventurous`);
-          } else if (selectedValue === "Extra" || selectedValue === "3") {
-            roastableChoices.push(`EXTRA pickled greens - a person of refined, tangy taste`);
-          }
-        }
-
-        if (itemName.toLowerCase().includes("soup richness") || itemName.toLowerCase().includes("richness")) {
-          if (selectedValue === "Extra Rich" || selectedValue === "3") {
-            roastableChoices.push(`EXTRA RICH soup - they came here for a broth experience, not a light snack`);
-          } else if (selectedValue === "Light" || selectedValue === "0") {
-            roastableChoices.push(`LIGHT soup - are they on a diet or something?`);
-          }
-        }
-
-        if (itemName.toLowerCase().includes("noodle texture") || itemName.toLowerCase().includes("texture")) {
-          if (selectedValue === "Firm" || selectedValue === "0") {
-            roastableChoices.push(`FIRM noodles - al dente perfectionist alert`);
-          } else if (selectedValue === "Soft" || selectedValue === "2") {
-            roastableChoices.push(`SOFT noodles - they like their noodles pre-chewed, apparently`);
-          }
-        }
-
-        if (itemName.toLowerCase().includes("sprouts")) {
-          if (selectedValue === "None" || selectedValue === "0") {
-            roastableChoices.push(`NO sprouts - sprout-phobic, interesting`);
-          }
-        }
-
-        if (itemName.toLowerCase().includes("bok choy")) {
-          if (selectedValue === "Extra" || selectedValue === "3") {
-            roastableChoices.push(`EXTRA baby bok choy - going heavy on the greens, health-conscious or just really likes tiny cabbages`);
-          } else if (selectedValue === "None" || selectedValue === "0") {
-            roastableChoices.push(`NO bok choy - turning down free vegetables, bold move`);
-          }
-        }
+    // TEXTURE/RICHNESS/SPICE ROASTS (the sliders are goldmines)
+    if (summary.noodleTexture !== null) {
+      const textureVal = String(summary.noodleTexture);
+      if (textureVal === "0" || textureVal.toLowerCase() === "firm") {
+        roastInsights.push(`FIRM noodles - al dente perfectionist who will absolutely know if we mess this up`);
+      } else if (textureVal === "2" || textureVal.toLowerCase() === "soft") {
+        roastInsights.push(`SOFT noodles - prefers the pre-chewed experience, no judgment (okay, a little)`);
+      } else {
+        roastInsights.push(`MEDIUM texture - diplomatically avoiding noodle controversy`);
       }
     }
 
-    // Get main items ordered
-    const mainItems = order.items
-      .filter(i => i.menuItem?.categoryType === "MAIN")
-      .map(i => i.menuItem?.name || i.name);
+    if (summary.soupRichness !== null) {
+      const richnessVal = String(summary.soupRichness);
+      if (richnessVal === "0" || richnessVal.toLowerCase().includes("light")) {
+        roastInsights.push(`LIGHT soup - treating our 12-hour broth like it's a diet drink`);
+      } else if (richnessVal === "2" || richnessVal === "3" || richnessVal.toLowerCase().includes("rich") || richnessVal.toLowerCase().includes("extra")) {
+        roastInsights.push(`EXTRA RICH soup - came here for a broth baptism, not a light snack`);
+      } else {
+        roastInsights.push(`REGULAR richness - trusting the chef's vision, respectable`);
+      }
+    }
 
-    // Try to generate AI roast if API key is available
+    if (summary.spiceLevel !== null) {
+      const spiceVal = String(summary.spiceLevel);
+      if (spiceVal === "0" || spiceVal.toLowerCase() === "none") {
+        roastInsights.push(`ZERO SPICE - their taste buds are in witness protection`);
+      } else if (spiceVal === "1" || spiceVal.toLowerCase() === "mild") {
+        roastInsights.push(`MILD spice - dipping a toe in, commitment issues with heat`);
+      } else if (spiceVal === "3" || spiceVal === "4" || spiceVal.toLowerCase().includes("extra") || spiceVal.toLowerCase().includes("hot")) {
+        roastInsights.push(`MAXIMUM SPICE - either has something to prove or no nerve endings left`);
+      }
+    }
+
+    // SKIPPED TOPPINGS (people who say no to free stuff are fascinating)
+    if (summary.skippedToppings.length > 0) {
+      const skipped = summary.skippedToppings.map(t => t.replace("Amount", "").replace("Level", "").trim());
+      if (skipped.length >= 3) {
+        roastInsights.push(`SKIPPED ${skipped.length} TOPPINGS (${skipped.join(", ")}) - running an elimination diet or just has trust issues with vegetables`);
+      } else {
+        roastInsights.push(`Said NO to: ${skipped.join(", ")} - these ingredients personally offended them`);
+      }
+    }
+
+    // EXTRAS (people who want MORE are committed)
+    if (summary.extras.length > 0) {
+      const extras = summary.extras.map(e => e.replace("Amount", "").replace("Level", "").trim());
+      roastInsights.push(`Demanded EXTRA: ${extras.join(", ")} - knows exactly what they want and isn't afraid to ask`);
+    }
+
+    // ADD-ONS (the upsells reveal personality)
+    if (summary.addons.length > 0) {
+      const addonNames = summary.addons.map(a => `${a.name}${a.quantity > 1 ? ` x${a.quantity}` : ""}`);
+      const addonTotal = summary.addons.reduce((sum, a) => sum + a.quantity, 0);
+      if (addonTotal >= 3) {
+        roastInsights.push(`LOADED UP with ${addonTotal} add-ons (${addonNames.join(", ")}) - treating this bowl like a project, not a meal`);
+      } else {
+        roastInsights.push(`ADD-ONS: ${addonNames.join(", ")} - couldn't resist the extras, we get it`);
+      }
+    }
+
+    // SIDES (ordering sides at a noodle place says a lot)
+    if (summary.sides.length > 0) {
+      const sideNames = summary.sides.map(s => `${s.name}${s.quantity > 1 ? ` x${s.quantity}` : ""}`);
+      roastInsights.push(`Also ordered SIDES: ${sideNames.join(", ")} - apparently one bowl of noodles wasn't enough carbs`);
+    }
+
+    // DRINKS (beverage choices are character)
+    if (summary.drinks.length > 0) {
+      const drinkNames = summary.drinks.map(d => `${d.name}${d.quantity > 1 ? ` x${d.quantity}` : ""}`);
+      roastInsights.push(`DRINKS: ${drinkNames.join(", ")} - proper hydration for the noodle journey ahead`);
+    }
+
+    // DESSERTS (the sweet tooth reveal)
+    if (summary.desserts.length > 0) {
+      const dessertNames = summary.desserts.map(d => `${d.name}${d.quantity > 1 ? ` x${d.quantity}` : ""}`);
+      roastInsights.push(`Already planning DESSERT: ${dessertNames.join(", ")} - this person knows how a meal should end`);
+    }
+
+    // Calculate total order price for potential roast
+    const totalCents = order.totalCents || 0;
+    if (totalCents > 5000) { // Over $50
+      roastInsights.push(`TOTAL: $${(totalCents / 100).toFixed(2)} - treating themselves like royalty, as they should`);
+    }
+
+    // Try to generate AI roast
     let roast = null;
     let source = "ai";
 
-    if (anthropic && roastableChoices.length > 0) {
+    if (anthropic && roastInsights.length > 0) {
       try {
-        const prompt = `You are a HILARIOUSLY SARCASTIC food critic analyzing a customer's beef noodle soup order at Oh!, a trendy restaurant with private dining pods. Your job is to lovingly roast their choices in a way that makes them laugh.
+        const prompt = `You're a WICKEDLY FUNNY comedian roasting a customer's beef noodle soup order at Oh!, a trendy restaurant with private dining pods. Your job is to deliver a HYPER-PERSONALIZED roast that makes them feel SEEN (and laugh).
 
-CUSTOMER INFO:
-${firstName ? `- Name: ${firstName}` : "- Guest (didn't even sign up, the mystery person)"}
-- Main dish: ${mainItems.join(", ") || "Beef Noodle Soup"}
-- Pod: ${order.seat?.number || "unknown"}
+CUSTOMER: ${firstName || "Mystery Guest"}
+POD: ${order.seat?.number || "somewhere cozy"}
 
-THEIR NOTABLE CUSTOMIZATIONS (this is the GOLD - use these!):
-${roastableChoices.map(c => `- ${c}`).join("\n")}
+=== THEIR COMPLETE ORDER BREAKDOWN ===
+${roastInsights.map((insight, i) => `${i + 1}. ${insight}`).join("\n")}
 
-ALL ORDER DETAILS:
-${orderDetails.map(d => `- ${d.name}: ${d.value}`).join("\n")}
+=== YOUR MISSION ===
+Write a 3-4 sentence roast (max 350 characters) that:
+1. MUST reference at least 2-3 SPECIFIC things from their order (noodle type, spice level, skipped items, add-ons, drinks, dessert - whatever's juicy)
+2. Connects the dots between their choices to paint a picture of who they are
+3. Is SARCASTIC but clearly affectionate - like a friend who knows you too well
+4. Has at least one genuinely funny observation or hot take
+5. Ends with a twist that shows you're actually impressed or on their side
 
-YOUR TASK:
-Write a SHORT (2-3 sentences, max 200 chars) sarcastic but affectionate roast of their order choices.
+=== STYLE GUIDE ===
+- Be SAVAGE but LOVABLE
+- Specific > Generic (never say "interesting choices" - call out the ACTUAL choices)
+- Hot takes welcome ("ordering no noodles at a noodle shop is either galaxy brain or a cry for help")
+- Pop culture references if they fit naturally
+- ${firstName ? `Use their name "${firstName}" once for impact` : "Address them directly"}
 
-STYLE:
-- Think snarky best friend, not mean critic
-- Heavy on sarcasm and playful jabs
-- Reference their SPECIFIC choices (spice levels, skipped toppings, etc.)
-- If they skipped something, playfully question their life choices
-- If they maxed something out, praise their commitment sarcastically
-- Be BOLD and FUNNY
-- End with something that shows you're on their team
+=== EXAMPLES OF THE VIBE ===
+- "${firstName || "Friend"}, you walked in here, chose the Signature Bowl, went EXTRA RICH on the broth, demanded firm noodles, then said 'no cilantro, no sprouts, no pickled greens.' You want flavor but only YOUR approved flavors. Control issues? Maybe. Delicious? Absolutely."
+- "Ramen noodles, maximum spice, extra bok choy, AND a Taiwan Beer to wash it down? Either you're celebrating something or you're about to. Your sinuses will remember this day. We salute you."
+- "You ordered the Premium Bowl, light soup, soft noodles, and a mochi dessert already waiting. ${firstName || "Bestie"}, you're not here for an experience, you're here for a whole narrative arc. The character development is immaculate."
 
-EXAMPLES:
-- "No cilantro AND no pickled greens? ${firstName || "Friend"}, are we afraid of flavor? Don't worry, the beef will carry this. Barely."
-- "Extra Spicy? Look at you, thinking you're invincible. The bathroom will remember this. But respect."
-- "Light soup and firm noodles — someone's training for something. Or just very particular. We don't judge. Much."
-
-Write the roast. Be savage but lovable. No quotes around it.`;
+Write the roast. No quotes around it. Make it specific, make it funny, make them screenshot it.`;
 
         const message = await anthropic.messages.create({
           model: "claude-sonnet-4-20250514",
-          max_tokens: 150,
+          max_tokens: 250,
           messages: [{ role: "user", content: prompt }],
         });
 
@@ -3455,24 +3500,41 @@ Write the roast. Be savage but lovable. No quotes around it.`;
       }
     } else if (!anthropic) {
       source = "fallback";
-    } else {
-      // No roastable choices, give a generic compliment-roast
-      source = "fallback";
     }
 
-    // Use fallback if AI didn't work or no roastable choices
+    // Build personalized fallback if AI failed
     if (!roast) {
-      roast = fallbackRoasts[Math.floor(Math.random() * fallbackRoasts.length)];
-      if (firstName) {
-        roast = `${firstName}, ` + roast.charAt(0).toLowerCase() + roast.slice(1);
+      source = "fallback";
+      // Create a semi-personalized fallback from the insights we gathered
+      if (roastInsights.length >= 2) {
+        const randomInsights = roastInsights.sort(() => 0.5 - Math.random()).slice(0, 2);
+        roast = `${firstName ? firstName + ", " : ""}we see you with that order. ${randomInsights[0].split(" - ")[0]}? Bold. ${randomInsights[1].split(" - ")[0]}? Even bolder. You came here with a vision and we respect the commitment.`;
+      } else {
+        roast = fallbackRoasts[Math.floor(Math.random() * fallbackRoasts.length)];
+        if (firstName) {
+          roast = `${firstName}, ` + roast.charAt(0).toLowerCase() + roast.slice(1);
+        }
       }
     }
 
+    // Build highlights from the most interesting insights
+    const highlights = roastInsights
+      .filter(i =>
+        i.includes("SKIPPED") ||
+        i.includes("EXTRA") ||
+        i.includes("MAXIMUM") ||
+        i.includes("ZERO") ||
+        i.includes("NO NOODLES") ||
+        i.includes("LOADED UP") ||
+        i.includes("DESSERT")
+      )
+      .slice(0, 4);
+
     return reply.send({
       roast,
-      highlights: roastableChoices.slice(0, 3), // Top 3 most roastable choices
+      highlights: highlights.length > 0 ? highlights : roastInsights.slice(0, 3),
       source,
-      orderDetails: orderDetails.slice(0, 10), // Limit for response size
+      orderSummary: summary,
       customerName: firstName,
     });
   } catch (error) {
@@ -3480,6 +3542,819 @@ Write the roast. Be savage but lovable. No quotes around it.`;
     return reply.status(500).send({ error: "Failed to generate roast" });
   }
 });
+
+// ====================
+// LIVE ORDER COMMENTARY (AI Kitchen Updates)
+// ====================
+
+// Fallback commentary for each stage when AI is unavailable
+const fallbackCommentary = {
+  QUEUED: [
+    "Your order has entered the queue. It's stretching. Hydrating. Mentally preparing for what's about to happen.",
+    "The kitchen has acknowledged your existence. That's step one. Don't get cocky.",
+    "Your order is in line. Like everyone else. You're not special. Yet.",
+  ],
+  PREPPING: [
+    "The chef has begun. Noodles are being boiled with the intensity of someone who actually cares about their job.",
+    "Your beef is hitting the wok. It sizzled. We all heard it. Even the beef knew this was coming.",
+    "Broth is being ladled with unnecessary dramatic flair. Your meal is basically performance art at this point.",
+    "The vegetables have been notified of their fate. They accepted it with dignity.",
+  ],
+  READY: [
+    "Your bowl has passed the final inspection. It's beautiful. We almost don't want to let it go. Almost.",
+    "Quality check complete. Your noodles have been deemed worthy of consumption. Congratulations.",
+    "The kitchen has signed off. Your meal is ready to meet its destiny. Try not to disappoint it.",
+  ],
+  SERVING: [
+    "It's on its way. Try to act natural. Don't make this weird.",
+    "Your food is approaching. The anticipation should be killing you. If it's not, you're doing this wrong.",
+    "Delivery imminent. This is it. The moment you've been waiting for. Don't blow it.",
+  ],
+};
+
+// Helper to build comprehensive order summary for AI
+function buildOrderSummary(order) {
+  const summary = {
+    mainDish: null,       // The soup/bowl choice (e.g., "Classic Beef Noodle Soup", "A5 Wagyu Beef Noodle Soup")
+    noodleType: null,     // Noodle choice (e.g., "Ramen Noodles", "Wide Noodles", "No Noodles")
+    noodleTexture: null,  // Slider: texture preference
+    soupRichness: null,   // Slider: soup richness
+    spiceLevel: null,     // Slider: spice level
+    toppings: [],         // Slider toppings with levels
+    skippedToppings: [],  // Toppings set to None/0
+    extras: [],           // Toppings set to Extra/Max
+    addons: [],           // Premium add-ons (Marinated Egg, Extra Noodles, etc.)
+    sides: [],            // Side dishes
+    drinks: [],           // Beverages
+    desserts: [],         // Desserts
+  };
+
+  for (const item of order.items) {
+    const name = item.menuItem?.name || item.name || "";
+    const category = item.menuItem?.category || "";
+    const categoryType = item.menuItem?.categoryType || "";
+    const selectionMode = item.menuItem?.selectionMode || "";
+    const value = item.selectedValue;
+
+    // Main dish (soup/bowl type) - category "main" or "soup"
+    // These are items like "Classic Beef Noodle Soup", "A5 Wagyu Beef Noodle Soup"
+    if ((category === "main" || category === "soup") && !name.toLowerCase().match(/^(ramen|shaved|wide|no) noodles?$/i)) {
+      summary.mainDish = name;
+    }
+
+    // Noodle type selection - items like "Ramen Noodles", "Wide Noodles", "No Noodles"
+    if (category === "noodles" || name.toLowerCase().match(/^(ramen|shaved|wide|no) noodles?$/i)) {
+      summary.noodleType = name;
+    }
+
+    // Slider customizations
+    if (categoryType === "SLIDER" || selectionMode === "SLIDER") {
+      const lowerName = name.toLowerCase();
+      if (lowerName.includes("texture")) {
+        summary.noodleTexture = value;
+      } else if (lowerName.includes("richness")) {
+        summary.soupRichness = value;
+      } else if (lowerName.includes("spice")) {
+        summary.spiceLevel = value;
+      } else {
+        // Topping sliders (bok choy, green onions, cilantro, sprouts, pickled greens)
+        const cleanName = name.replace(" Level", "").replace(" Amount", "");
+        if (value === "None" || value === "0" || value === 0) {
+          summary.skippedToppings.push(cleanName);
+        } else if (value === "Extra" || value === "3" || value >= 3) {
+          summary.extras.push(cleanName);
+        } else {
+          summary.toppings.push({ name: cleanName, level: value });
+        }
+      }
+    }
+
+    // Add-ons (premium items like Marinated Egg, Extra Noodles)
+    if (categoryType === "ADDON") {
+      summary.addons.push({ name, quantity: item.quantity });
+    }
+
+    // Sides
+    if (categoryType === "SIDE") {
+      summary.sides.push({ name, quantity: item.quantity });
+    }
+
+    // Drinks
+    if (categoryType === "DRINK") {
+      summary.drinks.push({ name, quantity: item.quantity });
+    }
+
+    // Desserts
+    if (categoryType === "DESSERT") {
+      summary.desserts.push({ name, quantity: item.quantity });
+    }
+  }
+
+  return summary;
+}
+
+// Generate live order commentary
+app.get("/orders/commentary", async (req, reply) => {
+  const { orderQrCode, orderId } = req.query || {};
+
+  if (!orderQrCode && !orderId) {
+    return reply.status(400).send({ error: "Order QR code or ID required" });
+  }
+
+  try {
+    // Find the order with all details
+    const order = await prisma.order.findFirst({
+      where: orderQrCode
+        ? { orderQrCode }
+        : { id: orderId },
+      include: {
+        user: true,
+        items: {
+          include: {
+            menuItem: true,
+          },
+        },
+        seat: true,
+        location: true,
+      },
+    });
+
+    if (!order) {
+      return reply.status(404).send({ error: "Order not found" });
+    }
+
+    // Get customer name
+    const firstName = order.user?.name?.split(" ")[0] || order.guestName?.split(" ")[0] || null;
+
+    // Build comprehensive order summary
+    const orderSummary = buildOrderSummary(order);
+
+    // Get current status
+    const status = order.status;
+
+    // If status doesn't have commentary, return empty
+    if (!["QUEUED", "PREPPING", "READY", "SERVING"].includes(status)) {
+      return reply.send({
+        commentary: null,
+        status,
+        message: "Commentary not available for this order status",
+      });
+    }
+
+    // Try to generate AI commentary
+    let commentary = null;
+    let source = "ai";
+
+    if (anthropic) {
+      try {
+        // Build the prompt with FULL order context
+        const orderContext = [];
+
+        if (orderSummary.mainDish) orderContext.push(`Main Dish: ${orderSummary.mainDish}`);
+        if (orderSummary.protein) orderContext.push(`Protein: ${orderSummary.protein}`);
+        if (orderSummary.noodleType) orderContext.push(`Noodle Type: ${orderSummary.noodleType}`);
+        if (orderSummary.noodleTexture) orderContext.push(`Noodle Texture: ${orderSummary.noodleTexture}`);
+        if (orderSummary.soupRichness) orderContext.push(`Soup Richness: ${orderSummary.soupRichness}`);
+        if (orderSummary.spiceLevel) orderContext.push(`Spice Level: ${orderSummary.spiceLevel}`);
+
+        if (orderSummary.extras.length > 0) {
+          orderContext.push(`EXTRA toppings requested: ${orderSummary.extras.join(", ")}`);
+        }
+        if (orderSummary.skippedToppings.length > 0) {
+          orderContext.push(`SKIPPED toppings (the coward's choices): ${orderSummary.skippedToppings.join(", ")}`);
+        }
+        if (orderSummary.addons.length > 0) {
+          orderContext.push(`Add-ons: ${orderSummary.addons.map(a => `${a.quantity}x ${a.name}`).join(", ")}`);
+        }
+        if (orderSummary.sides.length > 0) {
+          orderContext.push(`Sides: ${orderSummary.sides.map(s => `${s.quantity}x ${s.name}`).join(", ")}`);
+        }
+        if (orderSummary.drinks.length > 0) {
+          orderContext.push(`Drinks: ${orderSummary.drinks.map(d => `${d.quantity}x ${d.name}`).join(", ")}`);
+        }
+        if (orderSummary.desserts.length > 0) {
+          orderContext.push(`Desserts: ${orderSummary.desserts.map(d => `${d.quantity}x ${d.name}`).join(", ")}`);
+        }
+
+        const stageInstructions = {
+          QUEUED: "The order just entered the queue. Be dramatic about the waiting. Comment on their choices with anticipation. Mock their impatience gently.",
+          PREPPING: "The kitchen is actively cooking. Be vivid about what's happening to their food. Make the mundane sound epic. Roast their customization choices as they're being executed.",
+          READY: "The food is done and waiting. Build the tension. The bowl is judging them. Make them feel like this is the moment of truth.",
+          SERVING: "Food is being delivered. This is the climax. Make it feel like a life event. Comment on whether they're worthy of what's coming.",
+        };
+
+        const prompt = `You are the unhinged, sarcastic AI voice of Oh!, a beef noodle soup restaurant. Your job is to provide live kitchen commentary that ROASTS the customer's order while updating them on progress.
+
+CUSTOMER: ${firstName || "Mystery Guest (didn't even sign up, brave)"}
+POD: ${order.seat?.number || "TBD"}
+CURRENT STATUS: ${status}
+
+THE COMPLETE ORDER (roast ALL of this):
+${orderContext.join("\n")}
+
+STAGE INSTRUCTIONS: ${stageInstructions[status]}
+
+YOUR VOICE:
+- You're a sarcastic kitchen narrator who's seen too much
+- Heavy roasting energy - mock their choices lovingly but HARD
+- Reference SPECIFIC things they ordered (skipped cilantro? soft noodles? extra spicy? CALL IT OUT)
+- Be dramatic about mundane cooking activities
+- If they skipped toppings, question their life choices
+- If they went extra on something, mock their excess
+- If they ordered sides/drinks/desserts, comment on their appetite
+- Think: Gordon Ramsay meets a witty Twitter account meets your judgmental aunt
+- NO EMOJIS EVER
+
+EXAMPLES OF THE ENERGY WE WANT:
+- "Your noodles just hit boiling water. They knew this day would come. Unlike you, apparently, since you went with soft texture. You want them pre-chewed too?"
+- "The extra spicy is being added. We've notified your digestive system. It filed a complaint."
+- "No cilantro? The cilantro is honestly relieved. It didn't want to be associated with someone who also ordered light soup."
+- "Your bowl is being assembled with the precision of a surgeon who's questioning why you got a side of potstickers when you already ordered a full meal."
+
+Write a SHORT (2-3 sentences, max 250 chars) commentary for the ${status} stage. Be SAVAGE but not mean. Reference their SPECIFIC order choices. No quotes around it.`;
+
+        const message = await anthropic.messages.create({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 200,
+          messages: [{ role: "user", content: prompt }],
+        });
+
+        commentary = message.content[0]?.text?.trim();
+      } catch (aiError) {
+        console.error("AI commentary generation failed:", aiError);
+        source = "fallback";
+      }
+    } else {
+      source = "fallback";
+    }
+
+    // Use fallback if AI didn't work
+    if (!commentary) {
+      const stageFallbacks = fallbackCommentary[status] || fallbackCommentary.QUEUED;
+      commentary = stageFallbacks[Math.floor(Math.random() * stageFallbacks.length)];
+      if (firstName) {
+        commentary = commentary.replace("Your", `${firstName}, your`);
+      }
+    }
+
+    return reply.send({
+      commentary,
+      status,
+      source,
+      orderSummary: {
+        mainDish: orderSummary.mainDish,
+        protein: orderSummary.protein,
+        hasExtras: orderSummary.extras.length > 0,
+        hasSkipped: orderSummary.skippedToppings.length > 0,
+        hasSides: orderSummary.sides.length > 0,
+        hasDrinks: orderSummary.drinks.length > 0,
+        hasDesserts: orderSummary.desserts.length > 0,
+      },
+      customerName: firstName,
+      podNumber: order.seat?.number,
+    });
+  } catch (error) {
+    console.error("Error generating commentary:", error);
+    return reply.status(500).send({ error: "Failed to generate commentary" });
+  }
+});
+
+// ====================
+// BEHIND THE SCENES NARRATION (Ingredient Stories)
+// ====================
+
+// Fallback ingredient stories
+const fallbackBackstories = [
+  "Your beef was sliced exactly 43 minutes ago by someone who genuinely enjoys this. We don't ask questions.",
+  "The green onions in your bowl were selected for their structural integrity and positive attitude.",
+  "Your noodles began their journey as flour with big dreams. Today, those dreams come true. Or die. Depends on your chewing.",
+  "The broth has been simmering since before you woke up. It's been waiting for you. That's not creepy, it's romantic.",
+  "Fun fact: Your egg was soft-boiled to precisely 6.5 minutes. The extra 30 seconds is for emotional impact.",
+  "The chili oil in your bowl has ancestry. It doesn't like to talk about it.",
+  "Your bok choy was harvested yesterday. It had plans. Now it has purpose.",
+  "The soy sauce has been fermenting longer than you've been alive. Show some respect.",
+];
+
+// Generate behind the scenes ingredient narration
+app.get("/orders/:id/backstory", async (req, reply) => {
+  const { id } = req.params;
+
+  if (!id) {
+    return reply.status(400).send({ error: "Order ID required" });
+  }
+
+  try {
+    // Find the order with all details
+    const order = await prisma.order.findFirst({
+      where: { id },
+      include: {
+        user: true,
+        items: {
+          include: {
+            menuItem: true,
+          },
+        },
+      },
+    });
+
+    if (!order) {
+      return reply.status(404).send({ error: "Order not found" });
+    }
+
+    // Get customer name
+    const firstName = order.user?.name?.split(" ")[0] || order.guestName?.split(" ")[0] || null;
+
+    // Build order summary for context
+    const orderSummary = buildOrderSummary(order);
+
+    // Try to generate AI backstories
+    let backstories = [];
+    let source = "ai";
+
+    if (anthropic) {
+      try {
+        const orderContext = [];
+        if (orderSummary.protein) orderContext.push(`Protein: ${orderSummary.protein}`);
+        if (orderSummary.noodleType) orderContext.push(`Noodles: ${orderSummary.noodleType}`);
+        if (orderSummary.noodleTexture) orderContext.push(`Texture: ${orderSummary.noodleTexture}`);
+        if (orderSummary.spiceLevel) orderContext.push(`Spice: ${orderSummary.spiceLevel}`);
+        if (orderSummary.extras.length > 0) orderContext.push(`Extra: ${orderSummary.extras.join(", ")}`);
+        if (orderSummary.skippedToppings.length > 0) orderContext.push(`Skipped: ${orderSummary.skippedToppings.join(", ")}`);
+
+        const prompt = `You are the unhinged narrator of a beef noodle soup restaurant, providing "behind the scenes" facts about the ingredients in a customer's order. Your facts should be absurdist, slightly dark, weirdly specific, and FUNNY.
+
+CUSTOMER ORDER:
+${orderContext.join("\n")}
+${orderSummary.sides.length > 0 ? `Sides: ${orderSummary.sides.map(s => s.name).join(", ")}` : ""}
+${orderSummary.drinks.length > 0 ? `Drinks: ${orderSummary.drinks.map(d => d.name).join(", ")}` : ""}
+
+YOUR STYLE:
+- Absurdist but grounded - the humor comes from treating mundane things with unhinged seriousness
+- Weirdly specific numbers and times (e.g., "sliced 47 minutes ago", "simmered for 6 hours and 12 minutes")
+- Give ingredients personalities, ambitions, or backstories
+- Occasionally dark but never gross
+- If they skipped something, you can mention that ingredient is relieved/offended
+- If they got extra of something, mock their excess
+- NO EMOJIS EVER
+
+EXAMPLES:
+- "Your beef trained for this moment. Two years on a farm, thinking about life. Now it's in your bowl. Circle of life, but make it delicious."
+- "The cilantro you rejected is currently in therapy. Just kidding. It's in someone else's bowl, thriving."
+- "Your extra bok choy brings the vegetable count to 'suspiciously healthy for a noodle soup order.'"
+- "The noodles were made this morning by someone who takes this very seriously. Too seriously, some would say. We don't say that to his face."
+
+Generate exactly 4 short backstory facts (one sentence each, max 150 chars each) about the ingredients in this order. Be specific to what they ordered. Return as JSON array of strings.`;
+
+        const message = await anthropic.messages.create({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 400,
+          messages: [{ role: "user", content: prompt }],
+        });
+
+        const responseText = message.content[0]?.text?.trim();
+        // Try to parse JSON array from response
+        const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          backstories = JSON.parse(jsonMatch[0]);
+        }
+      } catch (aiError) {
+        console.error("AI backstory generation failed:", aiError);
+        source = "fallback";
+      }
+    } else {
+      source = "fallback";
+    }
+
+    // Use fallback if AI didn't work or returned invalid data
+    if (!backstories || backstories.length === 0) {
+      // Pick 3-4 random fallback stories
+      const shuffled = [...fallbackBackstories].sort(() => 0.5 - Math.random());
+      backstories = shuffled.slice(0, 4);
+      source = "fallback";
+    }
+
+    return reply.send({
+      backstories,
+      source,
+      customerName: firstName,
+      orderHighlights: {
+        protein: orderSummary.protein,
+        noodleType: orderSummary.noodleType,
+        spiceLevel: orderSummary.spiceLevel,
+        extras: orderSummary.extras,
+        skipped: orderSummary.skippedToppings,
+      },
+    });
+  } catch (error) {
+    console.error("Error generating backstory:", error);
+    return reply.status(500).send({ error: "Failed to generate backstory" });
+  }
+});
+
+// ====================
+// ORDER WHISPERER (Pattern Analysis for Returning Customers)
+// ====================
+
+// Analyze user's order history patterns by email and generate witty insights
+app.get("/users/by-email/:email/order-patterns", async (req, reply) => {
+  const { email } = req.params;
+
+  if (!email) {
+    return reply.status(400).send({ error: "Email required" });
+  }
+
+  try {
+    // First, find the user by email
+    const user = await prisma.user.findUnique({
+      where: { email: decodeURIComponent(email) },
+    });
+
+    if (!user) {
+      return reply.send({
+        hasPatterns: false,
+        orderCount: 0,
+        insights: [],
+        message: "User not found",
+      });
+    }
+
+    // Fetch user's completed orders (last 10 orders)
+    const orders = await prisma.order.findMany({
+      where: {
+        userId: user.id,
+        status: "COMPLETED",
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: 10,
+      include: {
+        items: {
+          include: {
+            menuItem: true,
+          },
+        },
+      },
+    });
+
+    // Only provide insights for returning customers (2+ orders)
+    if (orders.length < 2) {
+      return reply.send({
+        hasPatterns: false,
+        orderCount: orders.length,
+        insights: [],
+        message: "New customer - no patterns yet",
+      });
+    }
+
+    // Analyze order patterns
+    const patterns = {
+      totalOrders: orders.length,
+      bowlChoices: {},        // { "Classic Beef Noodles": 4, "Spicy Beef Noodles": 2 }
+      noodleChoices: {},      // { "Ramen Noodles": 3, "Wide Noodles": 2 }
+      spiceLevels: [],        // Track spice patterns
+      neverTried: new Set(),  // Items available but never ordered
+      alwaysSkips: {},        // Toppings always set to 0
+      alwaysMaxes: {},        // Items always maxed out
+      addOnCounts: {},        // Add-ons frequency
+      sidesCounts: {},        // Sides frequency
+      drinksCounts: {},       // Drinks frequency
+      dessertsCounts: {},     // Desserts frequency
+      customizations: {},     // Slider preferences
+    };
+
+    // Build pattern data from all orders
+    for (const order of orders) {
+      const summary = buildOrderSummary(order);
+
+      // Track bowl choices
+      if (summary.mainDish) {
+        patterns.bowlChoices[summary.mainDish] = (patterns.bowlChoices[summary.mainDish] || 0) + 1;
+      }
+
+      // Track noodle choices
+      if (summary.noodleType) {
+        patterns.noodleChoices[summary.noodleType] = (patterns.noodleChoices[summary.noodleType] || 0) + 1;
+      }
+
+      // Track spice level
+      if (summary.spiceLevel !== null) {
+        patterns.spiceLevels.push(summary.spiceLevel);
+      }
+
+      // Track skipped items
+      for (const skipped of summary.skippedToppings) {
+        patterns.alwaysSkips[skipped] = (patterns.alwaysSkips[skipped] || 0) + 1;
+      }
+
+      // Track maxed out items
+      for (const extra of summary.extras) {
+        patterns.alwaysMaxes[extra] = (patterns.alwaysMaxes[extra] || 0) + 1;
+      }
+
+      // Track add-ons
+      for (const addon of summary.addons) {
+        patterns.addOnCounts[addon.name] = (patterns.addOnCounts[addon.name] || 0) + 1;
+      }
+
+      // Track sides
+      for (const side of summary.sides) {
+        patterns.sidesCounts[side.name] = (patterns.sidesCounts[side.name] || 0) + 1;
+      }
+
+      // Track drinks
+      for (const drink of summary.drinks) {
+        patterns.drinksCounts[drink.name] = (patterns.drinksCounts[drink.name] || 0) + 1;
+      }
+
+      // Track desserts
+      for (const dessert of summary.desserts) {
+        patterns.dessertsCounts[dessert.name] = (patterns.dessertsCounts[dessert.name] || 0) + 1;
+      }
+    }
+
+    // Generate insights based on patterns
+    const insights = [];
+    const orderCount = patterns.totalOrders;
+
+    // Insight: Same bowl every time
+    const topBowl = Object.entries(patterns.bowlChoices).sort((a, b) => b[1] - a[1])[0];
+    if (topBowl && topBowl[1] === orderCount && orderCount >= 3) {
+      insights.push({
+        type: "bowl_loyalty",
+        trigger: "bowl_step",
+        count: topBowl[1],
+        item: topBowl[0],
+        tone: "playful_tease",
+      });
+    } else if (topBowl && topBowl[1] >= orderCount * 0.7) {
+      insights.push({
+        type: "bowl_favorite",
+        trigger: "bowl_step",
+        count: topBowl[1],
+        item: topBowl[0],
+        tone: "knowing_nod",
+      });
+    }
+
+    // Insight: Noodle preferences (shows on bowl_step since soup + noodles are together)
+    const topNoodle = Object.entries(patterns.noodleChoices).sort((a, b) => b[1] - a[1])[0];
+    if (topNoodle && topNoodle[1] === orderCount && orderCount >= 3) {
+      insights.push({
+        type: "noodle_loyalty",
+        trigger: "bowl_step",  // Shows on step 0 with soup selection
+        count: topNoodle[1],
+        item: topNoodle[0],
+        tone: "playful_tease",
+      });
+    } else if (topNoodle && topNoodle[1] >= orderCount * 0.5 && orderCount >= 3) {
+      // At least half the time they order this noodle type - notable preference
+      insights.push({
+        type: "noodle_favorite",
+        trigger: "bowl_step",
+        count: topNoodle[1],
+        item: topNoodle[0],
+        tone: "knowing_nod",
+      });
+    }
+
+    // Insight: Always skips certain toppings
+    const alwaysSkipped = Object.entries(patterns.alwaysSkips).filter(([_, count]) => count === orderCount);
+    if (alwaysSkipped.length > 0 && orderCount >= 2) {
+      insights.push({
+        type: "always_skips",
+        trigger: "customize_step",
+        items: alwaysSkipped.map(([name]) => name),
+        count: orderCount,
+        tone: "detective",
+      });
+    }
+
+    // Insight: Always maxes something
+    const alwaysMaxed = Object.entries(patterns.alwaysMaxes).filter(([_, count]) => count >= orderCount * 0.8);
+    if (alwaysMaxed.length > 0 && orderCount >= 2) {
+      insights.push({
+        type: "always_maxes",
+        trigger: "customize_step",
+        items: alwaysMaxed.map(([name]) => name),
+        tone: "respect",
+      });
+    }
+
+    // Insight: Spice patterns
+    if (patterns.spiceLevels.length >= 3) {
+      const allZero = patterns.spiceLevels.every(s => s === "None" || s === "0" || s === 0);
+      const allMax = patterns.spiceLevels.every(s => s === "Extra" || s === "3" || s >= 3);
+      if (allZero) {
+        insights.push({
+          type: "spice_avoider",
+          trigger: "customize_step",
+          tone: "gentle_tease",
+        });
+      } else if (allMax) {
+        insights.push({
+          type: "spice_warrior",
+          trigger: "customize_step",
+          tone: "impressed",
+        });
+      }
+    }
+
+    // Insight: Never ordered an add-on
+    if (Object.keys(patterns.addOnCounts).length === 0 && orderCount >= 3) {
+      insights.push({
+        type: "never_addons",
+        trigger: "extras_step",
+        tone: "curious",
+      });
+    }
+
+    // Insight: Loyal to certain add-on
+    const topAddon = Object.entries(patterns.addOnCounts).sort((a, b) => b[1] - a[1])[0];
+    if (topAddon && topAddon[1] >= orderCount * 0.8 && orderCount >= 3) {
+      insights.push({
+        type: "addon_favorite",
+        trigger: "extras_step",
+        item: topAddon[0],
+        count: topAddon[1],
+        tone: "knowing_nod",
+      });
+    }
+
+    // Insight: Never gets dessert
+    if (Object.keys(patterns.dessertsCounts).length === 0 && orderCount >= 4) {
+      insights.push({
+        type: "never_dessert",
+        trigger: "drinks_step",
+        tone: "surprised",
+      });
+    }
+
+    // Insight: Always gets dessert
+    const totalDesserts = Object.values(patterns.dessertsCounts).reduce((a, b) => a + b, 0);
+    if (totalDesserts === orderCount && orderCount >= 3) {
+      insights.push({
+        type: "always_dessert",
+        trigger: "drinks_step",
+        item: Object.keys(patterns.dessertsCounts)[0],
+        tone: "approving",
+      });
+    }
+
+    // Generate AI witty one-liners for the insights if available
+    if (anthropic && insights.length > 0) {
+      try {
+        const insightDescriptions = insights.map(i => {
+          switch (i.type) {
+            case "bowl_loyalty":
+              return `Ordered "${i.item}" ${i.count} times in a row (100% of orders)`;
+            case "bowl_favorite":
+              return `Ordered "${i.item}" ${i.count} out of ${orderCount} times (clear favorite)`;
+            case "noodle_loyalty":
+              return `Chose "${i.item}" ${i.count} times in a row - never tried other noodles`;
+            case "noodle_favorite":
+              return `Goes for "${i.item}" ${i.count} out of ${orderCount} times - clear noodle preference`;
+            case "always_skips":
+              return `Always skips ${i.items.join(", ")} - ${i.count} orders in a row`;
+            case "always_maxes":
+              return `Always maxes out ${i.items.join(", ")} every single order`;
+            case "spice_avoider":
+              return `Zero spice on every order - dedicated spice-free lifestyle`;
+            case "spice_warrior":
+              return `Maximum spice every time - taste buds made of steel`;
+            case "never_addons":
+              return `Never ordered a single add-on in ${orderCount} visits`;
+            case "addon_favorite":
+              return `Gets "${i.item}" every time (${i.count} orders straight)`;
+            case "never_dessert":
+              return `${orderCount} visits, zero desserts - mysterious self-control`;
+            case "always_dessert":
+              return `Always gets ${i.item || "dessert"} - proper meal-ender`;
+            default:
+              return "";
+          }
+        }).filter(d => d);
+
+        const prompt = `You generate witty, SHORT one-liners for a noodle restaurant's order system.
+
+A returning customer is placing an order. Based on their order history patterns, generate a single witty one-liner for EACH pattern below.
+
+RULES:
+- ONE sentence only, max 80 characters per response
+- Playful teasing, NOT mean-spirited
+- Reference the SPECIFIC item/behavior
+- Sound like a knowing friend, not a robot
+- NO emojis
+- DO NOT start with "We" or "You"
+
+PATTERNS DETECTED:
+${insightDescriptions.map((d, i) => `${i + 1}. ${d}`).join("\n")}
+
+Return as JSON array of objects with format: [{"index": 0, "oneLiner": "your witty comment"}, ...]`;
+
+        const message = await anthropic.messages.create({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 500,
+          messages: [{ role: "user", content: prompt }],
+        });
+
+        const responseText = message.content[0]?.text?.trim();
+        const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          const oneLiners = JSON.parse(jsonMatch[0]);
+          // Attach one-liners to insights
+          for (const liner of oneLiners) {
+            if (insights[liner.index]) {
+              insights[liner.index].oneLiner = liner.oneLiner;
+            }
+          }
+        }
+      } catch (aiError) {
+        console.error("AI one-liner generation failed:", aiError);
+        // Fall through to fallback one-liners
+      }
+    }
+
+    // Add fallback one-liners for any insights that don't have AI-generated ones
+    for (const insight of insights) {
+      if (!insight.oneLiner) {
+        insight.oneLiner = generateFallbackOneLiner(insight);
+      }
+    }
+
+    return reply.send({
+      hasPatterns: insights.length > 0,
+      orderCount,
+      insights,
+      patterns: {
+        topBowl: topBowl ? { name: topBowl[0], count: topBowl[1] } : null,
+        topNoodle: topNoodle ? { name: topNoodle[0], count: topNoodle[1] } : null,
+        topAddon: topAddon ? { name: topAddon[0], count: topAddon[1] } : null,
+      },
+    });
+  } catch (error) {
+    console.error("Error analyzing order patterns:", error);
+    return reply.status(500).send({ error: "Failed to analyze order patterns" });
+  }
+});
+
+// Fallback one-liners for each insight type
+function generateFallbackOneLiner(insight) {
+  const fallbacks = {
+    bowl_loyalty: [
+      `${insight.item}. ${insight.count} times. Starting to see a pattern here.`,
+      `Let me guess... ${insight.item}?`,
+      `The ${insight.item} didn't even need to ask anymore.`,
+    ],
+    bowl_favorite: [
+      `${insight.item} again? Bold, predictable, perfect.`,
+      `Ah, the ${insight.item} regular. Kitchen's already prepping.`,
+    ],
+    noodle_loyalty: [
+      `${insight.item} forever. Other noodles weep quietly.`,
+      `${insight.count} visits. ${insight.count} times ${insight.item}. Respect the commitment.`,
+    ],
+    noodle_favorite: [
+      `${insight.item} again? ${insight.count} out of ${insight.orderCount || "10"} orders. Reliable taste.`,
+      `Leaning toward ${insight.item}, as usual. The other noodles are getting jealous.`,
+    ],
+    always_skips: [
+      `Skipping ${insight.items?.[0] || "that"} again? Personal vendetta confirmed.`,
+      `${insight.items?.join(" and ") || "Certain ingredients"} remain unloved, as is tradition.`,
+    ],
+    always_maxes: [
+      `Maxing the ${insight.items?.[0] || "usual"}? Some things never change.`,
+      `${insight.items?.[0] || "That"} at maximum. As it should be.`,
+    ],
+    spice_avoider: [
+      `Zero spice zone. The cilantro respects your boundaries.`,
+      `Spice dial stays at zero. A person of peaceful tastes.`,
+    ],
+    spice_warrior: [
+      `Maximum spice. Your taste buds called - they've adapted.`,
+      `Spice level: scorched earth. We respect the dedication.`,
+    ],
+    never_addons: [
+      `${insight.count || "Several"} visits, zero add-ons. Purist vibes.`,
+      `The add-ons await. They've been very patient.`,
+    ],
+    addon_favorite: [
+      `${insight.item} again? At this point it should be named after you.`,
+      `The ${insight.item} saw you walk in and started celebrating.`,
+    ],
+    never_dessert: [
+      `Still no dessert? The mochi is starting to take it personally.`,
+      `Dessert-free streak continues. Impressive restraint.`,
+    ],
+    always_dessert: [
+      `Dessert incoming. A meal isn't complete without it.`,
+      `${insight.item || "Dessert"} is already being prepared. We know.`,
+    ],
+  };
+
+  const options = fallbacks[insight.type] || ["Interesting choice."];
+  return options[Math.floor(Math.random() * options.length)];
+}
 
 // ====================
 // START SERVER

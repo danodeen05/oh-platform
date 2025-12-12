@@ -67,6 +67,20 @@ interface OrderRoast {
   customerName: string | null;
 }
 
+interface OrderCommentary {
+  commentary: string | null;
+  status: string;
+  source: string;
+  customerName: string | null;
+  podNumber: string | null;
+}
+
+interface OrderBackstory {
+  backstories: string[];
+  source: string;
+  customerName: string | null;
+}
+
 function StatusContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -81,6 +95,12 @@ function StatusContent() {
   const [roast, setRoast] = useState<OrderRoast | null>(null);
   const [roastLoading, setRoastLoading] = useState(false);
   const [roastOpened, setRoastOpened] = useState(false);
+  const [commentary, setCommentary] = useState<OrderCommentary | null>(null);
+  const [commentaryLoading, setCommentaryLoading] = useState(false);
+  const [backstory, setBackstory] = useState<OrderBackstory | null>(null);
+  const [backstoryLoading, setBackstoryLoading] = useState(false);
+  const [backstoryOpened, setBackstoryOpened] = useState(false);
+  const [lastCommentaryStatus, setLastCommentaryStatus] = useState<string | null>(null);
 
   // Fetch order status
   async function fetchStatus() {
@@ -98,6 +118,11 @@ function StatusContent() {
         const data = await response.json();
         setStatus(data);
         setError(null);
+
+        // Fetch commentary when status is in active cooking stages
+        if (data.order?.status) {
+          fetchCommentary(data.order.status);
+        }
 
         // Clear active order from localStorage when completed
         if (data.order?.status === "COMPLETED") {
@@ -159,6 +184,58 @@ function StatusContent() {
       console.error("Failed to fetch roast:", err);
     } finally {
       setRoastLoading(false);
+    }
+  }
+
+  // Fetch live commentary (called when status changes)
+  async function fetchCommentary(currentStatus: string) {
+    if (!orderQrCode || commentaryLoading) return;
+    // Only fetch if status changed and is a commentary-worthy status
+    if (!["QUEUED", "PREPPING", "READY", "SERVING"].includes(currentStatus)) return;
+    if (currentStatus === lastCommentaryStatus) return;
+
+    setCommentaryLoading(true);
+    try {
+      const response = await fetch(
+        `${BASE}/orders/commentary?orderQrCode=${encodeURIComponent(orderQrCode)}`,
+        {
+          headers: { "x-tenant-slug": "oh" },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setCommentary(data);
+        setLastCommentaryStatus(currentStatus);
+      }
+    } catch (err) {
+      console.error("Failed to fetch commentary:", err);
+    } finally {
+      setCommentaryLoading(false);
+    }
+  }
+
+  // Fetch backstory
+  async function fetchBackstory(orderId: string) {
+    if (!orderId || backstory || backstoryLoading) return;
+
+    setBackstoryLoading(true);
+    try {
+      const response = await fetch(
+        `${BASE}/orders/${orderId}/backstory`,
+        {
+          headers: { "x-tenant-slug": "oh" },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setBackstory(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch backstory:", err);
+    } finally {
+      setBackstoryLoading(false);
     }
   }
 
@@ -371,6 +448,98 @@ function StatusContent() {
               }}
             />
           </div>
+
+          {/* Live AI Commentary - Shows during active cooking stages */}
+          {["QUEUED", "PREPPING", "READY", "SERVING"].includes(order.status) && (
+            <div
+              style={{
+                background: "linear-gradient(135deg, #3d3c35 0%, #2a2924 100%)",
+                borderRadius: 12,
+                padding: 20,
+                marginBottom: 20,
+                border: "1px solid #5a584a",
+                position: "relative",
+                overflow: "hidden",
+              }}
+            >
+              {/* Animated background effect */}
+              <div
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: "radial-gradient(circle at 20% 50%, rgba(199, 168, 120, 0.08) 0%, transparent 50%)",
+                  animation: "pulse 3s infinite",
+                }}
+              />
+
+              <div style={{ position: "relative", zIndex: 1 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    marginBottom: 12,
+                  }}
+                >
+                  <span style={{ fontSize: "1.2rem" }}>
+                    {order.status === "QUEUED" && "⏳"}
+                    {order.status === "PREPPING" && "🔥"}
+                    {order.status === "READY" && "✨"}
+                    {order.status === "SERVING" && "🚀"}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: "0.7rem",
+                      fontWeight: "bold",
+                      color: "#C7A878",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.15em",
+                    }}
+                  >
+                    Live Kitchen Feed
+                  </span>
+                </div>
+
+                {commentaryLoading ? (
+                  <div
+                    style={{
+                      color: "#a09a8a",
+                      fontSize: "0.95rem",
+                      fontStyle: "italic",
+                    }}
+                  >
+                    Listening to the kitchen...
+                  </div>
+                ) : commentary?.commentary ? (
+                  <p
+                    style={{
+                      color: "#E5E5E5",
+                      fontSize: "1rem",
+                      margin: 0,
+                      lineHeight: 1.6,
+                      fontStyle: "italic",
+                    }}
+                  >
+                    "{commentary.commentary}"
+                  </p>
+                ) : (
+                  <p
+                    style={{
+                      color: "#a09a8a",
+                      fontSize: "0.95rem",
+                      margin: 0,
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    The kitchen is suspiciously quiet. They're up to something.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Pod Assignment or Queue Status */}
           {order.podNumber && (
@@ -1126,6 +1295,143 @@ function StatusContent() {
                 <div style={{ fontSize: "2.5rem", marginBottom: 16 }}>🔥</div>
                 <p style={{ color: "#b45309", fontSize: "0.9rem" }}>
                   Our roast chef is on break. Your order is probably fine. Probably.
+                </p>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Behind the Scenes - Ingredient Backstories */}
+        {order.podConfirmedAt && ["PREPPING", "READY", "SERVING"].includes(order.status) && (
+          <div
+            style={{
+              background: "linear-gradient(135deg, #C7A878 0%, #a8895d 100%)",
+              borderRadius: 16,
+              padding: 24,
+              marginBottom: 16,
+              boxShadow: "0 4px 12px rgba(199, 168, 120, 0.3)",
+              textAlign: "center",
+              position: "relative",
+              overflow: "hidden",
+              border: "1px solid #d4b88a",
+            }}
+          >
+            {!backstoryOpened ? (
+              <>
+                <div style={{ fontSize: "3rem", marginBottom: 12 }}>
+                  🎬
+                </div>
+                <h3
+                  style={{
+                    margin: 0,
+                    marginBottom: 8,
+                    fontSize: "1.2rem",
+                    color: "#2a2924",
+                  }}
+                >
+                  Behind the Scenes
+                </h3>
+                <p
+                  style={{
+                    color: "#3d3c35",
+                    fontSize: "0.85rem",
+                    margin: 0,
+                    marginBottom: 16,
+                  }}
+                >
+                  Ever wonder about the secret lives of your ingredients?
+                </p>
+                <button
+                  onClick={() => {
+                    setBackstoryOpened(true);
+                    fetchBackstory(order.id);
+                  }}
+                  style={{
+                    padding: "12px 28px",
+                    background: "linear-gradient(135deg, #3d3c35 0%, #222222 100%)",
+                    color: "#E5E5E5",
+                    border: "none",
+                    borderRadius: 8,
+                    fontSize: "0.95rem",
+                    fontWeight: "bold",
+                    cursor: "pointer",
+                    boxShadow: "0 4px 12px rgba(34, 34, 34, 0.3)",
+                  }}
+                >
+                  🎬 Tell Me Everything
+                </button>
+              </>
+            ) : backstoryLoading ? (
+              <>
+                <div
+                  style={{
+                    fontSize: "3rem",
+                    marginBottom: 16,
+                    animation: "pulse 1s infinite",
+                  }}
+                >
+                  🎬
+                </div>
+                <p style={{ color: "#3d3c35", fontSize: "1rem" }}>
+                  Digging up the dirt...
+                </p>
+              </>
+            ) : backstory && backstory.backstories.length > 0 ? (
+              <>
+                <div style={{ fontSize: "2rem", marginBottom: 16 }}>
+                  🎬✨
+                </div>
+                <h3
+                  style={{
+                    margin: 0,
+                    marginBottom: 16,
+                    fontSize: "1rem",
+                    color: "#2a2924",
+                    fontWeight: "bold",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.1em",
+                  }}
+                >
+                  The Untold Stories
+                </h3>
+
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 12,
+                    textAlign: "left",
+                  }}
+                >
+                  {backstory.backstories.map((story, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        background: "rgba(255,255,255,0.25)",
+                        borderRadius: 10,
+                        padding: 14,
+                        borderLeft: "3px solid #3d3c35",
+                      }}
+                    >
+                      <p
+                        style={{
+                          color: "#2a2924",
+                          fontSize: "0.9rem",
+                          margin: 0,
+                          lineHeight: 1.6,
+                        }}
+                      >
+                        {story}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: "2.5rem", marginBottom: 16 }}>🎬</div>
+                <p style={{ color: "#3d3c35", fontSize: "0.9rem" }}>
+                  The ingredients prefer to remain anonymous. Mysterious bunch.
                 </p>
               </>
             )}
