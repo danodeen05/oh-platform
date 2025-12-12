@@ -2,452 +2,574 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 const giftCardAmounts = [25, 50, 75, 100, 150, 200];
+
+// Gift card design options
+const cardDesigns = [
+  { id: "classic", name: "Classic", gradient: "linear-gradient(135deg, #7C7A67 0%, #5a584a 100%)" },
+  { id: "dark", name: "Dark", gradient: "linear-gradient(135deg, #222222 0%, #444444 100%)" },
+  { id: "gold", name: "Gold", gradient: "linear-gradient(135deg, #C7A878 0%, #8B7355 100%)" },
+];
 
 export default function GiftCardsPage() {
   const [selectedAmount, setSelectedAmount] = useState<number | null>(50);
   const [customAmount, setCustomAmount] = useState("");
+  const [selectedDesign, setSelectedDesign] = useState("classic");
+
+  const currentDesign = cardDesigns.find(d => d.id === selectedDesign) || cardDesigns[0];
+  const displayAmount = selectedAmount || Number(customAmount) || 0;
 
   return (
-    <div style={{ background: "#E5E5E5", minHeight: "100vh" }}>
-      {/* Hero Section */}
+    <div style={{ background: "#faf9f7", minHeight: "100vh" }}>
+      {/* Hero Section with Gift Card Preview */}
       <section
         style={{
-          background: "linear-gradient(180deg, #222222 0%, #333333 100%)",
-          color: "#E5E5E5",
-          padding: "80px 24px 60px",
-          textAlign: "center",
+          position: "relative",
+          minHeight: "90vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "linear-gradient(180deg, #222222 0%, #333333 50%, #faf9f7 100%)",
+          padding: "120px 24px 80px",
+          overflow: "hidden",
         }}
       >
-        <h1
-          style={{
-            fontSize: "clamp(2rem, 6vw, 3.5rem)",
-            fontWeight: "300",
-            marginBottom: "16px",
-            letterSpacing: "2px",
-            color: "#E5E5E5",
-          }}
-        >
-          Gift Cards
-        </h1>
-        <p
-          style={{
-            fontSize: "clamp(1rem, 2.5vw, 1.2rem)",
-            maxWidth: "600px",
-            margin: "0 auto",
-            lineHeight: "1.8",
-            fontWeight: "300",
-            color: "#C7A878",
-          }}
-        >
-          Share the warmth of the perfect bowl. Send a digital gift card instantly to anyone who deserves a delicious experience.
-        </p>
-      </section>
-
-      {/* Gift Card Builder */}
-      <section style={{ maxWidth: "800px", margin: "0 auto", padding: "60px 24px" }}>
+        {/* Decorative elements */}
         <div
           style={{
-            background: "white",
-            borderRadius: "20px",
-            overflow: "hidden",
-            boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
+            position: "absolute",
+            top: "10%",
+            left: "5%",
+            width: "300px",
+            height: "300px",
+            background: "radial-gradient(circle, rgba(199, 168, 120, 0.1) 0%, transparent 70%)",
+            borderRadius: "50%",
           }}
-        >
-          {/* Card Preview */}
+        />
+        <div
+          style={{
+            position: "absolute",
+            bottom: "20%",
+            right: "10%",
+            width: "200px",
+            height: "200px",
+            background: "radial-gradient(circle, rgba(124, 122, 103, 0.1) 0%, transparent 70%)",
+            borderRadius: "50%",
+          }}
+        />
+
+        <div style={{ maxWidth: "1200px", width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
+          {/* Header text */}
+          <div style={{ textAlign: "center", marginBottom: "60px" }}>
+            <p
+              style={{
+                fontSize: "0.9rem",
+                textTransform: "uppercase",
+                letterSpacing: "4px",
+                color: "#C7A878",
+                marginBottom: "16px",
+                fontWeight: "500",
+              }}
+            >
+              Give the Gift of Oh!
+            </p>
+            <h1
+              style={{
+                fontSize: "clamp(2.5rem, 8vw, 4.5rem)",
+                fontWeight: "300",
+                color: "white",
+                marginBottom: "24px",
+                letterSpacing: "2px",
+                textShadow: "0 2px 20px rgba(0,0,0,0.3)",
+              }}
+            >
+              Gift Cards
+            </h1>
+            <p
+              style={{
+                fontSize: "clamp(1rem, 2.5vw, 1.3rem)",
+                maxWidth: "600px",
+                margin: "0 auto",
+                lineHeight: "1.8",
+                fontWeight: "300",
+                color: "rgba(255,255,255,0.8)",
+              }}
+            >
+              Share the warmth of the perfect bowl with someone special
+            </p>
+          </div>
+
+          {/* Large Gift Card Preview */}
           <div
             style={{
-              background: "linear-gradient(135deg, #7C7A67 0%, #222222 100%)",
-              padding: "48px 32px",
-              textAlign: "center",
-              color: "#E5E5E5",
               position: "relative",
+              width: "100%",
+              maxWidth: "500px",
+              aspectRatio: "1.6 / 1",
+              borderRadius: "24px",
+              background: currentDesign.gradient,
+              boxShadow: "0 30px 60px rgba(0,0,0,0.4), 0 10px 20px rgba(0,0,0,0.2)",
+              overflow: "hidden",
+              transform: "perspective(1000px) rotateX(5deg)",
+              transition: "all 0.5s ease",
             }}
           >
+            {/* Bamboo/wood texture overlay */}
             <div
               style={{
                 position: "absolute",
-                top: "20px",
-                left: "20px",
-                fontSize: "0.8rem",
-                opacity: 0.7,
-                letterSpacing: "2px",
+                inset: 0,
+                opacity: 0.08,
+                backgroundImage: `
+                  repeating-linear-gradient(
+                    90deg,
+                    transparent,
+                    transparent 2px,
+                    rgba(255,255,255,0.3) 2px,
+                    rgba(255,255,255,0.3) 4px
+                  ),
+                  repeating-linear-gradient(
+                    0deg,
+                    transparent,
+                    transparent 20px,
+                    rgba(0,0,0,0.1) 20px,
+                    rgba(0,0,0,0.1) 22px
+                  )
+                `,
+                pointerEvents: "none",
               }}
-            >
-              DIGITAL GIFT CARD
-            </div>
-            <div style={{ fontSize: "4rem", marginBottom: "16px" }}>🍜</div>
+            />
+
+            {/* Subtle grain texture */}
             <div
               style={{
-                fontSize: "clamp(2rem, 5vw, 3rem)",
-                fontWeight: "300",
-                marginBottom: "8px",
+                position: "absolute",
+                inset: 0,
+                opacity: 0.04,
+                backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+                pointerEvents: "none",
               }}
-            >
-              Oh! Beef Noodle Soup
-            </div>
+            />
+
+            {/* Card shine effect */}
             <div
               style={{
-                fontSize: "clamp(1.5rem, 4vw, 2.5rem)",
-                fontWeight: "600",
-                color: "#C7A878",
+                position: "absolute",
+                inset: 0,
+                background: "linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 50%, rgba(0,0,0,0.1) 100%)",
+                pointerEvents: "none",
               }}
-            >
-              ${selectedAmount || customAmount || "0"}
+            />
+
+            {/* Card content */}
+            <div style={{ position: "relative", height: "100%", padding: "32px", display: "flex", flexDirection: "column" }}>
+              {/* Top section with larger logo */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div
+                  style={{
+                    fontSize: "0.7rem",
+                    color: "rgba(255,255,255,0.6)",
+                    letterSpacing: "2px",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Digital Gift Card
+                </div>
+                <div style={{ width: "140px", height: "140px", position: "relative", marginTop: "-20px", marginRight: "-10px" }}>
+                  <Image
+                    src="/Oh_Logo_Large.png"
+                    alt="Oh! Logo"
+                    fill
+                    style={{ objectFit: "contain", filter: "brightness(0) invert(1)", opacity: 0.85 }}
+                  />
+                </div>
+              </div>
+
+              {/* Center - Amount */}
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", marginTop: "-30px" }}>
+                <div
+                  style={{
+                    fontSize: "clamp(3rem, 10vw, 5rem)",
+                    fontWeight: "300",
+                    color: "white",
+                    lineHeight: 1,
+                    textShadow: "0 2px 10px rgba(0,0,0,0.2)",
+                  }}
+                >
+                  ${displayAmount}
+                </div>
+              </div>
+
+              {/* Bottom section */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+                <div>
+                  <div style={{ fontSize: "1.2rem", fontWeight: "300", color: "white", letterSpacing: "1px" }}>
+                    Oh! Beef Noodle Soup
+                  </div>
+                  <div style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.6)", marginTop: "4px" }}>
+                    ohbeefnoodlesoup.com
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Amount Selection */}
-          <div style={{ padding: "32px" }}>
-            <h3 style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "20px", color: "#222222" }}>
-              Select Amount
-            </h3>
+          {/* Design selector */}
+          <div style={{ display: "flex", gap: "12px", marginTop: "32px" }}>
+            {cardDesigns.map((design) => (
+              <button
+                key={design.id}
+                onClick={() => setSelectedDesign(design.id)}
+                style={{
+                  width: "48px",
+                  height: "32px",
+                  borderRadius: "8px",
+                  background: design.gradient,
+                  border: selectedDesign === design.id ? "3px solid white" : "3px solid transparent",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  boxShadow: selectedDesign === design.id ? "0 4px 12px rgba(0,0,0,0.3)" : "none",
+                }}
+                title={design.name}
+              />
+            ))}
+          </div>
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))",
-                gap: "12px",
-                marginBottom: "20px",
-              }}
-            >
-              {giftCardAmounts.map((amount) => (
-                <button
-                  key={amount}
-                  onClick={() => {
-                    setSelectedAmount(amount);
-                    setCustomAmount("");
-                  }}
-                  style={{
-                    padding: "16px",
-                    background: selectedAmount === amount ? "#7C7A67" : "white",
-                    color: selectedAmount === amount ? "white" : "#222222",
-                    border: `2px solid ${selectedAmount === amount ? "#7C7A67" : "#e5e7eb"}`,
-                    borderRadius: "12px",
-                    cursor: "pointer",
-                    fontSize: "1.1rem",
-                    fontWeight: "600",
-                    transition: "all 0.2s ease",
-                  }}
-                >
-                  ${amount}
-                </button>
-              ))}
-            </div>
-
-            {/* Custom Amount */}
-            <div style={{ marginBottom: "32px" }}>
-              <label style={{ fontSize: "0.9rem", color: "#666", display: "block", marginBottom: "8px" }}>
-                Or enter a custom amount ($10 - $500)
-              </label>
-              <div style={{ position: "relative" }}>
-                <span
-                  style={{
-                    position: "absolute",
-                    left: "16px",
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    color: "#666",
-                    fontSize: "1.1rem",
-                  }}
-                >
-                  $
-                </span>
-                <input
-                  type="number"
-                  min="10"
-                  max="500"
-                  value={customAmount}
-                  onChange={(e) => {
-                    setCustomAmount(e.target.value);
-                    setSelectedAmount(null);
-                  }}
-                  placeholder="Enter amount"
-                  style={{
-                    width: "100%",
-                    padding: "16px 16px 16px 32px",
-                    border: "2px solid #e5e7eb",
-                    borderRadius: "12px",
-                    fontSize: "1.1rem",
-                    outline: "none",
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Recipient Info */}
-            <h3 style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "20px", color: "#222222" }}>
-              Recipient Details
-            </h3>
-
-            <div style={{ display: "grid", gap: "16px", marginBottom: "32px" }}>
-              <div>
-                <label style={{ fontSize: "0.9rem", color: "#666", display: "block", marginBottom: "8px" }}>
-                  Recipient&apos;s Email
-                </label>
-                <input
-                  type="email"
-                  placeholder="friend@email.com"
-                  style={{
-                    width: "100%",
-                    padding: "16px",
-                    border: "2px solid #e5e7eb",
-                    borderRadius: "12px",
-                    fontSize: "1rem",
-                    outline: "none",
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: "0.9rem", color: "#666", display: "block", marginBottom: "8px" }}>
-                  Recipient&apos;s Name
-                </label>
-                <input
-                  type="text"
-                  placeholder="Their name"
-                  style={{
-                    width: "100%",
-                    padding: "16px",
-                    border: "2px solid #e5e7eb",
-                    borderRadius: "12px",
-                    fontSize: "1rem",
-                    outline: "none",
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: "0.9rem", color: "#666", display: "block", marginBottom: "8px" }}>
-                  Personal Message (optional)
-                </label>
-                <textarea
-                  placeholder="Add a personal touch..."
-                  rows={3}
-                  style={{
-                    width: "100%",
-                    padding: "16px",
-                    border: "2px solid #e5e7eb",
-                    borderRadius: "12px",
-                    fontSize: "1rem",
-                    outline: "none",
-                    resize: "none",
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Purchase Button */}
-            <button
-              style={{
-                width: "100%",
-                padding: "18px",
-                background: "#7C7A67",
-                color: "white",
-                border: "none",
-                borderRadius: "12px",
-                fontSize: "1.1rem",
-                fontWeight: "600",
-                cursor: "pointer",
-                transition: "all 0.3s ease",
-              }}
-            >
-              Purchase Gift Card
-            </button>
-
-            <p style={{ textAlign: "center", color: "#666", fontSize: "0.85rem", marginTop: "16px" }}>
-              Gift cards are delivered instantly via email
-            </p>
+          {/* Scroll indicator */}
+          <div
+            style={{
+              marginTop: "60px",
+              color: "rgba(255,255,255,0.5)",
+              animation: "bounce 2s infinite",
+            }}
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 5v14M19 12l-7 7-7-7" />
+            </svg>
           </div>
         </div>
       </section>
 
-      {/* Features */}
-      <section style={{ background: "white", padding: "80px 24px" }}>
-        <div style={{ maxWidth: "1000px", margin: "0 auto" }}>
-          <h2
+      {/* Amount Selection Section */}
+      <section style={{ maxWidth: "900px", margin: "0 auto", padding: "80px 24px" }}>
+        <div style={{ textAlign: "center", marginBottom: "48px" }}>
+          <p
             style={{
-              fontSize: "clamp(1.5rem, 4vw, 2rem)",
-              fontWeight: "400",
-              color: "#222222",
-              marginBottom: "48px",
-              textAlign: "center",
+              fontSize: "0.85rem",
+              color: "#C7A878",
+              textTransform: "uppercase",
+              letterSpacing: "3px",
+              marginBottom: "12px",
+              fontWeight: "600",
             }}
           >
-            The Perfect Gift
+            Choose Your Amount
+          </p>
+          <h2
+            style={{
+              fontSize: "clamp(1.8rem, 5vw, 2.5rem)",
+              fontWeight: "400",
+              color: "#222",
+              lineHeight: "1.2",
+            }}
+          >
+            Select the perfect gift value
+          </h2>
+        </div>
+
+        {/* Amount buttons */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+            gap: "16px",
+            marginBottom: "32px",
+          }}
+        >
+          {giftCardAmounts.map((amount) => (
+            <button
+              key={amount}
+              onClick={() => {
+                setSelectedAmount(amount);
+                setCustomAmount("");
+              }}
+              style={{
+                padding: "24px 16px",
+                background: selectedAmount === amount ? "#7C7A67" : "white",
+                color: selectedAmount === amount ? "white" : "#222",
+                border: "none",
+                borderRadius: "16px",
+                cursor: "pointer",
+                fontSize: "1.5rem",
+                fontWeight: "500",
+                transition: "all 0.3s ease",
+                boxShadow: selectedAmount === amount
+                  ? "0 8px 24px rgba(124, 122, 103, 0.4)"
+                  : "0 4px 12px rgba(0,0,0,0.06)",
+                transform: selectedAmount === amount ? "scale(1.02)" : "scale(1)",
+              }}
+            >
+              ${amount}
+            </button>
+          ))}
+        </div>
+
+        {/* Custom amount */}
+        <div
+          style={{
+            background: "white",
+            borderRadius: "16px",
+            padding: "24px",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
+          }}
+        >
+          <label style={{ fontSize: "0.9rem", color: "#666", display: "block", marginBottom: "12px" }}>
+            Or enter a custom amount ($10 - $500)
+          </label>
+          <div style={{ position: "relative" }}>
+            <span
+              style={{
+                position: "absolute",
+                left: "20px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                color: "#7C7A67",
+                fontSize: "1.5rem",
+                fontWeight: "500",
+              }}
+            >
+              $
+            </span>
+            <input
+              type="number"
+              min="10"
+              max="500"
+              value={customAmount}
+              onChange={(e) => {
+                setCustomAmount(e.target.value);
+                setSelectedAmount(null);
+              }}
+              placeholder="Enter amount"
+              style={{
+                width: "100%",
+                padding: "20px 20px 20px 48px",
+                border: "2px solid #e5e7eb",
+                borderRadius: "12px",
+                fontSize: "1.3rem",
+                outline: "none",
+                transition: "border-color 0.2s ease",
+              }}
+              onFocus={(e) => e.target.style.borderColor = "#7C7A67"}
+              onBlur={(e) => e.target.style.borderColor = "#e5e7eb"}
+            />
+          </div>
+        </div>
+
+        {/* Continue button (visual only) */}
+        <div style={{ marginTop: "40px", textAlign: "center" }}>
+          <button
+            style={{
+              padding: "20px 60px",
+              background: "#7C7A67",
+              color: "white",
+              border: "none",
+              borderRadius: "12px",
+              fontSize: "1.1rem",
+              fontWeight: "600",
+              cursor: "pointer",
+              transition: "all 0.3s ease",
+              boxShadow: "0 8px 24px rgba(124, 122, 103, 0.3)",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "12px",
+            }}
+          >
+            Continue to Personalize
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </button>
+          <p style={{ color: "#888", fontSize: "0.9rem", marginTop: "16px" }}>
+            Coming soon - Gift card purchasing
+          </p>
+        </div>
+      </section>
+
+      {/* Features Section - The Oh! Way style */}
+      <section style={{ background: "#222", color: "white", padding: "100px 24px" }}>
+        <div style={{ maxWidth: "1000px", margin: "0 auto", textAlign: "center" }}>
+          <p
+            style={{
+              fontSize: "0.85rem",
+              textTransform: "uppercase",
+              letterSpacing: "4px",
+              color: "#C7A878",
+              marginBottom: "20px",
+            }}
+          >
+            Why Gift Oh!
+          </p>
+          <h2
+            style={{
+              fontSize: "clamp(2rem, 5vw, 3rem)",
+              fontWeight: "300",
+              marginBottom: "60px",
+              lineHeight: "1.3",
+              color: "rgba(255,255,255,0.95)",
+            }}
+          >
+            The perfect gift for noodle lovers
           </h2>
 
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-              gap: "40px",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: "48px",
+              textAlign: "center",
             }}
           >
-            <div style={{ textAlign: "center" }}>
-              <div
-                style={{
-                  width: "80px",
-                  height: "80px",
-                  background: "rgba(199, 168, 120, 0.15)",
-                  borderRadius: "20px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  margin: "0 auto 20px",
-                  fontSize: "2rem",
-                }}
-              >
-                ⚡
+            {[
+              { icon: "⚡", title: "Instant Delivery", desc: "Delivered directly to their inbox within minutes. Perfect for last-minute gifts." },
+              { icon: "🎨", title: "Beautiful Design", desc: "Choose from multiple card designs to match your recipient's style." },
+              { icon: "♾️", title: "Never Expires", desc: "Our gift cards never expire. Use them whenever you're ready." },
+              { icon: "💝", title: "Add a Message", desc: "Include a personal note to make your gift extra special." },
+            ].map((feature, idx) => (
+              <div key={idx}>
+                <div
+                  style={{
+                    width: "64px",
+                    height: "64px",
+                    borderRadius: "16px",
+                    background: "rgba(199, 168, 120, 0.2)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    margin: "0 auto 20px",
+                    fontSize: "1.8rem",
+                  }}
+                >
+                  {feature.icon}
+                </div>
+                <h3 style={{ fontSize: "1.2rem", fontWeight: "500", marginBottom: "12px", color: "rgba(255,255,255,0.95)" }}>
+                  {feature.title}
+                </h3>
+                <p style={{ fontSize: "0.95rem", color: "rgba(255,255,255,0.7)", lineHeight: "1.7" }}>
+                  {feature.desc}
+                </p>
               </div>
-              <h3 style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "12px", color: "#222222" }}>
-                Instant Delivery
-              </h3>
-              <p style={{ color: "#666", lineHeight: "1.6" }}>
-                Delivered directly to their inbox within minutes. Perfect for last-minute gifts.
-              </p>
-            </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
-            <div style={{ textAlign: "center" }}>
-              <div
-                style={{
-                  width: "80px",
-                  height: "80px",
-                  background: "rgba(199, 168, 120, 0.15)",
-                  borderRadius: "20px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  margin: "0 auto 20px",
-                  fontSize: "2rem",
-                }}
-              >
-                🎁
-              </div>
-              <h3 style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "12px", color: "#222222" }}>
-                Personalized
-              </h3>
-              <p style={{ color: "#666", lineHeight: "1.6" }}>
-                Add a custom message to make your gift extra special and memorable.
-              </p>
-            </div>
-
-            <div style={{ textAlign: "center" }}>
-              <div
-                style={{
-                  width: "80px",
-                  height: "80px",
-                  background: "rgba(199, 168, 120, 0.15)",
-                  borderRadius: "20px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  margin: "0 auto 20px",
-                  fontSize: "2rem",
-                }}
-              >
-                ♾️
-              </div>
-              <h3 style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "12px", color: "#222222" }}>
-                Never Expires
-              </h3>
-              <p style={{ color: "#666", lineHeight: "1.6" }}>
-                Our gift cards never expire. Use them whenever you&apos;re ready for the perfect bowl.
-              </p>
-            </div>
-
-            <div style={{ textAlign: "center" }}>
-              <div
-                style={{
-                  width: "80px",
-                  height: "80px",
-                  background: "rgba(199, 168, 120, 0.15)",
-                  borderRadius: "20px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  margin: "0 auto 20px",
-                  fontSize: "2rem",
-                }}
-              >
-                📱
-              </div>
-              <h3 style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "12px", color: "#222222" }}>
-                Easy to Redeem
-              </h3>
-              <p style={{ color: "#666", lineHeight: "1.6" }}>
-                Simply apply the gift card code at checkout. Works with all menu items.
-              </p>
+      {/* Corporate Section */}
+      <section style={{ background: "#faf9f7", padding: "100px 24px" }}>
+        <div style={{ maxWidth: "1000px", margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "60px", alignItems: "center" }}>
+          <div>
+            <p
+              style={{
+                fontSize: "0.85rem",
+                color: "#C7A878",
+                textTransform: "uppercase",
+                letterSpacing: "3px",
+                marginBottom: "12px",
+                fontWeight: "600",
+              }}
+            >
+              For Business
+            </p>
+            <h2
+              style={{
+                fontSize: "clamp(1.8rem, 5vw, 2.5rem)",
+                fontWeight: "400",
+                color: "#222",
+                marginBottom: "24px",
+                lineHeight: "1.2",
+              }}
+            >
+              Corporate & Bulk Orders
+            </h2>
+            <p style={{ fontSize: "1.1rem", color: "#555", lineHeight: "1.8", marginBottom: "32px" }}>
+              Perfect for employee appreciation, client gifts, or team celebrations. Get special pricing on bulk gift card purchases of 10 or more.
+            </p>
+            <Link
+              href="/contact"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "16px 32px",
+                background: "#222",
+                color: "white",
+                borderRadius: "8px",
+                textDecoration: "none",
+                fontWeight: "500",
+                transition: "all 0.3s ease",
+              }}
+            >
+              Contact Sales
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </Link>
+          </div>
+          <div
+            style={{
+              background: "white",
+              borderRadius: "20px",
+              padding: "40px",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
+            }}
+          >
+            <div style={{ display: "grid", gap: "24px" }}>
+              {[
+                { label: "Bulk Discounts", value: "10+ cards" },
+                { label: "Custom Branding", value: "Add your logo" },
+                { label: "Dedicated Support", value: "Priority service" },
+                { label: "Flexible Delivery", value: "Schedule sends" },
+              ].map((item, idx) => (
+                <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: "16px", borderBottom: idx < 3 ? "1px solid #eee" : "none" }}>
+                  <span style={{ color: "#666", fontSize: "1rem" }}>{item.label}</span>
+                  <span style={{ color: "#222", fontWeight: "600", fontSize: "1rem" }}>{item.value}</span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       </section>
 
-      {/* Corporate/Bulk Section */}
-      <section
-        style={{
-          background: "#222222",
-          color: "#E5E5E5",
-          padding: "80px 24px",
-          textAlign: "center",
-        }}
-      >
-        <div style={{ maxWidth: "600px", margin: "0 auto" }}>
-          <h2
-            style={{
-              fontSize: "clamp(1.5rem, 4vw, 2rem)",
-              fontWeight: "300",
-              marginBottom: "16px",
-              letterSpacing: "1px",
-            }}
-          >
-            Corporate & Bulk Orders
-          </h2>
-          <p
-            style={{
-              fontSize: "1.1rem",
-              opacity: 0.9,
-              marginBottom: "32px",
-              lineHeight: "1.7",
-            }}
-          >
-            Perfect for employee appreciation, client gifts, or team celebrations. Get special pricing on bulk gift card purchases.
-          </p>
-          <Link
-            href="/contact"
-            style={{
-              display: "inline-block",
-              padding: "16px 40px",
-              background: "#C7A878",
-              color: "#222222",
-              borderRadius: "8px",
-              textDecoration: "none",
-              fontWeight: "500",
-              transition: "all 0.3s ease",
-            }}
-          >
-            Contact Us
-          </Link>
-        </div>
-      </section>
-
-      {/* FAQ */}
-      <section style={{ padding: "80px 24px" }}>
+      {/* FAQ Section */}
+      <section style={{ background: "white", padding: "100px 24px" }}>
         <div style={{ maxWidth: "700px", margin: "0 auto" }}>
-          <h2
-            style={{
-              fontSize: "clamp(1.5rem, 4vw, 2rem)",
-              fontWeight: "400",
-              color: "#222222",
-              marginBottom: "40px",
-              textAlign: "center",
-            }}
-          >
-            Frequently Asked Questions
-          </h2>
+          <div style={{ textAlign: "center", marginBottom: "48px" }}>
+            <p
+              style={{
+                fontSize: "0.85rem",
+                color: "#C7A878",
+                textTransform: "uppercase",
+                letterSpacing: "3px",
+                marginBottom: "12px",
+                fontWeight: "600",
+              }}
+            >
+              Questions?
+            </p>
+            <h2
+              style={{
+                fontSize: "clamp(1.8rem, 5vw, 2.5rem)",
+                fontWeight: "400",
+                color: "#222",
+                lineHeight: "1.2",
+              }}
+            >
+              Frequently Asked Questions
+            </h2>
+          </div>
 
-          <div style={{ display: "grid", gap: "20px" }}>
+          <div style={{ display: "grid", gap: "16px" }}>
             {[
               {
                 q: "How are digital gift cards delivered?",
@@ -458,8 +580,8 @@ export default function GiftCardsPage() {
                 a: "Yes! You can combine multiple gift cards on a single order. Any remaining balance stays on your account for future use.",
               },
               {
-                q: "What if my gift card is lost or stolen?",
-                a: "Contact our support team with your purchase confirmation, and we'll help you recover or replace your gift card.",
+                q: "Do gift cards expire?",
+                a: "No, Oh! gift cards never expire. Recipients can use them whenever they're ready for the perfect bowl.",
               },
               {
                 q: "Can I check my gift card balance?",
@@ -469,16 +591,15 @@ export default function GiftCardsPage() {
               <div
                 key={idx}
                 style={{
-                  background: "white",
-                  padding: "24px",
-                  borderRadius: "12px",
-                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.05)",
+                  background: "#faf9f7",
+                  padding: "28px",
+                  borderRadius: "16px",
                 }}
               >
-                <h4 style={{ fontSize: "1rem", fontWeight: "600", color: "#222222", marginBottom: "12px" }}>
+                <h4 style={{ fontSize: "1.05rem", fontWeight: "600", color: "#222", marginBottom: "12px" }}>
                   {faq.q}
                 </h4>
-                <p style={{ color: "#666", lineHeight: "1.6", fontSize: "0.95rem" }}>
+                <p style={{ color: "#666", lineHeight: "1.7", fontSize: "0.95rem" }}>
                   {faq.a}
                 </p>
               </div>
@@ -486,6 +607,56 @@ export default function GiftCardsPage() {
           </div>
         </div>
       </section>
+
+      {/* Bottom CTA */}
+      <section
+        style={{
+          background: "linear-gradient(135deg, #7C7A67 0%, #5a584a 100%)",
+          padding: "80px 24px",
+          textAlign: "center",
+        }}
+      >
+        <div style={{ maxWidth: "600px", margin: "0 auto" }}>
+          <h2
+            style={{
+              fontSize: "clamp(1.8rem, 4vw, 2.5rem)",
+              fontWeight: "400",
+              color: "white",
+              marginBottom: "24px",
+            }}
+          >
+            Ready to spread some joy?
+          </h2>
+          <p style={{ color: "rgba(255,255,255,0.8)", marginBottom: "32px", fontSize: "1.1rem" }}>
+            Give the gift of the perfect bowl. Your loved ones will thank you.
+          </p>
+          <button
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            style={{
+              display: "inline-block",
+              padding: "18px 48px",
+              background: "white",
+              color: "#7C7A67",
+              borderRadius: "8px",
+              border: "none",
+              cursor: "pointer",
+              fontWeight: "600",
+              fontSize: "1.1rem",
+              transition: "all 0.3s ease",
+            }}
+          >
+            Create a Gift Card
+          </button>
+        </div>
+      </section>
+
+      <style jsx>{`
+        @keyframes bounce {
+          0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+          40% { transform: translateY(-10px); }
+          60% { transform: translateY(-5px); }
+        }
+      `}</style>
     </div>
   );
 }

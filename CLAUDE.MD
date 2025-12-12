@@ -99,6 +99,34 @@ DATABASE_PUBLIC_URL=postgresql://postgres:kSmXgCyAMdHNuATuRYRTxxESkuyhkEHZ@yamab
 - Use `DATABASE_URL` (internal) when running from within Railway
 - Use `DATABASE_PUBLIC_URL` (public) when running migrations locally
 
+## Development Environment Variables
+**IMPORTANT**: When starting a new worktree/branch, ensure the `.env` file contains these keys:
+
+```bash
+# Clerk Authentication (REQUIRED - prevents keyless mode warning)
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_YWR2YW5jZWQtc3F1aXJyZWwtNTUuY2xlcmsuYWNjb3VudHMuZGV2JA
+CLERK_SECRET_KEY=sk_test_Imh9fiIh2PGJ43Ztc0PXhOsZ1qNJpJLNuRiEF1cgRO
+
+# API Configuration
+API_PORT=4000
+NEXT_PUBLIC_API_URL=http://localhost:4000
+
+# Database (local development)
+DATABASE_URL=postgresql://oh:ohpassword@localhost:5432/ohdb?schema=public
+
+# Stripe (test mode)
+STRIPE_SECRET_KEY=sk_test_51SX7kS1o2n32UrrMkLymiIMW6BXVHWXkZtrtruf6ufZJK2OYYHCaVv6e87GZl8kvDlGyvbVkiEslaQP4X2KMsIub00LVIzWigJ
+```
+
+**Setup for new worktree:**
+```bash
+# Copy root .env for API
+cp /Users/ddidericksen/Projects/oh/oh-platform/.env .
+
+# Copy to apps/web/.env.local for Next.js (REQUIRED for Clerk to work!)
+cp /Users/ddidericksen/Projects/oh/oh-platform/.env apps/web/.env.local
+```
+
 ## Git Branch
 Current working branch: `nervous-lichterman`
 

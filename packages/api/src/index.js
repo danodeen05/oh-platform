@@ -5323,6 +5323,8 @@ app.get("/analytics/customers", async (req, reply) => {
       },
       select: {
         id: true,
+        name: true,
+        email: true,
         membershipTier: true,
         lifetimeOrderCount: true,
         lifetimeSpentCents: true,
@@ -5366,6 +5368,8 @@ app.get("/analytics/customers", async (req, reply) => {
     const topCustomers = usersWithOrders
       .map(user => ({
         id: user.id,
+        name: user.name || "Unknown",
+        email: user.email || null,
         orderCount: user.orders.length,
         periodSpend: user.orders.reduce((sum, o) => sum + (o.totalCents || 0), 0),
         lifetimeSpend: user.lifetimeSpentCents || 0,
