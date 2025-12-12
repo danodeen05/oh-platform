@@ -313,6 +313,25 @@ export default function AnalyticsPage() {
             Top sellers, category breakdown, and item-level analytics
           </p>
         </Link>
+
+        <Link
+          href="/analytics/upselling"
+          style={{
+            padding: "24px",
+            background: "white",
+            border: "2px solid #e5e7eb",
+            borderRadius: "12px",
+            textDecoration: "none",
+            color: "inherit",
+            transition: "all 0.2s",
+          }}
+        >
+          <div style={{ fontSize: "1.5rem", marginBottom: "12px" }}>+</div>
+          <h3 style={{ fontSize: "1.125rem", fontWeight: 600, marginBottom: "8px" }}>Upselling & Add-Ons</h3>
+          <p style={{ color: "#6b7280", fontSize: "0.875rem" }}>
+            Add-on revenue, item popularity, and conversion rates
+          </p>
+        </Link>
       </div>
 
       <style>{`

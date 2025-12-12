@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "";
 
@@ -15,6 +15,8 @@ type Order = {
   fulfillmentType: string;
   arrivedAt?: string; // When customer checked in at kiosk
   podConfirmedAt?: string; // When customer confirmed arrival at pod
+  parentOrderId?: string; // If this is an add-on order
+  addOnType?: "PAID_ADDON" | "REFILL" | "EXTRA_VEG" | "DESSERT_READY"; // Type of add-on order
   items: Array<{
     id: string;
     quantity: number;
@@ -37,6 +39,25 @@ type Order = {
   };
 };
 
+type PodCall = {
+  id: string;
+  orderId: string;
+  seatId: string;
+  locationId: string;
+  reason: "GENERAL" | "REFILL" | "ASSISTANCE" | "CHECK" | "CLEANUP";
+  status: "PENDING" | "ACKNOWLEDGED" | "RESOLVED" | "CANCELLED";
+  createdAt: string;
+  acknowledgedAt?: string;
+  seat: {
+    number: string;
+  };
+  order: {
+    id: string;
+    orderNumber: string;
+    kitchenOrderNumber?: string;
+  };
+};
+
 // Helper to get tier emoji
 function getTierEmoji(tier?: string): string {
   switch (tier) {
@@ -55,9 +76,43 @@ function isVIP(tier?: string): boolean {
   return tier === "BEEF_BOSS";
 }
 
+// Helper to get add-on type colors
+function getAddOnTypeStyle(addOnType?: string): { bg: string; border: string; label: string; emoji: string } {
+  switch (addOnType) {
+    case "PAID_ADDON":
+      return { bg: "#451a03", border: "#f59e0b", label: "Add-On Order", emoji: "🛒" };
+    case "REFILL":
+      return { bg: "#0c1f3f", border: "#3b82f6", label: "Drink Refill", emoji: "🥤" };
+    case "EXTRA_VEG":
+      return { bg: "#052e16", border: "#22c55e", label: "Extra Vegetables", emoji: "🥬" };
+    case "DESSERT_READY":
+      return { bg: "#4a1942", border: "#ec4899", label: "Ready for Dessert", emoji: "🍨" };
+    default:
+      return { bg: "#1f2937", border: "#374151", label: "", emoji: "" };
+  }
+}
+
+// Helper to get pod call reason display
+function getPodCallReasonDisplay(reason: string): { label: string; emoji: string } {
+  switch (reason) {
+    case "REFILL":
+      return { label: "Drink Refill", emoji: "🥤" };
+    case "ASSISTANCE":
+      return { label: "Need Help", emoji: "❓" };
+    case "CHECK":
+      return { label: "Request Check", emoji: "💳" };
+    case "CLEANUP":
+      return { label: "Cleanup Needed", emoji: "🧹" };
+    case "GENERAL":
+    default:
+      return { label: "Call Staff", emoji: "🔔" };
+  }
+}
+
 export default function KitchenDisplay({ locations }: { locations: any[] }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<string>("all");
+  const [podCalls, setPodCalls] = useState<PodCall[]>([]);
   const [stats, setStats] = useState({
     queued: 0,
     prepping: 0,
@@ -164,16 +219,85 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
     }
   }
 
+  async function loadPodCalls() {
+    try {
+      const params = new URLSearchParams();
+      if (selectedLocation !== "all") {
+        params.append("locationId", selectedLocation);
+      }
+      const queryString = params.toString();
+      const response = await fetch(
+        `${BASE}/pod-calls${queryString ? `?${queryString}` : ""}`,
+        {
+          headers: { "x-tenant-slug": "oh" },
+        }
+      );
+      const data = await response.json();
+      setPodCalls(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Failed to load pod calls:", error);
+      setPodCalls([]);
+    }
+  }
+
+  async function acknowledgePodCall(callId: string) {
+    try {
+      const response = await fetch(`${BASE}/pod-calls/${callId}/acknowledge`, {
+        method: "PATCH",
+        headers: {
+          "x-tenant-slug": "oh",
+        },
+      });
+      if (!response.ok) {
+        const error = await response.text();
+        console.error("Failed to acknowledge pod call:", error);
+        return;
+      }
+      // Immediately update local state to show acknowledged status
+      setPodCalls(prev =>
+        prev.map(call =>
+          call.id === callId
+            ? { ...call, status: "ACKNOWLEDGED" as const, acknowledgedAt: new Date().toISOString() }
+            : call
+        )
+      );
+    } catch (error) {
+      console.error("Failed to acknowledge pod call:", error);
+    }
+  }
+
+  async function resolvePodCall(callId: string) {
+    try {
+      const response = await fetch(`${BASE}/pod-calls/${callId}/resolve`, {
+        method: "PATCH",
+        headers: {
+          "x-tenant-slug": "oh",
+        },
+      });
+      if (!response.ok) {
+        const error = await response.text();
+        console.error("Failed to resolve pod call:", error);
+        return;
+      }
+      // Remove the resolved call from the list immediately
+      setPodCalls(prev => prev.filter(call => call.id !== callId));
+    } catch (error) {
+      console.error("Failed to resolve pod call:", error);
+    }
+  }
+
   useEffect(() => {
     loadOrders();
     loadStats();
     loadAvgProcessingTime();
+    loadPodCalls();
 
     // Auto-refresh every 10 seconds
     const interval = setInterval(() => {
       loadOrders();
       loadStats();
       loadAvgProcessingTime();
+      loadPodCalls();
     }, 10000);
 
     return () => clearInterval(interval);
@@ -230,6 +354,10 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
     const customerIsVIP = isVIP(order.user?.membershipTier);
     const tierEmoji = getTierEmoji(order.user?.membershipTier);
 
+    // Check if this is an add-on order (child order placed during meal)
+    const isAddOnOrder = !!order.addOnType;
+    const addOnStyle = getAddOnTypeStyle(order.addOnType);
+
     // Split items into bowl configuration (MAIN + SLIDER) vs add-ons (ADDON, SIDE, DRINK, DESSERT)
     const bowlItems = order.items.filter(
       (item) =>
@@ -279,27 +407,60 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
       </div>
     );
 
+    // Determine card styling based on order type
+    const getCardBackground = () => {
+      if (isAddOnOrder) return addOnStyle.bg;
+      if (isArriving) return "#1e293b";
+      if (customerIsVIP) return "#2d1f1f";
+      return "#1f2937";
+    };
+
+    const getCardBorder = () => {
+      if (isAddOnOrder) return `2px solid ${addOnStyle.border}`;
+      if (isArriving) return "2px solid #f59e0b";
+      if (customerIsVIP) return "2px solid #dc2626";
+      return "2px solid #374151";
+    };
+
     return (
       <div
         style={{
-          background: isArriving ? "#1e293b" : customerIsVIP ? "#2d1f1f" : "#1f2937",
-          border: isArriving
-            ? "2px solid #f59e0b"
-            : customerIsVIP
-              ? "2px solid #dc2626"
-              : "2px solid #374151",
+          background: getCardBackground(),
+          border: getCardBorder(),
           borderRadius: 12,
           padding: 16,
           marginBottom: 12,
           opacity: isArriving ? 0.85 : 1,
-          boxShadow: customerIsVIP && !isArriving
-            ? "0 0 15px rgba(220, 38, 38, 0.5), 0 0 30px rgba(220, 38, 38, 0.3)"
-            : "none",
+          boxShadow: isAddOnOrder
+            ? `0 0 15px ${addOnStyle.border}40, 0 0 30px ${addOnStyle.border}20`
+            : customerIsVIP && !isArriving
+              ? "0 0 15px rgba(220, 38, 38, 0.5), 0 0 30px rgba(220, 38, 38, 0.3)"
+              : "none",
           position: "relative" as const,
         }}
       >
+        {/* Add-On Order Banner */}
+        {isAddOnOrder && (
+          <div
+            style={{
+              background: addOnStyle.border,
+              color: "#000",
+              padding: "6px 12px",
+              borderRadius: 6,
+              fontSize: "0.75rem",
+              fontWeight: "bold",
+              textAlign: "center",
+              marginBottom: 10,
+              textTransform: "uppercase",
+              letterSpacing: "1px",
+            }}
+          >
+            {addOnStyle.emoji} {addOnStyle.label}
+          </div>
+        )}
+
         {/* Arriving Banner */}
-        {isArriving && (
+        {isArriving && !isAddOnOrder && (
           <div
             style={{
               background: "#f59e0b",
@@ -468,7 +629,28 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
             </button>
           )}
 
-          {order.status === "PREPPING" && (
+          {/* Add-on orders get a simplified flow: just "Delivered" button */}
+          {order.status === "PREPPING" && isAddOnOrder && (
+            <button
+              onClick={() => updateOrderStatus(order.id, "COMPLETED")}
+              style={{
+                flex: 1,
+                padding: 12,
+                background: addOnStyle.border,
+                color: "#000",
+                border: "none",
+                borderRadius: 8,
+                fontWeight: "bold",
+                cursor: "pointer",
+                fontSize: "0.9rem",
+              }}
+            >
+              {addOnStyle.emoji} Delivered
+            </button>
+          )}
+
+          {/* Regular orders go through full flow */}
+          {order.status === "PREPPING" && !isAddOnOrder && (
             <button
               onClick={() => updateOrderStatus(order.id, "READY")}
               style={{
@@ -620,6 +802,122 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
           </div>
         </div>
       </div>
+
+      {/* Pod Calls Notification Banner */}
+      {podCalls.length > 0 && (
+        <div
+          style={{
+            background: "#7c2d12",
+            borderBottom: "2px solid #ea580c",
+            padding: "12px 24px",
+            animation: "pulse 2s infinite",
+          }}
+        >
+          <style>
+            {`
+              @keyframes pulse {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.85; }
+              }
+            `}
+          </style>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              marginBottom: podCalls.length > 1 ? 12 : 0,
+            }}
+          >
+            <span style={{ fontSize: "1.5rem" }}>🔔</span>
+            <span style={{ fontWeight: "bold", fontSize: "1.1rem" }}>
+              {podCalls.length} Pod Call{podCalls.length > 1 ? "s" : ""} Waiting
+            </span>
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+            {podCalls.map((call) => {
+              const reasonDisplay = getPodCallReasonDisplay(call.reason);
+              const ageMs = Date.now() - new Date(call.createdAt).getTime();
+              const ageMins = Math.floor(ageMs / 60000);
+
+              return (
+                <div
+                  key={call.id}
+                  style={{
+                    background: call.status === "ACKNOWLEDGED" ? "#166534" : "#1f2937",
+                    border: call.status === "ACKNOWLEDGED" ? "2px solid #22c55e" : "2px solid #ea580c",
+                    borderRadius: 8,
+                    padding: "10px 16px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                  }}
+                >
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: "1.5rem" }}>{reasonDisplay.emoji}</div>
+                    <div
+                      style={{
+                        fontSize: "1.25rem",
+                        fontWeight: "bold",
+                        color: call.status === "ACKNOWLEDGED" ? "#22c55e" : "#ea580c",
+                      }}
+                    >
+                      Pod {call.seat.number}
+                    </div>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: "0.85rem", color: "#d4d4d4" }}>
+                      {reasonDisplay.label}
+                    </div>
+                    <div style={{ fontSize: "0.75rem", color: "#9ca3af" }}>
+                      {ageMins < 1 ? "Just now" : `${ageMins} min${ageMins > 1 ? "s" : ""} ago`}
+                    </div>
+                    {call.status === "ACKNOWLEDGED" && (
+                      <div style={{ fontSize: "0.7rem", color: "#22c55e", marginTop: 2 }}>
+                        ✓ Staff on the way
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                    {call.status === "PENDING" && (
+                      <button
+                        onClick={() => acknowledgePodCall(call.id)}
+                        style={{
+                          padding: "6px 12px",
+                          background: "#2563eb",
+                          color: "white",
+                          border: "none",
+                          borderRadius: 4,
+                          fontSize: "0.75rem",
+                          fontWeight: "bold",
+                          cursor: "pointer",
+                        }}
+                      >
+                        On My Way
+                      </button>
+                    )}
+                    <button
+                      onClick={() => resolvePodCall(call.id)}
+                      style={{
+                        padding: "6px 12px",
+                        background: call.status === "ACKNOWLEDGED" ? "#16a34a" : "#4b5563",
+                        color: "white",
+                        border: "none",
+                        borderRadius: 4,
+                        fontSize: "0.75rem",
+                        fontWeight: "bold",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Done
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div style={{ padding: 24 }}>
 

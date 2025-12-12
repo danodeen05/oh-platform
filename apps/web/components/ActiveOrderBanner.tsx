@@ -18,11 +18,12 @@ export default function ActiveOrderBanner() {
   const router = useRouter();
 
   // Don't show on order status page or order flow pages
-  const isOrderPage = pathname?.startsWith("/order/status") ||
-                      pathname?.startsWith("/order/confirmation") ||
-                      pathname?.startsWith("/order/scan") ||
-                      pathname?.startsWith("/order/check-in") ||
-                      pathname?.startsWith("/pod");
+  // Need to check without locale prefix (paths like /en/order/status, /zh-TW/order/status)
+  const isOrderPage = pathname?.includes("/order/status") ||
+                      pathname?.includes("/order/confirmation") ||
+                      pathname?.includes("/order/scan") ||
+                      pathname?.includes("/order/check-in") ||
+                      pathname?.includes("/pod");
 
   useEffect(() => {
     // Check localStorage for active order

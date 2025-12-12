@@ -27,6 +27,14 @@ type Location = {
   tenantId: string;
 };
 
+type ChildOrder = {
+  id: string;
+  orderNumber: string;
+  addOnType: string;
+  totalCents: number;
+  items: OrderItem[];
+};
+
 type Order = {
   id: string;
   orderNumber: string;
@@ -36,6 +44,7 @@ type Order = {
   createdAt: string;
   items: OrderItem[];
   location: Location;
+  childOrders?: ChildOrder[];
 };
 
 export default function OrdersPage() {
@@ -99,11 +108,24 @@ export default function OrdersPage() {
     try {
       setReordering(order.id);
 
+      // Combine items from main order and paid add-on child orders
+      // (exclude REFILL and EXTRA_VEG as those are free and contextual)
+      const allItems = [...order.items];
+
+      if (order.childOrders) {
+        for (const childOrder of order.childOrders) {
+          // Only include paid add-ons in reorder (skip refills and extra vegs)
+          if (childOrder.addOnType === "PAID_ADDON") {
+            allItems.push(...childOrder.items);
+          }
+        }
+      }
+
       // Create a new order with the same items at the same location
       const orderData = {
         locationId: order.location.id,
         tenantId: order.location.tenantId,
-        items: order.items.map((item) => ({
+        items: allItems.map((item) => ({
           menuItemId: item.menuItem.id,
           quantity: item.quantity,
           priceCents: item.priceCents,
@@ -329,6 +351,51 @@ export default function OrdersPage() {
                   </div>
                 </div>
               )}
+
+              {/* Child Orders (paid add-ons ordered during the meal) */}
+              {order.childOrders && order.childOrders.filter(co => co.addOnType === "PAID_ADDON").length > 0 && (
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#C7A878", marginBottom: 6 }}>
+                    Added During Visit
+                  </div>
+                  <div
+                    style={{
+                      background: "rgba(199, 168, 120, 0.15)",
+                      borderRadius: 8,
+                      padding: 10,
+                      borderLeft: "3px solid #C7A878",
+                    }}
+                  >
+                    {order.childOrders
+                      .filter(co => co.addOnType === "PAID_ADDON")
+                      .flatMap(co => co.items)
+                      .map((item: OrderItem) => (
+                        <div
+                          key={item.id}
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            padding: "2px 0",
+                            fontSize: "0.85rem",
+                          }}
+                        >
+                          <span>
+                            {item.menuItem.name}
+                            <span style={{ color: "#666", marginLeft: 6 }}>
+                              (Qty: {item.quantity})
+                            </span>
+                          </span>
+                          {item.priceCents > 0 && (
+                            <span style={{ color: "#666" }}>
+                              ${(item.priceCents / 100).toFixed(2)}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
             </>
           );
         })()}
@@ -344,7 +411,7 @@ export default function OrdersPage() {
           }}
         >
           <div style={{ fontWeight: "bold", fontSize: "1rem" }}>
-            Total: ${(order.totalCents / 100).toFixed(2)}
+            Total: ${((order.totalCents + (order.childOrders?.reduce((sum, co) => sum + co.totalCents, 0) || 0)) / 100).toFixed(2)}
           </div>
           <button
             onClick={() => handleReorder(order)}

@@ -36,6 +36,7 @@ interface OrderStatus {
       quantity: number;
       selectedValue: string | null;
       priceCents: number;
+      categoryType: string | null;
     }>;
   };
 }
@@ -81,6 +82,24 @@ interface OrderBackstory {
   customerName: string | null;
 }
 
+interface AvailableAddons {
+  paidAddons: Array<{
+    id: string;
+    name: string;
+    basePriceCents: number;
+    categoryType: string;
+  }>;
+  refillableDrinks: Array<{
+    id: string;
+    name: string;
+  }>;
+  extraVegetables: Array<{
+    id: string;
+    name: string;
+    sliderConfig?: any;
+  }>;
+}
+
 function StatusContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -101,6 +120,25 @@ function StatusContent() {
   const [backstoryLoading, setBackstoryLoading] = useState(false);
   const [backstoryOpened, setBackstoryOpened] = useState(false);
   const [lastCommentaryStatus, setLastCommentaryStatus] = useState<string | null>(null);
+
+  // Add-on and Call Staff state
+  const [showAddOnModal, setShowAddOnModal] = useState(false);
+  const [availableAddons, setAvailableAddons] = useState<AvailableAddons | null>(null);
+  const [addonsLoading, setAddonsLoading] = useState(false);
+  const [callStaffLoading, setCallStaffLoading] = useState(false);
+  const [callStaffSuccess, setCallStaffSuccess] = useState(false);
+  const [refillLoading, setRefillLoading] = useState(false);
+  const [extraVegLoading, setExtraVegLoading] = useState(false);
+  const [selectedExtraVegs, setSelectedExtraVegs] = useState<Set<string>>(new Set());
+
+  // Paid add-on state
+  const [selectedPaidAddons, setSelectedPaidAddons] = useState<Map<string, number>>(new Map()); // menuItemId -> quantity
+  const [paidAddonLoading, setPaidAddonLoading] = useState(false);
+  const [showPaymentConfirm, setShowPaymentConfirm] = useState(false);
+
+  // Dessert ready state
+  const [dessertLoading, setDessertLoading] = useState(false);
+  const [dessertRequested, setDessertRequested] = useState(false);
 
   // Fetch order status
   async function fetchStatus() {
@@ -236,6 +274,275 @@ function StatusContent() {
       console.error("Failed to fetch backstory:", err);
     } finally {
       setBackstoryLoading(false);
+    }
+  }
+
+  // Call Staff
+  async function callStaff() {
+    if (!status?.order?.id || callStaffLoading) return;
+
+    setCallStaffLoading(true);
+    try {
+      const response = await fetch(
+        `${BASE}/orders/${status.order.id}/call-staff`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-tenant-slug": "oh",
+          },
+          body: JSON.stringify({ reason: "GENERAL" }),
+        }
+      );
+
+      if (response.ok) {
+        setCallStaffSuccess(true);
+        setTimeout(() => setCallStaffSuccess(false), 5000);
+      } else {
+        const data = await response.json();
+        alert(data.error || "Failed to call staff. Please try again.");
+      }
+    } catch (err) {
+      console.error("Failed to call staff:", err);
+      alert("Failed to call staff. Please try again.");
+    } finally {
+      setCallStaffLoading(false);
+    }
+  }
+
+  // Fetch available add-ons
+  async function fetchAvailableAddons() {
+    if (!status?.order?.id || addonsLoading) return;
+
+    setAddonsLoading(true);
+    try {
+      const response = await fetch(
+        `${BASE}/orders/${status.order.id}/available-addons`,
+        {
+          headers: { "x-tenant-slug": "oh" },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setAvailableAddons(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch add-ons:", err);
+    } finally {
+      setAddonsLoading(false);
+    }
+  }
+
+  // Request drink refill
+  async function requestRefill(drinkId?: string) {
+    if (!status?.order?.id || refillLoading) return;
+
+    setRefillLoading(true);
+    try {
+      const response = await fetch(
+        `${BASE}/orders/${status.order.id}/refill`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-tenant-slug": "oh",
+          },
+          body: JSON.stringify({ drinkMenuItemId: drinkId }),
+        }
+      );
+
+      if (response.ok) {
+        alert("Drink refill requested! It will be brought to your pod shortly.");
+        setShowAddOnModal(false);
+      } else {
+        const data = await response.json();
+        alert(data.error || "Failed to request refill.");
+      }
+    } catch (err) {
+      console.error("Failed to request refill:", err);
+      alert("Failed to request refill. Please try again.");
+    } finally {
+      setRefillLoading(false);
+    }
+  }
+
+  // Request extra vegetables
+  async function requestExtraVegetables() {
+    if (!status?.order?.id || extraVegLoading || selectedExtraVegs.size === 0) return;
+
+    setExtraVegLoading(true);
+    try {
+      const items = Array.from(selectedExtraVegs).map(id => ({
+        menuItemId: id,
+        selectedValue: "Extra",
+      }));
+
+      const response = await fetch(
+        `${BASE}/orders/${status.order.id}/extra-vegetables`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-tenant-slug": "oh",
+          },
+          body: JSON.stringify({ items }),
+        }
+      );
+
+      if (response.ok) {
+        alert("Extra vegetables requested! They will be brought to your pod shortly.");
+        setShowAddOnModal(false);
+        setSelectedExtraVegs(new Set());
+      } else {
+        const data = await response.json();
+        alert(data.error || "Failed to request extra vegetables.");
+      }
+    } catch (err) {
+      console.error("Failed to request extra vegetables:", err);
+      alert("Failed to request extra vegetables. Please try again.");
+    } finally {
+      setExtraVegLoading(false);
+    }
+  }
+
+  // Open add-on modal
+  function openAddOnModal() {
+    setShowAddOnModal(true);
+    setSelectedPaidAddons(new Map()); // Reset selections when opening
+    setShowPaymentConfirm(false);
+    if (!availableAddons) {
+      fetchAvailableAddons();
+    }
+  }
+
+  // Request dessert delivery
+  async function requestDessert() {
+    if (!status?.order?.id || dessertLoading || dessertRequested) return;
+
+    setDessertLoading(true);
+    try {
+      const response = await fetch(
+        `${BASE}/orders/${status.order.id}/dessert-ready`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-tenant-slug": "oh",
+          },
+        }
+      );
+
+      if (response.ok) {
+        setDessertRequested(true);
+      } else {
+        const data = await response.json();
+        alert(data.error || "Failed to request dessert. Please try again.");
+      }
+    } catch (err) {
+      console.error("Failed to request dessert:", err);
+      alert("Failed to request dessert. Please try again.");
+    } finally {
+      setDessertLoading(false);
+    }
+  }
+
+  // Toggle paid add-on selection
+  function togglePaidAddon(itemId: string) {
+    const newMap = new Map(selectedPaidAddons);
+    if (newMap.has(itemId)) {
+      newMap.delete(itemId);
+    } else {
+      newMap.set(itemId, 1);
+    }
+    setSelectedPaidAddons(newMap);
+  }
+
+  // Update paid add-on quantity (max 3 per item)
+  function updatePaidAddonQty(itemId: string, delta: number) {
+    const newMap = new Map(selectedPaidAddons);
+    const currentQty = newMap.get(itemId) || 0;
+    const newQty = Math.max(0, Math.min(3, currentQty + delta)); // Limit to max 3
+    if (newQty === 0) {
+      newMap.delete(itemId);
+    } else {
+      newMap.set(itemId, newQty);
+    }
+    setSelectedPaidAddons(newMap);
+  }
+
+  // Calculate total for selected paid add-ons
+  function calculatePaidAddonTotal(): number {
+    if (!availableAddons) return 0;
+    let total = 0;
+    selectedPaidAddons.forEach((qty, itemId) => {
+      const item = availableAddons.paidAddons.find(a => a.id === itemId);
+      if (item) {
+        total += item.basePriceCents * qty;
+      }
+    });
+    return total;
+  }
+
+  // Submit paid add-on order
+  async function submitPaidAddonOrder() {
+    if (!status?.order?.id || paidAddonLoading || selectedPaidAddons.size === 0) return;
+
+    setPaidAddonLoading(true);
+    try {
+      const items = Array.from(selectedPaidAddons.entries()).map(([menuItemId, quantity]) => ({
+        menuItemId,
+        quantity,
+      }));
+
+      // Create the add-on order
+      const response = await fetch(
+        `${BASE}/orders/${status.order.id}/addons`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-tenant-slug": "oh",
+          },
+          body: JSON.stringify({ items }),
+        }
+      );
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to create add-on order");
+      }
+
+      const { order: addonOrder, totalCents } = await response.json();
+
+      // Mark as paid (test payment mode - same as main payment flow)
+      // Add-on orders go straight to PREPPING since customer is already at pod
+      const payResponse = await fetch(`${BASE}/orders/${addonOrder.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-tenant-slug": "oh",
+        },
+        body: JSON.stringify({
+          paymentStatus: "PAID",
+          status: "PREPPING",
+          podConfirmedAt: new Date().toISOString(),
+        }),
+      });
+
+      if (!payResponse.ok) {
+        throw new Error("Payment processing failed");
+      }
+
+      alert(`Add-on order placed! $${(totalCents / 100).toFixed(2)} charged. Your items will be brought to your pod shortly.`);
+      setShowAddOnModal(false);
+      setSelectedPaidAddons(new Map());
+      setShowPaymentConfirm(false);
+    } catch (err: any) {
+      console.error("Failed to submit paid add-on:", err);
+      alert(err.message || "Failed to place add-on order. Please try again.");
+    } finally {
+      setPaidAddonLoading(false);
     }
   }
 
@@ -592,9 +899,109 @@ function StatusContent() {
                   </button>
                 </>
               ) : (
-                <div style={{ fontSize: "0.85rem", marginTop: 8, opacity: 0.9 }}>
-                  ✓ You're checked in!
-                </div>
+                <>
+                  <div style={{ fontSize: "0.85rem", marginTop: 8, opacity: 0.9 }}>
+                    ✓ You're checked in!
+                  </div>
+
+                  {/* Pod Service Buttons - Call Staff & Add Items */}
+                  {["QUEUED", "PREPPING", "READY", "SERVING"].includes(order.status) && (
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 10,
+                        marginTop: 16,
+                        justifyContent: "center",
+                      }}
+                    >
+                      <button
+                        onClick={callStaff}
+                        disabled={callStaffLoading || callStaffSuccess}
+                        style={{
+                          padding: "10px 16px",
+                          background: callStaffSuccess ? "#22c55e" : "white",
+                          color: callStaffSuccess ? "white" : "#5a584a",
+                          border: "none",
+                          borderRadius: 8,
+                          fontSize: "0.85rem",
+                          fontWeight: "bold",
+                          cursor: callStaffLoading || callStaffSuccess ? "default" : "pointer",
+                          opacity: callStaffLoading ? 0.7 : 1,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                      >
+                        {callStaffSuccess ? (
+                          <>✓ Staff Notified</>
+                        ) : callStaffLoading ? (
+                          <>Calling...</>
+                        ) : (
+                          <>🔔 Call Staff</>
+                        )}
+                      </button>
+                      <button
+                        onClick={openAddOnModal}
+                        style={{
+                          padding: "10px 16px",
+                          background: "rgba(255,255,255,0.15)",
+                          color: "white",
+                          border: "2px solid rgba(255,255,255,0.5)",
+                          borderRadius: 8,
+                          fontSize: "0.85rem",
+                          fontWeight: "bold",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                      >
+                        ➕ Add Items
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Ready for Dessert Button - Only shows if order has dessert and status is SERVING */}
+                  {order.status === "SERVING" &&
+                    order.items.some((item) => item.categoryType === "DESSERT") && (
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "center",
+                          marginTop: 12,
+                        }}
+                      >
+                        <button
+                          onClick={requestDessert}
+                          disabled={dessertLoading || dessertRequested}
+                          style={{
+                            padding: "10px 16px",
+                            background: dessertRequested
+                              ? "#22c55e"
+                              : "linear-gradient(135deg, #ec4899 0%, #db2777 100%)",
+                            color: "white",
+                            border: "none",
+                            borderRadius: 8,
+                            fontSize: "0.85rem",
+                            fontWeight: "bold",
+                            cursor: dessertLoading || dessertRequested ? "default" : "pointer",
+                            opacity: dessertLoading ? 0.7 : 1,
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6,
+                          }}
+                        >
+                          {dessertRequested ? (
+                            <>✓ Dessert On Its Way!</>
+                          ) : dessertLoading ? (
+                            <>Notifying...</>
+                          ) : (
+                            <>🍨 Ready for Dessert</>
+                          )}
+                        </button>
+                      </div>
+                    )}
+                </>
               )}
             </div>
           )}
@@ -1525,6 +1932,527 @@ function StatusContent() {
           Status updates automatically every 5 seconds
         </div>
       </div>
+
+      {/* Add-On Modal */}
+      {showAddOnModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.7)",
+            display: "flex",
+            alignItems: "flex-end",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: 0,
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowAddOnModal(false);
+          }}
+        >
+          <div
+            style={{
+              background: "white",
+              borderRadius: "24px 24px 0 0",
+              width: "100%",
+              maxWidth: 500,
+              maxHeight: "85vh",
+              overflow: "auto",
+              animation: "slideUp 0.3s ease",
+            }}
+          >
+            <style>
+              {`
+                @keyframes slideUp {
+                  from { transform: translateY(100%); }
+                  to { transform: translateY(0); }
+                }
+              `}
+            </style>
+
+            {/* Modal Header */}
+            <div
+              style={{
+                position: "sticky",
+                top: 0,
+                background: "white",
+                padding: "20px 24px",
+                borderBottom: "1px solid #e5e7eb",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <h2 style={{ margin: 0, fontSize: "1.3rem", color: "#111" }}>
+                Add to Your Order
+              </h2>
+              <button
+                onClick={() => setShowAddOnModal(false)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  fontSize: "1.5rem",
+                  cursor: "pointer",
+                  color: "#666",
+                  padding: 8,
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div style={{ padding: 24 }}>
+              {addonsLoading ? (
+                <div style={{ textAlign: "center", padding: 40, color: "#666" }}>
+                  Loading available items...
+                </div>
+              ) : availableAddons ? (
+                <>
+                  {/* Free Drink Refills */}
+                  {availableAddons.refillableDrinks.length > 0 && (
+                    <div style={{ marginBottom: 24 }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          marginBottom: 12,
+                        }}
+                      >
+                        <span
+                          style={{
+                            background: "#7C7A67",
+                            color: "white",
+                            padding: "4px 10px",
+                            borderRadius: 16,
+                            fontSize: "0.7rem",
+                            fontWeight: "bold",
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          Free
+                        </span>
+                        <h3 style={{ margin: 0, fontSize: "1rem", color: "#111" }}>
+                          🥤 Drink Refills
+                        </h3>
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                        {availableAddons.refillableDrinks.map((drink) => (
+                          <button
+                            key={drink.id}
+                            onClick={() => requestRefill(drink.id)}
+                            disabled={refillLoading}
+                            style={{
+                              padding: "14px 16px",
+                              background: "#f5f5f0",
+                              border: "2px solid #7C7A67",
+                              borderRadius: 10,
+                              fontSize: "0.95rem",
+                              fontWeight: "500",
+                              cursor: refillLoading ? "default" : "pointer",
+                              opacity: refillLoading ? 0.7 : 1,
+                              color: "#3d3c35",
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                            }}
+                          >
+                            <span>{drink.name}</span>
+                            <span style={{ fontSize: "0.85rem", color: "#5a584a" }}>
+                              {refillLoading ? "Requesting..." : "Request Refill →"}
+                            </span>
+                          </button>
+                        ))}
+                        <button
+                          onClick={() => requestRefill()}
+                          disabled={refillLoading}
+                          style={{
+                            padding: "14px 16px",
+                            background: "#f3f4f6",
+                            border: "2px solid #d1d5db",
+                            borderRadius: 10,
+                            fontSize: "0.95rem",
+                            fontWeight: "500",
+                            cursor: refillLoading ? "default" : "pointer",
+                            opacity: refillLoading ? 0.7 : 1,
+                            color: "#374151",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                          }}
+                        >
+                          <span>Water Refill</span>
+                          <span style={{ fontSize: "0.85rem" }}>
+                            {refillLoading ? "Requesting..." : "Request →"}
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Free Extra Vegetables */}
+                  {availableAddons.extraVegetables.length > 0 && (
+                    <div style={{ marginBottom: 24 }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          marginBottom: 12,
+                        }}
+                      >
+                        <span
+                          style={{
+                            background: "#7C7A67",
+                            color: "white",
+                            padding: "4px 10px",
+                            borderRadius: 16,
+                            fontSize: "0.7rem",
+                            fontWeight: "bold",
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          Free
+                        </span>
+                        <h3 style={{ margin: 0, fontSize: "1rem", color: "#111" }}>
+                          🥬 Extras & Add-Ons
+                        </h3>
+                      </div>
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "repeat(2, 1fr)",
+                          gap: 8,
+                        }}
+                      >
+                        {availableAddons.extraVegetables.map((veg) => {
+                          const isSelected = selectedExtraVegs.has(veg.id);
+                          return (
+                            <button
+                              key={veg.id}
+                              onClick={() => {
+                                const newSet = new Set(selectedExtraVegs);
+                                if (isSelected) {
+                                  newSet.delete(veg.id);
+                                } else {
+                                  newSet.add(veg.id);
+                                }
+                                setSelectedExtraVegs(newSet);
+                              }}
+                              style={{
+                                padding: "12px 14px",
+                                background: isSelected ? "#e8e6dc" : "#f9fafb",
+                                border: isSelected
+                                  ? "2px solid #7C7A67"
+                                  : "2px solid #e5e7eb",
+                                borderRadius: 10,
+                                fontSize: "0.9rem",
+                                fontWeight: isSelected ? "600" : "500",
+                                cursor: "pointer",
+                                color: isSelected ? "#3d3c35" : "#374151",
+                                transition: "all 0.15s ease",
+                              }}
+                            >
+                              {isSelected && "✓ "}{veg.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {selectedExtraVegs.size > 0 && (
+                        <button
+                          onClick={requestExtraVegetables}
+                          disabled={extraVegLoading}
+                          style={{
+                            marginTop: 12,
+                            width: "100%",
+                            padding: "14px 16px",
+                            background: "#7C7A67",
+                            color: "white",
+                            border: "none",
+                            borderRadius: 10,
+                            fontSize: "1rem",
+                            fontWeight: "bold",
+                            cursor: extraVegLoading ? "default" : "pointer",
+                            opacity: extraVegLoading ? 0.7 : 1,
+                          }}
+                        >
+                          {extraVegLoading
+                            ? "Requesting..."
+                            : `Request ${selectedExtraVegs.size} Extra${selectedExtraVegs.size > 1 ? "s" : ""}`}
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Paid Add-Ons */}
+                  {availableAddons.paidAddons.length > 0 && (
+                    <div style={{ marginBottom: 16 }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          marginBottom: 12,
+                        }}
+                      >
+                        <span
+                          style={{
+                            background: "#C7A878",
+                            color: "#3d3c35",
+                            padding: "4px 10px",
+                            borderRadius: 16,
+                            fontSize: "0.7rem",
+                            fontWeight: "bold",
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          Paid
+                        </span>
+                        <h3 style={{ margin: 0, fontSize: "1rem", color: "#111" }}>
+                          🛒 Add-Ons & Extras
+                        </h3>
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                        {availableAddons.paidAddons.map((item) => {
+                          const qty = selectedPaidAddons.get(item.id) || 0;
+                          const isSelected = qty > 0;
+                          return (
+                            <div
+                              key={item.id}
+                              style={{
+                                padding: "12px 16px",
+                                background: isSelected ? "#f5f5f0" : "#fafafa",
+                                border: isSelected ? "2px solid #7C7A67" : "2px solid #d1d5db",
+                                borderRadius: 10,
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                              }}
+                            >
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: "0.95rem", fontWeight: "500", color: "#3d3c35" }}>
+                                  {item.name}
+                                </div>
+                                <div style={{ fontSize: "0.85rem", color: "#5a584a" }}>
+                                  ${(item.basePriceCents / 100).toFixed(2)}
+                                </div>
+                              </div>
+                              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                {isSelected ? (
+                                  <>
+                                    <button
+                                      onClick={() => updatePaidAddonQty(item.id, -1)}
+                                      style={{
+                                        width: 32,
+                                        height: 32,
+                                        borderRadius: 8,
+                                        border: "none",
+                                        background: "#7C7A67",
+                                        color: "white",
+                                        fontSize: "1.2rem",
+                                        fontWeight: "bold",
+                                        cursor: "pointer",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                      }}
+                                    >
+                                      −
+                                    </button>
+                                    <span
+                                      style={{
+                                        minWidth: 24,
+                                        textAlign: "center",
+                                        fontWeight: "bold",
+                                        fontSize: "1.1rem",
+                                        color: "#3d3c35",
+                                      }}
+                                    >
+                                      {qty}
+                                    </span>
+                                    <button
+                                      onClick={() => updatePaidAddonQty(item.id, 1)}
+                                      disabled={qty >= 3}
+                                      style={{
+                                        width: 32,
+                                        height: 32,
+                                        borderRadius: 8,
+                                        border: "none",
+                                        background: qty >= 3 ? "#d1d5db" : "#7C7A67",
+                                        color: qty >= 3 ? "#9ca3af" : "white",
+                                        fontSize: "1.2rem",
+                                        fontWeight: "bold",
+                                        cursor: qty >= 3 ? "not-allowed" : "pointer",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                      }}
+                                    >
+                                      +
+                                    </button>
+                                  </>
+                                ) : (
+                                  <button
+                                    onClick={() => togglePaidAddon(item.id)}
+                                    style={{
+                                      padding: "8px 16px",
+                                      borderRadius: 8,
+                                      border: "none",
+                                      background: "#7C7A67",
+                                      color: "white",
+                                      fontSize: "0.85rem",
+                                      fontWeight: "bold",
+                                      cursor: "pointer",
+                                    }}
+                                  >
+                                    Add
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Payment Summary & Checkout */}
+                      {selectedPaidAddons.size > 0 && (
+                        <div
+                          style={{
+                            marginTop: 16,
+                            padding: 16,
+                            background: "#f5f5f0",
+                            borderRadius: 10,
+                            border: "2px solid #7C7A67",
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              marginBottom: 12,
+                            }}
+                          >
+                            <span style={{ fontWeight: "bold", color: "#3d3c35" }}>
+                              Order Total
+                            </span>
+                            <span style={{ fontSize: "1.25rem", fontWeight: "bold", color: "#3d3c35" }}>
+                              ${(calculatePaidAddonTotal() / 100).toFixed(2)}
+                            </span>
+                          </div>
+
+                          {!showPaymentConfirm ? (
+                            <button
+                              onClick={() => setShowPaymentConfirm(true)}
+                              style={{
+                                width: "100%",
+                                padding: "14px 16px",
+                                background: "#7C7A67",
+                                color: "white",
+                                border: "none",
+                                borderRadius: 10,
+                                fontSize: "1rem",
+                                fontWeight: "bold",
+                                cursor: "pointer",
+                              }}
+                            >
+                              Checkout →
+                            </button>
+                          ) : (
+                            <div>
+                              <div
+                                style={{
+                                  background: "#e8e6dc",
+                                  padding: 12,
+                                  borderRadius: 8,
+                                  marginBottom: 12,
+                                  fontSize: "0.85rem",
+                                  color: "#5a584a",
+                                }}
+                              >
+                                ⚠️ Demo mode: No real charge will be made
+                              </div>
+                              <div style={{ display: "flex", gap: 8 }}>
+                                <button
+                                  onClick={() => setShowPaymentConfirm(false)}
+                                  style={{
+                                    flex: 1,
+                                    padding: "12px 16px",
+                                    background: "white",
+                                    color: "#5a584a",
+                                    border: "2px solid #7C7A67",
+                                    borderRadius: 10,
+                                    fontSize: "0.95rem",
+                                    fontWeight: "bold",
+                                    cursor: "pointer",
+                                  }}
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  onClick={submitPaidAddonOrder}
+                                  disabled={paidAddonLoading}
+                                  style={{
+                                    flex: 2,
+                                    padding: "12px 16px",
+                                    background: paidAddonLoading ? "#9ca3af" : "#5a584a",
+                                    color: "white",
+                                    border: "none",
+                                    borderRadius: 10,
+                                    fontSize: "0.95rem",
+                                    fontWeight: "bold",
+                                    cursor: paidAddonLoading ? "default" : "pointer",
+                                  }}
+                                >
+                                  {paidAddonLoading ? "Processing..." : `Pay $${(calculatePaidAddonTotal() / 100).toFixed(2)}`}
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* No items available */}
+                  {availableAddons.refillableDrinks.length === 0 &&
+                    availableAddons.extraVegetables.length === 0 &&
+                    availableAddons.paidAddons.length === 0 && (
+                      <div style={{ textAlign: "center", padding: 40, color: "#666" }}>
+                        No add-ons available for this order.
+                        <br />
+                        <br />
+                        <button
+                          onClick={callStaff}
+                          style={{
+                            padding: "12px 24px",
+                            background: "#7C7A67",
+                            color: "white",
+                            border: "none",
+                            borderRadius: 8,
+                            fontSize: "1rem",
+                            fontWeight: "bold",
+                            cursor: "pointer",
+                          }}
+                        >
+                          🔔 Call Staff Instead
+                        </button>
+                      </div>
+                    )}
+                </>
+              ) : (
+                <div style={{ textAlign: "center", padding: 40, color: "#666" }}>
+                  Failed to load add-ons. Please try again or call staff.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
