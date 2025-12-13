@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 const pressReleases = [
   {
@@ -10,14 +10,25 @@ const pressReleases = [
   },
 ];
 
-const brandAssets = [
-  { name: "Logo Package", description: "Primary logo in various formats (PNG, SVG, EPS)", icon: "🎨" },
-  { name: "Brand Guidelines", description: "Color palette, typography, and usage guidelines", icon: "📐" },
-  { name: "Product Photography", description: "High-resolution images of our signature dishes", icon: "📸" },
-  { name: "Location Photos", description: "Interior and exterior photography of our spaces", icon: "🏠" },
-];
-
 export default function PressPage() {
+  const t = useTranslations("press");
+
+  const brandAssets = [
+    { name: t("brandAssets.logoPackage.name"), description: t("brandAssets.logoPackage.description"), icon: "🎨" },
+    { name: t("brandAssets.brandGuidelines.name"), description: t("brandAssets.brandGuidelines.description"), icon: "📐" },
+    { name: t("brandAssets.productPhotography.name"), description: t("brandAssets.productPhotography.description"), icon: "📸" },
+    { name: t("brandAssets.locationPhotos.name"), description: t("brandAssets.locationPhotos.description"), icon: "🏠" },
+  ];
+
+  const keyFacts = [
+    { label: t("keyFacts.founded"), value: "2024" },
+    { label: t("keyFacts.headquarters"), value: "San Francisco, CA" },
+    { label: t("keyFacts.flagshipOpening"), value: "Spring 2025" },
+    { label: t("keyFacts.recipeHeritage"), value: "30+ Years" },
+    { label: t("keyFacts.uniqueFeature"), value: "Private Dining Pods" },
+    { label: t("keyFacts.techPlatform"), value: "Mobile-First Ordering" },
+  ];
+
   return (
     <div style={{ background: "#E5E5E5", minHeight: "100vh" }}>
       {/* Hero Section */}
@@ -38,7 +49,7 @@ export default function PressPage() {
             color: "#E5E5E5",
           }}
         >
-          Press & Media
+          {t("title")}
         </h1>
         <p
           style={{
@@ -50,7 +61,7 @@ export default function PressPage() {
             fontWeight: "300",
           }}
         >
-          Resources for journalists, bloggers, and media professionals covering Oh! Beef Noodle Soup.
+          {t("description")}
         </p>
       </section>
 
@@ -67,10 +78,10 @@ export default function PressPage() {
           }}
         >
           <h2 style={{ fontSize: "1.5rem", fontWeight: "500", color: "#222222", marginBottom: "16px" }}>
-            Media Contact
+            {t("mediaContact.title")}
           </h2>
           <p style={{ color: "#666", marginBottom: "24px", lineHeight: "1.6" }}>
-            For press inquiries, interviews, or media requests, please contact our communications team.
+            {t("mediaContact.description")}
           </p>
           <a
             href="mailto:press@ohbeefnoodlesoup.com"
@@ -87,14 +98,14 @@ export default function PressPage() {
             press@ohbeefnoodlesoup.com
           </a>
           <p style={{ color: "#666", fontSize: "0.9rem", marginTop: "16px" }}>
-            We typically respond within 24-48 hours
+            {t("mediaContact.responseTime")}
           </p>
         </div>
 
         {/* Our Story */}
         <div style={{ marginBottom: "48px" }}>
           <h2 style={{ fontSize: "1.5rem", fontWeight: "500", color: "#222222", marginBottom: "24px" }}>
-            Our Story
+            {t("ourStory.title")}
           </h2>
           <div
             style={{
@@ -105,13 +116,13 @@ export default function PressPage() {
             }}
           >
             <p style={{ color: "#444", lineHeight: "1.8", marginBottom: "16px" }}>
-              Oh! Beef Noodle Soup is reimagining the traditional Taiwanese dining experience through technology and thoughtful design. Founded on a 30-year family recipe, we&apos;re bringing the comfort of beef noodle soup to a new generation of diners who value quality, convenience, and unique experiences.
+              {t("ourStory.p1")}
             </p>
             <p style={{ color: "#444", lineHeight: "1.8", marginBottom: "16px" }}>
-              Our flagship location in San Francisco features private dining pods inspired by Japanese solo dining concepts, allowing guests to fully immerse themselves in the flavors and aromas of our handcrafted soup without distraction.
+              {t("ourStory.p2")}
             </p>
             <p style={{ color: "#444", lineHeight: "1.8" }}>
-              With a tech-first approach to ordering and service, Oh! offers a seamless dining experience from the moment you place your order through our app to the final spoonful of rich, aromatic broth.
+              {t("ourStory.p3")}
             </p>
           </div>
         </div>
@@ -119,7 +130,7 @@ export default function PressPage() {
         {/* Key Facts */}
         <div style={{ marginBottom: "48px" }}>
           <h2 style={{ fontSize: "1.5rem", fontWeight: "500", color: "#222222", marginBottom: "24px" }}>
-            Key Facts
+            {t("keyFacts.title")}
           </h2>
           <div
             style={{
@@ -128,14 +139,7 @@ export default function PressPage() {
               gap: "16px",
             }}
           >
-            {[
-              { label: "Founded", value: "2024" },
-              { label: "Headquarters", value: "San Francisco, CA" },
-              { label: "Flagship Opening", value: "Spring 2025" },
-              { label: "Recipe Heritage", value: "30+ Years" },
-              { label: "Unique Feature", value: "Private Dining Pods" },
-              { label: "Tech Platform", value: "Mobile-First Ordering" },
-            ].map((fact) => (
+            {keyFacts.map((fact) => (
               <div
                 key={fact.label}
                 style={{
@@ -159,7 +163,7 @@ export default function PressPage() {
         {/* Press Releases */}
         <div style={{ marginBottom: "48px" }}>
           <h2 style={{ fontSize: "1.5rem", fontWeight: "500", color: "#222222", marginBottom: "24px" }}>
-            Press Releases
+            {t("pressReleases.title")}
           </h2>
           <div style={{ display: "grid", gap: "16px" }}>
             {pressReleases.map((release, idx) => (
@@ -189,7 +193,7 @@ export default function PressPage() {
         {/* Brand Assets */}
         <div>
           <h2 style={{ fontSize: "1.5rem", fontWeight: "500", color: "#222222", marginBottom: "24px" }}>
-            Brand Assets
+            {t("brandAssets.title")}
           </h2>
           <div
             style={{
@@ -224,7 +228,7 @@ export default function PressPage() {
             ))}
           </div>
           <p style={{ textAlign: "center", color: "#666", marginTop: "24px", fontSize: "0.9rem" }}>
-            Request access to brand assets by emailing{" "}
+            {t("brandAssets.requestAccess")}{" "}
             <a href="mailto:press@ohbeefnoodlesoup.com" style={{ color: "#7C7A67", fontWeight: "500" }}>
               press@ohbeefnoodlesoup.com
             </a>

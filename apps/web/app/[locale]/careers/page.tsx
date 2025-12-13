@@ -1,29 +1,7 @@
 "use client";
 
 import Link from "next/link";
-
-const values = [
-  {
-    emoji: "🎯",
-    title: "Excellence in Craft",
-    description: "We obsess over the details. Every bowl, every experience, every interaction matters.",
-  },
-  {
-    emoji: "🚀",
-    title: "Innovation First",
-    description: "We're building the future of dining. Technology and tradition working in harmony.",
-  },
-  {
-    emoji: "🤝",
-    title: "Team Over Ego",
-    description: "We succeed together. Collaboration, respect, and support are at our core.",
-  },
-  {
-    emoji: "💪",
-    title: "Growth Mindset",
-    description: "We invest in our people. Learn, grow, and advance your career with us.",
-  },
-];
+import { useTranslations } from "next-intl";
 
 const openPositions = [
   {
@@ -63,16 +41,42 @@ const openPositions = [
   },
 ];
 
-const benefits = [
-  { emoji: "💰", title: "Competitive Pay", description: "Above-market wages plus performance bonuses" },
-  { emoji: "🏥", title: "Health Benefits", description: "Medical, dental, and vision coverage" },
-  { emoji: "🍜", title: "Free Meals", description: "Daily meals during shifts plus family discount" },
-  { emoji: "📈", title: "Career Growth", description: "Clear advancement paths and mentorship" },
-  { emoji: "📚", title: "Learning Budget", description: "Annual stipend for professional development" },
-  { emoji: "🎉", title: "Team Events", description: "Regular team outings and celebrations" },
-];
-
 export default function CareersPage() {
+  const t = useTranslations("careers");
+  const tCommon = useTranslations("common");
+
+  const values = [
+    {
+      emoji: "🎯",
+      title: t("values.excellence.title"),
+      description: t("values.excellence.description"),
+    },
+    {
+      emoji: "🚀",
+      title: t("values.innovation.title"),
+      description: t("values.innovation.description"),
+    },
+    {
+      emoji: "🤝",
+      title: t("values.team.title"),
+      description: t("values.team.description"),
+    },
+    {
+      emoji: "💪",
+      title: t("values.growth.title"),
+      description: t("values.growth.description"),
+    },
+  ];
+
+  const benefits = [
+    { emoji: "💰", title: t("benefits.pay.title"), description: t("benefits.pay.description") },
+    { emoji: "🏥", title: t("benefits.health.title"), description: t("benefits.health.description") },
+    { emoji: "🍜", title: t("benefits.meals.title"), description: t("benefits.meals.description") },
+    { emoji: "📈", title: t("benefits.careerGrowth.title"), description: t("benefits.careerGrowth.description") },
+    { emoji: "📚", title: t("benefits.learning.title"), description: t("benefits.learning.description") },
+    { emoji: "🎉", title: t("benefits.events.title"), description: t("benefits.events.description") },
+  ];
+
   return (
     <div style={{ background: "#E5E5E5", minHeight: "100vh" }}>
       {/* Hero Section */}
@@ -93,7 +97,7 @@ export default function CareersPage() {
             color: "#E5E5E5",
           }}
         >
-          Join Our Team
+          {t("title")}
         </h1>
         <p
           style={{
@@ -105,7 +109,7 @@ export default function CareersPage() {
             fontWeight: "300",
           }}
         >
-          Help us reimagine the dining experience. We&apos;re building something special and looking for passionate people to join us on this journey.
+          {t("description")}
         </p>
         <a
           href="#positions"
@@ -120,7 +124,7 @@ export default function CareersPage() {
             letterSpacing: "1px",
           }}
         >
-          VIEW OPEN POSITIONS
+          {t("viewPositions")}
         </a>
       </section>
 
@@ -136,7 +140,7 @@ export default function CareersPage() {
               textAlign: "center",
             }}
           >
-            Our Values
+            {t("values.title")}
           </h2>
           <p
             style={{
@@ -148,7 +152,7 @@ export default function CareersPage() {
               margin: "0 auto 48px",
             }}
           >
-            These principles guide everything we do, from how we make our soup to how we treat each other.
+            {t("values.description")}
           </p>
 
           <div
@@ -193,7 +197,7 @@ export default function CareersPage() {
               textAlign: "center",
             }}
           >
-            Open Positions
+            {t("openPositions")}
           </h2>
 
           <div style={{ display: "grid", gap: "16px" }}>
@@ -260,7 +264,7 @@ export default function CareersPage() {
                     whiteSpace: "nowrap",
                   }}
                 >
-                  Apply
+                  {t("applyNow")}
                 </button>
               </div>
             ))}
@@ -277,9 +281,9 @@ export default function CareersPage() {
             }}
           >
             <p style={{ color: "#222222", margin: 0 }}>
-              Don&apos;t see a position that fits? <strong>We&apos;re always looking for talented people.</strong>{" "}
+              {t("positions.noFit")} <strong>{t("positions.alwaysLooking")}</strong>{" "}
               <Link href="/contact" style={{ color: "#7C7A67", fontWeight: "600" }}>
-                Send us your resume
+                {t("positions.sendResume")}
               </Link>
             </p>
           </div>
@@ -298,7 +302,7 @@ export default function CareersPage() {
               letterSpacing: "1px",
             }}
           >
-            Why Work With Us
+            {t("benefits.title")}
           </h2>
 
           <div
@@ -347,7 +351,7 @@ export default function CareersPage() {
             marginBottom: "16px",
           }}
         >
-          Ready to Make Your Mark?
+          {t("cta.title")}
         </h2>
         <p
           style={{
@@ -357,7 +361,7 @@ export default function CareersPage() {
             opacity: 0.8,
           }}
         >
-          Join us in creating the future of dining.
+          {t("cta.description")}
         </p>
         <a
           href="#positions"
@@ -372,7 +376,7 @@ export default function CareersPage() {
             letterSpacing: "1px",
           }}
         >
-          APPLY NOW
+          {t("cta.button")}
         </a>
       </section>
     </div>
