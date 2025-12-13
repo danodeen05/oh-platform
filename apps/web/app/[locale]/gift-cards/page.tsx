@@ -179,11 +179,12 @@ export default function GiftCardsPage() {
                 >
                   Digital Gift Card
                 </div>
-                <div style={{ width: "140px", height: "140px", position: "relative", marginTop: "-20px", marginRight: "-10px" }}>
+                <div style={{ width: "clamp(100px, 25vw, 140px)", height: "clamp(100px, 25vw, 140px)", position: "relative", marginTop: "-20px", marginRight: "-10px" }}>
                   <Image
                     src="/Oh_Logo_Large.png"
                     alt="Oh! Logo"
                     fill
+                    sizes="(max-width: 768px) 100px, 140px"
                     style={{ objectFit: "contain", filter: "brightness(0) invert(1)", opacity: 0.85 }}
                   />
                 </div>
