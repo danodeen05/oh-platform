@@ -46,6 +46,7 @@ export default function GiftCardsPage() {
             height: "300px",
             background: "radial-gradient(circle, rgba(199, 168, 120, 0.1) 0%, transparent 70%)",
             borderRadius: "50%",
+            pointerEvents: "none",
           }}
         />
         <div
@@ -57,6 +58,7 @@ export default function GiftCardsPage() {
             height: "200px",
             background: "radial-gradient(circle, rgba(124, 122, 103, 0.1) 0%, transparent 70%)",
             borderRadius: "50%",
+            pointerEvents: "none",
           }}
         />
 
@@ -217,7 +219,7 @@ export default function GiftCardsPage() {
           </div>
 
           {/* Design selector */}
-          <div style={{ display: "flex", gap: "12px", marginTop: "32px" }}>
+          <div style={{ display: "flex", gap: "12px", marginTop: "32px", position: "relative", zIndex: 10 }}>
             {cardDesigns.map((design) => (
               <button
                 key={design.id}
@@ -231,6 +233,8 @@ export default function GiftCardsPage() {
                   cursor: "pointer",
                   transition: "all 0.2s ease",
                   boxShadow: selectedDesign === design.id ? "0 4px 12px rgba(0,0,0,0.3)" : "none",
+                  position: "relative",
+                  zIndex: 10,
                 }}
                 title={design.name}
               />
