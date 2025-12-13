@@ -100,9 +100,24 @@
     "selectLanguage": "Language"
   },
   "menu": {
-    "title": "Our Menu",
-    "description": "Crafted with a 30-year family recipe, every bowl tells a story of tradition, quality, and the pursuit of the perfect beef noodle soup.",
-    "unableToLoad": "Unable to load menu",
+    "hero": {
+      "title": "Our Menu",
+      "description": "Crafted with a 30-year family recipe, every bowl tells a story of tradition, quality, and the pursuit of the perfect beef noodle soup.",
+      "orderNow": "ORDER NOW"
+    },
+    "loading": "Loading menu...",
+    "error": {
+      "title": "Unable to load menu",
+      "failedToLoad": "Failed to load menu",
+      "tryAgain": "Try Again"
+    },
+    "tags": {
+      "premium": "Premium",
+      "signature": "Signature",
+      "included": "Included",
+      "unlimitedRefills": "Unlimited Refills",
+      "complimentary": "Complimentary"
+    },
     "categories": {
       "soups": "Soups",
       "noodles": "Noodles",
@@ -112,28 +127,23 @@
       "desserts": "Desserts"
     },
     "sections": {
-      "chooseSoup": {
-        "title": "Choose Your Soup",
+      "soup": {
         "subtitle": "The Foundation of Every Bowl",
         "description": "Our 30-year family recipe starts with slow-braised beef bones simmered for 48 hours, creating a rich, complex broth that defines the Oh! experience."
       },
-      "chooseNoodles": {
-        "title": "Choose Your Noodles",
+      "noodles": {
         "subtitle": "Hand-Selected for Perfection",
         "description": "Every noodle is chosen to complement our rich broth. Find your perfect texture."
       },
       "premiumAddons": {
-        "title": "Premium Add-ons",
         "subtitle": "Elevate Your Bowl",
         "description": "Enhance your experience with premium additions. Each item is prepared with the same attention to detail as our signature dishes."
       },
       "sideDishes": {
-        "title": "Side Dishes",
         "subtitle": "Complete Your Experience",
         "description": "Traditional accompaniments that complement the main attraction."
       },
       "dessert": {
-        "title": "Dessert",
         "subtitle": "Sweet Endings",
         "description": "Light, refreshing finishes to complete your dining experience."
       }
@@ -160,24 +170,80 @@
     },
     "cta": {
       "title": "Ready to Experience Oh!?",
-      "description": "Build your perfect bowl and skip the wait."
+      "description": "Build your perfect bowl and skip the wait.",
+      "button": "START YOUR ORDER"
     }
   },
   "locations": {
-    "title": "Our Locations",
-    "description": "Find an Oh! near you",
-    "hours": "Hours",
-    "weekday": "Weekday",
-    "weekend": "Weekend",
-    "comingSoon": "Coming Soon",
-    "openNow": "Open Now",
-    "features": "Features",
-    "upcomingCities": "Coming to Your City",
-    "selectLocation": "Select Location",
-    "viewDetails": "View Details",
-    "getDirections": "Get Directions",
-    "nearYou": "Near You",
-    "allLocations": "All Locations"
+    "hero": {
+      "findUs": "Find Us",
+      "title": "Our Locations",
+      "description": "Two locations in Utah. Private pods. No tipping. Just you and the perfect bowl."
+    },
+    "loading": "Finding our locations...",
+    "cityCreek": {
+      "tagline": "Downtown Salt Lake",
+      "description": "Our flagship Utah location in the heart of downtown Salt Lake City. Steps from Temple Square and the city's business district.",
+      "mallDescription": "City Creek Center is Salt Lake's premier shopping destination, featuring a retractable glass roof, creek running through the property, and over 100 stores and restaurants.",
+      "nearbyLandmarks": ["Temple Square", "Salt Palace Convention Center", "TRAX Light Rail"],
+      "parking": "Validated parking available in City Creek parking structure"
+    },
+    "universityPlace": {
+      "tagline": "Utah Valley",
+      "description": "Serving the Utah Valley community in Orem. Convenient for students, families, and anyone craving authentic beef noodle soup.",
+      "mallDescription": "University Place is Utah Valley's largest open-air shopping center, located at the crossroads of Orem and Provo with easy access from I-15.",
+      "nearbyLandmarks": ["Utah Valley University", "BYU Campus", "Provo Canyon"],
+      "parking": "Free surface parking throughout the center"
+    },
+    "details": {
+      "address": "Address",
+      "hours": "Hours",
+      "hoursMonThurs": "Monday – Thursday: 11am – 9pm",
+      "hoursFriSat": "Friday – Saturday: 11am – 10pm",
+      "hoursSun": "Sunday: 12pm – 8pm",
+      "parking": "Parking"
+    },
+    "buttons": {
+      "orderAhead": "Order Ahead",
+      "getDirections": "Get Directions"
+    },
+    "about": {
+      "title": "About",
+      "nearby": "Nearby"
+    },
+    "features": {
+      "privatePods": "12 Private Pods",
+      "orderAhead": "Order Ahead",
+      "noTipping": "No Tipping",
+      "accessible": "Accessible"
+    },
+    "ohWay": {
+      "label": "The Oh! Way",
+      "title": "A different kind of dining experience",
+      "kiosk": {
+        "title": "Order at the Kiosk",
+        "description": "Customize every detail of your bowl at our touchscreen kiosks. No pressure, take your time. Or order ahead from your phone."
+      },
+      "pod": {
+        "title": "Your Private Pod",
+        "description": "Inspired by Japan's ichiran ramen. Individual pods let you focus entirely on your meal. Peace, privacy, perfect soup."
+      },
+      "noTips": {
+        "title": "No Tips, Ever",
+        "description": "We pay our team well so you don't have to calculate tips. The price you see is the price you pay."
+      }
+    },
+    "comingSoon": {
+      "title": "More locations coming soon",
+      "description": "We're growing across Utah. Want Oh! in your neighborhood?",
+      "cities": ["Provo", "Draper", "Park City"],
+      "label": "Coming Soon"
+    },
+    "cta": {
+      "title": "Ready to experience Oh!?",
+      "description": "Skip the line. Order ahead and have your bowl ready when you arrive.",
+      "button": "Start Your Order"
+    }
   },
   "store": {
     "title": "The Official Store",

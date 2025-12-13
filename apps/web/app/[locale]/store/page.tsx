@@ -3,100 +3,121 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-
-const products = [
-  {
-    id: "home-kit",
-    name: "Oh! Home Kit",
-    category: "Food",
-    description: "Everything you need to make our signature beef noodle soup at home. Includes broth base, noodles, and spice packets.",
-    price: 34.99,
-    badge: "Best Seller",
-    image: "/store/HomeKit.png",
-  },
-  {
-    id: "chili-oil",
-    name: "Signature Chili Oil",
-    category: "Condiments",
-    description: "Our house-made chili oil with Szechuan peppercorns. Perfect for adding heat to any dish.",
-    price: 14.99,
-    badge: null,
-    image: "/store/SignatureChiliOil.png",
-  },
-  {
-    id: "broth-concentrate",
-    name: "Beef Bone Broth Concentrate",
-    category: "Food",
-    description: "Rich, concentrated beef broth made from our 48-hour recipe. Just add water for restaurant-quality broth.",
-    price: 24.99,
-    badge: "New",
-    image: "/store/BeefBoneBrothConcentrate.png",
-  },
-  {
-    id: "ceramic-bowl",
-    name: "Oh! Ceramic Bowl",
-    category: "Merchandise",
-    description: "Premium ceramic bowl designed for the perfect noodle experience. Heat-retaining, hand-glazed.",
-    price: 42.00,
-    badge: null,
-    image: "/store/CeramicBowl.png",
-  },
-  {
-    id: "chopsticks",
-    name: "Premium Chopstick Set",
-    category: "Merchandise",
-    description: "Handcrafted wooden chopsticks with matching rest. Comes in a beautiful gift box.",
-    price: 28.00,
-    badge: null,
-    image: "/store/Chopsticks.png",
-  },
-  {
-    id: "tshirt",
-    name: "Oh! Classic Tee",
-    category: "Apparel",
-    description: "Soft cotton tee with our signature logo. Available in black and white.",
-    price: 32.00,
-    badge: null,
-    image: "/store/T-Shirt.png",
-  },
-  {
-    id: "hoodie",
-    name: "Oh! Comfort Hoodie",
-    category: "Apparel",
-    description: "Premium heavyweight hoodie with embroidered logo. Perfect for cozy soup weather.",
-    price: 68.00,
-    badge: null,
-    image: "/store/ComfortHoodie.png",
-  },
-  {
-    id: "apron",
-    name: "Chef's Apron",
-    category: "Merchandise",
-    description: "Canvas apron with leather straps and our logo. For the home chef who takes noodles seriously.",
-    price: 45.00,
-    badge: null,
-    image: "/store/ChefsApron.png",
-  },
-  {
-    id: "wooden-bowl",
-    name: "Artisan Wood Bowl",
-    category: "Limited Edition",
-    description: "One-of-a-kind hand-turned wooden bowl with organic shape. Each piece features unique grain patterns and our laser-engraved logo.",
-    price: 145.00,
-    badge: "Limited",
-    image: "/store/ArtisanWoodenSoupBowl.png",
-  },
-];
-
-const categories = ["All", "Food", "Condiments", "Merchandise", "Apparel", "Limited Edition"];
+import { useTranslations, useLocale } from "next-intl";
 
 export default function StorePage() {
+  const t = useTranslations("store");
+  const tCommon = useTranslations("common");
+  const locale = useLocale();
+
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [hoveredProduct, setHoveredProduct] = useState<string | null>(null);
 
+  const products = [
+    {
+      id: "home-kit",
+      name: t("products.homeKit.name"),
+      category: t("categories.food"),
+      categoryKey: "Food",
+      description: t("products.homeKit.description"),
+      price: 34.99,
+      badge: t("badges.bestSeller"),
+      image: "/store/HomeKit.png",
+    },
+    {
+      id: "chili-oil",
+      name: t("products.chiliOil.name"),
+      category: t("categories.condiments"),
+      categoryKey: "Condiments",
+      description: t("products.chiliOil.description"),
+      price: 14.99,
+      badge: null,
+      image: "/store/SignatureChiliOil.png",
+    },
+    {
+      id: "broth-concentrate",
+      name: t("products.brothConcentrate.name"),
+      category: t("categories.food"),
+      categoryKey: "Food",
+      description: t("products.brothConcentrate.description"),
+      price: 24.99,
+      badge: t("badges.new"),
+      image: "/store/BeefBoneBrothConcentrate.png",
+    },
+    {
+      id: "ceramic-bowl",
+      name: t("products.ceramicBowl.name"),
+      category: t("categories.merchandise"),
+      categoryKey: "Merchandise",
+      description: t("products.ceramicBowl.description"),
+      price: 42.00,
+      badge: null,
+      image: "/store/CeramicBowl.png",
+    },
+    {
+      id: "chopsticks",
+      name: t("products.chopsticks.name"),
+      category: t("categories.merchandise"),
+      categoryKey: "Merchandise",
+      description: t("products.chopsticks.description"),
+      price: 28.00,
+      badge: null,
+      image: "/store/Chopsticks.png",
+    },
+    {
+      id: "tshirt",
+      name: t("products.tshirt.name"),
+      category: t("categories.apparel"),
+      categoryKey: "Apparel",
+      description: t("products.tshirt.description"),
+      price: 32.00,
+      badge: null,
+      image: "/store/T-Shirt.png",
+    },
+    {
+      id: "hoodie",
+      name: t("products.hoodie.name"),
+      category: t("categories.apparel"),
+      categoryKey: "Apparel",
+      description: t("products.hoodie.description"),
+      price: 68.00,
+      badge: null,
+      image: "/store/ComfortHoodie.png",
+    },
+    {
+      id: "apron",
+      name: t("products.apron.name"),
+      category: t("categories.merchandise"),
+      categoryKey: "Merchandise",
+      description: t("products.apron.description"),
+      price: 45.00,
+      badge: null,
+      image: "/store/ChefsApron.png",
+    },
+    {
+      id: "wooden-bowl",
+      name: t("products.woodenBowl.name"),
+      category: t("categories.limitedEdition"),
+      categoryKey: "Limited Edition",
+      description: t("products.woodenBowl.description"),
+      price: 145.00,
+      badge: t("badges.limited"),
+      image: "/store/ArtisanWoodenSoupBowl.png",
+    },
+  ];
+
+  const categories = [
+    { key: "All", label: t("categories.all") },
+    { key: "Food", label: t("categories.food") },
+    { key: "Condiments", label: t("categories.condiments") },
+    { key: "Merchandise", label: t("categories.merchandise") },
+    { key: "Apparel", label: t("categories.apparel") },
+    { key: "Limited Edition", label: t("categories.limitedEdition") },
+  ];
+
   const filteredProducts = selectedCategory === "All"
     ? products
-    : products.filter(p => p.category === selectedCategory);
+    : products.filter(p => p.categoryKey === selectedCategory);
 
   return (
     <div style={{ background: "#faf9f7", minHeight: "100vh" }}>
@@ -171,7 +192,7 @@ export default function StorePage() {
               fontWeight: "500",
             }}
           >
-            Bring Oh! Home
+            {t("tagline")}
           </p>
           <h1
             style={{
@@ -183,7 +204,7 @@ export default function StorePage() {
               textShadow: "0 2px 20px rgba(0,0,0,0.3)",
             }}
           >
-            The Official Store
+            {t("title")}
           </h1>
           <p
             style={{
@@ -195,7 +216,7 @@ export default function StorePage() {
               color: "rgba(255,255,255,0.8)",
             }}
           >
-            From at-home kits to premium merchandise, find everything you need to fuel your noodle obsession
+            {t("description")}
           </p>
 
           {/* Scroll indicator */}
@@ -222,7 +243,7 @@ export default function StorePage() {
         }}
       >
         <p style={{ color: "#222222", fontWeight: "500", margin: 0, fontSize: "1.05rem" }}>
-          Online store launching soon! Use your earned rewards credit on any item.
+          {t("launchingSoon")}
         </p>
       </section>
 
@@ -238,24 +259,24 @@ export default function StorePage() {
         >
           {categories.map((category) => (
             <button
-              key={category}
-              onClick={() => setSelectedCategory(category)}
+              key={category.key}
+              onClick={() => setSelectedCategory(category.key)}
               style={{
                 padding: "12px 28px",
-                background: selectedCategory === category ? "#7C7A67" : "white",
-                color: selectedCategory === category ? "white" : "#7C7A67",
+                background: selectedCategory === category.key ? "#7C7A67" : "white",
+                color: selectedCategory === category.key ? "white" : "#7C7A67",
                 border: "2px solid #7C7A67",
                 borderRadius: "30px",
                 cursor: "pointer",
                 fontSize: "0.95rem",
                 fontWeight: "500",
                 transition: "all 0.3s ease",
-                boxShadow: selectedCategory === category
+                boxShadow: selectedCategory === category.key
                   ? "0 4px 12px rgba(124, 122, 103, 0.3)"
                   : "0 2px 8px rgba(0,0,0,0.05)",
               }}
             >
-              {category}
+              {category.label}
             </button>
           ))}
         </div>
@@ -314,7 +335,7 @@ export default function StorePage() {
                       position: "absolute",
                       top: "16px",
                       left: "16px",
-                      background: product.badge === "Best Seller" ? "#7C7A67" : product.badge === "Limited" ? "#222222" : "#C7A878",
+                      background: product.badge === t("badges.bestSeller") ? "#7C7A67" : product.badge === t("badges.limited") ? "#222222" : "#C7A878",
                       color: "white",
                       padding: "8px 16px",
                       borderRadius: "20px",
@@ -344,7 +365,7 @@ export default function StorePage() {
                     letterSpacing: "0.5px",
                   }}
                 >
-                  Coming Soon
+                  {tCommon("comingSoon")}
                 </div>
               </div>
 
@@ -415,7 +436,7 @@ export default function StorePage() {
                       boxShadow: "0 4px 12px rgba(124, 122, 103, 0.25)",
                     }}
                   >
-                    Notify Me
+                    {tCommon("notifyMe")}
                   </button>
                 </div>
               </div>
@@ -436,7 +457,7 @@ export default function StorePage() {
               marginBottom: "20px",
             }}
           >
-            Why Shop Oh!
+            {t("whyShop.title")}
           </p>
           <h2
             style={{
@@ -447,7 +468,7 @@ export default function StorePage() {
               color: "rgba(255,255,255,0.95)",
             }}
           >
-            The Oh! Experience, delivered to your door
+            {t("whyShop.subtitle")}
           </h2>
 
           <div
@@ -468,8 +489,8 @@ export default function StorePage() {
                     <circle cx="18.5" cy="18.5" r="2.5" />
                   </svg>
                 ),
-                title: "Free Shipping",
-                desc: "On all orders over $20. Fast, reliable delivery right to your doorstep.",
+                title: t("whyShop.freeShipping.title"),
+                desc: t("whyShop.freeShipping.description"),
               },
               {
                 icon: (
@@ -478,8 +499,8 @@ export default function StorePage() {
                     <path d="M12 6v6l4 2" />
                   </svg>
                 ),
-                title: "Use Your Credit",
-                desc: "Apply your earned rewards credit from dining to any store purchase.",
+                title: t("whyShop.useCredit.title"),
+                desc: t("whyShop.useCredit.description"),
               },
               {
                 icon: (
@@ -487,8 +508,8 @@ export default function StorePage() {
                     <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                   </svg>
                 ),
-                title: "Member Rewards",
-                desc: "Earn points on every purchase. Stack rewards across in-store and online.",
+                title: t("whyShop.memberRewards.title"),
+                desc: t("whyShop.memberRewards.description"),
               },
               {
                 icon: (
@@ -496,8 +517,8 @@ export default function StorePage() {
                     <path d="M3 12h4l3-9 4 18 3-9h4" />
                   </svg>
                 ),
-                title: "Easy Returns",
-                desc: "30-day hassle-free returns. Not satisfied? We'll make it right.",
+                title: t("whyShop.easyReturns.title"),
+                desc: t("whyShop.easyReturns.description"),
               },
             ].map((feature, idx) => (
               <div key={idx}>
@@ -541,7 +562,7 @@ export default function StorePage() {
               fontWeight: "600",
             }}
           >
-            Stay Updated
+            {t("newsletter.tagline")}
           </p>
           <h2
             style={{
@@ -552,7 +573,7 @@ export default function StorePage() {
               lineHeight: "1.2",
             }}
           >
-            Be the First to Know
+            {t("newsletter.title")}
           </h2>
           <p
             style={{
@@ -562,7 +583,7 @@ export default function StorePage() {
               lineHeight: "1.7",
             }}
           >
-            Get early access to new products, exclusive drops, and member-only deals.
+            {t("newsletter.description")}
           </p>
           <div
             style={{
@@ -574,7 +595,7 @@ export default function StorePage() {
           >
             <input
               type="email"
-              placeholder="your@email.com"
+              placeholder={t("newsletter.placeholder")}
               style={{
                 flex: "1 1 200px",
                 maxWidth: "300px",
@@ -600,7 +621,7 @@ export default function StorePage() {
                 boxShadow: "0 4px 12px rgba(124, 122, 103, 0.3)",
               }}
             >
-              Notify Me
+              {tCommon("notifyMe")}
             </button>
           </div>
         </div>
@@ -623,13 +644,13 @@ export default function StorePage() {
               marginBottom: "24px",
             }}
           >
-            Can't wait for the store?
+            {t("cta.title")}
           </h2>
           <p style={{ color: "rgba(255,255,255,0.8)", marginBottom: "32px", fontSize: "1.1rem" }}>
-            Visit us in person and experience the perfect bowl today.
+            {t("cta.description")}
           </p>
           <Link
-            href="/locations"
+            href={`/${locale}/locations`}
             style={{
               display: "inline-block",
               padding: "18px 48px",
@@ -642,7 +663,7 @@ export default function StorePage() {
               transition: "all 0.3s ease",
             }}
           >
-            Find a Location
+            {tCommon("findLocation")}
           </Link>
         </div>
       </section>

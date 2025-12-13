@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { getMenuItemImage, isNoNoodlesItem } from "@/lib/menu-images";
+import { useTranslations, useLocale } from "next-intl";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
 
@@ -55,8 +56,8 @@ type MenuStep = {
 };
 
 // Helper to format price
-function formatPrice(cents: number): string {
-  if (cents === 0) return "Included";
+function formatPrice(cents: number, includedText: string): string {
+  if (cents === 0) return includedText;
   return `$${(cents / 100).toFixed(2)}`;
 }
 
@@ -74,7 +75,7 @@ type DisplaySection = {
   }[];
 };
 
-function mapStepsToDisplaySections(steps: MenuStep[]): DisplaySection[] {
+function mapStepsToDisplaySections(steps: MenuStep[], t: (key: string) => string): DisplaySection[] {
   const sections: DisplaySection[] = [];
 
   for (const step of steps) {
@@ -90,16 +91,16 @@ function mapStepsToDisplaySections(steps: MenuStep[]): DisplaySection[] {
           const tags: string[] = [];
 
           // Add tags based on item characteristics
-          if (item.name.includes("A5 Wagyu")) tags.push("Premium");
-          if (item.name.includes("Classic") && item.category === "main01") tags.push("Signature");
-          if (item.basePriceCents === 0 && item.categoryType !== "MAIN") tags.push("Included");
-          if (item.description?.toLowerCase().includes("unlimited")) tags.push("Unlimited Refills");
-          if (item.description?.toLowerCase().includes("complimentary")) tags.push("Complimentary");
+          if (item.name.includes("A5 Wagyu")) tags.push(t("tags.premium"));
+          if (item.name.includes("Classic") && item.category === "main01") tags.push(t("tags.signature"));
+          if (item.basePriceCents === 0 && item.categoryType !== "MAIN") tags.push(t("tags.included"));
+          if (item.description?.toLowerCase().includes("unlimited")) tags.push(t("tags.unlimitedRefills"));
+          if (item.description?.toLowerCase().includes("complimentary")) tags.push(t("tags.complimentary"));
 
           return {
             name: item.name,
             description: item.description || "",
-            price: item.basePriceCents === 0 ? "Included" : formatPrice(item.basePriceCents),
+            price: item.basePriceCents === 0 ? t("tags.included") : formatPrice(item.basePriceCents, t("tags.included")),
             tags,
           };
         });
@@ -111,24 +112,24 @@ function mapStepsToDisplaySections(steps: MenuStep[]): DisplaySection[] {
 
         switch (section.name) {
           case "Choose Your Soup":
-            subtitle = "The Foundation of Every Bowl";
-            description = "Our 30-year family recipe starts with slow-braised beef bones simmered for 48 hours, creating a rich, complex broth that defines the Oh! experience.";
+            subtitle = t("sections.soup.subtitle");
+            description = t("sections.soup.description");
             break;
           case "Choose Your Noodles":
-            subtitle = "Hand-Selected for Perfection";
-            description = "Every noodle is chosen to complement our rich broth. Find your perfect texture.";
+            subtitle = t("sections.noodles.subtitle");
+            description = t("sections.noodles.description");
             break;
           case "Premium Add-ons":
-            subtitle = "Elevate Your Bowl";
-            description = "Enhance your experience with premium additions. Each item is prepared with the same attention to detail as our signature dishes.";
+            subtitle = t("sections.premiumAddons.subtitle");
+            description = t("sections.premiumAddons.description");
             break;
           case "Side Dishes":
-            subtitle = "Complete Your Experience";
-            description = "Traditional accompaniments that complement the main attraction.";
+            subtitle = t("sections.sideDishes.subtitle");
+            description = t("sections.sideDishes.description");
             break;
           case "Dessert":
-            subtitle = "Sweet Endings";
-            description = "Light, refreshing finishes to complete your dining experience.";
+            subtitle = t("sections.dessert.subtitle");
+            description = t("sections.dessert.description");
             break;
           default:
             subtitle = section.name;
@@ -169,6 +170,8 @@ function getCustomizations(steps: MenuStep[]): { name: string; options: string[]
 }
 
 export default function MenuPage() {
+  const t = useTranslations("menu");
+  const locale = useLocale();
   const [menuSections, setMenuSections] = useState<DisplaySection[]>([]);
   const [customizations, setCustomizations] = useState<{ name: string; options: string[]; description: string }[]>([]);
   const [activeSection, setActiveSection] = useState("");
@@ -183,11 +186,11 @@ export default function MenuPage() {
         });
 
         if (!response.ok) {
-          throw new Error("Failed to load menu");
+          throw new Error(t("error.failedToLoad"));
         }
 
         const data = await response.json();
-        const sections = mapStepsToDisplaySections(data.steps);
+        const sections = mapStepsToDisplaySections(data.steps, t);
         const customs = getCustomizations(data.steps);
 
         setMenuSections(sections);
@@ -197,21 +200,21 @@ export default function MenuPage() {
           setActiveSection(sections[0].id);
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load menu");
+        setError(err instanceof Error ? err.message : t("error.failedToLoad"));
       } finally {
         setLoading(false);
       }
     }
 
     loadMenu();
-  }, []);
+  }, [t]);
 
   if (loading) {
     return (
       <div style={{ background: "#E5E5E5", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: "3rem", marginBottom: "16px" }}>🍜</div>
-          <p style={{ color: "#7C7A67", fontSize: "1.1rem" }}>Loading menu...</p>
+          <p style={{ color: "#7C7A67", fontSize: "1.1rem" }}>{t("loading")}</p>
         </div>
       </div>
     );
@@ -222,7 +225,7 @@ export default function MenuPage() {
       <div style={{ background: "#E5E5E5", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <div style={{ textAlign: "center", maxWidth: "400px", padding: "24px" }}>
           <div style={{ fontSize: "3rem", marginBottom: "16px" }}>😔</div>
-          <h2 style={{ color: "#222222", marginBottom: "8px" }}>Unable to load menu</h2>
+          <h2 style={{ color: "#222222", marginBottom: "8px" }}>{t("error.title")}</h2>
           <p style={{ color: "#666", marginBottom: "24px" }}>{error}</p>
           <button
             onClick={() => window.location.reload()}
@@ -236,7 +239,7 @@ export default function MenuPage() {
               fontSize: "1rem",
             }}
           >
-            Try Again
+            {t("error.tryAgain")}
           </button>
         </div>
       </div>
@@ -263,7 +266,7 @@ export default function MenuPage() {
             color: "#E5E5E5",
           }}
         >
-          Our Menu
+          {t("hero.title")}
         </h1>
         <p
           style={{
@@ -275,11 +278,10 @@ export default function MenuPage() {
             color: "#C7A878",
           }}
         >
-          Crafted with a 30-year family recipe, every bowl tells a story of tradition,
-          quality, and the pursuit of the perfect beef noodle soup.
+          {t("hero.description")}
         </p>
         <Link
-          href="/order"
+          href={`/${locale}/order`}
           style={{
             display: "inline-block",
             padding: "16px 48px",
@@ -292,7 +294,7 @@ export default function MenuPage() {
             transition: "all 0.3s ease",
           }}
         >
-          ORDER NOW
+          {t("hero.orderNow")}
         </Link>
       </section>
 
@@ -594,7 +596,7 @@ export default function MenuPage() {
               letterSpacing: "2px",
             }}
           >
-            The Oh! Difference
+            {t("difference.title")}
           </h2>
           <p
             style={{
@@ -606,8 +608,7 @@ export default function MenuPage() {
               color: "#C7A878",
             }}
           >
-            We believe the perfect bowl of beef noodle soup deserves the perfect dining experience.
-            That&apos;s why we&apos;ve reimagined every detail.
+            {t("difference.description")}
           </p>
 
           <div
@@ -621,40 +622,40 @@ export default function MenuPage() {
             <div>
               <div style={{ fontSize: "2rem", marginBottom: "16px" }}>🎯</div>
               <h3 style={{ fontSize: "1.2rem", fontWeight: "500", marginBottom: "8px", color: "#C7A878" }}>
-                Tech-First Experience
+                {t("difference.techFirst.title")}
               </h3>
               <p style={{ fontSize: "0.95rem", lineHeight: "1.6", color: "#C7A878" }}>
-                Order ahead on your phone. Skip the wait. Your bowl is ready the moment you arrive.
+                {t("difference.techFirst.description")}
               </p>
             </div>
 
             <div>
               <div style={{ fontSize: "2rem", marginBottom: "16px" }}>🏠</div>
               <h3 style={{ fontSize: "1.2rem", fontWeight: "500", marginBottom: "8px", color: "#C7A878" }}>
-                Private Dining Pods
+                {t("difference.privatePods.title")}
               </h3>
               <p style={{ fontSize: "0.95rem", lineHeight: "1.6", color: "#C7A878" }}>
-                Enjoy your soup in peaceful solitude. Our private cubicles let you focus on what matters—the incredible flavors.
+                {t("difference.privatePods.description")}
               </p>
             </div>
 
             <div>
               <div style={{ fontSize: "2rem", marginBottom: "16px" }}>⚡</div>
               <h3 style={{ fontSize: "1.2rem", fontWeight: "500", marginBottom: "8px", color: "#C7A878" }}>
-                Seamless Service
+                {t("difference.seamlessService.title")}
               </h3>
               <p style={{ fontSize: "0.95rem", lineHeight: "1.6", color: "#C7A878" }}>
-                Minimal interruptions, maximum enjoyment. Our automated systems mean your meal is about the food, not the service.
+                {t("difference.seamlessService.description")}
               </p>
             </div>
 
             <div>
               <div style={{ fontSize: "2rem", marginBottom: "16px" }}>🏆</div>
               <h3 style={{ fontSize: "1.2rem", fontWeight: "500", marginBottom: "8px", color: "#C7A878" }}>
-                Rewarding Loyalty
+                {t("difference.loyalty.title")}
               </h3>
               <p style={{ fontSize: "0.95rem", lineHeight: "1.6", color: "#C7A878" }}>
-                Earn credits, unlock badges, and level up your membership. Every visit brings you closer to free bowls and exclusive perks.
+                {t("difference.loyalty.description")}
               </p>
             </div>
           </div>
@@ -677,7 +678,7 @@ export default function MenuPage() {
             marginBottom: "16px",
           }}
         >
-          Ready to Experience Oh!?
+          {t("cta.title")}
         </h2>
         <p
           style={{
@@ -687,10 +688,10 @@ export default function MenuPage() {
             opacity: 0.8,
           }}
         >
-          Build your perfect bowl and skip the wait.
+          {t("cta.description")}
         </p>
         <Link
-          href="/order"
+          href={`/${locale}/order`}
           style={{
             display: "inline-block",
             padding: "16px 48px",
@@ -703,7 +704,7 @@ export default function MenuPage() {
             transition: "all 0.3s ease",
           }}
         >
-          START YOUR ORDER
+          {t("cta.button")}
         </Link>
       </section>
     </div>

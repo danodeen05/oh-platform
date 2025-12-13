@@ -100,9 +100,24 @@
     "selectLanguage": "語言"
   },
   "menu": {
-    "title": "我們的菜單",
-    "description": "採用30年家傳秘方精心製作，每一碗都訴說著傳統、品質和對完美牛肉麵的追求。",
-    "unableToLoad": "無法載入菜單",
+    "hero": {
+      "title": "我們的菜單",
+      "description": "採用30年家傳秘方精心製作，每一碗都訴說著傳統、品質和對完美牛肉麵的追求。",
+      "orderNow": "立即點餐"
+    },
+    "loading": "正在載入菜單...",
+    "error": {
+      "title": "無法載入菜單",
+      "failedToLoad": "載入菜單失敗",
+      "tryAgain": "重試"
+    },
+    "tags": {
+      "premium": "高級",
+      "signature": "招牌",
+      "included": "含",
+      "unlimitedRefills": "無限續杯",
+      "complimentary": "免費"
+    },
     "categories": {
       "soups": "湯底",
       "noodles": "麵條",
@@ -112,28 +127,23 @@
       "desserts": "甜點"
     },
     "sections": {
-      "chooseSoup": {
-        "title": "選擇湯底",
+      "soup": {
         "subtitle": "每碗麵的靈魂",
         "description": "我們30年的家傳秘方從慢燉48小時的牛骨開始，創造出濃郁、層次豐富的湯底，定義了Oh!的獨特體驗。"
       },
-      "chooseNoodles": {
-        "title": "選擇麵條",
+      "noodles": {
         "subtitle": "精心挑選的完美搭配",
         "description": "每種麵條都經過精選，與我們濃郁的湯底完美搭配。找到您喜歡的口感。"
       },
       "premiumAddons": {
-        "title": "高級加料",
         "subtitle": "提升您的體驗",
         "description": "用優質配料升級您的體驗。每一樣都以製作招牌菜品的細緻工藝準備。"
       },
       "sideDishes": {
-        "title": "小菜",
         "subtitle": "完善您的用餐",
         "description": "傳統配菜，與主菜相得益彰。"
       },
       "dessert": {
-        "title": "甜點",
         "subtitle": "甜蜜結尾",
         "description": "清爽的甜點，為您的用餐畫上完美句號。"
       }
@@ -160,24 +170,80 @@
     },
     "cta": {
       "title": "準備好體驗Oh!了嗎？",
-      "description": "打造您的完美牛肉麵，免去等待。"
+      "description": "打造您的完美牛肉麵，免去等待。",
+      "button": "開始點餐"
     }
   },
   "locations": {
-    "title": "我們的門市",
-    "description": "找到您附近的Oh!",
-    "hours": "營業時間",
-    "weekday": "平日",
-    "weekend": "週末",
-    "comingSoon": "即將開幕",
-    "openNow": "營業中",
-    "features": "特色",
-    "upcomingCities": "即將進入您的城市",
-    "selectLocation": "選擇門市",
-    "viewDetails": "查看詳情",
-    "getDirections": "取得路線",
-    "nearYou": "附近門市",
-    "allLocations": "所有門市"
+    "hero": {
+      "findUs": "找到我們",
+      "title": "我們的門市",
+      "description": "猶他州兩家門市。私人包廂。免小費。只有您和完美的牛肉麵。"
+    },
+    "loading": "正在尋找門市...",
+    "cityCreek": {
+      "tagline": "鹽湖城市中心",
+      "description": "我們在猶他州的旗艦店，位於鹽湖城市中心。距離聖殿廣場和商業區僅幾步之遙。",
+      "mallDescription": "City Creek Center是鹽湖城首屈一指的購物目的地，擁有可伸縮玻璃屋頂、貫穿整個建築的溪流以及100多家商店和餐廳。",
+      "nearbyLandmarks": ["聖殿廣場", "鹽宮會議中心", "TRAX輕軌"],
+      "parking": "City Creek停車場提供免費停車驗證"
+    },
+    "universityPlace": {
+      "tagline": "猶他谷",
+      "description": "服務於奧瑞姆的猶他谷社區。方便學生、家庭和任何渴望正宗牛肉麵的人。",
+      "mallDescription": "University Place是猶他谷最大的露天購物中心，位於奧瑞姆和普若佛的交匯處，可輕鬆從I-15高速公路到達。",
+      "nearbyLandmarks": ["猶他谷大學", "楊百翰大學", "普若佛峽谷"],
+      "parking": "整個中心提供免費地面停車"
+    },
+    "details": {
+      "address": "地址",
+      "hours": "營業時間",
+      "hoursMonThurs": "週一至週四：上午11點 - 晚上9點",
+      "hoursFriSat": "週五至週六：上午11點 - 晚上10點",
+      "hoursSun": "週日：中午12點 - 晚上8點",
+      "parking": "停車"
+    },
+    "buttons": {
+      "orderAhead": "提前點餐",
+      "getDirections": "取得路線"
+    },
+    "about": {
+      "title": "關於",
+      "nearby": "附近"
+    },
+    "features": {
+      "privatePods": "12個私人包廂",
+      "orderAhead": "提前點餐",
+      "noTipping": "免小費",
+      "accessible": "無障礙"
+    },
+    "ohWay": {
+      "label": "Oh!方式",
+      "title": "不一樣的用餐體驗",
+      "kiosk": {
+        "title": "在自助點餐機點餐",
+        "description": "在我們的觸控點餐機上自訂您牛肉麵的每一個細節。沒有壓力，慢慢來。或者提前在手機上點餐。"
+      },
+      "pod": {
+        "title": "您的私人包廂",
+        "description": "靈感來自日本一蘭拉麵。獨立包廂讓您完全專注於您的美食。寧靜、私密、完美的湯麵。"
+      },
+      "noTips": {
+        "title": "永遠不用給小費",
+        "description": "我們給團隊支付合理的薪資，所以您不必計算小費。您看到的價格就是您支付的價格。"
+      }
+    },
+    "comingSoon": {
+      "title": "更多門市即將開幕",
+      "description": "我們正在猶他州擴張。希望您的社區也有Oh!嗎？",
+      "cities": ["普若佛", "德雷珀", "帕克城"],
+      "label": "即將開幕"
+    },
+    "cta": {
+      "title": "準備好體驗Oh!了嗎？",
+      "description": "免排隊。提前點餐，到店即取。",
+      "button": "開始點餐"
+    }
   },
   "store": {
     "title": "官方商店",
