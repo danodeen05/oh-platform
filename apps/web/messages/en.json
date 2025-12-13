@@ -80,6 +80,49 @@
     "cta": {
       "title": "Ready to Experience Oh!?",
       "description": "Step into your private pod, savor premium beef noodle soup, and discover why dining at Oh! is unlike anything else."
+    },
+    "signature": {
+      "label": "OUR SIGNATURE",
+      "title": "A5 Wagyu Beef Noodle Soup",
+      "description": "Silky A5 Wagyu beef melts into our rich, aromatic broth — simmered for 48 hours using techniques passed down through three generations. Each bowl tells a story of patience, precision, and passion.",
+      "stats": {
+        "hours": "HOURS SIMMERED",
+        "grade": "WAGYU GRADE",
+        "years": "YEAR RECIPE"
+      }
+    },
+    "difference": {
+      "label": "THE OH! DIFFERENCE",
+      "title": "More Than Just a Meal"
+    },
+    "experience": {
+      "label": "THE OH! EXPERIENCE"
+    },
+    "ingredients": {
+      "label": "FRESH INGREDIENTS",
+      "title": "Customize Your Bowl",
+      "description": "Choose from hand-pulled noodles, fresh vegetables, and premium toppings to create your perfect bowl.",
+      "items": {
+        "ramenNoodles": "Ramen Noodles",
+        "softBoiledEgg": "Soft Boiled Egg",
+        "babyBokChoy": "Baby Bok Choy",
+        "beefMarrow": "Beef Marrow"
+      }
+    },
+    "viewMenu": "VIEW FULL MENU"
+  },
+  "orderBanner": {
+    "orderNumber": "Order #{number}",
+    "pod": "Pod {number}",
+    "active": "Active",
+    "tapToView": "Tap to view status",
+    "status": {
+      "placed": "Order placed",
+      "checkedIn": "Checked in",
+      "inQueue": "In queue",
+      "preparing": "Being prepared",
+      "qualityCheck": "Quality check",
+      "enjoy": "Enjoy your meal!"
     }
   },
   "footer": {

@@ -80,6 +80,49 @@
     "cta": {
       "title": "准备好体验Oh!了吗？",
       "description": "走进您的私人包厢，品尝顶级牛肉面，发现为什么在Oh!用餐与众不同。"
+    },
+    "signature": {
+      "label": "招牌菜品",
+      "title": "A5和牛牛肉面",
+      "description": "嫩滑的A5和牛在浓郁芳香的汤底中缓缓化开——这汤底历经48小时精心熬制，传承三代人的独特技艺。每一碗都诉说着耐心、精准与热情的故事。",
+      "stats": {
+        "hours": "小时熬制",
+        "grade": "和牛等级",
+        "years": "年传承"
+      }
+    },
+    "difference": {
+      "label": "Oh!的不同",
+      "title": "不只是一顿饭"
+    },
+    "experience": {
+      "label": "Oh!体验"
+    },
+    "ingredients": {
+      "label": "新鲜食材",
+      "title": "定制您的面",
+      "description": "从手工面条、新鲜蔬菜和优质配料中选择，打造您的完美牛肉面。",
+      "items": {
+        "ramenNoodles": "拉面",
+        "softBoiledEgg": "溏心蛋",
+        "babyBokChoy": "小白菜",
+        "beefMarrow": "牛骨髓"
+      }
+    },
+    "viewMenu": "查看完整菜单"
+  },
+  "orderBanner": {
+    "orderNumber": "订单 #{number}",
+    "pod": "包厢 {number}",
+    "active": "进行中",
+    "tapToView": "点击查看状态",
+    "status": {
+      "placed": "已下单",
+      "checkedIn": "已签到",
+      "inQueue": "排队中",
+      "preparing": "准备中",
+      "qualityCheck": "质量检查",
+      "enjoy": "请享用！"
     }
   },
   "footer": {

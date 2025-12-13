@@ -114,7 +114,7 @@ export default function HomePage() {
             animation: "fadeInUp 1s ease 0.8s forwards",
           }}
         >
-          Born from Taiwan's beloved beef noodle tradition and elevated with Japanese attention to detail, enjoy our 30-year family recipe in your own private pod.
+          {t("heroDescription")}
         </p>
 
         <div
@@ -292,7 +292,7 @@ export default function HomePage() {
               marginBottom: "16px",
               fontWeight: "500",
             }}>
-              OUR SIGNATURE
+              {t("signature.label")}
             </p>
             <h2
               style={{
@@ -304,7 +304,7 @@ export default function HomePage() {
                 color: "#E8E4DC",
               }}
             >
-              A5 Wagyu<br />Beef Noodle Soup
+              {t("signature.title")}
             </h2>
             <p
               style={{
@@ -315,7 +315,7 @@ export default function HomePage() {
                 fontWeight: "300",
               }}
             >
-              Silky A5 Wagyu beef melts into our rich, aromatic broth — simmered for 48 hours using techniques passed down through three generations. Each bowl tells a story of patience, precision, and passion.
+              {t("signature.description")}
             </p>
             <div style={{
               display: "flex",
@@ -324,15 +324,15 @@ export default function HomePage() {
             }}>
               <div>
                 <div style={{ fontSize: "2rem", fontWeight: "300", color: "#C7A878" }}>48+</div>
-                <div style={{ fontSize: "0.85rem", color: "#7C7A67", letterSpacing: "1px" }}>HOURS SIMMERED</div>
+                <div style={{ fontSize: "0.85rem", color: "#7C7A67", letterSpacing: "1px" }}>{t("signature.stats.hours")}</div>
               </div>
               <div>
                 <div style={{ fontSize: "2rem", fontWeight: "300", color: "#C7A878" }}>A5</div>
-                <div style={{ fontSize: "0.85rem", color: "#7C7A67", letterSpacing: "1px" }}>WAGYU GRADE</div>
+                <div style={{ fontSize: "0.85rem", color: "#7C7A67", letterSpacing: "1px" }}>{t("signature.stats.grade")}</div>
               </div>
               <div>
                 <div style={{ fontSize: "2rem", fontWeight: "300", color: "#C7A878" }}>30</div>
-                <div style={{ fontSize: "0.85rem", color: "#7C7A67", letterSpacing: "1px" }}>YEAR RECIPE</div>
+                <div style={{ fontSize: "0.85rem", color: "#7C7A67", letterSpacing: "1px" }}>{t("signature.stats.years")}</div>
               </div>
             </div>
           </div>
@@ -355,7 +355,7 @@ export default function HomePage() {
               marginBottom: "16px",
               fontWeight: "500",
             }}>
-              THE OH! DIFFERENCE
+              {t("difference.label")}
             </p>
             <h2 style={{
               fontSize: "clamp(1.8rem, 4vw, 2.5rem)",
@@ -363,7 +363,7 @@ export default function HomePage() {
               color: "#2D2A26",
               letterSpacing: "1px",
             }}>
-              More Than Just a Meal
+              {t("difference.title")}
             </h2>
           </div>
 
@@ -605,7 +605,7 @@ export default function HomePage() {
               marginBottom: "16px",
               fontWeight: "500",
             }}>
-              THE OH! EXPERIENCE
+              {t("experience.label")}
             </p>
             <h2
               style={{
@@ -734,7 +734,7 @@ export default function HomePage() {
               marginBottom: "16px",
               fontWeight: "500",
             }}>
-              FRESH INGREDIENTS
+              {t("ingredients.label")}
             </p>
             <h2 style={{
               fontSize: "clamp(1.8rem, 4vw, 2.5rem)",
@@ -743,7 +743,7 @@ export default function HomePage() {
               letterSpacing: "1px",
               marginBottom: "16px",
             }}>
-              Customize Your Bowl
+              {t("ingredients.title")}
             </h2>
             <p style={{
               fontSize: "1.1rem",
@@ -752,7 +752,7 @@ export default function HomePage() {
               margin: "0 auto",
               lineHeight: "1.7",
             }}>
-              Choose from hand-pulled noodles, fresh vegetables, and premium toppings to create your perfect bowl.
+              {t("ingredients.description")}
             </p>
           </div>
 
@@ -766,10 +766,10 @@ export default function HomePage() {
             marginBottom: "48px",
           }}>
             {[
-              { img: "/menu images/Ramen Noodles.png", name: "Ramen Noodles" },
-              { img: "/menu images/Soft Boiled Egg.png", name: "Soft Boiled Egg" },
-              { img: "/menu images/Baby Bok Choy.png", name: "Baby Bok Choy" },
-              { img: "/menu images/Beef Marrow.png", name: "Beef Marrow" },
+              { img: "/menu images/Ramen Noodles.png", key: "ramenNoodles" },
+              { img: "/menu images/Soft Boiled Egg.png", key: "softBoiledEgg" },
+              { img: "/menu images/Baby Bok Choy.png", key: "babyBokChoy" },
+              { img: "/menu images/Beef Marrow.png", key: "beefMarrow" },
             ].map((item, i) => (
               <div
                 key={i}
@@ -799,7 +799,7 @@ export default function HomePage() {
                 }}>
                   <img
                     src={item.img}
-                    alt={item.name}
+                    alt={t(`ingredients.items.${item.key}`)}
                     style={{
                       width: "100%",
                       height: "100%",
@@ -812,7 +812,7 @@ export default function HomePage() {
                   color: "#5A5549",
                   fontWeight: "400",
                 }}>
-                  {item.name}
+                  {t(`ingredients.items.${item.key}`)}
                 </p>
               </div>
             ))}
@@ -843,7 +843,7 @@ export default function HomePage() {
                 e.currentTarget.style.color = "#C7A878";
               }}
             >
-              VIEW FULL MENU
+              {t("viewMenu")}
             </Link>
           </div>
         </div>
@@ -990,7 +990,7 @@ export default function HomePage() {
               lineHeight: "1.3",
             }}
           >
-            Ready to Experience<br />Something Different?
+            {t("cta.title")}
           </h2>
           <p
             style={{
@@ -1001,7 +1001,7 @@ export default function HomePage() {
               fontWeight: "300",
             }}
           >
-            Step into your private pod, savor premium beef noodle soup, and discover why dining at Oh! is unlike anything else.
+            {t("cta.description")}
           </p>
 
           <SignedOut>
@@ -1029,7 +1029,7 @@ export default function HomePage() {
                   e.currentTarget.style.boxShadow = "0 8px 30px rgba(199, 168, 120, 0.35)";
                 }}
               >
-                START YOUR ORDER
+                {tCommon("startOrder")}
               </button>
             </SignInButton>
           </SignedOut>
@@ -1059,7 +1059,7 @@ export default function HomePage() {
                 e.currentTarget.style.boxShadow = "0 8px 30px rgba(199, 168, 120, 0.35)";
               }}
             >
-              START YOUR ORDER
+              {tCommon("startOrder")}
             </Link>
           </SignedIn>
         </div>

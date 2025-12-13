@@ -80,6 +80,49 @@
     "cta": {
       "title": "準備好體驗Oh!了嗎？",
       "description": "走進您的私人包廂，品嚐頂級牛肉麵，發現為什麼在Oh!用餐與眾不同。"
+    },
+    "signature": {
+      "label": "招牌菜品",
+      "title": "A5和牛牛肉麵",
+      "description": "嫩滑的A5和牛在濃郁芳香的湯底中緩緩化開——這湯底歷經48小時精心熬製，傳承三代人的獨特技藝。每一碗都訴說著耐心、精準與熱情的故事。",
+      "stats": {
+        "hours": "小時熬製",
+        "grade": "和牛等級",
+        "years": "年傳承"
+      }
+    },
+    "difference": {
+      "label": "Oh!的不同",
+      "title": "不只是一頓飯"
+    },
+    "experience": {
+      "label": "Oh!體驗"
+    },
+    "ingredients": {
+      "label": "新鮮食材",
+      "title": "定制您的麵",
+      "description": "從手工麵條、新鮮蔬菜和優質配料中選擇，打造您的完美牛肉麵。",
+      "items": {
+        "ramenNoodles": "拉麵",
+        "softBoiledEgg": "溏心蛋",
+        "babyBokChoy": "小白菜",
+        "beefMarrow": "牛骨髓"
+      }
+    },
+    "viewMenu": "查看完整菜單"
+  },
+  "orderBanner": {
+    "orderNumber": "訂單 #{number}",
+    "pod": "包廂 {number}",
+    "active": "進行中",
+    "tapToView": "點擊查看狀態",
+    "status": {
+      "placed": "已下單",
+      "checkedIn": "已簽到",
+      "inQueue": "排隊中",
+      "preparing": "準備中",
+      "qualityCheck": "品質檢查",
+      "enjoy": "請享用！"
     }
   },
   "footer": {

@@ -80,6 +80,49 @@
     "cta": {
       "title": "¿Listo para experimentar Oh!?",
       "description": "Entra en tu cabina privada, saborea sopa de fideos con carne premium y descubre por qué comer en Oh! es diferente a todo lo demás."
+    },
+    "signature": {
+      "label": "NUESTRA ESPECIALIDAD",
+      "title": "Sopa de Fideos con Wagyu A5",
+      "description": "La sedosa carne Wagyu A5 se derrite en nuestro rico y aromático caldo — cocido a fuego lento durante 48 horas usando técnicas transmitidas a través de tres generaciones. Cada tazón cuenta una historia de paciencia, precisión y pasión.",
+      "stats": {
+        "hours": "HORAS DE COCCIÓN",
+        "grade": "GRADO WAGYU",
+        "years": "AÑOS DE RECETA"
+      }
+    },
+    "difference": {
+      "label": "LA DIFERENCIA OH!",
+      "title": "Más que una comida"
+    },
+    "experience": {
+      "label": "LA EXPERIENCIA OH!"
+    },
+    "ingredients": {
+      "label": "INGREDIENTES FRESCOS",
+      "title": "Personaliza tu tazón",
+      "description": "Elige entre fideos hechos a mano, vegetales frescos y toppings premium para crear tu tazón perfecto.",
+      "items": {
+        "ramenNoodles": "Fideos Ramen",
+        "softBoiledEgg": "Huevo Cocido",
+        "babyBokChoy": "Bok Choy",
+        "beefMarrow": "Tuétano de Res"
+      }
+    },
+    "viewMenu": "VER MENÚ COMPLETO"
+  },
+  "orderBanner": {
+    "orderNumber": "Pedido #{number}",
+    "pod": "Cabina {number}",
+    "active": "Activo",
+    "tapToView": "Toca para ver estado",
+    "status": {
+      "placed": "Pedido realizado",
+      "checkedIn": "Registrado",
+      "inQueue": "En cola",
+      "preparing": "Preparando",
+      "qualityCheck": "Control de calidad",
+      "enjoy": "¡Disfruta tu comida!"
     }
   },
   "footer": {

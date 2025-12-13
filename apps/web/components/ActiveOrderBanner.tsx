@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "";
 
@@ -16,6 +17,7 @@ export default function ActiveOrderBanner() {
   const [dismissed, setDismissed] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+  const t = useTranslations("orderBanner");
 
   // Don't show on order status page or order flow pages
   // Need to check without locale prefix (paths like /en/order/status, /zh-TW/order/status)
@@ -86,15 +88,15 @@ export default function ActiveOrderBanner() {
   const getStatusText = () => {
     switch (activeOrder.status) {
       case "PAID":
-        return "Order placed";
+        return t("status.placed");
       case "QUEUED":
-        return activeOrder.podNumber ? "Checked in" : "In queue";
+        return activeOrder.podNumber ? t("status.checkedIn") : t("status.inQueue");
       case "PREPPING":
-        return "Being prepared";
+        return t("status.preparing");
       case "READY":
-        return "Quality check";
+        return t("status.qualityCheck");
       case "SERVING":
-        return "Enjoy your meal!";
+        return t("status.enjoy");
       default:
         return activeOrder.status;
     }
@@ -129,11 +131,11 @@ export default function ActiveOrderBanner() {
         <div style={{ fontSize: "1.5rem" }}>🍜</div>
         <div>
           <div style={{ fontWeight: "bold", fontSize: "0.9rem" }}>
-            Order #{activeOrder.kitchenOrderNumber || "Active"}{" "}
-            {activeOrder.podNumber && `• Pod ${activeOrder.podNumber}`}
+            {t("orderNumber", { number: activeOrder.kitchenOrderNumber || t("active") })}{" "}
+            {activeOrder.podNumber && `• ${t("pod", { number: activeOrder.podNumber })}`}
           </div>
           <div style={{ fontSize: "0.75rem", opacity: 0.9 }}>
-            {getStatusText()} — Tap to view status
+            {getStatusText()} — {t("tapToView")}
           </div>
         </div>
       </div>
