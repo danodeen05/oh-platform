@@ -3,12 +3,25 @@
     "signIn": "Iniciar sesión",
     "signInToOrder": "INICIAR SESIÓN PARA ORDENAR",
     "orderNow": "ORDENAR AHORA",
+    "startOrder": "COMENZAR TU PEDIDO",
+    "startEarning": "COMENZAR A GANAR",
     "loading": "Cargando...",
+    "loadingMenu": "Cargando menú...",
     "error": "Algo salió mal",
+    "tryAgain": "Intentar de nuevo",
     "included": "Incluido",
     "learnMore": "Más información",
     "viewAll": "Ver todo",
-    "close": "Cerrar"
+    "close": "Cerrar",
+    "apply": "Aplicar",
+    "notifyMe": "Notificarme",
+    "comingSoon": "Próximamente",
+    "findLocation": "Encontrar ubicación",
+    "viewFaq": "Ver preguntas frecuentes",
+    "sendMessage": "Enviar mensaje",
+    "email": "Correo electrónico",
+    "or": "O",
+    "contactForm": "formulario de contacto"
   },
   "navigation": {
     "menu": "Menú",
@@ -21,6 +34,7 @@
   "home": {
     "brandName": "Oh! Beef Noodle Soup",
     "tagline": "El único restaurante construido a tu medida.",
+    "heroDescription": "Nacido de la tradición taiwanesa de fideos con carne y elevado con la atención al detalle japonesa, disfruta de nuestra receta familiar de 30 años en tu propia cabina privada.",
     "features": {
       "recipe": {
         "title": "Receta de 30 años",
@@ -37,6 +51,7 @@
     },
     "pods": {
       "title": "Cabinas de comedor privadas",
+      "subtitle": "Tu espacio. Tu ritmo.",
       "description": "Experimenta una forma de comer como nunca antes. Nuestras cabinas individuales ofrecen un espacio tranquilo y sin distracciones para saborear cada sorbo. Sin mesas abarrotadas, sin ruido — solo tú y tu tazón perfecto de sopa de fideos con carne.",
       "features": {
         "space": {
@@ -61,6 +76,10 @@
         "math": "Sin cálculos incómodos",
         "checkout": "Pago simple"
       }
+    },
+    "cta": {
+      "title": "¿Listo para experimentar Oh!?",
+      "description": "Entra en tu cabina privada, saborea sopa de fideos con carne premium y descubre por qué comer en Oh! es diferente a todo lo demás."
     }
   },
   "footer": {
@@ -82,7 +101,8 @@
   },
   "menu": {
     "title": "Nuestro menú",
-    "description": "Explora nuestra selección de sopas de fideos con carne premium y acompañamientos",
+    "description": "Elaborado con una receta familiar de 30 años, cada tazón cuenta una historia de tradición, calidad y la búsqueda de la sopa de fideos con carne perfecta.",
+    "unableToLoad": "No se pudo cargar el menú",
     "categories": {
       "soups": "Sopas",
       "noodles": "Fideos",
@@ -90,6 +110,57 @@
       "sides": "Acompañamientos",
       "drinks": "Bebidas",
       "desserts": "Postres"
+    },
+    "sections": {
+      "chooseSoup": {
+        "title": "Elige tu sopa",
+        "subtitle": "La base de cada tazón",
+        "description": "Nuestra receta familiar de 30 años comienza con huesos de res cocidos a fuego lento durante 48 horas, creando un caldo rico y complejo que define la experiencia Oh!."
+      },
+      "chooseNoodles": {
+        "title": "Elige tus fideos",
+        "subtitle": "Seleccionados a mano para la perfección",
+        "description": "Cada fideo es elegido para complementar nuestro rico caldo. Encuentra tu textura perfecta."
+      },
+      "premiumAddons": {
+        "title": "Extras premium",
+        "subtitle": "Eleva tu tazón",
+        "description": "Mejora tu experiencia con adiciones premium. Cada artículo se prepara con la misma atención al detalle que nuestros platos insignia."
+      },
+      "sideDishes": {
+        "title": "Acompañamientos",
+        "subtitle": "Completa tu experiencia",
+        "description": "Acompañamientos tradicionales que complementan la atracción principal."
+      },
+      "dessert": {
+        "title": "Postre",
+        "subtitle": "Finales dulces",
+        "description": "Finales ligeros y refrescantes para completar tu experiencia gastronómica."
+      }
+    },
+    "difference": {
+      "title": "La diferencia Oh!",
+      "description": "Creemos que el tazón perfecto de sopa de fideos con carne merece la experiencia gastronómica perfecta. Por eso hemos reimaginado cada detalle.",
+      "techFirst": {
+        "title": "Experiencia tecnológica",
+        "description": "Ordena desde tu teléfono. Salta la espera. Tu tazón está listo en el momento que llegas."
+      },
+      "privatePods": {
+        "title": "Cabinas privadas",
+        "description": "Disfruta de tu sopa en paz. Nuestras cabinas privadas te permiten concentrarte en lo que importa: los increíbles sabores."
+      },
+      "seamlessService": {
+        "title": "Servicio impecable",
+        "description": "Mínimas interrupciones, máximo disfrute. Nuestros sistemas automatizados hacen que tu comida sea sobre la comida, no el servicio."
+      },
+      "loyalty": {
+        "title": "Lealtad recompensada",
+        "description": "Gana créditos, desbloquea insignias y sube de nivel tu membresía. Cada visita te acerca a tazones gratis y beneficios exclusivos."
+      }
+    },
+    "cta": {
+      "title": "¿Listo para experimentar Oh!?",
+      "description": "Construye tu tazón perfecto y salta la espera."
     }
   },
   "locations": {
@@ -101,27 +172,604 @@
     "comingSoon": "Próximamente",
     "openNow": "Abierto ahora",
     "features": "Características",
-    "upcomingCities": "Llegando a tu ciudad"
+    "upcomingCities": "Llegando a tu ciudad",
+    "selectLocation": "Seleccionar ubicación",
+    "viewDetails": "Ver detalles",
+    "getDirections": "Obtener direcciones",
+    "nearYou": "Cerca de ti",
+    "allLocations": "Todas las ubicaciones"
+  },
+  "store": {
+    "title": "La tienda oficial",
+    "tagline": "Lleva Oh! a casa",
+    "description": "Desde kits para casa hasta mercancía premium, encuentra todo lo que necesitas para alimentar tu obsesión por los fideos",
+    "launchingSoon": "¡Tienda en línea próximamente! Usa tus créditos de recompensas ganados en cualquier artículo.",
+    "categories": {
+      "all": "Todo",
+      "food": "Comida",
+      "condiments": "Condimentos",
+      "merchandise": "Mercancía",
+      "apparel": "Ropa",
+      "limitedEdition": "Edición limitada"
+    },
+    "badges": {
+      "bestSeller": "Más vendido",
+      "new": "Nuevo",
+      "limited": "Limitado"
+    },
+    "products": {
+      "homeKit": {
+        "name": "Kit Oh! para casa",
+        "description": "Todo lo que necesitas para hacer nuestra sopa de fideos con carne insignia en casa. Incluye base de caldo, fideos y paquetes de especias."
+      },
+      "chiliOil": {
+        "name": "Aceite de chile exclusivo",
+        "description": "Nuestro aceite de chile casero con granos de pimienta de Sichuan. Perfecto para agregar picante a cualquier plato."
+      },
+      "brothConcentrate": {
+        "name": "Concentrado de caldo de hueso de res",
+        "description": "Caldo de res rico y concentrado de nuestra receta de 48 horas. Solo agrega agua para un caldo de calidad de restaurante."
+      },
+      "ceramicBowl": {
+        "name": "Tazón de cerámica Oh!",
+        "description": "Tazón de cerámica premium diseñado para la experiencia perfecta de fideos. Retiene el calor, esmaltado a mano."
+      },
+      "chopsticks": {
+        "name": "Set de palillos premium",
+        "description": "Palillos de madera hechos a mano con soporte a juego. Viene en una hermosa caja de regalo."
+      },
+      "tshirt": {
+        "name": "Camiseta clásica Oh!",
+        "description": "Camiseta de algodón suave con nuestro logo exclusivo. Disponible en negro y blanco."
+      },
+      "hoodie": {
+        "name": "Sudadera Oh! Comfort",
+        "description": "Sudadera premium de peso pesado con logo bordado. Perfecta para el clima de sopa acogedora."
+      },
+      "apron": {
+        "name": "Delantal de chef",
+        "description": "Delantal de lona con correas de cuero y nuestro logo. Para el chef casero que se toma los fideos en serio."
+      },
+      "woodenBowl": {
+        "name": "Tazón de madera artesanal",
+        "description": "Tazón de madera único torneado a mano con forma orgánica. Cada pieza presenta patrones de grano únicos y nuestro logo grabado con láser."
+      }
+    },
+    "whyShop": {
+      "title": "Por qué comprar en Oh!",
+      "subtitle": "La experiencia Oh!, entregada a tu puerta",
+      "freeShipping": {
+        "title": "Envío gratis",
+        "description": "En todos los pedidos mayores de $20. Entrega rápida y confiable a tu puerta."
+      },
+      "useCredit": {
+        "title": "Usa tu crédito",
+        "description": "Aplica tu crédito de recompensas ganado al comer en cualquier compra de la tienda."
+      },
+      "memberRewards": {
+        "title": "Recompensas para miembros",
+        "description": "Gana puntos en cada compra. Acumula recompensas en tienda y en línea."
+      },
+      "easyReturns": {
+        "title": "Devoluciones fáciles",
+        "description": "Devoluciones sin complicaciones por 30 días. ¿No satisfecho? Lo arreglaremos."
+      }
+    },
+    "newsletter": {
+      "tagline": "Mantente actualizado",
+      "title": "Sé el primero en saber",
+      "description": "Obtén acceso anticipado a nuevos productos, lanzamientos exclusivos y ofertas solo para miembros.",
+      "placeholder": "tu@email.com"
+    },
+    "cta": {
+      "title": "¿No puedes esperar a la tienda?",
+      "description": "Visítanos en persona y experimenta el tazón perfecto hoy."
+    }
+  },
+  "giftCards": {
+    "title": "Tarjetas de regalo",
+    "tagline": "Regala Oh!",
+    "description": "Comparte la calidez del tazón perfecto con alguien especial",
+    "digitalCard": "Tarjeta de regalo digital",
+    "chooseAmount": {
+      "tagline": "Elige tu cantidad",
+      "title": "Selecciona el valor perfecto del regalo",
+      "customLabel": "O ingresa una cantidad personalizada ($10 - $500)",
+      "customPlaceholder": "Ingresa la cantidad"
+    },
+    "continue": "Continuar para personalizar",
+    "purchaseComingSoon": "Próximamente - Compra de tarjetas de regalo",
+    "designs": {
+      "classic": "Clásico",
+      "dark": "Oscuro",
+      "gold": "Dorado"
+    },
+    "why": {
+      "title": "Por qué regalar Oh!",
+      "subtitle": "El regalo perfecto para los amantes de los fideos",
+      "instantDelivery": {
+        "title": "Entrega instantánea",
+        "description": "Entregado directamente a su bandeja de entrada en minutos. Perfecto para regalos de última hora."
+      },
+      "beautifulDesign": {
+        "title": "Diseño hermoso",
+        "description": "Elige entre múltiples diseños de tarjetas para combinar con el estilo del destinatario."
+      },
+      "neverExpires": {
+        "title": "Nunca expira",
+        "description": "Nuestras tarjetas de regalo nunca expiran. Úsalas cuando estés listo."
+      },
+      "addMessage": {
+        "title": "Agrega un mensaje",
+        "description": "Incluye una nota personal para hacer tu regalo extra especial."
+      }
+    },
+    "corporate": {
+      "tagline": "Para empresas",
+      "title": "Pedidos corporativos y al por mayor",
+      "description": "Perfecto para reconocimiento de empleados, regalos para clientes o celebraciones de equipo. Obtén precios especiales en compras al por mayor de 10 o más tarjetas.",
+      "contactSales": "Contactar ventas",
+      "bulkDiscounts": "Descuentos por volumen",
+      "tenPlus": "10+ tarjetas",
+      "customBranding": "Marca personalizada",
+      "addLogo": "Agrega tu logo",
+      "dedicatedSupport": "Soporte dedicado",
+      "priorityService": "Servicio prioritario",
+      "flexibleDelivery": "Entrega flexible",
+      "scheduleSends": "Programa envíos"
+    },
+    "faq": {
+      "tagline": "¿Preguntas?",
+      "title": "Preguntas frecuentes",
+      "questions": {
+        "delivery": {
+          "q": "¿Cómo se entregan las tarjetas de regalo digitales?",
+          "a": "Las tarjetas de regalo se envían directamente a la dirección de correo electrónico del destinatario en minutos. Recibirán un correo electrónico bellamente diseñado con el código de la tarjeta de regalo y tu mensaje personal."
+        },
+        "multiple": {
+          "q": "¿Puedo usar múltiples tarjetas de regalo en un pedido?",
+          "a": "¡Sí! Puedes combinar múltiples tarjetas de regalo en un solo pedido. Cualquier saldo restante permanece en tu cuenta para uso futuro."
+        },
+        "expire": {
+          "q": "¿Las tarjetas de regalo expiran?",
+          "a": "No, las tarjetas de regalo de Oh! nunca expiran. Los destinatarios pueden usarlas cuando estén listos para el tazón perfecto."
+        },
+        "balance": {
+          "q": "¿Puedo verificar el saldo de mi tarjeta de regalo?",
+          "a": "Sí, puedes verificar tu saldo en cualquier momento en la sección 'Mi cuenta' o contactando a nuestro equipo de soporte."
+        }
+      }
+    },
+    "cta": {
+      "title": "¿Listo para difundir alegría?",
+      "description": "Regala el tazón perfecto. Tus seres queridos te lo agradecerán.",
+      "button": "Crear una tarjeta de regalo"
+    }
   },
   "loyalty": {
     "title": "Recompensas Oh!",
-    "description": "Gana recompensas con cada visita",
+    "description": "Cada tazón te acerca a algo especial. Gana créditos, desbloquea insignias y sube de nivel tu membresía con cada visita.",
+    "howItWorks": {
+      "title": "Cómo funciona",
+      "orderEarn": {
+        "title": "Ordena y gana",
+        "description": "Cada pedido te da cashback según tu nivel. Mira crecer tus créditos con cada tazón."
+      },
+      "referFriends": {
+        "title": "Refiere amigos",
+        "description": "Comparte tu enlace de referido único. Cuando tus amigos ordenen, ambos ganan créditos para su próxima comida."
+      },
+      "levelUp": {
+        "title": "Sube de nivel",
+        "description": "Desbloquea niveles más altos para mejores recompensas. Cuanto más visites, más ahorras."
+      },
+      "redeem": {
+        "title": "Canjea",
+        "description": "Usa tus créditos al pagar. Aplica hasta $5 por pedido en cualquier artículo del menú."
+      }
+    },
     "tiers": {
+      "title": "Niveles de membresía",
+      "description": "Comienza como Palillos y trabaja tu camino hasta Jefe de la carne. Cada nivel desbloquea mejores recompensas.",
+      "benefitsInclude": "Los beneficios incluyen",
+      "ultimate": "DEFINITIVO",
       "chopstick": {
         "name": "Palillos",
-        "description": "Bienvenido a Recompensas Oh!"
+        "requirement": "Registrarse",
+        "benefits": {
+          "referralBonus": "$5 de bonificación por referido",
+          "cashback": "1% de cashback en pedidos",
+          "earlyAccess": "Acceso anticipado a nuevos artículos del menú"
+        }
       },
       "noodleMaster": {
         "name": "Maestro de fideos",
-        "description": "¡Te estás convirtiendo en un habitual!"
+        "requirement": "10 pedidos + 5 referidos",
+        "benefits": {
+          "referralBonus": "$5 de bonificación por referido",
+          "cashback": "2% de cashback en pedidos",
+          "prioritySeating": "Asientos prioritarios",
+          "memberEvents": "Eventos exclusivos para miembros",
+          "freeBowl": "Tazón gratis al subir de nivel"
+        }
       },
       "beefBoss": {
         "name": "Jefe de la carne",
-        "description": "Verdadera realeza de los fideos"
+        "requirement": "25 pedidos + 10 referidos",
+        "benefits": {
+          "referralBonus": "$5 de bonificación por referido",
+          "cashback": "3% de cashback en pedidos",
+          "merchDrops": "Lanzamientos exclusivos de mercancía",
+          "premiumAddons": "Extras premium de cortesía",
+          "vipGift": "Regalo VIP anual y reconocimiento"
+        }
       }
+    },
+    "badges": {
+      "title": "Colecciona insignias",
+      "description": "Desbloquea logros mientras comes. Muestra tu colección y gana derecho a presumir.",
+      "firstBowl": {
+        "name": "Primer tazón",
+        "description": "Completa tu primer pedido"
+      },
+      "hotStreak": {
+        "name": "Racha caliente",
+        "description": "Ordena 3 días seguidos"
+      },
+      "perfectTen": {
+        "name": "Diez perfecto",
+        "description": "Realiza 10 pedidos"
+      },
+      "proteinPower": {
+        "name": "Poder proteico",
+        "description": "Ordena carne extra 5 veces"
+      },
+      "heatSeeker": {
+        "name": "Buscador de calor",
+        "description": "Ordena nivel de picante Inferno"
+      },
+      "giftGiver": {
+        "name": "Dador de regalos",
+        "description": "Envía tu primera tarjeta de regalo"
+      },
+      "communityBuilder": {
+        "name": "Constructor de comunidad",
+        "description": "Refiere 5 amigos"
+      },
+      "legend": {
+        "name": "Leyenda",
+        "description": "Alcanza el nivel Jefe de la carne"
+      }
+    },
+    "referral": {
+      "title": "Comparte el amor, gana recompensas",
+      "description": "¿Conoces a alguien que necesita un tazón de confort? Comparte tu enlace de referido y ambos ganarán créditos cuando hagan su primer pedido de $20 o más.",
+      "forYou": "para ti (nivel Palillos)",
+      "forFriend": "para tu amigo",
+      "unlimited": "referidos ilimitados",
+      "getLink": "Obtén tu enlace de referido"
+    },
+    "cta": {
+      "title": "¿Listo para comenzar tu viaje?",
+      "description": "Regístrate ahora y comienza a ganar con tu primer pedido."
     },
     "benefits": "Beneficios",
     "requirements": "Requisitos"
+  },
+  "referral": {
+    "title": "Invita amigos, gana recompensas",
+    "subtitle": "Da $5, recibe $5 por cada amigo que ordene $20+",
+    "howItWorks": "Cómo funciona",
+    "step1": {
+      "title": "Comparte tu enlace",
+      "description": "Envía tu enlace de referido único a amigos"
+    },
+    "step2": {
+      "title": "Ellos obtienen $5 de descuento al instante",
+      "description": "Tu amigo obtiene $5 de descuento en su primer pedido inmediatamente"
+    },
+    "step3": {
+      "title": "Tú ganas $5 (el 1 o 16)",
+      "description": "Cuando hagan un primer pedido de $20 o más, ganas $5 en créditos. Los créditos de referido se agregan a tu cuenta el 1 y 16 de cada mes."
+    },
+    "goodToKnow": "Bueno saber:",
+    "rules": {
+      "minimumOrder": "El primer pedido de tu amigo debe ser de $20 o más para que ganes el bono de referido",
+      "disbursement": "Los créditos de referido se distribuyen el 1 y 16 de cada mes",
+      "maxPerOrder": "Puedes aplicar hasta $5 en créditos por pedido"
+    }
+  },
+  "careers": {
+    "title": "Únete a nuestro equipo",
+    "description": "Ayúdanos a reimaginar la experiencia gastronómica. Estamos construyendo algo especial y buscamos personas apasionadas para unirse a nosotros en este viaje.",
+    "viewPositions": "VER POSICIONES ABIERTAS",
+    "values": {
+      "title": "Nuestros valores",
+      "description": "Estos principios guían todo lo que hacemos, desde cómo hacemos nuestra sopa hasta cómo nos tratamos entre nosotros.",
+      "excellence": {
+        "title": "Excelencia en el oficio",
+        "description": "Nos obsesionamos con los detalles. Cada tazón, cada experiencia, cada interacción importa."
+      },
+      "innovation": {
+        "title": "Innovación primero",
+        "description": "Estamos construyendo el futuro de la gastronomía. Tecnología y tradición trabajando en armonía."
+      },
+      "team": {
+        "title": "Equipo sobre ego",
+        "description": "Triunfamos juntos. Colaboración, respeto y apoyo son nuestro núcleo."
+      },
+      "growth": {
+        "title": "Mentalidad de crecimiento",
+        "description": "Invertimos en nuestra gente. Aprende, crece y avanza en tu carrera con nosotros."
+      }
+    },
+    "positions": {
+      "title": "Posiciones abiertas",
+      "noFit": "¿No ves una posición que te quede?",
+      "alwaysLooking": "Siempre buscamos personas talentosas.",
+      "sendResume": "Envíanos tu currículum"
+    },
+    "benefits": {
+      "title": "Por qué trabajar con nosotros",
+      "pay": {
+        "title": "Pago competitivo",
+        "description": "Salarios por encima del mercado más bonos por desempeño"
+      },
+      "health": {
+        "title": "Beneficios de salud",
+        "description": "Cobertura médica, dental y de visión"
+      },
+      "meals": {
+        "title": "Comidas gratis",
+        "description": "Comidas diarias durante turnos más descuento familiar"
+      },
+      "careerGrowth": {
+        "title": "Crecimiento profesional",
+        "description": "Caminos claros de avance y mentoría"
+      },
+      "learning": {
+        "title": "Presupuesto de aprendizaje",
+        "description": "Estipendio anual para desarrollo profesional"
+      },
+      "events": {
+        "title": "Eventos de equipo",
+        "description": "Salidas y celebraciones regulares del equipo"
+      }
+    },
+    "cta": {
+      "title": "¿Listo para dejar tu marca?",
+      "description": "Únete a nosotros para crear el futuro de la gastronomía.",
+      "button": "APLICAR AHORA"
+    },
+    "openPositions": "Posiciones abiertas",
+    "applyNow": "Aplicar ahora"
+  },
+  "contact": {
+    "title": "Contáctanos",
+    "description": "Nos encantaría saber de ti. Ya sea que tengas una pregunta, comentario, o solo quieras saludar—estamos aquí.",
+    "form": {
+      "title": "Envíanos un mensaje",
+      "name": "Tu nombre",
+      "email": "Dirección de correo",
+      "subject": "Asunto",
+      "message": "Mensaje",
+      "subjects": {
+        "general": "Consulta general",
+        "order": "Soporte de pedidos",
+        "feedback": "Comentarios",
+        "corporate": "Pedidos corporativos / al por mayor",
+        "press": "Consulta de prensa",
+        "careers": "Oportunidades de carrera"
+      },
+      "success": "¡Gracias por tu mensaje! Te responderemos pronto."
+    },
+    "other": {
+      "title": "Otras formas de contactarnos",
+      "email": {
+        "title": "Correo electrónico",
+        "value": "hello@ohbeefnoodlesoup.com"
+      },
+      "location": {
+        "title": "Ubicación",
+        "opening": "Apertura primavera 2025",
+        "city": "San Francisco, CA"
+      },
+      "responseTime": {
+        "title": "Tiempo de respuesta",
+        "value": "Normalmente respondemos en 24 horas"
+      }
+    },
+    "social": {
+      "title": "Síguenos",
+      "description": "Mantente conectado para actualizaciones, tras bambalinas y ofertas exclusivas."
+    },
+    "faq": {
+      "title": "¿Tienes una pregunta rápida?",
+      "description": "Consulta nuestras preguntas frecuentes para respuestas instantáneas."
+    },
+    "email": "Correo electrónico",
+    "phone": "Teléfono",
+    "address": "Dirección",
+    "sendMessage": "Enviar mensaje"
+  },
+  "press": {
+    "title": "Prensa y medios",
+    "description": "Recursos para periodistas, bloggers y profesionales de medios que cubren Oh! Beef Noodle Soup.",
+    "mediaContact": {
+      "title": "Contacto de medios",
+      "description": "Para consultas de prensa, entrevistas o solicitudes de medios, por favor contacta a nuestro equipo de comunicaciones.",
+      "responseTime": "Normalmente respondemos en 24-48 horas"
+    },
+    "ourStory": {
+      "title": "Nuestra historia",
+      "p1": "Oh! Beef Noodle Soup está reimaginando la experiencia gastronómica tradicional taiwanesa a través de la tecnología y el diseño reflexivo. Fundado en una receta familiar de 30 años, estamos llevando la comodidad de la sopa de fideos con carne a una nueva generación de comensales que valoran la calidad, la conveniencia y las experiencias únicas.",
+      "p2": "Nuestra ubicación insignia en San Francisco presenta cabinas de comedor privadas inspiradas en conceptos japoneses de comida en solitario, permitiendo a los huéspedes sumergirse completamente en los sabores y aromas de nuestra sopa artesanal sin distracciones.",
+      "p3": "Con un enfoque tecnológico en pedidos y servicio, Oh! ofrece una experiencia gastronómica perfecta desde el momento en que haces tu pedido a través de nuestra app hasta la última cucharada de caldo rico y aromático."
+    },
+    "keyFacts": {
+      "title": "Datos clave",
+      "founded": "Fundado",
+      "headquarters": "Sede",
+      "flagshipOpening": "Apertura insignia",
+      "recipeHeritage": "Herencia de receta",
+      "uniqueFeature": "Característica única",
+      "techPlatform": "Plataforma tecnológica"
+    },
+    "pressReleases": {
+      "title": "Comunicados de prensa"
+    },
+    "brandAssets": {
+      "title": "Activos de marca",
+      "requestAccess": "Solicita acceso a los activos de marca enviando un correo a",
+      "logoPackage": {
+        "name": "Paquete de logo",
+        "description": "Logo principal en varios formatos (PNG, SVG, EPS)"
+      },
+      "brandGuidelines": {
+        "name": "Guías de marca",
+        "description": "Paleta de colores, tipografía y directrices de uso"
+      },
+      "productPhotography": {
+        "name": "Fotografía de productos",
+        "description": "Imágenes de alta resolución de nuestros platos insignia"
+      },
+      "locationPhotos": {
+        "name": "Fotos de ubicación",
+        "description": "Fotografía interior y exterior de nuestros espacios"
+      }
+    },
+    "mediaKit": "Kit de medios",
+    "pressInquiries": "Consultas de prensa"
+  },
+  "privacy": {
+    "title": "Política de privacidad",
+    "description": "Tu privacidad nos importa. Aprende cómo recopilamos, usamos y protegemos tu información.",
+    "lastUpdated": "Última actualización: Diciembre 2024",
+    "sections": {
+      "introduction": {
+        "title": "Introducción",
+        "content": "Oh! Beef Noodle Soup (\"Oh!\", \"nosotros\", \"nos\" o \"nuestro\") respeta tu privacidad y está comprometido a proteger tus datos personales. Esta política de privacidad explica cómo recopilamos, usamos, divulgamos y protegemos tu información cuando visitas nuestro sitio web, aplicación móvil y ubicaciones físicas."
+      },
+      "infoCollect": {
+        "title": "Información que recopilamos",
+        "intro": "Podemos recopilar información sobre ti de varias maneras:",
+        "personalData": {
+          "title": "Datos personales",
+          "items": [
+            "Nombre, dirección de correo electrónico y número de teléfono",
+            "Dirección de facturación y entrega",
+            "Información de pago (procesada de forma segura a través de proveedores externos)",
+            "Credenciales de cuenta",
+            "Historial de pedidos y preferencias"
+          ]
+        },
+        "autoData": {
+          "title": "Datos recopilados automáticamente",
+          "items": [
+            "Información del dispositivo (tipo de navegador, sistema operativo)",
+            "Dirección IP y datos de ubicación",
+            "Patrones de uso y comportamiento de navegación",
+            "Cookies y tecnologías de seguimiento similares"
+          ]
+        }
+      },
+      "howWeUse": {
+        "title": "Cómo usamos tu información",
+        "items": [
+          "Procesar y completar tus pedidos",
+          "Administrar tu cuenta y proporcionar soporte al cliente",
+          "Enviar confirmaciones de pedidos y actualizaciones",
+          "Personalizar tu experiencia y preferencias",
+          "Administrar programas de lealtad y recompensas por referidos",
+          "Enviar comunicaciones promocionales (con tu consentimiento)",
+          "Mejorar nuestros productos, servicios y sitio web",
+          "Prevenir fraudes y garantizar la seguridad"
+        ]
+      },
+      "sharing": {
+        "title": "Compartir tu información",
+        "intro": "Podemos compartir tu información con:",
+        "serviceProviders": "Procesadores de pago, socios de entrega y proveedores de tecnología que nos ayudan a operar nuestro negocio",
+        "businessPartners": "Con tu consentimiento, para actividades de marketing o promocionales conjuntas",
+        "legalRequirements": "Cuando lo requiera la ley o para proteger nuestros derechos",
+        "noSell": "No vendemos tu información personal a terceros."
+      },
+      "security": {
+        "title": "Seguridad de datos",
+        "content": "Implementamos medidas técnicas y organizativas apropiadas para proteger tu información personal. Sin embargo, ningún método de transmisión por Internet o almacenamiento electrónico es 100% seguro, y no podemos garantizar seguridad absoluta."
+      },
+      "rights": {
+        "title": "Tus derechos",
+        "intro": "Dependiendo de tu ubicación, puedes tener los siguientes derechos:",
+        "items": [
+          "Acceder y recibir una copia de tus datos personales",
+          "Corregir información inexacta o incompleta",
+          "Eliminar tus datos personales",
+          "Oponerte o restringir cierto procesamiento",
+          "Portabilidad de datos",
+          "Retirar el consentimiento en cualquier momento"
+        ]
+      },
+      "cookies": {
+        "title": "Cookies",
+        "content": "Usamos cookies y tecnologías similares para mejorar tu experiencia, analizar el uso y ayudar con el marketing. Puedes gestionar las preferencias de cookies a través de la configuración de tu navegador."
+      },
+      "children": {
+        "title": "Privacidad de niños",
+        "content": "Nuestros servicios no están destinados a niños menores de 13 años. No recopilamos conscientemente información personal de niños menores de 13 años."
+      },
+      "changes": {
+        "title": "Cambios a esta política",
+        "content": "Podemos actualizar esta política de privacidad de vez en cuando. Te notificaremos de cualquier cambio publicando la nueva política en esta página y actualizando la fecha de \"Última actualización\"."
+      },
+      "contactUs": {
+        "title": "Contáctanos",
+        "intro": "Si tienes preguntas sobre esta política de privacidad o nuestras prácticas, por favor contáctanos:"
+      }
+    }
+  },
+  "accessibility": {
+    "title": "Accesibilidad",
+    "description": "Estamos comprometidos a hacer Oh! Beef Noodle Soup accesible para todos.",
+    "commitment": {
+      "title": "Nuestro compromiso",
+      "content": "En Oh! Beef Noodle Soup, creemos que todos merecen disfrutar del tazón perfecto de sopa de fideos con carne. Estamos comprometidos a garantizar que nuestras plataformas digitales y ubicaciones físicas sean accesibles para personas de todas las capacidades."
+    },
+    "website": {
+      "title": "Accesibilidad del sitio web",
+      "intro": "Nos esforzamos por garantizar que nuestro sitio web cumpla con los estándares WCAG 2.1 Nivel AA. Nuestros esfuerzos continuos de accesibilidad incluyen:",
+      "items": [
+        "Soporte de navegación por teclado para todos los elementos interactivos",
+        "Estructura de encabezados clara y consistente",
+        "Ratios de contraste de color suficientes",
+        "Texto alternativo para imágenes",
+        "Diseño responsivo para todos los dispositivos",
+        "Compatibilidad con lectores de pantalla"
+      ]
+    },
+    "restaurant": {
+      "title": "Accesibilidad del restaurante",
+      "intro": "Nuestras ubicaciones físicas están diseñadas con la accesibilidad en mente:",
+      "items": [
+        "Entradas y áreas de comedor accesibles para sillas de ruedas",
+        "Instalaciones de baño conformes con ADA",
+        "Cabinas de comedor privadas accesibles",
+        "Señalización clara y orientación",
+        "Asistencia disponible bajo solicitud"
+      ]
+    },
+    "ordering": {
+      "title": "Asistencia para pedidos",
+      "content": "Si necesitas asistencia para hacer un pedido o tienes preguntas sobre nuestras características de accesibilidad, nuestro equipo estará encantado de ayudar. Contáctanos en"
+    },
+    "feedback": {
+      "title": "Comentarios",
+      "content": "Agradecemos tus comentarios sobre la accesibilidad de Oh! Beef Noodle Soup. Por favor, haznos saber si encuentras alguna barrera de accesibilidad o tienes sugerencias de mejora."
+    },
+    "contactUs": {
+      "title": "Contáctanos sobre accesibilidad",
+      "intro": "Si tienes preguntas o inquietudes sobre accesibilidad, por favor comunícate:"
+    }
   },
   "order": {
     "chooseLocation": "Elige tu ubicación",
@@ -139,7 +787,11 @@
     "orderConfirmed": "Pedido confirmado",
     "preparing": "Preparando",
     "ready": "Listo",
-    "completed": "Completado"
+    "completed": "Completado",
+    "readyForDessert": "Listo para postre",
+    "checkIn": "Registrarse",
+    "scanQr": "Escanear código QR",
+    "payment": "Pago"
   },
   "member": {
     "dashboard": "Panel de control",
@@ -149,46 +801,9 @@
     "visits": "Visitas",
     "currentTier": "Nivel actual",
     "nextTier": "Siguiente nivel",
-    "pointsToNext": "puntos para el siguiente nivel"
-  },
-  "giftCards": {
-    "title": "Tarjetas de regalo",
-    "description": "Comparte el regalo de Oh! con amigos y familiares",
-    "buyNow": "Comprar ahora",
-    "checkBalance": "Consultar saldo"
-  },
-  "store": {
-    "title": "Tienda Oh!",
-    "description": "Llévate un pedacito de Oh! a casa",
-    "merchandise": "Mercancía",
-    "comingSoon": "Próximamente"
-  },
-  "careers": {
-    "title": "Empleo",
-    "description": "Únete a la familia Oh!",
-    "openPositions": "Posiciones abiertas",
-    "applyNow": "Aplicar ahora"
-  },
-  "contact": {
-    "title": "Contáctanos",
-    "description": "Nos encantaría saber de ti",
-    "email": "Correo electrónico",
-    "phone": "Teléfono",
-    "address": "Dirección",
-    "sendMessage": "Enviar mensaje"
-  },
-  "press": {
-    "title": "Prensa",
-    "description": "Oh! en las noticias",
-    "mediaKit": "Kit de medios",
-    "pressInquiries": "Consultas de prensa"
-  },
-  "privacy": {
-    "title": "Política de privacidad",
-    "lastUpdated": "Última actualización"
-  },
-  "accessibility": {
-    "title": "Accesibilidad",
-    "description": "Nuestro compromiso con la accesibilidad"
+    "pointsToNext": "puntos para el siguiente nivel",
+    "orderHistory": "Historial de pedidos",
+    "noOrders": "Sin pedidos aún",
+    "startOrdering": "Comienza a ordenar para construir tu historial"
   }
 }
