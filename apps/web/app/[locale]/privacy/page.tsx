@@ -1,8 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 export default function PrivacyPage() {
+  const t = useTranslations("privacy");
+  const tCommon = useTranslations("common");
+
   return (
     <div style={{ background: "#E5E5E5", minHeight: "100vh" }}>
       {/* Hero Section */}
@@ -23,7 +27,7 @@ export default function PrivacyPage() {
             color: "#E5E5E5",
           }}
         >
-          Privacy Policy
+          {t("title")}
         </h1>
         <p
           style={{
@@ -35,7 +39,7 @@ export default function PrivacyPage() {
             fontWeight: "300",
           }}
         >
-          Your privacy matters to us. Learn how we collect, use, and protect your information.
+          {t("description")}
         </p>
       </section>
 
@@ -50,113 +54,102 @@ export default function PrivacyPage() {
           }}
         >
           <p style={{ color: "#666", fontSize: "0.9rem", marginBottom: "32px" }}>
-            Last Updated: December 2024
+            {t("lastUpdated")}
           </p>
 
           <h2 style={{ fontSize: "1.3rem", fontWeight: "600", color: "#222222", marginBottom: "16px" }}>
-            Introduction
+            {t("sections.introduction.title")}
           </h2>
           <p style={{ color: "#444", lineHeight: "1.8", marginBottom: "24px" }}>
-            Oh! Beef Noodle Soup (&quot;Oh!&quot;, &quot;we&quot;, &quot;us&quot;, or &quot;our&quot;) respects your privacy and is committed to protecting your personal data. This privacy policy explains how we collect, use, disclose, and safeguard your information when you visit our website, mobile application, and physical locations.
+            {t("sections.introduction.content")}
           </p>
 
           <h2 style={{ fontSize: "1.3rem", fontWeight: "600", color: "#222222", marginBottom: "16px" }}>
-            Information We Collect
+            {t("sections.infoCollect.title")}
           </h2>
           <p style={{ color: "#444", lineHeight: "1.8", marginBottom: "16px" }}>
-            We may collect information about you in a variety of ways:
+            {t("sections.infoCollect.intro")}
           </p>
           <h3 style={{ fontSize: "1.1rem", fontWeight: "600", color: "#222222", marginBottom: "12px" }}>
-            Personal Data
+            {t("sections.infoCollect.personalData.title")}
           </h3>
           <ul style={{ color: "#444", lineHeight: "1.8", marginBottom: "24px", paddingLeft: "24px" }}>
-            <li style={{ marginBottom: "8px" }}>Name, email address, and phone number</li>
-            <li style={{ marginBottom: "8px" }}>Billing and delivery address</li>
-            <li style={{ marginBottom: "8px" }}>Payment information (processed securely through third-party providers)</li>
-            <li style={{ marginBottom: "8px" }}>Account credentials</li>
-            <li style={{ marginBottom: "8px" }}>Order history and preferences</li>
+            {(t.raw("sections.infoCollect.personalData.items") as string[]).map((item, idx) => (
+              <li key={idx} style={{ marginBottom: "8px" }}>{item}</li>
+            ))}
           </ul>
 
           <h3 style={{ fontSize: "1.1rem", fontWeight: "600", color: "#222222", marginBottom: "12px" }}>
-            Automatically Collected Data
+            {t("sections.infoCollect.autoData.title")}
           </h3>
           <ul style={{ color: "#444", lineHeight: "1.8", marginBottom: "24px", paddingLeft: "24px" }}>
-            <li style={{ marginBottom: "8px" }}>Device information (browser type, operating system)</li>
-            <li style={{ marginBottom: "8px" }}>IP address and location data</li>
-            <li style={{ marginBottom: "8px" }}>Usage patterns and browsing behavior</li>
-            <li style={{ marginBottom: "8px" }}>Cookies and similar tracking technologies</li>
+            {(t.raw("sections.infoCollect.autoData.items") as string[]).map((item, idx) => (
+              <li key={idx} style={{ marginBottom: "8px" }}>{item}</li>
+            ))}
           </ul>
 
           <h2 style={{ fontSize: "1.3rem", fontWeight: "600", color: "#222222", marginBottom: "16px" }}>
-            How We Use Your Information
+            {t("sections.howWeUse.title")}
           </h2>
           <ul style={{ color: "#444", lineHeight: "1.8", marginBottom: "24px", paddingLeft: "24px" }}>
-            <li style={{ marginBottom: "8px" }}>Process and fulfill your orders</li>
-            <li style={{ marginBottom: "8px" }}>Manage your account and provide customer support</li>
-            <li style={{ marginBottom: "8px" }}>Send order confirmations and updates</li>
-            <li style={{ marginBottom: "8px" }}>Personalize your experience and preferences</li>
-            <li style={{ marginBottom: "8px" }}>Administer loyalty programs and referral rewards</li>
-            <li style={{ marginBottom: "8px" }}>Send promotional communications (with your consent)</li>
-            <li style={{ marginBottom: "8px" }}>Improve our products, services, and website</li>
-            <li style={{ marginBottom: "8px" }}>Prevent fraud and ensure security</li>
+            {(t.raw("sections.howWeUse.items") as string[]).map((item, idx) => (
+              <li key={idx} style={{ marginBottom: "8px" }}>{item}</li>
+            ))}
           </ul>
 
           <h2 style={{ fontSize: "1.3rem", fontWeight: "600", color: "#222222", marginBottom: "16px" }}>
-            Sharing Your Information
+            {t("sections.sharing.title")}
           </h2>
           <p style={{ color: "#444", lineHeight: "1.8", marginBottom: "16px" }}>
-            We may share your information with:
+            {t("sections.sharing.intro")}
           </p>
           <ul style={{ color: "#444", lineHeight: "1.8", marginBottom: "24px", paddingLeft: "24px" }}>
-            <li style={{ marginBottom: "8px" }}><strong>Service Providers:</strong> Payment processors, delivery partners, and technology providers who help us operate our business</li>
-            <li style={{ marginBottom: "8px" }}><strong>Business Partners:</strong> With your consent, for joint marketing or promotional activities</li>
-            <li style={{ marginBottom: "8px" }}><strong>Legal Requirements:</strong> When required by law or to protect our rights</li>
+            <li style={{ marginBottom: "8px" }}><strong>Service Providers:</strong> {t("sections.sharing.serviceProviders")}</li>
+            <li style={{ marginBottom: "8px" }}><strong>Business Partners:</strong> {t("sections.sharing.businessPartners")}</li>
+            <li style={{ marginBottom: "8px" }}><strong>Legal Requirements:</strong> {t("sections.sharing.legalRequirements")}</li>
           </ul>
           <p style={{ color: "#444", lineHeight: "1.8", marginBottom: "24px" }}>
-            We do not sell your personal information to third parties.
+            {t("sections.sharing.noSell")}
           </p>
 
           <h2 style={{ fontSize: "1.3rem", fontWeight: "600", color: "#222222", marginBottom: "16px" }}>
-            Data Security
+            {t("sections.security.title")}
           </h2>
           <p style={{ color: "#444", lineHeight: "1.8", marginBottom: "24px" }}>
-            We implement appropriate technical and organizational measures to protect your personal information. However, no method of transmission over the Internet or electronic storage is 100% secure, and we cannot guarantee absolute security.
+            {t("sections.security.content")}
           </p>
 
           <h2 style={{ fontSize: "1.3rem", fontWeight: "600", color: "#222222", marginBottom: "16px" }}>
-            Your Rights
+            {t("sections.rights.title")}
           </h2>
           <p style={{ color: "#444", lineHeight: "1.8", marginBottom: "16px" }}>
-            Depending on your location, you may have the following rights:
+            {t("sections.rights.intro")}
           </p>
           <ul style={{ color: "#444", lineHeight: "1.8", marginBottom: "24px", paddingLeft: "24px" }}>
-            <li style={{ marginBottom: "8px" }}>Access and receive a copy of your personal data</li>
-            <li style={{ marginBottom: "8px" }}>Correct inaccurate or incomplete information</li>
-            <li style={{ marginBottom: "8px" }}>Delete your personal data</li>
-            <li style={{ marginBottom: "8px" }}>Object to or restrict certain processing</li>
-            <li style={{ marginBottom: "8px" }}>Data portability</li>
-            <li style={{ marginBottom: "8px" }}>Withdraw consent at any time</li>
+            {(t.raw("sections.rights.items") as string[]).map((item, idx) => (
+              <li key={idx} style={{ marginBottom: "8px" }}>{item}</li>
+            ))}
           </ul>
 
           <h2 style={{ fontSize: "1.3rem", fontWeight: "600", color: "#222222", marginBottom: "16px" }}>
-            Cookies
+            {t("sections.cookies.title")}
           </h2>
           <p style={{ color: "#444", lineHeight: "1.8", marginBottom: "24px" }}>
-            We use cookies and similar technologies to enhance your experience, analyze usage, and assist with marketing. You can manage cookie preferences through your browser settings.
+            {t("sections.cookies.content")}
           </p>
 
           <h2 style={{ fontSize: "1.3rem", fontWeight: "600", color: "#222222", marginBottom: "16px" }}>
-            Children&apos;s Privacy
+            {t("sections.children.title")}
           </h2>
           <p style={{ color: "#444", lineHeight: "1.8", marginBottom: "24px" }}>
-            Our services are not intended for children under 13 years of age. We do not knowingly collect personal information from children under 13.
+            {t("sections.children.content")}
           </p>
 
           <h2 style={{ fontSize: "1.3rem", fontWeight: "600", color: "#222222", marginBottom: "16px" }}>
-            Changes to This Policy
+            {t("sections.changes.title")}
           </h2>
           <p style={{ color: "#444", lineHeight: "1.8", marginBottom: "24px" }}>
-            We may update this privacy policy from time to time. We will notify you of any changes by posting the new policy on this page and updating the &quot;Last Updated&quot; date.
+            {t("sections.changes.content")}
           </p>
 
           <div
@@ -168,22 +161,22 @@ export default function PrivacyPage() {
             }}
           >
             <h3 style={{ fontSize: "1.1rem", fontWeight: "600", color: "#222222", marginBottom: "12px" }}>
-              Contact Us
+              {t("sections.contactUs.title")}
             </h3>
             <p style={{ color: "#666", fontSize: "0.95rem", marginBottom: "16px" }}>
-              If you have questions about this privacy policy or our practices, please contact us:
+              {t("sections.contactUs.intro")}
             </p>
             <div style={{ display: "grid", gap: "8px" }}>
               <div>
-                <span style={{ color: "#666" }}>Email: </span>
+                <span style={{ color: "#666" }}>{tCommon("email")}: </span>
                 <a href="mailto:privacy@ohbeefnoodlesoup.com" style={{ color: "#7C7A67", fontWeight: "500" }}>
                   privacy@ohbeefnoodlesoup.com
                 </a>
               </div>
               <div>
-                <span style={{ color: "#666" }}>Or use our </span>
+                <span style={{ color: "#666" }}>{tCommon("or")} </span>
                 <Link href="/contact" style={{ color: "#7C7A67", fontWeight: "500" }}>
-                  contact form
+                  {tCommon("contactForm")}
                 </Link>
               </div>
             </div>

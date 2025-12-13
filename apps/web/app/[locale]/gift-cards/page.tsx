@@ -3,20 +3,24 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 
 const giftCardAmounts = [25, 50, 75, 100, 150, 200];
 
-// Gift card design options
-const cardDesigns = [
-  { id: "classic", name: "Classic", gradient: "linear-gradient(135deg, #7C7A67 0%, #5a584a 100%)" },
-  { id: "dark", name: "Dark", gradient: "linear-gradient(135deg, #222222 0%, #444444 100%)" },
-  { id: "gold", name: "Gold", gradient: "linear-gradient(135deg, #C7A878 0%, #8B7355 100%)" },
-];
-
 export default function GiftCardsPage() {
+  const t = useTranslations("giftCards");
+  const tCommon = useTranslations("common");
+
   const [selectedAmount, setSelectedAmount] = useState<number | null>(50);
   const [customAmount, setCustomAmount] = useState("");
   const [selectedDesign, setSelectedDesign] = useState("classic");
+
+  // Gift card design options
+  const cardDesigns = [
+    { id: "classic", name: t("designs.classic"), gradient: "linear-gradient(135deg, #7C7A67 0%, #5a584a 100%)" },
+    { id: "dark", name: t("designs.dark"), gradient: "linear-gradient(135deg, #222222 0%, #444444 100%)" },
+    { id: "gold", name: t("designs.gold"), gradient: "linear-gradient(135deg, #C7A878 0%, #8B7355 100%)" },
+  ];
 
   const currentDesign = cardDesigns.find(d => d.id === selectedDesign) || cardDesigns[0];
   const displayAmount = selectedAmount || Number(customAmount) || 0;
@@ -75,7 +79,7 @@ export default function GiftCardsPage() {
                 fontWeight: "500",
               }}
             >
-              Give the Gift of Oh!
+              {t("tagline")}
             </p>
             <h1
               style={{
@@ -87,7 +91,7 @@ export default function GiftCardsPage() {
                 textShadow: "0 2px 20px rgba(0,0,0,0.3)",
               }}
             >
-              Gift Cards
+              {t("title")}
             </h1>
             <p
               style={{
@@ -99,7 +103,7 @@ export default function GiftCardsPage() {
                 color: "rgba(255,255,255,0.8)",
               }}
             >
-              Share the warmth of the perfect bowl with someone special
+              {t("description")}
             </p>
           </div>
 
@@ -177,7 +181,7 @@ export default function GiftCardsPage() {
                     textTransform: "uppercase",
                   }}
                 >
-                  Digital Gift Card
+                  {t("digitalCard")}
                 </div>
                 <div style={{ width: "clamp(100px, 25vw, 140px)", height: "clamp(100px, 25vw, 140px)", position: "relative", marginTop: "-20px", marginRight: "-10px" }}>
                   <Image
@@ -270,7 +274,7 @@ export default function GiftCardsPage() {
               fontWeight: "600",
             }}
           >
-            Choose Your Amount
+            {t("chooseAmount.tagline")}
           </p>
           <h2
             style={{
@@ -280,7 +284,7 @@ export default function GiftCardsPage() {
               lineHeight: "1.2",
             }}
           >
-            Select the perfect gift value
+            {t("chooseAmount.title")}
           </h2>
         </div>
 
@@ -331,7 +335,7 @@ export default function GiftCardsPage() {
           }}
         >
           <label style={{ fontSize: "0.9rem", color: "#666", display: "block", marginBottom: "12px" }}>
-            Or enter a custom amount ($10 - $500)
+            {t("chooseAmount.customLabel")}
           </label>
           <div style={{ position: "relative" }}>
             <span
@@ -356,7 +360,7 @@ export default function GiftCardsPage() {
                 setCustomAmount(e.target.value);
                 setSelectedAmount(null);
               }}
-              placeholder="Enter amount"
+              placeholder={t("chooseAmount.customPlaceholder")}
               style={{
                 width: "100%",
                 padding: "20px 20px 20px 48px",
@@ -391,13 +395,13 @@ export default function GiftCardsPage() {
               gap: "12px",
             }}
           >
-            Continue to Personalize
+            {t("continue")}
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M5 12h14M12 5l7 7-7 7" />
             </svg>
           </button>
           <p style={{ color: "#888", fontSize: "0.9rem", marginTop: "16px" }}>
-            Coming soon - Gift card purchasing
+            {t("purchaseComingSoon")}
           </p>
         </div>
       </section>
@@ -414,7 +418,7 @@ export default function GiftCardsPage() {
               marginBottom: "20px",
             }}
           >
-            Why Gift Oh!
+            {t("why.title")}
           </p>
           <h2
             style={{
@@ -425,7 +429,7 @@ export default function GiftCardsPage() {
               color: "rgba(255,255,255,0.95)",
             }}
           >
-            The perfect gift for noodle lovers
+            {t("why.subtitle")}
           </h2>
 
           <div
@@ -437,10 +441,10 @@ export default function GiftCardsPage() {
             }}
           >
             {[
-              { icon: "⚡", title: "Instant Delivery", desc: "Delivered directly to their inbox within minutes. Perfect for last-minute gifts." },
-              { icon: "🎨", title: "Beautiful Design", desc: "Choose from multiple card designs to match your recipient's style." },
-              { icon: "♾️", title: "Never Expires", desc: "Our gift cards never expire. Use them whenever you're ready." },
-              { icon: "💝", title: "Add a Message", desc: "Include a personal note to make your gift extra special." },
+              { icon: "⚡", title: t("why.instantDelivery.title"), desc: t("why.instantDelivery.description") },
+              { icon: "🎨", title: t("why.beautifulDesign.title"), desc: t("why.beautifulDesign.description") },
+              { icon: "♾️", title: t("why.neverExpires.title"), desc: t("why.neverExpires.description") },
+              { icon: "💝", title: t("why.addMessage.title"), desc: t("why.addMessage.description") },
             ].map((feature, idx) => (
               <div key={idx}>
                 <div
@@ -484,7 +488,7 @@ export default function GiftCardsPage() {
                 fontWeight: "600",
               }}
             >
-              For Business
+              {t("corporate.tagline")}
             </p>
             <h2
               style={{
@@ -495,10 +499,10 @@ export default function GiftCardsPage() {
                 lineHeight: "1.2",
               }}
             >
-              Corporate & Bulk Orders
+              {t("corporate.title")}
             </h2>
             <p style={{ fontSize: "1.1rem", color: "#555", lineHeight: "1.8", marginBottom: "32px" }}>
-              Perfect for employee appreciation, client gifts, or team celebrations. Get special pricing on bulk gift card purchases of 10 or more.
+              {t("corporate.description")}
             </p>
             <Link
               href="/contact"
@@ -515,7 +519,7 @@ export default function GiftCardsPage() {
                 transition: "all 0.3s ease",
               }}
             >
-              Contact Sales
+              {t("corporate.contactSales")}
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M5 12h14M12 5l7 7-7 7" />
               </svg>
@@ -531,10 +535,10 @@ export default function GiftCardsPage() {
           >
             <div style={{ display: "grid", gap: "24px" }}>
               {[
-                { label: "Bulk Discounts", value: "10+ cards" },
-                { label: "Custom Branding", value: "Add your logo" },
-                { label: "Dedicated Support", value: "Priority service" },
-                { label: "Flexible Delivery", value: "Schedule sends" },
+                { label: t("corporate.bulkDiscounts"), value: t("corporate.tenPlus") },
+                { label: t("corporate.customBranding"), value: t("corporate.addLogo") },
+                { label: t("corporate.dedicatedSupport"), value: t("corporate.priorityService") },
+                { label: t("corporate.flexibleDelivery"), value: t("corporate.scheduleSends") },
               ].map((item, idx) => (
                 <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: "16px", borderBottom: idx < 3 ? "1px solid #eee" : "none" }}>
                   <span style={{ color: "#666", fontSize: "1rem" }}>{item.label}</span>
@@ -560,7 +564,7 @@ export default function GiftCardsPage() {
                 fontWeight: "600",
               }}
             >
-              Questions?
+              {t("faq.tagline")}
             </p>
             <h2
               style={{
@@ -570,28 +574,16 @@ export default function GiftCardsPage() {
                 lineHeight: "1.2",
               }}
             >
-              Frequently Asked Questions
+              {t("faq.title")}
             </h2>
           </div>
 
           <div style={{ display: "grid", gap: "16px" }}>
             {[
-              {
-                q: "How are digital gift cards delivered?",
-                a: "Gift cards are sent directly to the recipient's email address within minutes of purchase. They'll receive a beautifully designed email with the gift card code and your personal message.",
-              },
-              {
-                q: "Can I use multiple gift cards on one order?",
-                a: "Yes! You can combine multiple gift cards on a single order. Any remaining balance stays on your account for future use.",
-              },
-              {
-                q: "Do gift cards expire?",
-                a: "No, Oh! gift cards never expire. Recipients can use them whenever they're ready for the perfect bowl.",
-              },
-              {
-                q: "Can I check my gift card balance?",
-                a: "Yes, you can check your balance anytime in the 'My Account' section or by contacting our support team.",
-              },
+              { q: t("faq.questions.delivery.q"), a: t("faq.questions.delivery.a") },
+              { q: t("faq.questions.multiple.q"), a: t("faq.questions.multiple.a") },
+              { q: t("faq.questions.expire.q"), a: t("faq.questions.expire.a") },
+              { q: t("faq.questions.balance.q"), a: t("faq.questions.balance.a") },
             ].map((faq, idx) => (
               <div
                 key={idx}
@@ -630,10 +622,10 @@ export default function GiftCardsPage() {
               marginBottom: "24px",
             }}
           >
-            Ready to spread some joy?
+            {t("cta.title")}
           </h2>
           <p style={{ color: "rgba(255,255,255,0.8)", marginBottom: "32px", fontSize: "1.1rem" }}>
-            Give the gift of the perfect bowl. Your loved ones will thank you.
+            {t("cta.description")}
           </p>
           <button
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
@@ -650,7 +642,7 @@ export default function GiftCardsPage() {
               transition: "all 0.3s ease",
             }}
           >
-            Create a Gift Card
+            {t("cta.button")}
           </button>
         </div>
       </section>

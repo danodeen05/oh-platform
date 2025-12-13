@@ -1,12 +1,17 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import ReferralDashboard from "./referral-dashboard";
 
 export default function ReferralPage() {
+  const t = useTranslations("referral");
+
   return (
     <main style={{ padding: 24, maxWidth: 800, margin: "0 auto" }}>
       <div style={{ textAlign: "center", marginBottom: 48 }}>
-        <h1 style={{ marginBottom: 8 }}>Invite Friends, Earn Rewards</h1>
+        <h1 style={{ marginBottom: 8 }}>{t("title")}</h1>
         <p style={{ color: "#666", fontSize: "1.1rem" }}>
-          Give $5, Get $5 for every friend who orders $20+
+          {t("subtitle")}
         </p>
       </div>
 
@@ -20,7 +25,7 @@ export default function ReferralPage() {
           borderRadius: 12,
         }}
       >
-        <h2 style={{ marginBottom: 16 }}>How It Works</h2>
+        <h2 style={{ marginBottom: 16 }}>{t("howItWorks")}</h2>
         <div style={{ display: "grid", gap: 24 }}>
           <div style={{ display: "flex", gap: 16 }}>
             <div
@@ -41,10 +46,10 @@ export default function ReferralPage() {
             </div>
             <div>
               <strong style={{ display: "block", marginBottom: 4 }}>
-                Share Your Link
+                {t("step1.title")}
               </strong>
               <p style={{ margin: 0, color: "#666" }}>
-                Send your unique referral link to friends
+                {t("step1.description")}
               </p>
             </div>
           </div>
@@ -68,10 +73,10 @@ export default function ReferralPage() {
             </div>
             <div>
               <strong style={{ display: "block", marginBottom: 4 }}>
-                They Get $5 Off Instantly
+                {t("step2.title")}
               </strong>
               <p style={{ margin: 0, color: "#666" }}>
-                Your friend gets $5 off their first order right away
+                {t("step2.description")}
               </p>
             </div>
           </div>
@@ -95,11 +100,10 @@ export default function ReferralPage() {
             </div>
             <div>
               <strong style={{ display: "block", marginBottom: 4 }}>
-                You Earn $5 (On the 1st or 16th)
+                {t("step3.title")}
               </strong>
               <p style={{ margin: 0, color: "#666" }}>
-                When they place a first order of $20 or more, you earn $5 in credits.
-                Referral credits are added to your account on the 1st and 16th of each month.
+                {t("step3.description")}
               </p>
             </div>
           </div>
@@ -116,11 +120,11 @@ export default function ReferralPage() {
             color: "#666",
           }}
         >
-          <strong style={{ color: "#222" }}>Good to know:</strong>
+          <strong style={{ color: "#222" }}>{t("goodToKnow")}</strong>
           <ul style={{ margin: "8px 0 0 0", paddingLeft: 20, lineHeight: 1.6 }}>
-            <li>Your friend's first order must be $20 or more for you to earn the referral bonus</li>
-            <li>Referral credits are disbursed on the 1st and 16th of each month</li>
-            <li>You can apply up to $5 in credits per order</li>
+            <li>{t("rules.minimumOrder")}</li>
+            <li>{t("rules.disbursement")}</li>
+            <li>{t("rules.maxPerOrder")}</li>
           </ul>
         </div>
       </div>

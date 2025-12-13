@@ -2,8 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 export default function ContactPage() {
+  const t = useTranslations("contact");
+  const tCommon = useTranslations("common");
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -13,8 +17,7 @@ export default function ContactPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle form submission
-    alert("Thank you for your message! We'll get back to you soon.");
+    alert(t("form.success"));
   };
 
   return (
@@ -37,7 +40,7 @@ export default function ContactPage() {
             color: "#E5E5E5",
           }}
         >
-          Contact Us
+          {t("title")}
         </h1>
         <p
           style={{
@@ -49,7 +52,7 @@ export default function ContactPage() {
             fontWeight: "300",
           }}
         >
-          We&apos;d love to hear from you. Whether you have a question, feedback, or just want to say hi—we&apos;re here.
+          {t("description")}
         </p>
       </section>
 
@@ -58,12 +61,12 @@ export default function ContactPage() {
           {/* Contact Form */}
           <div>
             <h2 style={{ fontSize: "1.5rem", fontWeight: "500", color: "#222222", marginBottom: "24px" }}>
-              Send Us a Message
+              {t("form.title")}
             </h2>
             <form onSubmit={handleSubmit}>
               <div style={{ marginBottom: "20px" }}>
                 <label style={{ display: "block", fontSize: "0.9rem", color: "#666", marginBottom: "8px" }}>
-                  Your Name
+                  {t("form.name")}
                 </label>
                 <input
                   type="text"
@@ -84,7 +87,7 @@ export default function ContactPage() {
 
               <div style={{ marginBottom: "20px" }}>
                 <label style={{ display: "block", fontSize: "0.9rem", color: "#666", marginBottom: "8px" }}>
-                  Email Address
+                  {t("form.email")}
                 </label>
                 <input
                   type="email"
@@ -104,7 +107,7 @@ export default function ContactPage() {
 
               <div style={{ marginBottom: "20px" }}>
                 <label style={{ display: "block", fontSize: "0.9rem", color: "#666", marginBottom: "8px" }}>
-                  Subject
+                  {t("form.subject")}
                 </label>
                 <select
                   value={formData.subject}
@@ -119,18 +122,18 @@ export default function ContactPage() {
                     background: "white",
                   }}
                 >
-                  <option value="general">General Inquiry</option>
-                  <option value="order">Order Support</option>
-                  <option value="feedback">Feedback</option>
-                  <option value="corporate">Corporate / Bulk Orders</option>
-                  <option value="press">Press Inquiry</option>
-                  <option value="careers">Career Opportunities</option>
+                  <option value="general">{t("form.subjects.general")}</option>
+                  <option value="order">{t("form.subjects.order")}</option>
+                  <option value="feedback">{t("form.subjects.feedback")}</option>
+                  <option value="corporate">{t("form.subjects.corporate")}</option>
+                  <option value="press">{t("form.subjects.press")}</option>
+                  <option value="careers">{t("form.subjects.careers")}</option>
                 </select>
               </div>
 
               <div style={{ marginBottom: "24px" }}>
                 <label style={{ display: "block", fontSize: "0.9rem", color: "#666", marginBottom: "8px" }}>
-                  Message
+                  {t("form.message")}
                 </label>
                 <textarea
                   value={formData.message}
@@ -164,7 +167,7 @@ export default function ContactPage() {
                   transition: "background 0.3s",
                 }}
               >
-                Send Message
+                {t("sendMessage")}
               </button>
             </form>
           </div>
@@ -172,7 +175,7 @@ export default function ContactPage() {
           {/* Contact Info */}
           <div>
             <h2 style={{ fontSize: "1.5rem", fontWeight: "500", color: "#222222", marginBottom: "24px" }}>
-              Other Ways to Reach Us
+              {t("other.title")}
             </h2>
 
             <div style={{ marginBottom: "32px" }}>
@@ -187,10 +190,10 @@ export default function ContactPage() {
               >
                 <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "12px" }}>
                   <span style={{ fontSize: "1.5rem" }}>📧</span>
-                  <h3 style={{ fontSize: "1rem", fontWeight: "600", color: "#222222", margin: 0 }}>Email</h3>
+                  <h3 style={{ fontSize: "1rem", fontWeight: "600", color: "#222222", margin: 0 }}>{t("other.email.title")}</h3>
                 </div>
                 <p style={{ color: "#7C7A67", fontWeight: "500", margin: 0 }}>
-                  hello@ohbeefnoodlesoup.com
+                  {t("other.email.value")}
                 </p>
               </div>
 
@@ -205,11 +208,11 @@ export default function ContactPage() {
               >
                 <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "12px" }}>
                   <span style={{ fontSize: "1.5rem" }}>📍</span>
-                  <h3 style={{ fontSize: "1rem", fontWeight: "600", color: "#222222", margin: 0 }}>Location</h3>
+                  <h3 style={{ fontSize: "1rem", fontWeight: "600", color: "#222222", margin: 0 }}>{t("other.location.title")}</h3>
                 </div>
                 <p style={{ color: "#666", margin: 0, lineHeight: "1.6" }}>
-                  Opening Spring 2025<br />
-                  San Francisco, CA
+                  {t("other.location.opening")}<br />
+                  {t("other.location.city")}
                 </p>
               </div>
 
@@ -223,10 +226,10 @@ export default function ContactPage() {
               >
                 <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "12px" }}>
                   <span style={{ fontSize: "1.5rem" }}>⏰</span>
-                  <h3 style={{ fontSize: "1rem", fontWeight: "600", color: "#222222", margin: 0 }}>Response Time</h3>
+                  <h3 style={{ fontSize: "1rem", fontWeight: "600", color: "#222222", margin: 0 }}>{t("other.responseTime.title")}</h3>
                 </div>
                 <p style={{ color: "#666", margin: 0 }}>
-                  We typically respond within 24 hours
+                  {t("other.responseTime.value")}
                 </p>
               </div>
             </div>
@@ -240,10 +243,10 @@ export default function ContactPage() {
               }}
             >
               <h3 style={{ fontSize: "1rem", fontWeight: "600", color: "#222222", marginBottom: "12px" }}>
-                Follow Us
+                {t("social.title")}
               </h3>
               <p style={{ color: "#666", fontSize: "0.9rem", marginBottom: "16px" }}>
-                Stay connected for updates, behind-the-scenes, and exclusive offers.
+                {t("social.description")}
               </p>
               <div style={{ display: "flex", gap: "12px" }}>
                 {["Instagram", "X", "TikTok"].map((platform) => (
@@ -272,10 +275,10 @@ export default function ContactPage() {
       {/* FAQ Link */}
       <section style={{ background: "white", padding: "60px 24px", textAlign: "center" }}>
         <h2 style={{ fontSize: "1.3rem", fontWeight: "400", color: "#222222", marginBottom: "12px" }}>
-          Have a quick question?
+          {t("faq.title")}
         </h2>
         <p style={{ color: "#666", marginBottom: "24px" }}>
-          Check out our frequently asked questions for instant answers.
+          {t("faq.description")}
         </p>
         <Link
           href="/gift-cards#faq"
@@ -290,7 +293,7 @@ export default function ContactPage() {
             fontWeight: "500",
           }}
         >
-          View FAQ
+          {tCommon("viewFaq")}
         </Link>
       </section>
     </div>

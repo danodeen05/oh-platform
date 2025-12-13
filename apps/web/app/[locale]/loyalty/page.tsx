@@ -1,59 +1,64 @@
 "use client";
 
 import Link from "next/link";
-
-const tiers = [
-  {
-    name: "Chopstick",
-    emoji: "🥢",
-    color: "#C7A878",
-    requirement: "Sign up",
-    benefits: [
-      "$5 referral bonus per friend",
-      "1% cashback on orders",
-      "Early access to new menu items",
-    ],
-  },
-  {
-    name: "Noodle Master",
-    emoji: "🍜",
-    color: "#7C7A67",
-    requirement: "10 orders + 5 referrals",
-    benefits: [
-      "$5 referral bonus per friend",
-      "2% cashback on orders",
-      "Priority seating",
-      "Exclusive member events",
-      "Free bowl on tier upgrade",
-    ],
-  },
-  {
-    name: "Beef Boss",
-    emoji: "🐂",
-    color: "#222222",
-    requirement: "25 orders + 10 referrals",
-    benefits: [
-      "$5 referral bonus per friend",
-      "3% cashback on orders",
-      "Exclusive merchandise drops",
-      "Complimentary premium add-ons",
-      "Annual VIP Gift & Recognition",
-    ],
-  },
-];
-
-const badges = [
-  { emoji: "🌟", name: "First Bowl", description: "Complete your first order" },
-  { emoji: "🔥", name: "Hot Streak", description: "Order 3 days in a row" },
-  { emoji: "🎯", name: "Perfect Ten", description: "Place 10 orders" },
-  { emoji: "💪", name: "Protein Power", description: "Order extra beef 5 times" },
-  { emoji: "🌶️", name: "Heat Seeker", description: "Order Inferno spice level" },
-  { emoji: "🎁", name: "Gift Giver", description: "Send your first gift card" },
-  { emoji: "👥", name: "Community Builder", description: "Refer 5 friends" },
-  { emoji: "🏆", name: "Legend", description: "Reach Beef Boss tier" },
-];
+import { useTranslations, useLocale } from "next-intl";
 
 export default function LoyaltyPage() {
+  const t = useTranslations("loyalty");
+  const tCommon = useTranslations("common");
+  const locale = useLocale();
+
+  const tiers = [
+    {
+      name: t("tiers.chopstick.name"),
+      emoji: "🥢",
+      color: "#C7A878",
+      requirement: t("tiers.chopstick.requirement"),
+      benefits: [
+        t("tiers.chopstick.benefits.referralBonus"),
+        t("tiers.chopstick.benefits.cashback"),
+        t("tiers.chopstick.benefits.earlyAccess"),
+      ],
+    },
+    {
+      name: t("tiers.noodleMaster.name"),
+      emoji: "🍜",
+      color: "#7C7A67",
+      requirement: t("tiers.noodleMaster.requirement"),
+      benefits: [
+        t("tiers.noodleMaster.benefits.referralBonus"),
+        t("tiers.noodleMaster.benefits.cashback"),
+        t("tiers.noodleMaster.benefits.prioritySeating"),
+        t("tiers.noodleMaster.benefits.memberEvents"),
+        t("tiers.noodleMaster.benefits.freeBowl"),
+      ],
+    },
+    {
+      name: t("tiers.beefBoss.name"),
+      emoji: "🐂",
+      color: "#222222",
+      requirement: t("tiers.beefBoss.requirement"),
+      benefits: [
+        t("tiers.beefBoss.benefits.referralBonus"),
+        t("tiers.beefBoss.benefits.cashback"),
+        t("tiers.beefBoss.benefits.merchDrops"),
+        t("tiers.beefBoss.benefits.premiumAddons"),
+        t("tiers.beefBoss.benefits.vipGift"),
+      ],
+    },
+  ];
+
+  const badges = [
+    { emoji: "🌟", name: t("badges.firstBowl.name"), description: t("badges.firstBowl.description") },
+    { emoji: "🔥", name: t("badges.hotStreak.name"), description: t("badges.hotStreak.description") },
+    { emoji: "🎯", name: t("badges.perfectTen.name"), description: t("badges.perfectTen.description") },
+    { emoji: "💪", name: t("badges.proteinPower.name"), description: t("badges.proteinPower.description") },
+    { emoji: "🌶️", name: t("badges.heatSeeker.name"), description: t("badges.heatSeeker.description") },
+    { emoji: "🎁", name: t("badges.giftGiver.name"), description: t("badges.giftGiver.description") },
+    { emoji: "👥", name: t("badges.communityBuilder.name"), description: t("badges.communityBuilder.description") },
+    { emoji: "🏆", name: t("badges.legend.name"), description: t("badges.legend.description") },
+  ];
+
   return (
     <div style={{ background: "#E5E5E5", minHeight: "100vh" }}>
       {/* Hero Section */}
@@ -74,7 +79,7 @@ export default function LoyaltyPage() {
             color: "#E5E5E5",
           }}
         >
-          Oh! Rewards
+          {t("title")}
         </h1>
         <p
           style={{
@@ -86,10 +91,10 @@ export default function LoyaltyPage() {
             color: "#C7A878",
           }}
         >
-          Every bowl brings you closer to something special. Earn credits, unlock badges, and level up your membership with every visit.
+          {t("description")}
         </p>
         <Link
-          href="/order"
+          href={`/${locale}/order`}
           style={{
             display: "inline-block",
             padding: "16px 48px",
@@ -101,7 +106,7 @@ export default function LoyaltyPage() {
             letterSpacing: "1px",
           }}
         >
-          START EARNING
+          {tCommon("startEarning")}
         </Link>
       </section>
 
@@ -117,7 +122,7 @@ export default function LoyaltyPage() {
               textAlign: "center",
             }}
           >
-            How It Works
+            {t("howItWorks.title")}
           </h2>
 
           <div
@@ -166,10 +171,10 @@ export default function LoyaltyPage() {
                 🍜
               </div>
               <h3 style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "12px", color: "#222222" }}>
-                Order & Earn
+                {t("howItWorks.orderEarn.title")}
               </h3>
               <p style={{ color: "#666", lineHeight: "1.6" }}>
-                Every order earns you cashback based on your tier level. Watch your credits grow with each bowl.
+                {t("howItWorks.orderEarn.description")}
               </p>
             </div>
 
@@ -210,10 +215,10 @@ export default function LoyaltyPage() {
                 👥
               </div>
               <h3 style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "12px", color: "#222222" }}>
-                Refer Friends
+                {t("howItWorks.referFriends.title")}
               </h3>
               <p style={{ color: "#666", lineHeight: "1.6" }}>
-                Share your unique referral link. When friends order, you both earn credits toward your next meal.
+                {t("howItWorks.referFriends.description")}
               </p>
             </div>
 
@@ -254,10 +259,10 @@ export default function LoyaltyPage() {
                 ⬆️
               </div>
               <h3 style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "12px", color: "#222222" }}>
-                Level Up
+                {t("howItWorks.levelUp.title")}
               </h3>
               <p style={{ color: "#666", lineHeight: "1.6" }}>
-                Unlock higher tiers for better rewards. The more you visit, the more you save.
+                {t("howItWorks.levelUp.description")}
               </p>
             </div>
 
@@ -298,10 +303,10 @@ export default function LoyaltyPage() {
                 💸
               </div>
               <h3 style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "12px", color: "#222222" }}>
-                Redeem
+                {t("howItWorks.redeem.title")}
               </h3>
               <p style={{ color: "#666", lineHeight: "1.6" }}>
-                Use your credits at checkout. Apply up to $5 per order toward any menu item.
+                {t("howItWorks.redeem.description")}
               </p>
             </div>
           </div>
@@ -320,7 +325,7 @@ export default function LoyaltyPage() {
               textAlign: "center",
             }}
           >
-            Membership Tiers
+            {t("tiers.title")}
           </h2>
           <p
             style={{
@@ -332,7 +337,7 @@ export default function LoyaltyPage() {
               margin: "0 auto 48px",
             }}
           >
-            Start as a Chopstick and work your way to Beef Boss. Every tier unlocks better rewards.
+            {t("tiers.description")}
           </p>
 
           <div
@@ -368,7 +373,7 @@ export default function LoyaltyPage() {
                       fontWeight: "600",
                     }}
                   >
-                    ULTIMATE
+                    {t("tiers.ultimate")}
                   </div>
                 )}
 
@@ -386,12 +391,12 @@ export default function LoyaltyPage() {
                       fontSize: "1.5rem",
                       fontWeight: "600",
                       marginBottom: "8px",
-                      color: tier.name === "Beef Boss" ? "#E5E5E5" : "#222222",
+                      color: tier.name === t("tiers.beefBoss.name") ? "#E5E5E5" : "#222222",
                     }}
                   >
                     {tier.name}
                   </h3>
-                  <p style={{ fontSize: "0.9rem", opacity: 0.9, color: tier.name === "Beef Boss" ? "#E5E5E5" : "#222222" }}>
+                  <p style={{ fontSize: "0.9rem", opacity: 0.9, color: tier.name === t("tiers.beefBoss.name") ? "#E5E5E5" : "#222222" }}>
                     {tier.requirement}
                   </p>
                 </div>
@@ -399,7 +404,7 @@ export default function LoyaltyPage() {
                 {/* Tier Benefits */}
                 <div style={{ padding: "24px" }}>
                   <h4 style={{ fontSize: "0.85rem", fontWeight: "600", color: "#666", marginBottom: "16px", textTransform: "uppercase", letterSpacing: "1px" }}>
-                    Benefits Include
+                    {t("tiers.benefitsInclude")}
                   </h4>
                   <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
                     {tier.benefits.map((benefit, benefitIdx) => (
@@ -439,7 +444,7 @@ export default function LoyaltyPage() {
               color: "#E5E5E5",
             }}
           >
-            Collect Badges
+            {t("badges.title")}
           </h2>
           <p
             style={{
@@ -451,7 +456,7 @@ export default function LoyaltyPage() {
               margin: "0 auto 48px",
             }}
           >
-            Unlock achievements as you dine. Show off your collection and earn bragging rights.
+            {t("badges.description")}
           </p>
 
           <div
@@ -497,7 +502,7 @@ export default function LoyaltyPage() {
               marginBottom: "16px",
             }}
           >
-            Share the Love, Earn Rewards
+            {t("referral.title")}
           </h2>
           <p
             style={{
@@ -507,7 +512,7 @@ export default function LoyaltyPage() {
               lineHeight: "1.7",
             }}
           >
-            Know someone who needs a bowl of comfort? Share your referral link and you&apos;ll both earn credits when they place their first order of $20 or more.
+            {t("referral.description")}
           </p>
 
           <div
@@ -527,21 +532,21 @@ export default function LoyaltyPage() {
             >
               <div>
                 <div style={{ fontSize: "2.5rem", color: "#7C7A67", fontWeight: "bold" }}>$5</div>
-                <div style={{ color: "#666", fontSize: "0.9rem" }}>for you (Chopstick tier)</div>
+                <div style={{ color: "#666", fontSize: "0.9rem" }}>{t("referral.forYou")}</div>
               </div>
               <div>
                 <div style={{ fontSize: "2.5rem", color: "#7C7A67", fontWeight: "bold" }}>$5</div>
-                <div style={{ color: "#666", fontSize: "0.9rem" }}>for your friend</div>
+                <div style={{ color: "#666", fontSize: "0.9rem" }}>{t("referral.forFriend")}</div>
               </div>
               <div>
                 <div style={{ fontSize: "2.5rem", color: "#7C7A67", fontWeight: "bold" }}>♾️</div>
-                <div style={{ color: "#666", fontSize: "0.9rem" }}>unlimited referrals</div>
+                <div style={{ color: "#666", fontSize: "0.9rem" }}>{t("referral.unlimited")}</div>
               </div>
             </div>
           </div>
 
           <Link
-            href="/referral"
+            href={`/${locale}/referral`}
             style={{
               display: "inline-block",
               padding: "16px 48px",
@@ -552,7 +557,7 @@ export default function LoyaltyPage() {
               fontWeight: "500",
             }}
           >
-            Get Your Referral Link
+            {t("referral.getLink")}
           </Link>
         </div>
       </section>
@@ -573,7 +578,7 @@ export default function LoyaltyPage() {
             marginBottom: "16px",
           }}
         >
-          Ready to Start Your Journey?
+          {t("cta.title")}
         </h2>
         <p
           style={{
@@ -583,10 +588,10 @@ export default function LoyaltyPage() {
             opacity: 0.8,
           }}
         >
-          Sign up now and start earning with your first order.
+          {t("cta.description")}
         </p>
         <Link
-          href="/order"
+          href={`/${locale}/order`}
           style={{
             display: "inline-block",
             padding: "16px 48px",
@@ -598,7 +603,7 @@ export default function LoyaltyPage() {
             letterSpacing: "1px",
           }}
         >
-          ORDER NOW
+          {tCommon("orderNow")}
         </Link>
       </section>
     </div>
