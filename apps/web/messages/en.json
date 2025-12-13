@@ -3,12 +3,25 @@
     "signIn": "Sign In",
     "signInToOrder": "SIGN IN TO ORDER",
     "orderNow": "ORDER NOW",
+    "startOrder": "START YOUR ORDER",
+    "startEarning": "START EARNING",
     "loading": "Loading...",
+    "loadingMenu": "Loading menu...",
     "error": "Something went wrong",
+    "tryAgain": "Try Again",
     "included": "Included",
     "learnMore": "Learn More",
     "viewAll": "View All",
-    "close": "Close"
+    "close": "Close",
+    "apply": "Apply",
+    "notifyMe": "Notify Me",
+    "comingSoon": "Coming Soon",
+    "findLocation": "Find a Location",
+    "viewFaq": "View FAQ",
+    "sendMessage": "Send Message",
+    "email": "Email",
+    "or": "Or",
+    "contactForm": "contact form"
   },
   "navigation": {
     "menu": "Menu",
@@ -21,6 +34,7 @@
   "home": {
     "brandName": "Oh! Beef Noodle Soup",
     "tagline": "The only restaurant built around you.",
+    "heroDescription": "Born from Taiwan's beloved beef noodle tradition and elevated with Japanese attention to detail, enjoy our 30-year family recipe in your own private pod.",
     "features": {
       "recipe": {
         "title": "30-Year Recipe",
@@ -37,6 +51,7 @@
     },
     "pods": {
       "title": "Private Dining Pods",
+      "subtitle": "Your Space. Your Pace.",
       "description": "Experience dining like never before. Our individual pods offer a peaceful, distraction-free space to savor every slurp. No crowded tables, no noise — just you and your perfect bowl of beef noodle soup.",
       "features": {
         "space": {
@@ -61,6 +76,10 @@
         "math": "No awkward math",
         "checkout": "Simple checkout"
       }
+    },
+    "cta": {
+      "title": "Ready to Experience Oh!?",
+      "description": "Step into your private pod, savor premium beef noodle soup, and discover why dining at Oh! is unlike anything else."
     }
   },
   "footer": {
@@ -82,7 +101,8 @@
   },
   "menu": {
     "title": "Our Menu",
-    "description": "Explore our selection of premium beef noodle soups and accompaniments",
+    "description": "Crafted with a 30-year family recipe, every bowl tells a story of tradition, quality, and the pursuit of the perfect beef noodle soup.",
+    "unableToLoad": "Unable to load menu",
     "categories": {
       "soups": "Soups",
       "noodles": "Noodles",
@@ -90,6 +110,57 @@
       "sides": "Sides",
       "drinks": "Drinks",
       "desserts": "Desserts"
+    },
+    "sections": {
+      "chooseSoup": {
+        "title": "Choose Your Soup",
+        "subtitle": "The Foundation of Every Bowl",
+        "description": "Our 30-year family recipe starts with slow-braised beef bones simmered for 48 hours, creating a rich, complex broth that defines the Oh! experience."
+      },
+      "chooseNoodles": {
+        "title": "Choose Your Noodles",
+        "subtitle": "Hand-Selected for Perfection",
+        "description": "Every noodle is chosen to complement our rich broth. Find your perfect texture."
+      },
+      "premiumAddons": {
+        "title": "Premium Add-ons",
+        "subtitle": "Elevate Your Bowl",
+        "description": "Enhance your experience with premium additions. Each item is prepared with the same attention to detail as our signature dishes."
+      },
+      "sideDishes": {
+        "title": "Side Dishes",
+        "subtitle": "Complete Your Experience",
+        "description": "Traditional accompaniments that complement the main attraction."
+      },
+      "dessert": {
+        "title": "Dessert",
+        "subtitle": "Sweet Endings",
+        "description": "Light, refreshing finishes to complete your dining experience."
+      }
+    },
+    "difference": {
+      "title": "The Oh! Difference",
+      "description": "We believe the perfect bowl of beef noodle soup deserves the perfect dining experience. That's why we've reimagined every detail.",
+      "techFirst": {
+        "title": "Tech-First Experience",
+        "description": "Order ahead on your phone. Skip the wait. Your bowl is ready the moment you arrive."
+      },
+      "privatePods": {
+        "title": "Private Dining Pods",
+        "description": "Enjoy your soup in peaceful solitude. Our private cubicles let you focus on what matters—the incredible flavors."
+      },
+      "seamlessService": {
+        "title": "Seamless Service",
+        "description": "Minimal interruptions, maximum enjoyment. Our automated systems mean your meal is about the food, not the service."
+      },
+      "loyalty": {
+        "title": "Rewarding Loyalty",
+        "description": "Earn credits, unlock badges, and level up your membership. Every visit brings you closer to free bowls and exclusive perks."
+      }
+    },
+    "cta": {
+      "title": "Ready to Experience Oh!?",
+      "description": "Build your perfect bowl and skip the wait."
     }
   },
   "locations": {
@@ -101,27 +172,604 @@
     "comingSoon": "Coming Soon",
     "openNow": "Open Now",
     "features": "Features",
-    "upcomingCities": "Coming to Your City"
+    "upcomingCities": "Coming to Your City",
+    "selectLocation": "Select Location",
+    "viewDetails": "View Details",
+    "getDirections": "Get Directions",
+    "nearYou": "Near You",
+    "allLocations": "All Locations"
+  },
+  "store": {
+    "title": "The Official Store",
+    "tagline": "Bring Oh! Home",
+    "description": "From at-home kits to premium merchandise, find everything you need to fuel your noodle obsession",
+    "launchingSoon": "Online store launching soon! Use your earned rewards credit on any item.",
+    "categories": {
+      "all": "All",
+      "food": "Food",
+      "condiments": "Condiments",
+      "merchandise": "Merchandise",
+      "apparel": "Apparel",
+      "limitedEdition": "Limited Edition"
+    },
+    "badges": {
+      "bestSeller": "Best Seller",
+      "new": "New",
+      "limited": "Limited"
+    },
+    "products": {
+      "homeKit": {
+        "name": "Oh! Home Kit",
+        "description": "Everything you need to make our signature beef noodle soup at home. Includes broth base, noodles, and spice packets."
+      },
+      "chiliOil": {
+        "name": "Signature Chili Oil",
+        "description": "Our house-made chili oil with Szechuan peppercorns. Perfect for adding heat to any dish."
+      },
+      "brothConcentrate": {
+        "name": "Beef Bone Broth Concentrate",
+        "description": "Rich, concentrated beef broth made from our 48-hour recipe. Just add water for restaurant-quality broth."
+      },
+      "ceramicBowl": {
+        "name": "Oh! Ceramic Bowl",
+        "description": "Premium ceramic bowl designed for the perfect noodle experience. Heat-retaining, hand-glazed."
+      },
+      "chopsticks": {
+        "name": "Premium Chopstick Set",
+        "description": "Handcrafted wooden chopsticks with matching rest. Comes in a beautiful gift box."
+      },
+      "tshirt": {
+        "name": "Oh! Classic Tee",
+        "description": "Soft cotton tee with our signature logo. Available in black and white."
+      },
+      "hoodie": {
+        "name": "Oh! Comfort Hoodie",
+        "description": "Premium heavyweight hoodie with embroidered logo. Perfect for cozy soup weather."
+      },
+      "apron": {
+        "name": "Chef's Apron",
+        "description": "Canvas apron with leather straps and our logo. For the home chef who takes noodles seriously."
+      },
+      "woodenBowl": {
+        "name": "Artisan Wood Bowl",
+        "description": "One-of-a-kind hand-turned wooden bowl with organic shape. Each piece features unique grain patterns and our laser-engraved logo."
+      }
+    },
+    "whyShop": {
+      "title": "Why Shop Oh!",
+      "subtitle": "The Oh! Experience, delivered to your door",
+      "freeShipping": {
+        "title": "Free Shipping",
+        "description": "On all orders over $20. Fast, reliable delivery right to your doorstep."
+      },
+      "useCredit": {
+        "title": "Use Your Credit",
+        "description": "Apply your earned rewards credit from dining to any store purchase."
+      },
+      "memberRewards": {
+        "title": "Member Rewards",
+        "description": "Earn points on every purchase. Stack rewards across in-store and online."
+      },
+      "easyReturns": {
+        "title": "Easy Returns",
+        "description": "30-day hassle-free returns. Not satisfied? We'll make it right."
+      }
+    },
+    "newsletter": {
+      "tagline": "Stay Updated",
+      "title": "Be the First to Know",
+      "description": "Get early access to new products, exclusive drops, and member-only deals.",
+      "placeholder": "your@email.com"
+    },
+    "cta": {
+      "title": "Can't wait for the store?",
+      "description": "Visit us in person and experience the perfect bowl today."
+    }
+  },
+  "giftCards": {
+    "title": "Gift Cards",
+    "tagline": "Give the Gift of Oh!",
+    "description": "Share the warmth of the perfect bowl with someone special",
+    "digitalCard": "Digital Gift Card",
+    "chooseAmount": {
+      "tagline": "Choose Your Amount",
+      "title": "Select the perfect gift value",
+      "customLabel": "Or enter a custom amount ($10 - $500)",
+      "customPlaceholder": "Enter amount"
+    },
+    "continue": "Continue to Personalize",
+    "purchaseComingSoon": "Coming soon - Gift card purchasing",
+    "designs": {
+      "classic": "Classic",
+      "dark": "Dark",
+      "gold": "Gold"
+    },
+    "why": {
+      "title": "Why Gift Oh!",
+      "subtitle": "The perfect gift for noodle lovers",
+      "instantDelivery": {
+        "title": "Instant Delivery",
+        "description": "Delivered directly to their inbox within minutes. Perfect for last-minute gifts."
+      },
+      "beautifulDesign": {
+        "title": "Beautiful Design",
+        "description": "Choose from multiple card designs to match your recipient's style."
+      },
+      "neverExpires": {
+        "title": "Never Expires",
+        "description": "Our gift cards never expire. Use them whenever you're ready."
+      },
+      "addMessage": {
+        "title": "Add a Message",
+        "description": "Include a personal note to make your gift extra special."
+      }
+    },
+    "corporate": {
+      "tagline": "For Business",
+      "title": "Corporate & Bulk Orders",
+      "description": "Perfect for employee appreciation, client gifts, or team celebrations. Get special pricing on bulk gift card purchases of 10 or more.",
+      "contactSales": "Contact Sales",
+      "bulkDiscounts": "Bulk Discounts",
+      "tenPlus": "10+ cards",
+      "customBranding": "Custom Branding",
+      "addLogo": "Add your logo",
+      "dedicatedSupport": "Dedicated Support",
+      "priorityService": "Priority service",
+      "flexibleDelivery": "Flexible Delivery",
+      "scheduleSends": "Schedule sends"
+    },
+    "faq": {
+      "tagline": "Questions?",
+      "title": "Frequently Asked Questions",
+      "questions": {
+        "delivery": {
+          "q": "How are digital gift cards delivered?",
+          "a": "Gift cards are sent directly to the recipient's email address within minutes of purchase. They'll receive a beautifully designed email with the gift card code and your personal message."
+        },
+        "multiple": {
+          "q": "Can I use multiple gift cards on one order?",
+          "a": "Yes! You can combine multiple gift cards on a single order. Any remaining balance stays on your account for future use."
+        },
+        "expire": {
+          "q": "Do gift cards expire?",
+          "a": "No, Oh! gift cards never expire. Recipients can use them whenever they're ready for the perfect bowl."
+        },
+        "balance": {
+          "q": "Can I check my gift card balance?",
+          "a": "Yes, you can check your balance anytime in the 'My Account' section or by contacting our support team."
+        }
+      }
+    },
+    "cta": {
+      "title": "Ready to spread some joy?",
+      "description": "Give the gift of the perfect bowl. Your loved ones will thank you.",
+      "button": "Create a Gift Card"
+    }
   },
   "loyalty": {
     "title": "Oh! Rewards",
-    "description": "Earn rewards with every visit",
+    "description": "Every bowl brings you closer to something special. Earn credits, unlock badges, and level up your membership with every visit.",
+    "howItWorks": {
+      "title": "How It Works",
+      "orderEarn": {
+        "title": "Order & Earn",
+        "description": "Every order earns you cashback based on your tier level. Watch your credits grow with each bowl."
+      },
+      "referFriends": {
+        "title": "Refer Friends",
+        "description": "Share your unique referral link. When friends order, you both earn credits toward your next meal."
+      },
+      "levelUp": {
+        "title": "Level Up",
+        "description": "Unlock higher tiers for better rewards. The more you visit, the more you save."
+      },
+      "redeem": {
+        "title": "Redeem",
+        "description": "Use your credits at checkout. Apply up to $5 per order toward any menu item."
+      }
+    },
     "tiers": {
+      "title": "Membership Tiers",
+      "description": "Start as a Chopstick and work your way to Beef Boss. Every tier unlocks better rewards.",
+      "benefitsInclude": "Benefits Include",
+      "ultimate": "ULTIMATE",
       "chopstick": {
         "name": "Chopstick",
-        "description": "Welcome to Oh! Rewards"
+        "requirement": "Sign up",
+        "benefits": {
+          "referralBonus": "$5 referral bonus per friend",
+          "cashback": "1% cashback on orders",
+          "earlyAccess": "Early access to new menu items"
+        }
       },
       "noodleMaster": {
         "name": "Noodle Master",
-        "description": "You're becoming a regular!"
+        "requirement": "10 orders + 5 referrals",
+        "benefits": {
+          "referralBonus": "$5 referral bonus per friend",
+          "cashback": "2% cashback on orders",
+          "prioritySeating": "Priority seating",
+          "memberEvents": "Exclusive member events",
+          "freeBowl": "Free bowl on tier upgrade"
+        }
       },
       "beefBoss": {
         "name": "Beef Boss",
-        "description": "True noodle royalty"
+        "requirement": "25 orders + 10 referrals",
+        "benefits": {
+          "referralBonus": "$5 referral bonus per friend",
+          "cashback": "3% cashback on orders",
+          "merchDrops": "Exclusive merchandise drops",
+          "premiumAddons": "Complimentary premium add-ons",
+          "vipGift": "Annual VIP Gift & Recognition"
+        }
       }
+    },
+    "badges": {
+      "title": "Collect Badges",
+      "description": "Unlock achievements as you dine. Show off your collection and earn bragging rights.",
+      "firstBowl": {
+        "name": "First Bowl",
+        "description": "Complete your first order"
+      },
+      "hotStreak": {
+        "name": "Hot Streak",
+        "description": "Order 3 days in a row"
+      },
+      "perfectTen": {
+        "name": "Perfect Ten",
+        "description": "Place 10 orders"
+      },
+      "proteinPower": {
+        "name": "Protein Power",
+        "description": "Order extra beef 5 times"
+      },
+      "heatSeeker": {
+        "name": "Heat Seeker",
+        "description": "Order Inferno spice level"
+      },
+      "giftGiver": {
+        "name": "Gift Giver",
+        "description": "Send your first gift card"
+      },
+      "communityBuilder": {
+        "name": "Community Builder",
+        "description": "Refer 5 friends"
+      },
+      "legend": {
+        "name": "Legend",
+        "description": "Reach Beef Boss tier"
+      }
+    },
+    "referral": {
+      "title": "Share the Love, Earn Rewards",
+      "description": "Know someone who needs a bowl of comfort? Share your referral link and you'll both earn credits when they place their first order of $20 or more.",
+      "forYou": "for you (Chopstick tier)",
+      "forFriend": "for your friend",
+      "unlimited": "unlimited referrals",
+      "getLink": "Get Your Referral Link"
+    },
+    "cta": {
+      "title": "Ready to Start Your Journey?",
+      "description": "Sign up now and start earning with your first order."
     },
     "benefits": "Benefits",
     "requirements": "Requirements"
+  },
+  "referral": {
+    "title": "Invite Friends, Earn Rewards",
+    "subtitle": "Give $5, Get $5 for every friend who orders $20+",
+    "howItWorks": "How It Works",
+    "step1": {
+      "title": "Share Your Link",
+      "description": "Send your unique referral link to friends"
+    },
+    "step2": {
+      "title": "They Get $5 Off Instantly",
+      "description": "Your friend gets $5 off their first order right away"
+    },
+    "step3": {
+      "title": "You Earn $5 (On the 1st or 16th)",
+      "description": "When they place a first order of $20 or more, you earn $5 in credits. Referral credits are added to your account on the 1st and 16th of each month."
+    },
+    "goodToKnow": "Good to know:",
+    "rules": {
+      "minimumOrder": "Your friend's first order must be $20 or more for you to earn the referral bonus",
+      "disbursement": "Referral credits are disbursed on the 1st and 16th of each month",
+      "maxPerOrder": "You can apply up to $5 in credits per order"
+    }
+  },
+  "careers": {
+    "title": "Join Our Team",
+    "description": "Help us reimagine the dining experience. We're building something special and looking for passionate people to join us on this journey.",
+    "viewPositions": "VIEW OPEN POSITIONS",
+    "values": {
+      "title": "Our Values",
+      "description": "These principles guide everything we do, from how we make our soup to how we treat each other.",
+      "excellence": {
+        "title": "Excellence in Craft",
+        "description": "We obsess over the details. Every bowl, every experience, every interaction matters."
+      },
+      "innovation": {
+        "title": "Innovation First",
+        "description": "We're building the future of dining. Technology and tradition working in harmony."
+      },
+      "team": {
+        "title": "Team Over Ego",
+        "description": "We succeed together. Collaboration, respect, and support are at our core."
+      },
+      "growth": {
+        "title": "Growth Mindset",
+        "description": "We invest in our people. Learn, grow, and advance your career with us."
+      }
+    },
+    "positions": {
+      "title": "Open Positions",
+      "noFit": "Don't see a position that fits?",
+      "alwaysLooking": "We're always looking for talented people.",
+      "sendResume": "Send us your resume"
+    },
+    "benefits": {
+      "title": "Why Work With Us",
+      "pay": {
+        "title": "Competitive Pay",
+        "description": "Above-market wages plus performance bonuses"
+      },
+      "health": {
+        "title": "Health Benefits",
+        "description": "Medical, dental, and vision coverage"
+      },
+      "meals": {
+        "title": "Free Meals",
+        "description": "Daily meals during shifts plus family discount"
+      },
+      "careerGrowth": {
+        "title": "Career Growth",
+        "description": "Clear advancement paths and mentorship"
+      },
+      "learning": {
+        "title": "Learning Budget",
+        "description": "Annual stipend for professional development"
+      },
+      "events": {
+        "title": "Team Events",
+        "description": "Regular team outings and celebrations"
+      }
+    },
+    "cta": {
+      "title": "Ready to Make Your Mark?",
+      "description": "Join us in creating the future of dining.",
+      "button": "APPLY NOW"
+    },
+    "openPositions": "Open Positions",
+    "applyNow": "Apply Now"
+  },
+  "contact": {
+    "title": "Contact Us",
+    "description": "We'd love to hear from you. Whether you have a question, feedback, or just want to say hi—we're here.",
+    "form": {
+      "title": "Send Us a Message",
+      "name": "Your Name",
+      "email": "Email Address",
+      "subject": "Subject",
+      "message": "Message",
+      "subjects": {
+        "general": "General Inquiry",
+        "order": "Order Support",
+        "feedback": "Feedback",
+        "corporate": "Corporate / Bulk Orders",
+        "press": "Press Inquiry",
+        "careers": "Career Opportunities"
+      },
+      "success": "Thank you for your message! We'll get back to you soon."
+    },
+    "other": {
+      "title": "Other Ways to Reach Us",
+      "email": {
+        "title": "Email",
+        "value": "hello@ohbeefnoodlesoup.com"
+      },
+      "location": {
+        "title": "Location",
+        "opening": "Opening Spring 2025",
+        "city": "San Francisco, CA"
+      },
+      "responseTime": {
+        "title": "Response Time",
+        "value": "We typically respond within 24 hours"
+      }
+    },
+    "social": {
+      "title": "Follow Us",
+      "description": "Stay connected for updates, behind-the-scenes, and exclusive offers."
+    },
+    "faq": {
+      "title": "Have a quick question?",
+      "description": "Check out our frequently asked questions for instant answers."
+    },
+    "email": "Email",
+    "phone": "Phone",
+    "address": "Address",
+    "sendMessage": "Send Message"
+  },
+  "press": {
+    "title": "Press & Media",
+    "description": "Resources for journalists, bloggers, and media professionals covering Oh! Beef Noodle Soup.",
+    "mediaContact": {
+      "title": "Media Contact",
+      "description": "For press inquiries, interviews, or media requests, please contact our communications team.",
+      "responseTime": "We typically respond within 24-48 hours"
+    },
+    "ourStory": {
+      "title": "Our Story",
+      "p1": "Oh! Beef Noodle Soup is reimagining the traditional Taiwanese dining experience through technology and thoughtful design. Founded on a 30-year family recipe, we're bringing the comfort of beef noodle soup to a new generation of diners who value quality, convenience, and unique experiences.",
+      "p2": "Our flagship location in San Francisco features private dining pods inspired by Japanese solo dining concepts, allowing guests to fully immerse themselves in the flavors and aromas of our handcrafted soup without distraction.",
+      "p3": "With a tech-first approach to ordering and service, Oh! offers a seamless dining experience from the moment you place your order through our app to the final spoonful of rich, aromatic broth."
+    },
+    "keyFacts": {
+      "title": "Key Facts",
+      "founded": "Founded",
+      "headquarters": "Headquarters",
+      "flagshipOpening": "Flagship Opening",
+      "recipeHeritage": "Recipe Heritage",
+      "uniqueFeature": "Unique Feature",
+      "techPlatform": "Tech Platform"
+    },
+    "pressReleases": {
+      "title": "Press Releases"
+    },
+    "brandAssets": {
+      "title": "Brand Assets",
+      "requestAccess": "Request access to brand assets by emailing",
+      "logoPackage": {
+        "name": "Logo Package",
+        "description": "Primary logo in various formats (PNG, SVG, EPS)"
+      },
+      "brandGuidelines": {
+        "name": "Brand Guidelines",
+        "description": "Color palette, typography, and usage guidelines"
+      },
+      "productPhotography": {
+        "name": "Product Photography",
+        "description": "High-resolution images of our signature dishes"
+      },
+      "locationPhotos": {
+        "name": "Location Photos",
+        "description": "Interior and exterior photography of our spaces"
+      }
+    },
+    "mediaKit": "Media Kit",
+    "pressInquiries": "Press Inquiries"
+  },
+  "privacy": {
+    "title": "Privacy Policy",
+    "description": "Your privacy matters to us. Learn how we collect, use, and protect your information.",
+    "lastUpdated": "Last Updated: December 2024",
+    "sections": {
+      "introduction": {
+        "title": "Introduction",
+        "content": "Oh! Beef Noodle Soup (\"Oh!\", \"we\", \"us\", or \"our\") respects your privacy and is committed to protecting your personal data. This privacy policy explains how we collect, use, disclose, and safeguard your information when you visit our website, mobile application, and physical locations."
+      },
+      "infoCollect": {
+        "title": "Information We Collect",
+        "intro": "We may collect information about you in a variety of ways:",
+        "personalData": {
+          "title": "Personal Data",
+          "items": [
+            "Name, email address, and phone number",
+            "Billing and delivery address",
+            "Payment information (processed securely through third-party providers)",
+            "Account credentials",
+            "Order history and preferences"
+          ]
+        },
+        "autoData": {
+          "title": "Automatically Collected Data",
+          "items": [
+            "Device information (browser type, operating system)",
+            "IP address and location data",
+            "Usage patterns and browsing behavior",
+            "Cookies and similar tracking technologies"
+          ]
+        }
+      },
+      "howWeUse": {
+        "title": "How We Use Your Information",
+        "items": [
+          "Process and fulfill your orders",
+          "Manage your account and provide customer support",
+          "Send order confirmations and updates",
+          "Personalize your experience and preferences",
+          "Administer loyalty programs and referral rewards",
+          "Send promotional communications (with your consent)",
+          "Improve our products, services, and website",
+          "Prevent fraud and ensure security"
+        ]
+      },
+      "sharing": {
+        "title": "Sharing Your Information",
+        "intro": "We may share your information with:",
+        "serviceProviders": "Payment processors, delivery partners, and technology providers who help us operate our business",
+        "businessPartners": "With your consent, for joint marketing or promotional activities",
+        "legalRequirements": "When required by law or to protect our rights",
+        "noSell": "We do not sell your personal information to third parties."
+      },
+      "security": {
+        "title": "Data Security",
+        "content": "We implement appropriate technical and organizational measures to protect your personal information. However, no method of transmission over the Internet or electronic storage is 100% secure, and we cannot guarantee absolute security."
+      },
+      "rights": {
+        "title": "Your Rights",
+        "intro": "Depending on your location, you may have the following rights:",
+        "items": [
+          "Access and receive a copy of your personal data",
+          "Correct inaccurate or incomplete information",
+          "Delete your personal data",
+          "Object to or restrict certain processing",
+          "Data portability",
+          "Withdraw consent at any time"
+        ]
+      },
+      "cookies": {
+        "title": "Cookies",
+        "content": "We use cookies and similar technologies to enhance your experience, analyze usage, and assist with marketing. You can manage cookie preferences through your browser settings."
+      },
+      "children": {
+        "title": "Children's Privacy",
+        "content": "Our services are not intended for children under 13 years of age. We do not knowingly collect personal information from children under 13."
+      },
+      "changes": {
+        "title": "Changes to This Policy",
+        "content": "We may update this privacy policy from time to time. We will notify you of any changes by posting the new policy on this page and updating the \"Last Updated\" date."
+      },
+      "contactUs": {
+        "title": "Contact Us",
+        "intro": "If you have questions about this privacy policy or our practices, please contact us:"
+      }
+    }
+  },
+  "accessibility": {
+    "title": "Accessibility",
+    "description": "We're committed to making Oh! Beef Noodle Soup accessible to everyone.",
+    "commitment": {
+      "title": "Our Commitment",
+      "content": "At Oh! Beef Noodle Soup, we believe everyone deserves to enjoy the perfect bowl of beef noodle soup. We are committed to ensuring our digital platforms and physical locations are accessible to people of all abilities."
+    },
+    "website": {
+      "title": "Website Accessibility",
+      "intro": "We strive to ensure our website meets WCAG 2.1 Level AA standards. Our ongoing accessibility efforts include:",
+      "items": [
+        "Keyboard navigation support for all interactive elements",
+        "Clear and consistent heading structure",
+        "Sufficient color contrast ratios",
+        "Alternative text for images",
+        "Responsive design for all devices",
+        "Screen reader compatibility"
+      ]
+    },
+    "restaurant": {
+      "title": "Restaurant Accessibility",
+      "intro": "Our physical locations are designed with accessibility in mind:",
+      "items": [
+        "Wheelchair accessible entrances and dining areas",
+        "ADA-compliant restroom facilities",
+        "Accessible private dining pods",
+        "Clear signage and wayfinding",
+        "Assistance available upon request"
+      ]
+    },
+    "ordering": {
+      "title": "Ordering Assistance",
+      "content": "If you need assistance placing an order or have questions about our accessibility features, our team is happy to help. Contact us at"
+    },
+    "feedback": {
+      "title": "Feedback",
+      "content": "We welcome your feedback on the accessibility of Oh! Beef Noodle Soup. Please let us know if you encounter any accessibility barriers or have suggestions for improvement."
+    },
+    "contactUs": {
+      "title": "Contact Us About Accessibility",
+      "intro": "If you have questions or concerns about accessibility, please reach out:"
+    }
   },
   "order": {
     "chooseLocation": "Choose Your Location",
@@ -139,7 +787,11 @@
     "orderConfirmed": "Order Confirmed",
     "preparing": "Preparing",
     "ready": "Ready",
-    "completed": "Completed"
+    "completed": "Completed",
+    "readyForDessert": "Ready for Dessert",
+    "checkIn": "Check In",
+    "scanQr": "Scan QR Code",
+    "payment": "Payment"
   },
   "member": {
     "dashboard": "Dashboard",
@@ -149,46 +801,9 @@
     "visits": "Visits",
     "currentTier": "Current Tier",
     "nextTier": "Next Tier",
-    "pointsToNext": "points to next tier"
-  },
-  "giftCards": {
-    "title": "Gift Cards",
-    "description": "Share the gift of Oh! with friends and family",
-    "buyNow": "Buy Now",
-    "checkBalance": "Check Balance"
-  },
-  "store": {
-    "title": "Oh! Store",
-    "description": "Take a piece of Oh! home with you",
-    "merchandise": "Merchandise",
-    "comingSoon": "Coming Soon"
-  },
-  "careers": {
-    "title": "Careers",
-    "description": "Join the Oh! family",
-    "openPositions": "Open Positions",
-    "applyNow": "Apply Now"
-  },
-  "contact": {
-    "title": "Contact Us",
-    "description": "We'd love to hear from you",
-    "email": "Email",
-    "phone": "Phone",
-    "address": "Address",
-    "sendMessage": "Send Message"
-  },
-  "press": {
-    "title": "Press",
-    "description": "Oh! in the news",
-    "mediaKit": "Media Kit",
-    "pressInquiries": "Press Inquiries"
-  },
-  "privacy": {
-    "title": "Privacy Policy",
-    "lastUpdated": "Last Updated"
-  },
-  "accessibility": {
-    "title": "Accessibility",
-    "description": "Our commitment to accessibility"
+    "pointsToNext": "points to next tier",
+    "orderHistory": "Order History",
+    "noOrders": "No orders yet",
+    "startOrdering": "Start ordering to build your history"
   }
 }
