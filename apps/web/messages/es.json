@@ -100,9 +100,24 @@
     "selectLanguage": "Idioma"
   },
   "menu": {
-    "title": "Nuestro menú",
-    "description": "Elaborado con una receta familiar de 30 años, cada tazón cuenta una historia de tradición, calidad y la búsqueda de la sopa de fideos con carne perfecta.",
-    "unableToLoad": "No se pudo cargar el menú",
+    "hero": {
+      "title": "Nuestro Menú",
+      "description": "Elaborado con una receta familiar de 30 años, cada tazón cuenta una historia de tradición, calidad y la búsqueda de la sopa de fideos con carne perfecta.",
+      "orderNow": "ORDENAR AHORA"
+    },
+    "loading": "Cargando menú...",
+    "error": {
+      "title": "No se pudo cargar el menú",
+      "failedToLoad": "Error al cargar el menú",
+      "tryAgain": "Intentar de nuevo"
+    },
+    "tags": {
+      "premium": "Premium",
+      "signature": "Insignia",
+      "included": "Incluido",
+      "unlimitedRefills": "Refills ilimitados",
+      "complimentary": "Cortesía"
+    },
     "categories": {
       "soups": "Sopas",
       "noodles": "Fideos",
@@ -112,28 +127,23 @@
       "desserts": "Postres"
     },
     "sections": {
-      "chooseSoup": {
-        "title": "Elige tu sopa",
+      "soup": {
         "subtitle": "La base de cada tazón",
         "description": "Nuestra receta familiar de 30 años comienza con huesos de res cocidos a fuego lento durante 48 horas, creando un caldo rico y complejo que define la experiencia Oh!."
       },
-      "chooseNoodles": {
-        "title": "Elige tus fideos",
+      "noodles": {
         "subtitle": "Seleccionados a mano para la perfección",
         "description": "Cada fideo es elegido para complementar nuestro rico caldo. Encuentra tu textura perfecta."
       },
       "premiumAddons": {
-        "title": "Extras premium",
         "subtitle": "Eleva tu tazón",
         "description": "Mejora tu experiencia con adiciones premium. Cada artículo se prepara con la misma atención al detalle que nuestros platos insignia."
       },
       "sideDishes": {
-        "title": "Acompañamientos",
         "subtitle": "Completa tu experiencia",
         "description": "Acompañamientos tradicionales que complementan la atracción principal."
       },
       "dessert": {
-        "title": "Postre",
         "subtitle": "Finales dulces",
         "description": "Finales ligeros y refrescantes para completar tu experiencia gastronómica."
       }
@@ -160,24 +170,80 @@
     },
     "cta": {
       "title": "¿Listo para experimentar Oh!?",
-      "description": "Construye tu tazón perfecto y salta la espera."
+      "description": "Construye tu tazón perfecto y salta la espera.",
+      "button": "COMENZAR TU ORDEN"
     }
   },
   "locations": {
-    "title": "Nuestras ubicaciones",
-    "description": "Encuentra un Oh! cerca de ti",
-    "hours": "Horario",
-    "weekday": "Entre semana",
-    "weekend": "Fin de semana",
-    "comingSoon": "Próximamente",
-    "openNow": "Abierto ahora",
-    "features": "Características",
-    "upcomingCities": "Llegando a tu ciudad",
-    "selectLocation": "Seleccionar ubicación",
-    "viewDetails": "Ver detalles",
-    "getDirections": "Obtener direcciones",
-    "nearYou": "Cerca de ti",
-    "allLocations": "Todas las ubicaciones"
+    "hero": {
+      "findUs": "Encuéntranos",
+      "title": "Nuestras Ubicaciones",
+      "description": "Dos ubicaciones en Utah. Cabinas privadas. Sin propinas. Solo tú y el tazón perfecto."
+    },
+    "loading": "Buscando nuestras ubicaciones...",
+    "cityCreek": {
+      "tagline": "Centro de Salt Lake",
+      "description": "Nuestra ubicación insignia en Utah, en el corazón del centro de Salt Lake City. A pasos de Temple Square y el distrito de negocios.",
+      "mallDescription": "City Creek Center es el destino de compras premier de Salt Lake, con techo de cristal retráctil, arroyo a través de la propiedad y más de 100 tiendas y restaurantes.",
+      "nearbyLandmarks": ["Temple Square", "Centro de Convenciones Salt Palace", "Tren Ligero TRAX"],
+      "parking": "Estacionamiento validado disponible en la estructura de estacionamiento de City Creek"
+    },
+    "universityPlace": {
+      "tagline": "Valle de Utah",
+      "description": "Sirviendo a la comunidad del Valle de Utah en Orem. Conveniente para estudiantes, familias y cualquiera que desee auténtica sopa de fideos con carne.",
+      "mallDescription": "University Place es el centro comercial al aire libre más grande del Valle de Utah, ubicado en el cruce de Orem y Provo con fácil acceso desde la I-15.",
+      "nearbyLandmarks": ["Utah Valley University", "Campus de BYU", "Cañón de Provo"],
+      "parking": "Estacionamiento gratuito en superficie en todo el centro"
+    },
+    "details": {
+      "address": "Dirección",
+      "hours": "Horario",
+      "hoursMonThurs": "Lunes – Jueves: 11am – 9pm",
+      "hoursFriSat": "Viernes – Sábado: 11am – 10pm",
+      "hoursSun": "Domingo: 12pm – 8pm",
+      "parking": "Estacionamiento"
+    },
+    "buttons": {
+      "orderAhead": "Ordenar con anticipación",
+      "getDirections": "Obtener direcciones"
+    },
+    "about": {
+      "title": "Acerca de",
+      "nearby": "Cerca"
+    },
+    "features": {
+      "privatePods": "12 Cabinas Privadas",
+      "orderAhead": "Ordenar con Anticipación",
+      "noTipping": "Sin Propinas",
+      "accessible": "Accesible"
+    },
+    "ohWay": {
+      "label": "El estilo Oh!",
+      "title": "Una experiencia gastronómica diferente",
+      "kiosk": {
+        "title": "Ordena en el Kiosco",
+        "description": "Personaliza cada detalle de tu tazón en nuestros kioscos táctiles. Sin presión, tómate tu tiempo. O ordena con anticipación desde tu teléfono."
+      },
+      "pod": {
+        "title": "Tu Cabina Privada",
+        "description": "Inspirado en el ramen ichiran de Japón. Las cabinas individuales te permiten concentrarte completamente en tu comida. Paz, privacidad, sopa perfecta."
+      },
+      "noTips": {
+        "title": "Sin Propinas, Nunca",
+        "description": "Pagamos bien a nuestro equipo para que no tengas que calcular propinas. El precio que ves es el precio que pagas."
+      }
+    },
+    "comingSoon": {
+      "title": "Más ubicaciones próximamente",
+      "description": "Estamos creciendo en Utah. ¿Quieres Oh! en tu vecindario?",
+      "cities": ["Provo", "Draper", "Park City"],
+      "label": "Próximamente"
+    },
+    "cta": {
+      "title": "¿Listo para experimentar Oh!?",
+      "description": "Salta la fila. Ordena con anticipación y ten tu tazón listo cuando llegues.",
+      "button": "Comenzar Tu Orden"
+    }
   },
   "store": {
     "title": "La tienda oficial",

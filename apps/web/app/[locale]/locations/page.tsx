@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect } from "react";
+import { useTranslations, useLocale } from "next-intl";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "";
 
@@ -15,34 +16,36 @@ type Location = {
   lng: number;
 };
 
-// Location-specific data
-const locationDetails: Record<string, {
-  image: string;
-  tagline: string;
-  description: string;
-  mallDescription: string;
-  nearbyLandmarks: string[];
-  parking: string;
-}> = {
-  "City Creek Mall": {
-    image: "/locations/CityCreekSaltLake.jpg",
-    tagline: "Downtown Salt Lake",
-    description: "Our flagship Utah location in the heart of downtown Salt Lake City. Steps from Temple Square and the city's business district.",
-    mallDescription: "City Creek Center is Salt Lake's premier shopping destination, featuring a retractable glass roof, creek running through the property, and over 100 stores and restaurants.",
-    nearbyLandmarks: ["Temple Square", "Salt Palace Convention Center", "TRAX Light Rail"],
-    parking: "Validated parking available in City Creek parking structure",
-  },
-  "University Place": {
-    image: "/locations/UniversityPlaceOrem.jpg",
-    tagline: "Utah Valley",
-    description: "Serving the Utah Valley community in Orem. Convenient for students, families, and anyone craving authentic beef noodle soup.",
-    mallDescription: "University Place is Utah Valley's largest open-air shopping center, located at the crossroads of Orem and Provo with easy access from I-15.",
-    nearbyLandmarks: ["Utah Valley University", "BYU Campus", "Provo Canyon"],
-    parking: "Free surface parking throughout the center",
-  },
-};
-
 export default function LocationsPage() {
+  const t = useTranslations("locations");
+  const locale = useLocale();
+
+  // Location-specific data - using translations
+  const locationDetails: Record<string, {
+    image: string;
+    tagline: string;
+    description: string;
+    mallDescription: string;
+    nearbyLandmarks: string[];
+    parking: string;
+  }> = {
+    "City Creek Mall": {
+      image: "/locations/CityCreekSaltLake.jpg",
+      tagline: t("cityCreek.tagline"),
+      description: t("cityCreek.description"),
+      mallDescription: t("cityCreek.mallDescription"),
+      nearbyLandmarks: t.raw("cityCreek.nearbyLandmarks") as string[],
+      parking: t("cityCreek.parking"),
+    },
+    "University Place": {
+      image: "/locations/UniversityPlaceOrem.jpg",
+      tagline: t("universityPlace.tagline"),
+      description: t("universityPlace.description"),
+      mallDescription: t("universityPlace.mallDescription"),
+      nearbyLandmarks: t.raw("universityPlace.nearbyLandmarks") as string[],
+      parking: t("universityPlace.parking"),
+    },
+  };
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeLocation, setActiveLocation] = useState<string | null>(null);
@@ -124,7 +127,7 @@ export default function LocationsPage() {
               textShadow: "0 1px 8px rgba(0,0,0,0.3)",
             }}
           >
-            Find Us
+            {t("hero.findUs")}
           </p>
           <h1
             style={{
@@ -136,7 +139,7 @@ export default function LocationsPage() {
               textShadow: "0 2px 20px rgba(0,0,0,0.5)",
             }}
           >
-            Our Locations
+            {t("hero.title")}
           </h1>
           <p
             style={{
@@ -148,8 +151,7 @@ export default function LocationsPage() {
               textShadow: "0 1px 10px rgba(0,0,0,0.4)",
             }}
           >
-            Two locations in Utah. Private pods. No tipping.
-            Just you and the perfect bowl.
+            {t("hero.description")}
           </p>
 
           {/* Location Toggle */}
@@ -283,7 +285,7 @@ export default function LocationsPage() {
                   </div>
                   <div>
                     <h4 style={{ fontSize: "0.8rem", color: "#999", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "6px" }}>
-                      Address
+                      {t("details.address")}
                     </h4>
                     <p style={{ color: "#222", fontSize: "1rem", lineHeight: "1.5" }}>
                       {activeLocationData.address}
@@ -311,12 +313,12 @@ export default function LocationsPage() {
                   </div>
                   <div>
                     <h4 style={{ fontSize: "0.8rem", color: "#999", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "6px" }}>
-                      Hours
+                      {t("details.hours")}
                     </h4>
                     <p style={{ color: "#222", fontSize: "1rem", lineHeight: "1.6" }}>
-                      Monday – Thursday: 11am – 9pm<br />
-                      Friday – Saturday: 11am – 10pm<br />
-                      Sunday: 12pm – 8pm
+                      {t("details.hoursMonThurs")}<br />
+                      {t("details.hoursFriSat")}<br />
+                      {t("details.hoursSun")}
                     </p>
                   </div>
                 </div>
@@ -341,7 +343,7 @@ export default function LocationsPage() {
                   </div>
                   <div>
                     <h4 style={{ fontSize: "0.8rem", color: "#999", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "6px" }}>
-                      Parking
+                      {t("details.parking")}
                     </h4>
                     <p style={{ color: "#222", fontSize: "1rem" }}>
                       {activeDetails.parking}
@@ -353,7 +355,7 @@ export default function LocationsPage() {
               {/* CTA Buttons */}
               <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
                 <Link
-                  href={`/order/location/${activeLocationData.id}`}
+                  href={`/${locale}/order/location/${activeLocationData.id}`}
                   style={{
                     padding: "16px 36px",
                     background: "#7C7A67",
@@ -368,7 +370,7 @@ export default function LocationsPage() {
                     gap: "8px",
                   }}
                 >
-                  Order Ahead
+                  {t("buttons.orderAhead")}
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M5 12h14M12 5l7 7-7 7" />
                   </svg>
@@ -389,7 +391,7 @@ export default function LocationsPage() {
                     transition: "all 0.3s ease",
                   }}
                 >
-                  Get Directions
+                  {t("buttons.getDirections")}
                 </a>
               </div>
             </div>
@@ -412,7 +414,7 @@ export default function LocationsPage() {
                     color: "#C7A878",
                   }}
                 >
-                  About {activeLocationData.name}
+                  {t("about.title")} {activeLocationData.name}
                 </h3>
                 <p style={{ fontSize: "1rem", lineHeight: "1.8", opacity: 0.85, marginBottom: "28px" }}>
                   {activeDetails.mallDescription}
@@ -427,7 +429,7 @@ export default function LocationsPage() {
                     marginBottom: "16px",
                   }}
                 >
-                  Nearby
+                  {t("about.nearby")}
                 </h4>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
                   {activeDetails.nearbyLandmarks.map((landmark, idx) => (
@@ -450,10 +452,10 @@ export default function LocationsPage() {
               {/* Features */}
               <div style={{ marginTop: "32px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                 {[
-                  { icon: "🥢", label: "12 Private Pods" },
-                  { icon: "📱", label: "Order Ahead" },
-                  { icon: "💳", label: "No Tipping" },
-                  { icon: "♿", label: "Accessible" },
+                  { icon: "🥢", label: t("features.privatePods") },
+                  { icon: "📱", label: t("features.orderAhead") },
+                  { icon: "💳", label: t("features.noTipping") },
+                  { icon: "♿", label: t("features.accessible") },
                 ].map((feature, idx) => (
                   <div
                     key={idx}
@@ -479,7 +481,7 @@ export default function LocationsPage() {
       {loading && (
         <section style={{ padding: "120px 24px", textAlign: "center" }}>
           <div style={{ fontSize: "3rem", marginBottom: "16px" }}>🍜</div>
-          <p style={{ color: "#666" }}>Finding our locations...</p>
+          <p style={{ color: "#666" }}>{t("loading")}</p>
         </section>
       )}
 
@@ -495,7 +497,7 @@ export default function LocationsPage() {
               marginBottom: "20px",
             }}
           >
-            The Oh! Way
+            {t("ohWay.label")}
           </p>
           <h2
             style={{
@@ -506,7 +508,7 @@ export default function LocationsPage() {
               color: "rgba(255,255,255,0.95)",
             }}
           >
-            A different kind of dining experience
+            {t("ohWay.title")}
           </h2>
 
           <div
@@ -534,11 +536,10 @@ export default function LocationsPage() {
                 🎯
               </div>
               <h3 style={{ fontSize: "1.2rem", fontWeight: "500", marginBottom: "12px", color: "rgba(255,255,255,0.95)" }}>
-                Order at the Kiosk
+                {t("ohWay.kiosk.title")}
               </h3>
               <p style={{ fontSize: "0.95rem", color: "rgba(255,255,255,0.7)", lineHeight: "1.7" }}>
-                Customize every detail of your bowl at our touchscreen kiosks.
-                No pressure, take your time. Or order ahead from your phone.
+                {t("ohWay.kiosk.description")}
               </p>
             </div>
 
@@ -559,11 +560,10 @@ export default function LocationsPage() {
                 🏠
               </div>
               <h3 style={{ fontSize: "1.2rem", fontWeight: "500", marginBottom: "12px", color: "rgba(255,255,255,0.95)" }}>
-                Your Private Pod
+                {t("ohWay.pod.title")}
               </h3>
               <p style={{ fontSize: "0.95rem", color: "rgba(255,255,255,0.7)", lineHeight: "1.7" }}>
-                Inspired by Japan's ichiran ramen. Individual pods let you focus
-                entirely on your meal. Peace, privacy, perfect soup.
+                {t("ohWay.pod.description")}
               </p>
             </div>
 
@@ -584,11 +584,10 @@ export default function LocationsPage() {
                 ❤️
               </div>
               <h3 style={{ fontSize: "1.2rem", fontWeight: "500", marginBottom: "12px", color: "rgba(255,255,255,0.95)" }}>
-                No Tips, Ever
+                {t("ohWay.noTips.title")}
               </h3>
               <p style={{ fontSize: "0.95rem", color: "rgba(255,255,255,0.7)", lineHeight: "1.7" }}>
-                We pay our team well so you don't have to calculate tips.
-                The price you see is the price you pay.
+                {t("ohWay.noTips.description")}
               </p>
             </div>
           </div>
@@ -606,10 +605,10 @@ export default function LocationsPage() {
               marginBottom: "16px",
             }}
           >
-            More locations coming soon
+            {t("comingSoon.title")}
           </h2>
           <p style={{ color: "#666", marginBottom: "40px", fontSize: "1.1rem" }}>
-            We're growing across Utah. Want Oh! in your neighborhood?
+            {t("comingSoon.description")}
           </p>
           <div
             style={{
@@ -619,7 +618,7 @@ export default function LocationsPage() {
               justifyContent: "center",
             }}
           >
-            {["Provo", "Draper", "Park City"].map((city) => (
+            {(t.raw("comingSoon.cities") as string[]).map((city) => (
               <span
                 key={city}
                 style={{
@@ -630,7 +629,7 @@ export default function LocationsPage() {
                   fontSize: "0.95rem",
                 }}
               >
-                {city} • Coming Soon
+                {city} • {t("comingSoon.label")}
               </span>
             ))}
           </div>
@@ -654,13 +653,13 @@ export default function LocationsPage() {
               marginBottom: "24px",
             }}
           >
-            Ready to experience Oh!?
+            {t("cta.title")}
           </h2>
           <p style={{ color: "rgba(255,255,255,0.8)", marginBottom: "32px", fontSize: "1.1rem" }}>
-            Skip the line. Order ahead and have your bowl ready when you arrive.
+            {t("cta.description")}
           </p>
           <Link
-            href="/order"
+            href={`/${locale}/order`}
             style={{
               display: "inline-block",
               padding: "18px 48px",
@@ -673,7 +672,7 @@ export default function LocationsPage() {
               transition: "all 0.3s ease",
             }}
           >
-            Start Your Order
+            {t("cta.button")}
           </Link>
         </div>
       </section>

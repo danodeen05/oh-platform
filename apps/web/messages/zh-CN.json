@@ -100,9 +100,24 @@
     "selectLanguage": "语言"
   },
   "menu": {
-    "title": "我们的菜单",
-    "description": "采用30年家传秘方精心制作，每一碗都诉说着传统、品质和对完美牛肉面的追求。",
-    "unableToLoad": "无法加载菜单",
+    "hero": {
+      "title": "我们的菜单",
+      "description": "采用30年家传秘方精心制作，每一碗都诉说着传统、品质和对完美牛肉面的追求。",
+      "orderNow": "立即点餐"
+    },
+    "loading": "正在加载菜单...",
+    "error": {
+      "title": "无法加载菜单",
+      "failedToLoad": "加载菜单失败",
+      "tryAgain": "重试"
+    },
+    "tags": {
+      "premium": "高级",
+      "signature": "招牌",
+      "included": "含",
+      "unlimitedRefills": "无限续杯",
+      "complimentary": "免费"
+    },
     "categories": {
       "soups": "汤底",
       "noodles": "面条",
@@ -112,28 +127,23 @@
       "desserts": "甜点"
     },
     "sections": {
-      "chooseSoup": {
-        "title": "选择汤底",
+      "soup": {
         "subtitle": "每碗面的灵魂",
         "description": "我们30年的家传秘方从慢炖48小时的牛骨开始，创造出浓郁、层次丰富的汤底，定义了Oh!的独特体验。"
       },
-      "chooseNoodles": {
-        "title": "选择面条",
+      "noodles": {
         "subtitle": "精心挑选的完美搭配",
         "description": "每种面条都经过精选，与我们浓郁的汤底完美搭配。找到您喜欢的口感。"
       },
       "premiumAddons": {
-        "title": "高级加料",
         "subtitle": "提升您的体验",
         "description": "用优质配料升级您的体验。每一样都以制作招牌菜品的细致工艺准备。"
       },
       "sideDishes": {
-        "title": "小菜",
         "subtitle": "完善您的用餐",
         "description": "传统配菜，与主菜相得益彰。"
       },
       "dessert": {
-        "title": "甜点",
         "subtitle": "甜蜜结尾",
         "description": "清爽的甜点，为您的用餐画上完美句号。"
       }
@@ -160,24 +170,80 @@
     },
     "cta": {
       "title": "准备好体验Oh!了吗？",
-      "description": "打造您的完美牛肉面，免去等待。"
+      "description": "打造您的完美牛肉面，免去等待。",
+      "button": "开始点餐"
     }
   },
   "locations": {
-    "title": "我们的门店",
-    "description": "找到您附近的Oh!",
-    "hours": "营业时间",
-    "weekday": "工作日",
-    "weekend": "周末",
-    "comingSoon": "即将开业",
-    "openNow": "营业中",
-    "features": "特色",
-    "upcomingCities": "即将进入您的城市",
-    "selectLocation": "选择门店",
-    "viewDetails": "查看详情",
-    "getDirections": "获取路线",
-    "nearYou": "附近门店",
-    "allLocations": "所有门店"
+    "hero": {
+      "findUs": "找到我们",
+      "title": "我们的门店",
+      "description": "犹他州两家门店。私人包厢。免小费。只有您和完美的牛肉面。"
+    },
+    "loading": "正在查找门店...",
+    "cityCreek": {
+      "tagline": "盐湖城市中心",
+      "description": "我们在犹他州的旗舰店，位于盐湖城市中心。距离圣殿广场和商业区仅几步之遥。",
+      "mallDescription": "City Creek Center是盐湖城首屈一指的购物目的地，拥有可伸缩玻璃屋顶、贯穿整个建筑的溪流以及100多家商店和餐厅。",
+      "nearbyLandmarks": ["圣殿广场", "盐宫会议中心", "TRAX轻轨"],
+      "parking": "City Creek停车场提供免费停车验证"
+    },
+    "universityPlace": {
+      "tagline": "犹他谷",
+      "description": "服务于奥瑞姆的犹他谷社区。方便学生、家庭和任何渴望正宗牛肉面的人。",
+      "mallDescription": "University Place是犹他谷最大的露天购物中心，位于奥瑞姆和普若佛的交汇处，可轻松从I-15高速公路到达。",
+      "nearbyLandmarks": ["犹他谷大学", "杨百翰大学", "普若佛峡谷"],
+      "parking": "整个中心提供免费地面停车"
+    },
+    "details": {
+      "address": "地址",
+      "hours": "营业时间",
+      "hoursMonThurs": "周一至周四：上午11点 - 晚上9点",
+      "hoursFriSat": "周五至周六：上午11点 - 晚上10点",
+      "hoursSun": "周日：中午12点 - 晚上8点",
+      "parking": "停车"
+    },
+    "buttons": {
+      "orderAhead": "提前点餐",
+      "getDirections": "获取路线"
+    },
+    "about": {
+      "title": "关于",
+      "nearby": "附近"
+    },
+    "features": {
+      "privatePods": "12个私人包厢",
+      "orderAhead": "提前点餐",
+      "noTipping": "免小费",
+      "accessible": "无障碍"
+    },
+    "ohWay": {
+      "label": "Oh!方式",
+      "title": "不一样的用餐体验",
+      "kiosk": {
+        "title": "在自助点餐机点餐",
+        "description": "在我们的触屏点餐机上自定义您牛肉面的每一个细节。没有压力，慢慢来。或者提前在手机上点餐。"
+      },
+      "pod": {
+        "title": "您的私人包厢",
+        "description": "灵感来自日本一兰拉面。独立包厢让您完全专注于您的美食。宁静、私密、完美的汤面。"
+      },
+      "noTips": {
+        "title": "永远不用给小费",
+        "description": "我们给团队支付合理的薪资，所以您不必计算小费。您看到的价格就是您支付的价格。"
+      }
+    },
+    "comingSoon": {
+      "title": "更多门店即将开业",
+      "description": "我们正在犹他州扩张。希望您的社区也有Oh!吗？",
+      "cities": ["普若佛", "德雷珀", "帕克城"],
+      "label": "即将开业"
+    },
+    "cta": {
+      "title": "准备好体验Oh!了吗？",
+      "description": "免排队。提前点餐，到店即取。",
+      "button": "开始点餐"
+    }
   },
   "store": {
     "title": "官方商店",
