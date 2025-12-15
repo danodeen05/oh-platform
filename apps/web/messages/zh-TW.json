@@ -8,7 +8,15 @@
     "included": "已包含",
     "learnMore": "了解更多",
     "viewAll": "查看全部",
-    "close": "關閉"
+    "close": "關閉",
+    "email": "電子郵件",
+    "or": "或使用我們的",
+    "contactForm": "聯繫表單",
+    "startEarning": "開始賺取",
+    "comingSoon": "即將推出",
+    "notifyMe": "通知我",
+    "findLocation": "尋找門市",
+    "viewFaq": "查看常見問題"
   },
   "navigation": {
     "menu": "菜單",
@@ -83,6 +91,7 @@
   "menu": {
     "title": "我們的菜單",
     "description": "探索我們精選的頂級牛肉麵和配菜",
+    "loading": "載入菜單中...",
     "categories": {
       "soups": "湯品",
       "noodles": "麵條",
@@ -98,27 +107,195 @@
     "hours": "營業時間",
     "weekday": "平日",
     "weekend": "週末",
-    "comingSoon": "即將開幕",
     "openNow": "營業中",
-    "features": "特色服務",
-    "upcomingCities": "即將進駐您的城市"
+    "upcomingCities": "即將進駐您的城市",
+    "loading": "載入門市中...",
+    "hero": {
+      "findUs": "找到我們",
+      "title": "門市地點",
+      "description": "在我們獨特的門市體驗哦！牛肉麵"
+    },
+    "cityCreek": {
+      "tagline": "鹽湖城市中心",
+      "description": "我們位於鹽湖城市中心的旗艦店，提供獨特的用餐體驗，配備私人包廂和科技化點餐。",
+      "mallDescription": "City Creek Center是猶他州首屈一指的購物目的地，擁有超過100家商店和餐廳，在令人驚嘆的露天環境中配備可伸縮的玻璃屋頂。",
+      "nearbyLandmarks": ["聖殿廣場", "鹽宮會議中心", "猶他州議會大廈", "Gateway購物中心"],
+      "parking": "在City Creek停車場免費停車，需驗證"
+    },
+    "universityPlace": {
+      "tagline": "猶他谷",
+      "description": "為猶他谷社區提供同樣卓越的品質和創新的用餐體驗。",
+      "mallDescription": "University Place是奧勒姆充滿活力的購物和娛樂中心，匯集全國連鎖店和當地最愛，靠近猶他谷大學。",
+      "nearbyLandmarks": ["猶他谷大學", "普若佛峽谷", "天波諾高斯洞穴", "楊百翰大學"],
+      "parking": "University Place全區提供充足免費停車位"
+    },
+    "details": {
+      "address": "地址",
+      "hours": "營業時間",
+      "hoursMonThurs": "週一至週四：上午11點 - 晚上9點",
+      "hoursFriSat": "週五至週六：上午11點 - 晚上10點",
+      "hoursSun": "週日：中午12點 - 晚上8點",
+      "parking": "停車資訊"
+    },
+    "about": {
+      "title": "關於",
+      "nearby": "附近景點"
+    },
+    "buttons": {
+      "orderAhead": "提前點餐",
+      "getDirections": "取得路線"
+    },
+    "features": {
+      "privatePods": "私人包廂",
+      "orderAhead": "提前點餐",
+      "noTipping": "免小費",
+      "accessible": "無障礙設施"
+    },
+    "ohWay": {
+      "label": "哦！風格",
+      "title": "不一樣的用餐體驗",
+      "kiosk": {
+        "title": "隨心點餐",
+        "description": "使用我們的手機應用程式或店內自助點餐機跳過排隊。您準備好時，餐點就準備好了。"
+      },
+      "pod": {
+        "title": "私人用餐包廂",
+        "description": "在您專屬的私人空間享用美食。沒有擁擠的餐桌，沒有噪音——只有您和完美的一碗麵。"
+      },
+      "noTips": {
+        "title": "無需小費",
+        "description": "您看到的價格就是您支付的價格。我們為團隊支付具競爭力的薪資，讓您無需擔心小費。"
+      }
+    },
+    "comingSoon": {
+      "title": "即將開幕",
+      "description": "我們正在擴展！敬請期待這些城市的新門市。",
+      "label": "即將開幕",
+      "cities": ["舊金山", "洛杉磯", "鳳凰城", "丹佛"]
+    },
+    "cta": {
+      "title": "準備好品嚐最棒的一碗麵了嗎？",
+      "description": "提前點餐，跳過等待。完美的一碗麵只需幾次點擊。",
+      "button": "開始點餐"
+    }
   },
   "loyalty": {
     "title": "哦！獎勵",
-    "description": "每次光臨都能累積獎勵",
+    "description": "每一碗都讓您更接近特別的獎勵。賺取點數、解鎖徽章，每次光臨都能升級會員資格。",
+    "startEarning": "開始賺取",
     "tiers": {
+      "title": "會員等級",
+      "description": "從筷子會員開始，一路晉升到牛肉達人。每個等級都能解鎖更好的獎勵。",
+      "benefitsInclude": "福利包含",
+      "ultimate": "最高等級",
       "chopstick": {
         "name": "筷子會員",
-        "description": "歡迎加入哦！獎勵"
+        "description": "歡迎加入哦！獎勵",
+        "requirement": "註冊即可",
+        "benefits": {
+          "referralBonus": "每位推薦好友可得$5獎勵",
+          "cashback": "訂單1%回饋",
+          "earlyAccess": "新品搶先體驗"
+        }
       },
       "noodleMaster": {
         "name": "麵條大師",
-        "description": "您已成為常客！"
+        "description": "您已成為常客！",
+        "requirement": "10筆訂單 + 5位推薦",
+        "benefits": {
+          "referralBonus": "每位推薦好友可得$5獎勵",
+          "cashback": "訂單2%回饋",
+          "prioritySeating": "優先入座",
+          "memberEvents": "專屬會員活動",
+          "freeBowl": "升級免費送一碗"
+        }
       },
       "beefBoss": {
         "name": "牛肉達人",
-        "description": "真正的麵食皇族"
+        "description": "真正的麵食皇族",
+        "requirement": "25筆訂單 + 10位推薦",
+        "benefits": {
+          "referralBonus": "每位推薦好友可得$5獎勵",
+          "cashback": "訂單3%回饋",
+          "merchDrops": "限定周邊商品",
+          "premiumAddons": "免費頂級加購",
+          "vipGift": "年度VIP禮物與表彰"
+        }
       }
+    },
+    "howItWorks": {
+      "title": "如何運作",
+      "orderEarn": {
+        "title": "點餐賺點",
+        "description": "每筆訂單都能根據您的等級獲得回饋。看著您的點數隨著每碗麵增長。"
+      },
+      "referFriends": {
+        "title": "推薦好友",
+        "description": "分享您的專屬推薦連結。當好友下單時，雙方都能獲得點數。"
+      },
+      "levelUp": {
+        "title": "等級提升",
+        "description": "解鎖更高等級享受更好獎勵。光臨越多，省得越多。"
+      },
+      "redeem": {
+        "title": "兌換",
+        "description": "結帳時使用點數。每筆訂單最多可抵用$5。"
+      }
+    },
+    "membershipTiers": {
+      "title": "會員等級",
+      "subtitle": "從筷子會員開始，一路晉升到牛肉達人。每個等級都能解鎖更好的獎勵。",
+      "ultimate": "最高等級",
+      "benefitsInclude": "福利包含"
+    },
+    "badges": {
+      "title": "收集徽章",
+      "subtitle": "用餐時解鎖成就。展示您的收藏，炫耀您的榮譽。",
+      "description": "用餐時解鎖成就。展示您的收藏，炫耀您的榮譽。",
+      "firstBowl": {
+        "name": "第一碗",
+        "description": "完成首筆訂單"
+      },
+      "hotStreak": {
+        "name": "連續光臨",
+        "description": "連續3天下單"
+      },
+      "perfectTen": {
+        "name": "完美十筆",
+        "description": "累計10筆訂單"
+      },
+      "proteinPower": {
+        "name": "蛋白質狂熱",
+        "description": "加點牛肉5次"
+      },
+      "heatSeeker": {
+        "name": "辣味追求者",
+        "description": "點選地獄辣度"
+      },
+      "giftGiver": {
+        "name": "送禮達人",
+        "description": "送出首張禮品卡"
+      },
+      "communityBuilder": {
+        "name": "社群建造者",
+        "description": "推薦5位好友"
+      },
+      "legend": {
+        "name": "傳奇",
+        "description": "達到牛肉達人等級"
+      }
+    },
+    "referral": {
+      "title": "分享愛，賺獎勵",
+      "description": "認識需要一碗暖心湯麵的人嗎？分享您的推薦連結，當他們首次下單滿$20時，雙方都能獲得點數。",
+      "forYou": "給您（筷子會員等級）",
+      "forFriend": "給您的朋友",
+      "unlimited": "無限推薦",
+      "getLink": "取得您的推薦連結"
+    },
+    "cta": {
+      "title": "準備好開始您的旅程了嗎？",
+      "description": "立即註冊，首筆訂單即開始賺取。"
     },
     "benefits": "會員福利",
     "requirements": "升級條件"
@@ -155,18 +332,258 @@
     "title": "禮品卡",
     "description": "與親朋好友分享哦!的美味",
     "buyNow": "立即購買",
-    "checkBalance": "查詢餘額"
+    "checkBalance": "查詢餘額",
+    "tagline": "送出美味的禮物",
+    "digitalCard": "數位禮品卡",
+    "continue": "繼續",
+    "purchaseComingSoon": "線上購買即將推出！",
+    "designs": {
+      "classic": "經典",
+      "dark": "深色",
+      "gold": "金色"
+    },
+    "chooseAmount": {
+      "tagline": "步驟 1",
+      "title": "選擇金額",
+      "customLabel": "或輸入自訂金額（$10-$500）",
+      "customPlaceholder": "輸入金額"
+    },
+    "why": {
+      "title": "為什麼選擇哦！禮品卡",
+      "subtitle": "適合任何場合的完美禮物",
+      "instantDelivery": {
+        "title": "即時送達",
+        "description": "透過電子郵件即時發送或預約特定日期"
+      },
+      "beautifulDesign": {
+        "title": "精美設計",
+        "description": "從我們優雅的卡片設計系列中選擇"
+      },
+      "neverExpires": {
+        "title": "永不過期",
+        "description": "我們的禮品卡永不過期，保持其全部價值"
+      },
+      "addMessage": {
+        "title": "附加訊息",
+        "description": "加入個人化留言，讓禮物更加特別"
+      }
+    },
+    "corporate": {
+      "tagline": "企業專案",
+      "title": "企業禮品卡",
+      "description": "用哦！禮品卡獎勵員工、感謝客戶或慶祝里程碑。完美適合任何企業送禮場合。",
+      "contactSales": "聯繫業務",
+      "bulkDiscounts": "大量折扣",
+      "tenPlus": "10張以上",
+      "customBranding": "客製品牌",
+      "addLogo": "加入您的標誌",
+      "dedicatedSupport": "專屬支援",
+      "priorityService": "優先服務",
+      "flexibleDelivery": "彈性配送",
+      "scheduleSends": "預約發送"
+    },
+    "faq": {
+      "tagline": "有問題嗎？",
+      "title": "常見問題",
+      "questions": {
+        "delivery": {
+          "q": "數位禮品卡如何配送？",
+          "a": "數位禮品卡會透過電子郵件發送給收件人。您可以選擇立即發送或預約特定日期。"
+        },
+        "multiple": {
+          "q": "我可以在一筆訂單中使用多張禮品卡嗎？",
+          "a": "可以！您可以在單筆訂單中合併使用多張禮品卡。剩餘餘額會保留在您的卡片中。"
+        },
+        "expire": {
+          "q": "禮品卡會過期嗎？",
+          "a": "不會，哦！禮品卡永不過期。您的餘額會一直保留，等您準備好享用下一碗麵時隨時可用。"
+        },
+        "balance": {
+          "q": "如何查詢禮品卡餘額？",
+          "a": "您可以在任何哦！門市查詢餘額，或登入線上帳戶查看。"
+        }
+      }
+    },
+    "cta": {
+      "title": "準備好送出哦！禮物了嗎？",
+      "description": "一碗完美的牛肉麵永遠是令人驚喜的禮物。",
+      "button": "開始選購"
+    }
   },
   "store": {
     "title": "哦！商店",
     "description": "把哦!帶回家",
     "merchandise": "週邊商品",
-    "comingSoon": "即將推出"
+    "comingSoon": "即將推出",
+    "tagline": "從我們的廚房到您家",
+    "launchingSoon": "線上商店即將推出！訂閱以獲得通知。",
+    "products": {
+      "homeKit": {
+        "name": "哦！家庭套裝",
+        "description": "在家製作正宗哦！牛肉麵所需的一切"
+      },
+      "chiliOil": {
+        "name": "招牌辣椒油",
+        "description": "我們自製的四川花椒辣椒油"
+      },
+      "brothConcentrate": {
+        "name": "牛骨濃湯濃縮液",
+        "description": "富含膠原蛋白的濃郁湯底，適用於湯品和燉菜"
+      },
+      "ceramicBowl": {
+        "name": "陶瓷麵碗",
+        "description": "傳統風格碗，最適合麵條和湯品"
+      },
+      "chopsticks": {
+        "name": "竹筷套組",
+        "description": "高級竹筷，帶有客製哦！雕刻"
+      },
+      "tshirt": {
+        "name": "哦！經典T恤",
+        "description": "柔軟棉質T恤，極簡哦！標誌"
+      },
+      "hoodie": {
+        "name": "舒適連帽衫",
+        "description": "舒適刷毛連帽衫，刺繡標誌"
+      },
+      "apron": {
+        "name": "主廚圍裙",
+        "description": "專業級圍裙，適合家庭主廚"
+      },
+      "woodenBowl": {
+        "name": "手工木製湯碗",
+        "description": "以再生木材手工製作，每件都是獨一無二"
+      }
+    },
+    "categories": {
+      "all": "全部",
+      "food": "食品",
+      "condiments": "調味品",
+      "merchandise": "週邊商品",
+      "apparel": "服飾",
+      "limitedEdition": "限量版"
+    },
+    "badges": {
+      "bestSeller": "暢銷",
+      "new": "新品",
+      "limited": "限量"
+    },
+    "whyShop": {
+      "title": "為什麼在哦！購物",
+      "subtitle": "哦！體驗，送貨到府",
+      "freeShipping": {
+        "title": "免運費",
+        "description": "訂單滿$50享免運"
+      },
+      "useCredit": {
+        "title": "使用您的點數",
+        "description": "將哦！獎勵應用於購物"
+      },
+      "memberRewards": {
+        "title": "會員獎勵",
+        "description": "每次購物都能賺取積分"
+      },
+      "easyReturns": {
+        "title": "輕鬆退貨",
+        "description": "30天無憂退貨"
+      }
+    },
+    "newsletter": {
+      "tagline": "搶先知道",
+      "title": "獲得優先權限",
+      "description": "訂閱獨家發布、會員專屬優惠，以及新產品的優先取得權。",
+      "placeholder": "輸入您的電子郵件"
+    },
+    "cta": {
+      "title": "等不及了？",
+      "description": "親自到訪我們的門市購物，順便享用一碗美味。"
+    }
+  },
+  "referral": {
+    "title": "推薦好友，賺取獎勵",
+    "subtitle": "分享愛，每推薦一位完成首單的好友即可獲得$5。",
+    "howItWorks": "如何運作",
+    "step1": {
+      "title": "分享您的連結",
+      "description": "將您的專屬推薦連結發送給親朋好友。"
+    },
+    "step2": {
+      "title": "好友下單",
+      "description": "當您的好友完成首筆$20或以上的訂單時，雙方都能獲得點數。"
+    },
+    "step3": {
+      "title": "一起賺取",
+      "description": "您獲得$5點數，他們獲得$5折扣。推薦人數沒有上限。"
+    },
+    "goodToKnow": "須知事項",
+    "rules": {
+      "minimumOrder": "推薦獎勵適用於首筆$20或以上的訂單",
+      "disbursement": "點數將在24小時內加入您的帳戶",
+      "maxPerOrder": "每筆訂單最多可使用$5點數"
+    }
   },
   "careers": {
-    "title": "職業機會",
-    "description": "加入哦！大家庭",
+    "title": "加入我們的團隊",
+    "description": "幫助我們重新定義餐飲體驗。我們正在創造特別的事物，尋找充滿熱情的人一同加入這段旅程。",
+    "viewPositions": "查看開放職缺",
+    "values": {
+      "title": "我們的價值觀",
+      "description": "這些原則指導我們所做的一切，從製作湯麵到彼此對待的方式。",
+      "excellence": {
+        "title": "精益求精",
+        "description": "我們專注細節。每一碗麵、每一次體驗、每一次互動都很重要。"
+      },
+      "innovation": {
+        "title": "創新優先",
+        "description": "我們正在建設餐飲的未來。科技與傳統和諧共存。"
+      },
+      "team": {
+        "title": "團隊為重",
+        "description": "我們共同成功。協作、尊重和支持是我們的核心。"
+      },
+      "growth": {
+        "title": "成長心態",
+        "description": "我們投資於員工。與我們一起學習、成長、推進您的職業生涯。"
+      }
+    },
     "openPositions": "開放職缺",
+    "positions": {
+      "noFit": "沒看到合適的職位？",
+      "alwaysLooking": "我們隨時在尋找優秀人才。",
+      "sendResume": "發送您的履歷"
+    },
+    "benefits": {
+      "title": "為什麼加入我們",
+      "pay": {
+        "title": "具競爭力的薪資",
+        "description": "高於市場的薪資加績效獎金"
+      },
+      "health": {
+        "title": "健康福利",
+        "description": "醫療、牙科和視力保險"
+      },
+      "meals": {
+        "title": "免費餐點",
+        "description": "輪班期間每日用餐加家庭折扣"
+      },
+      "careerGrowth": {
+        "title": "職業發展",
+        "description": "清晰的晉升路徑和導師制度"
+      },
+      "learning": {
+        "title": "學習預算",
+        "description": "年度專業發展補貼"
+      },
+      "events": {
+        "title": "團隊活動",
+        "description": "定期團隊出遊和慶祝活動"
+      }
+    },
+    "cta": {
+      "title": "準備好創造影響了嗎？",
+      "description": "加入我們，一起創造餐飲的未來。",
+      "button": "查看開放職缺"
+    },
     "applyNow": "立即申請"
   },
   "contact": {
@@ -175,20 +592,222 @@
     "email": "電子郵件",
     "phone": "電話",
     "address": "地址",
-    "sendMessage": "發送訊息"
+    "sendMessage": "發送訊息",
+    "form": {
+      "title": "傳送訊息給我們",
+      "name": "您的姓名",
+      "email": "電子郵件地址",
+      "subject": "主旨",
+      "subjects": {
+        "general": "一般諮詢",
+        "order": "訂單問題",
+        "feedback": "意見回饋",
+        "corporate": "企業/外燴",
+        "press": "媒體諮詢",
+        "careers": "職業機會"
+      },
+      "message": "您的訊息",
+      "success": "謝謝！我們會在24-48小時內回覆您。"
+    },
+    "other": {
+      "title": "其他聯繫方式",
+      "email": {
+        "title": "電子郵件",
+        "value": "hello@ohbeefnoodlesoup.com"
+      },
+      "location": {
+        "title": "拜訪我們",
+        "opening": "2025年春季開幕",
+        "city": "舊金山，加州"
+      },
+      "responseTime": {
+        "title": "回覆時間",
+        "value": "我們通常在24-48小時內回覆"
+      }
+    },
+    "social": {
+      "title": "追蹤我們",
+      "description": "保持聯繫，關注我們的旅程"
+    },
+    "faq": {
+      "title": "尋找快速解答？",
+      "description": "查看我們的常見問題以獲得即時幫助。"
+    }
   },
   "press": {
     "title": "媒體專區",
     "description": "哦！新聞報導",
     "mediaKit": "媒體資料包",
-    "pressInquiries": "媒體諮詢"
+    "pressInquiries": "媒體諮詢",
+    "mediaContact": {
+      "title": "媒體聯繫",
+      "description": "如有媒體諮詢、採訪和媒體請求，請聯繫我們的公關團隊。",
+      "responseTime": "我們通常在24-48小時內回覆。"
+    },
+    "ourStory": {
+      "title": "我們的故事",
+      "p1": "哦！牛肉麵源自30年的家傳配方和重新定義餐飲體驗的願景。我們的創辦人從小看著祖母完善她的牛肉麵配方，為家人和朋友提供令人難以忘懷的美味。",
+      "p2": "如今，我們將同樣的配方帶給更廣大的觀眾，結合創新科技和獨特的私人用餐包廂概念，讓焦點回歸到美食和體驗本身。",
+      "p3": "我們的使命很簡單：在一個專為享受而非分心設計的環境中，提供完美的一碗牛肉麵。"
+    },
+    "keyFacts": {
+      "title": "重要資訊",
+      "founded": "成立時間",
+      "headquarters": "總部",
+      "flagshipOpening": "旗艦店開幕",
+      "recipeHeritage": "配方傳承",
+      "uniqueFeature": "獨特特色",
+      "techPlatform": "科技平台"
+    },
+    "pressReleases": {
+      "title": "新聞稿"
+    },
+    "brandAssets": {
+      "title": "品牌資產",
+      "logoPackage": {
+        "name": "標誌套件",
+        "description": "各種格式的主要和次要標誌"
+      },
+      "brandGuidelines": {
+        "name": "品牌指南",
+        "description": "色彩、字體和使用規範"
+      },
+      "productPhotography": {
+        "name": "產品攝影",
+        "description": "我們招牌菜品的高解析度圖片"
+      },
+      "locationPhotos": {
+        "name": "門市照片",
+        "description": "我們門市的室內外照片"
+      },
+      "requestAccess": "如需取得品牌資產，請聯繫"
+    }
   },
   "privacy": {
     "title": "隱私政策",
-    "lastUpdated": "最後更新"
+    "description": "我們如何收集、使用和保護您的資訊",
+    "lastUpdated": "最後更新：2024年12月",
+    "sections": {
+      "introduction": {
+        "title": "簡介",
+        "content": "哦！牛肉麵（「我們」）致力於保護您的隱私。本隱私政策說明當您造訪我們的網站、使用我們的行動應用程式或在我們的餐廳用餐時，我們如何收集、使用、披露和保護您的資訊。"
+      },
+      "infoCollect": {
+        "title": "我們收集的資訊",
+        "intro": "我們收集您直接提供給我們的資訊，以及當您使用我們服務時自動收集的資訊。",
+        "personalData": {
+          "title": "您提供的個人資料",
+          "items": [
+            "姓名、電子郵件地址和電話號碼",
+            "付款資訊（由我們的付款服務商安全處理）",
+            "訂單記錄和偏好",
+            "帳戶憑證",
+            "您發送給我們的通訊內容"
+          ]
+        },
+        "autoData": {
+          "title": "自動收集的資訊",
+          "items": [
+            "裝置資訊（類型、作業系統、瀏覽器）",
+            "IP地址和位置資料",
+            "使用資料（瀏覽的頁面、使用的功能）",
+            "Cookie和類似追蹤技術"
+          ]
+        }
+      },
+      "howWeUse": {
+        "title": "我們如何使用您的資訊",
+        "items": [
+          "處理和完成您的訂單",
+          "就訂單和促銷活動與您溝通",
+          "改善我們的產品和服務",
+          "個人化您的體驗",
+          "維護我們平台的安全性",
+          "遵守法律義務"
+        ]
+      },
+      "sharing": {
+        "title": "資訊分享",
+        "intro": "我們可能會與以下對象分享您的資訊：",
+        "serviceProviders": "協助我們營運業務的第三方（付款處理商、配送服務）",
+        "businessPartners": "協助我們為您提供服務的合作夥伴",
+        "legalRequirements": "法律要求時或為保護我們的權利",
+        "noSell": "我們不會將您的個人資訊出售給第三方。"
+      },
+      "security": {
+        "title": "資料安全",
+        "content": "我們實施適當的技術和組織措施來保護您的個人資訊。然而，網際網路傳輸沒有任何方法是100%安全的，我們無法保證絕對安全。"
+      },
+      "rights": {
+        "title": "您的權利",
+        "intro": "根據您的所在地，您可能有權：",
+        "items": [
+          "存取我們持有的關於您的個人資料",
+          "要求更正不準確的資料",
+          "要求刪除您的資料",
+          "選擇不接收行銷通訊",
+          "要求資料可攜性"
+        ]
+      },
+      "cookies": {
+        "title": "Cookie",
+        "content": "我們使用Cookie和類似技術來增強您的體驗、分析使用情況並協助我們的行銷工作。您可以透過瀏覽器控制Cookie設定。"
+      },
+      "children": {
+        "title": "兒童隱私",
+        "content": "我們的服務不適用於13歲以下的兒童。我們不會故意收集13歲以下兒童的個人資訊。"
+      },
+      "changes": {
+        "title": "本政策的變更",
+        "content": "我們可能會不時更新本隱私政策。我們會透過在本頁面發布新政策並更新「最後更新」日期來通知您任何變更。"
+      },
+      "contactUs": {
+        "title": "聯繫我們",
+        "intro": "如果您對本隱私政策或我們的做法有任何疑問，請與我們聯繫："
+      }
+    }
   },
   "accessibility": {
     "title": "無障礙服務",
-    "description": "我們對無障礙的承諾"
+    "description": "我們致力於讓哦！牛肉麵對每個人都無障礙。",
+    "commitment": {
+      "title": "我們的承諾",
+      "content": "在哦！牛肉麵，我們相信每個人都值得享用完美的牛肉麵。我們致力於確保我們的數位平台和實體店面對所有能力的人都是無障礙的。"
+    },
+    "website": {
+      "title": "網站無障礙",
+      "intro": "我們努力確保網站符合WCAG 2.1 AA級標準。我們持續的無障礙工作包括：",
+      "items": [
+        "所有互動元素支援鍵盤導航",
+        "清晰一致的標題結構",
+        "足夠的色彩對比度",
+        "圖片替代文字",
+        "適應所有裝置的響應式設計",
+        "螢幕閱讀器相容性"
+      ]
+    },
+    "restaurant": {
+      "title": "餐廳無障礙",
+      "intro": "我們的實體店面在設計時考慮了無障礙需求：",
+      "items": [
+        "輪椅可進入的入口和用餐區",
+        "符合ADA標準的洗手間設施",
+        "無障礙私人用餐包廂",
+        "清晰的標誌和指引",
+        "可應要求提供協助"
+      ]
+    },
+    "ordering": {
+      "title": "點餐協助",
+      "content": "如果您需要點餐協助或對我們的無障礙功能有疑問，我們的團隊很樂意幫助您。請透過以下方式聯繫我們"
+    },
+    "feedback": {
+      "title": "意見回饋",
+      "content": "我們歡迎您對哦！牛肉麵無障礙服務的回饋。如果您遇到任何無障礙障礙或有改進建議，請告訴我們。"
+    },
+    "contactUs": {
+      "title": "聯繫我們關於無障礙服務",
+      "intro": "如果您對無障礙服務有疑問或疑慮，請聯繫我們："
+    }
   }
 }

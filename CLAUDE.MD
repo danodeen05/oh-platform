@@ -130,6 +130,32 @@ cp /Users/ddidericksen/Projects/oh/oh-platform/.env apps/web/.env.local
 ## Git Branch
 Current working branch: `nervous-lichterman`
 
+## Session Initialization
+
+### For Worktrees
+When starting a session in a git worktree, run `/init` or manually:
+```bash
+# Quick init script (copies env files, installs deps, generates Prisma)
+/Users/ddidericksen/Projects/oh/oh-platform/scripts/init-worktree.sh
+
+# Or manually:
+cp /Users/ddidericksen/Projects/oh/oh-platform/.env .
+cp /Users/ddidericksen/Projects/oh/oh-platform/apps/web/.env.local apps/web/
+pnpm install
+cd packages/db && pnpm exec prisma generate
+```
+
+### Required Environment Files
+- `.env` (root) - Database URL and other secrets
+- `apps/web/.env.local` - Clerk keys (NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY, CLERK_SECRET_KEY)
+
+### Start Servers
+```bash
+pnpm dev          # Web app (port 3000)
+pnpm admin:dev    # Admin (port 3001)
+pnpm api:dev      # API (port 4000)
+```
+
 ## When Working on This Project
 1. Always run commands from the workspace root
 2. Use `pnpm --filter @oh/<package>` to run package-specific commands
