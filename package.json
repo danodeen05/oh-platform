@@ -6,11 +6,11 @@
   "scripts": {
     "db:push": "pnpm --filter @oh/db prisma db push",
     "db:studio": "pnpm --filter @oh/db prisma studio",
-    "dev": "pnpm --filter @oh/web dev",
+    "dev": "rm -rf apps/web/.next apps/web/.clerk && pnpm --filter @oh/web dev",
     "build": "pnpm --filter @oh/web build",
     "start": "pnpm --filter @oh/web start",
     "api:dev": "pnpm --filter @oh/api dev",
-    "admin:dev": "pnpm --filter @oh/admin dev"
+    "admin:dev": "rm -rf apps/admin/.next apps/admin/.clerk && pnpm --filter @oh/admin dev"
   },
   "workspaces": [
     "apps/*",

@@ -20,7 +20,7 @@
   },
   "home": {
     "brandName": "Oh! Beef Noodle Soup",
-    "tagline": "El único restaurante construido a tu medida.",
+    "tagline": "El único restaurante construido a <bold>tu</bold> medida.",
     "features": {
       "recipe": {
         "title": "Receta de 30 años",

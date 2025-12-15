@@ -430,6 +430,7 @@ function StatusContent() {
             "Content-Type": "application/json",
             "x-tenant-slug": "oh",
           },
+          body: JSON.stringify({}),
         }
       );
 
