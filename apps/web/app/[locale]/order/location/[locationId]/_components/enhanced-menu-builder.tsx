@@ -6,6 +6,7 @@ import { SliderControl } from "./slider-control";
 import { RadioGroup } from "./radio-group";
 import { CheckboxGroup } from "./checkbox-group";
 import SeatingMap, { Seat } from "@/components/SeatingMap";
+import { useGuest } from "@/contexts/guest-context";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "";
 
@@ -61,14 +62,17 @@ type MenuStep = {
 type EnhancedMenuBuilderProps = {
   location: any;
   reorderId?: string;
+  groupCode?: string;
 };
 
 export default function EnhancedMenuBuilder({
   location,
   reorderId,
+  groupCode,
 }: EnhancedMenuBuilderProps) {
   const router = useRouter();
   const { user, isLoaded: userLoaded } = useUser();
+  const { guest, isGuest } = useGuest();
   const [menuSteps, setMenuSteps] = useState<MenuStep[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
@@ -97,6 +101,84 @@ export default function EnhancedMenuBuilder({
   const [selectedSeatId, setSelectedSeatId] = useState<string | null>(null);
   const [loadingSeats, setLoadingSeats] = useState(false);
   const [showSeatSelection, setShowSeatSelection] = useState(false);
+
+  // Database user ID for group orders
+  const [dbUserId, setDbUserId] = useState<string | null>(null);
+
+  // Group order info (for non-host members to skip arrival time)
+  const [groupOrderInfo, setGroupOrderInfo] = useState<{
+    isHost: boolean;
+    estimatedArrival: string | null;
+    hostUserId: string | null;
+    hostGuestId: string | null;
+  } | null>(null);
+
+  // Fetch database user ID when Clerk user is available
+  useEffect(() => {
+    async function fetchDbUser() {
+      if (!userLoaded) return;
+
+      // If no Clerk user, clear dbUserId
+      if (!user?.primaryEmailAddress?.emailAddress) {
+        setDbUserId(null);
+        return;
+      }
+
+      try {
+        const res = await fetch(`${BASE}/users`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-tenant-slug": "oh",
+          },
+          body: JSON.stringify({
+            email: user.primaryEmailAddress.emailAddress,
+            name: user.fullName || user.firstName || undefined,
+          }),
+        });
+
+        if (res.ok) {
+          const userData = await res.json();
+          setDbUserId(userData.id);
+          localStorage.setItem("userId", userData.id);
+          localStorage.setItem("referralCode", userData.referralCode);
+        }
+      } catch (e) {
+        console.error("Failed to fetch db user:", e);
+      }
+    }
+
+    fetchDbUser();
+  }, [userLoaded, user?.primaryEmailAddress?.emailAddress, user?.fullName, user?.firstName]);
+
+  // Fetch group order info if joining a group (to check if host and get arrival time)
+  useEffect(() => {
+    if (!groupCode) return;
+
+    async function fetchGroupOrder() {
+      try {
+        const res = await fetch(`${BASE}/group-orders/${groupCode}`, {
+          headers: { "x-tenant-slug": "oh" },
+        });
+        if (res.ok) {
+          const groupData = await res.json();
+          // Check if current user is the host
+          const isHost = (dbUserId && dbUserId === groupData.hostUserId) ||
+                         (isGuest && guest?.id && guest.id === groupData.hostGuestId);
+          setGroupOrderInfo({
+            isHost: !!isHost,
+            estimatedArrival: groupData.estimatedArrival,
+            hostUserId: groupData.hostUserId,
+            hostGuestId: groupData.hostGuestId,
+          });
+        }
+      } catch (e) {
+        console.error("Failed to fetch group order:", e);
+      }
+    }
+
+    fetchGroupOrder();
+  }, [groupCode, dbUserId, isGuest, guest?.id]);
 
   // Load menu structure
   useEffect(() => {
@@ -259,7 +341,7 @@ export default function EnhancedMenuBuilder({
         if (!response.ok) throw new Error("Failed to load seats");
 
         const seatsData = await response.json();
-        // Map API response to Seat type
+        // Map API response to Seat type (including dual pod info)
         const mappedSeats: Seat[] = seatsData.map((s: any) => ({
           id: s.id,
           number: s.number,
@@ -267,6 +349,8 @@ export default function EnhancedMenuBuilder({
           side: s.side || "left",
           row: s.row || 0,
           col: s.col || 0,
+          podType: s.podType || "SINGLE",
+          dualPartnerId: s.dualPartnerId || null,
         }));
 
         setSeats(mappedSeats);
@@ -424,16 +508,19 @@ export default function EnhancedMenuBuilder({
   }
 
   async function proceedToPayment() {
-    if (!arrivalTime) {
+    // Skip arrival time check for non-host group members
+    const isNonHostMember = groupCode && groupOrderInfo && !groupOrderInfo.isHost;
+
+    if (!isNonHostMember && !arrivalTime) {
       alert("Please select an arrival time");
       return;
     }
 
     setSubmitting(true);
 
-    // Calculate estimated arrival
+    // Calculate estimated arrival (not needed for non-host group members)
     let estimatedArrival = new Date();
-    if (arrivalTime !== "asap") {
+    if (arrivalTime && arrivalTime !== "asap") {
       const minutes = parseInt(arrivalTime);
       estimatedArrival = new Date(Date.now() + minutes * 60 * 1000);
     }
@@ -476,7 +563,52 @@ export default function EnhancedMenuBuilder({
         }
       });
 
-      // Build order payload - include seatId if customer selected one
+      // For group orders, use the group order endpoint directly
+      if (groupCode) {
+        try {
+          // Use guest ID if in guest mode
+          const guestId = isGuest && guest?.id ? guest.id : null;
+
+          // Ensure we have either a user ID or guest ID (dbUserId is from component state)
+          if (!dbUserId && !guestId) {
+            alert("Please sign in or continue as guest to place an order.");
+            setSubmitting(false);
+            return;
+          }
+
+          const groupResponse = await fetch(`${BASE}/group-orders/${groupCode}/orders`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-tenant-slug": "oh",
+            },
+            body: JSON.stringify({
+              items,
+              userId: dbUserId || null,
+              guestId: guestId,
+            }),
+          });
+
+          if (!groupResponse.ok) {
+            const errorData = await groupResponse.json().catch(() => ({}));
+            console.error("Failed to add order to group:", errorData);
+            alert(errorData.error || "Failed to add order to group. Please try again.");
+            setSubmitting(false);
+            return;
+          }
+
+          setSubmitting(false);
+          router.push(`/group/${groupCode}`);
+          return;
+        } catch (e) {
+          console.error("Error adding order to group:", e);
+          alert("Failed to add order to group. Please try again.");
+          setSubmitting(false);
+          return;
+        }
+      }
+
+      // Build order payload for non-group orders - include seatId if customer selected one
       const orderPayload: any = {
         locationId: location.id,
         tenantId: location.tenantId,
@@ -487,8 +619,15 @@ export default function EnhancedMenuBuilder({
 
       // If customer selected a seat (ASAP arrival with seat selection)
       if (selectedSeatId && arrivalTime === "asap") {
+        const selectedSeat = seats.find(s => s.id === selectedSeatId);
         orderPayload.seatId = selectedSeatId;
         orderPayload.podSelectionMethod = "CUSTOMER_SELECTED";
+
+        // If this is a dual pod, include the partner seat ID too
+        if (selectedSeat?.podType === "DUAL" && selectedSeat.dualPartnerId) {
+          orderPayload.dualPartnerSeatId = selectedSeat.dualPartnerId;
+          orderPayload.isDualPod = true;
+        }
       }
 
       const response = await fetch(`${BASE}/orders`, {
@@ -533,8 +672,93 @@ export default function EnhancedMenuBuilder({
     );
   }
 
+  // For non-host group members, skip time selection and submit directly
+  const isNonHostGroupMember = groupCode && groupOrderInfo && !groupOrderInfo.isHost;
+
   // Time selection view
   if (currentStepIndex >= menuSteps.length) {
+    // For non-host group members, show a simplified view
+    if (isNonHostGroupMember) {
+      return (
+        <div>
+          <button
+            onClick={previousStep}
+            style={{
+              marginBottom: 24,
+              padding: "8px 16px",
+              background: "transparent",
+              border: "1px solid #7C7A67",
+              color: "#7C7A67",
+              borderRadius: 8,
+              cursor: "pointer",
+            }}
+          >
+            ← Back to Menu
+          </button>
+
+          <div
+            style={{
+              marginBottom: 24,
+              padding: 20,
+              background: "#f0fdf4",
+              borderRadius: 12,
+              border: "1px solid #86efac",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <span style={{ fontSize: "1.5rem" }}>👥</span>
+              <div>
+                <div style={{ fontWeight: 600, color: "#166534" }}>Group Order: {groupCode}</div>
+                <div style={{ fontSize: "0.85rem", color: "#15803d" }}>
+                  Your order will be added to the group. The host will select the arrival time for everyone.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <h2 style={{ marginBottom: 16 }}>Review Your Order</h2>
+          <p style={{ color: "#666", marginBottom: 24 }}>
+            The group host will decide when everyone arrives and select pods. You can view pod availability on the group lobby page after adding your order.
+          </p>
+
+          <div
+            style={{
+              padding: 20,
+              background: "#f9fafb",
+              borderRadius: 12,
+              marginBottom: 24,
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontWeight: 600 }}>Your Total</span>
+              <span style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#7C7A67" }}>
+                ${(totalCents / 100).toFixed(2)}
+              </span>
+            </div>
+          </div>
+
+          <button
+            onClick={proceedToPayment}
+            disabled={submitting}
+            style={{
+              width: "100%",
+              padding: 16,
+              background: "#7C7A67",
+              color: "white",
+              border: "none",
+              borderRadius: 12,
+              fontSize: "1.1rem",
+              fontWeight: "bold",
+              cursor: submitting ? "not-allowed" : "pointer",
+            }}
+          >
+            {submitting ? "Adding to Group..." : "Add to Group Order"}
+          </button>
+        </div>
+      );
+    }
+
+    // Standard time selection view for hosts and non-group orders
     const timeOptions = [
       { value: "asap", label: "ASAP (between now and 5 minutes)", minutes: 0 },
       { value: "15", label: "15 minutes", minutes: 15 },
@@ -561,6 +785,31 @@ export default function EnhancedMenuBuilder({
           >
             ← Back to Menu
           </button>
+        )}
+
+        {groupCode && (
+          <div
+            style={{
+              marginBottom: 24,
+              padding: 16,
+              background: "#fef3e2",
+              borderRadius: 12,
+              border: "1px solid #f9a825",
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+            }}
+          >
+            <span style={{ fontSize: "1.5rem" }}>👥</span>
+            <div>
+              <div style={{ fontWeight: 600, color: "#92400e" }}>Group Order: {groupCode}</div>
+              <div style={{ fontSize: "0.85rem", color: "#b45309" }}>
+                {groupOrderInfo?.isHost
+                  ? "As the host, your arrival time will be used for the group"
+                  : "Your order will be added to the group"}
+              </div>
+            </div>
+          </div>
         )}
 
         <h2 style={{ marginBottom: 24 }}>When will you arrive?</h2>
@@ -618,8 +867,8 @@ export default function EnhancedMenuBuilder({
           })}
         </div>
 
-        {/* Seat Selection - shown when ASAP is selected and seats available */}
-        {arrivalTime === "asap" && showSeatSelection && (
+        {/* Seat Selection - shown when ASAP is selected and seats available (NOT for group orders - host selects pods on lobby) */}
+        {arrivalTime === "asap" && showSeatSelection && !groupCode && (
           <div
             style={{
               marginBottom: 32,
@@ -670,7 +919,7 @@ export default function EnhancedMenuBuilder({
           </div>
         )}
 
-        {arrivalTime === "asap" && loadingSeats && (
+        {arrivalTime === "asap" && loadingSeats && !groupCode && (
           <div
             style={{
               marginBottom: 32,
@@ -699,7 +948,11 @@ export default function EnhancedMenuBuilder({
             cursor: arrivalTime && !submitting ? "pointer" : "not-allowed",
           }}
         >
-          {submitting ? "Processing..." : "Review Order & Payment →"}
+          {submitting
+            ? "Processing..."
+            : groupCode
+              ? "Add to Group Order"
+              : "Review Order & Payment"}
         </button>
       </div>
     );

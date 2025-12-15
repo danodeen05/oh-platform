@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useUser, SignInButton } from "@clerk/nextjs";
+import { useGuest } from "@/contexts/guest-context";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "";
 
@@ -16,6 +17,7 @@ export default function PaymentForm({
 }) {
   const router = useRouter();
   const { user, isLoaded, isSignedIn } = useUser();
+  const { guest, isGuest, updateGuest } = useGuest();
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState("");
   const [hasReferral, setHasReferral] = useState(false);
@@ -27,6 +29,12 @@ export default function PaymentForm({
   const [applyCredits, setApplyCredits] = useState(true); // Allow user to choose whether to apply credits
   const initializingRef = useRef(false); // Prevent concurrent initialization calls
   const MAX_CREDITS_PER_ORDER = 500; // $5.00 limit in cents
+
+  // Guest checkout form state
+  const [guestName, setGuestName] = useState(guest?.name === "Guest" ? "" : guest?.name || "");
+  const [guestPhone, setGuestPhone] = useState(guest?.phone || "");
+  const [guestEmail, setGuestEmail] = useState(guest?.email || "");
+  const [guestFormError, setGuestFormError] = useState("");
 
   useEffect(() => {
     // Check if there's a pending referral code
@@ -181,6 +189,51 @@ export default function PaymentForm({
     }
   }
 
+  async function handleGuestPayment() {
+    // Validate guest name
+    if (!guestName.trim()) {
+      setGuestFormError("Please enter your name");
+      return;
+    }
+
+    setProcessing(true);
+    setError("");
+    setGuestFormError("");
+
+    try {
+      // Update guest details if changed
+      if (guest && (guestName !== guest.name || guestPhone !== guest.phone || guestEmail !== guest.email)) {
+        await updateGuest({
+          name: guestName.trim(),
+          phone: guestPhone.trim() || undefined,
+          email: guestEmail.trim() || undefined,
+        });
+      }
+
+      // Mark order as paid and link to guest
+      const response = await fetch(`${BASE}/orders/${orderId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          paymentStatus: "PAID",
+          guestId: guest?.id,
+        }),
+      });
+
+      if (!response.ok) throw new Error("Payment failed");
+
+      const updatedOrder = await response.json();
+
+      // Redirect to confirmation
+      router.push(
+        `/order/confirmation?orderId=${orderId}&orderNumber=${orderNumber}&total=${updatedOrder.totalCents}&paid=true`
+      );
+    } catch (err: any) {
+      setError(err.message || "Payment failed");
+      setProcessing(false);
+    }
+  }
+
   // Ensure totalCents is a valid number
   const validTotalCents =
     typeof totalCents === "number" && !isNaN(totalCents) ? totalCents : 0;
@@ -199,6 +252,220 @@ export default function PaymentForm({
   }
 
   if (!isSignedIn) {
+    // Show guest checkout form if user has a guest session
+    if (isGuest && guest) {
+      return (
+        <div>
+          {/* Guest Info Form */}
+          <div
+            style={{
+              background: "rgba(199, 168, 120, 0.1)",
+              border: "1px solid #C7A878",
+              borderRadius: 12,
+              padding: 24,
+              marginBottom: 24,
+            }}
+          >
+            <h3 style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
+              <span>👤</span> Guest Checkout
+            </h3>
+            <p style={{ color: "#666", fontSize: "0.9rem", marginBottom: 20 }}>
+              Please enter your name so we can prepare your order.
+            </p>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div>
+                <label style={{ display: "block", marginBottom: 6, fontWeight: "500", fontSize: "0.9rem" }}>
+                  Name <span style={{ color: "#ef4444" }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  value={guestName}
+                  onChange={(e) => setGuestName(e.target.value)}
+                  placeholder="Your name"
+                  style={{
+                    width: "100%",
+                    padding: "12px 16px",
+                    border: guestFormError ? "2px solid #ef4444" : "1px solid #d1d5db",
+                    borderRadius: 8,
+                    fontSize: "1rem",
+                    boxSizing: "border-box",
+                  }}
+                />
+                {guestFormError && (
+                  <p style={{ color: "#ef4444", fontSize: "0.85rem", marginTop: 4 }}>{guestFormError}</p>
+                )}
+              </div>
+
+              <div>
+                <label style={{ display: "block", marginBottom: 6, fontWeight: "500", fontSize: "0.9rem" }}>
+                  Phone <span style={{ color: "#9ca3af" }}>(optional)</span>
+                </label>
+                <input
+                  type="tel"
+                  value={guestPhone}
+                  onChange={(e) => setGuestPhone(e.target.value)}
+                  placeholder="For order updates"
+                  style={{
+                    width: "100%",
+                    padding: "12px 16px",
+                    border: "1px solid #d1d5db",
+                    borderRadius: 8,
+                    fontSize: "1rem",
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: "block", marginBottom: 6, fontWeight: "500", fontSize: "0.9rem" }}>
+                  Email <span style={{ color: "#9ca3af" }}>(optional)</span>
+                </label>
+                <input
+                  type="email"
+                  value={guestEmail}
+                  onChange={(e) => setGuestEmail(e.target.value)}
+                  placeholder="For receipt"
+                  style={{
+                    width: "100%",
+                    padding: "12px 16px",
+                    border: "1px solid #d1d5db",
+                    borderRadius: 8,
+                    fontSize: "1rem",
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Payment Method */}
+          <div style={{ marginBottom: 24 }}>
+            <h3 style={{ marginBottom: 16 }}>Payment Method</h3>
+            <div
+              style={{
+                border: "2px solid #7C7A67",
+                borderRadius: 12,
+                padding: 20,
+                background: "rgba(124, 122, 103, 0.1)",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                <div
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 8,
+                    background: "white",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "1.5rem",
+                  }}
+                >
+                  💳
+                </div>
+                <div>
+                  <div style={{ fontWeight: "bold" }}>Test Payment</div>
+                  <div style={{ fontSize: "0.85rem", color: "#666" }}>Demo mode - no real charge</div>
+                </div>
+              </div>
+              <div
+                style={{
+                  background: "#fef3c7",
+                  border: "1px solid #fbbf24",
+                  borderRadius: 8,
+                  padding: 12,
+                  fontSize: "0.85rem",
+                  color: "#92400e",
+                }}
+              >
+                ⚠️ This is a demo payment. Real Stripe integration coming soon!
+              </div>
+            </div>
+          </div>
+
+          {error && (
+            <div
+              style={{
+                background: "#fee2e2",
+                border: "1px solid #ef4444",
+                borderRadius: 8,
+                padding: 12,
+                marginBottom: 16,
+                color: "#991b1b",
+              }}
+            >
+              {error}
+            </div>
+          )}
+
+          <button
+            onClick={handleGuestPayment}
+            disabled={processing}
+            style={{
+              width: "100%",
+              padding: 16,
+              background: processing ? "#d1d5db" : "#7C7A67",
+              color: "white",
+              border: "none",
+              borderRadius: 12,
+              fontSize: "1.1rem",
+              fontWeight: "bold",
+              cursor: processing ? "not-allowed" : "pointer",
+              transition: "all 0.2s",
+            }}
+          >
+            {processing ? "Processing Payment..." : `Pay $${(validTotalCents / 100).toFixed(2)}`}
+          </button>
+
+          {/* Sign in option for rewards */}
+          <div
+            style={{
+              marginTop: 24,
+              padding: 16,
+              background: "#f9fafb",
+              borderRadius: 8,
+              textAlign: "center",
+            }}
+          >
+            <p style={{ color: "#666", fontSize: "0.9rem", marginBottom: 12 }}>
+              Want to earn rewards and track your orders?
+            </p>
+            <SignInButton mode="modal">
+              <button
+                style={{
+                  padding: "10px 24px",
+                  background: "transparent",
+                  color: "#7C7A67",
+                  border: "1px solid #7C7A67",
+                  borderRadius: 8,
+                  fontSize: "0.9rem",
+                  fontWeight: "500",
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                }}
+              >
+                Sign In Instead
+              </button>
+            </SignInButton>
+          </div>
+
+          <p
+            style={{
+              textAlign: "center",
+              fontSize: "0.75rem",
+              color: "#9ca3af",
+              marginTop: 16,
+            }}
+          >
+            🔒 Secure checkout powered by Stripe (test mode)
+          </p>
+        </div>
+      );
+    }
+
+    // Show sign-in prompt (no guest session)
     return (
       <div
         style={{
