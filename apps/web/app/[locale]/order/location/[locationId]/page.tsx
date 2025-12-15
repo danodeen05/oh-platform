@@ -1,9 +1,8 @@
 import EnhancedMenuBuilder from "./_components/enhanced-menu-builder";
+import { API_URL } from "@/lib/api";
 
 async function getLocation(locationId: string) {
-  const base = process.env.NEXT_PUBLIC_API_URL!;
-
-  const locRes = await fetch(`${base}/locations`, {
+  const locRes = await fetch(`${API_URL}/locations`, {
     cache: "no-store",
     headers: { "x-tenant-slug": "oh" },
   });
@@ -19,10 +18,10 @@ export default async function LocationMenuPage({
   searchParams,
 }: {
   params: Promise<{ locationId: string }>;
-  searchParams: Promise<{ reorderId?: string }>;
+  searchParams: Promise<{ reorderId?: string; groupCode?: string }>;
 }) {
   const { locationId } = await params;
-  const { reorderId } = await searchParams;
+  const { reorderId, groupCode } = await searchParams;
   const { location } = await getLocation(locationId);
 
   if (!location) {
@@ -73,7 +72,7 @@ export default async function LocationMenuPage({
         )}
       </div>
 
-      <EnhancedMenuBuilder location={location} reorderId={reorderId} />
+      <EnhancedMenuBuilder location={location} reorderId={reorderId} groupCode={groupCode} />
     </main>
   );
 }

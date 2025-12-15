@@ -1,137 +1,75 @@
 {
   "common": {
     "signIn": "登录",
-    "signInToOrder": "登录点餐",
-    "orderNow": "立即点餐",
-    "startOrder": "开始点餐",
-    "startEarning": "开始赚取积分",
+    "signInToOrder": "登录订购",
+    "orderNow": "立即订购",
     "loading": "加载中...",
-    "loadingMenu": "加载菜单...",
-    "error": "出错了",
-    "tryAgain": "重试",
+    "error": "发生错误",
     "included": "已包含",
     "learnMore": "了解更多",
     "viewAll": "查看全部",
-    "close": "关闭",
-    "apply": "应用",
-    "notifyMe": "通知我",
-    "comingSoon": "即将推出",
-    "findLocation": "查找门店",
-    "viewFaq": "查看常见问题",
-    "sendMessage": "发送消息",
-    "email": "电子邮件",
-    "or": "或",
-    "contactForm": "联系表单"
+    "close": "关闭"
   },
   "navigation": {
     "menu": "菜单",
-    "locations": "门店",
+    "locations": "门店地点",
     "giftCards": "礼品卡",
     "store": "商店",
-    "loyalty": "会员",
-    "myAccount": "我的Oh!账户"
+    "loyalty": "会员奖励",
+    "myAccount": "我的哦!账户"
   },
   "home": {
-    "brandName": "Oh! 牛肉面",
-    "tagline": "唯一一家为您而建的餐厅。",
-    "heroDescription": "源自台湾深受喜爱的牛肉面传统，融合日本精致工艺，在您的私人包厢中享用我们30年的家传秘方。",
+    "brandName": "哦！牛肉面",
+    "tagline": "唯一一家专为<bold>您</bold>打造的餐厅。",
     "features": {
       "recipe": {
-        "title": "30年秘方",
-        "description": "代代相传的完美牛肉面配方"
+        "title": "30年传承配方",
+        "description": "代代相传、精心熬制的牛肉面"
       },
       "beef": {
         "title": "顶级牛肉",
-        "description": "A5和牛及精选优质牛肉"
+        "description": "严选A5和牛及优质牛肉，品质卓越"
       },
       "tech": {
         "title": "科技化体验",
-        "description": "提前点餐、赚取积分、享受无缝服务"
+        "description": "提前点餐、累积奖励、享受无缝服务"
       }
     },
     "pods": {
       "title": "私人用餐包厢",
-      "subtitle": "您的空间，您的节奏。",
-      "description": "体验前所未有的用餐方式。我们的独立包厢提供一个宁静、无干扰的空间，让您尽情享受每一口面。没有拥挤的餐桌，没有喧嚣——只有您和您的完美牛肉面。",
+      "description": "体验前所未有的用餐方式。我们的独立包厢提供宁静、无干扰的空间，让您细细品尝每一口。没有拥挤的餐桌，没有噪音——只有您和完美的一碗牛肉面。",
       "features": {
         "space": {
-          "title": "您的空间",
-          "description": "配有氛围灯光和音乐控制的私人包厢"
+          "title": "专属空间",
+          "description": "配有氛围照明和音乐控制的私人包厢"
         },
         "focus": {
           "title": "零干扰",
-          "description": "专注享用美食，远离传统餐厅的喧嚣"
+          "description": "专心享用美食，远离传统餐厅的喧嚣"
         },
         "fast": {
           "title": "快速新鲜",
-          "description": "食物直接送达您的包厢，热腾腾、随时享用"
+          "description": "餐点直送包厢，热腾腾上桌"
         }
       }
     },
     "noTipping": {
-      "title": "永不收小费。",
-      "description": "在Oh!，您看到的价格就是您支付的价格。我们相信我们的团队应得公平稳定的工资——而不是不可预测的小费。这就是为什么我们为厨房和清洁员工支付具有竞争力的薪资和福利。",
+      "title": "永不收小费",
+      "description": "在哦!，您看到的价格就是您支付的价格。我们相信团队成员值得稳定、公平的薪资——而非不可预测的小费。因此，我们为厨房和清洁人员提供具竞争力的薪资和福利。",
       "benefits": {
-        "wages": "公平工资",
-        "math": "无需计算",
+        "wages": "公平薪资",
+        "math": "无需计算小费",
         "checkout": "简单结账"
       }
-    },
-    "cta": {
-      "title": "准备好体验Oh!了吗？",
-      "description": "走进您的私人包厢，品尝顶级牛肉面，发现为什么在Oh!用餐与众不同。"
-    },
-    "signature": {
-      "label": "招牌菜品",
-      "title": "A5和牛牛肉面",
-      "description": "嫩滑的A5和牛在浓郁芳香的汤底中缓缓化开——这汤底历经48小时精心熬制，传承三代人的独特技艺。每一碗都诉说着耐心、精准与热情的故事。",
-      "stats": {
-        "hours": "小时熬制",
-        "grade": "和牛等级",
-        "years": "年传承"
-      }
-    },
-    "difference": {
-      "label": "Oh!的不同",
-      "title": "不只是一顿饭"
-    },
-    "experience": {
-      "label": "Oh!体验"
-    },
-    "ingredients": {
-      "label": "新鲜食材",
-      "title": "定制您的面",
-      "description": "从手工面条、新鲜蔬菜和优质配料中选择，打造您的完美牛肉面。",
-      "items": {
-        "ramenNoodles": "拉面",
-        "softBoiledEgg": "溏心蛋",
-        "babyBokChoy": "小白菜",
-        "beefMarrow": "牛骨髓"
-      }
-    },
-    "viewMenu": "查看完整菜单"
-  },
-  "orderBanner": {
-    "orderNumber": "订单 #{number}",
-    "pod": "包厢 {number}",
-    "active": "进行中",
-    "tapToView": "点击查看状态",
-    "status": {
-      "placed": "已下单",
-      "checkedIn": "已签到",
-      "inQueue": "排队中",
-      "preparing": "准备中",
-      "qualityCheck": "质量检查",
-      "enjoy": "请享用！"
     }
   },
   "footer": {
-    "copyright": "© {year} Oh! 牛肉面。保留所有权利。",
+    "copyright": "© {year} 哦！牛肉面。保留所有权利。",
     "links": {
-      "accessibility": "无障碍访问",
-      "careers": "招聘",
+      "accessibility": "无障碍服务",
+      "careers": "职业机会",
       "contact": "联系我们",
-      "press": "媒体",
+      "press": "媒体专区",
       "privacy": "隐私政策"
     }
   },
@@ -143,776 +81,114 @@
     "selectLanguage": "语言"
   },
   "menu": {
-    "hero": {
-      "title": "我们的菜单",
-      "description": "采用30年家传秘方精心制作，每一碗都诉说着传统、品质和对完美牛肉面的追求。",
-      "orderNow": "立即点餐"
-    },
-    "loading": "正在加载菜单...",
-    "error": {
-      "title": "无法加载菜单",
-      "failedToLoad": "加载菜单失败",
-      "tryAgain": "重试"
-    },
-    "tags": {
-      "premium": "高级",
-      "signature": "招牌",
-      "included": "含",
-      "unlimitedRefills": "无限续杯",
-      "complimentary": "免费"
-    },
+    "title": "我们的菜单",
+    "description": "探索我们精选的顶级牛肉面和配菜",
     "categories": {
-      "soups": "汤底",
+      "soups": "汤品",
       "noodles": "面条",
-      "addons": "加料",
-      "sides": "小菜",
+      "addons": "加购",
+      "sides": "配菜",
       "drinks": "饮品",
       "desserts": "甜点"
-    },
-    "sections": {
-      "soup": {
-        "subtitle": "每碗面的灵魂",
-        "description": "我们30年的家传秘方从慢炖48小时的牛骨开始，创造出浓郁、层次丰富的汤底，定义了Oh!的独特体验。"
-      },
-      "noodles": {
-        "subtitle": "精心挑选的完美搭配",
-        "description": "每种面条都经过精选，与我们浓郁的汤底完美搭配。找到您喜欢的口感。"
-      },
-      "premiumAddons": {
-        "subtitle": "提升您的体验",
-        "description": "用优质配料升级您的体验。每一样都以制作招牌菜品的细致工艺准备。"
-      },
-      "sideDishes": {
-        "subtitle": "完善您的用餐",
-        "description": "传统配菜，与主菜相得益彰。"
-      },
-      "dessert": {
-        "subtitle": "甜蜜结尾",
-        "description": "清爽的甜点，为您的用餐画上完美句号。"
-      }
-    },
-    "difference": {
-      "title": "Oh!的不同",
-      "description": "我们相信完美的牛肉面值得完美的用餐体验。这就是为什么我们重新设计了每一个细节。",
-      "techFirst": {
-        "title": "科技优先体验",
-        "description": "提前在手机上点餐。免去等待。您的面在您到达时就准备好了。"
-      },
-      "privatePods": {
-        "title": "私人用餐包厢",
-        "description": "在宁静的独处中享用您的面。我们的私人包厢让您专注于最重要的——美味。"
-      },
-      "seamlessService": {
-        "title": "无缝服务",
-        "description": "最少打扰，最大享受。我们的自动化系统意味着您的用餐专注于食物，而非服务。"
-      },
-      "loyalty": {
-        "title": "忠诚奖励",
-        "description": "赚取积分、解锁徽章、提升会员等级。每次光顾都让您更接近免费餐品和专属福利。"
-      }
-    },
-    "cta": {
-      "title": "准备好体验Oh!了吗？",
-      "description": "打造您的完美牛肉面，免去等待。",
-      "button": "开始点餐"
     }
   },
   "locations": {
-    "hero": {
-      "findUs": "找到我们",
-      "title": "我们的门店",
-      "description": "犹他州两家门店。私人包厢。免小费。只有您和完美的牛肉面。"
-    },
-    "loading": "正在查找门店...",
-    "cityCreek": {
-      "tagline": "盐湖城市中心",
-      "description": "我们在犹他州的旗舰店，位于盐湖城市中心。距离圣殿广场和商业区仅几步之遥。",
-      "mallDescription": "City Creek Center是盐湖城首屈一指的购物目的地，拥有可伸缩玻璃屋顶、贯穿整个建筑的溪流以及100多家商店和餐厅。",
-      "nearbyLandmarks": ["圣殿广场", "盐宫会议中心", "TRAX轻轨"],
-      "parking": "City Creek停车场提供免费停车验证"
-    },
-    "universityPlace": {
-      "tagline": "犹他谷",
-      "description": "服务于奥瑞姆的犹他谷社区。方便学生、家庭和任何渴望正宗牛肉面的人。",
-      "mallDescription": "University Place是犹他谷最大的露天购物中心，位于奥瑞姆和普若佛的交汇处，可轻松从I-15高速公路到达。",
-      "nearbyLandmarks": ["犹他谷大学", "杨百翰大学", "普若佛峡谷"],
-      "parking": "整个中心提供免费地面停车"
-    },
-    "details": {
-      "address": "地址",
-      "hours": "营业时间",
-      "hoursMonThurs": "周一至周四：上午11点 - 晚上9点",
-      "hoursFriSat": "周五至周六：上午11点 - 晚上10点",
-      "hoursSun": "周日：中午12点 - 晚上8点",
-      "parking": "停车"
-    },
-    "buttons": {
-      "orderAhead": "提前点餐",
-      "getDirections": "获取路线"
-    },
-    "about": {
-      "title": "关于",
-      "nearby": "附近"
-    },
-    "features": {
-      "privatePods": "12个私人包厢",
-      "orderAhead": "提前点餐",
-      "noTipping": "免小费",
-      "accessible": "无障碍"
-    },
-    "ohWay": {
-      "label": "Oh!方式",
-      "title": "不一样的用餐体验",
-      "kiosk": {
-        "title": "在自助点餐机点餐",
-        "description": "在我们的触屏点餐机上自定义您牛肉面的每一个细节。没有压力，慢慢来。或者提前在手机上点餐。"
-      },
-      "pod": {
-        "title": "您的私人包厢",
-        "description": "灵感来自日本一兰拉面。独立包厢让您完全专注于您的美食。宁静、私密、完美的汤面。"
-      },
-      "noTips": {
-        "title": "永远不用给小费",
-        "description": "我们给团队支付合理的薪资，所以您不必计算小费。您看到的价格就是您支付的价格。"
-      }
-    },
-    "comingSoon": {
-      "title": "更多门店即将开业",
-      "description": "我们正在犹他州扩张。希望您的社区也有Oh!吗？",
-      "cities": ["普若佛", "德雷珀", "帕克城"],
-      "label": "即将开业"
-    },
-    "cta": {
-      "title": "准备好体验Oh!了吗？",
-      "description": "免排队。提前点餐，到店即取。",
-      "button": "开始点餐"
-    }
-  },
-  "store": {
-    "title": "官方商店",
-    "tagline": "把Oh!带回家",
-    "description": "从居家套装到优质周边，满足您对面条的一切热爱",
-    "launchingSoon": "网上商店即将上线！使用您赚取的积分兑换任何商品。",
-    "categories": {
-      "all": "全部",
-      "food": "食品",
-      "condiments": "调味品",
-      "merchandise": "周边",
-      "apparel": "服饰",
-      "limitedEdition": "限定款"
-    },
-    "badges": {
-      "bestSeller": "畅销",
-      "new": "新品",
-      "limited": "限定"
-    },
-    "products": {
-      "homeKit": {
-        "name": "Oh! 居家套装",
-        "description": "在家制作招牌牛肉面所需的一切。包含汤底、面条和调料包。"
-      },
-      "chiliOil": {
-        "name": "招牌辣油",
-        "description": "我们自制的辣油，含花椒。为任何菜品增添风味的完美选择。"
-      },
-      "brothConcentrate": {
-        "name": "牛骨汤浓缩液",
-        "description": "采用48小时秘方制作的浓郁牛骨汤。只需加水即可享用餐厅级汤底。"
-      },
-      "ceramicBowl": {
-        "name": "Oh! 陶瓷碗",
-        "description": "为完美面食体验设计的优质陶瓷碗。保温持久，手工上釉。"
-      },
-      "chopsticks": {
-        "name": "高级筷子套装",
-        "description": "手工制作的木筷配套筷架。精美礼盒装。"
-      },
-      "tshirt": {
-        "name": "Oh! 经典T恤",
-        "description": "柔软棉质T恤，印有我们的标志性logo。有黑白两色可选。"
-      },
-      "hoodie": {
-        "name": "Oh! 舒适卫衣",
-        "description": "优质加厚卫衣，刺绣logo。面食天气的完美选择。"
-      },
-      "apron": {
-        "name": "厨师围裙",
-        "description": "帆布围裙配皮带和logo。专为认真对待面食的家庭厨师设计。"
-      },
-      "woodenBowl": {
-        "name": "手工木碗",
-        "description": "独一无二的手工车制木碗，有机造型。每件都有独特的木纹和激光雕刻logo。"
-      }
-    },
-    "whyShop": {
-      "title": "为什么选择Oh!商店",
-      "subtitle": "Oh!体验，送货上门",
-      "freeShipping": {
-        "title": "免费配送",
-        "description": "满$20免运费。快速可靠，直送家门。"
-      },
-      "useCredit": {
-        "title": "使用积分",
-        "description": "用您用餐赚取的奖励积分购买任何商店商品。"
-      },
-      "memberRewards": {
-        "title": "会员奖励",
-        "description": "每次购物赚取积分。堂食和网购积分可累计。"
-      },
-      "easyReturns": {
-        "title": "轻松退换",
-        "description": "30天无忧退换。不满意？我们来解决。"
-      }
-    },
-    "newsletter": {
-      "tagline": "保持关注",
-      "title": "抢先知道",
-      "description": "获取新品优先购买权、独家发售和会员专属优惠。",
-      "placeholder": "your@email.com"
-    },
-    "cta": {
-      "title": "等不及商店上线？",
-      "description": "亲临门店，今天就体验完美牛肉面。"
-    }
-  },
-  "giftCards": {
-    "title": "礼品卡",
-    "tagline": "送出Oh!的礼物",
-    "description": "与特别的人分享完美牛肉面的温暖",
-    "digitalCard": "电子礼品卡",
-    "chooseAmount": {
-      "tagline": "选择金额",
-      "title": "选择完美的礼物价值",
-      "customLabel": "或输入自定义金额（$10 - $500）",
-      "customPlaceholder": "输入金额"
-    },
-    "continue": "继续个性化",
-    "purchaseComingSoon": "即将推出 - 礼品卡购买",
-    "designs": {
-      "classic": "经典",
-      "dark": "深色",
-      "gold": "金色"
-    },
-    "why": {
-      "title": "为什么选择Oh!礼品卡",
-      "subtitle": "面食爱好者的完美礼物",
-      "instantDelivery": {
-        "title": "即时送达",
-        "description": "几分钟内直接发送到收件人邮箱。最后一刻送礼的完美选择。"
-      },
-      "beautifulDesign": {
-        "title": "精美设计",
-        "description": "多种卡片设计可选，匹配收礼人的风格。"
-      },
-      "neverExpires": {
-        "title": "永不过期",
-        "description": "我们的礼品卡永不过期。随时使用。"
-      },
-      "addMessage": {
-        "title": "添加祝福",
-        "description": "附上个人祝福语，让您的礼物更特别。"
-      }
-    },
-    "corporate": {
-      "tagline": "企业服务",
-      "title": "企业及批量订购",
-      "description": "员工福利、客户礼品或团队庆祝的完美选择。10张及以上享受特别定价。",
-      "contactSales": "联系销售",
-      "bulkDiscounts": "批量折扣",
-      "tenPlus": "10张及以上",
-      "customBranding": "定制品牌",
-      "addLogo": "添加您的logo",
-      "dedicatedSupport": "专属支持",
-      "priorityService": "优先服务",
-      "flexibleDelivery": "灵活配送",
-      "scheduleSends": "定时发送"
-    },
-    "faq": {
-      "tagline": "有问题？",
-      "title": "常见问题",
-      "questions": {
-        "delivery": {
-          "q": "电子礼品卡如何送达？",
-          "a": "礼品卡在购买后几分钟内直接发送到收件人的电子邮箱。他们会收到一封精美设计的邮件，包含礼品卡代码和您的个人祝福。"
-        },
-        "multiple": {
-          "q": "可以在一个订单中使用多张礼品卡吗？",
-          "a": "可以！您可以在单个订单中合并使用多张礼品卡。余额将保留在您的账户中供以后使用。"
-        },
-        "expire": {
-          "q": "礼品卡会过期吗？",
-          "a": "不会，Oh!礼品卡永不过期。收礼人可以在准备好享用完美牛肉面时随时使用。"
-        },
-        "balance": {
-          "q": "如何查询礼品卡余额？",
-          "a": "您可以随时在「我的账户」部分查询余额，或联系我们的客服团队。"
-        }
-      }
-    },
-    "cta": {
-      "title": "准备好传递快乐了吗？",
-      "description": "送出完美牛肉面的礼物。您的亲友会感谢您的。",
-      "button": "创建礼品卡"
-    }
+    "title": "门店地点",
+    "description": "寻找您附近的哦!门店",
+    "hours": "营业时间",
+    "weekday": "工作日",
+    "weekend": "周末",
+    "comingSoon": "即将开业",
+    "openNow": "营业中",
+    "features": "特色服务",
+    "upcomingCities": "即将进驻您的城市"
   },
   "loyalty": {
-    "title": "Oh! 奖励",
-    "description": "每一碗都让您更接近特别的惊喜。每次光顾都能赚取积分、解锁徽章、提升会员等级。",
-    "howItWorks": {
-      "title": "如何运作",
-      "orderEarn": {
-        "title": "点餐赚积分",
-        "description": "每笔订单根据您的会员等级赚取返现。每碗面都让您的积分增长。"
-      },
-      "referFriends": {
-        "title": "推荐好友",
-        "description": "分享您的专属推荐链接。好友下单后，双方都能赚取积分用于下次用餐。"
-      },
-      "levelUp": {
-        "title": "等级提升",
-        "description": "解锁更高等级享受更好的奖励。光顾越多，省得越多。"
-      },
-      "redeem": {
-        "title": "兑换使用",
-        "description": "结账时使用积分。每单最多可抵扣$5购买任何菜品。"
-      }
-    },
+    "title": "哦！奖励",
+    "description": "每次光临都能累积奖励",
     "tiers": {
-      "title": "会员等级",
-      "description": "从筷子级开始，逐步晋升到牛肉老板级。每个等级都解锁更好的奖励。",
-      "benefitsInclude": "包含福利",
-      "ultimate": "终极",
       "chopstick": {
-        "name": "筷子级",
-        "requirement": "注册即可",
-        "benefits": {
-          "referralBonus": "每位好友$5推荐奖励",
-          "cashback": "订单1%返现",
-          "earlyAccess": "新品优先体验"
-        }
+        "name": "筷子会员",
+        "description": "欢迎加入哦！奖励"
       },
       "noodleMaster": {
         "name": "面条大师",
-        "requirement": "10单 + 5次推荐",
-        "benefits": {
-          "referralBonus": "每位好友$5推荐奖励",
-          "cashback": "订单2%返现",
-          "prioritySeating": "优先入座",
-          "memberEvents": "专属会员活动",
-          "freeBowl": "升级免费一碗"
-        }
+        "description": "您已成为常客！"
       },
       "beefBoss": {
-        "name": "牛肉老板",
-        "requirement": "25单 + 10次推荐",
-        "benefits": {
-          "referralBonus": "每位好友$5推荐奖励",
-          "cashback": "订单3%返现",
-          "merchDrops": "专属周边发售",
-          "premiumAddons": "免费高级加料",
-          "vipGift": "年度VIP礼物与特别待遇"
-        }
+        "name": "牛肉达人",
+        "description": "真正的面食皇族"
       }
     },
-    "badges": {
-      "title": "收集徽章",
-      "description": "用餐解锁成就。展示您的收藏，赢得荣誉。",
-      "firstBowl": {
-        "name": "第一碗",
-        "description": "完成您的第一单"
-      },
-      "hotStreak": {
-        "name": "连续光顾",
-        "description": "连续3天下单"
-      },
-      "perfectTen": {
-        "name": "完美十单",
-        "description": "下满10单"
-      },
-      "proteinPower": {
-        "name": "蛋白质达人",
-        "description": "5次加牛肉"
-      },
-      "heatSeeker": {
-        "name": "辣味追寻者",
-        "description": "点地狱辣度"
-      },
-      "giftGiver": {
-        "name": "送礼达人",
-        "description": "发送第一张礼品卡"
-      },
-      "communityBuilder": {
-        "name": "社区建设者",
-        "description": "推荐5位好友"
-      },
-      "legend": {
-        "name": "传奇",
-        "description": "达到牛肉老板等级"
-      }
-    },
-    "referral": {
-      "title": "分享爱，赚奖励",
-      "description": "认识需要一碗暖心面的人？分享您的推荐链接，当他们首单满$20时，双方都能赚取积分。",
-      "forYou": "给您（筷子级）",
-      "forFriend": "给您的朋友",
-      "unlimited": "无限推荐",
-      "getLink": "获取推荐链接"
-    },
-    "cta": {
-      "title": "准备好开始您的旅程了吗？",
-      "description": "立即注册，首单即可开始赚取积分。"
-    },
-    "benefits": "福利",
-    "requirements": "要求"
-  },
-  "referral": {
-    "title": "邀请好友，赚取奖励",
-    "subtitle": "您送$5，他得$5——好友首单满$20即可",
-    "howItWorks": "如何运作",
-    "step1": {
-      "title": "分享您的链接",
-      "description": "将您的专属推荐链接发送给朋友"
-    },
-    "step2": {
-      "title": "好友立享$5折扣",
-      "description": "您的朋友首单立即享受$5折扣"
-    },
-    "step3": {
-      "title": "您赚$5（每月1日或16日）",
-      "description": "当他们首单满$20时，您赚取$5积分。推荐积分于每月1日和16日添加到您的账户。"
-    },
-    "goodToKnow": "须知：",
-    "rules": {
-      "minimumOrder": "好友首单须满$20您才能获得推荐奖励",
-      "disbursement": "推荐积分于每月1日和16日发放",
-      "maxPerOrder": "每单最多可使用$5积分"
-    }
-  },
-  "careers": {
-    "title": "加入我们",
-    "description": "帮助我们重新定义用餐体验。我们正在打造一些特别的东西，寻找有热情的人一起踏上这段旅程。",
-    "viewPositions": "查看职位",
-    "values": {
-      "title": "我们的价值观",
-      "description": "这些原则指导我们所做的一切，从制作汤品到待人接物。",
-      "excellence": {
-        "title": "追求卓越",
-        "description": "我们专注于细节。每一碗、每次体验、每次互动都很重要。"
-      },
-      "innovation": {
-        "title": "创新至上",
-        "description": "我们正在打造餐饮的未来。科技与传统和谐共存。"
-      },
-      "team": {
-        "title": "团队为先",
-        "description": "我们共同成功。协作、尊重和支持是我们的核心。"
-      },
-      "growth": {
-        "title": "成长心态",
-        "description": "我们投资于员工。与我们一起学习、成长、发展职业。"
-      }
-    },
-    "positions": {
-      "title": "开放职位",
-      "noFit": "没有找到合适的职位？",
-      "alwaysLooking": "我们一直在寻找人才。",
-      "sendResume": "发送简历给我们"
-    },
-    "benefits": {
-      "title": "为什么加入我们",
-      "pay": {
-        "title": "有竞争力的薪酬",
-        "description": "高于市场的工资加绩效奖金"
-      },
-      "health": {
-        "title": "健康福利",
-        "description": "医疗、牙科和视力保险"
-      },
-      "meals": {
-        "title": "免费餐食",
-        "description": "上班时每日免费餐食加家庭折扣"
-      },
-      "careerGrowth": {
-        "title": "职业发展",
-        "description": "清晰的晋升路径和导师制度"
-      },
-      "learning": {
-        "title": "学习基金",
-        "description": "年度专业发展津贴"
-      },
-      "events": {
-        "title": "团队活动",
-        "description": "定期团建和庆祝活动"
-      }
-    },
-    "cta": {
-      "title": "准备好留下您的印记了吗？",
-      "description": "加入我们，共创餐饮的未来。",
-      "button": "立即申请"
-    },
-    "openPositions": "开放职位",
-    "applyNow": "立即申请"
-  },
-  "contact": {
-    "title": "联系我们",
-    "description": "我们很乐意听到您的声音。无论是问题、反馈还是打个招呼——我们都在这里。",
-    "form": {
-      "title": "给我们留言",
-      "name": "您的姓名",
-      "email": "电子邮箱",
-      "subject": "主题",
-      "message": "留言",
-      "subjects": {
-        "general": "一般咨询",
-        "order": "订单支持",
-        "feedback": "反馈",
-        "corporate": "企业/批量订购",
-        "press": "媒体咨询",
-        "careers": "工作机会"
-      },
-      "success": "感谢您的留言！我们会尽快回复。"
-    },
-    "other": {
-      "title": "其他联系方式",
-      "email": {
-        "title": "电子邮件",
-        "value": "hello@ohbeefnoodlesoup.com"
-      },
-      "location": {
-        "title": "地址",
-        "opening": "2025年春季开业",
-        "city": "加州旧金山"
-      },
-      "responseTime": {
-        "title": "回复时间",
-        "value": "我们通常在24小时内回复"
-      }
-    },
-    "social": {
-      "title": "关注我们",
-      "description": "保持联系，获取最新动态、幕后花絮和独家优惠。"
-    },
-    "faq": {
-      "title": "有快速问题？",
-      "description": "查看我们的常见问题获取即时解答。"
-    },
-    "email": "邮箱",
-    "phone": "电话",
-    "address": "地址",
-    "sendMessage": "发送消息"
-  },
-  "press": {
-    "title": "媒体中心",
-    "description": "为报道Oh!牛肉面的记者、博主和媒体专业人士提供的资源。",
-    "mediaContact": {
-      "title": "媒体联系",
-      "description": "如有新闻咨询、采访或媒体请求，请联系我们的公关团队。",
-      "responseTime": "我们通常在24-48小时内回复"
-    },
-    "ourStory": {
-      "title": "我们的故事",
-      "p1": "Oh!牛肉面正在通过科技和用心设计重新定义传统台湾用餐体验。基于30年的家传秘方，我们为重视品质、便利和独特体验的新一代食客带来牛肉面的温暖。",
-      "p2": "我们位于旧金山的旗舰店设有私人用餐包厢，灵感来自日本一人食概念，让客人能够完全沉浸在手工汤品的风味和香气中，不受干扰。",
-      "p3": "采用科技优先的点餐和服务方式，Oh!从您在App上下单的那一刻到最后一口浓郁芳香的汤，都提供无缝的用餐体验。"
-    },
-    "keyFacts": {
-      "title": "关键事实",
-      "founded": "成立时间",
-      "headquarters": "总部",
-      "flagshipOpening": "旗舰店开业",
-      "recipeHeritage": "秘方传承",
-      "uniqueFeature": "独特特色",
-      "techPlatform": "技术平台"
-    },
-    "pressReleases": {
-      "title": "新闻稿"
-    },
-    "brandAssets": {
-      "title": "品牌素材",
-      "requestAccess": "如需品牌素材，请发送邮件至",
-      "logoPackage": {
-        "name": "Logo包",
-        "description": "各种格式的主Logo（PNG、SVG、EPS）"
-      },
-      "brandGuidelines": {
-        "name": "品牌指南",
-        "description": "色彩、字体和使用指南"
-      },
-      "productPhotography": {
-        "name": "产品摄影",
-        "description": "招牌菜品的高分辨率图片"
-      },
-      "locationPhotos": {
-        "name": "门店照片",
-        "description": "空间内外部摄影"
-      }
-    },
-    "mediaKit": "媒体资料包",
-    "pressInquiries": "媒体咨询"
-  },
-  "privacy": {
-    "title": "隐私政策",
-    "description": "您的隐私对我们很重要。了解我们如何收集、使用和保护您的信息。",
-    "lastUpdated": "最后更新：2024年12月",
-    "sections": {
-      "introduction": {
-        "title": "简介",
-        "content": "Oh!牛肉面（「Oh!」、「我们」）尊重您的隐私并致力于保护您的个人数据。本隐私政策说明我们在您访问我们的网站、移动应用和实体店时如何收集、使用、披露和保护您的信息。"
-      },
-      "infoCollect": {
-        "title": "我们收集的信息",
-        "intro": "我们可能通过多种方式收集您的信息：",
-        "personalData": {
-          "title": "个人数据",
-          "items": [
-            "姓名、电子邮箱和电话号码",
-            "账单和配送地址",
-            "支付信息（通过第三方安全处理）",
-            "账户凭证",
-            "订单历史和偏好"
-          ]
-        },
-        "autoData": {
-          "title": "自动收集的数据",
-          "items": [
-            "设备信息（浏览器类型、操作系统）",
-            "IP地址和位置数据",
-            "使用模式和浏览行为",
-            "Cookies和类似追踪技术"
-          ]
-        }
-      },
-      "howWeUse": {
-        "title": "我们如何使用您的信息",
-        "items": [
-          "处理和完成您的订单",
-          "管理您的账户并提供客户支持",
-          "发送订单确认和更新",
-          "个性化您的体验和偏好",
-          "管理忠诚度计划和推荐奖励",
-          "发送促销信息（经您同意）",
-          "改进我们的产品、服务和网站",
-          "防止欺诈并确保安全"
-        ]
-      },
-      "sharing": {
-        "title": "信息共享",
-        "intro": "我们可能与以下方共享您的信息：",
-        "serviceProviders": "帮助我们运营业务的支付处理商、配送合作伙伴和技术提供商",
-        "businessPartners": "经您同意，用于联合营销或促销活动",
-        "legalRequirements": "法律要求或保护我们的权利时",
-        "noSell": "我们不会向第三方出售您的个人信息。"
-      },
-      "security": {
-        "title": "数据安全",
-        "content": "我们实施适当的技术和组织措施来保护您的个人信息。但是，互联网传输或电子存储的方法都不是100%安全的，我们无法保证绝对安全。"
-      },
-      "rights": {
-        "title": "您的权利",
-        "intro": "根据您的所在地，您可能拥有以下权利：",
-        "items": [
-          "访问并获取您个人数据的副本",
-          "更正不准确或不完整的信息",
-          "删除您的个人数据",
-          "反对或限制某些处理",
-          "数据可携带性",
-          "随时撤回同意"
-        ]
-      },
-      "cookies": {
-        "title": "Cookies",
-        "content": "我们使用cookies和类似技术来增强您的体验、分析使用情况并协助营销。您可以通过浏览器设置管理cookie偏好。"
-      },
-      "children": {
-        "title": "儿童隐私",
-        "content": "我们的服务不针对13岁以下的儿童。我们不会故意收集13岁以下儿童的个人信息。"
-      },
-      "changes": {
-        "title": "政策变更",
-        "content": "我们可能会不时更新本隐私政策。我们将通过在本页面发布新政策并更新「最后更新」日期来通知您任何变更。"
-      },
-      "contactUs": {
-        "title": "联系我们",
-        "intro": "如果您对本隐私政策或我们的做法有疑问，请联系我们："
-      }
-    }
-  },
-  "accessibility": {
-    "title": "无障碍访问",
-    "description": "我们致力于让每个人都能享受Oh!牛肉面。",
-    "commitment": {
-      "title": "我们的承诺",
-      "content": "在Oh!牛肉面，我们相信每个人都应该享受完美的牛肉面。我们致力于确保我们的数字平台和实体门店对所有能力的人都是无障碍的。"
-    },
-    "website": {
-      "title": "网站无障碍",
-      "intro": "我们努力确保网站符合WCAG 2.1 AA级标准。我们持续的无障碍工作包括：",
-      "items": [
-        "所有交互元素支持键盘导航",
-        "清晰一致的标题结构",
-        "充分的颜色对比度",
-        "图片替代文本",
-        "适配所有设备的响应式设计",
-        "屏幕阅读器兼容性"
-      ]
-    },
-    "restaurant": {
-      "title": "餐厅无障碍",
-      "intro": "我们的实体门店在设计时考虑了无障碍需求：",
-      "items": [
-        "轮椅可通行的入口和用餐区",
-        "符合ADA标准的卫生间设施",
-        "无障碍私人用餐包厢",
-        "清晰的标识和导向",
-        "按需提供帮助"
-      ]
-    },
-    "ordering": {
-      "title": "点餐协助",
-      "content": "如果您在点餐时需要帮助或对我们的无障碍功能有疑问，我们的团队很乐意提供帮助。请联系"
-    },
-    "feedback": {
-      "title": "反馈",
-      "content": "我们欢迎您对Oh!牛肉面无障碍方面的反馈。如果您遇到任何无障碍障碍或有改进建议，请告诉我们。"
-    },
-    "contactUs": {
-      "title": "无障碍相关联系",
-      "intro": "如果您对无障碍有疑问或顾虑，请联系我们："
-    }
+    "benefits": "会员福利",
+    "requirements": "升级条件"
   },
   "order": {
     "chooseLocation": "选择门店",
-    "selectLocationPrompt": "选择门店查看菜单和当前等待时间",
-    "referralApplied": "$5推荐折扣将被应用！",
-    "waitTime": "当前等待",
+    "selectLocationPrompt": "选择门店查看菜单和当前等候时间",
+    "referralApplied": "已应用$5推荐优惠！",
+    "waitTime": "当前等候时间",
     "minutes": "分钟",
     "addToOrder": "加入订单",
     "viewOrder": "查看订单",
     "checkout": "结账",
     "total": "总计",
     "subtotal": "小计",
-    "tax": "税费",
-    "orderPlaced": "订单已提交",
-    "orderConfirmed": "订单已确认",
+    "tax": "税金",
+    "orderPlaced": "已下单",
+    "orderConfirmed": "订单确认",
     "preparing": "准备中",
-    "ready": "已就绪",
-    "completed": "已完成",
-    "readyForDessert": "准备上甜点",
-    "checkIn": "签到",
-    "scanQr": "扫描二维码",
-    "payment": "支付"
+    "ready": "准备完成",
+    "completed": "完成"
   },
   "member": {
-    "dashboard": "仪表板",
-    "orders": "订单",
+    "dashboard": "会员中心",
+    "orders": "订单记录",
     "credits": "积分",
-    "favorites": "收藏",
-    "visits": "访问",
+    "favorites": "我的收藏",
+    "visits": "到访次数",
     "currentTier": "当前等级",
     "nextTier": "下一等级",
-    "pointsToNext": "积分升级",
-    "orderHistory": "订单历史",
-    "noOrders": "暂无订单",
-    "startOrdering": "开始点餐建立您的历史记录"
+    "pointsToNext": "积分即可升级"
+  },
+  "giftCards": {
+    "title": "礼品卡",
+    "description": "与亲朋好友分享哦!的美味",
+    "buyNow": "立即购买",
+    "checkBalance": "查询余额"
+  },
+  "store": {
+    "title": "哦！商店",
+    "description": "把哦!带回家",
+    "merchandise": "周边商品",
+    "comingSoon": "即将推出"
+  },
+  "careers": {
+    "title": "职业机会",
+    "description": "加入哦！大家庭",
+    "openPositions": "开放职位",
+    "applyNow": "立即申请"
+  },
+  "contact": {
+    "title": "联系我们",
+    "description": "我们很乐意听取您的意见",
+    "email": "电子邮件",
+    "phone": "电话",
+    "address": "地址",
+    "sendMessage": "发送消息"
+  },
+  "press": {
+    "title": "媒体专区",
+    "description": "哦！新闻报道",
+    "mediaKit": "媒体资料包",
+    "pressInquiries": "媒体咨询"
+  },
+  "privacy": {
+    "title": "隐私政策",
+    "lastUpdated": "最后更新"
+  },
+  "accessibility": {
+    "title": "无障碍服务",
+    "description": "我们对无障碍的承诺"
   }
 }

@@ -64,6 +64,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 Pods
               </Link>
               <Link
+                href="/pods/config"
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: "6px",
+                  textDecoration: "none",
+                  color: "#ec4899",
+                  fontSize: "0.875rem",
+                  fontWeight: 500,
+                }}
+              >
+                Pod Config
+              </Link>
+              <Link
                 href="/analytics"
                 style={{
                   padding: "8px 12px",

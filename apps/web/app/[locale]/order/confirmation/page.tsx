@@ -15,6 +15,7 @@ function ConfirmationContent() {
   const [copied, setCopied] = useState(false);
   const [shareText, setShareText] = useState("");
   const [order, setOrder] = useState<any>(null);
+  const [canNativeShare, setCanNativeShare] = useState(false);
 
   // Fetch order details
   useEffect(() => {
@@ -43,6 +44,11 @@ function ConfirmationContent() {
       localStorage.setItem("activeOrderQrCode", order.orderQrCode);
     }
   }, [order?.orderQrCode]);
+
+  // Check for native share capability after hydration
+  useEffect(() => {
+    setCanNativeShare(typeof navigator !== "undefined" && !!navigator.share);
+  }, []);
 
   useEffect(() => {
     // Get user's referral code from localStorage
@@ -197,166 +203,6 @@ function ConfirmationContent() {
             ? "Payment processed successfully"
             : "Waiting for payment confirmation"}
         </p>
-
-        {/* Social Sharing Section */}
-        <div
-          style={{
-            background: "rgba(124, 122, 103, 0.1)",
-            border: "2px solid #7C7A67",
-            borderRadius: 12,
-            padding: 20,
-            marginBottom: 24,
-          }}
-        >
-          <div style={{ fontSize: "1.5rem", marginBottom: 8 }}>🎉</div>
-          <h3 style={{ margin: 0, marginBottom: 8, fontSize: "1.1rem" }}>
-            Share Your Order!
-          </h3>
-          <p
-            style={{
-              fontSize: "0.85rem",
-              color: "#666",
-              marginBottom: 16,
-              margin: 0,
-            }}
-          >
-            Spread the word and earn rewards
-          </p>
-
-          {/* Share Buttons */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(2, 1fr)",
-              gap: 8,
-              marginBottom: 12,
-            }}
-          >
-            <button
-              onClick={() => handleShare("twitter")}
-              style={{
-                padding: 12,
-                background: "#1DA1F2",
-                color: "white",
-                border: "none",
-                borderRadius: 8,
-                cursor: "pointer",
-                fontSize: "0.9rem",
-                fontWeight: "bold",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-              }}
-            >
-              <span style={{ fontSize: "1.2rem" }}>𝕏</span>
-              Twitter
-            </button>
-
-            <button
-              onClick={() => handleShare("facebook")}
-              style={{
-                padding: 12,
-                background: "#1877F2",
-                color: "white",
-                border: "none",
-                borderRadius: 8,
-                cursor: "pointer",
-                fontSize: "0.9rem",
-                fontWeight: "bold",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-              }}
-            >
-              <span style={{ fontSize: "1.2rem" }}>f</span>
-              Facebook
-            </button>
-
-            <button
-              onClick={() => handleShare("linkedin")}
-              style={{
-                padding: 12,
-                background: "#0A66C2",
-                color: "white",
-                border: "none",
-                borderRadius: 8,
-                cursor: "pointer",
-                fontSize: "0.9rem",
-                fontWeight: "bold",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-              }}
-            >
-              <span style={{ fontSize: "1.2rem" }}>in</span>
-              LinkedIn
-            </button>
-
-            <button
-              onClick={() => handleShare("copy")}
-              style={{
-                padding: 12,
-                background: copied ? "#22c55e" : "#6b7280",
-                color: "white",
-                border: "none",
-                borderRadius: 8,
-                cursor: "pointer",
-                fontSize: "0.9rem",
-                fontWeight: "bold",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-                transition: "background 0.2s",
-              }}
-            >
-              <span style={{ fontSize: "1.2rem" }}>{copied ? "✓" : "📋"}</span>
-              {copied ? "Copied!" : "Copy"}
-            </button>
-          </div>
-
-          {/* Native Share Button (Mobile) */}
-          {typeof window !== "undefined" &&
-            typeof navigator !== "undefined" &&
-            navigator.share && (
-              <button
-                onClick={handleNativeShare}
-                style={{
-                  width: "100%",
-                  padding: 12,
-                  background: "#7C7A67",
-                  color: "white",
-                  border: "none",
-                  borderRadius: 8,
-                  cursor: "pointer",
-                  fontSize: "0.9rem",
-                  fontWeight: "bold",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 8,
-                }}
-              >
-                <span style={{ fontSize: "1.2rem" }}>📤</span>
-                Share via...
-              </button>
-            )}
-
-          <p
-            style={{
-              fontSize: "0.75rem",
-              color: "#666",
-              marginTop: 12,
-              marginBottom: 0,
-            }}
-          >
-            💡 Your referral link is included! Friends get $5 off their first order.
-            You earn $5 when they order $20+ (credited on the 1st or 16th).
-          </p>
-        </div>
 
         {/* Order QR Code Section - For Check-In at Location */}
         {order?.orderQrCode && !order?.arrivedAt && (
@@ -720,6 +566,166 @@ function ConfirmationContent() {
           >
             Order Again
           </button>
+
+          {/* Social Sharing Section */}
+          <div
+            style={{
+              background: "rgba(124, 122, 103, 0.1)",
+              border: "2px solid #7C7A67",
+              borderRadius: 12,
+              padding: 20,
+              marginTop: 12,
+            }}
+          >
+            <div style={{ fontSize: "1.5rem", marginBottom: 8, textAlign: "center" }}>🎉</div>
+            <h3 style={{ margin: 0, marginBottom: 8, fontSize: "1.1rem", textAlign: "center" }}>
+              Share Your Order!
+            </h3>
+            <p
+              style={{
+                fontSize: "0.85rem",
+                color: "#666",
+                marginBottom: 16,
+                margin: 0,
+                textAlign: "center",
+              }}
+            >
+              Spread the word and earn rewards
+            </p>
+
+            {/* Share Buttons */}
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(2, 1fr)",
+                gap: 8,
+                marginBottom: 12,
+              }}
+            >
+              <button
+                onClick={() => handleShare("twitter")}
+                style={{
+                  padding: 12,
+                  background: "#1DA1F2",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 8,
+                  cursor: "pointer",
+                  fontSize: "0.9rem",
+                  fontWeight: "bold",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                }}
+              >
+                <span style={{ fontSize: "1.2rem" }}>𝕏</span>
+                Twitter
+              </button>
+
+              <button
+                onClick={() => handleShare("facebook")}
+                style={{
+                  padding: 12,
+                  background: "#1877F2",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 8,
+                  cursor: "pointer",
+                  fontSize: "0.9rem",
+                  fontWeight: "bold",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                }}
+              >
+                <span style={{ fontSize: "1.2rem" }}>f</span>
+                Facebook
+              </button>
+
+              <button
+                onClick={() => handleShare("linkedin")}
+                style={{
+                  padding: 12,
+                  background: "#0A66C2",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 8,
+                  cursor: "pointer",
+                  fontSize: "0.9rem",
+                  fontWeight: "bold",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                }}
+              >
+                <span style={{ fontSize: "1.2rem" }}>in</span>
+                LinkedIn
+              </button>
+
+              <button
+                onClick={() => handleShare("copy")}
+                style={{
+                  padding: 12,
+                  background: copied ? "#22c55e" : "#6b7280",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 8,
+                  cursor: "pointer",
+                  fontSize: "0.9rem",
+                  fontWeight: "bold",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  transition: "background 0.2s",
+                }}
+              >
+                <span style={{ fontSize: "1.2rem" }}>{copied ? "✓" : "📋"}</span>
+                {copied ? "Copied!" : "Copy"}
+              </button>
+            </div>
+
+            {/* Native Share Button (Mobile) */}
+            {canNativeShare && (
+              <button
+                onClick={handleNativeShare}
+                style={{
+                  width: "100%",
+                  padding: 12,
+                  background: "#7C7A67",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 8,
+                  cursor: "pointer",
+                  fontSize: "0.9rem",
+                  fontWeight: "bold",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                }}
+              >
+                <span style={{ fontSize: "1.2rem" }}>📤</span>
+                Share via...
+              </button>
+            )}
+
+            <p
+              style={{
+                fontSize: "0.75rem",
+                color: "#666",
+                marginTop: 12,
+                marginBottom: 0,
+                textAlign: "center",
+              }}
+            >
+              💡 Your referral link is included! Friends get $5 off their first order.
+              You earn $5 when they order $20+ (credited on the 1st or 16th).
+            </p>
+          </div>
 
           <button
             onClick={() => router.push("/")}
