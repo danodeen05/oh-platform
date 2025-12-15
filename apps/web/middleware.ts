@@ -29,7 +29,11 @@ const isPublicRoute = createRouteMatcher([
   "/:locale/accessibility(.*)",
   "/:locale/tenants(.*)",
   "/:locale/pod(.*)",
+  "/:locale/kiosk(.*)",
 ]);
+
+// Check if this is a kiosk route
+const isKioskRoute = createRouteMatcher(["/:locale/kiosk(.*)"]);
 
 export default clerkMiddleware(async (auth, request: NextRequest) => {
   // Run the intl middleware first to handle locale routing
@@ -40,12 +44,17 @@ export default clerkMiddleware(async (auth, request: NextRequest) => {
     await auth.protect();
   }
 
+  // Set x-pathname header for kiosk detection in layout
+  if (isKioskRoute(request)) {
+    response.headers.set("x-pathname", request.nextUrl.pathname);
+  }
+
   return response;
 });
 
 export const config = {
   matcher: [
     // Match all paths except static files and API routes
-    "/((?!_next|api|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    "/((?!_next|api|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest|mp4|webm|ogg|mov)).*)",
   ],
 };
