@@ -3,9 +3,16 @@ import Link from "next/link";
 export default function HomePage() {
   return (
     <main style={{ padding: "48px", maxWidth: "1200px", margin: "0 auto" }}>
-      <h1 style={{ fontSize: "2.5rem", marginBottom: "8px" }}>
-        Oh Platform Admin
-      </h1>
+      <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "8px" }}>
+        <img
+          src="/Oh_Logo_Mark_Web.png"
+          alt="Oh!"
+          style={{ height: "56px", width: "auto" }}
+        />
+        <h1 style={{ fontSize: "2.5rem", margin: 0 }}>
+          Admin Portal
+        </h1>
+      </div>
       <p style={{ color: "#666", marginBottom: "48px", fontSize: "1.1rem" }}>
         Manage your restaurant operations
       </p>
