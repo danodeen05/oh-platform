@@ -20,7 +20,7 @@
   },
   "home": {
     "brandName": "哦！牛肉麵",
-    "tagline": "唯一一家專為您打造的餐廳。",
+    "tagline": "唯一一家專為<bold>您</bold>打造的餐廳。",
     "features": {
       "recipe": {
         "title": "30年傳承配方",

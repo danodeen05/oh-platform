@@ -12,6 +12,9 @@ out
 build
 dist
 
+# Clerk keyless mode cache (never commit - contains secrets)
+.clerk
+
 # debug
 npm-debug.log*
 yarn-debug.log*

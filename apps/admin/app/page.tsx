@@ -37,7 +37,7 @@ export default function HomePage() {
         </Link>
 
         <Link
-          href="/pods"
+          href="/cleaning"
           style={{
             padding: "32px",
             background: "white",
@@ -49,47 +49,9 @@ export default function HomePage() {
           }}
         >
           <div style={{ fontSize: "2.5rem", marginBottom: "16px" }}>🧹</div>
-          <h2 style={{ fontSize: "1.5rem", marginBottom: "8px" }}>Cleaning Management</h2>
+          <h2 style={{ fontSize: "1.5rem", marginBottom: "8px" }}>Cleaning</h2>
           <p style={{ color: "#666", fontSize: "0.95rem" }}>
             Track pod cleaning and customer service
-          </p>
-        </Link>
-
-        <Link
-          href="/analytics"
-          style={{
-            padding: "32px",
-            background: "linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)",
-            border: "2px solid #1e40af",
-            borderRadius: "12px",
-            textDecoration: "none",
-            color: "white",
-            transition: "all 0.2s",
-          }}
-        >
-          <div style={{ fontSize: "2.5rem", marginBottom: "16px" }}>📊</div>
-          <h2 style={{ fontSize: "1.5rem", marginBottom: "8px" }}>Analytics Dashboard</h2>
-          <p style={{ opacity: 0.9, fontSize: "0.95rem" }}>
-            Revenue, operations, customers, and menu insights
-          </p>
-        </Link>
-
-        <Link
-          href="/menu"
-          style={{
-            padding: "32px",
-            background: "white",
-            border: "2px solid #e5e7eb",
-            borderRadius: "12px",
-            textDecoration: "none",
-            color: "inherit",
-            transition: "all 0.2s",
-          }}
-        >
-          <div style={{ fontSize: "2.5rem", marginBottom: "16px" }}>🍜</div>
-          <h2 style={{ fontSize: "1.5rem", marginBottom: "8px" }}>Menu Management</h2>
-          <p style={{ color: "#666", fontSize: "0.95rem" }}>
-            Add, edit, and manage menu items
           </p>
         </Link>
 
@@ -113,7 +75,7 @@ export default function HomePage() {
         </Link>
 
         <Link
-          href="/tenants"
+          href="/menu"
           style={{
             padding: "32px",
             background: "white",
@@ -124,10 +86,29 @@ export default function HomePage() {
             transition: "all 0.2s",
           }}
         >
-          <div style={{ fontSize: "2.5rem", marginBottom: "16px" }}>🏢</div>
-          <h2 style={{ fontSize: "1.5rem", marginBottom: "8px" }}>Tenants</h2>
+          <div style={{ fontSize: "2.5rem", marginBottom: "16px" }}>🍜</div>
+          <h2 style={{ fontSize: "1.5rem", marginBottom: "8px" }}>Menu Management</h2>
           <p style={{ color: "#666", fontSize: "0.95rem" }}>
-            Multi-tenant configuration
+            Add, edit, and manage menu items
+          </p>
+        </Link>
+
+        <Link
+          href="/analytics"
+          style={{
+            padding: "32px",
+            background: "linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)",
+            border: "2px solid #1e40af",
+            borderRadius: "12px",
+            textDecoration: "none",
+            color: "white",
+            transition: "all 0.2s",
+          }}
+        >
+          <div style={{ fontSize: "2.5rem", marginBottom: "16px" }}>📊</div>
+          <h2 style={{ fontSize: "1.5rem", marginBottom: "8px" }}>Analytics Dashboard</h2>
+          <p style={{ opacity: 0.9, fontSize: "0.95rem" }}>
+            Revenue, operations, customers, and menu insights
           </p>
         </Link>
       </div>

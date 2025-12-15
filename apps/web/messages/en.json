@@ -20,7 +20,7 @@
   },
   "home": {
     "brandName": "Oh! Beef Noodle Soup",
-    "tagline": "The only restaurant built around you.",
+    "tagline": "The only restaurant built around <bold>you</bold>.",
     "features": {
       "recipe": {
         "title": "30-Year Recipe",

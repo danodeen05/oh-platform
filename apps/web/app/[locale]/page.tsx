@@ -1,6 +1,5 @@
 "use client";
 
-import { SignInButton, SignedIn, SignedOut } from "@clerk/nextjs";
 import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
 import { useState, useEffect } from "react";
@@ -99,7 +98,9 @@ export default function HomePage() {
             animation: "fadeInUp 1s ease 0.6s forwards",
           }}
         >
-          {t("tagline")}
+          {t.rich("tagline", {
+            bold: (chunks) => <strong style={{ fontWeight: "600" }}>{chunks}</strong>
+          })}
         </p>
 
         <p
@@ -123,64 +124,32 @@ export default function HomePage() {
             animation: "fadeInUp 1s ease 1s forwards",
           }}
         >
-          <SignedOut>
-            <SignInButton mode="modal">
-              <button
-                style={{
-                  padding: "20px 64px",
-                  fontSize: "1.1rem",
-                  fontWeight: "500",
-                  background: "linear-gradient(135deg, #C7A878 0%, #B8956A 100%)",
-                  color: "#ffffff",
-                  borderRadius: "50px",
-                  border: "none",
-                  cursor: "pointer",
-                  transition: "all 0.4s ease",
-                  letterSpacing: "2px",
-                  boxShadow: "0 8px 30px rgba(199, 168, 120, 0.35)",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = "translateY(-3px)";
-                  e.currentTarget.style.boxShadow = "0 12px 40px rgba(199, 168, 120, 0.45)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = "translateY(0)";
-                  e.currentTarget.style.boxShadow = "0 8px 30px rgba(199, 168, 120, 0.35)";
-                }}
-              >
-                {tCommon("signInToOrder")}
-              </button>
-            </SignInButton>
-          </SignedOut>
-
-          <SignedIn>
-            <Link
-              href={`/${locale}/order`}
-              style={{
-                padding: "20px 64px",
-                fontSize: "1.1rem",
-                fontWeight: "500",
-                background: "linear-gradient(135deg, #C7A878 0%, #B8956A 100%)",
-                color: "#ffffff",
-                borderRadius: "50px",
-                textDecoration: "none",
-                transition: "all 0.4s ease",
-                display: "inline-block",
-                letterSpacing: "2px",
-                boxShadow: "0 8px 30px rgba(199, 168, 120, 0.35)",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = "translateY(-3px)";
-                e.currentTarget.style.boxShadow = "0 12px 40px rgba(199, 168, 120, 0.45)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = "0 8px 30px rgba(199, 168, 120, 0.35)";
-              }}
-            >
-              {tCommon("orderNow")}
-            </Link>
-          </SignedIn>
+          <Link
+            href={`/${locale}/order`}
+            style={{
+              padding: "20px 64px",
+              fontSize: "1.1rem",
+              fontWeight: "500",
+              background: "linear-gradient(135deg, #C7A878 0%, #B8956A 100%)",
+              color: "#ffffff",
+              borderRadius: "50px",
+              textDecoration: "none",
+              transition: "all 0.4s ease",
+              display: "inline-block",
+              letterSpacing: "2px",
+              boxShadow: "0 8px 30px rgba(199, 168, 120, 0.35)",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-3px)";
+              e.currentTarget.style.boxShadow = "0 12px 40px rgba(199, 168, 120, 0.45)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.boxShadow = "0 8px 30px rgba(199, 168, 120, 0.35)";
+            }}
+          >
+            {tCommon("orderNow")}
+          </Link>
         </div>
 
         {/* Scroll indicator */}
@@ -574,7 +543,7 @@ export default function HomePage() {
             }}
           >
             <img
-              src="/pod.PNG"
+              src="/pod.png"
               alt="Private dining pod at Oh!"
               style={{
                 width: "100%",
@@ -1004,64 +973,32 @@ export default function HomePage() {
             Step into your private pod, savor premium beef noodle soup, and discover why dining at Oh! is unlike anything else.
           </p>
 
-          <SignedOut>
-            <SignInButton mode="modal">
-              <button
-                style={{
-                  padding: "20px 64px",
-                  fontSize: "1.1rem",
-                  fontWeight: "500",
-                  background: "linear-gradient(135deg, #C7A878 0%, #B8956A 100%)",
-                  color: "#ffffff",
-                  borderRadius: "50px",
-                  border: "none",
-                  cursor: "pointer",
-                  transition: "all 0.4s ease",
-                  letterSpacing: "2px",
-                  boxShadow: "0 8px 30px rgba(199, 168, 120, 0.35)",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = "translateY(-3px)";
-                  e.currentTarget.style.boxShadow = "0 12px 40px rgba(199, 168, 120, 0.45)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = "translateY(0)";
-                  e.currentTarget.style.boxShadow = "0 8px 30px rgba(199, 168, 120, 0.35)";
-                }}
-              >
-                START YOUR ORDER
-              </button>
-            </SignInButton>
-          </SignedOut>
-
-          <SignedIn>
-            <Link
-              href={`/${locale}/order`}
-              style={{
-                padding: "20px 64px",
-                fontSize: "1.1rem",
-                fontWeight: "500",
-                background: "linear-gradient(135deg, #C7A878 0%, #B8956A 100%)",
-                color: "#ffffff",
-                borderRadius: "50px",
-                textDecoration: "none",
-                transition: "all 0.4s ease",
-                display: "inline-block",
-                letterSpacing: "2px",
-                boxShadow: "0 8px 30px rgba(199, 168, 120, 0.35)",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = "translateY(-3px)";
-                e.currentTarget.style.boxShadow = "0 12px 40px rgba(199, 168, 120, 0.45)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = "0 8px 30px rgba(199, 168, 120, 0.35)";
-              }}
-            >
-              START YOUR ORDER
-            </Link>
-          </SignedIn>
+          <Link
+            href={`/${locale}/order`}
+            style={{
+              padding: "20px 64px",
+              fontSize: "1.1rem",
+              fontWeight: "500",
+              background: "linear-gradient(135deg, #C7A878 0%, #B8956A 100%)",
+              color: "#ffffff",
+              borderRadius: "50px",
+              textDecoration: "none",
+              transition: "all 0.4s ease",
+              display: "inline-block",
+              letterSpacing: "2px",
+              boxShadow: "0 8px 30px rgba(199, 168, 120, 0.35)",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = "translateY(-3px)";
+              e.currentTarget.style.boxShadow = "0 12px 40px rgba(199, 168, 120, 0.45)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.boxShadow = "0 8px 30px rgba(199, 168, 120, 0.35)";
+            }}
+          >
+            START YOUR ORDER
+          </Link>
         </div>
       </section>
 

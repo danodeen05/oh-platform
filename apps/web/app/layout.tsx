@@ -1,5 +1,6 @@
 import { ClerkProvider } from "@clerk/nextjs";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
+import { GuestProvider } from "@/contexts/guest-context";
 import "./globals.css";
 
 export const metadata = {
@@ -38,7 +39,9 @@ export default function RootLayout({
             rel="stylesheet"
           />
         </head>
-        <body>{children}</body>
+        <body>
+          <GuestProvider>{children}</GuestProvider>
+        </body>
       </html>
     </ClerkProvider>
   );

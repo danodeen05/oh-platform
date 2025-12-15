@@ -57,11 +57,9 @@ export default function LanguageSwitcher() {
         }}
         aria-label="Select language"
       >
-        <span style={{ fontSize: "1rem" }}>🌐</span>
+        <span style={{ fontSize: "1rem", marginRight: "4px" }}>文A</span>
         <span>{localeNames[locale as Locale]}</span>
-        <span style={{ fontSize: "0.7rem", marginLeft: "2px" }}>
-          {isOpen ? "▲" : "▼"}
-        </span>
+        <span style={{ fontSize: "0.7rem", marginLeft: "4px" }}>▼</span>
       </button>
 
       {isOpen && (

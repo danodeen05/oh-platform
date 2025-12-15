@@ -1568,6 +1568,115 @@ app.patch("/seats/:id/clean", async (req, reply) => {
 });
 
 // ====================
+// DUAL POD CONFIGURATION
+// ====================
+
+// POST /seats/link-dual - Link two seats as a dual pod
+app.post("/seats/link-dual", async (req, reply) => {
+  const { seatId1, seatId2 } = req.body;
+
+  if (!seatId1 || !seatId2) {
+    return reply.code(400).send({ error: "Both seatId1 and seatId2 are required" });
+  }
+
+  if (seatId1 === seatId2) {
+    return reply.code(400).send({ error: "Cannot link a seat to itself" });
+  }
+
+  // Fetch both seats
+  const [seat1, seat2] = await Promise.all([
+    prisma.seat.findUnique({ where: { id: seatId1 } }),
+    prisma.seat.findUnique({ where: { id: seatId2 } }),
+  ]);
+
+  if (!seat1 || !seat2) {
+    return reply.code(404).send({ error: "One or both seats not found" });
+  }
+
+  // Check they're at the same location
+  if (seat1.locationId !== seat2.locationId) {
+    return reply.code(400).send({ error: "Seats must be at the same location" });
+  }
+
+  // Check neither is already linked
+  if (seat1.dualPartnerId || seat2.dualPartnerId) {
+    return reply.code(400).send({ error: "One or both seats are already linked to a partner" });
+  }
+
+  // Check neither is currently occupied
+  if (seat1.status === "OCCUPIED" || seat2.status === "OCCUPIED") {
+    return reply.code(400).send({ error: "Cannot link occupied seats" });
+  }
+
+  // Link them bidirectionally using a transaction
+  const [updatedSeat1, updatedSeat2] = await prisma.$transaction([
+    prisma.seat.update({
+      where: { id: seatId1 },
+      data: {
+        podType: "DUAL",
+        dualPartnerId: seatId2,
+      },
+    }),
+    prisma.seat.update({
+      where: { id: seatId2 },
+      data: {
+        podType: "DUAL",
+        dualPartnerId: seatId1,
+      },
+    }),
+  ]);
+
+  return { success: true, seat1: updatedSeat1, seat2: updatedSeat2 };
+});
+
+// POST /seats/unlink-dual - Unlink a dual pod
+app.post("/seats/unlink-dual", async (req, reply) => {
+  const { seatId } = req.body;
+
+  if (!seatId) {
+    return reply.code(400).send({ error: "seatId is required" });
+  }
+
+  const seat = await prisma.seat.findUnique({ where: { id: seatId } });
+
+  if (!seat) {
+    return reply.code(404).send({ error: "Seat not found" });
+  }
+
+  if (!seat.dualPartnerId) {
+    return reply.code(400).send({ error: "Seat is not part of a dual pod" });
+  }
+
+  const partnerId = seat.dualPartnerId;
+
+  // Check neither is currently occupied
+  const partner = await prisma.seat.findUnique({ where: { id: partnerId } });
+  if (seat.status === "OCCUPIED" || (partner && partner.status === "OCCUPIED")) {
+    return reply.code(400).send({ error: "Cannot unlink occupied seats" });
+  }
+
+  // Unlink both seats using a transaction
+  const [updatedSeat1, updatedSeat2] = await prisma.$transaction([
+    prisma.seat.update({
+      where: { id: seatId },
+      data: {
+        podType: "SINGLE",
+        dualPartnerId: null,
+      },
+    }),
+    prisma.seat.update({
+      where: { id: partnerId },
+      data: {
+        podType: "SINGLE",
+        dualPartnerId: null,
+      },
+    }),
+  ]);
+
+  return { success: true, seat1: updatedSeat1, seat2: updatedSeat2 };
+});
+
+// ====================
 // POD CALLS (Customer requesting staff assistance)
 // ====================
 
@@ -2144,7 +2253,7 @@ app.get("/orders/:id", async (req, reply) => {
 });
 
 app.post("/orders", async (req, reply) => {
-  const { locationId, tenantId, items, seatId, estimatedArrival, podSelectionMethod } =
+  const { locationId, tenantId, items, seatId, estimatedArrival, podSelectionMethod, userId, guestId, dualPartnerSeatId, isDualPod } =
     req.body || {};
 
   if (!locationId || !tenantId || !items || !items.length) {
@@ -2244,8 +2353,13 @@ app.post("/orders", async (req, reply) => {
       seatId,
       podSelectionMethod: seatId ? (podSelectionMethod || "CUSTOMER_SELECTED") : null,
       podAssignedAt: seatId ? new Date() : null,
+      // Dual pod data
+      dualPartnerSeatId: dualPartnerSeatId || null,
+      isDualPod: isDualPod || false,
       totalCents,
       estimatedArrival: estimatedArrival ? new Date(estimatedArrival) : null,
+      userId: userId || null,
+      guestId: guestId || null,
       items: {
         create: orderItems,
       },
@@ -2258,6 +2372,8 @@ app.post("/orders", async (req, reply) => {
       },
       seat: true,
       location: true,
+      guest: true,
+      user: true,
     },
   });
 
@@ -2267,7 +2383,7 @@ app.post("/orders", async (req, reply) => {
 // PATCH /orders/:id - Update order status
 app.patch("/orders/:id", async (req, reply) => {
   const { id } = req.params;
-  const { status, paymentStatus, userId, totalCents, estimatedArrival } = req.body || {};
+  const { status, paymentStatus, userId, guestId, totalCents, estimatedArrival } = req.body || {};
 
   const data = {};
   if (status) data.status = status;
@@ -2279,13 +2395,14 @@ app.patch("/orders/:id", async (req, reply) => {
     }
   }
   if (userId) data.userId = userId;
+  if (guestId) data.guestId = guestId;
   if (totalCents !== undefined) data.totalCents = totalCents;
   if (estimatedArrival) data.estimatedArrival = new Date(estimatedArrival);
 
   if (!Object.keys(data).length) {
     return reply
       .code(400)
-      .send({ error: "status, paymentStatus, userId, totalCents, or estimatedArrival required" });
+      .send({ error: "status, paymentStatus, userId, guestId, totalCents, or estimatedArrival required" });
   }
 
   // If setting payment to PAID, also set paidAt timestamp and reservation expiry
@@ -2311,10 +2428,17 @@ app.patch("/orders/:id", async (req, reply) => {
     const expiryTime = new Date();
     expiryTime.setMinutes(expiryTime.getMinutes() + 15);
 
-    // Reserve the seat and set expiry on the order
+    // Build list of seats to reserve - primary seat, plus partner if dual pod
+    const seatsToReserve = [order.seatId];
+    if (order.isDualPod && order.dualPartnerSeatId) {
+      seatsToReserve.push(order.dualPartnerSeatId);
+    }
+
+    // Reserve the seat(s) and set expiry on the order
     await Promise.all([
-      prisma.seat.update({
-        where: { id: order.seatId },
+      // Reserve all seats (primary + partner for dual pods)
+      prisma.seat.updateMany({
+        where: { id: { in: seatsToReserve } },
         data: { status: "RESERVED" },
       }),
       prisma.order.update({
@@ -2323,7 +2447,11 @@ app.patch("/orders/:id", async (req, reply) => {
       }),
     ]);
 
-    console.log(`Pod ${order.seat?.number} reserved for order ${order.kitchenOrderNumber}, expires at ${expiryTime.toISOString()}`);
+    if (order.isDualPod && order.dualPartnerSeatId) {
+      console.log(`Dual Pod ${order.seat?.number} (both seats) reserved for order ${order.kitchenOrderNumber}, expires at ${expiryTime.toISOString()}`);
+    } else {
+      console.log(`Pod ${order.seat?.number} reserved for order ${order.kitchenOrderNumber}, expires at ${expiryTime.toISOString()}`);
+    }
   }
 
   // If order just got paid, update user progress
@@ -2603,6 +2731,110 @@ app.get("/users/referral/:code", async (req, reply) => {
   });
   if (!user) return reply.code(404).send({ error: "Invalid referral code" });
   return { name: user.name, email: user.email };
+});
+
+// ====================
+// GUEST CHECKOUT
+// ====================
+
+// Helper to generate secure session token
+function generateSessionToken() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let token = '';
+  for (let i = 0; i < 64; i++) {
+    token += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return token;
+}
+
+// POST /guests - Create a guest session
+app.post("/guests", async (req, reply) => {
+  const { name, phone, email } = req.body || {};
+
+  // Name is required at checkout, but we can create a session first
+  const sessionToken = generateSessionToken();
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+  const guest = await prisma.guest.create({
+    data: {
+      name: name || "Guest", // Placeholder until checkout
+      phone: phone || null,
+      email: email || null,
+      sessionToken,
+      expiresAt,
+    },
+  });
+
+  return guest;
+});
+
+// GET /guests/session/:token - Get guest by session token
+app.get("/guests/session/:token", async (req, reply) => {
+  const { token } = req.params;
+
+  const guest = await prisma.guest.findUnique({
+    where: { sessionToken: token },
+  });
+
+  if (!guest) {
+    return reply.code(404).send({ error: "Guest session not found" });
+  }
+
+  // Check if session is expired
+  if (new Date() > guest.expiresAt) {
+    return reply.code(401).send({ error: "Guest session expired" });
+  }
+
+  return guest;
+});
+
+// PATCH /guests/:id - Update guest details (name, phone, email at checkout)
+app.patch("/guests/:id", async (req, reply) => {
+  const { id } = req.params;
+  const { name, phone, email } = req.body || {};
+
+  const data = {};
+  if (name) data.name = name;
+  if (phone !== undefined) data.phone = phone;
+  if (email !== undefined) data.email = email;
+
+  if (!Object.keys(data).length) {
+    return reply.code(400).send({ error: "No fields to update" });
+  }
+
+  const guest = await prisma.guest.update({
+    where: { id },
+    data,
+  });
+
+  return guest;
+});
+
+// POST /guests/session/refresh - Refresh an existing session
+app.post("/guests/session/refresh", async (req, reply) => {
+  const { sessionToken } = req.body || {};
+
+  if (!sessionToken) {
+    return reply.code(400).send({ error: "sessionToken required" });
+  }
+
+  const guest = await prisma.guest.findUnique({
+    where: { sessionToken },
+  });
+
+  if (!guest) {
+    return reply.code(404).send({ error: "Guest session not found" });
+  }
+
+  // Extend session by another 24 hours
+  const newExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+  const updatedGuest = await prisma.guest.update({
+    where: { id: guest.id },
+    data: { expiresAt: newExpiresAt },
+  });
+
+  return updatedGuest;
 });
 
 // Get user's credits and history
@@ -5774,6 +6006,553 @@ app.get("/analytics/upselling", async (req, reply) => {
     console.error("Upselling analytics error:", error);
     return reply.status(500).send({ error: "Failed to fetch upselling analytics" });
   }
+});
+
+// ====================
+// GROUP ORDERS
+// ====================
+
+// Helper to generate 6-character group code
+function generateGroupCode() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // No I, O, 0, 1 to avoid confusion
+  let code = "";
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
+// POST /group-orders - Create a new group order (host initiates)
+app.post("/group-orders", async (req, reply) => {
+  const { locationId, tenantId, hostUserId, hostGuestId, estimatedArrival } = req.body || {};
+
+  if (!locationId || !tenantId) {
+    return reply.code(400).send({ error: "locationId and tenantId required" });
+  }
+
+  if (!hostUserId && !hostGuestId) {
+    return reply.code(400).send({ error: "Either hostUserId or hostGuestId required" });
+  }
+
+  // Generate unique code (retry if collision)
+  let code;
+  let attempts = 0;
+  while (!code && attempts < 10) {
+    const candidate = generateGroupCode();
+    const existing = await prisma.groupOrder.findUnique({ where: { code: candidate } });
+    if (!existing) code = candidate;
+    attempts++;
+  }
+
+  if (!code) {
+    return reply.code(500).send({ error: "Failed to generate unique group code" });
+  }
+
+  // Set expiry to 30 minutes from now
+  const expiresAt = new Date();
+  expiresAt.setMinutes(expiresAt.getMinutes() + 30);
+
+  const groupOrder = await prisma.groupOrder.create({
+    data: {
+      code,
+      locationId,
+      tenantId,
+      hostUserId: hostUserId || null,
+      hostGuestId: hostGuestId || null,
+      estimatedArrival: estimatedArrival ? new Date(estimatedArrival) : null,
+      expiresAt,
+      status: "GATHERING",
+    },
+    include: {
+      location: true,
+      hostUser: true,
+      hostGuest: true,
+      orders: {
+        include: {
+          items: { include: { menuItem: true } },
+          user: true,
+          guest: true,
+        },
+      },
+    },
+  });
+
+  return groupOrder;
+});
+
+// GET /group-orders/:code - Get group order by code (for joining)
+app.get("/group-orders/:code", async (req, reply) => {
+  const { code } = req.params;
+
+  const groupOrder = await prisma.groupOrder.findUnique({
+    where: { code: code.toUpperCase() },
+    include: {
+      location: true,
+      hostUser: true,
+      hostGuest: true,
+      orders: {
+        include: {
+          items: { include: { menuItem: true } },
+          user: true,
+          guest: true,
+          seat: true,
+        },
+      },
+      memberUsers: true,
+      memberGuests: true,
+    },
+  });
+
+  if (!groupOrder) {
+    return reply.code(404).send({ error: "Group not found" });
+  }
+
+  // Check if expired
+  if (new Date() > groupOrder.expiresAt && groupOrder.status === "GATHERING") {
+    // Auto-cancel expired groups
+    await prisma.groupOrder.update({
+      where: { id: groupOrder.id },
+      data: { status: "CANCELLED" },
+    });
+    return reply.code(410).send({ error: "Group order has expired" });
+  }
+
+  return groupOrder;
+});
+
+// POST /group-orders/:code/join - Join a group order
+app.post("/group-orders/:code/join", async (req, reply) => {
+  const { code } = req.params;
+  const { userId, guestId } = req.body || {};
+
+  if (!userId && !guestId) {
+    return reply.code(400).send({ error: "Either userId or guestId required" });
+  }
+
+  const groupOrder = await prisma.groupOrder.findUnique({
+    where: { code: code.toUpperCase() },
+    include: {
+      orders: true,
+      memberUsers: true,
+      memberGuests: true,
+    },
+  });
+
+  if (!groupOrder) {
+    return reply.code(404).send({ error: "Group not found" });
+  }
+
+  // Check if can still join
+  if (groupOrder.status !== "GATHERING") {
+    return reply.code(400).send({ error: "Group is no longer accepting new members" });
+  }
+
+  if (new Date() > groupOrder.expiresAt) {
+    return reply.code(410).send({ error: "Group order has expired" });
+  }
+
+  // Check max group size (8 people)
+  const memberCount = groupOrder.orders.length + 1; // +1 for host
+  if (memberCount >= 8) {
+    return reply.code(400).send({ error: "Group is full (max 8 people)" });
+  }
+
+  // Add member to group
+  const updateData = {};
+  if (userId) {
+    // Check if already a member
+    const alreadyMember = groupOrder.memberUsers.some(u => u.id === userId);
+    if (!alreadyMember) {
+      updateData.memberUsers = { connect: { id: userId } };
+    }
+  } else if (guestId) {
+    const alreadyMember = groupOrder.memberGuests.some(g => g.id === guestId);
+    if (!alreadyMember) {
+      updateData.memberGuests = { connect: { id: guestId } };
+    }
+  }
+
+  const updated = await prisma.groupOrder.update({
+    where: { id: groupOrder.id },
+    data: updateData,
+    include: {
+      location: true,
+      hostUser: true,
+      hostGuest: true,
+      orders: {
+        include: {
+          items: { include: { menuItem: true } },
+          user: true,
+          guest: true,
+        },
+      },
+      memberUsers: true,
+      memberGuests: true,
+    },
+  });
+
+  return updated;
+});
+
+// PATCH /group-orders/:code - Update group order (host controls)
+app.patch("/group-orders/:code", async (req, reply) => {
+  const { code } = req.params;
+  const { status, paymentMethod, closedAt } = req.body || {};
+
+  const groupOrder = await prisma.groupOrder.findUnique({
+    where: { code: code.toUpperCase() },
+  });
+
+  if (!groupOrder) {
+    return reply.code(404).send({ error: "Group not found" });
+  }
+
+  const data = {};
+
+  // Close group (stop accepting new members)
+  if (status === "CLOSED" && groupOrder.status === "GATHERING") {
+    data.status = "CLOSED";
+    data.closedAt = new Date();
+  }
+
+  // Set payment method
+  if (paymentMethod && ["HOST_PAYS_ALL", "PAY_YOUR_OWN"].includes(paymentMethod)) {
+    data.paymentMethod = paymentMethod;
+  }
+
+  // Mark as paying
+  if (status === "PAYING" && (groupOrder.status === "CLOSED" || groupOrder.status === "GATHERING")) {
+    data.status = "PAYING";
+    if (!groupOrder.closedAt) {
+      data.closedAt = new Date();
+    }
+  }
+
+  // Mark as paid
+  if (status === "PAID") {
+    data.status = "PAID";
+    data.finalizedAt = new Date();
+  }
+
+  // Mark as partially paid
+  if (status === "PARTIALLY_PAID") {
+    data.status = "PARTIALLY_PAID";
+  }
+
+  // Cancel group
+  if (status === "CANCELLED") {
+    data.status = "CANCELLED";
+  }
+
+  const updated = await prisma.groupOrder.update({
+    where: { id: groupOrder.id },
+    data,
+    include: {
+      location: true,
+      hostUser: true,
+      hostGuest: true,
+      orders: {
+        include: {
+          items: { include: { menuItem: true } },
+          user: true,
+          guest: true,
+        },
+      },
+      memberUsers: true,
+      memberGuests: true,
+    },
+  });
+
+  return updated;
+});
+
+// POST /group-orders/:code/orders - Add an order to a group
+app.post("/group-orders/:code/orders", async (req, reply) => {
+  const { code } = req.params;
+  const { items, userId, guestId } = req.body || {};
+
+  if (!items || !items.length) {
+    return reply.code(400).send({ error: "items required" });
+  }
+
+  if (!userId && !guestId) {
+    return reply.code(400).send({ error: "Either userId or guestId required" });
+  }
+
+  const groupOrder = await prisma.groupOrder.findUnique({
+    where: { code: code.toUpperCase() },
+    include: { orders: true },
+  });
+
+  if (!groupOrder) {
+    return reply.code(404).send({ error: "Group not found" });
+  }
+
+  if (groupOrder.status !== "GATHERING" && groupOrder.status !== "CLOSED") {
+    return reply.code(400).send({ error: "Cannot add orders to this group" });
+  }
+
+  // Calculate total for this order
+  const menuItems = await prisma.menuItem.findMany({
+    where: { id: { in: items.map((item) => item.menuItemId) } },
+  });
+
+  function calculateItemPrice(menuItem, quantity) {
+    if (quantity <= menuItem.includedQuantity) return 0;
+    if (menuItem.includedQuantity > 0) {
+      const extraQuantity = quantity - menuItem.includedQuantity;
+      return menuItem.basePriceCents + menuItem.additionalPriceCents * (extraQuantity - 1);
+    }
+    return menuItem.basePriceCents + menuItem.additionalPriceCents * (quantity - 1);
+  }
+
+  let totalCents = 0;
+  const orderItems = items.map((item) => {
+    const menuItem = menuItems.find((m) => m.id === item.menuItemId);
+    if (!menuItem) throw new Error(`Menu item ${item.menuItemId} not found`);
+
+    const itemTotal = calculateItemPrice(menuItem, item.quantity);
+    totalCents += itemTotal;
+
+    return {
+      menuItemId: item.menuItemId,
+      quantity: item.quantity,
+      priceCents: itemTotal,
+      selectedValue: item.selectedValue || null,
+    };
+  });
+
+  // Generate order numbers
+  const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+  const orderQrCode = `ORDER-${groupOrder.locationId.slice(-8)}-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+
+  // Check if this is the host's order - ensure boolean (not null/undefined)
+  const isHost = Boolean((userId && userId === groupOrder.hostUserId) || (guestId && guestId === groupOrder.hostGuestId));
+
+  const order = await prisma.order.create({
+    data: {
+      orderNumber,
+      orderQrCode,
+      tenant: { connect: { id: groupOrder.tenantId } },
+      location: { connect: { id: groupOrder.locationId } },
+      totalCents,
+      ...(userId ? { user: { connect: { id: userId } } } : {}),
+      ...(guestId ? { guest: { connect: { id: guestId } } } : {}),
+      groupOrder: { connect: { id: groupOrder.id } },
+      isGroupHost: isHost,
+      estimatedArrival: groupOrder.estimatedArrival,
+      items: {
+        create: orderItems,
+      },
+    },
+    include: {
+      items: { include: { menuItem: true } },
+      user: true,
+      guest: true,
+    },
+  });
+
+  return order;
+});
+
+// DELETE /group-orders/:code/orders/:orderId - Remove an order from a group
+app.delete("/group-orders/:code/orders/:orderId", async (req, reply) => {
+  const { code, orderId } = req.params;
+
+  const groupOrder = await prisma.groupOrder.findUnique({
+    where: { code: code.toUpperCase() },
+  });
+
+  if (!groupOrder) {
+    return reply.code(404).send({ error: "Group not found" });
+  }
+
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+  });
+
+  if (!order) {
+    return reply.code(404).send({ error: "Order not found" });
+  }
+
+  if (order.groupOrderId !== groupOrder.id) {
+    return reply.code(400).send({ error: "Order does not belong to this group" });
+  }
+
+  // Can only delete if not yet paid
+  if (order.paymentStatus === "PAID") {
+    return reply.code(400).send({ error: "Cannot delete paid orders" });
+  }
+
+  // Delete order items first, then the order
+  await prisma.orderItem.deleteMany({ where: { orderId } });
+  await prisma.order.delete({ where: { id: orderId } });
+
+  return { success: true };
+});
+
+// POST /group-orders/:code/transfer-host - Transfer host role to another member
+app.post("/group-orders/:code/transfer-host", async (req, reply) => {
+  const { code } = req.params;
+  const { newHostUserId, newHostGuestId } = req.body || {};
+
+  if (!newHostUserId && !newHostGuestId) {
+    return reply.code(400).send({ error: "Either newHostUserId or newHostGuestId required" });
+  }
+
+  const groupOrder = await prisma.groupOrder.findUnique({
+    where: { code: code.toUpperCase() },
+    include: { orders: true },
+  });
+
+  if (!groupOrder) {
+    return reply.code(404).send({ error: "Group not found" });
+  }
+
+  // Verify new host has an order in the group
+  const newHostOrder = groupOrder.orders.find(o =>
+    (newHostUserId && o.userId === newHostUserId) ||
+    (newHostGuestId && o.guestId === newHostGuestId)
+  );
+
+  if (!newHostOrder) {
+    return reply.code(400).send({ error: "New host must have an order in the group" });
+  }
+
+  // Update host
+  const updated = await prisma.groupOrder.update({
+    where: { id: groupOrder.id },
+    data: {
+      hostUserId: newHostUserId || null,
+      hostGuestId: newHostGuestId || null,
+    },
+    include: {
+      location: true,
+      hostUser: true,
+      hostGuest: true,
+      orders: {
+        include: {
+          items: { include: { menuItem: true } },
+          user: true,
+          guest: true,
+        },
+      },
+    },
+  });
+
+  // Update isGroupHost flag on orders
+  await prisma.order.updateMany({
+    where: { groupOrderId: groupOrder.id },
+    data: { isGroupHost: false },
+  });
+  await prisma.order.update({
+    where: { id: newHostOrder.id },
+    data: { isGroupHost: true },
+  });
+
+  return updated;
+});
+
+// POST /group-orders/:code/complete - Complete group order and notify kitchen/cleaning
+app.post("/group-orders/:code/complete", async (req, reply) => {
+  const { code } = req.params;
+  const { seatIds, seatingOption } = req.body || {};
+
+  const groupOrder = await prisma.groupOrder.findUnique({
+    where: { code: code.toUpperCase() },
+    include: {
+      orders: {
+        include: {
+          items: { include: { menuItem: true } },
+          user: true,
+          guest: true,
+        },
+      },
+      location: true,
+    },
+  });
+
+  if (!groupOrder) {
+    return reply.code(404).send({ error: "Group not found" });
+  }
+
+  // If group is already PAID and all orders are QUEUED, return success (idempotent)
+  if (groupOrder.status === "PAID") {
+    const allQueued = groupOrder.orders.every(o => o.status === "QUEUED");
+    if (allQueued) {
+      console.log(`[Group Order Already Complete] Code: ${groupOrder.code} - returning existing data`);
+      return groupOrder;
+    }
+  }
+
+  // Verify all orders are paid (check paymentStatus, not status - status changes to QUEUED when paid)
+  const allPaid = groupOrder.orders.every(o => o.paymentStatus === "PAID");
+  if (!allPaid) {
+    return reply.code(400).send({ error: "Not all orders are paid" });
+  }
+
+  // Update group status to PAID
+  const updatedGroup = await prisma.groupOrder.update({
+    where: { id: groupOrder.id },
+    data: { status: "PAID" },
+    include: {
+      orders: {
+        include: {
+          items: { include: { menuItem: true } },
+          user: true,
+          guest: true,
+        },
+      },
+      location: true,
+    },
+  });
+
+  const now = new Date();
+
+  // If seat IDs provided, reserve them and assign to orders
+  if (seatIds && seatIds.length > 0) {
+    for (let i = 0; i < seatIds.length && i < groupOrder.orders.length; i++) {
+      const seatId = seatIds[i];
+      const order = groupOrder.orders[i];
+
+      // Reserve the seat
+      await prisma.seat.update({
+        where: { id: seatId },
+        data: {
+          status: "RESERVED",
+          reservedUntil: new Date(Date.now() + 30 * 60 * 1000), // 30 min reservation
+        },
+      });
+
+      // Assign seat to order and queue it for kitchen
+      await prisma.order.update({
+        where: { id: order.id },
+        data: {
+          seatId: seatId,
+          podSelectionMethod: "GROUP_HOST_SELECTED",
+          status: "QUEUED",
+          queuedAt: now,
+          paidAt: order.paidAt || now,
+        },
+      });
+    }
+  } else {
+    // No seats provided - still queue orders for kitchen
+    for (const order of groupOrder.orders) {
+      await prisma.order.update({
+        where: { id: order.id },
+        data: {
+          status: "QUEUED",
+          queuedAt: now,
+          paidAt: order.paidAt || now,
+        },
+      });
+    }
+  }
+
+  console.log(`[Group Order Completed] Code: ${groupOrder.code}, Orders: ${groupOrder.orders.length}, Seating Option: ${seatingOption}, Kitchen notified`);
+
+  return updatedGroup;
 });
 
 // ====================

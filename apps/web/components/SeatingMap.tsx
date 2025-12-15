@@ -1,7 +1,5 @@
 "use client";
 
-import { useState } from "react";
-
 export interface Seat {
   id: string;
   number: string;
@@ -9,6 +7,8 @@ export interface Seat {
   side: "left" | "bottom" | "right";
   row: number;
   col: number;
+  podType?: "SINGLE" | "DUAL";
+  dualPartnerId?: string | null;
 }
 
 interface SeatingMapProps {
@@ -16,6 +16,7 @@ interface SeatingMapProps {
   selectedSeatId?: string | null;
   onSelectSeat: (seat: Seat) => void;
   disabled?: boolean;
+  groupSize?: number; // Number of people in the order/group - determines if dual pods are selectable
 }
 
 export default function SeatingMap({
@@ -23,7 +24,40 @@ export default function SeatingMap({
   selectedSeatId,
   onSelectSeat,
   disabled = false,
+  groupSize = 1,
 }: SeatingMapProps) {
+  // Helper to check if a seat is part of a dual pod (either it points to a partner, or another seat points to it)
+  const isDualPod = (seat: Seat) => {
+    if (seat.podType !== "DUAL") return false;
+    // Check if this seat has a partner reference
+    if (seat.dualPartnerId) return true;
+    // Check if another seat points to this one
+    return seats.some(s => s.dualPartnerId === seat.id);
+  };
+
+  // Helper to get partner seat (works both directions)
+  const getPartner = (seat: Seat) => {
+    // If this seat has a partner reference, use it
+    if (seat.dualPartnerId) {
+      return seats.find(s => s.id === seat.dualPartnerId);
+    }
+    // Otherwise, find the seat that points to this one
+    return seats.find(s => s.dualPartnerId === seat.id);
+  };
+
+  // For dual pods, check if the dual pod can be selected (groupSize must be 2)
+  const canSelectDualPod = groupSize === 2;
+
+  // Check if a seat should be hidden (it's the secondary seat of a dual pod pair)
+  // The secondary seat is the one that does NOT have the dualPartnerId set (it's pointed TO)
+  const shouldHideSeat = (seat: Seat) => {
+    if (seat.podType !== "DUAL") return false;
+    // If this seat has the dualPartnerId, it's the primary - don't hide it
+    if (seat.dualPartnerId) return false;
+    // If another seat points to this one, this is the secondary - hide it
+    return seats.some(s => s.dualPartnerId === seat.id);
+  };
+
   // Group seats by side
   // Left: top to bottom (col ascending)
   // Bottom: left to right (col ascending)
@@ -32,30 +66,53 @@ export default function SeatingMap({
   const bottomSeats = seats.filter((s) => s.side === "bottom").sort((a, b) => a.col - b.col);
   const rightSeats = seats.filter((s) => s.side === "right").sort((a, b) => b.col - a.col);
 
-  const getSeatStyle = (seat: Seat) => {
-    const isSelected = seat.id === selectedSeatId;
+  const getSeatStyle = (seat: Seat, isDual: boolean = false) => {
+    const isSelected = seat.id === selectedSeatId || (isDual && getPartner(seat)?.id === selectedSeatId);
     const isAvailable = seat.status === "AVAILABLE";
-    const isClickable = isAvailable && !disabled;
+    const partner = isDual ? getPartner(seat) : null;
+    const partnerAvailable = partner ? partner.status === "AVAILABLE" : true;
+    const bothAvailable = isAvailable && partnerAvailable;
+
+    // For dual pods: only clickable if groupSize is 2
+    // For single pods: clickable as normal
+    const canClick = bothAvailable && !disabled && (!isDual || canSelectDualPod);
 
     let backgroundColor = "#e5e7eb"; // gray - unavailable
     let borderColor = "#d1d5db";
     let textColor = "#9ca3af";
     let cursor = "not-allowed";
 
-    if (isAvailable) {
-      backgroundColor = "#dcfce7"; // green
-      borderColor = "#86efac";
-      textColor = "#166534";
-      cursor = disabled ? "not-allowed" : "pointer";
+    if (bothAvailable) {
+      if (isDual) {
+        // Dual pod available styling - cyan/teal theme
+        if (canSelectDualPod) {
+          backgroundColor = "#cffafe"; // cyan-100
+          borderColor = "#22d3ee"; // cyan-400
+          textColor = "#0e7490"; // cyan-700
+          cursor = disabled ? "not-allowed" : "pointer";
+        } else {
+          // Dual pod not selectable (wrong group size) - dimmed cyan
+          backgroundColor = "#ecfeff"; // cyan-50
+          borderColor = "#a5f3fc"; // cyan-200
+          textColor = "#0891b2"; // cyan-600
+          cursor = "not-allowed";
+        }
+      } else {
+        // Regular single pod available styling - green
+        backgroundColor = "#dcfce7"; // green
+        borderColor = "#86efac";
+        textColor = "#166534";
+        cursor = disabled ? "not-allowed" : "pointer";
+      }
     }
 
-    if (seat.status === "RESERVED") {
+    if (seat.status === "RESERVED" || (partner && partner.status === "RESERVED")) {
       backgroundColor = "#fef3c7"; // yellow
       borderColor = "#fcd34d";
       textColor = "#92400e";
     }
 
-    if (seat.status === "CLEANING") {
+    if (seat.status === "CLEANING" || (partner && partner.status === "CLEANING")) {
       backgroundColor = "#dbeafe"; // blue
       borderColor = "#93c5fd";
       textColor = "#1e40af";
@@ -67,15 +124,19 @@ export default function SeatingMap({
       textColor = "#ffffff";
     }
 
+    // Bottom dual pods should be horizontal, left/right dual pods should be vertical
+    const isBottomDual = isDual && seat.side === "bottom";
+
     return {
-      width: "60px",
-      height: "60px",
+      position: "relative" as const,
+      width: isDual ? (isBottomDual ? "120px" : "60px") : "60px",
+      height: isDual ? (isBottomDual ? "60px" : "120px") : "60px",
       borderRadius: "8px",
       border: `2px solid ${borderColor}`,
       backgroundColor,
       color: textColor,
       display: "flex",
-      flexDirection: "column" as const,
+      flexDirection: (isBottomDual ? "row" : "column") as const,
       alignItems: "center",
       justifyContent: "center",
       cursor,
@@ -83,36 +144,115 @@ export default function SeatingMap({
       fontWeight: isSelected ? "600" : "500",
       fontSize: "14px",
       opacity: disabled && !isSelected ? 0.7 : 1,
+      gap: isBottomDual ? "8px" : undefined,
     };
   };
 
   const handleSeatClick = (seat: Seat) => {
-    if (seat.status === "AVAILABLE" && !disabled) {
-      onSelectSeat(seat);
-    }
+    const isDual = isDualPod(seat);
+    const partner = isDual ? getPartner(seat) : null;
+    const bothAvailable = seat.status === "AVAILABLE" && (!partner || partner.status === "AVAILABLE");
+
+    if (!bothAvailable || disabled) return;
+
+    // For dual pods, only allow selection if groupSize is 2
+    if (isDual && !canSelectDualPod) return;
+
+    onSelectSeat(seat);
   };
 
-  const renderSeat = (seat: Seat) => (
-    <div
-      key={seat.id}
-      style={getSeatStyle(seat)}
-      onClick={() => handleSeatClick(seat)}
-      title={
-        seat.status === "AVAILABLE"
-          ? `Pod ${seat.number} - Available`
-          : `Pod ${seat.number} - ${seat.status}`
+  const renderSeat = (seat: Seat) => {
+    const isDual = isDualPod(seat);
+    const partner = isDual ? getPartner(seat) : null;
+
+    // Skip rendering the secondary seat of a dual pod (it's merged into the primary)
+    if (shouldHideSeat(seat)) {
+      return null;
+    }
+
+    // Generate title based on status and type
+    let title = `Pod ${seat.number}`;
+    if (isDual && partner) {
+      title = `Dual Pod ${seat.number} & ${partner.number}`;
+    }
+
+    const bothAvailable = seat.status === "AVAILABLE" && (!partner || partner.status === "AVAILABLE");
+    if (bothAvailable) {
+      if (isDual && !canSelectDualPod) {
+        title += " - Dual Pod (requires 2 guests)";
+      } else {
+        title += " - Available";
       }
-    >
-      <span style={{ fontSize: "16px", fontWeight: "bold" }}>{seat.number}</span>
-      {seat.status !== "AVAILABLE" && (
-        <span style={{ fontSize: "10px", marginTop: "2px" }}>
-          {seat.status === "RESERVED" && "Reserved"}
-          {seat.status === "OCCUPIED" && "In Use"}
-          {seat.status === "CLEANING" && "Cleaning"}
-        </span>
-      )}
-    </div>
-  );
+    } else {
+      const status = seat.status !== "AVAILABLE" ? seat.status : partner?.status;
+      title += ` - ${status}`;
+    }
+
+    return (
+      <div
+        key={seat.id}
+        style={getSeatStyle(seat, isDual)}
+        onClick={() => handleSeatClick(seat)}
+        title={title}
+      >
+        {isDual && partner ? (
+          // Combined dual pod display
+          // Bottom row: horizontal (left to right), Side columns: vertical
+          (() => {
+            const seatNum = parseInt(seat.number);
+            const partnerNum = parseInt(partner.number);
+            const isBottomRow = seat.side === "bottom";
+            const isRightSide = seat.side === "right";
+
+            // For bottom row (horizontal): lower number on left
+            // For right side (vertical): higher number on top
+            // For left side (vertical): lower number on top
+            let firstNum: string, secondNum: string;
+            if (isBottomRow) {
+              // Horizontal: lower number on left
+              firstNum = seatNum < partnerNum ? seat.number : partner.number;
+              secondNum = seatNum < partnerNum ? partner.number : seat.number;
+            } else if (isRightSide) {
+              // Vertical: higher number on top
+              firstNum = seatNum > partnerNum ? seat.number : partner.number;
+              secondNum = seatNum > partnerNum ? partner.number : seat.number;
+            } else {
+              // Left side vertical: lower number on top
+              firstNum = seatNum < partnerNum ? seat.number : partner.number;
+              secondNum = seatNum < partnerNum ? partner.number : seat.number;
+            }
+
+            return (
+              <>
+                <span style={{ fontSize: "16px", fontWeight: "bold" }}>{firstNum}</span>
+                <span style={{ fontSize: "9px", margin: isBottomRow ? "0 4px" : "4px 0" }}>Dual</span>
+                <span style={{ fontSize: "16px", fontWeight: "bold" }}>{secondNum}</span>
+                {!bothAvailable && (
+                  <span style={{ fontSize: "9px", marginTop: isBottomRow ? "0" : "4px", marginLeft: isBottomRow ? "4px" : "0" }}>
+                    {seat.status === "RESERVED" || partner.status === "RESERVED" ? "Reserved" : ""}
+                    {seat.status === "OCCUPIED" || partner.status === "OCCUPIED" ? "In Use" : ""}
+                    {seat.status === "CLEANING" || partner.status === "CLEANING" ? "Cleaning" : ""}
+                  </span>
+                )}
+              </>
+            );
+          })()
+        ) : (
+          // Regular single pod display
+          <>
+            <span style={{ fontSize: "16px", fontWeight: "bold" }}>{seat.number}</span>
+            {seat.status !== "AVAILABLE" && (
+              <span style={{ fontSize: "10px", marginTop: "2px" }}>
+                {seat.status === "RESERVED" && "Reserved"}
+                {seat.status === "OCCUPIED" && "In Use"}
+                {seat.status === "CLEANING" && "Cleaning"}
+              </span>
+            )}
+          </>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div style={{ padding: "20px" }}>
@@ -174,6 +314,18 @@ export default function SeatingMap({
           />
           <span style={{ fontSize: "12px", color: "#666" }}>Occupied</span>
         </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <div
+            style={{
+              width: "16px",
+              height: "32px",
+              borderRadius: "4px",
+              backgroundColor: "#cffafe",
+              border: "2px solid #22d3ee",
+            }}
+          />
+          <span style={{ fontSize: "12px", color: "#666" }}>Dual Pod</span>
+        </div>
       </div>
 
       {/* U-Shape Layout */}
@@ -183,7 +335,7 @@ export default function SeatingMap({
           flexDirection: "column",
           alignItems: "center",
           gap: "8px",
-          maxWidth: "400px",
+          maxWidth: "500px",
           margin: "0 auto",
         }}
       >
@@ -302,7 +454,19 @@ export default function SeatingMap({
         >
           <span style={{ color: "#666" }}>Selected: </span>
           <span style={{ fontWeight: "600", color: "#222" }}>
-            Pod {seats.find((s) => s.id === selectedSeatId)?.number}
+            {(() => {
+              const selectedSeat = seats.find((s) => s.id === selectedSeatId);
+              if (!selectedSeat) return "";
+              if (isDualPod(selectedSeat)) {
+                const partner = getPartner(selectedSeat);
+                if (partner) {
+                  const num1 = parseInt(selectedSeat.number);
+                  const num2 = parseInt(partner.number);
+                  return `Dual Pod ${Math.min(num1, num2).toString().padStart(2, '0')} & ${Math.max(num1, num2).toString().padStart(2, '0')}`;
+                }
+              }
+              return `Pod ${selectedSeat.number}`;
+            })()}
           </span>
         </div>
       )}

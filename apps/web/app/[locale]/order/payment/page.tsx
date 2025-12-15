@@ -1,8 +1,8 @@
 import PaymentForm from "./payment-form";
+import { API_URL } from "@/lib/api";
 
 async function getOrder(orderId: string) {
-  const base = process.env.NEXT_PUBLIC_API_URL!;
-  const res = await fetch(`${base}/orders/${orderId}`, {
+  const res = await fetch(`${API_URL}/orders/${orderId}`, {
     cache: "no-store",
     headers: { "x-tenant-slug": "oh" },
   });

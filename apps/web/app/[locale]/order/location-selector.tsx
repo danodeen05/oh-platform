@@ -1,6 +1,9 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
+import { API_URL } from "@/lib/api";
+import { useGuest } from "@/contexts/guest-context";
 
 type Location = {
   id: string;
@@ -9,6 +12,7 @@ type Location = {
   address: string;
   lat: number;
   lng: number;
+  tenantId: string;
   stats?: {
     availableSeats: number;
     totalSeats: number;
@@ -38,14 +42,19 @@ function calculateDistance(
 export default function LocationSelector({
   locations,
   referralCode,
+  groupMode = false,
 }: {
   locations: Location[];
   referralCode?: string;
+  groupMode?: boolean;
 }) {
   const router = useRouter();
+  const { user, isLoaded: userLoaded } = useUser();
+  const { guest, isGuest } = useGuest();
   const [userLat, setUserLat] = useState<number | null>(null);
   const [userLng, setUserLng] = useState<number | null>(null);
   const [sortedLocations, setSortedLocations] = useState(locations);
+  const [creatingGroup, setCreatingGroup] = useState(false);
 
   useEffect(() => {
     if (navigator.geolocation) {
@@ -72,19 +81,115 @@ export default function LocationSelector({
     }
   }, [userLat, userLng, locations]);
 
-  function selectLocation(locationId: string) {
+  async function selectLocation(location: Location) {
     // Store referral code in localStorage if provided
     if (referralCode) {
       console.log("Storing referral code:", referralCode);
       localStorage.setItem("pendingReferralCode", referralCode);
-    } else {
-      console.log("No referral code to store");
     }
-    router.push(`/order/location/${locationId}`);
+
+    // If in group mode, create a group order and redirect to lobby
+    if (groupMode) {
+      if (!userLoaded) return;
+
+      setCreatingGroup(true);
+      try {
+        let hostUserId: string | null = null;
+        let hostGuestId: string | null = null;
+
+        // If user is signed in with Clerk, get/create their database user ID
+        if (user?.primaryEmailAddress?.emailAddress) {
+          const userResponse = await fetch(`${API_URL}/users`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-tenant-slug": "oh",
+            },
+            body: JSON.stringify({
+              email: user.primaryEmailAddress.emailAddress,
+              name: user.fullName || user.firstName || undefined,
+            }),
+          });
+
+          if (userResponse.ok) {
+            const userData = await userResponse.json();
+            hostUserId = userData.id;
+            // Store for future use
+            localStorage.setItem("userId", userData.id);
+            localStorage.setItem("referralCode", userData.referralCode);
+          }
+        } else if (isGuest && guest?.id) {
+          // Use guest ID if in guest mode
+          hostGuestId = guest.id;
+        }
+
+        if (!hostUserId && !hostGuestId) {
+          alert("Please sign in or continue as guest to start a group order.");
+          setCreatingGroup(false);
+          return;
+        }
+
+        const response = await fetch(`${API_URL}/group-orders`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-tenant-slug": "oh",
+          },
+          body: JSON.stringify({
+            locationId: location.id,
+            tenantId: location.tenantId,
+            hostUserId,
+            hostGuestId,
+          }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          alert(error.error || "Failed to create group order");
+          setCreatingGroup(false);
+          return;
+        }
+
+        const groupOrder = await response.json();
+        // Redirect to the group lobby
+        router.push(`/group/${groupOrder.code}`);
+      } catch (error) {
+        console.error("Failed to create group order:", error);
+        alert("Failed to create group order. Please try again.");
+        setCreatingGroup(false);
+      }
+      return;
+    }
+
+    // Normal solo ordering flow
+    router.push(`/order/location/${location.id}`);
   }
 
   return (
     <div style={{ display: "grid", gap: 24 }}>
+      {/* Group mode header */}
+      {groupMode && (
+        <div
+          style={{
+            padding: 16,
+            background: "#fef3e2",
+            borderRadius: 8,
+            border: "1px solid #f9a825",
+            marginBottom: 8,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: "1.2rem" }}>👥</span>
+            <span style={{ fontWeight: 600, color: "#92400e" }}>
+              Starting a Group Order
+            </span>
+          </div>
+          <p style={{ color: "#b45309", fontSize: "0.9rem", margin: "8px 0 0" }}>
+            Select a location to create your group. Share the code with friends so they can add their orders!
+          </p>
+        </div>
+      )}
+
       {sortedLocations.map((loc: any) => {
         const availabilityPct = loc.stats
           ? (loc.stats.availableSeats / loc.stats.totalSeats) * 100
@@ -104,11 +209,13 @@ export default function LocationSelector({
         return (
           <div
             key={loc.id}
-            onClick={() => selectLocation(loc.id)}
+            onClick={() => !creatingGroup && selectLocation(loc)}
             style={{
-              border: "1px solid #e5e7eb",
+              border: groupMode ? "2px solid #7C7A67" : "1px solid #e5e7eb",
               borderRadius: 12,
               padding: 24,
+              opacity: creatingGroup ? 0.6 : 1,
+              pointerEvents: creatingGroup ? "none" : "auto",
               cursor: "pointer",
               transition: "all 0.2s",
               background: "white",

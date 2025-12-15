@@ -15,25 +15,26 @@ datasource db {
 // ==========================================
 
 model Tenant {
-  id            String   @id @default(cuid())
-  slug          String   @unique
-  brandName     String
-  logoUrl       String?
-  primaryColor  String   @default("#667eea")
-  domain        String?
-  
-  stripeAccountId      String?
-  subscriptionStatus   SubscriptionStatus @default(TRIAL)
-  subscriptionTier     String             @default("starter")
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
-  locations     Location[]
-  menuItems     MenuItem[]
-  orders        Order[]
-  users         TenantUser[]
-  transactions  PlatformTransaction[]
+  id           String  @id @default(cuid())
+  slug         String  @unique
+  brandName    String
+  logoUrl      String?
+  primaryColor String  @default("#667eea")
+  domain       String?
+
+  stripeAccountId    String?
+  subscriptionStatus SubscriptionStatus @default(TRIAL)
+  subscriptionTier   String             @default("starter")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  locations    Location[]
+  menuItems    MenuItem[]
+  orders       Order[]
+  users        TenantUser[]
+  transactions PlatformTransaction[]
+  groupOrders  GroupOrder[]
 }
 
 enum SubscriptionStatus {
@@ -45,15 +46,15 @@ enum SubscriptionStatus {
 }
 
 model TenantUser {
-  id        String     @id @default(cuid())
-  tenantId  String
-  tenant    Tenant     @relation(fields: [tenantId], references: [id])
-  
-  email     String
-  role      TenantRole @default(STAFF)
-  
-  createdAt DateTime   @default(now())
-  
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+
+  email String
+  role  TenantRole @default(STAFF)
+
+  createdAt DateTime @default(now())
+
   @@unique([tenantId, email])
 }
 
@@ -69,36 +70,37 @@ enum TenantRole {
 // ==========================================
 
 model Location {
-  id        String   @id @default(cuid())
-  tenantId  String
-  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
 
-  name      String
-  city      String
-  address   String
-  lat       Float
-  lng       Float
+  name    String
+  city    String
+  address String
+  lat     Float
+  lng     Float
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  seats      Seat[]
-  orders     Order[]
-  stats      LocationStats?
-  waitQueue  WaitQueue[]
+  seats       Seat[]
+  orders      Order[]
+  stats       LocationStats?
+  waitQueue   WaitQueue[]
+  groupOrders GroupOrder[]
 }
 
 model LocationStats {
-  id              String   @id @default(cuid())
-  locationId      String   @unique
-  location        Location @relation(fields: [locationId], references: [id])
-  
-  totalSeats      Int      @default(0)
-  availableSeats  Int      @default(0)
-  occupiedSeats   Int      @default(0)
-  avgWaitMinutes  Int      @default(0)
-  
-  updatedAt       DateTime @updatedAt
+  id         String   @id @default(cuid())
+  locationId String   @unique
+  location   Location @relation(fields: [locationId], references: [id])
+
+  totalSeats     Int @default(0)
+  availableSeats Int @default(0)
+  occupiedSeats  Int @default(0)
+  avgWaitMinutes Int @default(0)
+
+  updatedAt DateTime @updatedAt
 }
 
 // ==========================================
@@ -106,29 +108,29 @@ model LocationStats {
 // ==========================================
 
 model MenuItem {
-  id         String   @id @default(cuid())
-  tenantId   String
-  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
 
-  name       String
+  name String
 
   // Flexible pricing system
-  basePriceCents      Int      // Base price (can be $0 for included items)
-  additionalPriceCents Int     @default(0) // Price for extra servings
-  includedQuantity    Int      @default(0) // Number of servings included (1 for baby bok choy, 0 for others)
+  basePriceCents       Int // Base price (can be $0 for included items)
+  additionalPriceCents Int @default(0) // Price for extra servings
+  includedQuantity     Int @default(0) // Number of servings included (1 for baby bok choy, 0 for others)
 
-  category   String?  // e.g., "protein", "vegetables", "noodles", "main01", "slider01", etc.
+  category    String? // e.g., "protein", "vegetables", "noodles", "main01", "slider01", etc.
   description String?
-  isAvailable Boolean  @default(true)
+  isAvailable Boolean @default(true)
 
   // Enhanced menu organization
-  categoryType     CategoryType?  // Type of category (MAIN, SLIDER, ADDON, etc.)
-  selectionMode    SelectionMode  @default(MULTIPLE) // How users select this item
-  displayOrder     Int            @default(0) // Sort order within category
-  sliderConfig     Json?          // Slider metadata: {min, max, default, labels, step}
+  categoryType  CategoryType? // Type of category (MAIN, SLIDER, ADDON, etc.)
+  selectionMode SelectionMode @default(MULTIPLE) // How users select this item
+  displayOrder  Int           @default(0) // Sort order within category
+  sliderConfig  Json? // Slider metadata: {min, max, default, labels, step}
 
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   orderItems OrderItem[]
 }
@@ -143,10 +145,10 @@ enum CategoryType {
 }
 
 enum SelectionMode {
-  SINGLE      // Only one selection allowed (main01, main02)
-  MULTIPLE    // Multiple selections allowed (add-ons, sides, drinks)
-  SLIDER      // Slider control with levels (slider01-08)
-  INCLUDED    // Automatically included, can't be removed
+  SINGLE // Only one selection allowed (main01, main02)
+  MULTIPLE // Multiple selections allowed (add-ons, sides, drinks)
+  SLIDER // Slider control with levels (slider01-08)
+  INCLUDED // Automatically included, can't be removed
 }
 
 // ==========================================
@@ -154,27 +156,38 @@ enum SelectionMode {
 // ==========================================
 
 model Seat {
-  id         String     @id @default(cuid())
+  id         String   @id @default(cuid())
   locationId String
-  location   Location   @relation(fields: [locationId], references: [id])
+  location   Location @relation(fields: [locationId], references: [id])
 
-  number     String     // Pod number (e.g., "01", "02", "03")
-  qrCode     String     @unique // QR code for pod verification
-  status     SeatStatus @default(AVAILABLE)
+  number String // Pod number (e.g., "01", "02", "03")
+  qrCode String     @unique // QR code for pod verification
+  status SeatStatus @default(AVAILABLE)
 
   // Position in the seating layout (for visual map)
   // U-shape: left side (entrance), bottom, right side (exit)
-  row        Int        @default(0)  // 0=left, 1=bottom, 2=right
-  col        Int        @default(0)  // Position within the row
-  side       String     @default("left") // "left", "bottom", "right" for U-shape
+  row  Int    @default(0) // 0=left, 1=bottom, 2=right
+  col  Int    @default(0) // Position within the row
+  side String @default("left") // "left", "bottom", "right" for U-shape
 
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
+  // Dual Pod configuration (two adjacent pods that can be booked together)
+  podType       PodType @default(SINGLE)
+  dualPartnerId String? @unique // Reference to paired seat (bidirectional)
+  dualPartner   Seat?   @relation("DualPod", fields: [dualPartnerId], references: [id])
+  pairedWith    Seat?   @relation("DualPod")
 
-  orders     Order[]
-  podCalls   PodCall[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders   Order[]
+  podCalls PodCall[]
 
   @@unique([locationId, number]) // Ensure unique pod numbers per location
+}
+
+enum PodType {
+  SINGLE
+  DUAL
 }
 
 enum SeatStatus {
@@ -189,72 +202,85 @@ enum SeatStatus {
 // ==========================================
 
 model Order {
-  id              String      @id @default(cuid())
-  orderNumber     String      @unique // Long unique ID (e.g., "ORD-1764819716365-MI9K2P")
-  kitchenOrderNumber String?  // Daily sequential number (e.g., "0001", "0002")
-  orderQrCode     String?     @unique // QR code for customer to scan at kiosk and pod
-  status          OrderStatus @default(PENDING_PAYMENT)
+  id                 String      @id @default(cuid())
+  orderNumber        String      @unique // Long unique ID (e.g., "ORD-1764819716365-MI9K2P")
+  kitchenOrderNumber String? // Daily sequential number (e.g., "0001", "0002")
+  orderQrCode        String?     @unique // QR code for customer to scan at kiosk and pod
+  status             OrderStatus @default(PENDING_PAYMENT)
 
-  totalCents      Int
-  items           OrderItem[]
-  customizations  Json?
+  totalCents     Int
+  items          OrderItem[]
+  customizations Json?
 
-  fulfillmentType FulfillmentType @default(DINE_IN)
+  fulfillmentType  FulfillmentType @default(DINE_IN)
   estimatedArrival DateTime?
 
   // Lifecycle timestamps
-  paidAt          DateTime?    // When payment succeeded
-  arrivedAt       DateTime?    // When scanned at kiosk (check-in)
-  queuedAt        DateTime?    // When entered queue (if waiting for pod)
-  prepStartTime   DateTime?    // When kitchen started cooking
-  readyTime       DateTime?    // When food finished cooking
-  deliveredAt     DateTime?    // When food brought to table
-  completedTime   DateTime?    // When customer finished
-  podCleanedAt    DateTime?    // When pod was cleaned after customer left
+  paidAt        DateTime? // When payment succeeded
+  arrivedAt     DateTime? // When scanned at kiosk (check-in)
+  queuedAt      DateTime? // When entered queue (if waiting for pod)
+  prepStartTime DateTime? // When kitchen started cooking
+  readyTime     DateTime? // When food finished cooking
+  deliveredAt   DateTime? // When food brought to table
+  completedTime DateTime? // When customer finished
+  podCleanedAt  DateTime? // When pod was cleaned after customer left
 
   // Pod/Seat Assignment
-  seatId          String?
-  seat            Seat?        @relation(fields: [seatId], references: [id])
-  podAssignedAt   DateTime?    // When pod was assigned
-  podConfirmedAt  DateTime?    // When customer scanned QR to confirm pod
+  seatId               String?
+  seat                 Seat?     @relation(fields: [seatId], references: [id])
+  podAssignedAt        DateTime? // When pod was assigned
+  podConfirmedAt       DateTime? // When customer scanned QR to confirm pod
   podReservationExpiry DateTime? // When reservation expires if not confirmed
-  podSelectionMethod String?   // "AUTO" | "CUSTOMER_SELECTED" | "STAFF_ASSIGNED"
-  podReleasedAt   DateTime?    // When pod reservation was auto-released due to no-show
-  podReleasedNumber String?    // Which pod was released (for notification display)
+  podSelectionMethod   String? // "AUTO" | "CUSTOMER_SELECTED" | "STAFF_ASSIGNED"
+  podReleasedAt        DateTime? // When pod reservation was auto-released due to no-show
+  podReleasedNumber    String? // Which pod was released (for notification display)
+
+  // Dual Pod (2-person seating)
+  dualPartnerSeatId  String? // ID of the partner seat in a dual pod booking
+  isDualPod          Boolean @default(false) // Whether this order uses a dual pod
 
   // Queue Management
-  queuePosition   Int?         // Current position in queue
-  estimatedWaitMinutes Int?    // Estimated wait time
-  arrivalDeviation Int?        // Minutes early/late vs estimatedArrival
+  queuePosition        Int? // Current position in queue
+  estimatedWaitMinutes Int? // Estimated wait time
+  arrivalDeviation     Int? // Minutes early/late vs estimatedArrival
 
   // Notification tracking
-  notifiedAt      DateTime?    // When customer was notified of pod assignment
-  notificationMethod String?   // "PUSH" | "SMS" | "EMAIL"
+  notifiedAt         DateTime? // When customer was notified of pod assignment
+  notificationMethod String? // "PUSH" | "SMS" | "EMAIL"
 
-  locationId      String?
-  location        Location?    @relation(fields: [locationId], references: [id])
-  tenantId        String
-  tenant          Tenant       @relation(fields: [tenantId], references: [id])
+  locationId String?
+  location   Location? @relation(fields: [locationId], references: [id])
+  tenantId   String
+  tenant     Tenant    @relation(fields: [tenantId], references: [id])
 
-  userId          String?
-  user            User?        @relation(fields: [userId], references: [id])
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+
+  // Guest checkout (alternative to userId)
+  guestId String?
+  guest   Guest?  @relation(fields: [guestId], references: [id])
+
+  // Group order association
+  groupOrderId String?
+  groupOrder   GroupOrder? @relation(fields: [groupOrderId], references: [id])
+  isGroupHost  Boolean     @default(false)
 
   paymentStatus   PaymentStatus @default(PENDING)
   stripePaymentId String?
 
   // Child orders (add-ons placed after initial order)
-  parentOrderId   String?
-  parentOrder     Order?       @relation("OrderAddOns", fields: [parentOrderId], references: [id])
-  childOrders     Order[]      @relation("OrderAddOns")
-  addOnType       AddOnType?   // Type of add-on for kitchen display color coding
+  parentOrderId String?
+  parentOrder   Order?     @relation("OrderAddOns", fields: [parentOrderId], references: [id])
+  childOrders   Order[]    @relation("OrderAddOns")
+  addOnType     AddOnType? // Type of add-on for kitchen display color coding
 
-  podCalls        PodCall[]
+  podCalls PodCall[]
 
-  creditEvents    CreditEvent[]
-  waitQueueEntry  WaitQueue?
+  creditEvents   CreditEvent[]
+  waitQueueEntry WaitQueue?
 
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 enum OrderStatus {
@@ -263,16 +289,16 @@ enum OrderStatus {
   QUEUED
   PREPPING
   READY
-  SERVING      // Food delivered to table, customer eating
+  SERVING // Food delivered to table, customer eating
   COMPLETED
   CANCELLED
 }
 
 enum FulfillmentType {
-  DINE_IN     // Default - customer orders and dines in pod
-  PRE_ORDER   // Order placed before arrival (legacy)
-  WALK_IN     // Order placed at location (legacy)
-  PICKUP      // Pickup order (future feature)
+  DINE_IN // Default - customer orders and dines in pod
+  PRE_ORDER // Order placed before arrival (legacy)
+  WALK_IN // Order placed at location (legacy)
+  PICKUP // Pickup order (future feature)
 }
 
 enum PaymentStatus {
@@ -283,12 +309,12 @@ enum PaymentStatus {
 }
 
 model OrderItem {
-  id         String    @id @default(cuid())
-  orderId    String
-  order      Order     @relation(fields: [orderId], references: [id])
+  id      String @id @default(cuid())
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id])
 
   menuItemId String
-  menuItem   MenuItem  @relation(fields: [menuItemId], references: [id])
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
 
   quantity   Int
   priceCents Int
@@ -296,7 +322,78 @@ model OrderItem {
   // For slider items, store the display label (e.g., "Light", "Medium", "Rich")
   selectedValue String?
 
-  createdAt  DateTime  @default(now())
+  createdAt DateTime @default(now())
+}
+
+// ==========================================
+// GUESTS (Unauthenticated Checkout)
+// ==========================================
+
+model Guest {
+  id String @id @default(cuid())
+
+  name  String // Required at checkout
+  phone String? // Optional
+  email String? // Optional
+
+  sessionToken String   @unique // For cookie-based session
+  expiresAt    DateTime // Session expiry (24 hours from creation)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders            Order[]
+  groupOrdersAsHost GroupOrder[] @relation("GroupOrderHost")
+  groupOrders       GroupOrder[] @relation("GroupOrderMemberGuests")
+}
+
+// ==========================================
+// GROUP ORDERS
+// ==========================================
+
+model GroupOrder {
+  id   String @id @default(cuid())
+  code String @unique // 6-character shareable code
+
+  // Host can be either a registered user or a guest
+  hostUserId  String?
+  hostUser    User?   @relation("GroupOrderHost", fields: [hostUserId], references: [id])
+  hostGuestId String?
+  hostGuest   Guest?  @relation("GroupOrderHost", fields: [hostGuestId], references: [id])
+
+  locationId String
+  location   Location @relation(fields: [locationId], references: [id])
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+
+  status        GroupOrderStatus    @default(GATHERING)
+  paymentMethod GroupPaymentMethod?
+
+  estimatedArrival DateTime? // When group plans to arrive
+  expiresAt        DateTime // Auto-cancel time (30 min from creation)
+  closedAt         DateTime? // When host closed for new members
+  finalizedAt      DateTime? // When payment completed
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders       Order[]
+  memberUsers  User[]  @relation("GroupOrderMemberUsers")
+  memberGuests Guest[] @relation("GroupOrderMemberGuests")
+}
+
+enum GroupOrderStatus {
+  GATHERING // Accepting new members
+  CLOSED // No new members, awaiting payment
+  PAYING // Payment in progress
+  PAID // All payments complete
+  PARTIALLY_PAID // Some payments complete (Pay Your Own)
+  CANCELLED
+}
+
+enum GroupPaymentMethod {
+  HOST_PAYS_ALL // Single charge for total
+  PAY_YOUR_OWN // Each guest pays individually
 }
 
 // ==========================================
@@ -304,42 +401,46 @@ model OrderItem {
 // ==========================================
 
 model User {
-  id            String   @id @default(cuid())
-  email         String?  @unique
-  phone         String?  @unique
-  name          String?
+  id    String  @id @default(cuid())
+  email String? @unique
+  phone String? @unique
+  name  String?
 
   // Referral system
-  referralCode  String   @unique @default(cuid())
-  referredById  String?
-  referredBy    User?    @relation("Referrals", fields: [referredById], references: [id])
-  referrals     User[]   @relation("Referrals")
+  referralCode String  @unique @default(cuid())
+  referredById String?
+  referredBy   User?   @relation("Referrals", fields: [referredById], references: [id])
+  referrals    User[]  @relation("Referrals")
 
-  creditsCents  Int      @default(0)
+  creditsCents Int @default(0)
 
   // Membership tier system
-  membershipTier      MembershipTier @default(CHOPSTICK)
-  tierProgressOrders  Int            @default(0)
-  tierProgressReferrals Int          @default(0)
-  lifetimeOrderCount  Int            @default(0)
-  lifetimeSpentCents  Int            @default(0)
-  currentStreak       Int            @default(0)
-  longestStreak       Int            @default(0)
-  lastOrderDate       DateTime?
+  membershipTier        MembershipTier @default(CHOPSTICK)
+  tierProgressOrders    Int            @default(0)
+  tierProgressReferrals Int            @default(0)
+  lifetimeOrderCount    Int            @default(0)
+  lifetimeSpentCents    Int            @default(0)
+  currentStreak         Int            @default(0)
+  longestStreak         Int            @default(0)
+  lastOrderDate         DateTime?
 
   // Arrival prediction metrics (for queue prioritization)
-  avgArrivalDeviation Float?        // Average minutes early/late
-  arrivalAccuracy     Float?        // 0-1 score of on-time arrivals
-  onTimeArrivals      Int            @default(0)
+  avgArrivalDeviation Float? // Average minutes early/late
+  arrivalAccuracy     Float? // 0-1 score of on-time arrivals
+  onTimeArrivals      Int    @default(0)
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   orders         Order[]
   creditEvents   CreditEvent[]
   pendingCredits PendingCredit[]
   badges         UserBadge[]
   challenges     UserChallenge[]
+
+  // Group Orders
+  groupOrdersAsHost GroupOrder[] @relation("GroupOrderHost")
+  groupOrders       GroupOrder[] @relation("GroupOrderMemberUsers")
 }
 
 enum MembershipTier {
@@ -349,26 +450,26 @@ enum MembershipTier {
 }
 
 model CreditEvent {
-  id            String   @id @default(cuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id])
-  
-  type          CreditEventType
-  amountCents   Int
-  
-  orderId       String?
-  order         Order?   @relation(fields: [orderId], references: [id])
-  
-  description   String?
-  metadata      Json?
-  
-  createdAt     DateTime @default(now())
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  type        CreditEventType
+  amountCents Int
+
+  orderId String?
+  order   Order?  @relation(fields: [orderId], references: [id])
+
+  description String?
+  metadata    Json?
+
+  createdAt DateTime @default(now())
 }
 
 enum CreditEventType {
   REFERRAL_SIGNUP
   REFERRAL_ORDER
-  REFERRAL_ORDER_PENDING  // Credit queued for next disbursement
+  REFERRAL_ORDER_PENDING // Credit queued for next disbursement
   CASHBACK
   CREDIT_APPLIED
   CREDIT_EXPIRED
@@ -380,28 +481,28 @@ enum CreditEventType {
 // ==========================================
 
 model PendingCredit {
-  id            String   @id @default(cuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id])
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
 
-  type          PendingCreditType
-  amountCents   Int
+  type        PendingCreditType
+  amountCents Int
 
   // Reference to what triggered this credit
-  sourceUserId  String?  // The referred user who placed the order
-  sourceOrderId String?  // The order that triggered this credit
+  sourceUserId  String? // The referred user who placed the order
+  sourceOrderId String? // The order that triggered this credit
 
-  description   String?
+  description String?
 
   // Scheduling
-  scheduledFor  DateTime // Next disbursement date (1st or 16th)
-  disbursedAt   DateTime?
+  scheduledFor DateTime // Next disbursement date (1st or 16th)
+  disbursedAt  DateTime?
 
-  createdAt     DateTime @default(now())
+  createdAt DateTime @default(now())
 }
 
 enum PendingCreditType {
-  REFERRAL_ORDER  // Credit from referred friend's first order
+  REFERRAL_ORDER // Credit from referred friend's first order
 }
 
 // ==========================================
@@ -409,17 +510,17 @@ enum PendingCreditType {
 // ==========================================
 
 model Badge {
-  id          String   @id @default(cuid())
-  slug        String   @unique
+  id          String        @id @default(cuid())
+  slug        String        @unique
   name        String
   description String
   iconEmoji   String
   category    BadgeCategory
-  isActive    Boolean  @default(true)
-  
-  createdAt   DateTime @default(now())
-  
-  userBadges  UserBadge[]
+  isActive    Boolean       @default(true)
+
+  createdAt DateTime @default(now())
+
+  userBadges UserBadge[]
 }
 
 enum BadgeCategory {
@@ -431,50 +532,50 @@ enum BadgeCategory {
 }
 
 model UserBadge {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  badgeId   String
-  badge     Badge    @relation(fields: [badgeId], references: [id])
-  
-  earnedAt  DateTime @default(now())
-  
+  id      String @id @default(cuid())
+  userId  String
+  user    User   @relation(fields: [userId], references: [id])
+  badgeId String
+  badge   Badge  @relation(fields: [badgeId], references: [id])
+
+  earnedAt DateTime @default(now())
+
   @@unique([userId, badgeId])
 }
 
 model Challenge {
-  id            String   @id @default(cuid())
-  slug          String   @unique
-  name          String
-  description   String
-  rewardCents   Int
-  iconEmoji     String
-  
-  requirements  Json
-  
-  startsAt      DateTime?
-  endsAt        DateTime?
-  isActive      Boolean  @default(true)
-  
-  createdAt     DateTime @default(now())
-  
+  id          String @id @default(cuid())
+  slug        String @unique
+  name        String
+  description String
+  rewardCents Int
+  iconEmoji   String
+
+  requirements Json
+
+  startsAt DateTime?
+  endsAt   DateTime?
+  isActive Boolean   @default(true)
+
+  createdAt DateTime @default(now())
+
   userChallenges UserChallenge[]
 }
 
 model UserChallenge {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   userId      String
-  user        User     @relation(fields: [userId], references: [id])
+  user        User      @relation(fields: [userId], references: [id])
   challengeId String
   challenge   Challenge @relation(fields: [challengeId], references: [id])
-  
-  progress    Json
-  completedAt DateTime?
-  rewardClaimed Boolean @default(false)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+
+  progress      Json
+  completedAt   DateTime?
+  rewardClaimed Boolean   @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@unique([userId, challengeId])
 }
 
@@ -483,31 +584,31 @@ model UserChallenge {
 // ==========================================
 
 model WaitQueue {
-  id              String      @id @default(cuid())
-  orderId         String      @unique
-  order           Order       @relation(fields: [orderId], references: [id])
-  locationId      String
-  location        Location    @relation(fields: [locationId], references: [id])
+  id         String   @id @default(cuid())
+  orderId    String   @unique
+  order      Order    @relation(fields: [orderId], references: [id])
+  locationId String
+  location   Location @relation(fields: [locationId], references: [id])
 
-  arrivedAt       DateTime    // Actual arrival at kiosk
-  estimatedArrival DateTime?  // What customer selected when ordering
-  priority        Int         // Calculated priority score
-  status          QueueStatus @default(WAITING)
+  arrivedAt        DateTime // Actual arrival at kiosk
+  estimatedArrival DateTime? // What customer selected when ordering
+  priority         Int // Calculated priority score
+  status           QueueStatus @default(WAITING)
 
-  assignedAt      DateTime?   // When pod assigned
-  expiredAt       DateTime?   // If no-show or cancelled
+  assignedAt DateTime? // When pod assigned
+  expiredAt  DateTime? // If no-show or cancelled
 
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([locationId, status, priority])
 }
 
 enum QueueStatus {
-  WAITING         // In queue, no pod yet
-  ASSIGNED        // Pod assigned, heading there
-  CONFIRMED       // At pod, confirmed
-  EXPIRED         // No-show or cancelled
+  WAITING // In queue, no pod yet
+  ASSIGNED // Pod assigned, heading there
+  CONFIRMED // At pod, confirmed
+  EXPIRED // No-show or cancelled
 }
 
 // ==========================================
@@ -515,38 +616,38 @@ enum QueueStatus {
 // ==========================================
 
 model PodCall {
-  id          String       @id @default(cuid())
-  orderId     String
-  order       Order        @relation(fields: [orderId], references: [id])
-  seatId      String
-  seat        Seat         @relation(fields: [seatId], references: [id])
-  locationId  String
+  id         String @id @default(cuid())
+  orderId    String
+  order      Order  @relation(fields: [orderId], references: [id])
+  seatId     String
+  seat       Seat   @relation(fields: [seatId], references: [id])
+  locationId String
 
-  reason      PodCallReason @default(GENERAL)
-  status      PodCallStatus @default(PENDING)
+  reason PodCallReason @default(GENERAL)
+  status PodCallStatus @default(PENDING)
 
   // Timestamps
-  createdAt   DateTime     @default(now())
-  acknowledgedAt DateTime?  // When staff acknowledged the call
-  resolvedAt  DateTime?    // When staff resolved/completed the call
+  createdAt      DateTime  @default(now())
+  acknowledgedAt DateTime? // When staff acknowledged the call
+  resolvedAt     DateTime? // When staff resolved/completed the call
 
   @@index([locationId, status])
   @@index([seatId])
 }
 
 enum PodCallReason {
-  GENERAL      // Generic "call staff" request
-  REFILL       // Drink refill request
-  ASSISTANCE   // Need help/question
-  CHECK        // Request check/bill
-  CLEANUP      // Spill or cleanup needed
+  GENERAL // Generic "call staff" request
+  REFILL // Drink refill request
+  ASSISTANCE // Need help/question
+  CHECK // Request check/bill
+  CLEANUP // Spill or cleanup needed
 }
 
 enum PodCallStatus {
-  PENDING      // Not yet seen by staff
+  PENDING // Not yet seen by staff
   ACKNOWLEDGED // Staff has seen it, on their way
-  RESOLVED     // Completed
-  CANCELLED    // Customer cancelled the request
+  RESOLVED // Completed
+  CANCELLED // Customer cancelled the request
 }
 
 // ==========================================
@@ -559,10 +660,10 @@ enum PodCallStatus {
 // Add this enum for use in a new field on Order
 
 enum AddOnType {
-  PAID_ADDON     // Amber - paid add-ons (extra meat, sides)
-  REFILL         // Blue - free drink refill
-  EXTRA_VEG      // Green - free extra vegetables
-  DESSERT_READY  // Pink - customer is ready for dessert
+  PAID_ADDON // Amber - paid add-ons (extra meat, sides)
+  REFILL // Blue - free drink refill
+  EXTRA_VEG // Green - free extra vegetables
+  DESSERT_READY // Pink - customer is ready for dessert
 }
 
 // ==========================================
@@ -570,18 +671,18 @@ enum AddOnType {
 // ==========================================
 
 model PlatformTransaction {
-  id              String          @id @default(cuid())
-  tenantId        String
-  tenant          Tenant          @relation(fields: [tenantId], references: [id])
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
 
-  type            TransactionType
-  amountCents     Int
+  type             TransactionType
+  amountCents      Int
   platformFeeCents Int
-  tenantNetCents  Int
+  tenantNetCents   Int
 
-  metadata        Json?
+  metadata Json?
 
-  createdAt       DateTime        @default(now())
+  createdAt DateTime @default(now())
 }
 
 enum TransactionType {
