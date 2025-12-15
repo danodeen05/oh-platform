@@ -1,4 +1,4 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
+import { clerkMiddleware, createRouteMatcher, clerkClient } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 
 // Allowed admin email addresses
@@ -20,12 +20,18 @@ export default clerkMiddleware(async (auth, request) => {
   }
 
   // Require authentication
-  const { userId, sessionClaims } = await auth.protect()
+  const { userId } = await auth.protect()
 
-  // Check if user's email is in the allowed list
-  const userEmail = sessionClaims?.email as string | undefined
+  // Fetch user details to get email (works with SSO/social login)
+  const client = await clerkClient()
+  const user = await client.users.getUser(userId)
 
-  if (!userEmail || !ALLOWED_ADMINS.includes(userEmail.toLowerCase())) {
+  // Get primary email address
+  const primaryEmail = user.emailAddresses.find(
+    (email) => email.id === user.primaryEmailAddressId
+  )?.emailAddress
+
+  if (!primaryEmail || !ALLOWED_ADMINS.includes(primaryEmail.toLowerCase())) {
     // Redirect unauthorized users
     const url = new URL('/unauthorized', request.url)
     return NextResponse.redirect(url)
