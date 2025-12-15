@@ -1070,6 +1070,71 @@ app.post("/orders/check-in", async (req, reply) => {
   };
 });
 
+// GET /orders/lookup - Look up order by order number or QR code (for kiosk check-in)
+app.get("/orders/lookup", async (req, reply) => {
+  const { code } = req.query || {};
+
+  if (!code) {
+    return reply.code(400).send({ error: "code required (order number or QR code)" });
+  }
+
+  // Try to find by order number first, then by QR code
+  let order = await prisma.order.findUnique({
+    where: { orderNumber: code.toUpperCase() },
+    include: {
+      seat: true,
+      location: true,
+      items: {
+        include: {
+          menuItem: true,
+        },
+      },
+      user: true,
+    },
+  });
+
+  // If not found by order number, try QR code
+  if (!order) {
+    order = await prisma.order.findUnique({
+      where: { orderQrCode: code },
+      include: {
+        seat: true,
+        location: true,
+        items: {
+          include: {
+            menuItem: true,
+          },
+        },
+        user: true,
+      },
+    });
+  }
+
+  if (!order) {
+    return reply.code(404).send({ error: "Order not found" });
+  }
+
+  // Check if order is eligible for kiosk check-in
+  // Must be PAID status and not yet arrived
+  if (order.paymentStatus !== "PAID") {
+    return reply.code(400).send({
+      error: "Order not yet paid",
+      orderStatus: order.status,
+      paymentStatus: order.paymentStatus,
+    });
+  }
+
+  if (order.arrivedAt) {
+    return reply.code(400).send({
+      error: "Order already checked in",
+      arrivedAt: order.arrivedAt,
+      seatNumber: order.seat?.number,
+    });
+  }
+
+  return reply.send(order);
+});
+
 // GET /orders/status - Get real-time order status by QR code
 app.get("/orders/status", async (req, reply) => {
   const { orderQrCode } = req.query || {};
