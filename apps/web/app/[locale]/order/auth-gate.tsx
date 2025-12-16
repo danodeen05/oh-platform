@@ -2,6 +2,7 @@
 
 import { SignInButton, SignedIn, SignedOut, useUser } from "@clerk/nextjs";
 import { useGuest } from "@/contexts/guest-context";
+import { useTranslations } from "next-intl";
 import { type ReactNode } from "react";
 
 interface AuthGateProps {
@@ -11,6 +12,7 @@ interface AuthGateProps {
 export default function AuthGate({ children }: AuthGateProps) {
   const { isGuest, isLoading: guestLoading, startGuestSession } = useGuest();
   const { isLoaded: clerkLoaded } = useUser();
+  const t = useTranslations("auth");
 
   const handleGuestContinue = async () => {
     await startGuestSession();
@@ -25,7 +27,7 @@ export default function AuthGate({ children }: AuthGateProps) {
         alignItems: "center",
         minHeight: "300px"
       }}>
-        <div style={{ color: "#7C7A67" }}>Loading...</div>
+        <div style={{ color: "#7C7A67" }}>{t("loading")}</div>
       </div>
     );
   }
@@ -62,7 +64,7 @@ export default function AuthGate({ children }: AuthGateProps) {
                 letterSpacing: "1px",
               }}
             >
-              Ready to Order?
+              {t("readyToOrder")}
             </h1>
             <p
               style={{
@@ -73,7 +75,7 @@ export default function AuthGate({ children }: AuthGateProps) {
                 lineHeight: "1.7",
               }}
             >
-              Create a free account and start earning immediately.
+              {t("createAccount")}
             </p>
 
             {/* Benefits Grid */}
@@ -96,8 +98,8 @@ export default function AuthGate({ children }: AuthGateProps) {
                 }}
               >
                 <div style={{ fontSize: "1.5rem", marginBottom: "8px" }}>💰</div>
-                <div style={{ fontSize: "0.85rem", fontWeight: "600", color: "#2D2A26", marginBottom: "4px" }}>1% Cashback</div>
-                <div style={{ fontSize: "0.75rem", color: "#7C7A67" }}>including this order!</div>
+                <div style={{ fontSize: "0.85rem", fontWeight: "600", color: "#2D2A26", marginBottom: "4px" }}>{t("benefits.cashback")}</div>
+                <div style={{ fontSize: "0.75rem", color: "#7C7A67" }}>{t("benefits.cashbackSubtitle")}</div>
               </div>
               <div
                 style={{
@@ -108,8 +110,8 @@ export default function AuthGate({ children }: AuthGateProps) {
                 }}
               >
                 <div style={{ fontSize: "1.5rem", marginBottom: "8px" }}>🎁</div>
-                <div style={{ fontSize: "0.85rem", fontWeight: "600", color: "#2D2A26", marginBottom: "4px" }}>$5 Referral</div>
-                <div style={{ fontSize: "0.75rem", color: "#7C7A67" }}>for you & friends</div>
+                <div style={{ fontSize: "0.85rem", fontWeight: "600", color: "#2D2A26", marginBottom: "4px" }}>{t("benefits.referral")}</div>
+                <div style={{ fontSize: "0.75rem", color: "#7C7A67" }}>{t("benefits.referralSubtitle")}</div>
               </div>
               <div
                 style={{
@@ -120,8 +122,8 @@ export default function AuthGate({ children }: AuthGateProps) {
                 }}
               >
                 <div style={{ fontSize: "1.5rem", marginBottom: "8px" }}>⭐</div>
-                <div style={{ fontSize: "0.85rem", fontWeight: "600", color: "#2D2A26", marginBottom: "4px" }}>Early Access</div>
-                <div style={{ fontSize: "0.75rem", color: "#7C7A67" }}>new menu items</div>
+                <div style={{ fontSize: "0.85rem", fontWeight: "600", color: "#2D2A26", marginBottom: "4px" }}>{t("benefits.earlyAccess")}</div>
+                <div style={{ fontSize: "0.75rem", color: "#7C7A67" }}>{t("benefits.earlyAccessSubtitle")}</div>
               </div>
             </div>
 
@@ -151,7 +153,7 @@ export default function AuthGate({ children }: AuthGateProps) {
                   e.currentTarget.style.boxShadow = "0 8px 30px rgba(199, 168, 120, 0.35)";
                 }}
               >
-                SIGN IN / SIGN UP
+                {t("signInButton")}
               </button>
             </SignInButton>
 
@@ -167,7 +169,7 @@ export default function AuthGate({ children }: AuthGateProps) {
               }}
             >
               <div style={{ flex: 1, height: "1px", background: "rgba(124, 122, 103, 0.2)" }} />
-              <span style={{ color: "#7C7A67", fontSize: "0.9rem" }}>or</span>
+              <span style={{ color: "#7C7A67", fontSize: "0.9rem" }}>{t("or")}</span>
               <div style={{ flex: 1, height: "1px", background: "rgba(124, 122, 103, 0.2)" }} />
             </div>
 
@@ -194,7 +196,7 @@ export default function AuthGate({ children }: AuthGateProps) {
                 e.currentTarget.style.color = "#5A5549";
               }}
             >
-              Continue as Guest
+              {t("continueAsGuest")}
             </button>
 
             <p
@@ -205,7 +207,7 @@ export default function AuthGate({ children }: AuthGateProps) {
                 maxWidth: "400px",
               }}
             >
-              Guest checkout is quick, but you won&apos;t earn loyalty points or save your favorites.
+              {t("guestWarning")}
             </p>
           </div>
         )}

@@ -809,5 +809,190 @@
       "title": "聯繫我們關於無障礙服務",
       "intro": "如果您對無障礙服務有疑問或疑慮，請聯繫我們："
     }
+  },
+  "orderBanner": {
+    "orderNumber": "訂單 #{number}",
+    "active": "進行中",
+    "pod": "包廂 {number}",
+    "tapToView": "點擊查看狀態",
+    "status": {
+      "placed": "訂單已下",
+      "checkedIn": "已報到",
+      "inQueue": "排隊中",
+      "preparing": "正在準備您的訂單",
+      "qualityCheck": "品質檢查",
+      "enjoy": "請享用！"
+    }
+  },
+  "auth": {
+    "loading": "載入中...",
+    "readyToOrder": "準備好點餐了嗎？",
+    "createAccount": "建立免費帳戶，立即開始賺取獎勵。",
+    "signInButton": "登入 / 註冊",
+    "or": "或",
+    "continueAsGuest": "以訪客身份繼續",
+    "guestWarning": "訪客結帳快速，但您無法賺取忠誠點數或儲存最愛。",
+    "benefits": {
+      "cashback": "1% 現金回饋",
+      "cashbackSubtitle": "包含此訂單！",
+      "referral": "$5 推薦獎勵",
+      "referralSubtitle": "您和朋友都能獲得",
+      "earlyAccess": "搶先體驗",
+      "earlyAccessSubtitle": "新菜品"
+    }
+  },
+  "orderStatus": {
+    "pageTitle": "訂單狀態",
+    "loading": "載入訂單狀態中...",
+    "noOrderCode": "未提供訂單代碼",
+    "orderNotFound": "找不到訂單",
+    "placeNewOrder": "新增訂單",
+    "statusUpdates": "狀態每5秒自動更新",
+    "status": {
+      "pending": "待付款",
+      "paid": "已付款",
+      "queued": "排隊中",
+      "prepping": "準備中",
+      "ready": "準備送餐",
+      "serving": "請享用！",
+      "completed": "已完成"
+    },
+    "pod": {
+      "yourPod": "您的包廂",
+      "podNumber": "包廂 {number}",
+      "confirmArrival": "前往您的包廂並確認到達",
+      "checkedIn": "您已報到！",
+      "staffNotified": "已通知服務人員",
+      "calling": "呼叫中..."
+    },
+    "queue": {
+      "position": "排隊位置",
+      "estimatedWait": "預計等待：{minutes} 分鐘",
+      "notifyWhenReady": "包廂準備好時我們會通知您！"
+    },
+    "timeline": {
+      "title": "訂單時間軸",
+      "paid": "已付款",
+      "checkedIn": "已報到",
+      "orderStarted": "開始製作",
+      "qualityCheck": "品質檢查",
+      "delivered": "已送達",
+      "totalTime": "總時間"
+    },
+    "sections": {
+      "theBowl": "湯麵",
+      "addOnsExtras": "加料與配菜",
+      "location": "地點"
+    },
+    "buttons": {
+      "viewProfile": "查看我的檔案",
+      "orderAgain": "再次訂購",
+      "imDoneEating": "我吃完了",
+      "addToOrder": "加點"
+    },
+    "doneEating": {
+      "confirmPrompt": "您用餐完畢了嗎？這將通知服務人員清理您的包廂。",
+      "failedToUpdate": "更新失敗，請重試。"
+    },
+    "addItems": {
+      "title": "加點",
+      "loading": "載入可選項目中...",
+      "drinkRefills": "飲料續杯",
+      "requestRefill": "要求續杯",
+      "requesting": "要求中...",
+      "waterRefill": "水續杯",
+      "extrasAddons": "加料與配菜",
+      "requestExtras": "要求 {count} 份加料",
+      "addOnsExtras": "加料與配菜",
+      "orderTotal": "訂單總計",
+      "checkout": "結帳",
+      "demoWarning": "示範模式：不會實際收費",
+      "cancel": "取消",
+      "pay": "支付 ${amount}"
+    }
+  },
+  "features": {
+    "fortuneCookie": {
+      "title": "您的數位幸運餅乾",
+      "subtitle": "等待時，打開您的個人化運勢",
+      "crackOpen": "打開它",
+      "loading": "解讀您的運勢中...",
+      "luckyNumbers": "幸運數字",
+      "thisDay": "歷史上的今天 ({year})",
+      "learnChinese": "學中文",
+      "unavailable": "運勢暫時無法顯示 - 但您的餐點一定很棒！"
+    },
+    "roast": {
+      "title": "吐槽區",
+      "subtitle": "想聽聽我們對您點餐選擇的（搞笑）真實評論嗎？",
+      "button": "吐槽我的訂單",
+      "loading": "分析您的人生選擇中...",
+      "highlights": "我們注意到的：",
+      "unavailable": "吐槽師傅休息中。您的訂單應該沒問題。應該吧。"
+    },
+    "backstory": {
+      "title": "幕後故事",
+      "subtitle": "想知道您食材的秘密生活嗎？",
+      "button": "告訴我一切",
+      "loading": "挖掘八卦中...",
+      "heading": "不為人知的故事",
+      "unavailable": "食材們選擇保持匿名。神秘的一群。"
+    },
+    "kitchen": {
+      "label": "廚房直播",
+      "listening": "聆聽廚房中...",
+      "quiet": "廚房異常安靜。他們在策劃什麼。"
+    }
+  },
+  "payment": {
+    "pageTitle": "完成您的訂單",
+    "orderNumber": "訂單 #{number}",
+    "invalidOrder": "無效訂單",
+    "missingInformation": "缺少訂單資訊",
+    "orderNotFound": "找不到訂單",
+    "couldNotFind": "我們找不到此訂單",
+    "startNewOrder": "開始新訂單",
+    "readyBy": "預計完成時間",
+    "total": "總計",
+    "processing": "處理中...",
+    "payNow": "立即付款",
+    "testMode": "測試模式 - 不會實際收費"
+  },
+  "groupOrder": {
+    "notFound": "找不到群組",
+    "notFoundMessage": "群組代碼「{code}」不存在或已過期。",
+    "startNewOrder": "開始新訂單",
+    "hostPaysAll": "主揪付款",
+    "splitPayment": "分開付款",
+    "groupTotal": "群組總計",
+    "orderCount": "{count} 份訂單",
+    "waitingForHost": "等待主揪完成付款",
+    "groupOrders": "群組訂單",
+    "checkInAll": "全部報到（模擬自助機）",
+    "checkingIn": "報到中...",
+    "simulateCheckIn": "模擬報到"
+  },
+  "social": {
+    "instagram": "Instagram",
+    "twitter": "X (Twitter)",
+    "facebook": "Facebook",
+    "tiktok": "TikTok",
+    "yelp": "Yelp",
+    "tripadvisor": "TripAdvisor",
+    "youtube": "YouTube",
+    "linkedin": "LinkedIn",
+    "email": "電子郵件"
+  },
+  "confirmation": {
+    "title": "訂單已確認！",
+    "orderNumber": "訂單 #{number}",
+    "thankYou": "感謝您的訂購",
+    "whatNext": "接下來呢？",
+    "checkInInstructions": "前往餐廳，在自助機報到或掃描指定包廂的 QR 碼。",
+    "viewStatus": "查看訂單狀態",
+    "simulateCheckIn": "模擬報到（示範）",
+    "checkingIn": "報到中...",
+    "groupOrderNote": "這是包含 {count} 份訂單的群組訂單。",
+    "paidStatus": "付款完成"
   }
 }

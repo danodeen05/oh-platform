@@ -809,5 +809,190 @@
       "title": "联系我们关于无障碍服务",
       "intro": "如果您对无障碍服务有疑问或疑虑，请联系我们："
     }
+  },
+  "orderBanner": {
+    "orderNumber": "订单 #{number}",
+    "active": "进行中",
+    "pod": "包间 {number}",
+    "tapToView": "点击查看状态",
+    "status": {
+      "placed": "订单已下",
+      "checkedIn": "已报到",
+      "inQueue": "排队中",
+      "preparing": "正在准备您的订单",
+      "qualityCheck": "品质检查",
+      "enjoy": "请享用！"
+    }
+  },
+  "auth": {
+    "loading": "加载中...",
+    "readyToOrder": "准备好点餐了吗？",
+    "createAccount": "创建免费账户，立即开始赚取奖励。",
+    "signInButton": "登录 / 注册",
+    "or": "或",
+    "continueAsGuest": "以访客身份继续",
+    "guestWarning": "访客结账快速，但您无法赚取忠诚积分或保存收藏。",
+    "benefits": {
+      "cashback": "1% 现金返还",
+      "cashbackSubtitle": "包含此订单！",
+      "referral": "$5 推荐奖励",
+      "referralSubtitle": "您和朋友都能获得",
+      "earlyAccess": "抢先体验",
+      "earlyAccessSubtitle": "新菜品"
+    }
+  },
+  "orderStatus": {
+    "pageTitle": "订单状态",
+    "loading": "加载订单状态中...",
+    "noOrderCode": "未提供订单代码",
+    "orderNotFound": "找不到订单",
+    "placeNewOrder": "新增订单",
+    "statusUpdates": "状态每5秒自动更新",
+    "status": {
+      "pending": "待付款",
+      "paid": "已付款",
+      "queued": "排队中",
+      "prepping": "准备中",
+      "ready": "准备送餐",
+      "serving": "请享用！",
+      "completed": "已完成"
+    },
+    "pod": {
+      "yourPod": "您的包间",
+      "podNumber": "包间 {number}",
+      "confirmArrival": "前往您的包间并确认到达",
+      "checkedIn": "您已报到！",
+      "staffNotified": "已通知服务人员",
+      "calling": "呼叫中..."
+    },
+    "queue": {
+      "position": "排队位置",
+      "estimatedWait": "预计等待：{minutes} 分钟",
+      "notifyWhenReady": "包间准备好时我们会通知您！"
+    },
+    "timeline": {
+      "title": "订单时间线",
+      "paid": "已付款",
+      "checkedIn": "已报到",
+      "orderStarted": "开始制作",
+      "qualityCheck": "品质检查",
+      "delivered": "已送达",
+      "totalTime": "总时间"
+    },
+    "sections": {
+      "theBowl": "汤面",
+      "addOnsExtras": "加料与配菜",
+      "location": "地点"
+    },
+    "buttons": {
+      "viewProfile": "查看我的档案",
+      "orderAgain": "再次订购",
+      "imDoneEating": "我吃完了",
+      "addToOrder": "加点"
+    },
+    "doneEating": {
+      "confirmPrompt": "您用餐完毕了吗？这将通知服务人员清理您的包间。",
+      "failedToUpdate": "更新失败，请重试。"
+    },
+    "addItems": {
+      "title": "加点",
+      "loading": "加载可选项目中...",
+      "drinkRefills": "饮料续杯",
+      "requestRefill": "要求续杯",
+      "requesting": "要求中...",
+      "waterRefill": "水续杯",
+      "extrasAddons": "加料与配菜",
+      "requestExtras": "要求 {count} 份加料",
+      "addOnsExtras": "加料与配菜",
+      "orderTotal": "订单总计",
+      "checkout": "结账",
+      "demoWarning": "演示模式：不会实际收费",
+      "cancel": "取消",
+      "pay": "支付 ${amount}"
+    }
+  },
+  "features": {
+    "fortuneCookie": {
+      "title": "您的数字幸运饼干",
+      "subtitle": "等待时，打开您的个性化运势",
+      "crackOpen": "打开它",
+      "loading": "解读您的运势中...",
+      "luckyNumbers": "幸运数字",
+      "thisDay": "历史上的今天 ({year})",
+      "learnChinese": "学中文",
+      "unavailable": "运势暂时无法显示 - 但您的餐点一定很棒！"
+    },
+    "roast": {
+      "title": "吐槽区",
+      "subtitle": "想听听我们对您点餐选择的（搞笑）真实评论吗？",
+      "button": "吐槽我的订单",
+      "loading": "分析您的人生选择中...",
+      "highlights": "我们注意到的：",
+      "unavailable": "吐槽师傅休息中。您的订单应该没问题。应该吧。"
+    },
+    "backstory": {
+      "title": "幕后故事",
+      "subtitle": "想知道您食材的秘密生活吗？",
+      "button": "告诉我一切",
+      "loading": "挖掘八卦中...",
+      "heading": "不为人知的故事",
+      "unavailable": "食材们选择保持匿名。神秘的一群。"
+    },
+    "kitchen": {
+      "label": "厨房直播",
+      "listening": "聆听厨房中...",
+      "quiet": "厨房异常安静。他们在策划什么。"
+    }
+  },
+  "payment": {
+    "pageTitle": "完成您的订单",
+    "orderNumber": "订单 #{number}",
+    "invalidOrder": "无效订单",
+    "missingInformation": "缺少订单信息",
+    "orderNotFound": "找不到订单",
+    "couldNotFind": "我们找不到此订单",
+    "startNewOrder": "开始新订单",
+    "readyBy": "预计完成时间",
+    "total": "总计",
+    "processing": "处理中...",
+    "payNow": "立即付款",
+    "testMode": "测试模式 - 不会实际收费"
+  },
+  "groupOrder": {
+    "notFound": "找不到群组",
+    "notFoundMessage": "群组代码「{code}」不存在或已过期。",
+    "startNewOrder": "开始新订单",
+    "hostPaysAll": "团长付款",
+    "splitPayment": "分开付款",
+    "groupTotal": "群组总计",
+    "orderCount": "{count} 份订单",
+    "waitingForHost": "等待团长完成付款",
+    "groupOrders": "群组订单",
+    "checkInAll": "全部报到（模拟自助机）",
+    "checkingIn": "报到中...",
+    "simulateCheckIn": "模拟报到"
+  },
+  "social": {
+    "instagram": "Instagram",
+    "twitter": "X (Twitter)",
+    "facebook": "Facebook",
+    "tiktok": "TikTok",
+    "yelp": "Yelp",
+    "tripadvisor": "TripAdvisor",
+    "youtube": "YouTube",
+    "linkedin": "LinkedIn",
+    "email": "电子邮件"
+  },
+  "confirmation": {
+    "title": "订单已确认！",
+    "orderNumber": "订单 #{number}",
+    "thankYou": "感谢您的订购",
+    "whatNext": "接下来呢？",
+    "checkInInstructions": "前往餐厅，在自助机报到或扫描指定包间的 QR 码。",
+    "viewStatus": "查看订单状态",
+    "simulateCheckIn": "模拟报到（演示）",
+    "checkingIn": "报到中...",
+    "groupOrderNote": "这是包含 {count} 份订单的群组订单。",
+    "paidStatus": "付款完成"
   }
 }

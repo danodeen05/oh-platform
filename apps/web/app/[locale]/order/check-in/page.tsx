@@ -3,7 +3,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useState, Suspense } from "react";
 import { QRCodeSVG } from "qrcode.react";
 
-const BASE = process.env.NEXT_PUBLIC_API_URL || "";
+const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 function CheckInContent() {
   const searchParams = useSearchParams();
@@ -46,7 +46,12 @@ function CheckInContent() {
           router.push(`/order/status?orderQrCode=${encodeURIComponent(orderQrCode.trim())}`);
         }
       } else {
-        setError(data.error || "Check-in failed. Please try again.");
+        // If already checked in, treat as success and redirect to status
+        if (data.error === "Order already checked in") {
+          router.push(`/order/status?orderQrCode=${encodeURIComponent(orderQrCode.trim())}`);
+        } else {
+          setError(data.error || "Check-in failed. Please try again.");
+        }
       }
     } catch (err) {
       console.error("Check-in error:", err);
