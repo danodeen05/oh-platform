@@ -8,7 +8,7 @@ import { CheckboxGroup } from "./checkbox-group";
 import SeatingMap, { Seat } from "@/components/SeatingMap";
 import { useGuest } from "@/contexts/guest-context";
 
-const BASE = process.env.NEXT_PUBLIC_API_URL || "";
+const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 // Order Whisperer - Witty insights from order history
 type OrderInsight = {

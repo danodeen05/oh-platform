@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 
-const BASE = process.env.NEXT_PUBLIC_API_URL || "";
+const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 type TierBenefits = {
   referralBonus: number;

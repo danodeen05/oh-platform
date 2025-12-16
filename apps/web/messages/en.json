@@ -92,6 +92,10 @@
     "title": "Our Menu",
     "description": "Explore our selection of premium beef noodle soups and accompaniments",
     "loading": "Loading menu...",
+    "error": {
+      "title": "Unable to load menu",
+      "tryAgain": "Try Again"
+    },
     "categories": {
       "soups": "Soups",
       "noodles": "Noodles",
@@ -99,6 +103,64 @@
       "sides": "Sides",
       "drinks": "Drinks",
       "desserts": "Desserts"
+    },
+    "tags": {
+      "premium": "Premium",
+      "included": "Included",
+      "signature": "Signature",
+      "complimentary": "Complimentary"
+    },
+    "sections": {
+      "soup": {
+        "subtitle": "Start with our signature broth",
+        "description": "Rich, slow-simmered beef bone broth perfected over 30 years"
+      },
+      "noodles": {
+        "subtitle": "Choose your noodles",
+        "description": "Hand-pulled noodles made fresh daily"
+      },
+      "premiumAddons": {
+        "subtitle": "Enhance your bowl",
+        "description": "Premium proteins and toppings"
+      },
+      "sideDishes": {
+        "subtitle": "Complete your meal",
+        "description": "Traditional sides and accompaniments"
+      },
+      "dessert": {
+        "subtitle": "Sweet endings",
+        "description": "Traditional desserts to finish your meal"
+      }
+    },
+    "hero": {
+      "title": "Our Menu",
+      "description": "Build your perfect bowl with our premium ingredients and 30-year recipe",
+      "orderNow": "Order Now"
+    },
+    "difference": {
+      "title": "The Oh! Difference",
+      "description": "We're not just another noodle shop. We're reimagining what dining can be.",
+      "techFirst": {
+        "title": "Tech-First Experience",
+        "description": "Order ahead, skip the line, and enjoy a seamless dining experience"
+      },
+      "privatePods": {
+        "title": "Private Dining Pods",
+        "description": "Enjoy your meal in your own private space, free from distractions"
+      },
+      "seamlessService": {
+        "title": "Seamless Service",
+        "description": "From ordering to payment, everything is designed for convenience"
+      },
+      "loyalty": {
+        "title": "Rewarding Loyalty",
+        "description": "Earn points, unlock rewards, and level up with every visit"
+      }
+    },
+    "cta": {
+      "title": "Ready for the Best Bowl?",
+      "description": "Order ahead and skip the wait. Your perfect bowl is just a few taps away.",
+      "button": "Start Your Order"
     }
   },
   "locations": {
@@ -809,5 +871,190 @@
       "title": "Contact Us About Accessibility",
       "intro": "If you have questions or concerns about accessibility, please reach out:"
     }
+  },
+  "orderBanner": {
+    "orderNumber": "Order #{number}",
+    "active": "Active",
+    "pod": "Pod {number}",
+    "tapToView": "Tap to view status",
+    "status": {
+      "placed": "Order placed",
+      "checkedIn": "Checked in",
+      "inQueue": "In queue",
+      "preparing": "Preparing your order",
+      "qualityCheck": "Quality check",
+      "enjoy": "Enjoy your meal!"
+    }
+  },
+  "auth": {
+    "loading": "Loading...",
+    "readyToOrder": "Ready to Order?",
+    "createAccount": "Create a free account and start earning immediately.",
+    "signInButton": "SIGN IN / SIGN UP",
+    "or": "or",
+    "continueAsGuest": "Continue as Guest",
+    "guestWarning": "Guest checkout is quick, but you won't earn loyalty points or save your favorites.",
+    "benefits": {
+      "cashback": "1% Cashback",
+      "cashbackSubtitle": "including this order!",
+      "referral": "$5 Referral",
+      "referralSubtitle": "for you & friends",
+      "earlyAccess": "Early Access",
+      "earlyAccessSubtitle": "new menu items"
+    }
+  },
+  "orderStatus": {
+    "pageTitle": "Order Status",
+    "loading": "Loading order status...",
+    "noOrderCode": "No order code provided",
+    "orderNotFound": "Order not found",
+    "placeNewOrder": "Place New Order",
+    "statusUpdates": "Status updates automatically every 5 seconds",
+    "status": {
+      "pending": "Pending Payment",
+      "paid": "Paid",
+      "queued": "In Queue",
+      "prepping": "Preparing",
+      "ready": "Ready for Delivery",
+      "serving": "Enjoy Your Meal!",
+      "completed": "Completed"
+    },
+    "pod": {
+      "yourPod": "Your Pod",
+      "podNumber": "POD {number}",
+      "confirmArrival": "Go to your pod and confirm arrival",
+      "checkedIn": "You're checked in!",
+      "staffNotified": "Staff Notified",
+      "calling": "Calling..."
+    },
+    "queue": {
+      "position": "Queue Position",
+      "estimatedWait": "Estimated wait: {minutes} minutes",
+      "notifyWhenReady": "We'll notify you when a pod is ready!"
+    },
+    "timeline": {
+      "title": "Order Timeline",
+      "paid": "Paid",
+      "checkedIn": "Checked In",
+      "orderStarted": "Order Started",
+      "qualityCheck": "Order Quality Check",
+      "delivered": "Delivered",
+      "totalTime": "Total Time"
+    },
+    "sections": {
+      "theBowl": "The Bowl",
+      "addOnsExtras": "Add-ons & Extras",
+      "location": "Location"
+    },
+    "buttons": {
+      "viewProfile": "View My Profile",
+      "orderAgain": "Order Again",
+      "imDoneEating": "I'm Done Eating",
+      "addToOrder": "Add to Your Order"
+    },
+    "doneEating": {
+      "confirmPrompt": "Are you finished eating? This will notify staff to clean your pod.",
+      "failedToUpdate": "Failed to update status. Please try again."
+    },
+    "addItems": {
+      "title": "Add to Your Order",
+      "loading": "Loading available items...",
+      "drinkRefills": "Drink Refills",
+      "requestRefill": "Request Refill",
+      "requesting": "Requesting...",
+      "waterRefill": "Water Refill",
+      "extrasAddons": "Extras & Add-Ons",
+      "requestExtras": "Request {count} Extra(s)",
+      "addOnsExtras": "Add-Ons & Extras",
+      "orderTotal": "Order Total",
+      "checkout": "Checkout",
+      "demoWarning": "Demo mode: No real charge will be made",
+      "cancel": "Cancel",
+      "pay": "Pay ${amount}"
+    }
+  },
+  "features": {
+    "fortuneCookie": {
+      "title": "Your Digital Fortune Cookie",
+      "subtitle": "While you wait, crack open your personalized fortune",
+      "crackOpen": "Crack It Open",
+      "loading": "Reading your fortune...",
+      "luckyNumbers": "Lucky Numbers",
+      "thisDay": "This Day in History ({year})",
+      "learnChinese": "Learn Chinese",
+      "unavailable": "Fortune unavailable - but your meal is still going to be amazing!"
+    },
+    "roast": {
+      "title": "The Roast Zone",
+      "subtitle": "Want our brutally honest (and hilarious) take on your order choices?",
+      "button": "Roast My Order",
+      "loading": "Analyzing your life choices...",
+      "highlights": "What caught our attention:",
+      "unavailable": "Our roast chef is on break. Your order is probably fine. Probably."
+    },
+    "backstory": {
+      "title": "Behind the Scenes",
+      "subtitle": "Ever wonder about the secret lives of your ingredients?",
+      "button": "Tell Me Everything",
+      "loading": "Digging up the dirt...",
+      "heading": "The Untold Stories",
+      "unavailable": "The ingredients prefer to remain anonymous. Mysterious bunch."
+    },
+    "kitchen": {
+      "label": "Live Kitchen Feed",
+      "listening": "Listening to the kitchen...",
+      "quiet": "The kitchen is suspiciously quiet. They're up to something."
+    }
+  },
+  "payment": {
+    "pageTitle": "Complete Your Order",
+    "orderNumber": "Order #{number}",
+    "invalidOrder": "Invalid Order",
+    "missingInformation": "Missing order information",
+    "orderNotFound": "Order Not Found",
+    "couldNotFind": "We couldn't find this order",
+    "startNewOrder": "Start a new order",
+    "readyBy": "Ready by",
+    "total": "Total",
+    "processing": "Processing...",
+    "payNow": "Pay Now",
+    "testMode": "Test mode - no real charge"
+  },
+  "groupOrder": {
+    "notFound": "Group Not Found",
+    "notFoundMessage": "The group code \"{code}\" doesn't exist or has expired.",
+    "startNewOrder": "Start New Order",
+    "hostPaysAll": "Host Pays for All",
+    "splitPayment": "Split Payment",
+    "groupTotal": "Group Total",
+    "orderCount": "{count} orders",
+    "waitingForHost": "Waiting for host to complete payment",
+    "groupOrders": "Group Orders",
+    "checkInAll": "Check In All Orders (Simulate Kiosk)",
+    "checkingIn": "Checking in...",
+    "simulateCheckIn": "Simulate Check-in"
+  },
+  "social": {
+    "instagram": "Instagram",
+    "twitter": "X (Twitter)",
+    "facebook": "Facebook",
+    "tiktok": "TikTok",
+    "yelp": "Yelp",
+    "tripadvisor": "TripAdvisor",
+    "youtube": "YouTube",
+    "linkedin": "LinkedIn",
+    "email": "Email"
+  },
+  "confirmation": {
+    "title": "Order Confirmed!",
+    "orderNumber": "Order #{number}",
+    "thankYou": "Thank you for your order",
+    "whatNext": "What's Next?",
+    "checkInInstructions": "Head to the restaurant and check in at the kiosk or scan the QR code at your assigned pod.",
+    "viewStatus": "View Order Status",
+    "simulateCheckIn": "Simulate Check-in (Demo)",
+    "checkingIn": "Checking in...",
+    "groupOrderNote": "This is a group order with {count} orders.",
+    "paidStatus": "Payment Complete"
   }
 }

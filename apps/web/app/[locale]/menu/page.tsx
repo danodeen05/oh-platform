@@ -6,7 +6,7 @@ import Image from "next/image";
 import { getMenuItemImage, isNoNoodlesItem } from "@/lib/menu-images";
 import { useTranslations, useLocale } from "next-intl";
 
-const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
+const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 // Types from the API
 type MenuItem = {

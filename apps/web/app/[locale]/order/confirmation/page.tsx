@@ -2,22 +2,30 @@
 import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
 import { QRCodeSVG } from "qrcode.react";
+import { useTranslations } from "next-intl";
 
-const BASE = process.env.NEXT_PUBLIC_API_URL || "";
+const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 function ConfirmationContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const t = useTranslations("confirmation");
+  const tStatus = useTranslations("orderStatus");
+  const tGroup = useTranslations("groupOrder");
+  const tCommon = useTranslations("common");
   const orderNumber = searchParams.get("orderNumber");
   const orderId = searchParams.get("orderId");
   const total = searchParams.get("total");
   const paid = searchParams.get("paid");
+  const groupCode = searchParams.get("groupCode");
+  const orderCount = searchParams.get("orderCount");
   const [copied, setCopied] = useState(false);
   const [shareText, setShareText] = useState("");
   const [order, setOrder] = useState<any>(null);
+  const [groupOrders, setGroupOrders] = useState<any[]>([]);
   const [canNativeShare, setCanNativeShare] = useState(false);
 
-  // Fetch order details
+  // Fetch order details (and group orders if applicable)
   useEffect(() => {
     if (!orderId) return;
 
@@ -29,6 +37,19 @@ function ConfirmationContent() {
         if (response.ok) {
           const data = await response.json();
           setOrder(data);
+
+          // If this is a group order, fetch all orders in the group
+          if (data.groupOrderId || groupCode) {
+            const groupResponse = await fetch(`${BASE}/group-orders/${groupCode || data.groupOrderId}`, {
+              headers: { "x-tenant-slug": "oh" },
+            });
+            if (groupResponse.ok) {
+              const groupData = await groupResponse.json();
+              if (groupData.orders) {
+                setGroupOrders(groupData.orders);
+              }
+            }
+          }
         }
       } catch (error) {
         console.error("Failed to fetch order:", error);
@@ -36,7 +57,7 @@ function ConfirmationContent() {
     }
 
     fetchOrder();
-  }, [orderId]);
+  }, [orderId, groupCode]);
 
   // Store active order QR code in localStorage for the banner
   useEffect(() => {
@@ -189,7 +210,7 @@ function ConfirmationContent() {
             color: "#111",
           }}
         >
-          {isPaid ? "Order Confirmed!" : "Order Placed"}
+          {isPaid ? t("title") : t("thankYou")}
         </h1>
 
         <p
@@ -200,8 +221,8 @@ function ConfirmationContent() {
           }}
         >
           {isPaid
-            ? "Payment processed successfully"
-            : "Waiting for payment confirmation"}
+            ? t("paidStatus")
+            : t("thankYou")}
         </p>
 
         {/* Order QR Code Section - For Check-In at Location */}
@@ -282,7 +303,7 @@ function ConfirmationContent() {
                   cursor: "pointer",
                 }}
               >
-                🎫 Check In Now (Simulate Kiosk)
+                {t("simulateCheckIn")}
               </button>
 
               <button
@@ -305,7 +326,7 @@ function ConfirmationContent() {
                   cursor: "pointer",
                 }}
               >
-                📍 Track Order Status
+                {t("viewStatus")}
               </button>
             </div>
           </div>
@@ -386,6 +407,127 @@ function ConfirmationContent() {
           </div>
         )}
 
+        {/* Group Orders Section - Show all orders in the group */}
+        {groupOrders.length > 1 && (
+          <div
+            style={{
+              background: "#f0fdf4",
+              border: "2px solid #22c55e",
+              borderRadius: 12,
+              padding: 24,
+              marginBottom: 24,
+            }}
+          >
+            <div style={{ fontSize: "1.5rem", marginBottom: 8, textAlign: "center" }}>👥</div>
+            <h3 style={{ margin: 0, marginBottom: 16, fontSize: "1.2rem", textAlign: "center", color: "#166534" }}>
+              {tGroup("groupOrders")} ({groupOrders.length})
+            </h3>
+
+            <div style={{ display: "grid", gap: 12 }}>
+              {groupOrders.map((groupOrder, idx) => (
+                <div
+                  key={groupOrder.id}
+                  style={{
+                    background: "white",
+                    borderRadius: 8,
+                    padding: 16,
+                    border: "1px solid #e5e7eb",
+                  }}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <span style={{ fontWeight: 600 }}>
+                      {groupOrder.isGroupHost ? "Host" : `Guest ${idx}`}
+                    </span>
+                    <span style={{ fontSize: "0.85rem", color: "#666" }}>
+                      {groupOrder.seat ? `Pod ${groupOrder.seat.number}` : "No pod yet"}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: "0.85rem", color: "#666", marginBottom: 12 }}>
+                    {groupOrder.user?.name || groupOrder.guest?.name || `Order #${groupOrder.orderNumber.slice(-6)}`}
+                    {" • "}${(groupOrder.totalCents / 100).toFixed(2)}
+                  </div>
+
+                  {/* Check-in button for orders without pod or not confirmed */}
+                  {!groupOrder.arrivedAt && groupOrder.orderQrCode && (
+                    <button
+                      onClick={() =>
+                        router.push(
+                          `/order/check-in?orderQrCode=${encodeURIComponent(groupOrder.orderQrCode)}`
+                        )
+                      }
+                      style={{
+                        width: "100%",
+                        padding: 10,
+                        background: "#166534",
+                        color: "white",
+                        border: "none",
+                        borderRadius: 6,
+                        fontSize: "0.85rem",
+                        fontWeight: "bold",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Check In This Order
+                    </button>
+                  )}
+
+                  {groupOrder.arrivedAt && !groupOrder.podConfirmedAt && groupOrder.seat && (
+                    <div style={{ fontSize: "0.85rem", color: "#166534", textAlign: "center", padding: 8 }}>
+                      Assigned to Pod {groupOrder.seat.number} - awaiting arrival
+                    </div>
+                  )}
+
+                  {groupOrder.podConfirmedAt && (
+                    <div style={{ fontSize: "0.85rem", color: "#166534", textAlign: "center", padding: 8 }}>
+                      Checked in at Pod {groupOrder.seat?.number}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Check In All button */}
+            {groupOrders.some(o => !o.arrivedAt && o.orderQrCode) && (
+              <button
+                onClick={async () => {
+                  for (const o of groupOrders) {
+                    if (!o.arrivedAt && o.orderQrCode) {
+                      try {
+                        await fetch(`${BASE}/orders/check-in`, {
+                          method: "POST",
+                          headers: {
+                            "Content-Type": "application/json",
+                            "x-tenant-slug": "oh",
+                          },
+                          body: JSON.stringify({ orderQrCode: o.orderQrCode }),
+                        });
+                      } catch (err) {
+                        console.error("Failed to check in order:", err);
+                      }
+                    }
+                  }
+                  // Refresh the page to show updated status
+                  window.location.reload();
+                }}
+                style={{
+                  width: "100%",
+                  marginTop: 16,
+                  padding: 14,
+                  background: "#22c55e",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 8,
+                  fontSize: "1rem",
+                  fontWeight: "bold",
+                  cursor: "pointer",
+                }}
+              >
+                {tGroup("checkInAll")}
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Order Summary */}
         <div
           style={{
@@ -400,7 +542,7 @@ function ConfirmationContent() {
           {bowlItems.length > 0 && (
             <div style={{ marginBottom: extrasItems.length > 0 ? 12 : 0 }}>
               <div style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#7C7A67", marginBottom: 6 }}>
-                The Bowl
+                {tStatus("sections.theBowl")}
               </div>
               <div
                 style={{
@@ -441,7 +583,7 @@ function ConfirmationContent() {
           {extrasItems.length > 0 && (
             <div>
               <div style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#7C7A67", marginBottom: 6 }}>
-                Add-ons & Extras
+                {tStatus("sections.addOnsExtras")}
               </div>
               <div
                 style={{
@@ -547,7 +689,7 @@ function ConfirmationContent() {
               cursor: "pointer",
             }}
           >
-            View My Profile
+            {tStatus("buttons.viewProfile")}
           </button>
 
           <button
@@ -564,7 +706,7 @@ function ConfirmationContent() {
               cursor: "pointer",
             }}
           >
-            Order Again
+            {tStatus("buttons.orderAgain")}
           </button>
 
           {/* Social Sharing Section */}
@@ -760,7 +902,7 @@ export default function ConfirmationPage() {
             background: "#E5E5E5",
           }}
         >
-          <div style={{ color: "#222222", fontSize: "1.2rem" }}>Loading...</div>
+          <div style={{ color: "#222222", fontSize: "1.2rem" }}>Loading order...</div>
         </div>
       }
     >

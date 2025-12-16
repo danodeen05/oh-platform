@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUser, SignInButton } from "@clerk/nextjs";
 
-const BASE = process.env.NEXT_PUBLIC_API_URL || "";
+const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 export default function GroupPaymentForm({
   groupCode,
@@ -58,40 +58,41 @@ export default function GroupPaymentForm({
       });
 
       // Complete the group order with seating assignment
-      if (seatingOption) {
-        // Fetch available seats to assign based on seating option
-        const seatsRes = await fetch(`${BASE}/locations/${locationId}/seats`, {
-          headers: { "x-tenant-slug": "oh" },
-        });
+      // Always try to assign seats (for ASAP arrivals, seatingOption defaults to 1)
+      const effectiveSeatingOption = seatingOption || 1;
 
-        if (seatsRes.ok) {
-          const seats = await seatsRes.json();
-          const availableSeats = seats.filter((s: any) => s.status === "AVAILABLE");
-          const seatsNeeded = orderIds.length;
+      // Fetch available seats to assign based on seating option
+      const seatsRes = await fetch(`${BASE}/locations/${locationId}/seats`, {
+        headers: { "x-tenant-slug": "oh" },
+      });
 
-          // Assign seats based on seating option
-          let assignedSeatIds: string[] = [];
-          if (availableSeats.length >= seatsNeeded) {
-            const startIndex = seatingOption === 1 ? 0 :
-                              seatingOption === 2 ? Math.floor(availableSeats.length / 3) :
-                              Math.floor(availableSeats.length * 2 / 3);
-            assignedSeatIds = availableSeats.slice(startIndex, startIndex + seatsNeeded).map((s: any) => s.id);
-          }
+      let assignedSeatIds: string[] = [];
+      if (seatsRes.ok) {
+        const seats = await seatsRes.json();
+        const availableSeats = seats.filter((s: any) => s.status === "AVAILABLE");
+        const seatsNeeded = orderIds.length;
 
-          // Call complete endpoint to assign pods and notify kitchen
-          await fetch(`${BASE}/group-orders/${groupCode}/complete`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "x-tenant-slug": "oh",
-            },
-            body: JSON.stringify({
-              seatIds: assignedSeatIds,
-              seatingOption,
-            }),
-          });
+        // Assign seats based on seating option
+        if (availableSeats.length >= seatsNeeded) {
+          const startIndex = effectiveSeatingOption === 1 ? 0 :
+                            effectiveSeatingOption === 2 ? Math.floor(availableSeats.length / 3) :
+                            Math.floor(availableSeats.length * 2 / 3);
+          assignedSeatIds = availableSeats.slice(startIndex, startIndex + seatsNeeded).map((s: any) => s.id);
         }
       }
+
+      // Call complete endpoint to assign pods and notify kitchen
+      await fetch(`${BASE}/group-orders/${groupCode}/complete`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-tenant-slug": "oh",
+        },
+        body: JSON.stringify({
+          seatIds: assignedSeatIds,
+          seatingOption: effectiveSeatingOption,
+        }),
+      });
 
       // Redirect to confirmation with host's order details
       router.push(
