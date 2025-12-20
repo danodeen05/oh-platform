@@ -7,6 +7,7 @@ const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 // Consistent kiosk color system
 const COLORS = {
   primary: "#7C7A67",
+  primaryDark: "#5A5847", // Darker olive for slider thumb
   primaryLight: "rgba(124, 122, 103, 0.15)",
   primaryBorder: "rgba(124, 122, 103, 0.4)",
   surface: "#FFFFFF",
@@ -26,12 +27,55 @@ const COLORS = {
   borderDark: "#333333",
 };
 
+// CSS for custom slider thumb styling
+const sliderThumbStyles = `
+  input[type="range"].kiosk-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent;
+    cursor: pointer;
+  }
+
+  input[type="range"].kiosk-slider::-webkit-slider-runnable-track {
+    height: 10px;
+    background: #e5e5e5;
+    border-radius: 5px;
+  }
+
+  input[type="range"].kiosk-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 36px;
+    height: 36px;
+    background: #5A5847;
+    border-radius: 50%;
+    margin-top: -13px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    border: 3px solid #FFFFFF;
+  }
+
+  input[type="range"].kiosk-slider::-moz-range-track {
+    height: 10px;
+    background: #e5e5e5;
+    border-radius: 5px;
+  }
+
+  input[type="range"].kiosk-slider::-moz-range-thumb {
+    width: 30px;
+    height: 30px;
+    background: #5A5847;
+    border-radius: 50%;
+    border: 3px solid #FFFFFF;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+`;
+
 // Brand component for consistent branding across all kiosk screens
 function KioskBrand({ size = "normal" }: { size?: "small" | "normal" | "large" }) {
   const sizes = {
     small: { logo: 32, chinese: "1.2rem", english: "0.65rem", gap: 4 },
     normal: { logo: 48, chinese: "1.8rem", english: "0.95rem", gap: 6 },
-    large: { logo: 64, chinese: "2.5rem", english: "1.3rem", gap: 8 },
+    large: { logo: 96, chinese: "3.5rem", english: "1.8rem", gap: 10 },
   };
   const s = sizes[size];
 
@@ -105,6 +149,11 @@ const MENU_IMAGES: Record<string, string> = {
   "Spicy Green Beans": "/menu images/Spicy Green Beans.png",
   // Desserts
   "Mandarin Orange Sherbet": "/menu images/Mandarin Orange Sherbet.png",
+  // Beverages - exact API names
+  "Pepsi": "/menu images/Pepsi.jpg",
+  "Diet Pepsi": "/menu images/DietPepsi.jpg",
+  "Water (cold)": "/menu images/IceWater.jpeg",
+  "Water (room temp)": "/menu images/RoomTempWater.jpeg",
 };
 
 type Location = {
@@ -793,42 +842,40 @@ function MenuView({
   menuSteps: MenuStep[];
 }) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [showScrollHint, setShowScrollHint] = useState(false);
+  const [showScrollHint, setShowScrollHint] = useState(true); // Start visible
 
-  // Check if there's content below the fold
-  useEffect(() => {
+  // Check if there's content below the fold - update on scroll
+  const checkScrollPosition = useCallback(() => {
     const container = scrollContainerRef.current;
     if (container) {
-      const hasOverflow = container.scrollHeight > container.clientHeight;
-      setShowScrollHint(hasOverflow && container.scrollTop < 50);
-    }
-  }, [step]);
-
-  // Handle scroll to hide hint
-  const handleScroll = useCallback(() => {
-    const container = scrollContainerRef.current;
-    if (container && container.scrollTop > 50) {
-      setShowScrollHint(false);
+      const hasOverflow = container.scrollHeight > container.clientHeight + 10; // 10px buffer
+      // Show hint if there's overflow AND user hasn't scrolled to bottom (with 100px threshold)
+      const isNearBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 100;
+      setShowScrollHint(hasOverflow && !isNearBottom);
     }
   }, []);
 
-  // Auto-scroll after slider selection
+  // Check on mount and step change - use setTimeout to ensure DOM is ready
+  useEffect(() => {
+    // Check immediately
+    checkScrollPosition();
+    // Also check after a delay for images/content to load
+    const timer1 = setTimeout(checkScrollPosition, 300);
+    const timer2 = setTimeout(checkScrollPosition, 800);
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+    };
+  }, [step, checkScrollPosition]);
+
+  // Handle scroll to update hint visibility
+  const handleScroll = useCallback(() => {
+    checkScrollPosition();
+  }, [checkScrollPosition]);
+
+  // Handle slider change (no auto-scroll)
   const handleSliderChange = (itemId: string, value: number, labels: string[], defaultValue: number) => {
     onSliderUpdate(itemId, value, labels[value] || String(value));
-
-    // Find the next section and scroll to it
-    setTimeout(() => {
-      const container = scrollContainerRef.current;
-      if (container) {
-        const currentSection = document.getElementById(`section-${itemId}`);
-        if (currentSection?.nextElementSibling) {
-          currentSection.nextElementSibling.scrollIntoView({
-            behavior: "smooth",
-            block: "start",
-          });
-        }
-      }
-    }, 300);
   };
 
   // Check if this is the drinks & dessert step
@@ -847,7 +894,9 @@ function MenuView({
   return (
     <main
       style={{
-        minHeight: "100vh",
+        height: "100vh",
+        maxHeight: "100vh",
+        overflow: "hidden",
         background: COLORS.surface,
         color: COLORS.text,
         display: "flex",
@@ -860,7 +909,7 @@ function MenuView({
           position: "sticky",
           top: 0,
           background: COLORS.surface,
-          padding: "12px 24px",
+          padding: "20px 32px",
           borderBottom: `1px solid ${COLORS.border}`,
           zIndex: 10,
         }}
@@ -874,15 +923,15 @@ function MenuView({
         >
           {/* Left: Guest info and step title */}
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: "0.85rem", color: COLORS.textMuted }}>
-              {guestName}'s Order ({guestNumber}/{totalGuests})
+            <div style={{ fontSize: "1.1rem", color: COLORS.textMuted }}>
+              <strong style={{ color: COLORS.text }}>{guestName}'s</strong> Order ({guestNumber}/{totalGuests})
             </div>
-            <h1 style={{ fontSize: "1.5rem", fontWeight: 700, margin: 0 }}>{step.title}</h1>
+            <h1 style={{ fontSize: "2rem", fontWeight: 700, margin: "4px 0 0 0" }}>{step.title}</h1>
           </div>
 
-          {/* Center: Brand */}
+          {/* Center: Brand - 3x larger */}
           <div style={{ flex: 1, display: "flex", justifyContent: "center" }}>
-            <KioskBrand size="small" />
+            <KioskBrand size="large" />
           </div>
 
           {/* Right: Step indicator with text */}
@@ -892,20 +941,20 @@ function MenuView({
               display: "flex",
               flexDirection: "column",
               alignItems: "flex-end",
-              gap: 4,
+              gap: 8,
             }}
           >
-            <span style={{ fontSize: "0.85rem", color: COLORS.textMuted, fontWeight: 500 }}>
+            <span style={{ fontSize: "1.1rem", color: COLORS.textMuted, fontWeight: 600 }}>
               Step {stepIndex + 1} of {totalSteps}
             </span>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               {Array.from({ length: totalSteps }).map((_, i) => (
                 <div
                   key={i}
                   style={{
-                    width: i === stepIndex ? 20 : 6,
-                    height: 6,
-                    borderRadius: 3,
+                    width: i === stepIndex ? 32 : 10,
+                    height: 10,
+                    borderRadius: 5,
                     background: i <= stepIndex ? COLORS.primary : COLORS.border,
                     transition: "all 0.3s",
                   }}
@@ -924,35 +973,77 @@ function MenuView({
           flex: 1,
           overflowY: "auto",
           padding: "16px 20px",
-          paddingBottom: 140,
+          paddingBottom: 220,
         }}
       >
         <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+          {/* Legend for slider recommendation indicator */}
+          {step.sections.some((s) => s.selectionMode === "SLIDER") && (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "flex-end",
+                gap: 12,
+                marginBottom: 20,
+                fontSize: "1.1rem",
+                color: COLORS.text,
+              }}
+            >
+              <div
+                style={{
+                  width: 50,
+                  height: 28,
+                  borderRadius: 8,
+                  border: `2px dashed ${COLORS.primary}`,
+                }}
+              />
+              <span style={{ fontWeight: 500, display: "flex", alignItems: "center", gap: 4 }}>
+                <span style={{ fontSize: "1.5rem" }}>=</span> <span style={{ fontFamily: '"Ma Shan Zheng", cursive', color: "#C7A878", fontSize: "1.5rem" }}>哦</span> Oh! Recommendation
+              </span>
+            </div>
+          )}
           {step.sections.map((section) => (
             <div
               key={section.id}
               id={`section-${section.item?.id || section.id}`}
-              style={{ marginBottom: 32 }}
+              style={{ marginBottom: 28 }}
             >
-              <h2 style={{ fontSize: "1.1rem", marginBottom: 6, color: COLORS.text }}>
-                {section.name}
+              <h2 style={{ fontSize: "1.4rem", fontWeight: 700, marginBottom: 4, color: COLORS.text }}>
+                {section.name
+                  .replace(/Premium Add-?[Oo]ns/i, "Add-Ons")
+                  .replace("Choose Your Noodles", "Choose Your Noodle Style")}
                 {section.required && (
-                  <span style={{ color: COLORS.primary, marginLeft: 8, fontSize: "0.8rem" }}>
+                  <span style={{ color: COLORS.primary, marginLeft: 8, fontSize: "0.9rem", fontWeight: 600 }}>
                     Required
                   </span>
                 )}
               </h2>
               {section.description && (
-                <p style={{ color: COLORS.textMuted, marginBottom: 12, fontSize: "0.9rem" }}>
-                  {section.description}
+                <p style={{ color: COLORS.textMuted, marginBottom: 10, marginTop: 0, fontSize: "0.9rem", lineHeight: 1.3 }}>
+                  {/* Bold the recommended selection in "We recommend X for first-timers" */}
+                  {section.description.includes("recommend") ? (
+                    <>
+                      {section.description.split(/\b(Light|Medium|Rich|Extra Rich|Firm|Soft|None|Mild|Spicy|Extra Spicy)\b/).map((part, i) =>
+                        ["Light", "Medium", "Rich", "Extra Rich", "Firm", "Soft", "None", "Mild", "Spicy", "Extra Spicy"].includes(part) ? (
+                          <strong key={i} style={{ color: COLORS.primary }}>{part}</strong>
+                        ) : (
+                          <span key={i}>{part}</span>
+                        )
+                      )}
+                    </>
+                  ) : (
+                    section.description
+                  )}
                 </p>
               )}
 
-              {/* Radio selection mode with images - larger cards */}
+              {/* Radio selection mode with images - compact cards */}
               {section.selectionMode === "SINGLE" && section.items && (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 350px))", gap: 12 }}>
                   {section.items.map((item) => {
                     const isSelected = selections[section.id] === item.id;
+                    const hasSelection = !!selections[section.id];
                     const imageUrl = MENU_IMAGES[item.name];
                     const isNoNoodles = item.name.toLowerCase().includes("no noodle");
 
@@ -968,19 +1059,20 @@ function MenuView({
                           border: isSelected
                             ? `3px solid ${COLORS.primary}`
                             : `2px solid ${COLORS.border}`,
-                          borderRadius: 14,
+                          borderRadius: 12,
                           overflow: "hidden",
                           cursor: "pointer",
                           transition: "all 0.2s",
                           textAlign: "left",
                           position: "relative",
+                          opacity: hasSelection && !isSelected ? 0.3 : 1,
                         }}
                       >
                         {imageUrl ? (
                           <div
                             style={{
                               width: "100%",
-                              height: 140,
+                              aspectRatio: "1 / 1",
                               background: "#f5f5f5",
                               display: "flex",
                               alignItems: "center",
@@ -1003,21 +1095,21 @@ function MenuView({
                           <div
                             style={{
                               width: "100%",
-                              height: 140,
+                              aspectRatio: "1 / 1",
                               background: "linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%)",
                               display: "flex",
                               flexDirection: "column",
                               alignItems: "center",
                               justifyContent: "center",
-                              gap: 8,
+                              gap: 4,
                             }}
                           >
-                            <div style={{ fontSize: "2.5rem", opacity: 0.6 }}>🍜</div>
+                            <div style={{ fontSize: "3rem", opacity: 0.6 }}>🍜</div>
                             <div
                               style={{
                                 position: "absolute",
-                                width: 60,
-                                height: 60,
+                                width: 70,
+                                height: 70,
                                 border: `3px solid ${COLORS.error}`,
                                 borderRadius: "50%",
                                 transform: "rotate(-45deg)",
@@ -1034,7 +1126,7 @@ function MenuView({
                                 }}
                               />
                             </div>
-                            <span style={{ fontSize: "0.8rem", color: COLORS.textMuted, marginTop: 8 }}>
+                            <span style={{ fontSize: "0.9rem", color: COLORS.textMuted, marginTop: 12 }}>
                               Just broth & toppings
                             </span>
                           </div>
@@ -1042,22 +1134,22 @@ function MenuView({
                           <div
                             style={{
                               width: "100%",
-                              height: 140,
+                              aspectRatio: "1 / 1",
                               background: "#f5f5f5",
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
                             }}
                           >
-                            <span style={{ fontSize: "3rem" }}>🍜</span>
+                            <span style={{ fontSize: "4rem" }}>🍜</span>
                           </div>
                         )}
                         <div style={{ padding: 12 }}>
-                          <div style={{ fontWeight: 600, fontSize: "1rem", color: COLORS.text }}>
+                          <div style={{ fontWeight: 700, fontSize: "1.15rem", color: COLORS.text }}>
                             {item.name}
                           </div>
                           {item.basePriceCents > 0 && (
-                            <div style={{ color: COLORS.primary, fontSize: "0.9rem", marginTop: 2, fontWeight: 600 }}>
+                            <div style={{ color: COLORS.primary, fontSize: "1rem", marginTop: 3, fontWeight: 700 }}>
                               ${(item.basePriceCents / 100).toFixed(2)}
                             </div>
                           )}
@@ -1066,18 +1158,21 @@ function MenuView({
                           <div
                             style={{
                               position: "absolute",
-                              top: 10,
-                              right: 10,
-                              width: 26,
-                              height: 26,
-                              borderRadius: 13,
-                              background: COLORS.primary,
+                              top: 12,
+                              right: 12,
+                              width: 72,
+                              height: 72,
+                              borderRadius: 36,
+                              background: "rgba(245, 243, 239, 0.5)",
                               display: "flex",
+                              flexDirection: "column",
                               alignItems: "center",
                               justifyContent: "center",
+                              gap: 2,
                             }}
                           >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                            <span style={{ fontFamily: '"Ma Shan Zheng", cursive', fontSize: "2rem", color: "#C7A878", lineHeight: 1 }}>哦!</span>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C7A878" strokeWidth="3">
                               <path d="M20 6L9 17l-5-5" />
                             </svg>
                           </div>
@@ -1088,9 +1183,13 @@ function MenuView({
                 </div>
               )}
 
-              {/* Multiple selection mode with images and prices */}
+              {/* Multiple selection mode with images and prices - compact cards */}
               {section.selectionMode === "MULTIPLE" && section.items && (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(300px, 350px))",
+                  gap: 12,
+                }}>
                   {section.items.map((item) => {
                     const qty = cart[item.id] || 0;
                     const imageUrl = MENU_IMAGES[item.name];
@@ -1107,7 +1206,7 @@ function MenuView({
                           flexDirection: "column",
                           background: qty > 0 ? COLORS.primaryLight : COLORS.surfaceElevated,
                           border: qty > 0 ? `3px solid ${COLORS.primary}` : `2px solid ${COLORS.border}`,
-                          borderRadius: 14,
+                          borderRadius: 12,
                           overflow: "hidden",
                           transition: "all 0.2s",
                         }}
@@ -1116,7 +1215,7 @@ function MenuView({
                           <div
                             style={{
                               width: "100%",
-                              height: 110,
+                              aspectRatio: "1 / 1",
                               background: "#f5f5f5",
                               display: "flex",
                               alignItems: "center",
@@ -1138,14 +1237,14 @@ function MenuView({
                           <div
                             style={{
                               width: "100%",
-                              height: 110,
+                              aspectRatio: "1 / 1",
                               background: "#f5f5f5",
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
                             }}
                           >
-                            <span style={{ fontSize: "2.5rem" }}>
+                            <span style={{ fontSize: "4rem" }}>
                               {item.name.toLowerCase().includes("drink") ? "🥤" :
                                item.name.toLowerCase().includes("tea") ? "🍵" :
                                item.name.toLowerCase().includes("water") ? "💧" : "🍽️"}
@@ -1154,17 +1253,17 @@ function MenuView({
                         )}
                         <div
                           style={{
-                            padding: 12,
+                            padding: 10,
                             display: "flex",
                             flexDirection: "column",
-                            gap: 8,
+                            gap: 6,
                           }}
                         >
                           <div>
-                            <div style={{ fontWeight: 600, color: COLORS.text, fontSize: "0.95rem" }}>{item.name}</div>
+                            <div style={{ fontWeight: 700, color: COLORS.text, fontSize: "1rem" }}>{item.name}</div>
                             {/* Show price for all items in drinks & dessert */}
                             {isDrinksAndDessertStep || item.basePriceCents > 0 || item.additionalPriceCents > 0 ? (
-                              <div style={{ color: isDessert && isComplimentary ? COLORS.success : COLORS.primary, fontSize: "0.85rem", fontWeight: 600 }}>
+                              <div style={{ color: isDessert && isComplimentary ? COLORS.success : COLORS.primary, fontSize: "0.85rem", fontWeight: 600, marginTop: 2 }}>
                                 {isDessert && isComplimentary ? (
                                   "Complimentary - $0.00"
                                 ) : item.includedQuantity > 0 ? (
@@ -1180,17 +1279,18 @@ function MenuView({
                               </div>
                             ) : null}
                           </div>
-                          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16 }}>
                             <button
                               onClick={() => onCartUpdate(item.id, Math.max(0, qty - 1))}
                               style={{
-                                width: 36,
-                                height: 36,
-                                borderRadius: 8,
+                                width: 52,
+                                height: 52,
+                                borderRadius: 12,
                                 border: "none",
                                 background: qty > 0 ? COLORS.primary : COLORS.border,
                                 color: qty > 0 ? COLORS.textOnPrimary : COLORS.textMuted,
-                                fontSize: "1.3rem",
+                                fontSize: "1.75rem",
+                                fontWeight: 700,
                                 cursor: "pointer",
                                 display: "flex",
                                 alignItems: "center",
@@ -1201,10 +1301,10 @@ function MenuView({
                             </button>
                             <span
                               style={{
-                                minWidth: 24,
+                                minWidth: 44,
                                 textAlign: "center",
-                                fontSize: "1.1rem",
-                                fontWeight: 600,
+                                fontSize: "1.75rem",
+                                fontWeight: 700,
                                 color: COLORS.text,
                               }}
                             >
@@ -1214,13 +1314,14 @@ function MenuView({
                               onClick={() => onCartUpdate(item.id, qty + 1, maxQty)}
                               disabled={maxQty !== undefined && qty >= maxQty}
                               style={{
-                                width: 36,
-                                height: 36,
-                                borderRadius: 8,
+                                width: 52,
+                                height: 52,
+                                borderRadius: 12,
                                 border: "none",
                                 background: maxQty !== undefined && qty >= maxQty ? COLORS.border : COLORS.primary,
                                 color: maxQty !== undefined && qty >= maxQty ? COLORS.textMuted : COLORS.textOnPrimary,
-                                fontSize: "1.3rem",
+                                fontSize: "1.75rem",
+                                fontWeight: 700,
                                 cursor: maxQty !== undefined && qty >= maxQty ? "not-allowed" : "pointer",
                                 display: "flex",
                                 alignItems: "center",
@@ -1237,123 +1338,131 @@ function MenuView({
                 </div>
               )}
 
-              {/* Slider mode with "Our Suggestion" indicator */}
+              {/* Slider mode with image and "Our Suggestion" indicator */}
               {section.selectionMode === "SLIDER" && section.item && section.sliderConfig && (
                 <div
                   style={{
-                    padding: 20,
                     background: COLORS.surfaceElevated,
-                    borderRadius: 14,
+                    borderRadius: 12,
                     border: `2px solid ${COLORS.border}`,
+                    display: "flex",
+                    overflow: "hidden",
                   }}
                 >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      marginBottom: 16,
-                    }}
-                  >
-                    <span style={{ fontWeight: 600, color: COLORS.text }}>{section.item.name}</span>
-                    <span
+                  {/* Image on left */}
+                  {MENU_IMAGES[section.item.name] && (
+                    <div
                       style={{
-                        padding: "5px 14px",
-                        background: COLORS.primaryLight,
-                        borderRadius: 16,
-                        fontWeight: 600,
-                        color: COLORS.primary,
-                        fontSize: "0.9rem",
+                        width: 100,
+                        minHeight: 120,
+                        flexShrink: 0,
+                        background: "#f5f5f5",
+                        position: "relative",
                       }}
                     >
-                      {sliderLabels[section.item.id] || "Not set"}
-                    </span>
-                  </div>
+                      <img
+                        src={MENU_IMAGES[section.item.name]}
+                        alt={section.item.name}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                          position: "absolute",
+                          top: 0,
+                          left: 0,
+                        }}
+                      />
+                    </div>
+                  )}
 
-                  {/* Slider with "Our Suggestion" indicator */}
-                  <div style={{ position: "relative", paddingTop: 16 }}>
-                    <input
-                      type="range"
-                      min={section.sliderConfig.min || 0}
-                      max={section.sliderConfig.max || 3}
-                      value={cart[section.item.id] || 0}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value);
-                        const labels = section.sliderConfig.labels || [];
-                        handleSliderChange(section.item!.id, val, labels, section.sliderConfig.default ?? 0);
-                      }}
+                  {/* Content on right */}
+                  <div style={{ flex: 1, padding: 14 }}>
+                    <div
                       style={{
-                        width: "100%",
-                        height: 8,
-                        cursor: "pointer",
-                        accentColor: COLORS.primary,
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginBottom: 10,
                       }}
-                    />
-                  </div>
+                    >
+                      <span style={{ fontWeight: 600, color: COLORS.text }}>{section.item.name}</span>
+                      <span
+                        style={{
+                          padding: "5px 14px",
+                          background: COLORS.primaryDark,
+                          borderRadius: 16,
+                          fontWeight: 700,
+                          color: COLORS.textOnPrimary,
+                          fontSize: "0.9rem",
+                        }}
+                      >
+                        {sliderLabels[section.item.id] || "Not set"}
+                      </span>
+                    </div>
 
-                  {/* Labels with "Our Suggestion" marker */}
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      marginTop: 90,
-                      fontSize: "0.85rem",
-                      position: "relative",
-                    }}
-                  >
-                    {section.sliderConfig.labels?.map((label: string, i: number) => {
-                      const isDefault = i === (section.sliderConfig.default ?? 0);
-                      const isSelected = cart[section.item!.id] === i;
-                      return (
-                        <div
-                          key={i}
-                          style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "center",
-                            position: "relative",
-                          }}
-                        >
-                          {isDefault && (
-                            <>
-                              <span
-                                style={{
-                                  position: "absolute",
-                                  top: -85,
-                                  fontSize: "0.85rem",
-                                  color: COLORS.textMuted,
-                                  whiteSpace: "nowrap",
-                                  fontWeight: 500,
-                                }}
-                              >
-                                Our Suggestion
-                              </span>
-                              <div
-                                style={{
-                                  position: "absolute",
-                                  top: -60,
-                                  width: 70,
-                                  height: 70,
-                                  borderRadius: "50%",
-                                  border: `2px dashed ${COLORS.primary}`,
-                                  transform: "translateX(-50%)",
-                                  left: "50%",
-                                }}
-                              />
-                            </>
-                          )}
-                          <span
+                    {/* Slider with padding to keep labels within bounds */}
+                    <div style={{ position: "relative", paddingTop: 8, paddingLeft: 40, paddingRight: 40 }}>
+                      <input
+                        type="range"
+                        className="kiosk-slider"
+                        min={section.sliderConfig.min || 0}
+                        max={section.sliderConfig.max || 3}
+                        value={cart[section.item.id] || 0}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value);
+                          const labels = section.sliderConfig.labels || [];
+                          handleSliderChange(section.item!.id, val, labels, section.sliderConfig.default ?? 0);
+                        }}
+                        style={{
+                          width: "100%",
+                          height: 10,
+                          cursor: "pointer",
+                        }}
+                      />
+                    </div>
+
+                    {/* Labels below slider - using flexbox for even distribution */}
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        marginTop: 14,
+                        fontSize: "1rem",
+                        paddingLeft: 40,
+                        paddingRight: 40,
+                      }}
+                    >
+                      {section.sliderConfig.labels?.map((label: string, i: number) => {
+                        const isDefault = i === (section.sliderConfig.default ?? 0);
+                        const isSelected = cart[section.item!.id] === i;
+                        return (
+                          <div
+                            key={i}
                             style={{
-                              color: isSelected ? COLORS.primary : COLORS.textMuted,
-                              fontWeight: isSelected ? 600 : 400,
-                              transition: "all 0.2s",
+                              display: "flex",
+                              flexDirection: "column",
+                              alignItems: "center",
+                              flex: "0 0 auto",
                             }}
                           >
-                            {label}
-                          </span>
-                        </div>
-                      );
-                    })}
+                            <span
+                              style={{
+                                color: isSelected ? COLORS.primary : COLORS.text,
+                                fontWeight: isSelected ? 700 : 500,
+                                fontSize: isSelected ? "1.1rem" : "1rem",
+                                transition: "all 0.2s",
+                                padding: isDefault ? "4px 10px" : undefined,
+                                border: isDefault ? `2px dashed ${COLORS.primary}` : undefined,
+                                borderRadius: isDefault ? 8 : undefined,
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {label}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               )}
@@ -1362,26 +1471,112 @@ function MenuView({
         </div>
       </div>
 
-      {/* Scroll Hint */}
+      {/* Scroll Hint - Prominent animated indicator */}
       {showScrollHint && (
         <div
           style={{
             position: "fixed",
-            bottom: 120,
+            bottom: 180,
             left: "50%",
             transform: "translateX(-50%)",
             display: "flex",
-            flexDirection: "column",
+            flexDirection: "row",
             alignItems: "center",
-            gap: 6,
-            animation: "bounce 1.5s infinite",
-            zIndex: 5,
+            gap: 12,
+            zIndex: 15,
+            animation: "scrollHintPulse 2s ease-in-out infinite",
           }}
         >
-          <span style={{ color: COLORS.textMuted, fontSize: "0.85rem" }}>Scroll for more</span>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={COLORS.primary} strokeWidth="2">
-            <path d="M12 5v14M19 12l-7 7-7-7" />
-          </svg>
+          {/* Animated chevrons on left - pointing down */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0 }}>
+            <svg
+              width="32"
+              height="16"
+              viewBox="0 0 24 12"
+              fill="none"
+              stroke={COLORS.primaryDark}
+              strokeWidth="3"
+              style={{ animation: "chevronBounce 1s ease-in-out infinite", opacity: 0.9 }}
+            >
+              <path d="M4 2l8 8 8-8" />
+            </svg>
+            <svg
+              width="32"
+              height="16"
+              viewBox="0 0 24 12"
+              fill="none"
+              stroke={COLORS.primaryDark}
+              strokeWidth="3"
+              style={{ animation: "chevronBounce 1s ease-in-out infinite 0.15s", marginTop: -6, opacity: 0.6 }}
+            >
+              <path d="M4 2l8 8 8-8" />
+            </svg>
+            <svg
+              width="32"
+              height="16"
+              viewBox="0 0 24 12"
+              fill="none"
+              stroke={COLORS.primaryDark}
+              strokeWidth="3"
+              style={{ animation: "chevronBounce 1s ease-in-out infinite 0.3s", marginTop: -6, opacity: 0.3 }}
+            >
+              <path d="M4 2l8 8 8-8" />
+            </svg>
+          </div>
+
+          <div
+            style={{
+              background: COLORS.primaryDark,
+              color: COLORS.textOnPrimary,
+              padding: "12px 28px",
+              borderRadius: 30,
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              boxShadow: "0 4px 20px rgba(0,0,0,0.25)",
+              fontSize: "1.1rem",
+              fontWeight: 600,
+            }}
+          >
+            <span>Scroll for more options</span>
+          </div>
+
+          {/* Animated chevrons on right - pointing down */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0 }}>
+            <svg
+              width="32"
+              height="16"
+              viewBox="0 0 24 12"
+              fill="none"
+              stroke={COLORS.primaryDark}
+              strokeWidth="3"
+              style={{ animation: "chevronBounce 1s ease-in-out infinite", opacity: 0.9 }}
+            >
+              <path d="M4 2l8 8 8-8" />
+            </svg>
+            <svg
+              width="32"
+              height="16"
+              viewBox="0 0 24 12"
+              fill="none"
+              stroke={COLORS.primaryDark}
+              strokeWidth="3"
+              style={{ animation: "chevronBounce 1s ease-in-out infinite 0.15s", marginTop: -6, opacity: 0.6 }}
+            >
+              <path d="M4 2l8 8 8-8" />
+            </svg>
+            <svg
+              width="32"
+              height="16"
+              viewBox="0 0 24 12"
+              fill="none"
+              stroke={COLORS.primaryDark}
+              strokeWidth="3"
+              style={{ animation: "chevronBounce 1s ease-in-out infinite 0.3s", marginTop: -6, opacity: 0.3 }}
+            >
+              <path d="M4 2l8 8 8-8" />
+            </svg>
+          </div>
         </div>
       )}
 
@@ -1398,42 +1593,43 @@ function MenuView({
           zIndex: 10,
         }}
       >
-        {/* Running Total */}
+        {/* Running Total - larger */}
         <div
           style={{
             display: "flex",
             justifyContent: "center",
-            marginBottom: 12,
+            marginBottom: 16,
           }}
         >
           <div
             style={{
               background: COLORS.primaryLight,
-              padding: "8px 20px",
-              borderRadius: 20,
+              padding: "12px 28px",
+              borderRadius: 24,
               display: "flex",
               alignItems: "center",
-              gap: 8,
+              gap: 12,
             }}
           >
-            <span style={{ color: COLORS.textMuted, fontSize: "0.9rem" }}>Order Subtotal:</span>
-            <span style={{ color: COLORS.primary, fontWeight: 700, fontSize: "1.1rem" }}>
+            <span style={{ color: COLORS.textMuted, fontSize: "1.15rem", fontWeight: 500 }}>Order Subtotal:</span>
+            <span style={{ color: COLORS.primary, fontWeight: 700, fontSize: "1.5rem" }}>
               ${(runningTotal / 100).toFixed(2)}
             </span>
           </div>
         </div>
 
-        <div style={{ display: "flex", justifyContent: "center", gap: 12 }}>
+        <div style={{ display: "flex", justifyContent: "center", gap: 16 }}>
           {canGoBack && (
             <button
               onClick={onPrevious}
               style={{
-                padding: "14px 28px",
+                padding: "18px 40px",
                 background: "transparent",
                 border: `2px solid ${COLORS.border}`,
-                borderRadius: 10,
+                borderRadius: 12,
                 color: COLORS.textMuted,
-                fontSize: "1rem",
+                fontSize: "1.2rem",
+                fontWeight: 500,
                 cursor: "pointer",
               }}
             >
@@ -1444,12 +1640,12 @@ function MenuView({
             onClick={onNext}
             disabled={!canProceed}
             style={{
-              padding: "14px 40px",
+              padding: "18px 56px",
               background: canProceed ? COLORS.primary : "#ccc",
               border: "none",
-              borderRadius: 10,
+              borderRadius: 12,
               color: canProceed ? COLORS.textOnPrimary : "#888",
-              fontSize: "1rem",
+              fontSize: "1.2rem",
               fontWeight: 600,
               cursor: canProceed ? "pointer" : "not-allowed",
             }}
@@ -1464,6 +1660,19 @@ function MenuView({
           0%, 100% { transform: translateX(-50%) translateY(0); }
           50% { transform: translateX(-50%) translateY(-8px); }
         }
+        @keyframes scrollHintPulse {
+          0%, 100% { transform: translateX(-50%) scale(1); opacity: 1; }
+          50% { transform: translateX(-50%) scale(1.03); opacity: 0.95; }
+        }
+        @keyframes chevronBounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(6px); }
+        }
+        @keyframes chevronBounceHorizontal {
+          0%, 100% { transform: translateX(0); }
+          50% { transform: translateX(4px); }
+        }
+        ${sliderThumbStyles}
       `}</style>
     </main>
   );
@@ -1674,7 +1883,7 @@ function ReviewView({
             }}
           >
             <h3 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: 12, color: COLORS.primary }}>
-              Premium Add-Ons & Sides
+              Add-Ons & Sides
             </h3>
 
             {addOnItems.map((item, i) => (
