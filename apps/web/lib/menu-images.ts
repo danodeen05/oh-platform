@@ -34,6 +34,12 @@ const menuImageMap: Record<string, string> = {
 
   // Dessert
   "Mandarin Orange Sherbet": "/menu images/Mandarin Orange Sherbet.png",
+
+  // Beverages - exact API names
+  "Pepsi": "/menu images/Pepsi.jpg",
+  "Diet Pepsi": "/menu images/DietPepsi.jpg",
+  "Water (cold)": "/menu images/IceWater.jpeg",
+  "Water (room temp)": "/menu images/RoomTempWater.jpeg",
 };
 
 // Special marker for No Noodles
