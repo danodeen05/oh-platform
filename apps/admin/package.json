@@ -8,10 +8,10 @@
     "start": "next start -p 3001"
   },
   "dependencies": {
-    "@clerk/nextjs": "^6.35.5",
+    "@clerk/nextjs": "^6.36.5",
     "next": "16.1.0",
     "qrcode.react": "^4.2.0",
-    "react": "19.2.1",
-    "react-dom": "19.2.1"
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
   }
 }
