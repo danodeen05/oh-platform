@@ -827,6 +827,12 @@ app.get("/locations/:id/seats", async (req, reply) => {
               membershipTier: true,
             },
           },
+          guest: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
         },
         orderBy: {
           createdAt: "desc",
@@ -2275,7 +2281,11 @@ app.get("/orders", async (req, reply) => {
   const { status, locationId, userId } = req.query || {};
 
   const where = {};
-  if (status) where.status = status;
+  if (status) {
+    // Support comma-separated status values for filtering multiple statuses
+    const statuses = status.split(",").map(s => s.trim());
+    where.status = statuses.length === 1 ? statuses[0] : { in: statuses };
+  }
   if (locationId) where.locationId = locationId;
   if (userId) where.userId = userId;
 
@@ -2318,7 +2328,7 @@ app.get("/orders/:id", async (req, reply) => {
 });
 
 app.post("/orders", async (req, reply) => {
-  const { locationId, tenantId, items, seatId, estimatedArrival, podSelectionMethod, userId, guestId, dualPartnerSeatId, isDualPod } =
+  const { locationId, tenantId, items, seatId, estimatedArrival, podSelectionMethod, userId, guestId, guestName, isKioskOrder, dualPartnerSeatId, isDualPod } =
     req.body || {};
 
   if (!locationId || !tenantId || !items || !items.length) {
@@ -2408,6 +2418,19 @@ app.post("/orders", async (req, reply) => {
   // Format as 4-digit string (e.g., "0001", "0042", "0234")
   const kitchenOrderNumber = String(todaysOrderCount + 1).padStart(4, "0");
 
+  // Create guest record if guestName provided (kiosk orders)
+  let resolvedGuestId = guestId;
+  if (!resolvedGuestId && guestName) {
+    const guest = await prisma.guest.create({
+      data: {
+        name: guestName,
+        sessionToken: `kiosk-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+      },
+    });
+    resolvedGuestId = guest.id;
+  }
+
   const order = await prisma.order.create({
     data: {
       orderNumber,
@@ -2424,7 +2447,7 @@ app.post("/orders", async (req, reply) => {
       totalCents,
       estimatedArrival: estimatedArrival ? new Date(estimatedArrival) : null,
       userId: userId || null,
-      guestId: guestId || null,
+      guestId: resolvedGuestId || null,
       items: {
         create: orderItems,
       },
@@ -2448,7 +2471,20 @@ app.post("/orders", async (req, reply) => {
 // PATCH /orders/:id - Update order status
 app.patch("/orders/:id", async (req, reply) => {
   const { id } = req.params;
-  const { status, paymentStatus, userId, guestId, totalCents, estimatedArrival } = req.body || {};
+  const {
+    status,
+    paymentStatus,
+    userId,
+    guestId,
+    totalCents,
+    estimatedArrival,
+    seatId,
+    podSelectionMethod,
+    podAssignedAt,
+    podConfirmedAt,
+    podReservationExpiry,
+    orderSource,
+  } = req.body || {};
 
   const data = {};
   if (status) data.status = status;
@@ -2463,11 +2499,17 @@ app.patch("/orders/:id", async (req, reply) => {
   if (guestId) data.guestId = guestId;
   if (totalCents !== undefined) data.totalCents = totalCents;
   if (estimatedArrival) data.estimatedArrival = new Date(estimatedArrival);
+  if (seatId) data.seatId = seatId;
+  if (podSelectionMethod) data.podSelectionMethod = podSelectionMethod;
+  if (podAssignedAt) data.podAssignedAt = new Date(podAssignedAt);
+  if (podConfirmedAt) data.podConfirmedAt = new Date(podConfirmedAt);
+  if (podReservationExpiry) data.podReservationExpiry = new Date(podReservationExpiry);
+  if (orderSource) data.orderSource = orderSource;
 
   if (!Object.keys(data).length) {
     return reply
       .code(400)
-      .send({ error: "status, paymentStatus, userId, guestId, totalCents, or estimatedArrival required" });
+      .send({ error: "status, paymentStatus, userId, guestId, totalCents, estimatedArrival, or seatId required" });
   }
 
   // If setting payment to PAID, also set paidAt timestamp and reservation expiry
@@ -2516,6 +2558,25 @@ app.patch("/orders/:id", async (req, reply) => {
       console.log(`Dual Pod ${order.seat?.number} (both seats) reserved for order ${order.kitchenOrderNumber}, expires at ${expiryTime.toISOString()}`);
     } else {
       console.log(`Pod ${order.seat?.number} reserved for order ${order.kitchenOrderNumber}, expires at ${expiryTime.toISOString()}`);
+    }
+  }
+
+  // If podConfirmedAt was just set, mark seat as OCCUPIED
+  if (podConfirmedAt && order.seatId) {
+    const seatsToOccupy = [order.seatId];
+    if (order.isDualPod && order.dualPartnerSeatId) {
+      seatsToOccupy.push(order.dualPartnerSeatId);
+    }
+
+    await prisma.seat.updateMany({
+      where: { id: { in: seatsToOccupy } },
+      data: { status: "OCCUPIED" },
+    });
+
+    if (order.isDualPod && order.dualPartnerSeatId) {
+      console.log(`Dual Pod ${order.seat?.number} (both seats) now OCCUPIED - customer confirmed arrival for order ${order.kitchenOrderNumber}`);
+    } else {
+      console.log(`Pod ${order.seat?.number} now OCCUPIED - customer confirmed arrival for order ${order.kitchenOrderNumber}`);
     }
   }
 
@@ -2739,6 +2800,15 @@ app.post("/users", async (req, reply) => {
       }
     } else {
       console.log("ℹ️ Existing user already has referrer or no new referral code provided");
+    }
+
+    // Update name if it changed in Clerk
+    if (name && name !== existing.name) {
+      const updatedUser = await prisma.user.update({
+        where: { id: existing.id },
+        data: { name },
+      });
+      return updatedUser;
     }
 
     return existing;
@@ -3225,15 +3295,6 @@ app.get("/kitchen/orders", async (req, reply) => {
   const where = {
     tenantId: tenant.id,
     paymentStatus: "PAID", // Only show paid orders
-    // Show orders that have confirmed pod arrival OR are arriving (reserved but not confirmed)
-    OR: [
-      { podConfirmedAt: { not: null } }, // Customer confirmed at pod
-      {
-        seatId: { not: null }, // Has reserved seat
-        podConfirmedAt: null,  // Not confirmed yet
-        arrivedAt: null,       // Not checked in yet (arriving)
-      },
-    ],
   };
 
   if (locationId) {
@@ -3258,6 +3319,58 @@ app.get("/kitchen/orders", async (req, reply) => {
         },
       },
       seat: true,
+      location: true,
+      user: {
+        select: {
+          id: true,
+          name: true,
+          membershipTier: true,
+        },
+      },
+      guest: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "asc", // Oldest orders first
+    },
+  });
+
+  return orders;
+});
+
+// Get pickup orders (orders without a seat) in SERVING status
+app.get("/kitchen/pickup-orders", async (req, reply) => {
+  const { locationId } = req.query || {};
+  const tenantSlug = getTenantContext(req);
+
+  const tenant = await prisma.tenant.findUnique({
+    where: { slug: tenantSlug },
+  });
+  if (!tenant) return reply.code(404).send({ error: "Tenant not found" });
+
+  const where = {
+    tenantId: tenant.id,
+    paymentStatus: "PAID",
+    status: "SERVING",
+    seatId: null, // Only pickup orders (no seat assigned)
+  };
+
+  if (locationId) {
+    where.locationId = locationId;
+  }
+
+  const orders = await prisma.order.findMany({
+    where,
+    include: {
+      items: {
+        include: {
+          menuItem: true,
+        },
+      },
       location: true,
       user: {
         select: {
@@ -5896,6 +6009,108 @@ app.get("/analytics/realtime", async (req, reply) => {
   } catch (error) {
     console.error("Realtime analytics error:", error);
     return reply.status(500).send({ error: "Failed to fetch realtime analytics" });
+  }
+});
+
+// GET /analytics/order-sources - Track orders by source (WEB, KIOSK, MOBILE, STAFF)
+app.get("/analytics/order-sources", async (req, reply) => {
+  const tenantSlug = getTenantContext(req);
+  const { period = "week", locationId } = req.query;
+  const { start, end } = getDateRange(period);
+
+  try {
+    const tenant = await prisma.tenant.findUnique({ where: { slug: tenantSlug } });
+    if (!tenant) {
+      return reply.status(404).send({ error: "Tenant not found" });
+    }
+
+    const whereClause = {
+      tenantId: tenant.id,
+      createdAt: { gte: start, lte: end },
+      paymentStatus: "PAID",
+    };
+    if (locationId) whereClause.locationId = locationId;
+
+    // Get all paid orders with their source
+    const orders = await prisma.order.findMany({
+      where: whereClause,
+      select: {
+        orderSource: true,
+        totalCents: true,
+        createdAt: true,
+      },
+    });
+
+    // Calculate metrics by source
+    const sourceMetrics = {};
+    const sources = ["WEB", "KIOSK", "MOBILE", "STAFF"];
+
+    sources.forEach(source => {
+      const sourceOrders = orders.filter(o => o.orderSource === source);
+      sourceMetrics[source] = {
+        orders: sourceOrders.length,
+        revenue: sourceOrders.reduce((sum, o) => sum + (o.totalCents || 0), 0),
+        averageOrderValue: sourceOrders.length > 0
+          ? Math.round(sourceOrders.reduce((sum, o) => sum + (o.totalCents || 0), 0) / sourceOrders.length)
+          : 0,
+      };
+      sourceMetrics[source].revenueFormatted = `$${(sourceMetrics[source].revenue / 100).toFixed(2)}`;
+      sourceMetrics[source].aovFormatted = `$${(sourceMetrics[source].averageOrderValue / 100).toFixed(2)}`;
+    });
+
+    const totalOrders = orders.length;
+    const totalRevenue = orders.reduce((sum, o) => sum + (o.totalCents || 0), 0);
+
+    // Calculate percentages
+    sources.forEach(source => {
+      sourceMetrics[source].orderPercentage = totalOrders > 0
+        ? Math.round((sourceMetrics[source].orders / totalOrders) * 100)
+        : 0;
+      sourceMetrics[source].revenuePercentage = totalRevenue > 0
+        ? Math.round((sourceMetrics[source].revenue / totalRevenue) * 100)
+        : 0;
+    });
+
+    // Daily breakdown for chart
+    const dailyBreakdown = [];
+    const currentDate = new Date(start);
+    while (currentDate <= end) {
+      const dayStart = new Date(currentDate);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(currentDate);
+      dayEnd.setHours(23, 59, 59, 999);
+
+      const dayOrders = orders.filter(o => {
+        const orderDate = new Date(o.createdAt);
+        return orderDate >= dayStart && orderDate <= dayEnd;
+      });
+
+      dailyBreakdown.push({
+        date: currentDate.toISOString().split("T")[0],
+        web: dayOrders.filter(o => o.orderSource === "WEB").length,
+        kiosk: dayOrders.filter(o => o.orderSource === "KIOSK").length,
+        mobile: dayOrders.filter(o => o.orderSource === "MOBILE").length,
+        staff: dayOrders.filter(o => o.orderSource === "STAFF").length,
+        total: dayOrders.length,
+      });
+
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    return reply.send({
+      period,
+      dateRange: { start: start.toISOString(), end: end.toISOString() },
+      summary: {
+        totalOrders,
+        totalRevenue,
+        totalRevenueFormatted: `$${(totalRevenue / 100).toFixed(2)}`,
+      },
+      bySource: sourceMetrics,
+      dailyBreakdown,
+    });
+  } catch (error) {
+    console.error("Order sources analytics error:", error);
+    return reply.status(500).send({ error: "Failed to fetch order sources analytics" });
   }
 });
 
