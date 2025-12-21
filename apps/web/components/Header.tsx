@@ -4,7 +4,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { SignedIn, UserButton } from "@clerk/nextjs";
 import { useTranslations, useLocale } from "next-intl";
-import LanguageSwitcher from "./LanguageSwitcher";
 
 // Custom icon for the Oh! Account menu item
 const OhAccountIcon = () => (
@@ -124,7 +123,7 @@ export default function Header() {
           ))}
         </div>
 
-        {/* Right side: Language Switcher and User Button */}
+        {/* Right side: User Button */}
         <div
           style={{
             display: "flex",
@@ -132,8 +131,6 @@ export default function Header() {
             gap: "16px",
           }}
         >
-          <LanguageSwitcher />
-
           <SignedIn>
             <div
               style={{

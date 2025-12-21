@@ -4161,39 +4161,59 @@ app.get("/orders/fortune", async (req, reply) => {
 
     if (anthropic) {
       try {
-        const prompt = `You are a modern fortune cookie writer. Your fortunes are the kind people screenshot, share, and think about later. NOT about food, restaurants, or noodles. These are REAL fortunes about LIFE.
+        // Session-based creativity seed - changes every 30 seconds to ensure unique fortunes
+        const creativitySeed = Math.floor(Date.now() / 30000);
+        const styleOptions = [
+          "DELIGHTFULLY WEIRD - Unexpected, slightly surreal, makes them smile-laugh",
+          "COSMIC ABSURDIST - Philosophical but with a wink, like the universe is in on a joke",
+          "MAIN CHARACTER ENERGY - Aspirational without being cheesy, you're the protagonist",
+          "CRYPTIC POET - Intriguing, makes them pause and screenshot it",
+          "GENTLY UNHINGED - Sounds profound until you think about it, then it's profoundly weird",
+          "LATE-NIGHT WISDOM - The kind of thought you have at 2am that actually makes sense",
+          "MILLENNIAL MYSTIC - Spiritual but make it relatable, tarot-meets-therapy energy",
+        ];
+        const currentStyle = styleOptions[creativitySeed % styleOptions.length];
 
-YOUR STYLE MIX (pick one approach per fortune):
+        // Unique elements to incorporate
+        const themes = ["time", "doors", "strangers", "decisions", "silence", "algorithms", "mirrors", "messages", "dreams", "instincts", "chaos", "beginnings"];
+        const theme1 = themes[creativitySeed % themes.length];
+        const theme2 = themes[(creativitySeed + 3) % themes.length];
 
-1. DELIGHTFULLY WEIRD - Unexpected, slightly surreal, makes them smile
-   - "Somewhere, a door is opening for you. It might be a fridge. Start there."
-   - "The universe is rearranging itself around your next decision. No pressure."
-   - "A stranger will compliment something you almost didn't wear today."
+        const prompt = `You are a VIRAL fortune cookie writer. Your fortunes are the kind people screenshot, share, and think about for days. NOT about food or restaurants. These are REAL fortunes about LIFE that feel almost eerily personal.
 
-2. ASPIRATIONAL BUT REAL - Hopeful without being cheesy, grounded
-   - "The room you're afraid to walk into? They're going to love you in there."
-   - "Your next level will require a version of you that doesn't exist yet. Start building them."
-   - "The hardest part is almost over. The best part is almost beginning."
+CURRENT VIBE: ${currentStyle}
 
-3. PLAYFULLY CRYPTIC - Intriguing, makes them pause and think
-   - "Something lucky happened today. You just haven't noticed it yet."
-   - "A small yes will lead to a big yes. Say yes."
-   - "The chaos is not random. Pay attention."
-   - "Your intuition already texted you the answer. Stop leaving it on read."
+WEAVE IN THESE THEMES: ${theme1}, ${theme2}
+
+${firstName ? `PERSONALIZE FOR: ${firstName} (use their name naturally if it fits, but don't force it)` : ""}
+
+STYLE EXAMPLES (for inspiration, NEVER copy these exactly):
+- "Someone is thinking about you right now. They're wrong about everything, but still."
+- "The algorithm knows something about you that you haven't figured out yet."
+- "That thing you almost said? You should have said it. Next time."
+- "A parallel universe version of you just made the choice you're scared of. They're fine."
+- "Your next spontaneous decision will turn out to be the right one."
+- "Someone you haven't met yet will change everything. Wear that outfit."
+- "The thing you're procrastinating? It's procrastinating you back. Stalemate."
+- "An ending you're dreading is actually a beginning wearing a disguise."
 
 REQUIREMENTS:
-- ONE sentence only, under 100 characters ideal
-- Modern language (can reference texts, algorithms, main character energy, etc.)
-- Must feel like genuine wisdom, not a joke
-- Should be screenshot-worthy
-- NO food references, NO restaurant references, NO noodles
-- NO generic platitudes like "good things come to those who wait"
+- ONE sentence, under 100 characters ideal
+- Must feel PERSONALLY RELEVANT to whoever reads it
+- Modern language (texts, algorithms, main character energy, vibes, etc.)
+- Should make them pause and think "...wait, how did they know?"
+- NO generic platitudes, NO fortune cookie cliches
+- Be bold, be specific, be memorable
+- Temperature: HIGH creativity, surprise me
 
-Write ONE fortune. Return ONLY the fortune text. No quotes, no explanation.`;
+UNIQUE SEED: ${creativitySeed}-${Date.now() % 10000}
+
+Write ONE completely original fortune. Return ONLY the fortune text. No quotes.`;
 
         const message = await anthropic.messages.create({
           model: "claude-sonnet-4-20250514",
           max_tokens: 100,
+          temperature: 0.95,
           messages: [{ role: "user", content: prompt }],
         });
 
@@ -4413,39 +4433,79 @@ app.get("/orders/roast", async (req, reply) => {
 
     if (anthropic && roastInsights.length > 0) {
       try {
-        const prompt = `You're a WICKEDLY FUNNY comedian roasting a customer's beef noodle soup order at Oh!, a trendy restaurant with private dining pods. Your job is to deliver a HYPER-PERSONALIZED roast that makes them feel SEEN (and laugh).
+        // Session-based roast style - changes every 60 seconds for variety
+        const roastSeed = Math.floor(Date.now() / 60000);
+        const roastStyles = [
+          "STAND-UP COMEDIAN - You're doing a tight 5 at a comedy club, crowd loves food jokes",
+          "SASSY BEST FRIEND - Affectionately brutal, the friend who keeps it too real",
+          "DRAMATIC FOOD CRITIC - Over-the-top pretentious but self-aware about it",
+          "UNHINGED TWITTER - Pure chaos energy, absurdist takes that somehow land",
+          "GORDON RAMSAY'S NICE COUSIN - The roast energy but with more love underneath",
+          "GEN Z THERAPIST - Psychoanalyzing their order choices while being supportive",
+          "CHAOTIC NARRATOR - Narrating their choices like it's a nature documentary gone wrong",
+        ];
+        const currentRoastStyle = roastStyles[roastSeed % roastStyles.length];
 
-CUSTOMER: ${firstName || "Mystery Guest"}
-POD: ${order.seat?.number || "somewhere cozy"}
+        // Find the juiciest details to emphasize
+        const hasControversialChoices = roastInsights.some(i =>
+          i.includes("NO NOODLES") ||
+          i.includes("ZERO SPICE") ||
+          i.includes("SOFT noodles") ||
+          i.includes("SKIPPED")
+        );
+        const isExtraPerson = roastInsights.some(i =>
+          i.includes("EXTRA") ||
+          i.includes("MAXIMUM") ||
+          i.includes("LOADED UP")
+        );
 
-=== THEIR COMPLETE ORDER BREAKDOWN ===
+        const prompt = `You're a HILARIOUS comedian at the peak of your powers. A customer just ordered beef noodle soup and you need to DESTROY them (lovingly) with the funniest, most specific roast they've ever received.
+
+=== ROAST STYLE FOR THIS ORDER ===
+${currentRoastStyle}
+
+=== THE VICTIM ===
+CUSTOMER: ${firstName || "Mystery Guest (brave, ordering anonymously)"}
+POD: ${order.seat?.number || "hiding somewhere"}
+
+=== THEIR ORDER - DISSECT EVERY CHOICE ===
 ${roastInsights.map((insight, i) => `${i + 1}. ${insight}`).join("\n")}
 
-=== YOUR MISSION ===
-Write a 3-4 sentence roast (max 350 characters) that:
-1. MUST reference at least 2-3 SPECIFIC things from their order (noodle type, spice level, skipped items, add-ons, drinks, dessert - whatever's juicy)
-2. Connects the dots between their choices to paint a picture of who they are
-3. Is SARCASTIC but clearly affectionate - like a friend who knows you too well
-4. Has at least one genuinely funny observation or hot take
-5. Ends with a twist that shows you're actually impressed or on their side
+=== COMEDY FUEL ===
+${hasControversialChoices ? "They made CONTROVERSIAL choices. Go in on that." : ""}
+${isExtraPerson ? "They're an EXTRA person. Call out the excess." : ""}
+${summary.skippedToppings.length >= 3 ? "They're PICKY AS HELL. This is comedy gold." : ""}
+${summary.noodleType?.toLowerCase().includes("no noodle") ? "THEY CAME TO A NOODLE SHOP AND ORDERED NO NOODLES. This writes itself." : ""}
 
-=== STYLE GUIDE ===
-- Be SAVAGE but LOVABLE
-- Specific > Generic (never say "interesting choices" - call out the ACTUAL choices)
-- Hot takes welcome ("ordering no noodles at a noodle shop is either galaxy brain or a cry for help")
-- Pop culture references if they fit naturally
-- ${firstName ? `Use their name "${firstName}" once for impact` : "Address them directly"}
+=== MAKE IT LEGENDARY ===
+Write 2-4 sentences (max 400 characters) that:
+1. ROAST at least 2-3 SPECIFIC choices from their order - be EXACT
+2. Make unexpected connections ("you ordered X, which tells me you definitely also...")
+3. Include at least ONE joke that would get an actual laugh out loud
+4. ${firstName ? `Hit their name "${firstName}" at a punchline moment for maximum impact` : "Address them directly at a key moment"}
+5. End on something that's technically a compliment but still a little bit of a roast
 
-=== EXAMPLES OF THE VIBE ===
-- "${firstName || "Friend"}, you walked in here, chose the Signature Bowl, went EXTRA RICH on the broth, demanded firm noodles, then said 'no cilantro, no sprouts, no pickled greens.' You want flavor but only YOUR approved flavors. Control issues? Maybe. Delicious? Absolutely."
-- "Ramen noodles, maximum spice, extra bok choy, AND a Taiwan Beer to wash it down? Either you're celebrating something or you're about to. Your sinuses will remember this day. We salute you."
-- "You ordered the Premium Bowl, light soup, soft noodles, and a mochi dessert already waiting. ${firstName || "Bestie"}, you're not here for an experience, you're here for a whole narrative arc. The character development is immaculate."
+=== EXAMPLES OF CHEF'S KISS ROASTS ===
+- "${firstName || "Babe"}, you got the A5 Wagyu bowl, went EXTRA RICH on broth, MAXIMUM SPICE, then whispered 'no cilantro please.' You want to feel alive but on YOUR terms. Your therapist calls this 'controlled chaos.' The kitchen calls it 'a whole mood.'"
+- "Shaved noodles, firm texture, light soup, no green onions, no sprouts, AND you're already eyeing dessert? You didn't come here to eat, you came here to curate. We respect a control freak with taste."
+- "No noodles at a noodle shop. ${firstName || "You absolute legend"}. Either you're on a carb journey or you just woke up and chose violence. Either way, that broth is about to hit different and you know it."
+- "You ordered a side of potstickers, extra egg, AND a drink - BEFORE getting your bowl. ${firstName || "Bestie"}, this isn't lunch, this is a personal statement. We're honored to witness your origin story."
 
-Write the roast. No quotes around it. Make it specific, make it funny, make them screenshot it.`;
+=== CRITICAL RULES ===
+- NEVER be generic. If you could say it about any order, DELETE IT
+- Every sentence needs a SPECIFIC order detail woven in
+- Absurdist hot takes are encouraged
+- You're making fun of them but you clearly RESPECT them
+- Make it screenshot-worthy
+
+UNIQUE COMEDY SEED: ${roastSeed}-${Date.now() % 10000}
+
+Write the roast now. No quotes. Pure comedy. Make them choke on their noodles laughing.`;
 
         const message = await anthropic.messages.create({
           model: "claude-sonnet-4-20250514",
-          max_tokens: 250,
+          max_tokens: 300,
+          temperature: 0.95,
           messages: [{ role: "user", content: prompt }],
         });
 
@@ -4663,6 +4723,19 @@ app.get("/orders/commentary", async (req, reply) => {
 
     if (anthropic) {
       try {
+        // Session-based narrator personality - changes every 45 seconds for fresh commentary
+        const narratorSeed = Math.floor(Date.now() / 45000);
+        const narratorStyles = [
+          "UNHINGED SPORTS COMMENTATOR - narrating cooking like it's the finals, high energy",
+          "NATURE DOCUMENTARY - David Attenborough observing 'the customer in their natural habitat'",
+          "TELENOVELA NARRATOR - everything is dramatic, emotional, probably romantic",
+          "TRUE CRIME PODCAST - ominous, building suspense about... noodles",
+          "REALITY TV CONFESSIONAL - like you're talking to a producer about this customer",
+          "CHAOTIC THEATER KID - dramatic, theatrical, everything is an event",
+          "GRUMPY BUT LOVING GRANDMA - judging their choices but secretly proud",
+        ];
+        const currentNarratorStyle = narratorStyles[narratorSeed % narratorStyles.length];
+
         // Build the prompt with FULL order context
         const orderContext = [];
 
@@ -4693,45 +4766,54 @@ app.get("/orders/commentary", async (req, reply) => {
         }
 
         const stageInstructions = {
-          QUEUED: "The order just entered the queue. Be dramatic about the waiting. Comment on their choices with anticipation. Mock their impatience gently.",
-          PREPPING: "The kitchen is actively cooking. Be vivid about what's happening to their food. Make the mundane sound epic. Roast their customization choices as they're being executed.",
-          READY: "The food is done and waiting. Build the tension. The bowl is judging them. Make them feel like this is the moment of truth.",
-          SERVING: "Food is being delivered. This is the climax. Make it feel like a life event. Comment on whether they're worthy of what's coming.",
+          QUEUED: "The order just entered the queue. Be dramatic about the waiting. Create suspense.",
+          PREPPING: "The kitchen is actively cooking. Narrate what's happening to their food vividly.",
+          READY: "The food is done and waiting. Build the tension. This is the moment before glory.",
+          SERVING: "Food is being delivered. This is the climax. Make it feel monumental.",
         };
 
-        const prompt = `You are the unhinged, sarcastic AI voice of Oh!, a beef noodle soup restaurant. Your job is to provide live kitchen commentary that ROASTS the customer's order while updating them on progress.
+        const prompt = `You're providing LIVE KITCHEN COMMENTARY for a restaurant. Your style right now is:
 
-CUSTOMER: ${firstName || "Mystery Guest (didn't even sign up, brave)"}
-POD: ${order.seat?.number || "TBD"}
+=== NARRATOR PERSONA ===
+${currentNarratorStyle}
+
+=== THE SCENE ===
+CUSTOMER: ${firstName || "Anonymous Diner"}
+POD: ${order.seat?.number || "location TBD"}
 CURRENT STATUS: ${status}
+STAGE VIBE: ${stageInstructions[status]}
 
-THE COMPLETE ORDER (roast ALL of this):
+=== THEIR ORDER (reference specifics!) ===
 ${orderContext.join("\n")}
 
-STAGE INSTRUCTIONS: ${stageInstructions[status]}
+=== YOUR MISSION ===
+Write 2-3 sentences (max 280 chars) of commentary that:
+1. FULLY commits to your narrator persona above
+2. References at least ONE specific thing from their order
+3. ${status === "QUEUED" ? "Builds anticipation/suspense about what's coming" : ""}
+${status === "PREPPING" ? "Describes cooking happening dramatically with order specifics" : ""}
+${status === "READY" ? "Creates tension about the masterpiece awaiting them" : ""}
+${status === "SERVING" ? "Narrates the approaching food like a movie climax" : ""}
+4. Is FUNNY but different from typical restaurant commentary
+5. ${firstName ? `Mentions ${firstName} once for personalization` : "Addresses them directly"}
 
-YOUR VOICE:
-- You're a sarcastic kitchen narrator who's seen too much
-- Heavy roasting energy - mock their choices lovingly but HARD
-- Reference SPECIFIC things they ordered (skipped cilantro? soft noodles? extra spicy? CALL IT OUT)
-- Be dramatic about mundane cooking activities
-- If they skipped toppings, question their life choices
-- If they went extra on something, mock their excess
-- If they ordered sides/drinks/desserts, comment on their appetite
-- Think: Gordon Ramsay meets a witty Twitter account meets your judgmental aunt
-- NO EMOJIS EVER
+=== EXAMPLE ENERGY BY PERSONA ===
+SPORTS COMMENTATOR: "AND THE NOODLES HIT THE WATER! Firm texture requested - ${firstName || "this competitor"} is NOT playing games today. The crowd watches. The broth simmers. History is being made."
 
-EXAMPLES OF THE ENERGY WE WANT:
-- "Your noodles just hit boiling water. They knew this day would come. Unlike you, apparently, since you went with soft texture. You want them pre-chewed too?"
-- "The extra spicy is being added. We've notified your digestive system. It filed a complaint."
-- "No cilantro? The cilantro is honestly relieved. It didn't want to be associated with someone who also ordered light soup."
-- "Your bowl is being assembled with the precision of a surgeon who's questioning why you got a side of potstickers when you already ordered a full meal."
+NATURE DOCUMENTARY: "Here we observe the ${firstName || "urban diner"} in their natural habitat, having selected wide noodles and extra spice. A bold survival strategy. The kitchen springs into action."
 
-Write a SHORT (2-3 sentences, max 250 chars) commentary for the ${status} stage. Be SAVAGE but not mean. Reference their SPECIFIC order choices. No quotes around it.`;
+TRUE CRIME: "What ${firstName || "they"} didn't know was that skipping the cilantro would trigger a chain of events in the kitchen that no one could have predicted. The broth was already simmering."
+
+NO EMOJIS. Stay in character. Be creative. Make them laugh.
+
+UNIQUE SEED: ${narratorSeed}-${Date.now() % 10000}
+
+Write the commentary now. No quotes.`;
 
         const message = await anthropic.messages.create({
           model: "claude-sonnet-4-20250514",
           max_tokens: 200,
+          temperature: 0.95,
           messages: [{ role: "user", content: prompt }],
         });
 
@@ -4914,6 +4996,7 @@ Generate exactly 4 short backstory facts (one sentence each, max 150 chars each)
 // Analyze user's order history patterns by email and generate witty insights
 app.get("/users/by-email/:email/order-patterns", async (req, reply) => {
   const { email } = req.params;
+  const { firstName } = req.query; // Optional: user's first name for personalization
 
   if (!email) {
     return reply.status(400).send({ error: "Email required" });
@@ -4933,6 +5016,9 @@ app.get("/users/by-email/:email/order-patterns", async (req, reply) => {
         message: "User not found",
       });
     }
+
+    // Use provided firstName or extract from user.name
+    const userName = firstName || (user.name ? user.name.split(" ")[0] : null);
 
     // Fetch user's completed orders (last 10 orders)
     const orders = await prisma.order.findMany({
@@ -5191,9 +5277,15 @@ app.get("/users/by-email/:email/order-patterns", async (req, reply) => {
           }
         }).filter(d => d);
 
+        // Generate a session seed for variety (changes every few minutes)
+        const sessionSeed = Math.floor(Date.now() / 180000); // Changes every 3 minutes
+        const variationStyles = ["witty observation", "gentle tease", "knowing aside", "dry humor", "friendly jab"];
+        const styleIndex = sessionSeed % variationStyles.length;
+        const style = variationStyles[styleIndex];
+
         const prompt = `You generate witty, SHORT one-liners for a noodle restaurant's order system.
 
-A returning customer is placing an order. Based on their order history patterns, generate a single witty one-liner for EACH pattern below.
+A returning customer${userName ? ` named ${userName}` : ""} is placing an order. Based on their order history patterns, generate a single witty one-liner for EACH pattern below.
 
 RULES:
 - ONE sentence only, max 80 characters per response
@@ -5201,7 +5293,10 @@ RULES:
 - Reference the SPECIFIC item/behavior
 - Sound like a knowing friend, not a robot
 - NO emojis
-- DO NOT start with "We" or "You"
+- DO NOT start with "We"
+${userName ? `- You MAY use "${userName}" naturally in some (not all) one-liners to make it personal` : "- Do not use 'You' to start sentences"}
+- Style for this session: ${style}
+- Be CREATIVE and UNIQUE - never use the same phrasing twice
 
 PATTERNS DETECTED:
 ${insightDescriptions.map((d, i) => `${i + 1}. ${d}`).join("\n")}
@@ -5232,9 +5327,11 @@ Return as JSON array of objects with format: [{"index": 0, "oneLiner": "your wit
     }
 
     // Add fallback one-liners for any insights that don't have AI-generated ones
+    // Use a session seed so the same user gets different fallbacks on different visits
+    const fallbackSeed = Date.now();
     for (const insight of insights) {
       if (!insight.oneLiner) {
-        insight.oneLiner = generateFallbackOneLiner(insight);
+        insight.oneLiner = generateFallbackOneLiner(insight, userName, fallbackSeed);
       }
     }
 
@@ -5255,61 +5352,107 @@ Return as JSON array of objects with format: [{"index": 0, "oneLiner": "your wit
 });
 
 // Fallback one-liners for each insight type
-function generateFallbackOneLiner(insight) {
+// Now accepts userName for personalization and seed for variety
+function generateFallbackOneLiner(insight, userName, seed = Date.now()) {
+  const name = userName || null;
+
+  // Helper to occasionally include name (roughly 40% of the time when available)
+  const maybeName = () => name && (seed % 5 < 2) ? `${name}, ` : "";
+  const maybeNameEnd = () => name && (seed % 7 < 3) ? `, ${name}` : "";
+
   const fallbacks = {
     bowl_loyalty: [
-      `${insight.item}. ${insight.count} times. Starting to see a pattern here.`,
+      `${maybeName()}${insight.item}. ${insight.count} times. Starting to see a pattern here.`,
       `Let me guess... ${insight.item}?`,
       `The ${insight.item} didn't even need to ask anymore.`,
+      `${insight.item} again${maybeNameEnd()}? The kitchen saw this coming.`,
+      `${insight.count} for ${insight.count} on ${insight.item}. Consistency is underrated.`,
+      name ? `${name}'s usual: ${insight.item}. No surprises here.` : `The usual: ${insight.item}. No surprises here.`,
     ],
     bowl_favorite: [
       `${insight.item} again? Bold, predictable, perfect.`,
       `Ah, the ${insight.item} regular. Kitchen's already prepping.`,
+      `${maybeName()}back for ${insight.item}. The loyalty is noted.`,
+      `${insight.item} calling your name again${maybeNameEnd()}?`,
+      `${insight.count} out of ${insight.orderCount || "10"} times: ${insight.item}. A clear favorite.`,
     ],
     noodle_loyalty: [
       `${insight.item} forever. Other noodles weep quietly.`,
       `${insight.count} visits. ${insight.count} times ${insight.item}. Respect the commitment.`,
+      `${maybeName()}${insight.item} devotee. The other noodles have accepted their fate.`,
+      `Still ${insight.item}? The ramen is taking notes.`,
+      name ? `${name} and ${insight.item}: an unbreakable bond.` : `${insight.item}: an unshakeable choice.`,
     ],
     noodle_favorite: [
-      `${insight.item} again? ${insight.count} out of ${insight.orderCount || "10"} orders. Reliable taste.`,
+      `${insight.item} ${insight.count} out of ${insight.orderCount || "10"} times. Reliable taste.`,
       `Leaning toward ${insight.item}, as usual. The other noodles are getting jealous.`,
+      `${maybeName()}the ${insight.item} has missed you.`,
+      `${insight.item} again? A person of refined, consistent taste.`,
+      `The ${insight.item} awaits${maybeNameEnd()}.`,
+      name ? `${name}'s noodle of choice: ${insight.item}. Noted.` : `Noodle of choice: ${insight.item}. Noted.`,
     ],
     always_skips: [
       `Skipping ${insight.items?.[0] || "that"} again? Personal vendetta confirmed.`,
       `${insight.items?.join(" and ") || "Certain ingredients"} remain unloved, as is tradition.`,
+      `${maybeName()}still avoiding ${insight.items?.[0] || "the usual suspects"}.`,
+      `The ${insight.items?.[0] || "skipped items"} didn't make the cut. Again.`,
+      `${insight.count} orders, zero ${insight.items?.[0] || "of that"}. Commitment.`,
     ],
     always_maxes: [
       `Maxing the ${insight.items?.[0] || "usual"}? Some things never change.`,
       `${insight.items?.[0] || "That"} at maximum. As it should be.`,
+      `${maybeName()}cranking ${insight.items?.[0] || "it"} to the max, naturally.`,
+      `The ${insight.items?.[0] || "slider"} goes to eleven. Always.`,
+      name ? `${name} doesn't do half measures with ${insight.items?.[0] || "this"}.` : `No half measures with ${insight.items?.[0] || "this"}.`,
     ],
     spice_avoider: [
       `Zero spice zone. The cilantro respects your boundaries.`,
       `Spice dial stays at zero. A person of peaceful tastes.`,
+      `${maybeName()}keeping it mild. The peppers understand.`,
+      `Spice-free lifestyle${maybeNameEnd()}. No judgment here.`,
+      `The chili flakes remain untouched. As always.`,
     ],
     spice_warrior: [
       `Maximum spice. Your taste buds called - they've adapted.`,
-      `Spice level: scorched earth. We respect the dedication.`,
+      `Spice level: scorched earth. The dedication is impressive.`,
+      `${maybeName()}bringing the heat, as expected.`,
+      `Full spice${maybeNameEnd()}? The kitchen is ready.`,
+      name ? `${name}'s heat tolerance: legendary.` : `Heat tolerance: legendary.`,
     ],
     never_addons: [
       `${insight.count || "Several"} visits, zero add-ons. Purist vibes.`,
       `The add-ons await. They've been very patient.`,
+      `${maybeName()}sticking to the essentials.`,
+      `Add-on free since day one. Minimalist icon.`,
+      `The extras menu remains unexplored${maybeNameEnd()}.`,
     ],
     addon_favorite: [
       `${insight.item} again? At this point it should be named after you.`,
       `The ${insight.item} saw you walk in and started celebrating.`,
+      `${maybeName()}${insight.item} is practically mandatory at this point.`,
+      `${insight.item}, ${insight.count} visits running. Dedication.`,
+      name ? `${name}'s go-to add-on: ${insight.item}.` : `The go-to add-on: ${insight.item}.`,
     ],
     never_dessert: [
       `Still no dessert? The mochi is starting to take it personally.`,
       `Dessert-free streak continues. Impressive restraint.`,
+      `${maybeName()}skipping dessert again. The sweets remain hopeful.`,
+      `The dessert menu gathers dust${maybeNameEnd()}.`,
+      `${insight.count || "Several"} visits, zero desserts. Remarkable willpower.`,
     ],
     always_dessert: [
       `Dessert incoming. A meal isn't complete without it.`,
-      `${insight.item || "Dessert"} is already being prepared. We know.`,
+      `${insight.item || "Dessert"} is already being prepared.`,
+      `${maybeName()}never skips dessert. Priorities in order.`,
+      `${insight.item || "The sweet finish"} awaits${maybeNameEnd()}.`,
+      name ? `${name} knows a proper meal ends with dessert.` : `A proper meal ends with dessert.`,
     ],
   };
 
   const options = fallbacks[insight.type] || ["Interesting choice."];
-  return options[Math.floor(Math.random() * options.length)];
+  // Use seed to pick option deterministically but differently each session
+  const index = Math.abs(seed + insight.type.length) % options.length;
+  return options[index];
 }
 
 // ====================

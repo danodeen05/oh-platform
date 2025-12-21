@@ -332,80 +332,8 @@ function ConfirmationContent() {
           </div>
         )}
 
-        {/* Pod Assignment Section */}
-        {order?.seat && (
-          <div
-            style={{
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-              borderRadius: 12,
-              padding: 24,
-              marginBottom: 24,
-              color: "white",
-              textAlign: "center",
-            }}
-          >
-            <div style={{ fontSize: "1.5rem", marginBottom: 8 }}>🪑</div>
-            <h3 style={{ margin: 0, marginBottom: 8, fontSize: "1.3rem" }}>
-              Your Pod is Ready!
-            </h3>
-            <div
-              style={{
-                fontSize: "3rem",
-                fontWeight: "bold",
-                margin: "16px 0",
-                letterSpacing: "0.1em",
-              }}
-            >
-              POD {order.seat.number}
-            </div>
-            <p style={{ fontSize: "0.9rem", marginBottom: 16, opacity: 0.9 }}>
-              {order.podConfirmedAt
-                ? "You're checked in! Your order is being prepared."
-                : "Head to your pod and scan the QR code on the table to start your order."}
-            </p>
-
-            {!order.podConfirmedAt && (
-              <button
-                onClick={() => router.push(`/order/scan?orderId=${orderId}`)}
-                style={{
-                  width: "100%",
-                  padding: 14,
-                  background: "white",
-                  color: "#667eea",
-                  border: "none",
-                  borderRadius: 8,
-                  fontSize: "1rem",
-                  fontWeight: "bold",
-                  cursor: "pointer",
-                  marginTop: 8,
-                }}
-              >
-                📱 Scan Pod QR Code
-              </button>
-            )}
-
-            {order.podConfirmedAt && (
-              <div
-                style={{
-                  background: "rgba(255,255,255,0.2)",
-                  padding: 12,
-                  borderRadius: 8,
-                  marginTop: 12,
-                }}
-              >
-                <div style={{ fontSize: "0.85rem", marginBottom: 4 }}>
-                  Order Status
-                </div>
-                <div style={{ fontSize: "1.1rem", fontWeight: "bold" }}>
-                  {order.status === "QUEUED" && "⏳ In Queue"}
-                  {order.status === "PREPPING" && "👨‍🍳 Preparing"}
-                  {order.status === "READY" && "✅ Ready!"}
-                  {order.status === "COMPLETED" && "🎉 Enjoy!"}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
+        {/* Pod Assignment Section - TODO: Re-implement with better UX later */}
+        {/* Removed for now - will be added back with improved pod management */}
 
         {/* Group Orders Section - Show all orders in the group */}
         {groupOrders.length > 1 && (
