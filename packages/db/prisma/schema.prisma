@@ -268,6 +268,9 @@ model Order {
   paymentStatus   PaymentStatus @default(PENDING)
   stripePaymentId String?
 
+  // Order source tracking for analytics
+  orderSource OrderSource @default(WEB)
+
   // Child orders (add-ons placed after initial order)
   parentOrderId String?
   parentOrder   Order?     @relation("OrderAddOns", fields: [parentOrderId], references: [id])
@@ -306,6 +309,13 @@ enum PaymentStatus {
   PAID
   FAILED
   REFUNDED
+}
+
+enum OrderSource {
+  WEB       // Order placed via web app (desktop or mobile browser)
+  KIOSK     // Order placed at physical kiosk in-store
+  MOBILE    // Order placed via native mobile app (future)
+  STAFF     // Order placed by staff on behalf of customer
 }
 
 model OrderItem {

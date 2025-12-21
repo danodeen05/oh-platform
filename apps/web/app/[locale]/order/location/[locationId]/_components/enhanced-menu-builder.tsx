@@ -609,12 +609,15 @@ export default function EnhancedMenuBuilder({
       }
 
       // Build order payload for non-group orders - include seatId if customer selected one
+      const guestId = isGuest && guest?.id ? guest.id : null;
       const orderPayload: any = {
         locationId: location.id,
         tenantId: location.tenantId,
         items,
         estimatedArrival: estimatedArrival.toISOString(),
         fulfillmentType: "PRE_ORDER",
+        userId: dbUserId || null,
+        guestId: guestId,
       };
 
       // If customer selected a seat (ASAP arrival with seat selection)

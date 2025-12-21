@@ -265,6 +265,11 @@ export default function KioskOrderFlow({
     "name" | "menu" | "review" | "pod-selection" | "pass" | "payment" | "complete"
   >("name");
 
+  // Scroll to top when view or step changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, [view, currentStepIndex, currentGuestIndex]);
+
   // Processing state
   const [submitting, setSubmitting] = useState(false);
 
@@ -501,11 +506,12 @@ export default function KioskOrderFlow({
     try {
       if (paymentType === "separate") {
         // Pay only current guest's order and assign pod
-        const updates: any = { paymentStatus: "PAID" };
+        const updates: any = { paymentStatus: "PAID", orderSource: "KIOSK" };
         if (currentGuest.selectedPodId) {
           updates.seatId = currentGuest.selectedPodId;
           updates.podSelectionMethod = "CUSTOMER_SELECTED";
           updates.podAssignedAt = new Date().toISOString();
+          // Note: podConfirmedAt is NOT set here - customer must confirm at pod via QR scan
           updates.podReservationExpiry = new Date(Date.now() + 15 * 60 * 1000).toISOString();
         }
 
@@ -529,11 +535,12 @@ export default function KioskOrderFlow({
         // Single check - pay all orders and assign pods
         for (const guest of guestOrders) {
           if (guest.orderId) {
-            const updates: any = { paymentStatus: "PAID" };
+            const updates: any = { paymentStatus: "PAID", orderSource: "KIOSK" };
             if (guest.selectedPodId) {
               updates.seatId = guest.selectedPodId;
               updates.podSelectionMethod = "CUSTOMER_SELECTED";
               updates.podAssignedAt = new Date().toISOString();
+              // Note: podConfirmedAt is NOT set here - customer must confirm at pod via QR scan
               updates.podReservationExpiry = new Date(Date.now() + 15 * 60 * 1000).toISOString();
             }
 
@@ -855,9 +862,15 @@ function MenuView({
     }
   }, []);
 
-  // Check on mount and step change - use setTimeout to ensure DOM is ready
+  // Scroll to top and check position on step change
   useEffect(() => {
-    // Check immediately
+    // Scroll the container to top when step changes
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0;
+    }
+    // Also scroll window for safety
+    window.scrollTo({ top: 0, behavior: "instant" });
+    // Check scroll position immediately
     checkScrollPosition();
     // Also check after a delay for images/content to load
     const timer1 = setTimeout(checkScrollPosition, 300);
@@ -1701,6 +1714,11 @@ function ReviewView({
   onBack: () => void;
   submitting: boolean;
 }) {
+  // Scroll to top on mount
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, []);
+
   // Categorize items for display
   const bowlItems: Array<{ name: string; price: number; image?: string; value?: string }> = [];
   const customizations: Array<{ name: string; value: string }> = [];
@@ -2113,6 +2131,11 @@ function PodSelectionView({
   onConfirm: () => void;
   onBack: () => void;
 }) {
+  // Scroll to top on mount
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, []);
+
   // Get pods already selected by other guests in this party
   const takenPodIds = guestOrders
     .filter((_, i) => i !== currentGuestIndex)
@@ -2531,6 +2554,11 @@ function PaymentView({
   onPay: () => void;
   submitting: boolean;
 }) {
+  // Scroll to top on mount
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, []);
+
   const currentGuest = guestOrders[currentGuestIndex];
   const totalCents =
     paymentType === "single"
@@ -2701,20 +2729,33 @@ function CompleteView({
   onNewOrder: () => void;
 }) {
   const [countdown, setCountdown] = useState(30);
+  const [shouldRedirect, setShouldRedirect] = useState(false);
+
+  // Scroll to top on mount
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, []);
 
   // Auto-reset countdown
   useEffect(() => {
     const timer = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
-          onNewOrder();
+          setShouldRedirect(true);
           return 30;
         }
         return prev - 1;
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [onNewOrder]);
+  }, []);
+
+  // Handle redirect in a separate effect to avoid setState during render
+  useEffect(() => {
+    if (shouldRedirect) {
+      onNewOrder();
+    }
+  }, [shouldRedirect, onNewOrder]);
 
   return (
     <main
