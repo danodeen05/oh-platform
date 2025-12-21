@@ -5,12 +5,18 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 import { locales, localeNames, type Locale } from "@/i18n/config";
 
-export default function LanguageSwitcher() {
+type LanguageSwitcherProps = {
+  size?: "small" | "normal";
+};
+
+export default function LanguageSwitcher({ size = "normal" }: LanguageSwitcherProps) {
   const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const isSmall = size === "small";
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -37,45 +43,49 @@ export default function LanguageSwitcher() {
         style={{
           display: "flex",
           alignItems: "center",
-          gap: "6px",
-          padding: "8px 12px",
+          gap: isSmall ? "4px" : "6px",
+          padding: isSmall ? "4px 8px" : "8px 12px",
           background: "transparent",
-          border: "1px solid rgba(124, 122, 103, 0.3)",
-          borderRadius: "6px",
-          color: "#4a4a4a",
-          fontSize: "0.85rem",
+          border: isSmall ? "1px solid rgba(124, 122, 103, 0.4)" : "1px solid rgba(124, 122, 103, 0.3)",
+          borderRadius: isSmall ? "4px" : "6px",
+          color: isSmall ? "#999" : "#4a4a4a",
+          fontSize: isSmall ? "0.7rem" : "0.85rem",
           cursor: "pointer",
           transition: "all 0.2s ease",
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.borderColor = "#7C7A67";
-          e.currentTarget.style.background = "rgba(124, 122, 103, 0.05)";
+          e.currentTarget.style.background = isSmall ? "rgba(124, 122, 103, 0.1)" : "rgba(124, 122, 103, 0.05)";
+          e.currentTarget.style.color = isSmall ? "#C7A878" : "#4a4a4a";
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.borderColor = "rgba(124, 122, 103, 0.3)";
+          e.currentTarget.style.borderColor = isSmall ? "rgba(124, 122, 103, 0.4)" : "rgba(124, 122, 103, 0.3)";
           e.currentTarget.style.background = "transparent";
+          e.currentTarget.style.color = isSmall ? "#999" : "#4a4a4a";
         }}
         aria-label="Select language"
       >
-        <span style={{ fontSize: "1rem", marginRight: "4px" }}>文A</span>
+        <span style={{ fontSize: isSmall ? "0.75rem" : "1rem", marginRight: isSmall ? "2px" : "4px" }}>文A</span>
         <span>{localeNames[locale as Locale]}</span>
-        <span style={{ fontSize: "0.7rem", marginLeft: "4px" }}>▼</span>
+        <span style={{ fontSize: isSmall ? "0.55rem" : "0.7rem", marginLeft: isSmall ? "2px" : "4px" }}>▼</span>
       </button>
 
       {isOpen && (
         <div
           style={{
             position: "absolute",
-            top: "100%",
+            bottom: isSmall ? "100%" : undefined,
+            top: isSmall ? undefined : "100%",
             right: 0,
-            marginTop: "4px",
-            background: "white",
-            border: "1px solid rgba(124, 122, 103, 0.2)",
-            borderRadius: "8px",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+            marginTop: isSmall ? undefined : "4px",
+            marginBottom: isSmall ? "4px" : undefined,
+            background: isSmall ? "#333" : "white",
+            border: isSmall ? "1px solid rgba(124, 122, 103, 0.3)" : "1px solid rgba(124, 122, 103, 0.2)",
+            borderRadius: isSmall ? "6px" : "8px",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
             overflow: "hidden",
             zIndex: 100,
-            minWidth: "140px",
+            minWidth: isSmall ? "120px" : "140px",
           }}
         >
           {locales.map((loc) => (
@@ -85,20 +95,20 @@ export default function LanguageSwitcher() {
               style={{
                 display: "block",
                 width: "100%",
-                padding: "10px 16px",
+                padding: isSmall ? "8px 12px" : "10px 16px",
                 textAlign: "left",
-                background: loc === locale ? "rgba(124, 122, 103, 0.1)" : "transparent",
+                background: loc === locale ? (isSmall ? "rgba(124, 122, 103, 0.2)" : "rgba(124, 122, 103, 0.1)") : "transparent",
                 border: "none",
-                borderBottom: "1px solid rgba(124, 122, 103, 0.1)",
-                color: loc === locale ? "#7C7A67" : "#4a4a4a",
-                fontSize: "0.9rem",
+                borderBottom: isSmall ? "1px solid rgba(124, 122, 103, 0.2)" : "1px solid rgba(124, 122, 103, 0.1)",
+                color: loc === locale ? "#C7A878" : (isSmall ? "#ccc" : "#4a4a4a"),
+                fontSize: isSmall ? "0.8rem" : "0.9rem",
                 cursor: "pointer",
                 fontWeight: loc === locale ? "500" : "400",
                 transition: "background 0.2s ease",
               }}
               onMouseEnter={(e) => {
                 if (loc !== locale) {
-                  e.currentTarget.style.background = "rgba(124, 122, 103, 0.05)";
+                  e.currentTarget.style.background = isSmall ? "rgba(124, 122, 103, 0.15)" : "rgba(124, 122, 103, 0.05)";
                 }
               }}
               onMouseLeave={(e) => {

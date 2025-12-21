@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
-import { SliderControl } from "./slider-control";
+import { SliderControl, SliderLegend } from "./slider-control";
 import { RadioGroup } from "./radio-group";
 import { CheckboxGroup } from "./checkbox-group";
 import SeatingMap, { Seat } from "@/components/SeatingMap";
@@ -261,7 +261,12 @@ export default function EnhancedMenuBuilder({
     async function loadOrderPatterns() {
       try {
         const email = user?.primaryEmailAddress?.emailAddress;
-        const response = await fetch(`${BASE}/users/by-email/${encodeURIComponent(email!)}/order-patterns`, {
+        const firstName = user?.firstName || "";
+        const url = new URL(`${BASE}/users/by-email/${encodeURIComponent(email!)}/order-patterns`);
+        if (firstName) {
+          url.searchParams.set("firstName", firstName);
+        }
+        const response = await fetch(url.toString(), {
           headers: { "x-tenant-slug": "oh" },
         });
         if (response.ok) {
@@ -276,7 +281,7 @@ export default function EnhancedMenuBuilder({
     }
 
     loadOrderPatterns();
-  }, [userLoaded, user?.primaryEmailAddress?.emailAddress]);
+  }, [userLoaded, user?.primaryEmailAddress?.emailAddress, user?.firstName]);
 
   // Map step index to trigger type for Order Whisperer
   const getStepTrigger = useCallback((stepIndex: number): string | null => {
@@ -1036,6 +1041,11 @@ export default function EnhancedMenuBuilder({
         </div>
       )}
 
+      {/* Show slider legend if current step has sliders */}
+      {currentStep.sections.some(s => s.selectionMode === 'SLIDER') && (
+        <SliderLegend />
+      )}
+
       {/* Render sections */}
       {currentStep.sections.map((section) => {
         if (section.selectionMode === 'SINGLE' && section.items) {
@@ -1046,6 +1056,7 @@ export default function EnhancedMenuBuilder({
               items={section.items}
               selectedId={selections[section.id] || null}
               onSelect={(itemId) => handleRadioSelect(section.id, itemId)}
+              required={section.required}
             />
           );
         }
@@ -1054,7 +1065,7 @@ export default function EnhancedMenuBuilder({
           const value = cart[section.item.id] ?? section.sliderConfig.default ?? 0;
           const labels = section.sliderConfig.labels || [];
           return (
-            <div key={section.id} style={{ marginBottom: 16 }}>
+            <div key={section.id} style={{ marginBottom: 10 }}>
               <SliderControl
                 name={section.name}
                 description={section.description}

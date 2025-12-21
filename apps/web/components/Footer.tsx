@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
+import LanguageSwitcher from "./LanguageSwitcher";
 
 // SVG icons for social platforms - dark olive (#7C7A67) fill
 const SocialIcons = {
@@ -165,16 +166,26 @@ export default function Footer() {
           ))}
         </div>
 
-        {/* Copyright */}
+        {/* Language Selector and Copyright */}
         <div
           style={{
-            textAlign: "center",
-            color: "#7C7A67",
-            fontSize: "0.85rem",
-            letterSpacing: "0.5px",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            gap: "24px",
+            flexWrap: "wrap",
           }}
         >
-          {t("copyright", { year: new Date().getFullYear() })}
+          <LanguageSwitcher size="small" />
+          <div
+            style={{
+              color: "#7C7A67",
+              fontSize: "0.8rem",
+              letterSpacing: "0.5px",
+            }}
+          >
+            {t("copyright", { year: new Date().getFullYear() })}
+          </div>
         </div>
       </div>
     </footer>
