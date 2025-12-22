@@ -32,28 +32,21 @@ const processQueue = () => {
 const sendEvent = (eventName: string, params: Record<string, unknown>) => {
   if (typeof window === "undefined") return;
 
-  // Debug logging (remove after verification)
-  console.log(`[GA4] Sending event: ${eventName}`, params);
-  console.log(`[GA4] gtag available: ${!!window.gtag}`);
-
   // If gtag is available, send immediately
   if (window.gtag) {
     window.gtag("event", eventName, params);
-    console.log(`[GA4] Event sent via gtag`);
     return;
   }
 
   // Otherwise queue the event
   eventQueue.push({ eventName, params });
-  console.log(`[GA4] Event queued. Queue length: ${eventQueue.length}`);
 
   // Set up a check to process queue when gtag becomes available
   const checkGtag = () => {
     if (window.gtag) {
-      console.log(`[GA4] gtag now available, processing queue`);
       processQueue();
     } else {
-      // Check again in 100ms, up to 5 seconds
+      // Check again in 100ms
       setTimeout(checkGtag, 100);
     }
   };
