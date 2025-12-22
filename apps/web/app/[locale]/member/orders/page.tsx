@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { trackFavoriteAdded, trackReorder } from "@/lib/analytics";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 const MAX_FAVORITES = 3;
@@ -98,6 +99,15 @@ export default function OrdersPage() {
         return;
       }
       newFavorites = [...favorites, orderId];
+
+      // Track favorite added
+      const order = orders.find(o => o.id === orderId);
+      if (order) {
+        trackFavoriteAdded({
+          id: orderId,
+          name: `Order #${order.orderNumber}`,
+        });
+      }
     }
 
     setFavorites(newFavorites);
@@ -107,6 +117,9 @@ export default function OrdersPage() {
   async function handleReorder(order: Order) {
     try {
       setReordering(order.id);
+
+      // Track reorder event
+      trackReorder(order.id);
 
       // Combine items from main order and paid add-on child orders
       // (exclude REFILL and EXTRA_VEG as those are free and contextual)

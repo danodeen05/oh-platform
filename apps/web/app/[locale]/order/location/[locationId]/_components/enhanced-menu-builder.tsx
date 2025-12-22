@@ -7,6 +7,7 @@ import { RadioGroup } from "./radio-group";
 import { CheckboxGroup } from "./checkbox-group";
 import SeatingMap, { Seat } from "@/components/SeatingMap";
 import { useGuest } from "@/contexts/guest-context";
+import { trackAddToCart, trackLocationSelected, trackPodSelected, event } from "@/lib/analytics";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -450,6 +451,22 @@ export default function EnhancedMenuBuilder({
     setCart(prev => {
       const current = prev[itemId] || 0;
       const newQty = Math.max(0, current + delta);
+
+      // Track add to cart when quantity increases
+      if (delta > 0 && newQty > current) {
+        const allItems = getAllMenuItems();
+        const item = allItems.find(i => i.id === itemId);
+        if (item) {
+          trackAddToCart({
+            id: item.id,
+            name: item.name,
+            category: item.category,
+            price: item.basePriceCents / 100,
+            quantity: delta,
+          });
+        }
+      }
+
       if (newQty === 0) {
         const { [itemId]: _, ...rest } = prev;
         return rest;
@@ -902,7 +919,13 @@ export default function EnhancedMenuBuilder({
               <SeatingMap
                 seats={seats}
                 selectedSeatId={selectedSeatId}
-                onSelectSeat={(seat) => setSelectedSeatId(seat.id)}
+                onSelectSeat={(seat) => {
+                  setSelectedSeatId(seat.id);
+                  trackPodSelected({
+                    number: seat.number,
+                    locationId: location.id,
+                  });
+                }}
               />
             )}
 

@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { event } from "@/lib/analytics";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -218,6 +219,12 @@ export default function ReferralDashboard() {
           <button
             onClick={() => {
               navigator.clipboard.writeText(referralUrl);
+              // Track referral link copy
+              event({
+                action: "copy_referral_link",
+                category: "engagement",
+                label: credits?.referralCode,
+              });
               alert("Link copied!");
             }}
             style={{

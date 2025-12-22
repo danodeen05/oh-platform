@@ -397,6 +397,44 @@ export default function AnalyticsPage() {
         }}
       >
         <Link
+          href="/analytics/traffic"
+          style={{
+            padding: "24px",
+            background: "linear-gradient(135deg, #059669 0%, #10b981 100%)",
+            border: "2px solid #10b981",
+            borderRadius: "12px",
+            textDecoration: "none",
+            color: "white",
+            transition: "all 0.2s",
+          }}
+        >
+          <div style={{ fontSize: "1.5rem", marginBottom: "12px" }}>📊</div>
+          <h3 style={{ fontSize: "1.125rem", fontWeight: 600, marginBottom: "8px" }}>Website Traffic</h3>
+          <p style={{ fontSize: "0.875rem", opacity: 0.9 }}>
+            GA4-powered traffic analytics, page views, sources, and devices
+          </p>
+        </Link>
+
+        <Link
+          href="/analytics/funnel"
+          style={{
+            padding: "24px",
+            background: "linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%)",
+            border: "2px solid #8b5cf6",
+            borderRadius: "12px",
+            textDecoration: "none",
+            color: "white",
+            transition: "all 0.2s",
+          }}
+        >
+          <div style={{ fontSize: "1.5rem", marginBottom: "12px" }}>🎯</div>
+          <h3 style={{ fontSize: "1.125rem", fontWeight: 600, marginBottom: "8px" }}>Conversion Funnel</h3>
+          <p style={{ fontSize: "0.875rem", opacity: 0.9 }}>
+            Order funnel with drop-off rates and conversion tracking
+          </p>
+        </Link>
+
+        <Link
           href="/analytics/revenue"
           style={{
             padding: "24px",

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { API_URL } from "@/lib/api";
 import { useGuest } from "@/contexts/guest-context";
+import { trackLocationSelected, event } from "@/lib/analytics";
 
 type Location = {
   id: string;
@@ -82,6 +83,13 @@ export default function LocationSelector({
   }, [userLat, userLng, locations]);
 
   async function selectLocation(location: Location) {
+    // Track location selection
+    trackLocationSelected({
+      id: location.id,
+      name: location.name,
+      city: location.city,
+    });
+
     // Store referral code in localStorage if provided
     if (referralCode) {
       console.log("Storing referral code:", referralCode);
