@@ -1,8 +1,9 @@
 "use client";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, Suspense, useRef } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { useTranslations } from "next-intl";
+import { trackPurchase, event } from "@/lib/analytics";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -24,6 +25,7 @@ function ConfirmationContent() {
   const [order, setOrder] = useState<any>(null);
   const [groupOrders, setGroupOrders] = useState<any[]>([]);
   const [canNativeShare, setCanNativeShare] = useState(false);
+  const purchaseTrackedRef = useRef(false);
 
   // Fetch order details (and group orders if applicable)
   useEffect(() => {
@@ -65,6 +67,34 @@ function ConfirmationContent() {
       localStorage.setItem("activeOrderQrCode", order.orderQrCode);
     }
   }, [order?.orderQrCode]);
+
+  // Track purchase event (only once per order)
+  useEffect(() => {
+    if (!order || !paid || paid !== "true" || purchaseTrackedRef.current) return;
+
+    purchaseTrackedRef.current = true;
+
+    const items = order.items?.map((item: any) => ({
+      id: item.menuItem?.id || item.id,
+      name: item.menuItem?.name || "Unknown Item",
+      price: (item.priceCents || 0) / 100,
+      quantity: item.quantity || 1,
+    })) || [];
+
+    trackPurchase({
+      orderId: order.id || orderId || "",
+      total: (order.totalCents || parseInt(total || "0")) / 100,
+      items,
+    });
+
+    // Track social sharing intent
+    event({
+      action: "order_confirmed",
+      category: "conversion",
+      label: order.orderNumber || orderNumber || "",
+      value: order.totalCents || parseInt(total || "0"),
+    });
+  }, [order, paid, orderId, orderNumber, total]);
 
   // Check for native share capability after hydration
   useEffect(() => {
@@ -123,6 +153,15 @@ function ConfirmationContent() {
 
     if (url) {
       window.open(url, "_blank", "width=600,height=400");
+
+      // Track share event
+      event({
+        action: "share",
+        category: "engagement",
+        label: platform,
+        content_type: "order",
+        item_id: orderNumber || "",
+      });
 
       // Award share badge
       const userId = localStorage.getItem("userId");

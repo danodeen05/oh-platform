@@ -3,12 +3,37 @@ import cors from "@fastify/cors";
 import formbody from "@fastify/formbody";
 import { PrismaClient } from "@oh/db";
 import Anthropic from "@anthropic-ai/sdk";
+import { BetaAnalyticsDataClient } from "@google-analytics/data";
+import { readFileSync } from "fs";
 
 const prisma = new PrismaClient();
 const app = Fastify({ logger: true });
 
 // Initialize Anthropic client (uses ANTHROPIC_API_KEY env var automatically)
 const anthropic = process.env.ANTHROPIC_API_KEY ? new Anthropic() : null;
+
+// Initialize GA4 Analytics client
+let ga4Client = null;
+const GA4_PROPERTY_ID = process.env.GA_PROPERTY_ID || "516268103";
+const GA4_CREDENTIALS_PATH = process.env.GA_SERVICE_ACCOUNT_PATH;
+
+if (GA4_CREDENTIALS_PATH) {
+  try {
+    const credentials = JSON.parse(readFileSync(GA4_CREDENTIALS_PATH, "utf8"));
+    ga4Client = new BetaAnalyticsDataClient({ credentials });
+    console.log("✓ GA4 Analytics client initialized");
+  } catch (err) {
+    console.warn("GA4 Analytics client not initialized:", err.message);
+  }
+} else if (process.env.GA_SERVICE_ACCOUNT_JSON) {
+  try {
+    const credentials = JSON.parse(process.env.GA_SERVICE_ACCOUNT_JSON);
+    ga4Client = new BetaAnalyticsDataClient({ credentials });
+    console.log("✓ GA4 Analytics client initialized from env");
+  } catch (err) {
+    console.warn("GA4 Analytics client not initialized:", err.message);
+  }
+}
 
 // Register plugins
 await app.register(cors, {
@@ -6432,6 +6457,432 @@ app.get("/analytics/upselling", async (req, reply) => {
   } catch (error) {
     console.error("Upselling analytics error:", error);
     return reply.status(500).send({ error: "Failed to fetch upselling analytics" });
+  }
+});
+
+// ====================
+// GA4 WEBSITE ANALYTICS
+// ====================
+
+// Helper to convert period to GA4 date range
+function getGA4DateRange(period) {
+  const today = new Date();
+  const formatDate = (d) => d.toISOString().split("T")[0];
+
+  switch (period) {
+    case "today":
+      return { startDate: "today", endDate: "today" };
+    case "yesterday":
+      return { startDate: "yesterday", endDate: "yesterday" };
+    case "week":
+      return { startDate: "7daysAgo", endDate: "today" };
+    case "month":
+      return { startDate: "30daysAgo", endDate: "today" };
+    case "quarter":
+      return { startDate: "90daysAgo", endDate: "today" };
+    case "year":
+      return { startDate: "365daysAgo", endDate: "today" };
+    default:
+      return { startDate: "7daysAgo", endDate: "today" };
+  }
+}
+
+// GET /analytics/ga4/traffic - Website traffic overview
+app.get("/analytics/ga4/traffic", async (req, reply) => {
+  if (!ga4Client) {
+    return reply.status(503).send({ error: "GA4 not configured" });
+  }
+
+  const { period = "week" } = req.query;
+  const dateRange = getGA4DateRange(period);
+
+  try {
+    // Run report for traffic overview
+    const [response] = await ga4Client.runReport({
+      property: `properties/${GA4_PROPERTY_ID}`,
+      dateRanges: [dateRange],
+      dimensions: [{ name: "date" }],
+      metrics: [
+        { name: "activeUsers" },
+        { name: "sessions" },
+        { name: "screenPageViews" },
+        { name: "bounceRate" },
+        { name: "averageSessionDuration" },
+        { name: "newUsers" },
+      ],
+      orderBys: [{ dimension: { dimensionName: "date" }, desc: false }],
+    });
+
+    // Parse timeline data
+    const timeline = response.rows?.map((row) => ({
+      date: row.dimensionValues[0].value,
+      activeUsers: parseInt(row.metricValues[0].value) || 0,
+      sessions: parseInt(row.metricValues[1].value) || 0,
+      pageViews: parseInt(row.metricValues[2].value) || 0,
+      bounceRate: parseFloat(row.metricValues[3].value) || 0,
+      avgSessionDuration: parseFloat(row.metricValues[4].value) || 0,
+      newUsers: parseInt(row.metricValues[5].value) || 0,
+    })) || [];
+
+    // Calculate totals
+    const totals = timeline.reduce(
+      (acc, day) => ({
+        activeUsers: acc.activeUsers + day.activeUsers,
+        sessions: acc.sessions + day.sessions,
+        pageViews: acc.pageViews + day.pageViews,
+        newUsers: acc.newUsers + day.newUsers,
+      }),
+      { activeUsers: 0, sessions: 0, pageViews: 0, newUsers: 0 }
+    );
+
+    // Calculate averages
+    const avgBounceRate = timeline.length > 0
+      ? (timeline.reduce((sum, d) => sum + d.bounceRate, 0) / timeline.length * 100).toFixed(1)
+      : "0.0";
+    const avgSessionDuration = timeline.length > 0
+      ? Math.round(timeline.reduce((sum, d) => sum + d.avgSessionDuration, 0) / timeline.length)
+      : 0;
+
+    return reply.send({
+      period,
+      dateRange,
+      summary: {
+        activeUsers: totals.activeUsers,
+        sessions: totals.sessions,
+        pageViews: totals.pageViews,
+        newUsers: totals.newUsers,
+        bounceRate: `${avgBounceRate}%`,
+        avgSessionDuration: `${Math.floor(avgSessionDuration / 60)}m ${avgSessionDuration % 60}s`,
+      },
+      timeline,
+    });
+  } catch (error) {
+    console.error("GA4 traffic error:", error);
+    return reply.status(500).send({ error: "Failed to fetch GA4 traffic data" });
+  }
+});
+
+// GET /analytics/ga4/pages - Top pages by views
+app.get("/analytics/ga4/pages", async (req, reply) => {
+  if (!ga4Client) {
+    return reply.status(503).send({ error: "GA4 not configured" });
+  }
+
+  const { period = "week", limit = 20 } = req.query;
+  const dateRange = getGA4DateRange(period);
+
+  try {
+    const [response] = await ga4Client.runReport({
+      property: `properties/${GA4_PROPERTY_ID}`,
+      dateRanges: [dateRange],
+      dimensions: [{ name: "pagePath" }],
+      metrics: [
+        { name: "screenPageViews" },
+        { name: "activeUsers" },
+        { name: "averageSessionDuration" },
+        { name: "bounceRate" },
+      ],
+      orderBys: [{ metric: { metricName: "screenPageViews" }, desc: true }],
+      limit: parseInt(limit),
+    });
+
+    const pages = response.rows?.map((row) => ({
+      path: row.dimensionValues[0].value,
+      views: parseInt(row.metricValues[0].value) || 0,
+      users: parseInt(row.metricValues[1].value) || 0,
+      avgDuration: Math.round(parseFloat(row.metricValues[2].value) || 0),
+      bounceRate: (parseFloat(row.metricValues[3].value) * 100).toFixed(1),
+    })) || [];
+
+    return reply.send({
+      period,
+      dateRange,
+      pages,
+      total: pages.reduce((sum, p) => sum + p.views, 0),
+    });
+  } catch (error) {
+    console.error("GA4 pages error:", error);
+    return reply.status(500).send({ error: "Failed to fetch GA4 page data" });
+  }
+});
+
+// GET /analytics/ga4/sources - Traffic sources
+app.get("/analytics/ga4/sources", async (req, reply) => {
+  if (!ga4Client) {
+    return reply.status(503).send({ error: "GA4 not configured" });
+  }
+
+  const { period = "week" } = req.query;
+  const dateRange = getGA4DateRange(period);
+
+  try {
+    const [response] = await ga4Client.runReport({
+      property: `properties/${GA4_PROPERTY_ID}`,
+      dateRanges: [dateRange],
+      dimensions: [{ name: "sessionSource" }, { name: "sessionMedium" }],
+      metrics: [
+        { name: "sessions" },
+        { name: "activeUsers" },
+        { name: "conversions" },
+      ],
+      orderBys: [{ metric: { metricName: "sessions" }, desc: true }],
+      limit: 20,
+    });
+
+    const sources = response.rows?.map((row) => ({
+      source: row.dimensionValues[0].value || "(direct)",
+      medium: row.dimensionValues[1].value || "(none)",
+      sessions: parseInt(row.metricValues[0].value) || 0,
+      users: parseInt(row.metricValues[1].value) || 0,
+      conversions: parseInt(row.metricValues[2].value) || 0,
+    })) || [];
+
+    return reply.send({
+      period,
+      dateRange,
+      sources,
+    });
+  } catch (error) {
+    console.error("GA4 sources error:", error);
+    return reply.status(500).send({ error: "Failed to fetch GA4 source data" });
+  }
+});
+
+// GET /analytics/ga4/devices - Device breakdown
+app.get("/analytics/ga4/devices", async (req, reply) => {
+  if (!ga4Client) {
+    return reply.status(503).send({ error: "GA4 not configured" });
+  }
+
+  const { period = "week" } = req.query;
+  const dateRange = getGA4DateRange(period);
+
+  try {
+    const [response] = await ga4Client.runReport({
+      property: `properties/${GA4_PROPERTY_ID}`,
+      dateRanges: [dateRange],
+      dimensions: [{ name: "deviceCategory" }],
+      metrics: [
+        { name: "activeUsers" },
+        { name: "sessions" },
+        { name: "screenPageViews" },
+      ],
+      orderBys: [{ metric: { metricName: "activeUsers" }, desc: true }],
+    });
+
+    const devices = response.rows?.map((row) => ({
+      device: row.dimensionValues[0].value,
+      users: parseInt(row.metricValues[0].value) || 0,
+      sessions: parseInt(row.metricValues[1].value) || 0,
+      pageViews: parseInt(row.metricValues[2].value) || 0,
+    })) || [];
+
+    const total = devices.reduce((sum, d) => sum + d.users, 0);
+    const devicesWithPercentage = devices.map((d) => ({
+      ...d,
+      percentage: total > 0 ? ((d.users / total) * 100).toFixed(1) : "0.0",
+    }));
+
+    return reply.send({
+      period,
+      dateRange,
+      devices: devicesWithPercentage,
+      total,
+    });
+  } catch (error) {
+    console.error("GA4 devices error:", error);
+    return reply.status(500).send({ error: "Failed to fetch GA4 device data" });
+  }
+});
+
+// GET /analytics/ga4/geo - Geographic distribution
+app.get("/analytics/ga4/geo", async (req, reply) => {
+  if (!ga4Client) {
+    return reply.status(503).send({ error: "GA4 not configured" });
+  }
+
+  const { period = "week" } = req.query;
+  const dateRange = getGA4DateRange(period);
+
+  try {
+    const [response] = await ga4Client.runReport({
+      property: `properties/${GA4_PROPERTY_ID}`,
+      dateRanges: [dateRange],
+      dimensions: [{ name: "city" }, { name: "country" }],
+      metrics: [
+        { name: "activeUsers" },
+        { name: "sessions" },
+      ],
+      orderBys: [{ metric: { metricName: "activeUsers" }, desc: true }],
+      limit: 20,
+    });
+
+    const locations = response.rows?.map((row) => ({
+      city: row.dimensionValues[0].value || "(not set)",
+      country: row.dimensionValues[1].value || "(not set)",
+      users: parseInt(row.metricValues[0].value) || 0,
+      sessions: parseInt(row.metricValues[1].value) || 0,
+    })) || [];
+
+    return reply.send({
+      period,
+      dateRange,
+      locations,
+    });
+  } catch (error) {
+    console.error("GA4 geo error:", error);
+    return reply.status(500).send({ error: "Failed to fetch GA4 geo data" });
+  }
+});
+
+// GET /analytics/ga4/realtime - Real-time users
+app.get("/analytics/ga4/realtime", async (req, reply) => {
+  if (!ga4Client) {
+    return reply.status(503).send({ error: "GA4 not configured" });
+  }
+
+  try {
+    const [response] = await ga4Client.runRealtimeReport({
+      property: `properties/${GA4_PROPERTY_ID}`,
+      dimensions: [{ name: "unifiedScreenName" }],
+      metrics: [{ name: "activeUsers" }],
+      limit: 10,
+    });
+
+    const activePages = response.rows?.map((row) => ({
+      page: row.dimensionValues[0].value,
+      users: parseInt(row.metricValues[0].value) || 0,
+    })) || [];
+
+    const totalActiveUsers = activePages.reduce((sum, p) => sum + p.users, 0);
+
+    return reply.send({
+      activeUsers: totalActiveUsers,
+      topPages: activePages,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("GA4 realtime error:", error);
+    return reply.status(500).send({ error: "Failed to fetch GA4 realtime data" });
+  }
+});
+
+// GET /analytics/ga4/funnel - Order conversion funnel
+app.get("/analytics/ga4/funnel", async (req, reply) => {
+  if (!ga4Client) {
+    return reply.status(503).send({ error: "GA4 not configured" });
+  }
+
+  const { period = "week" } = req.query;
+  const dateRange = getGA4DateRange(period);
+
+  try {
+    // Get event counts for funnel steps
+    const [response] = await ga4Client.runReport({
+      property: `properties/${GA4_PROPERTY_ID}`,
+      dateRanges: [dateRange],
+      dimensions: [{ name: "eventName" }],
+      metrics: [{ name: "eventCount" }, { name: "totalUsers" }],
+      dimensionFilter: {
+        filter: {
+          fieldName: "eventName",
+          inListFilter: {
+            values: [
+              "page_view",
+              "location_selected",
+              "add_to_cart",
+              "begin_checkout",
+              "purchase",
+            ],
+          },
+        },
+      },
+    });
+
+    // Build funnel steps
+    const eventMap = {};
+    response.rows?.forEach((row) => {
+      eventMap[row.dimensionValues[0].value] = {
+        count: parseInt(row.metricValues[0].value) || 0,
+        users: parseInt(row.metricValues[1].value) || 0,
+      };
+    });
+
+    const funnelSteps = [
+      { name: "Page View", event: "page_view", ...eventMap["page_view"] || { count: 0, users: 0 } },
+      { name: "Location Selected", event: "location_selected", ...eventMap["location_selected"] || { count: 0, users: 0 } },
+      { name: "Add to Cart", event: "add_to_cart", ...eventMap["add_to_cart"] || { count: 0, users: 0 } },
+      { name: "Begin Checkout", event: "begin_checkout", ...eventMap["begin_checkout"] || { count: 0, users: 0 } },
+      { name: "Purchase", event: "purchase", ...eventMap["purchase"] || { count: 0, users: 0 } },
+    ];
+
+    // Calculate conversion rates between steps
+    for (let i = 1; i < funnelSteps.length; i++) {
+      const prev = funnelSteps[i - 1].users;
+      const curr = funnelSteps[i].users;
+      funnelSteps[i].conversionRate = prev > 0 ? ((curr / prev) * 100).toFixed(1) : "0.0";
+      funnelSteps[i].dropOff = prev > 0 ? (((prev - curr) / prev) * 100).toFixed(1) : "0.0";
+    }
+    funnelSteps[0].conversionRate = "100.0";
+    funnelSteps[0].dropOff = "0.0";
+
+    // Overall conversion rate
+    const startUsers = funnelSteps[0].users;
+    const endUsers = funnelSteps[funnelSteps.length - 1].users;
+    const overallConversion = startUsers > 0 ? ((endUsers / startUsers) * 100).toFixed(2) : "0.00";
+
+    return reply.send({
+      period,
+      dateRange,
+      steps: funnelSteps,
+      overallConversionRate: `${overallConversion}%`,
+      totalVisitors: startUsers,
+      totalPurchases: endUsers,
+    });
+  } catch (error) {
+    console.error("GA4 funnel error:", error);
+    return reply.status(500).send({ error: "Failed to fetch GA4 funnel data" });
+  }
+});
+
+// GET /analytics/ga4/hourly - Hourly activity
+app.get("/analytics/ga4/hourly", async (req, reply) => {
+  if (!ga4Client) {
+    return reply.status(503).send({ error: "GA4 not configured" });
+  }
+
+  const { period = "week" } = req.query;
+  const dateRange = getGA4DateRange(period);
+
+  try {
+    const [response] = await ga4Client.runReport({
+      property: `properties/${GA4_PROPERTY_ID}`,
+      dateRanges: [dateRange],
+      dimensions: [{ name: "hour" }],
+      metrics: [{ name: "activeUsers" }, { name: "sessions" }],
+      orderBys: [{ dimension: { dimensionName: "hour" }, desc: false }],
+    });
+
+    const hourly = response.rows?.map((row) => ({
+      hour: parseInt(row.dimensionValues[0].value),
+      hourLabel: `${row.dimensionValues[0].value}:00`,
+      users: parseInt(row.metricValues[0].value) || 0,
+      sessions: parseInt(row.metricValues[1].value) || 0,
+    })) || [];
+
+    // Find peak hour
+    const peakHour = hourly.reduce((max, h) => (h.users > max.users ? h : max), { users: 0 });
+
+    return reply.send({
+      period,
+      dateRange,
+      hourly,
+      peakHour: peakHour.hourLabel || "N/A",
+      peakUsers: peakHour.users,
+    });
+  } catch (error) {
+    console.error("GA4 hourly error:", error);
+    return reply.status(500).send({ error: "Failed to fetch GA4 hourly data" });
   }
 });
 
