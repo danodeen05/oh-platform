@@ -9,22 +9,51 @@ declare global {
 
 export const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
-// Helper to safely send GA4 events via dataLayer (works even before gtag loads)
+// Queue for events that fire before gtag is ready
+let eventQueue: Array<{ eventName: string; params: Record<string, unknown> }> = [];
+let isProcessingQueue = false;
+
+// Process queued events once gtag is available
+const processQueue = () => {
+  if (isProcessingQueue || typeof window === "undefined" || !window.gtag) return;
+  isProcessingQueue = true;
+
+  while (eventQueue.length > 0) {
+    const event = eventQueue.shift();
+    if (event) {
+      window.gtag("event", event.eventName, event.params);
+    }
+  }
+
+  isProcessingQueue = false;
+};
+
+// Helper to safely send GA4 events (queues if gtag not ready)
 const sendEvent = (eventName: string, params: Record<string, unknown>) => {
   if (typeof window === "undefined") return;
 
-  // Initialize dataLayer if needed
-  window.dataLayer = window.dataLayer || [];
-
-  // Push event to dataLayer - this works even if gtag hasn't loaded yet
-  window.dataLayer.push({
-    event: eventName,
-    ...params,
-  });
-
-  // Also call gtag if available for immediate processing
+  // If gtag is available, send immediately
   if (window.gtag) {
     window.gtag("event", eventName, params);
+    return;
+  }
+
+  // Otherwise queue the event
+  eventQueue.push({ eventName, params });
+
+  // Set up a check to process queue when gtag becomes available
+  const checkGtag = () => {
+    if (window.gtag) {
+      processQueue();
+    } else {
+      // Check again in 100ms, up to 5 seconds
+      setTimeout(checkGtag, 100);
+    }
+  };
+
+  // Only start checking if this is the first queued event
+  if (eventQueue.length === 1) {
+    setTimeout(checkGtag, 100);
   }
 };
 
@@ -266,12 +295,6 @@ export const setUserProperties = (properties: {
   lifetimeSpent?: number;
 }) => {
   if (typeof window === "undefined") return;
-
-  window.dataLayer = window.dataLayer || [];
-  window.dataLayer.push({
-    event: "set_user_properties",
-    user_properties: properties,
-  });
 
   if (window.gtag) {
     window.gtag("set", "user_properties", properties);
