@@ -171,26 +171,25 @@ export const trackLocationSelected = (location: {
   name: string;
   city?: string;
 }) => {
-  event({
-    action: "select_location",
-    category: "engagement",
-    label: location.name,
-    location_id: location.id,
-    location_city: location.city,
-  });
+  if (typeof window !== "undefined" && window.gtag) {
+    window.gtag("event", "location_selected", {
+      location_id: location.id,
+      location_name: location.name,
+      location_city: location.city,
+    });
+  }
 };
 
 export const trackPodSelected = (pod: {
   number: number;
   locationId: string;
 }) => {
-  event({
-    action: "select_pod",
-    category: "engagement",
-    label: `Pod ${pod.number}`,
-    pod_number: pod.number,
-    location_id: pod.locationId,
-  });
+  if (typeof window !== "undefined" && window.gtag) {
+    window.gtag("event", "pod_selected", {
+      pod_number: pod.number,
+      location_id: pod.locationId,
+    });
+  }
 };
 
 export const trackCheckIn = (order: {
@@ -198,13 +197,13 @@ export const trackCheckIn = (order: {
   locationId: string;
   arrivalDeviation?: number;
 }) => {
-  event({
-    action: "check_in",
-    category: "engagement",
-    label: order.orderId,
-    arrival_deviation_minutes: order.arrivalDeviation,
-    location_id: order.locationId,
-  });
+  if (typeof window !== "undefined" && window.gtag) {
+    window.gtag("event", "check_in", {
+      order_id: order.orderId,
+      location_id: order.locationId,
+      arrival_deviation_minutes: order.arrivalDeviation,
+    });
+  }
 };
 
 export const trackMenuCategoryViewed = (category: string) => {
