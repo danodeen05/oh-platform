@@ -156,6 +156,10 @@
     "title": "Nuestro menú",
     "description": "Explora nuestra selección de sopas de fideos con carne premium y acompañamientos",
     "loading": "Cargando menú...",
+    "error": {
+      "title": "No se pudo cargar el menú",
+      "tryAgain": "Intentar de nuevo"
+    },
     "categories": {
       "soups": "Sopas",
       "noodles": "Fideos",
@@ -163,6 +167,64 @@
       "sides": "Acompañamientos",
       "drinks": "Bebidas",
       "desserts": "Postres"
+    },
+    "tags": {
+      "premium": "Premium",
+      "included": "Incluido",
+      "signature": "Especial",
+      "complimentary": "Cortesía"
+    },
+    "sections": {
+      "soup": {
+        "subtitle": "Comienza con nuestro caldo especial",
+        "description": "Caldo de hueso de res perfeccionado durante 30 años"
+      },
+      "noodles": {
+        "subtitle": "Elige tus fideos",
+        "description": "Fideos hechos a mano frescos cada día"
+      },
+      "premiumAddons": {
+        "subtitle": "Mejora tu tazón",
+        "description": "Proteínas y toppings premium"
+      },
+      "sideDishes": {
+        "subtitle": "Completa tu comida",
+        "description": "Acompañamientos tradicionales"
+      },
+      "dessert": {
+        "subtitle": "Finales dulces",
+        "description": "Postres tradicionales para terminar tu comida"
+      }
+    },
+    "hero": {
+      "title": "Nuestro Menú",
+      "description": "Crea tu tazón perfecto con nuestros ingredientes premium y receta de 30 años",
+      "orderNow": "Ordenar Ahora"
+    },
+    "difference": {
+      "title": "La Diferencia Oh!",
+      "description": "No somos solo otra tienda de fideos. Estamos reimaginando lo que puede ser comer.",
+      "techFirst": {
+        "title": "Experiencia Tech-First",
+        "description": "Ordena con anticipación, salta la fila y disfruta una experiencia sin problemas"
+      },
+      "privatePods": {
+        "title": "Pods de Comedor Privado",
+        "description": "Disfruta tu comida en tu propio espacio privado, libre de distracciones"
+      },
+      "seamlessService": {
+        "title": "Servicio Sin Interrupciones",
+        "description": "Desde ordenar hasta pagar, todo está diseñado para tu conveniencia"
+      },
+      "loyalty": {
+        "title": "Lealtad Recompensada",
+        "description": "Gana puntos, desbloquea recompensas y sube de nivel con cada visita"
+      }
+    },
+    "cta": {
+      "title": "¿Listo para el Mejor Tazón?",
+      "description": "Ordena con anticipación y salta la espera. Tu tazón perfecto está a solo unos toques.",
+      "button": "Comienza Tu Orden"
     }
   },
   "locations": {

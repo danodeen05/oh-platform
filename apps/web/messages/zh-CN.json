@@ -156,6 +156,10 @@
     "title": "我们的菜单",
     "description": "探索我们精选的顶级牛肉面和配菜",
     "loading": "加载菜单中...",
+    "error": {
+      "title": "无法加载菜单",
+      "tryAgain": "重试"
+    },
     "categories": {
       "soups": "汤品",
       "noodles": "面条",
@@ -163,6 +167,64 @@
       "sides": "配菜",
       "drinks": "饮品",
       "desserts": "甜点"
+    },
+    "tags": {
+      "premium": "顶级",
+      "included": "已包含",
+      "signature": "招牌",
+      "complimentary": "免费"
+    },
+    "sections": {
+      "soup": {
+        "subtitle": "从我们的招牌汤底开始",
+        "description": "30年精心熬制的浓郁牛骨汤"
+      },
+      "noodles": {
+        "subtitle": "选择您的面条",
+        "description": "每日新鲜手工制作的面条"
+      },
+      "premiumAddons": {
+        "subtitle": "升级您的面碗",
+        "description": "顶级蛋白质和配料"
+      },
+      "sideDishes": {
+        "subtitle": "完善您的餐点",
+        "description": "传统配菜"
+      },
+      "dessert": {
+        "subtitle": "甜蜜结尾",
+        "description": "传统甜点为您的餐点画上句点"
+      }
+    },
+    "hero": {
+      "title": "我们的菜单",
+      "description": "用我们的顶级食材和30年传承配方，打造您完美的一碗",
+      "orderNow": "立即订购"
+    },
+    "difference": {
+      "title": "哦！的独特之处",
+      "description": "我们不只是另一家面店。我们正在重新定义用餐体验。",
+      "techFirst": {
+        "title": "科技优先体验",
+        "description": "提前点餐、跳过排队，享受无缝用餐体验"
+      },
+      "privatePods": {
+        "title": "私人用餐包厢",
+        "description": "在您专属的私人空间享用美食，远离干扰"
+      },
+      "seamlessService": {
+        "title": "无缝服务",
+        "description": "从点餐到付款，一切设计都为了方便"
+      },
+      "loyalty": {
+        "title": "回馈忠诚会员",
+        "description": "赚取积分、解锁奖励，每次光临都能升级"
+      }
+    },
+    "cta": {
+      "title": "准备好品尝最棒的一碗面了吗？",
+      "description": "提前点餐，跳过等待。完美的一碗面只需轻轻几点。",
+      "button": "开始点餐"
     }
   },
   "locations": {
