@@ -93,6 +93,16 @@ export default function HomePage() {
                 {chunks}
               </span>
             ),
+            bebas: (chunks) => (
+              <span
+                style={{
+                  fontFamily: '"Bebas Neue", sans-serif',
+                  letterSpacing: "2px",
+                }}
+              >
+                {chunks}
+              </span>
+            ),
           })}
         </h1>
 
