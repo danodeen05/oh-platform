@@ -156,6 +156,10 @@
     "title": "我們的菜單",
     "description": "探索我們精選的頂級牛肉麵和配菜",
     "loading": "載入菜單中...",
+    "error": {
+      "title": "無法載入菜單",
+      "tryAgain": "重試"
+    },
     "categories": {
       "soups": "湯品",
       "noodles": "麵條",
@@ -163,6 +167,64 @@
       "sides": "配菜",
       "drinks": "飲品",
       "desserts": "甜點"
+    },
+    "tags": {
+      "premium": "頂級",
+      "included": "已包含",
+      "signature": "招牌",
+      "complimentary": "免費"
+    },
+    "sections": {
+      "soup": {
+        "subtitle": "從我們的招牌湯底開始",
+        "description": "30年精心熬製的濃郁牛骨湯"
+      },
+      "noodles": {
+        "subtitle": "選擇您的麵條",
+        "description": "每日新鮮手工製作的麵條"
+      },
+      "premiumAddons": {
+        "subtitle": "升級您的麵碗",
+        "description": "頂級蛋白質和配料"
+      },
+      "sideDishes": {
+        "subtitle": "完善您的餐點",
+        "description": "傳統配菜"
+      },
+      "dessert": {
+        "subtitle": "甜蜜結尾",
+        "description": "傳統甜點為您的餐點畫上句點"
+      }
+    },
+    "hero": {
+      "title": "我們的菜單",
+      "description": "用我們的頂級食材和30年傳承配方，打造您完美的一碗",
+      "orderNow": "立即訂購"
+    },
+    "difference": {
+      "title": "哦！的獨特之處",
+      "description": "我們不只是另一家麵店。我們正在重新定義用餐體驗。",
+      "techFirst": {
+        "title": "科技優先體驗",
+        "description": "提前點餐、跳過排隊，享受無縫用餐體驗"
+      },
+      "privatePods": {
+        "title": "私人用餐包廂",
+        "description": "在您專屬的私人空間享用美食，遠離干擾"
+      },
+      "seamlessService": {
+        "title": "無縫服務",
+        "description": "從點餐到付款，一切設計都為了方便"
+      },
+      "loyalty": {
+        "title": "回饋忠誠會員",
+        "description": "賺取積分、解鎖獎勵，每次光臨都能升級"
+      }
+    },
+    "cta": {
+      "title": "準備好品嚐最棒的一碗麵了嗎？",
+      "description": "提前點餐，跳過等待。完美的一碗麵只需輕輕幾點。",
+      "button": "開始點餐"
     }
   },
   "locations": {
