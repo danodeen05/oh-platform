@@ -3,6 +3,13 @@ import cors from "@fastify/cors";
 import formbody from "@fastify/formbody";
 import { PrismaClient } from "@oh/db";
 import Anthropic from "@anthropic-ai/sdk";
+import {
+  sendOrderConfirmation,
+  sendPodReadyNotification,
+  sendOrderReadyNotification,
+  sendQueueUpdateNotification,
+  getNotificationStatus,
+} from "./notifications.js";
 
 const prisma = new PrismaClient();
 const app = Fastify({ logger: true });
@@ -126,9 +133,19 @@ async function processQueue(locationId) {
   return { assigned: assigned.length, assignments: assigned };
 }
 
-// Send notification when pod is ready (placeholder for now)
+// Send notification when pod is ready
 async function notifyPodReady(order) {
-  const notificationMethod = "SYSTEM"; // Will be PUSH/SMS/EMAIL when implemented
+  // Determine notification method based on what was sent
+  let notificationMethod = "SYSTEM";
+  const results = await sendPodReadyNotification(order, order.user, order.seat?.number);
+
+  if (results.email?.success && results.sms?.success) {
+    notificationMethod = "EMAIL_SMS";
+  } else if (results.email?.success) {
+    notificationMethod = "EMAIL";
+  } else if (results.sms?.success) {
+    notificationMethod = "SMS";
+  }
 
   // Update order with notification timestamp
   await prisma.order.update({
@@ -139,14 +156,9 @@ async function notifyPodReady(order) {
     },
   });
 
-  // TODO: Implement actual notifications
-  // - Push notification via web push API / Firebase
-  // - SMS via Twilio
-  // - Email via SendGrid
+  console.log(`[NOTIFICATION] Order ${order.kitchenOrderNumber || order.orderNumber.slice(-6)}: Pod ${order.seat?.number} is ready!`);
 
-  console.log(`[NOTIFICATION] Order ${order.kitchenOrderNumber || order.orderNumber.slice(-6)}: Pod ${order.seat.number} is ready!`);
-
-  return { sent: true, method: notificationMethod };
+  return { sent: true, method: notificationMethod, results };
 }
 
 // ====================
@@ -155,6 +167,11 @@ async function notifyPodReady(order) {
 
 app.get("/health", async (req, reply) => {
   return { ok: true };
+});
+
+// Notification status endpoint
+app.get("/notifications/status", async (req, reply) => {
+  return getNotificationStatus();
 });
 
 // ====================
@@ -2452,6 +2469,20 @@ app.patch("/orders/:id", async (req, reply) => {
     } else {
       console.log(`Pod ${order.seat?.number} reserved for order ${order.kitchenOrderNumber}, expires at ${expiryTime.toISOString()}`);
     }
+
+    // Send order confirmation notification
+    if (order.user) {
+      sendOrderConfirmation(order, order.user).catch(err => {
+        console.error("Failed to send order confirmation:", err);
+      });
+    }
+  }
+
+  // Send order confirmation if paid (for orders without pre-selected seat)
+  if (paymentStatus === "PAID" && !order.seatId && order.user) {
+    sendOrderConfirmation(order, order.user).catch(err => {
+      console.error("Failed to send order confirmation:", err);
+    });
   }
 
   // If order just got paid, update user progress
@@ -6557,6 +6588,153 @@ app.post("/group-orders/:code/complete", async (req, reply) => {
   console.log(`[Group Order Completed] Code: ${groupOrder.code}, Orders: ${groupOrder.orders.length}, Seating Option: ${seatingOption}, Kitchen notified`);
 
   return updatedGroup;
+});
+
+// ====================
+// LANGUAGE ANALYTICS
+// ====================
+
+// POST /analytics/language - Track a language visit
+app.post("/analytics/language", async (req, reply) => {
+  try {
+    const {
+      browserLanguage,
+      primaryLanguage,
+      resolvedLocale,
+      wasSupported,
+      sessionId,
+      userId,
+    } = req.body;
+
+    if (!browserLanguage || !primaryLanguage || !resolvedLocale) {
+      return reply.status(400).send({ error: "Missing required fields" });
+    }
+
+    const visit = await prisma.languageVisit.create({
+      data: {
+        browserLanguage,
+        primaryLanguage,
+        resolvedLocale,
+        wasSupported: wasSupported ?? false,
+        sessionId,
+        userId,
+        userAgent: req.headers["user-agent"],
+      },
+    });
+
+    return { success: true, id: visit.id };
+  } catch (error) {
+    console.error("Language analytics error:", error);
+    return reply.status(500).send({ error: "Failed to track language visit" });
+  }
+});
+
+// GET /analytics/language - Get language analytics data
+app.get("/analytics/language", async (req, reply) => {
+  try {
+    const { days = 30, tenantSlug } = req.query;
+    const since = new Date();
+    since.setDate(since.getDate() - parseInt(days));
+
+    // Get all language visits in the time period
+    const visits = await prisma.languageVisit.findMany({
+      where: {
+        createdAt: { gte: since },
+      },
+      select: {
+        primaryLanguage: true,
+        resolvedLocale: true,
+        wasSupported: true,
+        createdAt: true,
+      },
+    });
+
+    // Aggregate by primary language (including unsupported)
+    const languageCounts = {};
+    const unsupportedLanguages = {};
+    const localeCounts = {};
+    const dailyData = {};
+
+    for (const visit of visits) {
+      // Count primary languages
+      languageCounts[visit.primaryLanguage] = (languageCounts[visit.primaryLanguage] || 0) + 1;
+
+      // Count resolved locales
+      localeCounts[visit.resolvedLocale] = (localeCounts[visit.resolvedLocale] || 0) + 1;
+
+      // Track unsupported languages separately
+      if (!visit.wasSupported) {
+        unsupportedLanguages[visit.primaryLanguage] = (unsupportedLanguages[visit.primaryLanguage] || 0) + 1;
+      }
+
+      // Daily breakdown
+      const dateKey = visit.createdAt.toISOString().split("T")[0];
+      if (!dailyData[dateKey]) {
+        dailyData[dateKey] = { total: 0, supported: 0, unsupported: 0 };
+      }
+      dailyData[dateKey].total++;
+      if (visit.wasSupported) {
+        dailyData[dateKey].supported++;
+      } else {
+        dailyData[dateKey].unsupported++;
+      }
+    }
+
+    // Sort and format results
+    const sortedLanguages = Object.entries(languageCounts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([language, count]) => ({
+        language,
+        count,
+        percentage: ((count / visits.length) * 100).toFixed(1),
+        isSupported: !unsupportedLanguages[language] || unsupportedLanguages[language] < count,
+      }));
+
+    const sortedUnsupported = Object.entries(unsupportedLanguages)
+      .sort((a, b) => b[1] - a[1])
+      .map(([language, count]) => ({
+        language,
+        count,
+        percentage: ((count / visits.length) * 100).toFixed(1),
+      }));
+
+    const sortedLocales = Object.entries(localeCounts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([locale, count]) => ({
+        locale,
+        count,
+        percentage: ((count / visits.length) * 100).toFixed(1),
+      }));
+
+    // Format daily data for charts
+    const dailyBreakdown = Object.entries(dailyData)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([date, data]) => ({
+        date,
+        ...data,
+      }));
+
+    return {
+      summary: {
+        totalVisits: visits.length,
+        uniqueLanguages: Object.keys(languageCounts).length,
+        unsupportedLanguageVisits: Object.values(unsupportedLanguages).reduce((a, b) => a + b, 0),
+        supportedLanguageVisits: visits.length - Object.values(unsupportedLanguages).reduce((a, b) => a + b, 0),
+      },
+      allLanguages: sortedLanguages,
+      unsupportedLanguages: sortedUnsupported,
+      resolvedLocales: sortedLocales,
+      dailyBreakdown,
+      period: {
+        days: parseInt(days),
+        from: since.toISOString(),
+        to: new Date().toISOString(),
+      },
+    };
+  } catch (error) {
+    console.error("Language analytics error:", error);
+    return reply.status(500).send({ error: "Failed to fetch language analytics" });
+  }
 });
 
 // ====================

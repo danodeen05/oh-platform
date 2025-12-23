@@ -47,15 +47,24 @@ export default function AnalyticsPage() {
   const [realtime, setRealtime] = useState<RealtimeData | null>(null);
   const [revenue, setRevenue] = useState<RevenueData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   async function loadData() {
+    setError(null);
     try {
+      if (!BASE) {
+        throw new Error("API URL not configured. Set NEXT_PUBLIC_API_URL environment variable.");
+      }
       const headers = { "x-tenant-slug": "oh" };
       const [overviewRes, realtimeRes, revenueRes] = await Promise.all([
         fetch(`${BASE}/analytics/overview?period=${period}`, { headers }),
         fetch(`${BASE}/analytics/realtime`, { headers }),
         fetch(`${BASE}/analytics/revenue?period=${period}&groupBy=day`, { headers }),
       ]);
+
+      if (!overviewRes.ok || !realtimeRes.ok || !revenueRes.ok) {
+        throw new Error(`API returned error: ${overviewRes.status} ${realtimeRes.status} ${revenueRes.status}`);
+      }
 
       const [overviewData, realtimeData, revenueData] = await Promise.all([
         overviewRes.json(),
@@ -67,8 +76,9 @@ export default function AnalyticsPage() {
       setRealtime(realtimeData);
       setRevenue(revenueData);
       setLoading(false);
-    } catch (error) {
-      console.error("Failed to load analytics:", error);
+    } catch (err) {
+      console.error("Failed to load analytics:", err);
+      setError(err instanceof Error ? err.message : "Failed to load analytics");
       setLoading(false);
     }
   }
@@ -96,6 +106,61 @@ export default function AnalyticsPage() {
     return (
       <div style={{ padding: "48px", textAlign: "center", color: "#6b7280" }}>
         Loading analytics...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ maxWidth: "600px", margin: "48px auto", textAlign: "center" }}>
+        <div
+          style={{
+            background: "#fef2f2",
+            border: "1px solid #fecaca",
+            borderRadius: "12px",
+            padding: "32px",
+          }}
+        >
+          <div style={{ fontSize: "2rem", marginBottom: "16px" }}>!</div>
+          <h2 style={{ fontSize: "1.25rem", fontWeight: 600, marginBottom: "12px", color: "#374151" }}>
+            Unable to Load Analytics
+          </h2>
+          <p style={{ color: "#6b7280", marginBottom: "16px" }}>
+            Could not connect to the API server. Please check your configuration.
+          </p>
+          <div
+            style={{
+              background: "#fee2e2",
+              borderRadius: "8px",
+              padding: "12px",
+              fontSize: "0.875rem",
+              color: "#991b1b",
+              fontFamily: "monospace",
+              marginBottom: "16px",
+            }}
+          >
+            {error}
+          </div>
+          <div style={{ fontSize: "0.75rem", color: "#9ca3af" }}>
+            API URL: {BASE || "(not set)"}
+          </div>
+          <div style={{ marginTop: "24px" }}>
+            <Link
+              href="/"
+              style={{
+                display: "inline-block",
+                padding: "10px 20px",
+                background: "#374151",
+                color: "white",
+                borderRadius: "8px",
+                textDecoration: "none",
+                fontSize: "0.875rem",
+              }}
+            >
+              Back to Admin
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }
@@ -330,6 +395,25 @@ export default function AnalyticsPage() {
           <h3 style={{ fontSize: "1.125rem", fontWeight: 600, marginBottom: "8px" }}>Upselling & Add-Ons</h3>
           <p style={{ color: "#6b7280", fontSize: "0.875rem" }}>
             Add-on revenue, item popularity, and conversion rates
+          </p>
+        </Link>
+
+        <Link
+          href="/analytics/languages"
+          style={{
+            padding: "24px",
+            background: "white",
+            border: "2px solid #e5e7eb",
+            borderRadius: "12px",
+            textDecoration: "none",
+            color: "inherit",
+            transition: "all 0.2s",
+          }}
+        >
+          <div style={{ fontSize: "1.5rem", marginBottom: "12px" }}>A</div>
+          <h3 style={{ fontSize: "1.125rem", fontWeight: 600, marginBottom: "8px" }}>Language Analytics</h3>
+          <p style={{ color: "#6b7280", fontSize: "0.875rem" }}>
+            Browser languages, localization opportunities, and visitor demographics
           </p>
         </Link>
       </div>

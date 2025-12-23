@@ -1,6 +1,9 @@
 "use client";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
+import { useTranslations } from "next-intl";
+import { useToast } from "@/components/ui/Toast";
+import { ConfirmDialog } from "@/components/ui/Dialog";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "";
 
@@ -103,10 +106,13 @@ interface AvailableAddons {
 function StatusContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const t = useTranslations("order");
+  const toast = useToast();
   const orderQrCode = searchParams.get("orderQrCode");
 
   const [status, setStatus] = useState<OrderStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [confirmDoneOpen, setConfirmDoneOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [fortune, setFortune] = useState<Fortune | null>(null);
   const [fortuneLoading, setFortuneLoading] = useState(false);
@@ -297,14 +303,15 @@ function StatusContent() {
 
       if (response.ok) {
         setCallStaffSuccess(true);
+        toast.success(t("success.staffNotified"));
         setTimeout(() => setCallStaffSuccess(false), 5000);
       } else {
         const data = await response.json();
-        alert(data.error || "Failed to call staff. Please try again.");
+        toast.error(data.error || t("errors.callStaff"));
       }
     } catch (err) {
       console.error("Failed to call staff:", err);
-      alert("Failed to call staff. Please try again.");
+      toast.error(t("errors.callStaff"));
     } finally {
       setCallStaffLoading(false);
     }
@@ -353,15 +360,15 @@ function StatusContent() {
       );
 
       if (response.ok) {
-        alert("Drink refill requested! It will be brought to your pod shortly.");
+        toast.success(t("success.refillRequested"));
         setShowAddOnModal(false);
       } else {
         const data = await response.json();
-        alert(data.error || "Failed to request refill.");
+        toast.error(data.error || t("errors.requestRefill"));
       }
     } catch (err) {
       console.error("Failed to request refill:", err);
-      alert("Failed to request refill. Please try again.");
+      toast.error(t("errors.requestRefill"));
     } finally {
       setRefillLoading(false);
     }
@@ -391,16 +398,16 @@ function StatusContent() {
       );
 
       if (response.ok) {
-        alert("Extra vegetables requested! They will be brought to your pod shortly.");
+        toast.success(t("success.vegetablesRequested"));
         setShowAddOnModal(false);
         setSelectedExtraVegs(new Set());
       } else {
         const data = await response.json();
-        alert(data.error || "Failed to request extra vegetables.");
+        toast.error(data.error || t("errors.requestVegetables"));
       }
     } catch (err) {
       console.error("Failed to request extra vegetables:", err);
-      alert("Failed to request extra vegetables. Please try again.");
+      toast.error(t("errors.requestVegetables"));
     } finally {
       setExtraVegLoading(false);
     }
@@ -436,13 +443,14 @@ function StatusContent() {
 
       if (response.ok) {
         setDessertRequested(true);
+        toast.success(t("success.dessertOnWay"));
       } else {
         const data = await response.json();
-        alert(data.error || "Failed to request dessert. Please try again.");
+        toast.error(data.error || t("errors.requestDessert"));
       }
     } catch (err) {
       console.error("Failed to request dessert:", err);
-      alert("Failed to request dessert. Please try again.");
+      toast.error(t("errors.requestDessert"));
     } finally {
       setDessertLoading(false);
     }
@@ -535,13 +543,13 @@ function StatusContent() {
         throw new Error("Payment processing failed");
       }
 
-      alert(`Add-on order placed! $${(totalCents / 100).toFixed(2)} charged. Your items will be brought to your pod shortly.`);
+      toast.success(t("success.addonOrdered", { amount: `$${(totalCents / 100).toFixed(2)}` }));
       setShowAddOnModal(false);
       setSelectedPaidAddons(new Map());
       setShowPaymentConfirm(false);
     } catch (err: any) {
       console.error("Failed to submit paid add-on:", err);
-      alert(err.message || "Failed to place add-on order. Please try again.");
+      toast.error(err.message || t("errors.placeAddonOrder"));
     } finally {
       setPaidAddonLoading(false);
     }
@@ -1850,25 +1858,33 @@ function StatusContent() {
         <div style={{ display: "grid", gap: 12 }}>
           {/* Show "I'm Done Eating" button when order is SERVING */}
           {order.status === "SERVING" && (
-            <button
-              onClick={async () => {
-                if (confirm("Are you finished eating? This will notify staff to clean your pod.")) {
-                  try {
-                    await fetch(`${BASE}/kitchen/orders/${order.id}/status`, {
-                      method: "PATCH",
-                      headers: {
-                        "Content-Type": "application/json",
-                        "x-tenant-slug": "oh",
-                      },
-                      body: JSON.stringify({ status: "COMPLETED" }),
-                    });
-                    fetchStatus(); // Refresh status immediately
-                  } catch (error) {
-                    console.error("Failed to mark as done:", error);
-                    alert("Failed to update status. Please try again.");
-                  }
+            <>
+            <ConfirmDialog
+              open={confirmDoneOpen}
+              onClose={() => setConfirmDoneOpen(false)}
+              onConfirm={async () => {
+                try {
+                  await fetch(`${BASE}/kitchen/orders/${order.id}/status`, {
+                    method: "PATCH",
+                    headers: {
+                      "Content-Type": "application/json",
+                      "x-tenant-slug": "oh",
+                    },
+                    body: JSON.stringify({ status: "COMPLETED" }),
+                  });
+                  setConfirmDoneOpen(false);
+                  fetchStatus(); // Refresh status immediately
+                } catch (error) {
+                  console.error("Failed to mark as done:", error);
+                  toast.error(t("errors.markDone"));
                 }
               }}
+              title={t("status.doneEating")}
+              message={t("confirmations.finishedEating")}
+              type="info"
+            />
+            <button
+              onClick={() => setConfirmDoneOpen(true)}
               style={{
                 width: "100%",
                 padding: 16,
@@ -1884,6 +1900,7 @@ function StatusContent() {
             >
               ✓ I'm Done Eating
             </button>
+            </>
           )}
 
           <button

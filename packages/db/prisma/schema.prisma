@@ -268,6 +268,9 @@ model Order {
   paymentStatus   PaymentStatus @default(PENDING)
   stripePaymentId String?
 
+  // Order source tracking
+  orderSource OrderSource @default(WEB) // Where the order originated from
+
   // Child orders (add-ons placed after initial order)
   parentOrderId String?
   parentOrder   Order?     @relation("OrderAddOns", fields: [parentOrderId], references: [id])
@@ -306,6 +309,13 @@ enum PaymentStatus {
   PAID
   FAILED
   REFUNDED
+}
+
+enum OrderSource {
+  WEB    // Order placed via web app
+  KIOSK  // Order placed at in-store kiosk
+  MOBILE // Order placed via mobile app
+  STAFF  // Order entered by staff
 }
 
 model OrderItem {
@@ -689,4 +699,31 @@ enum TransactionType {
   ORDER
   SUBSCRIPTION
   REFUND
+}
+
+// ==========================================
+// LANGUAGE ANALYTICS
+// ==========================================
+
+model LanguageVisit {
+  id String @id @default(cuid())
+
+  browserLanguage  String // Raw Accept-Language header value (e.g., "zh-TW,zh;q=0.9,en;q=0.8")
+  primaryLanguage  String // Primary language code (e.g., "zh-TW", "fr", "de")
+  resolvedLocale   String // The locale actually shown (e.g., "en", "zh-TW")
+  wasSupported     Boolean // Whether primaryLanguage was supported
+
+  // Optional user/session tracking
+  userId    String?
+  sessionId String? // Anonymous session ID
+
+  // Request context
+  userAgent String?
+  country   String? // From IP geolocation if available
+
+  createdAt DateTime @default(now())
+
+  @@index([primaryLanguage])
+  @@index([resolvedLocale])
+  @@index([createdAt])
 }

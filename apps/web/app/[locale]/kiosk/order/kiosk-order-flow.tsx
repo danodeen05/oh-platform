@@ -1,6 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useToast } from "@/components/ui/Toast";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "";
 
@@ -62,6 +64,8 @@ export default function KioskOrderFlow({
   paymentType: "single" | "separate";
 }) {
   const router = useRouter();
+  const t = useTranslations("order");
+  const toast = useToast();
   const [menuSteps, setMenuSteps] = useState<MenuStep[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -128,7 +132,7 @@ export default function KioskOrderFlow({
         setLoading(false);
       } catch (error) {
         console.error("Failed to load menu:", error);
-        alert("Failed to load menu. Please try again.");
+        toast.error(t("errors.menuLoadFailed"));
       }
     }
 
@@ -244,7 +248,7 @@ export default function KioskOrderFlow({
       }
     } catch (error) {
       console.error("Failed to submit order:", error);
-      alert("Failed to submit order. Please try again.");
+      toast.error(t("errors.submitFailed"));
       setSubmitting(false);
     }
   }
@@ -289,7 +293,7 @@ export default function KioskOrderFlow({
       }
     } catch (error) {
       console.error("Payment failed:", error);
-      alert("Payment failed. Please try again.");
+      toast.error(t("errors.paymentFailed"));
     } finally {
       setSubmitting(false);
     }

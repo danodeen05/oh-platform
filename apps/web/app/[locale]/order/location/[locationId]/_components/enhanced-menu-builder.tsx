@@ -2,11 +2,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
+import { useTranslations } from "next-intl";
 import { SliderControl } from "./slider-control";
 import { RadioGroup } from "./radio-group";
 import { CheckboxGroup } from "./checkbox-group";
 import SeatingMap, { Seat } from "@/components/SeatingMap";
 import { useGuest } from "@/contexts/guest-context";
+import { useToast } from "@/components/ui/Toast";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "";
 
@@ -73,6 +75,8 @@ export default function EnhancedMenuBuilder({
   const router = useRouter();
   const { user, isLoaded: userLoaded } = useUser();
   const { guest, isGuest } = useGuest();
+  const t = useTranslations("order");
+  const toast = useToast();
   const [menuSteps, setMenuSteps] = useState<MenuStep[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
@@ -210,7 +214,7 @@ export default function EnhancedMenuBuilder({
         setLoading(false);
       } catch (error) {
         console.error("Failed to load menu:", error);
-        alert("Failed to load menu. Please try again.");
+        toast.error(t("errors.loadMenu"));
       }
     }
 
@@ -246,7 +250,7 @@ export default function EnhancedMenuBuilder({
         setLoading(false);
       } catch (error) {
         console.error("Failed to load reorder:", error);
-        alert("Failed to load your previous order.");
+        toast.error(t("errors.loadPreviousOrder"));
         router.push("/member/orders");
       }
     }
@@ -481,7 +485,7 @@ export default function EnhancedMenuBuilder({
         .map(s => s.name);
 
       if (requiredSections.length > 0) {
-        alert(`Please complete: ${requiredSections.join(", ")}`);
+        toast.warning(t("errors.completeRequired", { sections: requiredSections.join(", ") }));
         return;
       }
     }
@@ -512,7 +516,7 @@ export default function EnhancedMenuBuilder({
     const isNonHostMember = groupCode && groupOrderInfo && !groupOrderInfo.isHost;
 
     if (!isNonHostMember && !arrivalTime) {
-      alert("Please select an arrival time");
+      toast.warning(t("errors.selectArrivalTime"));
       return;
     }
 
@@ -537,7 +541,7 @@ export default function EnhancedMenuBuilder({
       });
 
       if (!response.ok) {
-        alert("Failed to update order. Please try again.");
+        toast.error(t("errors.updateOrder"));
         setSubmitting(false);
         return;
       }
@@ -571,7 +575,7 @@ export default function EnhancedMenuBuilder({
 
           // Ensure we have either a user ID or guest ID (dbUserId is from component state)
           if (!dbUserId && !guestId) {
-            alert("Please sign in or continue as guest to place an order.");
+            toast.error(t("errors.signInRequired"));
             setSubmitting(false);
             return;
           }
@@ -592,7 +596,7 @@ export default function EnhancedMenuBuilder({
           if (!groupResponse.ok) {
             const errorData = await groupResponse.json().catch(() => ({}));
             console.error("Failed to add order to group:", errorData);
-            alert(errorData.error || "Failed to add order to group. Please try again.");
+            toast.error(errorData.error || t("errors.addToGroup"));
             setSubmitting(false);
             return;
           }
@@ -602,7 +606,7 @@ export default function EnhancedMenuBuilder({
           return;
         } catch (e) {
           console.error("Error adding order to group:", e);
-          alert("Failed to add order to group. Please try again.");
+          toast.error(t("errors.addToGroup"));
           setSubmitting(false);
           return;
         }
@@ -639,7 +643,7 @@ export default function EnhancedMenuBuilder({
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         console.error("Order creation failed:", response.status, errorData);
-        alert("Failed to create order. Please try again.");
+        toast.error(t("errors.createOrder"));
         setSubmitting(false);
         return;
       }
@@ -649,7 +653,7 @@ export default function EnhancedMenuBuilder({
 
     if (!order || !order.id || !order.orderNumber) {
       console.error("Invalid order response:", order);
-      alert("Failed to create order. Please try again.");
+      toast.error(t("errors.createOrder"));
       setSubmitting(false);
       return;
     }

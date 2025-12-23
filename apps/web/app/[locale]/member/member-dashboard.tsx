@@ -2,6 +2,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
+import { useToast } from "@/components/ui/Toast";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "";
 
@@ -248,6 +250,8 @@ function OrderCalendar({ orders, tierColor }: { orders: Order[]; tierColor: stri
 
 export default function MemberDashboard() {
   const router = useRouter();
+  const t = useTranslations("common");
+  const toast = useToast();
   const [email, setEmail] = useState("");
   const [userId, setUserId] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -307,7 +311,7 @@ export default function MemberDashboard() {
 
   async function handleLogin() {
     if (!email) {
-      alert("Please enter your email");
+      toast.warning(t("enterEmail"));
       return;
     }
 

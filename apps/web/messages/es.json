@@ -16,7 +16,35 @@
     "comingSoon": "Próximamente",
     "notifyMe": "Notificarme",
     "findLocation": "Encontrar ubicación",
-    "viewFaq": "Ver preguntas frecuentes"
+    "viewFaq": "Ver preguntas frecuentes",
+    "confirm": "Confirmar",
+    "cancel": "Cancelar",
+    "ok": "Aceptar",
+    "yes": "Sí",
+    "no": "No",
+    "back": "Atrás",
+    "next": "Siguiente",
+    "continue": "Continuar",
+    "save": "Guardar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "retry": "Intentar de nuevo",
+    "dismiss": "Descartar",
+    "enterEmail": "Por favor ingresa tu correo electrónico",
+    "linkCopied": "¡Enlace copiado!"
+  },
+  "dialog": {
+    "confirmTitle": "Confirmar acción",
+    "alertTitle": "Aviso",
+    "errorTitle": "Error",
+    "successTitle": "Éxito",
+    "warningTitle": "Advertencia"
+  },
+  "toast": {
+    "success": "Éxito",
+    "error": "Error",
+    "warning": "Advertencia",
+    "info": "Información"
   },
   "navigation": {
     "menu": "Menú",
@@ -27,8 +55,24 @@
     "myAccount": "Mi cuenta Oh!"
   },
   "home": {
-    "brandName": "Oh! Beef Noodle Soup",
+    "brandName": "<oh>哦</oh> Oh! Beef Noodle Soup",
+    "brandNamePlain": "Oh! Beef Noodle Soup",
     "tagline": "El único restaurante construido a <bold>tu</bold> medida.",
+    "heroDescription": "Nacido de la querida tradición taiwanesa de sopa de fideos con carne y elevado con la atención japonesa al detalle, disfruta nuestra receta familiar de 30 años en tu propia cabina privada.",
+    "signature": {
+      "label": "NUESTRA ESPECIALIDAD",
+      "title": "Sopa de fideos con carne Wagyu A5",
+      "description": "La sedosa carne Wagyu A5 se derrite en nuestro rico y aromático caldo — cocido a fuego lento durante 48 horas usando técnicas transmitidas por tres generaciones. Cada tazón cuenta una historia de paciencia, precisión y pasión.",
+      "stats": {
+        "hours": "HORAS DE COCCIÓN",
+        "grade": "GRADO WAGYU",
+        "years": "AÑOS DE RECETA"
+      }
+    },
+    "difference": {
+      "label": "LA DIFERENCIA OH!",
+      "title": "Más que una comida"
+    },
     "features": {
       "recipe": {
         "title": "Receta de 30 años",
@@ -42,6 +86,9 @@
         "title": "Experiencia tecnológica",
         "description": "Ordena con anticipación, gana recompensas y disfruta de un servicio impecable"
       }
+    },
+    "experience": {
+      "label": "LA EXPERIENCIA OH!"
     },
     "pods": {
       "title": "Cabinas de comedor privadas",
@@ -69,6 +116,23 @@
         "math": "Sin cálculos incómodos",
         "checkout": "Pago simple"
       }
+    },
+    "customize": {
+      "label": "INGREDIENTES FRESCOS",
+      "title": "Personaliza tu tazón",
+      "description": "Elige entre fideos hechos a mano, vegetales frescos y toppings premium para crear tu tazón perfecto.",
+      "ingredients": {
+        "ramen": "Fideos Ramen",
+        "egg": "Huevo Cocido",
+        "bokChoy": "Bok Choy",
+        "marrow": "Tuétano"
+      }
+    },
+    "viewFullMenu": "VER MENÚ COMPLETO",
+    "cta": {
+      "title": "¿Listo para experimentar algo diferente?",
+      "description": "Entra en tu cabina privada, saborea sopa de fideos con carne premium y descubre por qué comer en Oh! es único.",
+      "button": "COMIENZA TU ORDEN"
     }
   },
   "footer": {
@@ -316,7 +380,154 @@
     "orderConfirmed": "Pedido confirmado",
     "preparing": "Preparando",
     "ready": "Listo",
-    "completed": "Completado"
+    "completed": "Completado",
+    "errors": {
+      "enterQrCode": "Por favor ingresa el código QR de tu pedido",
+      "checkInFailed": "Error al registrarse. Por favor intenta de nuevo.",
+      "networkError": "Error de red. Por favor intenta de nuevo.",
+      "signInRequired": "Por favor inicia sesión o continúa como invitado para comenzar un pedido grupal.",
+      "groupOrderFailed": "Error al crear el pedido grupal",
+      "groupOrderRetry": "Error al crear el pedido grupal. Por favor intenta de nuevo.",
+      "loadPreviousOrder": "Error al cargar tu pedido anterior. Por favor intenta de nuevo.",
+      "loadMenu": "Error al cargar el menú. Por favor intenta de nuevo.",
+      "selectBase": "Por favor selecciona al menos un plato base",
+      "selectArrivalTime": "Por favor selecciona una hora de llegada",
+      "updateOrder": "Error al actualizar el pedido. Por favor intenta de nuevo.",
+      "createOrder": "Error al crear el pedido. Por favor intenta de nuevo.",
+      "addToGroup": "Error al agregar el pedido al grupo. Por favor intenta de nuevo.",
+      "callStaff": "Error al llamar al personal. Por favor intenta de nuevo.",
+      "requestRefill": "Error al solicitar recarga. Por favor intenta de nuevo.",
+      "requestVegetables": "Error al solicitar vegetales extra. Por favor intenta de nuevo.",
+      "requestDessert": "Error al solicitar postre. Por favor intenta de nuevo.",
+      "orderNotFound": "Pedido no encontrado",
+      "loadStatus": "Error al cargar el estado del pedido",
+      "noOrderCode": "No se proporcionó código de pedido",
+      "placeAddonOrder": "Error al realizar el pedido adicional. Por favor intenta de nuevo.",
+      "markDone": "Error al actualizar el estado. Por favor intenta de nuevo.",
+      "completeRequired": "Por favor completa: {sections}",
+      "maxFavorites": "Solo puedes tener hasta {max} pedidos favoritos. Por favor elimina uno primero.",
+      "reorderFailed": "Error al crear el nuevo pedido. Por favor intenta de nuevo.",
+      "groupCompleteFailed": "Error al completar el pedido grupal. Por favor intenta de nuevo.",
+      "menuLoadFailed": "Error al cargar el menú. Por favor intenta de nuevo.",
+      "submitFailed": "Error al enviar el pedido. Por favor intenta de nuevo.",
+      "paymentFailed": "Error en el pago. Por favor intenta de nuevo."
+    },
+    "success": {
+      "refillRequested": "¡Recarga de bebida solicitada! Se llevará a tu cabina en breve.",
+      "vegetablesRequested": "¡Vegetales extra solicitados! Se llevarán a tu cabina en breve.",
+      "addonOrdered": "¡Pedido adicional realizado! {amount} cobrados. Tus artículos se llevarán a tu cabina en breve.",
+      "staffNotified": "Personal notificado",
+      "dessertOnWay": "¡Postre en camino!"
+    },
+    "confirmations": {
+      "finishedEating": "¿Terminaste de comer? Esto notificará al personal para limpiar tu cabina."
+    },
+    "checkIn": {
+      "title": "Quiosco de registro",
+      "subtitle": "Escanea o ingresa el código QR de tu pedido para obtener tu asignación de cabina",
+      "howTo": "Cómo registrarse:",
+      "step1": "Encuentra el código QR de tu pedido (en tu página de confirmación)",
+      "step2": "Escanéalo con el escáner del quiosco o ingresa el código abajo",
+      "step3": "Obtén tu asignación de cabina o posición en la cola",
+      "qrCodeLabel": "Código QR del pedido:",
+      "qrCodePlaceholder": "ORDER-xxpmm5hf-1234567890-ABC123",
+      "checkingIn": "Registrando...",
+      "checkInButton": "Registrarse",
+      "needHelp": "¿Necesitas ayuda?",
+      "helpTip1": "Tu código QR está en tu página de confirmación del pedido",
+      "helpTip2": "Comienza con \"ORDER-\" seguido de números y letras",
+      "helpTip3": "Pregunta al personal si necesitas asistencia"
+    },
+    "status": {
+      "pendingPayment": "Pago pendiente",
+      "paid": "Pagado",
+      "inQueue": "En cola",
+      "preparing": "Preparando",
+      "readyForDelivery": "Listo para entregar",
+      "enjoyMeal": "¡Disfruta tu comida!",
+      "completed": "Completado",
+      "yourPod": "Tu cabina",
+      "goToPod": "Ve a tu cabina y confirma tu llegada",
+      "confirmAtPod": "Confirmar que estoy en mi cabina",
+      "checkedIn": "¡Estás registrado!",
+      "callStaff": "Llamar personal",
+      "calling": "Llamando...",
+      "addItems": "Agregar artículos",
+      "readyForDessert": "Listo para el postre",
+      "notifying": "Notificando...",
+      "queuePosition": "Posición en cola",
+      "estimatedWait": "Tiempo estimado: {minutes} minutos",
+      "notifyWhenReady": "¡Te notificaremos cuando una cabina esté lista!",
+      "orderTimeline": "Cronología del pedido",
+      "totalTime": "Tiempo total",
+      "location": "Ubicación",
+      "autoRefresh": "El estado se actualiza automáticamente cada 5 segundos",
+      "viewProfile": "Ver mi perfil",
+      "orderAgain": "Ordenar de nuevo",
+      "doneEating": "Terminé de comer",
+      "placeNewOrder": "Hacer nuevo pedido",
+      "loading": "Cargando estado del pedido..."
+    },
+    "addons": {
+      "title": "Agregar a tu pedido",
+      "loading": "Cargando artículos disponibles...",
+      "free": "Gratis",
+      "paid": "De pago",
+      "drinkRefills": "Recargas de bebida",
+      "extrasAddons": "Extras y adicionales",
+      "paidAddons": "Adicionales de pago",
+      "requestRefill": "Solicitar recarga",
+      "requesting": "Solicitando...",
+      "waterRefill": "Recarga de agua",
+      "request": "Solicitar",
+      "add": "Agregar",
+      "orderTotal": "Total del pedido",
+      "checkout": "Pagar",
+      "cancel": "Cancelar",
+      "demoMode": "Modo demo: No se realizará ningún cargo real",
+      "processing": "Procesando...",
+      "pay": "Pagar {amount}",
+      "noAddonsAvailable": "No hay adicionales disponibles para este pedido.",
+      "callStaffInstead": "Llamar al personal",
+      "failedToLoad": "Error al cargar adicionales. Por favor intenta de nuevo o llama al personal."
+    },
+    "arrivalTime": {
+      "title": "¿Cuándo llegarás?",
+      "asap": "Lo antes posible (entre ahora y 5 minutos)",
+      "minutes15": "15 minutos",
+      "minutes30": "30 minutos",
+      "minutes45": "45 minutos",
+      "hour1": "1 hora",
+      "hour1half": "1.5 horas",
+      "readyBy": "Listo para las {time}",
+      "choosePod": "Elige tu cabina (opcional)",
+      "choosePodDescription": "Como llegarás pronto, puedes elegir tu cabina preferida ahora. Omite esto para ser asignado automáticamente al registrarte.",
+      "loadingSeats": "Cargando asientos...",
+      "checkingSeats": "Verificando disponibilidad de asientos...",
+      "clearSelection": "Borrar selección (asignar automáticamente)",
+      "continueToPayment": "Continuar al pago",
+      "reviewOrderPayment": "Revisar pedido y pago"
+    },
+    "group": {
+      "startingGroupOrder": "Iniciando un pedido grupal",
+      "selectLocationPrompt": "Selecciona una ubicación para crear tu grupo. ¡Comparte el código con amigos para que agreguen sus pedidos!",
+      "groupOrder": "Pedido grupal",
+      "yourTotal": "Tu total",
+      "addToGroupOrder": "Agregar al pedido grupal",
+      "addingToGroup": "Agregando al grupo...",
+      "hostArrivalTime": "Como anfitrión, tu hora de llegada se usará para el grupo",
+      "memberArrivalTime": "Tu pedido se agregará al grupo",
+      "reviewOrder": "Revisar tu pedido",
+      "hostSelectsArrival": "El anfitrión del grupo decidirá cuándo llegan todos y seleccionará las cabinas. Puedes ver la disponibilidad de cabinas en la página del lobby del grupo después de agregar tu pedido.",
+      "selectSeating": "Por favor selecciona una opción de asientos",
+      "orderCompleted": "¡Pedido grupal completado! El personal de cocina y limpieza ha sido notificado.",
+      "closeGroupTitle": "Cerrar grupo",
+      "closeGroupMessage": "¿Cerrar este grupo? Ningún miembro nuevo podrá unirse después de cerrar.",
+      "cancelGroupTitle": "Cancelar pedido grupal",
+      "cancelGroupMessage": "¿Cancelar este pedido grupal? Esto eliminará el grupo y todos los pedidos.",
+      "removeOrderTitle": "Eliminar pedido",
+      "removeOrderMessage": "¿Eliminar tu pedido de este grupo?"
+    }
   },
   "member": {
     "dashboard": "Panel de control",

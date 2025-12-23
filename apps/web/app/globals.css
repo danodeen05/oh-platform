@@ -174,3 +174,10 @@ p {
   background: var(--color-border);
   margin: var(--spacing-lg) 0;
 }
+
+/* Chinese locale typography - LXGW WenKai TC for body text */
+html[lang="zh-TW"],
+html[lang="zh-CN"] {
+  --font-primary: 'LXGW WenKai TC', 'Raleway', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-heading: 'LXGW WenKai TC', 'Noto Serif TC', serif;
+}

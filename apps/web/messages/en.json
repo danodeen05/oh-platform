@@ -16,7 +16,35 @@
     "comingSoon": "Coming Soon",
     "notifyMe": "Notify Me",
     "findLocation": "Find a Location",
-    "viewFaq": "View FAQs"
+    "viewFaq": "View FAQs",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "ok": "OK",
+    "yes": "Yes",
+    "no": "No",
+    "back": "Back",
+    "next": "Next",
+    "continue": "Continue",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "retry": "Try Again",
+    "dismiss": "Dismiss",
+    "enterEmail": "Please enter your email",
+    "linkCopied": "Link copied!"
+  },
+  "dialog": {
+    "confirmTitle": "Confirm Action",
+    "alertTitle": "Notice",
+    "errorTitle": "Error",
+    "successTitle": "Success",
+    "warningTitle": "Warning"
+  },
+  "toast": {
+    "success": "Success",
+    "error": "Error",
+    "warning": "Warning",
+    "info": "Info"
   },
   "navigation": {
     "menu": "Menu",
@@ -27,8 +55,24 @@
     "myAccount": "My Oh! Account"
   },
   "home": {
-    "brandName": "Oh! Beef Noodle Soup",
+    "brandName": "<oh>哦</oh> Oh! Beef Noodle Soup",
+    "brandNamePlain": "Oh! Beef Noodle Soup",
     "tagline": "The only restaurant built around <bold>you</bold>.",
+    "heroDescription": "Born from Taiwan's beloved beef noodle tradition and elevated with Japanese attention to detail, enjoy our 30-year family recipe in your own private pod.",
+    "signature": {
+      "label": "OUR SIGNATURE",
+      "title": "A5 Wagyu Beef Noodle Soup",
+      "description": "Silky A5 Wagyu beef melts into our rich, aromatic broth — simmered for 48 hours using techniques passed down through three generations. Each bowl tells a story of patience, precision, and passion.",
+      "stats": {
+        "hours": "HOURS SIMMERED",
+        "grade": "WAGYU GRADE",
+        "years": "YEAR RECIPE"
+      }
+    },
+    "difference": {
+      "label": "THE OH! DIFFERENCE",
+      "title": "More Than Just a Meal"
+    },
     "features": {
       "recipe": {
         "title": "30-Year Recipe",
@@ -42,6 +86,9 @@
         "title": "Tech-First Experience",
         "description": "Order ahead, earn rewards, and enjoy seamless service"
       }
+    },
+    "experience": {
+      "label": "THE OH! EXPERIENCE"
     },
     "pods": {
       "title": "Private Dining Pods",
@@ -69,6 +116,23 @@
         "math": "No awkward math",
         "checkout": "Simple checkout"
       }
+    },
+    "customize": {
+      "label": "FRESH INGREDIENTS",
+      "title": "Customize Your Bowl",
+      "description": "Choose from hand-pulled noodles, fresh vegetables, and premium toppings to create your perfect bowl.",
+      "ingredients": {
+        "ramen": "Ramen Noodles",
+        "egg": "Soft Boiled Egg",
+        "bokChoy": "Baby Bok Choy",
+        "marrow": "Beef Marrow"
+      }
+    },
+    "viewFullMenu": "VIEW FULL MENU",
+    "cta": {
+      "title": "Ready to Experience Something Different?",
+      "description": "Step into your private pod, savor premium beef noodle soup, and discover why dining at Oh! is unlike anything else.",
+      "button": "START YOUR ORDER"
     }
   },
   "footer": {
@@ -316,7 +380,154 @@
     "orderConfirmed": "Order Confirmed",
     "preparing": "Preparing",
     "ready": "Ready",
-    "completed": "Completed"
+    "completed": "Completed",
+    "errors": {
+      "enterQrCode": "Please enter your order QR code",
+      "checkInFailed": "Check-in failed. Please try again.",
+      "networkError": "Network error. Please try again.",
+      "signInRequired": "Please sign in or continue as guest to start a group order.",
+      "groupOrderFailed": "Failed to create group order",
+      "groupOrderRetry": "Failed to create group order. Please try again.",
+      "loadPreviousOrder": "Failed to load your previous order. Please try again.",
+      "loadMenu": "Failed to load menu. Please try again.",
+      "selectBase": "Please select at least one base dish",
+      "selectArrivalTime": "Please select an arrival time",
+      "updateOrder": "Failed to update order. Please try again.",
+      "createOrder": "Failed to create order. Please try again.",
+      "addToGroup": "Failed to add order to group. Please try again.",
+      "callStaff": "Failed to call staff. Please try again.",
+      "requestRefill": "Failed to request refill. Please try again.",
+      "requestVegetables": "Failed to request extra vegetables. Please try again.",
+      "requestDessert": "Failed to request dessert. Please try again.",
+      "orderNotFound": "Order not found",
+      "loadStatus": "Failed to load order status",
+      "noOrderCode": "No order code provided",
+      "placeAddonOrder": "Failed to place add-on order. Please try again.",
+      "markDone": "Failed to update status. Please try again.",
+      "completeRequired": "Please complete: {sections}",
+      "maxFavorites": "You can only have up to {max} favorite orders. Please remove one first.",
+      "reorderFailed": "Failed to create reorder. Please try again.",
+      "groupCompleteFailed": "Failed to complete group order. Please try again.",
+      "menuLoadFailed": "Failed to load menu. Please try again.",
+      "submitFailed": "Failed to submit order. Please try again.",
+      "paymentFailed": "Payment failed. Please try again."
+    },
+    "success": {
+      "refillRequested": "Drink refill requested! It will be brought to your pod shortly.",
+      "vegetablesRequested": "Extra vegetables requested! They will be brought to your pod shortly.",
+      "addonOrdered": "Add-on order placed! {amount} charged. Your items will be brought to your pod shortly.",
+      "staffNotified": "Staff Notified",
+      "dessertOnWay": "Dessert On Its Way!"
+    },
+    "confirmations": {
+      "finishedEating": "Are you finished eating? This will notify staff to clean your pod."
+    },
+    "checkIn": {
+      "title": "Check-In Kiosk",
+      "subtitle": "Scan or enter your order QR code to get your pod assignment",
+      "howTo": "How to check in:",
+      "step1": "Find your order QR code (on your order confirmation page)",
+      "step2": "Scan it with the kiosk scanner or enter the code below",
+      "step3": "Get your pod assignment or queue position",
+      "qrCodeLabel": "Order QR Code:",
+      "qrCodePlaceholder": "ORDER-xxpmm5hf-1234567890-ABC123",
+      "checkingIn": "Checking in...",
+      "checkInButton": "Check In",
+      "needHelp": "Need Help?",
+      "helpTip1": "Your QR code is on your order confirmation page",
+      "helpTip2": "It starts with \"ORDER-\" followed by numbers and letters",
+      "helpTip3": "Ask staff if you need assistance"
+    },
+    "status": {
+      "pendingPayment": "Pending Payment",
+      "paid": "Paid",
+      "inQueue": "In Queue",
+      "preparing": "Preparing",
+      "readyForDelivery": "Ready for Delivery",
+      "enjoyMeal": "Enjoy Your Meal!",
+      "completed": "Completed",
+      "yourPod": "Your Pod",
+      "goToPod": "Go to your pod and confirm arrival",
+      "confirmAtPod": "Confirm I'm At My Pod",
+      "checkedIn": "You're checked in!",
+      "callStaff": "Call Staff",
+      "calling": "Calling...",
+      "addItems": "Add Items",
+      "readyForDessert": "Ready for Dessert",
+      "notifying": "Notifying...",
+      "queuePosition": "Queue Position",
+      "estimatedWait": "Estimated wait: {minutes} minutes",
+      "notifyWhenReady": "We'll notify you when a pod is ready!",
+      "orderTimeline": "Order Timeline",
+      "totalTime": "Total Time",
+      "location": "Location",
+      "autoRefresh": "Status updates automatically every 5 seconds",
+      "viewProfile": "View My Profile",
+      "orderAgain": "Order Again",
+      "doneEating": "I'm Done Eating",
+      "placeNewOrder": "Place New Order",
+      "loading": "Loading order status..."
+    },
+    "addons": {
+      "title": "Add to Your Order",
+      "loading": "Loading available items...",
+      "free": "Free",
+      "paid": "Paid",
+      "drinkRefills": "Drink Refills",
+      "extrasAddons": "Extras & Add-Ons",
+      "paidAddons": "Add-Ons & Extras",
+      "requestRefill": "Request Refill",
+      "requesting": "Requesting...",
+      "waterRefill": "Water Refill",
+      "request": "Request",
+      "add": "Add",
+      "orderTotal": "Order Total",
+      "checkout": "Checkout",
+      "cancel": "Cancel",
+      "demoMode": "Demo mode: No real charge will be made",
+      "processing": "Processing...",
+      "pay": "Pay {amount}",
+      "noAddonsAvailable": "No add-ons available for this order.",
+      "callStaffInstead": "Call Staff Instead",
+      "failedToLoad": "Failed to load add-ons. Please try again or call staff."
+    },
+    "arrivalTime": {
+      "title": "When will you arrive?",
+      "asap": "ASAP (between now and 5 minutes)",
+      "minutes15": "15 minutes",
+      "minutes30": "30 minutes",
+      "minutes45": "45 minutes",
+      "hour1": "1 hour",
+      "hour1half": "1.5 hours",
+      "readyBy": "Ready by {time}",
+      "choosePod": "Choose Your Pod (Optional)",
+      "choosePodDescription": "Since you're arriving soon, you can pick your preferred pod now. Skip this to be auto-assigned when you check in.",
+      "loadingSeats": "Loading seats...",
+      "checkingSeats": "Checking seat availability...",
+      "clearSelection": "Clear Selection (Auto-assign instead)",
+      "continueToPayment": "Continue to Payment",
+      "reviewOrderPayment": "Review Order & Payment"
+    },
+    "group": {
+      "startingGroupOrder": "Starting a Group Order",
+      "selectLocationPrompt": "Select a location to create your group. Share the code with friends so they can add their orders!",
+      "groupOrder": "Group Order",
+      "yourTotal": "Your Total",
+      "addToGroupOrder": "Add to Group Order",
+      "addingToGroup": "Adding to Group...",
+      "hostArrivalTime": "As the host, your arrival time will be used for the group",
+      "memberArrivalTime": "Your order will be added to the group",
+      "reviewOrder": "Review Your Order",
+      "hostSelectsArrival": "The group host will decide when everyone arrives and select pods. You can view pod availability on the group lobby page after adding your order.",
+      "selectSeating": "Please select a seating option",
+      "orderCompleted": "Group order completed! Kitchen and cleaning staff have been notified.",
+      "closeGroupTitle": "Close Group",
+      "closeGroupMessage": "Close this group? No new members can join after closing.",
+      "cancelGroupTitle": "Cancel Group Order",
+      "cancelGroupMessage": "Cancel this group order? This will delete the group and all orders.",
+      "removeOrderTitle": "Remove Order",
+      "removeOrderMessage": "Remove your order from this group?"
+    }
   },
   "member": {
     "dashboard": "Dashboard",

@@ -5,4 +5,5 @@ export const routing = defineRouting({
   locales,
   defaultLocale,
   localePrefix: 'always',
+  localeDetection: true, // Detect browser language from Accept-Language header
 });

@@ -1,6 +1,7 @@
 "use client";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useState, Suspense } from "react";
+import { useTranslations } from "next-intl";
 import { QRCodeSVG } from "qrcode.react";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "";
@@ -8,6 +9,7 @@ const BASE = process.env.NEXT_PUBLIC_API_URL || "";
 function CheckInContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const t = useTranslations("order");
   const orderQrCodeParam = searchParams.get("orderQrCode");
 
   const [orderQrCode, setOrderQrCode] = useState(orderQrCodeParam || "");
@@ -18,7 +20,7 @@ function CheckInContent() {
     e.preventDefault();
 
     if (!orderQrCode.trim()) {
-      setError("Please enter your order QR code");
+      setError(t("errors.enterQrCode"));
       return;
     }
 
@@ -46,11 +48,11 @@ function CheckInContent() {
           router.push(`/order/status?orderQrCode=${encodeURIComponent(orderQrCode.trim())}`);
         }
       } else {
-        setError(data.error || "Check-in failed. Please try again.");
+        setError(data.error || t("errors.checkInFailed"));
       }
     } catch (err) {
       console.error("Check-in error:", err);
-      setError("Network error. Please try again.");
+      setError(t("errors.networkError"));
     } finally {
       setLoading(false);
     }

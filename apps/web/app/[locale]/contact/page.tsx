@@ -3,10 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { useToast } from "@/components/ui/Toast";
 
 export default function ContactPage() {
   const t = useTranslations("contact");
   const tCommon = useTranslations("common");
+  const toast = useToast();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -17,7 +19,7 @@ export default function ContactPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    alert(t("form.success"));
+    toast.success(t("form.success"));
   };
 
   return (
