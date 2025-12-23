@@ -1020,5 +1020,190 @@
       "title": "Contáctanos sobre accesibilidad",
       "intro": "Si tienes preguntas o inquietudes sobre accesibilidad, por favor comunícate:"
     }
+  },
+  "orderBanner": {
+    "orderNumber": "Pedido #{number}",
+    "active": "Activo",
+    "pod": "Pod {number}",
+    "tapToView": "Toca para ver estado",
+    "status": {
+      "placed": "Pedido realizado",
+      "checkedIn": "Registrado",
+      "inQueue": "En cola",
+      "preparing": "Preparando tu pedido",
+      "qualityCheck": "Control de calidad",
+      "enjoy": "¡Disfruta tu comida!"
+    }
+  },
+  "auth": {
+    "loading": "Cargando...",
+    "readyToOrder": "¿Listo para ordenar?",
+    "createAccount": "Crea una cuenta gratis y empieza a ganar recompensas de inmediato.",
+    "signInButton": "INICIAR SESIÓN / REGISTRARSE",
+    "or": "o",
+    "continueAsGuest": "Continuar como invitado",
+    "guestWarning": "El pago como invitado es rápido, pero no podrás ganar puntos de lealtad ni guardar favoritos.",
+    "benefits": {
+      "cashback": "1% Cashback",
+      "cashbackSubtitle": "¡incluyendo este pedido!",
+      "referral": "$5 por referir",
+      "referralSubtitle": "para ti y tus amigos",
+      "earlyAccess": "Acceso anticipado",
+      "earlyAccessSubtitle": "nuevos platillos"
+    }
+  },
+  "orderStatus": {
+    "pageTitle": "Estado del pedido",
+    "loading": "Cargando estado del pedido...",
+    "noOrderCode": "No se proporcionó código de pedido",
+    "orderNotFound": "Pedido no encontrado",
+    "placeNewOrder": "Hacer nuevo pedido",
+    "statusUpdates": "El estado se actualiza automáticamente cada 5 segundos",
+    "status": {
+      "pending": "Pago pendiente",
+      "paid": "Pagado",
+      "queued": "En cola",
+      "prepping": "Preparando",
+      "ready": "Listo para entregar",
+      "serving": "¡Disfruta tu comida!",
+      "completed": "Completado"
+    },
+    "pod": {
+      "yourPod": "Tu Pod",
+      "podNumber": "POD {number}",
+      "confirmArrival": "Ve a tu pod y confirma tu llegada",
+      "checkedIn": "¡Ya estás registrado!",
+      "staffNotified": "Personal notificado",
+      "calling": "Llamando..."
+    },
+    "queue": {
+      "position": "Posición en cola",
+      "estimatedWait": "Tiempo estimado: {minutes} minutos",
+      "notifyWhenReady": "¡Te notificaremos cuando tu pod esté listo!"
+    },
+    "timeline": {
+      "title": "Línea de tiempo del pedido",
+      "paid": "Pagado",
+      "checkedIn": "Registrado",
+      "orderStarted": "Pedido iniciado",
+      "qualityCheck": "Control de calidad",
+      "delivered": "Entregado",
+      "totalTime": "Tiempo total"
+    },
+    "sections": {
+      "theBowl": "El tazón",
+      "addOnsExtras": "Extras y adicionales",
+      "location": "Ubicación"
+    },
+    "buttons": {
+      "viewProfile": "Ver mi perfil",
+      "orderAgain": "Ordenar de nuevo",
+      "imDoneEating": "Terminé de comer",
+      "addToOrder": "Agregar al pedido"
+    },
+    "doneEating": {
+      "confirmPrompt": "¿Terminaste de comer? Esto notificará al personal para limpiar tu pod.",
+      "failedToUpdate": "Error al actualizar. Por favor intenta de nuevo."
+    },
+    "addItems": {
+      "title": "Agregar a tu pedido",
+      "loading": "Cargando artículos disponibles...",
+      "drinkRefills": "Refill de bebidas",
+      "requestRefill": "Solicitar refill",
+      "requesting": "Solicitando...",
+      "waterRefill": "Refill de agua",
+      "extrasAddons": "Extras y adicionales",
+      "requestExtras": "Solicitar {count} extra(s)",
+      "addOnsExtras": "Extras y adicionales",
+      "orderTotal": "Total del pedido",
+      "checkout": "Pagar",
+      "demoWarning": "Modo demo: No se realizará cargo real",
+      "cancel": "Cancelar",
+      "pay": "Pagar ${amount}"
+    }
+  },
+  "features": {
+    "fortuneCookie": {
+      "title": "Tu galleta de la fortuna digital",
+      "subtitle": "Mientras esperas, abre tu fortuna personalizada",
+      "crackOpen": "Ábrela",
+      "loading": "Leyendo tu fortuna...",
+      "luckyNumbers": "Números de la suerte",
+      "thisDay": "Este día en la historia ({year})",
+      "learnChinese": "Aprende chino",
+      "unavailable": "Fortuna no disponible - ¡pero tu comida será increíble!"
+    },
+    "roast": {
+      "title": "La zona de críticas",
+      "subtitle": "¿Quieres nuestra opinión (hilarante) sobre tus elecciones?",
+      "button": "Critica mi pedido",
+      "loading": "Analizando tus decisiones de vida...",
+      "highlights": "Lo que notamos:",
+      "unavailable": "Nuestro chef de críticas está en descanso. Tu pedido probablemente está bien. Probablemente."
+    },
+    "backstory": {
+      "title": "Detrás de escenas",
+      "subtitle": "¿Te has preguntado sobre la vida secreta de tus ingredientes?",
+      "button": "Cuéntame todo",
+      "loading": "Investigando...",
+      "heading": "Las historias no contadas",
+      "unavailable": "Los ingredientes prefieren permanecer anónimos. Grupo misterioso."
+    },
+    "kitchen": {
+      "label": "Cocina en vivo",
+      "listening": "Escuchando la cocina...",
+      "quiet": "La cocina está sospechosamente silenciosa. Están tramando algo."
+    }
+  },
+  "payment": {
+    "pageTitle": "Completa tu pedido",
+    "orderNumber": "Pedido #{number}",
+    "invalidOrder": "Pedido inválido",
+    "missingInformation": "Falta información del pedido",
+    "orderNotFound": "Pedido no encontrado",
+    "couldNotFind": "No pudimos encontrar este pedido",
+    "startNewOrder": "Iniciar nuevo pedido",
+    "readyBy": "Listo para",
+    "total": "Total",
+    "processing": "Procesando...",
+    "payNow": "Pagar ahora",
+    "testMode": "Modo de prueba - sin cargo real"
+  },
+  "groupOrder": {
+    "notFound": "Grupo no encontrado",
+    "notFoundMessage": "El código de grupo \"{code}\" no existe o ha expirado.",
+    "startNewOrder": "Iniciar nuevo pedido",
+    "hostPaysAll": "El anfitrión paga todo",
+    "splitPayment": "Pago dividido",
+    "groupTotal": "Total del grupo",
+    "orderCount": "{count} pedidos",
+    "waitingForHost": "Esperando que el anfitrión complete el pago",
+    "groupOrders": "Pedidos del grupo",
+    "checkInAll": "Registrar todos (Simular kiosco)",
+    "checkingIn": "Registrando...",
+    "simulateCheckIn": "Simular registro"
+  },
+  "social": {
+    "instagram": "Instagram",
+    "twitter": "X (Twitter)",
+    "facebook": "Facebook",
+    "tiktok": "TikTok",
+    "yelp": "Yelp",
+    "tripadvisor": "TripAdvisor",
+    "youtube": "YouTube",
+    "linkedin": "LinkedIn",
+    "email": "Correo electrónico"
+  },
+  "confirmation": {
+    "title": "¡Pedido confirmado!",
+    "orderNumber": "Pedido #{number}",
+    "thankYou": "Gracias por tu pedido",
+    "whatNext": "¿Qué sigue?",
+    "checkInInstructions": "Ve al restaurante y regístrate en el kiosco o escanea el código QR en tu pod asignado.",
+    "viewStatus": "Ver estado del pedido",
+    "simulateCheckIn": "Simular registro (Demo)",
+    "checkingIn": "Registrando...",
+    "groupOrderNote": "Este es un pedido grupal con {count} pedidos.",
+    "paidStatus": "Pago completado"
   }
 }

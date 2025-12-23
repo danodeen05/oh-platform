@@ -30,38 +30,36 @@ export default function GroupJoinBanner() {
   return (
     <div
       style={{
-        marginBottom: 32,
-        padding: 20,
-        background: "linear-gradient(135deg, #fef3e2 0%, #fde7cf 100%)",
-        borderRadius: 12,
-        border: "1px solid #f9a825",
+        marginBottom: 24,
+        padding: "12px 16px",
+        background: "rgba(255, 255, 255, 0.5)",
+        borderRadius: 2,
+        border: "1px solid rgba(124, 122, 103, 0.15)",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 16 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span style={{ fontSize: "1.5rem" }}>👥</span>
-          <div>
-            <div style={{ fontWeight: 600, color: "#92400e" }}>Dining Together?</div>
-            <div style={{ fontSize: "0.9rem", color: "#b45309" }}>
-              Start a group order or join an existing one
-            </div>
-          </div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <span style={{ fontSize: "0.85rem", color: "#222222" }}>
+            <span style={{ fontWeight: 500 }}>Dining together?</span>
+            <span style={{ color: "#666666", marginLeft: 8 }}>Start or join a group order</span>
+          </span>
         </div>
 
-        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {!showJoinInput ? (
             <>
               <button
                 onClick={() => router.push("/order?group=true")}
                 style={{
-                  padding: "10px 20px",
+                  padding: "6px 14px",
                   background: "#7C7A67",
-                  color: "white",
+                  color: "#E5E5E5",
                   border: "none",
-                  borderRadius: 8,
-                  fontWeight: 600,
+                  borderRadius: 2,
+                  fontWeight: 400,
                   cursor: "pointer",
-                  fontSize: "0.9rem",
+                  fontSize: "0.8rem",
+                  letterSpacing: "0.5px",
                 }}
               >
                 Start Group Order
@@ -69,14 +67,15 @@ export default function GroupJoinBanner() {
               <button
                 onClick={() => setShowJoinInput(true)}
                 style={{
-                  padding: "10px 20px",
-                  background: "white",
-                  color: "#7C7A67",
-                  border: "2px solid #7C7A67",
-                  borderRadius: 8,
-                  fontWeight: 600,
+                  padding: "6px 14px",
+                  background: "transparent",
+                  color: "#222222",
+                  border: "1px solid rgba(124, 122, 103, 0.15)",
+                  borderRadius: 2,
+                  fontWeight: 400,
                   cursor: "pointer",
-                  fontSize: "0.9rem",
+                  fontSize: "0.8rem",
+                  letterSpacing: "0.5px",
                 }}
               >
                 Join Group
@@ -86,7 +85,7 @@ export default function GroupJoinBanner() {
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
               <input
                 type="text"
-                placeholder="Enter code (e.g., ABC123)"
+                placeholder="Enter code"
                 value={groupCode}
                 onChange={(e) => {
                   setGroupCode(e.target.value.toUpperCase());
@@ -94,14 +93,15 @@ export default function GroupJoinBanner() {
                 }}
                 maxLength={6}
                 style={{
-                  padding: "10px 16px",
-                  border: error ? "2px solid #ef4444" : "2px solid #d1d5db",
-                  borderRadius: 8,
-                  fontSize: "1rem",
-                  width: 160,
+                  padding: "6px 12px",
+                  border: error ? "1px solid #ef4444" : "1px solid rgba(124, 122, 103, 0.15)",
+                  borderRadius: 2,
+                  fontSize: "0.85rem",
+                  width: 120,
                   textTransform: "uppercase",
-                  fontWeight: 600,
+                  fontWeight: 500,
                   letterSpacing: "0.05em",
+                  background: "rgba(255, 255, 255, 0.8)",
                 }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") handleJoinGroup();
@@ -112,14 +112,14 @@ export default function GroupJoinBanner() {
                 onClick={handleJoinGroup}
                 disabled={loading}
                 style={{
-                  padding: "10px 20px",
-                  background: "#7C7A67",
-                  color: "white",
+                  padding: "6px 14px",
+                  background: "#222222",
+                  color: "#E5E5E5",
                   border: "none",
-                  borderRadius: 8,
-                  fontWeight: 600,
+                  borderRadius: 2,
+                  fontWeight: 400,
                   cursor: loading ? "wait" : "pointer",
-                  fontSize: "0.9rem",
+                  fontSize: "0.8rem",
                 }}
               >
                 {loading ? "..." : "Join"}
@@ -131,12 +131,12 @@ export default function GroupJoinBanner() {
                   setError("");
                 }}
                 style={{
-                  padding: "8px",
+                  padding: "4px 8px",
                   background: "transparent",
                   border: "none",
                   cursor: "pointer",
-                  color: "#666",
-                  fontSize: "1.2rem",
+                  color: "#666666",
+                  fontSize: "1rem",
                 }}
               >
                 ×
@@ -147,7 +147,7 @@ export default function GroupJoinBanner() {
       </div>
 
       {error && (
-        <div style={{ marginTop: 8, color: "#ef4444", fontSize: "0.85rem" }}>
+        <div style={{ marginTop: 6, color: "#ef4444", fontSize: "0.8rem" }}>
           {error}
         </div>
       )}

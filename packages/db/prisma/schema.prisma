@@ -268,8 +268,8 @@ model Order {
   paymentStatus   PaymentStatus @default(PENDING)
   stripePaymentId String?
 
-  // Order source tracking
-  orderSource OrderSource @default(WEB) // Where the order originated from
+  // Order source tracking for analytics
+  orderSource OrderSource @default(WEB)
 
   // Child orders (add-ons placed after initial order)
   parentOrderId String?
@@ -312,10 +312,10 @@ enum PaymentStatus {
 }
 
 enum OrderSource {
-  WEB    // Order placed via web app
-  KIOSK  // Order placed at in-store kiosk
-  MOBILE // Order placed via mobile app
-  STAFF  // Order entered by staff
+  WEB       // Order placed via web app (desktop or mobile browser)
+  KIOSK     // Order placed at physical kiosk in-store
+  MOBILE    // Order placed via native mobile app (future)
+  STAFF     // Order placed by staff on behalf of customer
 }
 
 model OrderItem {

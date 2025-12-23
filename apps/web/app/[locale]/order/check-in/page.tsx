@@ -3,8 +3,9 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useState, Suspense } from "react";
 import { useTranslations } from "next-intl";
 import { QRCodeSVG } from "qrcode.react";
+import { trackCheckIn } from "@/lib/analytics";
 
-const BASE = process.env.NEXT_PUBLIC_API_URL || "";
+const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 function CheckInContent() {
   const searchParams = useSearchParams();
@@ -40,6 +41,13 @@ function CheckInContent() {
       const data = await response.json();
 
       if (response.ok) {
+        // Track successful check-in
+        trackCheckIn({
+          orderId: data.orderId || orderQrCode.trim(),
+          locationId: data.locationId || "",
+          arrivalDeviation: data.arrivalDeviation,
+        });
+
         if (data.status === "ASSIGNED") {
           // Pod assigned - redirect to status page
           router.push(`/order/status?orderQrCode=${encodeURIComponent(orderQrCode.trim())}`);
@@ -48,7 +56,12 @@ function CheckInContent() {
           router.push(`/order/status?orderQrCode=${encodeURIComponent(orderQrCode.trim())}`);
         }
       } else {
-        setError(data.error || t("errors.checkInFailed"));
+        // If already checked in, treat as success and redirect to status
+        if (data.error === "Order already checked in") {
+          router.push(`/order/status?orderQrCode=${encodeURIComponent(orderQrCode.trim())}`);
+        } else {
+          setError(data.error || t("errors.checkInFailed"));
+        }
       }
     } catch (err) {
       console.error("Check-in error:", err);

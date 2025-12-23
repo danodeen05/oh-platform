@@ -5,8 +5,9 @@ import Link from "next/link";
 import Image from "next/image";
 import { getMenuItemImage, isNoNoodlesItem } from "@/lib/menu-images";
 import { useTranslations, useLocale } from "next-intl";
+import { trackMenuCategoryViewed, trackViewItem } from "@/lib/analytics";
 
-const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4001";
+const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 // Types from the API
 type MenuItem = {
@@ -325,6 +326,7 @@ export default function MenuPage() {
               onClick={() => {
                 setActiveSection(section.id);
                 document.getElementById(section.id)?.scrollIntoView({ behavior: "smooth" });
+                trackMenuCategoryViewed(section.title);
               }}
               style={{
                 padding: "10px 20px",
