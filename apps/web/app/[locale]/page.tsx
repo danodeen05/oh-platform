@@ -942,6 +942,84 @@ export default function HomePage() {
               </p>
             </div>
           </div>
+
+          {/* Give Back - One Red Step Foundation */}
+          <div
+            style={{
+              marginTop: "48px",
+              padding: "32px",
+              background: "white",
+              borderRadius: "24px",
+              boxShadow: "0 8px 40px rgba(124, 122, 103, 0.1)",
+              maxWidth: "500px",
+            }}
+          >
+            <p
+              style={{
+                fontSize: "clamp(1.1rem, 2.5vw, 1.3rem)",
+                color: "#2D2A26",
+                fontWeight: "500",
+                marginBottom: "16px",
+                lineHeight: "1.5",
+              }}
+            >
+              {t("noTipping.giveBack.title")}
+            </p>
+            <p
+              style={{
+                fontSize: "0.95rem",
+                color: "#7C7A67",
+                marginBottom: "20px",
+                lineHeight: "1.7",
+              }}
+            >
+              {t("noTipping.giveBack.description")}
+            </p>
+            <a
+              href="https://www.oneredstepatatime.org"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "12px",
+                padding: "14px 28px",
+                borderRadius: "50px",
+                background: "linear-gradient(135deg, #C7A878 0%, #B8956A 100%)",
+                textDecoration: "none",
+                transition: "all 0.3s ease",
+                boxShadow: "0 4px 20px rgba(199, 168, 120, 0.3)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translateY(-2px)";
+                e.currentTarget.style.boxShadow = "0 8px 30px rgba(199, 168, 120, 0.4)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow = "0 4px 20px rgba(199, 168, 120, 0.3)";
+              }}
+            >
+              <img
+                src="/redsock-icon.png"
+                alt="One Red Step Foundation"
+                style={{
+                  height: "22px",
+                  width: "auto",
+                  filter: "brightness(0) invert(1)",
+                }}
+              />
+              <span
+                style={{
+                  fontSize: "0.95rem",
+                  fontWeight: "500",
+                  color: "#FFFFFF",
+                  letterSpacing: "0.5px",
+                }}
+              >
+                {t("noTipping.giveBack.button")}
+              </span>
+            </a>
+          </div>
         </div>
       </section>
 

@@ -52,7 +52,8 @@
     "giftCards": "Tarjetas de regalo",
     "store": "Tienda",
     "loyalty": "Recompensas",
-    "myAccount": "Mi cuenta Oh!"
+    "myAccount": "Mi cuenta Oh!",
+    "giveBack": "Contribuir"
   },
   "home": {
     "brandName": "<oh>哦！</oh> <bebas>Oh! Beef Noodle Soup</bebas>",
@@ -115,6 +116,11 @@
         "wages": "Salarios justos para todos",
         "math": "Sin cálculos incómodos",
         "checkout": "Pago simple"
+      },
+      "giveBack": {
+        "title": "¿Quieres contribuir?",
+        "description": "Apoya nuestra fundación 501(c)(3) que ayuda a familias necesitadas. En lugar de propina, considera contribuir a One Red Step at a Time.",
+        "button": "Contribuir hoy"
       }
     },
     "customize": {
@@ -143,6 +149,10 @@
       "contact": "Contacto",
       "press": "Prensa",
       "privacy": "Política de privacidad"
+    },
+    "foundation": {
+      "giveBack": "Contribuir",
+      "tagline": "Apoyando nuestra fundación 501(c)(3) — One Red Step at a Time"
     }
   },
   "languages": {

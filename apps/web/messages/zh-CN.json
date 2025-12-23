@@ -52,7 +52,8 @@
     "giftCards": "礼品卡",
     "store": "商店",
     "loyalty": "会员奖励",
-    "myAccount": "我的哦!账户"
+    "myAccount": "我的哦!账户",
+    "giveBack": "回馈社会"
   },
   "home": {
     "brandName": "<oh>哦！</oh>牛肉面",
@@ -115,6 +116,11 @@
         "wages": "公平薪资",
         "math": "无需计算小费",
         "checkout": "简单结账"
+      },
+      "giveBack": {
+        "title": "想要回馈社会？",
+        "description": "支持我们的501(c)(3)慈善基金会，帮助有需要的家庭。代替小费，考虑为One Red Step at a Time做出贡献。",
+        "button": "立即捐助"
       }
     },
     "customize": {
@@ -143,6 +149,10 @@
       "contact": "联系我们",
       "press": "媒体专区",
       "privacy": "隐私政策"
+    },
+    "foundation": {
+      "giveBack": "回馈社会",
+      "tagline": "支持我们的501(c)(3)慈善基金会 — One Red Step at a Time"
     }
   },
   "languages": {

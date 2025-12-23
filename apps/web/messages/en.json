@@ -52,7 +52,8 @@
     "giftCards": "Gift Cards",
     "store": "Store",
     "loyalty": "Loyalty",
-    "myAccount": "My Oh! Account"
+    "myAccount": "My Oh! Account",
+    "giveBack": "Give Back"
   },
   "home": {
     "brandName": "<oh>哦！</oh> <bebas>Oh! Beef Noodle Soup</bebas>",
@@ -115,6 +116,11 @@
         "wages": "Fair wages for all",
         "math": "No awkward math",
         "checkout": "Simple checkout"
+      },
+      "giveBack": {
+        "title": "Want to Give Back?",
+        "description": "Support our 501(c)(3) foundation that helps families in need. In lieu of a tip, consider contributing to One Red Step at a Time.",
+        "button": "Contribute Today"
       }
     },
     "customize": {
@@ -143,6 +149,10 @@
       "contact": "Contact",
       "press": "Press",
       "privacy": "Privacy Policy"
+    },
+    "foundation": {
+      "giveBack": "Give Back",
+      "tagline": "Supporting our 501(c)(3) foundation — One Red Step at a Time"
     }
   },
   "languages": {
