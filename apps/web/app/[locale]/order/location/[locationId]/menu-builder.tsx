@@ -1,6 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useToast } from "@/components/ui/Toast";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "";
 
@@ -30,6 +32,8 @@ export default function MenuBuilder({
   reorderId?: string;
 }) {
   const router = useRouter();
+  const t = useTranslations("order");
+  const toast = useToast();
   const [cart, setCart] = useState<Record<string, number>>({});
   const [step, setStep] = useState<"menu" | "time">("menu");
   const [arrivalTime, setArrivalTime] = useState<string>("");
@@ -61,7 +65,7 @@ export default function MenuBuilder({
         setLoading(false);
       } catch (error) {
         console.error("Failed to load reorder:", error);
-        alert("Failed to load your previous order. Please try again.");
+        toast.error(t("errors.loadPreviousOrder"));
         router.push("/member/orders");
       }
     }
@@ -141,7 +145,7 @@ export default function MenuBuilder({
 
   function proceedToTime() {
     if (!hasBase) {
-      alert("Please select at least one base dish");
+      toast.warning(t("errors.selectBase"));
       return;
     }
     setStep("time");
@@ -149,7 +153,7 @@ export default function MenuBuilder({
 
   async function proceedToPayment() {
     if (!arrivalTime) {
-      alert("Please select an arrival time");
+      toast.warning(t("errors.selectArrivalTime"));
       return;
     }
 
@@ -177,7 +181,7 @@ export default function MenuBuilder({
       if (!response.ok) {
         const errorData = await response.json();
         console.error("Failed to update order:", errorData);
-        alert("Failed to update order. Please try again.");
+        toast.error(t("errors.updateOrder"));
         setSubmitting(false);
         return;
       }

@@ -2,8 +2,10 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
+import { useTranslations } from "next-intl";
 import { API_URL } from "@/lib/api";
 import { useGuest } from "@/contexts/guest-context";
+import { useToast } from "@/components/ui/Toast";
 
 type Location = {
   id: string;
@@ -51,6 +53,8 @@ export default function LocationSelector({
   const router = useRouter();
   const { user, isLoaded: userLoaded } = useUser();
   const { guest, isGuest } = useGuest();
+  const t = useTranslations("order");
+  const toast = useToast();
   const [userLat, setUserLat] = useState<number | null>(null);
   const [userLng, setUserLng] = useState<number | null>(null);
   const [sortedLocations, setSortedLocations] = useState(locations);
@@ -124,7 +128,7 @@ export default function LocationSelector({
         }
 
         if (!hostUserId && !hostGuestId) {
-          alert("Please sign in or continue as guest to start a group order.");
+          toast.error(t("errors.signInRequired"));
           setCreatingGroup(false);
           return;
         }
@@ -145,7 +149,7 @@ export default function LocationSelector({
 
         if (!response.ok) {
           const error = await response.json();
-          alert(error.error || "Failed to create group order");
+          toast.error(error.error || t("errors.groupOrderFailed"));
           setCreatingGroup(false);
           return;
         }
@@ -155,7 +159,7 @@ export default function LocationSelector({
         router.push(`/group/${groupOrder.code}`);
       } catch (error) {
         console.error("Failed to create group order:", error);
-        alert("Failed to create group order. Please try again.");
+        toast.error(t("errors.groupOrderRetry"));
         setCreatingGroup(false);
       }
       return;

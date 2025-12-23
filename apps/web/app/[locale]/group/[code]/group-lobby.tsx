@@ -5,6 +5,9 @@ import { SignInButton, useUser } from "@clerk/nextjs";
 import { API_URL } from "@/lib/api";
 import { useGuest } from "@/contexts/guest-context";
 import SeatingMap, { Seat } from "@/components/SeatingMap";
+import { useTranslations } from "next-intl";
+import { useToast } from "@/components/ui/Toast";
+import { ConfirmDialog } from "@/components/ui/Dialog";
 
 type GroupOrder = {
   id: string;
@@ -66,6 +69,8 @@ type GroupLobbyProps = {
 
 export default function GroupLobby({ initialGroup }: GroupLobbyProps) {
   const router = useRouter();
+  const t = useTranslations("order");
+  const toast = useToast();
   const { user, isLoaded: userLoaded } = useUser();
   const { guest, isGuest, startGuestSession, isLoading: guestLoading } = useGuest();
   const [group, setGroup] = useState<GroupOrder>(initialGroup);
@@ -86,6 +91,11 @@ export default function GroupLobby({ initialGroup }: GroupLobbyProps) {
   // Pod seating options for final selection (when all paid)
   const [selectedSeatingOption, setSelectedSeatingOption] = useState<number | null>(null);
   const [completingOrder, setCompletingOrder] = useState(false);
+
+  // Confirm dialog states
+  const [closeGroupConfirmOpen, setCloseGroupConfirmOpen] = useState(false);
+  const [cancelGroupConfirmOpen, setCancelGroupConfirmOpen] = useState(false);
+  const [removeOrderConfirmOpen, setRemoveOrderConfirmOpen] = useState(false);
 
   // Fetch database user ID when Clerk user is available
   // Always fetch to ensure we have the correct user ID for the current Clerk user
@@ -336,8 +346,6 @@ export default function GroupLobby({ initialGroup }: GroupLobbyProps) {
 
   // Host controls: close group (stop new members)
   async function handleCloseGroup() {
-    if (!confirm("Close this group? No new members can join after closing.")) return;
-
     try {
       const res = await fetch(`${API_URL}/group-orders/${group.code}`, {
         method: "PATCH",
@@ -358,8 +366,6 @@ export default function GroupLobby({ initialGroup }: GroupLobbyProps) {
 
   // Host controls: cancel group order
   async function handleCancelGroup() {
-    if (!confirm("Cancel this group order? This will delete the group and all orders.")) return;
-
     try {
       const res = await fetch(`${API_URL}/group-orders/${group.code}`, {
         method: "PATCH",
@@ -439,7 +445,7 @@ export default function GroupLobby({ initialGroup }: GroupLobbyProps) {
   // Complete group order - notify kitchen and cleaning staff
   async function handleCompleteGroupOrder() {
     if (selectedSeatingOption === null) {
-      alert("Please select a seating option");
+      toast.warning(t("group.selectSeating"));
       return;
     }
 
@@ -474,15 +480,15 @@ export default function GroupLobby({ initialGroup }: GroupLobbyProps) {
 
       if (res.ok) {
         await fetchGroup();
-        alert("Group order completed! Kitchen and cleaning staff have been notified.");
+        toast.success(t("group.orderCompleted"));
         router.push(`/order/confirmation?groupCode=${group.code}`);
       } else {
         const error = await res.json().catch(() => ({}));
-        alert(error.error || "Failed to complete group order");
+        toast.error(error.error || t("errors.groupCompleteFailed"));
       }
     } catch (e) {
       console.error("Failed to complete group order:", e);
-      alert("Failed to complete group order. Please try again.");
+      toast.error(t("errors.groupCompleteFailed"));
     } finally {
       setCompletingOrder(false);
     }
@@ -491,7 +497,6 @@ export default function GroupLobby({ initialGroup }: GroupLobbyProps) {
   // Remove my order from group
   async function handleRemoveMyOrder() {
     if (!myOrder) return;
-    if (!confirm("Remove your order from this group?")) return;
 
     try {
       const res = await fetch(`${API_URL}/group-orders/${group.code}/orders/${myOrder.id}`, {
@@ -758,7 +763,7 @@ export default function GroupLobby({ initialGroup }: GroupLobbyProps) {
             </a>
             {myOrder.status === "PENDING_PAYMENT" && (
               <button
-                onClick={handleRemoveMyOrder}
+                onClick={() => setRemoveOrderConfirmOpen(true)}
                 style={{
                   padding: "8px 16px",
                   background: "transparent",
@@ -822,7 +827,7 @@ export default function GroupLobby({ initialGroup }: GroupLobbyProps) {
               <div style={{ display: "flex", gap: 8 }}>
                 {group.status === "GATHERING" && (
                   <button
-                    onClick={handleCloseGroup}
+                    onClick={() => setCloseGroupConfirmOpen(true)}
                     style={{
                       flex: 1,
                       padding: "10px 12px",
@@ -839,7 +844,7 @@ export default function GroupLobby({ initialGroup }: GroupLobbyProps) {
                   </button>
                 )}
                 <button
-                  onClick={handleCancelGroup}
+                  onClick={() => setCancelGroupConfirmOpen(true)}
                   style={{
                     flex: group.status === "GATHERING" ? 1 : "unset",
                     padding: "10px 12px",
@@ -901,7 +906,7 @@ export default function GroupLobby({ initialGroup }: GroupLobbyProps) {
                     onClick={(e) => {
                       if (!selectedSeatingOption) {
                         e.preventDefault();
-                        alert("Please select a seating area first");
+                        toast.warning(t("group.selectSeating"));
                       }
                     }}
                     style={{
@@ -1435,6 +1440,40 @@ export default function GroupLobby({ initialGroup }: GroupLobbyProps) {
           </a>
         </div>
       )}
+
+      {/* Confirm Dialogs */}
+      <ConfirmDialog
+        open={closeGroupConfirmOpen}
+        onClose={() => setCloseGroupConfirmOpen(false)}
+        onConfirm={async () => {
+          await handleCloseGroup();
+        }}
+        title={t("group.closeGroupTitle")}
+        message={t("group.closeGroupMessage")}
+        type="warning"
+      />
+
+      <ConfirmDialog
+        open={cancelGroupConfirmOpen}
+        onClose={() => setCancelGroupConfirmOpen(false)}
+        onConfirm={async () => {
+          await handleCancelGroup();
+        }}
+        title={t("group.cancelGroupTitle")}
+        message={t("group.cancelGroupMessage")}
+        type="danger"
+      />
+
+      <ConfirmDialog
+        open={removeOrderConfirmOpen}
+        onClose={() => setRemoveOrderConfirmOpen(false)}
+        onConfirm={async () => {
+          await handleRemoveMyOrder();
+        }}
+        title={t("group.removeOrderTitle")}
+        message={t("group.removeOrderMessage")}
+        type="warning"
+      />
     </main>
   );
 }

@@ -16,7 +16,35 @@
     "comingSoon": "即將推出",
     "notifyMe": "通知我",
     "findLocation": "尋找門市",
-    "viewFaq": "查看常見問題"
+    "viewFaq": "查看常見問題",
+    "confirm": "確認",
+    "cancel": "取消",
+    "ok": "確定",
+    "yes": "是",
+    "no": "否",
+    "back": "返回",
+    "next": "下一步",
+    "continue": "繼續",
+    "save": "儲存",
+    "delete": "刪除",
+    "edit": "編輯",
+    "retry": "重試",
+    "dismiss": "關閉",
+    "enterEmail": "請輸入您的電子郵件",
+    "linkCopied": "連結已複製！"
+  },
+  "dialog": {
+    "confirmTitle": "確認操作",
+    "alertTitle": "通知",
+    "errorTitle": "錯誤",
+    "successTitle": "成功",
+    "warningTitle": "警告"
+  },
+  "toast": {
+    "success": "成功",
+    "error": "錯誤",
+    "warning": "警告",
+    "info": "資訊"
   },
   "navigation": {
     "menu": "菜單",
@@ -27,8 +55,24 @@
     "myAccount": "我的哦!帳戶"
   },
   "home": {
-    "brandName": "哦！牛肉麵",
+    "brandName": "<oh>哦！</oh>牛肉麵",
+    "brandNamePlain": "哦！牛肉麵",
     "tagline": "唯一一家專為<bold>您</bold>打造的餐廳。",
+    "heroDescription": "源自台灣深受喜愛的牛肉麵傳統，融合日本精緻工藝，在您專屬的私人包廂中享用我們30年的家傳秘方。",
+    "signature": {
+      "label": "我們的招牌",
+      "title": "A5和牛牛肉麵",
+      "description": "絲滑的A5和牛融入我們香醇的濃郁湯底——使用三代相傳的技藝，慢火熬煮48小時。每一碗都訴說著耐心、精準與熱情的故事。",
+      "stats": {
+        "hours": "小時熬製",
+        "grade": "和牛等級",
+        "years": "年秘方"
+      }
+    },
+    "difference": {
+      "label": "哦！的獨特之處",
+      "title": "不只是一餐"
+    },
     "features": {
       "recipe": {
         "title": "30年傳承配方",
@@ -42,6 +86,9 @@
         "title": "科技化體驗",
         "description": "提前點餐、累積獎勵、享受無縫服務"
       }
+    },
+    "experience": {
+      "label": "哦！體驗"
     },
     "pods": {
       "title": "私人用餐包廂",
@@ -69,6 +116,23 @@
         "math": "無需計算小費",
         "checkout": "簡單結帳"
       }
+    },
+    "customize": {
+      "label": "新鮮食材",
+      "title": "客製您的麵碗",
+      "description": "從手工麵條、新鮮蔬菜和頂級配料中選擇，打造您完美的一碗。",
+      "ingredients": {
+        "ramen": "拉麵",
+        "egg": "溏心蛋",
+        "bokChoy": "小白菜",
+        "marrow": "牛骨髓"
+      }
+    },
+    "viewFullMenu": "查看完整菜單",
+    "cta": {
+      "title": "準備好體驗不一樣的用餐了嗎？",
+      "description": "走進您的私人包廂，品嚐頂級牛肉麵，發現為什麼在哦！用餐與眾不同。",
+      "button": "開始點餐"
     }
   },
   "footer": {
@@ -316,7 +380,154 @@
     "orderConfirmed": "訂單確認",
     "preparing": "準備中",
     "ready": "準備完成",
-    "completed": "完成"
+    "completed": "完成",
+    "errors": {
+      "enterQrCode": "請輸入您的訂單QR碼",
+      "checkInFailed": "報到失敗，請重試。",
+      "networkError": "網路錯誤，請重試。",
+      "signInRequired": "請登入或以訪客身份繼續以開始團體訂單。",
+      "groupOrderFailed": "建立團體訂單失敗",
+      "groupOrderRetry": "建立團體訂單失敗，請重試。",
+      "loadPreviousOrder": "載入上一筆訂單失敗，請重試。",
+      "loadMenu": "載入菜單失敗，請重試。",
+      "selectBase": "請至少選擇一道主餐",
+      "selectArrivalTime": "請選擇抵達時間",
+      "updateOrder": "更新訂單失敗，請重試。",
+      "createOrder": "建立訂單失敗，請重試。",
+      "addToGroup": "加入團體訂單失敗，請重試。",
+      "callStaff": "呼叫服務人員失敗，請重試。",
+      "requestRefill": "要求續杯失敗，請重試。",
+      "requestVegetables": "要求加菜失敗，請重試。",
+      "requestDessert": "要求甜點失敗，請重試。",
+      "orderNotFound": "找不到訂單",
+      "loadStatus": "載入訂單狀態失敗",
+      "noOrderCode": "未提供訂單代碼",
+      "placeAddonOrder": "加點失敗，請重試。",
+      "markDone": "更新狀態失敗，請重試。",
+      "completeRequired": "請完成：{sections}",
+      "maxFavorites": "您最多只能有 {max} 個收藏訂單，請先移除一個。",
+      "reorderFailed": "重新訂購失敗，請重試。",
+      "groupCompleteFailed": "完成團體訂單失敗，請重試。",
+      "menuLoadFailed": "載入菜單失敗，請重試。",
+      "submitFailed": "提交訂單失敗，請重試。",
+      "paymentFailed": "付款失敗，請重試。"
+    },
+    "success": {
+      "refillRequested": "已要求續杯！將很快送至您的包廂。",
+      "vegetablesRequested": "已要求加菜！將很快送至您的包廂。",
+      "addonOrdered": "加點成功！已收取 {amount}。您的餐點將很快送至包廂。",
+      "staffNotified": "已通知服務人員",
+      "dessertOnWay": "甜點正在送來！"
+    },
+    "confirmations": {
+      "finishedEating": "您用餐完畢了嗎？這將通知服務人員清理您的包廂。"
+    },
+    "checkIn": {
+      "title": "報到服務台",
+      "subtitle": "掃描或輸入您的訂單QR碼以獲取包廂分配",
+      "howTo": "如何報到：",
+      "step1": "找到您的訂單QR碼（在訂單確認頁面上）",
+      "step2": "使用服務台掃描器掃描或在下方輸入代碼",
+      "step3": "獲取您的包廂分配或排隊位置",
+      "qrCodeLabel": "訂單QR碼：",
+      "qrCodePlaceholder": "ORDER-xxpmm5hf-1234567890-ABC123",
+      "checkingIn": "報到中...",
+      "checkInButton": "報到",
+      "needHelp": "需要幫助？",
+      "helpTip1": "您的QR碼在訂單確認頁面上",
+      "helpTip2": "以「ORDER-」開頭，後接數字和字母",
+      "helpTip3": "如需協助請詢問服務人員"
+    },
+    "status": {
+      "pendingPayment": "待付款",
+      "paid": "已付款",
+      "inQueue": "排隊中",
+      "preparing": "準備中",
+      "readyForDelivery": "準備送餐",
+      "enjoyMeal": "請享用！",
+      "completed": "完成",
+      "yourPod": "您的包廂",
+      "goToPod": "前往包廂並確認抵達",
+      "confirmAtPod": "確認已到達包廂",
+      "checkedIn": "您已報到！",
+      "callStaff": "呼叫服務人員",
+      "calling": "呼叫中...",
+      "addItems": "加點",
+      "readyForDessert": "準備好吃甜點",
+      "notifying": "通知中...",
+      "queuePosition": "排隊位置",
+      "estimatedWait": "預估等候：{minutes} 分鐘",
+      "notifyWhenReady": "包廂準備好時我們會通知您！",
+      "orderTimeline": "訂單時間軸",
+      "totalTime": "總時間",
+      "location": "門市",
+      "autoRefresh": "狀態每5秒自動更新",
+      "viewProfile": "查看個人資料",
+      "orderAgain": "再次點餐",
+      "doneEating": "我用餐完畢",
+      "placeNewOrder": "建立新訂單",
+      "loading": "載入訂單狀態中..."
+    },
+    "addons": {
+      "title": "加點",
+      "loading": "載入可用項目中...",
+      "free": "免費",
+      "paid": "付費",
+      "drinkRefills": "飲料續杯",
+      "extrasAddons": "額外加點",
+      "paidAddons": "付費加點",
+      "requestRefill": "要求續杯",
+      "requesting": "要求中...",
+      "waterRefill": "續水",
+      "request": "要求",
+      "add": "加入",
+      "orderTotal": "訂單總計",
+      "checkout": "結帳",
+      "cancel": "取消",
+      "demoMode": "示範模式：不會進行實際扣款",
+      "processing": "處理中...",
+      "pay": "支付 {amount}",
+      "noAddonsAvailable": "此訂單無可用加點項目。",
+      "callStaffInstead": "改為呼叫服務人員",
+      "failedToLoad": "載入加點項目失敗，請重試或呼叫服務人員。"
+    },
+    "arrivalTime": {
+      "title": "您何時抵達？",
+      "asap": "盡快（現在到5分鐘內）",
+      "minutes15": "15分鐘",
+      "minutes30": "30分鐘",
+      "minutes45": "45分鐘",
+      "hour1": "1小時",
+      "hour1half": "1.5小時",
+      "readyBy": "預計 {time} 準備好",
+      "choosePod": "選擇您的包廂（選填）",
+      "choosePodDescription": "由於您即將抵達，您可以現在選擇偏好的包廂。跳過此步驟將在報到時自動分配。",
+      "loadingSeats": "載入座位中...",
+      "checkingSeats": "檢查座位可用性中...",
+      "clearSelection": "清除選擇（改為自動分配）",
+      "continueToPayment": "繼續付款",
+      "reviewOrderPayment": "檢視訂單與付款"
+    },
+    "group": {
+      "startingGroupOrder": "開始團體訂單",
+      "selectLocationPrompt": "選擇門市以建立您的團體。與朋友分享代碼讓他們加入訂單！",
+      "groupOrder": "團體訂單",
+      "yourTotal": "您的總計",
+      "addToGroupOrder": "加入團體訂單",
+      "addingToGroup": "加入團體中...",
+      "hostArrivalTime": "作為主辦人，您的抵達時間將用於整個團體",
+      "memberArrivalTime": "您的訂單將加入團體",
+      "reviewOrder": "檢視您的訂單",
+      "hostSelectsArrival": "團體主辦人將決定大家的抵達時間並選擇包廂。加入訂單後，您可以在團體大廳頁面查看包廂可用性。",
+      "selectSeating": "請選擇座位選項",
+      "orderCompleted": "團體訂單已完成！已通知廚房和清潔人員。",
+      "closeGroupTitle": "關閉團體",
+      "closeGroupMessage": "確定要關閉此團體嗎？關閉後將無法加入新成員。",
+      "cancelGroupTitle": "取消團體訂單",
+      "cancelGroupMessage": "確定要取消此團體訂單嗎？這將刪除團體和所有訂單。",
+      "removeOrderTitle": "移除訂單",
+      "removeOrderMessage": "確定要從此團體中移除您的訂單嗎？"
+    }
   },
   "member": {
     "dashboard": "會員中心",

@@ -5,6 +5,8 @@ import { routing } from "@/i18n/routing";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ActiveOrderBanner from "@/components/ActiveOrderBanner";
+import { Providers } from "@/components/Providers";
+import LanguageTracker from "@/components/LanguageTracker";
 
 type Props = {
   children: React.ReactNode;
@@ -31,10 +33,13 @@ export default async function LocaleLayout({ children, params }: Props) {
 
   return (
     <NextIntlClientProvider messages={messages}>
-      <Header />
-      <ActiveOrderBanner />
-      <main style={{ flex: 1 }}>{children}</main>
-      <Footer />
+      <Providers>
+        <LanguageTracker />
+        <Header />
+        <ActiveOrderBanner />
+        <main style={{ flex: 1 }}>{children}</main>
+        <Footer />
+      </Providers>
     </NextIntlClientProvider>
   );
 }

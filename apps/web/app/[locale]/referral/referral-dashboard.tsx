@@ -1,9 +1,13 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
+import { useToast } from "@/components/ui/Toast";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "";
 
 export default function ReferralDashboard() {
+  const t = useTranslations("common");
+  const toast = useToast();
   const [email, setEmail] = useState("");
   const [user, setUser] = useState<any>(null);
   const [credits, setCredits] = useState<any>(null);
@@ -12,7 +16,7 @@ export default function ReferralDashboard() {
 
   async function createUser() {
     if (!email) {
-      alert("Please enter your email");
+      toast.warning(t("enterEmail"));
       return;
     }
 
@@ -218,7 +222,7 @@ export default function ReferralDashboard() {
           <button
             onClick={() => {
               navigator.clipboard.writeText(referralUrl);
-              alert("Link copied!");
+              toast.success(t("linkCopied"));
             }}
             style={{
               padding: "8px 16px",

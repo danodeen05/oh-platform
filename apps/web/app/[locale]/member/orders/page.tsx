@@ -1,6 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useToast } from "@/components/ui/Toast";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "";
 const MAX_FAVORITES = 3;
@@ -49,6 +51,8 @@ type Order = {
 
 export default function OrdersPage() {
   const router = useRouter();
+  const t = useTranslations("order");
+  const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<Order[]>([]);
   const [reordering, setReordering] = useState<string | null>(null);
@@ -94,7 +98,7 @@ export default function OrdersPage() {
     } else {
       // Add to favorites (if under limit)
       if (favorites.length >= MAX_FAVORITES) {
-        alert(`You can only have up to ${MAX_FAVORITES} favorite orders. Please remove one first.`);
+        toast.warning(t("errors.maxFavorites", { max: MAX_FAVORITES }));
         return;
       }
       newFavorites = [...favorites, orderId];
@@ -152,7 +156,7 @@ export default function OrdersPage() {
       );
     } catch (error) {
       console.error("Failed to reorder:", error);
-      alert("Failed to create reorder. Please try again.");
+      toast.error(t("errors.reorderFailed"));
       setReordering(null);
     }
   }
