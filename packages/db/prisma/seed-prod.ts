@@ -172,14 +172,14 @@ async function seedCoreData() {
     { id: 'cmip6jbze000i2nnnsjjcpifd', name: 'No Noodles', basePriceCents: 0, category: 'main02', categoryType: 'MAIN', selectionMode: 'SINGLE', displayOrder: 4 },
 
     // SLIDERS
-    { id: 'cmip6jbzf000k2nnnmy81pbsx', name: 'Soup Richness', basePriceCents: 0, category: 'slider01', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 1 },
-    { id: 'cmip6jbzf000m2nnn3pkux3rw', name: 'Noodle Texture', basePriceCents: 0, category: 'slider02', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 2 },
-    { id: 'cmip6jbza00062z01skz6ndd5', name: 'Spice Level', basePriceCents: 0, category: 'slider03', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 3 },
-    { id: 'cmip6jc0200272nnnmx2bv246', name: 'Baby Bok Choy', basePriceCents: 0, category: 'slider04', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 4 },
-    { id: 'cmip6jc0g00292nnnwsr3nsiq', name: 'Green Onions', basePriceCents: 0, category: 'slider05', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 5 },
-    { id: 'cmip6jc0h002b2nnnedxu3hy6', name: 'Cilantro', basePriceCents: 0, category: 'slider06', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 6 },
-    { id: 'cmip6jc0h002d2nnn4zrbfozw', name: 'Sprouts', basePriceCents: 0, category: 'slider07', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 7 },
-    { id: 'cmip6jc0i002f2nnnpv38o0iq', name: 'Pickled Greens', basePriceCents: 0, category: 'slider08', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 8 },
+    { id: 'cmip6jbzf000k2nnnmy81pbsx', name: 'Soup Richness', basePriceCents: 0, category: 'slider01', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 1, sliderConfig: { max: 3, min: 0, step: 1, labels: ['Light', 'Medium', 'Rich', 'Extra Rich'], default: 1, description: 'How rich do you want your soup?' } },
+    { id: 'cmip6jbzf000m2nnn3pkux3rw', name: 'Noodle Texture', basePriceCents: 0, category: 'slider02', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 2, sliderConfig: { max: 2, min: 0, step: 1, labels: ['Firm', 'Medium', 'Soft'], default: 1, description: 'How firm do you want your noodles?' } },
+    { id: 'cmip6jbza00062z01skz6ndd5', name: 'Spice Level', basePriceCents: 0, category: 'slider03', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 3, sliderConfig: { max: 4, min: 0, step: 1, labels: ['None', 'Mild', 'Medium', 'Spicy', 'Extra Spicy'], default: 1, description: 'How spicy do you like it?' } },
+    { id: 'cmip6jc0200272nnnmx2bv246', name: 'Baby Bok Choy', basePriceCents: 0, category: 'slider04', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 4, sliderConfig: { max: 3, min: 0, step: 1, labels: ['None', 'Light', 'Normal', 'Extra'], default: 2, description: 'How much do you want?' } },
+    { id: 'cmip6jc0g00292nnnwsr3nsiq', name: 'Green Onions', basePriceCents: 0, category: 'slider05', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 5, sliderConfig: { max: 3, min: 0, step: 1, labels: ['None', 'Light', 'Normal', 'Extra'], default: 2, description: 'How much do you want?' } },
+    { id: 'cmip6jc0h002b2nnnedxu3hy6', name: 'Cilantro', basePriceCents: 0, category: 'slider06', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 6, sliderConfig: { max: 3, min: 0, step: 1, labels: ['None', 'Light', 'Normal', 'Extra'], default: 1, description: 'How much do you want?' } },
+    { id: 'cmip6jc0h002d2nnn4zrbfozw', name: 'Sprouts', basePriceCents: 0, category: 'slider07', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 7, sliderConfig: { max: 3, min: 0, step: 1, labels: ['None', 'Light', 'Normal', 'Extra'], default: 2, description: 'How much do you want?' } },
+    { id: 'cmip6jc0i002f2nnnpv38o0iq', name: 'Pickled Greens', basePriceCents: 0, category: 'slider08', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 8, sliderConfig: { max: 3, min: 0, step: 1, labels: ['None', 'Light', 'Normal', 'Extra'], default: 1, description: 'How much do you want?' } },
 
     // ADD-ONS
     { id: 'cmip6jc0i002f2nnnqv38o0ir', name: 'Bone Marrow', basePriceCents: 399, category: 'add-on01', categoryType: 'ADDON', selectionMode: 'MULTIPLE', displayOrder: 1 },
@@ -211,6 +211,7 @@ async function seedCoreData() {
         categoryType: item.categoryType as any,
         selectionMode: item.selectionMode as any,
         displayOrder: item.displayOrder,
+        sliderConfig: (item as any).sliderConfig || null,
         isAvailable: true,
       },
       create: {
@@ -222,6 +223,7 @@ async function seedCoreData() {
         categoryType: item.categoryType as any,
         selectionMode: item.selectionMode as any,
         displayOrder: item.displayOrder,
+        sliderConfig: (item as any).sliderConfig || null,
         isAvailable: true,
       }
     });
