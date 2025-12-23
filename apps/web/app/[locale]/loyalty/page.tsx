@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
+import { event } from "@/lib/analytics";
 
 export default function LoyaltyPage() {
   const t = useTranslations("loyalty");
@@ -95,6 +96,13 @@ export default function LoyaltyPage() {
         </p>
         <Link
           href={`/${locale}/order`}
+          onClick={() => {
+            event({
+              action: "loyalty_cta_click",
+              category: "engagement",
+              label: "start_earning_hero",
+            });
+          }}
           style={{
             display: "inline-block",
             padding: "16px 48px",

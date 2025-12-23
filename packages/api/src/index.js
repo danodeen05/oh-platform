@@ -10,12 +10,37 @@ import {
   sendQueueUpdateNotification,
   getNotificationStatus,
 } from "./notifications.js";
+import { BetaAnalyticsDataClient } from "@google-analytics/data";
+import { readFileSync } from "fs";
 
 const prisma = new PrismaClient();
 const app = Fastify({ logger: true });
 
 // Initialize Anthropic client (uses ANTHROPIC_API_KEY env var automatically)
 const anthropic = process.env.ANTHROPIC_API_KEY ? new Anthropic() : null;
+
+// Initialize GA4 Analytics client
+let ga4Client = null;
+const GA4_PROPERTY_ID = process.env.GA_PROPERTY_ID || "516268103";
+const GA4_CREDENTIALS_PATH = process.env.GA_SERVICE_ACCOUNT_PATH;
+
+if (GA4_CREDENTIALS_PATH) {
+  try {
+    const credentials = JSON.parse(readFileSync(GA4_CREDENTIALS_PATH, "utf8"));
+    ga4Client = new BetaAnalyticsDataClient({ credentials });
+    console.log("✓ GA4 Analytics client initialized");
+  } catch (err) {
+    console.warn("GA4 Analytics client not initialized:", err.message);
+  }
+} else if (process.env.GA_SERVICE_ACCOUNT_JSON) {
+  try {
+    const credentials = JSON.parse(process.env.GA_SERVICE_ACCOUNT_JSON);
+    ga4Client = new BetaAnalyticsDataClient({ credentials });
+    console.log("✓ GA4 Analytics client initialized from env");
+  } catch (err) {
+    console.warn("GA4 Analytics client not initialized:", err.message);
+  }
+}
 
 // Register plugins
 await app.register(cors, {
@@ -844,6 +869,12 @@ app.get("/locations/:id/seats", async (req, reply) => {
               membershipTier: true,
             },
           },
+          guest: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
         },
         orderBy: {
           createdAt: "desc",
@@ -1085,6 +1116,71 @@ app.post("/orders/check-in", async (req, reply) => {
     queuePosition,
     estimatedWaitMinutes,
   };
+});
+
+// GET /orders/lookup - Look up order by order number or QR code (for kiosk check-in)
+app.get("/orders/lookup", async (req, reply) => {
+  const { code } = req.query || {};
+
+  if (!code) {
+    return reply.code(400).send({ error: "code required (order number or QR code)" });
+  }
+
+  // Try to find by order number first, then by QR code
+  let order = await prisma.order.findUnique({
+    where: { orderNumber: code.toUpperCase() },
+    include: {
+      seat: true,
+      location: true,
+      items: {
+        include: {
+          menuItem: true,
+        },
+      },
+      user: true,
+    },
+  });
+
+  // If not found by order number, try QR code
+  if (!order) {
+    order = await prisma.order.findUnique({
+      where: { orderQrCode: code },
+      include: {
+        seat: true,
+        location: true,
+        items: {
+          include: {
+            menuItem: true,
+          },
+        },
+        user: true,
+      },
+    });
+  }
+
+  if (!order) {
+    return reply.code(404).send({ error: "Order not found" });
+  }
+
+  // Check if order is eligible for kiosk check-in
+  // Must be PAID status and not yet arrived
+  if (order.paymentStatus !== "PAID") {
+    return reply.code(400).send({
+      error: "Order not yet paid",
+      orderStatus: order.status,
+      paymentStatus: order.paymentStatus,
+    });
+  }
+
+  if (order.arrivedAt) {
+    return reply.code(400).send({
+      error: "Order already checked in",
+      arrivedAt: order.arrivedAt,
+      seatNumber: order.seat?.number,
+    });
+  }
+
+  return reply.send(order);
 });
 
 // GET /orders/status - Get real-time order status by QR code
@@ -2227,7 +2323,11 @@ app.get("/orders", async (req, reply) => {
   const { status, locationId, userId } = req.query || {};
 
   const where = {};
-  if (status) where.status = status;
+  if (status) {
+    // Support comma-separated status values for filtering multiple statuses
+    const statuses = status.split(",").map(s => s.trim());
+    where.status = statuses.length === 1 ? statuses[0] : { in: statuses };
+  }
   if (locationId) where.locationId = locationId;
   if (userId) where.userId = userId;
 
@@ -2270,7 +2370,7 @@ app.get("/orders/:id", async (req, reply) => {
 });
 
 app.post("/orders", async (req, reply) => {
-  const { locationId, tenantId, items, seatId, estimatedArrival, podSelectionMethod, userId, guestId, dualPartnerSeatId, isDualPod } =
+  const { locationId, tenantId, items, seatId, estimatedArrival, podSelectionMethod, userId, guestId, guestName, isKioskOrder, dualPartnerSeatId, isDualPod } =
     req.body || {};
 
   if (!locationId || !tenantId || !items || !items.length) {
@@ -2360,6 +2460,19 @@ app.post("/orders", async (req, reply) => {
   // Format as 4-digit string (e.g., "0001", "0042", "0234")
   const kitchenOrderNumber = String(todaysOrderCount + 1).padStart(4, "0");
 
+  // Create guest record if guestName provided (kiosk orders)
+  let resolvedGuestId = guestId;
+  if (!resolvedGuestId && guestName) {
+    const guest = await prisma.guest.create({
+      data: {
+        name: guestName,
+        sessionToken: `kiosk-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+      },
+    });
+    resolvedGuestId = guest.id;
+  }
+
   const order = await prisma.order.create({
     data: {
       orderNumber,
@@ -2376,7 +2489,7 @@ app.post("/orders", async (req, reply) => {
       totalCents,
       estimatedArrival: estimatedArrival ? new Date(estimatedArrival) : null,
       userId: userId || null,
-      guestId: guestId || null,
+      guestId: resolvedGuestId || null,
       items: {
         create: orderItems,
       },
@@ -2400,7 +2513,20 @@ app.post("/orders", async (req, reply) => {
 // PATCH /orders/:id - Update order status
 app.patch("/orders/:id", async (req, reply) => {
   const { id } = req.params;
-  const { status, paymentStatus, userId, guestId, totalCents, estimatedArrival } = req.body || {};
+  const {
+    status,
+    paymentStatus,
+    userId,
+    guestId,
+    totalCents,
+    estimatedArrival,
+    seatId,
+    podSelectionMethod,
+    podAssignedAt,
+    podConfirmedAt,
+    podReservationExpiry,
+    orderSource,
+  } = req.body || {};
 
   const data = {};
   if (status) data.status = status;
@@ -2415,11 +2541,17 @@ app.patch("/orders/:id", async (req, reply) => {
   if (guestId) data.guestId = guestId;
   if (totalCents !== undefined) data.totalCents = totalCents;
   if (estimatedArrival) data.estimatedArrival = new Date(estimatedArrival);
+  if (seatId) data.seatId = seatId;
+  if (podSelectionMethod) data.podSelectionMethod = podSelectionMethod;
+  if (podAssignedAt) data.podAssignedAt = new Date(podAssignedAt);
+  if (podConfirmedAt) data.podConfirmedAt = new Date(podConfirmedAt);
+  if (podReservationExpiry) data.podReservationExpiry = new Date(podReservationExpiry);
+  if (orderSource) data.orderSource = orderSource;
 
   if (!Object.keys(data).length) {
     return reply
       .code(400)
-      .send({ error: "status, paymentStatus, userId, guestId, totalCents, or estimatedArrival required" });
+      .send({ error: "status, paymentStatus, userId, guestId, totalCents, estimatedArrival, or seatId required" });
   }
 
   // If setting payment to PAID, also set paidAt timestamp and reservation expiry
@@ -2483,6 +2615,25 @@ app.patch("/orders/:id", async (req, reply) => {
     sendOrderConfirmation(order, order.user).catch(err => {
       console.error("Failed to send order confirmation:", err);
     });
+  }
+
+  // If podConfirmedAt was just set, mark seat as OCCUPIED
+  if (podConfirmedAt && order.seatId) {
+    const seatsToOccupy = [order.seatId];
+    if (order.isDualPod && order.dualPartnerSeatId) {
+      seatsToOccupy.push(order.dualPartnerSeatId);
+    }
+
+    await prisma.seat.updateMany({
+      where: { id: { in: seatsToOccupy } },
+      data: { status: "OCCUPIED" },
+    });
+
+    if (order.isDualPod && order.dualPartnerSeatId) {
+      console.log(`Dual Pod ${order.seat?.number} (both seats) now OCCUPIED - customer confirmed arrival for order ${order.kitchenOrderNumber}`);
+    } else {
+      console.log(`Pod ${order.seat?.number} now OCCUPIED - customer confirmed arrival for order ${order.kitchenOrderNumber}`);
+    }
   }
 
   // If order just got paid, update user progress
@@ -2705,6 +2856,15 @@ app.post("/users", async (req, reply) => {
       }
     } else {
       console.log("ℹ️ Existing user already has referrer or no new referral code provided");
+    }
+
+    // Update name if it changed in Clerk
+    if (name && name !== existing.name) {
+      const updatedUser = await prisma.user.update({
+        where: { id: existing.id },
+        data: { name },
+      });
+      return updatedUser;
     }
 
     return existing;
@@ -3191,15 +3351,6 @@ app.get("/kitchen/orders", async (req, reply) => {
   const where = {
     tenantId: tenant.id,
     paymentStatus: "PAID", // Only show paid orders
-    // Show orders that have confirmed pod arrival OR are arriving (reserved but not confirmed)
-    OR: [
-      { podConfirmedAt: { not: null } }, // Customer confirmed at pod
-      {
-        seatId: { not: null }, // Has reserved seat
-        podConfirmedAt: null,  // Not confirmed yet
-        arrivedAt: null,       // Not checked in yet (arriving)
-      },
-    ],
   };
 
   if (locationId) {
@@ -3224,6 +3375,58 @@ app.get("/kitchen/orders", async (req, reply) => {
         },
       },
       seat: true,
+      location: true,
+      user: {
+        select: {
+          id: true,
+          name: true,
+          membershipTier: true,
+        },
+      },
+      guest: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "asc", // Oldest orders first
+    },
+  });
+
+  return orders;
+});
+
+// Get pickup orders (orders without a seat) in SERVING status
+app.get("/kitchen/pickup-orders", async (req, reply) => {
+  const { locationId } = req.query || {};
+  const tenantSlug = getTenantContext(req);
+
+  const tenant = await prisma.tenant.findUnique({
+    where: { slug: tenantSlug },
+  });
+  if (!tenant) return reply.code(404).send({ error: "Tenant not found" });
+
+  const where = {
+    tenantId: tenant.id,
+    paymentStatus: "PAID",
+    status: "SERVING",
+    seatId: null, // Only pickup orders (no seat assigned)
+  };
+
+  if (locationId) {
+    where.locationId = locationId;
+  }
+
+  const orders = await prisma.order.findMany({
+    where,
+    include: {
+      items: {
+        include: {
+          menuItem: true,
+        },
+      },
       location: true,
       user: {
         select: {
@@ -4014,39 +4217,59 @@ app.get("/orders/fortune", async (req, reply) => {
 
     if (anthropic) {
       try {
-        const prompt = `You are a modern fortune cookie writer. Your fortunes are the kind people screenshot, share, and think about later. NOT about food, restaurants, or noodles. These are REAL fortunes about LIFE.
+        // Session-based creativity seed - changes every 30 seconds to ensure unique fortunes
+        const creativitySeed = Math.floor(Date.now() / 30000);
+        const styleOptions = [
+          "DELIGHTFULLY WEIRD - Unexpected, slightly surreal, makes them smile-laugh",
+          "COSMIC ABSURDIST - Philosophical but with a wink, like the universe is in on a joke",
+          "MAIN CHARACTER ENERGY - Aspirational without being cheesy, you're the protagonist",
+          "CRYPTIC POET - Intriguing, makes them pause and screenshot it",
+          "GENTLY UNHINGED - Sounds profound until you think about it, then it's profoundly weird",
+          "LATE-NIGHT WISDOM - The kind of thought you have at 2am that actually makes sense",
+          "MILLENNIAL MYSTIC - Spiritual but make it relatable, tarot-meets-therapy energy",
+        ];
+        const currentStyle = styleOptions[creativitySeed % styleOptions.length];
 
-YOUR STYLE MIX (pick one approach per fortune):
+        // Unique elements to incorporate
+        const themes = ["time", "doors", "strangers", "decisions", "silence", "algorithms", "mirrors", "messages", "dreams", "instincts", "chaos", "beginnings"];
+        const theme1 = themes[creativitySeed % themes.length];
+        const theme2 = themes[(creativitySeed + 3) % themes.length];
 
-1. DELIGHTFULLY WEIRD - Unexpected, slightly surreal, makes them smile
-   - "Somewhere, a door is opening for you. It might be a fridge. Start there."
-   - "The universe is rearranging itself around your next decision. No pressure."
-   - "A stranger will compliment something you almost didn't wear today."
+        const prompt = `You are a VIRAL fortune cookie writer. Your fortunes are the kind people screenshot, share, and think about for days. NOT about food or restaurants. These are REAL fortunes about LIFE that feel almost eerily personal.
 
-2. ASPIRATIONAL BUT REAL - Hopeful without being cheesy, grounded
-   - "The room you're afraid to walk into? They're going to love you in there."
-   - "Your next level will require a version of you that doesn't exist yet. Start building them."
-   - "The hardest part is almost over. The best part is almost beginning."
+CURRENT VIBE: ${currentStyle}
 
-3. PLAYFULLY CRYPTIC - Intriguing, makes them pause and think
-   - "Something lucky happened today. You just haven't noticed it yet."
-   - "A small yes will lead to a big yes. Say yes."
-   - "The chaos is not random. Pay attention."
-   - "Your intuition already texted you the answer. Stop leaving it on read."
+WEAVE IN THESE THEMES: ${theme1}, ${theme2}
+
+${firstName ? `PERSONALIZE FOR: ${firstName} (use their name naturally if it fits, but don't force it)` : ""}
+
+STYLE EXAMPLES (for inspiration, NEVER copy these exactly):
+- "Someone is thinking about you right now. They're wrong about everything, but still."
+- "The algorithm knows something about you that you haven't figured out yet."
+- "That thing you almost said? You should have said it. Next time."
+- "A parallel universe version of you just made the choice you're scared of. They're fine."
+- "Your next spontaneous decision will turn out to be the right one."
+- "Someone you haven't met yet will change everything. Wear that outfit."
+- "The thing you're procrastinating? It's procrastinating you back. Stalemate."
+- "An ending you're dreading is actually a beginning wearing a disguise."
 
 REQUIREMENTS:
-- ONE sentence only, under 100 characters ideal
-- Modern language (can reference texts, algorithms, main character energy, etc.)
-- Must feel like genuine wisdom, not a joke
-- Should be screenshot-worthy
-- NO food references, NO restaurant references, NO noodles
-- NO generic platitudes like "good things come to those who wait"
+- ONE sentence, under 100 characters ideal
+- Must feel PERSONALLY RELEVANT to whoever reads it
+- Modern language (texts, algorithms, main character energy, vibes, etc.)
+- Should make them pause and think "...wait, how did they know?"
+- NO generic platitudes, NO fortune cookie cliches
+- Be bold, be specific, be memorable
+- Temperature: HIGH creativity, surprise me
 
-Write ONE fortune. Return ONLY the fortune text. No quotes, no explanation.`;
+UNIQUE SEED: ${creativitySeed}-${Date.now() % 10000}
+
+Write ONE completely original fortune. Return ONLY the fortune text. No quotes.`;
 
         const message = await anthropic.messages.create({
           model: "claude-sonnet-4-20250514",
           max_tokens: 100,
+          temperature: 0.95,
           messages: [{ role: "user", content: prompt }],
         });
 
@@ -4266,39 +4489,79 @@ app.get("/orders/roast", async (req, reply) => {
 
     if (anthropic && roastInsights.length > 0) {
       try {
-        const prompt = `You're a WICKEDLY FUNNY comedian roasting a customer's beef noodle soup order at Oh!, a trendy restaurant with private dining pods. Your job is to deliver a HYPER-PERSONALIZED roast that makes them feel SEEN (and laugh).
+        // Session-based roast style - changes every 60 seconds for variety
+        const roastSeed = Math.floor(Date.now() / 60000);
+        const roastStyles = [
+          "STAND-UP COMEDIAN - You're doing a tight 5 at a comedy club, crowd loves food jokes",
+          "SASSY BEST FRIEND - Affectionately brutal, the friend who keeps it too real",
+          "DRAMATIC FOOD CRITIC - Over-the-top pretentious but self-aware about it",
+          "UNHINGED TWITTER - Pure chaos energy, absurdist takes that somehow land",
+          "GORDON RAMSAY'S NICE COUSIN - The roast energy but with more love underneath",
+          "GEN Z THERAPIST - Psychoanalyzing their order choices while being supportive",
+          "CHAOTIC NARRATOR - Narrating their choices like it's a nature documentary gone wrong",
+        ];
+        const currentRoastStyle = roastStyles[roastSeed % roastStyles.length];
 
-CUSTOMER: ${firstName || "Mystery Guest"}
-POD: ${order.seat?.number || "somewhere cozy"}
+        // Find the juiciest details to emphasize
+        const hasControversialChoices = roastInsights.some(i =>
+          i.includes("NO NOODLES") ||
+          i.includes("ZERO SPICE") ||
+          i.includes("SOFT noodles") ||
+          i.includes("SKIPPED")
+        );
+        const isExtraPerson = roastInsights.some(i =>
+          i.includes("EXTRA") ||
+          i.includes("MAXIMUM") ||
+          i.includes("LOADED UP")
+        );
 
-=== THEIR COMPLETE ORDER BREAKDOWN ===
+        const prompt = `You're a HILARIOUS comedian at the peak of your powers. A customer just ordered beef noodle soup and you need to DESTROY them (lovingly) with the funniest, most specific roast they've ever received.
+
+=== ROAST STYLE FOR THIS ORDER ===
+${currentRoastStyle}
+
+=== THE VICTIM ===
+CUSTOMER: ${firstName || "Mystery Guest (brave, ordering anonymously)"}
+POD: ${order.seat?.number || "hiding somewhere"}
+
+=== THEIR ORDER - DISSECT EVERY CHOICE ===
 ${roastInsights.map((insight, i) => `${i + 1}. ${insight}`).join("\n")}
 
-=== YOUR MISSION ===
-Write a 3-4 sentence roast (max 350 characters) that:
-1. MUST reference at least 2-3 SPECIFIC things from their order (noodle type, spice level, skipped items, add-ons, drinks, dessert - whatever's juicy)
-2. Connects the dots between their choices to paint a picture of who they are
-3. Is SARCASTIC but clearly affectionate - like a friend who knows you too well
-4. Has at least one genuinely funny observation or hot take
-5. Ends with a twist that shows you're actually impressed or on their side
+=== COMEDY FUEL ===
+${hasControversialChoices ? "They made CONTROVERSIAL choices. Go in on that." : ""}
+${isExtraPerson ? "They're an EXTRA person. Call out the excess." : ""}
+${summary.skippedToppings.length >= 3 ? "They're PICKY AS HELL. This is comedy gold." : ""}
+${summary.noodleType?.toLowerCase().includes("no noodle") ? "THEY CAME TO A NOODLE SHOP AND ORDERED NO NOODLES. This writes itself." : ""}
 
-=== STYLE GUIDE ===
-- Be SAVAGE but LOVABLE
-- Specific > Generic (never say "interesting choices" - call out the ACTUAL choices)
-- Hot takes welcome ("ordering no noodles at a noodle shop is either galaxy brain or a cry for help")
-- Pop culture references if they fit naturally
-- ${firstName ? `Use their name "${firstName}" once for impact` : "Address them directly"}
+=== MAKE IT LEGENDARY ===
+Write 2-4 sentences (max 400 characters) that:
+1. ROAST at least 2-3 SPECIFIC choices from their order - be EXACT
+2. Make unexpected connections ("you ordered X, which tells me you definitely also...")
+3. Include at least ONE joke that would get an actual laugh out loud
+4. ${firstName ? `Hit their name "${firstName}" at a punchline moment for maximum impact` : "Address them directly at a key moment"}
+5. End on something that's technically a compliment but still a little bit of a roast
 
-=== EXAMPLES OF THE VIBE ===
-- "${firstName || "Friend"}, you walked in here, chose the Signature Bowl, went EXTRA RICH on the broth, demanded firm noodles, then said 'no cilantro, no sprouts, no pickled greens.' You want flavor but only YOUR approved flavors. Control issues? Maybe. Delicious? Absolutely."
-- "Ramen noodles, maximum spice, extra bok choy, AND a Taiwan Beer to wash it down? Either you're celebrating something or you're about to. Your sinuses will remember this day. We salute you."
-- "You ordered the Premium Bowl, light soup, soft noodles, and a mochi dessert already waiting. ${firstName || "Bestie"}, you're not here for an experience, you're here for a whole narrative arc. The character development is immaculate."
+=== EXAMPLES OF CHEF'S KISS ROASTS ===
+- "${firstName || "Babe"}, you got the A5 Wagyu bowl, went EXTRA RICH on broth, MAXIMUM SPICE, then whispered 'no cilantro please.' You want to feel alive but on YOUR terms. Your therapist calls this 'controlled chaos.' The kitchen calls it 'a whole mood.'"
+- "Shaved noodles, firm texture, light soup, no green onions, no sprouts, AND you're already eyeing dessert? You didn't come here to eat, you came here to curate. We respect a control freak with taste."
+- "No noodles at a noodle shop. ${firstName || "You absolute legend"}. Either you're on a carb journey or you just woke up and chose violence. Either way, that broth is about to hit different and you know it."
+- "You ordered a side of potstickers, extra egg, AND a drink - BEFORE getting your bowl. ${firstName || "Bestie"}, this isn't lunch, this is a personal statement. We're honored to witness your origin story."
 
-Write the roast. No quotes around it. Make it specific, make it funny, make them screenshot it.`;
+=== CRITICAL RULES ===
+- NEVER be generic. If you could say it about any order, DELETE IT
+- Every sentence needs a SPECIFIC order detail woven in
+- Absurdist hot takes are encouraged
+- You're making fun of them but you clearly RESPECT them
+- Make it screenshot-worthy
+
+UNIQUE COMEDY SEED: ${roastSeed}-${Date.now() % 10000}
+
+Write the roast now. No quotes. Pure comedy. Make them choke on their noodles laughing.`;
 
         const message = await anthropic.messages.create({
           model: "claude-sonnet-4-20250514",
-          max_tokens: 250,
+          max_tokens: 300,
+          temperature: 0.95,
           messages: [{ role: "user", content: prompt }],
         });
 
@@ -4516,6 +4779,19 @@ app.get("/orders/commentary", async (req, reply) => {
 
     if (anthropic) {
       try {
+        // Session-based narrator personality - changes every 45 seconds for fresh commentary
+        const narratorSeed = Math.floor(Date.now() / 45000);
+        const narratorStyles = [
+          "UNHINGED SPORTS COMMENTATOR - narrating cooking like it's the finals, high energy",
+          "NATURE DOCUMENTARY - David Attenborough observing 'the customer in their natural habitat'",
+          "TELENOVELA NARRATOR - everything is dramatic, emotional, probably romantic",
+          "TRUE CRIME PODCAST - ominous, building suspense about... noodles",
+          "REALITY TV CONFESSIONAL - like you're talking to a producer about this customer",
+          "CHAOTIC THEATER KID - dramatic, theatrical, everything is an event",
+          "GRUMPY BUT LOVING GRANDMA - judging their choices but secretly proud",
+        ];
+        const currentNarratorStyle = narratorStyles[narratorSeed % narratorStyles.length];
+
         // Build the prompt with FULL order context
         const orderContext = [];
 
@@ -4546,45 +4822,54 @@ app.get("/orders/commentary", async (req, reply) => {
         }
 
         const stageInstructions = {
-          QUEUED: "The order just entered the queue. Be dramatic about the waiting. Comment on their choices with anticipation. Mock their impatience gently.",
-          PREPPING: "The kitchen is actively cooking. Be vivid about what's happening to their food. Make the mundane sound epic. Roast their customization choices as they're being executed.",
-          READY: "The food is done and waiting. Build the tension. The bowl is judging them. Make them feel like this is the moment of truth.",
-          SERVING: "Food is being delivered. This is the climax. Make it feel like a life event. Comment on whether they're worthy of what's coming.",
+          QUEUED: "The order just entered the queue. Be dramatic about the waiting. Create suspense.",
+          PREPPING: "The kitchen is actively cooking. Narrate what's happening to their food vividly.",
+          READY: "The food is done and waiting. Build the tension. This is the moment before glory.",
+          SERVING: "Food is being delivered. This is the climax. Make it feel monumental.",
         };
 
-        const prompt = `You are the unhinged, sarcastic AI voice of Oh!, a beef noodle soup restaurant. Your job is to provide live kitchen commentary that ROASTS the customer's order while updating them on progress.
+        const prompt = `You're providing LIVE KITCHEN COMMENTARY for a restaurant. Your style right now is:
 
-CUSTOMER: ${firstName || "Mystery Guest (didn't even sign up, brave)"}
-POD: ${order.seat?.number || "TBD"}
+=== NARRATOR PERSONA ===
+${currentNarratorStyle}
+
+=== THE SCENE ===
+CUSTOMER: ${firstName || "Anonymous Diner"}
+POD: ${order.seat?.number || "location TBD"}
 CURRENT STATUS: ${status}
+STAGE VIBE: ${stageInstructions[status]}
 
-THE COMPLETE ORDER (roast ALL of this):
+=== THEIR ORDER (reference specifics!) ===
 ${orderContext.join("\n")}
 
-STAGE INSTRUCTIONS: ${stageInstructions[status]}
+=== YOUR MISSION ===
+Write 2-3 sentences (max 280 chars) of commentary that:
+1. FULLY commits to your narrator persona above
+2. References at least ONE specific thing from their order
+3. ${status === "QUEUED" ? "Builds anticipation/suspense about what's coming" : ""}
+${status === "PREPPING" ? "Describes cooking happening dramatically with order specifics" : ""}
+${status === "READY" ? "Creates tension about the masterpiece awaiting them" : ""}
+${status === "SERVING" ? "Narrates the approaching food like a movie climax" : ""}
+4. Is FUNNY but different from typical restaurant commentary
+5. ${firstName ? `Mentions ${firstName} once for personalization` : "Addresses them directly"}
 
-YOUR VOICE:
-- You're a sarcastic kitchen narrator who's seen too much
-- Heavy roasting energy - mock their choices lovingly but HARD
-- Reference SPECIFIC things they ordered (skipped cilantro? soft noodles? extra spicy? CALL IT OUT)
-- Be dramatic about mundane cooking activities
-- If they skipped toppings, question their life choices
-- If they went extra on something, mock their excess
-- If they ordered sides/drinks/desserts, comment on their appetite
-- Think: Gordon Ramsay meets a witty Twitter account meets your judgmental aunt
-- NO EMOJIS EVER
+=== EXAMPLE ENERGY BY PERSONA ===
+SPORTS COMMENTATOR: "AND THE NOODLES HIT THE WATER! Firm texture requested - ${firstName || "this competitor"} is NOT playing games today. The crowd watches. The broth simmers. History is being made."
 
-EXAMPLES OF THE ENERGY WE WANT:
-- "Your noodles just hit boiling water. They knew this day would come. Unlike you, apparently, since you went with soft texture. You want them pre-chewed too?"
-- "The extra spicy is being added. We've notified your digestive system. It filed a complaint."
-- "No cilantro? The cilantro is honestly relieved. It didn't want to be associated with someone who also ordered light soup."
-- "Your bowl is being assembled with the precision of a surgeon who's questioning why you got a side of potstickers when you already ordered a full meal."
+NATURE DOCUMENTARY: "Here we observe the ${firstName || "urban diner"} in their natural habitat, having selected wide noodles and extra spice. A bold survival strategy. The kitchen springs into action."
 
-Write a SHORT (2-3 sentences, max 250 chars) commentary for the ${status} stage. Be SAVAGE but not mean. Reference their SPECIFIC order choices. No quotes around it.`;
+TRUE CRIME: "What ${firstName || "they"} didn't know was that skipping the cilantro would trigger a chain of events in the kitchen that no one could have predicted. The broth was already simmering."
+
+NO EMOJIS. Stay in character. Be creative. Make them laugh.
+
+UNIQUE SEED: ${narratorSeed}-${Date.now() % 10000}
+
+Write the commentary now. No quotes.`;
 
         const message = await anthropic.messages.create({
           model: "claude-sonnet-4-20250514",
           max_tokens: 200,
+          temperature: 0.95,
           messages: [{ role: "user", content: prompt }],
         });
 
@@ -4767,6 +5052,7 @@ Generate exactly 4 short backstory facts (one sentence each, max 150 chars each)
 // Analyze user's order history patterns by email and generate witty insights
 app.get("/users/by-email/:email/order-patterns", async (req, reply) => {
   const { email } = req.params;
+  const { firstName } = req.query; // Optional: user's first name for personalization
 
   if (!email) {
     return reply.status(400).send({ error: "Email required" });
@@ -4786,6 +5072,9 @@ app.get("/users/by-email/:email/order-patterns", async (req, reply) => {
         message: "User not found",
       });
     }
+
+    // Use provided firstName or extract from user.name
+    const userName = firstName || (user.name ? user.name.split(" ")[0] : null);
 
     // Fetch user's completed orders (last 10 orders)
     const orders = await prisma.order.findMany({
@@ -5044,9 +5333,15 @@ app.get("/users/by-email/:email/order-patterns", async (req, reply) => {
           }
         }).filter(d => d);
 
+        // Generate a session seed for variety (changes every few minutes)
+        const sessionSeed = Math.floor(Date.now() / 180000); // Changes every 3 minutes
+        const variationStyles = ["witty observation", "gentle tease", "knowing aside", "dry humor", "friendly jab"];
+        const styleIndex = sessionSeed % variationStyles.length;
+        const style = variationStyles[styleIndex];
+
         const prompt = `You generate witty, SHORT one-liners for a noodle restaurant's order system.
 
-A returning customer is placing an order. Based on their order history patterns, generate a single witty one-liner for EACH pattern below.
+A returning customer${userName ? ` named ${userName}` : ""} is placing an order. Based on their order history patterns, generate a single witty one-liner for EACH pattern below.
 
 RULES:
 - ONE sentence only, max 80 characters per response
@@ -5054,7 +5349,10 @@ RULES:
 - Reference the SPECIFIC item/behavior
 - Sound like a knowing friend, not a robot
 - NO emojis
-- DO NOT start with "We" or "You"
+- DO NOT start with "We"
+${userName ? `- You MAY use "${userName}" naturally in some (not all) one-liners to make it personal` : "- Do not use 'You' to start sentences"}
+- Style for this session: ${style}
+- Be CREATIVE and UNIQUE - never use the same phrasing twice
 
 PATTERNS DETECTED:
 ${insightDescriptions.map((d, i) => `${i + 1}. ${d}`).join("\n")}
@@ -5085,9 +5383,11 @@ Return as JSON array of objects with format: [{"index": 0, "oneLiner": "your wit
     }
 
     // Add fallback one-liners for any insights that don't have AI-generated ones
+    // Use a session seed so the same user gets different fallbacks on different visits
+    const fallbackSeed = Date.now();
     for (const insight of insights) {
       if (!insight.oneLiner) {
-        insight.oneLiner = generateFallbackOneLiner(insight);
+        insight.oneLiner = generateFallbackOneLiner(insight, userName, fallbackSeed);
       }
     }
 
@@ -5108,61 +5408,107 @@ Return as JSON array of objects with format: [{"index": 0, "oneLiner": "your wit
 });
 
 // Fallback one-liners for each insight type
-function generateFallbackOneLiner(insight) {
+// Now accepts userName for personalization and seed for variety
+function generateFallbackOneLiner(insight, userName, seed = Date.now()) {
+  const name = userName || null;
+
+  // Helper to occasionally include name (roughly 40% of the time when available)
+  const maybeName = () => name && (seed % 5 < 2) ? `${name}, ` : "";
+  const maybeNameEnd = () => name && (seed % 7 < 3) ? `, ${name}` : "";
+
   const fallbacks = {
     bowl_loyalty: [
-      `${insight.item}. ${insight.count} times. Starting to see a pattern here.`,
+      `${maybeName()}${insight.item}. ${insight.count} times. Starting to see a pattern here.`,
       `Let me guess... ${insight.item}?`,
       `The ${insight.item} didn't even need to ask anymore.`,
+      `${insight.item} again${maybeNameEnd()}? The kitchen saw this coming.`,
+      `${insight.count} for ${insight.count} on ${insight.item}. Consistency is underrated.`,
+      name ? `${name}'s usual: ${insight.item}. No surprises here.` : `The usual: ${insight.item}. No surprises here.`,
     ],
     bowl_favorite: [
       `${insight.item} again? Bold, predictable, perfect.`,
       `Ah, the ${insight.item} regular. Kitchen's already prepping.`,
+      `${maybeName()}back for ${insight.item}. The loyalty is noted.`,
+      `${insight.item} calling your name again${maybeNameEnd()}?`,
+      `${insight.count} out of ${insight.orderCount || "10"} times: ${insight.item}. A clear favorite.`,
     ],
     noodle_loyalty: [
       `${insight.item} forever. Other noodles weep quietly.`,
       `${insight.count} visits. ${insight.count} times ${insight.item}. Respect the commitment.`,
+      `${maybeName()}${insight.item} devotee. The other noodles have accepted their fate.`,
+      `Still ${insight.item}? The ramen is taking notes.`,
+      name ? `${name} and ${insight.item}: an unbreakable bond.` : `${insight.item}: an unshakeable choice.`,
     ],
     noodle_favorite: [
-      `${insight.item} again? ${insight.count} out of ${insight.orderCount || "10"} orders. Reliable taste.`,
+      `${insight.item} ${insight.count} out of ${insight.orderCount || "10"} times. Reliable taste.`,
       `Leaning toward ${insight.item}, as usual. The other noodles are getting jealous.`,
+      `${maybeName()}the ${insight.item} has missed you.`,
+      `${insight.item} again? A person of refined, consistent taste.`,
+      `The ${insight.item} awaits${maybeNameEnd()}.`,
+      name ? `${name}'s noodle of choice: ${insight.item}. Noted.` : `Noodle of choice: ${insight.item}. Noted.`,
     ],
     always_skips: [
       `Skipping ${insight.items?.[0] || "that"} again? Personal vendetta confirmed.`,
       `${insight.items?.join(" and ") || "Certain ingredients"} remain unloved, as is tradition.`,
+      `${maybeName()}still avoiding ${insight.items?.[0] || "the usual suspects"}.`,
+      `The ${insight.items?.[0] || "skipped items"} didn't make the cut. Again.`,
+      `${insight.count} orders, zero ${insight.items?.[0] || "of that"}. Commitment.`,
     ],
     always_maxes: [
       `Maxing the ${insight.items?.[0] || "usual"}? Some things never change.`,
       `${insight.items?.[0] || "That"} at maximum. As it should be.`,
+      `${maybeName()}cranking ${insight.items?.[0] || "it"} to the max, naturally.`,
+      `The ${insight.items?.[0] || "slider"} goes to eleven. Always.`,
+      name ? `${name} doesn't do half measures with ${insight.items?.[0] || "this"}.` : `No half measures with ${insight.items?.[0] || "this"}.`,
     ],
     spice_avoider: [
       `Zero spice zone. The cilantro respects your boundaries.`,
       `Spice dial stays at zero. A person of peaceful tastes.`,
+      `${maybeName()}keeping it mild. The peppers understand.`,
+      `Spice-free lifestyle${maybeNameEnd()}. No judgment here.`,
+      `The chili flakes remain untouched. As always.`,
     ],
     spice_warrior: [
       `Maximum spice. Your taste buds called - they've adapted.`,
-      `Spice level: scorched earth. We respect the dedication.`,
+      `Spice level: scorched earth. The dedication is impressive.`,
+      `${maybeName()}bringing the heat, as expected.`,
+      `Full spice${maybeNameEnd()}? The kitchen is ready.`,
+      name ? `${name}'s heat tolerance: legendary.` : `Heat tolerance: legendary.`,
     ],
     never_addons: [
       `${insight.count || "Several"} visits, zero add-ons. Purist vibes.`,
       `The add-ons await. They've been very patient.`,
+      `${maybeName()}sticking to the essentials.`,
+      `Add-on free since day one. Minimalist icon.`,
+      `The extras menu remains unexplored${maybeNameEnd()}.`,
     ],
     addon_favorite: [
       `${insight.item} again? At this point it should be named after you.`,
       `The ${insight.item} saw you walk in and started celebrating.`,
+      `${maybeName()}${insight.item} is practically mandatory at this point.`,
+      `${insight.item}, ${insight.count} visits running. Dedication.`,
+      name ? `${name}'s go-to add-on: ${insight.item}.` : `The go-to add-on: ${insight.item}.`,
     ],
     never_dessert: [
       `Still no dessert? The mochi is starting to take it personally.`,
       `Dessert-free streak continues. Impressive restraint.`,
+      `${maybeName()}skipping dessert again. The sweets remain hopeful.`,
+      `The dessert menu gathers dust${maybeNameEnd()}.`,
+      `${insight.count || "Several"} visits, zero desserts. Remarkable willpower.`,
     ],
     always_dessert: [
       `Dessert incoming. A meal isn't complete without it.`,
-      `${insight.item || "Dessert"} is already being prepared. We know.`,
+      `${insight.item || "Dessert"} is already being prepared.`,
+      `${maybeName()}never skips dessert. Priorities in order.`,
+      `${insight.item || "The sweet finish"} awaits${maybeNameEnd()}.`,
+      name ? `${name} knows a proper meal ends with dessert.` : `A proper meal ends with dessert.`,
     ],
   };
 
   const options = fallbacks[insight.type] || ["Interesting choice."];
-  return options[Math.floor(Math.random() * options.length)];
+  // Use seed to pick option deterministically but differently each session
+  const index = Math.abs(seed + insight.type.length) % options.length;
+  return options[index];
 }
 
 // ====================
@@ -5865,6 +6211,108 @@ app.get("/analytics/realtime", async (req, reply) => {
   }
 });
 
+// GET /analytics/order-sources - Track orders by source (WEB, KIOSK, MOBILE, STAFF)
+app.get("/analytics/order-sources", async (req, reply) => {
+  const tenantSlug = getTenantContext(req);
+  const { period = "week", locationId } = req.query;
+  const { start, end } = getDateRange(period);
+
+  try {
+    const tenant = await prisma.tenant.findUnique({ where: { slug: tenantSlug } });
+    if (!tenant) {
+      return reply.status(404).send({ error: "Tenant not found" });
+    }
+
+    const whereClause = {
+      tenantId: tenant.id,
+      createdAt: { gte: start, lte: end },
+      paymentStatus: "PAID",
+    };
+    if (locationId) whereClause.locationId = locationId;
+
+    // Get all paid orders with their source
+    const orders = await prisma.order.findMany({
+      where: whereClause,
+      select: {
+        orderSource: true,
+        totalCents: true,
+        createdAt: true,
+      },
+    });
+
+    // Calculate metrics by source
+    const sourceMetrics = {};
+    const sources = ["WEB", "KIOSK", "MOBILE", "STAFF"];
+
+    sources.forEach(source => {
+      const sourceOrders = orders.filter(o => o.orderSource === source);
+      sourceMetrics[source] = {
+        orders: sourceOrders.length,
+        revenue: sourceOrders.reduce((sum, o) => sum + (o.totalCents || 0), 0),
+        averageOrderValue: sourceOrders.length > 0
+          ? Math.round(sourceOrders.reduce((sum, o) => sum + (o.totalCents || 0), 0) / sourceOrders.length)
+          : 0,
+      };
+      sourceMetrics[source].revenueFormatted = `$${(sourceMetrics[source].revenue / 100).toFixed(2)}`;
+      sourceMetrics[source].aovFormatted = `$${(sourceMetrics[source].averageOrderValue / 100).toFixed(2)}`;
+    });
+
+    const totalOrders = orders.length;
+    const totalRevenue = orders.reduce((sum, o) => sum + (o.totalCents || 0), 0);
+
+    // Calculate percentages
+    sources.forEach(source => {
+      sourceMetrics[source].orderPercentage = totalOrders > 0
+        ? Math.round((sourceMetrics[source].orders / totalOrders) * 100)
+        : 0;
+      sourceMetrics[source].revenuePercentage = totalRevenue > 0
+        ? Math.round((sourceMetrics[source].revenue / totalRevenue) * 100)
+        : 0;
+    });
+
+    // Daily breakdown for chart
+    const dailyBreakdown = [];
+    const currentDate = new Date(start);
+    while (currentDate <= end) {
+      const dayStart = new Date(currentDate);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(currentDate);
+      dayEnd.setHours(23, 59, 59, 999);
+
+      const dayOrders = orders.filter(o => {
+        const orderDate = new Date(o.createdAt);
+        return orderDate >= dayStart && orderDate <= dayEnd;
+      });
+
+      dailyBreakdown.push({
+        date: currentDate.toISOString().split("T")[0],
+        web: dayOrders.filter(o => o.orderSource === "WEB").length,
+        kiosk: dayOrders.filter(o => o.orderSource === "KIOSK").length,
+        mobile: dayOrders.filter(o => o.orderSource === "MOBILE").length,
+        staff: dayOrders.filter(o => o.orderSource === "STAFF").length,
+        total: dayOrders.length,
+      });
+
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    return reply.send({
+      period,
+      dateRange: { start: start.toISOString(), end: end.toISOString() },
+      summary: {
+        totalOrders,
+        totalRevenue,
+        totalRevenueFormatted: `$${(totalRevenue / 100).toFixed(2)}`,
+      },
+      bySource: sourceMetrics,
+      dailyBreakdown,
+    });
+  } catch (error) {
+    console.error("Order sources analytics error:", error);
+    return reply.status(500).send({ error: "Failed to fetch order sources analytics" });
+  }
+});
+
 // GET /analytics/upselling - Track add-on orders, revenue, and item popularity
 app.get("/analytics/upselling", async (req, reply) => {
   const tenantSlug = getTenantContext(req);
@@ -6040,6 +6488,432 @@ app.get("/analytics/upselling", async (req, reply) => {
   } catch (error) {
     console.error("Upselling analytics error:", error);
     return reply.status(500).send({ error: "Failed to fetch upselling analytics" });
+  }
+});
+
+// ====================
+// GA4 WEBSITE ANALYTICS
+// ====================
+
+// Helper to convert period to GA4 date range
+function getGA4DateRange(period) {
+  const today = new Date();
+  const formatDate = (d) => d.toISOString().split("T")[0];
+
+  switch (period) {
+    case "today":
+      return { startDate: "today", endDate: "today" };
+    case "yesterday":
+      return { startDate: "yesterday", endDate: "yesterday" };
+    case "week":
+      return { startDate: "7daysAgo", endDate: "today" };
+    case "month":
+      return { startDate: "30daysAgo", endDate: "today" };
+    case "quarter":
+      return { startDate: "90daysAgo", endDate: "today" };
+    case "year":
+      return { startDate: "365daysAgo", endDate: "today" };
+    default:
+      return { startDate: "7daysAgo", endDate: "today" };
+  }
+}
+
+// GET /analytics/ga4/traffic - Website traffic overview
+app.get("/analytics/ga4/traffic", async (req, reply) => {
+  if (!ga4Client) {
+    return reply.status(503).send({ error: "GA4 not configured" });
+  }
+
+  const { period = "week" } = req.query;
+  const dateRange = getGA4DateRange(period);
+
+  try {
+    // Run report for traffic overview
+    const [response] = await ga4Client.runReport({
+      property: `properties/${GA4_PROPERTY_ID}`,
+      dateRanges: [dateRange],
+      dimensions: [{ name: "date" }],
+      metrics: [
+        { name: "activeUsers" },
+        { name: "sessions" },
+        { name: "screenPageViews" },
+        { name: "bounceRate" },
+        { name: "averageSessionDuration" },
+        { name: "newUsers" },
+      ],
+      orderBys: [{ dimension: { dimensionName: "date" }, desc: false }],
+    });
+
+    // Parse timeline data
+    const timeline = response.rows?.map((row) => ({
+      date: row.dimensionValues[0].value,
+      activeUsers: parseInt(row.metricValues[0].value) || 0,
+      sessions: parseInt(row.metricValues[1].value) || 0,
+      pageViews: parseInt(row.metricValues[2].value) || 0,
+      bounceRate: parseFloat(row.metricValues[3].value) || 0,
+      avgSessionDuration: parseFloat(row.metricValues[4].value) || 0,
+      newUsers: parseInt(row.metricValues[5].value) || 0,
+    })) || [];
+
+    // Calculate totals
+    const totals = timeline.reduce(
+      (acc, day) => ({
+        activeUsers: acc.activeUsers + day.activeUsers,
+        sessions: acc.sessions + day.sessions,
+        pageViews: acc.pageViews + day.pageViews,
+        newUsers: acc.newUsers + day.newUsers,
+      }),
+      { activeUsers: 0, sessions: 0, pageViews: 0, newUsers: 0 }
+    );
+
+    // Calculate averages
+    const avgBounceRate = timeline.length > 0
+      ? (timeline.reduce((sum, d) => sum + d.bounceRate, 0) / timeline.length * 100).toFixed(1)
+      : "0.0";
+    const avgSessionDuration = timeline.length > 0
+      ? Math.round(timeline.reduce((sum, d) => sum + d.avgSessionDuration, 0) / timeline.length)
+      : 0;
+
+    return reply.send({
+      period,
+      dateRange,
+      summary: {
+        activeUsers: totals.activeUsers,
+        sessions: totals.sessions,
+        pageViews: totals.pageViews,
+        newUsers: totals.newUsers,
+        bounceRate: `${avgBounceRate}%`,
+        avgSessionDuration: `${Math.floor(avgSessionDuration / 60)}m ${avgSessionDuration % 60}s`,
+      },
+      timeline,
+    });
+  } catch (error) {
+    console.error("GA4 traffic error:", error);
+    return reply.status(500).send({ error: "Failed to fetch GA4 traffic data" });
+  }
+});
+
+// GET /analytics/ga4/pages - Top pages by views
+app.get("/analytics/ga4/pages", async (req, reply) => {
+  if (!ga4Client) {
+    return reply.status(503).send({ error: "GA4 not configured" });
+  }
+
+  const { period = "week", limit = 20 } = req.query;
+  const dateRange = getGA4DateRange(period);
+
+  try {
+    const [response] = await ga4Client.runReport({
+      property: `properties/${GA4_PROPERTY_ID}`,
+      dateRanges: [dateRange],
+      dimensions: [{ name: "pagePath" }],
+      metrics: [
+        { name: "screenPageViews" },
+        { name: "activeUsers" },
+        { name: "averageSessionDuration" },
+        { name: "bounceRate" },
+      ],
+      orderBys: [{ metric: { metricName: "screenPageViews" }, desc: true }],
+      limit: parseInt(limit),
+    });
+
+    const pages = response.rows?.map((row) => ({
+      path: row.dimensionValues[0].value,
+      views: parseInt(row.metricValues[0].value) || 0,
+      users: parseInt(row.metricValues[1].value) || 0,
+      avgDuration: Math.round(parseFloat(row.metricValues[2].value) || 0),
+      bounceRate: (parseFloat(row.metricValues[3].value) * 100).toFixed(1),
+    })) || [];
+
+    return reply.send({
+      period,
+      dateRange,
+      pages,
+      total: pages.reduce((sum, p) => sum + p.views, 0),
+    });
+  } catch (error) {
+    console.error("GA4 pages error:", error);
+    return reply.status(500).send({ error: "Failed to fetch GA4 page data" });
+  }
+});
+
+// GET /analytics/ga4/sources - Traffic sources
+app.get("/analytics/ga4/sources", async (req, reply) => {
+  if (!ga4Client) {
+    return reply.status(503).send({ error: "GA4 not configured" });
+  }
+
+  const { period = "week" } = req.query;
+  const dateRange = getGA4DateRange(period);
+
+  try {
+    const [response] = await ga4Client.runReport({
+      property: `properties/${GA4_PROPERTY_ID}`,
+      dateRanges: [dateRange],
+      dimensions: [{ name: "sessionSource" }, { name: "sessionMedium" }],
+      metrics: [
+        { name: "sessions" },
+        { name: "activeUsers" },
+        { name: "conversions" },
+      ],
+      orderBys: [{ metric: { metricName: "sessions" }, desc: true }],
+      limit: 20,
+    });
+
+    const sources = response.rows?.map((row) => ({
+      source: row.dimensionValues[0].value || "(direct)",
+      medium: row.dimensionValues[1].value || "(none)",
+      sessions: parseInt(row.metricValues[0].value) || 0,
+      users: parseInt(row.metricValues[1].value) || 0,
+      conversions: parseInt(row.metricValues[2].value) || 0,
+    })) || [];
+
+    return reply.send({
+      period,
+      dateRange,
+      sources,
+    });
+  } catch (error) {
+    console.error("GA4 sources error:", error);
+    return reply.status(500).send({ error: "Failed to fetch GA4 source data" });
+  }
+});
+
+// GET /analytics/ga4/devices - Device breakdown
+app.get("/analytics/ga4/devices", async (req, reply) => {
+  if (!ga4Client) {
+    return reply.status(503).send({ error: "GA4 not configured" });
+  }
+
+  const { period = "week" } = req.query;
+  const dateRange = getGA4DateRange(period);
+
+  try {
+    const [response] = await ga4Client.runReport({
+      property: `properties/${GA4_PROPERTY_ID}`,
+      dateRanges: [dateRange],
+      dimensions: [{ name: "deviceCategory" }],
+      metrics: [
+        { name: "activeUsers" },
+        { name: "sessions" },
+        { name: "screenPageViews" },
+      ],
+      orderBys: [{ metric: { metricName: "activeUsers" }, desc: true }],
+    });
+
+    const devices = response.rows?.map((row) => ({
+      device: row.dimensionValues[0].value,
+      users: parseInt(row.metricValues[0].value) || 0,
+      sessions: parseInt(row.metricValues[1].value) || 0,
+      pageViews: parseInt(row.metricValues[2].value) || 0,
+    })) || [];
+
+    const total = devices.reduce((sum, d) => sum + d.users, 0);
+    const devicesWithPercentage = devices.map((d) => ({
+      ...d,
+      percentage: total > 0 ? ((d.users / total) * 100).toFixed(1) : "0.0",
+    }));
+
+    return reply.send({
+      period,
+      dateRange,
+      devices: devicesWithPercentage,
+      total,
+    });
+  } catch (error) {
+    console.error("GA4 devices error:", error);
+    return reply.status(500).send({ error: "Failed to fetch GA4 device data" });
+  }
+});
+
+// GET /analytics/ga4/geo - Geographic distribution
+app.get("/analytics/ga4/geo", async (req, reply) => {
+  if (!ga4Client) {
+    return reply.status(503).send({ error: "GA4 not configured" });
+  }
+
+  const { period = "week" } = req.query;
+  const dateRange = getGA4DateRange(period);
+
+  try {
+    const [response] = await ga4Client.runReport({
+      property: `properties/${GA4_PROPERTY_ID}`,
+      dateRanges: [dateRange],
+      dimensions: [{ name: "city" }, { name: "country" }],
+      metrics: [
+        { name: "activeUsers" },
+        { name: "sessions" },
+      ],
+      orderBys: [{ metric: { metricName: "activeUsers" }, desc: true }],
+      limit: 20,
+    });
+
+    const locations = response.rows?.map((row) => ({
+      city: row.dimensionValues[0].value || "(not set)",
+      country: row.dimensionValues[1].value || "(not set)",
+      users: parseInt(row.metricValues[0].value) || 0,
+      sessions: parseInt(row.metricValues[1].value) || 0,
+    })) || [];
+
+    return reply.send({
+      period,
+      dateRange,
+      locations,
+    });
+  } catch (error) {
+    console.error("GA4 geo error:", error);
+    return reply.status(500).send({ error: "Failed to fetch GA4 geo data" });
+  }
+});
+
+// GET /analytics/ga4/realtime - Real-time users
+app.get("/analytics/ga4/realtime", async (req, reply) => {
+  if (!ga4Client) {
+    return reply.status(503).send({ error: "GA4 not configured" });
+  }
+
+  try {
+    const [response] = await ga4Client.runRealtimeReport({
+      property: `properties/${GA4_PROPERTY_ID}`,
+      dimensions: [{ name: "unifiedScreenName" }],
+      metrics: [{ name: "activeUsers" }],
+      limit: 10,
+    });
+
+    const activePages = response.rows?.map((row) => ({
+      page: row.dimensionValues[0].value,
+      users: parseInt(row.metricValues[0].value) || 0,
+    })) || [];
+
+    const totalActiveUsers = activePages.reduce((sum, p) => sum + p.users, 0);
+
+    return reply.send({
+      activeUsers: totalActiveUsers,
+      topPages: activePages,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("GA4 realtime error:", error);
+    return reply.status(500).send({ error: "Failed to fetch GA4 realtime data" });
+  }
+});
+
+// GET /analytics/ga4/funnel - Order conversion funnel
+app.get("/analytics/ga4/funnel", async (req, reply) => {
+  if (!ga4Client) {
+    return reply.status(503).send({ error: "GA4 not configured" });
+  }
+
+  const { period = "week" } = req.query;
+  const dateRange = getGA4DateRange(period);
+
+  try {
+    // Get event counts for funnel steps
+    const [response] = await ga4Client.runReport({
+      property: `properties/${GA4_PROPERTY_ID}`,
+      dateRanges: [dateRange],
+      dimensions: [{ name: "eventName" }],
+      metrics: [{ name: "eventCount" }, { name: "totalUsers" }],
+      dimensionFilter: {
+        filter: {
+          fieldName: "eventName",
+          inListFilter: {
+            values: [
+              "page_view",
+              "location_selected",
+              "add_to_cart",
+              "begin_checkout",
+              "purchase",
+            ],
+          },
+        },
+      },
+    });
+
+    // Build funnel steps
+    const eventMap = {};
+    response.rows?.forEach((row) => {
+      eventMap[row.dimensionValues[0].value] = {
+        count: parseInt(row.metricValues[0].value) || 0,
+        users: parseInt(row.metricValues[1].value) || 0,
+      };
+    });
+
+    const funnelSteps = [
+      { name: "Page View", event: "page_view", ...eventMap["page_view"] || { count: 0, users: 0 } },
+      { name: "Location Selected", event: "location_selected", ...eventMap["location_selected"] || { count: 0, users: 0 } },
+      { name: "Add to Cart", event: "add_to_cart", ...eventMap["add_to_cart"] || { count: 0, users: 0 } },
+      { name: "Begin Checkout", event: "begin_checkout", ...eventMap["begin_checkout"] || { count: 0, users: 0 } },
+      { name: "Purchase", event: "purchase", ...eventMap["purchase"] || { count: 0, users: 0 } },
+    ];
+
+    // Calculate conversion rates between steps
+    for (let i = 1; i < funnelSteps.length; i++) {
+      const prev = funnelSteps[i - 1].users;
+      const curr = funnelSteps[i].users;
+      funnelSteps[i].conversionRate = prev > 0 ? ((curr / prev) * 100).toFixed(1) : "0.0";
+      funnelSteps[i].dropOff = prev > 0 ? (((prev - curr) / prev) * 100).toFixed(1) : "0.0";
+    }
+    funnelSteps[0].conversionRate = "100.0";
+    funnelSteps[0].dropOff = "0.0";
+
+    // Overall conversion rate
+    const startUsers = funnelSteps[0].users;
+    const endUsers = funnelSteps[funnelSteps.length - 1].users;
+    const overallConversion = startUsers > 0 ? ((endUsers / startUsers) * 100).toFixed(2) : "0.00";
+
+    return reply.send({
+      period,
+      dateRange,
+      steps: funnelSteps,
+      overallConversionRate: `${overallConversion}%`,
+      totalVisitors: startUsers,
+      totalPurchases: endUsers,
+    });
+  } catch (error) {
+    console.error("GA4 funnel error:", error);
+    return reply.status(500).send({ error: "Failed to fetch GA4 funnel data" });
+  }
+});
+
+// GET /analytics/ga4/hourly - Hourly activity
+app.get("/analytics/ga4/hourly", async (req, reply) => {
+  if (!ga4Client) {
+    return reply.status(503).send({ error: "GA4 not configured" });
+  }
+
+  const { period = "week" } = req.query;
+  const dateRange = getGA4DateRange(period);
+
+  try {
+    const [response] = await ga4Client.runReport({
+      property: `properties/${GA4_PROPERTY_ID}`,
+      dateRanges: [dateRange],
+      dimensions: [{ name: "hour" }],
+      metrics: [{ name: "activeUsers" }, { name: "sessions" }],
+      orderBys: [{ dimension: { dimensionName: "hour" }, desc: false }],
+    });
+
+    const hourly = response.rows?.map((row) => ({
+      hour: parseInt(row.dimensionValues[0].value),
+      hourLabel: `${row.dimensionValues[0].value}:00`,
+      users: parseInt(row.metricValues[0].value) || 0,
+      sessions: parseInt(row.metricValues[1].value) || 0,
+    })) || [];
+
+    // Find peak hour
+    const peakHour = hourly.reduce((max, h) => (h.users > max.users ? h : max), { users: 0 });
+
+    return reply.send({
+      period,
+      dateRange,
+      hourly,
+      peakHour: peakHour.hourLabel || "N/A",
+      peakUsers: peakHour.users,
+    });
+  } catch (error) {
+    console.error("GA4 hourly error:", error);
+    return reply.status(500).send({ error: "Failed to fetch GA4 hourly data" });
   }
 });
 

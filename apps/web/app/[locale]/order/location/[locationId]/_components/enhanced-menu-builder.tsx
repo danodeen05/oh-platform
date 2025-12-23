@@ -3,14 +3,15 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { useTranslations } from "next-intl";
-import { SliderControl } from "./slider-control";
+import { SliderControl, SliderLegend } from "./slider-control";
 import { RadioGroup } from "./radio-group";
 import { CheckboxGroup } from "./checkbox-group";
 import SeatingMap, { Seat } from "@/components/SeatingMap";
 import { useGuest } from "@/contexts/guest-context";
 import { useToast } from "@/components/ui/Toast";
+import { trackAddToCart, trackLocationSelected, trackPodSelected, event } from "@/lib/analytics";
 
-const BASE = process.env.NEXT_PUBLIC_API_URL || "";
+const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 // Order Whisperer - Witty insights from order history
 type OrderInsight = {
@@ -265,7 +266,12 @@ export default function EnhancedMenuBuilder({
     async function loadOrderPatterns() {
       try {
         const email = user?.primaryEmailAddress?.emailAddress;
-        const response = await fetch(`${BASE}/users/by-email/${encodeURIComponent(email!)}/order-patterns`, {
+        const firstName = user?.firstName || "";
+        const url = new URL(`${BASE}/users/by-email/${encodeURIComponent(email!)}/order-patterns`);
+        if (firstName) {
+          url.searchParams.set("firstName", firstName);
+        }
+        const response = await fetch(url.toString(), {
           headers: { "x-tenant-slug": "oh" },
         });
         if (response.ok) {
@@ -280,7 +286,7 @@ export default function EnhancedMenuBuilder({
     }
 
     loadOrderPatterns();
-  }, [userLoaded, user?.primaryEmailAddress?.emailAddress]);
+  }, [userLoaded, user?.primaryEmailAddress?.emailAddress, user?.firstName]);
 
   // Map step index to trigger type for Order Whisperer
   const getStepTrigger = useCallback((stepIndex: number): string | null => {
@@ -449,6 +455,22 @@ export default function EnhancedMenuBuilder({
     setCart(prev => {
       const current = prev[itemId] || 0;
       const newQty = Math.max(0, current + delta);
+
+      // Track add to cart when quantity increases
+      if (delta > 0 && newQty > current) {
+        const allItems = getAllMenuItems();
+        const item = allItems.find(i => i.id === itemId);
+        if (item) {
+          trackAddToCart({
+            id: item.id,
+            name: item.name,
+            category: item.category,
+            price: item.basePriceCents / 100,
+            quantity: delta,
+          });
+        }
+      }
+
       if (newQty === 0) {
         const { [itemId]: _, ...rest } = prev;
         return rest;
@@ -613,12 +635,15 @@ export default function EnhancedMenuBuilder({
       }
 
       // Build order payload for non-group orders - include seatId if customer selected one
+      const guestId = isGuest && guest?.id ? guest.id : null;
       const orderPayload: any = {
         locationId: location.id,
         tenantId: location.tenantId,
         items,
         estimatedArrival: estimatedArrival.toISOString(),
         fulfillmentType: "PRE_ORDER",
+        userId: dbUserId || null,
+        guestId: guestId,
       };
 
       // If customer selected a seat (ASAP arrival with seat selection)
@@ -898,7 +923,13 @@ export default function EnhancedMenuBuilder({
               <SeatingMap
                 seats={seats}
                 selectedSeatId={selectedSeatId}
-                onSelectSeat={(seat) => setSelectedSeatId(seat.id)}
+                onSelectSeat={(seat) => {
+                  setSelectedSeatId(seat.id);
+                  trackPodSelected({
+                    number: seat.number,
+                    locationId: location.id,
+                  });
+                }}
               />
             )}
 
@@ -1037,6 +1068,11 @@ export default function EnhancedMenuBuilder({
         </div>
       )}
 
+      {/* Show slider legend if current step has sliders */}
+      {currentStep.sections.some(s => s.selectionMode === 'SLIDER') && (
+        <SliderLegend />
+      )}
+
       {/* Render sections */}
       {currentStep.sections.map((section) => {
         if (section.selectionMode === 'SINGLE' && section.items) {
@@ -1047,6 +1083,7 @@ export default function EnhancedMenuBuilder({
               items={section.items}
               selectedId={selections[section.id] || null}
               onSelect={(itemId) => handleRadioSelect(section.id, itemId)}
+              required={section.required}
             />
           );
         }
@@ -1055,7 +1092,7 @@ export default function EnhancedMenuBuilder({
           const value = cart[section.item.id] ?? section.sliderConfig.default ?? 0;
           const labels = section.sliderConfig.labels || [];
           return (
-            <div key={section.id} style={{ marginBottom: 16 }}>
+            <div key={section.id} style={{ marginBottom: 10 }}>
               <SliderControl
                 name={section.name}
                 description={section.description}

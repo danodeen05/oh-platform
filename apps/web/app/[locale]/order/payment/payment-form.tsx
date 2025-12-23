@@ -3,8 +3,9 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useUser, SignInButton } from "@clerk/nextjs";
 import { useGuest } from "@/contexts/guest-context";
+import { trackBeginCheckout } from "@/lib/analytics";
 
-const BASE = process.env.NEXT_PUBLIC_API_URL || "";
+const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 export default function PaymentForm({
   orderId,
@@ -44,7 +45,13 @@ export default function PaymentForm({
     if (referralCode) {
       console.log("Found pending referral code:", referralCode);
     }
-  }, []);
+
+    // Track begin_checkout event when payment form loads
+    trackBeginCheckout({
+      items: [], // Items are displayed in the parent page, we track the order number and total
+      total: totalCents / 100,
+    });
+  }, [totalCents]);
 
   useEffect(() => {
     // Initialize user in our system when Clerk user is available

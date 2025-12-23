@@ -166,27 +166,26 @@ export default function Footer() {
           ))}
         </div>
 
-        {/* Language Switcher */}
+        {/* Language Selector and Copyright */}
         <div
           style={{
             display: "flex",
             justifyContent: "center",
-            marginBottom: "32px",
+            alignItems: "center",
+            gap: "24px",
+            flexWrap: "wrap",
           }}
         >
-          <LanguageSwitcher />
-        </div>
-
-        {/* Copyright */}
-        <div
-          style={{
-            textAlign: "center",
-            color: "#7C7A67",
-            fontSize: "0.85rem",
-            letterSpacing: "0.5px",
-          }}
-        >
-          {t("copyright", { year: new Date().getFullYear() })}
+          <LanguageSwitcher size="small" />
+          <div
+            style={{
+              color: "#7C7A67",
+              fontSize: "0.8rem",
+              letterSpacing: "0.5px",
+            }}
+          >
+            {t("copyright", { year: new Date().getFullYear() })}
+          </div>
         </div>
       </div>
     </footer>

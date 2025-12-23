@@ -60,6 +60,11 @@ pnpm db:studio     # Open Prisma Studio
 - For production migrations, use `DATABASE_PUBLIC_URL` from local machine
 
 ## Recent Major Changes
+- **Order Source Tracking**: Added `OrderSource` enum (WEB, KIOSK, MOBILE, STAFF) for analytics
+- **Guest Name Display**: Kitchen Display and Cleaning screen show customer names (User or Guest)
+- **Order Analytics**: Admin analytics page shows order breakdown by source
+- **Kiosk Guest Records**: API creates Guest records from kiosk `guestName` field
+- **Clerk Name Sync**: User names from Clerk sync to database on each interaction
 - **Consolidated Prisma Schema**: API now uses shared `@oh/db` package (no duplicate schemas)
 - **React 19 Upgrade**: Recently upgraded to React 19 RC with TypeScript support
 - **Clerk Integration**: Authentication system implemented with Clerk
@@ -89,7 +94,90 @@ pnpm db:studio     # Open Prisma Studio
 - Requires environment variables (see `.env.example`)
 - Database operations should use the `@oh/db` package
 - Port 3000 is used for the main web application
-- API runs on port 4001 in development
+- API runs on port 4000 in development
+- Admin dashboard runs on port 3001
+
+## Order Flow Architecture
+
+### Order Status Flow
+```
+PENDING_PAYMENT → QUEUED → PREPPING → READY → SERVING → COMPLETED
+```
+
+### Key Order Fields
+| Field | Description |
+|-------|-------------|
+| `seatId` | Pod assigned to order |
+| `podAssignedAt` | When pod was assigned |
+| `podConfirmedAt` | When customer confirmed at pod (required for Kitchen Display) |
+| `podSelectionMethod` | "CUSTOMER_SELECTED", "AUTO", or "STAFF_ASSIGNED" |
+| `status` | Order status (see flow above) |
+| `paymentStatus` | PENDING, PAID, FAILED, REFUNDED |
+| `orderSource` | WEB, KIOSK, MOBILE, or STAFF (for analytics) |
+| `userId` | Authenticated user (from Clerk) |
+| `guestId` | Guest record (for kiosk anonymous orders) |
+
+### Seat/Pod Status Flow
+```
+AVAILABLE → RESERVED (web order paid) → OCCUPIED (customer at pod) → CLEANING → AVAILABLE
+AVAILABLE → OCCUPIED (kiosk order) → CLEANING → AVAILABLE
+```
+
+### Two Ordering Paths
+
+#### 1. Web App Order Flow (`apps/web/app/[locale]/order/`)
+1. Customer selects pod during menu browsing (optional)
+2. Checkout & payment → `paymentStatus: PAID`, `status: QUEUED`
+3. If pod pre-selected: seat status → `RESERVED`, 15-min expiry set
+4. Customer arrives, scans order QR at kiosk → `POST /orders/check-in`
+5. Customer scans pod QR → `POST /orders/confirm-pod` → `podConfirmedAt` set, seat → `OCCUPIED`
+6. Order appears in Kitchen Display (requires `podConfirmedAt`)
+7. Kitchen workflow: QUEUED → PREPPING → READY → SERVING
+8. Cleaning screen: SERVING → COMPLETED, seat → `CLEANING`
+9. Staff marks clean → seat → `AVAILABLE`
+
+#### 2. Kiosk Order Flow (`apps/web/app/[locale]/kiosk/order/`)
+1. Customer orders at physical kiosk
+2. Customer selects pod before payment
+3. Payment → `PATCH /orders/:id` with:
+   - `paymentStatus: PAID`
+   - `seatId` (selected pod)
+   - `podConfirmedAt` (set at payment - customer is physically present)
+   - `podSelectionMethod: "CUSTOMER_SELECTED"`
+4. Seat status → `OCCUPIED` (not RESERVED, since customer is already there)
+5. Order appears in Kitchen Display immediately
+6. Same kitchen/cleaning workflow as web orders
+
+### Key API Endpoints
+
+**Order Management:**
+- `POST /orders` - Create order
+- `PATCH /orders/:id` - Update order (payment, seatId, podConfirmedAt, etc.)
+- `POST /orders/check-in` - Kiosk check-in (scan order QR)
+- `POST /orders/confirm-pod` - Pod confirmation (scan pod QR)
+
+**Kitchen Display (`apps/admin/app/kitchen/`):**
+- `GET /kitchen/orders?status=active` - Get active orders for kitchen
+- `PATCH /kitchen/orders/:id/status` - Update order status
+- `GET /kitchen/stats` - Order counts by status
+
+**Cleaning Screen (`apps/admin/app/cleaning/`):**
+- `GET /locations/:id/seats` - Get pods with their current orders
+- `PATCH /seats/:id/clean` - Mark pod as cleaned
+
+**Analytics (`apps/admin/app/analytics/`):**
+- `GET /analytics/order-sources` - Order counts by source (WEB, KIOSK, MOBILE, STAFF)
+
+### Important: Kitchen Display Requirements
+Orders only appear in Kitchen Display when:
+1. `paymentStatus = "PAID"`
+2. `status` is one of: QUEUED, PREPPING, READY, SERVING
+3. Has associated `seatId` (pod assignment)
+
+### Important: Cleaning Screen Requirements
+Pods appear in Cleaning screen when:
+1. Pod `status = "OCCUPIED"` with order in SERVING status (ready for cleaning)
+2. Pod `status = "CLEANING"` (being cleaned)
 
 ## Production Database (Railway)
 ```
@@ -128,7 +216,7 @@ cp /Users/ddidericksen/Projects/oh/oh-platform/.env apps/web/.env.local
 ```
 
 ## Git Branch
-Current working branch: `nervous-lichterman`
+Current working branch: `elastic-knuth`
 
 ## Session Initialization
 

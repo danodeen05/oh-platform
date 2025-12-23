@@ -2,8 +2,9 @@
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { useToast } from "@/components/ui/Toast";
+import { event } from "@/lib/analytics";
 
-const BASE = process.env.NEXT_PUBLIC_API_URL || "";
+const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 export default function ReferralDashboard() {
   const t = useTranslations("common");
@@ -222,6 +223,12 @@ export default function ReferralDashboard() {
           <button
             onClick={() => {
               navigator.clipboard.writeText(referralUrl);
+              // Track referral link copy
+              event({
+                action: "copy_referral_link",
+                category: "engagement",
+                label: credits?.referralCode,
+              });
               toast.success(t("linkCopied"));
             }}
             style={{

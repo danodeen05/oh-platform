@@ -15,17 +15,53 @@ type RadioGroupProps = {
   items: MenuItem[];
   selectedId: string | null;
   onSelect: (itemId: string) => void;
+  required?: boolean; // Whether this is a mandatory selection
 };
 
-export function RadioGroup({ title, items, selectedId, onSelect }: RadioGroupProps) {
+// Oh! character mark component for selected mandatory items
+function OhCheckmark() {
+  return (
+    <div
+      style={{
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        background: "rgba(245, 243, 239, 0.9)",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 1,
+        boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+      }}
+    >
+      <span style={{ fontFamily: '"Ma Shan Zheng", cursive', fontSize: "1.3rem", color: "#C7A878", lineHeight: 1 }}>哦!</span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C7A878" strokeWidth="3">
+        <path d="M20 6L9 17l-5-5" />
+      </svg>
+    </div>
+  );
+}
+
+export function RadioGroup({ title, items, selectedId, onSelect, required = false }: RadioGroupProps) {
+  const hasSelection = !!selectedId;
+
   return (
     <section style={{ marginBottom: 32 }}>
-      <h3 style={{ marginBottom: 16, fontSize: "1.1rem", fontWeight: "600" }}>
+      <h3 style={{ marginBottom: 16, fontSize: "1.1rem", fontWeight: "600", display: "flex", alignItems: "center", gap: 8 }}>
         {title}
+        {required && (
+          <span style={{ color: "#7C7A67", fontSize: "0.8rem", fontWeight: 500 }}>
+            Required
+          </span>
+        )}
       </h3>
       <div style={{ display: "grid", gap: 12 }}>
         {items.map((item) => {
           const isSelected = item.id === selectedId;
+          // Grey out unselected items when a selection has been made (for required sections)
+          const isGreyedOut = required && hasSelection && !isSelected;
+
           return (
             <button
               key={item.id}
@@ -39,6 +75,9 @@ export function RadioGroup({ title, items, selectedId, onSelect }: RadioGroupPro
                 textAlign: "left",
                 transition: "all 0.2s",
                 overflow: "hidden",
+                opacity: isGreyedOut ? 0.5 : 1,
+                filter: isGreyedOut ? "grayscale(50%)" : "none",
+                position: "relative",
               }}
             >
               <div
@@ -152,7 +191,10 @@ export function RadioGroup({ title, items, selectedId, onSelect }: RadioGroupPro
                         : "Included"}
                     </div>
                   </div>
-                  {isSelected && (
+                  {/* Oh! Checkmark for selected required items */}
+                  {isSelected && required && <OhCheckmark />}
+                  {/* Simple checkmark for non-required items */}
+                  {isSelected && !required && (
                     <div
                       style={{
                         width: 28,

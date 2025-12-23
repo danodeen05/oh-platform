@@ -37,6 +37,10 @@ type Order = {
     name?: string;
     membershipTier?: "CHOPSTICK" | "NOODLE_MASTER" | "BEEF_BOSS";
   };
+  guest?: {
+    id: string;
+    name: string;
+  };
 };
 
 type PodCall = {
@@ -74,6 +78,13 @@ function getTierEmoji(tier?: string): string {
 // Helper to check if VIP
 function isVIP(tier?: string): boolean {
   return tier === "BEEF_BOSS";
+}
+
+// Helper to get customer name from order (user or guest)
+function getCustomerName(order: Order): string | null {
+  if (order.user?.name) return order.user.name;
+  if (order.guest?.name) return order.guest.name;
+  return null;
 }
 
 // Helper to get add-on type colors
@@ -216,6 +227,35 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
       loadStats();
     } catch (error) {
       console.error("Failed to update order:", error);
+    }
+  }
+
+  async function confirmArrival(orderId: string) {
+    try {
+      // Set podConfirmedAt to confirm customer has arrived at pod
+      await fetch(`${BASE}/orders/${orderId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-tenant-slug": "oh",
+        },
+        body: JSON.stringify({ podConfirmedAt: new Date().toISOString() }),
+      });
+
+      // Also move the order to PREPPING status
+      await fetch(`${BASE}/kitchen/orders/${orderId}/status`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-tenant-slug": "oh",
+        },
+        body: JSON.stringify({ status: "PREPPING" }),
+      });
+
+      loadOrders();
+      loadStats();
+    } catch (error) {
+      console.error("Failed to confirm arrival:", error);
     }
   }
 
@@ -518,6 +558,11 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
             >
               {order.seat ? `Pod ${order.seat.number}` : "Dine-In"}
             </div>
+            {getCustomerName(order) && (
+              <div style={{ fontSize: "0.85rem", color: "#9ca3af", marginTop: 2 }}>
+                {getCustomerName(order)}
+              </div>
+            )}
           </div>
           <div
             style={{
@@ -612,20 +657,20 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
 
           {order.status === "QUEUED" && isArriving && (
             <button
-              disabled
+              onClick={() => confirmArrival(order.id)}
               style={{
                 flex: 1,
                 padding: 12,
-                background: "#4b5563",
-                color: "#9ca3af",
+                background: "#f59e0b",
+                color: "#000",
                 border: "none",
                 borderRadius: 8,
                 fontWeight: "bold",
-                cursor: "not-allowed",
+                cursor: "pointer",
                 fontSize: "0.9rem",
               }}
             >
-              Waiting for Customer...
+              Confirm Arrival
             </button>
           )}
 
