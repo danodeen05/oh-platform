@@ -227,6 +227,7 @@ export default function HomePage() {
         }} />
 
         <div
+          className="food-showcase-grid"
           style={{
             maxWidth: "1200px",
             margin: "0 auto",
@@ -238,6 +239,7 @@ export default function HomePage() {
         >
           {/* Left: Hero Bowl Image */}
           <div
+            className="food-showcase-image"
             style={{
               position: "relative",
               display: "flex",
@@ -268,14 +270,15 @@ export default function HomePage() {
                   width: "100%",
                   height: "auto",
                   position: "relative",
-                  filter: "drop-shadow(0 20px 50px rgba(0, 0, 0, 0.5))",
+                  borderRadius: "20px",
+                  boxShadow: "0 20px 60px rgba(0, 0, 0, 0.4)",
                 }}
               />
             </div>
           </div>
 
           {/* Right: Content */}
-          <div style={{ color: "#F5F0E8" }}>
+          <div className="food-showcase-content" style={{ color: "#F5F0E8" }}>
             <p style={{
               fontSize: "0.85rem",
               letterSpacing: "4px",
@@ -546,6 +549,7 @@ export default function HomePage() {
         }}
       >
         <div
+          className="pods-grid"
           style={{
             maxWidth: "1200px",
             margin: "0 auto",
@@ -557,6 +561,7 @@ export default function HomePage() {
         >
           {/* Left: Pod Image */}
           <div
+            className="pods-image"
             style={{
               position: "relative",
               borderRadius: "20px",
@@ -588,7 +593,7 @@ export default function HomePage() {
           </div>
 
           {/* Right: Content */}
-          <div>
+          <div className="pods-content">
             <p style={{
               fontSize: "0.85rem",
               letterSpacing: "4px",
@@ -1069,6 +1074,24 @@ export default function HomePage() {
         @media (max-width: 768px) {
           section > div[style*="grid-template-columns: 1fr 1fr"] {
             grid-template-columns: 1fr !important;
+          }
+          .food-showcase-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .food-showcase-image {
+            order: 1 !important;
+          }
+          .food-showcase-content {
+            order: 2 !important;
+          }
+          .pods-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .pods-image {
+            order: 1 !important;
+          }
+          .pods-content {
+            order: 2 !important;
           }
           .scroll-indicator {
             bottom: 16px !important;
