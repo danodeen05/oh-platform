@@ -91,6 +91,72 @@ export default function Footer() {
           margin: "0 auto",
         }}
       >
+        {/* One Red Step Foundation - Featured */}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            marginBottom: "32px",
+          }}
+        >
+          <a
+            href="https://www.oneredstepatatime.org"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              padding: "12px 24px",
+              borderRadius: "30px",
+              background: "rgba(199, 168, 120, 0.1)",
+              textDecoration: "none",
+              transition: "all 0.3s ease",
+              border: "1px solid rgba(199, 168, 120, 0.2)",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "rgba(199, 168, 120, 0.2)";
+              e.currentTarget.style.transform = "translateY(-2px)";
+              e.currentTarget.style.borderColor = "rgba(199, 168, 120, 0.4)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "rgba(199, 168, 120, 0.1)";
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.borderColor = "rgba(199, 168, 120, 0.2)";
+            }}
+          >
+            <img
+              src="/redsock-icon.png"
+              alt="One Red Step Foundation"
+              style={{
+                height: "24px",
+                width: "auto",
+              }}
+            />
+            <span
+              style={{
+                fontSize: "0.85rem",
+                fontWeight: "500",
+                color: "#C7A878",
+                letterSpacing: "0.5px",
+              }}
+            >
+              {t("foundation.giveBack")}
+            </span>
+          </a>
+          <p
+            style={{
+              color: "#7C7A67",
+              fontSize: "0.75rem",
+              marginTop: "8px",
+              textAlign: "center",
+            }}
+          >
+            {t("foundation.tagline")}
+          </p>
+        </div>
+
         {/* Social Media Icons */}
         <div
           style={{
