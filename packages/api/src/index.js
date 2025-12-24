@@ -1388,6 +1388,7 @@ app.get("/orders/lookup", async (req, reply) => {
 // GET /orders/status - Get real-time order status by QR code
 app.get("/orders/status", async (req, reply) => {
   const { orderQrCode } = req.query || {};
+  const locale = getLocale(req);
 
   if (!orderQrCode) {
     return reply.code(400).send({ error: "orderQrCode required" });
@@ -1448,15 +1449,18 @@ app.get("/orders/status", async (req, reply) => {
         city: order.location.city,
       },
 
-      // Items
-      items: order.items.map((item) => ({
-        id: item.id,
-        name: item.menuItem.name,
-        quantity: item.quantity,
-        selectedValue: item.selectedValue,
-        priceCents: item.priceCents,
-        categoryType: item.menuItem.categoryType,
-      })),
+      // Items - localized based on user's language preference
+      items: order.items.map((item) => {
+        const localizedMenuItem = localizeMenuItem(item.menuItem, locale);
+        return {
+          id: item.id,
+          name: localizedMenuItem.name,
+          quantity: item.quantity,
+          selectedValue: item.selectedValue,
+          priceCents: item.priceCents,
+          categoryType: item.menuItem.categoryType,
+        };
+      }),
     },
   };
 
@@ -4577,16 +4581,58 @@ Write ONE completely original fortune. Return ONLY the fortune text. No quotes.`
 });
 
 // Fallback roasts for when AI is unavailable
-const fallbackRoasts = [
-  "We analyzed your order and determined you have... opinions. Strong ones.",
-  "Your order tells a story. We're not sure what story, but it's definitely a story.",
-  "The kitchen looked at your order and said 'interesting choice.' That's a compliment. Probably.",
-  "Your customizations suggest you've either been here before or you're a culinary rebel. Either way, respect.",
-  "This order screams 'I know what I want' — or possibly 'I just hit random buttons.' We may never know.",
-  "Based on your order, our AI concluded: you're definitely a human who eats food.",
-  "Your choices today are being entered into our database of 'unique individuals.'",
-  "Somewhere, a chef is looking at this order and nodding appreciatively. Or laughing. One of those.",
-];
+const fallbackRoasts = {
+  en: [
+    "We analyzed your order and determined you have... opinions. Strong ones.",
+    "Your order tells a story. We're not sure what story, but it's definitely a story.",
+    "The kitchen looked at your order and said 'interesting choice.' That's a compliment. Probably.",
+    "Your customizations suggest you've either been here before or you're a culinary rebel. Either way, respect.",
+    "This order screams 'I know what I want' — or possibly 'I just hit random buttons.' We may never know.",
+    "Based on your order, our AI concluded: you're definitely a human who eats food.",
+    "Your choices today are being entered into our database of 'unique individuals.'",
+    "Somewhere, a chef is looking at this order and nodding appreciatively. Or laughing. One of those.",
+  ],
+  "zh-TW": [
+    "我們分析了你的點餐，結論是...你很有主見。非常有主見。",
+    "你的點餐講述了一個故事。我們不確定是什麼故事，但絕對是個故事。",
+    "廚房看了你的點餐說「有趣的選擇」。這是稱讚。大概吧。",
+    "你的客製化選擇顯示你要嘛來過這裡，要嘛是個料理叛逆者。無論如何，敬佩。",
+    "這份點餐在大喊「我知道我要什麼」——或者「我只是隨便亂點」。我們永遠不會知道。",
+    "根據你的點餐，我們的AI得出結論：你絕對是個會吃東西的人類。",
+    "你今天的選擇已被記錄到我們的「獨特個體」資料庫中。",
+    "某處有位廚師正看著這份點餐讚賞地點頭。或者在笑。兩者之一。",
+  ],
+  "zh-CN": [
+    "我们分析了你的点餐，结论是...你很有主见。非常有主见。",
+    "你的点餐讲述了一个故事。我们不确定是什么故事，但绝对是个故事。",
+    "厨房看了你的点餐说「有趣的选择」。这是称赞。大概吧。",
+    "你的定制选择显示你要么来过这里，要么是个料理叛逆者。无论如何，敬佩。",
+    "这份点餐在大喊「我知道我要什么」——或者「我只是随便乱点」。我们永远不会知道。",
+    "根据你的点餐，我们的AI得出结论：你绝对是个会吃东西的人类。",
+    "你今天的选择已被记录到我们的「独特个体」数据库中。",
+    "某处有位厨师正看着这份点餐赞赏地点头。或者在笑。两者之一。",
+  ],
+  es: [
+    "Analizamos tu pedido y determinamos que tienes... opiniones. Muy fuertes.",
+    "Tu pedido cuenta una historia. No estamos seguros de cuál, pero definitivamente es una historia.",
+    "La cocina vio tu pedido y dijo 'elección interesante'. Eso es un cumplido. Probablemente.",
+    "Tus personalizaciones sugieren que has estado aquí antes o eres un rebelde culinario. De cualquier manera, respeto.",
+    "Este pedido grita 'sé lo que quiero' — o posiblemente 'solo presioné botones al azar'. Nunca lo sabremos.",
+    "Según tu pedido, nuestra IA concluyó: definitivamente eres un humano que come comida.",
+    "Tus elecciones de hoy están siendo registradas en nuestra base de datos de 'individuos únicos'.",
+    "En algún lugar, un chef está mirando este pedido y asintiendo con aprecio. O riéndose. Una de las dos.",
+  ],
+};
+
+// Helper to get localized fallback roasts
+function getLocalizedFallbackRoast(locale, firstName) {
+  const roasts = fallbackRoasts[locale] || fallbackRoasts.en;
+  let roast = roasts[Math.floor(Math.random() * roasts.length)];
+  if (firstName) {
+    roast = `${firstName}, ` + roast.charAt(0).toLowerCase() + roast.slice(1);
+  }
+  return roast;
+}
 
 // Generate sarcastic order roast/analysis - DEEPLY PERSONALIZED
 app.get("/orders/roast", async (req, reply) => {
@@ -4766,6 +4812,15 @@ app.get("/orders/roast", async (req, reply) => {
           i.includes("LOADED UP")
         );
 
+        // Determine the target language name for the prompt
+        const languageNames = {
+          "zh-TW": "Traditional Chinese (繁體中文)",
+          "zh-CN": "Simplified Chinese (简体中文)",
+          "es": "Spanish (Español)",
+          "en": "English"
+        };
+        const targetLanguage = languageNames[locale] || "English";
+
         const prompt = `You're a HILARIOUS comedian at the peak of your powers. A customer just ordered beef noodle soup and you need to DESTROY them (lovingly) with the funniest, most specific roast they've ever received.
 
 === ROAST STYLE FOR THIS ORDER ===
@@ -4784,7 +4839,14 @@ ${isExtraPerson ? "They're an EXTRA person. Call out the excess." : ""}
 ${summary.skippedToppings.length >= 3 ? "They're PICKY AS HELL. This is comedy gold." : ""}
 ${summary.noodleType?.toLowerCase().includes("no noodle") ? "THEY CAME TO A NOODLE SHOP AND ORDERED NO NOODLES. This writes itself." : ""}
 
-=== MAKE IT LEGENDARY ===
+=== OUTPUT FORMAT ===
+You MUST respond with valid JSON in this exact format:
+{
+  "roast": "Your 2-4 sentence roast here (max 400 characters)",
+  "highlights": ["bullet point 1 about their order", "bullet point 2", "bullet point 3"]
+}
+
+=== ROAST REQUIREMENTS ===
 Write 2-4 sentences (max 400 characters) that:
 1. ROAST at least 2-3 SPECIFIC choices from their order - be EXACT
 2. Make unexpected connections ("you ordered X, which tells me you definitely also...")
@@ -4792,11 +4854,17 @@ Write 2-4 sentences (max 400 characters) that:
 4. ${firstName ? `Hit their name "${firstName}" at a punchline moment for maximum impact` : "Address them directly at a key moment"}
 5. End on something that's technically a compliment but still a little bit of a roast
 
-=== EXAMPLES OF CHEF'S KISS ROASTS ===
-- "${firstName || "Babe"}, you got the A5 Wagyu bowl, went EXTRA RICH on broth, MAXIMUM SPICE, then whispered 'no cilantro please.' You want to feel alive but on YOUR terms. Your therapist calls this 'controlled chaos.' The kitchen calls it 'a whole mood.'"
-- "Shaved noodles, firm texture, light soup, no green onions, no sprouts, AND you're already eyeing dessert? You didn't come here to eat, you came here to curate. We respect a control freak with taste."
-- "No noodles at a noodle shop. ${firstName || "You absolute legend"}. Either you're on a carb journey or you just woke up and chose violence. Either way, that broth is about to hit different and you know it."
-- "You ordered a side of potstickers, extra egg, AND a drink - BEFORE getting your bowl. ${firstName || "Bestie"}, this isn't lunch, this is a personal statement. We're honored to witness your origin story."
+=== HIGHLIGHTS REQUIREMENTS ===
+Write 3-4 short bullet points (each under 100 characters) that:
+1. Point out specific, interesting choices from their order
+2. Are witty observations, not just listing items
+3. Use a playful, observational tone
+
+=== EXAMPLES OF CHEF'S KISS OUTPUT ===
+{
+  "roast": "${firstName || "Babe"}, you got the A5 Wagyu bowl, went EXTRA RICH on broth, MAXIMUM SPICE, then whispered 'no cilantro please.' You want to feel alive but on YOUR terms. Your therapist calls this 'controlled chaos.'",
+  "highlights": ["EXTRA RICH soup - came here for a broth baptism, not a light snack", "Demanded EXTRA: Green Onions, Pickled Greens - knows exactly what they want", "Already planning DESSERT: Mandarin Orange Sherbet - this person knows how a meal should end"]
+}
 
 === CRITICAL RULES ===
 - NEVER be generic. If you could say it about any order, DELETE IT
@@ -4804,19 +4872,32 @@ Write 2-4 sentences (max 400 characters) that:
 - Absurdist hot takes are encouraged
 - You're making fun of them but you clearly RESPECT them
 - Make it screenshot-worthy
+- RESPOND ONLY IN ${targetLanguage.toUpperCase()}${locale !== "en" ? ` - All text in both "roast" and "highlights" must be in ${targetLanguage}` : ""}
 
 UNIQUE COMEDY SEED: ${roastSeed}-${Date.now() % 10000}
 
-Write the roast now. No quotes. Pure comedy. Make them choke on their noodles laughing.${languageInstruction}`;
+Respond with ONLY the JSON object. No other text.`;
 
         const message = await anthropic.messages.create({
           model: "claude-sonnet-4-20250514",
-          max_tokens: 300,
+          max_tokens: 500,
           temperature: 0.95,
           messages: [{ role: "user", content: prompt }],
         });
 
-        roast = message.content[0]?.text?.trim();
+        const responseText = message.content[0]?.text?.trim();
+        try {
+          const parsed = JSON.parse(responseText);
+          roast = parsed.roast;
+          if (parsed.highlights && Array.isArray(parsed.highlights)) {
+            // Use AI-generated highlights instead of the English ones
+            roastInsights.length = 0; // Clear the array
+            roastInsights.push(...parsed.highlights);
+          }
+        } catch (parseError) {
+          // If JSON parsing fails, treat the whole response as the roast
+          roast = responseText;
+        }
       } catch (aiError) {
         console.error("AI roast generation failed:", aiError);
         source = "fallback";
@@ -4828,19 +4909,11 @@ Write the roast now. No quotes. Pure comedy. Make them choke on their noodles la
     // Build personalized fallback if AI failed
     if (!roast) {
       source = "fallback";
-      // Create a semi-personalized fallback from the insights we gathered
-      if (roastInsights.length >= 2) {
-        const randomInsights = roastInsights.sort(() => 0.5 - Math.random()).slice(0, 2);
-        roast = `${firstName ? firstName + ", " : ""}we see you with that order. ${randomInsights[0].split(" - ")[0]}? Bold. ${randomInsights[1].split(" - ")[0]}? Even bolder. You came here with a vision and we respect the commitment.`;
-      } else {
-        roast = fallbackRoasts[Math.floor(Math.random() * fallbackRoasts.length)];
-        if (firstName) {
-          roast = `${firstName}, ` + roast.charAt(0).toLowerCase() + roast.slice(1);
-        }
-      }
+      roast = getLocalizedFallbackRoast(locale, firstName);
     }
 
     // Build highlights from the most interesting insights
+    // If AI generated translated highlights, roastInsights will already be in the target language
     const highlights = roastInsights
       .filter(i =>
         i.includes("SKIPPED") ||
@@ -4849,7 +4922,12 @@ Write the roast now. No quotes. Pure comedy. Make them choke on their noodles la
         i.includes("ZERO") ||
         i.includes("NO NOODLES") ||
         i.includes("LOADED UP") ||
-        i.includes("DESSERT")
+        i.includes("DESSERT") ||
+        // Also match Chinese/Spanish keywords for translated highlights
+        i.includes("跳過") || i.includes("加量") || i.includes("特辣") || i.includes("無辣") ||
+        i.includes("甜點") || i.includes("無麵") ||
+        i.includes("OMITIÓ") || i.includes("EXTRA") || i.includes("MÁXIMO") || i.includes("SIN PICANTE") ||
+        i.includes("POSTRE") || i.includes("SIN FIDEOS")
       )
       .slice(0, 4);
 
