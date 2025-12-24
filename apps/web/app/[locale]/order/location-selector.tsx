@@ -193,11 +193,11 @@ export default function LocationSelector({
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ fontSize: "1.2rem" }}>👥</span>
             <span style={{ fontWeight: 600, color: "#92400e" }}>
-              Starting a Group Order
+              {t("locationSelector.groupMode.title")}
             </span>
           </div>
           <p style={{ color: "#b45309", fontSize: "0.9rem", margin: "8px 0 0" }}>
-            Select a location to create your group. Share the code with friends so they can add their orders!
+            {t("locationSelector.groupMode.description")}
           </p>
         </div>
       )}
@@ -208,14 +208,14 @@ export default function LocationSelector({
           : 100;
 
         let statusColor = "#22c55e";
-        let statusText = "Available";
+        let statusText = t("locationSelector.status.available");
 
         if (availabilityPct < 30) {
           statusColor = "#ef4444";
-          statusText = "Busy";
+          statusText = t("locationSelector.status.busy");
         } else if (availabilityPct < 60) {
           statusColor = "#f59e0b";
-          statusText = "Moderate Wait";
+          statusText = t("locationSelector.status.moderateWait");
         }
 
         return (
@@ -263,7 +263,7 @@ export default function LocationSelector({
                       marginTop: 4,
                     }}
                   >
-                    📍 {loc.distance.toFixed(1)} miles away
+                    📍 {t("locationSelector.milesAway", { distance: loc.distance.toFixed(1) })}
                   </p>
                 )}
               </div>
@@ -294,14 +294,14 @@ export default function LocationSelector({
                 }}
               >
                 <div>
-                  <span style={{ color: "#9ca3af" }}>Available: </span>
+                  <span style={{ color: "#9ca3af" }}>{t("locationSelector.available")} </span>
                   <strong>
-                    {loc.stats.availableSeats}/{loc.stats.totalSeats} pods
+                    {t("locationSelector.pods", { available: loc.stats.availableSeats, total: loc.stats.totalSeats })}
                   </strong>
                 </div>
                 <div>
-                  <span style={{ color: "#9ca3af" }}>Avg Wait: </span>
-                  <strong>{loc.stats.avgWaitMinutes} min</strong>
+                  <span style={{ color: "#9ca3af" }}>{t("locationSelector.avgWait")} </span>
+                  <strong>{t("locationSelector.minWait", { minutes: loc.stats.avgWaitMinutes })}</strong>
                 </div>
               </div>
             )}

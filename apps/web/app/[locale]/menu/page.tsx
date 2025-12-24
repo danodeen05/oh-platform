@@ -13,6 +13,7 @@ const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 type MenuItem = {
   id: string;
   name: string;
+  nameEn?: string; // English name for image lookups
   basePriceCents: number;
   additionalPriceCents: number;
   includedQuantity: number;
@@ -70,6 +71,7 @@ type DisplaySection = {
   description: string;
   items: {
     name: string;
+    nameEn: string; // English name for image lookups
     description: string;
     price: string;
     tags: string[];
@@ -87,19 +89,22 @@ function mapStepsToDisplaySections(steps: MenuStep[], t: (key: string) => string
       if (section.name === "Beverages") continue;
 
       const items = (section.items || [])
-        .filter((item) => item.isAvailable && item.name !== "No Noodles")
+        .filter((item) => item.isAvailable && item.name !== "No Noodles" && (item.nameEn || item.name) !== "No Noodles")
         .map((item) => {
           const tags: string[] = [];
+          // Use English name for tag detection (consistent regardless of locale)
+          const englishName = item.nameEn || item.name;
 
           // Add tags based on item characteristics
-          if (item.name.includes("A5 Wagyu")) tags.push(t("tags.premium"));
-          if (item.name.includes("Classic") && item.category === "main01") tags.push(t("tags.signature"));
+          if (englishName.includes("A5 Wagyu")) tags.push(t("tags.premium"));
+          if (englishName.includes("Classic") && item.category === "main01") tags.push(t("tags.signature"));
           if (item.basePriceCents === 0 && item.categoryType !== "MAIN") tags.push(t("tags.included"));
           if (item.description?.toLowerCase().includes("unlimited")) tags.push(t("tags.unlimitedRefills"));
           if (item.description?.toLowerCase().includes("complimentary")) tags.push(t("tags.complimentary"));
 
           return {
             name: item.name,
+            nameEn: englishName, // Preserve English name for image lookups
             description: item.description || "",
             price: item.basePriceCents === 0 ? t("tags.included") : formatPrice(item.basePriceCents, t("tags.included")),
             tags,
@@ -182,7 +187,7 @@ export default function MenuPage() {
   useEffect(() => {
     async function loadMenu() {
       try {
-        const response = await fetch(`${BASE}/menu/steps`, {
+        const response = await fetch(`${BASE}/menu/steps?locale=${locale}`, {
           headers: { "x-tenant-slug": "oh" },
         });
 
@@ -208,7 +213,7 @@ export default function MenuPage() {
     }
 
     loadMenu();
-  }, [t]);
+  }, [t, locale]);
 
   if (loading) {
     return (
@@ -434,15 +439,15 @@ export default function MenuPage() {
                       overflow: "hidden",
                     }}
                   >
-                    {getMenuItemImage(item.name) ? (
+                    {getMenuItemImage(item.nameEn) ? (
                       <Image
-                        src={getMenuItemImage(item.name)!}
+                        src={getMenuItemImage(item.nameEn)!}
                         alt={item.name}
                         fill
                         style={{ objectFit: "cover" }}
                         sizes="(max-width: 768px) 100vw, 300px"
                       />
-                    ) : isNoNoodlesItem(item.name) ? (
+                    ) : isNoNoodlesItem(item.nameEn) ? (
                       <>
                         <Image
                           src="/menu images/Ramen Noodles.png"

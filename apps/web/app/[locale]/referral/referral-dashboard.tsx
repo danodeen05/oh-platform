@@ -1,13 +1,37 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { useToast } from "@/components/ui/Toast";
 import { event } from "@/lib/analytics";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
+// Helper to translate credit event descriptions
+function translateCreditEvent(
+  description: string,
+  type: string,
+  t: (key: string, params?: Record<string, string | number>) => string
+): string {
+  // Match "X% cashback on order"
+  const cashbackMatch = description?.match(/^(\d+)% cashback on order$/);
+  if (cashbackMatch) {
+    return t("creditEvents.cashback", { percent: cashbackMatch[1] });
+  }
+
+  // Match "Applied to order ORD-XXX"
+  const appliedMatch = description?.match(/^Applied to order (ORD-[\w-]+)$/);
+  if (appliedMatch) {
+    return t("creditEvents.appliedToOrder", { orderId: appliedMatch[1] });
+  }
+
+  // Fallback to original description or type
+  return description || type;
+}
+
 export default function ReferralDashboard() {
-  const t = useTranslations("common");
+  const locale = useLocale();
+  const t = useTranslations("referral.dashboard");
+  const tCommon = useTranslations("common");
   const toast = useToast();
   const [email, setEmail] = useState("");
   const [user, setUser] = useState<any>(null);
@@ -17,7 +41,7 @@ export default function ReferralDashboard() {
 
   async function createUser() {
     if (!email) {
-      toast.warning(t("enterEmail"));
+      toast.warning(tCommon("enterEmail"));
       return;
     }
 
@@ -77,9 +101,9 @@ export default function ReferralDashboard() {
           boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
         }}
       >
-        <h2 style={{ marginBottom: 16 }}>Get Started</h2>
+        <h2 style={{ marginBottom: 16 }}>{t("getStarted")}</h2>
         <p style={{ color: "#666", marginBottom: 24 }}>
-          Enter your email to get your referral link
+          {t("enterEmailPrompt")}
         </p>
         <input
           type="email"
@@ -110,7 +134,7 @@ export default function ReferralDashboard() {
             cursor: loading ? "not-allowed" : "pointer",
           }}
         >
-          {loading ? "Creating..." : "Get My Referral Link"}
+          {loading ? t("creating") : t("getMyReferralLink")}
         </button>
       </div>
     );
@@ -131,13 +155,13 @@ export default function ReferralDashboard() {
         }}
       >
         <div style={{ fontSize: "0.9rem", opacity: 0.9, marginBottom: 8 }}>
-          Available Credits
+          {t("availableCredits")}
         </div>
         <div style={{ fontSize: "3rem", fontWeight: "bold", marginBottom: 4 }}>
           ${((credits?.balance || 0) / 100).toFixed(2)}
         </div>
         <div style={{ fontSize: "0.85rem", opacity: 0.8 }}>
-          Use up to $5 per order at checkout
+          {t("useCreditsNote")}
         </div>
       </div>
 
@@ -155,10 +179,10 @@ export default function ReferralDashboard() {
             <div style={{ fontSize: "1.5rem" }}>⏳</div>
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: "bold", color: "#222", fontSize: "1.1rem" }}>
-                Pending Credits
+                {t("pendingCredits")}
               </div>
               <div style={{ fontSize: "0.85rem", color: "#666" }}>
-                Scheduled for disbursement
+                {t("scheduledForDisbursement")}
               </div>
             </div>
             <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#7C7A67" }}>
@@ -176,8 +200,8 @@ export default function ReferralDashboard() {
                 textAlign: "center",
               }}
             >
-              Next disbursement: <strong style={{ color: "#222" }}>
-                {new Date(pendingCredits.nextDisbursement).toLocaleDateString("en-US", {
+              {t("nextDisbursement")} <strong style={{ color: "#222" }}>
+                {new Date(pendingCredits.nextDisbursement).toLocaleDateString(locale, {
                   month: "long",
                   day: "numeric",
                   year: "numeric",
@@ -197,7 +221,7 @@ export default function ReferralDashboard() {
           border: "1px solid #e5e7eb",
         }}
       >
-        <h3 style={{ margin: 0, marginBottom: 16 }}>Your Referral Link</h3>
+        <h3 style={{ margin: 0, marginBottom: 16 }}>{t("yourReferralLink")}</h3>
         <div
           style={{
             display: "flex",
@@ -229,7 +253,7 @@ export default function ReferralDashboard() {
                 category: "engagement",
                 label: credits?.referralCode,
               });
-              toast.success(t("linkCopied"));
+              toast.success(tCommon("linkCopied"));
             }}
             style={{
               padding: "8px 16px",
@@ -242,7 +266,7 @@ export default function ReferralDashboard() {
               fontWeight: "bold",
             }}
           >
-            Copy
+            {t("copy")}
           </button>
         </div>
         <p
@@ -253,7 +277,7 @@ export default function ReferralDashboard() {
             marginTop: 12,
           }}
         >
-          Share this link to earn $5 for every friend who places an order of $20+
+          {t("shareToEarn")}
         </p>
       </div>
 
@@ -267,7 +291,7 @@ export default function ReferralDashboard() {
             border: "1px solid #e5e7eb",
           }}
         >
-          <h3 style={{ margin: 0, marginBottom: 16 }}>Recent Activity</h3>
+          <h3 style={{ margin: 0, marginBottom: 16 }}>{t("recentActivity")}</h3>
           <div style={{ display: "grid", gap: 12 }}>
             {credits.events.slice(0, 10).map((event: any) => (
               <div
@@ -283,10 +307,10 @@ export default function ReferralDashboard() {
               >
                 <div>
                   <div style={{ fontWeight: "bold", fontSize: "0.9rem" }}>
-                    {event.description || event.type}
+                    {translateCreditEvent(event.description, event.type, t)}
                   </div>
                   <div style={{ fontSize: "0.75rem", color: "#666" }}>
-                    {new Date(event.createdAt).toLocaleDateString()}
+                    {new Date(event.createdAt).toLocaleDateString(locale)}
                   </div>
                 </div>
                 <div

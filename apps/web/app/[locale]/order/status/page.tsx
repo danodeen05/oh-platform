@@ -1,7 +1,7 @@
 "use client";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState, useRef, Suspense } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { useToast } from "@/components/ui/Toast";
 import { ConfirmDialog } from "@/components/ui/Dialog";
 
@@ -104,7 +104,7 @@ interface AvailableAddons {
 }
 
 // Mental Health Awareness Component - fetches AI-generated facts
-function MentalHealthAwareness() {
+function MentalHealthAwareness({ translations, locale }: { translations: { label: string; loading: string; skipTip: string; supportCause: string; foundation: string }; locale: string }) {
   const [fact, setFact] = useState<{ question: string; fact: string; source: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -113,7 +113,7 @@ function MentalHealthAwareness() {
     async function fetchMentalHealthFact() {
       try {
         const response = await fetch(
-          `${BASE}/orders/mental-health-fact`,
+          `${BASE}/orders/mental-health-fact?locale=${locale}`,
           { headers: { "x-tenant-slug": "oh" } }
         );
         if (response.ok) {
@@ -145,7 +145,7 @@ function MentalHealthAwareness() {
           border: "2px solid rgba(199, 168, 120, 0.3)",
         }}
       >
-        <div style={{ color: "#7C7A67", fontSize: "0.9rem" }}>Loading mental health awareness...</div>
+        <div style={{ color: "#7C7A67", fontSize: "0.9rem" }}>{translations.loading}</div>
       </div>
     );
   }
@@ -207,7 +207,7 @@ function MentalHealthAwareness() {
             letterSpacing: "0.15em",
           }}
         >
-          Mental Health Matters
+          {translations.label}
         </span>
       </div>
 
@@ -269,7 +269,7 @@ function MentalHealthAwareness() {
           lineHeight: 1.5,
         }}
       >
-        Skip the tip. Make a difference instead.
+        {translations.skipTip}
       </p>
 
       <a
@@ -315,7 +315,7 @@ function MentalHealthAwareness() {
             letterSpacing: "0.3px",
           }}
         >
-          Support the Cause
+          {translations.supportCause}
         </span>
       </a>
 
@@ -330,7 +330,7 @@ function MentalHealthAwareness() {
           letterSpacing: "0.1em",
         }}
       >
-        One Red Step at a Time Foundation • 501(c)(3)
+        {translations.foundation}
       </p>
     </div>
   );
@@ -339,7 +339,10 @@ function MentalHealthAwareness() {
 function StatusContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const t = useTranslations("order");
+  const locale = useLocale();
+  const t = useTranslations("orderStatus");
+  const tFeatures = useTranslations("features");
+  const tOrder = useTranslations("order");
   const toast = useToast();
   const orderQrCode = searchParams.get("orderQrCode");
 
@@ -459,7 +462,7 @@ function StatusContent() {
     setRoastLoading(true);
     try {
       const response = await fetch(
-        `${BASE}/orders/roast?orderQrCode=${encodeURIComponent(orderQrCode)}`,
+        `${BASE}/orders/roast?orderQrCode=${encodeURIComponent(orderQrCode)}&locale=${locale}`,
         {
           headers: { "x-tenant-slug": "oh" },
         }
@@ -487,7 +490,7 @@ function StatusContent() {
     setCommentaryLoading(true);
     try {
       const response = await fetch(
-        `${BASE}/orders/commentary?orderQrCode=${encodeURIComponent(orderQrCode)}`,
+        `${BASE}/orders/commentary?orderQrCode=${encodeURIComponent(orderQrCode)}&locale=${locale}`,
         {
           headers: { "x-tenant-slug": "oh" },
         }
@@ -512,7 +515,7 @@ function StatusContent() {
     setBackstoryLoading(true);
     try {
       const response = await fetch(
-        `${BASE}/orders/${orderId}/backstory`,
+        `${BASE}/orders/${orderId}/backstory?locale=${locale}`,
         {
           headers: { "x-tenant-slug": "oh" },
         }
@@ -549,15 +552,15 @@ function StatusContent() {
 
       if (response.ok) {
         setCallStaffSuccess(true);
-        toast.success(t("success.staffNotified"));
+        toast.success(tOrder("success.staffNotified"));
         setTimeout(() => setCallStaffSuccess(false), 5000);
       } else {
         const data = await response.json();
-        toast.error(data.error || t("errors.callStaff"));
+        toast.error(data.error || tOrder("errors.callStaff"));
       }
     } catch (err) {
       console.error("Failed to call staff:", err);
-      toast.error(t("errors.callStaff"));
+      toast.error(tOrder("errors.callStaff"));
     } finally {
       setCallStaffLoading(false);
     }
@@ -570,7 +573,7 @@ function StatusContent() {
     setAddonsLoading(true);
     try {
       const response = await fetch(
-        `${BASE}/orders/${status.order.id}/available-addons`,
+        `${BASE}/orders/${status.order.id}/available-addons?locale=${locale}`,
         {
           headers: { "x-tenant-slug": "oh" },
         }
@@ -606,15 +609,15 @@ function StatusContent() {
       );
 
       if (response.ok) {
-        toast.success(t("success.refillRequested"));
+        toast.success(tOrder("success.refillRequested"));
         setShowAddOnModal(false);
       } else {
         const data = await response.json();
-        toast.error(data.error || t("errors.requestRefill"));
+        toast.error(data.error || tOrder("errors.requestRefill"));
       }
     } catch (err) {
       console.error("Failed to request refill:", err);
-      toast.error(t("errors.requestRefill"));
+      toast.error(tOrder("errors.requestRefill"));
     } finally {
       setRefillLoading(false);
     }
@@ -644,16 +647,16 @@ function StatusContent() {
       );
 
       if (response.ok) {
-        toast.success(t("success.vegetablesRequested"));
+        toast.success(tOrder("success.vegetablesRequested"));
         setShowAddOnModal(false);
         setSelectedExtraVegs(new Set());
       } else {
         const data = await response.json();
-        toast.error(data.error || t("errors.requestVegetables"));
+        toast.error(data.error || tOrder("errors.requestVegetables"));
       }
     } catch (err) {
       console.error("Failed to request extra vegetables:", err);
-      toast.error(t("errors.requestVegetables"));
+      toast.error(tOrder("errors.requestVegetables"));
     } finally {
       setExtraVegLoading(false);
     }
@@ -689,14 +692,14 @@ function StatusContent() {
 
       if (response.ok) {
         setDessertRequested(true);
-        toast.success(t("success.dessertOnWay"));
+        toast.success(tOrder("success.dessertOnWay"));
       } else {
         const data = await response.json();
-        toast.error(data.error || t("errors.requestDessert"));
+        toast.error(data.error || tOrder("errors.requestDessert"));
       }
     } catch (err) {
       console.error("Failed to request dessert:", err);
-      toast.error(t("errors.requestDessert"));
+      toast.error(tOrder("errors.requestDessert"));
     } finally {
       setDessertLoading(false);
     }
@@ -789,13 +792,13 @@ function StatusContent() {
         throw new Error("Payment processing failed");
       }
 
-      toast.success(t("success.addonOrdered", { amount: `$${(totalCents / 100).toFixed(2)}` }));
+      toast.success(tOrder("success.addonOrdered", { amount: `$${(totalCents / 100).toFixed(2)}` }));
       setShowAddOnModal(false);
       setSelectedPaidAddons(new Map());
       setShowPaymentConfirm(false);
     } catch (err: any) {
       console.error("Failed to submit paid add-on:", err);
-      toast.error(err.message || t("errors.placeAddonOrder"));
+      toast.error(err.message || tOrder("errors.placeAddonOrder"));
     } finally {
       setPaidAddonLoading(false);
     }
@@ -830,7 +833,7 @@ function StatusContent() {
         }}
       >
         <div style={{ textAlign: "center" }}>
-          <h1 style={{ color: "#111" }}>No order code provided</h1>
+          <h1 style={{ color: "#111" }}>{t("noOrderCode")}</h1>
           <button
             onClick={() => router.push("/order")}
             style={{
@@ -844,7 +847,7 @@ function StatusContent() {
               fontSize: "1rem",
             }}
           >
-            Place New Order
+            {t("placeNewOrder")}
           </button>
         </div>
       </main>
@@ -872,7 +875,7 @@ function StatusContent() {
             ⏳
           </div>
           <div style={{ color: "#666", fontSize: "1.2rem" }}>
-            Loading order status...
+            {t("loading")}
           </div>
         </div>
       </main>
@@ -892,7 +895,7 @@ function StatusContent() {
         }}
       >
         <div style={{ textAlign: "center" }}>
-          <h1 style={{ color: "#111" }}>{error || "Order not found"}</h1>
+          <h1 style={{ color: "#111" }}>{error || t("orderNotFound")}</h1>
           <button
             onClick={() => router.push("/order")}
             style={{
@@ -906,7 +909,7 @@ function StatusContent() {
               fontSize: "1rem",
             }}
           >
-            Place New Order
+            {t("placeNewOrder")}
           </button>
         </div>
       </main>
@@ -919,19 +922,19 @@ function StatusContent() {
   const getStatusDisplay = () => {
     switch (order.status) {
       case "PENDING_PAYMENT":
-        return { icon: "💳", label: "Pending Payment", color: "#f59e0b" };
+        return { icon: "💳", label: t("status.pending"), color: "#f59e0b" };
       case "PAID":
-        return { icon: "✅", label: "Paid", color: "#7C7A67" };
+        return { icon: "✅", label: t("status.paid"), color: "#7C7A67" };
       case "QUEUED":
-        return { icon: "⏳", label: "In Queue", color: "#6366f1" };
+        return { icon: "⏳", label: t("status.queued"), color: "#6366f1" };
       case "PREPPING":
-        return { icon: "👨‍🍳", label: "Preparing", color: "#f59e0b" };
+        return { icon: "👨‍🍳", label: t("status.prepping"), color: "#f59e0b" };
       case "READY":
-        return { icon: "🔔", label: "Ready for Delivery", color: "#7C7A67" };
+        return { icon: "🔔", label: t("status.ready"), color: "#7C7A67" };
       case "SERVING":
-        return { icon: "🍜", label: "Enjoy Your Meal!", color: "#7C7A67" };
+        return { icon: "🍜", label: t("status.serving"), color: "#7C7A67" };
       case "COMPLETED":
-        return { icon: "🎉", label: "Completed", color: "#6b7280" };
+        return { icon: "🎉", label: t("status.completed"), color: "#6b7280" };
       default:
         return { icon: "❓", label: order.status, color: "#6b7280" };
     }
@@ -987,7 +990,7 @@ function StatusContent() {
               {statusDisplay.label}
             </h1>
             <div style={{ color: "#666", fontSize: "0.9rem" }}>
-              Order #{order.kitchenOrderNumber || order.orderNumber}
+              {t("orderNumber", { number: order.kitchenOrderNumber || order.orderNumber })}
             </div>
           </div>
 
@@ -1061,7 +1064,7 @@ function StatusContent() {
                       letterSpacing: "0.15em",
                     }}
                   >
-                    Live Kitchen Feed
+                    {tFeatures("kitchen.label")}
                   </span>
                 </div>
 
@@ -1073,7 +1076,7 @@ function StatusContent() {
                       fontStyle: "italic",
                     }}
                   >
-                    Listening to the kitchen...
+                    {tFeatures("kitchen.listening")}
                   </div>
                 ) : commentary?.commentary ? (
                   <p
@@ -1096,7 +1099,7 @@ function StatusContent() {
                       lineHeight: 1.6,
                     }}
                   >
-                    The kitchen is suspiciously quiet. They're up to something.
+                    {tFeatures("kitchen.quiet")}
                   </p>
                 )}
               </div>
@@ -1116,7 +1119,7 @@ function StatusContent() {
               }}
             >
               <div style={{ fontSize: "0.9rem", opacity: 0.9, marginBottom: 4 }}>
-                Your Pod
+                {t("pod.yourPod")}
               </div>
               <div
                 style={{
@@ -1125,12 +1128,12 @@ function StatusContent() {
                   letterSpacing: "0.1em",
                 }}
               >
-                POD {order.podNumber}
+                {t("pod.podNumber", { number: order.podNumber })}
               </div>
               {!order.podConfirmedAt ? (
                 <>
                   <div style={{ fontSize: "0.85rem", marginTop: 8, opacity: 0.9 }}>
-                    Go to your pod and confirm arrival
+                    {t("pod.confirmArrival")}
                   </div>
                   <button
                     onClick={() =>
@@ -1150,13 +1153,13 @@ function StatusContent() {
                       cursor: "pointer",
                     }}
                   >
-                    🪑 Confirm I'm At My Pod
+                    🪑 {t("buttons.confirmAtPod")}
                   </button>
                 </>
               ) : (
                 <>
                   <div style={{ fontSize: "0.85rem", marginTop: 8, opacity: 0.9 }}>
-                    ✓ You're checked in!
+                    ✓ {t("pod.checkedIn")}
                   </div>
 
                   {/* Pod Service Buttons - Call Staff & Add Items */}
@@ -1188,11 +1191,11 @@ function StatusContent() {
                         }}
                       >
                         {callStaffSuccess ? (
-                          <>✓ Staff Notified</>
+                          <>✓ {t("pod.staffNotified")}</>
                         ) : callStaffLoading ? (
-                          <>Calling...</>
+                          <>{t("pod.calling")}</>
                         ) : (
-                          <>🔔 Call Staff</>
+                          <>🔔 {t("buttons.callStaff")}</>
                         )}
                       </button>
                       <button
@@ -1211,7 +1214,7 @@ function StatusContent() {
                           gap: 6,
                         }}
                       >
-                        ➕ Add Items
+                        ➕ {t("buttons.addItems")}
                       </button>
                     </div>
                   )}
@@ -1247,11 +1250,11 @@ function StatusContent() {
                           }}
                         >
                           {dessertRequested ? (
-                            <>✓ Dessert On Its Way!</>
+                            <>✓ {t("dessert.onItsWay")}</>
                           ) : dessertLoading ? (
-                            <>Notifying...</>
+                            <>{t("dessert.notifying")}</>
                           ) : (
-                            <>🍨 Ready for Dessert</>
+                            <>🍨 {t("dessert.readyForDessert")}</>
                           )}
                         </button>
                       </div>
@@ -1272,7 +1275,7 @@ function StatusContent() {
               }}
             >
               <div style={{ fontSize: "0.9rem", color: "#92400e", marginBottom: 4 }}>
-                Queue Position
+                {t("queue.position")}
               </div>
               <div
                 style={{
@@ -1285,7 +1288,7 @@ function StatusContent() {
               </div>
               {order.estimatedWaitMinutes && (
                 <div style={{ fontSize: "0.9rem", color: "#92400e", marginTop: 8 }}>
-                  Estimated wait: {order.estimatedWaitMinutes} minutes
+                  {t("queue.estimatedWait", { minutes: order.estimatedWaitMinutes })}
                 </div>
               )}
               <div
@@ -1296,7 +1299,7 @@ function StatusContent() {
                   opacity: 0.8,
                 }}
               >
-                We'll notify you when a pod is ready!
+                {t("queue.notifyWhenReady")}
               </div>
             </div>
           )}
@@ -1311,7 +1314,7 @@ function StatusContent() {
                 marginBottom: 12,
               }}
             >
-              Order Timeline
+              {t("timeline.title")}
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {order.paidAt && (
@@ -1325,7 +1328,7 @@ function StatusContent() {
                     }}
                   />
                   <div style={{ flex: 1, fontSize: "0.85rem" }}>
-                    <span style={{ fontWeight: 500 }}>Paid</span>
+                    <span style={{ fontWeight: 500 }}>{t("timeline.paid")}</span>
                     <span style={{ color: "#666", marginLeft: 8 }}>
                       {new Date(order.paidAt).toLocaleTimeString()}
                     </span>
@@ -1343,7 +1346,7 @@ function StatusContent() {
                     }}
                   />
                   <div style={{ flex: 1, fontSize: "0.85rem" }}>
-                    <span style={{ fontWeight: 500 }}>Checked In</span>
+                    <span style={{ fontWeight: 500 }}>{t("timeline.checkedIn")}</span>
                     <span style={{ color: "#666", marginLeft: 8 }}>
                       {new Date(order.arrivedAt).toLocaleTimeString()}
                     </span>
@@ -1361,7 +1364,7 @@ function StatusContent() {
                     }}
                   />
                   <div style={{ flex: 1, fontSize: "0.85rem" }}>
-                    <span style={{ fontWeight: 500 }}>Order Started</span>
+                    <span style={{ fontWeight: 500 }}>{t("timeline.orderStarted")}</span>
                     <span style={{ color: "#666", marginLeft: 8 }}>
                       {new Date(order.prepStartTime).toLocaleTimeString()}
                     </span>
@@ -1379,7 +1382,7 @@ function StatusContent() {
                     }}
                   />
                   <div style={{ flex: 1, fontSize: "0.85rem" }}>
-                    <span style={{ fontWeight: 500 }}>Order Quality Check</span>
+                    <span style={{ fontWeight: 500 }}>{t("timeline.qualityCheck")}</span>
                     <span style={{ color: "#666", marginLeft: 8 }}>
                       {new Date(order.readyTime).toLocaleTimeString()}
                     </span>
@@ -1397,7 +1400,7 @@ function StatusContent() {
                     }}
                   />
                   <div style={{ flex: 1, fontSize: "0.85rem" }}>
-                    <span style={{ fontWeight: 500 }}>Delivered</span>
+                    <span style={{ fontWeight: 500 }}>{t("timeline.delivered")}</span>
                     <span style={{ color: "#666", marginLeft: 8 }}>
                       {new Date(order.deliveredAt).toLocaleTimeString()}
                     </span>
@@ -1416,7 +1419,7 @@ function StatusContent() {
                     alignItems: "center",
                   }}
                 >
-                  <span style={{ fontWeight: 700, fontSize: "0.9rem" }}>Total Time</span>
+                  <span style={{ fontWeight: 700, fontSize: "0.9rem" }}>{t("timeline.totalTime")}</span>
                   <span style={{ fontWeight: 700, fontSize: "0.9rem", color: "#7C7A67" }}>
                     {(() => {
                       const paidTime = new Date(order.paidAt).getTime();
@@ -1454,7 +1457,7 @@ function StatusContent() {
               marginBottom: 8,
             }}
           >
-            Location
+            {t("location")}
           </div>
           <div style={{ fontSize: "1rem", fontWeight: 500 }}>
             {order.location.name}
@@ -1492,7 +1495,7 @@ function StatusContent() {
                     color: "#5a584a",
                   }}
                 >
-                  Your Digital Fortune Cookie
+                  {tFeatures("fortuneCookie.title")}
                 </h3>
                 <p
                   style={{
@@ -1502,7 +1505,7 @@ function StatusContent() {
                     marginBottom: 16,
                   }}
                 >
-                  While you wait, crack open your personalized fortune
+                  {tFeatures("fortuneCookie.subtitle")}
                 </p>
                 <button
                   onClick={() => {
@@ -1521,7 +1524,7 @@ function StatusContent() {
                     boxShadow: "0 4px 12px rgba(124, 122, 103, 0.3)",
                   }}
                 >
-                  🥠 Crack It Open
+                  🥠 {tFeatures("fortuneCookie.crackOpen")}
                 </button>
               </>
             ) : fortuneLoading ? (
@@ -1536,7 +1539,7 @@ function StatusContent() {
                   ✨
                 </div>
                 <p style={{ color: "#5a584a", fontSize: "1rem" }}>
-                  Reading your fortune...
+                  {tFeatures("fortuneCookie.loading")}
                 </p>
               </>
             ) : fortune ? (
@@ -1581,7 +1584,7 @@ function StatusContent() {
                       letterSpacing: "0.1em",
                     }}
                   >
-                    Lucky Numbers
+                    {tFeatures("fortuneCookie.luckyNumbers")}
                   </div>
                   <div
                     style={{
@@ -1633,7 +1636,7 @@ function StatusContent() {
                         letterSpacing: "0.05em",
                       }}
                     >
-                      📜 This Day in History ({fortune.thisDayInHistory.year})
+                      📜 {tFeatures("fortuneCookie.thisDay", { year: fortune.thisDayInHistory.year })}
                     </div>
                     <div style={{ lineHeight: 1.5 }}>
                       {fortune.thisDayInHistory.event}
@@ -1680,7 +1683,7 @@ function StatusContent() {
                         gap: 6,
                       }}
                     >
-                      📖 Learn Chinese
+                      📖 {tFeatures("fortuneCookie.learnChinese")}
                     </div>
 
                     {/* Main Chinese Character(s) display */}
@@ -1774,7 +1777,7 @@ function StatusContent() {
               <>
                 <div style={{ fontSize: "2.5rem", marginBottom: 16 }}>🥠</div>
                 <p style={{ color: "#7C7A67", fontSize: "0.9rem" }}>
-                  Fortune unavailable - but your meal is still going to be amazing!
+                  {tFeatures("fortuneCookie.unavailable")}
                 </p>
               </>
             )}
@@ -1809,7 +1812,7 @@ function StatusContent() {
                     color: "#92400e",
                   }}
                 >
-                  The Roast Zone
+                  {tFeatures("roast.title")}
                 </h3>
                 <p
                   style={{
@@ -1819,7 +1822,7 @@ function StatusContent() {
                     marginBottom: 16,
                   }}
                 >
-                  Want our brutally honest (and hilarious) take on your order choices?
+                  {tFeatures("roast.subtitle")}
                 </p>
                 <button
                   onClick={() => {
@@ -1838,7 +1841,7 @@ function StatusContent() {
                     boxShadow: "0 4px 12px rgba(245, 158, 11, 0.4)",
                   }}
                 >
-                  🔥 Roast My Order
+                  🔥 {tFeatures("roast.button")}
                 </button>
               </>
             ) : roastLoading ? (
@@ -1853,7 +1856,7 @@ function StatusContent() {
                   🤔
                 </div>
                 <p style={{ color: "#92400e", fontSize: "1rem" }}>
-                  Analyzing your life choices...
+                  {tFeatures("roast.loading")}
                 </p>
               </>
             ) : roast ? (
@@ -1906,7 +1909,7 @@ function StatusContent() {
                         letterSpacing: "0.05em",
                       }}
                     >
-                      🎯 What caught our attention:
+                      🎯 {tFeatures("roast.highlights")}
                     </div>
                     <ul style={{ margin: 0, paddingLeft: 16, lineHeight: 1.6 }}>
                       {roast.highlights.map((highlight, i) => (
@@ -1920,16 +1923,11 @@ function StatusContent() {
               <>
                 <div style={{ fontSize: "2.5rem", marginBottom: 16 }}>🔥</div>
                 <p style={{ color: "#b45309", fontSize: "0.9rem" }}>
-                  Our roast chef is on break. Your order is probably fine. Probably.
+                  {tFeatures("roast.unavailable")}
                 </p>
               </>
             )}
           </div>
-        )}
-
-        {/* One Red Step Foundation - Mental Health Awareness */}
-        {order.podConfirmedAt && (
-          <MentalHealthAwareness />
         )}
 
         {/* Behind the Scenes - Ingredient Backstories */}
@@ -1960,7 +1958,7 @@ function StatusContent() {
                     color: "#2a2924",
                   }}
                 >
-                  Behind the Scenes
+                  {tFeatures("backstory.title")}
                 </h3>
                 <p
                   style={{
@@ -1970,7 +1968,7 @@ function StatusContent() {
                     marginBottom: 16,
                   }}
                 >
-                  Ever wonder about the secret lives of your ingredients?
+                  {tFeatures("backstory.subtitle")}
                 </p>
                 <button
                   onClick={() => {
@@ -1989,7 +1987,7 @@ function StatusContent() {
                     boxShadow: "0 4px 12px rgba(34, 34, 34, 0.3)",
                   }}
                 >
-                  🎬 Tell Me Everything
+                  🎬 {tFeatures("backstory.button")}
                 </button>
               </>
             ) : backstoryLoading ? (
@@ -2004,7 +2002,7 @@ function StatusContent() {
                   🎬
                 </div>
                 <p style={{ color: "#3d3c35", fontSize: "1rem" }}>
-                  Digging up the dirt...
+                  {tFeatures("backstory.loading")}
                 </p>
               </>
             ) : backstory && backstory.backstories.length > 0 ? (
@@ -2023,7 +2021,7 @@ function StatusContent() {
                     letterSpacing: "0.1em",
                   }}
                 >
-                  The Untold Stories
+                  {tFeatures("backstory.heading")}
                 </h3>
 
                 <div
@@ -2062,11 +2060,25 @@ function StatusContent() {
               <>
                 <div style={{ fontSize: "2.5rem", marginBottom: 16 }}>🎬</div>
                 <p style={{ color: "#3d3c35", fontSize: "0.9rem" }}>
-                  The ingredients prefer to remain anonymous. Mysterious bunch.
+                  {tFeatures("backstory.unavailable")}
                 </p>
               </>
             )}
           </div>
+        )}
+
+        {/* One Red Step Foundation - Mental Health Awareness */}
+        {order.podConfirmedAt && (
+          <MentalHealthAwareness
+            locale={locale}
+            translations={{
+              label: t("mentalHealth.label"),
+              loading: t("mentalHealth.loading"),
+              skipTip: t("mentalHealth.skipTip"),
+              supportCause: t("mentalHealth.supportCause"),
+              foundation: t("mentalHealth.foundation"),
+            }}
+          />
         )}
 
         {/* Action Buttons */}
@@ -2113,7 +2125,7 @@ function StatusContent() {
                 boxShadow: "0 4px 12px rgba(124, 122, 103, 0.4)",
               }}
             >
-              ✓ I'm Done Eating
+              ✓ {t("buttons.doneEating")}
             </button>
             </>
           )}
@@ -2132,7 +2144,7 @@ function StatusContent() {
               cursor: "pointer",
             }}
           >
-            View My Profile
+            {t("buttons.viewProfile")}
           </button>
 
           <button
@@ -2149,7 +2161,7 @@ function StatusContent() {
               cursor: "pointer",
             }}
           >
-            Order Again
+            {t("buttons.orderAgain")}
           </button>
         </div>
 
@@ -2162,7 +2174,7 @@ function StatusContent() {
             color: "#999",
           }}
         >
-          Status updates automatically every 10 seconds
+          {t("autoRefresh")}
         </div>
       </div>
 
@@ -2220,7 +2232,7 @@ function StatusContent() {
               }}
             >
               <h2 style={{ margin: 0, fontSize: "1.3rem", color: "#111" }}>
-                Add to Your Order
+                {t("addItems.title")}
               </h2>
               <button
                 onClick={() => setShowAddOnModal(false)}
@@ -2241,7 +2253,7 @@ function StatusContent() {
             <div style={{ padding: 24 }}>
               {addonsLoading ? (
                 <div style={{ textAlign: "center", padding: 40, color: "#666" }}>
-                  Loading available items...
+                  {t("addItems.loading")}
                 </div>
               ) : availableAddons ? (
                 <>
@@ -2267,10 +2279,10 @@ function StatusContent() {
                             textTransform: "uppercase",
                           }}
                         >
-                          Free
+                          {t("addItems.free")}
                         </span>
                         <h3 style={{ margin: 0, fontSize: "1rem", color: "#111" }}>
-                          🥤 Drink Refills
+                          🥤 {t("addItems.drinkRefills")}
                         </h3>
                       </div>
                       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -2296,7 +2308,7 @@ function StatusContent() {
                           >
                             <span>{drink.name}</span>
                             <span style={{ fontSize: "0.85rem", color: "#5a584a" }}>
-                              {refillLoading ? "Requesting..." : "Request Refill →"}
+                              {refillLoading ? t("addItems.requesting") : t("addItems.requestRefill")}
                             </span>
                           </button>
                         ))}
@@ -2318,9 +2330,9 @@ function StatusContent() {
                             alignItems: "center",
                           }}
                         >
-                          <span>Water Refill</span>
+                          <span>{t("addItems.waterRefill")}</span>
                           <span style={{ fontSize: "0.85rem" }}>
-                            {refillLoading ? "Requesting..." : "Request →"}
+                            {refillLoading ? t("addItems.requesting") : t("addItems.request")}
                           </span>
                         </button>
                       </div>
@@ -2349,10 +2361,10 @@ function StatusContent() {
                             textTransform: "uppercase",
                           }}
                         >
-                          Free
+                          {t("addItems.free")}
                         </span>
                         <h3 style={{ margin: 0, fontSize: "1rem", color: "#111" }}>
-                          🥬 Extras & Add-Ons
+                          🥬 {t("addItems.extrasAndAddons")}
                         </h3>
                       </div>
                       <div
@@ -2414,8 +2426,8 @@ function StatusContent() {
                           }}
                         >
                           {extraVegLoading
-                            ? "Requesting..."
-                            : `Request ${selectedExtraVegs.size} Extra${selectedExtraVegs.size > 1 ? "s" : ""}`}
+                            ? t("addItems.requesting")
+                            : t("addItems.requestExtras", { count: selectedExtraVegs.size })}
                         </button>
                       )}
                     </div>
@@ -2443,10 +2455,10 @@ function StatusContent() {
                             textTransform: "uppercase",
                           }}
                         >
-                          Paid
+                          {t("addItems.paid")}
                         </span>
                         <h3 style={{ margin: 0, fontSize: "1rem", color: "#111" }}>
-                          🛒 Add-Ons & Extras
+                          🛒 {t("addItems.paidAddons")}
                         </h3>
                       </div>
                       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -2542,7 +2554,7 @@ function StatusContent() {
                                       cursor: "pointer",
                                     }}
                                   >
-                                    Add
+                                    {t("addItems.add")}
                                   </button>
                                 )}
                               </div>
@@ -2571,7 +2583,7 @@ function StatusContent() {
                             }}
                           >
                             <span style={{ fontWeight: "bold", color: "#3d3c35" }}>
-                              Order Total
+                              {t("addItems.orderTotal")}
                             </span>
                             <span style={{ fontSize: "1.25rem", fontWeight: "bold", color: "#3d3c35" }}>
                               ${(calculatePaidAddonTotal() / 100).toFixed(2)}
@@ -2593,7 +2605,7 @@ function StatusContent() {
                                 cursor: "pointer",
                               }}
                             >
-                              Checkout →
+                              {t("addItems.checkout")}
                             </button>
                           ) : (
                             <div>
@@ -2607,7 +2619,7 @@ function StatusContent() {
                                   color: "#5a584a",
                                 }}
                               >
-                                ⚠️ Demo mode: No real charge will be made
+                                ⚠️ {t("addItems.demoMode")}
                               </div>
                               <div style={{ display: "flex", gap: 8 }}>
                                 <button
@@ -2624,7 +2636,7 @@ function StatusContent() {
                                     cursor: "pointer",
                                   }}
                                 >
-                                  Cancel
+                                  {t("addItems.cancel")}
                                 </button>
                                 <button
                                   onClick={submitPaidAddonOrder}
@@ -2641,7 +2653,7 @@ function StatusContent() {
                                     cursor: paidAddonLoading ? "default" : "pointer",
                                   }}
                                 >
-                                  {paidAddonLoading ? "Processing..." : `Pay $${(calculatePaidAddonTotal() / 100).toFixed(2)}`}
+                                  {paidAddonLoading ? t("addItems.processing") : t("addItems.pay", { amount: `$${(calculatePaidAddonTotal() / 100).toFixed(2)}` })}
                                 </button>
                               </div>
                             </div>
@@ -2656,7 +2668,7 @@ function StatusContent() {
                     availableAddons.extraVegetables.length === 0 &&
                     availableAddons.paidAddons.length === 0 && (
                       <div style={{ textAlign: "center", padding: 40, color: "#666" }}>
-                        No add-ons available for this order.
+                        {t("addItems.noAddons")}
                         <br />
                         <br />
                         <button
@@ -2672,14 +2684,14 @@ function StatusContent() {
                             cursor: "pointer",
                           }}
                         >
-                          🔔 Call Staff Instead
+                          🔔 {t("addItems.callStaffInstead")}
                         </button>
                       </div>
                     )}
                 </>
               ) : (
                 <div style={{ textAlign: "center", padding: 40, color: "#666" }}>
-                  Failed to load add-ons. Please try again or call staff.
+                  {t("addItems.failedToLoad")}
                 </div>
               )}
             </div>
