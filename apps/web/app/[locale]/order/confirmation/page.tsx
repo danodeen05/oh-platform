@@ -2,8 +2,9 @@
 import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState, Suspense, useRef } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { trackPurchase, event } from "@/lib/analytics";
+import Image from "next/image";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -14,6 +15,7 @@ function ConfirmationContent() {
   const tStatus = useTranslations("orderStatus");
   const tGroup = useTranslations("groupOrder");
   const tCommon = useTranslations("common");
+  const locale = useLocale();
   const orderNumber = searchParams.get("orderNumber");
   const orderId = searchParams.get("orderId");
   const total = searchParams.get("total");
@@ -33,7 +35,7 @@ function ConfirmationContent() {
 
     async function fetchOrder() {
       try {
-        const response = await fetch(`${BASE}/orders/${orderId}`, {
+        const response = await fetch(`${BASE}/orders/${orderId}?locale=${locale}`, {
           headers: { "x-tenant-slug": "oh" },
         });
         if (response.ok) {
@@ -59,7 +61,7 @@ function ConfirmationContent() {
     }
 
     fetchOrder();
-  }, [orderId, groupCode]);
+  }, [orderId, groupCode, locale]);
 
   // Store active order QR code in localStorage for the banner
   useEffect(() => {
@@ -223,18 +225,27 @@ function ConfirmationContent() {
           textAlign: "center",
         }}
       >
+        {/* Oh! Logo */}
+        <Image
+          src="/Oh_Logo_Mark_Web.png"
+          alt="Oh! Beef Noodle Soup"
+          width={100}
+          height={100}
+          style={{ objectFit: "contain", margin: "0 auto 16px" }}
+        />
+
         {/* Success Icon */}
         <div
           style={{
-            width: 80,
-            height: 80,
+            width: 48,
+            height: 48,
             borderRadius: "50%",
             background: isPaid ? "#7C7A67" : "#fef3c7",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            margin: "0 auto 24px",
-            fontSize: "2.5rem",
+            margin: "0 auto 16px",
+            fontSize: "1.5rem",
             color: isPaid ? "white" : "inherit",
           }}
         >
@@ -277,10 +288,10 @@ function ConfirmationContent() {
           >
             <div style={{ fontSize: "1.5rem", marginBottom: 8 }}>🎫</div>
             <h3 style={{ margin: 0, marginBottom: 8, fontSize: "1.3rem", color: "white" }}>
-              Your Order QR Code
+              {t("yourOrderQrCode")}
             </h3>
             <p style={{ fontSize: "0.9rem", marginBottom: 16, color: "rgba(255,255,255,0.9)" }}>
-              Scan this at the kiosk when you arrive to get your pod assignment
+              {t("scanAtKiosk")}
             </p>
 
             {/* QR Code Display */}
@@ -317,7 +328,7 @@ function ConfirmationContent() {
             {/* Arrival Time */}
             {order.estimatedArrival && (
               <p style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.9)", marginTop: 12, marginBottom: 16 }}>
-                Expected arrival: {new Date(order.estimatedArrival).toLocaleTimeString()}
+                {t("expectedArrival", { time: new Date(order.estimatedArrival).toLocaleTimeString() })}
               </p>
             )}
 
@@ -403,14 +414,14 @@ function ConfirmationContent() {
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                     <span style={{ fontWeight: 600 }}>
-                      {groupOrder.isGroupHost ? "Host" : `Guest ${idx}`}
+                      {groupOrder.isGroupHost ? t("host") : t("guest", { number: idx })}
                     </span>
                     <span style={{ fontSize: "0.85rem", color: "#666" }}>
-                      {groupOrder.seat ? `Pod ${groupOrder.seat.number}` : "No pod yet"}
+                      {groupOrder.seat ? t("podNumber", { number: groupOrder.seat.number }) : t("noPodYet")}
                     </span>
                   </div>
                   <div style={{ fontSize: "0.85rem", color: "#666", marginBottom: 12 }}>
-                    {groupOrder.user?.name || groupOrder.guest?.name || `Order #${groupOrder.orderNumber.slice(-6)}`}
+                    {groupOrder.user?.name || groupOrder.guest?.name || `${t("orderLabel")} #${groupOrder.orderNumber.slice(-6)}`}
                     {" • "}${(groupOrder.totalCents / 100).toFixed(2)}
                   </div>
 
@@ -434,19 +445,19 @@ function ConfirmationContent() {
                         cursor: "pointer",
                       }}
                     >
-                      Check In This Order
+                      {t("checkInThisOrder")}
                     </button>
                   )}
 
                   {groupOrder.arrivedAt && !groupOrder.podConfirmedAt && groupOrder.seat && (
                     <div style={{ fontSize: "0.85rem", color: "#166534", textAlign: "center", padding: 8 }}>
-                      Assigned to Pod {groupOrder.seat.number} - awaiting arrival
+                      {t("assignedToPod", { number: groupOrder.seat.number })}
                     </div>
                   )}
 
                   {groupOrder.podConfirmedAt && (
                     <div style={{ fontSize: "0.85rem", color: "#166534", textAlign: "center", padding: 8 }}>
-                      Checked in at Pod {groupOrder.seat?.number}
+                      {t("checkedInAtPod", { number: groupOrder.seat?.number })}
                     </div>
                   )}
                 </div>
@@ -532,7 +543,7 @@ function ConfirmationContent() {
                     <span>
                       {item.menuItem.name}
                       <span style={{ color: "#666", marginLeft: 6 }}>
-                        ({item.selectedValue || `Qty: ${item.quantity}`})
+                        ({item.selectedValue || t("qty", { count: item.quantity })})
                       </span>
                     </span>
                     {item.priceCents > 0 && (
@@ -573,7 +584,7 @@ function ConfirmationContent() {
                     <span>
                       {item.menuItem.name}
                       <span style={{ color: "#666", marginLeft: 6 }}>
-                        (Qty: {item.quantity})
+                        ({t("qty", { count: item.quantity })})
                       </span>
                     </span>
                     {item.priceCents > 0 && (
@@ -595,7 +606,7 @@ function ConfirmationContent() {
               marginTop: 8,
             }}
           >
-            <span style={{ color: "#666" }}>Order</span>
+            <span style={{ color: "#666" }}>{t("orderLabel")}</span>
             <span>#{orderNumber}</span>
           </div>
           <div
@@ -608,7 +619,7 @@ function ConfirmationContent() {
               fontWeight: "bold",
             }}
           >
-            <span>Total</span>
+            <span>{t("total")}</span>
             <span style={{ color: "#7C7A67" }}>
               ${totalAmount}
             </span>
@@ -638,7 +649,7 @@ function ConfirmationContent() {
                 cursor: "pointer",
               }}
             >
-              📍 Track Order Status
+              📍 {t("trackOrderStatus")}
             </button>
           )}
 
@@ -688,7 +699,7 @@ function ConfirmationContent() {
           >
             <div style={{ fontSize: "1.5rem", marginBottom: 8, textAlign: "center" }}>🎉</div>
             <h3 style={{ margin: 0, marginBottom: 8, fontSize: "1.1rem", textAlign: "center" }}>
-              Share Your Order!
+              {t("shareYourOrder")}
             </h3>
             <p
               style={{
@@ -699,7 +710,7 @@ function ConfirmationContent() {
                 textAlign: "center",
               }}
             >
-              Spread the word and earn rewards
+              {t("spreadTheWord")}
             </p>
 
             {/* Share Buttons */}
@@ -729,7 +740,7 @@ function ConfirmationContent() {
                 }}
               >
                 <span style={{ fontSize: "1.2rem" }}>𝕏</span>
-                Twitter
+                {t("twitter")}
               </button>
 
               <button
@@ -750,7 +761,7 @@ function ConfirmationContent() {
                 }}
               >
                 <span style={{ fontSize: "1.2rem" }}>f</span>
-                Facebook
+                {t("facebook")}
               </button>
 
               <button
@@ -771,7 +782,7 @@ function ConfirmationContent() {
                 }}
               >
                 <span style={{ fontSize: "1.2rem" }}>in</span>
-                LinkedIn
+                {t("linkedin")}
               </button>
 
               <button
@@ -793,7 +804,7 @@ function ConfirmationContent() {
                 }}
               >
                 <span style={{ fontSize: "1.2rem" }}>{copied ? "✓" : "📋"}</span>
-                {copied ? "Copied!" : "Copy"}
+                {copied ? t("copied") : t("copy")}
               </button>
             </div>
 
@@ -818,7 +829,7 @@ function ConfirmationContent() {
                 }}
               >
                 <span style={{ fontSize: "1.2rem" }}>📤</span>
-                Share via...
+                {t("shareVia")}
               </button>
             )}
 
@@ -831,8 +842,7 @@ function ConfirmationContent() {
                 textAlign: "center",
               }}
             >
-              💡 Your referral link is included! Friends get $5 off their first order.
-              You earn $5 when they order $20+ (credited on the 1st or 16th).
+              💡 {t("referralNote")}
             </p>
           </div>
 
@@ -848,7 +858,7 @@ function ConfirmationContent() {
               cursor: "pointer",
             }}
           >
-            Back to Home
+            {t("backToHome")}
           </button>
         </div>
       </div>
@@ -869,7 +879,7 @@ export default function ConfirmationPage() {
             background: "#E5E5E5",
           }}
         >
-          <div style={{ color: "#222222", fontSize: "1.2rem" }}>Loading order...</div>
+          <div style={{ color: "#222222", fontSize: "1.2rem" }}>...</div>
         </div>
       }
     >

@@ -2,6 +2,8 @@ import { NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
+import { ClerkProvider } from "@clerk/nextjs";
+import { enUS, zhTW, zhCN, esES } from "@clerk/localizations";
 import { routing } from "@/i18n/routing";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -12,6 +14,14 @@ import LanguageTracker from "@/components/LanguageTracker";
 type Props = {
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
+};
+
+// Map app locales to Clerk localizations
+const clerkLocalizations: Record<string, typeof enUS> = {
+  en: enUS,
+  "zh-TW": zhTW,
+  "zh-CN": zhCN,
+  es: esES,
 };
 
 export function generateStaticParams() {
@@ -32,6 +42,9 @@ export default async function LocaleLayout({ children, params }: Props) {
   // Get messages for the current locale
   const messages = await getMessages();
 
+  // Get Clerk localization for the current locale
+  const clerkLocalization = clerkLocalizations[locale] || enUS;
+
   // Check if this is a kiosk route - kiosk has its own layout without header/footer
   const headersList = await headers();
   const pathname = headersList.get("x-pathname") || headersList.get("x-invoke-path") || "";
@@ -40,21 +53,25 @@ export default async function LocaleLayout({ children, params }: Props) {
   // For kiosk routes, render without header/footer
   if (isKioskRoute) {
     return (
-      <NextIntlClientProvider messages={messages}>
-        {children}
-      </NextIntlClientProvider>
+      <ClerkProvider localization={clerkLocalization}>
+        <NextIntlClientProvider messages={messages}>
+          {children}
+        </NextIntlClientProvider>
+      </ClerkProvider>
     );
   }
 
   return (
-    <NextIntlClientProvider messages={messages}>
-      <Providers>
-        <LanguageTracker />
-        <Header />
-        <ActiveOrderBanner />
-        <main style={{ flex: 1 }}>{children}</main>
-        <Footer />
-      </Providers>
-    </NextIntlClientProvider>
+    <ClerkProvider localization={clerkLocalization}>
+      <NextIntlClientProvider messages={messages}>
+        <Providers>
+          <LanguageTracker />
+          <Header />
+          <ActiveOrderBanner />
+          <main style={{ flex: 1 }}>{children}</main>
+          <Footer />
+        </Providers>
+      </NextIntlClientProvider>
+    </ClerkProvider>
   );
 }

@@ -182,7 +182,8 @@
       "premium": "顶级",
       "included": "已包含",
       "signature": "招牌",
-      "complimentary": "免费"
+      "complimentary": "免费",
+      "unlimitedRefills": "无限续杯"
     },
     "sections": {
       "soup": {
@@ -442,6 +443,101 @@
     "referralApplied": "已应用$5推荐优惠！",
     "waitTime": "当前等候时间",
     "minutes": "分钟",
+    "locationSelector": {
+      "groupMode": {
+        "title": "开始团体订单",
+        "description": "选择门店以创建您的团体。与朋友分享代码，他们可以加入订单！"
+      },
+      "status": {
+        "available": "可用",
+        "busy": "繁忙",
+        "moderateWait": "适度等待"
+      },
+      "milesAway": "{distance} 英里",
+      "available": "可用：",
+      "pods": "{available}/{total} 包厢",
+      "avgWait": "平均等候：",
+      "minWait": "{minutes} 分钟"
+    },
+    "groupBanner": {
+      "diningTogether": "一起用餐？",
+      "startOrJoin": "开始或加入团体订单",
+      "startGroupOrder": "开始团体订单",
+      "joinGroup": "加入团体",
+      "enterCode": "输入代码",
+      "join": "加入",
+      "enterGroupCode": "请输入团体代码",
+      "failedToJoin": "加入团体失败，请重试。"
+    },
+    "builder": {
+      "stepOf": "第 {current} 步，共 {total} 步",
+      "required": "必选",
+      "backToLocations": "返回门店列表",
+      "available": "可用：",
+      "seats": "{available}/{total} 座位",
+      "currentWait": "当前等候：",
+      "minWait": "{minutes} 分钟",
+      "continue": "继续",
+      "back": "返回",
+      "total": "总计：",
+      "loadingMenu": "加载菜单中...",
+      "ohRecommendation": "哦！推荐",
+      "included": "已包含",
+      "includedUpTo": "已包含（最多 {count}）",
+      "each": "每份",
+      "eachExtra": "每份额外",
+      "subtotalLabel": "小计：",
+      "sliderLabels": {
+        "Light": "清淡",
+        "Medium": "中等",
+        "Rich": "浓郁",
+        "Extra Rich": "特浓",
+        "Firm": "偏硬",
+        "Soft": "偏软",
+        "None": "无",
+        "Mild": "微辣",
+        "Spicy": "中辣",
+        "Extra Spicy": "特辣",
+        "Normal": "正常",
+        "Extra": "加量"
+      },
+      "backToMenu": "返回菜单",
+      "whenWillYouArrive": "您什么时候会到？",
+      "readyBy": "预计 {time} 准备好",
+      "reviewOrderPayment": "确认订单与付款",
+      "timeOptions": {
+        "asap": "尽快（现在至 5 分钟内）",
+        "15min": "15 分钟",
+        "30min": "30 分钟",
+        "45min": "45 分钟",
+        "1hour": "1 小时",
+        "90min": "1.5 小时"
+      },
+      "processing": "处理中...",
+      "addToGroupOrder": "加入团体订单",
+      "choosePod": "选择座位（可选）",
+      "choosePodDescription": "由于您即将到达，可以现在选择您喜欢的座位。跳过此步骤将在报到时自动分配座位。",
+      "clearSelection": "清除选择（改为自动分配）",
+      "checkingSeatAvailability": "正在检查座位状况...",
+      "loadingSeats": "加载座位中...",
+      "podLegend": {
+        "available": "可用",
+        "selected": "已选择",
+        "reserved": "已预订",
+        "occupied": "使用中",
+        "dualPod": "双人座"
+      },
+      "podMap": {
+        "entrance": "入口",
+        "kitchen": "厨房",
+        "exit": "出口",
+        "dual": "双人"
+      },
+      "podSelection": {
+        "selectedPrefix": "已选择：",
+        "pod": "座位"
+      }
+    },
     "addToOrder": "加入订单",
     "viewOrder": "查看订单",
     "checkout": "结账",
@@ -609,7 +705,98 @@
     "visits": "到访次数",
     "currentTier": "当前等级",
     "nextTier": "下一等级",
-    "pointsToNext": "积分即可升级"
+    "pointsToNext": "积分即可升级",
+    "myMembership": "我的会员",
+    "home": "首页",
+    "order": "点餐",
+    "referralsNav": "推荐",
+    "memberNav": "会员",
+    "yourBenefits": "您的福利：",
+    "progressTo": "升级至 {tier}：",
+    "totalOrders": "总订单数",
+    "badgesTitle": "徽章",
+    "welcome": "欢迎！",
+    "signInToView": "登录查看您的会员资料",
+    "continue": "继续",
+    "loading": "加载中...",
+    "loadingProfile": "加载您的资料中...",
+    "visitsThisMonth": "本月 {count} 次到访",
+    "tiers": {
+      "chopstick": "🥢 筷子会员",
+      "noodleMaster": "🍜 面条大师",
+      "beefBoss": "🐂 牛肉达人"
+    },
+    "perks": {
+      "referralBonus": "每推荐一位好友可获得 $5 奖励",
+      "cashback1": "订单 1% 返现",
+      "cashback2": "订单 2% 返现",
+      "cashback3": "订单 3% 返现",
+      "earlyAccess": "抢先体验新菜单",
+      "prioritySeating": "优先入座",
+      "memberEvents": "专属会员活动",
+      "freeBowlUpgrade": "升级送免费招牌面",
+      "merchandiseDrops": "限量周边商品",
+      "premiumAddons": "免费顶级配料",
+      "vipGift": "年度 VIP 礼物与表彰"
+    },
+    "badges": {
+      "first-order": {
+        "name": "第一碗",
+        "description": "完成您的第一笔订单"
+      },
+      "10-orders": {
+        "name": "面条爱好者",
+        "description": "完成 10 笔订单"
+      },
+      "50-orders": {
+        "name": "牛肉狂热者",
+        "description": "完成 50 笔订单"
+      },
+      "100-orders": {
+        "name": "百碗俱乐部",
+        "description": "完成 100 笔订单"
+      },
+      "first-referral": {
+        "name": "分享爱",
+        "description": "推荐您的第一位朋友"
+      },
+      "10-referrals": {
+        "name": "影响者",
+        "description": "推荐 10 位朋友"
+      },
+      "50-referrals": {
+        "name": "大使",
+        "description": "推荐 50 位朋友"
+      },
+      "3-day-streak": {
+        "name": "火热连续",
+        "description": "连续 3 天订餐"
+      },
+      "7-day-streak": {
+        "name": "周周战士",
+        "description": "连续 7 天订餐"
+      },
+      "30-day-streak": {
+        "name": "传奇",
+        "description": "连续 30 天订餐"
+      },
+      "tried-all-items": {
+        "name": "菜单大师",
+        "description": "品尝过菜单上的每一道菜"
+      },
+      "spicy-challenge": {
+        "name": "辣味追求者",
+        "description": "点了 10 次辣味"
+      },
+      "grand-opening": {
+        "name": "元老会员",
+        "description": "盛大开幕时加入的会员"
+      },
+      "vip": {
+        "name": "VIP",
+        "description": "达到牛肉达人等级"
+      }
+    }
   },
   "giftCards": {
     "title": "礼品卡",
@@ -803,6 +990,25 @@
       "minimumOrder": "推荐奖励适用于首笔$20或以上的订单",
       "disbursement": "积分将在24小时内加入您的账户",
       "maxPerOrder": "每笔订单最多可使用$5积分"
+    },
+    "dashboard": {
+      "getStarted": "开始使用",
+      "enterEmailPrompt": "输入您的电子邮件以获取推荐链接",
+      "getMyReferralLink": "获取我的推荐链接",
+      "creating": "创建中...",
+      "availableCredits": "可用积分",
+      "useCreditsNote": "结账时每笔订单最多可使用$5",
+      "pendingCredits": "待发放积分",
+      "scheduledForDisbursement": "计划发放",
+      "nextDisbursement": "下次发放：",
+      "yourReferralLink": "您的推荐链接",
+      "copy": "复制",
+      "shareToEarn": "分享此链接，每位下单$20以上的好友可为您赚取$5",
+      "recentActivity": "近期活动",
+      "creditEvents": {
+        "cashback": "订单 {percent}% 返现",
+        "appliedToOrder": "已用于订单 {orderId}"
+      }
     }
   },
   "careers": {
@@ -1131,6 +1337,7 @@
     "orderNotFound": "找不到订单",
     "placeNewOrder": "新增订单",
     "statusUpdates": "状态每5秒自动更新",
+    "orderNumber": "订单 #{number}",
     "status": {
       "pending": "待付款",
       "paid": "已付款",
@@ -1138,7 +1345,8 @@
       "prepping": "准备中",
       "ready": "准备送餐",
       "serving": "请享用！",
-      "completed": "已完成"
+      "completed": "已完成",
+      "doneEating": "用餐完毕？"
     },
     "pod": {
       "yourPod": "您的包间",
@@ -1170,28 +1378,59 @@
     "buttons": {
       "viewProfile": "查看我的档案",
       "orderAgain": "再次订购",
-      "imDoneEating": "我吃完了",
-      "addToOrder": "加点"
+      "doneEating": "我吃完了",
+      "addToOrder": "加点",
+      "callStaff": "呼叫服务员",
+      "addItems": "加点",
+      "confirmAtPod": "确认我已到包间"
+    },
+    "location": "地点",
+    "confirmations": {
+      "finishedEating": "您用餐完毕了吗？这将通知服务人员清理您的包间。"
+    },
+    "errors": {
+      "markDone": "无法标记完成，请重试。"
     },
     "doneEating": {
       "confirmPrompt": "您用餐完毕了吗？这将通知服务人员清理您的包间。",
       "failedToUpdate": "更新失败，请重试。"
     },
+    "dessert": {
+      "readyForDessert": "准备享用甜点",
+      "onItsWay": "甜点已在路上！",
+      "notifying": "通知中..."
+    },
     "addItems": {
       "title": "加点",
       "loading": "加载可选项目中...",
       "drinkRefills": "饮料续杯",
-      "requestRefill": "要求续杯",
+      "requestRefill": "要求续杯 →",
+      "request": "要求 →",
       "requesting": "要求中...",
       "waterRefill": "水续杯",
-      "extrasAddons": "加料与配菜",
+      "extrasAndAddons": "加料与配菜",
       "requestExtras": "要求 {count} 份加料",
-      "addOnsExtras": "加料与配菜",
+      "paidAddons": "加料与配菜",
       "orderTotal": "订单总计",
-      "checkout": "结账",
-      "demoWarning": "演示模式：不会实际收费",
+      "checkout": "结账 →",
+      "demoMode": "演示模式：不会实际收费",
       "cancel": "取消",
-      "pay": "支付 ${amount}"
+      "pay": "支付 {amount}",
+      "processing": "处理中...",
+      "free": "免费",
+      "paid": "付费",
+      "add": "添加",
+      "noAddons": "此订单无可加点项目。",
+      "callStaffInstead": "改为呼叫服务员",
+      "failedToLoad": "加载加点项目失败，请重试或呼叫服务员。"
+    },
+    "autoRefresh": "状态每 10 秒自动更新",
+    "mentalHealth": {
+      "label": "心理健康很重要",
+      "loading": "加载心理健康信息中...",
+      "skipTip": "不用给小费，改为做点好事。",
+      "supportCause": "支持公益",
+      "foundation": "One Red Step at a Time 基金会 • 501(c)(3)"
     }
   },
   "features": {
@@ -1239,7 +1478,46 @@
     "total": "总计",
     "processing": "处理中...",
     "payNow": "立即付款",
-    "testMode": "测试模式 - 不会实际收费"
+    "testMode": "测试模式 - 不会实际收费",
+    "theBowl": "面碗",
+    "addOnsExtras": "加购与配菜",
+    "qty": "数量：{count}",
+    "loading": "加载中...",
+    "subtotal": "小计",
+    "creditsApplied": "已使用积分",
+    "payAmount": "支付 ${amount}",
+    "processingPayment": "付款处理中...",
+    "secureCheckout": "安全结账由 Stripe 提供（测试模式）",
+    "paymentMethod": "付款方式",
+    "testPayment": "测试付款",
+    "demoMode": "演示模式 - 不会实际收费",
+    "demoWarning": "这是演示付款。真正的 Stripe 集成即将推出！",
+    "availableCredits": "可用积分",
+    "youHaveCredits": "您有 <bold>${amount}</bold> 积分",
+    "maxCreditsNote": "每笔订单最多可使用 $5 积分",
+    "applyToOrder": "使用 ${amount} 于此订单",
+    "welcomeReferred": "欢迎！您已被推荐",
+    "referralCreditsNote": "您获得 ${amount} 积分可用于此订单",
+    "referralAlreadyUsed": "推荐积分已使用",
+    "referralAlreadyUsedNote": "感谢您再次光临！推荐积分仅适用于您的首次订单。您仍可通过您的个人推荐链接推荐朋友来赚取积分。",
+    "loadingAccount": "正在加载您的账户和奖励...",
+    "signInToComplete": "登录以完成订单",
+    "signInDescription": "您需要登录以追踪订单、赚取奖励和使用推荐积分。",
+    "referralDiscountWaiting": "您有推荐折扣等待使用！",
+    "signInSignUp": "登录 / 注册",
+    "guestCheckout": "访客结账",
+    "guestCheckoutDescription": "请输入您的姓名以便我们准备您的订单。",
+    "name": "姓名",
+    "phone": "电话",
+    "email": "电子邮件",
+    "optional": "选填",
+    "yourName": "您的姓名",
+    "forOrderUpdates": "用于订单更新",
+    "forReceipt": "用于收据",
+    "enterYourName": "请输入您的姓名",
+    "wantToEarnRewards": "想要赚取奖励并追踪订单吗？",
+    "signInInstead": "改为登录",
+    "waitLoadingAccount": "请稍候，正在加载您的账户..."
   },
   "groupOrder": {
     "notFound": "找不到群组",
@@ -1266,6 +1544,23 @@
     "linkedin": "LinkedIn",
     "email": "电子邮件"
   },
+  "checkIn": {
+    "title": "自助报到机",
+    "subtitle": "扫描或输入您的订单二维码以获取座位分配",
+    "howToTitle": "如何报到：",
+    "step1": "找到您的订单二维码（在订单确认页面上）",
+    "step2": "使用报到机扫描或在下方输入代码",
+    "step3": "获取座位分配或排队位置",
+    "qrCodeLabel": "订单二维码：",
+    "qrCodePlaceholder": "ORDER-xxpmm5hf-1234567890-ABC123",
+    "checkInButton": "报到",
+    "checkingIn": "报到中...",
+    "needHelp": "需要帮助？",
+    "helpTip1": "您的二维码在订单确认页面上",
+    "helpTip2": "它以「ORDER-」开头，后面是数字和字母",
+    "helpTip3": "如需协助，请询问工作人员",
+    "loading": "加载中..."
+  },
   "confirmation": {
     "title": "订单已确认！",
     "orderNumber": "订单 #{number}",
@@ -1276,6 +1571,31 @@
     "simulateCheckIn": "模拟报到（演示）",
     "checkingIn": "报到中...",
     "groupOrderNote": "这是包含 {count} 份订单的群组订单。",
-    "paidStatus": "付款完成"
+    "paidStatus": "付款完成",
+    "yourOrderQrCode": "您的订单二维码",
+    "scanAtKiosk": "到达时请在自助机扫描此码以获取包间分配",
+    "expectedArrival": "预计到达时间：{time}",
+    "host": "主揪",
+    "guest": "宾客 {number}",
+    "podNumber": "包间 {number}",
+    "noPodYet": "尚未分配包间",
+    "checkInThisOrder": "此订单报到",
+    "assignedToPod": "已分配至包间 {number} - 等待到达",
+    "checkedInAtPod": "已在包间 {number} 报到",
+    "orderLabel": "订单",
+    "total": "总计",
+    "qty": "数量：{count}",
+    "trackOrderStatus": "追踪订单状态",
+    "shareYourOrder": "分享您的订单！",
+    "spreadTheWord": "分享给朋友并赚取奖励",
+    "copied": "已复制！",
+    "copy": "复制",
+    "shareVia": "分享至...",
+    "twitter": "推特",
+    "facebook": "脸书",
+    "linkedin": "领英",
+    "referralNote": "已包含您的推荐链接！朋友首次订购可享 $5 折扣。当他们消费 $20 以上时，您可获得 $5（每月 1 日或 16 日入账）。",
+    "backToHome": "返回首页",
+    "loadingOrder": "加载订单中..."
   }
 }

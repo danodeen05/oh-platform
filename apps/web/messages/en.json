@@ -182,7 +182,8 @@
       "premium": "Premium",
       "included": "Included",
       "signature": "Signature",
-      "complimentary": "Complimentary"
+      "complimentary": "Complimentary",
+      "unlimitedRefills": "Unlimited Refills"
     },
     "sections": {
       "soup": {
@@ -442,6 +443,101 @@
     "referralApplied": "$5 referral discount will be applied!",
     "waitTime": "Current Wait",
     "minutes": "min",
+    "locationSelector": {
+      "groupMode": {
+        "title": "Starting a Group Order",
+        "description": "Select a location to create your group. Share the code with friends so they can add their orders!"
+      },
+      "status": {
+        "available": "Available",
+        "busy": "Busy",
+        "moderateWait": "Moderate Wait"
+      },
+      "milesAway": "{distance} miles away",
+      "available": "Available:",
+      "pods": "{available}/{total} pods",
+      "avgWait": "Avg Wait:",
+      "minWait": "{minutes} min"
+    },
+    "groupBanner": {
+      "diningTogether": "Dining together?",
+      "startOrJoin": "Start or join a group order",
+      "startGroupOrder": "Start Group Order",
+      "joinGroup": "Join Group",
+      "enterCode": "Enter code",
+      "join": "Join",
+      "enterGroupCode": "Please enter a group code",
+      "failedToJoin": "Failed to join group. Please try again."
+    },
+    "builder": {
+      "stepOf": "Step {current} of {total}",
+      "required": "Required",
+      "backToLocations": "Back to locations",
+      "available": "Available:",
+      "seats": "{available}/{total} seats",
+      "currentWait": "Current Wait:",
+      "minWait": "{minutes} min",
+      "continue": "Continue",
+      "back": "Back",
+      "total": "Total:",
+      "loadingMenu": "Loading menu...",
+      "ohRecommendation": "Oh! Recommendation",
+      "included": "Included",
+      "includedUpTo": "Included (up to {count})",
+      "each": "each",
+      "eachExtra": "each extra",
+      "subtotalLabel": "Subtotal:",
+      "sliderLabels": {
+        "Light": "Light",
+        "Medium": "Medium",
+        "Rich": "Rich",
+        "Extra Rich": "Extra Rich",
+        "Firm": "Firm",
+        "Soft": "Soft",
+        "None": "None",
+        "Mild": "Mild",
+        "Spicy": "Spicy",
+        "Extra Spicy": "Extra Spicy",
+        "Normal": "Normal",
+        "Extra": "Extra"
+      },
+      "backToMenu": "Back to Menu",
+      "whenWillYouArrive": "When will you arrive?",
+      "readyBy": "Ready by {time}",
+      "reviewOrderPayment": "Review Order & Payment",
+      "timeOptions": {
+        "asap": "ASAP (between now and 5 minutes)",
+        "15min": "15 minutes",
+        "30min": "30 minutes",
+        "45min": "45 minutes",
+        "1hour": "1 hour",
+        "90min": "1.5 hours"
+      },
+      "processing": "Processing...",
+      "addToGroupOrder": "Add to Group Order",
+      "choosePod": "Choose Your Pod (Optional)",
+      "choosePodDescription": "Since you're arriving soon, you can pick your preferred pod now. Skip this to be auto-assigned when you check in.",
+      "clearSelection": "Clear Selection (Auto-assign instead)",
+      "checkingSeatAvailability": "Checking seat availability...",
+      "loadingSeats": "Loading seats...",
+      "podLegend": {
+        "available": "Available",
+        "selected": "Selected",
+        "reserved": "Reserved",
+        "occupied": "Occupied",
+        "dualPod": "Dual Pod"
+      },
+      "podMap": {
+        "entrance": "ENTRANCE",
+        "kitchen": "KITCHEN",
+        "exit": "EXIT",
+        "dual": "Dual"
+      },
+      "podSelection": {
+        "selectedPrefix": "Selected:",
+        "pod": "Pod"
+      }
+    },
     "addToOrder": "Add to Order",
     "viewOrder": "View Order",
     "checkout": "Checkout",
@@ -609,7 +705,98 @@
     "visits": "Visits",
     "currentTier": "Current Tier",
     "nextTier": "Next Tier",
-    "pointsToNext": "points to next tier"
+    "pointsToNext": "points to next tier",
+    "myMembership": "My Membership",
+    "home": "Home",
+    "order": "Order",
+    "referralsNav": "Referrals",
+    "memberNav": "Member",
+    "yourBenefits": "Your Benefits:",
+    "progressTo": "Progress to {tier}:",
+    "totalOrders": "Total Orders",
+    "badgesTitle": "Badges",
+    "welcome": "Welcome!",
+    "signInToView": "Sign in to view your membership",
+    "continue": "Continue",
+    "loading": "Loading...",
+    "loadingProfile": "Loading your profile...",
+    "visitsThisMonth": "{count} {count, plural, one {visit} other {visits}} this month",
+    "tiers": {
+      "chopstick": "🥢 Chopstick",
+      "noodleMaster": "🍜 Noodle Master",
+      "beefBoss": "🐂 Beef Boss"
+    },
+    "perks": {
+      "referralBonus": "$5 referral bonus per friend",
+      "cashback1": "1% cashback on orders",
+      "cashback2": "2% cashback on orders",
+      "cashback3": "3% cashback on orders",
+      "earlyAccess": "Early access to new menu items",
+      "prioritySeating": "Priority seating",
+      "memberEvents": "Exclusive member events",
+      "freeBowlUpgrade": "Free bowl on tier upgrade",
+      "merchandiseDrops": "Exclusive merchandise drops",
+      "premiumAddons": "Complimentary premium add-ons",
+      "vipGift": "Annual VIP Gift & Recognition"
+    },
+    "badges": {
+      "first-order": {
+        "name": "First Bowl",
+        "description": "Completed your first order"
+      },
+      "10-orders": {
+        "name": "Noodle Enthusiast",
+        "description": "Completed 10 orders"
+      },
+      "50-orders": {
+        "name": "Beef Devotee",
+        "description": "Completed 50 orders"
+      },
+      "100-orders": {
+        "name": "Century Club",
+        "description": "Completed 100 orders"
+      },
+      "first-referral": {
+        "name": "Share the Love",
+        "description": "Referred your first friend"
+      },
+      "10-referrals": {
+        "name": "Influencer",
+        "description": "Referred 10 friends"
+      },
+      "50-referrals": {
+        "name": "Ambassador",
+        "description": "Referred 50 friends"
+      },
+      "3-day-streak": {
+        "name": "Hot Streak",
+        "description": "Ordered 3 days in a row"
+      },
+      "7-day-streak": {
+        "name": "Weekly Warrior",
+        "description": "Ordered 7 days in a row"
+      },
+      "30-day-streak": {
+        "name": "Legend",
+        "description": "Ordered 30 days in a row"
+      },
+      "tried-all-items": {
+        "name": "Menu Master",
+        "description": "Tried every item on the menu"
+      },
+      "spicy-challenge": {
+        "name": "Heat Seeker",
+        "description": "Ordered spicy 10 times"
+      },
+      "grand-opening": {
+        "name": "OG Member",
+        "description": "Member since grand opening"
+      },
+      "vip": {
+        "name": "VIP",
+        "description": "Reached Beef Boss tier"
+      }
+    }
   },
   "giftCards": {
     "title": "Gift Cards",
@@ -803,6 +990,25 @@
       "minimumOrder": "Referral bonus applies to first orders of $20 or more",
       "disbursement": "Credits are added to your account within 24 hours",
       "maxPerOrder": "Maximum of $5 credit can be applied per order"
+    },
+    "dashboard": {
+      "getStarted": "Get Started",
+      "enterEmailPrompt": "Enter your email to get your referral link",
+      "getMyReferralLink": "Get My Referral Link",
+      "creating": "Creating...",
+      "availableCredits": "Available Credits",
+      "useCreditsNote": "Use up to $5 per order at checkout",
+      "pendingCredits": "Pending Credits",
+      "scheduledForDisbursement": "Scheduled for disbursement",
+      "nextDisbursement": "Next disbursement:",
+      "yourReferralLink": "Your Referral Link",
+      "copy": "Copy",
+      "shareToEarn": "Share this link to earn $5 for every friend who places an order of $20+",
+      "recentActivity": "Recent Activity",
+      "creditEvents": {
+        "cashback": "{percent}% cashback on order",
+        "appliedToOrder": "Applied to order {orderId}"
+      }
     }
   },
   "careers": {
@@ -1131,6 +1337,7 @@
     "orderNotFound": "Order not found",
     "placeNewOrder": "Place New Order",
     "statusUpdates": "Status updates automatically every 5 seconds",
+    "orderNumber": "Order #{number}",
     "status": {
       "pending": "Pending Payment",
       "paid": "Paid",
@@ -1138,7 +1345,8 @@
       "prepping": "Preparing",
       "ready": "Ready for Delivery",
       "serving": "Enjoy Your Meal!",
-      "completed": "Completed"
+      "completed": "Completed",
+      "doneEating": "Done Eating?"
     },
     "pod": {
       "yourPod": "Your Pod",
@@ -1170,28 +1378,59 @@
     "buttons": {
       "viewProfile": "View My Profile",
       "orderAgain": "Order Again",
-      "imDoneEating": "I'm Done Eating",
-      "addToOrder": "Add to Your Order"
+      "doneEating": "I'm Done Eating",
+      "addToOrder": "Add to Your Order",
+      "callStaff": "Call Staff",
+      "addItems": "Add Items",
+      "confirmAtPod": "Confirm I'm At My Pod"
+    },
+    "location": "Location",
+    "confirmations": {
+      "finishedEating": "Are you finished eating? This will notify staff to clean your pod."
+    },
+    "errors": {
+      "markDone": "Failed to mark as done. Please try again."
     },
     "doneEating": {
       "confirmPrompt": "Are you finished eating? This will notify staff to clean your pod.",
       "failedToUpdate": "Failed to update status. Please try again."
     },
+    "dessert": {
+      "readyForDessert": "Ready for Dessert",
+      "onItsWay": "Dessert On Its Way!",
+      "notifying": "Notifying..."
+    },
     "addItems": {
       "title": "Add to Your Order",
       "loading": "Loading available items...",
       "drinkRefills": "Drink Refills",
-      "requestRefill": "Request Refill",
+      "requestRefill": "Request Refill →",
+      "request": "Request →",
       "requesting": "Requesting...",
       "waterRefill": "Water Refill",
-      "extrasAddons": "Extras & Add-Ons",
+      "extrasAndAddons": "Extras & Add-Ons",
       "requestExtras": "Request {count} Extra(s)",
-      "addOnsExtras": "Add-Ons & Extras",
+      "paidAddons": "Add-Ons & Extras",
       "orderTotal": "Order Total",
-      "checkout": "Checkout",
-      "demoWarning": "Demo mode: No real charge will be made",
+      "checkout": "Checkout →",
+      "demoMode": "Demo mode: No real charge will be made",
       "cancel": "Cancel",
-      "pay": "Pay ${amount}"
+      "pay": "Pay {amount}",
+      "processing": "Processing...",
+      "free": "Free",
+      "paid": "Paid",
+      "add": "Add",
+      "noAddons": "No add-ons available for this order.",
+      "callStaffInstead": "Call Staff Instead",
+      "failedToLoad": "Failed to load add-ons. Please try again or call staff."
+    },
+    "autoRefresh": "Status updates automatically every 10 seconds",
+    "mentalHealth": {
+      "label": "Mental Health Matters",
+      "loading": "Loading mental health awareness...",
+      "skipTip": "Skip the tip. Make a difference instead.",
+      "supportCause": "Support the Cause",
+      "foundation": "One Red Step at a Time Foundation • 501(c)(3)"
     }
   },
   "features": {
@@ -1239,7 +1478,46 @@
     "total": "Total",
     "processing": "Processing...",
     "payNow": "Pay Now",
-    "testMode": "Test mode - no real charge"
+    "testMode": "Test mode - no real charge",
+    "theBowl": "The Bowl",
+    "addOnsExtras": "Add-ons & Extras",
+    "qty": "Qty: {count}",
+    "loading": "Loading...",
+    "subtotal": "Subtotal",
+    "creditsApplied": "Credits Applied",
+    "payAmount": "Pay ${amount}",
+    "processingPayment": "Processing Payment...",
+    "secureCheckout": "Secure checkout powered by Stripe (test mode)",
+    "paymentMethod": "Payment Method",
+    "testPayment": "Test Payment",
+    "demoMode": "Demo mode - no real charge",
+    "demoWarning": "This is a demo payment. Real Stripe integration coming soon!",
+    "availableCredits": "Available Credits",
+    "youHaveCredits": "You have <bold>${amount}</bold> in credits",
+    "maxCreditsNote": "You can apply up to $5 in credit to a single order",
+    "applyToOrder": "Apply ${amount} to this order",
+    "welcomeReferred": "Welcome! You've been referred",
+    "referralCreditsNote": "You got ${amount} in credits to use on this order",
+    "referralAlreadyUsed": "Referral credit already used",
+    "referralAlreadyUsedNote": "Thanks for checking us out again! Referral credits are only applied to your first order. You can still earn credits by referring friends using your personal referral link.",
+    "loadingAccount": "Loading your account and rewards...",
+    "signInToComplete": "Sign in to complete your order",
+    "signInDescription": "You'll need to sign in to track your order, earn rewards, and use referral credits.",
+    "referralDiscountWaiting": "You have a referral discount waiting!",
+    "signInSignUp": "Sign In / Sign Up",
+    "guestCheckout": "Guest Checkout",
+    "guestCheckoutDescription": "Please enter your name so we can prepare your order.",
+    "name": "Name",
+    "phone": "Phone",
+    "email": "Email",
+    "optional": "optional",
+    "yourName": "Your name",
+    "forOrderUpdates": "For order updates",
+    "forReceipt": "For receipt",
+    "enterYourName": "Please enter your name",
+    "wantToEarnRewards": "Want to earn rewards and track your orders?",
+    "signInInstead": "Sign In Instead",
+    "waitLoadingAccount": "Please wait while we load your account..."
   },
   "groupOrder": {
     "notFound": "Group Not Found",
@@ -1266,6 +1544,23 @@
     "linkedin": "LinkedIn",
     "email": "Email"
   },
+  "checkIn": {
+    "title": "Check-In Kiosk",
+    "subtitle": "Scan or enter your order QR code to get your pod assignment",
+    "howToTitle": "How to check in:",
+    "step1": "Find your order QR code (on your order confirmation page)",
+    "step2": "Scan it with the kiosk scanner or enter the code below",
+    "step3": "Get your pod assignment or queue position",
+    "qrCodeLabel": "Order QR Code:",
+    "qrCodePlaceholder": "ORDER-xxpmm5hf-1234567890-ABC123",
+    "checkInButton": "Check In",
+    "checkingIn": "Checking in...",
+    "needHelp": "Need Help?",
+    "helpTip1": "Your QR code is on your order confirmation page",
+    "helpTip2": "It starts with \"ORDER-\" followed by numbers and letters",
+    "helpTip3": "Ask staff if you need assistance",
+    "loading": "Loading..."
+  },
   "confirmation": {
     "title": "Order Confirmed!",
     "orderNumber": "Order #{number}",
@@ -1276,6 +1571,31 @@
     "simulateCheckIn": "Simulate Check-in (Demo)",
     "checkingIn": "Checking in...",
     "groupOrderNote": "This is a group order with {count} orders.",
-    "paidStatus": "Payment Complete"
+    "paidStatus": "Payment Complete",
+    "yourOrderQrCode": "Your Order QR Code",
+    "scanAtKiosk": "Scan this at the kiosk when you arrive to get your pod assignment",
+    "expectedArrival": "Expected arrival: {time}",
+    "host": "Host",
+    "guest": "Guest {number}",
+    "podNumber": "Pod {number}",
+    "noPodYet": "No pod yet",
+    "checkInThisOrder": "Check In This Order",
+    "assignedToPod": "Assigned to Pod {number} - awaiting arrival",
+    "checkedInAtPod": "Checked in at Pod {number}",
+    "orderLabel": "Order",
+    "total": "Total",
+    "qty": "Qty: {count}",
+    "trackOrderStatus": "Track Order Status",
+    "shareYourOrder": "Share Your Order!",
+    "spreadTheWord": "Spread the word and earn rewards",
+    "copied": "Copied!",
+    "copy": "Copy",
+    "shareVia": "Share via...",
+    "twitter": "Twitter",
+    "facebook": "Facebook",
+    "linkedin": "LinkedIn",
+    "referralNote": "Your referral link is included! Friends get $5 off their first order. You earn $5 when they order $20+ (credited on the 1st or 16th).",
+    "backToHome": "Back to Home",
+    "loadingOrder": "Loading order..."
   }
 }

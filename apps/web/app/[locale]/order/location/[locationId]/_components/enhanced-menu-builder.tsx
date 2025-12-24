@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { SliderControl, SliderLegend } from "./slider-control";
 import { RadioGroup } from "./radio-group";
 import { CheckboxGroup } from "./checkbox-group";
@@ -33,6 +33,7 @@ type OrderPatterns = {
 type MenuItem = {
   id: string;
   name: string;
+  nameEn?: string;
   basePriceCents: number;
   additionalPriceCents: number;
   includedQuantity: number;
@@ -77,6 +78,7 @@ export default function EnhancedMenuBuilder({
   const { user, isLoaded: userLoaded } = useUser();
   const { guest, isGuest } = useGuest();
   const t = useTranslations("order");
+  const locale = useLocale();
   const toast = useToast();
   const [menuSteps, setMenuSteps] = useState<MenuStep[]>([]);
   const [loading, setLoading] = useState(true);
@@ -189,7 +191,7 @@ export default function EnhancedMenuBuilder({
   useEffect(() => {
     async function loadMenu() {
       try {
-        const response = await fetch(`${BASE}/menu/steps`, {
+        const response = await fetch(`${BASE}/menu/steps?locale=${locale}`, {
           headers: { "x-tenant-slug": "oh" },
         });
         const data = await response.json();
@@ -220,7 +222,7 @@ export default function EnhancedMenuBuilder({
     }
 
     loadMenu();
-  }, []);
+  }, [locale]);
 
   // If reorderId is provided, load the order
   useEffect(() => {
@@ -695,7 +697,7 @@ export default function EnhancedMenuBuilder({
       <div style={{ minHeight: "400px", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: "3rem", marginBottom: 16 }}>🍜</div>
-          <div>Loading menu...</div>
+          <div>{t("builder.loadingMenu")}</div>
         </div>
       </div>
     );
@@ -789,12 +791,12 @@ export default function EnhancedMenuBuilder({
 
     // Standard time selection view for hosts and non-group orders
     const timeOptions = [
-      { value: "asap", label: "ASAP (between now and 5 minutes)", minutes: 0 },
-      { value: "15", label: "15 minutes", minutes: 15 },
-      { value: "30", label: "30 minutes", minutes: 30 },
-      { value: "45", label: "45 minutes", minutes: 45 },
-      { value: "60", label: "1 hour", minutes: 60 },
-      { value: "90", label: "1.5 hours", minutes: 90 },
+      { value: "asap", labelKey: "timeOptions.asap", minutes: 0 },
+      { value: "15", labelKey: "timeOptions.15min", minutes: 15 },
+      { value: "30", labelKey: "timeOptions.30min", minutes: 30 },
+      { value: "45", labelKey: "timeOptions.45min", minutes: 45 },
+      { value: "60", labelKey: "timeOptions.1hour", minutes: 60 },
+      { value: "90", labelKey: "timeOptions.90min", minutes: 90 },
     ];
 
     return (
@@ -812,7 +814,7 @@ export default function EnhancedMenuBuilder({
               cursor: "pointer",
             }}
           >
-            ← Back to Menu
+            ← {t("builder.backToMenu")}
           </button>
         )}
 
@@ -841,13 +843,13 @@ export default function EnhancedMenuBuilder({
           </div>
         )}
 
-        <h2 style={{ marginBottom: 24 }}>When will you arrive?</h2>
+        <h2 style={{ marginBottom: 24 }}>{t("builder.whenWillYouArrive")}</h2>
 
-        <div style={{ display: "grid", gap: 16, marginBottom: 32 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 32 }}>
           {timeOptions.map((option) => {
             const isSelected = arrivalTime === option.value;
             const estimatedReadyTime = new Date(Date.now() + option.minutes * 60 * 1000);
-            const timeStr = estimatedReadyTime.toLocaleTimeString("en-US", {
+            const timeStr = estimatedReadyTime.toLocaleTimeString(locale, {
               hour: "numeric",
               minute: "2-digit",
             });
@@ -858,8 +860,8 @@ export default function EnhancedMenuBuilder({
                 onClick={() => setArrivalTime(option.value)}
                 style={{
                   border: `2px solid ${isSelected ? "#7C7A67" : "#e5e7eb"}`,
-                  borderRadius: 12,
-                  padding: 20,
+                  borderRadius: 10,
+                  padding: "12px 14px",
                   background: isSelected ? "#f0f4ff" : "white",
                   cursor: "pointer",
                   textAlign: "left",
@@ -867,24 +869,27 @@ export default function EnhancedMenuBuilder({
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>
-                    <div style={{ fontWeight: "bold", fontSize: "1.1rem", marginBottom: 4 }}>
-                      {option.label}
+                    <div style={{ fontWeight: "bold", fontSize: "0.95rem", marginBottom: 2 }}>
+                      {t(`builder.${option.labelKey}`)}
                     </div>
-                    <div style={{ color: "#666", fontSize: "0.9rem" }}>
-                      Ready by {timeStr}
+                    <div style={{ color: "#666", fontSize: "0.8rem" }}>
+                      {t("builder.readyBy", { time: timeStr })}
                     </div>
                   </div>
                   {isSelected && (
                     <div
                       style={{
-                        width: 24,
-                        height: 24,
+                        width: 20,
+                        height: 20,
                         borderRadius: "50%",
                         background: "#7C7A67",
                         color: "white",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
+                        fontSize: "0.75rem",
+                        flexShrink: 0,
+                        marginLeft: 8,
                       }}
                     >
                       ✓
@@ -908,16 +913,15 @@ export default function EnhancedMenuBuilder({
             }}
           >
             <h3 style={{ marginBottom: 8, fontSize: "1.1rem" }}>
-              Choose Your Pod (Optional)
+              {t("builder.choosePod")}
             </h3>
             <p style={{ color: "#666", fontSize: "0.9rem", marginBottom: 16 }}>
-              Since you're arriving soon, you can pick your preferred pod now.
-              Skip this to be auto-assigned when you check in.
+              {t("builder.choosePodDescription")}
             </p>
 
             {loadingSeats ? (
               <div style={{ textAlign: "center", padding: 40 }}>
-                Loading seats...
+                {t("builder.loadingSeats")}
               </div>
             ) : (
               <SeatingMap
@@ -929,6 +933,19 @@ export default function EnhancedMenuBuilder({
                     number: seat.number,
                     locationId: location.id,
                   });
+                }}
+                labels={{
+                  available: t("builder.podLegend.available"),
+                  selected: t("builder.podLegend.selected"),
+                  reserved: t("builder.podLegend.reserved"),
+                  occupied: t("builder.podLegend.occupied"),
+                  dualPod: t("builder.podLegend.dualPod"),
+                  entrance: t("builder.podMap.entrance"),
+                  kitchen: t("builder.podMap.kitchen"),
+                  exit: t("builder.podMap.exit"),
+                  dual: t("builder.podMap.dual"),
+                  selectedPrefix: t("builder.podSelection.selectedPrefix"),
+                  pod: t("builder.podSelection.pod"),
                 }}
               />
             )}
@@ -947,7 +964,7 @@ export default function EnhancedMenuBuilder({
                     fontSize: "0.9rem",
                   }}
                 >
-                  Clear Selection (Auto-assign instead)
+                  {t("builder.clearSelection")}
                 </button>
               </div>
             )}
@@ -964,7 +981,7 @@ export default function EnhancedMenuBuilder({
               textAlign: "center",
             }}
           >
-            <div style={{ color: "#666" }}>Checking seat availability...</div>
+            <div style={{ color: "#666" }}>{t("builder.checkingSeatAvailability")}</div>
           </div>
         )}
 
@@ -984,10 +1001,10 @@ export default function EnhancedMenuBuilder({
           }}
         >
           {submitting
-            ? "Processing..."
+            ? t("builder.processing")
             : groupCode
-              ? "Add to Group Order"
-              : "Review Order & Payment"}
+              ? t("builder.addToGroupOrder")
+              : t("builder.reviewOrderPayment")}
         </button>
       </div>
     );
@@ -1014,7 +1031,7 @@ export default function EnhancedMenuBuilder({
           ))}
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.875rem", color: "#666" }}>
-          <span>Step {currentStepIndex + 1} of {menuSteps.length}</span>
+          <span>{t("builder.stepOf", { current: currentStepIndex + 1, total: menuSteps.length })}</span>
           <span>{currentStep.title}</span>
         </div>
       </div>
@@ -1070,7 +1087,7 @@ export default function EnhancedMenuBuilder({
 
       {/* Show slider legend if current step has sliders */}
       {currentStep.sections.some(s => s.selectionMode === 'SLIDER') && (
-        <SliderLegend />
+        <SliderLegend recommendationLabel={t("builder.ohRecommendation")} />
       )}
 
       {/* Render sections */}
@@ -1084,6 +1101,7 @@ export default function EnhancedMenuBuilder({
               selectedId={selections[section.id] || null}
               onSelect={(itemId) => handleRadioSelect(section.id, itemId)}
               required={section.required}
+              requiredLabel={t("builder.required")}
             />
           );
         }
@@ -1091,10 +1109,16 @@ export default function EnhancedMenuBuilder({
         if (section.selectionMode === 'SLIDER' && section.item && section.sliderConfig) {
           const value = cart[section.item.id] ?? section.sliderConfig.default ?? 0;
           const labels = section.sliderConfig.labels || [];
+          // Build slider label translations object
+          const sliderLabelTranslations: Record<string, string> = {};
+          labels.forEach((label: string) => {
+            sliderLabelTranslations[label] = t(`builder.sliderLabels.${label}`) || label;
+          });
           return (
             <div key={section.id} style={{ marginBottom: 10 }}>
               <SliderControl
                 name={section.name}
+                nameEn={section.item.nameEn}
                 description={section.description}
                 value={value}
                 onChange={(val) => {
@@ -1107,6 +1131,8 @@ export default function EnhancedMenuBuilder({
                   additionalPriceCents: section.item.additionalPriceCents,
                   includedQuantity: section.item.includedQuantity,
                 }}
+                labelTranslations={sliderLabelTranslations}
+                includedUpToLabel={t("builder.includedUpTo", { count: section.item.includedQuantity })}
               />
             </div>
           );
@@ -1121,6 +1147,12 @@ export default function EnhancedMenuBuilder({
               quantities={cart}
               onUpdateQuantity={handleQuantityUpdate}
               maxQuantity={section.maxQuantity}
+              labels={{
+                included: t("builder.included"),
+                each: t("builder.each"),
+                eachExtra: t("builder.eachExtra"),
+                subtotal: t("builder.subtotalLabel"),
+              }}
             />
           );
         }
@@ -1131,7 +1163,7 @@ export default function EnhancedMenuBuilder({
       {/* Navigation */}
       <div style={{ position: "sticky", bottom: 0, background: "white", border: "1px solid rgba(124, 122, 103, 0.2)", borderRadius: "16px", padding: "24px 32px", marginTop: 32, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <strong style={{ fontSize: "1.1rem", color: "#222222" }}>Total:</strong>
+          <strong style={{ fontSize: "1.1rem", color: "#222222" }}>{t("builder.total")}</strong>
           <strong style={{ fontSize: "1.8rem", color: "#7C7A67", paddingRight: "8px" }}>
             ${(totalCents / 100).toFixed(2)}
           </strong>
@@ -1153,7 +1185,7 @@ export default function EnhancedMenuBuilder({
                 cursor: "pointer",
               }}
             >
-              ← Back
+              ← {t("builder.back")}
             </button>
           )}
           <button
@@ -1171,7 +1203,7 @@ export default function EnhancedMenuBuilder({
               cursor: isStepComplete(currentStep) ? "pointer" : "not-allowed",
             }}
           >
-            Continue →
+            {t("builder.continue")} →
           </button>
         </div>
       </div>

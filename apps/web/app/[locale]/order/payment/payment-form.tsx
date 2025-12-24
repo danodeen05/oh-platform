@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useUser, SignInButton } from "@clerk/nextjs";
 import { useGuest } from "@/contexts/guest-context";
 import { trackBeginCheckout } from "@/lib/analytics";
+import { useTranslations } from "next-intl";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -17,6 +18,7 @@ export default function PaymentForm({
   orderNumber: string;
 }) {
   const router = useRouter();
+  const t = useTranslations("payment");
   const { user, isLoaded, isSignedIn } = useUser();
   const { guest, isGuest, updateGuest } = useGuest();
   const [processing, setProcessing] = useState(false);
@@ -253,7 +255,7 @@ export default function PaymentForm({
     return (
       <div style={{ textAlign: "center", padding: "40px 0" }}>
         <div style={{ fontSize: "1.5rem", marginBottom: 16 }}>⏳</div>
-        <p style={{ color: "#666" }}>Loading...</p>
+        <p style={{ color: "#666" }}>{t("loading")}</p>
       </div>
     );
   }
@@ -274,22 +276,22 @@ export default function PaymentForm({
             }}
           >
             <h3 style={{ marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
-              <span>👤</span> Guest Checkout
+              <span>👤</span> {t("guestCheckout")}
             </h3>
             <p style={{ color: "#666", fontSize: "0.9rem", marginBottom: 20 }}>
-              Please enter your name so we can prepare your order.
+              {t("guestCheckoutDescription")}
             </p>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <div>
                 <label style={{ display: "block", marginBottom: 6, fontWeight: "500", fontSize: "0.9rem" }}>
-                  Name <span style={{ color: "#ef4444" }}>*</span>
+                  {t("name")} <span style={{ color: "#ef4444" }}>*</span>
                 </label>
                 <input
                   type="text"
                   value={guestName}
                   onChange={(e) => setGuestName(e.target.value)}
-                  placeholder="Your name"
+                  placeholder={t("yourName")}
                   style={{
                     width: "100%",
                     padding: "12px 16px",
@@ -306,13 +308,13 @@ export default function PaymentForm({
 
               <div>
                 <label style={{ display: "block", marginBottom: 6, fontWeight: "500", fontSize: "0.9rem" }}>
-                  Phone <span style={{ color: "#9ca3af" }}>(optional)</span>
+                  {t("phone")} <span style={{ color: "#9ca3af" }}>({t("optional")})</span>
                 </label>
                 <input
                   type="tel"
                   value={guestPhone}
                   onChange={(e) => setGuestPhone(e.target.value)}
-                  placeholder="For order updates"
+                  placeholder={t("forOrderUpdates")}
                   style={{
                     width: "100%",
                     padding: "12px 16px",
@@ -326,13 +328,13 @@ export default function PaymentForm({
 
               <div>
                 <label style={{ display: "block", marginBottom: 6, fontWeight: "500", fontSize: "0.9rem" }}>
-                  Email <span style={{ color: "#9ca3af" }}>(optional)</span>
+                  {t("email")} <span style={{ color: "#9ca3af" }}>({t("optional")})</span>
                 </label>
                 <input
                   type="email"
                   value={guestEmail}
                   onChange={(e) => setGuestEmail(e.target.value)}
-                  placeholder="For receipt"
+                  placeholder={t("forReceipt")}
                   style={{
                     width: "100%",
                     padding: "12px 16px",
@@ -348,7 +350,7 @@ export default function PaymentForm({
 
           {/* Payment Method */}
           <div style={{ marginBottom: 24 }}>
-            <h3 style={{ marginBottom: 16 }}>Payment Method</h3>
+            <h3 style={{ marginBottom: 16 }}>{t("paymentMethod")}</h3>
             <div
               style={{
                 border: "2px solid #7C7A67",
@@ -373,8 +375,8 @@ export default function PaymentForm({
                   💳
                 </div>
                 <div>
-                  <div style={{ fontWeight: "bold" }}>Test Payment</div>
-                  <div style={{ fontSize: "0.85rem", color: "#666" }}>Demo mode - no real charge</div>
+                  <div style={{ fontWeight: "bold" }}>{t("testPayment")}</div>
+                  <div style={{ fontSize: "0.85rem", color: "#666" }}>{t("demoMode")}</div>
                 </div>
               </div>
               <div
@@ -387,7 +389,7 @@ export default function PaymentForm({
                   color: "#92400e",
                 }}
               >
-                ⚠️ This is a demo payment. Real Stripe integration coming soon!
+                ⚠️ {t("demoWarning")}
               </div>
             </div>
           </div>
@@ -423,7 +425,7 @@ export default function PaymentForm({
               transition: "all 0.2s",
             }}
           >
-            {processing ? "Processing Payment..." : `Pay $${(validTotalCents / 100).toFixed(2)}`}
+            {processing ? t("processingPayment") : t("payAmount", { amount: (validTotalCents / 100).toFixed(2) })}
           </button>
 
           {/* Sign in option for rewards */}
@@ -437,7 +439,7 @@ export default function PaymentForm({
             }}
           >
             <p style={{ color: "#666", fontSize: "0.9rem", marginBottom: 12 }}>
-              Want to earn rewards and track your orders?
+              {t("wantToEarnRewards")}
             </p>
             <SignInButton mode="modal">
               <button
@@ -453,7 +455,7 @@ export default function PaymentForm({
                   transition: "all 0.2s",
                 }}
               >
-                Sign In Instead
+                {t("signInInstead")}
               </button>
             </SignInButton>
           </div>
@@ -466,7 +468,7 @@ export default function PaymentForm({
               marginTop: 16,
             }}
           >
-            🔒 Secure checkout powered by Stripe (test mode)
+            🔒 {t("secureCheckout")}
           </p>
         </div>
       );
@@ -484,13 +486,12 @@ export default function PaymentForm({
         }}
       >
         <div style={{ fontSize: "2.5rem", marginBottom: 16 }}>🔐</div>
-        <h3 style={{ marginBottom: 12 }}>Sign in to complete your order</h3>
+        <h3 style={{ marginBottom: 12 }}>{t("signInToComplete")}</h3>
         <p style={{ color: "#666", marginBottom: 24, lineHeight: 1.6 }}>
-          You'll need to sign in to track your order, earn rewards, and use
-          referral credits.
+          {t("signInDescription")}
           {hasReferral && (
             <span style={{ color: "#7C7A67", fontWeight: "bold", display: "block", marginTop: 8 }}>
-              🎉 You have a referral discount waiting!
+              🎉 {t("referralDiscountWaiting")}
             </span>
           )}
         </p>
@@ -508,7 +509,7 @@ export default function PaymentForm({
               transition: "all 0.2s",
             }}
           >
-            Sign In / Sign Up
+            {t("signInSignUp")}
           </button>
         </SignInButton>
       </div>
@@ -531,7 +532,7 @@ export default function PaymentForm({
         >
           <div style={{ fontSize: "1.5rem", marginBottom: 8 }}>⏳</div>
           <p style={{ color: "#666", margin: 0 }}>
-            Loading your account and rewards...
+            {t("loadingAccount")}
           </p>
         </div>
       )}
@@ -555,11 +556,10 @@ export default function PaymentForm({
               <div style={{ fontSize: "1.5rem" }}>🎉</div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: "bold", color: "#222222" }}>
-                  Welcome! You've been referred
+                  {t("welcomeReferred")}
                 </div>
                 <div style={{ fontSize: "0.85rem", color: "#7C7A67" }}>
-                  You got ${(userCredits / 100).toFixed(2)} in credits to use on
-                  this order
+                  {t("referralCreditsNote", { amount: (userCredits / 100).toFixed(2) })}
                 </div>
               </div>
             </div>
@@ -582,10 +582,10 @@ export default function PaymentForm({
               <div style={{ fontSize: "1.5rem" }}>ℹ️</div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontWeight: "bold", color: "#92400e" }}>
-                  Referral credit already used
+                  {t("referralAlreadyUsed")}
                 </div>
                 <div style={{ fontSize: "0.85rem", color: "#b45309", lineHeight: 1.5 }}>
-                  Thanks for checking us out again! Referral credits are only applied to your first order. You can still earn credits by referring friends using your personal referral link.
+                  {t("referralAlreadyUsedNote")}
                 </div>
               </div>
             </div>
@@ -606,13 +606,16 @@ export default function PaymentForm({
                 <div style={{ fontSize: "1.5rem" }}>💰</div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: "bold", color: "#222222" }}>
-                    Available Credits
+                    {t("availableCredits")}
                   </div>
                   <div style={{ fontSize: "0.85rem", color: "#7C7A67" }}>
-                    You have ${(userCredits / 100).toFixed(2)} in credits
+                    {t.rich("youHaveCredits", {
+                      amount: (userCredits / 100).toFixed(2),
+                      bold: (chunks) => <strong style={{ color: "#222" }}>{chunks}</strong>
+                    })}
                   </div>
                   <div style={{ fontSize: "0.75rem", color: "#7C7A67", marginTop: 4 }}>
-                    You can apply up to $5 in credit to a single order
+                    {t("maxCreditsNote")}
                   </div>
                 </div>
               </div>
@@ -640,7 +643,7 @@ export default function PaymentForm({
                   }}
                 />
                 <span style={{ fontSize: "0.9rem", color: "#222222" }}>
-                  Apply {Math.min(userCredits, MAX_CREDITS_PER_ORDER) === MAX_CREDITS_PER_ORDER ? '$5.00' : `$${(userCredits / 100).toFixed(2)}`} to this order
+                  {t("applyToOrder", { amount: Math.min(userCredits, MAX_CREDITS_PER_ORDER) === MAX_CREDITS_PER_ORDER ? '5.00' : (userCredits / 100).toFixed(2) })}
                 </span>
               </label>
             </div>
@@ -664,7 +667,7 @@ export default function PaymentForm({
                   marginBottom: 8,
                 }}
               >
-                <span style={{ color: "#666" }}>Subtotal</span>
+                <span style={{ color: "#666" }}>{t("subtotal")}</span>
                 <span>${(totalCents / 100).toFixed(2)}</span>
               </div>
               <div
@@ -676,7 +679,7 @@ export default function PaymentForm({
                   fontWeight: "bold",
                 }}
               >
-                <span>Credits Applied</span>
+                <span>{t("creditsApplied")}</span>
                 <span>-${(creditsApplied / 100).toFixed(2)}</span>
               </div>
               <div
@@ -689,7 +692,7 @@ export default function PaymentForm({
                   fontWeight: "bold",
                 }}
               >
-                <span>Total</span>
+                <span>{t("total")}</span>
                 <span>${(discountedTotal / 100).toFixed(2)}</span>
               </div>
             </div>
@@ -697,7 +700,7 @@ export default function PaymentForm({
 
           {/* Payment Method Selection */}
           <div style={{ marginBottom: 32 }}>
-            <h3 style={{ marginBottom: 16 }}>Payment Method</h3>
+            <h3 style={{ marginBottom: 16 }}>{t("paymentMethod")}</h3>
 
             <div
               style={{
@@ -730,9 +733,9 @@ export default function PaymentForm({
                   💳
                 </div>
                 <div>
-                  <div style={{ fontWeight: "bold" }}>Test Payment</div>
+                  <div style={{ fontWeight: "bold" }}>{t("testPayment")}</div>
                   <div style={{ fontSize: "0.85rem", color: "#666" }}>
-                    Demo mode - no real charge
+                    {t("demoMode")}
                   </div>
                 </div>
               </div>
@@ -747,7 +750,7 @@ export default function PaymentForm({
                   color: "#92400e",
                 }}
               >
-                ⚠️ This is a demo payment. Real Stripe integration coming soon!
+                ⚠️ {t("demoWarning")}
               </div>
             </div>
           </div>
@@ -784,8 +787,8 @@ export default function PaymentForm({
             }}
           >
             {processing
-              ? "Processing Payment..."
-              : `Pay $${(discountedTotal / 100).toFixed(2)}`}
+              ? t("processingPayment")
+              : t("payAmount", { amount: (discountedTotal / 100).toFixed(2) })}
           </button>
 
           <p
@@ -796,8 +799,7 @@ export default function PaymentForm({
               marginTop: 16,
             }}
           >
-            🔒 Secure checkout powered by Stripe (test mode)
-          </p>
+            🔒 {t("secureCheckout")}</p>
         </>
       )}
     </div>
