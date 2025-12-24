@@ -119,8 +119,8 @@
       },
       "giveBack": {
         "title": "Want to Give Back?",
-        "description": "Support our 501(c)(3) foundation that helps families in need. In lieu of a tip, consider contributing to One Red Step at a Time.",
-        "button": "Contribute Today"
+        "description": "How much power is in a pair of red socks? Let's find out together. Walk with Us™ to support mental health.",
+        "button": "Walk With Us"
       }
     },
     "customize": {
@@ -152,7 +152,7 @@
     },
     "foundation": {
       "giveBack": "Give Back",
-      "tagline": "Supporting our 501(c)(3) foundation — One Red Step at a Time"
+      "tagline": "Support our 501(c)(3) foundation — One Red Step At A Time"
     }
   },
   "languages": {
@@ -469,7 +469,7 @@
       "addToGroup": "Failed to add order to group. Please try again.",
       "callStaff": "Failed to call staff. Please try again.",
       "requestRefill": "Failed to request refill. Please try again.",
-      "requestVegetables": "Failed to request extra vegetables. Please try again.",
+      "requestVegetables": "Failed to request free extras. Please try again.",
       "requestDessert": "Failed to request dessert. Please try again.",
       "orderNotFound": "Order not found",
       "loadStatus": "Failed to load order status",
@@ -486,7 +486,7 @@
     },
     "success": {
       "refillRequested": "Drink refill requested! It will be brought to your pod shortly.",
-      "vegetablesRequested": "Extra vegetables requested! They will be brought to your pod shortly.",
+      "vegetablesRequested": "Free extras requested! They will be brought to your pod shortly.",
       "addonOrdered": "Add-on order placed! {amount} charged. Your items will be brought to your pod shortly.",
       "staffNotified": "Staff Notified",
       "dessertOnWay": "Dessert On Its Way!"

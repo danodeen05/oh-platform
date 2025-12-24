@@ -1,6 +1,6 @@
 "use client";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
 import { useTranslations } from "next-intl";
 import { useToast } from "@/components/ui/Toast";
 import { ConfirmDialog } from "@/components/ui/Dialog";
@@ -103,6 +103,239 @@ interface AvailableAddons {
   }>;
 }
 
+// Mental Health Awareness Component - fetches AI-generated facts
+function MentalHealthAwareness() {
+  const [fact, setFact] = useState<{ question: string; fact: string; source: string } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    async function fetchMentalHealthFact() {
+      try {
+        const response = await fetch(
+          `${BASE}/orders/mental-health-fact`,
+          { headers: { "x-tenant-slug": "oh" } }
+        );
+        if (response.ok) {
+          const data = await response.json();
+          setFact(data);
+        } else {
+          setError(true);
+        }
+      } catch (err) {
+        console.error("Failed to fetch mental health fact:", err);
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchMentalHealthFact();
+  }, []);
+
+  // Don't render if loading or error
+  if (loading) {
+    return (
+      <div
+        style={{
+          background: "linear-gradient(135deg, #ffffff 0%, #faf8f5 100%)",
+          borderRadius: 16,
+          padding: 24,
+          marginBottom: 16,
+          textAlign: "center",
+          border: "2px solid rgba(199, 168, 120, 0.3)",
+        }}
+      >
+        <div style={{ color: "#7C7A67", fontSize: "0.9rem" }}>Loading mental health awareness...</div>
+      </div>
+    );
+  }
+
+  if (error || !fact) {
+    return null; // Don't show anything if API fails
+  }
+
+  return (
+    <div
+      style={{
+        background: "linear-gradient(135deg, #ffffff 0%, #faf8f5 100%)",
+        borderRadius: 16,
+        padding: 24,
+        marginBottom: 16,
+        boxShadow: "0 4px 12px rgba(199, 168, 120, 0.15)",
+        textAlign: "center",
+        position: "relative",
+        overflow: "hidden",
+        border: "2px solid rgba(199, 168, 120, 0.3)",
+      }}
+    >
+      {/* Decorative red accent */}
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 4,
+          background: "linear-gradient(90deg, #dc2626 0%, #b91c1c 100%)",
+        }}
+      />
+
+      {/* Header with sock icon */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 10,
+          marginBottom: 16,
+        }}
+      >
+        <img
+          src="/redsock-icon.png"
+          alt="One Red Step"
+          style={{
+            height: 36,
+            width: "auto",
+          }}
+        />
+        <span
+          style={{
+            fontSize: "0.7rem",
+            fontWeight: "bold",
+            color: "#dc2626",
+            textTransform: "uppercase",
+            letterSpacing: "0.15em",
+          }}
+        >
+          Mental Health Matters
+        </span>
+      </div>
+
+      {/* Question */}
+      <h3
+        style={{
+          margin: 0,
+          marginBottom: 12,
+          fontSize: "1.1rem",
+          color: "#2D2A26",
+          fontWeight: "600",
+        }}
+      >
+        {fact.question}
+      </h3>
+
+      {/* Fact */}
+      <p
+        style={{
+          color: "#5a584a",
+          fontSize: "0.95rem",
+          margin: 0,
+          marginBottom: 12,
+          lineHeight: 1.6,
+        }}
+      >
+        {fact.fact}
+      </p>
+
+      {/* Source */}
+      <p
+        style={{
+          color: "#9ca3af",
+          fontSize: "0.75rem",
+          margin: 0,
+          marginBottom: 16,
+          fontStyle: "italic",
+        }}
+      >
+        — {fact.source}
+      </p>
+
+      {/* Divider */}
+      <div
+        style={{
+          height: 1,
+          background: "rgba(199, 168, 120, 0.3)",
+          margin: "0 -24px 16px -24px",
+        }}
+      />
+
+      {/* CTA Section */}
+      <p
+        style={{
+          color: "#7C7A67",
+          fontSize: "0.85rem",
+          margin: 0,
+          marginBottom: 12,
+          lineHeight: 1.5,
+        }}
+      >
+        Skip the tip. Make a difference instead.
+      </p>
+
+      <a
+        href="https://www.oneredstepatatime.org"
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 10,
+          padding: "12px 24px",
+          borderRadius: 50,
+          background: "#FFFFFF",
+          border: "2px solid #dc2626",
+          textDecoration: "none",
+          transition: "all 0.3s ease",
+          boxShadow: "0 4px 12px rgba(220, 38, 38, 0.15)",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = "translateY(-2px)";
+          e.currentTarget.style.boxShadow = "0 8px 20px rgba(220, 38, 38, 0.25)";
+          e.currentTarget.style.background = "rgba(220, 38, 38, 0.05)";
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = "translateY(0)";
+          e.currentTarget.style.boxShadow = "0 4px 12px rgba(220, 38, 38, 0.15)";
+          e.currentTarget.style.background = "#FFFFFF";
+        }}
+      >
+        <img
+          src="/redsock-icon.png"
+          alt="One Red Step Foundation"
+          style={{
+            height: 26,
+            width: "auto",
+          }}
+        />
+        <span
+          style={{
+            fontSize: "0.9rem",
+            fontWeight: "600",
+            color: "#dc2626",
+            letterSpacing: "0.3px",
+          }}
+        >
+          Support the Cause
+        </span>
+      </a>
+
+      {/* Foundation name */}
+      <p
+        style={{
+          color: "#9ca3af",
+          fontSize: "0.7rem",
+          margin: 0,
+          marginTop: 12,
+          textTransform: "uppercase",
+          letterSpacing: "0.1em",
+        }}
+      >
+        One Red Step at a Time Foundation • 501(c)(3)
+      </p>
+    </div>
+  );
+}
+
 function StatusContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -125,7 +358,7 @@ function StatusContent() {
   const [backstory, setBackstory] = useState<OrderBackstory | null>(null);
   const [backstoryLoading, setBackstoryLoading] = useState(false);
   const [backstoryOpened, setBackstoryOpened] = useState(false);
-  const [lastCommentaryStatus, setLastCommentaryStatus] = useState<string | null>(null);
+  const lastCommentaryStatusRef = useRef<string | null>(null);
 
   // Add-on and Call Staff state
   const [showAddOnModal, setShowAddOnModal] = useState(false);
@@ -160,7 +393,19 @@ function StatusContent() {
 
       if (response.ok) {
         const data = await response.json();
-        setStatus(data);
+
+        // Only update state if data has actually changed to prevent unnecessary re-renders
+        setStatus((prevStatus) => {
+          // Deep compare the critical fields to avoid jerkiness
+          if (prevStatus &&
+              prevStatus.order?.status === data.order?.status &&
+              prevStatus.order?.podConfirmedAt === data.order?.podConfirmedAt &&
+              prevStatus.queuePosition === data.queuePosition &&
+              prevStatus.estimatedWait === data.estimatedWait) {
+            return prevStatus; // No change, don't re-render
+          }
+          return data;
+        });
         setError(null);
 
         // Fetch commentary when status is in active cooking stages
@@ -183,9 +428,9 @@ function StatusContent() {
     }
   }
 
-  // Fetch fortune cookie
+  // Fetch fortune cookie - always fetches fresh (no caching)
   async function fetchFortune() {
-    if (!orderQrCode || fortune || fortuneLoading) return;
+    if (!orderQrCode || fortuneLoading) return;
 
     setFortuneLoading(true);
     try {
@@ -207,9 +452,9 @@ function StatusContent() {
     }
   }
 
-  // Fetch order roast
+  // Fetch order roast - always fetches fresh (no caching)
   async function fetchRoast() {
-    if (!orderQrCode || roast || roastLoading) return;
+    if (!orderQrCode || roastLoading) return;
 
     setRoastLoading(true);
     try {
@@ -236,7 +481,8 @@ function StatusContent() {
     if (!orderQrCode || commentaryLoading) return;
     // Only fetch if status changed and is a commentary-worthy status
     if (!["QUEUED", "PREPPING", "READY", "SERVING"].includes(currentStatus)) return;
-    if (currentStatus === lastCommentaryStatus) return;
+    // Use ref to avoid stale closure - only fetch when status actually changes
+    if (currentStatus === lastCommentaryStatusRef.current) return;
 
     setCommentaryLoading(true);
     try {
@@ -250,7 +496,7 @@ function StatusContent() {
       if (response.ok) {
         const data = await response.json();
         setCommentary(data);
-        setLastCommentaryStatus(currentStatus);
+        lastCommentaryStatusRef.current = currentStatus;
       }
     } catch (err) {
       console.error("Failed to fetch commentary:", err);
@@ -259,9 +505,9 @@ function StatusContent() {
     }
   }
 
-  // Fetch backstory
+  // Fetch backstory - always fetches fresh (no caching)
   async function fetchBackstory(orderId: string) {
-    if (!orderId || backstory || backstoryLoading) return;
+    if (!orderId || backstoryLoading) return;
 
     setBackstoryLoading(true);
     try {
@@ -560,13 +806,13 @@ function StatusContent() {
     fetchStatus();
   }, [orderQrCode]);
 
-  // Poll every 5 seconds
+  // Poll every 10 seconds (increased from 5 to reduce jerkiness)
   useEffect(() => {
     if (!orderQrCode) return;
 
     const interval = setInterval(() => {
       fetchStatus();
-    }, 5000);
+    }, 10000);
 
     return () => clearInterval(interval);
   }, [orderQrCode]);
@@ -1437,47 +1683,19 @@ function StatusContent() {
                       📖 Learn Chinese
                     </div>
 
-                    {/* Main Chinese Character(s) with audio button */}
-                    <button
-                      onClick={() => {
-                        if ('speechSynthesis' in window) {
-                          const utterance = new SpeechSynthesisUtterance(fortune.learnChinese!.traditional);
-                          utterance.lang = 'zh-TW';
-                          utterance.rate = 0.8;
-                          // Try to find a Chinese voice
-                          const voices = speechSynthesis.getVoices();
-                          const chineseVoice = voices.find(v =>
-                            v.lang.startsWith('zh') || v.lang.includes('Chinese')
-                          );
-                          if (chineseVoice) {
-                            utterance.voice = chineseVoice;
-                          }
-                          speechSynthesis.speak(utterance);
-                        }
-                      }}
+                    {/* Main Chinese Character(s) display */}
+                    <div
                       style={{
                         background: "rgba(255,255,255,0.15)",
                         border: "2px solid rgba(255,255,255,0.3)",
                         borderRadius: 12,
                         padding: "16px 24px",
                         width: "100%",
-                        cursor: "pointer",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        gap: 16,
                         marginBottom: 12,
-                        transition: "all 0.2s ease",
                       }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = "rgba(255,255,255,0.25)";
-                        e.currentTarget.style.transform = "scale(1.02)";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = "rgba(255,255,255,0.15)";
-                        e.currentTarget.style.transform = "scale(1)";
-                      }}
-                      title="Tap to hear pronunciation"
                     >
                       <span
                         style={{
@@ -1489,15 +1707,7 @@ function StatusContent() {
                       >
                         {fortune.learnChinese.traditional}
                       </span>
-                      <span
-                        style={{
-                          fontSize: "1.5rem",
-                          opacity: 0.9,
-                        }}
-                      >
-                        🔊
-                      </span>
-                    </button>
+                    </div>
 
                     {/* Pinyin and English */}
                     <div style={{ textAlign: "center", marginBottom: 12 }}>
@@ -1715,6 +1925,11 @@ function StatusContent() {
               </>
             )}
           </div>
+        )}
+
+        {/* One Red Step Foundation - Mental Health Awareness */}
+        {order.podConfirmedAt && (
+          <MentalHealthAwareness />
         )}
 
         {/* Behind the Scenes - Ingredient Backstories */}
@@ -1947,7 +2162,7 @@ function StatusContent() {
             color: "#999",
           }}
         >
-          Status updates automatically every 5 seconds
+          Status updates automatically every 10 seconds
         </div>
       </div>
 

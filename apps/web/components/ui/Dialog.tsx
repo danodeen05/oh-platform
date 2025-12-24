@@ -218,18 +218,31 @@ export function AlertDialog({
       showCloseButton={false}
     >
       <div style={{ textAlign: "center" }}>
+        {/* Oh! Character Logo */}
+        <div style={{ marginBottom: 12 }}>
+          <img
+            src="/Oh_Logo_Mark_Web.png"
+            alt="Oh!"
+            style={{
+              height: 64,
+              width: "auto",
+              objectFit: "contain",
+            }}
+          />
+        </div>
+
         {/* Icon */}
         <div
           style={{
-            width: 64,
-            height: 64,
+            width: 48,
+            height: 48,
             borderRadius: "50%",
             background: styles.bgColor,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            margin: "0 auto 20px",
-            fontSize: type === "success" || type === "error" ? "1.5rem" : "2rem",
+            margin: "0 auto 16px",
+            fontSize: type === "success" || type === "error" ? "1.25rem" : "1.5rem",
             color: styles.color,
             fontWeight: type === "success" || type === "error" ? "bold" : "normal",
           }}
@@ -328,6 +341,19 @@ export function ConfirmDialog({
       closeOnEscape={!loading}
     >
       <div style={{ textAlign: "center" }}>
+        {/* Oh! Character Logo */}
+        <div style={{ marginBottom: 16 }}>
+          <img
+            src="/Oh_Logo_Mark_Web.png"
+            alt="Oh!"
+            style={{
+              height: 64,
+              width: "auto",
+              objectFit: "contain",
+            }}
+          />
+        </div>
+
         {/* Title */}
         {title && (
           <h3

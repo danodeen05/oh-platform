@@ -947,11 +947,14 @@ export default function HomePage() {
           <div
             style={{
               marginTop: "48px",
+              marginLeft: "auto",
+              marginRight: "auto",
               padding: "32px",
               background: "white",
               borderRadius: "24px",
               boxShadow: "0 8px 40px rgba(124, 122, 103, 0.1)",
               maxWidth: "500px",
+              textAlign: "center",
             }}
           >
             <p
@@ -985,34 +988,36 @@ export default function HomePage() {
                 gap: "12px",
                 padding: "14px 28px",
                 borderRadius: "50px",
-                background: "linear-gradient(135deg, #C7A878 0%, #B8956A 100%)",
+                background: "#FFFFFF",
+                border: "2px solid #C7A878",
                 textDecoration: "none",
                 transition: "all 0.3s ease",
-                boxShadow: "0 4px 20px rgba(199, 168, 120, 0.3)",
+                boxShadow: "0 4px 20px rgba(199, 168, 120, 0.2)",
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = "translateY(-2px)";
-                e.currentTarget.style.boxShadow = "0 8px 30px rgba(199, 168, 120, 0.4)";
+                e.currentTarget.style.boxShadow = "0 8px 30px rgba(199, 168, 120, 0.3)";
+                e.currentTarget.style.background = "rgba(199, 168, 120, 0.1)";
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = "0 4px 20px rgba(199, 168, 120, 0.3)";
+                e.currentTarget.style.boxShadow = "0 4px 20px rgba(199, 168, 120, 0.2)";
+                e.currentTarget.style.background = "#FFFFFF";
               }}
             >
               <img
                 src="/redsock-icon.png"
                 alt="One Red Step Foundation"
                 style={{
-                  height: "22px",
+                  height: "28px",
                   width: "auto",
-                  filter: "brightness(0) invert(1)",
                 }}
               />
               <span
                 style={{
                   fontSize: "0.95rem",
                   fontWeight: "500",
-                  color: "#FFFFFF",
+                  color: "#C7A878",
                   letterSpacing: "0.5px",
                 }}
               >
