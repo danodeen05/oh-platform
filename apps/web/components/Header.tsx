@@ -123,7 +123,7 @@ export default function Header() {
           ))}
         </div>
 
-        {/* Right side: Foundation Link & User Button */}
+        {/* Right side: User Button */}
         <div
           style={{
             display: "flex",
@@ -131,53 +131,6 @@ export default function Header() {
             gap: "16px",
           }}
         >
-          {/* One Red Step Foundation Link */}
-          <a
-            href="https://www.oneredstepatatime.org"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              padding: "6px 12px",
-              borderRadius: "20px",
-              background: "rgba(199, 168, 120, 0.1)",
-              textDecoration: "none",
-              transition: "all 0.3s ease",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "rgba(199, 168, 120, 0.2)";
-              e.currentTarget.style.transform = "scale(1.02)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "rgba(199, 168, 120, 0.1)";
-              e.currentTarget.style.transform = "scale(1)";
-            }}
-            title={t("giveBack")}
-            className="foundation-link"
-          >
-            <img
-              src="/redsock-icon.png"
-              alt="One Red Step Foundation"
-              style={{
-                height: "20px",
-                width: "auto",
-              }}
-            />
-            <span
-              style={{
-                fontSize: "0.75rem",
-                fontWeight: "500",
-                color: "#C7A878",
-                letterSpacing: "0.3px",
-              }}
-              className="foundation-text"
-            >
-              {t("giveBack")}
-            </span>
-          </a>
-
           <SignedIn>
             <div
               style={{
@@ -251,12 +204,6 @@ export default function Header() {
         @media (max-width: 767px) {
           .mobile-menu-btn {
             display: block !important;
-          }
-          .foundation-text {
-            display: none !important;
-          }
-          .foundation-link {
-            padding: 6px !important;
           }
         }
         @media (min-width: 768px) {

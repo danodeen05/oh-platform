@@ -12,6 +12,7 @@ import {
 } from "./notifications.js";
 import { BetaAnalyticsDataClient } from "@google-analytics/data";
 import { readFileSync } from "fs";
+import crypto from "crypto";
 
 const prisma = new PrismaClient();
 const app = Fastify({ logger: true });
@@ -3931,66 +3932,68 @@ setInterval(releaseExpiredReservations, 60 * 1000);
 // FORTUNE COOKIE
 // ====================
 
-// Get "This Day in History" facts
-function getThisDayInHistory() {
+// Get "This Day in History" facts - AI-powered, always fresh
+async function getThisDayInHistory(anthropic) {
   const today = new Date();
-  const month = today.getMonth();
-  const day = today.getDate();
-
-  // A collection of interesting historical facts for each day
-  // This is a small sample - in production you might use an external API
-  const historicalFacts = [
-    { date: "January 1", year: 1863, event: "The Emancipation Proclamation was issued by President Lincoln" },
-    { date: "January 1", year: 2002, event: "The Euro became the official currency of 12 European countries" },
-    { date: "February 14", year: 1929, event: "The St. Valentine's Day Massacre occurred in Chicago" },
-    { date: "March 14", year: 1879, event: "Albert Einstein was born" },
-    { date: "April 15", year: 1912, event: "The Titanic sank after hitting an iceberg" },
-    { date: "May 5", year: 1961, event: "Alan Shepard became the first American in space" },
-    { date: "June 28", year: 1914, event: "Archduke Franz Ferdinand was assassinated, triggering WWI" },
-    { date: "July 4", year: 1776, event: "The Declaration of Independence was adopted" },
-    { date: "July 20", year: 1969, event: "Neil Armstrong became the first human to walk on the Moon" },
-    { date: "August 6", year: 1991, event: "The World Wide Web became publicly available" },
-    { date: "September 11", year: 2001, event: "The September 11 attacks occurred in the United States" },
-    { date: "October 31", year: 1517, event: "Martin Luther posted his 95 Theses" },
-    { date: "November 9", year: 1989, event: "The Berlin Wall fell" },
-    { date: "December 10", year: 1901, event: "The first Nobel Prizes were awarded" },
-    { date: "December 17", year: 1903, event: "The Wright Brothers achieved the first powered flight" },
-  ];
-
   const monthNames = ["January", "February", "March", "April", "May", "June",
                       "July", "August", "September", "October", "November", "December"];
-  const todayStr = `${monthNames[month]} ${day}`;
+  const todayStr = `${monthNames[today.getMonth()]} ${today.getDate()}`;
 
-  // Find facts for today (or return null if none found)
-  const todayFacts = historicalFacts.filter(f => f.date === todayStr);
-  if (todayFacts.length > 0) {
-    return todayFacts[Math.floor(Math.random() * todayFacts.length)];
+  // Always use AI if available for fresh, unique facts
+  if (anthropic) {
+    try {
+      // Use unique seed to ensure different facts each time
+      const uniqueSeed = Date.now();
+
+      const prompt = `You are a history expert. Tell me ONE interesting historical event that happened on ${todayStr} (any year in history).
+
+REQUIREMENTS:
+- Must be a REAL historical event that actually happened on ${todayStr}
+- Pick something unexpected, surprising, or little-known - NOT the most famous event for this date
+- Vary the type: could be science, art, politics, sports, culture, invention, birth, discovery, etc.
+- Include the specific year
+
+UNIQUE SEED: ${uniqueSeed} (use this to vary your selection - don't repeat the same event)
+
+Return ONLY valid JSON in this exact format (no markdown):
+{"year":1234,"event":"Brief description of what happened"}`;
+
+      const message = await anthropic.messages.create({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 150,
+        temperature: 0.9,
+        messages: [{ role: "user", content: prompt }],
+      });
+
+      const responseText = message.content[0]?.text?.trim();
+      const parsed = JSON.parse(responseText);
+
+      if (parsed.year && parsed.event) {
+        return { year: parsed.year, event: parsed.event };
+      }
+    } catch (error) {
+      console.error("AI history generation failed:", error);
+    }
   }
 
-  // If no fact for today, return a random one
-  return historicalFacts[Math.floor(Math.random() * historicalFacts.length)];
+  // Simple fallback - won't be used if AI is available
+  return { year: 2024, event: `Something interesting happened on ${todayStr}! Check back for AI-powered facts.` };
 }
 
-// Generate lucky numbers based on order details
-function generateLuckyNumbers(orderId, userName, orderDate) {
-  // Create a seed from order details for pseudo-random but consistent numbers
-  const seed = orderId + (userName || "guest") + orderDate;
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) {
-    hash = ((hash << 5) - hash) + seed.charCodeAt(i);
-    hash = hash & hash; // Convert to 32bit integer
-  }
-
+// Generate lucky numbers - TRUE random, never repeated
+function generateLuckyNumbers() {
   const numbers = [];
   const used = new Set();
 
-  for (let i = 0; i < 6; i++) {
-    let num = Math.abs((hash * (i + 1) * 31) % 49) + 1;
-    while (used.has(num)) {
-      num = (num % 49) + 1;
+  while (numbers.length < 6) {
+    // Generate cryptographically random number 1-49
+    const randomBytes = crypto.randomBytes(1);
+    const num = (randomBytes[0] % 49) + 1;
+
+    if (!used.has(num)) {
+      used.add(num);
+      numbers.push(num);
     }
-    used.add(num);
-    numbers.push(num);
   }
 
   return numbers.sort((a, b) => a - b);
@@ -4084,46 +4087,64 @@ const fallbackChineseWords = [
   },
 ];
 
-// Generate AI-powered Chinese word based on current events/trends
+// Generate AI-powered Chinese word - always unique, never repeating
 async function generateChineseWord(anthropic) {
   if (!anthropic) return null;
 
   try {
     const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    const uniqueSeed = Date.now(); // Ensures unique word each time
 
-    const prompt = `You are a Chinese language teacher creating a "Word of the Day" for an American audience at a beef noodle soup restaurant.
+    // Categories to cycle through for variety
+    const categories = [
+      "food and cooking (ingredients, cooking methods, flavors)",
+      "emotions and feelings",
+      "nature and weather",
+      "internet slang and modern expressions",
+      "traditional culture and customs",
+      "travel and places",
+      "relationships and social interactions",
+      "work and business",
+      "health and body",
+      "time and seasons",
+      "animals and creatures",
+      "music, art, and entertainment",
+      "technology and innovation",
+      "sports and hobbies",
+      "philosophy and wisdom",
+    ];
+    const categoryIndex = Math.floor(uniqueSeed / 1000) % categories.length;
+    const focusCategory = categories[categoryIndex];
 
-Today's date: ${today}
+    const prompt = `You are a Chinese language teacher at a beef noodle soup restaurant. Generate ONE unique Chinese word or phrase.
 
-Pick ONE interesting Chinese word or short phrase that could be:
-- Related to current events, trending topics, or pop culture (movies, music, sports, tech)
-- A useful food-related term
-- A fun slang expression popular with young people
-- A culturally significant term
-- Something seasonally relevant
+TODAY: ${today}
+FOCUS CATEGORY: ${focusCategory}
+UNIQUE SEED: ${uniqueSeed}
 
-Requirements:
-- Use TRADITIONAL Chinese characters (Taiwan style, not simplified)
+REQUIREMENTS:
+- Pick a word from the "${focusCategory}" category that you haven't used before
+- Use TRADITIONAL Chinese characters (Taiwan style, NOT simplified)
 - Include proper pinyin with tone marks (ā, á, ǎ, à, ē, é, ě, è, ī, í, ǐ, ì, ō, ó, ǒ, ò, ū, ú, ǔ, ù, ǖ, ǘ, ǚ, ǜ)
-- Keep it to 1-4 characters
-- Make it fun and memorable
-- Include a brief, engaging explanation of why it's relevant today
+- 1-4 characters only
+- Make it practical and memorable
+- Fun fact should explain usage or cultural context
 
-Return ONLY valid JSON in this exact format (no markdown, no explanation):
-{"traditional":"字","pinyin":"zì","english":"Character/Word","category":"culture","funFact":"Brief engaging fact about why this word is interesting or relevant today"}`;
+AVOID these common words: 你好, 謝謝, 好吃, 牛肉麵, 加油, 乾杯
+
+Return ONLY valid JSON (no markdown):
+{"traditional":"字","pinyin":"zì","english":"English meaning","category":"${focusCategory.split(' ')[0]}","funFact":"Engaging fact about this word"}`;
 
     const message = await anthropic.messages.create({
       model: "claude-sonnet-4-20250514",
       max_tokens: 300,
+      temperature: 0.95, // High temperature for variety
       messages: [{ role: "user", content: prompt }],
     });
 
     const responseText = message.content[0]?.text?.trim();
-
-    // Parse the JSON response
     const parsed = JSON.parse(responseText);
 
-    // Validate required fields
     if (parsed.traditional && parsed.pinyin && parsed.english) {
       return parsed;
     }
@@ -4205,11 +4226,11 @@ app.get("/orders/fortune", async (req, reply) => {
     // Get user's tier if available
     const tier = order.user?.membershipTier || "CHOPSTICK";
 
-    // Generate lucky numbers
-    const luckyNumbers = generateLuckyNumbers(order.id, firstName, order.createdAt.toISOString());
+    // Generate truly random lucky numbers (crypto-based)
+    const luckyNumbers = generateLuckyNumbers();
 
-    // Get historical fact
-    const historyFact = getThisDayInHistory();
+    // Get AI-generated historical fact for today
+    const historyFact = await getThisDayInHistory(anthropic);
 
     // Try to generate AI fortune if API key is available
     let fortune = null;
@@ -5042,6 +5063,86 @@ Generate exactly 4 short backstory facts (one sentence each, max 150 chars each)
   } catch (error) {
     console.error("Error generating backstory:", error);
     return reply.status(500).send({ error: "Failed to generate backstory" });
+  }
+});
+
+// ====================
+// MENTAL HEALTH AWARENESS
+// ====================
+
+// Generate AI-powered mental health facts - always unique
+app.get("/orders/mental-health-fact", async (req, reply) => {
+  // Try to generate unique AI-powered mental health fact
+  if (!anthropic) {
+    return reply.status(503).send({ error: "AI service unavailable" });
+  }
+
+  try {
+    const uniqueSeed = Date.now();
+
+    // Categories to ensure variety
+    const categories = [
+      "workplace mental health and productivity",
+      "children and adolescent mental health",
+      "social connection and loneliness",
+      "exercise and physical activity benefits",
+      "sleep and mental health",
+      "mindfulness and meditation",
+      "therapy and treatment access",
+      "stigma and awareness",
+      "depression statistics and facts",
+      "anxiety disorders",
+      "stress management",
+      "suicide prevention and awareness",
+      "family and relationships",
+      "technology and mental health",
+      "self-care and resilience",
+      "global mental health",
+      "neuroscience and brain health",
+      "creative arts and mental wellness",
+    ];
+    const categoryIndex = Math.floor(uniqueSeed / 1000) % categories.length;
+    const focusCategory = categories[categoryIndex];
+
+    const prompt = `You are a mental health educator creating an engaging "Did you know?" fact for restaurant customers.
+
+FOCUS AREA: ${focusCategory}
+UNIQUE SEED: ${uniqueSeed}
+
+REQUIREMENTS:
+- Provide ONE specific, accurate mental health statistic or fact related to "${focusCategory}"
+- Must be from a reputable source (cite it: NAMI, WHO, CDC, NIH, APA, Harvard, etc.)
+- Should be surprising, thought-provoking, or hopeful
+- End with something actionable or empowering when possible
+- Keep the fact under 200 characters
+- DO NOT repeat common stats like "1 in 5 adults" unless highly relevant to the category
+
+Return ONLY valid JSON (no markdown):
+{"question":"Did you know?","fact":"The specific fact here","source":"Organization Name, Year"}`;
+
+    const message = await anthropic.messages.create({
+      model: "claude-sonnet-4-20250514",
+      max_tokens: 250,
+      temperature: 0.9,
+      messages: [{ role: "user", content: prompt }],
+    });
+
+    const responseText = message.content[0]?.text?.trim();
+    const parsed = JSON.parse(responseText);
+
+    if (parsed.question && parsed.fact && parsed.source) {
+      return reply.send({
+        question: parsed.question,
+        fact: parsed.fact,
+        source: parsed.source,
+        generatedAt: new Date().toISOString(),
+      });
+    }
+
+    return reply.status(500).send({ error: "Invalid AI response" });
+  } catch (error) {
+    console.error("Error generating mental health fact:", error);
+    return reply.status(500).send({ error: "Failed to generate mental health fact" });
   }
 });
 

@@ -130,7 +130,7 @@ export default function Footer() {
               src="/redsock-icon.png"
               alt="One Red Step Foundation"
               style={{
-                height: "24px",
+                height: "32px",
                 width: "auto",
               }}
             />

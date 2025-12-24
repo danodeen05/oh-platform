@@ -119,8 +119,8 @@
       },
       "giveBack": {
         "title": "想要回饋社會？",
-        "description": "支持我們的501(c)(3)慈善基金會，幫助有需要的家庭。代替小費，考慮為One Red Step at a Time做出貢獻。",
-        "button": "立即捐助"
+        "description": "一雙紅襪子究竟蘊含多大的力量？讓我們一起來發現。Walk with Us™，支持心理健康。",
+        "button": "與我們同行"
       }
     },
     "customize": {
@@ -152,7 +152,7 @@
     },
     "foundation": {
       "giveBack": "回饋社會",
-      "tagline": "支持我們的501(c)(3)慈善基金會 — One Red Step at a Time"
+      "tagline": "支持我們的501(c)(3)慈善基金會 — One Red Step At A Time"
     }
   },
   "languages": {
@@ -469,7 +469,7 @@
       "addToGroup": "加入團體訂單失敗，請重試。",
       "callStaff": "呼叫服務人員失敗，請重試。",
       "requestRefill": "要求續杯失敗，請重試。",
-      "requestVegetables": "要求加菜失敗，請重試。",
+      "requestVegetables": "要求免費加點失敗，請重試。",
       "requestDessert": "要求甜點失敗，請重試。",
       "orderNotFound": "找不到訂單",
       "loadStatus": "載入訂單狀態失敗",
@@ -486,7 +486,7 @@
     },
     "success": {
       "refillRequested": "已要求續杯！將很快送至您的包廂。",
-      "vegetablesRequested": "已要求加菜！將很快送至您的包廂。",
+      "vegetablesRequested": "已要求免費加點！將很快送至您的包廂。",
       "addonOrdered": "加點成功！已收取 {amount}。您的餐點將很快送至包廂。",
       "staffNotified": "已通知服務人員",
       "dessertOnWay": "甜點正在送來！"
