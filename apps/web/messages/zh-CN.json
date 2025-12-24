@@ -119,8 +119,8 @@
       },
       "giveBack": {
         "title": "想要回馈社会？",
-        "description": "支持我们的501(c)(3)慈善基金会，帮助有需要的家庭。代替小费，考虑为One Red Step at a Time做出贡献。",
-        "button": "立即捐助"
+        "description": "一双红袜子究竟蕴含多大的力量？让我们一起来发现。Walk with Us™，支持心理健康。",
+        "button": "与我们同行"
       }
     },
     "customize": {
@@ -152,7 +152,7 @@
     },
     "foundation": {
       "giveBack": "回馈社会",
-      "tagline": "支持我们的501(c)(3)慈善基金会 — One Red Step at a Time"
+      "tagline": "支持我们的501(c)(3)慈善基金会 — One Red Step At A Time"
     }
   },
   "languages": {
@@ -469,7 +469,7 @@
       "addToGroup": "加入团体订单失败，请重试。",
       "callStaff": "呼叫服务员失败，请重试。",
       "requestRefill": "请求续杯失败，请重试。",
-      "requestVegetables": "请求加菜失败，请重试。",
+      "requestVegetables": "请求免费加点失败，请重试。",
       "requestDessert": "请求甜点失败，请重试。",
       "orderNotFound": "找不到订单",
       "loadStatus": "加载订单状态失败",
@@ -486,7 +486,7 @@
     },
     "success": {
       "refillRequested": "已请求续杯！将很快送至您的包厢。",
-      "vegetablesRequested": "已请求加菜！将很快送至您的包厢。",
+      "vegetablesRequested": "已请求免费加点！将很快送至您的包厢。",
       "addonOrdered": "加点成功！已收取 {amount}。您的餐点将很快送至包厢。",
       "staffNotified": "已通知服务员",
       "dessertOnWay": "甜点正在送来！"

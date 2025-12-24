@@ -119,8 +119,8 @@
       },
       "giveBack": {
         "title": "¿Quieres contribuir?",
-        "description": "Apoya nuestra fundación 501(c)(3) que ayuda a familias necesitadas. En lugar de propina, considera contribuir a One Red Step at a Time.",
-        "button": "Contribuir hoy"
+        "description": "¿Cuánto poder hay en un par de calcetines rojos? Descubrámoslo juntos. Walk with Us™ para apoyar la salud mental.",
+        "button": "Camina con Nosotros"
       }
     },
     "customize": {
@@ -152,7 +152,7 @@
     },
     "foundation": {
       "giveBack": "Contribuir",
-      "tagline": "Apoyando nuestra fundación 501(c)(3) — One Red Step at a Time"
+      "tagline": "Apoya nuestra fundación 501(c)(3) — One Red Step At A Time"
     }
   },
   "languages": {
@@ -469,7 +469,7 @@
       "addToGroup": "Error al agregar el pedido al grupo. Por favor intenta de nuevo.",
       "callStaff": "Error al llamar al personal. Por favor intenta de nuevo.",
       "requestRefill": "Error al solicitar recarga. Por favor intenta de nuevo.",
-      "requestVegetables": "Error al solicitar vegetales extra. Por favor intenta de nuevo.",
+      "requestVegetables": "Error al solicitar extras gratis. Por favor intenta de nuevo.",
       "requestDessert": "Error al solicitar postre. Por favor intenta de nuevo.",
       "orderNotFound": "Pedido no encontrado",
       "loadStatus": "Error al cargar el estado del pedido",
@@ -486,7 +486,7 @@
     },
     "success": {
       "refillRequested": "¡Recarga de bebida solicitada! Se llevará a tu cabina en breve.",
-      "vegetablesRequested": "¡Vegetales extra solicitados! Se llevarán a tu cabina en breve.",
+      "vegetablesRequested": "¡Extras gratis solicitados! Se llevarán a tu cabina en breve.",
       "addonOrdered": "¡Pedido adicional realizado! {amount} cobrados. Tus artículos se llevarán a tu cabina en breve.",
       "staffNotified": "Personal notificado",
       "dessertOnWay": "¡Postre en camino!"
