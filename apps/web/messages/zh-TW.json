@@ -182,7 +182,8 @@
       "premium": "頂級",
       "included": "已包含",
       "signature": "招牌",
-      "complimentary": "免費"
+      "complimentary": "免費",
+      "unlimitedRefills": "無限續杯"
     },
     "sections": {
       "soup": {
@@ -442,6 +443,101 @@
     "referralApplied": "已套用$5推薦優惠！",
     "waitTime": "目前等候時間",
     "minutes": "分鐘",
+    "locationSelector": {
+      "groupMode": {
+        "title": "開始團體訂單",
+        "description": "選擇門市以建立您的團體。與朋友分享代碼，他們可以加入訂單！"
+      },
+      "status": {
+        "available": "可用",
+        "busy": "繁忙",
+        "moderateWait": "適度等待"
+      },
+      "milesAway": "{distance} 英里",
+      "available": "可用：",
+      "pods": "{available}/{total} 包廂",
+      "avgWait": "平均等候：",
+      "minWait": "{minutes} 分鐘"
+    },
+    "groupBanner": {
+      "diningTogether": "一起用餐？",
+      "startOrJoin": "開始或加入團體訂單",
+      "startGroupOrder": "開始團體訂單",
+      "joinGroup": "加入團體",
+      "enterCode": "輸入代碼",
+      "join": "加入",
+      "enterGroupCode": "請輸入團體代碼",
+      "failedToJoin": "加入團體失敗，請重試。"
+    },
+    "builder": {
+      "stepOf": "第 {current} 步，共 {total} 步",
+      "required": "必選",
+      "backToLocations": "返回門市列表",
+      "available": "可用：",
+      "seats": "{available}/{total} 座位",
+      "currentWait": "目前等候：",
+      "minWait": "{minutes} 分鐘",
+      "continue": "繼續",
+      "back": "返回",
+      "total": "總計：",
+      "loadingMenu": "載入菜單中...",
+      "ohRecommendation": "哦！推薦",
+      "included": "已包含",
+      "includedUpTo": "已包含（最多 {count}）",
+      "each": "每份",
+      "eachExtra": "每份額外",
+      "subtotalLabel": "小計：",
+      "sliderLabels": {
+        "Light": "清淡",
+        "Medium": "中等",
+        "Rich": "濃郁",
+        "Extra Rich": "特濃",
+        "Firm": "偏硬",
+        "Soft": "偏軟",
+        "None": "無",
+        "Mild": "微辣",
+        "Spicy": "中辣",
+        "Extra Spicy": "特辣",
+        "Normal": "正常",
+        "Extra": "加量"
+      },
+      "backToMenu": "返回菜單",
+      "whenWillYouArrive": "您什麼時候會到？",
+      "readyBy": "預計 {time} 準備好",
+      "reviewOrderPayment": "確認訂單與付款",
+      "timeOptions": {
+        "asap": "盡快（現在至 5 分鐘內）",
+        "15min": "15 分鐘",
+        "30min": "30 分鐘",
+        "45min": "45 分鐘",
+        "1hour": "1 小時",
+        "90min": "1.5 小時"
+      },
+      "processing": "處理中...",
+      "addToGroupOrder": "加入團體訂單",
+      "choosePod": "選擇座位（可選）",
+      "choosePodDescription": "由於您即將到達，可以現在選擇您喜歡的座位。跳過此步驟將在報到時自動分配座位。",
+      "clearSelection": "清除選擇（改為自動分配）",
+      "checkingSeatAvailability": "正在檢查座位狀況...",
+      "loadingSeats": "載入座位中...",
+      "podLegend": {
+        "available": "可用",
+        "selected": "已選擇",
+        "reserved": "已預訂",
+        "occupied": "使用中",
+        "dualPod": "雙人座"
+      },
+      "podMap": {
+        "entrance": "入口",
+        "kitchen": "廚房",
+        "exit": "出口",
+        "dual": "雙人"
+      },
+      "podSelection": {
+        "selectedPrefix": "已選擇：",
+        "pod": "座位"
+      }
+    },
     "addToOrder": "加入訂單",
     "viewOrder": "查看訂單",
     "checkout": "結帳",
@@ -609,7 +705,98 @@
     "visits": "到訪次數",
     "currentTier": "目前等級",
     "nextTier": "下一等級",
-    "pointsToNext": "點數即可升級"
+    "pointsToNext": "點數即可升級",
+    "myMembership": "我的會員",
+    "home": "首頁",
+    "order": "點餐",
+    "referralsNav": "推薦",
+    "memberNav": "會員",
+    "yourBenefits": "您的福利：",
+    "progressTo": "升級至 {tier}：",
+    "totalOrders": "總訂單數",
+    "badgesTitle": "徽章",
+    "welcome": "歡迎！",
+    "signInToView": "登入查看您的會員資料",
+    "continue": "繼續",
+    "loading": "載入中...",
+    "loadingProfile": "載入您的資料中...",
+    "visitsThisMonth": "本月 {count} 次到訪",
+    "tiers": {
+      "chopstick": "🥢 筷子會員",
+      "noodleMaster": "🍜 麵條大師",
+      "beefBoss": "🐂 牛肉達人"
+    },
+    "perks": {
+      "referralBonus": "每推薦一位好友可獲得 $5 獎勵",
+      "cashback1": "訂單 1% 回饋",
+      "cashback2": "訂單 2% 回饋",
+      "cashback3": "訂單 3% 回饋",
+      "earlyAccess": "搶先體驗新菜單",
+      "prioritySeating": "優先入座",
+      "memberEvents": "專屬會員活動",
+      "freeBowlUpgrade": "升級送免費招牌麵",
+      "merchandiseDrops": "限量周邊商品",
+      "premiumAddons": "免費頂級配料",
+      "vipGift": "年度 VIP 禮物與表彰"
+    },
+    "badges": {
+      "first-order": {
+        "name": "第一碗",
+        "description": "完成您的第一筆訂單"
+      },
+      "10-orders": {
+        "name": "麵條愛好者",
+        "description": "完成 10 筆訂單"
+      },
+      "50-orders": {
+        "name": "牛肉狂熱者",
+        "description": "完成 50 筆訂單"
+      },
+      "100-orders": {
+        "name": "百碗俱樂部",
+        "description": "完成 100 筆訂單"
+      },
+      "first-referral": {
+        "name": "分享愛",
+        "description": "推薦您的第一位朋友"
+      },
+      "10-referrals": {
+        "name": "影響者",
+        "description": "推薦 10 位朋友"
+      },
+      "50-referrals": {
+        "name": "大使",
+        "description": "推薦 50 位朋友"
+      },
+      "3-day-streak": {
+        "name": "火熱連續",
+        "description": "連續 3 天訂餐"
+      },
+      "7-day-streak": {
+        "name": "週週戰士",
+        "description": "連續 7 天訂餐"
+      },
+      "30-day-streak": {
+        "name": "傳奇",
+        "description": "連續 30 天訂餐"
+      },
+      "tried-all-items": {
+        "name": "菜單大師",
+        "description": "品嚐過菜單上的每一道菜"
+      },
+      "spicy-challenge": {
+        "name": "辣味追求者",
+        "description": "點了 10 次辣味"
+      },
+      "grand-opening": {
+        "name": "元老會員",
+        "description": "盛大開幕時加入的會員"
+      },
+      "vip": {
+        "name": "VIP",
+        "description": "達到牛肉達人等級"
+      }
+    }
   },
   "giftCards": {
     "title": "禮品卡",
@@ -803,6 +990,25 @@
       "minimumOrder": "推薦獎勵適用於首筆$20或以上的訂單",
       "disbursement": "點數將在24小時內加入您的帳戶",
       "maxPerOrder": "每筆訂單最多可使用$5點數"
+    },
+    "dashboard": {
+      "getStarted": "開始使用",
+      "enterEmailPrompt": "輸入您的電子郵件以獲取推薦連結",
+      "getMyReferralLink": "取得我的推薦連結",
+      "creating": "建立中...",
+      "availableCredits": "可用點數",
+      "useCreditsNote": "結帳時每筆訂單最多可使用$5",
+      "pendingCredits": "待發放點數",
+      "scheduledForDisbursement": "計劃發放",
+      "nextDisbursement": "下次發放：",
+      "yourReferralLink": "您的推薦連結",
+      "copy": "複製",
+      "shareToEarn": "分享此連結，每位下單$20以上的好友可為您賺取$5",
+      "recentActivity": "近期活動",
+      "creditEvents": {
+        "cashback": "訂單 {percent}% 回饋",
+        "appliedToOrder": "已用於訂單 {orderId}"
+      }
     }
   },
   "careers": {
@@ -1131,6 +1337,7 @@
     "orderNotFound": "找不到訂單",
     "placeNewOrder": "新增訂單",
     "statusUpdates": "狀態每5秒自動更新",
+    "orderNumber": "訂單 #{number}",
     "status": {
       "pending": "待付款",
       "paid": "已付款",
@@ -1138,7 +1345,8 @@
       "prepping": "準備中",
       "ready": "準備送餐",
       "serving": "請享用！",
-      "completed": "已完成"
+      "completed": "已完成",
+      "doneEating": "用餐完畢？"
     },
     "pod": {
       "yourPod": "您的包廂",
@@ -1170,28 +1378,59 @@
     "buttons": {
       "viewProfile": "查看我的檔案",
       "orderAgain": "再次訂購",
-      "imDoneEating": "我吃完了",
-      "addToOrder": "加點"
+      "doneEating": "我吃完了",
+      "addToOrder": "加點",
+      "callStaff": "呼叫服務員",
+      "addItems": "加點",
+      "confirmAtPod": "確認我已到包廂"
+    },
+    "location": "地點",
+    "confirmations": {
+      "finishedEating": "您用餐完畢了嗎？這將通知服務人員清理您的包廂。"
+    },
+    "errors": {
+      "markDone": "無法標記完成，請重試。"
     },
     "doneEating": {
       "confirmPrompt": "您用餐完畢了嗎？這將通知服務人員清理您的包廂。",
       "failedToUpdate": "更新失敗，請重試。"
     },
+    "dessert": {
+      "readyForDessert": "準備享用甜點",
+      "onItsWay": "甜點已在路上！",
+      "notifying": "通知中..."
+    },
     "addItems": {
       "title": "加點",
       "loading": "載入可選項目中...",
       "drinkRefills": "飲料續杯",
-      "requestRefill": "要求續杯",
+      "requestRefill": "要求續杯 →",
+      "request": "要求 →",
       "requesting": "要求中...",
       "waterRefill": "水續杯",
-      "extrasAddons": "加料與配菜",
+      "extrasAndAddons": "加料與配菜",
       "requestExtras": "要求 {count} 份加料",
-      "addOnsExtras": "加料與配菜",
+      "paidAddons": "加料與配菜",
       "orderTotal": "訂單總計",
-      "checkout": "結帳",
-      "demoWarning": "示範模式：不會實際收費",
+      "checkout": "結帳 →",
+      "demoMode": "示範模式：不會實際收費",
       "cancel": "取消",
-      "pay": "支付 ${amount}"
+      "pay": "支付 {amount}",
+      "processing": "處理中...",
+      "free": "免費",
+      "paid": "付費",
+      "add": "添加",
+      "noAddons": "此訂單無可加點項目。",
+      "callStaffInstead": "改為呼叫服務員",
+      "failedToLoad": "載入加點項目失敗，請重試或呼叫服務員。"
+    },
+    "autoRefresh": "狀態每 10 秒自動更新",
+    "mentalHealth": {
+      "label": "心理健康很重要",
+      "loading": "載入心理健康資訊中...",
+      "skipTip": "不用給小費，改為做點好事。",
+      "supportCause": "支持公益",
+      "foundation": "One Red Step at a Time 基金會 • 501(c)(3)"
     }
   },
   "features": {
@@ -1239,7 +1478,46 @@
     "total": "總計",
     "processing": "處理中...",
     "payNow": "立即付款",
-    "testMode": "測試模式 - 不會實際收費"
+    "testMode": "測試模式 - 不會實際收費",
+    "theBowl": "麵碗",
+    "addOnsExtras": "加購與配菜",
+    "qty": "數量：{count}",
+    "loading": "載入中...",
+    "subtotal": "小計",
+    "creditsApplied": "已使用點數",
+    "payAmount": "支付 ${amount}",
+    "processingPayment": "付款處理中...",
+    "secureCheckout": "安全結帳由 Stripe 提供（測試模式）",
+    "paymentMethod": "付款方式",
+    "testPayment": "測試付款",
+    "demoMode": "示範模式 - 不會實際收費",
+    "demoWarning": "這是示範付款。真正的 Stripe 整合即將推出！",
+    "availableCredits": "可用點數",
+    "youHaveCredits": "您有 <bold>${amount}</bold> 點數",
+    "maxCreditsNote": "每筆訂單最多可使用 $5 點數",
+    "applyToOrder": "使用 ${amount} 於此訂單",
+    "welcomeReferred": "歡迎！您已被推薦",
+    "referralCreditsNote": "您獲得 ${amount} 點數可用於此訂單",
+    "referralAlreadyUsed": "推薦點數已使用",
+    "referralAlreadyUsedNote": "感謝您再次光臨！推薦點數僅適用於您的首次訂單。您仍可透過您的個人推薦連結推薦朋友來賺取點數。",
+    "loadingAccount": "正在載入您的帳戶和獎勵...",
+    "signInToComplete": "登入以完成訂單",
+    "signInDescription": "您需要登入以追蹤訂單、賺取獎勵和使用推薦點數。",
+    "referralDiscountWaiting": "您有推薦折扣等待使用！",
+    "signInSignUp": "登入 / 註冊",
+    "guestCheckout": "訪客結帳",
+    "guestCheckoutDescription": "請輸入您的姓名以便我們準備您的訂單。",
+    "name": "姓名",
+    "phone": "電話",
+    "email": "電子郵件",
+    "optional": "選填",
+    "yourName": "您的姓名",
+    "forOrderUpdates": "用於訂單更新",
+    "forReceipt": "用於收據",
+    "enterYourName": "請輸入您的姓名",
+    "wantToEarnRewards": "想要賺取獎勵並追蹤訂單嗎？",
+    "signInInstead": "改為登入",
+    "waitLoadingAccount": "請稍候，正在載入您的帳戶..."
   },
   "groupOrder": {
     "notFound": "找不到群組",
@@ -1266,6 +1544,23 @@
     "linkedin": "LinkedIn",
     "email": "電子郵件"
   },
+  "checkIn": {
+    "title": "自助報到機",
+    "subtitle": "掃描或輸入您的訂單 QR 碼以獲取座位分配",
+    "howToTitle": "如何報到：",
+    "step1": "找到您的訂單 QR 碼（在訂單確認頁面上）",
+    "step2": "使用報到機掃描或在下方輸入代碼",
+    "step3": "獲取座位分配或排隊位置",
+    "qrCodeLabel": "訂單 QR 碼：",
+    "qrCodePlaceholder": "ORDER-xxpmm5hf-1234567890-ABC123",
+    "checkInButton": "報到",
+    "checkingIn": "報到中...",
+    "needHelp": "需要幫助？",
+    "helpTip1": "您的 QR 碼在訂單確認頁面上",
+    "helpTip2": "它以「ORDER-」開頭，後面是數字和字母",
+    "helpTip3": "如需協助，請詢問工作人員",
+    "loading": "載入中..."
+  },
   "confirmation": {
     "title": "訂單已確認！",
     "orderNumber": "訂單 #{number}",
@@ -1276,6 +1571,31 @@
     "simulateCheckIn": "模擬報到（示範）",
     "checkingIn": "報到中...",
     "groupOrderNote": "這是包含 {count} 份訂單的群組訂單。",
-    "paidStatus": "付款完成"
+    "paidStatus": "付款完成",
+    "yourOrderQrCode": "您的訂單 QR 碼",
+    "scanAtKiosk": "到達時請在自助機掃描此碼以獲取包廂分配",
+    "expectedArrival": "預計到達時間：{time}",
+    "host": "主揪",
+    "guest": "賓客 {number}",
+    "podNumber": "包廂 {number}",
+    "noPodYet": "尚未分配包廂",
+    "checkInThisOrder": "此訂單報到",
+    "assignedToPod": "已分配至包廂 {number} - 等待到達",
+    "checkedInAtPod": "已在包廂 {number} 報到",
+    "orderLabel": "訂單",
+    "total": "總計",
+    "qty": "數量：{count}",
+    "trackOrderStatus": "追蹤訂單狀態",
+    "shareYourOrder": "分享您的訂單！",
+    "spreadTheWord": "分享給朋友並賺取獎勵",
+    "copied": "已複製！",
+    "copy": "複製",
+    "shareVia": "分享至...",
+    "twitter": "推特",
+    "facebook": "臉書",
+    "linkedin": "領英",
+    "referralNote": "已包含您的推薦連結！朋友首次訂購可享 $5 折扣。當他們消費 $20 以上時，您可獲得 $5（每月 1 日或 16 日入帳）。",
+    "backToHome": "返回首頁",
+    "loadingOrder": "載入訂單中..."
   }
 }

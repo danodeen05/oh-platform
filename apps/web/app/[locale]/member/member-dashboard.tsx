@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { useToast } from "@/components/ui/Toast";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -47,7 +47,7 @@ type Order = {
 };
 
 // Mini Calendar Component for Member Page - matches stats card width
-function OrderCalendar({ orders, tierColor }: { orders: Order[]; tierColor: string }) {
+function OrderCalendar({ orders, tierColor, t }: { orders: Order[]; tierColor: string; t: (key: string, values?: Record<string, any>) => string }) {
   const [viewDate, setViewDate] = useState(new Date());
   const today = new Date();
 
@@ -157,7 +157,7 @@ function OrderCalendar({ orders, tierColor }: { orders: Order[]; tierColor: stri
         </button>
       </div>
       <div style={{ fontSize: "1rem", color: "#666", marginBottom: 6 }}>
-        {orderCount} {orderCount === 1 ? "visit" : "visits"} this month
+        {t("visitsThisMonth", { count: orderCount })}
       </div>
 
       {/* Day Headers */}
@@ -250,7 +250,9 @@ function OrderCalendar({ orders, tierColor }: { orders: Order[]; tierColor: stri
 
 export default function MemberDashboard() {
   const router = useRouter();
-  const t = useTranslations("common");
+  const locale = useLocale();
+  const t = useTranslations("member");
+  const tCommon = useTranslations("common");
   const toast = useToast();
   const [email, setEmail] = useState("");
   const [userId, setUserId] = useState<string | null>(null);
@@ -311,7 +313,7 @@ export default function MemberDashboard() {
 
   async function handleLogin() {
     if (!email) {
-      toast.warning(t("enterEmail"));
+      toast.warning(tCommon("enterEmail"));
       return;
     }
 
@@ -342,12 +344,13 @@ export default function MemberDashboard() {
   }
 
   function getTierName(tier: string) {
-    const names = {
-      CHOPSTICK: "🥢 Chopstick",
-      NOODLE_MASTER: "🍜 Noodle Master",
-      BEEF_BOSS: "🐂 Beef Boss",
+    const tierKeys: Record<string, string> = {
+      CHOPSTICK: "tiers.chopstick",
+      NOODLE_MASTER: "tiers.noodleMaster",
+      BEEF_BOSS: "tiers.beefBoss",
     };
-    return names[tier as keyof typeof names] || tier;
+    const key = tierKeys[tier];
+    return key ? t(key) : tier;
   }
 
   if (!userId) {
@@ -379,10 +382,10 @@ export default function MemberDashboard() {
               textAlign: "center",
             }}
           >
-            Welcome! 🍜
+            {t("welcome")} 🍜
           </h1>
           <p style={{ color: "#666", marginBottom: 24, textAlign: "center" }}>
-            Sign in to view your membership
+            {t("signInToView")}
           </p>
 
           <input
@@ -418,7 +421,7 @@ export default function MemberDashboard() {
               cursor: loading ? "not-allowed" : "pointer",
             }}
           >
-            {loading ? "Loading..." : "Continue"}
+            {loading ? t("loading") : t("continue")}
           </button>
         </div>
       </div>
@@ -438,7 +441,7 @@ export default function MemberDashboard() {
       >
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: "3rem", marginBottom: 16 }}>🍜</div>
-          <div>Loading your profile...</div>
+          <div>{t("loadingProfile")}</div>
         </div>
       </div>
     );
@@ -460,7 +463,7 @@ export default function MemberDashboard() {
         }}
       >
         <h1 style={{ margin: 0, color: "#E5E5E5", fontSize: "1.3rem" }}>
-          My Membership
+          {t("myMembership")}
         </h1>
         <button
           onClick={() => router.push("/")}
@@ -474,7 +477,7 @@ export default function MemberDashboard() {
             fontSize: "0.9rem",
           }}
         >
-          Home
+          {t("home")}
         </button>
       </div>
 
@@ -501,7 +504,7 @@ export default function MemberDashboard() {
               <div
                 style={{ fontSize: "0.85rem", color: "#666", marginBottom: 4 }}
               >
-                Current Tier
+                {t("currentTier")}
               </div>
               <div
                 style={{
@@ -539,16 +542,16 @@ export default function MemberDashboard() {
             }}
           >
             <div style={{ fontWeight: "bold", marginBottom: 12 }}>
-              Your Benefits:
+              {t("yourBenefits")}
             </div>
             <div style={{ display: "grid", gap: 8 }}>
-              {profile.tierBenefits.perks.map((perk, idx) => (
+              {profile.tierBenefits.perks.map((perkKey, idx) => (
                 <div
                   key={idx}
                   style={{ display: "flex", alignItems: "center", gap: 8 }}
                 >
                   <span style={{ color: tierColor }}>✓</span>
-                  <span style={{ fontSize: "0.9rem" }}>{perk}</span>
+                  <span style={{ fontSize: "0.9rem" }}>{t(`perks.${perkKey}`)}</span>
                 </div>
               ))}
             </div>
@@ -564,7 +567,7 @@ export default function MemberDashboard() {
                   marginBottom: 12,
                 }}
               >
-                Progress to {getTierName(profile.nextTier.next)}:
+                {t("progressTo", { tier: getTierName(profile.nextTier.next) })}
               </div>
 
               {/* Orders Progress */}
@@ -577,7 +580,7 @@ export default function MemberDashboard() {
                     marginBottom: 4,
                   }}
                 >
-                  <span>Orders</span>
+                  <span>{t("orders")}</span>
                   <span>
                     {profile.tierProgress.orders.current} /{" "}
                     {profile.tierProgress.orders.needed}
@@ -612,7 +615,7 @@ export default function MemberDashboard() {
                     marginBottom: 4,
                   }}
                 >
-                  <span>Referrals</span>
+                  <span>{t("referralsNav")}</span>
                   <span>
                     {profile.tierProgress.referrals.current} /{" "}
                     {profile.tierProgress.referrals.needed}
@@ -674,7 +677,7 @@ export default function MemberDashboard() {
               {profile.lifetimeOrderCount}
             </div>
             <div style={{ fontSize: "0.85rem", color: "#666" }}>
-              Total Orders
+              {t("totalOrders")}
             </div>
           </div>
 
@@ -702,7 +705,7 @@ export default function MemberDashboard() {
             >
               ${(profile.creditsCents / 100).toFixed(2)}
             </div>
-            <div style={{ fontSize: "0.85rem", color: "#666" }}>Credits</div>
+            <div style={{ fontSize: "0.85rem", color: "#666" }}>{t("credits")}</div>
           </div>
         </div>
 
@@ -715,7 +718,7 @@ export default function MemberDashboard() {
           }}
         >
           <div style={{ width: "100%", maxWidth: 400 }}>
-            <OrderCalendar orders={orders} tierColor={tierColor} />
+            <OrderCalendar orders={orders} tierColor={tierColor} t={t} />
           </div>
         </div>
 
@@ -727,7 +730,7 @@ export default function MemberDashboard() {
             padding: 24,
           }}
         >
-          <h2 style={{ margin: 0, marginBottom: 16 }}>Badges</h2>
+          <h2 style={{ margin: 0, marginBottom: 16 }}>{t("badgesTitle")}</h2>
 
           <div style={{ display: "grid", gap: 12 }}>
             {allBadges.map((badge) => {
@@ -762,7 +765,7 @@ export default function MemberDashboard() {
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: "bold", marginBottom: 2 }}>
-                      {badge.name}
+                      {t(`badges.${badge.slug}.name`, { defaultValue: badge.name })}
                       {earned && (
                         <span style={{ color: "#7C7A67", marginLeft: 8 }}>
                           ✓
@@ -770,7 +773,7 @@ export default function MemberDashboard() {
                       )}
                     </div>
                     <div style={{ fontSize: "0.85rem", color: "#666" }}>
-                      {badge.description}
+                      {t(`badges.${badge.slug}.description`, { defaultValue: badge.description })}
                     </div>
                   </div>
                 </div>
@@ -808,7 +811,7 @@ export default function MemberDashboard() {
           }}
         >
           <span style={{ fontSize: "1.5rem" }}>🍜</span>
-          <span style={{ fontSize: "0.75rem", color: "#666" }}>Order</span>
+          <span style={{ fontSize: "0.75rem", color: "#666" }}>{t("order")}</span>
         </button>
 
         <button
@@ -825,7 +828,7 @@ export default function MemberDashboard() {
           }}
         >
           <span style={{ fontSize: "1.5rem" }}>💰</span>
-          <span style={{ fontSize: "0.75rem", color: "#666" }}>Referrals</span>
+          <span style={{ fontSize: "0.75rem", color: "#666" }}>{t("referralsNav")}</span>
         </button>
 
         <button
@@ -848,7 +851,7 @@ export default function MemberDashboard() {
               fontWeight: "bold",
             }}
           >
-            Member
+            {t("memberNav")}
           </span>
         </button>
       </div>

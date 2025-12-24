@@ -11,12 +11,27 @@ export interface Seat {
   dualPartnerId?: string | null;
 }
 
+interface SeatingMapLabels {
+  available?: string;
+  selected?: string;
+  reserved?: string;
+  occupied?: string;
+  dualPod?: string;
+  entrance?: string;
+  kitchen?: string;
+  exit?: string;
+  dual?: string;
+  selectedPrefix?: string; // "Selected:" prefix text
+  pod?: string; // "Pod" label for selection info
+}
+
 interface SeatingMapProps {
   seats: Seat[];
   selectedSeatId?: string | null;
   onSelectSeat: (seat: Seat) => void;
   disabled?: boolean;
   groupSize?: number; // Number of people in the order/group - determines if dual pods are selectable
+  labels?: SeatingMapLabels; // Translated labels
 }
 
 export default function SeatingMap({
@@ -25,7 +40,22 @@ export default function SeatingMap({
   onSelectSeat,
   disabled = false,
   groupSize = 1,
+  labels = {},
 }: SeatingMapProps) {
+  // Default labels with fallbacks
+  const l = {
+    available: labels.available || "Available",
+    selected: labels.selected || "Selected",
+    reserved: labels.reserved || "Reserved",
+    occupied: labels.occupied || "Occupied",
+    dualPod: labels.dualPod || "Dual Pod",
+    entrance: labels.entrance || "ENTRANCE",
+    kitchen: labels.kitchen || "KITCHEN",
+    exit: labels.exit || "EXIT",
+    dual: labels.dual || "Dual",
+    selectedPrefix: labels.selectedPrefix || "Selected:",
+    pod: labels.pod || "Pod",
+  };
   // Helper to check if a seat is part of a dual pod (either it points to a partner, or another seat points to it)
   const isDualPod = (seat: Seat) => {
     if (seat.podType !== "DUAL") return false;
@@ -225,7 +255,7 @@ export default function SeatingMap({
             return (
               <>
                 <span style={{ fontSize: "16px", fontWeight: "bold" }}>{firstNum}</span>
-                <span style={{ fontSize: "9px", margin: isBottomRow ? "0 4px" : "4px 0" }}>Dual</span>
+                <span style={{ fontSize: "9px", margin: isBottomRow ? "0 4px" : "4px 0" }}>{l.dual}</span>
                 <span style={{ fontSize: "16px", fontWeight: "bold" }}>{secondNum}</span>
                 {!bothAvailable && (
                   <span style={{ fontSize: "9px", marginTop: isBottomRow ? "0" : "4px", marginLeft: isBottomRow ? "4px" : "0" }}>
@@ -276,7 +306,7 @@ export default function SeatingMap({
               border: "2px solid #86efac",
             }}
           />
-          <span style={{ fontSize: "12px", color: "#666" }}>Available</span>
+          <span style={{ fontSize: "12px", color: "#666" }}>{l.available}</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
           <div
@@ -288,7 +318,7 @@ export default function SeatingMap({
               border: "2px solid #5c5a4f",
             }}
           />
-          <span style={{ fontSize: "12px", color: "#666" }}>Selected</span>
+          <span style={{ fontSize: "12px", color: "#666" }}>{l.selected}</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
           <div
@@ -300,7 +330,7 @@ export default function SeatingMap({
               border: "2px solid #fcd34d",
             }}
           />
-          <span style={{ fontSize: "12px", color: "#666" }}>Reserved</span>
+          <span style={{ fontSize: "12px", color: "#666" }}>{l.reserved}</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
           <div
@@ -312,7 +342,7 @@ export default function SeatingMap({
               border: "2px solid #d1d5db",
             }}
           />
-          <span style={{ fontSize: "12px", color: "#666" }}>Occupied</span>
+          <span style={{ fontSize: "12px", color: "#666" }}>{l.occupied}</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
           <div
@@ -324,7 +354,7 @@ export default function SeatingMap({
               border: "2px solid #22d3ee",
             }}
           />
-          <span style={{ fontSize: "12px", color: "#666" }}>Dual Pod</span>
+          <span style={{ fontSize: "12px", color: "#666" }}>{l.dualPod}</span>
         </div>
       </div>
 
@@ -349,7 +379,7 @@ export default function SeatingMap({
             marginBottom: "8px",
           }}
         >
-          Entrance
+          {l.entrance}
         </div>
 
         {/* Main Layout Container */}
@@ -399,7 +429,7 @@ export default function SeatingMap({
                   letterSpacing: "1px",
                 }}
               >
-                Kitchen
+                {l.kitchen}
               </div>
             </div>
           </div>
@@ -437,7 +467,7 @@ export default function SeatingMap({
             marginTop: "8px",
           }}
         >
-          Exit
+          {l.exit}
         </div>
       </div>
 
@@ -452,7 +482,7 @@ export default function SeatingMap({
             textAlign: "center",
           }}
         >
-          <span style={{ color: "#666" }}>Selected: </span>
+          <span style={{ color: "#666" }}>{l.selectedPrefix} </span>
           <span style={{ fontWeight: "600", color: "#222" }}>
             {(() => {
               const selectedSeat = seats.find((s) => s.id === selectedSeatId);
@@ -462,10 +492,10 @@ export default function SeatingMap({
                 if (partner) {
                   const num1 = parseInt(selectedSeat.number);
                   const num2 = parseInt(partner.number);
-                  return `Dual Pod ${Math.min(num1, num2).toString().padStart(2, '0')} & ${Math.max(num1, num2).toString().padStart(2, '0')}`;
+                  return `${l.dualPod} ${Math.min(num1, num2).toString().padStart(2, '0')} & ${Math.max(num1, num2).toString().padStart(2, '0')}`;
                 }
               }
-              return `Pod ${selectedSeat.number}`;
+              return `${l.pod} ${selectedSeat.number}`;
             })()}
           </span>
         </div>

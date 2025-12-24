@@ -112,7 +112,11 @@ model MenuItem {
   tenantId String
   tenant   Tenant @relation(fields: [tenantId], references: [id])
 
-  name String
+  // Name translations (English is required, others optional)
+  name     String  // English (default)
+  nameZhTW String? // Traditional Chinese (Taiwan)
+  nameZhCN String? // Simplified Chinese (China)
+  nameEs   String? // Spanish
 
   // Flexible pricing system
   basePriceCents       Int // Base price (can be $0 for included items)
@@ -120,7 +124,13 @@ model MenuItem {
   includedQuantity     Int @default(0) // Number of servings included (1 for baby bok choy, 0 for others)
 
   category    String? // e.g., "protein", "vegetables", "noodles", "main01", "slider01", etc.
-  description String?
+
+  // Description translations
+  description     String? // English (default)
+  descriptionZhTW String? // Traditional Chinese (Taiwan)
+  descriptionZhCN String? // Simplified Chinese (China)
+  descriptionEs   String? // Spanish
+
   isAvailable Boolean @default(true)
 
   // Enhanced menu organization

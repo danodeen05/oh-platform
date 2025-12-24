@@ -10,7 +10,8 @@ const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 function CheckInContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const t = useTranslations("order");
+  const t = useTranslations("checkIn");
+  const tOrder = useTranslations("order");
   const orderQrCodeParam = searchParams.get("orderQrCode");
 
   const [orderQrCode, setOrderQrCode] = useState(orderQrCodeParam || "");
@@ -21,7 +22,7 @@ function CheckInContent() {
     e.preventDefault();
 
     if (!orderQrCode.trim()) {
-      setError(t("errors.enterQrCode"));
+      setError(tOrder("errors.enterQrCode"));
       return;
     }
 
@@ -60,12 +61,12 @@ function CheckInContent() {
         if (data.error === "Order already checked in") {
           router.push(`/order/status?orderQrCode=${encodeURIComponent(orderQrCode.trim())}`);
         } else {
-          setError(data.error || t("errors.checkInFailed"));
+          setError(data.error || tOrder("errors.checkInFailed"));
         }
       }
     } catch (err) {
       console.error("Check-in error:", err);
-      setError(t("errors.networkError"));
+      setError(tOrder("errors.networkError"));
     } finally {
       setLoading(false);
     }
@@ -94,12 +95,12 @@ function CheckInContent() {
       >
         {/* Header */}
         <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <div style={{ fontSize: "3rem", marginBottom: 16 }}>🎫</div>
+          <div style={{ fontSize: "3rem", marginBottom: 16 }}>📱</div>
           <h1 style={{ margin: 0, marginBottom: 8, fontSize: "1.8rem", color: "#111" }}>
-            Check-In Kiosk
+            {t("title")}
           </h1>
           <p style={{ color: "#666", fontSize: "1rem", margin: 0 }}>
-            Scan or enter your order QR code to get your pod assignment
+            {t("subtitle")}
           </p>
         </div>
 
@@ -114,13 +115,13 @@ function CheckInContent() {
         >
           <div style={{ fontSize: "0.85rem", color: "#666", lineHeight: 1.6 }}>
             <strong style={{ color: "#111", display: "block", marginBottom: 8 }}>
-              How to check in:
+              {t("howToTitle")}
             </strong>
-            1. Find your order QR code (on your order confirmation page)
+            1. {t("step1")}
             <br />
-            2. Scan it with the kiosk scanner or enter the code below
+            2. {t("step2")}
             <br />
-            3. Get your pod assignment or queue position
+            3. {t("step3")}
           </div>
         </div>
 
@@ -137,14 +138,14 @@ function CheckInContent() {
                 fontWeight: "500",
               }}
             >
-              Order QR Code:
+              {t("qrCodeLabel")}
             </label>
             <input
               id="orderQrCode"
               type="text"
               value={orderQrCode}
               onChange={(e) => setOrderQrCode(e.target.value)}
-              placeholder="ORDER-xxpmm5hf-1234567890-ABC123"
+              placeholder={t("qrCodePlaceholder")}
               style={{
                 width: "100%",
                 padding: "12px 16px",
@@ -188,7 +189,7 @@ function CheckInContent() {
               cursor: loading || !orderQrCode.trim() ? "not-allowed" : "pointer",
             }}
           >
-            {loading ? "Checking in..." : "Check In"}
+            {loading ? t("checkingIn") : t("checkInButton")}
           </button>
         </form>
 
@@ -204,12 +205,12 @@ function CheckInContent() {
           }}
         >
           <div style={{ fontWeight: "bold", marginBottom: 8, color: "#111" }}>
-            💡 Need Help?
+            💡 {t("needHelp")}
           </div>
           <ul style={{ margin: 0, paddingLeft: 20 }}>
-            <li>Your QR code is on your order confirmation page</li>
-            <li>It starts with "ORDER-" followed by numbers and letters</li>
-            <li>Ask staff if you need assistance</li>
+            <li>{t("helpTip1")}</li>
+            <li>{t("helpTip2")}</li>
+            <li>{t("helpTip3")}</li>
           </ul>
         </div>
       </div>
@@ -230,7 +231,7 @@ export default function CheckInPage() {
             background: "#E5E5E5",
           }}
         >
-          <div style={{ color: "#222222", fontSize: "1.2rem" }}>Loading...</div>
+          <div style={{ color: "#222222", fontSize: "1.2rem" }}>...</div>
         </div>
       }
     >
