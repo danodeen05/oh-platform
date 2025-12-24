@@ -4572,7 +4572,24 @@ Write ONE completely original fortune. Return ONLY the fortune text. No quotes.`
     });
   } catch (error) {
     console.error("Error generating fortune:", error);
-    return reply.status(500).send({ error: "Failed to generate fortune" });
+    // Return a fallback fortune instead of 500 error
+    const fallbackFortune = fallbackFortunes[Math.floor(Math.random() * fallbackFortunes.length)];
+    const fallbackWord = fallbackChineseWords[Math.floor(Math.random() * fallbackChineseWords.length)];
+    return reply.send({
+      fortune: fallbackFortune,
+      luckyNumbers: [Math.floor(Math.random() * 99) + 1, Math.floor(Math.random() * 99) + 1, Math.floor(Math.random() * 99) + 1],
+      thisDayInHistory: null,
+      learnChinese: fallbackWord ? {
+        traditional: fallbackWord.traditional,
+        pinyin: fallbackWord.pinyin,
+        english: fallbackWord.english,
+        category: fallbackWord.category,
+        funFact: fallbackWord.funFact,
+        source: "fallback",
+      } : null,
+      source: "fallback",
+      isFallback: true,
+    });
   }
 });
 
@@ -4862,7 +4879,15 @@ Write the roast now. No quotes. Pure comedy. Make them choke on their noodles la
     });
   } catch (error) {
     console.error("Error generating roast:", error);
-    return reply.status(500).send({ error: "Failed to generate roast" });
+    // Return a fallback roast instead of 500 error
+    const fallbackRoast = fallbackRoasts[Math.floor(Math.random() * fallbackRoasts.length)];
+    return reply.send({
+      roast: fallbackRoast,
+      highlights: [],
+      source: "fallback",
+      orderSummary: null,
+      isFallback: true,
+    });
   }
 });
 
@@ -5162,7 +5187,16 @@ Write the commentary now. No quotes.${languageInstruction}`;
     });
   } catch (error) {
     console.error("Error generating commentary:", error);
-    return reply.status(500).send({ error: "Failed to generate commentary" });
+    // Return a fallback commentary instead of 500 error
+    const stageFallbacks = fallbackCommentary.QUEUED;
+    const fallbackComment = stageFallbacks[Math.floor(Math.random() * stageFallbacks.length)];
+    return reply.send({
+      commentary: fallbackComment,
+      status: "QUEUED",
+      source: "fallback",
+      orderSummary: null,
+      isFallback: true,
+    });
   }
 });
 
@@ -5296,7 +5330,14 @@ Generate exactly 4 short backstory facts (one sentence each, max 150 chars each)
     });
   } catch (error) {
     console.error("Error generating backstory:", error);
-    return reply.status(500).send({ error: "Failed to generate backstory" });
+    // Return fallback backstories instead of 500 error
+    const shuffled = [...fallbackBackstories].sort(() => 0.5 - Math.random());
+    return reply.send({
+      backstories: shuffled.slice(0, 4),
+      source: "fallback",
+      orderHighlights: null,
+      isFallback: true,
+    });
   }
 });
 
@@ -5309,9 +5350,9 @@ app.get("/orders/mental-health-fact", async (req, reply) => {
   const locale = getLocale(req);
   const languageInstruction = getLanguageInstruction(locale);
 
-  // Try to generate unique AI-powered mental health fact
+  // Try to generate unique AI-powered mental health fact - return fallback if API key not set
   if (!anthropic) {
-    return reply.status(503).send({ error: "AI service unavailable" });
+    return sendMentalHealthFallback(reply, locale);
   }
 
   try {
@@ -5392,12 +5433,46 @@ Return ONLY valid JSON (no markdown). The "question" field should be "${question
       });
     }
 
-    return reply.status(500).send({ error: "Invalid AI response" });
+    // Fallback if AI response is invalid
+    return sendMentalHealthFallback(reply, locale);
   } catch (error) {
     console.error("Error generating mental health fact:", error);
-    return reply.status(500).send({ error: "Failed to generate mental health fact" });
+    // Return fallback instead of 500 error
+    return sendMentalHealthFallback(reply, locale);
   }
 });
+
+// Helper function for mental health fallback responses
+function sendMentalHealthFallback(reply, locale) {
+  const fallbacks = {
+    en: {
+      question: "Did you know?",
+      fact: "Taking short breaks during meals to practice mindful eating can reduce stress and improve digestion.",
+      source: "Harvard Health Publishing, 2023",
+    },
+    "zh-TW": {
+      question: "你知道嗎？",
+      fact: "用餐時短暫休息並練習正念飲食，可以減輕壓力並改善消化。",
+      source: "哈佛健康出版，2023",
+    },
+    "zh-CN": {
+      question: "你知道吗？",
+      fact: "用餐时短暂休息并练习正念饮食，可以减轻压力并改善消化。",
+      source: "哈佛健康出版，2023",
+    },
+    es: {
+      question: "¿Sabías que...?",
+      fact: "Tomar breves descansos durante las comidas para practicar la alimentación consciente puede reducir el estrés y mejorar la digestión.",
+      source: "Harvard Health Publishing, 2023",
+    },
+  };
+  const fallback = fallbacks[locale] || fallbacks.en;
+  return reply.send({
+    ...fallback,
+    generatedAt: new Date().toISOString(),
+    isFallback: true,
+  });
+}
 
 // ====================
 // ORDER WHISPERER (Pattern Analysis for Returning Customers)
