@@ -182,7 +182,8 @@
       "premium": "Premium",
       "included": "Incluido",
       "signature": "Especial",
-      "complimentary": "Cortesía"
+      "complimentary": "Cortesía",
+      "unlimitedRefills": "Refills Ilimitados"
     },
     "sections": {
       "soup": {
@@ -442,6 +443,101 @@
     "referralApplied": "¡Se aplicará un descuento de $5 por referido!",
     "waitTime": "Espera actual",
     "minutes": "min",
+    "locationSelector": {
+      "groupMode": {
+        "title": "Iniciando pedido grupal",
+        "description": "Selecciona una ubicación para crear tu grupo. ¡Comparte el código con amigos para que puedan agregar sus pedidos!"
+      },
+      "status": {
+        "available": "Disponible",
+        "busy": "Ocupado",
+        "moderateWait": "Espera moderada"
+      },
+      "milesAway": "{distance} millas",
+      "available": "Disponible:",
+      "pods": "{available}/{total} pods",
+      "avgWait": "Espera promedio:",
+      "minWait": "{minutes} min"
+    },
+    "groupBanner": {
+      "diningTogether": "¿Cenando juntos?",
+      "startOrJoin": "Inicia o únete a un pedido grupal",
+      "startGroupOrder": "Iniciar pedido grupal",
+      "joinGroup": "Unirse al grupo",
+      "enterCode": "Ingresa código",
+      "join": "Unirse",
+      "enterGroupCode": "Por favor ingresa un código de grupo",
+      "failedToJoin": "Error al unirse al grupo. Por favor intenta de nuevo."
+    },
+    "builder": {
+      "stepOf": "Paso {current} de {total}",
+      "required": "Requerido",
+      "backToLocations": "Volver a ubicaciones",
+      "available": "Disponible:",
+      "seats": "{available}/{total} asientos",
+      "currentWait": "Espera actual:",
+      "minWait": "{minutes} min",
+      "continue": "Continuar",
+      "back": "Atrás",
+      "total": "Total:",
+      "loadingMenu": "Cargando menú...",
+      "ohRecommendation": "¡Oh! Recomendación",
+      "included": "Incluido",
+      "includedUpTo": "Incluido (hasta {count})",
+      "each": "c/u",
+      "eachExtra": "c/u extra",
+      "subtotalLabel": "Subtotal:",
+      "sliderLabels": {
+        "Light": "Ligero",
+        "Medium": "Medio",
+        "Rich": "Intenso",
+        "Extra Rich": "Extra Intenso",
+        "Firm": "Firme",
+        "Soft": "Suave",
+        "None": "Sin",
+        "Mild": "Suave",
+        "Spicy": "Picante",
+        "Extra Spicy": "Extra Picante",
+        "Normal": "Normal",
+        "Extra": "Extra"
+      },
+      "backToMenu": "Volver al Menú",
+      "whenWillYouArrive": "¿Cuándo llegarás?",
+      "readyBy": "Listo a las {time}",
+      "reviewOrderPayment": "Revisar Pedido y Pago",
+      "timeOptions": {
+        "asap": "Lo antes posible (entre ahora y 5 minutos)",
+        "15min": "15 minutos",
+        "30min": "30 minutos",
+        "45min": "45 minutos",
+        "1hour": "1 hora",
+        "90min": "1.5 horas"
+      },
+      "processing": "Procesando...",
+      "addToGroupOrder": "Agregar al Pedido de Grupo",
+      "choosePod": "Elige Tu Pod (Opcional)",
+      "choosePodDescription": "Como llegarás pronto, puedes elegir tu pod preferido ahora. Omite esto para ser asignado automáticamente al registrarte.",
+      "clearSelection": "Limpiar Selección (Auto-asignar)",
+      "checkingSeatAvailability": "Verificando disponibilidad de asientos...",
+      "loadingSeats": "Cargando asientos...",
+      "podLegend": {
+        "available": "Disponible",
+        "selected": "Seleccionado",
+        "reserved": "Reservado",
+        "occupied": "Ocupado",
+        "dualPod": "Pod Doble"
+      },
+      "podMap": {
+        "entrance": "ENTRADA",
+        "kitchen": "COCINA",
+        "exit": "SALIDA",
+        "dual": "Doble"
+      },
+      "podSelection": {
+        "selectedPrefix": "Seleccionado:",
+        "pod": "Pod"
+      }
+    },
     "addToOrder": "Agregar al pedido",
     "viewOrder": "Ver pedido",
     "checkout": "Pagar",
@@ -609,7 +705,98 @@
     "visits": "Visitas",
     "currentTier": "Nivel actual",
     "nextTier": "Siguiente nivel",
-    "pointsToNext": "puntos para el siguiente nivel"
+    "pointsToNext": "puntos para el siguiente nivel",
+    "myMembership": "Mi Membresía",
+    "home": "Inicio",
+    "order": "Ordenar",
+    "referralsNav": "Referencias",
+    "memberNav": "Miembro",
+    "yourBenefits": "Tus Beneficios:",
+    "progressTo": "Progreso hacia {tier}:",
+    "totalOrders": "Pedidos Totales",
+    "badgesTitle": "Insignias",
+    "welcome": "¡Bienvenido!",
+    "signInToView": "Inicia sesión para ver tu membresía",
+    "continue": "Continuar",
+    "loading": "Cargando...",
+    "loadingProfile": "Cargando tu perfil...",
+    "visitsThisMonth": "{count} {count, plural, one {visita} other {visitas}} este mes",
+    "tiers": {
+      "chopstick": "🥢 Palillos",
+      "noodleMaster": "🍜 Maestro de Fideos",
+      "beefBoss": "🐂 Jefe de la Carne"
+    },
+    "perks": {
+      "referralBonus": "$5 de bonificación por cada amigo referido",
+      "cashback1": "1% de reembolso en pedidos",
+      "cashback2": "2% de reembolso en pedidos",
+      "cashback3": "3% de reembolso en pedidos",
+      "earlyAccess": "Acceso anticipado a nuevos platos",
+      "prioritySeating": "Asiento prioritario",
+      "memberEvents": "Eventos exclusivos para miembros",
+      "freeBowlUpgrade": "Tazón gratis al subir de nivel",
+      "merchandiseDrops": "Mercancía exclusiva",
+      "premiumAddons": "Complementos premium de cortesía",
+      "vipGift": "Regalo anual VIP y reconocimiento"
+    },
+    "badges": {
+      "first-order": {
+        "name": "Primer Tazón",
+        "description": "Completaste tu primer pedido"
+      },
+      "10-orders": {
+        "name": "Entusiasta de Fideos",
+        "description": "Completaste 10 pedidos"
+      },
+      "50-orders": {
+        "name": "Devoto de la Carne",
+        "description": "Completaste 50 pedidos"
+      },
+      "100-orders": {
+        "name": "Club del Centenario",
+        "description": "Completaste 100 pedidos"
+      },
+      "first-referral": {
+        "name": "Comparte el Amor",
+        "description": "Referiste a tu primer amigo"
+      },
+      "10-referrals": {
+        "name": "Influencer",
+        "description": "Referiste a 10 amigos"
+      },
+      "50-referrals": {
+        "name": "Embajador",
+        "description": "Referiste a 50 amigos"
+      },
+      "3-day-streak": {
+        "name": "Racha Caliente",
+        "description": "Pediste 3 días seguidos"
+      },
+      "7-day-streak": {
+        "name": "Guerrero Semanal",
+        "description": "Pediste 7 días seguidos"
+      },
+      "30-day-streak": {
+        "name": "Leyenda",
+        "description": "Pediste 30 días seguidos"
+      },
+      "tried-all-items": {
+        "name": "Maestro del Menú",
+        "description": "Probaste todos los platos del menú"
+      },
+      "spicy-challenge": {
+        "name": "Buscador de Picante",
+        "description": "Pediste picante 10 veces"
+      },
+      "grand-opening": {
+        "name": "Miembro Original",
+        "description": "Miembro desde la gran apertura"
+      },
+      "vip": {
+        "name": "VIP",
+        "description": "Alcanzaste el nivel Jefe de la Carne"
+      }
+    }
   },
   "giftCards": {
     "title": "Tarjetas de regalo",
@@ -803,6 +990,25 @@
       "minimumOrder": "El bono de referido aplica a primeros pedidos de $20 o más",
       "disbursement": "Los créditos se agregan a tu cuenta en 24 horas",
       "maxPerOrder": "Máximo de $5 de crédito puede aplicarse por pedido"
+    },
+    "dashboard": {
+      "getStarted": "Comenzar",
+      "enterEmailPrompt": "Ingresa tu correo para obtener tu enlace de referido",
+      "getMyReferralLink": "Obtener Mi Enlace de Referido",
+      "creating": "Creando...",
+      "availableCredits": "Créditos Disponibles",
+      "useCreditsNote": "Usa hasta $5 por pedido al pagar",
+      "pendingCredits": "Créditos Pendientes",
+      "scheduledForDisbursement": "Programado para desembolso",
+      "nextDisbursement": "Próximo desembolso:",
+      "yourReferralLink": "Tu Enlace de Referido",
+      "copy": "Copiar",
+      "shareToEarn": "Comparte este enlace para ganar $5 por cada amigo que ordene $20+",
+      "recentActivity": "Actividad Reciente",
+      "creditEvents": {
+        "cashback": "{percent}% de reembolso en pedido",
+        "appliedToOrder": "Aplicado al pedido {orderId}"
+      }
     }
   },
   "careers": {
@@ -1131,6 +1337,7 @@
     "orderNotFound": "Pedido no encontrado",
     "placeNewOrder": "Hacer nuevo pedido",
     "statusUpdates": "El estado se actualiza automáticamente cada 5 segundos",
+    "orderNumber": "Pedido #{number}",
     "status": {
       "pending": "Pago pendiente",
       "paid": "Pagado",
@@ -1138,7 +1345,8 @@
       "prepping": "Preparando",
       "ready": "Listo para entregar",
       "serving": "¡Disfruta tu comida!",
-      "completed": "Completado"
+      "completed": "Completado",
+      "doneEating": "¿Terminaste de comer?"
     },
     "pod": {
       "yourPod": "Tu Pod",
@@ -1170,28 +1378,59 @@
     "buttons": {
       "viewProfile": "Ver mi perfil",
       "orderAgain": "Ordenar de nuevo",
-      "imDoneEating": "Terminé de comer",
-      "addToOrder": "Agregar al pedido"
+      "doneEating": "Terminé de comer",
+      "addToOrder": "Agregar al pedido",
+      "callStaff": "Llamar personal",
+      "addItems": "Agregar artículos",
+      "confirmAtPod": "Confirmar que estoy en mi cabina"
+    },
+    "location": "Ubicación",
+    "confirmations": {
+      "finishedEating": "¿Terminaste de comer? Esto notificará al personal para limpiar tu pod."
+    },
+    "errors": {
+      "markDone": "Error al marcar como terminado. Por favor intenta de nuevo."
     },
     "doneEating": {
       "confirmPrompt": "¿Terminaste de comer? Esto notificará al personal para limpiar tu pod.",
       "failedToUpdate": "Error al actualizar. Por favor intenta de nuevo."
     },
+    "dessert": {
+      "readyForDessert": "Listo para el postre",
+      "onItsWay": "¡El postre viene en camino!",
+      "notifying": "Notificando..."
+    },
     "addItems": {
       "title": "Agregar a tu pedido",
       "loading": "Cargando artículos disponibles...",
       "drinkRefills": "Refill de bebidas",
-      "requestRefill": "Solicitar refill",
+      "requestRefill": "Solicitar refill →",
+      "request": "Solicitar →",
       "requesting": "Solicitando...",
       "waterRefill": "Refill de agua",
-      "extrasAddons": "Extras y adicionales",
+      "extrasAndAddons": "Extras y adicionales",
       "requestExtras": "Solicitar {count} extra(s)",
-      "addOnsExtras": "Extras y adicionales",
+      "paidAddons": "Extras y adicionales",
       "orderTotal": "Total del pedido",
-      "checkout": "Pagar",
-      "demoWarning": "Modo demo: No se realizará cargo real",
+      "checkout": "Pagar →",
+      "demoMode": "Modo demo: No se realizará cargo real",
       "cancel": "Cancelar",
-      "pay": "Pagar ${amount}"
+      "pay": "Pagar {amount}",
+      "processing": "Procesando...",
+      "free": "Gratis",
+      "paid": "De pago",
+      "add": "Agregar",
+      "noAddons": "No hay artículos adicionales disponibles para este pedido.",
+      "callStaffInstead": "Llamar al personal",
+      "failedToLoad": "Error al cargar artículos. Por favor intenta de nuevo o llama al personal."
+    },
+    "autoRefresh": "El estado se actualiza automáticamente cada 10 segundos",
+    "mentalHealth": {
+      "label": "La salud mental importa",
+      "loading": "Cargando información de salud mental...",
+      "skipTip": "Sin propinas. Haz la diferencia.",
+      "supportCause": "Apoyar la causa",
+      "foundation": "One Red Step at a Time Foundation • 501(c)(3)"
     }
   },
   "features": {
@@ -1239,7 +1478,46 @@
     "total": "Total",
     "processing": "Procesando...",
     "payNow": "Pagar ahora",
-    "testMode": "Modo de prueba - sin cargo real"
+    "testMode": "Modo de prueba - sin cargo real",
+    "theBowl": "El Tazón",
+    "addOnsExtras": "Extras y Acompañamientos",
+    "qty": "Cant: {count}",
+    "loading": "Cargando...",
+    "subtotal": "Subtotal",
+    "creditsApplied": "Créditos Aplicados",
+    "payAmount": "Pagar ${amount}",
+    "processingPayment": "Procesando pago...",
+    "secureCheckout": "Pago seguro con Stripe (modo de prueba)",
+    "paymentMethod": "Método de pago",
+    "testPayment": "Pago de prueba",
+    "demoMode": "Modo demo - sin cargo real",
+    "demoWarning": "Este es un pago de demostración. ¡La integración real de Stripe viene pronto!",
+    "availableCredits": "Créditos Disponibles",
+    "youHaveCredits": "Tienes <bold>${amount}</bold> en créditos",
+    "maxCreditsNote": "Puedes aplicar hasta $5 en crédito por pedido",
+    "applyToOrder": "Aplicar ${amount} a este pedido",
+    "welcomeReferred": "¡Bienvenido! Has sido referido",
+    "referralCreditsNote": "Tienes ${amount} en créditos para usar en este pedido",
+    "referralAlreadyUsed": "Crédito de referido ya usado",
+    "referralAlreadyUsedNote": "¡Gracias por visitarnos de nuevo! Los créditos de referido solo se aplican a tu primer pedido. Aún puedes ganar créditos refiriendo amigos con tu enlace personal.",
+    "loadingAccount": "Cargando tu cuenta y recompensas...",
+    "signInToComplete": "Inicia sesión para completar tu pedido",
+    "signInDescription": "Necesitas iniciar sesión para rastrear tu pedido, ganar recompensas y usar créditos de referido.",
+    "referralDiscountWaiting": "¡Tienes un descuento de referido esperando!",
+    "signInSignUp": "Iniciar sesión / Registrarse",
+    "guestCheckout": "Pago como invitado",
+    "guestCheckoutDescription": "Por favor ingresa tu nombre para que podamos preparar tu pedido.",
+    "name": "Nombre",
+    "phone": "Teléfono",
+    "email": "Correo electrónico",
+    "optional": "opcional",
+    "yourName": "Tu nombre",
+    "forOrderUpdates": "Para actualizaciones del pedido",
+    "forReceipt": "Para el recibo",
+    "enterYourName": "Por favor ingresa tu nombre",
+    "wantToEarnRewards": "¿Quieres ganar recompensas y rastrear tus pedidos?",
+    "signInInstead": "Iniciar sesión en su lugar",
+    "waitLoadingAccount": "Por favor espera mientras cargamos tu cuenta..."
   },
   "groupOrder": {
     "notFound": "Grupo no encontrado",
@@ -1266,6 +1544,23 @@
     "linkedin": "LinkedIn",
     "email": "Correo electrónico"
   },
+  "checkIn": {
+    "title": "Quiosco de Registro",
+    "subtitle": "Escanea o ingresa el código QR de tu pedido para obtener tu asignación de cabina",
+    "howToTitle": "Cómo registrarte:",
+    "step1": "Encuentra el código QR de tu pedido (en la página de confirmación)",
+    "step2": "Escanéalo con el escáner del quiosco o ingresa el código abajo",
+    "step3": "Obtén tu asignación de cabina o posición en la fila",
+    "qrCodeLabel": "Código QR del pedido:",
+    "qrCodePlaceholder": "ORDER-xxpmm5hf-1234567890-ABC123",
+    "checkInButton": "Registrarse",
+    "checkingIn": "Registrando...",
+    "needHelp": "¿Necesitas ayuda?",
+    "helpTip1": "Tu código QR está en la página de confirmación de tu pedido",
+    "helpTip2": "Comienza con \"ORDER-\" seguido de números y letras",
+    "helpTip3": "Pregunta al personal si necesitas asistencia",
+    "loading": "Cargando..."
+  },
   "confirmation": {
     "title": "¡Pedido confirmado!",
     "orderNumber": "Pedido #{number}",
@@ -1276,6 +1571,31 @@
     "simulateCheckIn": "Simular registro (Demo)",
     "checkingIn": "Registrando...",
     "groupOrderNote": "Este es un pedido grupal con {count} pedidos.",
-    "paidStatus": "Pago completado"
+    "paidStatus": "Pago completado",
+    "yourOrderQrCode": "Tu código QR de pedido",
+    "scanAtKiosk": "Escanea esto en el kiosco cuando llegues para obtener tu asignación de pod",
+    "expectedArrival": "Hora de llegada esperada: {time}",
+    "host": "Anfitrión",
+    "guest": "Invitado {number}",
+    "podNumber": "Pod {number}",
+    "noPodYet": "Sin pod asignado",
+    "checkInThisOrder": "Registrar este pedido",
+    "assignedToPod": "Asignado al Pod {number} - esperando llegada",
+    "checkedInAtPod": "Registrado en Pod {number}",
+    "orderLabel": "Pedido",
+    "total": "Total",
+    "qty": "Cant: {count}",
+    "trackOrderStatus": "Rastrear estado del pedido",
+    "shareYourOrder": "¡Comparte tu pedido!",
+    "spreadTheWord": "Comparte y gana recompensas",
+    "copied": "¡Copiado!",
+    "copy": "Copiar",
+    "shareVia": "Compartir vía...",
+    "twitter": "Twitter",
+    "facebook": "Facebook",
+    "linkedin": "LinkedIn",
+    "referralNote": "¡Tu enlace de referido está incluido! Tus amigos obtienen $5 de descuento en su primer pedido. Ganas $5 cuando piden $20+ (acreditado el 1 o 16 del mes).",
+    "backToHome": "Volver al inicio",
+    "loadingOrder": "Cargando pedido..."
   }
 }

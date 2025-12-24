@@ -1,8 +1,10 @@
 import PaymentForm from "./payment-form";
 import { API_URL } from "@/lib/api";
+import { getTranslations, getLocale } from "next-intl/server";
+import Image from "next/image";
 
-async function getOrder(orderId: string) {
-  const res = await fetch(`${API_URL}/orders/${orderId}`, {
+async function getOrder(orderId: string, locale: string) {
+  const res = await fetch(`${API_URL}/orders/${orderId}?locale=${locale}`, {
     cache: "no-store",
     headers: { "x-tenant-slug": "oh" },
   });
@@ -20,6 +22,8 @@ export default async function PaymentPage({
     total?: string;
   }>;
 }) {
+  const t = await getTranslations("payment");
+  const locale = await getLocale();
   const params = await searchParams;
   const orderId = params.orderId;
   const orderNumber = params.orderNumber;
@@ -27,21 +31,21 @@ export default async function PaymentPage({
   if (!orderId || !orderNumber) {
     return (
       <main style={{ padding: 24, textAlign: "center" }}>
-        <h1>Invalid Order</h1>
-        <p>Missing order information</p>
-        <a href="/order">← Start a new order</a>
+        <h1>{t("invalidOrder")}</h1>
+        <p>{t("missingInformation")}</p>
+        <a href="/order">← {t("startNewOrder")}</a>
       </main>
     );
   }
 
-  const order = await getOrder(orderId);
+  const order = await getOrder(orderId, locale);
 
   if (!order) {
     return (
       <main style={{ padding: 24, textAlign: "center" }}>
-        <h1>Order Not Found</h1>
-        <p>We couldn't find this order</p>
-        <a href="/order">← Start a new order</a>
+        <h1>{t("orderNotFound")}</h1>
+        <p>{t("couldNotFind")}</p>
+        <a href="/order">← {t("startNewOrder")}</a>
       </main>
     );
   }
@@ -80,8 +84,25 @@ export default async function PaymentPage({
           boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
         }}
       >
-        <h1 style={{ margin: 0, marginBottom: 8 }}>Complete Your Order</h1>
-        <p style={{ color: "#666", marginBottom: 24 }}>Order #{orderNumber}</p>
+        {/* Header with Logo */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 8,
+          }}
+        >
+          <h1 style={{ margin: 0 }}>{t("pageTitle")}</h1>
+          <Image
+            src="/Oh_Logo_Mark_Web.png"
+            alt="Oh! Beef Noodle Soup"
+            width={60}
+            height={60}
+            style={{ objectFit: "contain" }}
+          />
+        </div>
+        <p style={{ color: "#666", marginBottom: 24 }}>{t("orderNumber", { number: orderNumber })}</p>
 
         {/* Order Summary */}
         <div
@@ -96,7 +117,7 @@ export default async function PaymentPage({
           {bowlItems.length > 0 && (
             <div style={{ marginBottom: extrasItems.length > 0 ? 12 : 0 }}>
               <div style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#7C7A67", marginBottom: 6 }}>
-                The Bowl
+                {t("theBowl")}
               </div>
               <div
                 style={{
@@ -119,7 +140,7 @@ export default async function PaymentPage({
                     <span>
                       {item.menuItem.name}
                       <span style={{ color: "#666", marginLeft: 6 }}>
-                        ({item.selectedValue || `Qty: ${item.quantity}`})
+                        ({item.selectedValue || t("qty", { count: item.quantity })})
                       </span>
                     </span>
                     {item.priceCents > 0 && (
@@ -137,7 +158,7 @@ export default async function PaymentPage({
           {extrasItems.length > 0 && (
             <div>
               <div style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#7C7A67", marginBottom: 6 }}>
-                Add-ons & Extras
+                {t("addOnsExtras")}
               </div>
               <div
                 style={{
@@ -160,7 +181,7 @@ export default async function PaymentPage({
                     <span>
                       {item.menuItem.name}
                       <span style={{ color: "#666", marginLeft: 6 }}>
-                        (Qty: {item.quantity})
+                        ({t("qty", { count: item.quantity })})
                       </span>
                     </span>
                     {item.priceCents > 0 && (
@@ -184,7 +205,7 @@ export default async function PaymentPage({
                 marginTop: 8,
               }}
             >
-              <span>Ready by</span>
+              <span>{t("readyBy")}</span>
               <span>
                 {new Date(order.estimatedArrival).toLocaleTimeString("en-US", {
                   hour: "numeric",
@@ -206,7 +227,7 @@ export default async function PaymentPage({
               fontWeight: "bold",
             }}
           >
-            <span>Total</span>
+            <span>{t("total")}</span>
             <span>${(totalCents / 100).toFixed(2)}</span>
           </div>
         </div>

@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import EnhancedMenuBuilder from "./_components/enhanced-menu-builder";
 import { API_URL } from "@/lib/api";
 
@@ -20,6 +21,7 @@ export default async function LocationMenuPage({
   params: Promise<{ locationId: string }>;
   searchParams: Promise<{ reorderId?: string; groupCode?: string }>;
 }) {
+  const t = await getTranslations("order.builder");
   const { locationId } = await params;
   const { reorderId, groupCode } = await searchParams;
   const { location } = await getLocation(locationId);
@@ -29,7 +31,7 @@ export default async function LocationMenuPage({
       <main style={{ padding: 24, textAlign: "center" }}>
         <h1>Location not found</h1>
         <p>The location you're looking for doesn't exist.</p>
-        <a href="/order">← Back to locations</a>
+        <a href="/order">← {t("backToLocations")}</a>
       </main>
     );
   }
@@ -38,7 +40,7 @@ export default async function LocationMenuPage({
     <main style={{ padding: 24, maxWidth: 800, margin: "0 auto" }}>
       <div style={{ marginBottom: 32 }}>
         <a href="/order" style={{ color: "#7C7A67", textDecoration: "none" }}>
-          ← Back to locations
+          ← {t("backToLocations")}
         </a>
       </div>
 
@@ -58,15 +60,14 @@ export default async function LocationMenuPage({
             }}
           >
             <div>
-              <span style={{ color: "#9ca3af" }}>Available: </span>
+              <span style={{ color: "#9ca3af" }}>{t("available")} </span>
               <strong>
-                {location.stats.availableSeats}/{location.stats.totalSeats}{" "}
-                seats
+                {t("seats", { available: location.stats.availableSeats, total: location.stats.totalSeats })}
               </strong>
             </div>
             <div>
-              <span style={{ color: "#9ca3af" }}>Current Wait: </span>
-              <strong>{location.stats.avgWaitMinutes} min</strong>
+              <span style={{ color: "#9ca3af" }}>{t("currentWait")} </span>
+              <strong>{t("minWait", { minutes: location.stats.avgWaitMinutes })}</strong>
             </div>
           </div>
         )}

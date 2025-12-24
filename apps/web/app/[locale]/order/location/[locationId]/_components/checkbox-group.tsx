@@ -6,6 +6,7 @@ import { getMenuItemImage } from "@/lib/menu-images";
 type MenuItem = {
   id: string;
   name: string;
+  nameEn?: string; // English name for image lookups
   basePriceCents: number;
   additionalPriceCents: number;
   includedQuantity: number;
@@ -18,6 +19,12 @@ type CheckboxGroupProps = {
   quantities: Record<string, number>;
   onUpdateQuantity: (itemId: string, delta: number) => void;
   maxQuantity?: number;
+  labels?: {
+    included?: string;
+    eachExtra?: string;
+    each?: string;
+    subtotal?: string;
+  };
 };
 
 export function CheckboxGroup({
@@ -26,6 +33,7 @@ export function CheckboxGroup({
   quantities,
   onUpdateQuantity,
   maxQuantity,
+  labels,
 }: CheckboxGroupProps) {
   if (items.length === 0) return null;
 
@@ -71,8 +79,8 @@ export function CheckboxGroup({
                   alignItems: "stretch",
                 }}
               >
-                {/* Image */}
-                {getMenuItemImage(item.name) && (
+                {/* Image - use English name for lookup */}
+                {getMenuItemImage(item.nameEn || item.name) && (
                   <div
                     style={{
                       width: 80,
@@ -83,7 +91,7 @@ export function CheckboxGroup({
                     }}
                   >
                     <Image
-                      src={getMenuItemImage(item.name)!}
+                      src={getMenuItemImage(item.nameEn || item.name)!}
                       alt={item.name}
                       fill
                       style={{ objectFit: "cover" }}
@@ -113,16 +121,16 @@ export function CheckboxGroup({
                     <div style={{ fontSize: "0.875rem" }}>
                       {item.includedQuantity > 0 ? (
                         <span style={{ color: "#22c55e" }}>
-                          {item.includedQuantity} included
+                          {item.includedQuantity} {labels?.included || "included"}
                           {item.additionalPriceCents > 0 && (
                             <span style={{ color: "#666" }}>
-                              {" "}• +${(item.additionalPriceCents / 100).toFixed(2)} each extra
+                              {" "}• +${(item.additionalPriceCents / 100).toFixed(2)} {labels?.eachExtra || "each extra"}
                             </span>
                           )}
                         </span>
                       ) : (
                         <span style={{ color: "#7C7A67", fontWeight: "600" }}>
-                          +${(item.basePriceCents / 100).toFixed(2)} each
+                          +${(item.basePriceCents / 100).toFixed(2)} {labels?.each || "each"}
                         </span>
                       )}
                     </div>
@@ -135,7 +143,7 @@ export function CheckboxGroup({
                           marginTop: 4,
                         }}
                       >
-                        Subtotal: ${(itemPrice / 100).toFixed(2)}
+                        {labels?.subtotal || "Subtotal:"} ${(itemPrice / 100).toFixed(2)}
                       </div>
                     )}
                   </div>

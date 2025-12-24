@@ -58,6 +58,197 @@ function getTenantContext(req) {
   return headerSlug || subdomain || "oh";
 }
 
+// Helper to get locale from request
+function getLocale(req) {
+  // Check query param first, then header, then default to English
+  const queryLocale = req.query?.locale;
+  const headerLocale = req.headers["accept-language"]?.split(",")[0]?.split("-")[0];
+  const fullHeaderLocale = req.headers["accept-language"]?.split(",")[0];
+
+  // Map common locale formats to our supported locales
+  const localeMap = {
+    "zh-TW": "zh-TW",
+    "zh-tw": "zh-TW",
+    "zh-Hant": "zh-TW",
+    "zh-CN": "zh-CN",
+    "zh-cn": "zh-CN",
+    "zh-Hans": "zh-CN",
+    "zh": "zh-CN", // Default Chinese to Simplified
+    "es": "es",
+    "en": "en",
+  };
+
+  // Priority: query param > full header locale > base header locale > default
+  return localeMap[queryLocale] || localeMap[fullHeaderLocale] || localeMap[headerLocale] || "en";
+}
+
+// Helper to get language instruction for AI prompts based on locale
+function getLanguageInstruction(locale) {
+  const instructions = {
+    "zh-TW": "\n\nIMPORTANT: Respond ONLY in Traditional Chinese (繁體中文). Do not use English.",
+    "zh-CN": "\n\nIMPORTANT: Respond ONLY in Simplified Chinese (简体中文). Do not use English.",
+    "es": "\n\nIMPORTANT: Respond ONLY in Spanish (Español). Do not use English.",
+    "en": "", // No instruction needed for English
+  };
+  return instructions[locale] || "";
+}
+
+// Helper to localize menu item based on locale
+function localizeMenuItem(item, locale) {
+  if (!item) return item;
+
+  const localizedItem = { ...item };
+
+  // Always preserve the original English name for image lookups
+  localizedItem.nameEn = item.name;
+
+  switch (locale) {
+    case "zh-TW":
+      localizedItem.name = item.nameZhTW || item.name;
+      localizedItem.description = item.descriptionZhTW || item.description;
+      break;
+    case "zh-CN":
+      localizedItem.name = item.nameZhCN || item.name;
+      localizedItem.description = item.descriptionZhCN || item.description;
+      break;
+    case "es":
+      localizedItem.name = item.nameEs || item.name;
+      localizedItem.description = item.descriptionEs || item.description;
+      break;
+    // English is default, use original name
+  }
+
+  return localizedItem;
+}
+
+// Slider value translations for order display
+const sliderValueTranslations = {
+  en: {
+    "Light": "Light",
+    "Medium": "Medium",
+    "Rich": "Rich",
+    "Extra Rich": "Extra Rich",
+    "Firm": "Firm",
+    "Soft": "Soft",
+    "None": "None",
+    "Mild": "Mild",
+    "Spicy": "Spicy",
+    "Extra Spicy": "Extra Spicy",
+    "Normal": "Normal",
+    "Extra": "Extra"
+  },
+  "zh-TW": {
+    "Light": "清淡",
+    "Medium": "中等",
+    "Rich": "濃郁",
+    "Extra Rich": "特濃",
+    "Firm": "偏硬",
+    "Soft": "偏軟",
+    "None": "無",
+    "Mild": "微辣",
+    "Spicy": "中辣",
+    "Extra Spicy": "特辣",
+    "Normal": "正常",
+    "Extra": "加量"
+  },
+  "zh-CN": {
+    "Light": "清淡",
+    "Medium": "中等",
+    "Rich": "浓郁",
+    "Extra Rich": "特浓",
+    "Firm": "偏硬",
+    "Soft": "偏软",
+    "None": "无",
+    "Mild": "微辣",
+    "Spicy": "中辣",
+    "Extra Spicy": "特辣",
+    "Normal": "正常",
+    "Extra": "加量"
+  },
+  es: {
+    "Light": "Ligero",
+    "Medium": "Medio",
+    "Rich": "Intenso",
+    "Extra Rich": "Extra Intenso",
+    "Firm": "Firme",
+    "Soft": "Suave",
+    "None": "Sin",
+    "Mild": "Suave",
+    "Spicy": "Picante",
+    "Extra Spicy": "Extra Picante",
+    "Normal": "Normal",
+    "Extra": "Extra"
+  }
+};
+
+// Helper to localize slider selected values
+function localizeSelectedValue(value, locale) {
+  if (!value) return value;
+  const translations = sliderValueTranslations[locale] || sliderValueTranslations.en;
+  return translations[value] || value;
+}
+
+// Localized section/step titles
+const localizedLabels = {
+  en: {
+    buildFoundation: "Build the Foundation",
+    chooseYourSoup: "Choose Your Soup",
+    chooseYourNoodles: "Choose Your Noodles",
+    customizeYourBowl: "Customize Your Bowl",
+    addOnsSides: "Add-Ons & Sides",
+    premiumAddons: "Premium Add-ons",
+    sideDishes: "Side Dishes",
+    drinksDessert: "Drinks & Dessert",
+    beverages: "Beverages",
+    dessert: "Dessert",
+    included: "Included",
+  },
+  "zh-TW": {
+    buildFoundation: "建立基底",
+    chooseYourSoup: "選擇湯品",
+    chooseYourNoodles: "選擇麵條",
+    customizeYourBowl: "客製您的麵碗",
+    addOnsSides: "加購與配菜",
+    premiumAddons: "精選加購",
+    sideDishes: "配菜",
+    drinksDessert: "飲品與甜點",
+    beverages: "飲品",
+    dessert: "甜點",
+    included: "已包含",
+  },
+  "zh-CN": {
+    buildFoundation: "建立基底",
+    chooseYourSoup: "选择汤品",
+    chooseYourNoodles: "选择面条",
+    customizeYourBowl: "定制您的面碗",
+    addOnsSides: "加购与配菜",
+    premiumAddons: "精选加购",
+    sideDishes: "配菜",
+    drinksDessert: "饮品与甜点",
+    beverages: "饮品",
+    dessert: "甜点",
+    included: "已包含",
+  },
+  es: {
+    buildFoundation: "Construye la Base",
+    chooseYourSoup: "Elige Tu Sopa",
+    chooseYourNoodles: "Elige Tus Fideos",
+    customizeYourBowl: "Personaliza Tu Tazón",
+    addOnsSides: "Extras y Acompañamientos",
+    premiumAddons: "Extras Premium",
+    sideDishes: "Acompañamientos",
+    drinksDessert: "Bebidas y Postre",
+    beverages: "Bebidas",
+    dessert: "Postre",
+    included: "Incluido",
+  },
+};
+
+// Get localized labels for a locale
+function getLabels(locale) {
+  return localizedLabels[locale] || localizedLabels.en;
+}
+
 // ====================
 // QUEUE PROCESSING & NOTIFICATIONS
 // ====================
@@ -516,6 +707,8 @@ app.post("/locations/validate-address", async (req, reply) => {
 
 app.get("/menu", async (req, reply) => {
   const tenantSlug = getTenantContext(req);
+  const locale = getLocale(req);
+
   const tenant = await prisma.tenant.findUnique({
     where: { slug: tenantSlug },
   });
@@ -531,12 +724,16 @@ app.get("/menu", async (req, reply) => {
     ]
   });
 
-  return items;
+  // Localize all items
+  return items.map(item => localizeMenuItem(item, locale));
 });
 
 // GET /menu/steps - Returns structured menu for multi-step order builder
 app.get("/menu/steps", async (req, reply) => {
   const tenantSlug = getTenantContext(req);
+  const locale = getLocale(req);
+  const labels = getLabels(locale);
+
   const tenant = await prisma.tenant.findUnique({
     where: { slug: tenantSlug },
   });
@@ -552,31 +749,35 @@ app.get("/menu/steps", async (req, reply) => {
     ]
   });
 
+  // Localize all items
+  const localizedItems = items.map(item => localizeMenuItem(item, locale));
+
   // Group items by category for easier frontend rendering
-  const main01 = items.filter(i => i.category === 'main01');
-  const main02 = items.filter(i => i.category === 'main02');
-  const sliders = items.filter(i => i.categoryType === 'SLIDER');
-  const addons = items.filter(i => i.categoryType === 'ADDON');
-  const sides = items.filter(i => i.categoryType === 'SIDE');
-  const drinks = items.filter(i => i.categoryType === 'DRINK');
-  const desserts = items.filter(i => i.categoryType === 'DESSERT');
+  const main01 = localizedItems.filter(i => i.category === 'main01');
+  const main02 = localizedItems.filter(i => i.category === 'main02');
+  const sliders = localizedItems.filter(i => i.categoryType === 'SLIDER');
+  const addons = localizedItems.filter(i => i.categoryType === 'ADDON');
+  const sides = localizedItems.filter(i => i.categoryType === 'SIDE');
+  const drinks = localizedItems.filter(i => i.categoryType === 'DRINK');
+  const desserts = localizedItems.filter(i => i.categoryType === 'DESSERT');
 
   return {
+    locale, // Include locale in response for frontend reference
     steps: [
       {
         id: 'bowl',
-        title: 'Build the Foundation',
+        title: labels.buildFoundation,
         sections: [
           {
             id: 'soup',
-            name: 'Choose Your Soup',
+            name: labels.chooseYourSoup,
             selectionMode: 'SINGLE',
             required: true,
             items: main01
           },
           {
             id: 'noodles',
-            name: 'Choose Your Noodles',
+            name: labels.chooseYourNoodles,
             selectionMode: 'SINGLE',
             required: true,
             items: main02
@@ -585,7 +786,7 @@ app.get("/menu/steps", async (req, reply) => {
       },
       {
         id: 'customize',
-        title: 'Customize Your Bowl',
+        title: labels.customizeYourBowl,
         sections: sliders.map(item => ({
           id: item.id,
           name: item.name,
@@ -598,11 +799,11 @@ app.get("/menu/steps", async (req, reply) => {
       },
       {
         id: 'extras',
-        title: 'Add-Ons & Sides',
+        title: labels.addOnsSides,
         sections: [
           {
             id: 'addons',
-            name: 'Premium Add-ons',
+            name: labels.premiumAddons,
             selectionMode: 'MULTIPLE',
             required: false,
             maxQuantity: 3,
@@ -610,7 +811,7 @@ app.get("/menu/steps", async (req, reply) => {
           },
           {
             id: 'sides',
-            name: 'Side Dishes',
+            name: labels.sideDishes,
             selectionMode: 'MULTIPLE',
             required: false,
             maxQuantity: 3,
@@ -620,11 +821,11 @@ app.get("/menu/steps", async (req, reply) => {
       },
       {
         id: 'drinks-desserts',
-        title: 'Drinks & Dessert',
+        title: labels.drinksDessert,
         sections: [
           {
             id: 'drinks',
-            name: 'Beverages',
+            name: labels.beverages,
             selectionMode: 'MULTIPLE',
             required: false,
             maxQuantity: 1,
@@ -632,7 +833,7 @@ app.get("/menu/steps", async (req, reply) => {
           },
           {
             id: 'desserts',
-            name: 'Dessert',
+            name: labels.dessert,
             selectionMode: 'MULTIPLE',
             required: false,
             maxQuantity: 1,
@@ -1950,6 +2151,7 @@ app.delete("/pod-calls/:id", async (req, reply) => {
 // GET /orders/:id/available-addons - Get available add-on items for an order
 app.get("/orders/:id/available-addons", async (req, reply) => {
   const { id } = req.params;
+  const locale = getLocale(req);
 
   const order = await prisma.order.findUnique({
     where: { id },
@@ -1983,20 +2185,22 @@ app.get("/orders/:id/available-addons", async (req, reply) => {
       .map(item => item.menuItem.id)
   );
 
-  // Organize by add-on type for the UI
+  // Organize by add-on type for the UI with localization
   const addons = {
     // Paid add-ons: ADDON, SIDE, DRINK, DESSERT categories
     // Exclude drinks that are already in the order (covered by refills)
-    paidAddons: menuItems.filter(item =>
-      ["ADDON", "SIDE", "DRINK", "DESSERT"].includes(item.categoryType) &&
-      item.basePriceCents > 0 &&
-      !orderedDrinkIds.has(item.id)
-    ),
+    paidAddons: menuItems
+      .filter(item =>
+        ["ADDON", "SIDE", "DRINK", "DESSERT"].includes(item.categoryType) &&
+        item.basePriceCents > 0 &&
+        !orderedDrinkIds.has(item.id)
+      )
+      .map(item => localizeMenuItem(item, locale)),
 
     // Drinks for refills (only drinks that were in the original order)
     refillableDrinks: order.items
       .filter(item => item.menuItem.categoryType === "DRINK")
-      .map(item => item.menuItem),
+      .map(item => localizeMenuItem(item.menuItem, locale)),
 
     // Extra vegetables: SLIDER items (free extras)
     // Filter out Soup Richness and Noodle Texture (not addable during meal)
@@ -2007,11 +2211,21 @@ app.get("/orders/:id/available-addons", async (req, reply) => {
         !item.name.includes("Soup Richness") &&
         !item.name.includes("Noodle Texture")
       )
-      .map(item => ({
-        ...item,
-        // Rename Spice Level for add-on context
-        name: item.name === "Spice Level" ? "Chili Oil (Spicy)" : item.name,
-      })),
+      .map(item => {
+        const localized = localizeMenuItem(item, locale);
+        // Rename Spice Level for add-on context (use localized name if available)
+        if (item.name === "Spice Level") {
+          // Use localized "Chili Oil (Spicy)" equivalent
+          const chiliOilNames = {
+            "zh-TW": "辣油（辣）",
+            "zh-CN": "辣油（辣）",
+            "es": "Aceite de Chile (Picante)",
+            "en": "Chili Oil (Spicy)",
+          };
+          localized.name = chiliOilNames[locale] || "Chili Oil (Spicy)";
+        }
+        return localized;
+      }),
   };
 
   return addons;
@@ -2353,6 +2567,8 @@ app.get("/orders", async (req, reply) => {
 
 app.get("/orders/:id", async (req, reply) => {
   const { id } = req.params;
+  const locale = getLocale(req);
+
   const order = await prisma.order.findUnique({
     where: { id },
     include: {
@@ -2367,7 +2583,19 @@ app.get("/orders/:id", async (req, reply) => {
   });
 
   if (!order) return reply.code(404).send({ error: "Order not found" });
-  return order;
+
+  // Localize menu items based on locale
+  const localizedOrder = {
+    ...order,
+    items: order.items.map(item => ({
+      ...item,
+      menuItem: localizeMenuItem(item.menuItem, locale),
+      // Also localize the selectedValue for slider items
+      selectedValue: localizeSelectedValue(item.selectedValue, locale),
+    })),
+  };
+
+  return localizedOrder;
 });
 
 app.post("/orders", async (req, reply) => {
@@ -3675,31 +3903,31 @@ function getTierBenefits(tier) {
       referralBonus: 500,
       cashbackPercent: 1,
       perks: [
-        "$5 referral bonus per friend",
-        "1% cashback on orders",
-        "Early access to new menu items",
+        "referralBonus",
+        "cashback1",
+        "earlyAccess",
       ],
     },
     NOODLE_MASTER: {
       referralBonus: 500,
       cashbackPercent: 2,
       perks: [
-        "$5 referral bonus per friend",
-        "2% cashback on orders",
-        "Priority seating",
-        "Exclusive member events",
-        "Free bowl on tier upgrade",
+        "referralBonus",
+        "cashback2",
+        "prioritySeating",
+        "memberEvents",
+        "freeBowlUpgrade",
       ],
     },
     BEEF_BOSS: {
       referralBonus: 500,
       cashbackPercent: 3,
       perks: [
-        "$5 referral bonus per friend",
-        "3% cashback on orders",
-        "Exclusive merchandise drops",
-        "Complimentary premium add-ons",
-        "Annual VIP Gift & Recognition",
+        "referralBonus",
+        "cashback3",
+        "merchandiseDrops",
+        "premiumAddons",
+        "vipGift",
       ],
     },
   };
@@ -4363,6 +4591,8 @@ const fallbackRoasts = [
 // Generate sarcastic order roast/analysis - DEEPLY PERSONALIZED
 app.get("/orders/roast", async (req, reply) => {
   const { orderQrCode, orderId } = req.query || {};
+  const locale = getLocale(req);
+  const languageInstruction = getLanguageInstruction(locale);
 
   if (!orderQrCode && !orderId) {
     return reply.status(400).send({ error: "Order QR code or ID required" });
@@ -4577,7 +4807,7 @@ Write 2-4 sentences (max 400 characters) that:
 
 UNIQUE COMEDY SEED: ${roastSeed}-${Date.now() % 10000}
 
-Write the roast now. No quotes. Pure comedy. Make them choke on their noodles laughing.`;
+Write the roast now. No quotes. Pure comedy. Make them choke on their noodles laughing.${languageInstruction}`;
 
         const message = await anthropic.messages.create({
           model: "claude-sonnet-4-20250514",
@@ -4749,6 +4979,8 @@ function buildOrderSummary(order) {
 // Generate live order commentary
 app.get("/orders/commentary", async (req, reply) => {
   const { orderQrCode, orderId } = req.query || {};
+  const locale = getLocale(req);
+  const languageInstruction = getLanguageInstruction(locale);
 
   if (!orderQrCode && !orderId) {
     return reply.status(400).send({ error: "Order QR code or ID required" });
@@ -4885,7 +5117,7 @@ NO EMOJIS. Stay in character. Be creative. Make them laugh.
 
 UNIQUE SEED: ${narratorSeed}-${Date.now() % 10000}
 
-Write the commentary now. No quotes.`;
+Write the commentary now. No quotes.${languageInstruction}`;
 
         const message = await anthropic.messages.create({
           model: "claude-sonnet-4-20250514",
@@ -4953,6 +5185,8 @@ const fallbackBackstories = [
 // Generate behind the scenes ingredient narration
 app.get("/orders/:id/backstory", async (req, reply) => {
   const { id } = req.params;
+  const locale = getLocale(req);
+  const languageInstruction = getLanguageInstruction(locale);
 
   if (!id) {
     return reply.status(400).send({ error: "Order ID required" });
@@ -5018,7 +5252,7 @@ EXAMPLES:
 - "Your extra bok choy brings the vegetable count to 'suspiciously healthy for a noodle soup order.'"
 - "The noodles were made this morning by someone who takes this very seriously. Too seriously, some would say. We don't say that to his face."
 
-Generate exactly 4 short backstory facts (one sentence each, max 150 chars each) about the ingredients in this order. Be specific to what they ordered. Return as JSON array of strings.`;
+Generate exactly 4 short backstory facts (one sentence each, max 150 chars each) about the ingredients in this order. Be specific to what they ordered. Return as JSON array of strings.${languageInstruction}`;
 
         const message = await anthropic.messages.create({
           model: "claude-sonnet-4-20250514",
@@ -5072,6 +5306,9 @@ Generate exactly 4 short backstory facts (one sentence each, max 150 chars each)
 
 // Generate AI-powered mental health facts - always unique
 app.get("/orders/mental-health-fact", async (req, reply) => {
+  const locale = getLocale(req);
+  const languageInstruction = getLanguageInstruction(locale);
+
   // Try to generate unique AI-powered mental health fact
   if (!anthropic) {
     return reply.status(503).send({ error: "AI service unavailable" });
@@ -5104,10 +5341,26 @@ app.get("/orders/mental-health-fact", async (req, reply) => {
     const categoryIndex = Math.floor(uniqueSeed / 1000) % categories.length;
     const focusCategory = categories[categoryIndex];
 
+    // Get localized "Did you know?" text
+    const questionTexts = {
+      "zh-TW": "你知道嗎？",
+      "zh-CN": "你知道吗？",
+      "es": "¿Sabías que...?",
+      "en": "Did you know?",
+    };
+    const questionText = questionTexts[locale] || "Did you know?";
+
+    // Language-specific instruction for the fact content
+    const languageNote = locale === "en" ? "" :
+      locale === "zh-TW" ? "Write the fact in Traditional Chinese (繁體中文)." :
+      locale === "zh-CN" ? "Write the fact in Simplified Chinese (简体中文)." :
+      locale === "es" ? "Write the fact in Spanish (Español)." : "";
+
     const prompt = `You are a mental health educator creating an engaging "Did you know?" fact for restaurant customers.
 
 FOCUS AREA: ${focusCategory}
 UNIQUE SEED: ${uniqueSeed}
+${languageNote ? `LANGUAGE: ${languageNote}` : ""}
 
 REQUIREMENTS:
 - Provide ONE specific, accurate mental health statistic or fact related to "${focusCategory}"
@@ -5117,8 +5370,8 @@ REQUIREMENTS:
 - Keep the fact under 200 characters
 - DO NOT repeat common stats like "1 in 5 adults" unless highly relevant to the category
 
-Return ONLY valid JSON (no markdown):
-{"question":"Did you know?","fact":"The specific fact here","source":"Organization Name, Year"}`;
+Return ONLY valid JSON (no markdown). The "question" field should be "${questionText}":
+{"question":"${questionText}","fact":"The specific fact here","source":"Organization Name, Year"}`;
 
     const message = await anthropic.messages.create({
       model: "claude-sonnet-4-20250514",

@@ -64,6 +64,7 @@ type SliderConfig = {
 
 type SliderControlProps = {
   name: string;
+  nameEn?: string; // English name for image lookups
   description?: string;
   value: number;
   onChange: (value: number) => void;
@@ -73,19 +74,30 @@ type SliderControlProps = {
     additionalPriceCents: number;
     includedQuantity: number;
   };
+  labelTranslations?: Record<string, string>; // Map English labels to translated labels
+  includedUpToLabel?: string; // Translated "Included (up to X)" text
 };
 
 export function SliderControl({
   name,
+  nameEn,
   description,
   value,
   onChange,
   config,
   pricingInfo,
+  labelTranslations,
+  includedUpToLabel,
 }: SliderControlProps) {
   const { min, max, labels, step } = config;
   const defaultValue = config.default ?? 0;
-  const itemImage = getMenuItemImage(name);
+  // Use English name for image lookup, fallback to localized name
+  const itemImage = getMenuItemImage(nameEn || name);
+
+  // Helper to get translated label
+  const getTranslatedLabel = (label: string) => {
+    return labelTranslations?.[label] || label;
+  };
 
   // Track if value was just changed for animation
   const [justChanged, setJustChanged] = useState(false);
@@ -157,7 +169,7 @@ export function SliderControl({
                   fontSize: "0.8rem",
                 }}
               >
-                {labels[value] || value}
+                {getTranslatedLabel(labels[value]) || value}
               </span>
             </div>
 
@@ -166,7 +178,7 @@ export function SliderControl({
               <div style={{ fontSize: "0.8rem", marginBottom: 8 }}>
                 {value <= pricingInfo.includedQuantity ? (
                   <span style={{ color: "#22c55e" }}>
-                    Included (up to {pricingInfo.includedQuantity})
+                    {includedUpToLabel || `Included (up to ${pricingInfo.includedQuantity})`}
                   </span>
                 ) : (
                   <span style={{ color: "#7C7A67" }}>
@@ -230,7 +242,7 @@ export function SliderControl({
                         whiteSpace: "nowrap",
                       }}
                     >
-                      {label}
+                      {getTranslatedLabel(label)}
                     </span>
                   </div>
                 );
@@ -244,7 +256,7 @@ export function SliderControl({
 }
 
 // Legend component for slider recommendation indicator
-export function SliderLegend() {
+export function SliderLegend({ recommendationLabel = "Oh! Recommendation" }: { recommendationLabel?: string }) {
   return (
     <div
       style={{
@@ -268,7 +280,7 @@ export function SliderLegend() {
       <span style={{ fontWeight: 500, display: "flex", alignItems: "center", gap: 4 }}>
         <span style={{ fontSize: "1.1rem" }}>=</span>{" "}
         <span style={{ fontFamily: '"Ma Shan Zheng", cursive', color: "#C7A878", fontSize: "1.1rem" }}>哦</span>{" "}
-        Oh! Recommendation
+        {recommendationLabel}
       </span>
     </div>
   );

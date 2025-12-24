@@ -6,6 +6,7 @@ import { getMenuItemImage, isNoNoodlesItem } from "@/lib/menu-images";
 type MenuItem = {
   id: string;
   name: string;
+  nameEn?: string; // English name for image lookups
   basePriceCents: number;
   description?: string;
 };
@@ -16,6 +17,7 @@ type RadioGroupProps = {
   selectedId: string | null;
   onSelect: (itemId: string) => void;
   required?: boolean; // Whether this is a mandatory selection
+  requiredLabel?: string; // Translated label for "Required"
 };
 
 // Oh! character mark component for selected mandatory items
@@ -43,7 +45,7 @@ function OhCheckmark() {
   );
 }
 
-export function RadioGroup({ title, items, selectedId, onSelect, required = false }: RadioGroupProps) {
+export function RadioGroup({ title, items, selectedId, onSelect, required = false, requiredLabel = "Required" }: RadioGroupProps) {
   const hasSelection = !!selectedId;
 
   return (
@@ -52,7 +54,7 @@ export function RadioGroup({ title, items, selectedId, onSelect, required = fals
         {title}
         {required && (
           <span style={{ color: "#7C7A67", fontSize: "0.8rem", fontWeight: 500 }}>
-            Required
+            {requiredLabel}
           </span>
         )}
       </h3>
@@ -86,8 +88,8 @@ export function RadioGroup({ title, items, selectedId, onSelect, required = fals
                   alignItems: "stretch",
                 }}
               >
-                {/* Image */}
-                {getMenuItemImage(item.name) && (
+                {/* Image - use English name for lookup */}
+                {getMenuItemImage(item.nameEn || item.name) && (
                   <div
                     style={{
                       width: 100,
@@ -98,7 +100,7 @@ export function RadioGroup({ title, items, selectedId, onSelect, required = fals
                     }}
                   >
                     <Image
-                      src={getMenuItemImage(item.name)!}
+                      src={getMenuItemImage(item.nameEn || item.name)!}
                       alt={item.name}
                       fill
                       style={{ objectFit: "cover" }}
@@ -107,7 +109,7 @@ export function RadioGroup({ title, items, selectedId, onSelect, required = fals
                   </div>
                 )}
                 {/* No Noodles - special crossed-out image */}
-                {isNoNoodlesItem(item.name) && (
+                {isNoNoodlesItem(item.nameEn || item.name) && (
                   <div
                     style={{
                       width: 100,
