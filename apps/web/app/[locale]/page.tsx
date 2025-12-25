@@ -18,7 +18,7 @@ export default function HomePage() {
 
   return (
     <div style={{ background: "#FAF8F5", overflow: "hidden" }}>
-      {/* Hero Section with Warm Gradient */}
+      {/* Hero Section with Video Background */}
       <section
         style={{
           minHeight: "calc(100vh - 80px)",
@@ -29,19 +29,38 @@ export default function HomePage() {
           padding: "20px 24px 40px",
           textAlign: "center",
           position: "relative",
-          background: "linear-gradient(180deg, #FAF8F5 0%, #F5F0E8 50%, #EDE4D8 100%)",
+          overflow: "hidden",
         }}
       >
-        {/* Decorative warm glow */}
+        {/* Video Background */}
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            zIndex: 0,
+          }}
+        >
+          <source src="/OhHomepageHero.mp4" type="video/mp4" />
+        </video>
+
+        {/* Light overlay for text readability */}
         <div
           style={{
             position: "absolute",
-            top: "20%",
-            left: "50%",
-            transform: "translateX(-50%)",
-            width: "600px",
-            height: "600px",
-            background: "radial-gradient(circle, rgba(199, 168, 120, 0.15) 0%, transparent 70%)",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            background: "rgba(45, 42, 38, 0.4)",
+            zIndex: 1,
             pointerEvents: "none",
           }}
         />
@@ -56,6 +75,7 @@ export default function HomePage() {
             justifyContent: "center",
             opacity: 0,
             animation: "fadeInDown 1s ease 0.2s forwards",
+            zIndex: 2,
           }}
         >
           <img
@@ -65,7 +85,7 @@ export default function HomePage() {
               width: "clamp(180px, 25vw, 320px)",
               height: "auto",
               display: "block",
-              filter: "drop-shadow(0 4px 20px rgba(124, 122, 103, 0.15))",
+              filter: "brightness(0.85)",
             }}
           />
         </div>
@@ -75,10 +95,11 @@ export default function HomePage() {
             fontSize: "clamp(2rem, 6vw, 3.5rem)",
             fontWeight: "300",
             marginBottom: "20px",
-            color: "#2D2A26",
+            color: "#F5F0E8",
             letterSpacing: "3px",
             opacity: 0,
             animation: "fadeInUp 1s ease 0.4s forwards",
+            zIndex: 2,
           }}
         >
           {t.rich("brandName", {
@@ -112,11 +133,12 @@ export default function HomePage() {
             marginBottom: "16px",
             maxWidth: "600px",
             lineHeight: "1.7",
-            color: "#5A5549",
+            color: "#E8E4DC",
             fontWeight: "300",
             fontStyle: "italic",
             opacity: 0,
             animation: "fadeInUp 1s ease 0.6s forwards",
+            zIndex: 2,
           }}
         >
           {t.rich("tagline", {
@@ -130,10 +152,11 @@ export default function HomePage() {
             marginBottom: "48px",
             maxWidth: "500px",
             lineHeight: "1.8",
-            color: "#7C7A67",
+            color: "#A9A69A",
             fontWeight: "300",
             opacity: 0,
             animation: "fadeInUp 1s ease 0.8s forwards",
+            zIndex: 2,
           }}
         >
           {t("heroDescription")}
@@ -143,6 +166,7 @@ export default function HomePage() {
           style={{
             opacity: 0,
             animation: "fadeInUp 1s ease 1s forwards",
+            zIndex: 2,
           }}
         >
           <Link
@@ -183,6 +207,7 @@ export default function HomePage() {
             transform: "translateX(-50%)",
             opacity: 0,
             animation: "fadeInUp 1s ease 1.5s forwards, bounce 2s ease-in-out 2.5s infinite",
+            zIndex: 2,
           }}
         >
           <div className="scroll-indicator-inner" style={{
