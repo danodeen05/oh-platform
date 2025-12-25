@@ -4,6 +4,21 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { getMenuItemImage } from "@/lib/menu-images";
 
+// CSS for pulsating animation on Extra Spicy
+const pulseStyles = `
+  @keyframes spicePulse {
+    0%, 100% {
+      box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4);
+    }
+    50% {
+      box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.2);
+    }
+  }
+  .spice-pulse {
+    animation: spicePulse 1.5s ease-in-out infinite;
+  }
+`;
+
 type SliderConfig = {
   min: number;
   max: number;
@@ -30,6 +45,15 @@ type SliderControlProps = {
   includedUpToLabel?: string; // Translated "Included (up to X)" text
 };
 
+// Heat colors for spice levels (index 0 = None, no color)
+const spiceColors = [
+  null,                    // 0: None - no heat color
+  "rgba(244, 114, 182, 0.6)", // 1: Mild - pinkish
+  "rgba(239, 68, 68, 0.7)",   // 2: Medium - red
+  "rgba(220, 38, 38, 0.85)",  // 3: Spicy - deeper red
+  "rgba(185, 28, 28, 1)",     // 4: Extra Spicy - intense red
+];
+
 export function SliderControl({
   name,
   nameEn,
@@ -45,6 +69,9 @@ export function SliderControl({
   const defaultValue = config.default ?? 0;
   // Use English name for image lookup, fallback to localized name
   const itemImage = getMenuItemImage(nameEn || name);
+
+  // Check if this is the spice level control
+  const isSpiceLevel = nameEn?.toLowerCase().includes("spice") || name.toLowerCase().includes("spice");
 
   // Helper to get translated label
   const getTranslatedLabel = (label: string) => {
@@ -66,120 +93,126 @@ export function SliderControl({
     onChange(newValue);
   };
 
+  // Get spice styling for the segmented control container
+  const getSpiceContainerStyle = () => {
+    if (!isSpiceLevel || value === 0) return {};
+
+    const color = spiceColors[value] || spiceColors[spiceColors.length - 1];
+    const borderWidth = value === 4 ? 3 : 2; // Thicker for Extra Spicy
+
+    return {
+      border: `${borderWidth}px solid ${color}`,
+      boxShadow: value >= 3 ? `0 0 8px ${color}` : undefined,
+    };
+  };
+
+  const isExtraSpicy = isSpiceLevel && value === 4;
+
   return (
-    <div
-      style={{
-        border: "1px solid #e5e7eb",
-        borderRadius: 8,
-        background: "white",
-        transition: "all 0.2s",
-        overflow: "hidden",
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "stretch" }}>
-        {/* Image */}
-        {itemImage && (
-          <div
-            style={{
-              width: 70,
-              minHeight: 80,
-              position: "relative",
-              flexShrink: 0,
-              background: "#f5f5f5",
-            }}
-          >
-            <Image
-              src={itemImage}
-              alt={name}
-              fill
-              style={{ objectFit: "cover" }}
-              sizes="70px"
-            />
-          </div>
-        )}
-        {/* Content */}
-        <div style={{ flex: 1, padding: "12px 14px" }}>
-          {/* Header row */}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: 8,
-            }}
-          >
-            <span style={{ fontWeight: 600, fontSize: "0.95rem", color: "#1a1a1a" }}>{name}</span>
-            <span
+    <>
+      {isSpiceLevel && <style>{pulseStyles}</style>}
+      <div
+        style={{
+          border: "1px solid #e5e7eb",
+          borderRadius: 8,
+          background: "white",
+          transition: "all 0.2s",
+          overflow: "hidden",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "stretch" }}>
+          {/* Image */}
+          {itemImage && (
+            <div
               style={{
-                padding: "4px 12px",
-                background: "#5A5847",
-                borderRadius: 12,
-                fontWeight: 600,
-                color: "#FFFFFF",
-                fontSize: "0.8rem",
+                width: 70,
+                minHeight: 80,
+                position: "relative",
+                flexShrink: 0,
+                background: "#f5f5f5",
               }}
             >
-              {getTranslatedLabel(labels[value]) || value}
-            </span>
-          </div>
-
-          {/* Pricing info */}
-          {pricingInfo && pricingInfo.includedQuantity > 0 && (
-            <div style={{ fontSize: "0.8rem", marginBottom: 8 }}>
-              {value <= pricingInfo.includedQuantity ? (
-                <span style={{ color: "#22c55e" }}>
-                  {includedUpToLabel || `Included (up to ${pricingInfo.includedQuantity})`}
-                </span>
-              ) : (
-                <span style={{ color: "#7C7A67" }}>
-                  +${((pricingInfo.additionalPriceCents * (value - pricingInfo.includedQuantity)) / 100).toFixed(2)}
-                </span>
-              )}
+              <Image
+                src={itemImage}
+                alt={name}
+                fill
+                style={{ objectFit: "cover" }}
+                sizes="70px"
+              />
             </div>
           )}
+          {/* Content */}
+          <div style={{ flex: 1, padding: "12px 14px" }}>
+            {/* Header row - just the name now */}
+            <div
+              style={{
+                marginBottom: 8,
+              }}
+            >
+              <span style={{ fontWeight: 600, fontSize: "0.95rem", color: "#1a1a1a" }}>{name}</span>
+            </div>
 
-          {/* Segmented control - clickable buttons for each option */}
-          <div
-            style={{
-              display: "flex",
-              background: "#e5e5e5",
-              borderRadius: 20,
-              padding: 3,
-              gap: 2,
-            }}
-          >
-            {labels.map((label, i) => {
-              const isDefault = i === defaultValue;
-              const isSelected = value === i;
-              return (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => handleChange(i)}
-                  style={{
-                    flex: 1,
-                    padding: "8px 4px",
-                    border: "none",
-                    borderRadius: 16,
-                    background: isSelected ? "#5A5847" : "transparent",
-                    color: isSelected ? "#FFFFFF" : "#666",
-                    fontWeight: isSelected ? 600 : 400,
-                    fontSize: "0.75rem",
-                    cursor: "pointer",
-                    transition: "all 0.15s ease",
-                    position: "relative",
-                    outline: isDefault && !isSelected ? "2px dashed #7C7A67" : "none",
-                    outlineOffset: -2,
-                  }}
-                >
-                  {getTranslatedLabel(label)}
-                </button>
-              );
-            })}
+            {/* Pricing info */}
+            {pricingInfo && pricingInfo.includedQuantity > 0 && (
+              <div style={{ fontSize: "0.8rem", marginBottom: 8 }}>
+                {value <= pricingInfo.includedQuantity ? (
+                  <span style={{ color: "#22c55e" }}>
+                    {includedUpToLabel || `Included (up to ${pricingInfo.includedQuantity})`}
+                  </span>
+                ) : (
+                  <span style={{ color: "#7C7A67" }}>
+                    +${((pricingInfo.additionalPriceCents * (value - pricingInfo.includedQuantity)) / 100).toFixed(2)}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Segmented control - clickable buttons for each option */}
+            <div
+              className={isExtraSpicy ? "spice-pulse" : undefined}
+              style={{
+                display: "flex",
+                background: "#e5e5e5",
+                borderRadius: 20,
+                padding: 3,
+                gap: 2,
+                transition: "all 0.3s ease",
+                ...getSpiceContainerStyle(),
+              }}
+            >
+              {labels.map((label, i) => {
+                const isDefault = i === defaultValue;
+                const isSelected = value === i;
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => handleChange(i)}
+                    style={{
+                      flex: 1,
+                      padding: "8px 4px",
+                      border: "none",
+                      borderRadius: 16,
+                      background: isSelected ? "#5A5847" : "transparent",
+                      color: isSelected ? "#FFFFFF" : "#666",
+                      fontWeight: isSelected ? 600 : 400,
+                      fontSize: "0.75rem",
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                      position: "relative",
+                      outline: isDefault && !isSelected ? "2px dashed #7C7A67" : "none",
+                      outlineOffset: -2,
+                    }}
+                  >
+                    {getTranslatedLabel(label)}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
