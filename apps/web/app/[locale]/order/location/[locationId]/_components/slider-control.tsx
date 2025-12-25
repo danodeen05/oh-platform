@@ -4,54 +4,6 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { getMenuItemImage } from "@/lib/menu-images";
 
-// CSS for custom slider thumb styling (matching kiosk)
-const sliderStyles = `
-  input[type="range"].web-slider {
-    -webkit-appearance: none;
-    appearance: none;
-    background: transparent;
-    cursor: pointer;
-  }
-
-  input[type="range"].web-slider::-webkit-slider-runnable-track {
-    height: 8px;
-    background: #e5e5e5;
-    border-radius: 4px;
-  }
-
-  input[type="range"].web-slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 28px;
-    height: 28px;
-    background: #5A5847;
-    border-radius: 50%;
-    margin-top: -10px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
-    border: 2px solid #FFFFFF;
-    transition: transform 0.15s ease;
-  }
-
-  input[type="range"].web-slider::-webkit-slider-thumb:hover {
-    transform: scale(1.1);
-  }
-
-  input[type="range"].web-slider::-moz-range-track {
-    height: 8px;
-    background: #e5e5e5;
-    border-radius: 4px;
-  }
-
-  input[type="range"].web-slider::-moz-range-thumb {
-    width: 24px;
-    height: 24px;
-    background: #5A5847;
-    border-radius: 50%;
-    border: 2px solid #FFFFFF;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
-  }
-`;
-
 type SliderConfig = {
   min: number;
   max: number;
@@ -89,7 +41,7 @@ export function SliderControl({
   labelTranslations,
   includedUpToLabel,
 }: SliderControlProps) {
-  const { min, max, labels, step } = config;
+  const { labels } = config;
   const defaultValue = config.default ?? 0;
   // Use English name for image lookup, fallback to localized name
   const itemImage = getMenuItemImage(nameEn || name);
@@ -115,143 +67,119 @@ export function SliderControl({
   };
 
   return (
-    <>
-      <style>{sliderStyles}</style>
-      <div
-        style={{
-          border: "1px solid #e5e7eb",
-          borderRadius: 8,
-          background: "white",
-          transition: "all 0.2s",
-          overflow: "hidden",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "stretch" }}>
-          {/* Image */}
-          {itemImage && (
-            <div
+    <div
+      style={{
+        border: "1px solid #e5e7eb",
+        borderRadius: 8,
+        background: "white",
+        transition: "all 0.2s",
+        overflow: "hidden",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "stretch" }}>
+        {/* Image */}
+        {itemImage && (
+          <div
+            style={{
+              width: 70,
+              minHeight: 80,
+              position: "relative",
+              flexShrink: 0,
+              background: "#f5f5f5",
+            }}
+          >
+            <Image
+              src={itemImage}
+              alt={name}
+              fill
+              style={{ objectFit: "cover" }}
+              sizes="70px"
+            />
+          </div>
+        )}
+        {/* Content */}
+        <div style={{ flex: 1, padding: "12px 14px" }}>
+          {/* Header row */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: 8,
+            }}
+          >
+            <span style={{ fontWeight: 600, fontSize: "0.95rem", color: "#1a1a1a" }}>{name}</span>
+            <span
               style={{
-                width: 70,
-                minHeight: 80,
-                position: "relative",
-                flexShrink: 0,
-                background: "#f5f5f5",
+                padding: "4px 12px",
+                background: "#5A5847",
+                borderRadius: 12,
+                fontWeight: 600,
+                color: "#FFFFFF",
+                fontSize: "0.8rem",
               }}
             >
-              <Image
-                src={itemImage}
-                alt={name}
-                fill
-                style={{ objectFit: "cover" }}
-                sizes="70px"
-              />
+              {getTranslatedLabel(labels[value]) || value}
+            </span>
+          </div>
+
+          {/* Pricing info */}
+          {pricingInfo && pricingInfo.includedQuantity > 0 && (
+            <div style={{ fontSize: "0.8rem", marginBottom: 8 }}>
+              {value <= pricingInfo.includedQuantity ? (
+                <span style={{ color: "#22c55e" }}>
+                  {includedUpToLabel || `Included (up to ${pricingInfo.includedQuantity})`}
+                </span>
+              ) : (
+                <span style={{ color: "#7C7A67" }}>
+                  +${((pricingInfo.additionalPriceCents * (value - pricingInfo.includedQuantity)) / 100).toFixed(2)}
+                </span>
+              )}
             </div>
           )}
-          {/* Content */}
-          <div style={{ flex: 1, padding: "12px 14px" }}>
-            {/* Header row */}
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 8,
-              }}
-            >
-              <span style={{ fontWeight: 600, fontSize: "0.95rem", color: "#1a1a1a" }}>{name}</span>
-              <span
-                style={{
-                  padding: "4px 12px",
-                  background: "#5A5847",
-                  borderRadius: 12,
-                  fontWeight: 600,
-                  color: "#FFFFFF",
-                  fontSize: "0.8rem",
-                }}
-              >
-                {getTranslatedLabel(labels[value]) || value}
-              </span>
-            </div>
 
-            {/* Pricing info */}
-            {pricingInfo && pricingInfo.includedQuantity > 0 && (
-              <div style={{ fontSize: "0.8rem", marginBottom: 8 }}>
-                {value <= pricingInfo.includedQuantity ? (
-                  <span style={{ color: "#22c55e" }}>
-                    {includedUpToLabel || `Included (up to ${pricingInfo.includedQuantity})`}
-                  </span>
-                ) : (
-                  <span style={{ color: "#7C7A67" }}>
-                    +${((pricingInfo.additionalPriceCents * (value - pricingInfo.includedQuantity)) / 100).toFixed(2)}
-                  </span>
-                )}
-              </div>
-            )}
-
-            {/* Slider with padding for thumb overflow */}
-            <div style={{ position: "relative", paddingLeft: 14, paddingRight: 14 }}>
-              <input
-                type="range"
-                className="web-slider"
-                min={min}
-                max={max}
-                value={value}
-                step={step}
-                onChange={(e) => handleChange(parseInt(e.target.value))}
-                style={{
-                  width: "100%",
-                  height: 28,
-                  cursor: "pointer",
-                }}
-              />
-            </div>
-
-            {/* Labels below slider - show ALL labels with dotted border on default */}
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                marginTop: 8,
-                fontSize: "0.8rem",
-                paddingLeft: 14,
-                paddingRight: 14,
-              }}
-            >
-              {labels.map((label, i) => {
-                const isDefault = i === defaultValue;
-                const isSelected = value === i;
-                return (
-                  <div
-                    key={i}
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      flex: "0 0 auto",
-                    }}
-                  >
-                    <span
-                      style={{
-                        color: isSelected ? "#5A5847" : "#666",
-                        fontWeight: isSelected ? 700 : 400,
-                        fontSize: isSelected ? "0.85rem" : "0.8rem",
-                        transition: "all 0.15s ease",
-                        padding: isDefault ? "3px 8px" : undefined,
-                        border: isDefault ? "2px dashed #7C7A67" : undefined,
-                        borderRadius: isDefault ? 6 : undefined,
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {getTranslatedLabel(label)}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
+          {/* Segmented control - clickable buttons for each option */}
+          <div
+            style={{
+              display: "flex",
+              background: "#e5e5e5",
+              borderRadius: 20,
+              padding: 3,
+              gap: 2,
+            }}
+          >
+            {labels.map((label, i) => {
+              const isDefault = i === defaultValue;
+              const isSelected = value === i;
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => handleChange(i)}
+                  style={{
+                    flex: 1,
+                    padding: "8px 4px",
+                    border: "none",
+                    borderRadius: 16,
+                    background: isSelected ? "#5A5847" : "transparent",
+                    color: isSelected ? "#FFFFFF" : "#666",
+                    fontWeight: isSelected ? 600 : 400,
+                    fontSize: "0.75rem",
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                    position: "relative",
+                    outline: isDefault && !isSelected ? "2px dashed #7C7A67" : "none",
+                    outlineOffset: -2,
+                  }}
+                >
+                  {getTranslatedLabel(label)}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }
 
