@@ -53,7 +53,13 @@
     "store": "Store",
     "loyalty": "Loyalty",
     "myAccount": "My Oh! Account",
-    "giveBack": "Give Back"
+    "giveBack": "Give Back",
+    "aboutUs": "About Us",
+    "shop": "Shop",
+    "ohStore": "Oh! Store",
+    "memberBenefits": "Member Benefits",
+    "referral": "Referral",
+    "signIn": "Sign In"
   },
   "home": {
     "brandName": "<oh>哦！</oh> <bebas>Oh! Beef Noodle Soup</bebas>",
@@ -236,6 +242,22 @@
       "title": "Ready for the Best Bowl?",
       "description": "Order ahead and skip the wait. Your perfect bowl is just a few taps away.",
       "button": "Start Your Order"
+    },
+    "dietary": {
+      "vegetarian": "Vegetarian",
+      "vegan": "Vegan",
+      "glutenFree": "Gluten-Free",
+      "spice": {
+        "level1": "Mild",
+        "level2": "Medium",
+        "level3": "Hot"
+      }
+    },
+    "allergen": {
+      "title": "Allergen Information",
+      "description": "Our dishes are prepared in a kitchen that handles common allergens including wheat, soy, and eggs. Please inform our staff of any allergies or dietary restrictions when ordering.",
+      "spicyIndicator": "Spicy",
+      "contactUs": "For detailed allergen information, please contact us before ordering."
     }
   },
   "locations": {
@@ -325,6 +347,7 @@
       "description": "Start as a Chopstick and work your way to Beef Boss. Every tier unlocks better rewards.",
       "benefitsInclude": "Benefits Include",
       "ultimate": "ULTIMATE",
+      "yourTier": "Your Current Tier",
       "chopstick": {
         "name": "Chopstick",
         "description": "Welcome to Oh! Rewards",
@@ -354,9 +377,12 @@
         "benefits": {
           "referralBonus": "$5 referral bonus per friend",
           "cashback": "3% cashback on orders",
+          "topPrioritySeating": "Top priority seating",
+          "freePremiumBowl": "Free premium bowl on tier upgrade",
           "merchDrops": "Exclusive merchandise drops",
           "premiumAddons": "Complimentary premium add-ons",
-          "vipGift": "Annual VIP Gift & Recognition"
+          "vipGift": "Annual VIP Gift & Recognition",
+          "wallOfFame": "Picture & Signed Order on Oh! Wall of Fame"
         }
       }
     },
@@ -443,6 +469,16 @@
     "referralApplied": "$5 referral discount will be applied!",
     "waitTime": "Current Wait",
     "minutes": "min",
+    "quickOrder": {
+      "title": "Quick Order - Chef's Choice",
+      "description": "New to Oh!? Let our chef build the perfect bowl.",
+      "item1": "Classic Beef Noodle Soup",
+      "item2": "Wide Noodles",
+      "item3": "Oh!'s recommended bowl configuration",
+      "item4": "Mandarin Orange Sherbet (complimentary)",
+      "price": "$15.99",
+      "selectButton": "Select"
+    },
     "locationSelector": {
       "groupMode": {
         "title": "Starting a Group Order",
@@ -536,6 +572,10 @@
       "podSelection": {
         "selectedPrefix": "Selected:",
         "pod": "Pod"
+      },
+      "dietaryLegend": {
+        "spicy": "Spicy",
+        "moreInfo": "Tap for allergen information"
       }
     },
     "addToOrder": "Add to Order",
@@ -714,6 +754,16 @@
     "yourBenefits": "Your Benefits:",
     "progressTo": "Progress to {tier}:",
     "totalOrders": "Total Orders",
+    "challengesTitle": "Challenges",
+    "activeChallenges": "Your Active Challenges",
+    "availableChallenges": "Available Challenges",
+    "completed": "Completed!",
+    "claimed": "Claimed",
+    "claimReward": "Claim ${amount}",
+    "reward": "Reward",
+    "join": "Join",
+    "challengeEnrolled": "You've joined the challenge!",
+    "rewardClaimed": "${amount} added to your credits!",
     "badgesTitle": "Badges",
     "welcome": "Welcome!",
     "signInToView": "Sign in to view your membership",
@@ -722,9 +772,9 @@
     "loadingProfile": "Loading your profile...",
     "visitsThisMonth": "{count} {count, plural, one {visit} other {visits}} this month",
     "tiers": {
-      "chopstick": "🥢 Chopstick",
-      "noodleMaster": "🍜 Noodle Master",
-      "beefBoss": "🐂 Beef Boss"
+      "chopstick": "Chopstick",
+      "noodleMaster": "Noodle Master",
+      "beefBoss": "Beef Boss"
     },
     "perks": {
       "referralBonus": "$5 referral bonus per friend",
@@ -979,16 +1029,16 @@
     },
     "step2": {
       "title": "Friend Orders",
-      "description": "When your friend places their first order of $20 or more, you both earn credits."
+      "description": "When your friend completes their first order of $20 or more, you both earn credits."
     },
     "step3": {
-      "title": "Earn Together",
-      "description": "You get $5 credit, they get $5 off. There's no limit to how many friends you can refer."
+      "title": "Earn Instantly",
+      "description": "You get $5 credit instantly, they get $5 off. No limits on referrals."
     },
     "goodToKnow": "Good to Know",
     "rules": {
       "minimumOrder": "Referral bonus applies to first orders of $20 or more",
-      "disbursement": "Credits are added to your account within 24 hours",
+      "disbursement": "Credits are added to your account instantly when your friend completes their order",
       "maxPerOrder": "Maximum of $5 credit can be applied per order"
     },
     "dashboard": {
@@ -1003,7 +1053,11 @@
       "nextDisbursement": "Next disbursement:",
       "yourReferralLink": "Your Referral Link",
       "copy": "Copy",
-      "shareToEarn": "Share this link to earn $5 for every friend who places an order of $20+",
+      "showQRCode": "Show QR Code",
+      "scanToJoin": "Scan to Join Oh!",
+      "scanDescription": "Your friend can scan this QR code to sign up with your referral",
+      "close": "Close",
+      "shareToEarn": "Share this link to earn $5 for every friend who completes an order of $20+",
       "recentActivity": "Recent Activity",
       "creditEvents": {
         "cashback": "{percent}% cashback on order",
@@ -1598,6 +1652,10 @@
     "checkingIn": "Checking in...",
     "groupOrderNote": "This is a group order with {count} orders.",
     "paidStatus": "Payment Complete",
+    "paymentSuccessful": "Payment Successful",
+    "paymentConfirmed": "Your payment of {amount} has been confirmed",
+    "paymentPending": "Payment Pending",
+    "paymentProcessing": "Your payment is being processed",
     "yourOrderQrCode": "Your Order QR Code",
     "scanAtKiosk": "Scan this at the kiosk when you arrive to get your pod assignment",
     "expectedArrival": "Expected arrival: {time}",
@@ -1620,7 +1678,7 @@
     "twitter": "Twitter",
     "facebook": "Facebook",
     "linkedin": "LinkedIn",
-    "referralNote": "Your referral link is included! Friends get $5 off their first order. You earn $5 when they order $20+ (credited on the 1st or 16th).",
+    "referralNote": "Your referral link is included! Friends get $5 off their first order. You earn $5 instantly when they complete a $20+ order.",
     "backToHome": "Back to Home",
     "loadingOrder": "Loading order..."
   }

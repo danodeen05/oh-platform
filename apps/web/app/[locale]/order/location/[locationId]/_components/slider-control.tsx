@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import { getMenuItemImage } from "@/lib/menu-images";
+import { DietaryBadges } from "./dietary-badges";
 
 // CSS for pulsating animation on Extra Spicy
 const pulseStyles = `
@@ -29,6 +30,15 @@ type SliderConfig = {
   description?: string;
 };
 
+type DietaryLabels = {
+  vegetarian?: string;
+  vegan?: string;
+  glutenFree?: string;
+  spiceMild?: string;
+  spiceMedium?: string;
+  spiceHot?: string;
+};
+
 type SliderControlProps = {
   name: string;
   nameEn?: string; // English name for image lookups
@@ -43,6 +53,12 @@ type SliderControlProps = {
   };
   labelTranslations?: Record<string, string>; // Map English labels to translated labels
   includedUpToLabel?: string; // Translated "Included (up to X)" text
+  // Dietary information
+  isVegetarian?: boolean;
+  isVegan?: boolean;
+  isGlutenFree?: boolean;
+  spiceLevel?: number; // 0=none, 1=mild, 2=medium, 3=hot
+  dietaryLabels?: DietaryLabels;
 };
 
 // Heat colors for spice levels (index 0 = None, no color)
@@ -64,6 +80,11 @@ export function SliderControl({
   pricingInfo,
   labelTranslations,
   includedUpToLabel,
+  isVegetarian,
+  isVegan,
+  isGlutenFree,
+  spiceLevel,
+  dietaryLabels,
 }: SliderControlProps) {
   const { labels } = config;
   const defaultValue = config.default ?? 0;
@@ -143,13 +164,24 @@ export function SliderControl({
           )}
           {/* Content */}
           <div style={{ flex: 1, padding: "12px 14px" }}>
-            {/* Header row - just the name now */}
+            {/* Header row - name and dietary badges */}
             <div
               style={{
                 marginBottom: 8,
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                flexWrap: "wrap",
               }}
             >
               <span style={{ fontWeight: 600, fontSize: "0.95rem", color: "#1a1a1a" }}>{name}</span>
+              <DietaryBadges
+                isVegetarian={isVegetarian}
+                isVegan={isVegan}
+                isGlutenFree={isGlutenFree}
+                spiceLevel={spiceLevel}
+                labels={dietaryLabels}
+              />
             </div>
 
             {/* Pricing info */}

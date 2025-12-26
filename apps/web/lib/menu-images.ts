@@ -10,6 +10,7 @@ const menuImageMap: Record<string, string> = {
   // Noodle types
   "Shaved Noodles": "/menu images/Shaved Noodles.png",
   "Wide Noodles": "/menu images/Wide Noodles.png",
+  "Wide Noodles (Gluten Free)": "/menu images/Wide Noodles.png",
   "Ramen Noodles": "/menu images/Ramen Noodles.png",
   "No Noodles": "__NO_NOODLES__", // Special case - handled by component
 

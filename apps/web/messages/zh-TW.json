@@ -53,7 +53,13 @@
     "store": "商店",
     "loyalty": "會員獎勵",
     "myAccount": "我的哦!帳戶",
-    "giveBack": "回饋社會"
+    "giveBack": "回饋社會",
+    "aboutUs": "關於我們",
+    "shop": "購物",
+    "ohStore": "哦!商店",
+    "memberBenefits": "會員福利",
+    "referral": "推薦好友",
+    "signIn": "登入"
   },
   "home": {
     "brandName": "<oh>哦！</oh>牛肉麵",
@@ -236,6 +242,22 @@
       "title": "準備好品嚐最棒的一碗麵了嗎？",
       "description": "提前點餐，跳過等待。完美的一碗麵只需輕輕幾點。",
       "button": "開始點餐"
+    },
+    "dietary": {
+      "vegetarian": "素食",
+      "vegan": "純素",
+      "glutenFree": "無麩質",
+      "spice": {
+        "level1": "微辣",
+        "level2": "中辣",
+        "level3": "特辣"
+      }
+    },
+    "allergen": {
+      "title": "過敏原資訊",
+      "description": "我們的菜品在處理常見過敏原（包括小麥、大豆和雞蛋）的廚房中製作。點餐時請告知我們的員工您的任何過敏或飲食限制。",
+      "spicyIndicator": "辣",
+      "contactUs": "如需詳細的過敏原資訊，請在點餐前聯繫我們。"
     }
   },
   "locations": {
@@ -325,6 +347,7 @@
       "description": "從筷子會員開始，一路晉升到牛肉達人。每個等級都能解鎖更好的獎勵。",
       "benefitsInclude": "福利包含",
       "ultimate": "最高等級",
+      "yourTier": "您的當前等級",
       "chopstick": {
         "name": "筷子會員",
         "description": "歡迎加入哦！獎勵",
@@ -354,9 +377,12 @@
         "benefits": {
           "referralBonus": "每位推薦好友可得$5獎勵",
           "cashback": "訂單3%回饋",
+          "topPrioritySeating": "最高優先入座",
+          "freePremiumBowl": "升級送免費頂級招牌麵",
           "merchDrops": "限定周邊商品",
           "premiumAddons": "免費頂級加購",
-          "vipGift": "年度VIP禮物與表彰"
+          "vipGift": "年度VIP禮物與表彰",
+          "wallOfFame": "照片及簽名訂單上Oh!名人牆"
         }
       }
     },
@@ -443,6 +469,16 @@
     "referralApplied": "已套用$5推薦優惠！",
     "waitTime": "目前等候時間",
     "minutes": "分鐘",
+    "quickOrder": {
+      "title": "快速下單 - 主廚推薦",
+      "description": "初次來到Oh!？讓主廚為您準備完美的一碗。",
+      "item1": "經典牛肉麵",
+      "item2": "寬麵",
+      "item3": "Oh!推薦的碗配置",
+      "item4": "橘子雪酪（贈送）",
+      "price": "$15.99",
+      "selectButton": "選擇"
+    },
     "locationSelector": {
       "groupMode": {
         "title": "開始團體訂單",
@@ -536,6 +572,10 @@
       "podSelection": {
         "selectedPrefix": "已選擇：",
         "pod": "座位"
+      },
+      "dietaryLegend": {
+        "spicy": "辣",
+        "moreInfo": "點擊查看過敏原資訊"
       }
     },
     "addToOrder": "加入訂單",
@@ -714,6 +754,16 @@
     "yourBenefits": "您的福利：",
     "progressTo": "升級至 {tier}：",
     "totalOrders": "總訂單數",
+    "challengesTitle": "挑戰",
+    "activeChallenges": "您的活動挑戰",
+    "availableChallenges": "可用挑戰",
+    "completed": "已完成！",
+    "claimed": "已領取",
+    "claimReward": "領取 ${amount}",
+    "reward": "獎勵",
+    "join": "參加",
+    "challengeEnrolled": "您已加入挑戰！",
+    "rewardClaimed": "${amount} 已添加到您的餘額！",
     "badgesTitle": "徽章",
     "welcome": "歡迎！",
     "signInToView": "登入查看您的會員資料",
@@ -722,9 +772,9 @@
     "loadingProfile": "載入您的資料中...",
     "visitsThisMonth": "本月 {count} 次到訪",
     "tiers": {
-      "chopstick": "🥢 筷子會員",
-      "noodleMaster": "🍜 麵條大師",
-      "beefBoss": "🐂 牛肉達人"
+      "chopstick": "筷子會員",
+      "noodleMaster": "麵條大師",
+      "beefBoss": "牛肉達人"
     },
     "perks": {
       "referralBonus": "每推薦一位好友可獲得 $5 獎勵",
@@ -982,13 +1032,13 @@
       "description": "當您的好友完成首筆$20或以上的訂單時，雙方都能獲得點數。"
     },
     "step3": {
-      "title": "一起賺取",
-      "description": "您獲得$5點數，他們獲得$5折扣。推薦人數沒有上限。"
+      "title": "即刻賺取",
+      "description": "您即刻獲得$5點數，他們獲得$5折扣。推薦人數沒有上限。"
     },
     "goodToKnow": "須知事項",
     "rules": {
       "minimumOrder": "推薦獎勵適用於首筆$20或以上的訂單",
-      "disbursement": "點數將在24小時內加入您的帳戶",
+      "disbursement": "當好友完成訂單後，點數即刻加入您的帳戶",
       "maxPerOrder": "每筆訂單最多可使用$5點數"
     },
     "dashboard": {
@@ -1003,7 +1053,11 @@
       "nextDisbursement": "下次發放：",
       "yourReferralLink": "您的推薦連結",
       "copy": "複製",
-      "shareToEarn": "分享此連結，每位下單$20以上的好友可為您賺取$5",
+      "showQRCode": "顯示二維碼",
+      "scanToJoin": "掃碼加入Oh!",
+      "scanDescription": "您的好友可以掃描此二維碼通過您的推薦註冊",
+      "close": "關閉",
+      "shareToEarn": "分享此連結，每位完成$20以上訂單的好友可為您賺取$5",
       "recentActivity": "近期活動",
       "creditEvents": {
         "cashback": "訂單 {percent}% 回饋",
@@ -1598,6 +1652,10 @@
     "checkingIn": "報到中...",
     "groupOrderNote": "這是包含 {count} 份訂單的群組訂單。",
     "paidStatus": "付款完成",
+    "paymentSuccessful": "付款成功",
+    "paymentConfirmed": "您的 {amount} 付款已確認",
+    "paymentPending": "付款處理中",
+    "paymentProcessing": "您的付款正在處理中",
     "yourOrderQrCode": "您的訂單 QR 碼",
     "scanAtKiosk": "到達時請在自助機掃描此碼以獲取包廂分配",
     "expectedArrival": "預計到達時間：{time}",
@@ -1620,7 +1678,7 @@
     "twitter": "推特",
     "facebook": "臉書",
     "linkedin": "領英",
-    "referralNote": "已包含您的推薦連結！朋友首次訂購可享 $5 折扣。當他們消費 $20 以上時，您可獲得 $5（每月 1 日或 16 日入帳）。",
+    "referralNote": "已包含您的推薦連結！朋友首次訂購可享 $5 折扣。當他們完成 $20 以上訂單時，您即刻獲得 $5。",
     "backToHome": "返回首頁",
     "loadingOrder": "載入訂單中..."
   }

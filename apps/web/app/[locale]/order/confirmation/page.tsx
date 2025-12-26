@@ -234,23 +234,108 @@ function ConfirmationContent() {
           style={{ objectFit: "contain", margin: "0 auto 16px" }}
         />
 
-        {/* Success Icon */}
-        <div
-          style={{
-            width: 48,
-            height: 48,
-            borderRadius: "50%",
-            background: isPaid ? "#7C7A67" : "#fef3c7",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            margin: "0 auto 16px",
-            fontSize: "1.5rem",
-            color: isPaid ? "white" : "inherit",
-          }}
-        >
-          {isPaid ? "✓" : "⏳"}
-        </div>
+        {/* Payment Confirmation Banner */}
+        {isPaid && (
+          <div
+            style={{
+              background: "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)",
+              borderRadius: 12,
+              padding: "16px 20px",
+              marginBottom: 20,
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+            }}
+          >
+            <div
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: "50%",
+                background: "rgba(255,255,255,0.25)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "1.5rem",
+                flexShrink: 0,
+              }}
+            >
+              ✓
+            </div>
+            <div style={{ textAlign: "left" }}>
+              <div
+                style={{
+                  color: "white",
+                  fontWeight: "bold",
+                  fontSize: "1.1rem",
+                  marginBottom: 2,
+                }}
+              >
+                {t("paymentSuccessful")}
+              </div>
+              <div
+                style={{
+                  color: "rgba(255,255,255,0.9)",
+                  fontSize: "0.85rem",
+                }}
+              >
+                {t("paymentConfirmed", { amount: `$${totalAmount}` })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Pending Payment Banner */}
+        {!isPaid && (
+          <div
+            style={{
+              background: "#fef3c7",
+              border: "2px solid #f59e0b",
+              borderRadius: 12,
+              padding: "16px 20px",
+              marginBottom: 20,
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+            }}
+          >
+            <div
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: "50%",
+                background: "#f59e0b",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "1.5rem",
+                flexShrink: 0,
+              }}
+            >
+              ⏳
+            </div>
+            <div style={{ textAlign: "left" }}>
+              <div
+                style={{
+                  color: "#92400e",
+                  fontWeight: "bold",
+                  fontSize: "1.1rem",
+                  marginBottom: 2,
+                }}
+              >
+                {t("paymentPending")}
+              </div>
+              <div
+                style={{
+                  color: "#a16207",
+                  fontSize: "0.85rem",
+                }}
+              >
+                {t("paymentProcessing")}
+              </div>
+            </div>
+          </div>
+        )}
 
         <h1
           style={{
@@ -260,7 +345,7 @@ function ConfirmationContent() {
             color: "#111",
           }}
         >
-          {isPaid ? t("title") : t("thankYou")}
+          {t("title")}
         </h1>
 
         <p
@@ -270,9 +355,7 @@ function ConfirmationContent() {
             fontSize: "1rem",
           }}
         >
-          {isPaid
-            ? t("paidStatus")
-            : t("thankYou")}
+          {t("thankYou")}
         </p>
 
         {/* Order QR Code Section - For Check-In at Location */}

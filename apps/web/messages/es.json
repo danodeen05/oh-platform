@@ -53,7 +53,13 @@
     "store": "Tienda",
     "loyalty": "Recompensas",
     "myAccount": "Mi cuenta Oh!",
-    "giveBack": "Contribuir"
+    "giveBack": "Contribuir",
+    "aboutUs": "Nosotros",
+    "shop": "Comprar",
+    "ohStore": "Tienda Oh!",
+    "memberBenefits": "Beneficios de Miembro",
+    "referral": "Referidos",
+    "signIn": "Iniciar Sesión"
   },
   "home": {
     "brandName": "<oh>哦！</oh> <bebas>Oh! Beef Noodle Soup</bebas>",
@@ -236,6 +242,22 @@
       "title": "¿Listo para el Mejor Tazón?",
       "description": "Ordena con anticipación y salta la espera. Tu tazón perfecto está a solo unos toques.",
       "button": "Comienza Tu Orden"
+    },
+    "dietary": {
+      "vegetarian": "Vegetariano",
+      "vegan": "Vegano",
+      "glutenFree": "Sin Gluten",
+      "spice": {
+        "level1": "Suave",
+        "level2": "Medio",
+        "level3": "Picante"
+      }
+    },
+    "allergen": {
+      "title": "Información de Alérgenos",
+      "description": "Nuestros platos se preparan en una cocina que maneja alérgenos comunes como trigo, soya y huevos. Por favor informe a nuestro personal sobre cualquier alergia o restricción dietética al ordenar.",
+      "spicyIndicator": "Picante",
+      "contactUs": "Para información detallada sobre alérgenos, contáctenos antes de ordenar."
     }
   },
   "locations": {
@@ -325,6 +347,7 @@
       "description": "Comienza como Palillos y avanza hasta Jefe de la carne. Cada nivel desbloquea mejores recompensas.",
       "benefitsInclude": "Beneficios incluyen",
       "ultimate": "MÁXIMO",
+      "yourTier": "Tu Nivel Actual",
       "chopstick": {
         "name": "Palillos",
         "description": "Bienvenido a Recompensas Oh!",
@@ -354,9 +377,12 @@
         "benefits": {
           "referralBonus": "$5 de bonificación por cada amigo referido",
           "cashback": "3% de devolución en pedidos",
+          "topPrioritySeating": "Asiento con máxima prioridad",
+          "freePremiumBowl": "Bowl premium gratis al subir de nivel",
           "merchDrops": "Lanzamientos exclusivos de mercancía",
           "premiumAddons": "Extras premium de cortesía",
-          "vipGift": "Regalo y reconocimiento VIP anual"
+          "vipGift": "Regalo y reconocimiento VIP anual",
+          "wallOfFame": "Foto y pedido firmado en el Muro de la Fama Oh!"
         }
       }
     },
@@ -443,6 +469,16 @@
     "referralApplied": "¡Se aplicará un descuento de $5 por referido!",
     "waitTime": "Espera actual",
     "minutes": "min",
+    "quickOrder": {
+      "title": "Pedido Rápido - Elección del Chef",
+      "description": "¿Nuevo en Oh!? Deja que nuestro chef prepare el tazón perfecto.",
+      "item1": "Sopa de Fideos con Res Clásica",
+      "item2": "Fideos Anchos",
+      "item3": "Configuración recomendada de Oh!",
+      "item4": "Sorbete de Mandarina (cortesía)",
+      "price": "$15.99",
+      "selectButton": "Seleccionar"
+    },
     "locationSelector": {
       "groupMode": {
         "title": "Iniciando pedido grupal",
@@ -536,6 +572,10 @@
       "podSelection": {
         "selectedPrefix": "Seleccionado:",
         "pod": "Pod"
+      },
+      "dietaryLegend": {
+        "spicy": "Picante",
+        "moreInfo": "Toca para información de alérgenos"
       }
     },
     "addToOrder": "Agregar al pedido",
@@ -714,6 +754,16 @@
     "yourBenefits": "Tus Beneficios:",
     "progressTo": "Progreso hacia {tier}:",
     "totalOrders": "Pedidos Totales",
+    "challengesTitle": "Desafíos",
+    "activeChallenges": "Tus Desafíos Activos",
+    "availableChallenges": "Desafíos Disponibles",
+    "completed": "¡Completado!",
+    "claimed": "Reclamado",
+    "claimReward": "Reclamar ${amount}",
+    "reward": "Recompensa",
+    "join": "Unirse",
+    "challengeEnrolled": "¡Te has unido al desafío!",
+    "rewardClaimed": "¡${amount} añadidos a tus créditos!",
     "badgesTitle": "Insignias",
     "welcome": "¡Bienvenido!",
     "signInToView": "Inicia sesión para ver tu membresía",
@@ -722,9 +772,9 @@
     "loadingProfile": "Cargando tu perfil...",
     "visitsThisMonth": "{count} {count, plural, one {visita} other {visitas}} este mes",
     "tiers": {
-      "chopstick": "🥢 Palillos",
-      "noodleMaster": "🍜 Maestro de Fideos",
-      "beefBoss": "🐂 Jefe de la Carne"
+      "chopstick": "Palillos",
+      "noodleMaster": "Maestro de Fideos",
+      "beefBoss": "Jefe de la Carne"
     },
     "perks": {
       "referralBonus": "$5 de bonificación por cada amigo referido",
@@ -979,16 +1029,16 @@
     },
     "step2": {
       "title": "Amigo ordena",
-      "description": "Cuando tu amigo hace su primer pedido de $20 o más, ambos ganan créditos."
+      "description": "Cuando tu amigo completa su primer pedido de $20 o más, ambos ganan créditos."
     },
     "step3": {
-      "title": "Ganen juntos",
-      "description": "Tú recibes $5 de crédito, ellos $5 de descuento. No hay límite de amigos que puedes referir."
+      "title": "Gana al instante",
+      "description": "Tú recibes $5 de crédito al instante, ellos $5 de descuento. Sin límites de referidos."
     },
     "goodToKnow": "Bueno saber",
     "rules": {
       "minimumOrder": "El bono de referido aplica a primeros pedidos de $20 o más",
-      "disbursement": "Los créditos se agregan a tu cuenta en 24 horas",
+      "disbursement": "Los créditos se agregan a tu cuenta al instante cuando tu amigo completa su pedido",
       "maxPerOrder": "Máximo de $5 de crédito puede aplicarse por pedido"
     },
     "dashboard": {
@@ -1003,7 +1053,11 @@
       "nextDisbursement": "Próximo desembolso:",
       "yourReferralLink": "Tu Enlace de Referido",
       "copy": "Copiar",
-      "shareToEarn": "Comparte este enlace para ganar $5 por cada amigo que ordene $20+",
+      "showQRCode": "Mostrar Código QR",
+      "scanToJoin": "Escanea para unirte a Oh!",
+      "scanDescription": "Tu amigo puede escanear este código QR para registrarse con tu referido",
+      "close": "Cerrar",
+      "shareToEarn": "Comparte este enlace para ganar $5 por cada amigo que complete un pedido de $20+",
       "recentActivity": "Actividad Reciente",
       "creditEvents": {
         "cashback": "{percent}% de reembolso en pedido",
@@ -1598,6 +1652,10 @@
     "checkingIn": "Registrando...",
     "groupOrderNote": "Este es un pedido grupal con {count} pedidos.",
     "paidStatus": "Pago completado",
+    "paymentSuccessful": "Pago Exitoso",
+    "paymentConfirmed": "Tu pago de {amount} ha sido confirmado",
+    "paymentPending": "Pago Pendiente",
+    "paymentProcessing": "Tu pago está siendo procesado",
     "yourOrderQrCode": "Tu código QR de pedido",
     "scanAtKiosk": "Escanea esto en el kiosco cuando llegues para obtener tu asignación de pod",
     "expectedArrival": "Hora de llegada esperada: {time}",
@@ -1620,7 +1678,7 @@
     "twitter": "Twitter",
     "facebook": "Facebook",
     "linkedin": "LinkedIn",
-    "referralNote": "¡Tu enlace de referido está incluido! Tus amigos obtienen $5 de descuento en su primer pedido. Ganas $5 cuando piden $20+ (acreditado el 1 o 16 del mes).",
+    "referralNote": "¡Tu enlace de referido está incluido! Tus amigos obtienen $5 de descuento en su primer pedido. Ganas $5 instantáneamente cuando completen un pedido de $20+.",
     "backToHome": "Volver al inicio",
     "loadingOrder": "Cargando pedido..."
   }

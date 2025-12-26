@@ -6,6 +6,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { SliderControl, SliderLegend } from "./slider-control";
 import { RadioGroup } from "./radio-group";
 import { CheckboxGroup } from "./checkbox-group";
+import { DietaryLegend } from "./dietary-legend";
 import SeatingMap, { Seat } from "@/components/SeatingMap";
 import { useGuest } from "@/contexts/guest-context";
 import { useToast } from "@/components/ui/Toast";
@@ -43,6 +44,11 @@ type MenuItem = {
   description?: string;
   sliderConfig?: any;
   isAvailable: boolean;
+  // Dietary information
+  isVegetarian?: boolean;
+  isVegan?: boolean;
+  isGlutenFree?: boolean;
+  spiceLevel?: number; // 0=none, 1=mild, 2=medium, 3=hot
 };
 
 type MenuSection = {
@@ -69,6 +75,14 @@ type EnhancedMenuBuilderProps = {
   groupCode?: string;
 };
 
+// Chef's Choice preset - the default quick order items
+const CHEFS_CHOICE = {
+  soupId: "cmip6jbza00062nnnskz6ntt8", // Classic Beef Noodle Soup
+  noodleId: "cmip6jbzd000c2nnny2hrd859", // Wide Noodles
+  waterId: "cmip6jc0i002f2nnnyv38o0iz", // Water (cold)
+  dessertId: "cmip6jc0i002f2nnnav38o0ib", // Mandarin Orange Sherbet
+};
+
 export default function EnhancedMenuBuilder({
   location,
   reorderId,
@@ -78,8 +92,28 @@ export default function EnhancedMenuBuilder({
   const { user, isLoaded: userLoaded } = useUser();
   const { guest, isGuest } = useGuest();
   const t = useTranslations("order");
+  const tMenu = useTranslations("menu");
   const locale = useLocale();
   const toast = useToast();
+
+  // Dietary labels for menu item badges
+  const dietaryLabels = {
+    vegetarian: tMenu("dietary.vegetarian"),
+    vegan: tMenu("dietary.vegan"),
+    glutenFree: tMenu("dietary.glutenFree"),
+    spiceMild: tMenu("dietary.spice.level1"),
+    spiceMedium: tMenu("dietary.spice.level2"),
+    spiceHot: tMenu("dietary.spice.level3"),
+  };
+
+  // Dietary legend labels (for the legend at bottom of each step)
+  const dietaryLegendLabels = {
+    vegetarian: tMenu("dietary.vegetarian"),
+    vegan: tMenu("dietary.vegan"),
+    glutenFree: tMenu("dietary.glutenFree"),
+    spicy: t("builder.dietaryLegend.spicy"),
+    moreInfo: t("builder.dietaryLegend.moreInfo"),
+  };
   const [menuSteps, setMenuSteps] = useState<MenuStep[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
@@ -1036,6 +1070,84 @@ export default function EnhancedMenuBuilder({
         </div>
       </div>
 
+      {/* Quick Order - Chef's Choice (only show on first step and not in group mode) */}
+      {currentStepIndex === 0 && !groupCode && (
+        <div
+          style={{
+            marginBottom: 24,
+            padding: "14px 16px",
+            background: "linear-gradient(135deg, #7C7A67 0%, #5a584a 100%)",
+            borderRadius: 10,
+            color: "white",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M6 13.87A4 4 0 0 1 7.41 6a5.11 5.11 0 0 1 1.05-1.54 5 5 0 0 1 7.08 0A5.11 5.11 0 0 1 16.59 6 4 4 0 0 1 18 13.87V21H6Z" />
+              <line x1="6" y1="17" x2="18" y2="17" />
+            </svg>
+            <span style={{ margin: 0, fontSize: "1rem", fontWeight: 600 }}>
+              {t("quickOrder.title")}
+            </span>
+            <span style={{ marginLeft: "auto", color: "rgba(255,255,255,0.9)", fontSize: "0.8rem" }}>
+              {t("quickOrder.description")}
+            </span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16 }}>
+            <div style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.85)", lineHeight: 1.5 }}>
+              {t("quickOrder.item1")} • {t("quickOrder.item2")} • {t("quickOrder.item3")} • {t("quickOrder.item4")}
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+              <span style={{ fontWeight: 700, fontSize: "1.1rem" }}>{t("quickOrder.price")}</span>
+              <button
+                onClick={() => {
+                  // Pre-populate cart with Chef's Choice and skip to time selection
+                  const initialSelections: Record<string, string> = {};
+                  menuSteps.forEach((step: MenuStep) => {
+                    step.sections.forEach((section: MenuSection) => {
+                      if (section.selectionMode === 'SINGLE' && section.items) {
+                        const hasSoup = section.items.find(item => item.id === CHEFS_CHOICE.soupId);
+                        const hasNoodle = section.items.find(item => item.id === CHEFS_CHOICE.noodleId);
+                        if (hasSoup) initialSelections[section.id] = CHEFS_CHOICE.soupId;
+                        if (hasNoodle) initialSelections[section.id] = CHEFS_CHOICE.noodleId;
+                      }
+                    });
+                  });
+                  setSelections(initialSelections);
+                  setCart(prev => ({
+                    ...prev,
+                    [CHEFS_CHOICE.waterId]: 1,
+                    [CHEFS_CHOICE.dessertId]: 1,
+                  }));
+                  setCurrentStepIndex(menuSteps.length);
+                }}
+                style={{
+                  padding: "8px 16px",
+                  background: "white",
+                  color: "#7C7A67",
+                  border: "none",
+                  borderRadius: 6,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  fontSize: "0.85rem",
+                  transition: "transform 0.2s, box-shadow 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "scale(1.02)";
+                  e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.2)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "scale(1)";
+                  e.currentTarget.style.boxShadow = "none";
+                }}
+              >
+                {t("quickOrder.selectButton")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <h2 style={{ marginBottom: currentWhisper ? 12 : 24 }}>{currentStep.title}</h2>
 
       {/* Order Whisperer - Witty one-liner based on order history */}
@@ -1102,6 +1214,7 @@ export default function EnhancedMenuBuilder({
               onSelect={(itemId) => handleRadioSelect(section.id, itemId)}
               required={section.required}
               requiredLabel={t("builder.required")}
+              dietaryLabels={dietaryLabels}
             />
           );
         }
@@ -1133,6 +1246,11 @@ export default function EnhancedMenuBuilder({
                 }}
                 labelTranslations={sliderLabelTranslations}
                 includedUpToLabel={t("builder.includedUpTo", { count: section.item.includedQuantity })}
+                isVegetarian={section.item.isVegetarian}
+                isVegan={section.item.isVegan}
+                isGlutenFree={section.item.isGlutenFree}
+                spiceLevel={section.item.spiceLevel}
+                dietaryLabels={dietaryLabels}
               />
             </div>
           );
@@ -1153,12 +1271,16 @@ export default function EnhancedMenuBuilder({
                 eachExtra: t("builder.eachExtra"),
                 subtotal: t("builder.subtotalLabel"),
               }}
+              dietaryLabels={dietaryLabels}
             />
           );
         }
 
         return null;
       })}
+
+      {/* Dietary Legend */}
+      <DietaryLegend labels={dietaryLegendLabels} />
 
       {/* Navigation */}
       <div style={{ position: "sticky", bottom: 0, background: "white", border: "1px solid rgba(124, 122, 103, 0.2)", borderRadius: "16px", padding: "24px 32px", marginTop: 32, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}>

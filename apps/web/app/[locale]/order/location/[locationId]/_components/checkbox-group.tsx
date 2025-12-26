@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { getMenuItemImage } from "@/lib/menu-images";
+import { DietaryBadges } from "./dietary-badges";
 
 type MenuItem = {
   id: string;
@@ -11,6 +12,20 @@ type MenuItem = {
   additionalPriceCents: number;
   includedQuantity: number;
   description?: string;
+  // Dietary information
+  isVegetarian?: boolean;
+  isVegan?: boolean;
+  isGlutenFree?: boolean;
+  spiceLevel?: number; // 0=none, 1=mild, 2=medium, 3=hot
+};
+
+type DietaryLabels = {
+  vegetarian?: string;
+  vegan?: string;
+  glutenFree?: string;
+  spiceMild?: string;
+  spiceMedium?: string;
+  spiceHot?: string;
 };
 
 type CheckboxGroupProps = {
@@ -25,6 +40,7 @@ type CheckboxGroupProps = {
     each?: string;
     subtotal?: string;
   };
+  dietaryLabels?: DietaryLabels;
 };
 
 export function CheckboxGroup({
@@ -34,6 +50,7 @@ export function CheckboxGroup({
   onUpdateQuantity,
   maxQuantity,
   labels,
+  dietaryLabels,
 }: CheckboxGroupProps) {
   if (items.length === 0) return null;
 
@@ -110,8 +127,15 @@ export function CheckboxGroup({
                   }}
                 >
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: "600", fontSize: "1rem", marginBottom: 4 }}>
-                      {item.name}
+                    <div style={{ fontWeight: "600", fontSize: "1rem", marginBottom: 4, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <span>{item.name}</span>
+                      <DietaryBadges
+                        isVegetarian={item.isVegetarian}
+                        isVegan={item.isVegan}
+                        isGlutenFree={item.isGlutenFree}
+                        spiceLevel={item.spiceLevel}
+                        labels={dietaryLabels}
+                      />
                     </div>
                     {item.description && (
                       <div style={{ color: "#666", fontSize: "0.875rem", marginBottom: 4 }}>
