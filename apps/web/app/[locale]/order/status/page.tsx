@@ -438,7 +438,7 @@ function StatusContent() {
     setFortuneLoading(true);
     try {
       const response = await fetch(
-        `${BASE}/orders/fortune?orderQrCode=${encodeURIComponent(orderQrCode)}`,
+        `${BASE}/orders/fortune?orderQrCode=${encodeURIComponent(orderQrCode)}&locale=${locale}`,
         {
           headers: { "x-tenant-slug": "oh" },
         }

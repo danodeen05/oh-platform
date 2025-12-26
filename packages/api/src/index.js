@@ -4165,7 +4165,7 @@ setInterval(releaseExpiredReservations, 60 * 1000);
 // ====================
 
 // Get "This Day in History" facts - AI-powered, always fresh
-async function getThisDayInHistory(anthropic) {
+async function getThisDayInHistory(anthropic, language = { name: "English", instruction: "Write in English." }) {
   const today = new Date();
   const monthNames = ["January", "February", "March", "April", "May", "June",
                       "July", "August", "September", "October", "November", "December"];
@@ -4179,16 +4179,19 @@ async function getThisDayInHistory(anthropic) {
 
       const prompt = `You are a history expert. Tell me ONE interesting historical event that happened on ${todayStr} (any year in history).
 
+LANGUAGE: ${language.instruction}
+
 REQUIREMENTS:
 - Must be a REAL historical event that actually happened on ${todayStr}
 - Pick something unexpected, surprising, or little-known - NOT the most famous event for this date
 - Vary the type: could be science, art, politics, sports, culture, invention, birth, discovery, etc.
 - Include the specific year
+- Write the event description in ${language.name}
 
 UNIQUE SEED: ${uniqueSeed} (use this to vary your selection - don't repeat the same event)
 
 Return ONLY valid JSON in this exact format (no markdown):
-{"year":1234,"event":"Brief description of what happened"}`;
+{"year":1234,"event":"Brief description of what happened in ${language.name}"}`;
 
       const message = await anthropic.messages.create({
         model: "claude-sonnet-4-20250514",
@@ -4420,11 +4423,21 @@ const fallbackFortunes = [
 
 // Generate fortune cookie for an order
 app.get("/orders/fortune", async (req, reply) => {
-  const { orderQrCode, orderId } = req.query || {};
+  const { orderQrCode, orderId, locale = "en" } = req.query || {};
 
   if (!orderQrCode && !orderId) {
     return reply.status(400).send({ error: "Order QR code or ID required" });
   }
+
+  // Determine language for content generation
+  const languageMap = {
+    "en": { name: "English", instruction: "Write in English." },
+    "zh-TW": { name: "Traditional Chinese", instruction: "Write in Traditional Chinese (繁體中文). Use natural, fluent Traditional Chinese." },
+    "zh-CN": { name: "Simplified Chinese", instruction: "Write in Simplified Chinese (简体中文). Use natural, fluent Simplified Chinese." },
+    "es": { name: "Spanish", instruction: "Write in Spanish (Español). Use natural, fluent Spanish." },
+  };
+  const language = languageMap[locale] || languageMap["en"];
+  const isChineseLocale = locale === "zh-TW" || locale === "zh-CN";
 
   try {
     // Find the order
@@ -4462,7 +4475,7 @@ app.get("/orders/fortune", async (req, reply) => {
     const luckyNumbers = generateLuckyNumbers();
 
     // Get AI-generated historical fact for today
-    const historyFact = await getThisDayInHistory(anthropic);
+    const historyFact = await getThisDayInHistory(anthropic, language);
 
     // Try to generate AI fortune if API key is available
     let fortune = null;
@@ -4490,13 +4503,15 @@ app.get("/orders/fortune", async (req, reply) => {
 
         const prompt = `You are a VIRAL fortune cookie writer. Your fortunes are the kind people screenshot, share, and think about for days. NOT about food or restaurants. These are REAL fortunes about LIFE that feel almost eerily personal.
 
+LANGUAGE: ${language.instruction}
+
 CURRENT VIBE: ${currentStyle}
 
 WEAVE IN THESE THEMES: ${theme1}, ${theme2}
 
 ${firstName ? `PERSONALIZE FOR: ${firstName} (use their name naturally if it fits, but don't force it)` : ""}
 
-STYLE EXAMPLES (for inspiration, NEVER copy these exactly):
+STYLE EXAMPLES (for inspiration, NEVER copy these exactly - translate the vibe, not the words):
 - "Someone is thinking about you right now. They're wrong about everything, but still."
 - "The algorithm knows something about you that you haven't figured out yet."
 - "That thing you almost said? You should have said it. Next time."
@@ -4507,17 +4522,18 @@ STYLE EXAMPLES (for inspiration, NEVER copy these exactly):
 - "An ending you're dreading is actually a beginning wearing a disguise."
 
 REQUIREMENTS:
-- ONE sentence, under 100 characters ideal
+- ONE sentence, under 100 characters ideal (or equivalent length in target language)
 - Must feel PERSONALLY RELEVANT to whoever reads it
-- Modern language (texts, algorithms, main character energy, vibes, etc.)
+- Modern language appropriate for the target culture
 - Should make them pause and think "...wait, how did they know?"
 - NO generic platitudes, NO fortune cookie cliches
 - Be bold, be specific, be memorable
 - Temperature: HIGH creativity, surprise me
+- MUST be written entirely in ${language.name}
 
 UNIQUE SEED: ${creativitySeed}-${Date.now() % 10000}
 
-Write ONE completely original fortune. Return ONLY the fortune text. No quotes.`;
+Write ONE completely original fortune in ${language.name}. Return ONLY the fortune text. No quotes.`;
 
         const message = await anthropic.messages.create({
           model: "claude-sonnet-4-20250514",
@@ -4540,19 +4556,21 @@ Write ONE completely original fortune. Return ONLY the fortune text. No quotes.`
       fortune = fallbackFortunes[Math.floor(Math.random() * fallbackFortunes.length)];
     }
 
-    // Generate Learn Chinese word
+    // Generate Learn Chinese word - skip for Chinese locales (they already know Chinese!)
     let chineseWord = null;
     let chineseWordSource = "ai";
 
-    // Try AI-generated word first
-    if (anthropic) {
-      chineseWord = await generateChineseWord(anthropic);
-    }
+    if (!isChineseLocale) {
+      // Try AI-generated word first
+      if (anthropic) {
+        chineseWord = await generateChineseWord(anthropic);
+      }
 
-    // Fall back to curated list if AI fails
-    if (!chineseWord) {
-      chineseWord = fallbackChineseWords[Math.floor(Math.random() * fallbackChineseWords.length)];
-      chineseWordSource = "fallback";
+      // Fall back to curated list if AI fails
+      if (!chineseWord) {
+        chineseWord = fallbackChineseWords[Math.floor(Math.random() * fallbackChineseWords.length)];
+        chineseWordSource = "fallback";
+      }
     }
 
     return reply.send({

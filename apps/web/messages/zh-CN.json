@@ -1561,6 +1561,32 @@
     "helpTip3": "如需协助，请询问工作人员",
     "loading": "加载中..."
   },
+  "scan": {
+    "title": "确认抵达包间",
+    "subtitle": "在您的指定包间扫描或输入订单二维码",
+    "assignedPod": "您的指定包间",
+    "podNumber": "包间 {number}",
+    "qrCodeLabel": "您的订单二维码：",
+    "qrCodeHint": "与订单确认页上的二维码相同",
+    "qrCodePlaceholder": "ORDER-xxpmm5hf-1234567890-ABC123",
+    "enterQrCodeError": "请扫描或输入您的订单二维码",
+    "confirmFailed": "确认包间抵达失败",
+    "networkError": "网络错误，请重试。",
+    "confirming": "确认中...",
+    "confirmButton": "确认我已到达包间",
+    "whatThisDoes": "这会做什么",
+    "helpList": {
+      "confirms": "确认您已抵达指定包间",
+      "notifies": "通知厨房开始准备您的餐点",
+      "realtime": "您将在屏幕上看到实时状态更新"
+    },
+    "backToStatus": "返回订单状态",
+    "success": {
+      "title": "包间已确认！",
+      "message": "您的餐点正在准备中"
+    },
+    "loading": "加载中..."
+  },
   "confirmation": {
     "title": "订单已确认！",
     "orderNumber": "订单 #{number}",

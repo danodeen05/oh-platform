@@ -1561,6 +1561,32 @@
     "helpTip3": "如需協助，請詢問工作人員",
     "loading": "載入中..."
   },
+  "scan": {
+    "title": "確認抵達包廂",
+    "subtitle": "在您的指定包廂掃描或輸入訂單 QR 碼",
+    "assignedPod": "您的指定包廂",
+    "podNumber": "包廂 {number}",
+    "qrCodeLabel": "您的訂單 QR 碼：",
+    "qrCodeHint": "與訂單確認頁上的 QR 碼相同",
+    "qrCodePlaceholder": "ORDER-xxpmm5hf-1234567890-ABC123",
+    "enterQrCodeError": "請掃描或輸入您的訂單 QR 碼",
+    "confirmFailed": "確認包廂抵達失敗",
+    "networkError": "網路錯誤，請重試。",
+    "confirming": "確認中...",
+    "confirmButton": "確認我已到達包廂",
+    "whatThisDoes": "這會做什麼",
+    "helpList": {
+      "confirms": "確認您已抵達指定包廂",
+      "notifies": "通知廚房開始準備您的餐點",
+      "realtime": "您將在螢幕上看到即時狀態更新"
+    },
+    "backToStatus": "返回訂單狀態",
+    "success": {
+      "title": "包廂已確認！",
+      "message": "您的餐點正在準備中"
+    },
+    "loading": "載入中..."
+  },
   "confirmation": {
     "title": "訂單已確認！",
     "orderNumber": "訂單 #{number}",
