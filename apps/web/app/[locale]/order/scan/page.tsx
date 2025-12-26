@@ -1,12 +1,14 @@
 "use client";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useState, useEffect, Suspense } from "react";
+import { useTranslations } from "next-intl";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 function ScanContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const t = useTranslations("scan");
   const orderQrCodeParam = searchParams.get("orderQrCode");
 
   const [orderQrCode, setOrderQrCode] = useState(orderQrCodeParam || "");
@@ -45,7 +47,7 @@ function ScanContent() {
     e.preventDefault();
 
     if (!orderQrCode.trim()) {
-      setError("Please scan or enter your order QR code");
+      setError(t("enterQrCodeError"));
       return;
     }
 
@@ -70,10 +72,10 @@ function ScanContent() {
           router.push(`/order/status?orderQrCode=${encodeURIComponent(orderQrCode.trim())}`);
         }, 1500);
       } else {
-        setError(data.error || "Failed to confirm pod arrival");
+        setError(data.error || t("confirmFailed"));
       }
     } catch (error) {
-      setError("Network error. Please try again.");
+      setError(t("networkError"));
     } finally {
       setLoading(false);
     }
@@ -90,7 +92,7 @@ function ScanContent() {
           background: "#E5E5E5",
         }}
       >
-        <div style={{ color: "#222222", fontSize: "1.2rem" }}>Loading...</div>
+        <div style={{ color: "#222222", fontSize: "1.2rem" }}>{t("loading")}</div>
       </div>
     );
   }
@@ -135,10 +137,10 @@ function ScanContent() {
             ✓
           </div>
           <h1 style={{ margin: 0, marginBottom: 8, fontSize: "1.8rem" }}>
-            Pod Confirmed!
+            {t("success.title")}
           </h1>
           <p style={{ color: "#666", fontSize: "1rem" }}>
-            Your order is now being prepared
+            {t("success.message")}
           </p>
         </div>
       </div>
@@ -170,10 +172,10 @@ function ScanContent() {
         <div style={{ textAlign: "center", marginBottom: 32 }}>
           <div style={{ fontSize: "3rem", marginBottom: 16 }}>📱</div>
           <h1 style={{ margin: 0, marginBottom: 8, fontSize: "1.8rem" }}>
-            Confirm Pod Arrival
+            {t("title")}
           </h1>
           <p style={{ color: "#666", fontSize: "1rem", margin: 0 }}>
-            Scan or enter your order QR code at your assigned pod
+            {t("subtitle")}
           </p>
         </div>
 
@@ -190,10 +192,10 @@ function ScanContent() {
             }}
           >
             <div style={{ fontSize: "0.9rem", marginBottom: 4, opacity: 0.9 }}>
-              Your Assigned Pod
+              {t("assignedPod")}
             </div>
             <div style={{ fontSize: "2.5rem", fontWeight: "bold", letterSpacing: "0.1em" }}>
-              POD {order.podNumber}
+              {t("podNumber", { number: order.podNumber })}
             </div>
           </div>
         )}
@@ -211,14 +213,14 @@ function ScanContent() {
                 fontWeight: "500",
               }}
             >
-              Your Order QR Code:
+              {t("qrCodeLabel")}
             </label>
             <input
               id="orderQrCode"
               type="text"
               value={orderQrCode}
               onChange={(e) => setOrderQrCode(e.target.value)}
-              placeholder="ORDER-xxpmm5hf-1234567890-ABC123"
+              placeholder={t("qrCodePlaceholder")}
               style={{
                 width: "100%",
                 padding: "12px 16px",
@@ -230,7 +232,7 @@ function ScanContent() {
               autoFocus
             />
             <p style={{ fontSize: "0.75rem", color: "#9ca3af", marginTop: 4 }}>
-              Same QR code from your order confirmation
+              {t("qrCodeHint")}
             </p>
           </div>
 
@@ -265,7 +267,7 @@ function ScanContent() {
               cursor: loading || !orderQrCode.trim() ? "not-allowed" : "pointer",
             }}
           >
-            {loading ? "Confirming..." : "Confirm I'm At My Pod"}
+            {loading ? t("confirming") : t("confirmButton")}
           </button>
         </form>
 
@@ -281,12 +283,12 @@ function ScanContent() {
           }}
         >
           <div style={{ fontWeight: "bold", marginBottom: 8, color: "#111" }}>
-            💡 What This Does
+            💡 {t("whatThisDoes")}
           </div>
           <ul style={{ margin: 0, paddingLeft: 20 }}>
-            <li>Confirms you've arrived at your assigned pod</li>
-            <li>Notifies the kitchen to start preparing your order</li>
-            <li>You'll see real-time status updates on your screen</li>
+            <li>{t("helpList.confirms")}</li>
+            <li>{t("helpList.notifies")}</li>
+            <li>{t("helpList.realtime")}</li>
           </ul>
         </div>
 
@@ -304,30 +306,33 @@ function ScanContent() {
             cursor: "pointer",
           }}
         >
-          ← Back to Order Status
+          ← {t("backToStatus")}
         </button>
       </div>
     </main>
   );
 }
 
+function ScanFallback() {
+  const t = useTranslations("scan");
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "#E5E5E5",
+      }}
+    >
+      <div style={{ color: "#222222", fontSize: "1.2rem" }}>{t("loading")}</div>
+    </div>
+  );
+}
+
 export default function ScanPage() {
   return (
-    <Suspense
-      fallback={
-        <div
-          style={{
-            minHeight: "100vh",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: "#E5E5E5",
-          }}
-        >
-          <div style={{ color: "#222222", fontSize: "1.2rem" }}>Loading...</div>
-        </div>
-      }
-    >
+    <Suspense fallback={<ScanFallback />}>
       <ScanContent />
     </Suspense>
   );

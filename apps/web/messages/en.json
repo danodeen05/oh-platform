@@ -1561,6 +1561,32 @@
     "helpTip3": "Ask staff if you need assistance",
     "loading": "Loading..."
   },
+  "scan": {
+    "title": "Confirm Pod Arrival",
+    "subtitle": "Scan or enter your order QR code at your assigned pod",
+    "assignedPod": "Your Assigned Pod",
+    "podNumber": "POD {number}",
+    "qrCodeLabel": "Your Order QR Code:",
+    "qrCodeHint": "Same QR code from your order confirmation",
+    "qrCodePlaceholder": "ORDER-xxpmm5hf-1234567890-ABC123",
+    "enterQrCodeError": "Please scan or enter your order QR code",
+    "confirmFailed": "Failed to confirm pod arrival",
+    "networkError": "Network error. Please try again.",
+    "confirming": "Confirming...",
+    "confirmButton": "Confirm I'm At My Pod",
+    "whatThisDoes": "What This Does",
+    "helpList": {
+      "confirms": "Confirms you've arrived at your assigned pod",
+      "notifies": "Notifies the kitchen to start preparing your order",
+      "realtime": "You'll see real-time status updates on your screen"
+    },
+    "backToStatus": "Back to Order Status",
+    "success": {
+      "title": "Pod Confirmed!",
+      "message": "Your order is now being prepared"
+    },
+    "loading": "Loading..."
+  },
   "confirmation": {
     "title": "Order Confirmed!",
     "orderNumber": "Order #{number}",

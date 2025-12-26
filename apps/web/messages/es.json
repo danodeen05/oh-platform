@@ -1561,6 +1561,32 @@
     "helpTip3": "Pregunta al personal si necesitas asistencia",
     "loading": "Cargando..."
   },
+  "scan": {
+    "title": "Confirmar Llegada a la Cabina",
+    "subtitle": "Escanea o ingresa el código QR de tu pedido en tu cabina asignada",
+    "assignedPod": "Tu Cabina Asignada",
+    "podNumber": "CABINA {number}",
+    "qrCodeLabel": "Tu Código QR del Pedido:",
+    "qrCodeHint": "El mismo código QR de la confirmación de tu pedido",
+    "qrCodePlaceholder": "ORDER-xxpmm5hf-1234567890-ABC123",
+    "enterQrCodeError": "Por favor escanea o ingresa el código QR de tu pedido",
+    "confirmFailed": "Error al confirmar llegada a la cabina",
+    "networkError": "Error de red. Por favor intenta de nuevo.",
+    "confirming": "Confirmando...",
+    "confirmButton": "Confirmar que Estoy en Mi Cabina",
+    "whatThisDoes": "Qué Hace Esto",
+    "helpList": {
+      "confirms": "Confirma que has llegado a tu cabina asignada",
+      "notifies": "Notifica a la cocina para empezar a preparar tu pedido",
+      "realtime": "Verás actualizaciones de estado en tiempo real en tu pantalla"
+    },
+    "backToStatus": "Volver al Estado del Pedido",
+    "success": {
+      "title": "¡Cabina Confirmada!",
+      "message": "Tu pedido se está preparando"
+    },
+    "loading": "Cargando..."
+  },
   "confirmation": {
     "title": "¡Pedido confirmado!",
     "orderNumber": "Pedido #{number}",
