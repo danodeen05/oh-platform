@@ -4,6 +4,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { useToast } from "@/components/ui/Toast";
 import { event } from "@/lib/analytics";
 import { QRCodeSVG } from "qrcode.react";
+import Image from "next/image";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -308,7 +309,8 @@ export default function ReferralDashboard() {
             <rect x="14" y="18" width="3" height="3" fill="currentColor"/>
             <rect x="18" y="18" width="3" height="3" fill="currentColor"/>
           </svg>
-          {t("showQRCode")}
+          {t("showMyOhQRCode")}
+          <span style={{ fontFamily: '"Ma Shan Zheng", cursive', fontSize: "1.2rem", marginLeft: 4 }}>哦</span>
         </button>
 
         <p
@@ -368,20 +370,37 @@ export default function ReferralDashboard() {
                 position: "relative",
               }}
             >
-              <QRCodeSVG
-                value={referralUrl}
-                size={240}
-                level="H"
-                includeMargin
-                imageSettings={{
-                  src: "/Oh_Logo_Mark_Web.png",
-                  x: undefined,
-                  y: undefined,
-                  height: 48,
-                  width: 48,
-                  excavate: true,
-                }}
-              />
+              <div style={{ position: "relative", display: "inline-block" }}>
+                <QRCodeSVG
+                  value={referralUrl}
+                  size={240}
+                  level="H"
+                  includeMargin
+                />
+                {/* Logo overlay with rounded corners */}
+                <div
+                  style={{
+                    position: "absolute",
+                    top: "50%",
+                    left: "50%",
+                    transform: "translate(-50%, -50%)",
+                    background: "white",
+                    borderRadius: 14,
+                    padding: 8,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Image
+                    src="/Oh_Logo_Mark_Web.png"
+                    alt="Oh!"
+                    width={56}
+                    height={56}
+                    style={{ objectFit: "contain" }}
+                  />
+                </div>
+              </div>
             </div>
 
             <div

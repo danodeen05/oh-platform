@@ -1055,8 +1055,9 @@ app.get("/locations/:id/seats", async (req, reply) => {
       orders: {
         where: {
           status: {
-            in: ["QUEUED", "PREPPING", "READY", "SERVING"],
+            in: ["QUEUED", "PREPPING", "READY", "SERVING", "COMPLETED"],
           },
+          podCleanedAt: null,
         },
         include: {
           items: {
