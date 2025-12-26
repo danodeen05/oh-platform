@@ -670,21 +670,23 @@ export default function PodsManager({ locations }: { locations: Location[] }) {
                     {currentOrder && (
                       <button
                         onClick={() => startCleaning(pod.id, currentOrder.id)}
+                        disabled={currentOrder.status !== "SERVING"}
                         style={{
                           width: "100%",
                           padding: 16,
-                          background: currentOrder.status === "SERVING" ? "#3b82f6" : "#6b7280",
-                          color: "white",
+                          background: currentOrder.status === "SERVING" ? "#3b82f6" : "#374151",
+                          color: currentOrder.status === "SERVING" ? "white" : "#6b7280",
                           border: "none",
                           borderRadius: 8,
                           fontWeight: "bold",
-                          cursor: "pointer",
+                          cursor: currentOrder.status === "SERVING" ? "pointer" : "not-allowed",
                           fontSize: "1rem",
+                          opacity: currentOrder.status === "SERVING" ? 1 : 0.6,
                         }}
                       >
                         {currentOrder.status === "SERVING"
                           ? "🧹 Customer Left - Start Cleaning"
-                          : "🧹 Ready to Clean"}
+                          : `⏳ Waiting (${statusText})`}
                       </button>
                     )}
                   </div>

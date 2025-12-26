@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { useTranslations, useLocale } from "next-intl";
@@ -457,8 +457,8 @@ export default function EnhancedMenuBuilder({
     return items;
   }
 
-  // Calculate total
-  const totalCents = (() => {
+  // Calculate total - using useMemo to ensure Safari properly detects state changes
+  const totalCents = useMemo(() => {
     const allItems = getAllMenuItems();
     let total = 0;
 
@@ -479,7 +479,7 @@ export default function EnhancedMenuBuilder({
     });
 
     return total;
-  })();
+  }, [cart, selections, menuSteps]);
 
   // Handle radio selection
   function handleRadioSelect(sectionId: string, itemId: string) {
@@ -796,7 +796,16 @@ export default function EnhancedMenuBuilder({
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ fontWeight: 600 }}>Your Total</span>
-              <span style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#7C7A67" }}>
+              <span
+                key={totalCents}
+                style={{
+                  fontSize: "1.5rem",
+                  fontWeight: "bold",
+                  color: "#7C7A67",
+                  transform: "translateZ(0)",
+                  WebkitFontSmoothing: "antialiased",
+                }}
+              >
                 ${(totalCents / 100).toFixed(2)}
               </span>
             </div>
@@ -1286,7 +1295,16 @@ export default function EnhancedMenuBuilder({
       <div style={{ position: "sticky", bottom: 0, background: "white", border: "1px solid rgba(124, 122, 103, 0.2)", borderRadius: "16px", padding: "24px 32px", marginTop: 32, boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <strong style={{ fontSize: "1.1rem", color: "#222222" }}>{t("builder.total")}</strong>
-          <strong style={{ fontSize: "1.8rem", color: "#7C7A67", paddingRight: "8px" }}>
+          <strong
+            key={totalCents}
+            style={{
+              fontSize: "1.8rem",
+              color: "#7C7A67",
+              paddingRight: "8px",
+              transform: "translateZ(0)",
+              WebkitFontSmoothing: "antialiased",
+            }}
+          >
             ${(totalCents / 100).toFixed(2)}
           </strong>
         </div>

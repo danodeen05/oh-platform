@@ -81,7 +81,7 @@ export default function Footer() {
       style={{
         background: "#222222",
         borderTop: "1px solid rgba(124, 122, 103, 0.15)",
-        padding: "64px 24px 32px",
+        padding: "32px 24px 20px",
         marginTop: "auto",
       }}
     >
@@ -97,7 +97,7 @@ export default function Footer() {
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
-            marginBottom: "32px",
+            marginBottom: "16px",
           }}
         >
           <a
@@ -161,9 +161,9 @@ export default function Footer() {
         <div
           style={{
             display: "flex",
-            gap: "12px",
+            gap: "10px",
             justifyContent: "center",
-            marginBottom: "48px",
+            marginBottom: "20px",
             flexWrap: "wrap",
           }}
         >
@@ -174,9 +174,9 @@ export default function Footer() {
               target={social.href.startsWith("mailto") ? undefined : "_blank"}
               rel={social.href.startsWith("mailto") ? undefined : "noopener noreferrer"}
               style={{
-                width: "44px",
-                height: "44px",
-                borderRadius: "10px",
+                width: "38px",
+                height: "38px",
+                borderRadius: "8px",
                 background: "#E5E5E5",
                 display: "flex",
                 alignItems: "center",
@@ -203,15 +203,15 @@ export default function Footer() {
         <div
           style={{
             display: "flex",
-            gap: "24px",
+            gap: "20px",
             justifyContent: "center",
             flexWrap: "wrap",
-            marginBottom: "32px",
+            marginBottom: "16px",
             alignItems: "center",
           }}
         >
           {footerLinks.map((link, index) => (
-            <span key={link.href} style={{ display: "flex", alignItems: "center", gap: "24px" }}>
+            <span key={link.href} style={{ display: "flex", alignItems: "center", gap: "20px" }}>
               <Link
                 href={link.href}
                 style={{

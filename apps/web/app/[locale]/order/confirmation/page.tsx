@@ -369,7 +369,6 @@ function ConfirmationContent() {
               textAlign: "center",
             }}
           >
-            <div style={{ fontSize: "1.5rem", marginBottom: 8 }}>🎫</div>
             <h3 style={{ margin: 0, marginBottom: 8, fontSize: "1.3rem", color: "white" }}>
               {t("yourOrderQrCode")}
             </h3>
@@ -382,9 +381,10 @@ function ConfirmationContent() {
               style={{
                 background: "white",
                 padding: 20,
-                borderRadius: 12,
+                borderRadius: 16,
                 marginBottom: 16,
                 display: "inline-block",
+                position: "relative",
               }}
             >
               <QRCodeSVG
@@ -393,6 +393,29 @@ function ConfirmationContent() {
                 level="H"
                 includeMargin={false}
               />
+              {/* Logo overlay with rounded corners */}
+              <div
+                style={{
+                  position: "absolute",
+                  top: "50%",
+                  left: "50%",
+                  transform: "translate(-50%, -50%)",
+                  background: "white",
+                  borderRadius: 14,
+                  padding: 8,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Image
+                  src="/Oh_Logo_Mark_Web.png"
+                  alt="Oh!"
+                  width={56}
+                  height={56}
+                  style={{ objectFit: "contain" }}
+                />
+              </div>
             </div>
 
             {/* Order Code Text */}

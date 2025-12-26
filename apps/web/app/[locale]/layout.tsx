@@ -65,11 +65,13 @@ export default async function LocaleLayout({ children, params }: Props) {
     <ClerkProvider localization={clerkLocalization}>
       <NextIntlClientProvider messages={messages}>
         <Providers>
-          <LanguageTracker />
-          <Header />
-          <ActiveOrderBanner />
-          <main style={{ flex: 1 }}>{children}</main>
-          <Footer />
+          <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+            <LanguageTracker />
+            <Header />
+            <ActiveOrderBanner />
+            <main style={{ flex: 1 }}>{children}</main>
+            <Footer />
+          </div>
         </Providers>
       </NextIntlClientProvider>
     </ClerkProvider>
