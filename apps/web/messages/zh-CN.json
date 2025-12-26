@@ -53,7 +53,13 @@
     "store": "商店",
     "loyalty": "会员奖励",
     "myAccount": "我的哦!账户",
-    "giveBack": "回馈社会"
+    "giveBack": "回馈社会",
+    "aboutUs": "关于我们",
+    "shop": "购物",
+    "ohStore": "哦!商店",
+    "memberBenefits": "会员福利",
+    "referral": "推荐好友",
+    "signIn": "登录"
   },
   "home": {
     "brandName": "<oh>哦！</oh>牛肉面",
@@ -236,6 +242,22 @@
       "title": "准备好品尝最棒的一碗面了吗？",
       "description": "提前点餐，跳过等待。完美的一碗面只需轻轻几点。",
       "button": "开始点餐"
+    },
+    "dietary": {
+      "vegetarian": "素食",
+      "vegan": "纯素",
+      "glutenFree": "无麸质",
+      "spice": {
+        "level1": "微辣",
+        "level2": "中辣",
+        "level3": "特辣"
+      }
+    },
+    "allergen": {
+      "title": "过敏原信息",
+      "description": "我们的菜品在处理常见过敏原（包括小麦、大豆和鸡蛋）的厨房中制作。点餐时请告知我们的员工您的任何过敏或饮食限制。",
+      "spicyIndicator": "辣",
+      "contactUs": "如需详细的过敏原信息，请在点餐前联系我们。"
     }
   },
   "locations": {
@@ -325,6 +347,7 @@
       "description": "从筷子会员开始，一路晋升到牛肉达人。每个等级都能解锁更好的奖励。",
       "benefitsInclude": "福利包含",
       "ultimate": "最高等级",
+      "yourTier": "您的当前等级",
       "chopstick": {
         "name": "筷子会员",
         "description": "欢迎加入哦！奖励",
@@ -354,9 +377,12 @@
         "benefits": {
           "referralBonus": "每位推荐好友可得$5奖励",
           "cashback": "订单3%返现",
+          "topPrioritySeating": "最高优先入座",
+          "freePremiumBowl": "升级送免费顶级招牌面",
           "merchDrops": "限定周边商品",
           "premiumAddons": "免费顶级加购",
-          "vipGift": "年度VIP礼物与表彰"
+          "vipGift": "年度VIP礼物与表彰",
+          "wallOfFame": "照片及签名订单上Oh!名人墙"
         }
       }
     },
@@ -443,6 +469,16 @@
     "referralApplied": "已应用$5推荐优惠！",
     "waitTime": "当前等候时间",
     "minutes": "分钟",
+    "quickOrder": {
+      "title": "快速下单 - 主厨推荐",
+      "description": "初次来到Oh!？让主厨为您准备完美的一碗。",
+      "item1": "经典牛肉面",
+      "item2": "宽面",
+      "item3": "Oh!推荐的碗配置",
+      "item4": "橘子雪酪（赠送）",
+      "price": "$15.99",
+      "selectButton": "选择"
+    },
     "locationSelector": {
       "groupMode": {
         "title": "开始团体订单",
@@ -536,6 +572,10 @@
       "podSelection": {
         "selectedPrefix": "已选择：",
         "pod": "座位"
+      },
+      "dietaryLegend": {
+        "spicy": "辣",
+        "moreInfo": "点击查看过敏原信息"
       }
     },
     "addToOrder": "加入订单",
@@ -714,6 +754,16 @@
     "yourBenefits": "您的福利：",
     "progressTo": "升级至 {tier}：",
     "totalOrders": "总订单数",
+    "challengesTitle": "挑战",
+    "activeChallenges": "您的活动挑战",
+    "availableChallenges": "可用挑战",
+    "completed": "已完成！",
+    "claimed": "已领取",
+    "claimReward": "领取 ${amount}",
+    "reward": "奖励",
+    "join": "参加",
+    "challengeEnrolled": "您已加入挑战！",
+    "rewardClaimed": "${amount} 已添加到您的余额！",
     "badgesTitle": "徽章",
     "welcome": "欢迎！",
     "signInToView": "登录查看您的会员资料",
@@ -722,9 +772,9 @@
     "loadingProfile": "加载您的资料中...",
     "visitsThisMonth": "本月 {count} 次到访",
     "tiers": {
-      "chopstick": "🥢 筷子会员",
-      "noodleMaster": "🍜 面条大师",
-      "beefBoss": "🐂 牛肉达人"
+      "chopstick": "筷子会员",
+      "noodleMaster": "面条大师",
+      "beefBoss": "牛肉达人"
     },
     "perks": {
       "referralBonus": "每推荐一位好友可获得 $5 奖励",
@@ -982,13 +1032,13 @@
       "description": "当您的好友完成首笔$20或以上的订单时，双方都能获得积分。"
     },
     "step3": {
-      "title": "一起赚取",
-      "description": "您获得$5积分，他们获得$5折扣。推荐人数没有上限。"
+      "title": "即刻赚取",
+      "description": "您即刻获得$5积分，他们获得$5折扣。推荐人数没有上限。"
     },
     "goodToKnow": "须知事项",
     "rules": {
       "minimumOrder": "推荐奖励适用于首笔$20或以上的订单",
-      "disbursement": "积分将在24小时内加入您的账户",
+      "disbursement": "当好友完成订单后，积分即刻加入您的账户",
       "maxPerOrder": "每笔订单最多可使用$5积分"
     },
     "dashboard": {
@@ -1003,7 +1053,11 @@
       "nextDisbursement": "下次发放：",
       "yourReferralLink": "您的推荐链接",
       "copy": "复制",
-      "shareToEarn": "分享此链接，每位下单$20以上的好友可为您赚取$5",
+      "showQRCode": "显示二维码",
+      "scanToJoin": "扫码加入Oh!",
+      "scanDescription": "您的好友可以扫描此二维码通过您的推荐注册",
+      "close": "关闭",
+      "shareToEarn": "分享此链接，每位完成$20以上订单的好友可为您赚取$5",
       "recentActivity": "近期活动",
       "creditEvents": {
         "cashback": "订单 {percent}% 返现",
@@ -1598,6 +1652,10 @@
     "checkingIn": "报到中...",
     "groupOrderNote": "这是包含 {count} 份订单的群组订单。",
     "paidStatus": "付款完成",
+    "paymentSuccessful": "付款成功",
+    "paymentConfirmed": "您的 {amount} 付款已确认",
+    "paymentPending": "付款处理中",
+    "paymentProcessing": "您的付款正在处理中",
     "yourOrderQrCode": "您的订单二维码",
     "scanAtKiosk": "到达时请在自助机扫描此码以获取包间分配",
     "expectedArrival": "预计到达时间：{time}",
@@ -1620,7 +1678,7 @@
     "twitter": "推特",
     "facebook": "脸书",
     "linkedin": "领英",
-    "referralNote": "已包含您的推荐链接！朋友首次订购可享 $5 折扣。当他们消费 $20 以上时，您可获得 $5（每月 1 日或 16 日入账）。",
+    "referralNote": "已包含您的推荐链接！朋友首次订购可享 $5 折扣。当他们完成 $20 以上订单时，您即刻获得 $5。",
     "backToHome": "返回首页",
     "loadingOrder": "加载订单中..."
   }

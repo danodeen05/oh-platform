@@ -161,44 +161,45 @@ async function seedCoreData() {
 
   const menuItems = [
     // MAIN DISHES (main01)
-    { id: 'cmip6jbzc00082nnn1di1ka94', name: 'A5 Wagyu Beef Noodle Soup', nameZhTW: 'A5和牛牛肉麵', nameZhCN: 'A5和牛牛肉面', nameEs: 'Sopa de Fideos con Res Wagyu A5', basePriceCents: 2399, category: 'main01', categoryType: 'MAIN', selectionMode: 'SINGLE', displayOrder: 1 },
-    { id: 'cmip6jbza00062nnnskz6ntt8', name: 'Classic Beef Noodle Soup', nameZhTW: '經典牛肉麵', nameZhCN: '经典牛肉面', nameEs: 'Sopa de Fideos con Res Clásica', basePriceCents: 1599, category: 'main01', categoryType: 'MAIN', selectionMode: 'SINGLE', displayOrder: 1 },
-    { id: 'cmip6jbzc000a2nnnewnr00lb', name: 'Classic Beef Noodle Soup (no beef)', nameZhTW: '經典牛肉麵（無牛肉）', nameZhCN: '经典牛肉面（无牛肉）', nameEs: 'Sopa de Fideos Clásica (sin carne)', basePriceCents: 1099, category: 'main01', categoryType: 'MAIN', selectionMode: 'SINGLE', displayOrder: 1 },
+    { id: 'cmip6jbzc00082nnn1di1ka94', name: 'A5 Wagyu Beef Noodle Soup', nameZhTW: 'A5和牛牛肉麵', nameZhCN: 'A5和牛牛肉面', nameEs: 'Sopa de Fideos con Res Wagyu A5', basePriceCents: 2399, category: 'main01', categoryType: 'MAIN', selectionMode: 'SINGLE', displayOrder: 1, isGlutenFree: false, spiceLevel: 1 },
+    { id: 'cmip6jbza00062nnnskz6ntt8', name: 'Classic Beef Noodle Soup', nameZhTW: '經典牛肉麵', nameZhCN: '经典牛肉面', nameEs: 'Sopa de Fideos con Res Clásica', basePriceCents: 1599, category: 'main01', categoryType: 'MAIN', selectionMode: 'SINGLE', displayOrder: 1, isGlutenFree: false, spiceLevel: 1 },
+    { id: 'cmip6jbzc000a2nnnewnr00lb', name: 'Classic Beef Noodle Soup (no beef)', nameZhTW: '經典牛肉麵（無牛肉）', nameZhCN: '经典牛肉面（无牛肉）', nameEs: 'Sopa de Fideos Clásica (sin carne)', basePriceCents: 1099, category: 'main01', categoryType: 'MAIN', selectionMode: 'SINGLE', displayOrder: 1, isVegetarian: false, isGlutenFree: false, spiceLevel: 0 },
 
     // NOODLE TYPES (main02)
-    { id: 'cmip6jbze000g2nnnvgx9hqnf', name: 'Ramen Noodles', nameZhTW: '拉麵', nameZhCN: '拉面', nameEs: 'Fideos Ramen', basePriceCents: 0, category: 'main02', categoryType: 'MAIN', selectionMode: 'SINGLE', displayOrder: 1 },
-    { id: 'cmip6jbzd000e2nnnw1ftbmxr', name: 'Shaved Noodles', nameZhTW: '刀削麵', nameZhCN: '刀削面', nameEs: 'Fideos Cortados a Mano', basePriceCents: 0, category: 'main02', categoryType: 'MAIN', selectionMode: 'SINGLE', displayOrder: 2 },
-    { id: 'cmip6jbzd000c2nnny2hrd859', name: 'Wide Noodles', nameZhTW: '寬麵', nameZhCN: '宽面', nameEs: 'Fideos Anchos', basePriceCents: 0, category: 'main02', categoryType: 'MAIN', selectionMode: 'SINGLE', displayOrder: 3 },
-    { id: 'cmip6jbze000i2nnnsjjcpifd', name: 'No Noodles', nameZhTW: '無麵', nameZhCN: '无面', nameEs: 'Sin Fideos', basePriceCents: 0, category: 'main02', categoryType: 'MAIN', selectionMode: 'SINGLE', displayOrder: 4 },
+    { id: 'cmip6jbze000g2nnnvgx9hqnf', name: 'Ramen Noodles', nameZhTW: '拉麵', nameZhCN: '拉面', nameEs: 'Fideos Ramen', basePriceCents: 0, category: 'main02', categoryType: 'MAIN', selectionMode: 'SINGLE', displayOrder: 1, isVegetarian: true, isVegan: true },
+    { id: 'cmip6jbzd000e2nnnw1ftbmxr', name: 'Shaved Noodles', nameZhTW: '刀削麵', nameZhCN: '刀削面', nameEs: 'Fideos Cortados a Mano', basePriceCents: 0, category: 'main02', categoryType: 'MAIN', selectionMode: 'SINGLE', displayOrder: 2, isVegetarian: true, isVegan: true },
+    { id: 'cmip6jbzd000c2nnny2hrd859', name: 'Wide Noodles', nameZhTW: '寬麵', nameZhCN: '宽面', nameEs: 'Fideos Anchos', basePriceCents: 0, category: 'main02', categoryType: 'MAIN', selectionMode: 'SINGLE', displayOrder: 3, isVegetarian: true, isVegan: true },
+    { id: 'cmjnacgf10001gf1rgfwide01', name: 'Wide Noodles (Gluten Free)', nameZhTW: '寬麵（無麩質）', nameZhCN: '宽面（无麸质）', nameEs: 'Fideos Anchos (Sin Gluten)', basePriceCents: 100, category: 'main02', categoryType: 'MAIN', selectionMode: 'SINGLE', displayOrder: 4, isVegetarian: true, isVegan: true, isGlutenFree: true },
+    { id: 'cmip6jbze000i2nnnsjjcpifd', name: 'No Noodles', nameZhTW: '無麵', nameZhCN: '无面', nameEs: 'Sin Fideos', basePriceCents: 0, category: 'main02', categoryType: 'MAIN', selectionMode: 'SINGLE', displayOrder: 5, isVegetarian: true, isVegan: true, isGlutenFree: true },
 
     // SLIDERS
     { id: 'cmip6jbzf000k2nnnmy81pbsx', name: 'Soup Richness', nameZhTW: '湯頭濃度', nameZhCN: '汤头浓度', nameEs: 'Intensidad del Caldo', basePriceCents: 0, category: 'slider01', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 1, sliderConfig: { max: 3, min: 0, step: 1, labels: ['Light', 'Medium', 'Rich', 'Extra Rich'], default: 1, description: 'How rich do you want your soup?' } },
     { id: 'cmip6jbzf000m2nnn3pkux3rw', name: 'Noodle Texture', nameZhTW: '麵條口感', nameZhCN: '面条口感', nameEs: 'Textura de Fideos', basePriceCents: 0, category: 'slider02', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 2, sliderConfig: { max: 2, min: 0, step: 1, labels: ['Firm', 'Medium', 'Soft'], default: 1, description: 'How firm do you want your noodles?' } },
     { id: 'cmip6jbza00062z01skz6ndd5', name: 'Spice Level', nameZhTW: '辣度', nameZhCN: '辣度', nameEs: 'Nivel de Picante', basePriceCents: 0, category: 'slider03', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 3, sliderConfig: { max: 4, min: 0, step: 1, labels: ['None', 'Mild', 'Medium', 'Spicy', 'Extra Spicy'], default: 1, description: 'How spicy do you like it?' } },
-    { id: 'cmip6jc0200272nnnmx2bv246', name: 'Baby Bok Choy', nameZhTW: '青江菜', nameZhCN: '小白菜', nameEs: 'Bok Choy', basePriceCents: 0, category: 'slider04', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 4, sliderConfig: { max: 3, min: 0, step: 1, labels: ['None', 'Light', 'Normal', 'Extra'], default: 2, description: 'How much do you want?' } },
-    { id: 'cmip6jc0g00292nnnwsr3nsiq', name: 'Green Onions', nameZhTW: '蔥花', nameZhCN: '葱花', nameEs: 'Cebollín', basePriceCents: 0, category: 'slider05', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 5, sliderConfig: { max: 3, min: 0, step: 1, labels: ['None', 'Light', 'Normal', 'Extra'], default: 2, description: 'How much do you want?' } },
-    { id: 'cmip6jc0h002b2nnnedxu3hy6', name: 'Cilantro', nameZhTW: '香菜', nameZhCN: '香菜', nameEs: 'Cilantro', basePriceCents: 0, category: 'slider06', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 6, sliderConfig: { max: 3, min: 0, step: 1, labels: ['None', 'Light', 'Normal', 'Extra'], default: 1, description: 'How much do you want?' } },
-    { id: 'cmip6jc0h002d2nnn4zrbfozw', name: 'Sprouts', nameZhTW: '豆芽菜', nameZhCN: '豆芽菜', nameEs: 'Brotes de Soja', basePriceCents: 0, category: 'slider07', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 7, sliderConfig: { max: 3, min: 0, step: 1, labels: ['None', 'Light', 'Normal', 'Extra'], default: 2, description: 'How much do you want?' } },
-    { id: 'cmip6jc0i002f2nnnpv38o0iq', name: 'Pickled Greens', nameZhTW: '酸菜', nameZhCN: '酸菜', nameEs: 'Verduras en Escabeche', basePriceCents: 0, category: 'slider08', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 8, sliderConfig: { max: 3, min: 0, step: 1, labels: ['None', 'Light', 'Normal', 'Extra'], default: 1, description: 'How much do you want?' } },
+    { id: 'cmip6jc0200272nnnmx2bv246', name: 'Baby Bok Choy', nameZhTW: '青江菜', nameZhCN: '小白菜', nameEs: 'Bok Choy', basePriceCents: 0, category: 'slider04', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 4, sliderConfig: { max: 3, min: 0, step: 1, labels: ['None', 'Light', 'Normal', 'Extra'], default: 2, description: 'How much do you want?' }, isVegetarian: true, isVegan: true, isGlutenFree: true },
+    { id: 'cmip6jc0g00292nnnwsr3nsiq', name: 'Green Onions', nameZhTW: '蔥花', nameZhCN: '葱花', nameEs: 'Cebollín', basePriceCents: 0, category: 'slider05', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 5, sliderConfig: { max: 3, min: 0, step: 1, labels: ['None', 'Light', 'Normal', 'Extra'], default: 2, description: 'How much do you want?' }, isVegetarian: true, isVegan: true, isGlutenFree: true },
+    { id: 'cmip6jc0h002b2nnnedxu3hy6', name: 'Cilantro', nameZhTW: '香菜', nameZhCN: '香菜', nameEs: 'Cilantro', basePriceCents: 0, category: 'slider06', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 6, sliderConfig: { max: 3, min: 0, step: 1, labels: ['None', 'Light', 'Normal', 'Extra'], default: 1, description: 'How much do you want?' }, isVegetarian: true, isVegan: true, isGlutenFree: true },
+    { id: 'cmip6jc0h002d2nnn4zrbfozw', name: 'Sprouts', nameZhTW: '豆芽菜', nameZhCN: '豆芽菜', nameEs: 'Brotes de Soja', basePriceCents: 0, category: 'slider07', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 7, sliderConfig: { max: 3, min: 0, step: 1, labels: ['None', 'Light', 'Normal', 'Extra'], default: 2, description: 'How much do you want?' }, isVegetarian: true, isVegan: true, isGlutenFree: true },
+    { id: 'cmip6jc0i002f2nnnpv38o0iq', name: 'Pickled Greens', nameZhTW: '酸菜', nameZhCN: '酸菜', nameEs: 'Verduras en Escabeche', basePriceCents: 0, category: 'slider08', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 8, sliderConfig: { max: 3, min: 0, step: 1, labels: ['None', 'Light', 'Normal', 'Extra'], default: 1, description: 'How much do you want?' }, isVegetarian: true, isVegan: true, isGlutenFree: true },
 
     // ADD-ONS
-    { id: 'cmip6jc0i002f2nnnqv38o0ir', name: 'Bone Marrow', nameZhTW: '牛骨髓', nameZhCN: '牛骨髓', nameEs: 'Tuétano de Res', basePriceCents: 399, category: 'add-on01', categoryType: 'ADDON', selectionMode: 'MULTIPLE', displayOrder: 1 },
-    { id: 'cmip6jc0i002f2nnnrv38o0is', name: 'Extra Beef', nameZhTW: '加牛肉', nameZhCN: '加牛肉', nameEs: 'Carne Extra', basePriceCents: 599, category: 'add-on02', categoryType: 'ADDON', selectionMode: 'MULTIPLE', displayOrder: 2 },
-    { id: 'cmip6jc0i002f2nnnsv38o0it', name: 'Extra Noodles', nameZhTW: '加麵', nameZhCN: '加面', nameEs: 'Fideos Extra', basePriceCents: 299, category: 'add-on03', categoryType: 'ADDON', selectionMode: 'MULTIPLE', displayOrder: 3 },
-    { id: 'cmip6jc0i002f2nnntv38o0iu', name: 'Soft-Boild Egg', nameZhTW: '滷蛋', nameZhCN: '卤蛋', nameEs: 'Huevo Marinado', basePriceCents: 199, category: 'add-on04', categoryType: 'ADDON', selectionMode: 'MULTIPLE', displayOrder: 4 },
+    { id: 'cmip6jc0i002f2nnnqv38o0ir', name: 'Bone Marrow', nameZhTW: '牛骨髓', nameZhCN: '牛骨髓', nameEs: 'Tuétano de Res', basePriceCents: 399, category: 'add-on01', categoryType: 'ADDON', selectionMode: 'MULTIPLE', displayOrder: 1, isGlutenFree: true },
+    { id: 'cmip6jc0i002f2nnnrv38o0is', name: 'Extra Beef', nameZhTW: '加牛肉', nameZhCN: '加牛肉', nameEs: 'Carne Extra', basePriceCents: 599, category: 'add-on02', categoryType: 'ADDON', selectionMode: 'MULTIPLE', displayOrder: 2, isGlutenFree: true },
+    { id: 'cmip6jc0i002f2nnnsv38o0it', name: 'Extra Noodles', nameZhTW: '加麵', nameZhCN: '加面', nameEs: 'Fideos Extra', basePriceCents: 299, category: 'add-on03', categoryType: 'ADDON', selectionMode: 'MULTIPLE', displayOrder: 3, isVegetarian: true, isVegan: true },
+    { id: 'cmip6jc0i002f2nnntv38o0iu', name: 'Soft-Boild Egg', nameZhTW: '滷蛋', nameZhCN: '卤蛋', nameEs: 'Huevo Marinado', basePriceCents: 199, category: 'add-on04', categoryType: 'ADDON', selectionMode: 'MULTIPLE', displayOrder: 4, isVegetarian: true, isGlutenFree: true },
 
     // SIDES
-    { id: 'cmip6jc0i002f2nnnuv38o0iv', name: 'Spicy Cucumbers', nameZhTW: '涼拌小黃瓜', nameZhCN: '凉拌黄瓜', nameEs: 'Pepinos Picantes', basePriceCents: 299, category: 'side01', categoryType: 'SIDE', selectionMode: 'MULTIPLE', displayOrder: 1 },
-    { id: 'cmip6jc0i002f2nnnvv38o0iw', name: 'Spicy Green Beans', nameZhTW: '乾煸四季豆', nameZhCN: '干煸四季豆', nameEs: 'Ejotes Picantes', basePriceCents: 299, category: 'side02', categoryType: 'SIDE', selectionMode: 'MULTIPLE', displayOrder: 2 },
+    { id: 'cmip6jc0i002f2nnnuv38o0iv', name: 'Spicy Cucumbers', nameZhTW: '涼拌小黃瓜', nameZhCN: '凉拌黄瓜', nameEs: 'Pepinos Picantes', basePriceCents: 299, category: 'side01', categoryType: 'SIDE', selectionMode: 'MULTIPLE', displayOrder: 1, isVegetarian: true, isVegan: true, isGlutenFree: true, spiceLevel: 2 },
+    { id: 'cmip6jc0i002f2nnnvv38o0iw', name: 'Spicy Green Beans', nameZhTW: '乾煸四季豆', nameZhCN: '干煸四季豆', nameEs: 'Ejotes Picantes', basePriceCents: 299, category: 'side02', categoryType: 'SIDE', selectionMode: 'MULTIPLE', displayOrder: 2, isVegetarian: false, isVegan: false, isGlutenFree: true, spiceLevel: 2 },
 
     // DRINKS
-    { id: 'cmip6jc0i002f2nnnwv38o0ix', name: 'Pepsi', nameZhTW: '百事可樂', nameZhCN: '百事可乐', nameEs: 'Pepsi', basePriceCents: 249, category: 'drink01', categoryType: 'DRINK', selectionMode: 'MULTIPLE', displayOrder: 1 },
-    { id: 'cmip6jc0i002f2nnnxv38o0iy', name: 'Diet Pepsi', nameZhTW: '無糖百事', nameZhCN: '无糖百事', nameEs: 'Pepsi Dietética', basePriceCents: 249, category: 'drink02', categoryType: 'DRINK', selectionMode: 'MULTIPLE', displayOrder: 2 },
-    { id: 'cmip6jc0i002f2nnnyv38o0iz', name: 'Water (cold)', nameZhTW: '冰水', nameZhCN: '冰水', nameEs: 'Agua Fría', basePriceCents: 0, category: 'drink03', categoryType: 'DRINK', selectionMode: 'MULTIPLE', displayOrder: 3 },
-    { id: 'cmip6jc0i002f2nnnzv38o0ia', name: 'Water (room temp)', nameZhTW: '常溫水', nameZhCN: '常温水', nameEs: 'Agua Natural', basePriceCents: 0, category: 'drink04', categoryType: 'DRINK', selectionMode: 'MULTIPLE', displayOrder: 4 },
+    { id: 'cmip6jc0i002f2nnnwv38o0ix', name: 'Pepsi', nameZhTW: '百事可樂', nameZhCN: '百事可乐', nameEs: 'Pepsi', basePriceCents: 249, category: 'drink01', categoryType: 'DRINK', selectionMode: 'MULTIPLE', displayOrder: 1, isVegetarian: true, isVegan: true, isGlutenFree: true },
+    { id: 'cmip6jc0i002f2nnnxv38o0iy', name: 'Diet Pepsi', nameZhTW: '無糖百事', nameZhCN: '无糖百事', nameEs: 'Pepsi Dietética', basePriceCents: 249, category: 'drink02', categoryType: 'DRINK', selectionMode: 'MULTIPLE', displayOrder: 2, isVegetarian: true, isVegan: true, isGlutenFree: true },
+    { id: 'cmip6jc0i002f2nnnyv38o0iz', name: 'Water (cold)', nameZhTW: '冰水', nameZhCN: '冰水', nameEs: 'Agua Fría', basePriceCents: 0, category: 'drink03', categoryType: 'DRINK', selectionMode: 'MULTIPLE', displayOrder: 3, isVegetarian: true, isVegan: true, isGlutenFree: true },
+    { id: 'cmip6jc0i002f2nnnzv38o0ia', name: 'Water (room temp)', nameZhTW: '常溫水', nameZhCN: '常温水', nameEs: 'Agua Natural', basePriceCents: 0, category: 'drink04', categoryType: 'DRINK', selectionMode: 'MULTIPLE', displayOrder: 4, isVegetarian: true, isVegan: true, isGlutenFree: true },
 
     // DESSERT
-    { id: 'cmip6jc0i002f2nnnav38o0ib', name: 'Mandarin Orange Sherbet', nameZhTW: '橘子雪酪', nameZhCN: '橘子雪酪', nameEs: 'Sorbete de Mandarina', basePriceCents: 0, category: 'dessert01', categoryType: 'DESSERT', selectionMode: 'MULTIPLE', displayOrder: 1 },
+    { id: 'cmip6jc0i002f2nnnav38o0ib', name: 'Mandarin Orange Sherbet', nameZhTW: '橘子雪酪', nameZhCN: '橘子雪酪', nameEs: 'Sorbete de Mandarina', basePriceCents: 0, category: 'dessert01', categoryType: 'DESSERT', selectionMode: 'MULTIPLE', displayOrder: 1, isVegetarian: true, isGlutenFree: true },
   ];
 
   for (const item of menuItems) {
@@ -216,6 +217,12 @@ async function seedCoreData() {
         displayOrder: item.displayOrder,
         sliderConfig: (item as any).sliderConfig || null,
         isAvailable: true,
+        // Dietary fields
+        isVegetarian: (item as any).isVegetarian ?? false,
+        isVegan: (item as any).isVegan ?? false,
+        isGlutenFree: (item as any).isGlutenFree ?? false,
+        spiceLevel: (item as any).spiceLevel ?? 0,
+        allergens: (item as any).allergens || null,
       },
       create: {
         id: item.id,
@@ -231,6 +238,12 @@ async function seedCoreData() {
         displayOrder: item.displayOrder,
         sliderConfig: (item as any).sliderConfig || null,
         isAvailable: true,
+        // Dietary fields
+        isVegetarian: (item as any).isVegetarian ?? false,
+        isVegan: (item as any).isVegan ?? false,
+        isGlutenFree: (item as any).isGlutenFree ?? false,
+        spiceLevel: (item as any).spiceLevel ?? 0,
+        allergens: (item as any).allergens || null,
       }
     });
   }

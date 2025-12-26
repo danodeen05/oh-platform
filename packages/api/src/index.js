@@ -2924,75 +2924,14 @@ app.patch("/orders/:id", async (req, reply) => {
     // Award badges
     await checkAndAwardBadges(user.id);
 
-    // If user was referred, queue credits for referrer (scheduled disbursement)
-    if (user.referredById) {
-      const paidOrderCount = await prisma.order.count({
-        where: {
-          userId: user.id,
-          paymentStatus: "PAID",
-        },
-      });
+    // Update challenge progress
+    await updateChallengeProgress(user.id, {
+      totalCents: order.totalCents,
+      items: order.items,
+    });
 
-      if (paidOrderCount === 1) {
-        // This is their first order - check $20 minimum requirement
-        const MINIMUM_ORDER_FOR_REFERRAL = 2000; // $20.00 in cents
-
-        if (order.totalCents >= MINIMUM_ORDER_FOR_REFERRAL) {
-          // Order meets minimum - queue credits for referrer
-          const referrer = await prisma.user.findUnique({
-            where: { id: user.referredById },
-          });
-
-          if (referrer) {
-            // Get referrer's tier benefits
-            const tierBenefits = getTierBenefits(referrer.membershipTier);
-            const referralBonus = tierBenefits.referralBonus;
-
-            // Calculate next disbursement date (1st or 16th of month)
-            const scheduledFor = getNextDisbursementDate();
-
-            // Create pending credit instead of immediate credit
-            await prisma.pendingCredit.create({
-              data: {
-                userId: user.referredById,
-                type: "REFERRAL_ORDER",
-                amountCents: referralBonus,
-                sourceUserId: user.id,
-                sourceOrderId: order.id,
-                description: `Referral bonus - friend's first order (scheduled for ${scheduledFor.toLocaleDateString()})`,
-                scheduledFor,
-              },
-            });
-
-            // Create a credit event to track this (but don't add to balance yet)
-            await prisma.creditEvent.create({
-              data: {
-                userId: user.referredById,
-                type: "REFERRAL_ORDER_PENDING",
-                amountCents: referralBonus,
-                orderId: order.id,
-                description: `Referral bonus pending - scheduled for ${scheduledFor.toLocaleDateString()}`,
-              },
-            });
-
-            // Still increment referral progress for tier tracking
-            await prisma.user.update({
-              where: { id: user.referredById },
-              data: {
-                tierProgressReferrals: { increment: 1 },
-              },
-            });
-
-            // Check if referrer should be upgraded
-            await checkTierUpgrade(user.referredById);
-
-            console.log(`📅 Referral credit of $${referralBonus / 100} queued for ${referrer.email}, scheduled for ${scheduledFor.toLocaleDateString()}`);
-          }
-        } else {
-          console.log(`❌ Referral credit not awarded - order total $${order.totalCents / 100} below $20 minimum`);
-        }
-      }
-    }
+    // Note: Referral credit is awarded when order reaches COMPLETED status (not at payment)
+    // See /kitchen/orders/:id/status endpoint
 
     // Award cashback credits based on user's tier
     const tierBenefits = getTierBenefits(user.membershipTier);
@@ -3419,6 +3358,356 @@ app.get("/users/:id/challenges", async (req, reply) => {
   return userChallenges;
 });
 
+// ====================
+// CHALLENGE ADMIN ENDPOINTS
+// ====================
+
+// Create a new challenge
+app.post("/challenges", async (req, reply) => {
+  const { slug, name, description, rewardCents, iconEmoji, requirements, startsAt, endsAt } = req.body;
+
+  if (!slug || !name || !description || !requirements) {
+    return reply.code(400).send({ error: "slug, name, description, and requirements are required" });
+  }
+
+  const challenge = await prisma.challenge.create({
+    data: {
+      slug,
+      name,
+      description,
+      rewardCents: rewardCents || 0,
+      iconEmoji: iconEmoji || "🎯",
+      requirements,
+      startsAt: startsAt ? new Date(startsAt) : null,
+      endsAt: endsAt ? new Date(endsAt) : null,
+      isActive: true,
+    },
+  });
+
+  console.log(`🎯 Challenge created: ${name}`);
+  return challenge;
+});
+
+// Update a challenge
+app.patch("/challenges/:id", async (req, reply) => {
+  const { id } = req.params;
+  const { name, description, rewardCents, iconEmoji, requirements, startsAt, endsAt, isActive } = req.body;
+
+  const challenge = await prisma.challenge.update({
+    where: { id },
+    data: {
+      ...(name !== undefined && { name }),
+      ...(description !== undefined && { description }),
+      ...(rewardCents !== undefined && { rewardCents }),
+      ...(iconEmoji !== undefined && { iconEmoji }),
+      ...(requirements !== undefined && { requirements }),
+      ...(startsAt !== undefined && { startsAt: startsAt ? new Date(startsAt) : null }),
+      ...(endsAt !== undefined && { endsAt: endsAt ? new Date(endsAt) : null }),
+      ...(isActive !== undefined && { isActive }),
+    },
+  });
+
+  console.log(`🎯 Challenge updated: ${challenge.name}`);
+  return challenge;
+});
+
+// Delete a challenge (soft delete by deactivating)
+app.delete("/challenges/:id", async (req, reply) => {
+  const { id } = req.params;
+
+  const challenge = await prisma.challenge.update({
+    where: { id },
+    data: { isActive: false },
+  });
+
+  console.log(`🎯 Challenge deactivated: ${challenge.name}`);
+  return { success: true, message: "Challenge deactivated" };
+});
+
+// Get a single challenge by ID or slug
+app.get("/challenges/:idOrSlug", async (req, reply) => {
+  const { idOrSlug } = req.params;
+
+  const challenge = await prisma.challenge.findFirst({
+    where: {
+      OR: [{ id: idOrSlug }, { slug: idOrSlug }],
+    },
+    include: {
+      userChallenges: {
+        select: {
+          id: true,
+          progress: true,
+          completedAt: true,
+          rewardClaimed: true,
+        },
+      },
+    },
+  });
+
+  if (!challenge) {
+    return reply.code(404).send({ error: "Challenge not found" });
+  }
+
+  return challenge;
+});
+
+// Enroll a user in a challenge
+app.post("/users/:userId/challenges/:challengeId/enroll", async (req, reply) => {
+  const { userId, challengeId } = req.params;
+
+  // Check if challenge exists and is active
+  const challenge = await prisma.challenge.findUnique({
+    where: { id: challengeId },
+  });
+
+  if (!challenge || !challenge.isActive) {
+    return reply.code(404).send({ error: "Challenge not found or inactive" });
+  }
+
+  // Check if already enrolled
+  const existing = await prisma.userChallenge.findUnique({
+    where: { userId_challengeId: { userId, challengeId } },
+  });
+
+  if (existing) {
+    return reply.code(400).send({ error: "Already enrolled in this challenge" });
+  }
+
+  // Initialize progress based on requirements type
+  const initialProgress = { current: 0 };
+
+  const userChallenge = await prisma.userChallenge.create({
+    data: {
+      userId,
+      challengeId,
+      progress: initialProgress,
+    },
+    include: { challenge: true },
+  });
+
+  console.log(`🎯 User ${userId} enrolled in challenge: ${challenge.name}`);
+  return userChallenge;
+});
+
+// Claim challenge reward
+app.post("/users/:userId/challenges/:challengeId/claim", async (req, reply) => {
+  const { userId, challengeId } = req.params;
+
+  const userChallenge = await prisma.userChallenge.findUnique({
+    where: { userId_challengeId: { userId, challengeId } },
+    include: { challenge: true },
+  });
+
+  if (!userChallenge) {
+    return reply.code(404).send({ error: "Challenge enrollment not found" });
+  }
+
+  if (!userChallenge.completedAt) {
+    return reply.code(400).send({ error: "Challenge not completed yet" });
+  }
+
+  if (userChallenge.rewardClaimed) {
+    return reply.code(400).send({ error: "Reward already claimed" });
+  }
+
+  // Award the reward
+  await prisma.$transaction([
+    // Update user credits
+    prisma.user.update({
+      where: { id: userId },
+      data: { creditsCents: { increment: userChallenge.challenge.rewardCents } },
+    }),
+    // Create credit event
+    prisma.creditEvent.create({
+      data: {
+        userId,
+        type: "CHALLENGE_REWARD",
+        amountCents: userChallenge.challenge.rewardCents,
+        description: `Challenge completed: ${userChallenge.challenge.name}`,
+      },
+    }),
+    // Mark reward as claimed
+    prisma.userChallenge.update({
+      where: { id: userChallenge.id },
+      data: { rewardClaimed: true },
+    }),
+  ]);
+
+  console.log(`🎉 User ${userId} claimed reward for challenge: ${userChallenge.challenge.name}`);
+  return { success: true, rewardCents: userChallenge.challenge.rewardCents };
+});
+
+// Get user's badge progress
+app.get("/users/:id/badge-progress", async (req, reply) => {
+  const { id } = req.params;
+
+  const user = await prisma.user.findUnique({
+    where: { id },
+    include: {
+      badges: {
+        include: { badge: true },
+      },
+    },
+  });
+
+  if (!user) {
+    return reply.code(404).send({ error: "User not found" });
+  }
+
+  // Get referral count (referrals who have placed at least 1 order)
+  const referralCount = await prisma.user.count({
+    where: { referredById: id, lifetimeOrderCount: { gt: 0 } },
+  });
+
+  // Get spicy order count for Heat Seeker badge
+  const spicyOrderCount = await prisma.orderItem.count({
+    where: {
+      order: { userId: id, paymentStatus: "PAID" },
+      menuItem: { name: { contains: "Spice", mode: "insensitive" } },
+      selectedValue: { in: ["Spicy", "Extra Spicy", "Hot", "Extra Hot"] },
+    },
+  });
+
+  // Get unique menu items for Menu Master badge
+  const uniqueItemsOrdered = await prisma.orderItem.findMany({
+    where: {
+      order: { userId: id, paymentStatus: "PAID" },
+      menuItem: {
+        categoryType: { in: ["MAIN", "ADDON", "SIDE", "DRINK", "DESSERT"] },
+        isActive: true,
+      },
+    },
+    distinct: ["menuItemId"],
+    select: { menuItemId: true },
+  });
+
+  const totalMenuItems = await prisma.menuItem.count({
+    where: {
+      isActive: true,
+      categoryType: { in: ["MAIN", "ADDON", "SIDE", "DRINK", "DESSERT"] },
+    },
+  });
+
+  // Build progress for each badge type
+  const earnedSlugs = user.badges.map((ub) => ub.badge.slug);
+
+  const progress = {
+    // Order milestone badges
+    "first-order": {
+      current: user.lifetimeOrderCount,
+      required: 1,
+      percent: Math.min(100, (user.lifetimeOrderCount / 1) * 100),
+      earned: earnedSlugs.includes("first-order"),
+    },
+    "10-orders": {
+      current: user.lifetimeOrderCount,
+      required: 10,
+      percent: Math.min(100, (user.lifetimeOrderCount / 10) * 100),
+      earned: earnedSlugs.includes("10-orders"),
+    },
+    "50-orders": {
+      current: user.lifetimeOrderCount,
+      required: 50,
+      percent: Math.min(100, (user.lifetimeOrderCount / 50) * 100),
+      earned: earnedSlugs.includes("50-orders"),
+    },
+    "100-orders": {
+      current: user.lifetimeOrderCount,
+      required: 100,
+      percent: Math.min(100, (user.lifetimeOrderCount / 100) * 100),
+      earned: earnedSlugs.includes("100-orders"),
+    },
+    // Referral badges
+    "first-referral": {
+      current: referralCount,
+      required: 1,
+      percent: Math.min(100, (referralCount / 1) * 100),
+      earned: earnedSlugs.includes("first-referral"),
+    },
+    "10-referrals": {
+      current: referralCount,
+      required: 10,
+      percent: Math.min(100, (referralCount / 10) * 100),
+      earned: earnedSlugs.includes("10-referrals"),
+    },
+    "50-referrals": {
+      current: referralCount,
+      required: 50,
+      percent: Math.min(100, (referralCount / 50) * 100),
+      earned: earnedSlugs.includes("50-referrals"),
+    },
+    // Streak badges
+    "3-day-streak": {
+      current: user.longestStreak,
+      required: 3,
+      percent: Math.min(100, (user.longestStreak / 3) * 100),
+      earned: earnedSlugs.includes("3-day-streak"),
+    },
+    "7-day-streak": {
+      current: user.longestStreak,
+      required: 7,
+      percent: Math.min(100, (user.longestStreak / 7) * 100),
+      earned: earnedSlugs.includes("7-day-streak"),
+    },
+    "30-day-streak": {
+      current: user.longestStreak,
+      required: 30,
+      percent: Math.min(100, (user.longestStreak / 30) * 100),
+      earned: earnedSlugs.includes("30-day-streak"),
+    },
+    // VIP badge (Beef Boss tier)
+    vip: {
+      current: user.membershipTier === "BEEF_BOSS" ? 1 : 0,
+      required: 1,
+      percent: user.membershipTier === "BEEF_BOSS" ? 100 : 0,
+      earned: earnedSlugs.includes("vip"),
+      description: "Reach Beef Boss tier",
+    },
+    // OG Member badge
+    "grand-opening": {
+      current: user.createdAt <= new Date("2025-03-01") ? 1 : 0,
+      required: 1,
+      percent: user.createdAt <= new Date("2025-03-01") ? 100 : 0,
+      earned: earnedSlugs.includes("grand-opening"),
+      description: "Signed up before launch",
+    },
+    // Heat Seeker badge (spicy orders)
+    "spicy-challenge": {
+      current: spicyOrderCount,
+      required: 10,
+      percent: Math.min(100, (spicyOrderCount / 10) * 100),
+      earned: earnedSlugs.includes("spicy-challenge"),
+      description: "Order spicy 10 times",
+    },
+    // Menu Master badge (tried all items)
+    "tried-all-items": {
+      current: uniqueItemsOrdered.length,
+      required: totalMenuItems,
+      percent: totalMenuItems > 0 ? Math.min(100, (uniqueItemsOrdered.length / totalMenuItems) * 100) : 0,
+      earned: earnedSlugs.includes("tried-all-items"),
+      description: "Try every menu item",
+    },
+  };
+
+  return {
+    userId: id,
+    lifetimeOrderCount: user.lifetimeOrderCount,
+    referralCount,
+    longestStreak: user.longestStreak,
+    currentStreak: user.currentStreak,
+    membershipTier: user.membershipTier,
+    spicyOrderCount,
+    uniqueItemsOrdered: uniqueItemsOrdered.length,
+    totalMenuItems,
+    earnedBadges: user.badges.map((ub) => ({
+      slug: ub.badge.slug,
+      name: ub.badge.name,
+      awardedAt: ub.awardedAt,
+    })),
+    progress,
+  };
+});
+
 // Get user's pending credits
 app.get("/users/:id/pending-credits", async (req, reply) => {
   const { id } = req.params;
@@ -3713,8 +4002,22 @@ app.patch("/kitchen/orders/:id/status", async (req, reply) => {
       },
       seat: true,
       location: true,
+      user: true,
     },
   });
+
+  // Ensure pod status is synchronized with order status
+  // Pod should be OCCUPIED for active orders (QUEUED through SERVING)
+  if (order.seatId && ["QUEUED", "PREPPING", "READY", "SERVING"].includes(status)) {
+    const currentSeat = order.seat;
+    if (currentSeat && currentSeat.status !== "OCCUPIED") {
+      console.log(`⚠️ Pod ${currentSeat.number} status was ${currentSeat.status}, correcting to OCCUPIED for order ${order.kitchenOrderNumber}`);
+      await prisma.seat.update({
+        where: { id: order.seatId },
+        data: { status: "OCCUPIED" },
+      });
+    }
+  }
 
   // When order is completed, release the pod and process queue
   if (status === "COMPLETED" && order.seatId) {
@@ -3728,6 +4031,65 @@ app.patch("/kitchen/orders/:id/status", async (req, reply) => {
 
     // Note: Staff will mark pod as AVAILABLE via /seats/:id/clean
     // which will automatically trigger queue processing
+  }
+
+  // Award referral credit when order is COMPLETED (not just PAID)
+  // This ensures the customer actually received and completed their meal
+  if (status === "COMPLETED" && order.user?.referredById) {
+    const user = order.user;
+
+    // Check if this is their first COMPLETED order
+    const completedOrderCount = await prisma.order.count({
+      where: {
+        userId: user.id,
+        status: "COMPLETED",
+      },
+    });
+
+    if (completedOrderCount === 1) {
+      // This is their first completed order - check $20 minimum requirement
+      const MINIMUM_ORDER_FOR_REFERRAL = 2000; // $20.00 in cents
+
+      if (order.totalCents >= MINIMUM_ORDER_FOR_REFERRAL) {
+        // Order meets minimum - credit referrer
+        const referrer = await prisma.user.findUnique({
+          where: { id: user.referredById },
+        });
+
+        if (referrer) {
+          // Get referrer's tier benefits
+          const tierBenefits = getTierBenefits(referrer.membershipTier);
+          const referralBonus = tierBenefits.referralBonus;
+
+          // Add credits to referrer's balance
+          await prisma.user.update({
+            where: { id: user.referredById },
+            data: {
+              creditsCents: { increment: referralBonus },
+              tierProgressReferrals: { increment: 1 },
+            },
+          });
+
+          // Create credit event for tracking
+          await prisma.creditEvent.create({
+            data: {
+              userId: user.referredById,
+              type: "REFERRAL_ORDER",
+              amountCents: referralBonus,
+              orderId: order.id,
+              description: `Referral bonus - friend completed their first order`,
+            },
+          });
+
+          // Check if referrer should be upgraded
+          await checkTierUpgrade(user.referredById);
+
+          console.log(`✅ Referral credit of $${referralBonus / 100} awarded to ${referrer.email} (order COMPLETED)`);
+        }
+      } else {
+        console.log(`❌ Referral credit not awarded - order total $${order.totalCents / 100} below $20 minimum`);
+      }
+    }
   }
 
   return order;
@@ -3983,13 +4345,13 @@ async function checkTierUpgrade(userId) {
 
   let newTier = user.membershipTier;
 
-  // Check for upgrades
+  // Check for upgrades (requires BOTH orders AND referrals)
   if (user.membershipTier === "CHOPSTICK") {
-    if (user.tierProgressOrders >= 10 || user.tierProgressReferrals >= 5) {
+    if (user.tierProgressOrders >= 10 && user.tierProgressReferrals >= 5) {
       newTier = "NOODLE_MASTER";
     }
   } else if (user.membershipTier === "NOODLE_MASTER") {
-    if (user.tierProgressOrders >= 50 || user.tierProgressReferrals >= 20) {
+    if (user.tierProgressOrders >= 25 && user.tierProgressReferrals >= 10) {
       newTier = "BEEF_BOSS";
     }
   }
@@ -4076,6 +4438,51 @@ async function checkAndAwardBadges(userId) {
     if (badge.slug === "30-day-streak" && user.longestStreak >= 30)
       shouldAward = true;
 
+    // Check OG Member badge (users who signed up before launch)
+    const LAUNCH_DATE = new Date("2025-03-01");
+    if (badge.slug === "grand-opening" && user.createdAt <= LAUNCH_DATE)
+      shouldAward = true;
+
+    // Check Heat Seeker badge (ordered spicy 10+ times)
+    if (badge.slug === "spicy-challenge") {
+      const spicyOrderCount = await prisma.orderItem.count({
+        where: {
+          order: { userId, paymentStatus: "PAID" },
+          menuItem: { name: { contains: "Spice", mode: "insensitive" } },
+          selectedValue: { in: ["Spicy", "Extra Spicy", "Hot", "Extra Hot"] },
+        },
+      });
+      if (spicyOrderCount >= 10) shouldAward = true;
+    }
+
+    // Check Menu Master badge (tried all menu items)
+    if (badge.slug === "tried-all-items") {
+      // Get unique menu items ordered by this user
+      const uniqueItemsOrdered = await prisma.orderItem.findMany({
+        where: {
+          order: { userId, paymentStatus: "PAID" },
+          menuItem: {
+            categoryType: { in: ["MAIN", "ADDON", "SIDE", "DRINK", "DESSERT"] },
+            isAvailable: true,
+          },
+        },
+        distinct: ["menuItemId"],
+        select: { menuItemId: true },
+      });
+
+      // Get total active menu items (excluding sliders)
+      const totalMenuItems = await prisma.menuItem.count({
+        where: {
+          isAvailable: true,
+          categoryType: { in: ["MAIN", "ADDON", "SIDE", "DRINK", "DESSERT"] },
+        },
+      });
+
+      if (uniqueItemsOrdered.length >= totalMenuItems && totalMenuItems > 0) {
+        shouldAward = true;
+      }
+    }
+
     // Award the badge
     if (shouldAward) {
       await prisma.userBadge.create({
@@ -4086,6 +4493,98 @@ async function checkAndAwardBadges(userId) {
       });
 
       console.log(`🏆 Badge awarded: ${badge.name} to user ${userId}`);
+    }
+  }
+}
+
+// Update challenge progress after order completion
+async function updateChallengeProgress(userId, orderData) {
+  // Get user's active challenge enrollments
+  const userChallenges = await prisma.userChallenge.findMany({
+    where: {
+      userId,
+      completedAt: null, // Only incomplete challenges
+    },
+    include: {
+      challenge: true,
+    },
+  });
+
+  const now = new Date();
+
+  for (const userChallenge of userChallenges) {
+    // Skip if challenge is missing or not active
+    if (!userChallenge.challenge) continue;
+    if (!userChallenge.challenge.isActive) continue;
+
+    // Skip if challenge hasn't started yet
+    if (userChallenge.challenge.startsAt && userChallenge.challenge.startsAt > now) continue;
+
+    const requirements = userChallenge.challenge.requirements;
+    const progress = userChallenge.progress || { current: 0 };
+    let newCurrent = progress.current;
+    let completed = false;
+
+    // Handle different requirement types
+    switch (requirements.type) {
+      case "order_count":
+        // Increment order count
+        newCurrent = progress.current + 1;
+        completed = newCurrent >= requirements.target;
+        break;
+
+      case "spend_amount":
+        // Track spending in cents
+        newCurrent = progress.current + (orderData.totalCents || 0);
+        completed = newCurrent >= requirements.target;
+        break;
+
+      case "order_streak":
+        // This is handled by streak logic elsewhere, just check current streak
+        const user = await prisma.user.findUnique({ where: { id: userId } });
+        newCurrent = user?.currentStreak || 0;
+        completed = newCurrent >= requirements.target;
+        break;
+
+      case "specific_item":
+        // Check if order contains specific menu item
+        if (orderData.items?.some(item => item.menuItemId === requirements.menuItemId)) {
+          newCurrent = progress.current + 1;
+          completed = newCurrent >= (requirements.target || 1);
+        }
+        break;
+
+      case "category_orders":
+        // Check if order contains items from specific category
+        if (orderData.items?.some(item => item.categoryType === requirements.categoryType)) {
+          newCurrent = progress.current + 1;
+          completed = newCurrent >= requirements.target;
+        }
+        break;
+
+      default:
+        // Generic order-based progress
+        newCurrent = progress.current + 1;
+        completed = newCurrent >= (requirements.target || 1);
+    }
+
+    // Update progress
+    const updateData = {
+      progress: { ...progress, current: newCurrent },
+      updatedAt: new Date(),
+    };
+
+    if (completed) {
+      updateData.completedAt = new Date();
+    }
+
+    await prisma.userChallenge.update({
+      where: { id: userChallenge.id },
+      data: updateData,
+    });
+
+    if (completed) {
+      console.log(`🎯 Challenge completed: ${userChallenge.challenge.name} by user ${userId}`);
     }
   }
 }
@@ -4159,6 +4658,44 @@ async function releaseExpiredReservations() {
 
 // Run reservation cleanup every minute
 setInterval(releaseExpiredReservations, 60 * 1000);
+
+// Synchronize pod statuses with order statuses (fixes inconsistencies on startup)
+async function synchronizePodStatuses() {
+  try {
+    console.log("🔄 Checking for pod/order status inconsistencies...");
+
+    // Find orders in active states (QUEUED through SERVING) with pods that aren't OCCUPIED
+    const activeOrders = await prisma.order.findMany({
+      where: {
+        status: { in: ["QUEUED", "PREPPING", "READY", "SERVING"] },
+        seatId: { not: null },
+      },
+      include: {
+        seat: true,
+      },
+    });
+
+    let fixedCount = 0;
+    for (const order of activeOrders) {
+      if (order.seat && order.seat.status !== "OCCUPIED") {
+        console.log(`⚠️ Fixing: Pod ${order.seat.number} was ${order.seat.status}, correcting to OCCUPIED for order ${order.kitchenOrderNumber} (status: ${order.status})`);
+        await prisma.seat.update({
+          where: { id: order.seatId },
+          data: { status: "OCCUPIED" },
+        });
+        fixedCount++;
+      }
+    }
+
+    if (fixedCount > 0) {
+      console.log(`✅ Fixed ${fixedCount} pod status inconsistencies`);
+    } else {
+      console.log("✅ No pod status inconsistencies found");
+    }
+  } catch (error) {
+    console.error("Error synchronizing pod statuses:", error);
+  }
+}
 
 // ====================
 // FORTUNE COOKIE
@@ -8147,6 +8684,7 @@ app.listen({ port: PORT, host: "0.0.0.0" }, (err) => {
   }
   console.log(`🚀 API server running on http://localhost:${PORT}`);
 
-  // Run initial cleanup on startup
+  // Run initial cleanup and synchronization on startup
   releaseExpiredReservations();
+  synchronizePodStatuses();
 });

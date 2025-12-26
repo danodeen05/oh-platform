@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { getMenuItemImage, isNoNoodlesItem } from "@/lib/menu-images";
+import { DietaryBadges } from "./dietary-badges";
 
 type MenuItem = {
   id: string;
@@ -9,6 +10,20 @@ type MenuItem = {
   nameEn?: string; // English name for image lookups
   basePriceCents: number;
   description?: string;
+  // Dietary information
+  isVegetarian?: boolean;
+  isVegan?: boolean;
+  isGlutenFree?: boolean;
+  spiceLevel?: number; // 0=none, 1=mild, 2=medium, 3=hot
+};
+
+type DietaryLabels = {
+  vegetarian?: string;
+  vegan?: string;
+  glutenFree?: string;
+  spiceMild?: string;
+  spiceMedium?: string;
+  spiceHot?: string;
 };
 
 type RadioGroupProps = {
@@ -18,6 +33,7 @@ type RadioGroupProps = {
   onSelect: (itemId: string) => void;
   required?: boolean; // Whether this is a mandatory selection
   requiredLabel?: string; // Translated label for "Required"
+  dietaryLabels?: DietaryLabels; // Translated labels for dietary badges
 };
 
 // Oh! character mark component for selected mandatory items
@@ -45,7 +61,7 @@ function OhCheckmark() {
   );
 }
 
-export function RadioGroup({ title, items, selectedId, onSelect, required = false, requiredLabel = "Required" }: RadioGroupProps) {
+export function RadioGroup({ title, items, selectedId, onSelect, required = false, requiredLabel = "Required", dietaryLabels }: RadioGroupProps) {
   const hasSelection = !!selectedId;
 
   return (
@@ -187,10 +203,19 @@ export function RadioGroup({ title, items, selectedId, onSelect, required = fals
                         {item.description}
                       </div>
                     )}
-                    <div style={{ color: "#7C7A67", fontWeight: "600", fontSize: "0.95rem" }}>
-                      {item.basePriceCents > 0
-                        ? `$${(item.basePriceCents / 100).toFixed(2)}`
-                        : "Included"}
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ color: "#7C7A67", fontWeight: "600", fontSize: "0.95rem" }}>
+                        {item.basePriceCents > 0
+                          ? `$${(item.basePriceCents / 100).toFixed(2)}`
+                          : "Included"}
+                      </span>
+                      <DietaryBadges
+                        isVegetarian={item.isVegetarian}
+                        isVegan={item.isVegan}
+                        isGlutenFree={item.isGlutenFree}
+                        spiceLevel={item.spiceLevel}
+                        labels={dietaryLabels}
+                      />
                     </div>
                   </div>
                   {/* Oh! Checkmark for selected required items */}

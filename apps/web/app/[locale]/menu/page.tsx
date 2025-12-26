@@ -30,6 +30,12 @@ type MenuItem = {
     description?: string;
   };
   isAvailable: boolean;
+  // Dietary information
+  isVegetarian?: boolean;
+  isVegan?: boolean;
+  isGlutenFree?: boolean;
+  spiceLevel?: number; // 0=none, 1=mild, 2=medium, 3=hot
+  allergens?: string;
 };
 
 type MenuSection = {
@@ -75,8 +81,89 @@ type DisplaySection = {
     description: string;
     price: string;
     tags: string[];
+    // Dietary information
+    isVegetarian?: boolean;
+    isVegan?: boolean;
+    isGlutenFree?: boolean;
+    spiceLevel?: number; // 0=none, 1=mild, 2=medium, 3=hot
+    allergens?: string;
   }[];
 };
+
+// Dietary badge component
+function DietaryBadges({
+  isVegetarian,
+  isVegan,
+  isGlutenFree,
+  spiceLevel,
+  t
+}: {
+  isVegetarian?: boolean;
+  isVegan?: boolean;
+  isGlutenFree?: boolean;
+  spiceLevel?: number;
+  t: (key: string) => string;
+}) {
+  const badges: { label: string; abbr: string; color: string; bgColor: string }[] = [];
+
+  if (isVegan) {
+    badges.push({ label: t("dietary.vegan"), abbr: "VG", color: "#166534", bgColor: "#dcfce7" });
+  } else if (isVegetarian) {
+    badges.push({ label: t("dietary.vegetarian"), abbr: "V", color: "#166534", bgColor: "#dcfce7" });
+  }
+
+  if (isGlutenFree) {
+    badges.push({ label: t("dietary.glutenFree"), abbr: "GF", color: "#92400e", bgColor: "#fef3c7" });
+  }
+
+  const hasDietaryInfo = badges.length > 0 || (spiceLevel && spiceLevel > 0);
+  if (!hasDietaryInfo) return null;
+
+  return (
+    <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "8px" }}>
+      {badges.map((badge, idx) => (
+        <span
+          key={idx}
+          title={badge.label}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "2px 8px",
+            fontSize: "0.7rem",
+            fontWeight: "700",
+            borderRadius: "4px",
+            background: badge.bgColor,
+            color: badge.color,
+            letterSpacing: "0.5px",
+          }}
+        >
+          {badge.abbr}
+        </span>
+      ))}
+      {spiceLevel && spiceLevel > 0 && (
+        <span
+          title={t(`dietary.spice.level${spiceLevel}`)}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "2px",
+            padding: "2px 8px",
+            fontSize: "0.7rem",
+            fontWeight: "700",
+            borderRadius: "4px",
+            background: spiceLevel === 1 ? "#fef3c7" : spiceLevel === 2 ? "#fed7aa" : "#fecaca",
+            color: spiceLevel === 1 ? "#92400e" : spiceLevel === 2 ? "#c2410c" : "#dc2626",
+          }}
+        >
+          {Array.from({ length: spiceLevel }).map((_, i) => (
+            <span key={i}>🌶</span>
+          ))}
+        </span>
+      )}
+    </div>
+  );
+}
 
 function mapStepsToDisplaySections(steps: MenuStep[], t: (key: string) => string): DisplaySection[] {
   const sections: DisplaySection[] = [];
@@ -108,6 +195,12 @@ function mapStepsToDisplaySections(steps: MenuStep[], t: (key: string) => string
             description: item.description || "",
             price: item.basePriceCents === 0 ? t("tags.included") : formatPrice(item.basePriceCents, t("tags.included")),
             tags,
+            // Pass through dietary information
+            isVegetarian: item.isVegetarian,
+            isVegan: item.isVegan,
+            isGlutenFree: item.isGlutenFree,
+            spiceLevel: item.spiceLevel,
+            allergens: item.allergens,
           };
         });
 
@@ -214,6 +307,20 @@ export default function MenuPage() {
 
     loadMenu();
   }, [t, locale]);
+
+  // Handle hash navigation (scroll to element after page loads)
+  useEffect(() => {
+    if (!loading && typeof window !== "undefined" && window.location.hash) {
+      const elementId = window.location.hash.slice(1); // Remove the '#'
+      // Small delay to ensure DOM is fully rendered
+      setTimeout(() => {
+        const element = document.getElementById(elementId);
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 100);
+    }
+  }, [loading]);
 
   if (loading) {
     return (
@@ -499,7 +606,7 @@ export default function MenuPage() {
                     ) : (
                       <span style={{ fontSize: "4rem", opacity: 0.3 }}>🍜</span>
                     )}
-                    {/* Tags overlay */}
+                    {/* Tags overlay - top left */}
                     {item.tags.length > 0 && (
                       <div
                         style={{
@@ -532,6 +639,98 @@ export default function MenuPage() {
                             {tag}
                           </span>
                         ))}
+                      </div>
+                    )}
+                    {/* Dietary badges overlay - top right */}
+                    {(item.isVegetarian || item.isVegan || item.isGlutenFree || (item.spiceLevel && item.spiceLevel > 0)) && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: "12px",
+                          right: "12px",
+                          display: "flex",
+                          gap: "4px",
+                          flexWrap: "wrap",
+                          justifyContent: "flex-end",
+                        }}
+                      >
+                        {item.isVegan ? (
+                          <span
+                            title={t("dietary.vegan")}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              padding: "4px 8px",
+                              fontSize: "0.65rem",
+                              fontWeight: "700",
+                              borderRadius: "4px",
+                              background: "#dcfce7",
+                              color: "#166534",
+                              boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                            }}
+                          >
+                            VG
+                          </span>
+                        ) : item.isVegetarian ? (
+                          <span
+                            title={t("dietary.vegetarian")}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              padding: "4px 8px",
+                              fontSize: "0.65rem",
+                              fontWeight: "700",
+                              borderRadius: "4px",
+                              background: "#dcfce7",
+                              color: "#166534",
+                              boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                            }}
+                          >
+                            V
+                          </span>
+                        ) : null}
+                        {item.isGlutenFree && (
+                          <span
+                            title={t("dietary.glutenFree")}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              padding: "4px 8px",
+                              fontSize: "0.65rem",
+                              fontWeight: "700",
+                              borderRadius: "4px",
+                              background: "#fef3c7",
+                              color: "#92400e",
+                              boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                            }}
+                          >
+                            GF
+                          </span>
+                        )}
+                        {item.spiceLevel && item.spiceLevel > 0 && (
+                          <span
+                            title={t(`dietary.spice.level${item.spiceLevel}`)}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "1px",
+                              padding: "4px 6px",
+                              fontSize: "0.6rem",
+                              fontWeight: "700",
+                              borderRadius: "4px",
+                              background: item.spiceLevel === 1 ? "#fef3c7" : item.spiceLevel === 2 ? "#fed7aa" : "#fecaca",
+                              color: item.spiceLevel === 1 ? "#92400e" : item.spiceLevel === 2 ? "#c2410c" : "#dc2626",
+                              boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                            }}
+                          >
+                            {Array.from({ length: item.spiceLevel }).map((_, i) => (
+                              <span key={i}>🌶</span>
+                            ))}
+                          </span>
+                        )}
                       </div>
                     )}
                   </div>
@@ -666,6 +865,49 @@ export default function MenuPage() {
               </p>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Allergen Disclaimer */}
+      <section
+        id="allergen-info"
+        style={{
+          background: "#f5f5f5",
+          padding: "32px 24px",
+          borderTop: "1px solid #e5e7eb",
+        }}
+      >
+        <div style={{ maxWidth: "800px", margin: "0 auto", textAlign: "center" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", marginBottom: "12px" }}>
+            <span style={{ fontSize: "1.2rem" }}>⚠️</span>
+            <h3 style={{ fontSize: "1rem", fontWeight: "600", color: "#222", margin: 0 }}>
+              {t("allergen.title")}
+            </h3>
+          </div>
+          <p style={{ fontSize: "0.9rem", color: "#666", lineHeight: "1.6", marginBottom: "16px" }}>
+            {t("allergen.description")}
+          </p>
+          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "16px", marginBottom: "16px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", color: "#444" }}>
+              <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "2px 8px", fontSize: "0.7rem", fontWeight: "700", borderRadius: "4px", background: "#dcfce7", color: "#166534" }}>V</span>
+              <span>{t("dietary.vegetarian")}</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", color: "#444" }}>
+              <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "2px 8px", fontSize: "0.7rem", fontWeight: "700", borderRadius: "4px", background: "#dcfce7", color: "#166534" }}>VG</span>
+              <span>{t("dietary.vegan")}</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", color: "#444" }}>
+              <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "2px 8px", fontSize: "0.7rem", fontWeight: "700", borderRadius: "4px", background: "#fef3c7", color: "#92400e" }}>GF</span>
+              <span>{t("dietary.glutenFree")}</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", color: "#444" }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "2px", padding: "2px 8px", fontSize: "0.7rem", fontWeight: "700", borderRadius: "4px", background: "#fecaca", color: "#dc2626" }}>🌶</span>
+              <span>{t("allergen.spicyIndicator")}</span>
+            </div>
+          </div>
+          <p style={{ fontSize: "0.8rem", color: "#888", fontStyle: "italic" }}>
+            {t("allergen.contactUs")}
+          </p>
         </div>
       </section>
 

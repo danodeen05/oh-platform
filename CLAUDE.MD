@@ -60,6 +60,9 @@ pnpm db:studio     # Open Prisma Studio
 - For production migrations, use `DATABASE_PUBLIC_URL` from local machine
 
 ## Recent Major Changes
+- **Instant Referral Credits**: Referrer now gets $5 instantly when referee's order reaches COMPLETED status (was previously scheduled for 1st/16th of month)
+- **Quick Order Feature**: "Chef's Choice" one-click ordering for new guests ($15.99 preset bowl)
+- **Dietary Icons**: Menu items now show vegetarian, vegan, gluten-free, and spice level indicators
 - **Order Source Tracking**: Added `OrderSource` enum (WEB, KIOSK, MOBILE, STAFF) for analytics
 - **Guest Name Display**: Kitchen Display and Cleaning screen show customer names (User or Guest)
 - **Order Analytics**: Admin analytics page shows order breakdown by source
@@ -76,6 +79,9 @@ pnpm db:studio     # Open Prisma Studio
 - **Home Page**: Private Pods section, No Tipping section, video logo animation
 - **Dynamic Menu**: Menu page now fetches from API instead of hardcoded items
 - **Noodle Ordering**: Custom display order (Ramen → Shaved → Wide → No Noodles)
+
+## Documentation
+- **Gamification Improvements**: See `docs/GAMIFICATION-IMPROVEMENTS.md` for tier/badge/challenge system analysis and improvement roadmap
 
 ## Key Features
 - User authentication via Clerk with custom "My Oh! Account" menu item

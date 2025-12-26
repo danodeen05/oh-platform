@@ -46,6 +46,57 @@ type Order = {
   createdAt: string;
 };
 
+type BadgeProgress = {
+  current: number;
+  required: number;
+  percent: number;
+  earned: boolean;
+  description?: string;
+};
+
+type Challenge = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  rewardCents: number;
+  iconEmoji: string;
+  requirements: { type: string; target: number };
+};
+
+type UserChallenge = {
+  id: string;
+  challengeId: string;
+  challenge: Challenge;
+  progress: { current: number };
+  completedAt: string | null;
+  rewardClaimed: boolean;
+};
+
+// Tier icon component that uses PNG files with transparent backgrounds
+function TierIcon({ tier, size = 40, invert = false }: { tier: string; size?: number; invert?: boolean }) {
+  const tierKeyMap: Record<string, string> = {
+    CHOPSTICK: "chopstick",
+    NOODLE_MASTER: "noodle-master",
+    BEEF_BOSS: "beef-boss",
+  };
+  const tierKey = tierKeyMap[tier] || "chopstick";
+  const iconPath = `/tiers/${tierKey}.png`;
+
+  return (
+    <Image
+      src={iconPath}
+      alt={tier}
+      width={size}
+      height={size}
+      style={{
+        objectFit: "contain",
+        filter: invert ? "invert(1)" : "none",
+      }}
+    />
+  );
+}
+
 // Mini Calendar Component for Member Page - matches stats card width
 function OrderCalendar({ orders, tierColor, t }: { orders: Order[]; tierColor: string; t: (key: string, values?: Record<string, any>) => string }) {
   const [viewDate, setViewDate] = useState(new Date());
@@ -259,6 +310,9 @@ export default function MemberDashboard() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [allBadges, setAllBadges] = useState<Badge[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [badgeProgress, setBadgeProgress] = useState<Record<string, BadgeProgress>>({});
+  const [userChallenges, setUserChallenges] = useState<UserChallenge[]>([]);
+  const [availableChallenges, setAvailableChallenges] = useState<Challenge[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -267,8 +321,11 @@ export default function MemberDashboard() {
       setUserId(savedUserId);
       loadProfile(savedUserId);
       loadOrders(savedUserId);
+      loadBadgeProgress(savedUserId);
+      loadUserChallenges(savedUserId);
     }
     loadAllBadges();
+    loadAvailableChallenges();
   }, []);
 
   async function loadProfile(uid: string) {
@@ -311,6 +368,68 @@ export default function MemberDashboard() {
     }
   }
 
+  async function loadBadgeProgress(uid: string) {
+    try {
+      const response = await fetch(`${BASE}/users/${uid}/badge-progress`);
+      const data = await response.json();
+      setBadgeProgress(data.progress || {});
+    } catch (error) {
+      console.error("Failed to load badge progress:", error);
+    }
+  }
+
+  async function loadUserChallenges(uid: string) {
+    try {
+      const response = await fetch(`${BASE}/users/${uid}/challenges`);
+      const data = await response.json();
+      setUserChallenges(data);
+    } catch (error) {
+      console.error("Failed to load user challenges:", error);
+    }
+  }
+
+  async function loadAvailableChallenges() {
+    try {
+      const response = await fetch(`${BASE}/challenges`);
+      const data = await response.json();
+      setAvailableChallenges(data);
+    } catch (error) {
+      console.error("Failed to load challenges:", error);
+    }
+  }
+
+  async function enrollInChallenge(challengeId: string) {
+    if (!userId) return;
+    try {
+      const response = await fetch(`${BASE}/users/${userId}/challenges/${challengeId}/enroll`, {
+        method: "POST",
+      });
+      if (response.ok) {
+        toast.success(t("challengeEnrolled"));
+        loadUserChallenges(userId);
+      }
+    } catch (error) {
+      console.error("Failed to enroll in challenge:", error);
+    }
+  }
+
+  async function claimChallengeReward(challengeId: string) {
+    if (!userId) return;
+    try {
+      const response = await fetch(`${BASE}/users/${userId}/challenges/${challengeId}/claim`, {
+        method: "POST",
+      });
+      if (response.ok) {
+        const data = await response.json();
+        toast.success(t("rewardClaimed", { amount: (data.rewardCents / 100).toFixed(2) }));
+        loadUserChallenges(userId);
+        loadProfile(userId);
+      }
+    } catch (error) {
+      console.error("Failed to claim reward:", error);
+    }
+  }
+
   async function handleLogin() {
     if (!email) {
       toast.warning(tCommon("enterEmail"));
@@ -328,6 +447,8 @@ export default function MemberDashboard() {
       setUserId(userData.id);
       localStorage.setItem("userId", userData.id);
       loadProfile(userData.id);
+      loadBadgeProgress(userData.id);
+      loadUserChallenges(userData.id);
     } catch (error) {
       console.error("Failed to create user:", error);
       setLoading(false);
@@ -519,16 +640,14 @@ export default function MemberDashboard() {
             <div
               style={{
                 background: tierColor + "20",
-                color: tierColor,
-                padding: "8px 16px",
-                borderRadius: 8,
-                fontWeight: "bold",
-                fontSize: "1.5rem",
+                padding: "12px",
+                borderRadius: 12,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
               }}
             >
-              {profile.membershipTier === "CHOPSTICK" && "🥢"}
-              {profile.membershipTier === "NOODLE_MASTER" && "🍜"}
-              {profile.membershipTier === "BEEF_BOSS" && "🐂"}
+              <TierIcon tier={profile.membershipTier} size={48} />
             </div>
           </div>
 
@@ -722,6 +841,200 @@ export default function MemberDashboard() {
           </div>
         </div>
 
+        {/* Challenges Section */}
+        {(userChallenges.length > 0 || availableChallenges.length > 0) && (
+          <div
+            style={{
+              background: "white",
+              borderRadius: 16,
+              padding: 24,
+              marginBottom: 16,
+            }}
+          >
+            <h2 style={{ margin: 0, marginBottom: 16 }}>{t("challengesTitle")}</h2>
+
+            {/* Active Challenges */}
+            {userChallenges.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <h3 style={{ fontSize: "0.9rem", color: "#666", marginBottom: 12 }}>{t("activeChallenges")}</h3>
+                <div style={{ display: "grid", gap: 12 }}>
+                  {userChallenges.map((uc) => {
+                    const progress = uc.progress?.current || 0;
+                    const target = uc.challenge.requirements.target || 1;
+                    const percent = Math.min(100, (progress / target) * 100);
+                    const isCompleted = !!uc.completedAt;
+
+                    return (
+                      <div
+                        key={uc.id}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 12,
+                          padding: 12,
+                          background: isCompleted ? "rgba(124, 122, 103, 0.1)" : "#f9fafb",
+                          borderRadius: 12,
+                          border: isCompleted ? "2px solid #7C7A67" : "1px solid #e5e7eb",
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: "2rem",
+                            width: 48,
+                            height: 48,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            background: isCompleted ? "rgba(199, 168, 120, 0.2)" : "#f3f4f6",
+                            borderRadius: 12,
+                          }}
+                        >
+                          {uc.challenge.iconEmoji}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: "bold", marginBottom: 2 }}>
+                            {uc.challenge.name}
+                            {isCompleted && !uc.rewardClaimed && (
+                              <span style={{ color: "#22c55e", marginLeft: 8 }}>
+                                {t("completed")}
+                              </span>
+                            )}
+                            {uc.rewardClaimed && (
+                              <span style={{ color: "#7C7A67", marginLeft: 8 }}>
+                                {t("claimed")}
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: "0.85rem", color: "#666", marginBottom: 6 }}>
+                            {uc.challenge.description}
+                          </div>
+                          {!isCompleted && (
+                            <div>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  justifyContent: "space-between",
+                                  fontSize: "0.75rem",
+                                  color: "#888",
+                                  marginBottom: 4,
+                                }}
+                              >
+                                <span>{progress} / {target}</span>
+                                <span>{Math.round(percent)}%</span>
+                              </div>
+                              <div
+                                style={{
+                                  height: 6,
+                                  background: "#e5e7eb",
+                                  borderRadius: 3,
+                                  overflow: "hidden",
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    height: "100%",
+                                    background: tierColor,
+                                    width: `${percent}%`,
+                                    transition: "width 0.3s",
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          )}
+                          {isCompleted && !uc.rewardClaimed && (
+                            <button
+                              onClick={() => claimChallengeReward(uc.challengeId)}
+                              style={{
+                                marginTop: 8,
+                                padding: "6px 12px",
+                                background: tierColor,
+                                color: "white",
+                                border: "none",
+                                borderRadius: 6,
+                                cursor: "pointer",
+                                fontSize: "0.85rem",
+                                fontWeight: "bold",
+                              }}
+                            >
+                              {t("claimReward", { amount: (uc.challenge.rewardCents / 100).toFixed(2) })}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Available Challenges (not enrolled) */}
+            {availableChallenges.filter(c => !userChallenges.some(uc => uc.challengeId === c.id)).length > 0 && (
+              <div>
+                <h3 style={{ fontSize: "0.9rem", color: "#666", marginBottom: 12 }}>{t("availableChallenges")}</h3>
+                <div style={{ display: "grid", gap: 12 }}>
+                  {availableChallenges
+                    .filter(c => !userChallenges.some(uc => uc.challengeId === c.id))
+                    .map((challenge) => (
+                      <div
+                        key={challenge.id}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 12,
+                          padding: 12,
+                          background: "#f9fafb",
+                          borderRadius: 12,
+                          border: "1px solid #e5e7eb",
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: "2rem",
+                            width: 48,
+                            height: 48,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            background: "#f3f4f6",
+                            borderRadius: 12,
+                          }}
+                        >
+                          {challenge.iconEmoji}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: "bold", marginBottom: 2 }}>
+                            {challenge.name}
+                          </div>
+                          <div style={{ fontSize: "0.85rem", color: "#666", marginBottom: 4 }}>
+                            {challenge.description}
+                          </div>
+                          <div style={{ fontSize: "0.75rem", color: tierColor, fontWeight: "bold" }}>
+                            {t("reward")}: ${(challenge.rewardCents / 100).toFixed(2)}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => enrollInChallenge(challenge.id)}
+                          style={{
+                            padding: "8px 16px",
+                            background: tierColor,
+                            color: "white",
+                            border: "none",
+                            borderRadius: 8,
+                            cursor: "pointer",
+                            fontSize: "0.85rem",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          {t("join")}
+                        </button>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Badges */}
         <div
           style={{
@@ -735,6 +1048,8 @@ export default function MemberDashboard() {
           <div style={{ display: "grid", gap: 12 }}>
             {allBadges.map((badge) => {
               const earned = earnedBadgeIds.includes(badge.id);
+              const progress = badgeProgress[badge.slug];
+              const hasProgress = progress && progress.required > 1 && !earned;
               return (
                 <div
                   key={badge.id}
@@ -746,7 +1061,7 @@ export default function MemberDashboard() {
                     background: earned ? "rgba(124, 122, 103, 0.1)" : "#f9fafb",
                     borderRadius: 12,
                     border: earned ? "2px solid #7C7A67" : "1px solid #e5e7eb",
-                    opacity: earned ? 1 : 0.5,
+                    opacity: earned ? 1 : 0.7,
                   }}
                 >
                   <div
@@ -772,9 +1087,43 @@ export default function MemberDashboard() {
                         </span>
                       )}
                     </div>
-                    <div style={{ fontSize: "0.85rem", color: "#666" }}>
+                    <div style={{ fontSize: "0.85rem", color: "#666", marginBottom: hasProgress ? 6 : 0 }}>
                       {t(`badges.${badge.slug}.description`, { defaultValue: badge.description })}
                     </div>
+                    {/* Progress bar for unearned badges */}
+                    {hasProgress && (
+                      <div>
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            fontSize: "0.75rem",
+                            color: "#888",
+                            marginBottom: 4,
+                          }}
+                        >
+                          <span>{progress.current} / {progress.required}</span>
+                          <span>{Math.round(progress.percent)}%</span>
+                        </div>
+                        <div
+                          style={{
+                            height: 6,
+                            background: "#e5e7eb",
+                            borderRadius: 3,
+                            overflow: "hidden",
+                          }}
+                        >
+                          <div
+                            style={{
+                              height: "100%",
+                              background: tierColor,
+                              width: `${progress.percent}%`,
+                              transition: "width 0.3s",
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               );

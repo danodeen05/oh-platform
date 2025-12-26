@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { useToast } from "@/components/ui/Toast";
 import { event } from "@/lib/analytics";
+import { QRCodeSVG } from "qrcode.react";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -38,6 +39,7 @@ export default function ReferralDashboard() {
   const [credits, setCredits] = useState<any>(null);
   const [pendingCredits, setPendingCredits] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [showQR, setShowQR] = useState(false);
 
   async function createUser() {
     if (!email) {
@@ -269,6 +271,46 @@ export default function ReferralDashboard() {
             {t("copy")}
           </button>
         </div>
+
+        {/* Show QR Button */}
+        <button
+          onClick={() => {
+            setShowQR(true);
+            event({
+              action: "show_referral_qr",
+              category: "engagement",
+              label: credits?.referralCode,
+            });
+          }}
+          style={{
+            width: "100%",
+            marginTop: 12,
+            padding: "12px 16px",
+            background: "#222222",
+            color: "white",
+            border: "none",
+            borderRadius: 8,
+            cursor: "pointer",
+            fontSize: "0.9rem",
+            fontWeight: "bold",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+          }}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
+            <rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
+            <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="2"/>
+            <rect x="14" y="14" width="3" height="3" fill="currentColor"/>
+            <rect x="18" y="14" width="3" height="3" fill="currentColor"/>
+            <rect x="14" y="18" width="3" height="3" fill="currentColor"/>
+            <rect x="18" y="18" width="3" height="3" fill="currentColor"/>
+          </svg>
+          {t("showQRCode")}
+        </button>
+
         <p
           style={{
             fontSize: "0.85rem",
@@ -280,6 +322,101 @@ export default function ReferralDashboard() {
           {t("shareToEarn")}
         </p>
       </div>
+
+      {/* QR Code Modal */}
+      {showQR && (
+        <div
+          onClick={() => setShowQR(false)}
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0, 0, 0, 0.8)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: 24,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "white",
+              borderRadius: 20,
+              padding: 32,
+              maxWidth: 360,
+              width: "100%",
+              textAlign: "center",
+            }}
+          >
+            <h3 style={{ margin: 0, marginBottom: 8, fontSize: "1.3rem" }}>
+              {t("scanToJoin")}
+            </h3>
+            <p style={{ color: "#666", marginBottom: 24, fontSize: "0.9rem" }}>
+              {t("scanDescription")}
+            </p>
+
+            {/* QR Code with Oh! logo in center */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "center",
+                marginBottom: 24,
+                position: "relative",
+              }}
+            >
+              <QRCodeSVG
+                value={referralUrl}
+                size={240}
+                level="H"
+                includeMargin
+                imageSettings={{
+                  src: "/Oh_Logo_Mark_Web.png",
+                  x: undefined,
+                  y: undefined,
+                  height: 48,
+                  width: 48,
+                  excavate: true,
+                }}
+              />
+            </div>
+
+            <div
+              style={{
+                background: "#f9fafb",
+                borderRadius: 8,
+                padding: 12,
+                marginBottom: 16,
+                fontSize: "0.85rem",
+                color: "#7C7A67",
+                wordBreak: "break-all",
+              }}
+            >
+              {referralUrl}
+            </div>
+
+            <button
+              onClick={() => setShowQR(false)}
+              style={{
+                width: "100%",
+                padding: 14,
+                background: "#7C7A67",
+                color: "white",
+                border: "none",
+                borderRadius: 8,
+                cursor: "pointer",
+                fontSize: "1rem",
+                fontWeight: "bold",
+              }}
+            >
+              {t("close")}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Recent Activity */}
       {credits?.events && credits.events.length > 0 && (
