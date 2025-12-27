@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 type DietaryBadgesProps = {
   isVegetarian?: boolean;
   isVegan?: boolean;
@@ -22,30 +24,24 @@ export function DietaryBadges({
   spiceLevel,
   labels = {},
 }: DietaryBadgesProps) {
-  const badges: { label: string; abbr: string; color: string; bgColor: string }[] = [];
+  const badges: { label: string; src: string }[] = [];
 
   if (isVegan) {
     badges.push({
       label: labels.vegan || "Vegan",
-      abbr: "VG",
-      color: "#166534",
-      bgColor: "#dcfce7",
+      src: "/allergens/vegan.png",
     });
   } else if (isVegetarian) {
     badges.push({
       label: labels.vegetarian || "Vegetarian",
-      abbr: "V",
-      color: "#166534",
-      bgColor: "#dcfce7",
+      src: "/allergens/vegetarian.png",
     });
   }
 
   if (isGlutenFree) {
     badges.push({
       label: labels.glutenFree || "Gluten-Free",
-      abbr: "GF",
-      color: "#92400e",
-      bgColor: "#fef3c7",
+      src: "/allergens/gluten-free.png",
     });
   }
 
@@ -67,26 +63,17 @@ export function DietaryBadges({
   };
 
   return (
-    <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", marginTop: "4px" }}>
+    <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", marginTop: "4px", alignItems: "center" }}>
       {badges.map((badge, idx) => (
-        <span
+        <Image
           key={idx}
+          src={badge.src}
+          alt={badge.label}
           title={badge.label}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "1px 6px",
-            fontSize: "0.65rem",
-            fontWeight: "700",
-            borderRadius: "3px",
-            background: badge.bgColor,
-            color: badge.color,
-            letterSpacing: "0.3px",
-          }}
-        >
-          {badge.abbr}
-        </span>
+          width={20}
+          height={20}
+          style={{ objectFit: "contain" }}
+        />
       ))}
       {spiceLevel !== undefined && spiceLevel > 0 && (
         <span

@@ -303,6 +303,7 @@ export default function CustomersPage() {
           { key: "lifetimeSpend", label: "Lifetime Spend", align: "right" },
         ]}
         data={topCustomersTableData}
+        expandable={true}
       />
     </div>
   );

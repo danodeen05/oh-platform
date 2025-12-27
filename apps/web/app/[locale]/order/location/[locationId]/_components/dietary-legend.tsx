@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useLocale } from "next-intl";
 
@@ -43,21 +44,13 @@ export function DietaryLegend({ labels = {} }: DietaryLegendProps) {
       >
         {/* Vegetarian */}
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "2px 8px",
-              fontSize: "0.7rem",
-              fontWeight: 700,
-              borderRadius: 4,
-              background: "#dcfce7",
-              color: "#166534",
-            }}
-          >
-            V
-          </span>
+          <Image
+            src="/allergens/vegetarian.png"
+            alt={labels.vegetarian || "Vegetarian"}
+            width={20}
+            height={20}
+            style={{ objectFit: "contain" }}
+          />
           <span style={{ fontSize: "0.8rem", color: "#666" }}>
             {labels.vegetarian || "Vegetarian"}
           </span>
@@ -65,21 +58,13 @@ export function DietaryLegend({ labels = {} }: DietaryLegendProps) {
 
         {/* Vegan */}
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "2px 8px",
-              fontSize: "0.7rem",
-              fontWeight: 700,
-              borderRadius: 4,
-              background: "#dcfce7",
-              color: "#166534",
-            }}
-          >
-            VG
-          </span>
+          <Image
+            src="/allergens/vegan.png"
+            alt={labels.vegan || "Vegan"}
+            width={20}
+            height={20}
+            style={{ objectFit: "contain" }}
+          />
           <span style={{ fontSize: "0.8rem", color: "#666" }}>
             {labels.vegan || "Vegan"}
           </span>
@@ -87,21 +72,13 @@ export function DietaryLegend({ labels = {} }: DietaryLegendProps) {
 
         {/* Gluten-Free */}
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "2px 8px",
-              fontSize: "0.7rem",
-              fontWeight: 700,
-              borderRadius: 4,
-              background: "#fef3c7",
-              color: "#92400e",
-            }}
-          >
-            GF
-          </span>
+          <Image
+            src="/allergens/gluten-free.png"
+            alt={labels.glutenFree || "Gluten-Free"}
+            width={20}
+            height={20}
+            style={{ objectFit: "contain" }}
+          />
           <span style={{ fontSize: "0.8rem", color: "#666" }}>
             {labels.glutenFree || "Gluten-Free"}
           </span>
