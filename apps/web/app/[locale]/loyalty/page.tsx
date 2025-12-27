@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useTranslations, useLocale } from "next-intl";
-import { event } from "@/lib/analytics";
+import { event, trackLoyaltySignup } from "@/lib/analytics";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -148,6 +148,7 @@ export default function LoyaltyPage() {
         <Link
           href={`/${locale}/order`}
           onClick={() => {
+            trackLoyaltySignup();
             event({
               action: "loyalty_cta_click",
               category: "engagement",
@@ -779,6 +780,14 @@ export default function LoyaltyPage() {
         </p>
         <Link
           href={`/${locale}/order`}
+          onClick={() => {
+            trackLoyaltySignup();
+            event({
+              action: "loyalty_cta_click",
+              category: "engagement",
+              label: "order_now_bottom",
+            });
+          }}
           style={{
             display: "inline-block",
             padding: "16px 48px",
