@@ -179,44 +179,8 @@ export default function PodsManager({ locations }: { locations: Location[] }) {
     return () => clearInterval(interval);
   }, [selectedLocation]);
 
-  async function startCleaning(podId: string, orderId: string, orderStatus?: string) {
-    try {
-      // If order is already COMPLETED, just set the pod to CLEANING directly
-      if (orderStatus === "COMPLETED") {
-        // Directly set pod to CLEANING status
-        const response = await fetch(`${BASE}/seats/${podId}`, {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            "x-tenant-slug": "oh",
-          },
-          body: JSON.stringify({ status: "CLEANING" }),
-        });
-
-        if (!response.ok) {
-          console.error("Failed to set pod to cleaning:", await response.text());
-        }
-      } else {
-        // Mark the order as COMPLETED - this will automatically set pod to CLEANING
-        await fetch(`${BASE}/kitchen/orders/${orderId}/status`, {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            "x-tenant-slug": "oh",
-          },
-          body: JSON.stringify({ status: "COMPLETED" }),
-        });
-      }
-
-      // Refresh pods list
-      loadPods();
-    } catch (error) {
-      console.error("Failed to start cleaning:", error);
-    }
-  }
-
-  // Force a pod to CLEANING status and complete any active orders (edge case recovery)
-  async function forceCleanPod(podId: string) {
+  // Start cleaning: Complete any active orders and set pod to CLEANING
+  async function startCleaning(podId: string) {
     try {
       const response = await fetch(`${BASE}/seats/${podId}/force-clean`, {
         method: "POST",
@@ -228,17 +192,17 @@ export default function PodsManager({ locations }: { locations: Location[] }) {
 
       if (!response.ok) {
         const error = await response.json();
-        console.error("Failed to force pod to cleaning:", error);
-        alert(`Failed to set pod to cleaning: ${error.error || "Unknown error"}`);
+        console.error("Failed to start cleaning:", error);
+        alert(`Failed to start cleaning: ${error.error || "Unknown error"}`);
       } else {
         const result = await response.json();
         if (result.completedOrders > 0) {
-          console.log(`Force-cleaned pod, completed ${result.completedOrders} order(s)`);
+          console.log(`Started cleaning, completed ${result.completedOrders} order(s)`);
         }
         loadPods();
       }
     } catch (error) {
-      console.error("Failed to force pod to cleaning:", error);
+      console.error("Failed to start cleaning:", error);
     }
   }
 
@@ -712,47 +676,23 @@ export default function PodsManager({ locations }: { locations: Location[] }) {
                       <TimeInPod podConfirmedAt={currentOrder?.podConfirmedAt} />
                     </div>
 
-                    {/* Action Button */}
-                    {currentOrder ? (
-                      <button
-                        onClick={() => startCleaning(pod.id, currentOrder.id, currentOrder.status)}
-                        disabled={currentOrder.status !== "SERVING" && currentOrder.status !== "COMPLETED"}
-                        style={{
-                          width: "100%",
-                          padding: 16,
-                          background: (currentOrder.status === "SERVING" || currentOrder.status === "COMPLETED") ? "#3b82f6" : "#374151",
-                          color: (currentOrder.status === "SERVING" || currentOrder.status === "COMPLETED") ? "white" : "#6b7280",
-                          border: "none",
-                          borderRadius: 8,
-                          fontWeight: "bold",
-                          cursor: (currentOrder.status === "SERVING" || currentOrder.status === "COMPLETED") ? "pointer" : "not-allowed",
-                          fontSize: "1rem",
-                          opacity: (currentOrder.status === "SERVING" || currentOrder.status === "COMPLETED") ? 1 : 0.6,
-                        }}
-                      >
-                        {(currentOrder.status === "SERVING" || currentOrder.status === "COMPLETED")
-                          ? "🧹 Customer Left - Start Cleaning"
-                          : `⏳ Waiting (${statusText})`}
-                      </button>
-                    ) : (
-                      /* Fallback: No order found but pod is OCCUPIED - allow manual override */
-                      <button
-                        onClick={() => forceCleanPod(pod.id)}
-                        style={{
-                          width: "100%",
-                          padding: 16,
-                          background: "#f59e0b",
-                          color: "#000",
-                          border: "none",
-                          borderRadius: 8,
-                          fontWeight: "bold",
-                          cursor: "pointer",
-                          fontSize: "1rem",
-                        }}
-                      >
-                        ⚠️ Force Start Cleaning (No Order Found)
-                      </button>
-                    )}
+                    {/* Action Button - Always allow cleaning staff to start cleaning */}
+                    <button
+                      onClick={() => startCleaning(pod.id)}
+                      style={{
+                        width: "100%",
+                        padding: 16,
+                        background: "#3b82f6",
+                        color: "white",
+                        border: "none",
+                        borderRadius: 8,
+                        fontWeight: "bold",
+                        cursor: "pointer",
+                        fontSize: "1rem",
+                      }}
+                    >
+                      🧹 Customer Left - Start Cleaning
+                    </button>
                   </div>
                 );
               })}
