@@ -179,19 +179,36 @@ export default function PodsManager({ locations }: { locations: Location[] }) {
     return () => clearInterval(interval);
   }, [selectedLocation]);
 
-  async function startCleaning(podId: string, orderId: string) {
+  async function startCleaning(podId: string, orderId: string, orderStatus?: string) {
     try {
-      // First, mark the order as COMPLETED
-      await fetch(`${BASE}/kitchen/orders/${orderId}/status`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "x-tenant-slug": "oh",
-        },
-        body: JSON.stringify({ status: "COMPLETED" }),
-      });
+      // If order is already COMPLETED, just set the pod to CLEANING directly
+      if (orderStatus === "COMPLETED") {
+        // Directly set pod to CLEANING status
+        const response = await fetch(`${BASE}/seats/${podId}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "x-tenant-slug": "oh",
+          },
+          body: JSON.stringify({ status: "CLEANING" }),
+        });
 
-      // Pod status will automatically be set to CLEANING by the API
+        if (!response.ok) {
+          console.error("Failed to set pod to cleaning:", await response.text());
+        }
+      } else {
+        // Mark the order as COMPLETED - this will automatically set pod to CLEANING
+        await fetch(`${BASE}/kitchen/orders/${orderId}/status`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            "x-tenant-slug": "oh",
+          },
+          body: JSON.stringify({ status: "COMPLETED" }),
+        });
+      }
+
+      // Refresh pods list
       loadPods();
     } catch (error) {
       console.error("Failed to start cleaning:", error);
@@ -557,12 +574,14 @@ export default function PodsManager({ locations }: { locations: Location[] }) {
                   PREPPING: "Preparing",
                   READY: "Ready",
                   SERVING: "Serving",
+                  COMPLETED: "Completed",
                 };
                 const statusColors: Record<string, string> = {
                   QUEUED: "#f59e0b",    // Orange (matches Kitchen Display)
                   PREPPING: "#3b82f6",  // Blue (matches Kitchen Display)
                   READY: "#22c55e",     // Green (matches Kitchen Display)
                   SERVING: "#8b5cf6",   // Purple (matches Kitchen Display)
+                  COMPLETED: "#6b7280", // Gray for completed
                 };
                 const statusText = currentOrder?.status
                   ? statusMap[currentOrder.status] || currentOrder.status
@@ -669,22 +688,22 @@ export default function PodsManager({ locations }: { locations: Location[] }) {
                     {/* Action Button */}
                     {currentOrder && (
                       <button
-                        onClick={() => startCleaning(pod.id, currentOrder.id)}
-                        disabled={currentOrder.status !== "SERVING"}
+                        onClick={() => startCleaning(pod.id, currentOrder.id, currentOrder.status)}
+                        disabled={currentOrder.status !== "SERVING" && currentOrder.status !== "COMPLETED"}
                         style={{
                           width: "100%",
                           padding: 16,
-                          background: currentOrder.status === "SERVING" ? "#3b82f6" : "#374151",
-                          color: currentOrder.status === "SERVING" ? "white" : "#6b7280",
+                          background: (currentOrder.status === "SERVING" || currentOrder.status === "COMPLETED") ? "#3b82f6" : "#374151",
+                          color: (currentOrder.status === "SERVING" || currentOrder.status === "COMPLETED") ? "white" : "#6b7280",
                           border: "none",
                           borderRadius: 8,
                           fontWeight: "bold",
-                          cursor: currentOrder.status === "SERVING" ? "pointer" : "not-allowed",
+                          cursor: (currentOrder.status === "SERVING" || currentOrder.status === "COMPLETED") ? "pointer" : "not-allowed",
                           fontSize: "1rem",
-                          opacity: currentOrder.status === "SERVING" ? 1 : 0.6,
+                          opacity: (currentOrder.status === "SERVING" || currentOrder.status === "COMPLETED") ? 1 : 0.6,
                         }}
                       >
-                        {currentOrder.status === "SERVING"
+                        {(currentOrder.status === "SERVING" || currentOrder.status === "COMPLETED")
                           ? "🧹 Customer Left - Start Cleaning"
                           : `⏳ Waiting (${statusText})`}
                       </button>
