@@ -104,42 +104,33 @@ function DietaryBadges({
   spiceLevel?: number;
   t: (key: string) => string;
 }) {
-  const badges: { label: string; abbr: string; color: string; bgColor: string }[] = [];
+  const badges: { label: string; src: string }[] = [];
 
   if (isVegan) {
-    badges.push({ label: t("dietary.vegan"), abbr: "VG", color: "#166534", bgColor: "#dcfce7" });
+    badges.push({ label: t("dietary.vegan"), src: "/allergens/vegan.png" });
   } else if (isVegetarian) {
-    badges.push({ label: t("dietary.vegetarian"), abbr: "V", color: "#166534", bgColor: "#dcfce7" });
+    badges.push({ label: t("dietary.vegetarian"), src: "/allergens/vegetarian.png" });
   }
 
   if (isGlutenFree) {
-    badges.push({ label: t("dietary.glutenFree"), abbr: "GF", color: "#92400e", bgColor: "#fef3c7" });
+    badges.push({ label: t("dietary.glutenFree"), src: "/allergens/gluten-free.png" });
   }
 
   const hasDietaryInfo = badges.length > 0 || (spiceLevel && spiceLevel > 0);
   if (!hasDietaryInfo) return null;
 
   return (
-    <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "8px" }}>
+    <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "8px", alignItems: "center" }}>
       {badges.map((badge, idx) => (
-        <span
+        <Image
           key={idx}
+          src={badge.src}
+          alt={badge.label}
           title={badge.label}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "2px 8px",
-            fontSize: "0.7rem",
-            fontWeight: "700",
-            borderRadius: "4px",
-            background: badge.bgColor,
-            color: badge.color,
-            letterSpacing: "0.5px",
-          }}
-        >
-          {badge.abbr}
-        </span>
+          width={24}
+          height={24}
+          style={{ objectFit: "contain" }}
+        />
       ))}
       {spiceLevel && spiceLevel > 0 && (
         <span
@@ -652,63 +643,37 @@ export default function MenuPage() {
                           gap: "4px",
                           flexWrap: "wrap",
                           justifyContent: "flex-end",
+                          alignItems: "center",
                         }}
                       >
                         {item.isVegan ? (
-                          <span
+                          <Image
+                            src="/allergens/vegan.png"
+                            alt={t("dietary.vegan")}
                             title={t("dietary.vegan")}
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              padding: "4px 8px",
-                              fontSize: "0.65rem",
-                              fontWeight: "700",
-                              borderRadius: "4px",
-                              background: "#dcfce7",
-                              color: "#166534",
-                              boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
-                            }}
-                          >
-                            VG
-                          </span>
+                            width={28}
+                            height={28}
+                            style={{ objectFit: "contain", filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.3))" }}
+                          />
                         ) : item.isVegetarian ? (
-                          <span
+                          <Image
+                            src="/allergens/vegetarian.png"
+                            alt={t("dietary.vegetarian")}
                             title={t("dietary.vegetarian")}
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              padding: "4px 8px",
-                              fontSize: "0.65rem",
-                              fontWeight: "700",
-                              borderRadius: "4px",
-                              background: "#dcfce7",
-                              color: "#166534",
-                              boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
-                            }}
-                          >
-                            V
-                          </span>
+                            width={28}
+                            height={28}
+                            style={{ objectFit: "contain", filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.3))" }}
+                          />
                         ) : null}
                         {item.isGlutenFree && (
-                          <span
+                          <Image
+                            src="/allergens/gluten-free.png"
+                            alt={t("dietary.glutenFree")}
                             title={t("dietary.glutenFree")}
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              padding: "4px 8px",
-                              fontSize: "0.65rem",
-                              fontWeight: "700",
-                              borderRadius: "4px",
-                              background: "#fef3c7",
-                              color: "#92400e",
-                              boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
-                            }}
-                          >
-                            GF
-                          </span>
+                            width={28}
+                            height={28}
+                            style={{ objectFit: "contain", filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.3))" }}
+                          />
                         )}
                         {item.spiceLevel && item.spiceLevel > 0 && (
                           <span
@@ -887,17 +852,17 @@ export default function MenuPage() {
           <p style={{ fontSize: "0.9rem", color: "#666", lineHeight: "1.6", marginBottom: "16px" }}>
             {t("allergen.description")}
           </p>
-          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "16px", marginBottom: "16px" }}>
+          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "16px", marginBottom: "16px", alignItems: "center" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", color: "#444" }}>
-              <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "2px 8px", fontSize: "0.7rem", fontWeight: "700", borderRadius: "4px", background: "#dcfce7", color: "#166534" }}>V</span>
+              <Image src="/allergens/vegetarian.png" alt={t("dietary.vegetarian")} width={24} height={24} style={{ objectFit: "contain" }} />
               <span>{t("dietary.vegetarian")}</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", color: "#444" }}>
-              <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "2px 8px", fontSize: "0.7rem", fontWeight: "700", borderRadius: "4px", background: "#dcfce7", color: "#166534" }}>VG</span>
+              <Image src="/allergens/vegan.png" alt={t("dietary.vegan")} width={24} height={24} style={{ objectFit: "contain" }} />
               <span>{t("dietary.vegan")}</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", color: "#444" }}>
-              <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "2px 8px", fontSize: "0.7rem", fontWeight: "700", borderRadius: "4px", background: "#fef3c7", color: "#92400e" }}>GF</span>
+              <Image src="/allergens/gluten-free.png" alt={t("dietary.glutenFree")} width={24} height={24} style={{ objectFit: "contain" }} />
               <span>{t("dietary.glutenFree")}</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.85rem", color: "#444" }}>
