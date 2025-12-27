@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useTranslations, useLocale } from "next-intl";
 import { useToast } from "@/components/ui/Toast";
+import { setUserProperties } from "@/lib/analytics";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -341,6 +342,14 @@ export default function MemberDashboard() {
       console.log("Has badges?", data.badges);
       console.log("Has tierBenefits?", data.tierBenefits);
       setProfile(data);
+
+      // Set GA4 user properties for segmentation
+      setUserProperties({
+        membershipTier: data.membershipTier,
+        lifetimeOrderCount: data.lifetimeOrderCount,
+        lifetimeSpent: data.lifetimeSpentCents / 100,
+      });
+
       setLoading(false);
     } catch (error) {
       console.error("Failed to load profile:", error);

@@ -10,7 +10,7 @@ import { DietaryLegend } from "./dietary-legend";
 import SeatingMap, { Seat } from "@/components/SeatingMap";
 import { useGuest } from "@/contexts/guest-context";
 import { useToast } from "@/components/ui/Toast";
-import { trackAddToCart, trackLocationSelected, trackPodSelected, event } from "@/lib/analytics";
+import { trackAddToCart, trackRemoveFromCart, trackLocationSelected, trackPodSelected, trackMenuCategoryViewed, event } from "@/lib/analytics";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -247,6 +247,11 @@ export default function EnhancedMenuBuilder({
         });
         setCart(initialCart);
         setSliderLabels(initialLabels);
+
+        // Track initial menu step view
+        if (data.steps.length > 0) {
+          trackMenuCategoryViewed(data.steps[0].name);
+        }
 
         setLoading(false);
       } catch (error) {
@@ -507,6 +512,20 @@ export default function EnhancedMenuBuilder({
         }
       }
 
+      // Track remove from cart when quantity decreases
+      if (delta < 0 && current > 0) {
+        const allItems = getAllMenuItems();
+        const item = allItems.find(i => i.id === itemId);
+        if (item) {
+          trackRemoveFromCart({
+            id: item.id,
+            name: item.name,
+            price: item.basePriceCents / 100,
+            quantity: Math.abs(delta),
+          });
+        }
+      }
+
       if (newQty === 0) {
         const { [itemId]: _, ...rest } = prev;
         return rest;
@@ -549,10 +568,15 @@ export default function EnhancedMenuBuilder({
     }
 
     if (currentStepIndex < menuSteps.length - 1) {
-      setCurrentStepIndex(prev => prev + 1);
+      const nextIndex = currentStepIndex + 1;
+      setCurrentStepIndex(nextIndex);
+      // Track menu category navigation in GA4
+      trackMenuCategoryViewed(menuSteps[nextIndex].name);
     } else {
       // Last menu step, move to time selection
       setCurrentStepIndex(menuSteps.length);
+      // Track arrival time step
+      trackMenuCategoryViewed("Arrival Time");
     }
 
     // Scroll to top when advancing to next step (setTimeout for Safari compatibility)
@@ -562,7 +586,12 @@ export default function EnhancedMenuBuilder({
   }
 
   function previousStep() {
-    setCurrentStepIndex(prev => Math.max(0, prev - 1));
+    const prevIndex = Math.max(0, currentStepIndex - 1);
+    setCurrentStepIndex(prevIndex);
+    // Track menu category navigation in GA4
+    if (prevIndex < menuSteps.length) {
+      trackMenuCategoryViewed(menuSteps[prevIndex].name);
+    }
     // Scroll to top when going back (setTimeout for Safari compatibility)
     setTimeout(() => {
       window.scrollTo(0, 0);

@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useUser, SignInButton } from "@clerk/nextjs";
 import { useGuest } from "@/contexts/guest-context";
-import { trackBeginCheckout } from "@/lib/analytics";
+import { trackBeginCheckout, trackReferralCodeUsed } from "@/lib/analytics";
 import { useTranslations } from "next-intl";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -133,6 +133,11 @@ export default function PaymentForm({
       if (userData.referralJustApplied) {
         console.log("🎉 Referral just applied!");
         setHasReferral(true);
+
+        // Track referral code usage in GA4
+        if (referralCode) {
+          trackReferralCodeUsed(referralCode);
+        }
       }
 
       // Clear the pending referral code after successful user creation
