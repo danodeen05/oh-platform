@@ -1887,6 +1887,57 @@ app.patch("/seats/:id/clean", async (req, reply) => {
   return seat;
 });
 
+// POST /seats/:id/force-clean - Force pod to CLEANING and complete any active orders
+// Used as emergency recovery when order/pod state gets out of sync
+app.post("/seats/:id/force-clean", async (req, reply) => {
+  const { id } = req.params;
+
+  // Find the pod
+  const seat = await prisma.seat.findUnique({
+    where: { id },
+    include: { location: true },
+  });
+
+  if (!seat) {
+    return reply.code(404).send({ error: "Pod not found" });
+  }
+
+  // Find and complete any active orders on this pod
+  const activeOrders = await prisma.order.findMany({
+    where: {
+      seatId: id,
+      status: { in: ["QUEUED", "PREPPING", "READY", "SERVING"] },
+    },
+  });
+
+  const completedOrderIds = [];
+  for (const order of activeOrders) {
+    await prisma.order.update({
+      where: { id: order.id },
+      data: {
+        status: "COMPLETED",
+        completedTime: new Date(),
+      },
+    });
+    completedOrderIds.push(order.id);
+    console.log(`Force-completed order ${order.kitchenOrderNumber || order.orderNumber} on pod ${seat.number}`);
+  }
+
+  // Set pod to CLEANING
+  const updatedSeat = await prisma.seat.update({
+    where: { id },
+    data: { status: "CLEANING" },
+  });
+
+  console.log(`Force-cleaned pod ${seat.number} at ${seat.location.name}, completed ${activeOrders.length} orders`);
+
+  return {
+    success: true,
+    seat: updatedSeat,
+    completedOrders: completedOrderIds.length,
+  };
+});
+
 // ====================
 // DUAL POD CONFIGURATION
 // ====================

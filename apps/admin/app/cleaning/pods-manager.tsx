@@ -215,16 +215,15 @@ export default function PodsManager({ locations }: { locations: Location[] }) {
     }
   }
 
-  // Force a pod to CLEANING status when no order is found (edge case recovery)
+  // Force a pod to CLEANING status and complete any active orders (edge case recovery)
   async function forceCleanPod(podId: string) {
     try {
-      const response = await fetch(`${BASE}/seats/${podId}`, {
-        method: "PATCH",
+      const response = await fetch(`${BASE}/seats/${podId}/force-clean`, {
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
           "x-tenant-slug": "oh",
         },
-        body: JSON.stringify({ status: "CLEANING" }),
       });
 
       if (!response.ok) {
@@ -232,6 +231,10 @@ export default function PodsManager({ locations }: { locations: Location[] }) {
         console.error("Failed to force pod to cleaning:", error);
         alert(`Failed to set pod to cleaning: ${error.error || "Unknown error"}`);
       } else {
+        const result = await response.json();
+        if (result.completedOrders > 0) {
+          console.log(`Force-cleaned pod, completed ${result.completedOrders} order(s)`);
+        }
         loadPods();
       }
     } catch (error) {
