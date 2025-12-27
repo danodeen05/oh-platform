@@ -215,6 +215,30 @@ export default function PodsManager({ locations }: { locations: Location[] }) {
     }
   }
 
+  // Force a pod to CLEANING status when no order is found (edge case recovery)
+  async function forceCleanPod(podId: string) {
+    try {
+      const response = await fetch(`${BASE}/seats/${podId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-tenant-slug": "oh",
+        },
+        body: JSON.stringify({ status: "CLEANING" }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        console.error("Failed to force pod to cleaning:", error);
+        alert(`Failed to set pod to cleaning: ${error.error || "Unknown error"}`);
+      } else {
+        loadPods();
+      }
+    } catch (error) {
+      console.error("Failed to force pod to cleaning:", error);
+    }
+  }
+
   async function markClean(podId: string) {
     try {
       const response = await fetch(`${BASE}/seats/${podId}/clean`, {
@@ -686,7 +710,7 @@ export default function PodsManager({ locations }: { locations: Location[] }) {
                     </div>
 
                     {/* Action Button */}
-                    {currentOrder && (
+                    {currentOrder ? (
                       <button
                         onClick={() => startCleaning(pod.id, currentOrder.id, currentOrder.status)}
                         disabled={currentOrder.status !== "SERVING" && currentOrder.status !== "COMPLETED"}
@@ -706,6 +730,24 @@ export default function PodsManager({ locations }: { locations: Location[] }) {
                         {(currentOrder.status === "SERVING" || currentOrder.status === "COMPLETED")
                           ? "🧹 Customer Left - Start Cleaning"
                           : `⏳ Waiting (${statusText})`}
+                      </button>
+                    ) : (
+                      /* Fallback: No order found but pod is OCCUPIED - allow manual override */
+                      <button
+                        onClick={() => forceCleanPod(pod.id)}
+                        style={{
+                          width: "100%",
+                          padding: 16,
+                          background: "#f59e0b",
+                          color: "#000",
+                          border: "none",
+                          borderRadius: 8,
+                          fontWeight: "bold",
+                          cursor: "pointer",
+                          fontSize: "1rem",
+                        }}
+                      >
+                        ⚠️ Force Start Cleaning (No Order Found)
                       </button>
                     )}
                   </div>
