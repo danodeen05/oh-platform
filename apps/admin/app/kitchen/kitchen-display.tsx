@@ -732,6 +732,25 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
               Deliver to Pod
             </button>
           )}
+
+          {order.status === "SERVING" && (
+            <button
+              onClick={() => updateOrderStatus(order.id, "COMPLETED")}
+              style={{
+                flex: 1,
+                padding: 12,
+                background: "#6b7280",
+                color: "white",
+                border: "none",
+                borderRadius: 8,
+                fontWeight: "bold",
+                cursor: "pointer",
+                fontSize: "0.9rem",
+              }}
+            >
+              ✓ Mark Complete
+            </button>
+          )}
         </div>
       </div>
     );
