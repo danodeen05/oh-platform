@@ -26,7 +26,7 @@ function renderCell(value: unknown): ReactNode {
   }
   // Check if it's a React element (has $$typeof)
   if (typeof value === "object" && value !== null && "$$typeof" in value) {
-    return value as ReactNode;
+    return value as unknown as ReactNode;
   }
   // Fallback to string conversion
   return String(value);
