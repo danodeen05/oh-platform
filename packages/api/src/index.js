@@ -2713,28 +2713,8 @@ app.post("/orders", async (req, reply) => {
       .send({ error: "locationId, tenantId, and items required" });
   }
 
-  // Validate arrival time is within operating hours (skip for kiosk orders - customer is present)
-  if (!isKioskOrder && estimatedArrival) {
-    const location = await prisma.location.findUnique({
-      where: { id: locationId },
-      select: { operatingHours: true, timezone: true, isClosed: true },
-    });
-
-    if (location) {
-      // Convert estimatedArrival (ISO timestamp) to minutes from now
-      const arrivalDate = new Date(estimatedArrival);
-      const now = new Date();
-      const minutesFromNow = Math.round((arrivalDate.getTime() - now.getTime()) / (1000 * 60));
-      const validation = validateArrivalTime(location, minutesFromNow);
-
-      if (!validation.valid) {
-        return reply.code(400).send({
-          error: "Invalid arrival time",
-          message: validation.reason,
-        });
-      }
-    }
-  }
+  // Note: Arrival time validation disabled - frontend filters available times
+  // Backend accepts any arrival time to avoid timezone calculation issues
 
   // Calculate total
   const menuItems = await prisma.menuItem.findMany({
