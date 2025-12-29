@@ -12,9 +12,16 @@
  * 4. Set environment variables:
  *    - APPLE_PASS_TYPE_ID (e.g., pass.com.oh.loyalty)
  *    - APPLE_TEAM_ID (your 10-character team ID)
- *    - APPLE_PASS_CERT_PATH (path to .p12 file)
- *    - APPLE_PASS_CERT_PASSWORD (password for .p12)
+ *
+ *    Option A - File paths (for local development):
+ *    - APPLE_PASS_CERT_PATH (path to .pem cert file)
+ *    - APPLE_PASS_KEY_PATH (path to .pem key file)
  *    - APPLE_WWDR_CERT_PATH (path to WWDR certificate)
+ *
+ *    Option B - Base64 encoded (for production/Railway):
+ *    - APPLE_PASS_CERT_BASE64 (base64 encoded cert PEM)
+ *    - APPLE_PASS_KEY_BASE64 (base64 encoded key PEM)
+ *    - APPLE_WWDR_CERT_BASE64 (base64 encoded WWDR PEM)
  *
  * For testing without certificates, use the demo mode.
  */
@@ -48,16 +55,49 @@ const TIER_CONFIG = {
 
 /**
  * Check if Apple Wallet certificates are configured
+ * Supports both file paths (local) and base64 env vars (production)
  */
 export function isAppleWalletConfigured() {
   const passTypeId = process.env.APPLE_PASS_TYPE_ID;
   const teamId = process.env.APPLE_TEAM_ID;
+
+  // Check for base64 encoded certs (production)
+  const certBase64 = process.env.APPLE_PASS_CERT_BASE64;
+  const keyBase64 = process.env.APPLE_PASS_KEY_BASE64;
+  const wwdrBase64 = process.env.APPLE_WWDR_CERT_BASE64;
+
+  if (passTypeId && teamId && certBase64 && keyBase64 && wwdrBase64) {
+    return true;
+  }
+
+  // Check for file paths (local development)
   const certPath = process.env.APPLE_PASS_CERT_PATH;
   const keyPath = process.env.APPLE_PASS_KEY_PATH;
   const wwdrPath = process.env.APPLE_WWDR_CERT_PATH;
 
   return !!(passTypeId && teamId && certPath && keyPath && wwdrPath &&
             existsSync(certPath) && existsSync(keyPath) && existsSync(wwdrPath));
+}
+
+/**
+ * Load certificates from either base64 env vars or file paths
+ */
+function loadCertificates() {
+  // Try base64 first (production)
+  if (process.env.APPLE_PASS_CERT_BASE64) {
+    return {
+      signerCert: Buffer.from(process.env.APPLE_PASS_CERT_BASE64, 'base64'),
+      signerKey: Buffer.from(process.env.APPLE_PASS_KEY_BASE64, 'base64'),
+      wwdr: Buffer.from(process.env.APPLE_WWDR_CERT_BASE64, 'base64'),
+    };
+  }
+
+  // Fall back to file paths (local development)
+  return {
+    signerCert: readFileSync(process.env.APPLE_PASS_CERT_PATH),
+    signerKey: readFileSync(process.env.APPLE_PASS_KEY_PATH),
+    wwdr: readFileSync(process.env.APPLE_WWDR_CERT_PATH),
+  };
 }
 
 /**
@@ -84,10 +124,8 @@ export async function generateAppleWalletPass(user) {
   const creditsFormatted = `$${(user.creditsCents / 100).toFixed(2)}`;
   const memberSince = new Date(user.createdAt).getFullYear().toString();
 
-  // Load certificates (PEM format)
-  const signerCert = readFileSync(process.env.APPLE_PASS_CERT_PATH);
-  const signerKey = readFileSync(process.env.APPLE_PASS_KEY_PATH);
-  const wwdr = readFileSync(process.env.APPLE_WWDR_CERT_PATH);
+  // Load certificates (from base64 env vars or file paths)
+  const { signerCert, signerKey, wwdr } = loadCertificates();
 
   // Create the pass using the model directory for images
   const modelPath = join(__dirname, 'pass-template.pass');
