@@ -62,13 +62,18 @@ export default function LocationSelector({
   const [creatingGroup, setCreatingGroup] = useState(false);
 
   useEffect(() => {
-    if (navigator.geolocation) {
+    // Only attempt geolocation on secure connections (HTTPS)
+    // Browsers block geolocation on HTTP for security reasons
+    const isSecureContext = typeof window !== 'undefined' && window.isSecureContext;
+
+    if (isSecureContext && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           setUserLat(position.coords.latitude);
           setUserLng(position.coords.longitude);
         },
         (error) => {
+          // Silently handle geolocation errors (user denied, etc.)
           console.log("Location access denied:", error);
         }
       );
