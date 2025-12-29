@@ -17,6 +17,9 @@ type CreditData = {
   balance: number;
   referralCode: string;
   events: CreditEvent[];
+  lifetimeEarningsCents: number;
+  rank: number;
+  totalUsers: number;
 };
 
 export default function CreditsPage() {
@@ -78,6 +81,24 @@ export default function CreditsPage() {
       hour: "2-digit",
       minute: "2-digit",
     });
+  }
+
+  function getRankMessage(rank: number, totalUsers: number) {
+    const percentile = ((totalUsers - rank + 1) / totalUsers) * 100;
+
+    if (rank === 1) {
+      return { emoji: "👑", title: "Reigning Champion", message: "You're the #1 top earner at Oh!" };
+    } else if (rank <= 3) {
+      return { emoji: "🏆", title: "Elite Earner", message: `You're #${rank} on the Oh! Leaderboard!` };
+    } else if (rank <= 10) {
+      return { emoji: "🔥", title: "Top 10 Earner", message: `You're ranked #${rank} – almost at the top!` };
+    } else if (percentile >= 90) {
+      return { emoji: "⭐", title: "Rising Star", message: `Top ${Math.round(100 - percentile + 1)}%! You're ranked #${rank}` };
+    } else if (percentile >= 50) {
+      return { emoji: "📈", title: "On the Rise", message: `You're ranked #${rank} of ${totalUsers} earners` };
+    } else {
+      return { emoji: "🎯", title: "Building Momentum", message: `You're ranked #${rank} – keep earning!` };
+    }
   }
 
   if (loading) {
@@ -165,6 +186,80 @@ export default function CreditsPage() {
           >
             {credits.events.length} transaction{credits.events.length !== 1 ? "s" : ""}
           </div>
+        </div>
+
+        {/* Lifetime Earnings & Ranking Card */}
+        <div
+          style={{
+            background: "white",
+            borderRadius: 16,
+            padding: 24,
+            marginBottom: 24,
+            boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+          }}
+        >
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: 20,
+            }}
+          >
+            {/* Lifetime Earnings */}
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: "0.85rem", color: "#666", marginBottom: 8 }}>
+                Lifetime Earnings
+              </div>
+              <div
+                style={{
+                  fontSize: "1.8rem",
+                  fontWeight: "bold",
+                  color: "#C7A878",
+                }}
+              >
+                ${(credits.lifetimeEarningsCents / 100).toFixed(2)}
+              </div>
+            </div>
+
+            {/* Ranking */}
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: "0.85rem", color: "#666", marginBottom: 8 }}>
+                Your Rank
+              </div>
+              <div
+                style={{
+                  fontSize: "1.8rem",
+                  fontWeight: "bold",
+                  color: "#7C7A67",
+                }}
+              >
+                #{credits.rank}
+              </div>
+            </div>
+          </div>
+
+          {/* Ranking Message */}
+          {credits.lifetimeEarningsCents > 0 && (
+            <div
+              style={{
+                marginTop: 20,
+                padding: 16,
+                background: "linear-gradient(135deg, rgba(199, 168, 120, 0.1) 0%, rgba(124, 122, 103, 0.1) 100%)",
+                borderRadius: 12,
+                textAlign: "center",
+              }}
+            >
+              <div style={{ fontSize: "1.5rem", marginBottom: 8 }}>
+                {getRankMessage(credits.rank, credits.totalUsers).emoji}
+              </div>
+              <div style={{ fontWeight: "bold", color: "#222", marginBottom: 4 }}>
+                {getRankMessage(credits.rank, credits.totalUsers).title}
+              </div>
+              <div style={{ fontSize: "0.9rem", color: "#666" }}>
+                {getRankMessage(credits.rank, credits.totalUsers).message}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Transactions */}

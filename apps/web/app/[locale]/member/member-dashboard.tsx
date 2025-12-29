@@ -316,6 +316,7 @@ export default function MemberDashboard() {
   const [availableChallenges, setAvailableChallenges] = useState<Challenge[]>([]);
   const [loading, setLoading] = useState(false);
   const [walletStatus, setWalletStatus] = useState<{ apple: boolean; google: boolean } | null>(null);
+  const [showTiersModal, setShowTiersModal] = useState(false);
 
   useEffect(() => {
     const savedUserId = localStorage.getItem("userId");
@@ -510,6 +511,53 @@ export default function MemberDashboard() {
     return key ? t(key) : tier;
   }
 
+  // Tiers data for modal
+  const tiers = [
+    {
+      name: t("tiers.chopstick"),
+      tierKey: "CHOPSTICK" as const,
+      iconKey: "chopstick" as const,
+      color: "#C7A878",
+      requirement: t("tiersModal.chopstickRequirement"),
+      benefits: [
+        t("tiersModal.benefits.referralBonus"),
+        t("tiersModal.benefits.cashback1"),
+        t("tiersModal.benefits.earlyAccess"),
+      ],
+    },
+    {
+      name: t("tiers.noodleMaster"),
+      tierKey: "NOODLE_MASTER" as const,
+      iconKey: "noodle-master" as const,
+      color: "#7C7A67",
+      requirement: t("tiersModal.noodleMasterRequirement"),
+      benefits: [
+        t("tiersModal.benefits.referralBonus"),
+        t("tiersModal.benefits.cashback2"),
+        t("tiersModal.benefits.prioritySeating"),
+        t("tiersModal.benefits.memberEvents"),
+        t("tiersModal.benefits.freeBowl"),
+      ],
+    },
+    {
+      name: t("tiers.beefBoss"),
+      tierKey: "BEEF_BOSS" as const,
+      iconKey: "beef-boss" as const,
+      color: "#222222",
+      requirement: t("tiersModal.beefBossRequirement"),
+      benefits: [
+        t("tiersModal.benefits.referralBonus"),
+        t("tiersModal.benefits.cashback3"),
+        t("tiersModal.benefits.topPrioritySeating"),
+        t("tiersModal.benefits.freePremiumBowl"),
+        t("tiersModal.benefits.merchDrops"),
+        t("tiersModal.benefits.premiumAddons"),
+        t("tiersModal.benefits.vipGift"),
+        t("tiersModal.benefits.wallOfFame"),
+      ],
+    },
+  ];
+
   if (!userId) {
     return (
       <div
@@ -644,158 +692,210 @@ export default function MemberDashboard() {
           style={{
             background: "white",
             borderRadius: 16,
-            padding: 24,
+            overflow: "hidden",
             marginBottom: 16,
             boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
           }}
         >
+          {/* Tier Header with gradient background */}
           <div
             style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "start",
-              marginBottom: 16,
+              backgroundImage: `linear-gradient(145deg, ${
+                profile.membershipTier === "CHOPSTICK"
+                  ? `${tierColor} 0%, #B8956A 50%, ${tierColor}ee 100%`
+                  : profile.membershipTier === "NOODLE_MASTER"
+                  ? `#8A8875 0%, ${tierColor} 50%, #6A6855 100%`
+                  : `#333333 0%, ${tierColor} 50%, #111111 100%`
+              })`,
+              padding: "24px",
+              position: "relative",
             }}
           >
-            <div>
-              <div
-                style={{ fontSize: "0.85rem", color: "#666", marginBottom: 4 }}
-              >
-                {t("currentTier")}
-              </div>
-              <div
-                style={{
-                  fontSize: "1.8rem",
-                  fontWeight: "bold",
-                  color: tierColor,
-                }}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <div>
+                <div
+                  style={{
+                    fontSize: "0.85rem",
+                    color: profile.membershipTier === "CHOPSTICK" ? "rgba(34, 34, 34, 0.7)" : "rgba(255, 255, 255, 0.8)",
+                    marginBottom: 4,
+                  }}
+                >
+                  {t("currentMemberTier")}
+                </div>
+                <div
+                  style={{
+                    fontSize: "1.8rem",
+                    fontWeight: "bold",
+                    color: profile.membershipTier === "CHOPSTICK" ? "#222222" : "#E5E5E5",
+                  }}
               >
                 {getTierName(profile.membershipTier)}
               </div>
             </div>
-            <div
-              style={{
-                background: tierColor + "20",
-                padding: "12px",
-                borderRadius: 12,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <TierIcon tier={profile.membershipTier} size={48} />
-            </div>
-          </div>
-
-          {/* Tier Benefits */}
-          <div
-            style={{
-              background: "#f9fafb",
-              borderRadius: 12,
-              padding: 16,
-              marginBottom: 16,
-            }}
-          >
-            <div style={{ fontWeight: "bold", marginBottom: 12 }}>
-              {t("yourBenefits")}
-            </div>
-            <div style={{ display: "grid", gap: 8 }}>
-              {profile.tierBenefits.perks.map((perkKey, idx) => (
-                <div
-                  key={idx}
-                  style={{ display: "flex", alignItems: "center", gap: 8 }}
-                >
-                  <span style={{ color: tierColor }}>✓</span>
-                  <span style={{ fontSize: "0.9rem" }}>{t(`perks.${perkKey}`)}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Progress to Next Tier */}
-          {profile.nextTier && (
-            <div>
               <div
                 style={{
-                  fontSize: "0.9rem",
-                  fontWeight: "bold",
-                  marginBottom: 12,
+                  background: profile.membershipTier === "CHOPSTICK"
+                    ? "rgba(255, 255, 255, 0.25)"
+                    : "rgba(255, 255, 255, 0.12)",
+                  borderRadius: "50%",
+                  padding: "16px",
+                  boxShadow: profile.membershipTier === "CHOPSTICK"
+                    ? "0 6px 24px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255,255,255,0.3)"
+                    : "0 6px 24px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255,255,255,0.15)",
+                  border: profile.membershipTier === "CHOPSTICK"
+                    ? "1px solid rgba(255,255,255,0.2)"
+                    : "1px solid rgba(255,255,255,0.1)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
               >
-                {t("progressTo", { tier: getTierName(profile.nextTier.next) })}
+                <TierIcon
+                  tier={profile.membershipTier}
+                  size={52}
+                  invert={profile.membershipTier === "NOODLE_MASTER" || profile.membershipTier === "BEEF_BOSS"}
+                />
               </div>
+            </div>
+          </div>
 
-              {/* Orders Progress */}
-              <div style={{ marginBottom: 12 }}>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    fontSize: "0.85rem",
-                    marginBottom: 4,
-                  }}
-                >
-                  <span>{t("orders")}</span>
-                  <span>
-                    {profile.tierProgress.orders.current} /{" "}
-                    {profile.tierProgress.orders.needed}
-                  </span>
-                </div>
-                <div
-                  style={{
-                    height: 8,
-                    background: "#e5e7eb",
-                    borderRadius: 4,
-                    overflow: "hidden",
-                  }}
-                >
+          {/* Tier Content */}
+          <div style={{ padding: 24 }}>
+            {/* Tier Benefits */}
+            <div
+              style={{
+                background: "#f9fafb",
+                borderRadius: 12,
+                padding: 16,
+                marginBottom: 16,
+              }}
+            >
+              <div style={{ fontWeight: "bold", marginBottom: 12 }}>
+                {t("yourBenefits")}
+              </div>
+              <div style={{ display: "grid", gap: 8 }}>
+                {profile.tierBenefits.perks.map((perkKey, idx) => (
                   <div
-                    style={{
-                      height: "100%",
-                      background: tierColor,
-                      width: `${profile.tierProgress.orders.percent}%`,
-                      transition: "width 0.3s",
-                    }}
-                  />
-                </div>
+                    key={idx}
+                    style={{ display: "flex", alignItems: "center", gap: 8 }}
+                  >
+                    <span style={{ color: tierColor }}>✓</span>
+                    <span style={{ fontSize: "0.9rem" }}>{t(`perks.${perkKey}`)}</span>
+                  </div>
+                ))}
               </div>
+            </div>
 
-              {/* Referrals Progress */}
+            {/* Progress to Next Tier */}
+            {profile.nextTier && (
               <div>
                 <div
                   style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    fontSize: "0.85rem",
-                    marginBottom: 4,
+                    fontSize: "0.9rem",
+                    fontWeight: "bold",
+                    marginBottom: 12,
                   }}
                 >
-                  <span>{t("referralsNav")}</span>
-                  <span>
-                    {profile.tierProgress.referrals.current} /{" "}
-                    {profile.tierProgress.referrals.needed}
-                  </span>
+                  {t("progressTo", { tier: getTierName(profile.nextTier.next) })}
                 </div>
-                <div
-                  style={{
-                    height: 8,
-                    background: "#e5e7eb",
-                    borderRadius: 4,
-                    overflow: "hidden",
-                  }}
-                >
+
+                {/* Orders Progress */}
+                <div style={{ marginBottom: 12 }}>
                   <div
                     style={{
-                      height: "100%",
-                      background: tierColor,
-                      width: `${profile.tierProgress.referrals.percent}%`,
-                      transition: "width 0.3s",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      fontSize: "0.85rem",
+                      marginBottom: 4,
                     }}
-                  />
+                  >
+                    <span>{t("orders")}</span>
+                    <span>
+                      {profile.tierProgress.orders.current} /{" "}
+                      {profile.tierProgress.orders.needed}
+                    </span>
+                  </div>
+                  <div
+                    style={{
+                      height: 8,
+                      background: "#e5e7eb",
+                      borderRadius: 4,
+                      overflow: "hidden",
+                    }}
+                  >
+                    <div
+                      style={{
+                        height: "100%",
+                        background: tierColor,
+                        width: `${profile.tierProgress.orders.percent}%`,
+                        transition: "width 0.3s",
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Referrals Progress */}
+                <div>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      fontSize: "0.85rem",
+                      marginBottom: 4,
+                    }}
+                  >
+                    <span>{t("referralsNav")}</span>
+                    <span>
+                      {profile.tierProgress.referrals.current} /{" "}
+                      {profile.tierProgress.referrals.needed}
+                    </span>
+                  </div>
+                  <div
+                    style={{
+                      height: 8,
+                      background: "#e5e7eb",
+                      borderRadius: 4,
+                      overflow: "hidden",
+                    }}
+                  >
+                    <div
+                      style={{
+                        height: "100%",
+                        background: tierColor,
+                        width: `${profile.tierProgress.referrals.percent}%`,
+                        transition: "width 0.3s",
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
+
+            {/* View All Tiers Link */}
+            <button
+              onClick={() => setShowTiersModal(true)}
+              style={{
+                width: "100%",
+                padding: "12px",
+                background: "transparent",
+                border: `1px solid ${tierColor}`,
+                borderRadius: 8,
+                color: tierColor,
+                fontSize: "0.9rem",
+                fontWeight: "600",
+                cursor: "pointer",
+                marginTop: profile.nextTier ? 16 : 0,
+              }}
+            >
+              {t("viewAllTiers")}
+            </button>
+          </div>
         </div>
 
         {/* Stats Grid */}
@@ -860,7 +960,7 @@ export default function MemberDashboard() {
             >
               ${(profile.creditsCents / 100).toFixed(2)}
             </div>
-            <div style={{ fontSize: "0.85rem", color: "#666" }}>{t("credits")}</div>
+            <div style={{ fontSize: "0.85rem", color: "#666" }}>{t("availableCredit")}</div>
           </div>
         </div>
 
@@ -1189,11 +1289,6 @@ export default function MemberDashboard() {
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: "bold", marginBottom: 2 }}>
                       {t(`badges.${badge.slug}.name`, { defaultValue: badge.name })}
-                      {earned && (
-                        <span style={{ color: "#7C7A67", marginLeft: 8 }}>
-                          ✓
-                        </span>
-                      )}
                     </div>
                     <div style={{ fontSize: "0.85rem", color: "#666", marginBottom: hasProgress ? 6 : 0 }}>
                       {t(`badges.${badge.slug}.description`, { defaultValue: badge.description })}
@@ -1233,6 +1328,33 @@ export default function MemberDashboard() {
                       </div>
                     )}
                   </div>
+                  {/* Large check mark for earned badges */}
+                  {earned && (
+                    <div
+                      style={{
+                        width: 44,
+                        height: 44,
+                        borderRadius: "50%",
+                        background: "#7C7A67",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                        boxShadow: "0 2px 8px rgba(124, 122, 103, 0.3)",
+                      }}
+                    >
+                      <span
+                        style={{
+                          color: "white",
+                          fontSize: "1.5rem",
+                          fontWeight: "bold",
+                          lineHeight: 1,
+                        }}
+                      >
+                        ✓
+                      </span>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -1312,6 +1434,214 @@ export default function MemberDashboard() {
           </span>
         </button>
       </div>
+
+      {/* Tiers Modal */}
+      {showTiersModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0, 0, 0, 0.6)",
+            zIndex: 1000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+          onClick={() => setShowTiersModal(false)}
+        >
+          <div
+            style={{
+              background: "#E5E5E5",
+              borderRadius: 20,
+              maxWidth: 900,
+              width: "100%",
+              maxHeight: "90vh",
+              overflow: "auto",
+              position: "relative",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                padding: "20px 24px",
+                borderBottom: "1px solid #ddd",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                position: "sticky",
+                top: 0,
+                background: "#E5E5E5",
+                zIndex: 10,
+              }}
+            >
+              <h2 style={{ margin: 0, fontSize: "1.3rem", color: "#222" }}>
+                {t("tiersModal.title")}
+              </h2>
+              <button
+                onClick={() => setShowTiersModal(false)}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  fontSize: "1.5rem",
+                  cursor: "pointer",
+                  color: "#666",
+                  padding: "4px 8px",
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Tiers Grid */}
+            <div
+              style={{
+                padding: 24,
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+                gap: 20,
+              }}
+            >
+              {tiers.map((tier) => {
+                const isCurrentTier = profile.membershipTier === tier.tierKey;
+                const needsInvert = tier.tierKey === "NOODLE_MASTER" || tier.tierKey === "BEEF_BOSS";
+
+                return (
+                  <div
+                    key={tier.name}
+                    style={{
+                      background: "white",
+                      borderRadius: 16,
+                      overflow: "hidden",
+                      boxShadow: isCurrentTier
+                        ? `0 0 0 3px ${tier.color}, 0 8px 24px rgba(0, 0, 0, 0.15)`
+                        : "0 4px 16px rgba(0, 0, 0, 0.1)",
+                      transform: isCurrentTier ? "scale(1.02)" : "none",
+                      transition: "transform 0.3s ease, box-shadow 0.3s ease",
+                      position: "relative",
+                    }}
+                  >
+                    {/* Current Tier Badge */}
+                    {isCurrentTier && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: 12,
+                          left: 12,
+                          background: "white",
+                          color: "#222",
+                          padding: "6px 14px",
+                          borderRadius: 20,
+                          fontSize: "0.75rem",
+                          fontWeight: "700",
+                          zIndex: 10,
+                          boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                      >
+                        <span style={{ fontSize: "0.85rem", color: tier.color }}>★</span>
+                        {t("tiersModal.yourTier")}
+                      </div>
+                    )}
+
+                    {/* Tier Header */}
+                    <div
+                      style={{
+                        backgroundImage: `linear-gradient(145deg, ${
+                          tier.tierKey === "CHOPSTICK"
+                            ? `${tier.color} 0%, #B8956A 50%, ${tier.color}ee 100%`
+                            : tier.tierKey === "NOODLE_MASTER"
+                            ? `#8A8875 0%, ${tier.color} 50%, #6A6855 100%`
+                            : `#333333 0%, ${tier.color} 50%, #111111 100%`
+                        })`,
+                        padding: "36px 20px",
+                        textAlign: "center",
+                      }}
+                    >
+                      <div style={{ marginBottom: 12, display: "flex", justifyContent: "center" }}>
+                        <div
+                          style={{
+                            background: tier.tierKey === "CHOPSTICK"
+                              ? "rgba(255, 255, 255, 0.25)"
+                              : "rgba(255, 255, 255, 0.12)",
+                            borderRadius: "50%",
+                            padding: 16,
+                            boxShadow: tier.tierKey === "CHOPSTICK"
+                              ? "0 4px 16px rgba(0, 0, 0, 0.2)"
+                              : "0 4px 16px rgba(0, 0, 0, 0.4)",
+                          }}
+                        >
+                          <TierIcon tier={tier.tierKey} size={64} invert={needsInvert} />
+                        </div>
+                      </div>
+                      <h3
+                        style={{
+                          fontSize: "1.25rem",
+                          fontWeight: "600",
+                          marginBottom: 6,
+                          color: tier.tierKey === "CHOPSTICK" ? "#222" : "#E5E5E5",
+                        }}
+                      >
+                        {tier.name}
+                      </h3>
+                      <p
+                        style={{
+                          fontSize: "0.85rem",
+                          opacity: 0.9,
+                          color: tier.tierKey === "CHOPSTICK" ? "#222" : "#E5E5E5",
+                          margin: 0,
+                        }}
+                      >
+                        {tier.requirement}
+                      </p>
+                    </div>
+
+                    {/* Tier Benefits */}
+                    <div style={{ padding: 20 }}>
+                      <h4
+                        style={{
+                          fontSize: "0.75rem",
+                          fontWeight: "600",
+                          color: "#666",
+                          marginBottom: 12,
+                          textTransform: "uppercase",
+                          letterSpacing: "0.5px",
+                        }}
+                      >
+                        {t("tiersModal.benefitsInclude")}
+                      </h4>
+                      <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                        {tier.benefits.map((benefit, idx) => (
+                          <li
+                            key={idx}
+                            style={{
+                              display: "flex",
+                              alignItems: "flex-start",
+                              gap: 10,
+                              marginBottom: 10,
+                              fontSize: "0.9rem",
+                              color: "#222",
+                            }}
+                          >
+                            <span style={{ color: tier.color, flexShrink: 0 }}>✓</span>
+                            {benefit}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

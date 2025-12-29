@@ -111,13 +111,12 @@ export default function HomePage() {
           }}
         >
           <img
-            src="/Oh_Logo_Mark_Web.png"
+            src="/Oh_Logo_Mark_Light.png"
             alt={t("brandNamePlain")}
             style={{
               width: "clamp(180px, 25vw, 320px)",
               height: "auto",
               display: "block",
-              filter: "brightness(0.85)",
             }}
           />
         </div>

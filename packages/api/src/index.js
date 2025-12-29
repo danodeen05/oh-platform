@@ -3338,10 +3338,36 @@ app.get("/users/:id/credits", async (req, reply) => {
 
   if (!user) return reply.code(404).send({ error: "User not found" });
 
+  // Calculate lifetime earnings (sum of positive credit events)
+  const lifetimeEarningsResult = await prisma.creditEvent.aggregate({
+    where: {
+      userId: id,
+      amountCents: { gt: 0 },
+    },
+    _sum: { amountCents: true },
+  });
+  const lifetimeEarningsCents = lifetimeEarningsResult._sum.amountCents || 0;
+
+  // Calculate user's rank by lifetime earnings
+  // Get all users' lifetime earnings and rank them
+  const allUsersEarnings = await prisma.creditEvent.groupBy({
+    by: ["userId"],
+    where: { amountCents: { gt: 0 } },
+    _sum: { amountCents: true },
+    orderBy: { _sum: { amountCents: "desc" } },
+  });
+
+  // Find the user's rank (1-indexed)
+  const userRank = allUsersEarnings.findIndex((u) => u.userId === id) + 1;
+  const totalUsersWithEarnings = allUsersEarnings.length;
+
   return {
     balance: user.creditsCents,
     referralCode: user.referralCode,
     events: user.creditEvents,
+    lifetimeEarningsCents,
+    rank: userRank > 0 ? userRank : totalUsersWithEarnings + 1,
+    totalUsers: totalUsersWithEarnings || 1,
   };
 });
 
