@@ -8970,6 +8970,328 @@ app.post("/group-orders/:code/complete", async (req, reply) => {
   return updatedGroup;
 });
 
+
+// =================
+// MEAL FOR A STRANGER
+// =================
+
+// POST /meal-gifts - Create a new meal gift
+app.post("/meal-gifts", async (req, reply) => {
+  const { giverId, locationId, amountCents, messageFromGiver } = req.body || {};
+
+  if (!giverId || !locationId || !amountCents) {
+    return reply.code(400).send({ error: "giverId, locationId, and amountCents required" });
+  }
+
+  // Validate amount range ($15.99 - $35.00)
+  if (amountCents < 1599 || amountCents > 3500) {
+    return reply.code(400).send({ error: "Amount must be between $15.99 and $35.00" });
+  }
+
+  // Get location to calculate expiration (end of business day)
+  const location = await prisma.location.findUnique({
+    where: { id: locationId },
+    select: { timezone: true, operatingHours: true },
+  });
+
+  if (!location) {
+    return reply.code(404).send({ error: "Location not found" });
+  }
+
+  // Calculate expiration: end of business day (9pm in location timezone)
+  const now = new Date();
+  const expiresAt = new Date();
+  expiresAt.setHours(21, 0, 0, 0); // 9pm
+
+  // If it's already past 9pm, expire tomorrow at 9pm
+  if (now.getHours() >= 21) {
+    expiresAt.setDate(expiresAt.getDate() + 1);
+  }
+
+  const mealGift = await prisma.mealGift.create({
+    data: {
+      giverId,
+      locationId,
+      amountCents,
+      messageFromGiver: messageFromGiver || null,
+      expiresAt,
+      status: "PENDING",
+    },
+    include: {
+      giver: { select: { id: true, name: true } },
+      location: { select: { id: true, name: true, city: true } },
+    },
+  });
+
+  return mealGift;
+});
+
+// GET /meal-gifts/next/:locationId - Get next pending meal gift for location (FIFO)
+app.get("/meal-gifts/next/:locationId", async (req, reply) => {
+  const { locationId } = req.params;
+
+  // Find the oldest pending gift at this location that hasn't expired
+  const mealGift = await prisma.mealGift.findFirst({
+    where: {
+      locationId,
+      status: "PENDING",
+      expiresAt: { gt: new Date() }, // Not expired
+    },
+    orderBy: {
+      createdAt: "asc", // FIFO order
+    },
+    include: {
+      giver: { select: { id: true, name: true } },
+      location: { select: { id: true, name: true, city: true } },
+      chain: {
+        include: {
+          recipient: { select: { id: true, name: true } },
+        },
+        orderBy: { createdAt: "asc" },
+      },
+    },
+  });
+
+  if (!mealGift) {
+    return reply.code(404).send({ error: "No meal gifts available" });
+  }
+
+  return mealGift;
+});
+
+// POST /meal-gifts/:id/accept - Accept a meal gift and apply to order
+app.post("/meal-gifts/:id/accept", async (req, reply) => {
+  const { id } = req.params;
+  const { recipientId, orderId, messageFromRecipient } = req.body || {};
+
+  if (!recipientId || !orderId) {
+    return reply.code(400).send({ error: "recipientId and orderId required" });
+  }
+
+  const mealGift = await prisma.mealGift.findUnique({
+    where: { id },
+    include: { giver: true, chain: true },
+  });
+
+  if (!mealGift) {
+    return reply.code(404).send({ error: "Meal gift not found" });
+  }
+
+  if (mealGift.status !== "PENDING") {
+    return reply.code(400).send({ error: "Meal gift is not available" });
+  }
+
+  if (new Date() > mealGift.expiresAt) {
+    return reply.code(400).send({ error: "Meal gift has expired" });
+  }
+
+  // Update meal gift to ACCEPTED status
+  const updatedGift = await prisma.mealGift.update({
+    where: { id },
+    data: {
+      status: "ACCEPTED",
+      acceptedById: recipientId,
+      orderId,
+      acceptedAt: new Date(),
+    },
+  });
+
+  // Add chain entry for ACCEPTED action
+  await prisma.mealGiftChain.create({
+    data: {
+      mealGiftId: id,
+      recipientId,
+      action: "ACCEPTED",
+      messageFromRecipient: messageFromRecipient || null,
+    },
+  });
+
+  // Give giver $5 reward (complete challenge)
+  await prisma.creditEvent.create({
+    data: {
+      userId: mealGift.giverId,
+      amountCents: 500, // $5 reward
+      type: "CHALLENGE_REWARD",
+      description: "Meal for a Stranger challenge completed",
+    },
+  });
+
+  // Update giver's credit balance
+  await prisma.user.update({
+    where: { id: mealGift.giverId },
+    data: {
+      creditBalanceCents: {
+        increment: 500,
+      },
+    },
+  });
+
+  // Mark challenge as completed for giver
+  const challenge = await prisma.challenge.findUnique({
+    where: { slug: "meal-for-stranger" },
+  });
+
+  if (challenge) {
+    await prisma.userChallenge.upsert({
+      where: {
+        userId_challengeId: {
+          userId: mealGift.giverId,
+          challengeId: challenge.id,
+        },
+      },
+      update: {
+        completedAt: new Date(),
+        rewardClaimed: true,
+      },
+      create: {
+        userId: mealGift.giverId,
+        challengeId: challenge.id,
+        progress: JSON.stringify({ accepted: true }),
+        completedAt: new Date(),
+        rewardClaimed: true,
+      },
+    });
+  }
+
+  return updatedGift;
+});
+
+// POST /meal-gifts/:id/pay-forward - Pay forward a meal gift to next person
+app.post("/meal-gifts/:id/pay-forward", async (req, reply) => {
+  const { id } = req.params;
+  const { recipientId, messageFromRecipient } = req.body || {};
+
+  if (!recipientId) {
+    return reply.code(400).send({ error: "recipientId required" });
+  }
+
+  const mealGift = await prisma.mealGift.findUnique({
+    where: { id },
+  });
+
+  if (!mealGift) {
+    return reply.code(404).send({ error: "Meal gift not found" });
+  }
+
+  if (mealGift.status !== "PENDING") {
+    return reply.code(400).send({ error: "Meal gift is not available" });
+  }
+
+  if (new Date() > mealGift.expiresAt) {
+    return reply.code(400).send({ error: "Meal gift has expired" });
+  }
+
+  // Increment pay forward count
+  const updatedGift = await prisma.mealGift.update({
+    where: { id },
+    data: {
+      payForwardCount: {
+        increment: 1,
+      },
+    },
+  });
+
+  // Add chain entry for PAY_FORWARD action
+  await prisma.mealGiftChain.create({
+    data: {
+      mealGiftId: id,
+      recipientId,
+      action: "PAID_FORWARD",
+      messageFromRecipient: messageFromRecipient || null,
+    },
+  });
+
+  return updatedGift;
+});
+
+// POST /meal-gifts/expire - Expire and refund unclaimed gifts (cron job)
+app.post("/meal-gifts/expire", async (req, reply) => {
+  const now = new Date();
+
+  // Find all expired pending gifts
+  const expiredGifts = await prisma.mealGift.findMany({
+    where: {
+      status: "PENDING",
+      expiresAt: { lte: now },
+    },
+    include: {
+      giver: true,
+    },
+  });
+
+  const results = [];
+
+  for (const gift of expiredGifts) {
+    // Mark as expired
+    await prisma.mealGift.update({
+      where: { id: gift.id },
+      data: {
+        status: "EXPIRED",
+        expiredAt: now,
+      },
+    });
+
+    // Refund giver as credit
+    await prisma.creditEvent.create({
+      data: {
+        userId: gift.giverId,
+        amountCents: gift.amountCents,
+        type: "REFUND",
+        description: "Meal gift expired and refunded",
+      },
+    });
+
+    // Update giver's credit balance
+    await prisma.user.update({
+      where: { id: gift.giverId },
+      data: {
+        creditBalanceCents: {
+          increment: gift.amountCents,
+        },
+      },
+    });
+
+    results.push({
+      id: gift.id,
+      giverId: gift.giverId,
+      amountCents: gift.amountCents,
+      refunded: true,
+    });
+  }
+
+  return {
+    expired: results.length,
+    gifts: results,
+  };
+});
+
+// GET /meal-gifts/:id - Get meal gift details
+app.get("/meal-gifts/:id", async (req, reply) => {
+  const { id } = req.params;
+
+  const mealGift = await prisma.mealGift.findUnique({
+    where: { id },
+    include: {
+      giver: { select: { id: true, name: true } },
+      acceptedBy: { select: { id: true, name: true } },
+      location: { select: { id: true, name: true, city: true } },
+      order: { select: { id: true, orderNumber: true } },
+      chain: {
+        include: {
+          recipient: { select: { id: true, name: true } },
+        },
+        orderBy: { createdAt: "asc" },
+      },
+    },
+  });
+
+  if (!mealGift) {
+    return reply.code(404).send({ error: "Meal gift not found" });
+  }
+
+  return mealGift;
+});
+
 // ====================
 // LANGUAGE ANALYTICS
 // ====================

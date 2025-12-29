@@ -1,0 +1,86 @@
+
+> oh-platform@0.1.0 admin:dev /home/ohdev/projects/oh-platform
+> rm -rf apps/admin/.next apps/admin/.clerk && pnpm --filter @oh/admin dev
+
+
+> @oh/admin@0.1.0 dev /home/ohdev/projects/oh-platform/apps/admin
+> next dev -p 3001
+
+▲ Next.js 16.1.0 (Turbopack)
+- Local:         http://localhost:3001
+- Network:       http://162.243.3.7:3001
+- Environments: .env.local
+
+✓ Starting...
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+✓ Ready in 1748ms
+⚠ Cross origin request detected from devadmin.ohbeef.com to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
+Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+○ Compiling / ...
+ GET / 200 in 5.0s (compile: 4.3s, proxy.ts: 227ms, render: 460ms)
+ POST / 200 in 62ms (compile: 12ms, proxy.ts: 27ms, render: 22ms)
+ GET /kitchen 200 in 2.5s (compile: 1069ms, proxy.ts: 11ms, render: 1409ms)
+ HEAD / 200 in 78ms (compile: 4ms, proxy.ts: 9ms, render: 65ms)
+ GET / 200 in 90ms (compile: 6ms, proxy.ts: 9ms, render: 75ms)
+ POST / 200 in 31ms (compile: 9ms, proxy.ts: 12ms, render: 10ms)
+ HEAD / 200 in 115ms (compile: 7ms, proxy.ts: 19ms, render: 88ms)
+ GET / 200 in 85ms (compile: 7ms, proxy.ts: 8ms, render: 70ms)
+ POST / 200 in 25ms (compile: 4ms, proxy.ts: 10ms, render: 10ms)
+ GET / 200 in 95ms (compile: 5ms, proxy.ts: 7ms, render: 83ms)
+ POST / 200 in 32ms (compile: 9ms, proxy.ts: 12ms, render: 12ms)
+ GET / 200 in 96ms (compile: 6ms, proxy.ts: 8ms, render: 81ms)
+ POST / 200 in 29ms (compile: 8ms, proxy.ts: 12ms, render: 9ms)
+ GET / 200 in 84ms (compile: 4ms, proxy.ts: 7ms, render: 73ms)
+ GET /kitchen 200 in 467ms (compile: 6ms, proxy.ts: 11ms, render: 450ms)
+ GET / 200 in 131ms (compile: 8ms, proxy.ts: 9ms, render: 114ms)
+ GET / 200 in 137ms (compile: 10ms, proxy.ts: 11ms, render: 115ms)
+ GET / 200 in 132ms (compile: 5ms, proxy.ts: 9ms, render: 118ms)
+ GET / 200 in 86ms (compile: 6ms, proxy.ts: 8ms, render: 72ms)
+ GET / 200 in 85ms (compile: 4ms, proxy.ts: 9ms, render: 71ms)
+ GET / 200 in 127ms (compile: 8ms, proxy.ts: 14ms, render: 105ms)
+ GET / 200 in 108ms (compile: 6ms, proxy.ts: 8ms, render: 93ms)
+ HEAD / 200 in 85ms (compile: 10ms, proxy.ts: 8ms, render: 67ms)
+ GET / 200 in 104ms (compile: 7ms, proxy.ts: 9ms, render: 88ms)
+ GET / 200 in 156ms (compile: 14ms, proxy.ts: 13ms, render: 129ms)
+ GET / 200 in 70ms (compile: 4ms, proxy.ts: 8ms, render: 57ms)
+ GET / 200 in 73ms (compile: 4ms, proxy.ts: 8ms, render: 61ms)
+ GET /kitchen 200 in 997ms (compile: 4ms, proxy.ts: 8ms, render: 985ms)
+ GET /analytics 200 in 2.0s (compile: 1642ms, proxy.ts: 20ms, render: 363ms)
+ GET /cleaning/config 200 in 2.5s (compile: 1685ms, proxy.ts: 9ms, render: 796ms)
+ GET /cleaning 200 in 3.2s (compile: 1976ms, proxy.ts: 8ms, render: 1255ms)
+ GET /menu 200 in 3.0s (compile: 1730ms, proxy.ts: 22ms, render: 1283ms)
+ GET /locations 200 in 3.2s (compile: 1675ms, proxy.ts: 18ms, render: 1543ms)
+ GET /xlinkHref 404 in 727ms (compile: 373ms, proxy.ts: 19ms, render: 335ms)
+ GET /glyphRef 404 in 921ms (compile: 616ms, proxy.ts: 10ms, render: 294ms)
+ GET /href 404 in 1150ms (compile: 869ms, proxy.ts: 9ms, render: 271ms)
+ GET /image 404 in 100ms (compile: 9ms, proxy.ts: 26ms, render: 65ms)
+ GET /robots.txt 404 in 92ms (compile: 12ms, proxy.ts: 11ms, render: 69ms)
+ GET / 200 in 80ms (compile: 8ms, proxy.ts: 8ms, render: 64ms)
+ GET /cleaning 200 in 885ms (compile: 5ms, proxy.ts: 9ms, render: 871ms)
+ GET /menu 200 in 454ms (compile: 6ms, proxy.ts: 9ms, render: 439ms)
+ GET /locations 200 in 469ms (compile: 4ms, proxy.ts: 7ms, render: 458ms)
+ GET /analytics 200 in 69ms (compile: 8ms, proxy.ts: 9ms, render: 52ms)
+ GET /cleaning/config 200 in 618ms (compile: 6ms, proxy.ts: 6ms, render: 606ms)
+ GET /kitchen 200 in 450ms (compile: 5ms, proxy.ts: 8ms, render: 437ms)
+ GET /pods 404 in 74ms (compile: 9ms, proxy.ts: 6ms, render: 59ms)
+ HEAD / 200 in 62ms (compile: 6ms, proxy.ts: 10ms, render: 46ms)
+ HEAD / 200 in 95ms (compile: 4ms, proxy.ts: 10ms, render: 82ms)
+Error: Failed to find Server Action "x". This request might be from an older or newer deployment.
+Read more: https://nextjs.org/docs/messages/failed-to-find-server-action
+    at ignore-listed frames
+ POST / 404 in 804ms (compile: 5ms, proxy.ts: 11ms, render: 787ms)
+Error: Failed to find Server Action "x". This request might be from an older or newer deployment.
+Read more: https://nextjs.org/docs/messages/failed-to-find-server-action
+    at ignore-listed frames
+ POST /_next 404 in 547ms (compile: 8ms, render: 539ms)
+ HEAD / 200 in 71ms (compile: 6ms, proxy.ts: 8ms, render: 56ms)
+Error: Failed to find Server Action "x". This request might be from an older or newer deployment.
+Read more: https://nextjs.org/docs/messages/failed-to-find-server-action
+    at ignore-listed frames
+ POST / 404 in 468ms (compile: 5ms, proxy.ts: 15ms, render: 448ms)
+Error: Failed to find Server Action "x". This request might be from an older or newer deployment.
+Read more: https://nextjs.org/docs/messages/failed-to-find-server-action
+    at ignore-listed frames
+ POST /_next 404 in 389ms (compile: 6ms, render: 383ms)
+ HEAD / 200 in 81ms (compile: 7ms, proxy.ts: 14ms, render: 61ms)
+ HEAD / 200 in 87ms (compile: 7ms, proxy.ts: 8ms, render: 72ms)

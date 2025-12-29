@@ -26,6 +26,7 @@ export default function PaymentForm({
   const [hasReferral, setHasReferral] = useState(false);
   const [referralNotApplied, setReferralNotApplied] = useState(false);
   const [userCredits, setUserCredits] = useState(0);
+  const [mealGiftCredit, setMealGiftCredit] = useState(0);
   const [userId, setUserId] = useState<string | null>(null);
   const [loadingCredits, setLoadingCredits] = useState(false);
   const [userInitialized, setUserInitialized] = useState(false);
@@ -61,6 +62,30 @@ export default function PaymentForm({
       initializeUser();
     }
   }, [isLoaded, isSignedIn, user, userInitialized]);
+
+  // Fetch meal gift credit for this order
+  useEffect(() => {
+    async function fetchMealGift() {
+      try {
+        const response = await fetch(`${BASE}/orders/${orderId}`, {
+          headers: { "x-tenant-slug": "oh" },
+        });
+        
+        if (response.ok) {
+          const orderData = await response.json();
+          if (orderData.mealGift && orderData.mealGift.status === "ACCEPTED") {
+            setMealGiftCredit(orderData.mealGift.amountCents);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch meal gift:", err);
+      }
+    }
+
+    if (orderId) {
+      fetchMealGift();
+    }
+  }, [orderId]);
 
   async function initializeUser() {
     if (!user?.primaryEmailAddress?.emailAddress) return;
@@ -252,8 +277,8 @@ export default function PaymentForm({
   const validTotalCents =
     typeof totalCents === "number" && !isNaN(totalCents) ? totalCents : 0;
   const creditsApplied = applyCredits ? Math.min(userCredits, validTotalCents, MAX_CREDITS_PER_ORDER) : 0;
-  const discountedTotal = validTotalCents - creditsApplied;
-  const showCreditsBreakdown = applyCredits && creditsApplied > 0;
+  const discountedTotal = validTotalCents - creditsApplied - mealGiftCredit;
+  const showCreditsBreakdown = (applyCredits   const showCreditsBreakdown = applyCredits && creditsApplied > 0;  const showCreditsBreakdown = applyCredits && creditsApplied > 0; creditsApplied > 0) || mealGiftCredit > 0;
 
   // Show sign-in prompt if not authenticated
   if (!isLoaded) {
@@ -687,6 +712,20 @@ export default function PaymentForm({
                 <span>{t("creditsApplied")}</span>
                 <span>-${(creditsApplied / 100).toFixed(2)}</span>
               </div>
+              {mealGiftCredit > 0 && (
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: 8,
+                    color: "#22c55e",
+                    fontWeight: "bold",
+                  }}
+                >
+                  <span>🎁 Meal Gift</span>
+                  <span>-${(mealGiftCredit / 100).toFixed(2)}</span>
+                </div>
+              )}
               <div
                 style={{
                   display: "flex",

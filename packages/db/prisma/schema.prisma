@@ -93,6 +93,7 @@ model Location {
   stats       LocationStats?
   waitQueue   WaitQueue[]
   groupOrders GroupOrder[]
+  mealGifts   MealGift[]
 }
 
 model LocationStats {
@@ -303,6 +304,7 @@ model Order {
 
   creditEvents   CreditEvent[]
   waitQueueEntry WaitQueue?
+  mealGift      MealGift?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -473,6 +475,11 @@ model User {
   // Group Orders
   groupOrdersAsHost GroupOrder[] @relation("GroupOrderHost")
   groupOrders       GroupOrder[] @relation("GroupOrderMemberUsers")
+  
+  // Meal for a Stranger
+  givenMealGifts    MealGift[]      @relation("GivenMealGifts")
+  acceptedMealGifts MealGift[]      @relation("AcceptedMealGifts")
+  mealGiftChain     MealGiftChain[]
 }
 
 enum MembershipTier {
@@ -480,6 +487,7 @@ enum MembershipTier {
   NOODLE_MASTER
   BEEF_BOSS
 }
+  
 
 model CreditEvent {
   id     String @id @default(cuid())
@@ -748,4 +756,66 @@ model LanguageVisit {
   @@index([primaryLanguage])
   @@index([resolvedLocale])
   @@index([createdAt])
+}
+
+// ==========================================
+// MEAL FOR A STRANGER CHALLENGE
+// ==========================================
+
+model MealGift {
+  id         String   @id @default(cuid())
+  giverId    String
+  giver      User     @relation("GivenMealGifts", fields: [giverId], references: [id])
+  locationId String
+  location   Location @relation(fields: [locationId], references: [id])
+
+  amountCents       Int // Gift amount (5.99 - 5.00)
+  messageFromGiver  String? // Optional message from giver
+  payForwardCount   Int @default(0) // How many times it was paid forward
+
+  status MealGiftStatus @default(PENDING)
+  
+  // Tracking
+  acceptedById String? // Final recipient who accepted
+  acceptedBy   User?   @relation("AcceptedMealGifts", fields: [acceptedById], references: [id])
+  orderId      String? @unique // Order where gift was applied
+  order        Order?  @relation(fields: [orderId], references: [id])
+
+  // Timestamps
+  createdAt DateTime  @default(now())
+  expiresAt DateTime  // End of business day at location
+  acceptedAt DateTime? // When finally accepted
+  expiredAt  DateTime? // When it expired and was refunded
+
+  // Chain tracking
+  chain MealGiftChain[]
+
+  @@index([locationId, status, createdAt])
+  @@index([giverId])
+}
+
+model MealGiftChain {
+  id          String   @id @default(cuid())
+  mealGiftId  String
+  mealGift    MealGift @relation(fields: [mealGiftId], references: [id])
+  recipientId String
+  recipient   User     @relation(fields: [recipientId], references: [id])
+
+  action              MealGiftAction // ACCEPTED or PAID_FORWARD
+  messageFromRecipient String? // Optional thank you or message
+
+  createdAt DateTime @default(now())
+
+  @@index([mealGiftId])
+}
+
+enum MealGiftStatus {
+  PENDING  // Waiting for someone to claim
+  ACCEPTED // Someone accepted and used it
+  EXPIRED  // End of day, refunded to giver as credit
+}
+
+enum MealGiftAction {
+  ACCEPTED      // Recipient applied to their order
+  PAID_FORWARD  // Recipient passed to next person
 }
