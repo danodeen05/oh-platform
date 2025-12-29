@@ -1,0 +1,123 @@
+
+> oh-platform@0.1.0 api:dev /home/ohdev/projects/oh-platform
+> pnpm --filter @oh/api dev
+
+
+> @oh/api@0.1.0 dev /home/ohdev/projects/oh-platform/packages/api
+> node --env-file=../../.env --watch src/index.js
+
+GA4 Analytics client not initialized: ENOENT: no such file or directory, open '/Users/ddidericksen/Projects/oh/oh-platform/oh-beef-noodle-soup-0b9bc2bc522b.json'
+🚀 API server running on http://localhost:4000
+{"level":30,"time":1767047871046,"pid":16196,"hostname":"oh-dev","msg":"Server listening at http://0.0.0.0:4000"}
+🔄 Checking for pod/order status inconsistencies...
+✅ No pod status inconsistencies found
+{"level":30,"time":1767047874264,"pid":16196,"hostname":"oh-dev","reqId":"req-1","req":{"method":"OPTIONS","url":"/orders/status?orderQrCode=ORDER-f4nc0dvh-1767043809088-Y11Q89","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":40776},"msg":"incoming request"}
+{"level":30,"time":1767047874269,"pid":16196,"hostname":"oh-dev","reqId":"req-1","res":{"statusCode":204},"responseTime":3.7130659967660904,"msg":"request completed"}
+{"level":30,"time":1767047874328,"pid":16196,"hostname":"oh-dev","reqId":"req-2","req":{"method":"GET","url":"/orders/status?orderQrCode=ORDER-f4nc0dvh-1767043809088-Y11Q89","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":40788},"msg":"incoming request"}
+{"level":30,"time":1767047875435,"pid":16196,"hostname":"oh-dev","reqId":"req-2","res":{"statusCode":200},"responseTime":1107.0990439988673,"msg":"request completed"}
+{"level":30,"time":1767047875555,"pid":16196,"hostname":"oh-dev","reqId":"req-3","req":{"method":"OPTIONS","url":"/orders/mental-health-fact?locale=en","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":40798},"msg":"incoming request"}
+{"level":30,"time":1767047875555,"pid":16196,"hostname":"oh-dev","reqId":"req-3","res":{"statusCode":204},"responseTime":0.31968599930405617,"msg":"request completed"}
+{"level":30,"time":1767047875556,"pid":16196,"hostname":"oh-dev","reqId":"req-4","req":{"method":"OPTIONS","url":"/orders/mental-health-fact?locale=en","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":40806},"msg":"incoming request"}
+{"level":30,"time":1767047875557,"pid":16196,"hostname":"oh-dev","reqId":"req-4","res":{"statusCode":204},"responseTime":0.3243900015950203,"msg":"request completed"}
+{"level":30,"time":1767047875616,"pid":16196,"hostname":"oh-dev","reqId":"req-5","req":{"method":"GET","url":"/orders/mental-health-fact?locale=en","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":40814},"msg":"incoming request"}
+{"level":30,"time":1767047875678,"pid":16196,"hostname":"oh-dev","reqId":"req-6","req":{"method":"GET","url":"/orders/mental-health-fact?locale=en","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":40830},"msg":"incoming request"}
+{"level":30,"time":1767047878368,"pid":16196,"hostname":"oh-dev","reqId":"req-7","req":{"method":"HEAD","url":"/","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":40840},"msg":"incoming request"}
+{"level":30,"time":1767047878369,"pid":16196,"hostname":"oh-dev","reqId":"req-7","msg":"Route HEAD:/ not found"}
+{"level":30,"time":1767047878369,"pid":16196,"hostname":"oh-dev","reqId":"req-7","res":{"statusCode":404},"responseTime":0.49493399634957314,"msg":"request completed"}
+{"level":30,"time":1767047878801,"pid":16196,"hostname":"oh-dev","reqId":"req-8","req":{"method":"GET","url":"/","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":40848},"msg":"incoming request"}
+{"level":30,"time":1767047878802,"pid":16196,"hostname":"oh-dev","reqId":"req-8","msg":"Route GET:/ not found"}
+{"level":30,"time":1767047878802,"pid":16196,"hostname":"oh-dev","reqId":"req-8","res":{"statusCode":404},"responseTime":0.6180370002985001,"msg":"request completed"}
+{"level":30,"time":1767047879286,"pid":16196,"hostname":"oh-dev","reqId":"req-6","res":{"statusCode":200},"responseTime":3608.2562719993293,"msg":"request completed"}
+{"level":30,"time":1767047879310,"pid":16196,"hostname":"oh-dev","reqId":"req-9","req":{"method":"HEAD","url":"/_next","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":40854},"msg":"incoming request"}
+{"level":30,"time":1767047879311,"pid":16196,"hostname":"oh-dev","reqId":"req-9","msg":"Route HEAD:/_next not found"}
+{"level":30,"time":1767047879311,"pid":16196,"hostname":"oh-dev","reqId":"req-9","res":{"statusCode":404},"responseTime":0.46337100118398666,"msg":"request completed"}
+{"level":30,"time":1767047879390,"pid":16196,"hostname":"oh-dev","reqId":"req-5","res":{"statusCode":200},"responseTime":3774.0836609974504,"msg":"request completed"}
+{"level":30,"time":1767047883260,"pid":16196,"hostname":"oh-dev","reqId":"req-a","req":{"method":"OPTIONS","url":"/orders/status?orderQrCode=ORDER-f4nc0dvh-1767043809088-Y11Q89","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":40856},"msg":"incoming request"}
+{"level":30,"time":1767047883261,"pid":16196,"hostname":"oh-dev","reqId":"req-a","res":{"statusCode":204},"responseTime":0.7612919993698597,"msg":"request completed"}
+{"level":30,"time":1767047883321,"pid":16196,"hostname":"oh-dev","reqId":"req-b","req":{"method":"GET","url":"/orders/status?orderQrCode=ORDER-f4nc0dvh-1767043809088-Y11Q89","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":40870},"msg":"incoming request"}
+{"level":30,"time":1767047883873,"pid":16196,"hostname":"oh-dev","reqId":"req-b","res":{"statusCode":200},"responseTime":551.8487880006433,"msg":"request completed"}
+{"level":30,"time":1767047884259,"pid":16196,"hostname":"oh-dev","reqId":"req-c","req":{"method":"GET","url":"/orders/status?orderQrCode=ORDER-f4nc0dvh-1767043809088-Y11Q89","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":52376},"msg":"incoming request"}
+{"level":30,"time":1767047884303,"pid":16196,"hostname":"oh-dev","reqId":"req-d","req":{"method":"GET","url":"/","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":52390},"msg":"incoming request"}
+{"level":30,"time":1767047884303,"pid":16196,"hostname":"oh-dev","reqId":"req-d","msg":"Route GET:/ not found"}
+{"level":30,"time":1767047884304,"pid":16196,"hostname":"oh-dev","reqId":"req-d","res":{"statusCode":404},"responseTime":0.6888299994170666,"msg":"request completed"}
+{"level":30,"time":1767047884822,"pid":16196,"hostname":"oh-dev","reqId":"req-c","res":{"statusCode":200},"responseTime":563.0734090022743,"msg":"request completed"}
+{"level":30,"time":1767047886204,"pid":16196,"hostname":"oh-dev","reqId":"req-e","req":{"method":"GET","url":"/","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":52398},"msg":"incoming request"}
+{"level":30,"time":1767047886204,"pid":16196,"hostname":"oh-dev","reqId":"req-e","msg":"Route GET:/ not found"}
+{"level":30,"time":1767047886204,"pid":16196,"hostname":"oh-dev","reqId":"req-e","res":{"statusCode":404},"responseTime":0.5004550032317638,"msg":"request completed"}
+{"level":30,"time":1767047892703,"pid":16196,"hostname":"oh-dev","reqId":"req-f","req":{"method":"GET","url":"/","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":52406},"msg":"incoming request"}
+{"level":30,"time":1767047892703,"pid":16196,"hostname":"oh-dev","reqId":"req-f","msg":"Route GET:/ not found"}
+{"level":30,"time":1767047892704,"pid":16196,"hostname":"oh-dev","reqId":"req-f","res":{"statusCode":404},"responseTime":0.766720000654459,"msg":"request completed"}
+{"level":30,"time":1767047894259,"pid":16196,"hostname":"oh-dev","reqId":"req-g","req":{"method":"OPTIONS","url":"/orders/status?orderQrCode=ORDER-f4nc0dvh-1767043809088-Y11Q89","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":42742},"msg":"incoming request"}
+{"level":30,"time":1767047894260,"pid":16196,"hostname":"oh-dev","reqId":"req-g","res":{"statusCode":204},"responseTime":0.40910300239920616,"msg":"request completed"}
+{"level":30,"time":1767047894330,"pid":16196,"hostname":"oh-dev","reqId":"req-h","req":{"method":"GET","url":"/orders/status?orderQrCode=ORDER-f4nc0dvh-1767043809088-Y11Q89","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":42758},"msg":"incoming request"}
+{"level":30,"time":1767047894958,"pid":16196,"hostname":"oh-dev","reqId":"req-h","res":{"statusCode":200},"responseTime":628.1984010003507,"msg":"request completed"}
+{"level":30,"time":1767047904258,"pid":16196,"hostname":"oh-dev","reqId":"req-i","req":{"method":"OPTIONS","url":"/orders/status?orderQrCode=ORDER-f4nc0dvh-1767043809088-Y11Q89","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":53976},"msg":"incoming request"}
+{"level":30,"time":1767047904259,"pid":16196,"hostname":"oh-dev","reqId":"req-i","res":{"statusCode":204},"responseTime":0.7206289991736412,"msg":"request completed"}
+{"level":30,"time":1767047904321,"pid":16196,"hostname":"oh-dev","reqId":"req-j","req":{"method":"GET","url":"/orders/status?orderQrCode=ORDER-f4nc0dvh-1767043809088-Y11Q89","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":53992},"msg":"incoming request"}
+{"level":30,"time":1767047904867,"pid":16196,"hostname":"oh-dev","reqId":"req-j","res":{"statusCode":200},"responseTime":546.0819390006363,"msg":"request completed"}
+{"level":30,"time":1767047913258,"pid":16196,"hostname":"oh-dev","reqId":"req-k","req":{"method":"OPTIONS","url":"/orders/status?orderQrCode=ORDER-f4nc0dvh-1767043809088-Y11Q89","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":54008},"msg":"incoming request"}
+{"level":30,"time":1767047913259,"pid":16196,"hostname":"oh-dev","reqId":"req-k","res":{"statusCode":204},"responseTime":0.475103996694088,"msg":"request completed"}
+{"level":30,"time":1767047913321,"pid":16196,"hostname":"oh-dev","reqId":"req-l","req":{"method":"GET","url":"/orders/status?orderQrCode=ORDER-f4nc0dvh-1767043809088-Y11Q89","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":54024},"msg":"incoming request"}
+{"level":30,"time":1767047913945,"pid":16196,"hostname":"oh-dev","reqId":"req-l","res":{"statusCode":200},"responseTime":623.5912810005248,"msg":"request completed"}
+{"level":30,"time":1767047914258,"pid":16196,"hostname":"oh-dev","reqId":"req-m","req":{"method":"GET","url":"/orders/status?orderQrCode=ORDER-f4nc0dvh-1767043809088-Y11Q89","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":34896},"msg":"incoming request"}
+{"level":30,"time":1767047914809,"pid":16196,"hostname":"oh-dev","reqId":"req-m","res":{"statusCode":200},"responseTime":550.3074709996581,"msg":"request completed"}
+{"level":30,"time":1767047924258,"pid":16196,"hostname":"oh-dev","reqId":"req-n","req":{"method":"OPTIONS","url":"/orders/status?orderQrCode=ORDER-f4nc0dvh-1767043809088-Y11Q89","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":47878},"msg":"incoming request"}
+{"level":30,"time":1767047924259,"pid":16196,"hostname":"oh-dev","reqId":"req-n","res":{"statusCode":204},"responseTime":0.4601599983870983,"msg":"request completed"}
+{"level":30,"time":1767047924322,"pid":16196,"hostname":"oh-dev","reqId":"req-o","req":{"method":"GET","url":"/orders/status?orderQrCode=ORDER-f4nc0dvh-1767043809088-Y11Q89","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":47886},"msg":"incoming request"}
+{"level":30,"time":1767047924868,"pid":16196,"hostname":"oh-dev","reqId":"req-o","res":{"statusCode":200},"responseTime":545.7377739995718,"msg":"request completed"}
+{"level":30,"time":1767047935258,"pid":16196,"hostname":"oh-dev","reqId":"req-p","req":{"method":"OPTIONS","url":"/orders/status?orderQrCode=ORDER-f4nc0dvh-1767043809088-Y11Q89","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":56318},"msg":"incoming request"}
+{"level":30,"time":1767047935259,"pid":16196,"hostname":"oh-dev","reqId":"req-p","res":{"statusCode":204},"responseTime":0.3061650022864342,"msg":"request completed"}
+{"level":30,"time":1767047935320,"pid":16196,"hostname":"oh-dev","reqId":"req-q","req":{"method":"GET","url":"/orders/status?orderQrCode=ORDER-f4nc0dvh-1767043809088-Y11Q89","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":56326},"msg":"incoming request"}
+{"level":30,"time":1767047935868,"pid":16196,"hostname":"oh-dev","reqId":"req-q","res":{"statusCode":200},"responseTime":548.3060549981892,"msg":"request completed"}
+{"level":30,"time":1767047936522,"pid":16196,"hostname":"oh-dev","reqId":"req-r","req":{"method":"HEAD","url":"/","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":56334},"msg":"incoming request"}
+{"level":30,"time":1767047936522,"pid":16196,"hostname":"oh-dev","reqId":"req-r","msg":"Route HEAD:/ not found"}
+{"level":30,"time":1767047936523,"pid":16196,"hostname":"oh-dev","reqId":"req-r","res":{"statusCode":404},"responseTime":0.4392619989812374,"msg":"request completed"}
+{"level":30,"time":1767047937319,"pid":16196,"hostname":"oh-dev","reqId":"req-s","req":{"method":"GET","url":"/","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":56340},"msg":"incoming request"}
+{"level":30,"time":1767047937319,"pid":16196,"hostname":"oh-dev","reqId":"req-s","msg":"Route GET:/ not found"}
+{"level":30,"time":1767047937319,"pid":16196,"hostname":"oh-dev","reqId":"req-s","res":{"statusCode":404},"responseTime":0.5323270000517368,"msg":"request completed"}
+{"level":30,"time":1767047938022,"pid":16196,"hostname":"oh-dev","reqId":"req-t","req":{"method":"HEAD","url":"/_next","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":56344},"msg":"incoming request"}
+{"level":30,"time":1767047938022,"pid":16196,"hostname":"oh-dev","reqId":"req-t","msg":"Route HEAD:/_next not found"}
+{"level":30,"time":1767047938023,"pid":16196,"hostname":"oh-dev","reqId":"req-t","res":{"statusCode":404},"responseTime":0.34230300039052963,"msg":"request completed"}
+{"level":30,"time":1767047943259,"pid":16196,"hostname":"oh-dev","reqId":"req-u","req":{"method":"OPTIONS","url":"/orders/status?orderQrCode=ORDER-f4nc0dvh-1767043809088-Y11Q89","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":56356},"msg":"incoming request"}
+{"level":30,"time":1767047943259,"pid":16196,"hostname":"oh-dev","reqId":"req-u","res":{"statusCode":204},"responseTime":0.3612080030143261,"msg":"request completed"}
+{"level":30,"time":1767047943321,"pid":16196,"hostname":"oh-dev","reqId":"req-v","req":{"method":"GET","url":"/orders/status?orderQrCode=ORDER-f4nc0dvh-1767043809088-Y11Q89","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":56358},"msg":"incoming request"}
+{"level":30,"time":1767047943886,"pid":16196,"hostname":"oh-dev","reqId":"req-v","res":{"statusCode":200},"responseTime":564.8769779987633,"msg":"request completed"}
+{"level":30,"time":1767047946255,"pid":16196,"hostname":"oh-dev","reqId":"req-w","req":{"method":"GET","url":"/orders/status?orderQrCode=ORDER-f4nc0dvh-1767043809088-Y11Q89","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":33164},"msg":"incoming request"}
+{"level":30,"time":1767047946886,"pid":16196,"hostname":"oh-dev","reqId":"req-w","res":{"statusCode":200},"responseTime":630.7568800002337,"msg":"request completed"}
+{"level":30,"time":1767047957256,"pid":16196,"hostname":"oh-dev","reqId":"req-x","req":{"method":"OPTIONS","url":"/orders/status?orderQrCode=ORDER-f4nc0dvh-1767043809088-Y11Q89","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":48168},"msg":"incoming request"}
+{"level":30,"time":1767047957257,"pid":16196,"hostname":"oh-dev","reqId":"req-x","res":{"statusCode":204},"responseTime":0.38245900347828865,"msg":"request completed"}
+{"level":30,"time":1767047957318,"pid":16196,"hostname":"oh-dev","reqId":"req-y","req":{"method":"GET","url":"/orders/status?orderQrCode=ORDER-f4nc0dvh-1767043809088-Y11Q89","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":48182},"msg":"incoming request"}
+{"level":30,"time":1767047957864,"pid":16196,"hostname":"oh-dev","reqId":"req-y","res":{"statusCode":200},"responseTime":545.8686999976635,"msg":"request completed"}
+{"level":30,"time":1767047968265,"pid":16196,"hostname":"oh-dev","reqId":"req-z","req":{"method":"OPTIONS","url":"/orders/status?orderQrCode=ORDER-f4nc0dvh-1767043809088-Y11Q89","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":40682},"msg":"incoming request"}
+{"level":30,"time":1767047968265,"pid":16196,"hostname":"oh-dev","reqId":"req-z","res":{"statusCode":204},"responseTime":0.41174300014972687,"msg":"request completed"}
+{"level":30,"time":1767047968328,"pid":16196,"hostname":"oh-dev","reqId":"req-10","req":{"method":"GET","url":"/orders/status?orderQrCode=ORDER-f4nc0dvh-1767043809088-Y11Q89","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":40698},"msg":"incoming request"}
+{"level":30,"time":1767047968965,"pid":16196,"hostname":"oh-dev","reqId":"req-10","res":{"statusCode":200},"responseTime":637.0051860027015,"msg":"request completed"}
+{"level":30,"time":1767047974256,"pid":16196,"hostname":"oh-dev","reqId":"req-11","req":{"method":"OPTIONS","url":"/orders/status?orderQrCode=ORDER-f4nc0dvh-1767043809088-Y11Q89","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":48984},"msg":"incoming request"}
+{"level":30,"time":1767047974257,"pid":16196,"hostname":"oh-dev","reqId":"req-11","res":{"statusCode":204},"responseTime":0.3737710006535053,"msg":"request completed"}
+{"level":30,"time":1767047974318,"pid":16196,"hostname":"oh-dev","reqId":"req-12","req":{"method":"GET","url":"/orders/status?orderQrCode=ORDER-f4nc0dvh-1767043809088-Y11Q89","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":48994},"msg":"incoming request"}
+{"level":30,"time":1767047974865,"pid":16196,"hostname":"oh-dev","reqId":"req-12","res":{"statusCode":200},"responseTime":547.3943879976869,"msg":"request completed"}
+{"level":30,"time":1767047979259,"pid":16196,"hostname":"oh-dev","reqId":"req-13","req":{"method":"GET","url":"/orders/status?orderQrCode=ORDER-f4nc0dvh-1767043809088-Y11Q89","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":49000},"msg":"incoming request"}
+{"level":30,"time":1767047979812,"pid":16196,"hostname":"oh-dev","reqId":"req-13","res":{"statusCode":200},"responseTime":553.0266180001199,"msg":"request completed"}
+{"level":30,"time":1767047990268,"pid":16196,"hostname":"oh-dev","reqId":"req-14","req":{"method":"OPTIONS","url":"/orders/status?orderQrCode=ORDER-f4nc0dvh-1767043809088-Y11Q89","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":55298},"msg":"incoming request"}
+{"level":30,"time":1767047990269,"pid":16196,"hostname":"oh-dev","reqId":"req-14","res":{"statusCode":204},"responseTime":0.4057549983263016,"msg":"request completed"}
+{"level":30,"time":1767047990328,"pid":16196,"hostname":"oh-dev","reqId":"req-15","req":{"method":"GET","url":"/orders/status?orderQrCode=ORDER-f4nc0dvh-1767043809088-Y11Q89","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":55310},"msg":"incoming request"}
+{"level":30,"time":1767047990951,"pid":16196,"hostname":"oh-dev","reqId":"req-15","res":{"statusCode":200},"responseTime":623.7812810018659,"msg":"request completed"}
+{"level":30,"time":1767048001255,"pid":16196,"hostname":"oh-dev","reqId":"req-16","req":{"method":"OPTIONS","url":"/orders/status?orderQrCode=ORDER-f4nc0dvh-1767043809088-Y11Q89","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":51422},"msg":"incoming request"}
+{"level":30,"time":1767048001255,"pid":16196,"hostname":"oh-dev","reqId":"req-16","res":{"statusCode":204},"responseTime":0.5209340006113052,"msg":"request completed"}
+{"level":30,"time":1767048001317,"pid":16196,"hostname":"oh-dev","reqId":"req-17","req":{"method":"GET","url":"/orders/status?orderQrCode=ORDER-f4nc0dvh-1767043809088-Y11Q89","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":51432},"msg":"incoming request"}
+{"level":30,"time":1767048001871,"pid":16196,"hostname":"oh-dev","reqId":"req-17","res":{"statusCode":200},"responseTime":554.4394810013473,"msg":"request completed"}
+{"level":30,"time":1767048005253,"pid":16196,"hostname":"oh-dev","reqId":"req-18","req":{"method":"GET","url":"/orders/status?orderQrCode=ORDER-f4nc0dvh-1767043809088-Y11Q89","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":42120},"msg":"incoming request"}
+{"level":30,"time":1767048005801,"pid":16196,"hostname":"oh-dev","reqId":"req-18","res":{"statusCode":200},"responseTime":547.8752309978008,"msg":"request completed"}
+{"level":30,"time":1767048012253,"pid":16196,"hostname":"oh-dev","reqId":"req-19","req":{"method":"OPTIONS","url":"/orders/status?orderQrCode=ORDER-f4nc0dvh-1767043809088-Y11Q89","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":42128},"msg":"incoming request"}
+{"level":30,"time":1767048012254,"pid":16196,"hostname":"oh-dev","reqId":"req-19","res":{"statusCode":204},"responseTime":0.3404200002551079,"msg":"request completed"}
+{"level":30,"time":1767048012312,"pid":16196,"hostname":"oh-dev","reqId":"req-1a","req":{"method":"GET","url":"/orders/status?orderQrCode=ORDER-f4nc0dvh-1767043809088-Y11Q89","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":42136},"msg":"incoming request"}
+{"level":30,"time":1767048012957,"pid":16196,"hostname":"oh-dev","reqId":"req-1a","res":{"statusCode":200},"responseTime":644.3802070021629,"msg":"request completed"}
+{"level":30,"time":1767048188775,"pid":16196,"hostname":"oh-dev","reqId":"req-1b","req":{"method":"GET","url":"/","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":50198},"msg":"incoming request"}
+{"level":30,"time":1767048188776,"pid":16196,"hostname":"oh-dev","reqId":"req-1b","msg":"Route GET:/ not found"}
+{"level":30,"time":1767048188776,"pid":16196,"hostname":"oh-dev","reqId":"req-1b","res":{"statusCode":404},"responseTime":0.5472460016608238,"msg":"request completed"}
+{"level":30,"time":1767048188791,"pid":16196,"hostname":"oh-dev","reqId":"req-1c","req":{"method":"GET","url":"/","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":50200},"msg":"incoming request"}
+{"level":30,"time":1767048188791,"pid":16196,"hostname":"oh-dev","reqId":"req-1c","msg":"Route GET:/ not found"}
+{"level":30,"time":1767048188792,"pid":16196,"hostname":"oh-dev","reqId":"req-1c","res":{"statusCode":404},"responseTime":0.4042779989540577,"msg":"request completed"}
+{"level":30,"time":1767048195033,"pid":16196,"hostname":"oh-dev","reqId":"req-1d","req":{"method":"GET","url":"/","hostname":"devapi.ohbeef.com","remoteAddress":"127.0.0.1","remotePort":38516},"msg":"incoming request"}
+{"level":30,"time":1767048195033,"pid":16196,"hostname":"oh-dev","reqId":"req-1d","msg":"Route GET:/ not found"}
+{"level":30,"time":1767048195034,"pid":16196,"hostname":"oh-dev","reqId":"req-1d","res":{"statusCode":404},"responseTime":0.4642620012164116,"msg":"request completed"}
