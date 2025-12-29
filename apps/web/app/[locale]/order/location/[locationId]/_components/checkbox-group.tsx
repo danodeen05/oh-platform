@@ -63,6 +63,7 @@ export function CheckboxGroup({
         {items.map((item) => {
           const qty = quantities[item.id] || 0;
           const isSelected = qty > 0;
+          const isMaxed = maxQuantity !== undefined && qty >= maxQuantity;
 
           // Calculate price for this item
           let itemPrice = 0;
@@ -82,12 +83,14 @@ export function CheckboxGroup({
           return (
             <div
               key={item.id}
+              onClick={() => !isMaxed && onUpdateQuantity(item.id, 1)}
               style={{
                 border: `1px solid ${isSelected ? "#7C7A67" : "#e5e7eb"}`,
                 borderRadius: 12,
                 background: isSelected ? "#f9fafb" : "white",
                 transition: "all 0.2s",
                 overflow: "hidden",
+                cursor: isMaxed ? "not-allowed" : "pointer",
               }}
             >
               <div
@@ -172,58 +175,41 @@ export function CheckboxGroup({
                     )}
                   </div>
 
-                  <div style={{ display: "flex", gap: 8, alignItems: "center", marginLeft: 12 }}>
-                    {isSelected && (
-                      <>
-                        <button
-                          onClick={() => onUpdateQuantity(item.id, -1)}
-                          style={{
-                            width: 36,
-                            height: 36,
-                            borderRadius: "50%",
-                            border: "1px solid #d1d5db",
-                            background: "white",
-                            cursor: "pointer",
-                            fontSize: "1.2rem",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                          }}
-                        >
-                          −
-                        </button>
-                        <span
-                          style={{
-                            minWidth: 24,
-                            textAlign: "center",
-                            fontWeight: "600",
-                            fontSize: "1rem",
-                          }}
-                        >
-                          {qty}
-                        </span>
-                      </>
-                    )}
-                    <button
-                      onClick={() => onUpdateQuantity(item.id, 1)}
-                      disabled={maxQuantity !== undefined && qty >= maxQuantity}
-                      style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: "50%",
-                        border: "none",
-                        background: maxQuantity !== undefined && qty >= maxQuantity ? "#d1d5db" : "#7C7A67",
-                        color: "white",
-                        cursor: maxQuantity !== undefined && qty >= maxQuantity ? "not-allowed" : "pointer",
-                        fontSize: "1.2rem",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      +
-                    </button>
-                  </div>
+                  {/* Quantity controls - minus button and quantity display */}
+                  {isSelected && (
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", marginLeft: 12 }}>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onUpdateQuantity(item.id, -1);
+                        }}
+                        style={{
+                          width: 36,
+                          height: 36,
+                          borderRadius: "50%",
+                          border: "1px solid #d1d5db",
+                          background: "white",
+                          cursor: "pointer",
+                          fontSize: "1.2rem",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        −
+                      </button>
+                      <span
+                        style={{
+                          minWidth: 24,
+                          textAlign: "center",
+                          fontWeight: "600",
+                          fontSize: "1rem",
+                        }}
+                      >
+                        {qty}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
