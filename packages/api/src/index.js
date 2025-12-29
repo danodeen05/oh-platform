@@ -3695,8 +3695,10 @@ app.get("/users/:id/badge-progress", async (req, reply) => {
     where: {
       order: { userId: id, paymentStatus: "PAID" },
       menuItem: {
-        categoryType: { in: ["MAIN", "ADDON", "SIDE", "DRINK", "DESSERT"] },
-        isActive: true,
+        is: {
+          categoryType: { in: ["MAIN", "ADDON", "SIDE", "DRINK", "DESSERT"] },
+          isAvailable: true,
+        },
       },
     },
     distinct: ["menuItemId"],
@@ -3705,7 +3707,7 @@ app.get("/users/:id/badge-progress", async (req, reply) => {
 
   const totalMenuItems = await prisma.menuItem.count({
     where: {
-      isActive: true,
+      isAvailable: true,
       categoryType: { in: ["MAIN", "ADDON", "SIDE", "DRINK", "DESSERT"] },
     },
   });
