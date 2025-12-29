@@ -188,6 +188,7 @@ export default function PodsManager({ locations }: { locations: Location[] }) {
           "Content-Type": "application/json",
           "x-tenant-slug": "oh",
         },
+        body: JSON.stringify({}),
       });
 
       if (!response.ok) {
