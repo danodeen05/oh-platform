@@ -302,7 +302,6 @@ async function seedCoreData() {
 
   const challenges = [
     { id: 'cmip6jc1l003k2nnnoc7o1uve', slug: 'try-all-bases', name: 'Noodle Explorer', iconEmoji: '🗺️', rewardCents: 500, description: 'Try all noodle types', requirements: { type: 'try_all_noodles', count: 4 } },
-    { id: 'cmip6jc1l003l2nnnseead1fn', slug: 'weekend-warrior', name: 'Weekend Warrior', iconEmoji: '📅', rewardCents: 300, description: 'Order on both Saturday and Sunday', requirements: { type: 'weekend_orders', days: ['saturday', 'sunday'] } },
     { id: 'cmip6jc1l003m2nnnbgkfv7ff', slug: 'bring-5-friends', name: 'Party Host', iconEmoji: '🎊', rewardCents: 1000, description: 'Refer 5 friends who make a purchase', requirements: { type: 'referrals', count: 5 } },
     { id: 'cmip6jc1l003n2nnns34wpuds', slug: 'early-bird', name: 'Early Bird', iconEmoji: '🌅', rewardCents: 400, description: 'Order before 11am', requirements: { type: 'early_order', beforeHour: 11 } },
   ];

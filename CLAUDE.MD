@@ -82,6 +82,27 @@ pnpm db:studio     # Open Prisma Studio
 
 ## Documentation
 - **Gamification Improvements**: See `docs/GAMIFICATION-IMPROVEMENTS.md` for tier/badge/challenge system analysis and improvement roadmap
+- **Hours of Operation Plan**: See `docs/HOURS-OF-OPERATION.md` for implementation plan
+
+## Operating Hours (TODO: Not Yet Implemented)
+
+**Standard Hours**: Mon-Sat 11am - 9pm, Closed Sundays
+
+**Online Ordering Rules**:
+- Orders accepted starting 1 hour before opening (10am)
+- Last online order at 8:45pm (15 minutes before close)
+- Arrival time options filtered to only show valid times within operating hours
+- After hours: "Order Now" button replaced with "Opens at 11am" or similar
+
+**Implementation Status**: Planned but not yet built. See `docs/HOURS-OF-OPERATION.md` for full plan.
+
+**Key Files to Modify**:
+- `packages/db/prisma/schema.prisma` - Add `operatingHours` JSON field to Location
+- `packages/api/src/utils/operating-hours.js` - Hours validation utilities (new file)
+- `packages/api/src/index.js` - Add `/locations/:id/availability` endpoint
+- `apps/web/app/[locale]/order/location/[locationId]/_components/enhanced-menu-builder.tsx` - Filter arrival times
+- `apps/web/app/[locale]/page.tsx` - Conditional "Order Now" button
+- `apps/web/messages/*.json` - Update hours display strings
 
 ## Key Features
 - User authentication via Clerk with custom "My Oh! Account" menu item

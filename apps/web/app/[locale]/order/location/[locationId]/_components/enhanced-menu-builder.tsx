@@ -143,6 +143,15 @@ export default function EnhancedMenuBuilder({
   const [loadingSeats, setLoadingSeats] = useState(false);
   const [showSeatSelection, setShowSeatSelection] = useState(false);
 
+  // Operating hours availability
+  const [availability, setAvailability] = useState<{
+    canOrder: boolean;
+    validArrivalTimes: string[];
+    preOrderMessage: string | null;
+    statusMessage: string | null;
+    closesAt: string | null;
+  } | null>(null);
+
   // Database user ID for group orders
   const [dbUserId, setDbUserId] = useState<string | null>(null);
 
@@ -220,6 +229,35 @@ export default function EnhancedMenuBuilder({
 
     fetchGroupOrder();
   }, [groupCode, dbUserId, isGuest, guest?.id]);
+
+  // Fetch location availability for operating hours
+  useEffect(() => {
+    async function fetchAvailability() {
+      try {
+        const response = await fetch(`${BASE}/locations/${location.id}/availability`, {
+          headers: { "x-tenant-slug": "oh" },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setAvailability({
+            canOrder: data.canOrder,
+            validArrivalTimes: data.validArrivalTimes || [],
+            preOrderMessage: data.preOrderMessage,
+            statusMessage: data.statusMessage,
+            closesAt: data.closesAt,
+          });
+        }
+      } catch (e) {
+        console.error("Failed to fetch availability:", e);
+      }
+    }
+
+    fetchAvailability();
+
+    // Refresh availability every 60 seconds
+    const interval = setInterval(fetchAvailability, 60000);
+    return () => clearInterval(interval);
+  }, [location.id]);
 
   // Load menu structure
   useEffect(() => {
@@ -862,7 +900,7 @@ export default function EnhancedMenuBuilder({
     }
 
     // Standard time selection view for hosts and non-group orders
-    const timeOptions = [
+    const allTimeOptions = [
       { value: "asap", labelKey: "timeOptions.asap", minutes: 0 },
       { value: "15", labelKey: "timeOptions.15min", minutes: 15 },
       { value: "30", labelKey: "timeOptions.30min", minutes: 30 },
@@ -870,6 +908,67 @@ export default function EnhancedMenuBuilder({
       { value: "60", labelKey: "timeOptions.1hour", minutes: 60 },
       { value: "90", labelKey: "timeOptions.90min", minutes: 90 },
     ];
+
+    // Filter time options based on availability
+    const timeOptions = availability?.validArrivalTimes?.length
+      ? allTimeOptions.filter((opt) => availability.validArrivalTimes.includes(opt.value))
+      : allTimeOptions;
+
+    // If ordering is closed, show message instead of time options
+    if (availability && !availability.canOrder) {
+      return (
+        <div>
+          {!existingOrderId && (
+            <button
+              onClick={previousStep}
+              style={{
+                marginBottom: 24,
+                padding: "8px 16px",
+                background: "transparent",
+                border: "1px solid #7C7A67",
+                color: "#7C7A67",
+                borderRadius: 8,
+                cursor: "pointer",
+              }}
+            >
+              ← {t("builder.backToMenu")}
+            </button>
+          )}
+
+          <div
+            style={{
+              padding: 32,
+              background: "#fef2f2",
+              borderRadius: 16,
+              border: "1px solid #fca5a5",
+              textAlign: "center",
+            }}
+          >
+            <div style={{ fontSize: "2rem", marginBottom: 16 }}>🕐</div>
+            <h2 style={{ color: "#dc2626", marginBottom: 12 }}>
+              {t("builder.orderingClosed")}
+            </h2>
+            <p style={{ color: "#7f1d1d", marginBottom: 24 }}>
+              {availability.statusMessage || t("builder.orderingClosedMessage")}
+            </p>
+            <button
+              onClick={() => window.location.href = `/${locale}/menu`}
+              style={{
+                padding: "12px 24px",
+                background: "#7C7A67",
+                color: "white",
+                border: "none",
+                borderRadius: 8,
+                cursor: "pointer",
+                fontWeight: 500,
+              }}
+            >
+              {t("builder.viewMenu")}
+            </button>
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div>
@@ -888,6 +987,25 @@ export default function EnhancedMenuBuilder({
           >
             ← {t("builder.backToMenu")}
           </button>
+        )}
+
+        {/* Pre-order message (when ordering before restaurant opens) */}
+        {availability?.preOrderMessage && (
+          <div
+            style={{
+              marginBottom: 24,
+              padding: 16,
+              background: "#fef3e2",
+              borderRadius: 12,
+              border: "1px solid #f9a825",
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+            }}
+          >
+            <span style={{ fontSize: "1.5rem" }}>☀️</span>
+            <div style={{ color: "#92400e" }}>{availability.preOrderMessage}</div>
+          </div>
         )}
 
         {groupCode && (

@@ -4,16 +4,48 @@ import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
 import { useState, useEffect } from "react";
 
+const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+
 export default function HomePage() {
   const t = useTranslations("home");
   const tCommon = useTranslations("common");
   const locale = useLocale();
   const [scrollY, setScrollY] = useState(0);
+  const [availability, setAvailability] = useState<{
+    canOrder: boolean;
+    statusMessage: string | null;
+    nextOpen?: { orderingOpens: string; dayName: string };
+  } | null>(null);
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY);
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Fetch location availability
+  useEffect(() => {
+    async function fetchAvailability() {
+      try {
+        // Fetch locations to get the first location's availability
+        const response = await fetch(`${BASE}/locations`, {
+          headers: { "x-tenant-slug": "oh" },
+        });
+        if (response.ok) {
+          const locations = await response.json();
+          if (locations.length > 0 && locations[0].availability) {
+            setAvailability(locations[0].availability);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to fetch availability:", e);
+      }
+    }
+
+    fetchAvailability();
+    // Refresh every 60 seconds
+    const interval = setInterval(fetchAvailability, 60000);
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -169,32 +201,71 @@ export default function HomePage() {
             zIndex: 2,
           }}
         >
-          <Link
-            href={`/${locale}/order`}
-            style={{
-              padding: "20px 64px",
-              fontSize: "1.1rem",
-              fontWeight: "500",
-              background: "linear-gradient(135deg, #C7A878 0%, #B8956A 100%)",
-              color: "#ffffff",
-              borderRadius: "50px",
-              textDecoration: "none",
-              transition: "all 0.4s ease",
-              display: "inline-block",
-              letterSpacing: "2px",
-              boxShadow: "0 8px 30px rgba(199, 168, 120, 0.35)",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "translateY(-3px)";
-              e.currentTarget.style.boxShadow = "0 12px 40px rgba(199, 168, 120, 0.45)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.boxShadow = "0 8px 30px rgba(199, 168, 120, 0.35)";
-            }}
-          >
-            {tCommon("orderNow")}
-          </Link>
+          {availability?.canOrder !== false ? (
+            <Link
+              href={`/${locale}/order`}
+              style={{
+                padding: "20px 64px",
+                fontSize: "1.1rem",
+                fontWeight: "500",
+                background: "linear-gradient(135deg, #C7A878 0%, #B8956A 100%)",
+                color: "#ffffff",
+                borderRadius: "50px",
+                textDecoration: "none",
+                transition: "all 0.4s ease",
+                display: "inline-block",
+                letterSpacing: "2px",
+                boxShadow: "0 8px 30px rgba(199, 168, 120, 0.35)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translateY(-3px)";
+                e.currentTarget.style.boxShadow = "0 12px 40px rgba(199, 168, 120, 0.45)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow = "0 8px 30px rgba(199, 168, 120, 0.35)";
+              }}
+            >
+              {tCommon("orderNow")}
+            </Link>
+          ) : (
+            <div style={{ textAlign: "center" }}>
+              <div
+                style={{
+                  padding: "20px 48px",
+                  fontSize: "1.1rem",
+                  fontWeight: "500",
+                  background: "rgba(124, 122, 103, 0.8)",
+                  color: "#ffffff",
+                  borderRadius: "50px",
+                  display: "inline-block",
+                  letterSpacing: "2px",
+                  marginBottom: 12,
+                }}
+              >
+                {availability?.statusMessage || t("opensAt")}
+              </div>
+              <div>
+                <Link
+                  href={`/${locale}/menu`}
+                  style={{
+                    padding: "12px 32px",
+                    fontSize: "0.9rem",
+                    fontWeight: "500",
+                    background: "transparent",
+                    color: "#ffffff",
+                    border: "2px solid rgba(255,255,255,0.5)",
+                    borderRadius: "50px",
+                    textDecoration: "none",
+                    display: "inline-block",
+                    letterSpacing: "1px",
+                  }}
+                >
+                  {tCommon("viewMenu")}
+                </Link>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Scroll indicator */}

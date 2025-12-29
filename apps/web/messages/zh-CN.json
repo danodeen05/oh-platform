@@ -3,6 +3,7 @@
     "signIn": "登录",
     "signInToOrder": "登录订购",
     "orderNow": "立即订购",
+    "viewMenu": "查看菜单",
     "loading": "加载中...",
     "error": "发生错误",
     "included": "已包含",
@@ -66,6 +67,7 @@
     "brandNamePlain": "哦！牛肉面",
     "tagline": "唯一一家专为<bold>您</bold>打造的餐厅。",
     "heroDescription": "源自台湾深受喜爱的牛肉面传统，融合日本精致工艺，在您专属的私人包厢中享用我们30年的家传秘方。",
+    "opensAt": "上午10点开始接受预订",
     "signature": {
       "label": "我们的招牌",
       "title": "A5和牛牛肉面",
@@ -291,9 +293,8 @@
     "details": {
       "address": "地址",
       "hours": "营业时间",
-      "hoursMonThurs": "周一至周四：上午11点 - 晚上9点",
-      "hoursFriSat": "周五至周六：上午11点 - 晚上10点",
-      "hoursSun": "周日：中午12点 - 晚上8点",
+      "hoursWeekday": "周一至周六：上午11点 - 晚上9点",
+      "hoursSunday": "周日：休息",
       "parking": "停车信息"
     },
     "about": {
@@ -549,6 +550,9 @@
         "1hour": "1 小时",
         "90min": "1.5 小时"
       },
+      "orderingClosed": "在线订购已关闭",
+      "orderingClosedMessage": "请稍后再来！在线订购于上午10点开放。",
+      "viewMenu": "查看菜单",
       "processing": "处理中...",
       "addToGroupOrder": "加入团体订单",
       "choosePod": "选择座位（可选）",
@@ -771,6 +775,11 @@
     "loading": "加载中...",
     "loadingProfile": "加载您的资料中...",
     "visitsThisMonth": "本月 {count} 次到访",
+    "addToWallet": "添加到钱包",
+    "walletDescription": "将会员卡添加到手机钱包，方便访问并自动更新。",
+    "addToAppleWallet": "添加到 Apple 钱包",
+    "addToGoogleWallet": "添加到 Google 钱包",
+    "walletComingSoon": "完整钱包功能即将上线！预览模式已可用。",
     "tiers": {
       "chopstick": "筷子会员",
       "noodleMaster": "面条大师",
@@ -845,6 +854,34 @@
       "vip": {
         "name": "VIP",
         "description": "达到牛肉达人等级"
+      },
+      "lunch-regular": {
+        "name": "午餐常客",
+        "description": "午餐时段下单10次"
+      },
+      "night-owl": {
+        "name": "夜猫子",
+        "description": "晚上8点后下单5次"
+      },
+      "big-spender": {
+        "name": "大手笔",
+        "description": "累计消费超过$500"
+      },
+      "generous-soul": {
+        "name": "慷慨之心",
+        "description": "推荐3位朋友下单"
+      },
+      "pod-explorer": {
+        "name": "包厢探索者",
+        "description": "在5个不同包厢用餐"
+      },
+      "quick-return": {
+        "name": "快速回头客",
+        "description": "24小时内再次下单"
+      },
+      "birthday-bowl": {
+        "name": "生日面",
+        "description": "在生日当天下单"
       }
     }
   },
