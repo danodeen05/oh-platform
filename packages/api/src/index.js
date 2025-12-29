@@ -2721,9 +2721,11 @@ app.post("/orders", async (req, reply) => {
     });
 
     if (location) {
-      // Convert estimatedArrival to minutes from now
-      const arrivalMinutes = parseInt(estimatedArrival) || 0;
-      const validation = validateArrivalTime(location, arrivalMinutes);
+      // Convert estimatedArrival (ISO timestamp) to minutes from now
+      const arrivalDate = new Date(estimatedArrival);
+      const now = new Date();
+      const minutesFromNow = Math.round((arrivalDate.getTime() - now.getTime()) / (1000 * 60));
+      const validation = validateArrivalTime(location, minutesFromNow);
 
       if (!validation.valid) {
         return reply.code(400).send({

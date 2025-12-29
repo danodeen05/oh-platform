@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
+import { SignedIn, SignedOut, SignInButton, UserButton, useAuth } from "@clerk/nextjs";
 import { useTranslations, useLocale } from "next-intl";
 
 // Custom icon for the Oh! Account menu item
@@ -128,8 +128,15 @@ export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [mobileExpandedSection, setMobileExpandedSection] = useState<string | null>(null);
+  const [isSignedIn, setIsSignedIn] = useState(false);
+  const { isSignedIn: clerkSignedIn } = useAuth();
   const t = useTranslations("navigation");
   const locale = useLocale();
+
+  // Track authentication state
+  useEffect(() => {
+    setIsSignedIn(clerkSignedIn || false);
+  }, [clerkSignedIn]);
 
   // Dropdown menu structure
   const aboutUsItems = [
@@ -142,10 +149,11 @@ export default function Header() {
     { href: `/${locale}/gift-cards`, label: t("giftCards") },
   ];
 
+  // Member Benefits items - conditionally include "My Account" only for signed-in users
   const memberBenefitsItems = [
     { href: `/${locale}/loyalty`, label: t("loyalty") },
     { href: `/${locale}/referral`, label: t("referral") },
-    { href: `/${locale}/member`, label: t("myAccount") },
+    ...(isSignedIn ? [{ href: `/${locale}/member`, label: t("myAccount") }] : []),
   ];
 
   return (
@@ -244,16 +252,14 @@ export default function Header() {
             onClose={() => setOpenDropdown(null)}
           />
 
-          {/* Member Benefits Dropdown - Only shown when signed in */}
-          <SignedIn>
-            <NavDropdown
-              label={t("memberBenefits")}
-              items={memberBenefitsItems}
-              isOpen={openDropdown === "memberBenefits"}
-              onToggle={() => setOpenDropdown(openDropdown === "memberBenefits" ? null : "memberBenefits")}
-              onClose={() => setOpenDropdown(null)}
-            />
-          </SignedIn>
+          {/* Member Benefits Dropdown - Shows for all users, "My Account" only for signed-in users */}
+          <NavDropdown
+            label={t("memberBenefits")}
+            items={memberBenefitsItems}
+            isOpen={openDropdown === "memberBenefits"}
+            onToggle={() => setOpenDropdown(openDropdown === "memberBenefits" ? null : "memberBenefits")}
+            onClose={() => setOpenDropdown(null)}
+          />
         </div>
 
         {/* Right side: Auth Button */}
@@ -420,51 +426,49 @@ export default function Header() {
               )}
             </div>
 
-            {/* Member Benefits Section - Only for signed in users */}
-            <SignedIn>
-              <div style={{ borderBottom: "1px solid rgba(124, 122, 103, 0.15)" }}>
-                <button
-                  onClick={() => setMobileExpandedSection(mobileExpandedSection === "memberBenefits" ? null : "memberBenefits")}
-                  style={{
-                    width: "100%",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    background: "transparent",
-                    border: "none",
-                    color: "#222222",
-                    fontSize: "1.1rem",
-                    fontWeight: "500",
-                    letterSpacing: "0.5px",
-                    padding: "12px 0",
-                    cursor: "pointer",
-                  }}
-                >
-                  {t("memberBenefits")}
-                  <ChevronDown isOpen={mobileExpandedSection === "memberBenefits"} />
-                </button>
-                {mobileExpandedSection === "memberBenefits" && (
-                  <div style={{ paddingLeft: "16px", paddingBottom: "8px" }}>
-                    {memberBenefitsItems.map((item) => (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        onClick={() => setMobileMenuOpen(false)}
-                        style={{
-                          display: "block",
-                          color: "#4a4a4a",
-                          textDecoration: "none",
-                          fontSize: "1rem",
-                          padding: "8px 0",
-                        }}
-                      >
-                        {item.label}
-                      </Link>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </SignedIn>
+            {/* Member Benefits Section - Shows for all users, "My Account" only for signed-in users */}
+            <div style={{ borderBottom: "1px solid rgba(124, 122, 103, 0.15)" }}>
+              <button
+                onClick={() => setMobileExpandedSection(mobileExpandedSection === "memberBenefits" ? null : "memberBenefits")}
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  background: "transparent",
+                  border: "none",
+                  color: "#222222",
+                  fontSize: "1.1rem",
+                  fontWeight: "500",
+                  letterSpacing: "0.5px",
+                  padding: "12px 0",
+                  cursor: "pointer",
+                }}
+              >
+                {t("memberBenefits")}
+                <ChevronDown isOpen={mobileExpandedSection === "memberBenefits"} />
+              </button>
+              {mobileExpandedSection === "memberBenefits" && (
+                <div style={{ paddingLeft: "16px", paddingBottom: "8px" }}>
+                  {memberBenefitsItems.map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setMobileMenuOpen(false)}
+                      style={{
+                        display: "block",
+                        color: "#4a4a4a",
+                        textDecoration: "none",
+                        fontSize: "1rem",
+                        padding: "8px 0",
+                      }}
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
 
             {/* Sign In for mobile - only for signed out users */}
             <SignedOut>
