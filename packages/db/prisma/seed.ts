@@ -454,18 +454,6 @@ async function main() {
         isActive: true,
       },
       {
-        slug: "weekend-warrior",
-        name: "Weekend Warrior",
-        description: "Order on Saturday and Sunday",
-        rewardCents: 300,
-        iconEmoji: "📅",
-        requirements: JSON.stringify({
-          type: "order_days",
-          days: ["saturday", "sunday"],
-        }),
-        isActive: true,
-      },
-      {
         slug: "bring-5-friends",
         name: "Party Host",
         description: "Refer 5 friends this month",

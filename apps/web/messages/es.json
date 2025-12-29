@@ -3,6 +3,7 @@
     "signIn": "Iniciar sesión",
     "signInToOrder": "INICIAR SESIÓN PARA ORDENAR",
     "orderNow": "ORDENAR AHORA",
+    "viewMenu": "VER MENÚ",
     "loading": "Cargando...",
     "error": "Algo salió mal",
     "included": "Incluido",
@@ -66,6 +67,7 @@
     "brandNamePlain": "Oh! Beef Noodle Soup",
     "tagline": "El único restaurante construido a <bold>tu</bold> medida.",
     "heroDescription": "Nacido de la querida tradición taiwanesa de sopa de fideos con carne y elevado con la atención japonesa al detalle, disfruta nuestra receta familiar de 30 años en tu propia cabina privada.",
+    "opensAt": "Abrimos a las 10am para pedidos",
     "signature": {
       "label": "NUESTRA ESPECIALIDAD",
       "title": "Sopa de fideos con carne Wagyu A5",
@@ -291,9 +293,8 @@
     "details": {
       "address": "Dirección",
       "hours": "Horario",
-      "hoursMonThurs": "Lun-Jue: 11am - 9pm",
-      "hoursFriSat": "Vie-Sáb: 11am - 10pm",
-      "hoursSun": "Dom: 12pm - 8pm",
+      "hoursWeekday": "Lun-Sáb: 11am - 9pm",
+      "hoursSunday": "Domingo: Cerrado",
       "parking": "Estacionamiento"
     },
     "about": {
@@ -549,6 +550,9 @@
         "1hour": "1 hora",
         "90min": "1.5 horas"
       },
+      "orderingClosed": "Pedidos en línea cerrados",
+      "orderingClosedMessage": "¡Vuelve pronto! Los pedidos en línea abren a las 10am.",
+      "viewMenu": "Ver Menú",
       "processing": "Procesando...",
       "addToGroupOrder": "Agregar al Pedido de Grupo",
       "choosePod": "Elige Tu Pod (Opcional)",
@@ -771,6 +775,11 @@
     "loading": "Cargando...",
     "loadingProfile": "Cargando tu perfil...",
     "visitsThisMonth": "{count} {count, plural, one {visita} other {visitas}} este mes",
+    "addToWallet": "Agregar a la Cartera",
+    "walletDescription": "Guarda tu tarjeta de membresía en la cartera de tu teléfono para acceso fácil y actualizaciones automáticas.",
+    "addToAppleWallet": "Agregar a Apple Wallet",
+    "addToGoogleWallet": "Agregar a Google Wallet",
+    "walletComingSoon": "¡Integración completa de cartera próximamente! Modo de vista previa disponible.",
     "tiers": {
       "chopstick": "Palillos",
       "noodleMaster": "Maestro de Fideos",
@@ -845,6 +854,34 @@
       "vip": {
         "name": "VIP",
         "description": "Alcanzaste el nivel Jefe de la Carne"
+      },
+      "lunch-regular": {
+        "name": "Cliente Habitual del Almuerzo",
+        "description": "Ordenaste durante el almuerzo 10 veces"
+      },
+      "night-owl": {
+        "name": "Noctámbulo",
+        "description": "Ordenaste después de las 8pm 5 veces"
+      },
+      "big-spender": {
+        "name": "Gran Gastador",
+        "description": "Gastaste más de $500 en total"
+      },
+      "generous-soul": {
+        "name": "Alma Generosa",
+        "description": "Referiste a 3 amigos que ordenaron"
+      },
+      "pod-explorer": {
+        "name": "Explorador de Pods",
+        "description": "Comiste en 5 pods diferentes"
+      },
+      "quick-return": {
+        "name": "Regreso Rápido",
+        "description": "Ordenaste de nuevo en menos de 24 horas"
+      },
+      "birthday-bowl": {
+        "name": "Tazón de Cumpleaños",
+        "description": "Ordenaste en tu cumpleaños"
       }
     }
   },

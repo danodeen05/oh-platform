@@ -3,6 +3,7 @@
     "signIn": "Sign In",
     "signInToOrder": "SIGN IN TO ORDER",
     "orderNow": "ORDER NOW",
+    "viewMenu": "VIEW MENU",
     "loading": "Loading...",
     "error": "Something went wrong",
     "included": "Included",
@@ -66,6 +67,7 @@
     "brandNamePlain": "Oh! Beef Noodle Soup",
     "tagline": "The only restaurant built around <bold>you</bold>.",
     "heroDescription": "Born from Taiwan's beloved beef noodle tradition and elevated with Japanese attention to detail, enjoy our 30-year family recipe in your own private pod.",
+    "opensAt": "Opens at 10am for ordering",
     "signature": {
       "label": "OUR SIGNATURE",
       "title": "A5 Wagyu Beef Noodle Soup",
@@ -291,9 +293,8 @@
     "details": {
       "address": "Address",
       "hours": "Hours",
-      "hoursMonThurs": "Mon-Thu: 11am - 9pm",
-      "hoursFriSat": "Fri-Sat: 11am - 10pm",
-      "hoursSun": "Sun: 12pm - 8pm",
+      "hoursWeekday": "Mon-Sat: 11am - 9pm",
+      "hoursSunday": "Sunday: Closed",
       "parking": "Parking"
     },
     "about": {
@@ -549,6 +550,9 @@
         "1hour": "1 hour",
         "90min": "1.5 hours"
       },
+      "orderingClosed": "Online Ordering is Closed",
+      "orderingClosedMessage": "Check back soon! Online ordering opens at 10am.",
+      "viewMenu": "View Menu",
       "processing": "Processing...",
       "addToGroupOrder": "Add to Group Order",
       "choosePod": "Choose Your Pod (Optional)",
@@ -771,6 +775,11 @@
     "loading": "Loading...",
     "loadingProfile": "Loading your profile...",
     "visitsThisMonth": "{count} {count, plural, one {visit} other {visits}} this month",
+    "addToWallet": "Add to Wallet",
+    "walletDescription": "Keep your membership card in your phone wallet for easy access and automatic updates.",
+    "addToAppleWallet": "Add to Apple Wallet",
+    "addToGoogleWallet": "Add to Google Wallet",
+    "walletComingSoon": "Full wallet integration coming soon! Preview mode available.",
     "tiers": {
       "chopstick": "Chopstick",
       "noodleMaster": "Noodle Master",
@@ -845,6 +854,34 @@
       "vip": {
         "name": "VIP",
         "description": "Reached Beef Boss tier"
+      },
+      "lunch-regular": {
+        "name": "Lunch Regular",
+        "description": "Ordered during lunch hours 10 times"
+      },
+      "night-owl": {
+        "name": "Night Owl",
+        "description": "Ordered after 8pm 5 times"
+      },
+      "big-spender": {
+        "name": "Big Spender",
+        "description": "Spent over $500 lifetime"
+      },
+      "generous-soul": {
+        "name": "Generous Soul",
+        "description": "Referred 3 friends who ordered"
+      },
+      "pod-explorer": {
+        "name": "Pod Explorer",
+        "description": "Dined in 5 different pods"
+      },
+      "quick-return": {
+        "name": "Quick Return",
+        "description": "Ordered again within 24 hours"
+      },
+      "birthday-bowl": {
+        "name": "Birthday Bowl",
+        "description": "Ordered on your birthday"
       }
     }
   },

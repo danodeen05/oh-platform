@@ -80,6 +80,11 @@ model Location {
   lat     Float
   lng     Float
 
+  // Operating hours (JSON: { mon: { open: "11:00", close: "21:00" }, sun: null })
+  operatingHours Json?
+  timezone       String  @default("America/Denver")
+  isClosed       Boolean @default(false) // For temporary closures
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

@@ -13,6 +13,18 @@ import {
 import { BetaAnalyticsDataClient } from "@google-analytics/data";
 import { readFileSync } from "fs";
 import crypto from "crypto";
+import {
+  generateAppleWalletPass,
+  generateDemoPassData,
+  generateGoogleWalletLink,
+  isAppleWalletConfigured,
+  isGoogleWalletConfigured,
+} from "./wallet/wallet-pass.js";
+import {
+  getLocationStatus,
+  validateArrivalTime,
+  DEFAULT_HOURS,
+} from "./utils/operating-hours.js";
 
 const prisma = new PrismaClient();
 const app = Fastify({ logger: true });
@@ -497,18 +509,55 @@ app.get("/locations", async (req, reply) => {
       // Estimate: 15 minutes per order in queue, max 60 minutes
       const avgWaitMinutes = Math.min(queuedOrders * 15, 60);
 
+      // Get operating hours availability
+      const availability = getLocationStatus(location);
+
       return {
         ...location,
         stats: {
           availableSeats,
           totalSeats,
           avgWaitMinutes,
-        }
+        },
+        availability: {
+          isOpen: availability.isOpen,
+          canOrder: availability.canOrder,
+          statusMessage: availability.statusMessage,
+          closesAt: availability.closesAt,
+        },
       };
     })
   );
 
   return locationsWithRealTimeStats;
+});
+
+// Get location availability for online ordering
+app.get("/locations/:id/availability", async (req, reply) => {
+  const { id } = req.params;
+
+  const location = await prisma.location.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      name: true,
+      operatingHours: true,
+      timezone: true,
+      isClosed: true,
+    },
+  });
+
+  if (!location) {
+    return reply.code(404).send({ error: "Location not found" });
+  }
+
+  const status = getLocationStatus(location);
+
+  return {
+    locationId: location.id,
+    locationName: location.name,
+    ...status,
+  };
 });
 
 app.post("/locations", async (req, reply) => {
@@ -2664,6 +2713,27 @@ app.post("/orders", async (req, reply) => {
       .send({ error: "locationId, tenantId, and items required" });
   }
 
+  // Validate arrival time is within operating hours (skip for kiosk orders - customer is present)
+  if (!isKioskOrder && estimatedArrival) {
+    const location = await prisma.location.findUnique({
+      where: { id: locationId },
+      select: { operatingHours: true, timezone: true, isClosed: true },
+    });
+
+    if (location) {
+      // Convert estimatedArrival to minutes from now
+      const arrivalMinutes = parseInt(estimatedArrival) || 0;
+      const validation = validateArrivalTime(location, arrivalMinutes);
+
+      if (!validation.valid) {
+        return reply.code(400).send({
+          error: "Invalid arrival time",
+          message: validation.reason,
+        });
+      }
+    }
+  }
+
   // Calculate total
   const menuItems = await prisma.menuItem.findMany({
     where: {
@@ -3640,6 +3710,39 @@ app.get("/users/:id/badge-progress", async (req, reply) => {
     },
   });
 
+  // Get orders for time-based badges
+  const allOrders = await prisma.order.findMany({
+    where: { userId: id, paymentStatus: "PAID" },
+    select: { createdAt: true, seatId: true },
+    orderBy: { createdAt: "asc" },
+  });
+
+  // Calculate lunch orders (11am-2pm)
+  const lunchOrderCount = allOrders.filter((o) => {
+    const hour = new Date(o.createdAt).getHours();
+    return hour >= 11 && hour < 14;
+  }).length;
+
+  // Calculate night orders (after 8pm)
+  const nightOrderCount = allOrders.filter((o) => {
+    const hour = new Date(o.createdAt).getHours();
+    return hour >= 20;
+  }).length;
+
+  // Calculate unique pods visited
+  const uniquePods = new Set(allOrders.filter((o) => o.seatId).map((o) => o.seatId));
+  const uniquePodCount = uniquePods.size;
+
+  // Check if user has quick return (ordered within 24 hours)
+  let hasQuickReturn = false;
+  for (let i = 1; i < allOrders.length; i++) {
+    const diff = new Date(allOrders[i].createdAt).getTime() - new Date(allOrders[i - 1].createdAt).getTime();
+    if (diff <= 24 * 60 * 60 * 1000) {
+      hasQuickReturn = true;
+      break;
+    }
+  }
+
   // Build progress for each badge type
   const earnedSlugs = user.badges.map((ub) => ub.badge.slug);
 
@@ -3739,6 +3842,56 @@ app.get("/users/:id/badge-progress", async (req, reply) => {
       earned: earnedSlugs.includes("tried-all-items"),
       description: "Try every menu item",
     },
+    // New badges
+    "lunch-regular": {
+      current: lunchOrderCount,
+      required: 10,
+      percent: Math.min(100, (lunchOrderCount / 10) * 100),
+      earned: earnedSlugs.includes("lunch-regular"),
+      description: "Order during lunch (11am-2pm) 10 times",
+    },
+    "night-owl": {
+      current: nightOrderCount,
+      required: 5,
+      percent: Math.min(100, (nightOrderCount / 5) * 100),
+      earned: earnedSlugs.includes("night-owl"),
+      description: "Order after 8pm 5 times",
+    },
+    "big-spender": {
+      current: Math.floor(user.lifetimeSpentCents / 100),
+      required: 500,
+      percent: Math.min(100, (user.lifetimeSpentCents / 50000) * 100),
+      earned: earnedSlugs.includes("big-spender"),
+      description: "Spend $500 lifetime",
+    },
+    "generous-soul": {
+      current: referralCount,
+      required: 3,
+      percent: Math.min(100, (referralCount / 3) * 100),
+      earned: earnedSlugs.includes("generous-soul"),
+      description: "Refer 3 friends who order",
+    },
+    "pod-explorer": {
+      current: uniquePodCount,
+      required: 5,
+      percent: Math.min(100, (uniquePodCount / 5) * 100),
+      earned: earnedSlugs.includes("pod-explorer"),
+      description: "Dine in 5 different pods",
+    },
+    "quick-return": {
+      current: hasQuickReturn ? 1 : 0,
+      required: 1,
+      percent: hasQuickReturn ? 100 : 0,
+      earned: earnedSlugs.includes("quick-return"),
+      description: "Order again within 24 hours",
+    },
+    "birthday-bowl": {
+      current: 0, // Would need birthday data from Clerk
+      required: 1,
+      percent: 0,
+      earned: earnedSlugs.includes("birthday-bowl"),
+      description: "Order on your birthday",
+    },
   };
 
   return {
@@ -3782,6 +3935,154 @@ app.get("/users/:id/pending-credits", async (req, reply) => {
     pendingCredits,
     totalPendingCents,
     nextDisbursement,
+  };
+});
+
+// ====================
+// WALLET PASS ENDPOINTS
+// ====================
+
+// Check wallet configuration status
+app.get("/wallet/status", async (req, reply) => {
+  return {
+    apple: {
+      configured: isAppleWalletConfigured(),
+      message: isAppleWalletConfigured()
+        ? "Apple Wallet is configured"
+        : "Apple Wallet requires certificates. Demo mode available.",
+    },
+    google: {
+      configured: isGoogleWalletConfigured(),
+      message: isGoogleWalletConfigured()
+        ? "Google Wallet is configured"
+        : "Google Wallet requires service account. Demo mode available.",
+    },
+  };
+});
+
+// Generate Apple Wallet pass for a user
+app.get("/users/:id/wallet/apple", async (req, reply) => {
+  const { id } = req.params;
+  const { demo } = req.query;
+
+  const user = await prisma.user.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      membershipTier: true,
+      creditsCents: true,
+      lifetimeOrderCount: true,
+      currentStreak: true,
+      referralCode: true,
+      createdAt: true,
+    },
+  });
+
+  if (!user) {
+    return reply.code(404).send({ error: "User not found" });
+  }
+
+  // If demo mode or certificates not configured, return demo data
+  if (demo === "true" || !isAppleWalletConfigured()) {
+    return generateDemoPassData(user);
+  }
+
+  try {
+    const passBuffer = await generateAppleWalletPass(user);
+
+    reply
+      .header("Content-Type", "application/vnd.apple.pkpass")
+      .header("Content-Disposition", `attachment; filename="oh-membership-${user.id}.pkpass"`)
+      .send(passBuffer);
+  } catch (error) {
+    console.error("Error generating Apple Wallet pass:", error);
+    return reply.code(500).send({
+      error: "Failed to generate pass",
+      message: error.message,
+      hint: "Check that Apple Wallet certificates are properly configured",
+    });
+  }
+});
+
+// Generate Google Wallet pass link for a user
+app.get("/users/:id/wallet/google", async (req, reply) => {
+  const { id } = req.params;
+
+  const user = await prisma.user.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      membershipTier: true,
+      creditsCents: true,
+      lifetimeOrderCount: true,
+      currentStreak: true,
+      referralCode: true,
+      createdAt: true,
+    },
+  });
+
+  if (!user) {
+    return reply.code(404).send({ error: "User not found" });
+  }
+
+  try {
+    const walletData = await generateGoogleWalletLink(user);
+    return walletData;
+  } catch (error) {
+    console.error("Error generating Google Wallet link:", error);
+    return reply.code(500).send({
+      error: "Failed to generate Google Wallet link",
+      message: error.message,
+    });
+  }
+});
+
+// Get combined wallet pass data (for displaying in UI)
+app.get("/users/:id/wallet", async (req, reply) => {
+  const { id } = req.params;
+
+  const user = await prisma.user.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      membershipTier: true,
+      creditsCents: true,
+      lifetimeOrderCount: true,
+      currentStreak: true,
+      referralCode: true,
+      createdAt: true,
+    },
+  });
+
+  if (!user) {
+    return reply.code(404).send({ error: "User not found" });
+  }
+
+  return {
+    user: {
+      id: user.id,
+      name: user.name,
+      tier: user.membershipTier,
+      credits: user.creditsCents,
+      orders: user.lifetimeOrderCount,
+      streak: user.currentStreak,
+      referralCode: user.referralCode,
+      memberSince: user.createdAt,
+    },
+    walletLinks: {
+      apple: `/users/${id}/wallet/apple`,
+      google: `/users/${id}/wallet/google`,
+    },
+    configured: {
+      apple: isAppleWalletConfigured(),
+      google: isGoogleWalletConfigured(),
+    },
   };
 });
 
@@ -4533,6 +4834,87 @@ async function checkAndAwardBadges(userId) {
       if (uniqueItemsOrdered.length >= totalMenuItems && totalMenuItems > 0) {
         shouldAward = true;
       }
+    }
+
+    // Check Lunch Regular badge (ordered during lunch hours 11am-2pm 10 times)
+    if (badge.slug === "lunch-regular") {
+      const lunchOrders = await prisma.order.count({
+        where: {
+          userId,
+          paymentStatus: "PAID",
+          createdAt: {
+            // This is a simplified check - in production you'd use a more sophisticated time query
+          },
+        },
+      });
+      // For now, count orders and check hour in application
+      const allOrders = await prisma.order.findMany({
+        where: { userId, paymentStatus: "PAID" },
+        select: { createdAt: true },
+      });
+      const lunchCount = allOrders.filter((o) => {
+        const hour = new Date(o.createdAt).getHours();
+        return hour >= 11 && hour < 14;
+      }).length;
+      if (lunchCount >= 10) shouldAward = true;
+    }
+
+    // Check Night Owl badge (ordered after 8pm 5 times)
+    if (badge.slug === "night-owl") {
+      const allOrders = await prisma.order.findMany({
+        where: { userId, paymentStatus: "PAID" },
+        select: { createdAt: true },
+      });
+      const nightCount = allOrders.filter((o) => {
+        const hour = new Date(o.createdAt).getHours();
+        return hour >= 20;
+      }).length;
+      if (nightCount >= 5) shouldAward = true;
+    }
+
+    // Check Big Spender badge (spent over $500 lifetime)
+    if (badge.slug === "big-spender") {
+      if (user.lifetimeSpentCents >= 50000) shouldAward = true; // $500 = 50000 cents
+    }
+
+    // Check Generous Soul badge (referred 3 friends who ordered)
+    if (badge.slug === "generous-soul") {
+      const successfulReferrals = await prisma.user.count({
+        where: { referredById: userId, lifetimeOrderCount: { gt: 0 } },
+      });
+      if (successfulReferrals >= 3) shouldAward = true;
+    }
+
+    // Check Pod Explorer badge (dined in 5 different pods)
+    if (badge.slug === "pod-explorer") {
+      const uniquePods = await prisma.order.findMany({
+        where: { userId, paymentStatus: "PAID", seatId: { not: null } },
+        distinct: ["seatId"],
+        select: { seatId: true },
+      });
+      if (uniquePods.length >= 5) shouldAward = true;
+    }
+
+    // Check Quick Return badge (ordered again within 24 hours)
+    if (badge.slug === "quick-return") {
+      const orders = await prisma.order.findMany({
+        where: { userId, paymentStatus: "PAID" },
+        orderBy: { createdAt: "asc" },
+        select: { createdAt: true },
+      });
+      for (let i = 1; i < orders.length; i++) {
+        const diff = new Date(orders[i].createdAt).getTime() - new Date(orders[i - 1].createdAt).getTime();
+        if (diff <= 24 * 60 * 60 * 1000) {
+          // 24 hours in milliseconds
+          shouldAward = true;
+          break;
+        }
+      }
+    }
+
+    // Check VIP badge (reached Beef Boss tier)
+    if (badge.slug === "vip" && user.membershipTier === "BEEF_BOSS") {
+      shouldAward = true;
     }
 
     // Award the badge
