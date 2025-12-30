@@ -3,6 +3,7 @@ import cors from "@fastify/cors";
 import formbody from "@fastify/formbody";
 import { PrismaClient } from "@oh/db";
 import Anthropic from "@anthropic-ai/sdk";
+import Stripe from "stripe";
 import {
   sendOrderConfirmation,
   sendPodReadyNotification,
@@ -31,6 +32,9 @@ const app = Fastify({ logger: true });
 
 // Initialize Anthropic client (uses ANTHROPIC_API_KEY env var automatically)
 const anthropic = process.env.ANTHROPIC_API_KEY ? new Anthropic() : null;
+
+// Initialize Stripe client
+const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
 
 // Initialize GA4 Analytics client
 let ga4Client = null;
@@ -3214,6 +3218,39 @@ function generateSessionToken() {
   return token;
 }
 
+
+// Create Stripe Payment Intent
+app.post("/create-payment-intent", async (req, reply) => {
+  try {
+    if (!stripe) {
+      return reply.status(500).send({ error: "Stripe is not configured" });
+    }
+
+    const { amountCents, metadata } = req.body;
+
+    if (!amountCents || amountCents < 50) {
+      return reply.status(400).send({ error: "Amount must be at least 50 cents" });
+    }
+
+    // Create payment intent
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: amountCents,
+      currency: "usd",
+      metadata: metadata || {},
+      automatic_payment_methods: {
+        enabled: true,
+      },
+    });
+
+    reply.send({
+      clientSecret: paymentIntent.client_secret,
+      id: paymentIntent.id,
+    });
+  } catch (error) {
+    console.error("Error creating payment intent:", error);
+    reply.status(500).send({ error: error.message });
+  }
+});
 // POST /guests - Create a guest session
 app.post("/guests", async (req, reply) => {
   const { name, phone, email } = req.body || {};
@@ -3350,6 +3387,46 @@ app.get("/users/:id/credits", async (req, reply) => {
     lifetimeEarningsCents,
     rank: userRank > 0 ? userRank : totalUsersWithEarnings + 1,
     totalUsers: totalUsersWithEarnings || 1,
+  };
+});
+
+// Deduct credits from user (for meal gifts, etc.)
+app.post("/users/:id/deduct-credits", async (req, reply) => {
+  const { id } = req.params;
+  const { amountCents, description, mealGiftId } = req.body || {};
+
+  if (!amountCents || amountCents <= 0) {
+    return reply.code(400).send({ error: "Valid amountCents required" });
+  }
+
+  const user = await prisma.user.findUnique({ where: { id } });
+  if (!user) return reply.code(404).send({ error: "User not found" });
+
+  if (user.creditsCents < amountCents) {
+    return reply.code(400).send({ error: "Insufficient credits" });
+  }
+
+  // Deduct from user balance
+  await prisma.user.update({
+    where: { id },
+    data: { creditsCents: { decrement: amountCents } },
+  });
+
+  // Record the debit event
+  await prisma.creditEvent.create({
+    data: {
+      userId: id,
+      type: "CREDIT_APPLIED",
+      amountCents: -amountCents,
+      description: description || "Credits used",
+      metadata: mealGiftId ? { mealGiftId } : undefined,
+    },
+  });
+
+  return {
+    success: true,
+    deducted: amountCents,
+    newBalance: user.creditsCents - amountCents
   };
 });
 
@@ -4969,32 +5046,35 @@ async function updateChallengeProgress(userId, orderData) {
     let newCurrent = progress.current;
     let completed = false;
 
+    // Get target - challenges use either 'target' or 'count'
+    const target = requirements.target || requirements.count;
+
     // Handle different requirement types
     switch (requirements.type) {
       case "order_count":
         // Increment order count
         newCurrent = progress.current + 1;
-        completed = newCurrent >= requirements.target;
+        completed = newCurrent >= target;
         break;
 
       case "spend_amount":
         // Track spending in cents
         newCurrent = progress.current + (orderData.totalCents || 0);
-        completed = newCurrent >= requirements.target;
+        completed = newCurrent >= target;
         break;
 
       case "order_streak":
         // This is handled by streak logic elsewhere, just check current streak
         const user = await prisma.user.findUnique({ where: { id: userId } });
         newCurrent = user?.currentStreak || 0;
-        completed = newCurrent >= requirements.target;
+        completed = newCurrent >= target;
         break;
 
       case "specific_item":
         // Check if order contains specific menu item
         if (orderData.items?.some(item => item.menuItemId === requirements.menuItemId)) {
           newCurrent = progress.current + 1;
-          completed = newCurrent >= (requirements.target || 1);
+          completed = newCurrent >= (target || 1);
         }
         break;
 
@@ -5002,14 +5082,40 @@ async function updateChallengeProgress(userId, orderData) {
         // Check if order contains items from specific category
         if (orderData.items?.some(item => item.categoryType === requirements.categoryType)) {
           newCurrent = progress.current + 1;
-          completed = newCurrent >= requirements.target;
+          completed = newCurrent >= target;
         }
         break;
 
+      case "try_all_noodles":
+        // Track unique noodle types tried
+        // This requires tracking which noodles have been tried, not just a count
+        // For now, don't auto-complete - needs special handling
+        // TODO: Implement proper noodle variety tracking
+        break;
+
+      case "referrals":
+        // Referral progress is tracked elsewhere when referrals complete
+        // Don't update on regular orders
+        break;
+
+      case "early_order":
+        // Check if order was placed before the specified hour
+        const orderHour = new Date(orderData.createdAt || new Date()).getHours();
+        if (orderHour < (requirements.beforeHour || 11)) {
+          newCurrent = 1;
+          completed = true;
+        }
+        break;
+
+      case "meal_gift":
+        // Meal gift completion is handled by the gift acceptance flow
+        // Don't update on regular orders
+        break;
+
       default:
-        // Generic order-based progress
-        newCurrent = progress.current + 1;
-        completed = newCurrent >= (requirements.target || 1);
+        // Unknown challenge type - don't auto-complete to prevent bugs
+        console.log(`⚠️ Unknown challenge type: ${requirements.type} - skipping`);
+        break;
     }
 
     // Update progress
@@ -9062,7 +9168,7 @@ app.get("/meal-gifts/next/:locationId", async (req, reply) => {
 // POST /meal-gifts/:id/accept - Accept a meal gift and apply to order
 app.post("/meal-gifts/:id/accept", async (req, reply) => {
   const { id } = req.params;
-  const { recipientId, orderId, messageFromRecipient } = req.body || {};
+  const { recipientId, orderId, messageFromRecipient, orderTotalCents } = req.body || {};
 
   if (!recipientId || !orderId) {
     return reply.code(400).send({ error: "recipientId and orderId required" });
@@ -9085,6 +9191,11 @@ app.post("/meal-gifts/:id/accept", async (req, reply) => {
     return reply.code(400).send({ error: "Meal gift has expired" });
   }
 
+  // Calculate excess gift amount (gift - order total)
+  const giftAmount = mealGift.amountCents;
+  const orderTotal = orderTotalCents || 0;
+  const excessAmount = Math.max(0, giftAmount - orderTotal);
+
   // Update meal gift to ACCEPTED status
   const updatedGift = await prisma.mealGift.update({
     where: { id },
@@ -9106,51 +9217,96 @@ app.post("/meal-gifts/:id/accept", async (req, reply) => {
     },
   });
 
-  // Give giver $5 reward (complete challenge)
-  await prisma.creditEvent.create({
-    data: {
-      userId: mealGift.giverId,
-      amountCents: 500, // $5 reward
-      type: "CHALLENGE_REWARD",
-      description: "Meal for a Stranger challenge completed",
-    },
-  });
+  // Credit excess gift amount to recipient (if any)
+  if (excessAmount > 0) {
+    // Check if recipient is a User (not a Guest)
+    const recipientUser = await prisma.user.findUnique({ where: { id: recipientId } });
 
-  // Update giver's credit balance
-  await prisma.user.update({
-    where: { id: mealGift.giverId },
-    data: {
-      creditBalanceCents: {
-        increment: 500,
-      },
-    },
-  });
+    if (recipientUser) {
+      // Create credit event for the excess
+      await prisma.creditEvent.create({
+        data: {
+          userId: recipientId,
+          amountCents: excessAmount,
+          type: "GIFT_EXCESS",
+          description: `Meal gift excess credited (Gift: $${(giftAmount / 100).toFixed(2)}, Order: $${(orderTotal / 100).toFixed(2)})`,
+          metadata: { mealGiftId: id },
+        },
+      });
 
-  // Mark challenge as completed for giver
+      // Update recipient's credit balance
+      await prisma.user.update({
+        where: { id: recipientId },
+        data: {
+          creditsCents: {
+            increment: excessAmount,
+          },
+        },
+      });
+    }
+  }
+
+  // Check if giver has already completed this challenge (only reward once)
   const challenge = await prisma.challenge.findUnique({
     where: { slug: "meal-for-stranger" },
   });
 
+  let alreadyRewarded = false;
   if (challenge) {
-    await prisma.userChallenge.upsert({
+    const existingChallenge = await prisma.userChallenge.findUnique({
       where: {
         userId_challengeId: {
           userId: mealGift.giverId,
           challengeId: challenge.id,
         },
       },
-      update: {
-        completedAt: new Date(),
-        rewardClaimed: true,
-      },
-      create: {
+    });
+    alreadyRewarded = existingChallenge?.rewardClaimed === true;
+  }
+
+  // Only give $5 reward if not already claimed
+  if (!alreadyRewarded) {
+    await prisma.creditEvent.create({
+      data: {
         userId: mealGift.giverId,
-        challengeId: challenge.id,
-        progress: JSON.stringify({ accepted: true }),
-        completedAt: new Date(),
-        rewardClaimed: true,
+        amountCents: 500, // $5 reward
+        type: "CHALLENGE_REWARD",
+        description: "Meal for a Stranger challenge completed",
       },
     });
+
+    // Update giver's credit balance
+    await prisma.user.update({
+      where: { id: mealGift.giverId },
+      data: {
+        creditsCents: {
+          increment: 500,
+        },
+      },
+    });
+
+    // Mark challenge as completed for giver
+    if (challenge) {
+      await prisma.userChallenge.upsert({
+        where: {
+          userId_challengeId: {
+            userId: mealGift.giverId,
+            challengeId: challenge.id,
+          },
+        },
+        update: {
+          completedAt: new Date(),
+          rewardClaimed: true,
+        },
+        create: {
+          userId: mealGift.giverId,
+          challengeId: challenge.id,
+          progress: JSON.stringify({ accepted: true }),
+          completedAt: new Date(),
+          rewardClaimed: true,
+        },
+      });
+    }
   }
 
   return updatedGift;
@@ -9290,6 +9446,42 @@ app.get("/meal-gifts/:id", async (req, reply) => {
   }
 
   return mealGift;
+});
+
+// GET /users/:userId/meal-gifts - Get user's meal gift transactions (given and received)
+app.get("/users/:userId/meal-gifts", async (req, reply) => {
+  const { userId } = req.params;
+
+  // Get gifts given by user (with recipient messages from chain)
+  const giftsGiven = await prisma.mealGift.findMany({
+    where: { giverId: userId },
+    include: {
+      location: { select: { id: true, name: true, city: true } },
+      acceptedBy: { select: { id: true, name: true } },
+      chain: {
+        where: { action: "ACCEPTED" },
+        select: { messageFromRecipient: true, createdAt: true },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  // Get gifts received by user
+  const giftsReceived = await prisma.mealGift.findMany({
+    where: { acceptedById: userId },
+    include: {
+      giver: { select: { id: true, name: true } },
+      location: { select: { id: true, name: true, city: true } },
+    },
+    orderBy: { acceptedAt: "desc" },
+  });
+
+  return {
+    given: giftsGiven,
+    received: giftsReceived,
+  };
 });
 
 // ====================

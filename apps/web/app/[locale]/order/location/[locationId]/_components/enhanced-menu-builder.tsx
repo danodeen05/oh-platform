@@ -10,6 +10,7 @@ import { DietaryLegend } from "./dietary-legend";
 import SeatingMap, { Seat } from "@/components/SeatingMap";
 import { useGuest } from "@/contexts/guest-context";
 import { useToast } from "@/components/ui/Toast";
+import { MealGiftModal } from "@/components/MealGiftModal";
 import { trackAddToCart, trackRemoveFromCart, trackLocationSelected, trackPodSelected, trackMenuCategoryViewed, event } from "@/lib/analytics";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -69,6 +70,20 @@ type MenuStep = {
   sections: MenuSection[];
 };
 
+
+type MealGift = {
+  id: string;
+  amountCents: number;
+  messageFromGiver: string | null;
+  payForwardCount: number;
+  giver: {
+    name: string;
+  };
+  location: {
+    name: string;
+    city: string;
+  };
+};
 type EnhancedMenuBuilderProps = {
   location: any;
   reorderId?: string;
@@ -142,6 +157,11 @@ export default function EnhancedMenuBuilder({
   const [selectedSeatId, setSelectedSeatId] = useState<string | null>(null);
   const [loadingSeats, setLoadingSeats] = useState(false);
   const [showSeatSelection, setShowSeatSelection] = useState(false);
+
+  // Meal gift state
+  const [pendingMealGift, setPendingMealGift] = useState<MealGift | null>(null);
+  const [showMealGiftModal, setShowMealGiftModal] = useState(false);
+  const [acceptedMealGiftId, setAcceptedMealGiftId] = useState<string | null>(null);
 
   // Operating hours availability
   const [availability, setAvailability] = useState<{
@@ -367,6 +387,27 @@ export default function EnhancedMenuBuilder({
     loadOrderPatterns();
   }, [userLoaded, user?.primaryEmailAddress?.emailAddress, user?.firstName]);
 
+
+  // Fetch pending meal gift for this location
+  useEffect(() => {
+    async function fetchPendingMealGift() {
+      try {
+        const response = await fetch(`${BASE}/meal-gifts/next/${location.id}`, {
+          headers: { "x-tenant-slug": "oh" },
+        });
+        
+        if (response.ok) {
+          const gift = await response.json();
+          setPendingMealGift(gift);
+          setShowMealGiftModal(true);
+        }
+      } catch (error) {
+        console.error("Failed to fetch pending meal gift:", error);
+      }
+    }
+
+    fetchPendingMealGift();
+  }, [location.id]);
   // Map step index to trigger type for Order Whisperer
   const getStepTrigger = useCallback((stepIndex: number): string | null => {
     // Based on actual menu step structure:
@@ -576,6 +617,55 @@ export default function EnhancedMenuBuilder({
   function handleSliderChange(itemId: string, value: number, label: string) {
     setCart(prev => ({ ...prev, [itemId]: value }));
     setSliderLabels(prev => ({ ...prev, [itemId]: label }));
+  }
+
+  // Meal gift handlers
+  function handleMealGiftAccept(giftId: string, message?: string) {
+    setAcceptedMealGiftId(giftId);
+    // Store message in localStorage to be passed at checkout
+    if (message) {
+      localStorage.setItem("mealGiftMessage", message);
+    } else {
+      localStorage.removeItem("mealGiftMessage");
+    }
+    setShowMealGiftModal(false);
+    toast.success("Meal gift reserved! It will be applied at checkout.");
+  }
+
+  async function handleMealGiftPayForward(giftId: string) {
+    const userId = dbUserId || localStorage.getItem("userId");
+    if (!userId) {
+      toast.error("Please sign in to pay forward a meal gift");
+      return;
+    }
+
+    try {
+      const response = await fetch(`${BASE}/meal-gifts/${giftId}/pay-forward`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-tenant-slug": "oh",
+        },
+        body: JSON.stringify({
+          recipientId: userId,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to pay forward meal gift");
+      }
+
+      toast.success("You paid it forward! The next person will receive this gift.");
+      setShowMealGiftModal(false);
+      setPendingMealGift(null);
+    } catch (error) {
+      console.error("Failed to pay forward:", error);
+      toast.error("Failed to pay forward. Please try again.");
+    }
+  }
+
+  function handleMealGiftClose() {
+    setShowMealGiftModal(false);
   }
 
   // Check if current step is complete
@@ -789,7 +879,7 @@ export default function EnhancedMenuBuilder({
     setSubmitting(false);
 
     router.push(
-      `/order/payment?orderId=${order.id}&orderNumber=${order.orderNumber}&total=${order.totalCents}`
+      `/order/payment?orderId=${order.id}&orderNumber=${order.orderNumber}&total=${order.totalCents}${acceptedMealGiftId ? `&mealGiftId=${acceptedMealGiftId}` : ""}`
     );
   }
 
@@ -1494,6 +1584,17 @@ export default function EnhancedMenuBuilder({
           </button>
         </div>
       </div>
+
+      {/* Meal Gift Modal */}
+      {showMealGiftModal && pendingMealGift && (
+        <MealGiftModal
+          mealGift={pendingMealGift}
+          userId={dbUserId || localStorage.getItem("userId") || ""}
+          onAccept={handleMealGiftAccept}
+          onPayForward={handleMealGiftPayForward}
+          onClose={handleMealGiftClose}
+        />
+      )}
     </div>
   );
 }

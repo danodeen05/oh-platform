@@ -18,6 +18,7 @@ export default async function PaymentPage({
 }: {
   searchParams: Promise<{
     orderId?: string;
+    mealGiftId?: string;
     orderNumber?: string;
     total?: string;
   }>;
@@ -27,6 +28,7 @@ export default async function PaymentPage({
   const params = await searchParams;
   const orderId = params.orderId;
   const orderNumber = params.orderNumber;
+  const mealGiftId = params.mealGiftId;
 
   if (!orderId || !orderNumber) {
     return (
@@ -236,6 +238,7 @@ export default async function PaymentPage({
           orderId={orderId}
           totalCents={totalCents}
           orderNumber={orderNumber}
+          mealGiftId={mealGiftId}
         />
       </div>
     </main>

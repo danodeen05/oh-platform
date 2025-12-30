@@ -40,6 +40,9 @@ export default function MenuBuilder({
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(!!reorderId);
   const [existingOrderId, setExistingOrderId] = useState<string | null>(reorderId || null);
+  const [mealGift, setMealGift] = useState<any | null>(null);
+  const [showGiftModal, setShowGiftModal] = useState(false);
+  const [acceptedGiftId, setAcceptedGiftId] = useState<string | null>(null);
 
   // If reorderId is provided, load the order and skip to time selection
   useEffect(() => {
@@ -72,6 +75,27 @@ export default function MenuBuilder({
 
     loadReorder();
   }, [reorderId]);
+
+  // Check for available meal gift at this location
+  useEffect(() => {
+    async function checkMealGift() {
+      try {
+        const response = await fetch(`${BASE}/meal-gifts/next/${location.id}`, {
+          headers: { "x-tenant-slug": "oh" },
+        });
+
+        if (response.ok) {
+          const gift = await response.json();
+          setMealGift(gift);
+          setShowGiftModal(true);
+        }
+      } catch (error) {
+        console.error("Failed to check for meal gift:", error);
+      }
+    }
+
+    checkMealGift();
+  }, [location.id]);
 
   // Calculate price for an item based on flexible pricing
   function getItemPrice(item: MenuItem, quantity: number): number {
@@ -143,6 +167,35 @@ export default function MenuBuilder({
 
   const hasBase = bases.some((base) => cart[base.id] > 0);
 
+  async function handleAcceptGift() {
+    if (!mealGift) return;
+
+    setAcceptedGiftId(mealGift.id);
+    setShowGiftModal(false);
+    toast.success(`You've accepted a $${(mealGift.amountCents / 100).toFixed(2)} meal gift!`);
+  }
+
+  async function handlePayForward() {
+    if (!mealGift) return;
+
+    try {
+      const response = await fetch(`${BASE}/meal-gifts/${mealGift.id}/pay-forward`, {
+        method: "POST",
+        headers: { "x-tenant-slug": "oh" },
+      });
+
+      if (response.ok) {
+        setShowGiftModal(false);
+        toast.success("Your kindness continues the chain!");
+      } else {
+        toast.error("Failed to pay forward. Please try again.");
+      }
+    } catch (error) {
+      console.error("Failed to pay forward:", error);
+      toast.error("Failed to pay forward. Please try again.");
+    }
+  }
+
   function proceedToTime() {
     if (!hasBase) {
       toast.warning(t("errors.selectBase"));
@@ -211,9 +264,9 @@ export default function MenuBuilder({
     setSubmitting(false);
 
     // Redirect to payment - use order.totalCents from server response
-    router.push(
-      `/order/payment?orderId=${order.id}&orderNumber=${order.orderNumber}&total=${order.totalCents}`
-    );
+    // Include mealGiftId if a gift was accepted
+    const paymentUrl = `/order/payment?orderId=${order.id}&orderNumber=${order.orderNumber}&total=${order.totalCents}${acceptedGiftId ? `&mealGiftId=${acceptedGiftId}` : ''}`;
+    router.push(paymentUrl);
   }
 
   // Show loading state while loading reorder
@@ -656,6 +709,122 @@ export default function MenuBuilder({
               Please select at least one base dish
             </p>
           )}
+        </div>
+      )}
+
+      {/* Meal Gift Modal */}
+      {showGiftModal && mealGift && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0, 0, 0, 0.7)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: 20,
+          }}
+        >
+          <div
+            style={{
+              background: "white",
+              borderRadius: 16,
+              padding: 32,
+              maxWidth: 500,
+              width: "100%",
+              boxShadow: "0 20px 60px rgba(0, 0, 0, 0.3)",
+            }}
+          >
+            {/* Gift Icon */}
+            <div style={{ textAlign: "center", fontSize: "4rem", marginBottom: 16 }}>
+              🎁
+            </div>
+
+            {/* Title */}
+            <h2 style={{ textAlign: "center", marginBottom: 16, fontSize: "1.8rem" }}>
+              You've Got a Gift!
+            </h2>
+
+            {/* Amount */}
+            <div
+              style={{
+                textAlign: "center",
+                fontSize: "2.5rem",
+                fontWeight: "bold",
+                color: "#7C7A67",
+                marginBottom: 16,
+              }}
+            >
+              ${(mealGift.amountCents / 100).toFixed(2)}
+            </div>
+
+            {/* Message */}
+            {mealGift.messageFromGiver && (
+              <div
+                style={{
+                  background: "#f9fafb",
+                  padding: 16,
+                  borderRadius: 8,
+                  marginBottom: 24,
+                  fontStyle: "italic",
+                  textAlign: "center",
+                  color: "#666",
+                }}
+              >
+                "{mealGift.messageFromGiver}"
+              </div>
+            )}
+
+            {/* Info */}
+            <p style={{ textAlign: "center", color: "#666", marginBottom: 24 }}>
+              {mealGift.giver?.name || "Someone"} gifted a meal to the next solo diner at this location. That's you!
+            </p>
+
+            {/* Buttons */}
+            <div style={{ display: "grid", gap: 12 }}>
+              <button
+                onClick={handleAcceptGift}
+                style={{
+                  width: "100%",
+                  padding: 16,
+                  background: "#7C7A67",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 12,
+                  fontSize: "1.1rem",
+                  fontWeight: "bold",
+                  cursor: "pointer",
+                }}
+              >
+                Accept Gift
+              </button>
+
+              <button
+                onClick={handlePayForward}
+                style={{
+                  width: "100%",
+                  padding: 16,
+                  background: "transparent",
+                  color: "#7C7A67",
+                  border: "2px solid #7C7A67",
+                  borderRadius: 12,
+                  fontSize: "1.1rem",
+                  fontWeight: "bold",
+                  cursor: "pointer",
+                }}
+              >
+                Pay It Forward
+              </button>
+            </div>
+
+            <p style={{ textAlign: "center", fontSize: "0.85rem", color: "#999", marginTop: 16, marginBottom: 0 }}>
+              Paying it forward continues the kindness chain to the next person
+            </p>
+          </div>
         </div>
       )}
     </div>
