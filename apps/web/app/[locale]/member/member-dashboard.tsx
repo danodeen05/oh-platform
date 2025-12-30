@@ -324,6 +324,7 @@ export default function MemberDashboard() {
   const locale = useLocale();
   const t = useTranslations("member");
   const tCommon = useTranslations("common");
+  const tMealGift = useTranslations("mealGift");
   const toast = useToast();
   const [email, setEmail] = useState("");
   const [userId, setUserId] = useState<string | null>(null);
@@ -1199,7 +1200,7 @@ export default function MemberDashboard() {
                                     fontWeight: "bold",
                                   }}
                                 >
-                                  🎁 Give a Meal
+                                  🎁 {tMealGift("dashboard.giveAMeal")}
                                 </button>
                               )}
                             </div>
@@ -1239,14 +1240,14 @@ export default function MemberDashboard() {
                                 fontWeight: "bold",
                               }}
                             >
-                              🎁 Gift Another Meal
+                              🎁 {tMealGift("dashboard.giftAnotherMeal")}
                             </button>
                           )}
                           {/* Gift history for meal-for-stranger challenge */}
                           {uc.challenge.slug === "meal-for-stranger" && mealGifts.given.length > 0 && (
                             <div style={{ marginTop: 12 }}>
                               <div style={{ fontSize: "0.8rem", color: "#666", marginBottom: 8, fontWeight: "600" }}>
-                                Your Gift History:
+                                {tMealGift("dashboard.yourGiftHistory")}
                               </div>
                               <div style={{ display: "grid", gap: 8 }}>
                                 {mealGifts.given.map((gift) => (
@@ -1278,10 +1279,10 @@ export default function MemberDashboard() {
                                     </div>
                                     <div style={{ fontSize: "0.75rem", color: "#666" }}>
                                       {gift.status === "ACCEPTED" && gift.acceptedBy
-                                        ? `Accepted by ${gift.acceptedBy.name}`
+                                        ? tMealGift("dashboard.acceptedBy", { name: gift.acceptedBy.name })
                                         : gift.status === "EXPIRED"
-                                        ? "Expired"
-                                        : "Pending"}
+                                        ? tMealGift("dashboard.expired")
+                                        : tMealGift("dashboard.pending")}
                                       {" • "}
                                       {new Date(gift.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                                     </div>

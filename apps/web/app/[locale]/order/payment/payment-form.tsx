@@ -21,6 +21,7 @@ export default function PaymentForm({
 }) {
   const router = useRouter();
   const t = useTranslations("payment");
+  const tMealGift = useTranslations("mealGift");
   const { user, isLoaded, isSignedIn } = useUser();
   const { guest, isGuest, updateGuest } = useGuest();
   const [processing, setProcessing] = useState(false);
@@ -780,7 +781,7 @@ export default function PaymentForm({
                     fontWeight: "bold",
                   }}
                 >
-                  <span>🎁 Meal Gift Applied</span>
+                  <span>🎁 {tMealGift("payment.giftApplied")}</span>
                   <span>-${(giftApplied / 100).toFixed(2)}</span>
                 </div>
               )}
@@ -794,7 +795,7 @@ export default function PaymentForm({
                     fontSize: "0.9rem",
                   }}
                 >
-                  <span>💰 Gift Excess → Your Credits</span>
+                  <span>💰 {tMealGift("payment.giftExcess")}</span>
                   <span>+${(giftExcess / 100).toFixed(2)}</span>
                 </div>
               )}

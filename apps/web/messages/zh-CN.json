@@ -1751,5 +1751,104 @@
     "referralNote": "已包含您的推荐链接！朋友首次订购可享 $5 折扣。当他们完成 $20 以上订单时，您即刻获得 $5。",
     "backToHome": "返回首页",
     "loadingOrder": "加载订单中..."
+  },
+  "mealGift": {
+    "title": "请陌生人吃饭",
+    "description": "在您选择的地点为下一位独自用餐的人赠送一份餐食。如果他们选择转赠，看着善意链条不断增长！",
+    "howItWorks": "如何运作",
+    "steps": {
+      "chooseLocation": "选择地点和礼物金额（$15.99 - $35.00）",
+      "nextDiner": "该地点的下一位独自用餐者将收到您的礼物通知",
+      "acceptOrForward": "他们可以接受或转赠给下一个人",
+      "earnReward": "当有人接受时，您将获得 $5 奖励！",
+      "seeMessage": "当有人接受时，您将看到他们的感谢信息",
+      "refund": "如果当天结束前未被领取，您将获得全额积分退款"
+    },
+    "form": {
+      "location": "地点",
+      "giftAmount": "礼物金额：${amount}",
+      "giftAmountLabel": "礼物金额",
+      "minAmount": "$15.99",
+      "maxAmount": "$35.00",
+      "message": "留言（可选）",
+      "messagePlaceholder": "添加一条善意的留言...",
+      "availableCredits": "可用积分",
+      "useCredits": "使用积分支付此礼物",
+      "paymentCard": "支付卡"
+    },
+    "summary": {
+      "giftAmount": "礼物金额：",
+      "creditsApplied": "已使用积分：",
+      "cardPayment": "卡支付：",
+      "potentialReward": "潜在奖励：",
+      "rewardAmount": "+$5.00",
+      "alreadyCompleted": "您已获得此挑战的 $5 奖励。感谢您继续传递善意！"
+    },
+    "button": {
+      "giftMeal": "赠送 ${amount} 餐食",
+      "processing": "处理中..."
+    },
+    "signInPrompt": "请登录以赠送餐食",
+    "errors": {
+      "signIn": "请登录以赠送餐食",
+      "selectLocation": "请选择一个地点",
+      "paymentNotReady": "支付系统尚未准备好，请稍候...",
+      "createUser": "创建用户失败",
+      "createPaymentIntent": "创建支付意向失败",
+      "cardNotFound": "未找到卡片元素",
+      "paymentFailed": "支付未成功",
+      "createGift": "创建餐食礼物失败",
+      "createGiftRetry": "创建餐食礼物失败，请重试。",
+      "loadLocations": "加载地点失败"
+    },
+    "success": {
+      "created": "餐食礼物已创建！您的善意将点亮某人的一天。"
+    },
+    "modal": {
+      "title": "有人请您吃饭！",
+      "chainOfKindness": "善意链条：{count} 次转赠！",
+      "description": "一位善良的陌生人在 {location} 为您赠送了这份餐食。您可以：",
+      "acceptOption": "接受",
+      "acceptDescription": "应用到您当前的订单",
+      "forwardOption": "转赠",
+      "forwardDescription": "传递给下一个人",
+      "acceptButton": "接受礼物",
+      "forwardButton": "转赠",
+      "backButton": "返回",
+      "acceptTitle": "接受此礼物",
+      "acceptSubtitle": "${amount} 将应用到您的订单",
+      "thankYouLabel": "感谢信息（可选）",
+      "thankYouPlaceholder": "感谢送礼者...",
+      "forwardTitle": "转赠",
+      "forwardSubtitle": "将这份 ${amount} 的礼物传递给下一位用餐者",
+      "forwardMessageLabel": "给下一位的留言（可选）",
+      "forwardMessagePlaceholder": "添加您的善意留言..."
+    },
+    "toast": {
+      "reserved": "您已预订 ${amount} 的餐食礼物！将在结账时应用。",
+      "paidForward": "您已转赠！下一个人将收到此礼物。",
+      "payForwardFailed": "转赠餐食礼物失败",
+      "giftReserved": "餐食礼物已预订！将在结账时应用。",
+      "payForwardSuccess": "您已转赠！下一个人将收到此礼物。",
+      "payForwardError": "转赠失败，请重试。"
+    },
+    "dashboard": {
+      "giveAMeal": "赠送餐食",
+      "giftAnotherMeal": "再赠送一份餐食",
+      "yourGiftHistory": "您的赠送历史：",
+      "acceptedBy": "被 {name} 接受",
+      "expired": "已过期",
+      "pending": "待处理"
+    },
+    "payment": {
+      "giftApplied": "餐食礼物已应用",
+      "giftExcess": "礼物余额 → 您的积分"
+    }
+  },
+  "challenges": {
+    "mealForStranger": {
+      "title": "请陌生人吃饭",
+      "description": "在您的地点为下一位独自用餐的人赠送一份餐食"
+    }
   }
 }

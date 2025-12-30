@@ -1751,5 +1751,104 @@
     "referralNote": "Your referral link is included! Friends get $5 off their first order. You earn $5 instantly when they complete a $20+ order.",
     "backToHome": "Back to Home",
     "loadingOrder": "Loading order..."
+  },
+  "mealGift": {
+    "title": "Meal for a Stranger",
+    "description": "Gift a meal to the next solo diner at your chosen location. If they pay it forward, watch the kindness chain grow!",
+    "howItWorks": "How it Works",
+    "steps": {
+      "chooseLocation": "Choose a location and gift amount ($15.99 - $35.00)",
+      "nextDiner": "The next solo diner at that location gets notified of your gift",
+      "acceptOrForward": "They can accept it or pay it forward to the next person",
+      "earnReward": "When someone accepts, you earn a $5 reward!",
+      "seeMessage": "When someone accepts, you'll see their thank-you message",
+      "refund": "If unclaimed by end of day, you get a full refund as credits"
+    },
+    "form": {
+      "location": "Location",
+      "giftAmount": "Gift Amount: ${amount}",
+      "giftAmountLabel": "Gift Amount",
+      "minAmount": "$15.99",
+      "maxAmount": "$35.00",
+      "message": "Message (Optional)",
+      "messagePlaceholder": "Add a message of kindness...",
+      "availableCredits": "Available Credits",
+      "useCredits": "Use credits for this gift",
+      "paymentCard": "Payment Card"
+    },
+    "summary": {
+      "giftAmount": "Gift Amount:",
+      "creditsApplied": "Credits Applied:",
+      "cardPayment": "Card Payment:",
+      "potentialReward": "Potential Reward:",
+      "rewardAmount": "+$5.00",
+      "alreadyCompleted": "You've already earned your $5 reward for this challenge. Thank you for continuing to spread kindness!"
+    },
+    "button": {
+      "giftMeal": "Gift ${amount} Meal",
+      "processing": "Processing..."
+    },
+    "signInPrompt": "Please sign in to gift a meal",
+    "errors": {
+      "signIn": "Please sign in to gift a meal",
+      "selectLocation": "Please select a location",
+      "paymentNotReady": "Payment system not ready. Please wait...",
+      "createUser": "Failed to create user",
+      "createPaymentIntent": "Failed to create payment intent",
+      "cardNotFound": "Card element not found",
+      "paymentFailed": "Payment was not successful",
+      "createGift": "Failed to create meal gift",
+      "createGiftRetry": "Failed to create meal gift. Please try again.",
+      "loadLocations": "Failed to load locations"
+    },
+    "success": {
+      "created": "Meal gift created! Your kindness will brighten someone's day."
+    },
+    "modal": {
+      "title": "Someone Gifted You a Meal!",
+      "chainOfKindness": "Chain of Kindness: {count} pay-it-forwards!",
+      "description": "A kind stranger has gifted you this meal at {location}. You can:",
+      "acceptOption": "Accept it",
+      "acceptDescription": "Apply to your current order",
+      "forwardOption": "Pay it forward",
+      "forwardDescription": "Pass to the next person",
+      "acceptButton": "Accept Gift",
+      "forwardButton": "Pay It Forward",
+      "backButton": "Back",
+      "acceptTitle": "Accept This Gift",
+      "acceptSubtitle": "The ${amount} will be applied to your order",
+      "thankYouLabel": "Thank You Message (Optional)",
+      "thankYouPlaceholder": "Thank the giver...",
+      "forwardTitle": "Pay It Forward",
+      "forwardSubtitle": "Pass this ${amount} gift to the next diner",
+      "forwardMessageLabel": "Message to Next Person (Optional)",
+      "forwardMessagePlaceholder": "Add your message of kindness..."
+    },
+    "toast": {
+      "reserved": "You've reserved a ${amount} meal gift! It will be applied at checkout.",
+      "paidForward": "You've paid it forward! The next person will get this gift.",
+      "payForwardFailed": "Failed to pay forward meal gift",
+      "giftReserved": "Meal gift reserved! It will be applied at checkout.",
+      "payForwardSuccess": "You paid it forward! The next person will receive this gift.",
+      "payForwardError": "Failed to pay forward. Please try again."
+    },
+    "dashboard": {
+      "giveAMeal": "Give a Meal",
+      "giftAnotherMeal": "Gift Another Meal",
+      "yourGiftHistory": "Your Gift History:",
+      "acceptedBy": "Accepted by {name}",
+      "expired": "Expired",
+      "pending": "Pending"
+    },
+    "payment": {
+      "giftApplied": "Meal Gift Applied",
+      "giftExcess": "Gift Excess → Your Credits"
+    }
+  },
+  "challenges": {
+    "mealForStranger": {
+      "title": "Meal for a Stranger",
+      "description": "Gift a meal to the next solo diner at your location"
+    }
   }
 }

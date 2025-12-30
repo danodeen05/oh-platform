@@ -9632,6 +9632,247 @@ app.get("/analytics/language", async (req, reply) => {
 });
 
 // ====================
+// CHALLENGES ANALYTICS
+// ====================
+
+app.get("/analytics/challenges", async (req, reply) => {
+  const tenantSlug = getTenantContext(req);
+  const { period = "month" } = req.query;
+  const { start, end } = getDateRange(period);
+
+  try {
+    const tenant = await prisma.tenant.findUnique({ where: { slug: tenantSlug } });
+    if (!tenant) {
+      return reply.status(404).send({ error: "Tenant not found" });
+    }
+
+    // Get user IDs who have ordered from this tenant (tenant's customers)
+    const tenantUsers = await prisma.order.findMany({
+      where: { tenantId: tenant.id },
+      select: { userId: true },
+      distinct: ['userId'],
+    });
+    const tenantUserIds = tenantUsers.map(o => o.userId).filter(Boolean);
+
+    // Get all challenges (challenges are global definitions)
+    // But filter userChallenges to only include users who are this tenant's customers
+    const challenges = await prisma.challenge.findMany({
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        description: true,
+        iconEmoji: true,
+        rewardCents: true,
+        isActive: true,
+        userChallenges: {
+          where: {
+            userId: { in: tenantUserIds },
+          },
+          select: {
+            id: true,
+            progress: true,
+            rewardClaimed: true,
+            completedAt: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
+
+    // Calculate metrics for each challenge
+    const challengeMetrics = challenges.map((challenge) => {
+      const enrollments = challenge.userChallenges.length;
+      const completions = challenge.userChallenges.filter((uc) => uc.completedAt !== null).length;
+      const rewardsClaimed = challenge.userChallenges.filter((uc) => uc.rewardClaimed).length;
+      const totalRewardsIssued = rewardsClaimed * challenge.rewardCents;
+
+      return {
+        id: challenge.id,
+        slug: challenge.slug,
+        name: challenge.name,
+        description: challenge.description,
+        iconEmoji: challenge.iconEmoji,
+        rewardCents: challenge.rewardCents,
+        rewardFormatted: `$${(challenge.rewardCents / 100).toFixed(2)}`,
+        isActive: challenge.isActive,
+        enrollments,
+        completions,
+        rewardsClaimed,
+        completionRate: enrollments > 0 ? `${((completions / enrollments) * 100).toFixed(1)}%` : "0%",
+        totalRewardsIssued,
+        totalRewardsIssuedFormatted: `$${(totalRewardsIssued / 100).toFixed(2)}`,
+      };
+    });
+
+    // Summary stats
+    const totalEnrollments = challengeMetrics.reduce((sum, c) => sum + c.enrollments, 0);
+    const totalCompletions = challengeMetrics.reduce((sum, c) => sum + c.completions, 0);
+    const totalRewardsIssued = challengeMetrics.reduce((sum, c) => sum + c.totalRewardsIssued, 0);
+
+    return reply.send({
+      period,
+      dateRange: { start, end },
+      summary: {
+        totalChallenges: challenges.length,
+        activeChallenges: challenges.filter((c) => c.isActive).length,
+        totalEnrollments,
+        totalCompletions,
+        totalRewardsIssued,
+        totalRewardsIssuedFormatted: `$${(totalRewardsIssued / 100).toFixed(2)}`,
+        overallCompletionRate: totalEnrollments > 0
+          ? ((totalCompletions / totalEnrollments) * 100).toFixed(1)
+          : "0",
+      },
+      challenges: challengeMetrics,
+    });
+  } catch (error) {
+    console.error("Challenges analytics error:", error);
+    return reply.status(500).send({ error: "Failed to fetch challenges analytics" });
+  }
+});
+
+// ====================
+// BADGES ANALYTICS
+// ====================
+
+app.get("/analytics/badges", async (req, reply) => {
+  const tenantSlug = getTenantContext(req);
+  const { period = "month" } = req.query;
+  const { start, end } = getDateRange(period);
+
+  try {
+    const tenant = await prisma.tenant.findUnique({ where: { slug: tenantSlug } });
+    if (!tenant) {
+      return reply.status(404).send({ error: "Tenant not found" });
+    }
+
+    // Get user IDs who have ordered from this tenant (tenant's customers)
+    const tenantUsers = await prisma.order.findMany({
+      where: { tenantId: tenant.id },
+      select: { userId: true },
+      distinct: ['userId'],
+    });
+    const tenantUserIds = tenantUsers.map(o => o.userId).filter(Boolean);
+
+    // Get all badges (badges are global definitions)
+    // But filter userBadges to only include users who are this tenant's customers
+    const badges = await prisma.badge.findMany({
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        description: true,
+        iconEmoji: true,
+        category: true,
+        isActive: true,
+        userBadges: {
+          where: {
+            userId: { in: tenantUserIds },
+          },
+          select: {
+            id: true,
+            userId: true,
+            earnedAt: true,
+            user: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // Calculate metrics for each badge
+    const badgeMetrics = badges.map((badge) => {
+      const totalEarned = badge.userBadges.length;
+      const earnedThisPeriod = badge.userBadges.filter(
+        (ub) => new Date(ub.earnedAt) >= start && new Date(ub.earnedAt) <= end
+      ).length;
+      const uniqueHolders = new Set(badge.userBadges.map((ub) => ub.userId)).size;
+
+      // Calculate rarity based on holders
+      let rarity = "Common";
+      if (uniqueHolders <= 1) rarity = "Legendary";
+      else if (uniqueHolders <= 5) rarity = "Epic";
+      else if (uniqueHolders <= 20) rarity = "Rare";
+      else if (uniqueHolders <= 50) rarity = "Uncommon";
+
+      return {
+        id: badge.id,
+        slug: badge.slug,
+        name: badge.name,
+        description: badge.description,
+        iconEmoji: badge.iconEmoji,
+        category: badge.category,
+        isActive: badge.isActive,
+        totalEarned,
+        earnedThisPeriod,
+        uniqueHolders,
+        rarity,
+      };
+    });
+
+    // Category breakdown
+    const byCategory = {};
+    for (const badge of badgeMetrics) {
+      if (!byCategory[badge.category]) {
+        byCategory[badge.category] = { count: 0, totalEarned: 0 };
+      }
+      byCategory[badge.category].count++;
+      byCategory[badge.category].totalEarned += badge.totalEarned;
+    }
+
+    // Summary stats
+    const totalAwarded = badgeMetrics.reduce((sum, b) => sum + b.totalEarned, 0);
+    const awardedThisPeriod = badgeMetrics.reduce((sum, b) => sum + b.earnedThisPeriod, 0);
+
+    // Get unique badge holders
+    const allUserBadges = badges.flatMap((b) => b.userBadges);
+    const uniqueBadgeHolders = new Set(allUserBadges.map((ub) => ub.userId)).size;
+    const averageBadgesPerUser = uniqueBadgeHolders > 0
+      ? (totalAwarded / uniqueBadgeHolders).toFixed(1)
+      : "0";
+
+    // Recent awards
+    const recentAwards = allUserBadges
+      .filter((ub) => new Date(ub.earnedAt) >= start)
+      .sort((a, b) => new Date(b.earnedAt) - new Date(a.earnedAt))
+      .slice(0, 20)
+      .map((ub) => {
+        const badge = badges.find((b) => b.userBadges.includes(ub));
+        return {
+          id: ub.id,
+          badgeName: badge?.name || "Unknown",
+          badgeEmoji: badge?.iconEmoji || "🏅",
+          userName: ub.user?.name || "Unknown",
+          earnedAt: ub.earnedAt,
+        };
+      });
+
+    return reply.send({
+      period,
+      dateRange: { start, end },
+      summary: {
+        totalBadges: badges.length,
+        activeBadges: badges.filter((b) => b.isActive).length,
+        totalAwarded,
+        awardedThisPeriod,
+        uniqueBadgeHolders,
+        averageBadgesPerUser,
+      },
+      byCategory,
+      badges: badgeMetrics,
+      recentAwards,
+    });
+  } catch (error) {
+    console.error("Badges analytics error:", error);
+    return reply.status(500).send({ error: "Failed to fetch badges analytics" });
+  }
+});
+
+// ====================
 // START SERVER
 // ====================
 

@@ -1751,5 +1751,104 @@
     "referralNote": "已包含您的推薦連結！朋友首次訂購可享 $5 折扣。當他們完成 $20 以上訂單時，您即刻獲得 $5。",
     "backToHome": "返回首頁",
     "loadingOrder": "載入訂單中..."
+  },
+  "mealGift": {
+    "title": "請陌生人吃飯",
+    "description": "在您選擇的地點為下一位獨自用餐的人贈送一份餐食。如果他們選擇轉贈，看著善意鏈條不斷增長！",
+    "howItWorks": "如何運作",
+    "steps": {
+      "chooseLocation": "選擇地點和禮物金額（$15.99 - $35.00）",
+      "nextDiner": "該地點的下一位獨自用餐者將收到您的禮物通知",
+      "acceptOrForward": "他們可以接受或轉贈給下一個人",
+      "earnReward": "當有人接受時，您將獲得 $5 獎勵！",
+      "seeMessage": "當有人接受時，您將看到他們的感謝訊息",
+      "refund": "如果當天結束前未被領取，您將獲得全額積分退款"
+    },
+    "form": {
+      "location": "地點",
+      "giftAmount": "禮物金額：${amount}",
+      "giftAmountLabel": "禮物金額",
+      "minAmount": "$15.99",
+      "maxAmount": "$35.00",
+      "message": "留言（選填）",
+      "messagePlaceholder": "添加一條善意的留言...",
+      "availableCredits": "可用積分",
+      "useCredits": "使用積分支付此禮物",
+      "paymentCard": "支付卡"
+    },
+    "summary": {
+      "giftAmount": "禮物金額：",
+      "creditsApplied": "已使用積分：",
+      "cardPayment": "卡片支付：",
+      "potentialReward": "潛在獎勵：",
+      "rewardAmount": "+$5.00",
+      "alreadyCompleted": "您已獲得此挑戰的 $5 獎勵。感謝您繼續傳遞善意！"
+    },
+    "button": {
+      "giftMeal": "贈送 ${amount} 餐食",
+      "processing": "處理中..."
+    },
+    "signInPrompt": "請登入以贈送餐食",
+    "errors": {
+      "signIn": "請登入以贈送餐食",
+      "selectLocation": "請選擇一個地點",
+      "paymentNotReady": "支付系統尚未準備好，請稍候...",
+      "createUser": "建立使用者失敗",
+      "createPaymentIntent": "建立支付意向失敗",
+      "cardNotFound": "未找到卡片元素",
+      "paymentFailed": "支付未成功",
+      "createGift": "建立餐食禮物失敗",
+      "createGiftRetry": "建立餐食禮物失敗，請重試。",
+      "loadLocations": "載入地點失敗"
+    },
+    "success": {
+      "created": "餐食禮物已建立！您的善意將點亮某人的一天。"
+    },
+    "modal": {
+      "title": "有人請您吃飯！",
+      "chainOfKindness": "善意鏈條：{count} 次轉贈！",
+      "description": "一位善良的陌生人在 {location} 為您贈送了這份餐食。您可以：",
+      "acceptOption": "接受",
+      "acceptDescription": "應用到您目前的訂單",
+      "forwardOption": "轉贈",
+      "forwardDescription": "傳遞給下一個人",
+      "acceptButton": "接受禮物",
+      "forwardButton": "轉贈",
+      "backButton": "返回",
+      "acceptTitle": "接受此禮物",
+      "acceptSubtitle": "${amount} 將應用到您的訂單",
+      "thankYouLabel": "感謝訊息（選填）",
+      "thankYouPlaceholder": "感謝送禮者...",
+      "forwardTitle": "轉贈",
+      "forwardSubtitle": "將這份 ${amount} 的禮物傳遞給下一位用餐者",
+      "forwardMessageLabel": "給下一位的留言（選填）",
+      "forwardMessagePlaceholder": "添加您的善意留言..."
+    },
+    "toast": {
+      "reserved": "您已預訂 ${amount} 的餐食禮物！將在結帳時應用。",
+      "paidForward": "您已轉贈！下一個人將收到此禮物。",
+      "payForwardFailed": "轉贈餐食禮物失敗",
+      "giftReserved": "餐食禮物已預訂！將在結帳時應用。",
+      "payForwardSuccess": "您已轉贈！下一個人將收到此禮物。",
+      "payForwardError": "轉贈失敗，請重試。"
+    },
+    "dashboard": {
+      "giveAMeal": "贈送餐食",
+      "giftAnotherMeal": "再贈送一份餐食",
+      "yourGiftHistory": "您的贈送歷史：",
+      "acceptedBy": "被 {name} 接受",
+      "expired": "已過期",
+      "pending": "待處理"
+    },
+    "payment": {
+      "giftApplied": "餐食禮物已應用",
+      "giftExcess": "禮物餘額 → 您的積分"
+    }
+  },
+  "challenges": {
+    "mealForStranger": {
+      "title": "請陌生人吃飯",
+      "description": "在您的地點為下一位獨自用餐的人贈送一份餐食"
+    }
   }
 }

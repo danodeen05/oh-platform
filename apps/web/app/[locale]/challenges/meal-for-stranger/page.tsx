@@ -35,7 +35,7 @@ function PaymentForm({
 }) {
   const router = useRouter();
   const { user } = useUser();
-  const t = useTranslations("challenges");
+  const t = useTranslations("mealGift");
   const toast = useToast();
   const stripe = useStripe();
   const elements = useElements();
@@ -50,17 +50,17 @@ function PaymentForm({
     e.preventDefault();
 
     if (!user) {
-      toast.error("Please sign in to gift a meal");
+      toast.error(t("errors.signIn"));
       return;
     }
 
     if (!selectedLocationId) {
-      toast.error("Please select a location");
+      toast.error(t("errors.selectLocation"));
       return;
     }
 
     if (needsStripePayment && (!stripe || !elements)) {
-      toast.error("Payment system not ready. Please wait...");
+      toast.error(t("errors.paymentNotReady"));
       return;
     }
 
@@ -81,7 +81,7 @@ function PaymentForm({
       });
 
       if (!userResponse.ok) {
-        throw new Error("Failed to create user");
+        throw new Error(t("errors.createUser"));
       }
 
       const userData = await userResponse.json();
@@ -111,7 +111,7 @@ function PaymentForm({
         });
 
         if (!paymentResponse.ok) {
-          throw new Error("Failed to create payment intent");
+          throw new Error(t("errors.createPaymentIntent"));
         }
 
         const paymentData = await paymentResponse.json();
@@ -119,7 +119,7 @@ function PaymentForm({
         // Confirm payment with card
         const cardElement = elements!.getElement(CardElement);
         if (!cardElement) {
-          throw new Error("Card element not found");
+          throw new Error(t("errors.cardNotFound"));
         }
 
         const { error, paymentIntent } = await stripe!.confirmCardPayment(
@@ -140,7 +140,7 @@ function PaymentForm({
         }
 
         if (paymentIntent?.status !== "succeeded") {
-          throw new Error("Payment was not successful");
+          throw new Error(t("errors.paymentFailed"));
         }
 
         paymentIntentId = paymentIntent.id;
@@ -164,7 +164,7 @@ function PaymentForm({
 
       if (!mealGiftResponse.ok) {
         const errorData = await mealGiftResponse.json();
-        throw new Error(errorData.error || "Failed to create meal gift");
+        throw new Error(errorData.error || t("errors.createGift"));
       }
 
       const mealGift = await mealGiftResponse.json();
@@ -184,11 +184,11 @@ function PaymentForm({
         });
       }
 
-      toast.success("Meal gift created! Your kindness will brighten someone's day.");
+      toast.success(t("success.created"));
       router.push(`/member`);
     } catch (error: any) {
       console.error("Failed to create meal gift:", error);
-      toast.error(error.message || "Failed to create meal gift. Please try again.");
+      toast.error(error.message || t("errors.createGiftRetry"));
       setSubmitting(false);
     }
   }
@@ -200,30 +200,30 @@ function PaymentForm({
       {/* Payment Summary */}
       <div style={{ background: "#fef3e2", padding: 16, borderRadius: 8, marginBottom: 24, border: "1px solid #fbbf24" }}>
         <div style={{ marginBottom: 8, display: "flex", justifyContent: "space-between" }}>
-          <span>Gift Amount:</span>
+          <span>{t("summary.giftAmount")}</span>
           <span style={{ fontWeight: "600" }}>${amountDollar}</span>
         </div>
         {creditsToUse > 0 && (
           <div style={{ marginBottom: 8, display: "flex", justifyContent: "space-between", color: "#22c55e" }}>
-            <span>Credits Applied:</span>
+            <span>{t("summary.creditsApplied")}</span>
             <span style={{ fontWeight: "600" }}>-${(creditsToUse / 100).toFixed(2)}</span>
           </div>
         )}
         {remainingAmount > 0 && (
           <div style={{ marginBottom: 8, display: "flex", justifyContent: "space-between", color: "#dc2626" }}>
-            <span>Card Payment:</span>
+            <span>{t("summary.cardPayment")}</span>
             <span style={{ fontWeight: "600" }}>${(remainingAmount / 100).toFixed(2)}</span>
           </div>
         )}
         {!challengeAlreadyCompleted && (
           <div style={{ borderTop: "1px solid #f9a825", paddingTop: 8, marginTop: 8, display: "flex", justifyContent: "space-between", fontWeight: "bold" }}>
-            <span>Potential Reward:</span>
-            <span style={{ color: "#22c55e" }}>+$5.00</span>
+            <span>{t("summary.potentialReward")}</span>
+            <span style={{ color: "#22c55e" }}>{t("summary.rewardAmount")}</span>
           </div>
         )}
         {challengeAlreadyCompleted && (
           <div style={{ borderTop: "1px solid #f9a825", paddingTop: 8, marginTop: 8, fontSize: "0.85rem", color: "#666", fontStyle: "italic" }}>
-            You&apos;ve already earned your $5 reward for this challenge. Thank you for continuing to spread kindness!
+            {t("summary.alreadyCompleted")}
           </div>
         )}
       </div>
@@ -232,7 +232,7 @@ function PaymentForm({
       {needsStripePayment && (
         <div style={{ marginBottom: 24 }}>
           <label style={{ display: "block", fontWeight: "600", marginBottom: 8 }}>
-            Payment Card
+            {t("form.paymentCard")}
           </label>
           <div style={{
             padding: 12,
@@ -276,7 +276,7 @@ function PaymentForm({
           cursor: submitting || (!stripe && needsStripePayment) ? "not-allowed" : "pointer",
         }}
       >
-        {submitting ? "Processing..." : `Gift ${amountDollar} Meal`}
+        {submitting ? t("button.processing") : t("button.giftMeal", { amount: amountDollar })}
       </button>
     </form>
   );
@@ -284,7 +284,7 @@ function PaymentForm({
 
 export default function MealForStrangerPage() {
   const { user, isLoaded: userLoaded } = useUser();
-  const t = useTranslations("challenges");
+  const t = useTranslations("mealGift");
 
   const [locations, setLocations] = useState<Location[]>([]);
   const [selectedLocationId, setSelectedLocationId] = useState<string>("");
@@ -373,35 +373,35 @@ export default function MealForStrangerPage() {
       <div style={{ textAlign: "center", marginBottom: 32 }}>
         <div style={{ fontSize: "3rem", marginBottom: 8 }}>🎁</div>
         <h1 style={{ fontSize: "2rem", fontWeight: "bold", marginBottom: 8 }}>
-          Meal for a Stranger
+          {t("title")}
         </h1>
         <p style={{ color: "#666", fontSize: "1rem" }}>
-          Gift a meal to the next solo diner at your chosen location. If they pay it forward, watch the kindness chain grow!
+          {t("description")}
         </p>
       </div>
 
       {/* How it Works */}
       <div style={{ background: "#f9fafb", padding: 24, borderRadius: 12, marginBottom: 32 }}>
         <h2 style={{ fontSize: "1.2rem", fontWeight: "600", marginBottom: 16 }}>
-          How it Works
+          {t("howItWorks")}
         </h2>
         <ol style={{ marginLeft: 20, color: "#666" }}>
-          <li style={{ marginBottom: 8 }}>Choose a location and gift amount ($15.99 - $35.00)</li>
-          <li style={{ marginBottom: 8 }}>The next solo diner at that location gets notified of your gift</li>
-          <li style={{ marginBottom: 8 }}>They can accept it or pay it forward to the next person</li>
+          <li style={{ marginBottom: 8 }}>{t("steps.chooseLocation")}</li>
+          <li style={{ marginBottom: 8 }}>{t("steps.nextDiner")}</li>
+          <li style={{ marginBottom: 8 }}>{t("steps.acceptOrForward")}</li>
           <li style={{ marginBottom: 8 }}>
             {challengeAlreadyCompleted
-              ? "When someone accepts, you'll see their thank-you message"
-              : "When someone accepts, you earn a $5 reward!"}
+              ? t("steps.seeMessage")
+              : t("steps.earnReward")}
           </li>
-          <li>If unclaimed by end of day, you get a full refund as credits</li>
+          <li>{t("steps.refund")}</li>
         </ol>
       </div>
 
       {/* Location Selection */}
       <div style={{ marginBottom: 24 }}>
         <label style={{ display: "block", fontWeight: "600", marginBottom: 8 }}>
-          Location
+          {t("form.location")}
         </label>
         <select
           value={selectedLocationId}
@@ -425,7 +425,7 @@ export default function MealForStrangerPage() {
       {/* Amount Selection */}
       <div style={{ marginBottom: 24 }}>
         <label style={{ display: "block", fontWeight: "600", marginBottom: 8 }}>
-          Gift Amount: ${amountDollar}
+          {t("form.giftAmountLabel")}: ${amountDollar}
         </label>
         <input
           type="range"
@@ -437,20 +437,20 @@ export default function MealForStrangerPage() {
           style={{ width: "100%" }}
         />
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.875rem", color: "#666" }}>
-          <span>$15.99</span>
-          <span>$35.00</span>
+          <span>{t("form.minAmount")}</span>
+          <span>{t("form.maxAmount")}</span>
         </div>
       </div>
 
       {/* Message (Optional) */}
       <div style={{ marginBottom: 24 }}>
         <label style={{ display: "block", fontWeight: "600", marginBottom: 8 }}>
-          Message (Optional)
+          {t("form.message")}
         </label>
         <textarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          placeholder="Add a message of kindness..."
+          placeholder={t("form.messagePlaceholder")}
           maxLength={200}
           style={{
             width: "100%",
@@ -471,7 +471,7 @@ export default function MealForStrangerPage() {
       {userProfile && (
         <div style={{ background: "#f0f9ff", padding: 16, borderRadius: 8, marginBottom: 24, border: "1px solid #bae6fd" }}>
           <div style={{ marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontWeight: "600" }}>Available Credits:</span>
+            <span style={{ fontWeight: "600" }}>{t("form.availableCredits")}:</span>
             <span style={{ fontWeight: "bold", color: "#0284c7", fontSize: "1.1rem" }}>
               ${(creditBalance / 100).toFixed(2)}
             </span>
@@ -483,7 +483,7 @@ export default function MealForStrangerPage() {
               onChange={(e) => setApplyCredits(e.target.checked)}
               style={{ width: 18, height: 18, cursor: "pointer" }}
             />
-            <span style={{ fontSize: "0.95rem" }}>Use credits for this gift</span>
+            <span style={{ fontSize: "0.95rem" }}>{t("form.useCredits")}</span>
           </label>
         </div>
       )}
@@ -502,7 +502,7 @@ export default function MealForStrangerPage() {
 
       {!userLoaded || !user ? (
         <p style={{ textAlign: "center", marginTop: 16, color: "#666", fontSize: "0.875rem" }}>
-          Please sign in to gift a meal
+          {t("signInPrompt")}
         </p>
       ) : null}
     </div>
