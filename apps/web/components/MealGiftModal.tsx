@@ -23,7 +23,7 @@ type MealGiftModalProps = {
   mealGift: MealGift;
   userId: string;
   orderId?: string;
-  onAccept: (giftId: string) => void;
+  onAccept: (giftId: string, message?: string) => void;
   onPayForward: (giftId: string) => void;
   onClose: () => void;
 };
@@ -44,39 +44,12 @@ export function MealGiftModal({
   const giftAmount = (mealGift.amountCents / 100).toFixed(2);
 
   async function handleAccept() {
-    if (!orderId) {
-      toast.error("Please create an order first");
-      return;
-    }
-
-    setSubmitting(true);
-
-    try {
-      const response = await fetch(`${API_URL}/meal-gifts/${mealGift.id}/accept`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-tenant-slug": "oh",
-        },
-        body: JSON.stringify({
-          recipientId: userId,
-          orderId,
-          messageFromRecipient: message || null,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to accept meal gift");
-      }
-
-      toast.success(`You've received a $${giftAmount} meal gift!`);
-      onAccept(mealGift.id);
-      onClose();
-    } catch (error: any) {
-      console.error("Failed to accept meal gift:", error);
-      toast.error(error.message || "Failed to accept meal gift");
-      setSubmitting(false);
-    }
+    // Note: We don't require orderId here because the actual API call to accept
+    // the gift happens at checkout time when the order exists. This function
+    // just signals the intent to accept the gift and passes the message.
+    toast.success(`You've reserved a $${giftAmount} meal gift! It will be applied at checkout.`);
+    onAccept(mealGift.id, message || undefined);
+    onClose();
   }
 
   async function handlePayForward() {
@@ -121,7 +94,6 @@ export function MealGiftModal({
         zIndex: 9999,
         padding: 20,
       }}
-      onClick={onClose}
     >
       <div
         style={{
@@ -209,20 +181,6 @@ export function MealGiftModal({
                 }}
               >
                 Pay It Forward
-              </button>
-              <button
-                onClick={onClose}
-                style={{
-                  padding: 12,
-                  background: "transparent",
-                  color: "#666",
-                  border: "1px solid #e5e7eb",
-                  borderRadius: 8,
-                  fontSize: "1rem",
-                  cursor: "pointer",
-                }}
-              >
-                Maybe Later
               </button>
             </div>
           </>

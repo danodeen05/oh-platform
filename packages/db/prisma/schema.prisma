@@ -514,6 +514,8 @@ enum CreditEventType {
   CREDIT_APPLIED
   CREDIT_EXPIRED
   ADMIN_ADJUSTMENT
+  CHALLENGE_REWARD // Reward for completing challenges
+  GIFT_EXCESS // Excess from meal gift when order < gift amount
 }
 
 // ==========================================

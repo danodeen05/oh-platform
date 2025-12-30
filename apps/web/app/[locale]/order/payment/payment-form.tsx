@@ -12,10 +12,12 @@ export default function PaymentForm({
   orderId,
   totalCents,
   orderNumber,
+  mealGiftId,
 }: {
   orderId: string;
   totalCents: number;
   orderNumber: string;
+  mealGiftId?: string;
 }) {
   const router = useRouter();
   const t = useTranslations("payment");
@@ -63,18 +65,20 @@ export default function PaymentForm({
     }
   }, [isLoaded, isSignedIn, user, userInitialized]);
 
-  // Fetch meal gift credit for this order
+  // Fetch meal gift credit if mealGiftId is provided
+  // We fetch directly from the meal gift endpoint since the gift isn't linked to the order yet
   useEffect(() => {
     async function fetchMealGift() {
       try {
-        const response = await fetch(`${BASE}/orders/${orderId}`, {
+        const response = await fetch(`${BASE}/meal-gifts/${mealGiftId}`, {
           headers: { "x-tenant-slug": "oh" },
         });
-        
+
         if (response.ok) {
-          const orderData = await response.json();
-          if (orderData.mealGift && orderData.mealGift.status === "ACCEPTED") {
-            setMealGiftCredit(orderData.mealGift.amountCents);
+          const giftData = await response.json();
+          // Only apply if gift is still pending (will be accepted at payment time)
+          if (giftData.status === "PENDING") {
+            setMealGiftCredit(giftData.amountCents);
           }
         }
       } catch (err) {
@@ -82,10 +86,10 @@ export default function PaymentForm({
       }
     }
 
-    if (orderId) {
+    if (mealGiftId) {
       fetchMealGift();
     }
-  }, [orderId]);
+  }, [mealGiftId]);
 
   async function initializeUser() {
     if (!user?.primaryEmailAddress?.emailAddress) return;
@@ -181,6 +185,48 @@ export default function PaymentForm({
     }
   }
 
+  async function acceptMealGift() {
+    if (!mealGiftId) return;
+
+    const recipientId = userId || guest?.id;
+    if (!recipientId) {
+      console.warn("No user/guest ID available to accept meal gift");
+      return;
+    }
+
+    // Get the thank-you message from localStorage (set in menu builder)
+    const messageFromRecipient = localStorage.getItem("mealGiftMessage") || undefined;
+
+    try {
+      const response = await fetch(`${BASE}/meal-gifts/${mealGiftId}/accept`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-tenant-slug": "oh",
+        },
+        body: JSON.stringify({
+          recipientId,
+          orderId,
+          messageFromRecipient,
+          orderTotalCents: validTotalCents, // Pass order total so API can calculate excess credit
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.warn("Failed to accept meal gift:", errorData);
+        // Dont throw - continue with payment even if gift acceptance fails
+      } else {
+        console.log("Meal gift accepted successfully");
+        // Clear the message from localStorage after successful accept
+        localStorage.removeItem("mealGiftMessage");
+      }
+    } catch (error) {
+      console.warn("Error accepting meal gift:", error);
+      // Dont throw - continue with payment even if gift acceptance fails
+    }
+  }
+
   async function handleTestPayment() {
     if (!userId) {
       setError("Please wait while we load your account...");
@@ -190,7 +236,11 @@ export default function PaymentForm({
     setProcessing(true);
     setError("");
 
+
     try {
+      // Accept meal gift if one was selected
+      await acceptMealGift();
+
       // Apply credits to order if user has any AND they chose to apply them
       if (applyCredits && userCredits > 0) {
         const creditsToApply = Math.min(userCredits, totalCents, MAX_CREDITS_PER_ORDER);
@@ -237,9 +287,13 @@ export default function PaymentForm({
 
     setProcessing(true);
     setError("");
+
     setGuestFormError("");
 
     try {
+      // Accept meal gift if one was selected
+      await acceptMealGift();
+
       // Update guest details if changed
       if (guest && (guestName !== guest.name || guestPhone !== guest.phone || guestEmail !== guest.email)) {
         await updateGuest({
@@ -277,8 +331,12 @@ export default function PaymentForm({
   const validTotalCents =
     typeof totalCents === "number" && !isNaN(totalCents) ? totalCents : 0;
   const creditsApplied = applyCredits ? Math.min(userCredits, validTotalCents, MAX_CREDITS_PER_ORDER) : 0;
-  const discountedTotal = validTotalCents - creditsApplied - mealGiftCredit;
-  const showCreditsBreakdown = (applyCredits   const showCreditsBreakdown = applyCredits && creditsApplied > 0;  const showCreditsBreakdown = applyCredits && creditsApplied > 0; creditsApplied > 0) || mealGiftCredit > 0;
+  // Cap the gift applied to the remaining order total after credits
+  const afterCreditsTotal = validTotalCents - creditsApplied;
+  const giftApplied = Math.min(mealGiftCredit, afterCreditsTotal);
+  const giftExcess = mealGiftCredit - giftApplied; // Excess will be credited to recipient's account
+  const discountedTotal = afterCreditsTotal - giftApplied;
+  const showCreditsBreakdown = (applyCredits && creditsApplied > 0) || giftApplied > 0;
 
   // Show sign-in prompt if not authenticated
   if (!isLoaded) {
@@ -712,7 +770,7 @@ export default function PaymentForm({
                 <span>{t("creditsApplied")}</span>
                 <span>-${(creditsApplied / 100).toFixed(2)}</span>
               </div>
-              {mealGiftCredit > 0 && (
+              {giftApplied > 0 && (
                 <div
                   style={{
                     display: "flex",
@@ -722,8 +780,22 @@ export default function PaymentForm({
                     fontWeight: "bold",
                   }}
                 >
-                  <span>🎁 Meal Gift</span>
-                  <span>-${(mealGiftCredit / 100).toFixed(2)}</span>
+                  <span>🎁 Meal Gift Applied</span>
+                  <span>-${(giftApplied / 100).toFixed(2)}</span>
+                </div>
+              )}
+              {giftExcess > 0 && (
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: 8,
+                    color: "#0284c7",
+                    fontSize: "0.9rem",
+                  }}
+                >
+                  <span>💰 Gift Excess → Your Credits</span>
+                  <span>+${(giftExcess / 100).toFixed(2)}</span>
                 </div>
               )}
               <div

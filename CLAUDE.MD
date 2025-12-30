@@ -1,5 +1,30 @@
 # Claude Code Context for Oh Platform
 
+## CRITICAL: Cloud Development Environment
+
+**ALL DEVELOPMENT HAPPENS ON THE DIGITALOCEAN DROPLET SERVER**
+
+- **Server IP**: `162.243.3.7`
+- **Project Path**: `/home/claude-user/projects/oh-platform`
+
+**NEVER use localhost or local Mac paths. All changes must target the cloud server.**
+
+### Development URLs (HTTPS Enabled)
+| Service | URL |
+|---------|-----|
+| Web App | `https://devwebapp.ohbeef.com` |
+| Admin Dashboard | `https://devadmin.ohbeef.com` |
+| API | `https://devapi.ohbeef.com` |
+
+### Cloud File Paths
+| Resource | Path |
+|----------|------|
+| Project Root | `/home/claude-user/projects/oh-platform` |
+| Certs Directory | `/home/claude-user/projects/oh-platform/certs/` |
+| GA Service Account | `/home/claude-user/projects/oh-platform/oh-beef-noodle-soup-0b9bc2bc522b.json` |
+
+---
+
 ## Project Overview
 Oh Platform is a full-stack monorepo application built with modern web technologies. It's designed as a comprehensive platform scaffold with database integration, authentication, and payment processing capabilities.
 
@@ -215,31 +240,28 @@ DATABASE_PUBLIC_URL=postgresql://postgres:kSmXgCyAMdHNuATuRYRTxxESkuyhkEHZ@yamab
 - Use `DATABASE_PUBLIC_URL` (public) when running migrations locally
 
 ## Development Environment Variables
-**IMPORTANT**: When starting a new worktree/branch, ensure the `.env` file contains these keys:
+**IMPORTANT**: All development happens on the DigitalOcean cloud server (162.243.3.7).
 
 ```bash
 # Clerk Authentication (REQUIRED - prevents keyless mode warning)
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_YWR2YW5jZWQtc3F1aXJyZWwtNTUuY2xlcmsuYWNjb3VudHMuZGV2JA
 CLERK_SECRET_KEY=sk_test_Imh9fiIh2PGJ43Ztc0PXhOsZ1qNJpJLNuRiEF1cgRO
 
-# API Configuration
+# API Configuration (CLOUD SERVER - NOT localhost)
 API_PORT=4000
-NEXT_PUBLIC_API_URL=http://localhost:4000
+NEXT_PUBLIC_API_URL=https://devapi.ohbeef.com
 
-# Database (local development)
-DATABASE_URL=postgresql://oh:ohpassword@localhost:5432/ohdb?schema=public
+# Database (Railway - production)
+DATABASE_URL=postgresql://postgres:kSmXgCyAMdHNuATuRYRTxxESkuyhkEHZ@yamabiko.proxy.rlwy.net:55841/railway
 
 # Stripe (test mode)
 STRIPE_SECRET_KEY=sk_test_51SX7kS1o2n32UrrMkLymiIMW6BXVHWXkZtrtruf6ufZJK2OYYHCaVv6e87GZl8kvDlGyvbVkiEslaQP4X2KMsIub00LVIzWigJ
-```
 
-**Setup for new worktree:**
-```bash
-# Copy root .env for API
-cp /Users/ddidericksen/Projects/oh/oh-platform/.env .
-
-# Copy to apps/web/.env.local for Next.js (REQUIRED for Clerk to work!)
-cp /Users/ddidericksen/Projects/oh/oh-platform/.env apps/web/.env.local
+# File Paths (CLOUD SERVER)
+GA_SERVICE_ACCOUNT_PATH=/home/claude-user/projects/oh-platform/oh-beef-noodle-soup-0b9bc2bc522b.json
+APPLE_PASS_CERT_PATH=/home/claude-user/projects/oh-platform/certs/oh-pass-cert.pem
+APPLE_PASS_KEY_PATH=/home/claude-user/projects/oh-platform/certs/oh-pass-key.pem
+APPLE_WWDR_CERT_PATH=/home/claude-user/projects/oh-platform/certs/wwdr.pem
 ```
 
 ## Git Branch
@@ -247,28 +269,20 @@ Current working branch: `elastic-knuth`
 
 ## Session Initialization
 
-### For Worktrees
-When starting a session in a git worktree, run `/init` or manually:
-```bash
-# Quick init script (copies env files, installs deps, generates Prisma)
-/Users/ddidericksen/Projects/oh/oh-platform/scripts/init-worktree.sh
-
-# Or manually:
-cp /Users/ddidericksen/Projects/oh/oh-platform/.env .
-cp /Users/ddidericksen/Projects/oh/oh-platform/apps/web/.env.local apps/web/
-pnpm install
-cd packages/db && pnpm exec prisma generate
-```
+### Cloud Server Setup
+All development happens on the DigitalOcean droplet at `162.243.3.7`. Environment files are already configured at `/home/claude-user/projects/oh-platform`.
 
 ### Required Environment Files
-- `.env` (root) - Database URL and other secrets
-- `apps/web/.env.local` - Clerk keys (NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY, CLERK_SECRET_KEY)
+- `.env` (root) - Database URL, API keys, and cloud paths
+- `apps/web/.env.local` - Clerk keys, API URL pointing to cloud server
+- `apps/admin/.env.local` - Admin-specific config pointing to cloud server
+- `packages/db/.env` - Database and API configuration
 
-### Start Servers
+### Start Servers (on cloud server)
 ```bash
-pnpm dev          # Web app (port 3000)
-pnpm admin:dev    # Admin (port 3001)
-pnpm api:dev      # API (port 4000)
+pnpm dev          # Web app (port 3000) → https://devwebapp.ohbeef.com
+pnpm admin:dev    # Admin (port 3001) → https://devadmin.ohbeef.com
+pnpm api:dev      # API (port 4000) → https://devapi.ohbeef.com
 ```
 
 ## When Working on This Project
@@ -284,3 +298,33 @@ pnpm api:dev      # API (port 4000)
 - When pushing changes for deployment, use: `git push origin <branch>:main`
 - This pushes the current worktree branch directly to main to trigger Railway deployment
 - Do NOT try to checkout main (it's already checked out in the main repo)
+
+## Meal for a Stranger Challenge - Implementation Status (Dec 30, 2024)
+
+### Status: READY FOR TESTING
+
+The recipient notification modal has been implemented. Changes made:
+
+**Files Modified:**
+1. `apps/web/app/[locale]/order/location/[locationId]/_components/enhanced-menu-builder.tsx`
+   - Added MealGiftModal integration
+   - Fetches pending gifts on page load
+   - Handlers for Accept/Pay Forward/Close
+
+2. `apps/web/app/[locale]/order/payment/page.tsx`
+   - Passes mealGiftId to PaymentForm
+
+3. `apps/web/app/[locale]/order/payment/payment-form.tsx`
+   - Accepts meal gift during checkout
+
+**Testing Steps:**
+1. User A: Go to `/challenges/meal-for-stranger`, create a gift at a location
+2. User B: Go to `/order/location/{locationId}` for the same location
+3. User B should see the MealGiftModal popup
+4. Test "Accept" flow (should apply at checkout)
+5. Test "Pay Forward" flow (should pass to next person)
+6. Test "Maybe Later" (should dismiss modal)
+
+**Backups Created:**
+- `/tmp/enhanced-menu-builder-backup.tsx`
+- `/tmp/payment-form-backup.tsx`

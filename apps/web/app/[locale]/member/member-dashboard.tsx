@@ -74,6 +74,25 @@ type UserChallenge = {
   rewardClaimed: boolean;
 };
 
+type MealGift = {
+  id: string;
+  amountCents: number;
+  status: "PENDING" | "ACCEPTED" | "EXPIRED";
+  messageFromGiver?: string;
+  createdAt: string;
+  acceptedAt?: string;
+  expiredAt?: string;
+  location: { id: string; name: string; city: string };
+  giver?: { id: string; name: string };
+  acceptedBy?: { id: string; name: string };
+  chain?: Array<{ messageFromRecipient?: string; createdAt: string }>;
+};
+
+type MealGifts = {
+  given: MealGift[];
+  received: MealGift[];
+};
+
 // Tier icon component that uses PNG files with transparent backgrounds
 function TierIcon({ tier, size = 40, invert = false }: { tier: string; size?: number; invert?: boolean }) {
   const tierKeyMap: Record<string, string> = {
@@ -314,6 +333,7 @@ export default function MemberDashboard() {
   const [badgeProgress, setBadgeProgress] = useState<Record<string, BadgeProgress>>({});
   const [userChallenges, setUserChallenges] = useState<UserChallenge[]>([]);
   const [availableChallenges, setAvailableChallenges] = useState<Challenge[]>([]);
+  const [mealGifts, setMealGifts] = useState<MealGifts>({ given: [], received: [] });
   const [loading, setLoading] = useState(false);
   const [walletStatus, setWalletStatus] = useState<{ apple: boolean; google: boolean } | null>(null);
   const [showTiersModal, setShowTiersModal] = useState(false);
@@ -326,6 +346,7 @@ export default function MemberDashboard() {
       loadOrders(savedUserId);
       loadBadgeProgress(savedUserId);
       loadUserChallenges(savedUserId);
+      loadMealGifts(savedUserId);
     }
     loadAllBadges();
     loadAvailableChallenges();
@@ -425,6 +446,16 @@ export default function MemberDashboard() {
     }
   }
 
+  async function loadMealGifts(uid: string) {
+    try {
+      const response = await fetch(`${BASE}/users/${uid}/meal-gifts`);
+      const data = await response.json();
+      setMealGifts(data);
+    } catch (error) {
+      console.error("Failed to load meal gifts:", error);
+    }
+  }
+
   async function loadAvailableChallenges() {
     try {
       const response = await fetch(`${BASE}/challenges`);
@@ -435,19 +466,24 @@ export default function MemberDashboard() {
     }
   }
 
-  async function enrollInChallenge(challengeId: string) {
+  async function enrollInChallenge(challenge: Challenge) {
     if (!userId) return;
     try {
-      const response = await fetch(`${BASE}/users/${userId}/challenges/${challengeId}/enroll`, {
+      const response = await fetch(`${BASE}/users/${userId}/challenges/${challenge.id}/enroll`, {
         method: "POST",
       });
       if (response.ok) {
         toast.success(t("challengeEnrolled"));
         loadUserChallenges(userId);
+        
+        // Navigate to challenge page for "Meal for a Stranger"
+        if (challenge.slug === "meal-for-stranger") {
+          router.push(`/${locale}/challenges/meal-for-stranger`);
+        }
       }
     } catch (error) {
       console.error("Failed to enroll in challenge:", error);
-    }
+  }
   }
 
   async function claimChallengeReward(challengeId: string) {
@@ -1147,6 +1183,25 @@ export default function MemberDashboard() {
                                   }}
                                 />
                               </div>
+                              {uc.challenge.slug === "meal-for-stranger" && (
+                                <button
+                                  onClick={() => router.push(`/${locale}/challenges/meal-for-stranger`)}
+                                  style={{
+                                    marginTop: 8,
+                                    width: "100%",
+                                    padding: "8px 12px",
+                                    background: tierColor,
+                                    color: "white",
+                                    border: "none",
+                                    borderRadius: 6,
+                                    cursor: "pointer",
+                                    fontSize: "0.85rem",
+                                    fontWeight: "bold",
+                                  }}
+                                >
+                                  🎁 Give a Meal
+                                </button>
+                              )}
                             </div>
                           )}
                           {isCompleted && !uc.rewardClaimed && (
@@ -1166,6 +1221,91 @@ export default function MemberDashboard() {
                             >
                               {t("claimReward", { amount: (uc.challenge.rewardCents / 100).toFixed(2) })}
                             </button>
+                          )}
+                          {/* Gift Another Meal button for completed/claimed meal-for-stranger */}
+                          {uc.challenge.slug === "meal-for-stranger" && uc.rewardClaimed && (
+                            <button
+                              onClick={() => router.push(`/${locale}/challenges/meal-for-stranger`)}
+                              style={{
+                                marginTop: 8,
+                                width: "100%",
+                                padding: "8px 12px",
+                                background: tierColor,
+                                color: "white",
+                                border: "none",
+                                borderRadius: 6,
+                                cursor: "pointer",
+                                fontSize: "0.85rem",
+                                fontWeight: "bold",
+                              }}
+                            >
+                              🎁 Gift Another Meal
+                            </button>
+                          )}
+                          {/* Gift history for meal-for-stranger challenge */}
+                          {uc.challenge.slug === "meal-for-stranger" && mealGifts.given.length > 0 && (
+                            <div style={{ marginTop: 12 }}>
+                              <div style={{ fontSize: "0.8rem", color: "#666", marginBottom: 8, fontWeight: "600" }}>
+                                Your Gift History:
+                              </div>
+                              <div style={{ display: "grid", gap: 8 }}>
+                                {mealGifts.given.map((gift) => (
+                                  <div
+                                    key={gift.id}
+                                    style={{
+                                      padding: 10,
+                                      background: gift.status === "ACCEPTED" ? "rgba(34, 197, 94, 0.1)" : gift.status === "EXPIRED" ? "rgba(239, 68, 68, 0.05)" : "rgba(251, 191, 36, 0.1)",
+                                      borderRadius: 8,
+                                      border: gift.status === "ACCEPTED" ? "1px solid rgba(34, 197, 94, 0.3)" : gift.status === "EXPIRED" ? "1px solid rgba(239, 68, 68, 0.3)" : "1px solid rgba(251, 191, 36, 0.3)",
+                                    }}
+                                  >
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                                      <span style={{ fontWeight: "600", fontSize: "0.85rem" }}>
+                                        ${(gift.amountCents / 100).toFixed(2)} • {gift.location.name}
+                                      </span>
+                                      <span
+                                        style={{
+                                          fontSize: "0.7rem",
+                                          padding: "2px 6px",
+                                          borderRadius: 4,
+                                          background: gift.status === "ACCEPTED" ? "#22c55e" : gift.status === "EXPIRED" ? "#ef4444" : "#fbbf24",
+                                          color: "white",
+                                          fontWeight: "bold",
+                                        }}
+                                      >
+                                        {gift.status}
+                                      </span>
+                                    </div>
+                                    <div style={{ fontSize: "0.75rem", color: "#666" }}>
+                                      {gift.status === "ACCEPTED" && gift.acceptedBy
+                                        ? `Accepted by ${gift.acceptedBy.name}`
+                                        : gift.status === "EXPIRED"
+                                        ? "Expired"
+                                        : "Pending"}
+                                      {" • "}
+                                      {new Date(gift.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                                    </div>
+                                    {/* Recipient message */}
+                                    {gift.status === "ACCEPTED" && gift.chain?.[0]?.messageFromRecipient && (
+                                      <div
+                                        style={{
+                                          marginTop: 6,
+                                          padding: "6px 8px",
+                                          background: "white",
+                                          borderRadius: 6,
+                                          borderLeft: "2px solid #22c55e",
+                                          fontSize: "0.8rem",
+                                          fontStyle: "italic",
+                                          color: "#333",
+                                        }}
+                                      >
+                                        &ldquo;{gift.chain[0].messageFromRecipient}&rdquo;
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -1221,7 +1361,7 @@ export default function MemberDashboard() {
                           </div>
                         </div>
                         <button
-                          onClick={() => enrollInChallenge(challenge.id)}
+                          onClick={() => enrollInChallenge(challenge)}
                           style={{
                             padding: "8px 16px",
                             background: tierColor,
