@@ -612,6 +612,44 @@ export default function AnalyticsPage() {
             Browser languages, localization opportunities, and visitor demographics
           </p>
         </Link>
+
+        <Link
+          href="/analytics/challenges"
+          style={{
+            padding: "24px",
+            background: "white",
+            border: "2px solid #e5e7eb",
+            borderRadius: "12px",
+            textDecoration: "none",
+            color: "inherit",
+            transition: "all 0.2s",
+          }}
+        >
+          <div style={{ fontSize: "1.5rem", marginBottom: "12px" }}>🏆</div>
+          <h3 style={{ fontSize: "1.125rem", fontWeight: 600, marginBottom: "8px" }}>Challenges Analytics</h3>
+          <p style={{ color: "#6b7280", fontSize: "0.875rem" }}>
+            Track challenge engagement, completion rates, and reward distribution
+          </p>
+        </Link>
+
+        <Link
+          href="/analytics/badges"
+          style={{
+            padding: "24px",
+            background: "white",
+            border: "2px solid #e5e7eb",
+            borderRadius: "12px",
+            textDecoration: "none",
+            color: "inherit",
+            transition: "all 0.2s",
+          }}
+        >
+          <div style={{ fontSize: "1.5rem", marginBottom: "12px" }}>🎖️</div>
+          <h3 style={{ fontSize: "1.125rem", fontWeight: 600, marginBottom: "8px" }}>Badges Analytics</h3>
+          <p style={{ color: "#6b7280", fontSize: "0.875rem" }}>
+            Badge distribution, engagement, and gamification effectiveness
+          </p>
+        </Link>
       </div>
 
       <style>{`

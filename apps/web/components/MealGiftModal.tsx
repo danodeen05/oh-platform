@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { API_URL } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
 
@@ -36,6 +37,7 @@ export function MealGiftModal({
   onPayForward,
   onClose,
 }: MealGiftModalProps) {
+  const t = useTranslations("mealGift");
   const toast = useToast();
   const [action, setAction] = useState<"view" | "accept" | "pay-forward">("view");
   const [message, setMessage] = useState("");
@@ -47,7 +49,7 @@ export function MealGiftModal({
     // Note: We don't require orderId here because the actual API call to accept
     // the gift happens at checkout time when the order exists. This function
     // just signals the intent to accept the gift and passes the message.
-    toast.success(`You've reserved a $${giftAmount} meal gift! It will be applied at checkout.`);
+    toast.success(t("toast.reserved", { amount: giftAmount }));
     onAccept(mealGift.id, message || undefined);
     onClose();
   }
@@ -69,15 +71,15 @@ export function MealGiftModal({
       });
 
       if (!response.ok) {
-        throw new Error("Failed to pay forward meal gift");
+        throw new Error(t("toast.payForwardFailed"));
       }
 
-      toast.success("You've paid it forward! The next person will get this gift.");
+      toast.success(t("toast.paidForward"));
       onPayForward(mealGift.id);
       onClose();
     } catch (error: any) {
       console.error("Failed to pay forward meal gift:", error);
-      toast.error(error.message || "Failed to pay forward meal gift");
+      toast.error(error.message || t("toast.payForwardFailed"));
       setSubmitting(false);
     }
   }
@@ -110,7 +112,7 @@ export function MealGiftModal({
             <div style={{ textAlign: "center", marginBottom: 24 }}>
               <div style={{ fontSize: "4rem", marginBottom: 8 }}>🎁</div>
               <h2 style={{ fontSize: "1.5rem", fontWeight: "bold", marginBottom: 8 }}>
-                Someone Gifted You a Meal!
+                {t("modal.title")}
               </h2>
               <p style={{ fontSize: "2rem", fontWeight: "bold", color: "#22c55e" }}>
                 ${giftAmount}
@@ -137,17 +139,17 @@ export function MealGiftModal({
 
             {mealGift.payForwardCount > 0 && (
               <div style={{ textAlign: "center", marginBottom: 24, color: "#7C7A67" }}>
-                <strong>Chain of Kindness: {mealGift.payForwardCount} pay-it-forwards!</strong>
+                <strong>{t("modal.chainOfKindness", { count: mealGift.payForwardCount })}</strong>
               </div>
             )}
 
             <div style={{ marginBottom: 24, color: "#666", fontSize: "0.9rem" }}>
               <p style={{ marginBottom: 8 }}>
-                A kind stranger has gifted you this meal at {mealGift.location.name}. You can:
+                {t("modal.description", { location: mealGift.location.name })}
               </p>
               <ul style={{ marginLeft: 20 }}>
-                <li><strong>Accept it</strong> - Apply to your current order</li>
-                <li><strong>Pay it forward</strong> - Pass to the next person</li>
+                <li><strong>{t("modal.acceptOption")}</strong> - {t("modal.acceptDescription")}</li>
+                <li><strong>{t("modal.forwardOption")}</strong> - {t("modal.forwardDescription")}</li>
               </ul>
             </div>
 
@@ -165,7 +167,7 @@ export function MealGiftModal({
                   cursor: "pointer",
                 }}
               >
-                Accept Gift
+                {t("modal.acceptButton")}
               </button>
               <button
                 onClick={() => setAction("pay-forward")}
@@ -180,7 +182,7 @@ export function MealGiftModal({
                   cursor: "pointer",
                 }}
               >
-                Pay It Forward
+                {t("modal.forwardButton")}
               </button>
             </div>
           </>
@@ -191,21 +193,21 @@ export function MealGiftModal({
             <div style={{ textAlign: "center", marginBottom: 24 }}>
               <div style={{ fontSize: "3rem", marginBottom: 8 }}>✨</div>
               <h2 style={{ fontSize: "1.5rem", fontWeight: "bold", marginBottom: 8 }}>
-                Accept This Gift
+                {t("modal.acceptTitle")}
               </h2>
               <p style={{ color: "#666" }}>
-                The ${giftAmount} will be applied to your order
+                {t("modal.acceptSubtitle", { amount: giftAmount })}
               </p>
             </div>
 
             <div style={{ marginBottom: 24 }}>
               <label style={{ display: "block", fontWeight: "600", marginBottom: 8 }}>
-                Thank You Message (Optional)
+                {t("modal.thankYouLabel")}
               </label>
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="Thank the giver..."
+                placeholder={t("modal.thankYouPlaceholder")}
                 maxLength={200}
                 style={{
                   width: "100%",
@@ -237,7 +239,7 @@ export function MealGiftModal({
                   cursor: submitting ? "not-allowed" : "pointer",
                 }}
               >
-                {submitting ? "Processing..." : "Accept Gift"}
+                {submitting ? t("button.processing") : t("modal.acceptButton")}
               </button>
               <button
                 onClick={() => setAction("view")}
@@ -252,7 +254,7 @@ export function MealGiftModal({
                   cursor: submitting ? "not-allowed" : "pointer",
                 }}
               >
-                Back
+                {t("modal.backButton")}
               </button>
             </div>
           </>
@@ -263,21 +265,21 @@ export function MealGiftModal({
             <div style={{ textAlign: "center", marginBottom: 24 }}>
               <div style={{ fontSize: "3rem", marginBottom: 8 }}>💝</div>
               <h2 style={{ fontSize: "1.5rem", fontWeight: "bold", marginBottom: 8 }}>
-                Pay It Forward
+                {t("modal.forwardTitle")}
               </h2>
               <p style={{ color: "#666" }}>
-                Pass this ${giftAmount} gift to the next diner
+                {t("modal.forwardSubtitle", { amount: giftAmount })}
               </p>
             </div>
 
             <div style={{ marginBottom: 24 }}>
               <label style={{ display: "block", fontWeight: "600", marginBottom: 8 }}>
-                Message to Next Person (Optional)
+                {t("modal.forwardMessageLabel")}
               </label>
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="Add your message of kindness..."
+                placeholder={t("modal.forwardMessagePlaceholder")}
                 maxLength={200}
                 style={{
                   width: "100%",
@@ -309,7 +311,7 @@ export function MealGiftModal({
                   cursor: submitting ? "not-allowed" : "pointer",
                 }}
               >
-                {submitting ? "Processing..." : "Pay It Forward"}
+                {submitting ? t("button.processing") : t("modal.forwardButton")}
               </button>
               <button
                 onClick={() => setAction("view")}
@@ -324,7 +326,7 @@ export function MealGiftModal({
                   cursor: submitting ? "not-allowed" : "pointer",
                 }}
               >
-                Back
+                {t("modal.backButton")}
               </button>
             </div>
           </>

@@ -1751,5 +1751,104 @@
     "referralNote": "¡Tu enlace de referido está incluido! Tus amigos obtienen $5 de descuento en su primer pedido. Ganas $5 instantáneamente cuando completen un pedido de $20+.",
     "backToHome": "Volver al inicio",
     "loadingOrder": "Cargando pedido..."
+  },
+  "mealGift": {
+    "title": "Comida para un Desconocido",
+    "description": "Regala una comida al próximo comensal solitario en tu ubicación elegida. ¡Si la pagan hacia adelante, mira crecer la cadena de bondad!",
+    "howItWorks": "Cómo Funciona",
+    "steps": {
+      "chooseLocation": "Elige una ubicación y monto del regalo ($15.99 - $35.00)",
+      "nextDiner": "El próximo comensal solitario en esa ubicación será notificado de tu regalo",
+      "acceptOrForward": "Pueden aceptarlo o pagarlo hacia adelante a la siguiente persona",
+      "earnReward": "¡Cuando alguien lo acepte, ganas una recompensa de $5!",
+      "seeMessage": "Cuando alguien lo acepte, verás su mensaje de agradecimiento",
+      "refund": "Si no se reclama al final del día, recibes un reembolso completo como créditos"
+    },
+    "form": {
+      "location": "Ubicación",
+      "giftAmount": "Monto del Regalo: ${amount}",
+      "giftAmountLabel": "Monto del Regalo",
+      "minAmount": "$15.99",
+      "maxAmount": "$35.00",
+      "message": "Mensaje (Opcional)",
+      "messagePlaceholder": "Agrega un mensaje de bondad...",
+      "availableCredits": "Créditos Disponibles",
+      "useCredits": "Usar créditos para este regalo",
+      "paymentCard": "Tarjeta de Pago"
+    },
+    "summary": {
+      "giftAmount": "Monto del Regalo:",
+      "creditsApplied": "Créditos Aplicados:",
+      "cardPayment": "Pago con Tarjeta:",
+      "potentialReward": "Recompensa Potencial:",
+      "rewardAmount": "+$5.00",
+      "alreadyCompleted": "Ya has ganado tu recompensa de $5 por este desafío. ¡Gracias por seguir difundiendo bondad!"
+    },
+    "button": {
+      "giftMeal": "Regalar Comida de ${amount}",
+      "processing": "Procesando..."
+    },
+    "signInPrompt": "Por favor inicia sesión para regalar una comida",
+    "errors": {
+      "signIn": "Por favor inicia sesión para regalar una comida",
+      "selectLocation": "Por favor selecciona una ubicación",
+      "paymentNotReady": "Sistema de pago no está listo. Por favor espera...",
+      "createUser": "Error al crear usuario",
+      "createPaymentIntent": "Error al crear intención de pago",
+      "cardNotFound": "Elemento de tarjeta no encontrado",
+      "paymentFailed": "El pago no fue exitoso",
+      "createGift": "Error al crear regalo de comida",
+      "createGiftRetry": "Error al crear regalo de comida. Por favor intenta de nuevo.",
+      "loadLocations": "Error al cargar ubicaciones"
+    },
+    "success": {
+      "created": "¡Regalo de comida creado! Tu bondad alegrará el día de alguien."
+    },
+    "modal": {
+      "title": "¡Alguien te Regaló una Comida!",
+      "chainOfKindness": "Cadena de Bondad: ¡{count} pagos hacia adelante!",
+      "description": "Un desconocido amable te ha regalado esta comida en {location}. Puedes:",
+      "acceptOption": "Aceptarlo",
+      "acceptDescription": "Aplicar a tu pedido actual",
+      "forwardOption": "Pagarlo hacia adelante",
+      "forwardDescription": "Pasarlo a la siguiente persona",
+      "acceptButton": "Aceptar Regalo",
+      "forwardButton": "Pagar Hacia Adelante",
+      "backButton": "Atrás",
+      "acceptTitle": "Aceptar Este Regalo",
+      "acceptSubtitle": "Los ${amount} se aplicarán a tu pedido",
+      "thankYouLabel": "Mensaje de Agradecimiento (Opcional)",
+      "thankYouPlaceholder": "Agradece al donante...",
+      "forwardTitle": "Pagar Hacia Adelante",
+      "forwardSubtitle": "Pasa este regalo de ${amount} al siguiente comensal",
+      "forwardMessageLabel": "Mensaje para la Siguiente Persona (Opcional)",
+      "forwardMessagePlaceholder": "Agrega tu mensaje de bondad..."
+    },
+    "toast": {
+      "reserved": "¡Has reservado un regalo de comida de ${amount}! Se aplicará al pagar.",
+      "paidForward": "¡Lo has pagado hacia adelante! La siguiente persona recibirá este regalo.",
+      "payForwardFailed": "Error al pagar hacia adelante el regalo de comida",
+      "giftReserved": "¡Regalo de comida reservado! Se aplicará al pagar.",
+      "payForwardSuccess": "¡Lo pagaste hacia adelante! La siguiente persona recibirá este regalo.",
+      "payForwardError": "Error al pagar hacia adelante. Por favor intenta de nuevo."
+    },
+    "dashboard": {
+      "giveAMeal": "Regalar una Comida",
+      "giftAnotherMeal": "Regalar Otra Comida",
+      "yourGiftHistory": "Tu Historial de Regalos:",
+      "acceptedBy": "Aceptado por {name}",
+      "expired": "Expirado",
+      "pending": "Pendiente"
+    },
+    "payment": {
+      "giftApplied": "Regalo de Comida Aplicado",
+      "giftExcess": "Excedente del Regalo → Tus Créditos"
+    }
+  },
+  "challenges": {
+    "mealForStranger": {
+      "title": "Comida para un Desconocido",
+      "description": "Regala una comida al próximo comensal solitario en tu ubicación"
+    }
   }
 }
