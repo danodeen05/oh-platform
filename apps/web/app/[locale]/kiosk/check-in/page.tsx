@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import "../kiosk.css";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "";
 
@@ -162,8 +163,8 @@ export default function CheckInPage() {
   if (loading) {
     return (
       <main
+        className="kiosk-screen"
         style={{
-          minHeight: "100vh",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -173,7 +174,7 @@ export default function CheckInPage() {
       >
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: "4rem", marginBottom: 16, color: COLORS.primary }}>Oh!</div>
-          <div style={{ fontSize: "1.25rem", color: COLORS.textMuted }}>Loading your order...</div>
+          <div className="kiosk-body" style={{ color: COLORS.textMuted }}>Loading your order...</div>
         </div>
       </main>
     );
@@ -182,8 +183,8 @@ export default function CheckInPage() {
   if (error) {
     return (
       <main
+        className="kiosk-screen"
         style={{
-          minHeight: "100vh",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
@@ -195,37 +196,25 @@ export default function CheckInPage() {
       >
         <div
           style={{
-            width: 80,
-            height: 80,
-            borderRadius: 40,
+            width: 100,
+            height: 100,
+            borderRadius: 50,
             background: "rgba(239, 68, 68, 0.1)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            marginBottom: 24,
+            marginBottom: 32,
           }}
         >
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke={COLORS.error} strokeWidth="2">
+          <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke={COLORS.error} strokeWidth="2">
             <circle cx="12" cy="12" r="10" />
             <line x1="15" y1="9" x2="9" y2="15" />
             <line x1="9" y1="9" x2="15" y2="15" />
           </svg>
         </div>
-        <h1 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: 8 }}>Oops!</h1>
-        <p style={{ color: COLORS.textMuted, marginBottom: 32, textAlign: "center" }}>{error}</p>
-        <button
-          onClick={handleBackToHome}
-          style={{
-            padding: "16px 48px",
-            background: COLORS.primary,
-            border: "none",
-            borderRadius: 12,
-            color: COLORS.textOnPrimary,
-            fontSize: "1.1rem",
-            fontWeight: 600,
-            cursor: "pointer",
-          }}
-        >
+        <h1 className="kiosk-subtitle" style={{ marginBottom: 12 }}>Oops!</h1>
+        <p className="kiosk-body" style={{ color: COLORS.textMuted, marginBottom: 40, textAlign: "center" }}>{error}</p>
+        <button onClick={handleBackToHome} className="kiosk-btn kiosk-btn-primary">
           Back to Home
         </button>
       </main>
@@ -235,8 +224,8 @@ export default function CheckInPage() {
   if (checkInComplete) {
     return (
       <main
+        className="kiosk-screen"
         style={{
-          minHeight: "100vh",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
@@ -249,25 +238,25 @@ export default function CheckInPage() {
       >
         <div
           style={{
-            width: 100,
-            height: 100,
-            borderRadius: 50,
+            width: 120,
+            height: 120,
+            borderRadius: 60,
             background: COLORS.successLight,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            marginBottom: 32,
+            marginBottom: 40,
           }}
         >
-          <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke={COLORS.success} strokeWidth="2">
+          <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke={COLORS.success} strokeWidth="2.5">
             <path d="M20 6L9 17l-5-5" />
           </svg>
         </div>
 
-        <h1 style={{ fontSize: "2.5rem", fontWeight: 700, marginBottom: 16 }}>
+        <h1 className="kiosk-title" style={{ marginBottom: 16 }}>
           Welcome Back!
         </h1>
-        <p style={{ color: COLORS.textMuted, marginBottom: 8 }}>
+        <p className="kiosk-body" style={{ color: COLORS.textMuted, marginBottom: 8 }}>
           {order?.user?.name || order?.guestName || "Guest"}
         </p>
 
@@ -275,31 +264,32 @@ export default function CheckInPage() {
           <div
             style={{
               background: COLORS.primary,
-              borderRadius: 20,
-              padding: "32px 48px",
-              marginTop: 32,
-              marginBottom: 32,
+              borderRadius: 24,
+              padding: "40px 64px",
+              marginTop: 40,
+              marginBottom: 40,
               color: COLORS.textOnPrimary,
             }}
           >
-            <div style={{ fontSize: "0.9rem", opacity: 0.85, marginBottom: 8 }}>
+            <div style={{ fontSize: "1.125rem", opacity: 0.85, marginBottom: 12 }}>
               Please proceed to
             </div>
-            <div style={{ fontSize: "4rem", fontWeight: 700 }}>Pod {assignedSeat.number}</div>
+            <div style={{ fontSize: "5rem", fontWeight: 700, lineHeight: 1 }}>Pod {assignedSeat.number}</div>
           </div>
         )}
 
         <div
           style={{
             background: COLORS.surfaceElevated,
-            borderRadius: 16,
-            padding: 24,
+            borderRadius: 20,
+            padding: 28,
             border: `1px solid ${COLORS.border}`,
-            marginBottom: 32,
+            marginBottom: 40,
+            minWidth: 320,
           }}
         >
-          <div style={{ fontWeight: 600, marginBottom: 16 }}>Order #{order?.orderNumber}</div>
-          <div style={{ color: COLORS.textMuted, fontSize: "0.9rem" }}>
+          <div style={{ fontWeight: 600, marginBottom: 16, fontSize: "1.25rem" }}>Order #{order?.orderNumber}</div>
+          <div style={{ color: COLORS.textMuted, fontSize: "1.125rem" }}>
             {order?.items.map((item) => (
               <div key={item.id}>
                 {item.quantity}x {item.menuItem.name}
@@ -308,23 +298,11 @@ export default function CheckInPage() {
           </div>
         </div>
 
-        <p style={{ color: COLORS.textMuted, marginBottom: 32 }}>
+        <p className="kiosk-body" style={{ color: COLORS.textMuted, marginBottom: 40 }}>
           Your food is being prepared and will arrive at your pod shortly.
         </p>
 
-        <button
-          onClick={handleBackToHome}
-          style={{
-            padding: "16px 48px",
-            background: COLORS.primary,
-            border: "none",
-            borderRadius: 12,
-            color: COLORS.textOnPrimary,
-            fontSize: "1.1rem",
-            fontWeight: 600,
-            cursor: "pointer",
-          }}
-        >
+        <button onClick={handleBackToHome} className="kiosk-btn kiosk-btn-primary">
           Done
         </button>
       </main>
@@ -344,8 +322,8 @@ export default function CheckInPage() {
 
   return (
     <main
+      className="kiosk-screen kiosk-scroll"
       style={{
-        minHeight: "100vh",
         background: COLORS.surface,
         color: COLORS.text,
         padding: 48,
@@ -354,10 +332,10 @@ export default function CheckInPage() {
         alignItems: "center",
       }}
     >
-      <h1 style={{ fontSize: "2rem", fontWeight: 700, marginBottom: 8 }}>
+      <h1 className="kiosk-title" style={{ marginBottom: 12 }}>
         Welcome, {order?.user?.name || order?.guestName || "Guest"}!
       </h1>
-      <p style={{ color: COLORS.textMuted, marginBottom: 8 }}>
+      <p className="kiosk-body" style={{ color: COLORS.textMuted, marginBottom: 8 }}>
         Order #{order?.orderNumber}
       </p>
       {order?.user?.membershipTier && (
@@ -515,32 +493,16 @@ export default function CheckInPage() {
       )}
 
       {/* Actions */}
-      <div style={{ display: "flex", gap: 16 }}>
-        <button
-          onClick={handleBackToHome}
-          style={{
-            padding: "16px 32px",
-            background: "transparent",
-            border: `2px solid ${COLORS.border}`,
-            borderRadius: 12,
-            color: COLORS.textMuted,
-            fontSize: "1.1rem",
-            cursor: "pointer",
-          }}
-        >
+      <div style={{ display: "flex", gap: 20 }}>
+        <button onClick={handleBackToHome} className="kiosk-btn kiosk-btn-ghost">
           Cancel
         </button>
         <button
           onClick={handleCheckIn}
           disabled={!selectedPodId || checkingIn}
+          className="kiosk-btn kiosk-btn-primary"
           style={{
-            padding: "16px 48px",
             background: selectedPodId && !checkingIn ? COLORS.success : "#ccc",
-            border: "none",
-            borderRadius: 12,
-            color: COLORS.textOnPrimary,
-            fontSize: "1.1rem",
-            fontWeight: 600,
             cursor: selectedPodId && !checkingIn ? "pointer" : "not-allowed",
           }}
         >
@@ -575,44 +537,35 @@ function PodButton({
     <button
       onClick={onClick}
       disabled={!isAvailable}
+      className="kiosk-pod-btn"
       style={{
-        width: 56,
-        height: 56,
-        borderRadius: 12,
-        border: isSelected ? `3px solid ${COLORS.text}` : "none",
+        border: isSelected ? `4px solid ${COLORS.text}` : "none",
         background: bgColor,
         color: isAvailable ? COLORS.textOnPrimary : "rgba(255,255,255,0.7)",
-        fontSize: "1rem",
-        fontWeight: 700,
         cursor: isAvailable ? "pointer" : "not-allowed",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        transition: "all 0.2s",
         position: "relative",
       }}
     >
       {seat.number}
       {seat.podType === "DUAL" && (
-        <span style={{ fontSize: "0.6rem", opacity: 0.8 }}>DUAL</span>
+        <span style={{ fontSize: "0.7rem", opacity: 0.8 }}>DUAL</span>
       )}
       {isRecommended && !isSelected && (
         <div
           style={{
             position: "absolute",
-            top: -6,
-            right: -6,
-            width: 16,
-            height: 16,
-            borderRadius: 8,
+            top: -8,
+            right: -8,
+            width: 20,
+            height: 20,
+            borderRadius: 10,
             background: COLORS.warning,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
           }}
         >
-          <span style={{ fontSize: "0.6rem", color: COLORS.text }}>★</span>
+          <span style={{ fontSize: "0.7rem", color: COLORS.text }}>★</span>
         </div>
       )}
     </button>

@@ -80,6 +80,10 @@ model Location {
   lat     Float
   lng     Float
 
+  // Tax rate for this location (e.g., 0.0945 for 9.45%)
+  // Includes state, local, and restaurant taxes combined
+  taxRate Float @default(0.0)
+
   // Operating hours (JSON: { mon: { open: "11:00", close: "21:00" }, sun: null })
   operatingHours Json?
   timezone       String  @default("America/Denver")

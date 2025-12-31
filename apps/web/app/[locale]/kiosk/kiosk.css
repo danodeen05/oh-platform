@@ -1,0 +1,418 @@
+/* Kiosk Display Optimization for Elo I-Series 5 (1920x1080 landscape) */
+
+/* Base kiosk container - fixed dimensions for kiosk display */
+.kiosk-container {
+  width: 100vw;
+  height: 100vh;
+  max-width: 1920px;
+  max-height: 1080px;
+  overflow: hidden;
+  position: relative;
+  background: #FFFFFF;
+}
+
+/* Full-screen kiosk mode */
+.kiosk-screen {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Scrollable content area within kiosk */
+.kiosk-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: #7C7A67 #e5e5e5;
+}
+
+.kiosk-scroll::-webkit-scrollbar {
+  width: 12px;
+}
+
+.kiosk-scroll::-webkit-scrollbar-track {
+  background: #e5e5e5;
+  border-radius: 6px;
+}
+
+.kiosk-scroll::-webkit-scrollbar-thumb {
+  background: #7C7A67;
+  border-radius: 6px;
+}
+
+/* Touch-optimized buttons - minimum 56px for primary actions */
+.kiosk-btn {
+  min-height: 56px;
+  min-width: 56px;
+  padding: 16px 32px;
+  font-size: 1.125rem;
+  font-weight: 600;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.1s;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.kiosk-btn:active {
+  transform: scale(0.98);
+}
+
+/* Primary CTA button - larger for main actions */
+.kiosk-btn-primary {
+  min-height: 64px;
+  padding: 20px 48px;
+  font-size: 1.375rem;
+  background: #7C7A67;
+  color: #FFFFFF;
+  border: none;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+
+.kiosk-btn-primary:active {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+/* Secondary button */
+.kiosk-btn-secondary {
+  background: transparent;
+  color: #7C7A67;
+  border: 2px solid #7C7A67;
+}
+
+/* Ghost/text button */
+.kiosk-btn-ghost {
+  background: transparent;
+  color: #999999;
+  border: 2px solid #e5e5e5;
+}
+
+/* Large touch targets for quantity controls */
+.kiosk-qty-btn {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  font-size: 2rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+/* Party size selector buttons */
+.kiosk-party-btn {
+  width: 140px;
+  height: 140px;
+  border-radius: 24px;
+  font-size: 3rem;
+  font-weight: 700;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  touch-action: manipulation;
+}
+
+/* Pod selection buttons */
+.kiosk-pod-btn {
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  font-size: 1.25rem;
+  font-weight: 700;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  touch-action: manipulation;
+}
+
+/* Menu item cards - optimized grid */
+.kiosk-menu-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+/* For 1920px width, show 4-5 columns */
+@media (min-width: 1200px) {
+  .kiosk-menu-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (min-width: 1600px) {
+  .kiosk-menu-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
+}
+
+/* Menu item card */
+.kiosk-menu-card {
+  border-radius: 16px;
+  overflow: hidden;
+  transition: all 0.2s;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.kiosk-menu-card:active {
+  transform: scale(0.98);
+}
+
+/* Slider optimization for touch */
+.kiosk-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 12px;
+  background: #e5e5e5;
+  border-radius: 6px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.kiosk-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 40px;
+  height: 40px;
+  background: #5A5847;
+  border-radius: 50%;
+  border: 4px solid #FFFFFF;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  cursor: grab;
+}
+
+.kiosk-slider::-webkit-slider-thumb:active {
+  cursor: grabbing;
+  transform: scale(1.1);
+}
+
+.kiosk-slider::-moz-range-thumb {
+  width: 36px;
+  height: 36px;
+  background: #5A5847;
+  border-radius: 50%;
+  border: 4px solid #FFFFFF;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  cursor: grab;
+}
+
+.kiosk-slider::-moz-range-track {
+  height: 12px;
+  background: #e5e5e5;
+  border-radius: 6px;
+}
+
+/* Typography optimized for 21.5" display at viewing distance */
+.kiosk-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.kiosk-subtitle {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.kiosk-body {
+  font-size: 1.25rem;
+  line-height: 1.4;
+}
+
+.kiosk-body-sm {
+  font-size: 1.125rem;
+  line-height: 1.4;
+}
+
+.kiosk-caption {
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+/* Video background for attract screen - exact fit */
+.kiosk-video-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Input fields - larger for touch */
+.kiosk-input {
+  width: 100%;
+  padding: 20px 24px;
+  font-size: 1.5rem;
+  border: 3px solid #7C7A67;
+  border-radius: 16px;
+  background: #FFFFFF;
+  text-align: center;
+  touch-action: manipulation;
+}
+
+.kiosk-input:focus {
+  outline: none;
+  border-color: #5A5847;
+  box-shadow: 0 0 0 4px rgba(124, 122, 103, 0.2);
+}
+
+/* Number pad for PIN entry */
+.kiosk-numpad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  max-width: 320px;
+}
+
+.kiosk-numpad-btn {
+  width: 96px;
+  height: 72px;
+  border-radius: 16px;
+  font-size: 1.75rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: none;
+  transition: all 0.1s;
+  touch-action: manipulation;
+}
+
+/* Fixed bottom bar for navigation */
+.kiosk-bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 20px 32px;
+  background: linear-gradient(to top, #FFFFFF 80%, transparent);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 100;
+}
+
+/* Animations */
+@keyframes kiosk-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+@keyframes kiosk-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.kiosk-pulse {
+  animation: kiosk-pulse 2s ease-in-out infinite;
+}
+
+.kiosk-bounce {
+  animation: kiosk-bounce 1.5s ease-in-out infinite;
+}
+
+/* Hide scrollbar on kiosk but keep functionality */
+.kiosk-hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.kiosk-hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Prevent text selection on kiosk */
+.kiosk-no-select {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* QR Scanner viewfinder */
+.kiosk-qr-viewfinder {
+  position: relative;
+  width: 320px;
+  height: 320px;
+  border-radius: 24px;
+  overflow: hidden;
+}
+
+.kiosk-qr-corners {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.kiosk-qr-corner {
+  position: absolute;
+  width: 48px;
+  height: 48px;
+  border-color: #7C7A67;
+  border-style: solid;
+  border-width: 0;
+}
+
+.kiosk-qr-corner-tl {
+  top: 16px;
+  left: 16px;
+  border-top-width: 4px;
+  border-left-width: 4px;
+  border-top-left-radius: 12px;
+}
+
+.kiosk-qr-corner-tr {
+  top: 16px;
+  right: 16px;
+  border-top-width: 4px;
+  border-right-width: 4px;
+  border-top-right-radius: 12px;
+}
+
+.kiosk-qr-corner-bl {
+  bottom: 16px;
+  left: 16px;
+  border-bottom-width: 4px;
+  border-left-width: 4px;
+  border-bottom-left-radius: 12px;
+}
+
+.kiosk-qr-corner-br {
+  bottom: 16px;
+  right: 16px;
+  border-bottom-width: 4px;
+  border-right-width: 4px;
+  border-bottom-right-radius: 12px;
+}
+
+/* Scanning animation line */
+@keyframes scan-line {
+  0%, 100% { top: 32px; opacity: 1; }
+  50% { top: calc(100% - 32px); opacity: 0.5; }
+}
+
+.kiosk-scan-line {
+  position: absolute;
+  left: 32px;
+  right: 32px;
+  height: 2px;
+  background: #7C7A67;
+  animation: scan-line 2s ease-in-out infinite;
+}

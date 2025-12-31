@@ -193,6 +193,12 @@ function ConfirmationContent() {
   const totalAmount = total ? (parseInt(total) / 100).toFixed(2) : "0.00";
   const isPaid = paid === "true";
 
+  // Calculate tax from order data
+  const subtotalCents = order?.totalCents || 0;
+  const taxRate = order?.location?.taxRate || 0;
+  const taxCents = Math.round(subtotalCents * taxRate);
+  const totalWithTaxCents = subtotalCents + taxCents;
+
   // Group items by category: Bowl (main, slider) vs Extras (add-on, side, drink, dessert)
   const bowlItems = order?.items?.filter((item: any) => {
     const cat = item.menuItem.category || "";
@@ -715,19 +721,48 @@ function ConfirmationContent() {
             <span style={{ color: "#666" }}>{t("orderLabel")}</span>
             <span>#{orderNumber}</span>
           </div>
+          {/* Subtotal */}
           <div
             style={{
               display: "flex",
               justifyContent: "space-between",
-              marginTop: 8,
-              paddingTop: 8,
+              marginTop: 10,
+              paddingTop: 10,
               borderTop: "1px solid #e5e7eb",
+              fontSize: "0.9rem",
+              color: "#666",
+            }}
+          >
+            <span>{t("subtotal")}</span>
+            <span>${(subtotalCents / 100).toFixed(2)}</span>
+          </div>
+          {/* Tax */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              fontSize: "0.9rem",
+              color: "#666",
+            }}
+          >
+            <span>{t("tax")} ({(taxRate * 100).toFixed(2)}%)</span>
+            <span>${(taxCents / 100).toFixed(2)}</span>
+          </div>
+          {/* Total */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              marginTop: 6,
+              paddingTop: 6,
+              borderTop: "1px solid #e5e7eb",
+              fontSize: "1.1rem",
               fontWeight: "bold",
             }}
           >
             <span>{t("total")}</span>
             <span style={{ color: "#7C7A67" }}>
-              ${totalAmount}
+              ${order ? (totalWithTaxCents / 100).toFixed(2) : totalAmount}
             </span>
           </div>
         </div>

@@ -1,9 +1,11 @@
 "use client";
 import { useState, useEffect, ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import "./kiosk.css";
+import { IdleTimer } from "@/components/kiosk";
 
 // Default staff PIN - in production this would come from environment/config
-const STAFF_PIN = "1234";
+const STAFF_PIN = process.env.NEXT_PUBLIC_KIOSK_STAFF_PIN || "1234";
 
 export default function KioskLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -73,7 +75,10 @@ export default function KioskLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div style={{ position: "relative", minHeight: "100vh" }}>
+    <div className="kiosk-container kiosk-no-select" style={{ position: "relative" }}>
+      {/* Idle Timer - auto-return to attract screen after 60s inactivity */}
+      <IdleTimer timeout={60000} redirectPath="/kiosk" showWarning />
+
       {/* Hidden exit button - triple tap to reveal */}
       <button
         onClick={handleCornerTap}
@@ -81,8 +86,8 @@ export default function KioskLayout({ children }: { children: ReactNode }) {
           position: "fixed",
           top: 0,
           right: 0,
-          width: 60,
-          height: 60,
+          width: 80,
+          height: 80,
           background: "transparent",
           border: "none",
           zIndex: 9999,
@@ -168,32 +173,18 @@ export default function KioskLayout({ children }: { children: ReactNode }) {
               </div>
             )}
 
-            {/* Number Pad */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(3, 1fr)",
-                gap: 12,
-                maxWidth: 280,
-                margin: "0 auto 24px",
-              }}
-            >
+            {/* Number Pad - Touch optimized */}
+            <div className="kiosk-numpad" style={{ margin: "0 auto 24px" }}>
               {["1", "2", "3", "4", "5", "6", "7", "8", "9", "clear", "0", "back"].map(
                 (key) => (
                   <button
                     key={key}
                     onClick={() => handlePinKey(key)}
+                    className="kiosk-numpad-btn"
                     style={{
-                      width: 80,
-                      height: 60,
-                      borderRadius: 12,
-                      border: "none",
                       background: key === "clear" || key === "back" ? "#333" : "#444",
                       color: "white",
-                      fontSize: key === "clear" || key === "back" ? "0.85rem" : "1.5rem",
-                      fontWeight: 600,
-                      cursor: "pointer",
-                      transition: "all 0.1s",
+                      fontSize: key === "clear" || key === "back" ? "1rem" : "1.75rem",
                     }}
                   >
                     {key === "clear" ? "Clear" : key === "back" ? "<" : key}
