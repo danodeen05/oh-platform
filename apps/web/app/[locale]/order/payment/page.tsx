@@ -53,7 +53,10 @@ export default async function PaymentPage({
   }
 
   // Get total from the order data, not from URL param
-  const totalCents = order.totalCents;
+  const subtotalCents = order.totalCents;
+  const taxRate = order.location?.taxRate || 0;
+  const taxCents = Math.round(subtotalCents * taxRate);
+  const totalCents = subtotalCents + taxCents;
 
   // Group items by category: Bowl (main, slider) vs Extras (add-on, side, drink, dessert)
   const bowlItems = order.items.filter((item: any) => {
@@ -218,12 +221,40 @@ export default async function PaymentPage({
             </div>
           )}
 
+          {/* Subtotal */}
           <div
             style={{
               display: "flex",
               justifyContent: "space-between",
               marginTop: 10,
               paddingTop: 10,
+              borderTop: "1px solid #e5e7eb",
+              fontSize: "0.9rem",
+              color: "#666",
+            }}
+          >
+            <span>{t("subtotal")}</span>
+            <span>${(subtotalCents / 100).toFixed(2)}</span>
+          </div>
+          {/* Tax */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              fontSize: "0.9rem",
+              color: "#666",
+            }}
+          >
+            <span>{t("tax")} ({(taxRate * 100).toFixed(2)}%)</span>
+            <span>${(taxCents / 100).toFixed(2)}</span>
+          </div>
+          {/* Total */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              marginTop: 6,
+              paddingTop: 6,
               borderTop: "1px solid #e5e7eb",
               fontSize: "1.1rem",
               fontWeight: "bold",

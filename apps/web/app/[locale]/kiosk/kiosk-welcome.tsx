@@ -1,6 +1,7 @@
 "use client";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { QRScanner, parseKioskQR } from "@/components/kiosk";
 
 type Location = {
   id: string;
@@ -24,6 +25,50 @@ const COLORS = {
   border: "#e5e5e5",
   borderDark: "#333333",
 };
+
+// Brand component for consistent branding across kiosk screens
+function KioskBrand({ size = "normal" }: { size?: "small" | "normal" | "large" | "xlarge" }) {
+  const sizes = {
+    small: { logo: 32, chinese: "1.2rem", english: "0.65rem", gap: 4 },
+    normal: { logo: 48, chinese: "1.8rem", english: "0.95rem", gap: 6 },
+    large: { logo: 96, chinese: "3.5rem", english: "1.8rem", gap: 10 },
+    xlarge: { logo: 160, chinese: "5.6rem", english: "2.8rem", gap: 12 },
+  };
+  const s = sizes[size];
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: s.gap }}>
+      <img
+        src="/Oh_Logo_Large.png"
+        alt="Oh! Logo"
+        style={{ width: s.logo, height: s.logo, objectFit: "contain" }}
+      />
+      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+        <span
+          style={{
+            fontFamily: '"Ma Shan Zheng", cursive',
+            fontSize: s.chinese,
+            color: "#C7A878",
+            lineHeight: 1,
+          }}
+        >
+          哦
+        </span>
+        <span
+          style={{
+            fontFamily: '"Bebas Neue", sans-serif',
+            fontSize: s.english,
+            color: COLORS.text,
+            letterSpacing: "0.02em",
+            lineHeight: 1,
+          }}
+        >
+          Oh! Beef Noodle Soup
+        </span>
+      </div>
+    </div>
+  );
+}
 
 export default function KioskWelcome({ location }: { location: Location }) {
   const router = useRouter();
@@ -99,8 +144,8 @@ export default function KioskWelcome({ location }: { location: Location }) {
   if (step === "welcome") {
     return (
       <main
+        className="kiosk-screen"
         style={{
-          minHeight: "100vh",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
@@ -110,25 +155,14 @@ export default function KioskWelcome({ location }: { location: Location }) {
           overflow: "hidden",
         }}
       >
-        {/* Video Background - Full Screen */}
+        {/* Video Background - Exact 1920x1080 fit */}
         <video
           ref={videoRef}
           autoPlay
           muted
           playsInline
           onEnded={handleVideoEnded}
-          style={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            minWidth: "100%",
-            minHeight: "100%",
-            width: "auto",
-            height: "auto",
-            objectFit: "cover",
-            zIndex: 0,
-          }}
+          className="kiosk-video-bg"
         >
           <source src="/kiosk-video.mp4" type="video/mp4" />
         </video>
@@ -147,43 +181,37 @@ export default function KioskWelcome({ location }: { location: Location }) {
             width: "100%",
           }}
         >
-          {/* Main CTA - Start New Order */}
+          {/* Main CTA - Start New Order - Touch optimized */}
           <button
             onClick={handleStartOrder}
+            className="kiosk-btn kiosk-btn-primary"
             style={{
-              padding: "28px 72px",
-              background: COLORS.primary,
-              borderRadius: 20,
-              border: "none",
-              color: COLORS.textOnPrimary,
-              fontSize: "1.75rem",
-              fontWeight: 600,
-              cursor: "pointer",
-              boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
-              marginBottom: 24,
-              transition: "transform 0.2s, box-shadow 0.2s",
+              padding: "32px 80px",
+              borderRadius: 24,
+              fontSize: "2rem",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.25)",
+              marginBottom: 28,
             }}
           >
             Tap to Start Your Order
           </button>
 
-          {/* Secondary CTA - Online Order Check-in */}
+          {/* Secondary CTA - Online Order Check-in - Touch optimized */}
           <button
             onClick={handleScanQR}
+            className="kiosk-btn"
             style={{
-              padding: "16px 40px",
+              padding: "20px 48px",
               background: "rgba(255, 255, 255, 0.95)",
-              borderRadius: 14,
-              border: `2px solid ${COLORS.primary}`,
+              borderRadius: 16,
+              border: `3px solid ${COLORS.primary}`,
               color: COLORS.primary,
-              fontSize: "1.1rem",
+              fontSize: "1.25rem",
               fontWeight: 600,
-              cursor: "pointer",
               boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
               display: "flex",
               alignItems: "center",
-              gap: 12,
-              transition: "transform 0.2s",
+              gap: 14,
             }}
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -225,83 +253,100 @@ export default function KioskWelcome({ location }: { location: Location }) {
   if (step === "party-size") {
     return (
       <main
+        className="kiosk-screen"
         style={{
-          minHeight: "100vh",
           display: "flex",
           flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
           background: COLORS.surface,
-          padding: 48,
+          position: "relative",
+          overflow: "hidden",
         }}
       >
-        <h1
-          style={{
-            fontSize: "2.5rem",
-            fontWeight: 700,
-            marginBottom: 12,
-            textAlign: "center",
-            color: COLORS.text,
-          }}
-        >
-          How many guests today?
-        </h1>
-        <p style={{ fontSize: "1.25rem", color: COLORS.textMuted, marginBottom: 48 }}>
-          Select your party size
-        </p>
-
+        {/* Decorative Oh! mark on right side - 30% cut off */}
         <div
           style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
-            gap: 20,
-            maxWidth: 720,
+            position: "absolute",
+            top: "50%",
+            right: "-15%",
+            transform: "translateY(-50%)",
+            opacity: 0.08,
+            pointerEvents: "none",
+            zIndex: 0,
           }}
         >
-          {[1, 2, 3, 4, 5, 6, 7, 8].map((size) => (
-            <button
-              key={size}
-              onClick={() => handlePartySelect(size)}
-              style={{
-                width: 130,
-                height: 130,
-                borderRadius: 20,
-                border: `3px solid ${COLORS.primary}`,
-                background: COLORS.primaryLight,
-                color: COLORS.text,
-                fontSize: "2.75rem",
-                fontWeight: 700,
-                cursor: "pointer",
-                transition: "all 0.2s",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              {size}
-              <span style={{ fontSize: "0.85rem", fontWeight: 400, marginTop: 2, color: COLORS.textMuted }}>
-                {size === 1 ? "guest" : "guests"}
-              </span>
-            </button>
-          ))}
+          <img
+            src="/Oh_Logo_Mark_Web.png"
+            alt=""
+            style={{
+              height: "90vh",
+              width: "auto",
+              objectFit: "contain",
+            }}
+          />
         </div>
 
-        <button
-          onClick={handleBackToWelcome}
+        {/* Large Brand Header - top left */}
+        <div style={{ position: "absolute", top: 48, left: 48, zIndex: 1 }}>
+          <KioskBrand size="xlarge" />
+        </div>
+
+        {/* Centered content */}
+        <div
           style={{
-            marginTop: 48,
-            padding: "16px 32px",
-            background: "transparent",
-            border: `2px solid ${COLORS.border}`,
-            borderRadius: 12,
-            color: COLORS.textMuted,
-            fontSize: "1.1rem",
-            cursor: "pointer",
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1,
           }}
         >
-          Cancel
-        </button>
+          <h1 className="kiosk-title" style={{ marginBottom: 12, textAlign: "center", color: COLORS.text, fontSize: "3.5rem" }}>
+            How many guests today?
+          </h1>
+          <p className="kiosk-body" style={{ color: COLORS.textMuted, marginBottom: 48, fontSize: "1.5rem" }}>
+            Select your party size
+          </p>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(4, 1fr)",
+              gap: 24,
+              maxWidth: 800,
+            }}
+          >
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((size) => (
+              <button
+                key={size}
+                onClick={() => handlePartySelect(size)}
+                className="kiosk-party-btn"
+                style={{
+                  border: `3px solid ${COLORS.primary}`,
+                  background: COLORS.primaryLight,
+                  color: COLORS.text,
+                }}
+              >
+                {size}
+                <span style={{ fontSize: "1rem", fontWeight: 400, marginTop: 4, color: COLORS.textMuted }}>
+                  {size === 1 ? "guest" : "guests"}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <button
+            onClick={handleBackToWelcome}
+            className="kiosk-btn"
+            style={{
+              marginTop: 48,
+              background: COLORS.primary,
+              color: COLORS.textOnPrimary,
+            }}
+          >
+            Cancel
+          </button>
+        </div>
       </main>
     );
   }
@@ -309,8 +354,8 @@ export default function KioskWelcome({ location }: { location: Location }) {
   // Payment type selector (for parties of 2+)
   return (
     <main
+      className="kiosk-screen"
       style={{
-        minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -319,42 +364,38 @@ export default function KioskWelcome({ location }: { location: Location }) {
         padding: 48,
       }}
     >
-      <h1
-        style={{
-          fontSize: "2.5rem",
-          fontWeight: 700,
-          marginBottom: 12,
-          textAlign: "center",
-          color: COLORS.text,
-        }}
-      >
+      <h1 className="kiosk-title" style={{ marginBottom: 12, textAlign: "center", color: COLORS.text }}>
         How would you like to pay?
       </h1>
-      <p style={{ fontSize: "1.25rem", color: COLORS.textMuted, marginBottom: 48 }}>
+      <p className="kiosk-body" style={{ color: COLORS.textMuted, marginBottom: 48 }}>
         Party of {partySize}
       </p>
 
-      <div style={{ display: "flex", gap: 32, maxWidth: 800 }}>
+      <div style={{ display: "flex", gap: 40, maxWidth: 900 }}>
         {/* One Check */}
         <button
           onClick={() => handlePaymentType("single")}
+          className="kiosk-btn"
           style={{
             flex: 1,
-            padding: 48,
-            borderRadius: 24,
+            padding: 56,
+            borderRadius: 28,
             border: `3px solid ${COLORS.primary}`,
             background: COLORS.primaryLight,
             color: COLORS.text,
-            cursor: "pointer",
-            transition: "all 0.2s",
             textAlign: "center",
+            minHeight: 280,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
           }}
         >
-          <div style={{ fontSize: "4rem", marginBottom: 16, color: COLORS.primary }}>1</div>
-          <div style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: 8 }}>
+          <div style={{ fontSize: "5rem", marginBottom: 20, color: COLORS.primary, lineHeight: 1 }}>1</div>
+          <div style={{ fontSize: "1.75rem", fontWeight: 700, marginBottom: 12 }}>
             One Check
           </div>
-          <div style={{ fontSize: "1rem", color: COLORS.textMuted }}>
+          <div style={{ fontSize: "1.125rem", color: COLORS.textMuted }}>
             Everyone orders, one person pays at the end
           </div>
         </button>
@@ -362,23 +403,27 @@ export default function KioskWelcome({ location }: { location: Location }) {
         {/* Separate Checks */}
         <button
           onClick={() => handlePaymentType("separate")}
+          className="kiosk-btn"
           style={{
             flex: 1,
-            padding: 48,
-            borderRadius: 24,
+            padding: 56,
+            borderRadius: 28,
             border: `3px solid ${COLORS.primary}`,
             background: COLORS.primaryLight,
             color: COLORS.text,
-            cursor: "pointer",
-            transition: "all 0.2s",
             textAlign: "center",
+            minHeight: 280,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
           }}
         >
-          <div style={{ fontSize: "4rem", marginBottom: 16, color: COLORS.primary }}>{partySize}</div>
-          <div style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: 8 }}>
+          <div style={{ fontSize: "5rem", marginBottom: 20, color: COLORS.primary, lineHeight: 1 }}>{partySize}</div>
+          <div style={{ fontSize: "1.75rem", fontWeight: 700, marginBottom: 12 }}>
             Separate Checks
           </div>
-          <div style={{ fontSize: "1rem", color: COLORS.textMuted }}>
+          <div style={{ fontSize: "1.125rem", color: COLORS.textMuted }}>
             Each person orders and pays individually
           </div>
         </button>
@@ -386,16 +431,8 @@ export default function KioskWelcome({ location }: { location: Location }) {
 
       <button
         onClick={() => setStep("party-size")}
-        style={{
-          marginTop: 48,
-          padding: "16px 32px",
-          background: "transparent",
-          border: `2px solid ${COLORS.border}`,
-          borderRadius: 12,
-          color: COLORS.textMuted,
-          fontSize: "1.1rem",
-          cursor: "pointer",
-        }}
+        className="kiosk-btn kiosk-btn-ghost"
+        style={{ marginTop: 48 }}
       >
         Back
       </button>
@@ -410,6 +447,7 @@ function QRScanView({ location, onBack }: { location: Location; onBack: () => vo
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showManualEntry, setShowManualEntry] = useState(false);
+  const [scannerActive, setScannerActive] = useState(true);
 
   async function handleLookup() {
     if (!orderCode.trim()) return;
@@ -443,10 +481,35 @@ function QRScanView({ location, onBack }: { location: Location; onBack: () => vo
     }
   }
 
+  // Handle QR scan result from camera
+  function handleQRScan(data: string) {
+    // Disable scanner to prevent multiple navigations
+    setScannerActive(false);
+
+    // Parse QR code data using helper
+    const parsed = parseKioskQR(data);
+
+    if (parsed.type === "order" && parsed.token) {
+      router.push(`/kiosk/check-in?token=${parsed.token}&locationId=${location.id}`);
+    } else if (parsed.type === "member" && parsed.id) {
+      router.push(`/kiosk/check-in?memberId=${parsed.id}&locationId=${location.id}`);
+    } else {
+      // Unknown format - try as order number
+      setOrderCode(data.toUpperCase());
+      setShowManualEntry(true);
+      setScannerActive(false);
+    }
+  }
+
+  function handleScannerError(err: Error) {
+    console.warn("QR Scanner error:", err);
+    // Don't show error to user - manual entry is always available
+  }
+
   return (
     <main
+      className="kiosk-screen"
       style={{
-        minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -455,88 +518,39 @@ function QRScanView({ location, onBack }: { location: Location; onBack: () => vo
         padding: 48,
       }}
     >
-      <h1
-        style={{
-          fontSize: "2.25rem",
-          fontWeight: 700,
-          marginBottom: 12,
-          textAlign: "center",
-          color: COLORS.text,
-        }}
-      >
+      <h1 className="kiosk-title" style={{ marginBottom: 12, textAlign: "center", color: COLORS.text }}>
         Check In Your Online Order
       </h1>
-      <p style={{ fontSize: "1.1rem", color: COLORS.textMuted, marginBottom: 48, textAlign: "center" }}>
+      <p className="kiosk-body" style={{ color: COLORS.textMuted, marginBottom: 48, textAlign: "center" }}>
         Scan your order QR code or enter your order number
       </p>
 
-      {/* QR Scanner Placeholder */}
-      <div
-        style={{
-          width: 320,
-          height: 320,
-          background: COLORS.surfaceDark,
-          borderRadius: 24,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          marginBottom: 32,
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
-        {/* Scanner frame corners */}
-        <div style={{ position: "absolute", top: 20, left: 20, width: 40, height: 40, borderTop: `4px solid ${COLORS.primary}`, borderLeft: `4px solid ${COLORS.primary}`, borderRadius: "8px 0 0 0" }} />
-        <div style={{ position: "absolute", top: 20, right: 20, width: 40, height: 40, borderTop: `4px solid ${COLORS.primary}`, borderRight: `4px solid ${COLORS.primary}`, borderRadius: "0 8px 0 0" }} />
-        <div style={{ position: "absolute", bottom: 20, left: 20, width: 40, height: 40, borderBottom: `4px solid ${COLORS.primary}`, borderLeft: `4px solid ${COLORS.primary}`, borderRadius: "0 0 0 8px" }} />
-        <div style={{ position: "absolute", bottom: 20, right: 20, width: 40, height: 40, borderBottom: `4px solid ${COLORS.primary}`, borderRight: `4px solid ${COLORS.primary}`, borderRadius: "0 0 8px 0" }} />
+      {/* Real QR Scanner with camera */}
+      <QRScanner
+        onScan={handleQRScan}
+        onError={handleScannerError}
+        active={scannerActive && !showManualEntry}
+        width={360}
+        height={360}
+      />
 
-        {/* Scanning animation line */}
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 40,
-            right: 40,
-            height: 2,
-            background: COLORS.primary,
-            animation: "scanLine 2s ease-in-out infinite",
-          }}
-        />
-
-        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke={COLORS.textMuted} strokeWidth="1.5">
-          <rect x="3" y="3" width="7" height="7" rx="1" />
-          <rect x="14" y="3" width="7" height="7" rx="1" />
-          <rect x="3" y="14" width="7" height="7" rx="1" />
-          <path d="M14 14h3v3" />
-          <path d="M17 17h3v3" />
-          <path d="M14 20v-3h3" />
-        </svg>
-        <p style={{ color: COLORS.textMuted, marginTop: 16, fontSize: "0.95rem" }}>
-          Position QR code in frame
-        </p>
-      </div>
+      {/* Spacer */}
+      <div style={{ height: 32 }} />
 
       {/* Manual entry toggle */}
       {!showManualEntry ? (
         <button
-          onClick={() => setShowManualEntry(true)}
-          style={{
-            padding: "12px 24px",
-            background: "transparent",
-            border: `2px solid ${COLORS.border}`,
-            borderRadius: 10,
-            color: COLORS.textMuted,
-            fontSize: "1rem",
-            cursor: "pointer",
-            marginBottom: 32,
+          onClick={() => {
+            setShowManualEntry(true);
+            setScannerActive(false);
           }}
+          className="kiosk-btn kiosk-btn-secondary"
+          style={{ marginBottom: 32 }}
         >
           Enter Order Number Manually
         </button>
       ) : (
-        <div style={{ width: "100%", maxWidth: 400, marginBottom: 32 }}>
+        <div style={{ width: "100%", maxWidth: 480, marginBottom: 32 }}>
           <input
             type="text"
             value={orderCode}
@@ -546,15 +560,9 @@ function QRScanView({ location, onBack }: { location: Location; onBack: () => vo
             }}
             placeholder="Enter order number (e.g., ORD-1234...)"
             autoFocus
+            className="kiosk-input"
             style={{
-              width: "100%",
-              padding: "18px 24px",
-              fontSize: "1.25rem",
-              border: `2px solid ${error ? "#ef4444" : COLORS.primary}`,
-              borderRadius: 14,
-              background: COLORS.surface,
-              color: COLORS.text,
-              textAlign: "center",
+              border: `3px solid ${error ? "#ef4444" : COLORS.primary}`,
               letterSpacing: "0.05em",
             }}
             onKeyDown={(e) => {
@@ -563,7 +571,7 @@ function QRScanView({ location, onBack }: { location: Location; onBack: () => vo
           />
 
           {error && (
-            <p style={{ color: "#ef4444", marginTop: 12, textAlign: "center", fontSize: "0.95rem" }}>
+            <p style={{ color: "#ef4444", marginTop: 12, textAlign: "center", fontSize: "1.125rem" }}>
               {error}
             </p>
           )}
@@ -571,45 +579,35 @@ function QRScanView({ location, onBack }: { location: Location; onBack: () => vo
           <button
             onClick={handleLookup}
             disabled={!orderCode.trim() || loading}
+            className="kiosk-btn kiosk-btn-primary"
             style={{
               width: "100%",
-              marginTop: 16,
-              padding: "16px 32px",
+              marginTop: 20,
               background: orderCode.trim() && !loading ? COLORS.primary : "#ccc",
-              border: "none",
-              borderRadius: 12,
-              color: COLORS.textOnPrimary,
-              fontSize: "1.1rem",
-              fontWeight: 600,
               cursor: orderCode.trim() && !loading ? "pointer" : "not-allowed",
             }}
           >
             {loading ? "Looking up..." : "Find My Order"}
           </button>
+
+          <button
+            onClick={() => {
+              setShowManualEntry(false);
+              setScannerActive(true);
+              setOrderCode("");
+              setError(null);
+            }}
+            className="kiosk-btn kiosk-btn-ghost"
+            style={{ width: "100%", marginTop: 12 }}
+          >
+            Back to Scanner
+          </button>
         </div>
       )}
 
-      <button
-        onClick={onBack}
-        style={{
-          padding: "16px 32px",
-          background: "transparent",
-          border: `2px solid ${COLORS.border}`,
-          borderRadius: 12,
-          color: COLORS.textMuted,
-          fontSize: "1.1rem",
-          cursor: "pointer",
-        }}
-      >
+      <button onClick={onBack} className="kiosk-btn kiosk-btn-ghost">
         Back
       </button>
-
-      <style>{`
-        @keyframes scanLine {
-          0%, 100% { top: 40px; opacity: 1; }
-          50% { top: 280px; opacity: 0.5; }
-        }
-      `}</style>
     </main>
   );
 }

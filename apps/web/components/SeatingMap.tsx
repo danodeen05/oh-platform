@@ -30,7 +30,8 @@ interface SeatingMapProps {
   selectedSeatId?: string | null;
   onSelectSeat: (seat: Seat) => void;
   disabled?: boolean;
-  groupSize?: number; // Number of people in the order/group - determines if dual pods are selectable
+  groupSize?: number; // Number of people in the order/group
+  hostPaysAll?: boolean; // True if host is paying for all orders in the group (required for dual pod selection)
   labels?: SeatingMapLabels; // Translated labels
 }
 
@@ -40,6 +41,7 @@ export default function SeatingMap({
   onSelectSeat,
   disabled = false,
   groupSize = 1,
+  hostPaysAll = false,
   labels = {},
 }: SeatingMapProps) {
   // Default labels with fallbacks
@@ -75,8 +77,9 @@ export default function SeatingMap({
     return seats.find(s => s.dualPartnerId === seat.id);
   };
 
-  // For dual pods, check if the dual pod can be selected (groupSize must be 2)
-  const canSelectDualPod = groupSize === 2;
+  // For dual pods, check if the dual pod can be selected
+  // Dual pods require: group of 2+ people AND host paying for all orders
+  const canSelectDualPod = groupSize >= 2 && hostPaysAll;
 
   // Check if a seat should be hidden (it's the secondary seat of a dual pod pair)
   // The secondary seat is the one that does NOT have the dualPartnerId set (it's pointed TO)
@@ -209,7 +212,7 @@ export default function SeatingMap({
     const bothAvailable = seat.status === "AVAILABLE" && (!partner || partner.status === "AVAILABLE");
     if (bothAvailable) {
       if (isDual && !canSelectDualPod) {
-        title += " - Dual Pod (requires 2 guests)";
+        title += " - Dual Pod (requires group of 2+ with shared payment)";
       } else {
         title += " - Available";
       }

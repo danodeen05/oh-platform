@@ -1385,6 +1385,7 @@ export default function GroupLobby({ initialGroup }: GroupLobbyProps) {
                     onSelectSeat={(seat) => setSelectedSeatId(seat.id)}
                     disabled={true}
                     groupSize={group.orders.length}
+                    hostPaysAll={group.paymentMethod === "HOST_PAYS_ALL"}
                   />
                 )}
 

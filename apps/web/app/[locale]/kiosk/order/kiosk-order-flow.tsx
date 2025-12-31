@@ -2,7 +2,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useToast } from "@/components/ui/Toast";
+import { QRCodeSVG } from "qrcode.react";
+import { VirtualKeyboard } from "@/components/kiosk";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -73,11 +74,12 @@ const sliderThumbStyles = `
 `;
 
 // Brand component for consistent branding across all kiosk screens
-function KioskBrand({ size = "normal" }: { size?: "small" | "normal" | "large" }) {
+function KioskBrand({ size = "normal" }: { size?: "small" | "normal" | "large" | "xlarge" }) {
   const sizes = {
     small: { logo: 32, chinese: "1.2rem", english: "0.65rem", gap: 4 },
     normal: { logo: 48, chinese: "1.8rem", english: "0.95rem", gap: 6 },
     large: { logo: 96, chinese: "3.5rem", english: "1.8rem", gap: 10 },
+    xlarge: { logo: 160, chinese: "5.6rem", english: "2.8rem", gap: 12 },
   };
   const s = sizes[size];
 
@@ -115,6 +117,77 @@ function KioskBrand({ size = "normal" }: { size?: "small" | "normal" | "large" }
   );
 }
 
+// Dietary badges component for displaying V/VG/GF/Spicy indicators
+function DietaryBadges({
+  isVegetarian,
+  isVegan,
+  isGlutenFree,
+  spiceLevel,
+  size = "normal",
+}: {
+  isVegetarian?: boolean;
+  isVegan?: boolean;
+  isGlutenFree?: boolean;
+  spiceLevel?: number;
+  size?: "small" | "normal" | "large";
+}) {
+  const sizes = {
+    small: { badge: 18, gap: 3, spiceFont: "0.6rem", spicePadding: "1px 4px" },
+    normal: { badge: 24, gap: 4, spiceFont: "0.7rem", spicePadding: "2px 6px" },
+    large: { badge: 32, gap: 6, spiceFont: "0.85rem", spicePadding: "3px 8px" },
+  };
+  const s = sizes[size];
+
+  const badges: { label: string; src: string }[] = [];
+
+  if (isVegan) {
+    badges.push({ label: "Vegan", src: "/allergens/vegan.png" });
+  } else if (isVegetarian) {
+    badges.push({ label: "Vegetarian", src: "/allergens/vegetarian.png" });
+  }
+
+  if (isGlutenFree) {
+    badges.push({ label: "Gluten-Free", src: "/allergens/gluten-free.png" });
+  }
+
+  const hasDietaryInfo = badges.length > 0 || (spiceLevel && spiceLevel > 0);
+  if (!hasDietaryInfo) return null;
+
+  return (
+    <div style={{ display: "flex", gap: s.gap, flexWrap: "wrap", alignItems: "center" }}>
+      {badges.map((badge, idx) => (
+        <img
+          key={idx}
+          src={badge.src}
+          alt={badge.label}
+          title={badge.label}
+          style={{ width: s.badge, height: s.badge, objectFit: "contain" }}
+        />
+      ))}
+      {spiceLevel !== undefined && spiceLevel > 0 && (
+        <span
+          title={spiceLevel >= 3 ? "Hot" : spiceLevel >= 2 ? "Medium" : "Mild"}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "1px",
+            padding: s.spicePadding,
+            fontSize: s.spiceFont,
+            fontWeight: 600,
+            borderRadius: 4,
+            background: spiceLevel >= 3 ? "#fef2f2" : spiceLevel >= 2 ? "#fff7ed" : "#fefce8",
+            color: spiceLevel >= 3 ? "#dc2626" : spiceLevel >= 2 ? "#ea580c" : "#ca8a04",
+          }}
+        >
+          {Array.from({ length: spiceLevel }).map((_, i) => (
+            <span key={i}>🌶️</span>
+          ))}
+        </span>
+      )}
+    </div>
+  );
+}
+
 // Menu item image mapping - using correct file names from /public/menu images/
 // Keys match exact API names from /menu/steps endpoint
 const MENU_IMAGES: Record<string, string> = {
@@ -132,6 +205,7 @@ const MENU_IMAGES: Record<string, string> = {
   "Ramen Noodles": "/menu images/Ramen Noodles.png",
   "Shaved Noodles": "/menu images/Shaved Noodles.png",
   "Wide Noodles": "/menu images/Wide Noodles.png",
+  "Wide Noodles (Gluten Free)": "/menu images/Wide Noodles.png",
   // Toppings & Add-Ons
   "Baby Bok Choy": "/menu images/Baby Bok Choy.png",
   "Beef Marrow": "/menu images/Beef Marrow.png",
@@ -162,6 +236,7 @@ type Location = {
   id: string;
   name: string;
   tenantId: string;
+  taxRate: number;
 };
 
 type Seat = {
@@ -185,6 +260,10 @@ type MenuItem = {
   selectionMode?: string;
   sliderConfig?: any;
   isAvailable: boolean;
+  isVegetarian?: boolean;
+  isVegan?: boolean;
+  isGlutenFree?: boolean;
+  spiceLevel?: number;
 };
 
 type MenuSection = {
@@ -214,6 +293,8 @@ type GuestOrder = {
   orderId?: string;
   orderNumber?: string;
   dailyOrderNumber?: number;
+  subtotalCents?: number;
+  taxCents?: number;
   totalCents?: number;
   paid: boolean;
   selectedPodId?: string;
@@ -223,11 +304,15 @@ type GuestOrder = {
 function calculateItemPrice(item: MenuItem, quantity: number): number {
   if (quantity <= 0) return 0;
   if (quantity <= item.includedQuantity) return 0;
+
+  // If additionalPriceCents is 0, use basePriceCents for each item
+  const effectiveAdditionalPrice = item.additionalPriceCents || item.basePriceCents;
+
   if (item.includedQuantity > 0) {
     const extraQuantity = quantity - item.includedQuantity;
-    return item.basePriceCents + item.additionalPriceCents * (extraQuantity - 1);
+    return item.basePriceCents + effectiveAdditionalPrice * (extraQuantity - 1);
   }
-  return item.basePriceCents + item.additionalPriceCents * (quantity - 1);
+  return item.basePriceCents + effectiveAdditionalPrice * (quantity - 1);
 }
 
 export default function KioskOrderFlow({
@@ -241,10 +326,10 @@ export default function KioskOrderFlow({
 }) {
   const router = useRouter();
   const t = useTranslations("order");
-  const toast = useToast();
   const [menuSteps, setMenuSteps] = useState<MenuStep[]>([]);
   const [seats, setSeats] = useState<Seat[]>([]);
   const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Track all guest orders
   const [guestOrders, setGuestOrders] = useState<GuestOrder[]>(
@@ -327,7 +412,7 @@ export default function KioskOrderFlow({
         setLoading(false);
       } catch (error) {
         console.error("Failed to load menu:", error);
-        toast.error(t("errors.menuLoadFailed"));
+        setErrorMessage("Failed to load menu. Please try again.");
       }
     }
 
@@ -472,12 +557,19 @@ export default function KioskOrderFlow({
 
       const order = await response.json();
 
+      // Calculate tax from the order subtotal
+      const subtotalCents = order.totalCents; // Backend returns pre-tax total
+      const taxCents = Math.round(subtotalCents * location.taxRate);
+      const totalWithTaxCents = subtotalCents + taxCents;
+
       // Update guest with order info - use kitchenOrderNumber from API
       updateCurrentGuest({
         orderId: order.id,
         orderNumber: order.orderNumber,
         dailyOrderNumber: order.kitchenOrderNumber,
-        totalCents: order.totalCents,
+        subtotalCents,
+        taxCents,
+        totalCents: totalWithTaxCents,
       });
 
       setSubmitting(false);
@@ -499,7 +591,7 @@ export default function KioskOrderFlow({
       }
     } catch (error) {
       console.error("Failed to submit order:", error);
-      toast.error(t("errors.submitFailed"));
+      setErrorMessage("Failed to submit order. Please try again.");
       setSubmitting(false);
     }
   }
@@ -562,7 +654,7 @@ export default function KioskOrderFlow({
       }
     } catch (error) {
       console.error("Payment failed:", error);
-      toast.error(t("errors.paymentFailed"));
+      setErrorMessage("Payment failed. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -582,8 +674,8 @@ export default function KioskOrderFlow({
   if (loading) {
     return (
       <main
+        className="kiosk-screen"
         style={{
-          minHeight: "100vh",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -594,6 +686,61 @@ export default function KioskOrderFlow({
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: "4rem", marginBottom: 16, color: COLORS.primary }}>Oh!</div>
           <div style={{ fontSize: "1.25rem", color: COLORS.textMuted }}>Loading menu...</div>
+        </div>
+      </main>
+    );
+  }
+
+  // Error display
+  if (errorMessage) {
+    return (
+      <main
+        className="kiosk-screen"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          background: COLORS.surface,
+          color: COLORS.text,
+          padding: 48,
+        }}
+      >
+        <div
+          style={{
+            width: 100,
+            height: 100,
+            borderRadius: 50,
+            background: "rgba(239, 68, 68, 0.1)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: 32,
+          }}
+        >
+          <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke={COLORS.error} strokeWidth="2">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="15" y1="9" x2="9" y2="15" />
+            <line x1="9" y1="9" x2="15" y2="15" />
+          </svg>
+        </div>
+        <h1 className="kiosk-subtitle" style={{ marginBottom: 12 }}>Something went wrong</h1>
+        <p className="kiosk-body" style={{ color: COLORS.textMuted, marginBottom: 40, textAlign: "center" }}>
+          {errorMessage}
+        </p>
+        <div style={{ display: "flex", gap: 16 }}>
+          <button
+            onClick={() => setErrorMessage(null)}
+            className="kiosk-btn kiosk-btn-secondary"
+          >
+            Try Again
+          </button>
+          <button
+            onClick={startOver}
+            className="kiosk-btn kiosk-btn-primary"
+          >
+            Start Over
+          </button>
         </div>
       </main>
     );
@@ -631,6 +778,7 @@ export default function KioskOrderFlow({
         onSelectionUpdate={handleSelectionUpdate}
         onNext={nextStep}
         onPrevious={previousStep}
+        onCancel={startOver}
         canGoBack={currentStepIndex > 0}
         menuSteps={menuSteps}
       />
@@ -648,6 +796,7 @@ export default function KioskOrderFlow({
         sliderLabels={currentGuest.sliderLabels}
         selections={currentGuest.selections}
         menuSteps={menuSteps}
+        taxRate={location.taxRate}
         onSubmit={submitCurrentGuestOrder}
         onBack={() => setView("menu")}
         submitting={submitting}
@@ -663,6 +812,7 @@ export default function KioskOrderFlow({
         guestOrders={guestOrders}
         currentGuestIndex={currentGuestIndex}
         partySize={partySize}
+        paymentType={paymentType}
         selectedPodId={currentGuest.selectedPodId}
         onSelectPod={handlePodSelection}
         onConfirm={handlePodConfirm}
@@ -694,7 +844,9 @@ export default function KioskOrderFlow({
         guestOrders={guestOrders}
         currentGuestIndex={currentGuestIndex}
         seats={seats}
+        taxRate={location.taxRate}
         onPay={handlePayment}
+        onBack={() => setView("pods")}
         submitting={submitting}
       />
     );
@@ -729,88 +881,159 @@ function NameEntryView({
 }) {
   const [name, setName] = useState("");
 
+  const handleSubmit = () => {
+    if (name.trim()) {
+      onSubmit(name.trim().toUpperCase());
+    }
+  };
+
   return (
     <main
+      className="kiosk-screen"
       style={{
-        minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
         background: COLORS.surface,
         color: COLORS.text,
-        padding: 48,
+        position: "relative",
+        overflow: "hidden",
       }}
     >
-      {/* Brand Header */}
-      <div style={{ position: "absolute", top: 24, left: 24 }}>
-        <KioskBrand size="normal" />
-      </div>
-
-      <div style={{ fontSize: "1rem", color: COLORS.textMuted, marginBottom: 8 }}>
-        Guest {guestNumber} of {totalGuests}
-      </div>
-      <h1 style={{ fontSize: "2.5rem", fontWeight: 700, marginBottom: 32, textAlign: "center" }}>
-        What's your name?
-      </h1>
-
-      <input
-        type="text"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        placeholder="Enter your name"
-        autoFocus
+      {/* Decorative Oh! mark on right side - 30% cut off */}
+      <div
         style={{
-          width: "100%",
-          maxWidth: 400,
-          padding: "20px 24px",
-          fontSize: "1.5rem",
-          border: `3px solid ${COLORS.primary}`,
-          borderRadius: 16,
-          background: COLORS.surface,
-          color: COLORS.text,
-          textAlign: "center",
-          marginBottom: 32,
+          position: "absolute",
+          top: "50%",
+          right: "-15%", // Cut off 30% of the logo (half of 30%)
+          transform: "translateY(-50%)",
+          opacity: 0.08,
+          pointerEvents: "none",
+          zIndex: 0,
         }}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && name.trim()) {
-            onSubmit(name.trim());
-          }
-        }}
-      />
-
-      <div style={{ display: "flex", gap: 16 }}>
-        <button
-          onClick={onCancel}
+      >
+        <img
+          src="/Oh_Logo_Mark_Web.png"
+          alt=""
           style={{
-            padding: "16px 32px",
-            background: "transparent",
-            border: `2px solid ${COLORS.border}`,
-            borderRadius: 12,
-            color: COLORS.textMuted,
-            fontSize: "1.1rem",
-            cursor: "pointer",
+            height: "90vh",
+            width: "auto",
+            objectFit: "contain",
           }}
-        >
-          Cancel
-        </button>
-        <button
-          onClick={() => name.trim() && onSubmit(name.trim())}
-          disabled={!name.trim()}
-          style={{
-            padding: "16px 48px",
-            background: name.trim() ? COLORS.primary : "#ccc",
-            border: "none",
-            borderRadius: 12,
-            color: COLORS.textOnPrimary,
-            fontSize: "1.1rem",
-            fontWeight: 600,
-            cursor: name.trim() ? "pointer" : "not-allowed",
-          }}
-        >
-          Continue
-        </button>
+        />
       </div>
+
+      {/* Large Brand Header - top left */}
+      <div style={{ position: "absolute", top: 48, left: 48, zIndex: 1 }}>
+        <KioskBrand size="xlarge" />
+      </div>
+
+      {/* Centered content area - title and input display */}
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          paddingBottom: 340, // Space for keyboard
+          zIndex: 1,
+        }}
+      >
+        <div style={{ fontSize: "1.5rem", color: COLORS.textMuted, marginBottom: 12 }}>
+          Guest {guestNumber} of {totalGuests}
+        </div>
+        <h1 className="kiosk-title" style={{ marginBottom: 40, textAlign: "center", fontSize: "3.5rem" }}>
+          What's your name?
+        </h1>
+
+        {/* Name display field */}
+        <div
+          style={{
+            background: COLORS.surface,
+            border: `4px solid ${COLORS.primary}`,
+            borderRadius: 20,
+            padding: '4px 10px',
+            minWidth: 500,
+            minHeight: 90,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+          }}
+        >
+          <span
+            style={{
+              fontFamily: '"Bebas Neue", sans-serif',
+              fontSize: '6rem',
+              fontWeight: 700,
+              color: name ? COLORS.text : COLORS.textMuted,
+              textAlign: 'center',
+              letterSpacing: '0.05em',
+            }}
+          >
+            {name || "Tap keys below"}
+          </span>
+          {name && (
+            <span
+              style={{
+                display: 'inline-block',
+                width: 4,
+                height: '1.2em',
+                background: COLORS.primary,
+                marginLeft: 4,
+                animation: 'blink 1s infinite',
+              }}
+            />
+          )}
+        </div>
+
+      </div>
+
+      {/* Cancel button - bottom left */}
+      <button
+        onClick={onCancel}
+        className="kiosk-btn"
+        style={{
+          position: "absolute",
+          bottom: 24,
+          left: 48,
+          fontSize: "1.25rem",
+          background: COLORS.primary,
+          color: COLORS.textOnPrimary,
+          zIndex: 2,
+        }}
+      >
+        Cancel
+      </button>
+
+      {/* Keyboard fixed at bottom - centered */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          padding: "16px 48px 24px",
+          display: "flex",
+          justifyContent: "center",
+          zIndex: 1,
+        }}
+      >
+        <VirtualKeyboard
+          value={name}
+          onChange={setName}
+          onSubmit={handleSubmit}
+          maxLength={25}
+          showInput={false}
+        />
+      </div>
+
+      <style>{`
+        @keyframes blink {
+          0%, 50% { opacity: 1; }
+          51%, 100% { opacity: 0; }
+        }
+      `}</style>
     </main>
   );
 }
@@ -831,6 +1054,7 @@ function MenuView({
   onSelectionUpdate,
   onNext,
   onPrevious,
+  onCancel,
   canGoBack,
   menuSteps,
 }: {
@@ -849,11 +1073,13 @@ function MenuView({
   onSelectionUpdate: (sectionId: string, itemId: string) => void;
   onNext: () => void;
   onPrevious: () => void;
+  onCancel: () => void;
   canGoBack: boolean;
   menuSteps: MenuStep[];
 }) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showScrollHint, setShowScrollHint] = useState(true); // Start visible
+  const [showAllergenPopup, setShowAllergenPopup] = useState(false);
 
   // Check if there's content below the fold - update on scroll
   const checkScrollPosition = useCallback(() => {
@@ -918,16 +1144,40 @@ function MenuView({
         color: COLORS.text,
         display: "flex",
         flexDirection: "column",
+        position: "relative",
       }}
     >
+      {/* Decorative Oh! mark on right side - 30% cut off */}
+      <div
+        style={{
+          position: "absolute",
+          top: "50%",
+          right: "-15%",
+          transform: "translateY(-50%)",
+          opacity: 0.08,
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      >
+        <img
+          src="/Oh_Logo_Mark_Web.png"
+          alt=""
+          style={{
+            height: "90vh",
+            width: "auto",
+            objectFit: "contain",
+          }}
+        />
+      </div>
+
       {/* Fixed Header */}
       <div
         style={{
           position: "sticky",
           top: 0,
-          background: COLORS.surface,
+          background: COLORS.primaryLight,
           padding: "20px 32px",
-          borderBottom: `1px solid ${COLORS.border}`,
+          borderBottom: `1px solid ${COLORS.primaryBorder}`,
           zIndex: 10,
         }}
       >
@@ -951,27 +1201,27 @@ function MenuView({
             <KioskBrand size="large" />
           </div>
 
-          {/* Right: Step indicator with text */}
+          {/* Right: Step indicator with text - 2x larger */}
           <div
             style={{
               flex: 1,
               display: "flex",
               flexDirection: "column",
               alignItems: "flex-end",
-              gap: 8,
+              gap: 10,
             }}
           >
-            <span style={{ fontSize: "1.1rem", color: COLORS.textMuted, fontWeight: 600 }}>
+            <span style={{ fontSize: "1.6rem", color: COLORS.text, fontWeight: 700 }}>
               Step {stepIndex + 1} of {totalSteps}
             </span>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               {Array.from({ length: totalSteps }).map((_, i) => (
                 <div
                   key={i}
                   style={{
-                    width: i === stepIndex ? 32 : 10,
-                    height: 10,
-                    borderRadius: 5,
+                    width: i === stepIndex ? 56 : 20,
+                    height: 20,
+                    borderRadius: 10,
                     background: i <= stepIndex ? COLORS.primary : COLORS.border,
                     transition: "all 0.3s",
                   }}
@@ -1020,44 +1270,932 @@ function MenuView({
               </span>
             </div>
           )}
-          {step.sections.map((section) => (
-            <div
-              key={section.id}
-              id={`section-${section.item?.id || section.id}`}
-              style={{ marginBottom: 28 }}
-            >
-              <h2 style={{ fontSize: "1.4rem", fontWeight: 700, marginBottom: 4, color: COLORS.text }}>
-                {section.name
-                  .replace(/Premium Add-?[Oo]ns/i, "Add-Ons")
-                  .replace("Choose Your Noodles", "Choose Your Noodle Style")}
-                {section.required && (
-                  <span style={{ color: COLORS.primary, marginLeft: 8, fontSize: "0.9rem", fontWeight: 600 }}>
-                    Required
-                  </span>
-                )}
-              </h2>
-              {section.description && (
-                <p style={{ color: COLORS.textMuted, marginBottom: 10, marginTop: 0, fontSize: "0.9rem", lineHeight: 1.3 }}>
-                  {/* Bold the recommended selection in "We recommend X for first-timers" */}
-                  {section.description.includes("recommend") ? (
-                    <>
-                      {section.description.split(/\b(Light|Medium|Rich|Extra Rich|Firm|Soft|None|Mild|Spicy|Extra Spicy)\b/).map((part, i) =>
-                        ["Light", "Medium", "Rich", "Extra Rich", "Firm", "Soft", "None", "Mild", "Spicy", "Extra Spicy"].includes(part) ? (
-                          <strong key={i} style={{ color: COLORS.primary }}>{part}</strong>
-                        ) : (
-                          <span key={i}>{part}</span>
-                        )
-                      )}
-                    </>
-                  ) : (
-                    section.description
+          {/* Step 1: Show required sections side by side */}
+          {isStep1 && (
+            <div style={{ display: "flex", gap: 40, marginBottom: 28 }}>
+              {step.sections.filter(s => s.required && s.selectionMode === "SINGLE").map((section) => (
+                <div key={section.id} style={{ flex: 1 }}>
+                  <h2 style={{ fontSize: "1.3rem", fontWeight: 700, marginBottom: 4, color: COLORS.text, textAlign: "center" }}>
+                    {section.name
+                      .replace(/Premium Add-?[Oo]ns/i, "Add-Ons")
+                      .replace("Choose Your Noodles", "Choose Your Noodle Style")}
+                    <span style={{ color: COLORS.primary, marginLeft: 8, fontSize: "0.85rem", fontWeight: 600 }}>
+                      Required
+                    </span>
+                  </h2>
+                  {section.description && (
+                    <p style={{ color: COLORS.textMuted, marginBottom: 10, marginTop: 0, fontSize: "0.85rem", lineHeight: 1.3, textAlign: "center" }}>
+                      {section.description}
+                    </p>
                   )}
-                </p>
-              )}
+                  {(() => {
+                    const isNoodleSection = section.name.toLowerCase().includes("noodle");
+                    const noNoodlesItem = isNoodleSection ? section.items?.find(item => item.name.toLowerCase().includes("no noodle")) : null;
+                    const gridItems = isNoodleSection ? section.items?.filter(item => !item.name.toLowerCase().includes("no noodle")) : section.items;
+                    const hasSelection = !!selections[section.id];
+
+                    return (
+                      <>
+                        <div style={{
+                          display: "grid",
+                          gridTemplateColumns: "repeat(2, 1fr)",
+                          gap: 12,
+                        }}>
+                          {gridItems?.map((item) => {
+                            const isSelected = selections[section.id] === item.id;
+                            const imageUrl = MENU_IMAGES[item.name];
+
+                            return (
+                              <button
+                                key={item.id}
+                                onClick={() => onSelectionUpdate(section.id, item.id)}
+                                style={{
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  padding: 0,
+                                  background: isSelected ? COLORS.primaryLight : COLORS.surfaceElevated,
+                                  border: isSelected
+                                    ? `3px solid ${COLORS.primary}`
+                                    : `2px solid ${COLORS.border}`,
+                                  borderRadius: 12,
+                                  overflow: "hidden",
+                                  cursor: "pointer",
+                                  transition: "all 0.2s",
+                                  textAlign: "left",
+                                  position: "relative",
+                                  opacity: hasSelection && !isSelected ? 0.3 : 1,
+                                }}
+                              >
+                                {imageUrl ? (
+                                  <div
+                                    style={{
+                                      width: "100%",
+                                      aspectRatio: "4 / 3",
+                                      background: "#f5f5f5",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      overflow: "hidden",
+                                      position: "relative",
+                                    }}
+                                  >
+                                    <img
+                                      src={imageUrl}
+                                      alt={item.name}
+                                      style={{
+                                        width: "100%",
+                                        height: "100%",
+                                        objectFit: "cover",
+                                      }}
+                                    />
+                                    {/* Dietary badges - top left */}
+                                    <div style={{ position: "absolute", top: 6, left: 6 }}>
+                                      <DietaryBadges
+                                        isVegetarian={item.isVegetarian}
+                                        isVegan={item.isVegan}
+                                        isGlutenFree={item.isGlutenFree}
+                                        spiceLevel={item.spiceLevel}
+                                        size="small"
+                                      />
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div
+                                    style={{
+                                      width: "100%",
+                                      aspectRatio: "4 / 3",
+                                      background: "#f5f5f5",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      position: "relative",
+                                    }}
+                                  >
+                                    <span style={{ fontSize: "3rem" }}>🍜</span>
+                                    {/* Dietary badges - top left */}
+                                    <div style={{ position: "absolute", top: 6, left: 6 }}>
+                                      <DietaryBadges
+                                        isVegetarian={item.isVegetarian}
+                                        isVegan={item.isVegan}
+                                        isGlutenFree={item.isGlutenFree}
+                                        spiceLevel={item.spiceLevel}
+                                        size="small"
+                                      />
+                                    </div>
+                                  </div>
+                                )}
+                                <div style={{ padding: 8 }}>
+                                  <div style={{ fontWeight: 700, fontSize: "1rem", color: COLORS.text }}>
+                                    {item.name}
+                                  </div>
+                                  {item.basePriceCents > 0 ? (
+                                    <div style={{ color: COLORS.primary, fontSize: "1.1rem", marginTop: 2, fontWeight: 700 }}>
+                                      ${(item.basePriceCents / 100).toFixed(2)}
+                                    </div>
+                                  ) : (
+                                    <div style={{ color: COLORS.primary, fontSize: "1.1rem", marginTop: 2, fontWeight: 700 }}>
+                                      (included)
+                                    </div>
+                                  )}
+                                </div>
+                                {isSelected && (
+                                  <div
+                                    style={{
+                                      position: "absolute",
+                                      top: 8,
+                                      right: 8,
+                                      width: 48,
+                                      height: 48,
+                                      borderRadius: 24,
+                                      background: "rgba(245, 243, 239, 0.5)",
+                                      display: "flex",
+                                      flexDirection: "column",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      gap: 1,
+                                    }}
+                                  >
+                                    <span style={{ fontFamily: '"Ma Shan Zheng", cursive', fontSize: "1.4rem", color: "#C7A878", lineHeight: 1 }}>哦!</span>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C7A878" strokeWidth="3">
+                                      <path d="M20 6L9 17l-5-5" />
+                                    </svg>
+                                  </div>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {/* No Noodles button - centered below the grid */}
+                        {noNoodlesItem && (
+                          <div style={{ display: "flex", justifyContent: "center", marginTop: 12 }}>
+                            <button
+                              onClick={() => onSelectionUpdate(section.id, noNoodlesItem.id)}
+                              style={{
+                                padding: "12px 32px",
+                                background: selections[section.id] === noNoodlesItem.id ? COLORS.primaryDark : COLORS.primary,
+                                border: selections[section.id] === noNoodlesItem.id
+                                  ? `3px solid ${COLORS.primaryDark}`
+                                  : `2px solid ${COLORS.primary}`,
+                                borderRadius: 12,
+                                cursor: "pointer",
+                                transition: "all 0.2s",
+                                opacity: hasSelection && selections[section.id] !== noNoodlesItem.id ? 0.3 : 1,
+                              }}
+                            >
+                              <span style={{ fontSize: "1.2rem", color: COLORS.textOnPrimary, fontWeight: 700 }}>
+                                No Noodles 🚫
+                              </span>
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Step 3: Add-Ons & Sides - side by side layout */}
+          {(() => {
+            const isStep3 = step.title?.toLowerCase().includes("add-on") || step.sections.some(s => s.name.toLowerCase().includes("add-on") && s.selectionMode === "MULTIPLE");
+            if (!isStep3) return null;
+
+            const addOnsSection = step.sections.find(s => s.name.toLowerCase().includes("add-on") || s.name.toLowerCase().includes("addon"));
+            const sidesSection = step.sections.find(s => s.name.toLowerCase().includes("side"));
+
+            if (!addOnsSection && !sidesSection) return null;
+
+            return (
+              <div style={{ display: "flex", gap: 32, marginBottom: 28 }}>
+                {/* Add-Ons Column */}
+                {addOnsSection && addOnsSection.items && (
+                  <div style={{ flex: 1 }}>
+                    <h2 style={{ fontSize: "1.3rem", fontWeight: 700, marginBottom: 8, color: COLORS.text, textAlign: "center" }}>
+                      {addOnsSection.name.replace(/Premium /i, "")}
+                    </h2>
+                    <div style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(2, 1fr)",
+                      gap: 10,
+                    }}>
+                      {addOnsSection.items.map((item) => {
+                        const qty = cart[item.id] || 0;
+                        const imageUrl = MENU_IMAGES[item.name];
+                        const maxQty = addOnsSection.maxQuantity;
+
+                        return (
+                          <div
+                            key={item.id}
+                            onClick={() => {
+                              if (maxQty === undefined || qty < maxQty) {
+                                onCartUpdate(item.id, qty + 1, maxQty);
+                              }
+                            }}
+                            style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              padding: 0,
+                              background: qty > 0 ? COLORS.primaryLight : COLORS.surfaceElevated,
+                              border: qty > 0 ? `3px solid ${COLORS.primary}` : `2px solid ${COLORS.border}`,
+                              borderRadius: 10,
+                              overflow: "hidden",
+                              transition: "all 0.2s",
+                              position: "relative",
+                              cursor: maxQty !== undefined && qty >= maxQty ? "not-allowed" : "pointer",
+                              textAlign: "left",
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: "100%",
+                                aspectRatio: "4 / 3",
+                                background: "#f5f5f5",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                overflow: "hidden",
+                                position: "relative",
+                              }}
+                            >
+                              {imageUrl ? (
+                                <img
+                                  src={imageUrl}
+                                  alt={item.name}
+                                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                />
+                              ) : (
+                                <span style={{ fontSize: "3rem" }}>🍽️</span>
+                              )}
+                              <div style={{ position: "absolute", top: 6, left: 6 }}>
+                                <DietaryBadges
+                                  isVegetarian={item.isVegetarian}
+                                  isVegan={item.isVegan}
+                                  isGlutenFree={item.isGlutenFree}
+                                  spiceLevel={item.spiceLevel}
+                                  size="small"
+                                />
+                              </div>
+                            </div>
+                            {/* Name, price, and qty controls - qty on right side */}
+                            <div style={{ padding: 8, display: "flex", alignItems: "center", width: "100%" }}>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontWeight: 700, fontSize: "1rem", color: COLORS.text }}>{item.name}</div>
+                                {item.basePriceCents > 0 && (
+                                  <div style={{ color: COLORS.primary, fontSize: "1.1rem", marginTop: 2, fontWeight: 700 }}>
+                                    ${(item.basePriceCents / 100).toFixed(2)} <span style={{ fontWeight: 500, fontSize: "0.85rem" }}>each</span>
+                                  </div>
+                                )}
+                              </div>
+                              {/* Qty display with minus button - right side */}
+                              {qty > 0 && (
+                                <div
+                                  style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: "auto", flexShrink: 0 }}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onCartUpdate(item.id, Math.max(0, qty - 1));
+                                    }}
+                                    style={{
+                                      width: 29,
+                                      height: 29,
+                                      borderRadius: 6,
+                                      border: "none",
+                                      background: COLORS.primary,
+                                      color: COLORS.textOnPrimary,
+                                      fontSize: "1.2rem",
+                                      fontWeight: 700,
+                                      cursor: "pointer",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                    }}
+                                  >
+                                    -
+                                  </button>
+                                  <span style={{ fontSize: "1.75rem", fontWeight: 700, color: COLORS.text, minWidth: 24, textAlign: "right" }}>
+                                    {qty}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Side Dishes Column */}
+                {sidesSection && sidesSection.items && (
+                  <div style={{ flex: 1 }}>
+                    <h2 style={{ fontSize: "1.3rem", fontWeight: 700, marginBottom: 8, color: COLORS.text, textAlign: "center" }}>
+                      {sidesSection.name}
+                    </h2>
+                    <div style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(2, 1fr)",
+                      gap: 10,
+                    }}>
+                      {sidesSection.items.map((item) => {
+                        const qty = cart[item.id] || 0;
+                        const imageUrl = MENU_IMAGES[item.name];
+                        const maxQty = sidesSection.maxQuantity;
+
+                        return (
+                          <div
+                            key={item.id}
+                            onClick={() => {
+                              if (maxQty === undefined || qty < maxQty) {
+                                onCartUpdate(item.id, qty + 1, maxQty);
+                              }
+                            }}
+                            style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              padding: 0,
+                              background: qty > 0 ? COLORS.primaryLight : COLORS.surfaceElevated,
+                              border: qty > 0 ? `3px solid ${COLORS.primary}` : `2px solid ${COLORS.border}`,
+                              borderRadius: 10,
+                              overflow: "hidden",
+                              transition: "all 0.2s",
+                              position: "relative",
+                              cursor: maxQty !== undefined && qty >= maxQty ? "not-allowed" : "pointer",
+                              textAlign: "left",
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: "100%",
+                                aspectRatio: "4 / 3",
+                                background: "#f5f5f5",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                overflow: "hidden",
+                                position: "relative",
+                              }}
+                            >
+                              {imageUrl ? (
+                                <img
+                                  src={imageUrl}
+                                  alt={item.name}
+                                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                />
+                              ) : (
+                                <span style={{ fontSize: "3rem" }}>🍽️</span>
+                              )}
+                              <div style={{ position: "absolute", top: 6, left: 6 }}>
+                                <DietaryBadges
+                                  isVegetarian={item.isVegetarian}
+                                  isVegan={item.isVegan}
+                                  isGlutenFree={item.isGlutenFree}
+                                  spiceLevel={item.spiceLevel}
+                                  size="small"
+                                />
+                              </div>
+                            </div>
+                            {/* Name, price, and qty controls - qty on right side */}
+                            <div style={{ padding: 8, display: "flex", alignItems: "center", width: "100%" }}>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontWeight: 700, fontSize: "1rem", color: COLORS.text }}>{item.name}</div>
+                                {item.basePriceCents > 0 && (
+                                  <div style={{ color: COLORS.primary, fontSize: "1.1rem", marginTop: 2, fontWeight: 700 }}>
+                                    ${(item.basePriceCents / 100).toFixed(2)} <span style={{ fontWeight: 500, fontSize: "0.85rem" }}>each</span>
+                                  </div>
+                                )}
+                              </div>
+                              {/* Qty display with minus button - right side */}
+                              {qty > 0 && (
+                                <div
+                                  style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: "auto", flexShrink: 0 }}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onCartUpdate(item.id, Math.max(0, qty - 1));
+                                    }}
+                                    style={{
+                                      width: 29,
+                                      height: 29,
+                                      borderRadius: 6,
+                                      border: "none",
+                                      background: COLORS.primary,
+                                      color: COLORS.textOnPrimary,
+                                      fontSize: "1.2rem",
+                                      fontWeight: 700,
+                                      cursor: "pointer",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                    }}
+                                  >
+                                    -
+                                  </button>
+                                  <span style={{ fontSize: "1.75rem", fontWeight: 700, color: COLORS.text, minWidth: 24, textAlign: "right" }}>
+                                    {qty}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* Step 4: Drinks & Dessert - side by side layout */}
+          {(() => {
+            const isStep4 = isDrinksAndDessertStep;
+            if (!isStep4) return null;
+
+            const beveragesSection = step.sections.find(s =>
+              s.name.toLowerCase().includes("drink") ||
+              s.name.toLowerCase().includes("beverage")
+            );
+            const dessertSection = step.sections.find(s =>
+              s.name.toLowerCase().includes("dessert")
+            );
+
+            if (!beveragesSection && !dessertSection) return null;
+
+            return (
+              <div style={{ display: "flex", gap: 32, marginBottom: 28 }}>
+                {/* Beverages Column */}
+                {beveragesSection && beveragesSection.items && (
+                  <div style={{ flex: 1 }}>
+                    <h2 style={{ fontSize: "1.3rem", fontWeight: 700, marginBottom: 8, color: COLORS.text, textAlign: "center" }}>
+                      {beveragesSection.name} <span style={{ fontWeight: 500, fontSize: "0.9rem", color: COLORS.textMuted }}>(free refills)</span>
+                    </h2>
+                    <div style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(2, 1fr)",
+                      gap: 10,
+                    }}>
+                      {beveragesSection.items.map((item) => {
+                        const qty = cart[item.id] || 0;
+                        const imageUrl = MENU_IMAGES[item.name];
+                        const maxQty = beveragesSection.maxQuantity || 1;
+
+                        return (
+                          <div
+                            key={item.id}
+                            onClick={() => {
+                              if (qty === 0) {
+                                onCartUpdate(item.id, 1, maxQty);
+                              }
+                            }}
+                            style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              padding: 0,
+                              background: qty > 0 ? COLORS.primaryLight : COLORS.surfaceElevated,
+                              border: qty > 0 ? `3px solid ${COLORS.primary}` : `2px solid ${COLORS.border}`,
+                              borderRadius: 10,
+                              overflow: "hidden",
+                              transition: "all 0.2s",
+                              position: "relative",
+                              cursor: qty > 0 ? "default" : "pointer",
+                              textAlign: "left",
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: "100%",
+                                aspectRatio: "4 / 3",
+                                background: "#f5f5f5",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                overflow: "hidden",
+                                position: "relative",
+                              }}
+                            >
+                              {imageUrl ? (
+                                <img
+                                  src={imageUrl}
+                                  alt={item.name}
+                                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                />
+                              ) : (
+                                <span style={{ fontSize: "3rem" }}>🥤</span>
+                              )}
+                              <div style={{ position: "absolute", top: 6, left: 6 }}>
+                                <DietaryBadges
+                                  isVegetarian={item.isVegetarian}
+                                  isVegan={item.isVegan}
+                                  isGlutenFree={item.isGlutenFree}
+                                  spiceLevel={item.spiceLevel}
+                                  size="small"
+                                />
+                              </div>
+                            </div>
+                            {/* Name, price, and qty controls */}
+                            <div style={{ padding: 8, display: "flex", alignItems: "center", width: "100%" }}>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontWeight: 700, fontSize: "1rem", color: COLORS.text }}>{item.name}</div>
+                                <div style={{ color: item.basePriceCents > 0 ? COLORS.primary : COLORS.success, fontSize: "1.1rem", marginTop: 2, fontWeight: 700 }}>
+                                  {item.basePriceCents > 0 ? `$${(item.basePriceCents / 100).toFixed(2)}` : "FREE"}
+                                </div>
+                              </div>
+                              {/* Qty display with minus button - right side */}
+                              {qty > 0 && (
+                                <div
+                                  style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: "auto", flexShrink: 0 }}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onCartUpdate(item.id, 0);
+                                    }}
+                                    style={{
+                                      width: 29,
+                                      height: 29,
+                                      borderRadius: 6,
+                                      border: "none",
+                                      background: COLORS.primary,
+                                      color: COLORS.textOnPrimary,
+                                      fontSize: "1.2rem",
+                                      fontWeight: 700,
+                                      cursor: "pointer",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                    }}
+                                  >
+                                    -
+                                  </button>
+                                  <span style={{ fontSize: "1.75rem", fontWeight: 700, color: COLORS.text, minWidth: 24, textAlign: "right" }}>
+                                    {qty}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Dessert Column */}
+                {dessertSection && dessertSection.items && (
+                  <div style={{ flex: 1, borderLeft: `2px solid ${COLORS.border}`, paddingLeft: 32 }}>
+                    <h2 style={{ fontSize: "1.3rem", fontWeight: 700, marginBottom: 8, color: COLORS.text, textAlign: "center" }}>
+                      {dessertSection.name} <span style={{ fontWeight: 500, fontSize: "0.9rem", color: COLORS.textMuted }}>(free)</span>
+                    </h2>
+                    <div style={{
+                      display: "flex",
+                      justifyContent: "center",
+                    }}>
+                      {dessertSection.items.map((item) => {
+                        const qty = cart[item.id] || 0;
+                        const imageUrl = MENU_IMAGES[item.name];
+                        const maxQty = dessertSection.maxQuantity || 1;
+
+                        return (
+                          <div
+                            key={item.id}
+                            onClick={() => {
+                              if (qty === 0) {
+                                onCartUpdate(item.id, 1, maxQty);
+                              }
+                            }}
+                            style={{
+                              display: "flex",
+                              flexDirection: "column",
+                              padding: 0,
+                              background: qty > 0 ? COLORS.primaryLight : COLORS.surfaceElevated,
+                              border: qty > 0 ? `3px solid ${COLORS.primary}` : `2px solid ${COLORS.border}`,
+                              borderRadius: 10,
+                              overflow: "hidden",
+                              transition: "all 0.2s",
+                              position: "relative",
+                              cursor: qty > 0 ? "default" : "pointer",
+                              textAlign: "left",
+                              width: "calc(50% - 5px)",
+                            }}
+                          >
+                            <div
+                              style={{
+                                width: "100%",
+                                aspectRatio: "4 / 3",
+                                background: "#f5f5f5",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                overflow: "hidden",
+                                position: "relative",
+                              }}
+                            >
+                              {imageUrl ? (
+                                <img
+                                  src={imageUrl}
+                                  alt={item.name}
+                                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                />
+                              ) : (
+                                <span style={{ fontSize: "3rem" }}>🍨</span>
+                              )}
+                              <div style={{ position: "absolute", top: 6, left: 6 }}>
+                                <DietaryBadges
+                                  isVegetarian={item.isVegetarian}
+                                  isVegan={item.isVegan}
+                                  isGlutenFree={item.isGlutenFree}
+                                  spiceLevel={item.spiceLevel}
+                                  size="small"
+                                />
+                              </div>
+                            </div>
+                            {/* Name, price, and qty controls */}
+                            <div style={{ padding: 8, display: "flex", alignItems: "center", width: "100%" }}>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontWeight: 700, fontSize: "1rem", color: COLORS.text }}>{item.name}</div>
+                                <div style={{ color: item.basePriceCents > 0 ? COLORS.primary : COLORS.success, fontSize: "1.1rem", marginTop: 2, fontWeight: 700 }}>
+                                  {item.basePriceCents > 0 ? `$${(item.basePriceCents / 100).toFixed(2)}` : "FREE"}
+                                </div>
+                              </div>
+                              {/* Qty display with minus button - right side */}
+                              {qty > 0 && (
+                                <div
+                                  style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: "auto", flexShrink: 0 }}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onCartUpdate(item.id, 0);
+                                    }}
+                                    style={{
+                                      width: 29,
+                                      height: 29,
+                                      borderRadius: 6,
+                                      border: "none",
+                                      background: COLORS.primary,
+                                      color: COLORS.textOnPrimary,
+                                      fontSize: "1.2rem",
+                                      fontWeight: 700,
+                                      cursor: "pointer",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                    }}
+                                  >
+                                    -
+                                  </button>
+                                  <span style={{ fontSize: "1.75rem", fontWeight: 700, color: COLORS.text, minWidth: 24, textAlign: "right" }}>
+                                    {qty}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* Check if this is a slider-only step (Customize Your Bowl) */}
+          {(() => {
+            // Check if Step 3 (Add-Ons & Sides) - handled by special layout above
+            const isStep3 = step.title?.toLowerCase().includes("add-on") || step.sections.some(s => s.name.toLowerCase().includes("add-on") && s.selectionMode === "MULTIPLE");
+
+            // Filter out sections handled by special layouts
+            const filteredSections = step.sections.filter(section => {
+              // Skip Step 1 required SINGLE sections (handled above)
+              if (isStep1 && section.required && section.selectionMode === "SINGLE") return false;
+              // Skip Step 3 Add-Ons and Sides sections (handled above)
+              if (isStep3 && (section.name.toLowerCase().includes("add-on") || section.name.toLowerCase().includes("addon") || section.name.toLowerCase().includes("side"))) return false;
+              // Skip Step 4 Drinks and Dessert sections (handled above)
+              if (isDrinksAndDessertStep && (section.name.toLowerCase().includes("drink") || section.name.toLowerCase().includes("beverage") || section.name.toLowerCase().includes("dessert"))) return false;
+              return true;
+            });
+            const allSliders = filteredSections.every(s => s.selectionMode === "SLIDER");
+            const sliderSections = filteredSections.filter(s => s.selectionMode === "SLIDER");
+            const nonSliderSections = filteredSections.filter(s => s.selectionMode !== "SLIDER");
+
+            return (
+              <>
+                {/* Render sliders in 2-column grid if all sections are sliders */}
+                {allSliders && sliderSections.length > 0 && (
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(2, 1fr)",
+                      gap: 12,
+                    }}
+                  >
+                    {sliderSections.map((section) => (
+                      <div key={section.id} id={`section-${section.item?.id || section.id}`}>
+                        {section.selectionMode === "SLIDER" && section.item && section.sliderConfig && (() => {
+                          const sliderName = section.name.toLowerCase();
+                          const itemName = section.item!.name.toLowerCase();
+                          const sliderValue = cart[section.item!.id] || 0;
+
+                          // Spice Level - Progressive red
+                          const isSpiceSlider = sliderName.includes("spice");
+                          const spiceColors = [
+                            null,
+                            "rgba(244, 114, 182, 0.6)",
+                            "rgba(239, 68, 68, 0.7)",
+                            "rgba(220, 38, 38, 0.85)",
+                            "rgba(185, 28, 28, 1)",
+                          ];
+
+                          // Soup Richness - Progressive deep brown
+                          const isRichnessSlider = sliderName.includes("richness") || sliderName.includes("broth");
+                          const richnessColors = [
+                            "rgba(139, 90, 43, 0.4)",    // Light - subtle brown
+                            "rgba(120, 70, 30, 0.6)",    // Medium - moderate brown
+                            "rgba(101, 55, 20, 0.85)",   // Rich - deeper brown
+                            "rgba(75, 40, 10, 1)",       // Extra Rich - deep dark brown
+                          ];
+
+                          // Noodle Texture - Tan colors (Firm=bold, Medium=normal, Soft=light)
+                          const isTextureSlider = sliderName.includes("texture") || sliderName.includes("noodle texture");
+                          const textureColors = [
+                            "rgba(139, 90, 43, 0.85)",  // Firm - bold tan
+                            "rgba(160, 120, 70, 0.6)",  // Medium - normal tan
+                            "rgba(180, 150, 100, 0.4)", // Soft - light tan
+                          ];
+
+                          // Vegetables - Deep green
+                          const isVegetableSlider = ["bok choy", "green onion", "sprout", "cilantro", "pickled green"].some(
+                            veg => itemName.includes(veg)
+                          );
+                          const vegetableColors = [
+                            null,                        // None
+                            "rgba(34, 139, 34, 0.5)",    // Light amount
+                            "rgba(34, 139, 34, 0.7)",    // Medium amount
+                            "rgba(22, 101, 52, 0.85)",   // More
+                            "rgba(20, 83, 45, 1)",       // Extra
+                          ];
+
+                          // Determine border color and width based on slider type
+                          let borderColor: string | null = null;
+                          let borderWidth = 2;
+                          let glowColor: string | null = null;
+                          let glowSize = 0;
+
+                          if (isSpiceSlider && sliderValue > 0) {
+                            borderColor = spiceColors[sliderValue];
+                            borderWidth = sliderValue === 4 ? 4 : sliderValue >= 2 ? 3 : 2;
+                            if (sliderValue >= 2) {
+                              glowColor = spiceColors[sliderValue];
+                              glowSize = sliderValue >= 3 ? 12 : 6;
+                            }
+                          } else if (isRichnessSlider) {
+                            borderColor = richnessColors[sliderValue];
+                            borderWidth = sliderValue >= 3 ? 4 : sliderValue >= 2 ? 3 : 2;
+                            if (sliderValue >= 2) {
+                              glowColor = richnessColors[sliderValue];
+                              glowSize = sliderValue >= 3 ? 10 : 5;
+                            }
+                          } else if (isTextureSlider) {
+                            borderColor = textureColors[sliderValue];
+                            borderWidth = sliderValue === 0 ? 3 : 2; // Firm gets bolder border
+                            if (sliderValue === 0) {
+                              glowColor = textureColors[0];
+                              glowSize = 6;
+                            }
+                          } else if (isVegetableSlider && sliderValue > 0) {
+                            borderColor = vegetableColors[sliderValue];
+                            borderWidth = sliderValue >= 3 ? 3 : 2;
+                            if (sliderValue >= 2) {
+                              glowColor = vegetableColors[sliderValue];
+                              glowSize = sliderValue >= 3 ? 8 : 4;
+                            }
+                          }
+
+                          return (
+                            <div
+                              style={{
+                                background: COLORS.surfaceElevated,
+                                borderRadius: 10,
+                                border: borderColor
+                                  ? `${borderWidth}px solid ${borderColor}`
+                                  : `2px solid ${COLORS.border}`,
+                                boxShadow: glowColor && glowSize > 0
+                                  ? `0 0 ${glowSize}px ${glowColor}`
+                                  : undefined,
+                                padding: 12,
+                                transition: "all 0.3s ease",
+                              }}
+                            >
+                              {/* Compact header with name */}
+                              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                                <span style={{ fontWeight: 600, fontSize: "0.95rem", color: COLORS.text }}>{section.item.name}</span>
+                                <DietaryBadges
+                                  isVegetarian={section.item.isVegetarian}
+                                  isVegan={section.item.isVegan}
+                                  isGlutenFree={section.item.isGlutenFree}
+                                  spiceLevel={section.item.spiceLevel}
+                                  size="small"
+                                />
+                              </div>
+
+                              {/* Compact slider */}
+                              <div style={{ paddingLeft: 8, paddingRight: 8 }}>
+                                <input
+                                  type="range"
+                                  className="kiosk-slider"
+                                  min={section.sliderConfig.min || 0}
+                                  max={section.sliderConfig.max || 3}
+                                  value={cart[section.item.id] || 0}
+                                  onChange={(e) => {
+                                    const val = parseInt(e.target.value);
+                                    const labels = section.sliderConfig.labels || [];
+                                    handleSliderChange(section.item!.id, val, labels, section.sliderConfig.default ?? 0);
+                                  }}
+                                  style={{ width: "100%", height: 8, cursor: "pointer" }}
+                                />
+                              </div>
+
+                              {/* Compact labels */}
+                              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, paddingLeft: 8, paddingRight: 8 }}>
+                                {section.sliderConfig.labels?.map((label: string, i: number) => {
+                                  const isDefault = i === (section.sliderConfig.default ?? 0);
+                                  const isSelected = cart[section.item!.id] === i;
+                                  return (
+                                    <span
+                                      key={i}
+                                      style={{
+                                        fontSize: "0.75rem",
+                                        color: isSelected ? COLORS.primary : COLORS.textMuted,
+                                        fontWeight: isSelected ? 700 : 500,
+                                        padding: isDefault ? "2px 6px" : undefined,
+                                        border: isDefault ? `1.5px dashed ${COLORS.primary}` : undefined,
+                                        borderRadius: isDefault ? 4 : undefined,
+                                        whiteSpace: "nowrap",
+                                      }}
+                                    >
+                                      {label}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Render non-slider sections normally */}
+                {nonSliderSections.map((section) => (
+                  <div
+                    key={section.id}
+                    id={`section-${section.item?.id || section.id}`}
+                    style={{ marginBottom: 28 }}
+                  >
+                    <h2 style={{ fontSize: "1.4rem", fontWeight: 700, marginBottom: 4, color: COLORS.text }}>
+                      {section.name
+                        .replace(/Premium Add-?[Oo]ns/i, "Add-Ons")
+                        .replace("Choose Your Noodles", "Choose Your Noodle Style")}
+                      {section.required && (
+                        <span style={{ color: COLORS.primary, marginLeft: 8, fontSize: "0.9rem", fontWeight: 600 }}>
+                          Required
+                        </span>
+                      )}
+                    </h2>
+                    {section.description && (
+                      <p style={{ color: COLORS.textMuted, marginBottom: 10, marginTop: 0, fontSize: "0.9rem", lineHeight: 1.3 }}>
+                        {section.description.includes("recommend") ? (
+                          <>
+                            {section.description.split(/\b(Light|Medium|Rich|Extra Rich|Firm|Soft|None|Mild|Spicy|Extra Spicy)\b/).map((part, i) =>
+                              ["Light", "Medium", "Rich", "Extra Rich", "Firm", "Soft", "None", "Mild", "Spicy", "Extra Spicy"].includes(part) ? (
+                                <strong key={i} style={{ color: COLORS.primary }}>{part}</strong>
+                              ) : (
+                                <span key={i}>{part}</span>
+                              )
+                            )}
+                          </>
+                        ) : (
+                          section.description
+                        )}
+                      </p>
+                    )}
 
               {/* Radio selection mode with images - compact cards */}
               {section.selectionMode === "SINGLE" && section.items && (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 350px))", gap: 12 }}>
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(300px, 350px))",
+                  gap: 12,
+                }}>
                   {section.items.map((item) => {
                     const isSelected = selections[section.id] === item.id;
                     const hasSelection = !!selections[section.id];
@@ -1095,6 +2233,7 @@ function MenuView({
                               alignItems: "center",
                               justifyContent: "center",
                               overflow: "hidden",
+                              position: "relative",
                             }}
                           >
                             <img
@@ -1106,45 +2245,32 @@ function MenuView({
                                 objectFit: "cover",
                               }}
                             />
+                            {/* Dietary badges - top left */}
+                            <div style={{ position: "absolute", top: 8, left: 8 }}>
+                              <DietaryBadges
+                                isVegetarian={item.isVegetarian}
+                                isVegan={item.isVegan}
+                                isGlutenFree={item.isGlutenFree}
+                                spiceLevel={item.spiceLevel}
+                                size="normal"
+                              />
+                            </div>
                           </div>
                         ) : isNoNoodles ? (
-                          // Creative "No Noodles" display
+                          // Olive "No Noodles" button
                           <div
                             style={{
                               width: "100%",
                               aspectRatio: "1 / 1",
-                              background: "linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%)",
+                              background: "#6B8E23",
                               display: "flex",
                               flexDirection: "column",
                               alignItems: "center",
                               justifyContent: "center",
-                              gap: 4,
                             }}
                           >
-                            <div style={{ fontSize: "3rem", opacity: 0.6 }}>🍜</div>
-                            <div
-                              style={{
-                                position: "absolute",
-                                width: 70,
-                                height: 70,
-                                border: `3px solid ${COLORS.error}`,
-                                borderRadius: "50%",
-                                transform: "rotate(-45deg)",
-                              }}
-                            >
-                              <div
-                                style={{
-                                  position: "absolute",
-                                  top: "50%",
-                                  left: "-5%",
-                                  width: "110%",
-                                  height: 3,
-                                  background: COLORS.error,
-                                }}
-                              />
-                            </div>
-                            <span style={{ fontSize: "0.9rem", color: COLORS.textMuted, marginTop: 12 }}>
-                              Just broth & toppings
+                            <span style={{ fontSize: "1.8rem", color: "#fff", fontWeight: 700, textAlign: "center" }}>
+                              No Noodles 🚫
                             </span>
                           </div>
                         ) : (
@@ -1156,9 +2282,20 @@ function MenuView({
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
+                              position: "relative",
                             }}
                           >
                             <span style={{ fontSize: "4rem" }}>🍜</span>
+                            {/* Dietary badges - top left */}
+                            <div style={{ position: "absolute", top: 8, left: 8 }}>
+                              <DietaryBadges
+                                isVegetarian={item.isVegetarian}
+                                isVegan={item.isVegan}
+                                isGlutenFree={item.isGlutenFree}
+                                spiceLevel={item.spiceLevel}
+                                size="normal"
+                              />
+                            </div>
                           </div>
                         )}
                         <div style={{ padding: 12 }}>
@@ -1200,134 +2337,336 @@ function MenuView({
                 </div>
               )}
 
-              {/* Multiple selection mode with images and prices - compact cards */}
-              {section.selectionMode === "MULTIPLE" && section.items && (
-                <div style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(300px, 350px))",
-                  gap: 12,
-                }}>
-                  {section.items.map((item) => {
-                    const qty = cart[item.id] || 0;
-                    const imageUrl = MENU_IMAGES[item.name];
-                    const maxQty = section.maxQuantity;
-                    const itemPrice = calculateItemPrice(item, qty);
-                    const isComplimentary = item.basePriceCents === 0 && item.additionalPriceCents === 0;
-                    const isDessert = item.category?.toLowerCase() === "dessert" || section.name.toLowerCase().includes("dessert");
+              {/* Multiple selection mode with images and prices */}
+              {section.selectionMode === "MULTIPLE" && section.items && (() => {
+                const isAddOnsSection = section.name.toLowerCase().includes("add-on") || section.name.toLowerCase().includes("addon");
+                const isSidesSection = section.name.toLowerCase().includes("side");
+                const isStep3Style = isAddOnsSection || isSidesSection;
 
-                    return (
-                      <div
-                        key={item.id}
-                        style={{
-                          display: "flex",
-                          flexDirection: "column",
-                          background: qty > 0 ? COLORS.primaryLight : COLORS.surfaceElevated,
-                          border: qty > 0 ? `3px solid ${COLORS.primary}` : `2px solid ${COLORS.border}`,
-                          borderRadius: 12,
-                          overflow: "hidden",
-                          transition: "all 0.2s",
-                        }}
-                      >
-                        {imageUrl ? (
+                // Use fixed 2-column grid for Add-Ons & Sides (Step 3 style)
+                const gridColumns = isStep3Style ? "repeat(2, 1fr)" : "repeat(auto-fill, minmax(300px, 350px))";
+
+                return (
+                  <div style={{
+                    display: "grid",
+                    gridTemplateColumns: gridColumns,
+                    gap: 12,
+                  }}>
+                    {section.items.map((item) => {
+                      const qty = cart[item.id] || 0;
+                      const imageUrl = MENU_IMAGES[item.name];
+                      const maxQty = section.maxQuantity;
+                      const itemPrice = calculateItemPrice(item, qty);
+                      const isComplimentary = item.basePriceCents === 0 && item.additionalPriceCents === 0;
+                      const isDessert = item.category?.toLowerCase() === "dessert" || section.name.toLowerCase().includes("dessert");
+
+                      // Step 3 style - simpler cards matching Step 1
+                      if (isStep3Style) {
+                        return (
                           <div
+                            key={item.id}
                             style={{
-                              width: "100%",
-                              aspectRatio: "1 / 1",
-                              background: "#f5f5f5",
                               display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
+                              flexDirection: "column",
+                              background: qty > 0 ? COLORS.primaryLight : COLORS.surfaceElevated,
+                              border: qty > 0 ? `3px solid ${COLORS.primary}` : `2px solid ${COLORS.border}`,
+                              borderRadius: 12,
                               overflow: "hidden",
+                              transition: "all 0.2s",
+                              position: "relative",
                             }}
                           >
-                            <img
-                              src={imageUrl}
-                              alt={item.name}
-                              style={{
-                                width: "100%",
-                                height: "100%",
-                                objectFit: "cover",
-                              }}
-                            />
-                          </div>
-                        ) : (
-                          <div
-                            style={{
-                              width: "100%",
-                              aspectRatio: "1 / 1",
-                              background: "#f5f5f5",
+                            {imageUrl ? (
+                              <div
+                                style={{
+                                  width: "100%",
+                                  aspectRatio: "1 / 1",
+                                  background: "#f5f5f5",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  overflow: "hidden",
+                                  position: "relative",
+                                }}
+                              >
+                                <img
+                                  src={imageUrl}
+                                  alt={item.name}
+                                  style={{
+                                    width: "100%",
+                                    height: "100%",
+                                    objectFit: "cover",
+                                  }}
+                                />
+                                {/* Dietary badges - top left */}
+                                <div style={{ position: "absolute", top: 8, left: 8 }}>
+                                  <DietaryBadges
+                                    isVegetarian={item.isVegetarian}
+                                    isVegan={item.isVegan}
+                                    isGlutenFree={item.isGlutenFree}
+                                    spiceLevel={item.spiceLevel}
+                                    size="normal"
+                                  />
+                                </div>
+                              </div>
+                            ) : (
+                              <div
+                                style={{
+                                  width: "100%",
+                                  aspectRatio: "1 / 1",
+                                  background: "#f5f5f5",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  position: "relative",
+                                }}
+                              >
+                                <span style={{ fontSize: "4rem" }}>🍽️</span>
+                                <div style={{ position: "absolute", top: 8, left: 8 }}>
+                                  <DietaryBadges
+                                    isVegetarian={item.isVegetarian}
+                                    isVegan={item.isVegan}
+                                    isGlutenFree={item.isGlutenFree}
+                                    spiceLevel={item.spiceLevel}
+                                    size="normal"
+                                  />
+                                </div>
+                              </div>
+                            )}
+                            <div style={{ padding: 12 }}>
+                              <div style={{ fontWeight: 700, fontSize: "1.15rem", color: COLORS.text }}>
+                                {item.name}
+                              </div>
+                              {item.basePriceCents > 0 && (
+                                <div style={{ color: COLORS.primary, fontSize: "1rem", marginTop: 3, fontWeight: 700 }}>
+                                  ${(item.basePriceCents / 100).toFixed(2)}
+                                </div>
+                              )}
+                            </div>
+                            {/* Quantity controls overlay at bottom */}
+                            <div style={{
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
-                            }}
-                          >
-                            <span style={{ fontSize: "4rem" }}>
-                              {item.name.toLowerCase().includes("drink") ? "🥤" :
-                               item.name.toLowerCase().includes("tea") ? "🍵" :
-                               item.name.toLowerCase().includes("water") ? "💧" : "🍽️"}
-                            </span>
+                              gap: 12,
+                              padding: "8px 12px 12px",
+                              borderTop: `1px solid ${COLORS.border}`,
+                            }}>
+                              <button
+                                onClick={() => onCartUpdate(item.id, Math.max(0, qty - 1))}
+                                style={{
+                                  width: 44,
+                                  height: 44,
+                                  borderRadius: 10,
+                                  border: "none",
+                                  background: qty > 0 ? COLORS.primary : COLORS.border,
+                                  color: qty > 0 ? COLORS.textOnPrimary : COLORS.textMuted,
+                                  fontSize: "1.5rem",
+                                  fontWeight: 700,
+                                  cursor: "pointer",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                }}
+                              >
+                                -
+                              </button>
+                              <span
+                                style={{
+                                  minWidth: 36,
+                                  textAlign: "center",
+                                  fontSize: "1.5rem",
+                                  fontWeight: 700,
+                                  color: COLORS.text,
+                                }}
+                              >
+                                {qty}
+                              </span>
+                              <button
+                                onClick={() => onCartUpdate(item.id, qty + 1, maxQty)}
+                                disabled={maxQty !== undefined && qty >= maxQty}
+                                style={{
+                                  width: 44,
+                                  height: 44,
+                                  borderRadius: 10,
+                                  border: "none",
+                                  background: maxQty !== undefined && qty >= maxQty ? COLORS.border : COLORS.primary,
+                                  color: maxQty !== undefined && qty >= maxQty ? COLORS.textMuted : COLORS.textOnPrimary,
+                                  fontSize: "1.5rem",
+                                  fontWeight: 700,
+                                  cursor: maxQty !== undefined && qty >= maxQty ? "not-allowed" : "pointer",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                }}
+                              >
+                                +
+                              </button>
+                            </div>
+                            {/* Selection indicator when qty > 0 */}
+                            {qty > 0 && (
+                              <div
+                                style={{
+                                  position: "absolute",
+                                  top: 12,
+                                  right: 12,
+                                  width: 72,
+                                  height: 72,
+                                  borderRadius: 36,
+                                  background: "rgba(245, 243, 239, 0.5)",
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  gap: 2,
+                                }}
+                              >
+                                <span style={{ fontFamily: '"Ma Shan Zheng", cursive', fontSize: "2rem", color: "#C7A878", lineHeight: 1 }}>哦!</span>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C7A878" strokeWidth="3">
+                                  <path d="M20 6L9 17l-5-5" />
+                                </svg>
+                              </div>
+                            )}
                           </div>
-                        )}
+                        );
+                      }
+
+                      // Default style for other MULTIPLE sections (Drinks & Desserts)
+                      return (
                         <div
+                          key={item.id}
                           style={{
-                            padding: 10,
                             display: "flex",
                             flexDirection: "column",
-                            gap: 6,
+                            background: qty > 0 ? COLORS.primaryLight : COLORS.surfaceElevated,
+                            border: qty > 0 ? `3px solid ${COLORS.primary}` : `2px solid ${COLORS.border}`,
+                            borderRadius: 12,
+                            overflow: "hidden",
+                            transition: "all 0.2s",
                           }}
                         >
-                          <div>
-                            <div style={{ fontWeight: 700, color: COLORS.text, fontSize: "1rem" }}>{item.name}</div>
-                            {/* Show price for all items in drinks & dessert */}
-                            {isDrinksAndDessertStep || item.basePriceCents > 0 || item.additionalPriceCents > 0 ? (
-                              <div style={{ color: isDessert && isComplimentary ? COLORS.success : COLORS.primary, fontSize: "0.85rem", fontWeight: 600, marginTop: 2 }}>
-                                {isDessert && isComplimentary ? (
-                                  "Complimentary - $0.00"
-                                ) : item.includedQuantity > 0 ? (
-                                  <>
-                                    <span style={{ color: COLORS.success }}>{item.includedQuantity} included</span>
-                                    {item.additionalPriceCents > 0 && (
-                                      <span style={{ color: COLORS.textMuted }}> • +${(item.additionalPriceCents / 100).toFixed(2)} each extra</span>
-                                    )}
-                                  </>
-                                ) : (
-                                  `$${(item.basePriceCents / 100).toFixed(2)}${item.additionalPriceCents > 0 ? ` (+$${(item.additionalPriceCents / 100).toFixed(2)} each)` : ""}`
-                                )}
-                              </div>
-                            ) : null}
-                          </div>
-                          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16 }}>
-                            <button
-                              onClick={() => onCartUpdate(item.id, Math.max(0, qty - 1))}
+                          {imageUrl ? (
+                            <div
                               style={{
-                                width: 52,
-                                height: 52,
-                                borderRadius: 12,
-                                border: "none",
-                                background: qty > 0 ? COLORS.primary : COLORS.border,
-                                color: qty > 0 ? COLORS.textOnPrimary : COLORS.textMuted,
-                                fontSize: "1.75rem",
-                                fontWeight: 700,
-                                cursor: "pointer",
+                                width: "100%",
+                                aspectRatio: "1 / 1",
+                                background: "#f5f5f5",
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
+                                overflow: "hidden",
+                                position: "relative",
                               }}
                             >
-                              -
-                            </button>
-                            <span
+                              <img
+                                src={imageUrl}
+                                alt={item.name}
+                                style={{
+                                  width: "100%",
+                                  height: "100%",
+                                  objectFit: "cover",
+                                }}
+                              />
+                              {/* Dietary badges - top left */}
+                              <div style={{ position: "absolute", top: 8, left: 8 }}>
+                                <DietaryBadges
+                                  isVegetarian={item.isVegetarian}
+                                  isVegan={item.isVegan}
+                                  isGlutenFree={item.isGlutenFree}
+                                  spiceLevel={item.spiceLevel}
+                                  size="normal"
+                                />
+                              </div>
+                            </div>
+                          ) : (
+                            <div
                               style={{
-                                minWidth: 44,
-                                textAlign: "center",
-                                fontSize: "1.75rem",
-                                fontWeight: 700,
-                                color: COLORS.text,
+                                width: "100%",
+                                aspectRatio: "1 / 1",
+                                background: "#f5f5f5",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                position: "relative",
                               }}
                             >
-                              {qty}
-                            </span>
-                            <button
+                              <span style={{ fontSize: "4rem" }}>
+                                {item.name.toLowerCase().includes("drink") ? "🥤" :
+                                 item.name.toLowerCase().includes("tea") ? "🍵" :
+                                 item.name.toLowerCase().includes("water") ? "💧" : "🍽️"}
+                              </span>
+                              {/* Dietary badges - top left (for items without images) */}
+                              <div style={{ position: "absolute", top: 8, left: 8 }}>
+                                <DietaryBadges
+                                  isVegetarian={item.isVegetarian}
+                                  isVegan={item.isVegan}
+                                  isGlutenFree={item.isGlutenFree}
+                                  spiceLevel={item.spiceLevel}
+                                  size="normal"
+                                />
+                              </div>
+                            </div>
+                          )}
+                          <div
+                            style={{
+                              padding: 10,
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: 6,
+                            }}
+                          >
+                            <div>
+                              <div style={{ fontWeight: 700, color: COLORS.text, fontSize: "1rem" }}>{item.name}</div>
+                              {/* Show price for all items in drinks & dessert */}
+                              {isDrinksAndDessertStep || item.basePriceCents > 0 || item.additionalPriceCents > 0 ? (
+                                <div style={{ color: isDessert && isComplimentary ? COLORS.success : COLORS.primary, fontSize: "0.85rem", fontWeight: 600, marginTop: 2 }}>
+                                  {isDessert && isComplimentary ? (
+                                    "Complimentary - $0.00"
+                                  ) : item.includedQuantity > 0 ? (
+                                    <>
+                                      <span style={{ color: COLORS.success }}>{item.includedQuantity} included</span>
+                                      {item.additionalPriceCents > 0 && (
+                                        <span style={{ color: COLORS.textMuted }}> • +${(item.additionalPriceCents / 100).toFixed(2)} each extra</span>
+                                      )}
+                                    </>
+                                  ) : (
+                                    `$${(item.basePriceCents / 100).toFixed(2)}${item.additionalPriceCents > 0 ? ` (+$${(item.additionalPriceCents / 100).toFixed(2)} each)` : ""}`
+                                  )}
+                                </div>
+                              ) : null}
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16 }}>
+                              <button
+                                onClick={() => onCartUpdate(item.id, Math.max(0, qty - 1))}
+                                style={{
+                                  width: 52,
+                                  height: 52,
+                                  borderRadius: 12,
+                                  border: "none",
+                                  background: qty > 0 ? COLORS.primary : COLORS.border,
+                                  color: qty > 0 ? COLORS.textOnPrimary : COLORS.textMuted,
+                                  fontSize: "1.75rem",
+                                  fontWeight: 700,
+                                  cursor: "pointer",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                }}
+                              >
+                                -
+                              </button>
+                              <span
+                                style={{
+                                  minWidth: 44,
+                                  textAlign: "center",
+                                  fontSize: "1.75rem",
+                                  fontWeight: 700,
+                                  color: COLORS.text,
+                                }}
+                              >
+                                {qty}
+                              </span>
+                              <button
                               onClick={() => onCartUpdate(item.id, qty + 1, maxQty)}
                               disabled={maxQty !== undefined && qty >= maxQty}
                               style={{
@@ -1351,19 +2690,106 @@ function MenuView({
                         </div>
                       </div>
                     );
-                  })}
-                </div>
-              )}
+                    })}
+                  </div>
+                );
+              })()}
 
               {/* Slider mode with image and "Our Suggestion" indicator */}
-              {section.selectionMode === "SLIDER" && section.item && section.sliderConfig && (
+              {section.selectionMode === "SLIDER" && section.item && section.sliderConfig && (() => {
+                const sliderName = section.name.toLowerCase();
+                const itemName = section.item!.name.toLowerCase();
+                const sliderValue = cart[section.item!.id] || 0;
+
+                // Spice Level - Progressive red
+                const isSpiceSlider = sliderName.includes("spice");
+                const spiceColors = [
+                  null,
+                  "rgba(244, 114, 182, 0.6)",
+                  "rgba(239, 68, 68, 0.7)",
+                  "rgba(220, 38, 38, 0.85)",
+                  "rgba(185, 28, 28, 1)",
+                ];
+
+                // Soup Richness - Progressive deep brown
+                const isRichnessSlider = sliderName.includes("richness") || sliderName.includes("broth");
+                const richnessColors = [
+                  "rgba(139, 90, 43, 0.4)",
+                  "rgba(120, 70, 30, 0.6)",
+                  "rgba(101, 55, 20, 0.85)",
+                  "rgba(75, 40, 10, 1)",
+                ];
+
+                // Noodle Texture - Tan colors
+                const isTextureSlider = sliderName.includes("texture") || sliderName.includes("noodle texture");
+                const textureColors = [
+                  "rgba(139, 90, 43, 0.85)",
+                  "rgba(160, 120, 70, 0.6)",
+                  "rgba(180, 150, 100, 0.4)",
+                ];
+
+                // Vegetables - Deep green
+                const isVegetableSlider = ["bok choy", "green onion", "sprout", "cilantro", "pickled green"].some(
+                  veg => itemName.includes(veg)
+                );
+                const vegetableColors = [
+                  null,
+                  "rgba(34, 139, 34, 0.5)",
+                  "rgba(34, 139, 34, 0.7)",
+                  "rgba(22, 101, 52, 0.85)",
+                  "rgba(20, 83, 45, 1)",
+                ];
+
+                // Determine border color and width based on slider type
+                let borderColor: string | null = null;
+                let borderWidth = 2;
+                let glowColor: string | null = null;
+                let glowSize = 0;
+
+                if (isSpiceSlider && sliderValue > 0) {
+                  borderColor = spiceColors[sliderValue];
+                  borderWidth = sliderValue === 4 ? 4 : sliderValue >= 2 ? 3 : 2;
+                  if (sliderValue >= 2) {
+                    glowColor = spiceColors[sliderValue];
+                    glowSize = sliderValue >= 3 ? 16 : 8;
+                  }
+                } else if (isRichnessSlider) {
+                  borderColor = richnessColors[sliderValue];
+                  borderWidth = sliderValue >= 3 ? 4 : sliderValue >= 2 ? 3 : 2;
+                  if (sliderValue >= 2) {
+                    glowColor = richnessColors[sliderValue];
+                    glowSize = sliderValue >= 3 ? 12 : 6;
+                  }
+                } else if (isTextureSlider) {
+                  borderColor = textureColors[sliderValue];
+                  borderWidth = sliderValue === 0 ? 3 : 2;
+                  if (sliderValue === 0) {
+                    glowColor = textureColors[0];
+                    glowSize = 8;
+                  }
+                } else if (isVegetableSlider && sliderValue > 0) {
+                  borderColor = vegetableColors[sliderValue];
+                  borderWidth = sliderValue >= 3 ? 3 : 2;
+                  if (sliderValue >= 2) {
+                    glowColor = vegetableColors[sliderValue];
+                    glowSize = sliderValue >= 3 ? 10 : 5;
+                  }
+                }
+
+                return (
                 <div
                   style={{
                     background: COLORS.surfaceElevated,
                     borderRadius: 12,
-                    border: `2px solid ${COLORS.border}`,
+                    border: borderColor
+                      ? `${borderWidth}px solid ${borderColor}`
+                      : `2px solid ${COLORS.border}`,
+                    boxShadow: glowColor && glowSize > 0
+                      ? `0 0 ${glowSize}px ${glowColor}`
+                      : undefined,
                     display: "flex",
                     overflow: "hidden",
+                    transition: "all 0.3s ease",
                   }}
                 >
                   {/* Image on left */}
@@ -1394,27 +2820,15 @@ function MenuView({
 
                   {/* Content on right */}
                   <div style={{ flex: 1, padding: 14 }}>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        marginBottom: 10,
-                      }}
-                    >
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
                       <span style={{ fontWeight: 600, color: COLORS.text }}>{section.item.name}</span>
-                      <span
-                        style={{
-                          padding: "5px 14px",
-                          background: COLORS.primaryDark,
-                          borderRadius: 16,
-                          fontWeight: 700,
-                          color: COLORS.textOnPrimary,
-                          fontSize: "0.9rem",
-                        }}
-                      >
-                        {sliderLabels[section.item.id] || "Not set"}
-                      </span>
+                      <DietaryBadges
+                        isVegetarian={section.item.isVegetarian}
+                        isVegan={section.item.isVegan}
+                        isGlutenFree={section.item.isGlutenFree}
+                        spiceLevel={section.item.spiceLevel}
+                        size="small"
+                      />
                     </div>
 
                     {/* Slider with padding to keep labels within bounds */}
@@ -1482,9 +2896,13 @@ function MenuView({
                     </div>
                   </div>
                 </div>
-              )}
+                );
+              })()}
             </div>
           ))}
+              </>
+            );
+          })()}
         </div>
       </div>
 
@@ -1605,27 +3023,30 @@ function MenuView({
           left: 0,
           right: 0,
           padding: "12px 20px 16px",
-          background: COLORS.surface,
-          borderTop: `1px solid ${COLORS.border}`,
+          background: COLORS.primaryLight,
+          borderTop: `1px solid ${COLORS.primaryBorder}`,
           zIndex: 10,
         }}
       >
-        {/* Running Total - larger */}
+        {/* Running Total and Allergen Info row */}
         <div
           style={{
             display: "flex",
             justifyContent: "center",
+            alignItems: "center",
             marginBottom: 16,
+            position: "relative",
           }}
         >
           <div
             style={{
-              background: COLORS.primaryLight,
+              background: COLORS.surface,
               padding: "12px 28px",
               borderRadius: 24,
               display: "flex",
               alignItems: "center",
               gap: 12,
+              border: `1px solid ${COLORS.primaryBorder}`,
             }}
           >
             <span style={{ color: COLORS.textMuted, fontSize: "1.15rem", fontWeight: 500 }}>Order Subtotal:</span>
@@ -1635,8 +3056,45 @@ function MenuView({
           </div>
         </div>
 
+        {/* Allergen Info Link - positioned toward right, vertically centered */}
+        <button
+          onClick={() => setShowAllergenPopup(true)}
+          style={{
+            position: "absolute",
+            right: 100,
+            top: "50%",
+            transform: "translateY(-50%)",
+            background: "transparent",
+            border: "none",
+            color: COLORS.primary,
+            fontSize: "1.35rem",
+            fontWeight: 600,
+            cursor: "pointer",
+            textDecoration: "underline",
+          }}
+        >
+          ⚠️ Oh! Allergen Info
+        </button>
+
         <div style={{ display: "flex", justifyContent: "center", gap: 16 }}>
-          {canGoBack && (
+          {/* Cancel button on step 1, Back button on other steps */}
+          {!canGoBack ? (
+            <button
+              onClick={onCancel}
+              style={{
+                padding: "18px 40px",
+                background: COLORS.primary,
+                border: "none",
+                borderRadius: 12,
+                color: COLORS.textOnPrimary,
+                fontSize: "1.2rem",
+                fontWeight: 500,
+                cursor: "pointer",
+              }}
+            >
+              Cancel
+            </button>
+          ) : (
             <button
               onClick={onPrevious}
               style={{
@@ -1663,14 +3121,137 @@ function MenuView({
               borderRadius: 12,
               color: canProceed ? COLORS.textOnPrimary : "#888",
               fontSize: "1.2rem",
-              fontWeight: 600,
+              fontWeight: 700,
               cursor: canProceed ? "pointer" : "not-allowed",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
             }}
           >
             {stepIndex === totalSteps - 1 ? "Review Order" : "Next"}
+            <span style={{
+              display: "inline-block",
+              animation: canProceed ? "chevronBounceHorizontal 1s ease-in-out infinite" : "none",
+            }}>
+              →
+            </span>
           </button>
         </div>
       </div>
+
+      {/* Allergen Info Popup */}
+      {showAllergenPopup && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 100,
+          }}
+          onClick={() => setShowAllergenPopup(false)}
+        >
+          <div
+            style={{
+              background: COLORS.surface,
+              borderRadius: 16,
+              padding: 32,
+              maxWidth: 500,
+              width: "90%",
+              position: "relative",
+              boxShadow: "0 8px 32px rgba(0, 0, 0, 0.2)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close button - large for kiosk touch */}
+            <button
+              onClick={() => setShowAllergenPopup(false)}
+              style={{
+                position: "absolute",
+                top: 16,
+                right: 16,
+                width: 56,
+                height: 56,
+                borderRadius: 28,
+                border: `2px solid ${COLORS.border}`,
+                background: COLORS.surfaceElevated,
+                color: COLORS.text,
+                fontSize: "2rem",
+                fontWeight: 700,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              ✕
+            </button>
+
+            {/* Header with Oh! branding */}
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+              <img
+                src="/Oh_Logo_Mark_Web.png"
+                alt="Oh!"
+                style={{ width: 48, height: 48, objectFit: "contain" }}
+              />
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ fontSize: "1.3rem" }}>⚠️</span>
+                <h2 style={{ fontSize: "1.4rem", fontWeight: 700, color: COLORS.text, margin: 0 }}>
+                  Oh! Allergen Information
+                </h2>
+              </div>
+            </div>
+
+            {/* Description */}
+            <p style={{ fontSize: "1rem", color: COLORS.textLight, lineHeight: 1.6, marginBottom: 24 }}>
+              Please inform our staff of any food allergies or dietary restrictions before ordering.
+              While we take precautions, cross-contamination may occur in our kitchen.
+            </p>
+
+            {/* Legend */}
+            <h3 style={{ fontSize: "1.1rem", fontWeight: 600, color: COLORS.text, marginBottom: 16 }}>
+              Dietary Symbol Legend
+            </h3>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <img src="/allergens/vegetarian.png" alt="Vegetarian" style={{ width: 32, height: 32, objectFit: "contain" }} />
+                <span style={{ fontSize: "1rem", color: COLORS.text }}>Vegetarian</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <img src="/allergens/vegan.png" alt="Vegan" style={{ width: 32, height: 32, objectFit: "contain" }} />
+                <span style={{ fontSize: "1rem", color: COLORS.text }}>Vegan</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <img src="/allergens/gluten-free.png" alt="Gluten-Free" style={{ width: 32, height: 32, objectFit: "contain" }} />
+                <span style={{ fontSize: "1rem", color: COLORS.text }}>Gluten-Free</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <span style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 2,
+                  padding: "4px 10px",
+                  fontSize: "0.85rem",
+                  fontWeight: 700,
+                  borderRadius: 6,
+                  background: "#fecaca",
+                  color: "#dc2626",
+                }}>
+                  🌶️🌶️🌶️
+                </span>
+                <span style={{ fontSize: "1rem", color: COLORS.text }}>Spicy (1-3 peppers indicate heat level)</span>
+              </div>
+            </div>
+
+            {/* Footer note */}
+            <p style={{ fontSize: "0.85rem", color: COLORS.textMuted, fontStyle: "italic", marginTop: 20, textAlign: "center" }}>
+              Please ask our staff for detailed allergen information.
+            </p>
+          </div>
+        </div>
+      )}
 
       <style>{`
         @keyframes bounce {
@@ -1703,6 +3284,7 @@ function ReviewView({
   sliderLabels,
   selections,
   menuSteps,
+  taxRate,
   onSubmit,
   onBack,
   submitting,
@@ -1714,14 +3296,98 @@ function ReviewView({
   sliderLabels: Record<string, string>;
   selections: Record<string, string>;
   menuSteps: MenuStep[];
+  taxRate: number;
   onSubmit: () => void;
   onBack: () => void;
   submitting: boolean;
 }) {
-  // Scroll to top on mount
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "instant" });
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [showScrollHint, setShowScrollHint] = useState(false);
+  const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [isAutoScrolling, setIsAutoScrolling] = useState(false);
+
+  // Check if there's content below the fold
+  const checkScrollPosition = useCallback(() => {
+    const container = scrollContainerRef.current;
+    if (container) {
+      const hasOverflow = container.scrollHeight > container.clientHeight + 10;
+      const isNearBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 50;
+      setShowScrollHint(hasOverflow && !isNearBottom);
+    }
   }, []);
+
+  // Stop auto-scroll
+  const stopAutoScroll = useCallback(() => {
+    if (scrollIntervalRef.current) {
+      clearInterval(scrollIntervalRef.current);
+      scrollIntervalRef.current = null;
+    }
+    setIsAutoScrolling(false);
+  }, []);
+
+  // Auto-scroll slowly until bottom - Safari compatible
+  useEffect(() => {
+    let startTimeout: NodeJS.Timeout | null = null;
+
+    const startAutoScroll = () => {
+      const container = scrollContainerRef.current;
+      if (!container) return;
+
+      // Check if there's content to scroll
+      const hasOverflow = container.scrollHeight > container.clientHeight + 10;
+      if (!hasOverflow) {
+        console.log('[AutoScroll] No overflow, skipping');
+        return;
+      }
+
+      console.log('[AutoScroll] Starting auto-scroll');
+      setIsAutoScrolling(true);
+
+      // Use setInterval for better Safari compatibility
+      scrollIntervalRef.current = setInterval(() => {
+        const cont = scrollContainerRef.current;
+        if (!cont) {
+          stopAutoScroll();
+          return;
+        }
+
+        const isAtBottom = cont.scrollTop + cont.clientHeight >= cont.scrollHeight - 5;
+
+        if (!isAtBottom) {
+          cont.scrollTop += 1; // Scroll 1px every 16ms (~60fps)
+        } else {
+          // Reached bottom, stop scrolling
+          console.log('[AutoScroll] Reached bottom');
+          stopAutoScroll();
+        }
+      }, 16);
+    };
+
+    // Start after a delay to let content render
+    startTimeout = setTimeout(() => {
+      checkScrollPosition();
+      startAutoScroll();
+    }, 2500);
+
+    // Cleanup
+    return () => {
+      if (startTimeout) clearTimeout(startTimeout);
+      stopAutoScroll();
+    };
+  }, [checkScrollPosition, stopAutoScroll]);
+
+  // Only stop auto-scroll on actual user touch/interaction, not programmatic scroll
+  const handleUserTouch = useCallback(() => {
+    if (isAutoScrolling) {
+      console.log('[AutoScroll] User touch, stopping');
+      stopAutoScroll();
+    }
+  }, [stopAutoScroll, isAutoScrolling]);
+
+  // Update scroll hint on scroll (don't stop auto-scroll here)
+  const handleScroll = useCallback(() => {
+    checkScrollPosition();
+  }, [checkScrollPosition]);
 
   // Categorize items for display
   const bowlItems: Array<{ name: string; price: number; image?: string; value?: string }> = [];
@@ -1786,60 +3452,108 @@ function ReviewView({
   const addOnsSubtotal = addOnItems.reduce((sum, item) => sum + item.price, 0);
   const drinksSubtotal = drinkItems.reduce((sum, item) => sum + item.price, 0);
   const dessertSubtotal = dessertItems.reduce((sum, item) => sum + item.price, 0);
-  const orderTotal = bowlSubtotal + addOnsSubtotal + drinksSubtotal + dessertSubtotal;
+  const subtotal = bowlSubtotal + addOnsSubtotal + drinksSubtotal + dessertSubtotal;
+  const taxCents = Math.round(subtotal * taxRate);
+  const orderTotal = subtotal + taxCents;
 
   return (
     <main
       style={{
-        minHeight: "100vh",
+        height: "100vh",
+        maxHeight: "100vh",
         background: COLORS.surface,
         color: COLORS.text,
-        padding: "32px 24px",
         display: "flex",
         flexDirection: "column",
-        alignItems: "center",
-        overflowY: "auto",
+        position: "relative",
+        overflow: "hidden",
       }}
     >
-      {/* Brand Header */}
-      <div style={{ position: "absolute", top: 24, left: 24 }}>
-        <KioskBrand size="normal" />
+      {/* Decorative Oh! mark on right side - 30% cut off */}
+      <div
+        style={{
+          position: "absolute",
+          top: "50%",
+          right: "-15%",
+          transform: "translateY(-50%)",
+          opacity: 0.08,
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      >
+        <img
+          src="/Oh_Logo_Mark_Web.png"
+          alt=""
+          style={{
+            height: "90vh",
+            width: "auto",
+            objectFit: "contain",
+          }}
+        />
       </div>
 
-      <div style={{ fontSize: "0.9rem", color: COLORS.textMuted, marginBottom: 8, marginTop: 48 }}>
-        Guest {guestNumber} of {totalGuests}
+      {/* Large Brand Header - top left (matching NameEntryView) */}
+      <div style={{ position: "absolute", top: 48, left: 48, zIndex: 1 }}>
+        <KioskBrand size="xlarge" />
       </div>
-      <h1 style={{ fontSize: "1.75rem", fontWeight: 700, marginBottom: 8 }}>
-        {guestName}'s Order
-      </h1>
-      <p style={{ color: COLORS.textMuted, marginBottom: 24 }}>Review before submitting</p>
 
-      <div style={{ width: "100%", maxWidth: 600 }}>
-        {/* Bowl Configuration Section */}
+      {/* Fixed Header with color */}
+      <div style={{
+        textAlign: "center",
+        paddingTop: 32,
+        paddingBottom: 20,
+        background: COLORS.primaryLight,
+        borderBottom: `1px solid ${COLORS.primaryBorder}`,
+        zIndex: 1,
+      }}>
+        <div style={{ fontSize: "1.5rem", color: COLORS.textMuted, marginBottom: 8 }}>
+          Guest {guestNumber} of {totalGuests}
+        </div>
+        <h1 className="kiosk-title" style={{ fontSize: "3.5rem", fontWeight: 700, marginBottom: 8 }}>
+          {guestName}'s Order
+        </h1>
+        <p style={{ color: COLORS.textMuted, margin: 0, fontSize: "1.25rem" }}>Review before submitting</p>
+      </div>
+
+      {/* Scrollable Content */}
+      <div
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        onTouchStart={handleUserTouch}
+        onMouseDown={handleUserTouch}
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          padding: "20px 24px",
+          paddingBottom: 140,
+          WebkitOverflowScrolling: "touch",
+        }}
+      >
+      <div style={{ width: "100%", maxWidth: 600, margin: "0 auto" }}>
+        {/* Bowl Configuration Section - Compact */}
         {(bowlItems.length > 0 || customizations.length > 0) && (
           <div
             style={{
               background: COLORS.surfaceElevated,
-              borderRadius: 14,
-              padding: 20,
-              marginBottom: 16,
+              borderRadius: 12,
+              padding: "12px 16px",
+              marginBottom: 10,
               border: `1px solid ${COLORS.border}`,
             }}
           >
-            <h3 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: 12, color: COLORS.primary }}>
+            <h3 style={{ fontSize: "0.95rem", fontWeight: 600, marginBottom: 8, color: COLORS.primary }}>
               Bowl Configuration
             </h3>
 
-            {/* Bowl selections */}
+            {/* Bowl selections - compact rows */}
             {bowlItems.map((item, i) => (
               <div
                 key={i}
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: 12,
-                  padding: "10px 0",
-                  borderBottom: i < bowlItems.length - 1 || customizations.length > 0 ? `1px solid ${COLORS.border}` : "none",
+                  gap: 10,
+                  padding: "4px 0",
                 }}
               >
                 {item.image ? (
@@ -1847,249 +3561,281 @@ function ReviewView({
                     src={item.image}
                     alt={item.name}
                     style={{
-                      width: 48,
-                      height: 48,
-                      borderRadius: 8,
+                      width: 36,
+                      height: 36,
+                      borderRadius: 6,
                       objectFit: "cover",
                     }}
                   />
                 ) : (
-                  <div style={{ width: 48, height: 48, borderRadius: 8, background: "#f0f0f0", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <span style={{ fontSize: "1.5rem" }}>🍜</span>
+                  <div style={{ width: 36, height: 36, borderRadius: 6, background: "#f0f0f0", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <span style={{ fontSize: "1.1rem" }}>🍜</span>
                   </div>
                 )}
                 <div style={{ flex: 1 }}>
-                  <span style={{ fontWeight: 500 }}>{item.name}</span>
+                  <span style={{ fontWeight: 500, fontSize: "0.95rem" }}>{item.name}</span>
                 </div>
-                <span style={{ color: COLORS.primary, fontWeight: 600 }}>
+                <span style={{ color: COLORS.primary, fontWeight: 600, fontSize: "0.95rem" }}>
                   {item.price > 0 ? `$${(item.price / 100).toFixed(2)}` : "Included"}
                 </span>
               </div>
             ))}
 
-            {/* Customizations (sliders) */}
-            {customizations.map((item, i) => (
-              <div
-                key={`custom-${i}`}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  padding: "10px 0",
-                  borderBottom: i < customizations.length - 1 ? `1px solid ${COLORS.border}` : "none",
-                }}
-              >
-                <div style={{ flex: 1 }}>
-                  <span style={{ color: COLORS.textLight }}>{item.name}</span>
-                </div>
-                <span style={{ color: COLORS.textMuted, fontWeight: 500 }}>{item.value}</span>
+            {/* Customizations (sliders) - inline compact */}
+            {customizations.length > 0 && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 16px", marginTop: 6 }}>
+                {customizations.map((item, i) => (
+                  <span key={`custom-${i}`} style={{ fontSize: "0.85rem", color: COLORS.textLight }}>
+                    {item.name}: <span style={{ color: COLORS.textMuted, fontWeight: 500 }}>{item.value}</span>
+                  </span>
+                ))}
               </div>
-            ))}
+            )}
 
             {/* Bowl subtotal */}
-            <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 12, marginTop: 8, borderTop: `1px dashed ${COLORS.border}` }}>
-              <span style={{ fontWeight: 500 }}>Bowl Subtotal</span>
-              <span style={{ fontWeight: 600, color: COLORS.primary }}>${(bowlSubtotal / 100).toFixed(2)}</span>
+            <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 8, marginTop: 6, borderTop: `1px dashed ${COLORS.border}` }}>
+              <span style={{ fontWeight: 500, fontSize: "0.9rem" }}>Bowl Subtotal</span>
+              <span style={{ fontWeight: 600, color: COLORS.primary, fontSize: "0.95rem" }}>${(bowlSubtotal / 100).toFixed(2)}</span>
             </div>
           </div>
         )}
 
-        {/* Add-Ons Section */}
-        {addOnItems.length > 0 && (
+        {/* Extras Section - Combined Add-Ons, Sides, Drinks, Dessert */}
+        {(addOnItems.length > 0 || drinkItems.length > 0 || dessertItems.length > 0) && (
           <div
             style={{
               background: COLORS.surfaceElevated,
-              borderRadius: 14,
-              padding: 20,
-              marginBottom: 16,
+              borderRadius: 12,
+              padding: "12px 16px",
+              marginBottom: 10,
               border: `1px solid ${COLORS.border}`,
             }}
           >
-            <h3 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: 12, color: COLORS.primary }}>
-              Add-Ons & Sides
+            <h3 style={{ fontSize: "0.95rem", fontWeight: 600, marginBottom: 8, color: COLORS.primary }}>
+              Extras
             </h3>
 
+            {/* Add-Ons & Sides */}
             {addOnItems.map((item, i) => (
               <div
-                key={i}
+                key={`addon-${i}`}
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: 12,
-                  padding: "10px 0",
-                  borderBottom: i < addOnItems.length - 1 ? `1px solid ${COLORS.border}` : "none",
+                  gap: 10,
+                  padding: "4px 0",
                 }}
               >
                 {item.image ? (
                   <img
                     src={item.image}
                     alt={item.name}
-                    style={{
-                      width: 48,
-                      height: 48,
-                      borderRadius: 8,
-                      objectFit: "cover",
-                    }}
+                    style={{ width: 36, height: 36, borderRadius: 6, objectFit: "cover" }}
                   />
                 ) : (
-                  <div style={{ width: 48, height: 48, borderRadius: 8, background: "#f0f0f0", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <span style={{ fontSize: "1.5rem" }}>🍽️</span>
+                  <div style={{ width: 36, height: 36, borderRadius: 6, background: "#f0f0f0", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <span style={{ fontSize: "1.1rem" }}>🍽️</span>
                   </div>
                 )}
                 <div style={{ flex: 1 }}>
-                  <span style={{ fontWeight: 500 }}>{item.name}</span>
-                  {item.quantity > 1 && <span style={{ color: COLORS.textMuted }}> x{item.quantity}</span>}
+                  <span style={{ fontWeight: 500, fontSize: "0.95rem" }}>{item.name}</span>
+                  {item.quantity > 1 && <span style={{ color: COLORS.textMuted, fontSize: "0.9rem" }}> x{item.quantity}</span>}
                 </div>
-                <span style={{ color: COLORS.primary, fontWeight: 600 }}>
+                <span style={{ color: COLORS.primary, fontWeight: 600, fontSize: "0.95rem" }}>
                   {item.price > 0 ? `$${(item.price / 100).toFixed(2)}` : "Included"}
                 </span>
               </div>
             ))}
 
-            <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 12, marginTop: 8, borderTop: `1px dashed ${COLORS.border}` }}>
-              <span style={{ fontWeight: 500 }}>Add-Ons Subtotal</span>
-              <span style={{ fontWeight: 600, color: COLORS.primary }}>${(addOnsSubtotal / 100).toFixed(2)}</span>
-            </div>
-          </div>
-        )}
-
-        {/* Drinks Section */}
-        {drinkItems.length > 0 && (
-          <div
-            style={{
-              background: COLORS.surfaceElevated,
-              borderRadius: 14,
-              padding: 20,
-              marginBottom: 16,
-              border: `1px solid ${COLORS.border}`,
-            }}
-          >
-            <h3 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: 12, color: COLORS.primary }}>
-              Drinks
-            </h3>
-
+            {/* Drinks */}
             {drinkItems.map((item, i) => (
               <div
-                key={i}
+                key={`drink-${i}`}
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: 12,
-                  padding: "10px 0",
-                  borderBottom: i < drinkItems.length - 1 ? `1px solid ${COLORS.border}` : "none",
+                  gap: 10,
+                  padding: "4px 0",
                 }}
               >
                 {item.image ? (
                   <img
                     src={item.image}
                     alt={item.name}
-                    style={{ width: 48, height: 48, borderRadius: 8, objectFit: "cover" }}
+                    style={{ width: 36, height: 36, borderRadius: 6, objectFit: "cover" }}
                   />
                 ) : (
-                  <div style={{ width: 48, height: 48, borderRadius: 8, background: "#f0f0f0", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <span style={{ fontSize: "1.5rem" }}>🥤</span>
+                  <div style={{ width: 36, height: 36, borderRadius: 6, background: "#f0f0f0", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <span style={{ fontSize: "1.1rem" }}>🥤</span>
                   </div>
                 )}
                 <div style={{ flex: 1 }}>
-                  <span style={{ fontWeight: 500 }}>{item.name}</span>
-                  {item.quantity > 1 && <span style={{ color: COLORS.textMuted }}> x{item.quantity}</span>}
+                  <span style={{ fontWeight: 500, fontSize: "0.95rem" }}>{item.name}</span>
+                  {item.quantity > 1 && <span style={{ color: COLORS.textMuted, fontSize: "0.9rem" }}> x{item.quantity}</span>}
                 </div>
-                <span style={{ color: COLORS.primary, fontWeight: 600 }}>${(item.price / 100).toFixed(2)}</span>
-              </div>
-            ))}
-
-            <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 12, marginTop: 8, borderTop: `1px dashed ${COLORS.border}` }}>
-              <span style={{ fontWeight: 500 }}>Drinks Subtotal</span>
-              <span style={{ fontWeight: 600, color: COLORS.primary }}>${(drinksSubtotal / 100).toFixed(2)}</span>
-            </div>
-          </div>
-        )}
-
-        {/* Dessert Section */}
-        {dessertItems.length > 0 && (
-          <div
-            style={{
-              background: COLORS.surfaceElevated,
-              borderRadius: 14,
-              padding: 20,
-              marginBottom: 16,
-              border: `1px solid ${COLORS.border}`,
-            }}
-          >
-            <h3 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: 12, color: COLORS.primary }}>
-              Dessert
-            </h3>
-
-            {dessertItems.map((item, i) => (
-              <div
-                key={i}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                  padding: "10px 0",
-                  borderBottom: i < dessertItems.length - 1 ? `1px solid ${COLORS.border}` : "none",
-                }}
-              >
-                {item.image ? (
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    style={{ width: 48, height: 48, borderRadius: 8, objectFit: "cover" }}
-                  />
-                ) : (
-                  <div style={{ width: 48, height: 48, borderRadius: 8, background: "#f0f0f0", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <span style={{ fontSize: "1.5rem" }}>🍨</span>
-                  </div>
-                )}
-                <div style={{ flex: 1 }}>
-                  <span style={{ fontWeight: 500 }}>{item.name}</span>
-                  {item.quantity > 1 && <span style={{ color: COLORS.textMuted }}> x{item.quantity}</span>}
-                </div>
-                <span style={{ color: item.price === 0 ? COLORS.success : COLORS.primary, fontWeight: 600 }}>
-                  {item.price === 0 ? "Complimentary" : `$${(item.price / 100).toFixed(2)}`}
+                <span style={{ color: COLORS.primary, fontWeight: 600, fontSize: "0.95rem" }}>
+                  {item.price > 0 ? `$${(item.price / 100).toFixed(2)}` : "FREE"}
                 </span>
               </div>
             ))}
 
-            <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 12, marginTop: 8, borderTop: `1px dashed ${COLORS.border}` }}>
-              <span style={{ fontWeight: 500 }}>Dessert Subtotal</span>
-              <span style={{ fontWeight: 600, color: dessertSubtotal === 0 ? COLORS.success : COLORS.primary }}>
-                {dessertSubtotal === 0 ? "$0.00" : `$${(dessertSubtotal / 100).toFixed(2)}`}
-              </span>
+            {/* Desserts */}
+            {dessertItems.map((item, i) => (
+              <div
+                key={`dessert-${i}`}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "4px 0",
+                }}
+              >
+                {item.image ? (
+                  <img
+                    src={item.image}
+                    alt={item.name}
+                    style={{ width: 36, height: 36, borderRadius: 6, objectFit: "cover" }}
+                  />
+                ) : (
+                  <div style={{ width: 36, height: 36, borderRadius: 6, background: "#f0f0f0", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <span style={{ fontSize: "1.1rem" }}>🍨</span>
+                  </div>
+                )}
+                <div style={{ flex: 1 }}>
+                  <span style={{ fontWeight: 500, fontSize: "0.95rem" }}>{item.name}</span>
+                  {item.quantity > 1 && <span style={{ color: COLORS.textMuted, fontSize: "0.9rem" }}> x{item.quantity}</span>}
+                </div>
+                <span style={{ color: item.price === 0 ? COLORS.success : COLORS.primary, fontWeight: 600, fontSize: "0.95rem" }}>
+                  {item.price === 0 ? "FREE" : `$${(item.price / 100).toFixed(2)}`}
+                </span>
+              </div>
+            ))}
+
+            {/* Extras subtotal */}
+            <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 8, marginTop: 6, borderTop: `1px dashed ${COLORS.border}` }}>
+              <span style={{ fontWeight: 500, fontSize: "0.9rem" }}>Extras Subtotal</span>
+              <span style={{ fontWeight: 600, color: COLORS.primary, fontSize: "0.95rem" }}>${((addOnsSubtotal + drinksSubtotal + dessertSubtotal) / 100).toFixed(2)}</span>
             </div>
           </div>
         )}
 
-        {/* Order Total */}
+        {/* Order Total with Tax */}
         <div
           style={{
             background: COLORS.primary,
-            borderRadius: 14,
-            padding: 20,
-            marginBottom: 24,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
+            borderRadius: 12,
+            padding: "14px 16px",
+            marginBottom: 16,
           }}
         >
-          <span style={{ color: COLORS.textOnPrimary, fontSize: "1.1rem", fontWeight: 600 }}>Order Total</span>
-          <span style={{ color: COLORS.textOnPrimary, fontSize: "1.5rem", fontWeight: 700 }}>
-            ${(orderTotal / 100).toFixed(2)}
-          </span>
+          {/* Subtotal */}
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+            <span style={{ color: COLORS.textOnPrimary, fontSize: "0.9rem", opacity: 0.9 }}>Subtotal</span>
+            <span style={{ color: COLORS.textOnPrimary, fontSize: "0.9rem" }}>
+              ${(subtotal / 100).toFixed(2)}
+            </span>
+          </div>
+          {/* Tax */}
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, paddingBottom: 8, borderBottom: "1px solid rgba(255,255,255,0.2)" }}>
+            <span style={{ color: COLORS.textOnPrimary, fontSize: "0.9rem", opacity: 0.9 }}>
+              Tax ({(taxRate * 100).toFixed(2)}%)
+            </span>
+            <span style={{ color: COLORS.textOnPrimary, fontSize: "0.9rem" }}>
+              ${(taxCents / 100).toFixed(2)}
+            </span>
+          </div>
+          {/* Total */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ color: COLORS.textOnPrimary, fontSize: "1rem", fontWeight: 600 }}>Total</span>
+            <span style={{ color: COLORS.textOnPrimary, fontSize: "1.25rem", fontWeight: 700 }}>
+              ${(orderTotal / 100).toFixed(2)}
+            </span>
+          </div>
         </div>
       </div>
+      </div>
 
-      <div style={{ display: "flex", gap: 16 }}>
+      {/* Scroll Hint Indicator */}
+      {showScrollHint && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 140,
+            left: "50%",
+            transform: "translateX(-50%)",
+            display: "flex",
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 12,
+            zIndex: 15,
+            animation: "scrollHintPulse 2s ease-in-out infinite",
+          }}
+        >
+          {/* Animated chevrons on left */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0 }}>
+            <svg width="28" height="14" viewBox="0 0 24 12" fill="none" stroke={COLORS.primaryDark} strokeWidth="3" style={{ animation: "chevronBounce 1s ease-in-out infinite", opacity: 0.9 }}>
+              <path d="M4 2l8 8 8-8" />
+            </svg>
+            <svg width="28" height="14" viewBox="0 0 24 12" fill="none" stroke={COLORS.primaryDark} strokeWidth="3" style={{ animation: "chevronBounce 1s ease-in-out infinite 0.15s", marginTop: -4, opacity: 0.6 }}>
+              <path d="M4 2l8 8 8-8" />
+            </svg>
+          </div>
+
+          <div
+            style={{
+              background: COLORS.primaryDark,
+              color: COLORS.textOnPrimary,
+              padding: "10px 24px",
+              borderRadius: 24,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              boxShadow: "0 4px 16px rgba(0,0,0,0.25)",
+              fontSize: "1rem",
+              fontWeight: 600,
+            }}
+          >
+            <span>Scroll to see more</span>
+          </div>
+
+          {/* Animated chevrons on right */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0 }}>
+            <svg width="28" height="14" viewBox="0 0 24 12" fill="none" stroke={COLORS.primaryDark} strokeWidth="3" style={{ animation: "chevronBounce 1s ease-in-out infinite", opacity: 0.9 }}>
+              <path d="M4 2l8 8 8-8" />
+            </svg>
+            <svg width="28" height="14" viewBox="0 0 24 12" fill="none" stroke={COLORS.primaryDark} strokeWidth="3" style={{ animation: "chevronBounce 1s ease-in-out infinite 0.15s", marginTop: -4, opacity: 0.6 }}>
+              <path d="M4 2l8 8 8-8" />
+            </svg>
+          </div>
+        </div>
+      )}
+
+      {/* Fixed Bottom Navigation with color */}
+      <div
+        style={{
+          position: "fixed",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          padding: "16px 24px",
+          background: COLORS.primaryLight,
+          borderTop: `1px solid ${COLORS.primaryBorder}`,
+          display: "flex",
+          justifyContent: "center",
+          gap: 16,
+          zIndex: 10,
+        }}
+      >
         <button
           onClick={onBack}
           disabled={submitting}
           style={{
-            padding: "14px 28px",
+            padding: "16px 32px",
             background: "transparent",
             border: `2px solid ${COLORS.border}`,
-            borderRadius: 10,
+            borderRadius: 12,
             color: COLORS.textMuted,
-            fontSize: "1rem",
+            fontSize: "1.1rem",
             cursor: "pointer",
           }}
         >
@@ -2099,19 +3845,45 @@ function ReviewView({
           onClick={onSubmit}
           disabled={submitting}
           style={{
-            padding: "14px 40px",
+            padding: "16px 48px",
             background: submitting ? "#ccc" : COLORS.primary,
             border: "none",
-            borderRadius: 10,
+            borderRadius: 12,
             color: COLORS.textOnPrimary,
-            fontSize: "1rem",
+            fontSize: "1.1rem",
             fontWeight: 600,
             cursor: submitting ? "wait" : "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
           }}
         >
-          {submitting ? "Submitting..." : "Continue to Pod Selection"}
+          <strong>{submitting ? "Submitting..." : "Continue to Pod Selection"}</strong>
+          {!submitting && (
+            <span style={{
+              display: "inline-block",
+              animation: "chevronBounceHorizontal 1s ease-in-out infinite",
+            }}>
+              →
+            </span>
+          )}
         </button>
       </div>
+
+      <style>{`
+        @keyframes chevronBounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(4px); }
+        }
+        @keyframes chevronBounceHorizontal {
+          0%, 100% { transform: translateX(0); }
+          50% { transform: translateX(4px); }
+        }
+        @keyframes scrollHintPulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.8; }
+        }
+      `}</style>
     </main>
   );
 }
@@ -2121,6 +3893,7 @@ function PodSelectionView({
   guestOrders,
   currentGuestIndex,
   partySize,
+  paymentType,
   selectedPodId,
   onSelectPod,
   onConfirm,
@@ -2130,6 +3903,7 @@ function PodSelectionView({
   guestOrders: GuestOrder[];
   currentGuestIndex: number;
   partySize: number;
+  paymentType: "single" | "separate";
   selectedPodId?: string;
   onSelectPod: (podId: string) => void;
   onConfirm: () => void;
@@ -2146,49 +3920,132 @@ function PodSelectionView({
     .map((g) => g.selectedPodId)
     .filter(Boolean) as string[];
 
+  // Dual pods can only be selected if:
+  // 1. Party size is 2 or more AND
+  // 2. Host is paying for all orders (single payment, not separate)
+  const canSelectDualPod = partySize >= 2 && paymentType === "single";
+
+  // Helper to check if a seat is part of a dual pod
+  const isDualPodSeat = (seat: Seat) => {
+    if (seat.podType !== "DUAL") return false;
+    if (seat.dualPartnerId) return true;
+    return seats.some(s => s.dualPartnerId === seat.id);
+  };
+
   // Recommend pods based on availability and party size
+  // Only recommend dual pods if they can be selected
   const availableSeats = seats.filter(
-    (s) => s.status === "AVAILABLE" && !takenPodIds.includes(s.id)
+    (s) => s.status === "AVAILABLE" && !takenPodIds.includes(s.id) && (!isDualPodSeat(s) || canSelectDualPod)
   );
 
-  // For parties of 2+, recommend adjacent pods
+  // Recommend the first few available pods
   const recommendedPods = availableSeats.slice(0, Math.min(3, availableSeats.length));
 
   const selectedSeat = seats.find((s) => s.id === selectedPodId);
 
   // Group seats by side for U-shape layout
+  // Left: top to bottom (col ascending)
+  // Bottom: left to right (col ascending)
+  // Right: bottom to top (col descending) - to continue the U-shape flow
   const leftSeats = seats.filter((s) => s.side === "left").sort((a, b) => a.col - b.col);
   const bottomSeats = seats.filter((s) => s.side === "bottom").sort((a, b) => a.col - b.col);
-  const rightSeats = seats.filter((s) => s.side === "right").sort((a, b) => a.col - b.col);
+  const rightSeats = seats.filter((s) => s.side === "right").sort((a, b) => b.col - a.col);
+
+  // Helper to check if a seat is part of a dual pod
+  const isDualPod = (seat: Seat) => {
+    if (seat.podType !== "DUAL") return false;
+    if (seat.dualPartnerId) return true;
+    return seats.some(s => s.dualPartnerId === seat.id);
+  };
+
+  // Helper to get partner seat
+  const getPartner = (seat: Seat) => {
+    if (seat.dualPartnerId) {
+      return seats.find(s => s.id === seat.dualPartnerId);
+    }
+    return seats.find(s => s.dualPartnerId === seat.id);
+  };
+
+  // Check if a seat should be hidden (it's the secondary seat of a dual pod pair)
+  const shouldHideSeat = (seat: Seat) => {
+    if (seat.podType !== "DUAL") return false;
+    if (seat.dualPartnerId) return false;
+    return seats.some(s => s.dualPartnerId === seat.id);
+  };
 
   return (
     <main
       style={{
-        minHeight: "100vh",
+        height: "100vh",
+        maxHeight: "100vh",
         background: COLORS.surface,
         color: COLORS.text,
-        padding: 48,
+        display: "flex",
+        flexDirection: "column",
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      {/* Decorative Oh! mark on right side - 30% cut off */}
+      <div
+        style={{
+          position: "absolute",
+          top: "50%",
+          right: "-15%",
+          transform: "translateY(-50%)",
+          opacity: 0.08,
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      >
+        <img
+          src="/Oh_Logo_Mark_Web.png"
+          alt=""
+          style={{
+            height: "90vh",
+            width: "auto",
+            objectFit: "contain",
+          }}
+        />
+      </div>
+
+      {/* Large Brand Header - top left */}
+      <div style={{ position: "absolute", top: 48, left: 48, zIndex: 1 }}>
+        <KioskBrand size="xlarge" />
+      </div>
+
+      {/* Fixed Header with color */}
+      <div style={{
+        textAlign: "center",
+        paddingTop: 32,
+        paddingBottom: 20,
+        background: COLORS.primaryLight,
+        borderBottom: `1px solid ${COLORS.primaryBorder}`,
+        zIndex: 1,
+      }}>
+        {partySize > 1 && (
+          <div style={{ fontSize: "1.5rem", color: COLORS.textMuted, marginBottom: 8 }}>
+            Guest {currentGuestIndex + 1} of {partySize}
+          </div>
+        )}
+        <h1 className="kiosk-title" style={{ fontSize: "3.5rem", fontWeight: 700, marginBottom: 8 }}>
+          Choose Your Pod
+        </h1>
+        <p style={{ color: COLORS.textMuted, margin: 0, fontSize: "1.25rem" }}>
+          <strong style={{ color: COLORS.text }}>{guestOrders[currentGuestIndex].guestName}</strong>, pick your private dining pod
+        </p>
+      </div>
+
+      {/* Scrollable Content */}
+      <div style={{
+        flex: 1,
+        overflowY: "auto",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-      }}
-    >
-      {/* Brand Header */}
-      <div style={{ position: "absolute", top: 24, left: 24 }}>
-        <KioskBrand size="normal" />
-      </div>
-
-      <h1 style={{ fontSize: "2rem", fontWeight: 700, marginBottom: 8, marginTop: 32 }}>
-        Choose Your Pod
-      </h1>
-      <p style={{ color: COLORS.textMuted, marginBottom: 8 }}>
-        {guestOrders[currentGuestIndex].guestName}, pick your private dining pod
-      </p>
-      {partySize > 1 && (
-        <p style={{ color: COLORS.textMuted, marginBottom: 32, fontSize: "0.9rem" }}>
-          Guest {currentGuestIndex + 1} of {partySize}
-        </p>
-      )}
+        padding: "24px 48px",
+        paddingBottom: 120,
+      }}>
 
       {/* Recommended Pods */}
       {recommendedPods.length > 0 && !selectedPodId && (
@@ -2234,78 +4091,125 @@ function PodSelectionView({
           marginBottom: 32,
         }}
       >
-        {/* Top row label */}
-        <div style={{ color: COLORS.textMuted, fontSize: "0.85rem" }}>Kitchen</div>
+        {/* Entrance Label at top */}
+        <div style={{ color: COLORS.textMuted, fontSize: "1.1rem", marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
+          <span>🚪</span> Entrance
+        </div>
 
-        {/* U-Shape Container */}
-        <div style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
+        {/* U-Shape Container: Left Column | Kitchen | Right Column */}
+        <div style={{ display: "flex", gap: 32, alignItems: "stretch" }}>
           {/* Left Column */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {leftSeats.map((seat) => (
-              <PodButton
-                key={seat.id}
-                seat={seat}
-                isSelected={selectedPodId === seat.id}
-                isTaken={takenPodIds.includes(seat.id)}
-                isRecommended={recommendedPods.some((r) => r.id === seat.id)}
-                onClick={() => onSelectPod(seat.id)}
-              />
-            ))}
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {leftSeats.filter(seat => !shouldHideSeat(seat)).map((seat) => {
+              const isDual = isDualPod(seat);
+              const partner = isDual ? getPartner(seat) : null;
+              const isSelectedDual = isDual && partner && (selectedPodId === seat.id || selectedPodId === partner.id);
+              return (
+                <PodButton
+                  key={seat.id}
+                  seat={seat}
+                  partner={partner}
+                  isDual={isDual}
+                  isSelected={selectedPodId === seat.id || isSelectedDual}
+                  isTaken={takenPodIds.includes(seat.id) || (partner ? takenPodIds.includes(partner.id) : false)}
+                  isRecommended={recommendedPods.some((r) => r.id === seat.id || (partner && r.id === partner.id))}
+                  canSelectDualPod={canSelectDualPod}
+                  onClick={() => onSelectPod(seat.id)}
+                  orientation="vertical"
+                />
+              );
+            })}
           </div>
 
-          {/* Center/Bottom Row */}
-          <div
-            style={{
-              display: "flex",
-              gap: 12,
-              alignSelf: "flex-end",
-              marginTop: leftSeats.length > 3 ? (leftSeats.length - 3) * 68 : 0,
-            }}
-          >
-            {bottomSeats.map((seat) => (
-              <PodButton
-                key={seat.id}
-                seat={seat}
-                isSelected={selectedPodId === seat.id}
-                isTaken={takenPodIds.includes(seat.id)}
-                isRecommended={recommendedPods.some((r) => r.id === seat.id)}
-                onClick={() => onSelectPod(seat.id)}
-              />
-            ))}
+          {/* Kitchen in the center */}
+          <div style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "24px 48px",
+            minHeight: 200,
+          }}>
+            <span style={{ fontSize: "4rem", marginBottom: 8 }}>👨‍🍳</span>
+            <span style={{ fontSize: "1.25rem", fontWeight: 600, color: COLORS.textMuted }}>Kitchen</span>
           </div>
 
           {/* Right Column */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {rightSeats.map((seat) => (
-              <PodButton
-                key={seat.id}
-                seat={seat}
-                isSelected={selectedPodId === seat.id}
-                isTaken={takenPodIds.includes(seat.id)}
-                isRecommended={recommendedPods.some((r) => r.id === seat.id)}
-                onClick={() => onSelectPod(seat.id)}
-              />
-            ))}
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {rightSeats.filter(seat => !shouldHideSeat(seat)).map((seat) => {
+              const isDual = isDualPod(seat);
+              const partner = isDual ? getPartner(seat) : null;
+              const isSelectedDual = isDual && partner && (selectedPodId === seat.id || selectedPodId === partner.id);
+              return (
+                <PodButton
+                  key={seat.id}
+                  seat={seat}
+                  partner={partner}
+                  isDual={isDual}
+                  isSelected={selectedPodId === seat.id || isSelectedDual}
+                  isTaken={takenPodIds.includes(seat.id) || (partner ? takenPodIds.includes(partner.id) : false)}
+                  isRecommended={recommendedPods.some((r) => r.id === seat.id || (partner && r.id === partner.id))}
+                  canSelectDualPod={canSelectDualPod}
+                  onClick={() => onSelectPod(seat.id)}
+                  orientation="vertical"
+                />
+              );
+            })}
           </div>
         </div>
 
-        {/* Bottom label */}
-        <div style={{ color: COLORS.textMuted, fontSize: "0.85rem", marginTop: 8 }}>Entrance</div>
+        {/* Bottom Row - below the U-shape */}
+        <div
+          style={{
+            display: "flex",
+            gap: 16,
+            marginTop: 8,
+          }}
+        >
+          {bottomSeats.filter(seat => !shouldHideSeat(seat)).map((seat) => {
+            const isDual = isDualPod(seat);
+            const partner = isDual ? getPartner(seat) : null;
+            const isSelectedDual = isDual && partner && (selectedPodId === seat.id || selectedPodId === partner.id);
+            return (
+              <PodButton
+                key={seat.id}
+                seat={seat}
+                partner={partner}
+                isDual={isDual}
+                isSelected={selectedPodId === seat.id || isSelectedDual}
+                isTaken={takenPodIds.includes(seat.id) || (partner ? takenPodIds.includes(partner.id) : false)}
+                isRecommended={recommendedPods.some((r) => r.id === seat.id || (partner && r.id === partner.id))}
+                canSelectDualPod={canSelectDualPod}
+                onClick={() => onSelectPod(seat.id)}
+                orientation="horizontal"
+              />
+            );
+          })}
+        </div>
+
+        {/* Exit Label at bottom */}
+        <div style={{ color: COLORS.textMuted, fontSize: "1.1rem", marginTop: 8 }}>
+          EXIT
+        </div>
       </div>
 
       {/* Legend */}
-      <div style={{ display: "flex", gap: 24, marginBottom: 32 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ width: 20, height: 20, borderRadius: 4, background: COLORS.success }} />
-          <span style={{ fontSize: "0.85rem", color: COLORS.textMuted }}>Available</span>
+      <div style={{ display: "flex", gap: 32, marginBottom: 32, flexWrap: "wrap", justifyContent: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 28, height: 28, borderRadius: 6, background: COLORS.success }} />
+          <span style={{ fontSize: "1rem", color: COLORS.textMuted }}>Available</span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ width: 20, height: 20, borderRadius: 4, background: "#ef4444" }} />
-          <span style={{ fontSize: "0.85rem", color: COLORS.textMuted }}>Occupied</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 28, height: 56, borderRadius: 6, background: "#22d3ee" }} />
+          <span style={{ fontSize: "1rem", color: COLORS.textMuted }}>Dual Pod</span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ width: 20, height: 20, borderRadius: 4, background: COLORS.primary, border: `3px solid ${COLORS.text}` }} />
-          <span style={{ fontSize: "0.85rem", color: COLORS.textMuted }}>Your Selection</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 28, height: 28, borderRadius: 6, background: "#ef4444" }} />
+          <span style={{ fontSize: "1rem", color: COLORS.textMuted }}>Occupied</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 28, height: 28, borderRadius: 6, background: COLORS.primary, border: `3px solid ${COLORS.text}` }} />
+          <span style={{ fontSize: "1rem", color: COLORS.textMuted }}>Your Selection</span>
         </div>
       </div>
 
@@ -2322,16 +4226,42 @@ function PodSelectionView({
           }}
         >
           <div style={{ fontSize: "1.25rem", fontWeight: 600 }}>
-            Pod {selectedSeat.number} Selected
+            {(() => {
+              const isDual = isDualPod(selectedSeat);
+              if (isDual) {
+                const partner = getPartner(selectedSeat);
+                if (partner) {
+                  const num1 = parseInt(selectedSeat.number);
+                  const num2 = parseInt(partner.number);
+                  return `Dual Pod ${Math.min(num1, num2).toString().padStart(2, '0')} & ${Math.max(num1, num2).toString().padStart(2, '0')} Selected`;
+                }
+              }
+              return `Pod ${selectedSeat.number} Selected`;
+            })()}
           </div>
           <div style={{ color: COLORS.textMuted, fontSize: "0.9rem" }}>
-            {selectedSeat.podType === "DUAL" ? "Dual Pod (fits 2)" : "Single Pod"}
+            {isDualPod(selectedSeat) ? "Dual Pod (fits 2)" : "Single Pod"}
           </div>
         </div>
       )}
+      </div>
 
-      {/* Actions */}
-      <div style={{ display: "flex", gap: 16 }}>
+      {/* Fixed Bottom Navigation with color */}
+      <div
+        style={{
+          position: "fixed",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          padding: "16px 24px",
+          background: COLORS.primaryLight,
+          borderTop: `1px solid ${COLORS.primaryBorder}`,
+          display: "flex",
+          justifyContent: "center",
+          gap: 16,
+          zIndex: 10,
+        }}
+      >
         <button
           onClick={onBack}
           style={{
@@ -2358,79 +4288,160 @@ function PodSelectionView({
             fontSize: "1.1rem",
             fontWeight: 600,
             cursor: selectedPodId ? "pointer" : "not-allowed",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
           }}
         >
-          Continue to Payment
+          <strong>Continue to Payment</strong>
+          {selectedPodId && (
+            <span style={{
+              display: "inline-block",
+              animation: "chevronBounceHorizontal 1s ease-in-out infinite",
+            }}>
+              →
+            </span>
+          )}
         </button>
       </div>
+
+      <style>{`
+        @keyframes chevronBounceHorizontal {
+          0%, 100% { transform: translateX(0); }
+          50% { transform: translateX(4px); }
+        }
+      `}</style>
     </main>
   );
 }
 
 function PodButton({
   seat,
+  partner,
+  isDual,
   isSelected,
   isTaken,
   isRecommended,
+  canSelectDualPod = true,
   onClick,
+  orientation = "vertical",
 }: {
   seat: Seat;
+  partner?: Seat | null;
+  isDual?: boolean;
   isSelected: boolean;
   isTaken: boolean;
   isRecommended: boolean;
+  canSelectDualPod?: boolean;
   onClick: () => void;
+  orientation?: "vertical" | "horizontal";
 }) {
-  const isAvailable = seat.status === "AVAILABLE" && !isTaken;
+  const partnerAvailable = partner ? partner.status === "AVAILABLE" : true;
+  // For dual pods, also check if dual pods can be selected (requires 2+ guests with single payment)
+  const isAvailable = seat.status === "AVAILABLE" && partnerAvailable && !isTaken && (!isDual || canSelectDualPod);
+
+  // Dual pods use cyan/teal color, single pods use green
+  // If dual pod is not selectable due to party size/payment, use dimmed cyan
   const bgColor = isSelected
     ? COLORS.primary
+    : !isAvailable && isDual && !canSelectDualPod
+    ? "#a5f3fc" // cyan-200 - dimmed cyan for unavailable dual pods
     : !isAvailable
     ? "#ef4444"
-    : isRecommended
-    ? COLORS.success
-    : COLORS.successLight;
+    : isDual
+    ? "#22d3ee" // cyan-400 for dual pods
+    : COLORS.success;
+
+  // Non-recommended available pods get reduced opacity (but still visible)
+  const opacity = isSelected || !isAvailable || isRecommended ? 1 : 0.45;
+
+  // For dual pods, make the button larger (double in one direction)
+  // Sizes reduced by ~10% for better fit
+  const isHorizontal = orientation === "horizontal";
+  const width = isDual ? (isHorizontal ? 152 : 76) : 76;
+  const height = isDual ? (isHorizontal ? 76 : 152) : 76;
+
+  // Get display numbers for dual pods
+  const getDisplayNumbers = () => {
+    if (!isDual || !partner) return null;
+    const num1 = parseInt(seat.number);
+    const num2 = parseInt(partner.number);
+    // For vertical: lower number on top for left side, higher on top for right side
+    // For horizontal: lower number on left
+    if (isHorizontal) {
+      return {
+        first: Math.min(num1, num2).toString().padStart(2, '0'),
+        second: Math.max(num1, num2).toString().padStart(2, '0'),
+      };
+    } else {
+      // Vertical - for right side, higher numbers on top; for left side, lower on top
+      // We determine side by checking if this seat is on the right
+      const isRightSide = seat.side === "right";
+      if (isRightSide) {
+        return {
+          first: Math.max(num1, num2).toString().padStart(2, '0'),
+          second: Math.min(num1, num2).toString().padStart(2, '0'),
+        };
+      } else {
+        return {
+          first: Math.min(num1, num2).toString().padStart(2, '0'),
+          second: Math.max(num1, num2).toString().padStart(2, '0'),
+        };
+      }
+    }
+  };
+
+  const dualNumbers = getDisplayNumbers();
 
   return (
     <button
       onClick={onClick}
       disabled={!isAvailable}
       style={{
-        width: 56,
-        height: 56,
-        borderRadius: 12,
-        border: isSelected ? `3px solid ${COLORS.text}` : "none",
+        width,
+        height,
+        borderRadius: 16,
+        border: isSelected ? `4px solid ${COLORS.text}` : "none",
         background: bgColor,
         color: isAvailable ? COLORS.textOnPrimary : "rgba(255,255,255,0.7)",
-        fontSize: "1rem",
+        fontSize: "1.35rem",
         fontWeight: 700,
         cursor: isAvailable ? "pointer" : "not-allowed",
         display: "flex",
-        flexDirection: "column",
+        flexDirection: isHorizontal ? "row" : "column",
         alignItems: "center",
         justifyContent: "center",
+        gap: isDual ? 8 : 0,
         transition: "all 0.2s",
         position: "relative",
+        opacity,
       }}
     >
-      {seat.number}
-      {seat.podType === "DUAL" && (
-        <span style={{ fontSize: "0.6rem", opacity: 0.8 }}>DUAL</span>
+      {isDual && dualNumbers ? (
+        <>
+          <span style={{ fontSize: "1.35rem", fontWeight: 700 }}>{dualNumbers.first}</span>
+          <span style={{ fontSize: "0.675rem", opacity: 0.8 }}>Dual</span>
+          <span style={{ fontSize: "1.35rem", fontWeight: 700 }}>{dualNumbers.second}</span>
+        </>
+      ) : (
+        seat.number
       )}
       {isRecommended && !isSelected && (
         <div
           style={{
             position: "absolute",
-            top: -6,
-            right: -6,
-            width: 16,
-            height: 16,
-            borderRadius: 8,
+            top: -8,
+            right: -8,
+            width: 24,
+            height: 24,
+            borderRadius: 12,
             background: COLORS.warning,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
           }}
         >
-          <span style={{ fontSize: "0.6rem", color: COLORS.text }}>★</span>
+          <span style={{ fontSize: "0.85rem", color: COLORS.text }}>★</span>
         </div>
       )}
     </button>
@@ -2466,10 +4477,35 @@ function PassView({
         color: COLORS.text,
         padding: 48,
         textAlign: "center",
+        position: "relative",
+        overflow: "hidden",
       }}
     >
+      {/* Decorative Oh! mark on right side - 30% cut off */}
+      <div
+        style={{
+          position: "absolute",
+          top: "50%",
+          right: "-15%",
+          transform: "translateY(-50%)",
+          opacity: 0.08,
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      >
+        <img
+          src="/Oh_Logo_Mark_Web.png"
+          alt=""
+          style={{
+            height: "90vh",
+            width: "auto",
+            objectFit: "contain",
+          }}
+        />
+      </div>
+
       {/* Brand Header */}
-      <div style={{ position: "absolute", top: 24, left: 24 }}>
+      <div style={{ position: "absolute", top: 24, left: 24, zIndex: 1 }}>
         <KioskBrand size="normal" />
       </div>
 
@@ -2483,6 +4519,7 @@ function PassView({
           alignItems: "center",
           justifyContent: "center",
           marginBottom: 24,
+          zIndex: 1,
         }}
       >
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke={COLORS.success} strokeWidth="2">
@@ -2548,14 +4585,18 @@ function PaymentView({
   guestOrders,
   currentGuestIndex,
   seats,
+  taxRate,
   onPay,
+  onBack,
   submitting,
 }: {
   paymentType: "single" | "separate";
   guestOrders: GuestOrder[];
   currentGuestIndex: number;
   seats: Seat[];
+  taxRate: number;
   onPay: () => void;
+  onBack: () => void;
   submitting: boolean;
 }) {
   // Scroll to top on mount
@@ -2564,10 +4605,17 @@ function PaymentView({
   }, []);
 
   const currentGuest = guestOrders[currentGuestIndex];
-  const totalCents =
+
+  // Calculate totals with tax breakdown
+  const subtotalCents =
     paymentType === "single"
-      ? guestOrders.reduce((sum, g) => sum + (g.totalCents || 0), 0)
-      : currentGuest.totalCents || 0;
+      ? guestOrders.reduce((sum, g) => sum + (g.subtotalCents || 0), 0)
+      : currentGuest.subtotalCents || 0;
+  const taxCents =
+    paymentType === "single"
+      ? guestOrders.reduce((sum, g) => sum + (g.taxCents || 0), 0)
+      : currentGuest.taxCents || 0;
+  const totalCents = subtotalCents + taxCents;
 
   const selectedPods = guestOrders
     .filter((g) => g.selectedPodId)
@@ -2580,145 +4628,278 @@ function PaymentView({
         minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
         background: COLORS.surface,
         color: COLORS.text,
-        padding: 48,
-        textAlign: "center",
         position: "relative",
+        overflow: "hidden",
       }}
     >
-      {/* Brand header */}
-      <div style={{ position: "absolute", top: 24, left: 24 }}>
-        <KioskBrand size="normal" />
-      </div>
-
-      <h1 style={{ fontSize: "2.5rem", fontWeight: 700, marginBottom: 16 }}>Payment</h1>
-
-      {paymentType === "single" ? (
-        <>
-          <p style={{ color: COLORS.textMuted, marginBottom: 32 }}>
-            One check for {guestOrders.length} guests
-          </p>
-          <div
-            style={{
-              background: COLORS.surfaceElevated,
-              borderRadius: 16,
-              padding: 24,
-              marginBottom: 24,
-              minWidth: 320,
-              border: `1px solid ${COLORS.border}`,
-            }}
-          >
-            {guestOrders.map((g, i) => {
-              const pod = seats.find((s) => s.id === g.selectedPodId);
-              return (
-                <div
-                  key={i}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    padding: "10px 0",
-                    borderBottom: i < guestOrders.length - 1 ? `1px solid ${COLORS.border}` : "none",
-                  }}
-                >
-                  <div>
-                    <span>{g.guestName}</span>
-                    {pod && (
-                      <span style={{ color: COLORS.textMuted, marginLeft: 8, fontSize: "0.85rem" }}>
-                        Pod {pod.number}
-                      </span>
-                    )}
-                  </div>
-                  <span>${((g.totalCents || 0) / 100).toFixed(2)}</span>
-                </div>
-              );
-            })}
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                paddingTop: 16,
-                marginTop: 8,
-                borderTop: `2px solid ${COLORS.primary}`,
-                fontWeight: 700,
-                fontSize: "1.25rem",
-              }}
-            >
-              <span>Total</span>
-              <span>${(totalCents / 100).toFixed(2)}</span>
-            </div>
-          </div>
-        </>
-      ) : (
-        <>
-          <p style={{ color: COLORS.textMuted, marginBottom: 16 }}>{currentGuest.guestName}'s payment</p>
-          {currentGuest.selectedPodId && (
-            <p style={{ color: COLORS.primary, marginBottom: 16 }}>
-              Pod {seats.find((s) => s.id === currentGuest.selectedPodId)?.number}
-            </p>
-          )}
-          <div
-            style={{
-              fontSize: "3rem",
-              fontWeight: 700,
-              marginBottom: 32,
-              color: COLORS.primary,
-            }}
-          >
-            ${(totalCents / 100).toFixed(2)}
-          </div>
-        </>
-      )}
-
-      {/* Pod Summary */}
-      {selectedPods.length > 0 && (
-        <div
-          style={{
-            background: COLORS.primaryLight,
-            borderRadius: 12,
-            padding: 16,
-            marginBottom: 24,
-          }}
-        >
-          <div style={{ fontWeight: 600, marginBottom: 4 }}>Your Pod(s)</div>
-          <div style={{ color: COLORS.textMuted }}>
-            {selectedPods.map((p) => `Pod ${p.number}`).join(", ")}
-          </div>
-        </div>
-      )}
-
+      {/* Decorative Oh! mark on right side - 30% cut off */}
       <div
         style={{
-          padding: 16,
-          background: COLORS.warningLight,
-          border: `1px solid ${COLORS.warning}`,
-          borderRadius: 12,
-          marginBottom: 32,
-          color: "#92400e",
-          fontSize: "0.9rem",
+          position: "absolute",
+          top: "50%",
+          right: "-15%",
+          transform: "translateY(-50%)",
+          opacity: 0.08,
+          pointerEvents: "none",
+          zIndex: 0,
         }}
       >
-        Demo Mode - Tap to simulate payment
+        <img
+          src="/Oh_Logo_Mark_Web.png"
+          alt=""
+          style={{
+            height: "90vh",
+            width: "auto",
+            objectFit: "contain",
+          }}
+        />
       </div>
 
-      <button
-        onClick={onPay}
-        disabled={submitting}
+      {/* Large Brand Header - top left (matching other views) */}
+      <div style={{ position: "absolute", top: 48, left: 48, zIndex: 1 }}>
+        <KioskBrand size="xlarge" />
+      </div>
+
+      {/* Fixed Header with color */}
+      <div style={{
+        textAlign: "center",
+        paddingTop: 32,
+        paddingBottom: 20,
+        background: COLORS.primaryLight,
+        borderBottom: `1px solid ${COLORS.primaryBorder}`,
+        zIndex: 1,
+      }}>
+        <h1 className="kiosk-title" style={{ fontSize: "3.5rem", fontWeight: 700, marginBottom: 8 }}>
+          Payment
+        </h1>
+        <p style={{ color: COLORS.textMuted, margin: 0, fontSize: "1.25rem" }}>
+          {paymentType === "single"
+            ? `One check for ${guestOrders.length} guest${guestOrders.length > 1 ? "s" : ""}`
+            : `${currentGuest.guestName}'s payment`}
+        </p>
+      </div>
+
+      {/* Scrollable Content */}
+      <div
         style={{
-          padding: "20px 64px",
-          background: submitting ? "#ccc" : COLORS.success,
-          border: "none",
-          borderRadius: 16,
-          color: COLORS.textOnPrimary,
-          fontSize: "1.25rem",
-          fontWeight: 600,
-          cursor: submitting ? "wait" : "pointer",
+          flex: 1,
+          overflowY: "auto",
+          padding: "24px",
+          paddingBottom: 140,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
         }}
       >
-        {submitting ? "Processing..." : `Pay $${(totalCents / 100).toFixed(2)}`}
-      </button>
+        <div style={{ width: "100%", maxWidth: 500 }}>
+          {paymentType === "single" ? (
+            <div
+              style={{
+                background: COLORS.surfaceElevated,
+                borderRadius: 16,
+                padding: 24,
+                marginBottom: 24,
+                border: `1px solid ${COLORS.border}`,
+              }}
+            >
+              {guestOrders.map((g, i) => {
+                const pod = seats.find((s) => s.id === g.selectedPodId);
+                return (
+                  <div
+                    key={i}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      padding: "12px 0",
+                      borderBottom: i < guestOrders.length - 1 ? `1px solid ${COLORS.border}` : "none",
+                      fontSize: "1.1rem",
+                    }}
+                  >
+                    <div>
+                      <span style={{ fontWeight: 500 }}>{g.guestName}</span>
+                      {pod && (
+                        <span style={{ color: COLORS.textMuted, marginLeft: 8, fontSize: "0.9rem" }}>
+                          Pod {pod.number}
+                        </span>
+                      )}
+                    </div>
+                    <span>${((g.totalCents || 0) / 100).toFixed(2)}</span>
+                  </div>
+                );
+              })}
+              {/* Subtotal */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  paddingTop: 16,
+                  marginTop: 12,
+                  borderTop: `1px solid ${COLORS.border}`,
+                  fontSize: "1.05rem",
+                }}
+              >
+                <span style={{ color: COLORS.textMuted }}>Subtotal</span>
+                <span>${(subtotalCents / 100).toFixed(2)}</span>
+              </div>
+              {/* Tax */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  paddingTop: 8,
+                  fontSize: "1.05rem",
+                }}
+              >
+                <span style={{ color: COLORS.textMuted }}>Tax ({(taxRate * 100).toFixed(2)}%)</span>
+                <span>${(taxCents / 100).toFixed(2)}</span>
+              </div>
+              {/* Total */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  paddingTop: 16,
+                  marginTop: 12,
+                  borderTop: `2px solid ${COLORS.primary}`,
+                  fontWeight: 700,
+                  fontSize: "1.4rem",
+                }}
+              >
+                <span>Total</span>
+                <span style={{ color: COLORS.primary }}>${(totalCents / 100).toFixed(2)}</span>
+              </div>
+            </div>
+          ) : (
+            <>
+              {currentGuest.selectedPodId && (
+                <div
+                  style={{
+                    background: COLORS.primaryLight,
+                    borderRadius: 12,
+                    padding: 16,
+                    marginBottom: 24,
+                    textAlign: "center",
+                  }}
+                >
+                  <div style={{ fontWeight: 600, color: COLORS.primary, fontSize: "1.1rem" }}>
+                    Pod {seats.find((s) => s.id === currentGuest.selectedPodId)?.number}
+                  </div>
+                </div>
+              )}
+              {/* Price breakdown for separate payment */}
+              <div
+                style={{
+                  background: COLORS.surfaceElevated,
+                  borderRadius: 16,
+                  padding: 24,
+                  marginBottom: 24,
+                  border: `1px solid ${COLORS.border}`,
+                  textAlign: "center",
+                }}
+              >
+                <div style={{ color: COLORS.textMuted, fontSize: "1.1rem", marginBottom: 8 }}>
+                  Subtotal: ${(subtotalCents / 100).toFixed(2)}
+                </div>
+                <div style={{ color: COLORS.textMuted, fontSize: "1.1rem", marginBottom: 16 }}>
+                  Tax ({(taxRate * 100).toFixed(2)}%): ${(taxCents / 100).toFixed(2)}
+                </div>
+                <div
+                  style={{
+                    fontSize: "3rem",
+                    fontWeight: 700,
+                    color: COLORS.primary,
+                  }}
+                >
+                  ${(totalCents / 100).toFixed(2)}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Pod Summary - only show for single payment if multiple pods */}
+          {paymentType === "single" && selectedPods.length > 0 && (
+            <div
+              style={{
+                background: COLORS.primaryLight,
+                borderRadius: 12,
+                padding: 16,
+                marginBottom: 24,
+                textAlign: "center",
+              }}
+            >
+              <div style={{ fontWeight: 600, marginBottom: 4, fontSize: "1.1rem" }}>Your Pod(s)</div>
+              <div style={{ color: COLORS.textMuted, fontSize: "1.05rem" }}>
+                {selectedPods.map((p) => `Pod ${p.number}`).join(", ")}
+              </div>
+            </div>
+          )}
+
+          <div
+            style={{
+              padding: 16,
+              background: COLORS.warningLight,
+              border: `1px solid ${COLORS.warning}`,
+              borderRadius: 12,
+              color: "#92400e",
+              fontSize: "1rem",
+              textAlign: "center",
+            }}
+          >
+            Demo Mode - Tap to simulate payment
+          </div>
+        </div>
+      </div>
+
+      {/* Fixed Bottom Navigation with color */}
+      <div
+        style={{
+          position: "fixed",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          padding: "16px 24px",
+          background: COLORS.primaryLight,
+          borderTop: `1px solid ${COLORS.primaryBorder}`,
+          display: "flex",
+          justifyContent: "center",
+          gap: 16,
+          zIndex: 10,
+        }}
+      >
+        <button
+          onClick={onBack}
+          disabled={submitting}
+          style={{
+            padding: "16px 32px",
+            background: "transparent",
+            border: `2px solid ${COLORS.border}`,
+            borderRadius: 12,
+            color: COLORS.textMuted,
+            fontSize: "1.1rem",
+            cursor: submitting ? "not-allowed" : "pointer",
+          }}
+        >
+          Back
+        </button>
+        <button
+          onClick={onPay}
+          disabled={submitting}
+          style={{
+            padding: "16px 48px",
+            background: submitting ? "#ccc" : COLORS.success,
+            border: "none",
+            borderRadius: 12,
+            color: COLORS.textOnPrimary,
+            fontSize: "1.25rem",
+            fontWeight: 700,
+            cursor: submitting ? "wait" : "pointer",
+          }}
+        >
+          {submitting ? "Processing..." : `Pay $${(totalCents / 100).toFixed(2)}`}
+        </button>
+      </div>
     </main>
   );
 }
@@ -2761,10 +4942,18 @@ function CompleteView({
     }
   }, [shouldRedirect, onNewOrder]);
 
+  // Generate QR code value for an order
+  const getQRValue = (guest: GuestOrder) => {
+    if (guest.orderId) {
+      return `oh://order/${guest.orderId}`;
+    }
+    return `oh://order/${guest.orderNumber || guest.dailyOrderNumber}`;
+  };
+
   return (
     <main
+      className="kiosk-screen"
       style={{
-        minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -2774,102 +4963,150 @@ function CompleteView({
         padding: 48,
         textAlign: "center",
         position: "relative",
+        overflow: "hidden",
       }}
     >
+      {/* Decorative Oh! mark on right side - 30% cut off */}
+      <div
+        style={{
+          position: "absolute",
+          top: "50%",
+          right: "-15%",
+          transform: "translateY(-50%)",
+          opacity: 0.08,
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      >
+        <img
+          src="/Oh_Logo_Mark_Web.png"
+          alt=""
+          style={{
+            height: "90vh",
+            width: "auto",
+            objectFit: "contain",
+          }}
+        />
+      </div>
+
       {/* Brand header */}
-      <div style={{ position: "absolute", top: 24, left: 24 }}>
+      <div style={{ position: "absolute", top: 24, left: 24, zIndex: 1 }}>
         <KioskBrand size="normal" />
       </div>
 
       <div
         style={{
-          width: 100,
-          height: 100,
-          borderRadius: 50,
+          width: 120,
+          height: 120,
+          borderRadius: 60,
           background: COLORS.successLight,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          marginBottom: 32,
+          marginBottom: 40,
+          zIndex: 1,
         }}
       >
-        <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke={COLORS.success} strokeWidth="2">
+        <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke={COLORS.success} strokeWidth="2.5">
           <path d="M20 6L9 17l-5-5" />
         </svg>
       </div>
 
-      <h1 style={{ fontSize: "2.5rem", fontWeight: 700, marginBottom: 16 }}>
+      <h1 className="kiosk-title" style={{ marginBottom: 16 }}>
         You're All Set!
       </h1>
-      <p style={{ color: COLORS.textMuted, marginBottom: 48 }}>
-        Please proceed to your pod(s) - your food will arrive shortly
+      <p className="kiosk-body" style={{ color: COLORS.textMuted, marginBottom: 48 }}>
+        Proceed to your pod(s) and scan your QR code when you arrive
       </p>
 
+      {/* Order cards with QR codes */}
       <div
         style={{
-          background: COLORS.surfaceElevated,
-          borderRadius: 20,
-          padding: 32,
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 24,
+          justifyContent: "center",
           marginBottom: 48,
-          border: `1px solid ${COLORS.border}`,
+          maxWidth: 1200,
         }}
       >
-        <h2 style={{ marginBottom: 20, fontSize: "1.25rem" }}>Your Orders</h2>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 16, justifyContent: "center" }}>
-          {guestOrders.map((g) => {
-            const pod = seats.find((s) => s.id === g.selectedPodId);
-            return (
+        {guestOrders.map((g) => {
+          const pod = seats.find((s) => s.id === g.selectedPodId);
+          return (
+            <div
+              key={g.guestNumber}
+              style={{
+                background: COLORS.surfaceElevated,
+                borderRadius: 24,
+                padding: 28,
+                border: `2px solid ${COLORS.primary}`,
+                minWidth: 240,
+                textAlign: "center",
+              }}
+            >
+              {/* Guest name */}
+              <div style={{ fontSize: "1.25rem", fontWeight: 600, marginBottom: 4, color: COLORS.text }}>
+                {g.guestName}
+              </div>
+
+              {/* Order number */}
+              <div style={{ fontSize: "2.5rem", fontWeight: 700, color: COLORS.primary, marginBottom: 16 }}>
+                #{g.dailyOrderNumber || "---"}
+              </div>
+
+              {/* QR Code */}
               <div
-                key={g.guestNumber}
                 style={{
-                  padding: "20px 28px",
-                  background: COLORS.primary,
+                  background: "#FFFFFF",
+                  padding: 16,
                   borderRadius: 16,
-                  minWidth: 140,
-                  color: COLORS.textOnPrimary,
+                  display: "inline-block",
+                  marginBottom: 16,
                 }}
               >
-                <div style={{ fontSize: "0.85rem", opacity: 0.85 }}>{g.guestName}</div>
-                <div style={{ fontSize: "2rem", fontWeight: 700, margin: "4px 0" }}>
-                  #{g.dailyOrderNumber || "---"}
-                </div>
-                {pod && (
-                  <div
-                    style={{
-                      background: "rgba(255,255,255,0.2)",
-                      borderRadius: 8,
-                      padding: "6px 12px",
-                      marginTop: 8,
-                      fontSize: "0.9rem",
-                      fontWeight: 600,
-                    }}
-                  >
-                    Pod {pod.number}
-                  </div>
-                )}
+                <QRCodeSVG
+                  value={getQRValue(g)}
+                  size={160}
+                  level="M"
+                  includeMargin={false}
+                  fgColor="#1a1a1a"
+                  bgColor="#FFFFFF"
+                />
               </div>
-            );
-          })}
-        </div>
+
+              {/* Pod assignment */}
+              {pod && (
+                <div
+                  style={{
+                    background: COLORS.primary,
+                    borderRadius: 12,
+                    padding: "12px 20px",
+                    color: COLORS.textOnPrimary,
+                    fontSize: "1.125rem",
+                    fontWeight: 600,
+                  }}
+                >
+                  Go to Pod {pod.number}
+                </div>
+              )}
+
+              {/* Scan instruction */}
+              <p style={{ color: COLORS.textMuted, fontSize: "0.9rem", marginTop: 12 }}>
+                Scan at your pod to begin
+              </p>
+            </div>
+          );
+        })}
       </div>
 
       <button
         onClick={onNewOrder}
-        style={{
-          padding: "20px 64px",
-          background: COLORS.primary,
-          border: "none",
-          borderRadius: 16,
-          color: COLORS.textOnPrimary,
-          fontSize: "1.25rem",
-          fontWeight: 600,
-          cursor: "pointer",
-        }}
+        className="kiosk-btn kiosk-btn-primary"
       >
         Start New Order
       </button>
 
-      <p style={{ marginTop: 24, color: COLORS.textMuted, fontSize: "0.85rem" }}>
+      <p style={{ marginTop: 24, color: COLORS.textMuted, fontSize: "1rem" }}>
         Screen will reset automatically in {countdown} seconds
       </p>
     </main>

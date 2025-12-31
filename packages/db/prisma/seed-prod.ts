@@ -120,6 +120,7 @@ async function seedCoreData() {
       address: '50 S Main St, Salt Lake City, UT 84101',
       lat: 40.7679773,
       lng: -111.89162,
+      taxRate: 0.0945, // Salt Lake City: 8.45% base + 1% restaurant tax = 9.45%
     },
     create: {
       id: 'cmip6jbz700022nnnxxpmm5hf',
@@ -129,9 +130,10 @@ async function seedCoreData() {
       address: '50 S Main St, Salt Lake City, UT 84101',
       lat: 40.7679773,
       lng: -111.89162,
+      taxRate: 0.0945, // Salt Lake City: 8.45% base + 1% restaurant tax = 9.45%
     }
   });
-  console.log('✓ Location:', cityCreek.name, `(${cityCreek.city})`);
+  console.log('✓ Location:', cityCreek.name, `(${cityCreek.city}, tax: ${(cityCreek.taxRate * 100).toFixed(2)}%)`);
 
   const universityPlace = await prisma.location.upsert({
     where: { id: 'cmip6jbza00042nnnf4nc0dvh' },
@@ -141,6 +143,7 @@ async function seedCoreData() {
       address: '575 E University Pkwy, Orem, UT 84097',
       lat: 40.2338,
       lng: -111.6585,
+      taxRate: 0.0845, // Orem: 7.45% base + 1% restaurant tax = 8.45%
     },
     create: {
       id: 'cmip6jbza00042nnnf4nc0dvh',
@@ -150,9 +153,10 @@ async function seedCoreData() {
       address: '575 E University Pkwy, Orem, UT 84097',
       lat: 40.2338,
       lng: -111.6585,
+      taxRate: 0.0845, // Orem: 7.45% base + 1% restaurant tax = 8.45%
     }
   });
-  console.log('✓ Location:', universityPlace.name, `(${universityPlace.city})`);
+  console.log('✓ Location:', universityPlace.name, `(${universityPlace.city}, tax: ${(universityPlace.taxRate * 100).toFixed(2)}%)`);
 
   // ==========================================
   // MENU ITEMS
@@ -169,7 +173,7 @@ async function seedCoreData() {
     { id: 'cmip6jbze000g2nnnvgx9hqnf', name: 'Ramen Noodles', nameZhTW: '拉麵', nameZhCN: '拉面', nameEs: 'Fideos Ramen', basePriceCents: 0, category: 'main02', categoryType: 'MAIN', selectionMode: 'SINGLE', displayOrder: 1, isVegetarian: true, isVegan: true },
     { id: 'cmip6jbzd000e2nnnw1ftbmxr', name: 'Shaved Noodles', nameZhTW: '刀削麵', nameZhCN: '刀削面', nameEs: 'Fideos Cortados a Mano', basePriceCents: 0, category: 'main02', categoryType: 'MAIN', selectionMode: 'SINGLE', displayOrder: 2, isVegetarian: true, isVegan: true },
     { id: 'cmip6jbzd000c2nnny2hrd859', name: 'Wide Noodles', nameZhTW: '寬麵', nameZhCN: '宽面', nameEs: 'Fideos Anchos', basePriceCents: 0, category: 'main02', categoryType: 'MAIN', selectionMode: 'SINGLE', displayOrder: 3, isVegetarian: true, isVegan: true },
-    { id: 'cmjnacgf10001gf1rgfwide01', name: 'Wide Noodles (Gluten Free)', nameZhTW: '寬麵（無麩質）', nameZhCN: '宽面（无麸质）', nameEs: 'Fideos Anchos (Sin Gluten)', basePriceCents: 100, category: 'main02', categoryType: 'MAIN', selectionMode: 'SINGLE', displayOrder: 4, isVegetarian: true, isVegan: true, isGlutenFree: true },
+    { id: 'cmjnacgf10001gf1rgfwide01', name: 'Wide Noodles (Gluten Free)', nameZhTW: '寬麵（無麩質）', nameZhCN: '宽面（无麸质）', nameEs: 'Fideos Anchos (Sin Gluten)', basePriceCents: 0, category: 'main02', categoryType: 'MAIN', selectionMode: 'SINGLE', displayOrder: 4, isVegetarian: true, isVegan: true, isGlutenFree: true },
     { id: 'cmip6jbze000i2nnnsjjcpifd', name: 'No Noodles', nameZhTW: '無麵', nameZhCN: '无面', nameEs: 'Sin Fideos', basePriceCents: 0, category: 'main02', categoryType: 'MAIN', selectionMode: 'SINGLE', displayOrder: 5, isVegetarian: true, isVegan: true, isGlutenFree: true },
 
     // SLIDERS
