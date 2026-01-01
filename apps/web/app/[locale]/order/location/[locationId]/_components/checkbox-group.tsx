@@ -132,7 +132,7 @@ export function CheckboxGroup({
                   }}
                 >
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: "600", fontSize: "1rem", marginBottom: 4, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <div style={{ fontWeight: "600", fontSize: "1rem", marginBottom: 4, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", color: "#1a1a1a" }}>
                       <span>{item.name}</span>
                       <DietaryBadges
                         isVegetarian={item.isVegetarian}
