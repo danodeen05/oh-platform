@@ -2,6 +2,7 @@
 import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState, useRef, Suspense } from "react";
 import { useTranslations, useLocale } from "next-intl";
+import { useUser, useSignUp, useSignIn } from "@clerk/nextjs";
 import { useToast } from "@/components/ui/Toast";
 import { ConfirmDialog } from "@/components/ui/Dialog";
 
@@ -344,6 +345,7 @@ function StatusContent() {
   const tFeatures = useTranslations("features");
   const tOrder = useTranslations("order");
   const toast = useToast();
+  const { user, isLoaded: isUserLoaded } = useUser();
   const orderQrCode = searchParams.get("orderQrCode");
 
   const [status, setStatus] = useState<OrderStatus | null>(null);
@@ -381,6 +383,9 @@ function StatusContent() {
   // Dessert ready state
   const [dessertLoading, setDessertLoading] = useState(false);
   const [dessertRequested, setDessertRequested] = useState(false);
+
+  // Sign-up modal state
+  const [showSignUpModal, setShowSignUpModal] = useState(false);
 
   // Fetch order status
   async function fetchStatus() {
@@ -808,6 +813,48 @@ function StatusContent() {
   useEffect(() => {
     fetchStatus();
   }, [orderQrCode]);
+
+  // Check for pending order link after sign-in
+  useEffect(() => {
+    async function linkPendingOrder() {
+      if (!isUserLoaded || !user || !orderQrCode) return;
+
+      // Check if there's a pending order to link
+      const pendingLink = localStorage.getItem("pendingOrderLink");
+      if (!pendingLink) return;
+
+      try {
+        const { orderQrCode: pendingQrCode } = JSON.parse(pendingLink);
+
+        // Only link if we're viewing the same order that was pending
+        if (pendingQrCode !== orderQrCode) return;
+
+        // Call API to link order to account
+        const response = await fetch(`${BASE}/orders/link-to-account`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-tenant-slug": "oh",
+          },
+          body: JSON.stringify({
+            orderQrCode: pendingQrCode,
+            userId: user.id,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          toast.success(t("signUp.orderLinked", { points: data.pointsAwarded }));
+          // Clear the pending link
+          localStorage.removeItem("pendingOrderLink");
+        }
+      } catch (error) {
+        console.error("Failed to link order:", error);
+      }
+    }
+
+    linkPendingOrder();
+  }, [isUserLoaded, user, orderQrCode]);
 
   // Poll every 10 seconds (increased from 5 to reduce jerkiness)
   useEffect(() => {
@@ -1466,6 +1513,90 @@ function StatusContent() {
             {order.location.city}
           </div>
         </div>
+
+        {/* Sign-up CTA for unauthenticated users */}
+        {isUserLoaded && !user && (
+          <div
+            style={{
+              background: "linear-gradient(135deg, #7C7A67 0%, #5a584a 100%)",
+              borderRadius: 16,
+              padding: 24,
+              marginBottom: 16,
+              textAlign: "center",
+              boxShadow: "0 4px 12px rgba(124, 122, 103, 0.3)",
+            }}
+          >
+            <div style={{ fontSize: "1.5rem", marginBottom: 8 }}>
+              ⭐
+            </div>
+            <h3
+              style={{
+                color: "white",
+                margin: 0,
+                marginBottom: 8,
+                fontSize: "1.2rem",
+              }}
+            >
+              {t("signUp.title")}
+            </h3>
+            <p
+              style={{
+                color: "rgba(255,255,255,0.85)",
+                margin: 0,
+                marginBottom: 16,
+                fontSize: "0.9rem",
+                lineHeight: 1.5,
+              }}
+            >
+              {t("signUp.subtitle")}
+            </p>
+            <div
+              style={{
+                background: "rgba(255,255,255,0.15)",
+                borderRadius: 12,
+                padding: 16,
+                marginBottom: 16,
+              }}
+            >
+              <div
+                style={{
+                  color: "white",
+                  fontSize: "0.85rem",
+                  lineHeight: 1.6,
+                }}
+              >
+                <div style={{ marginBottom: 6 }}>✓ {t("signUp.benefit1")}</div>
+                <div style={{ marginBottom: 6 }}>✓ {t("signUp.benefit2")}</div>
+                <div style={{ marginBottom: 6 }}>✓ {t("signUp.benefit3")}</div>
+                <div>✓ {t("signUp.benefit4")}</div>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowSignUpModal(true)}
+              style={{
+                padding: "14px 32px",
+                borderRadius: 50,
+                border: "2px solid white",
+                background: "transparent",
+                color: "white",
+                fontSize: "1rem",
+                fontWeight: 600,
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "white";
+                e.currentTarget.style.color = "#5a584a";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent";
+                e.currentTarget.style.color = "white";
+              }}
+            >
+              {t("signUp.button")}
+            </button>
+          </div>
+        )}
 
         {/* Fortune Cookie - Show after pod check-in to pass time while waiting */}
         {order.podConfirmedAt && (
@@ -2694,6 +2825,222 @@ function StatusContent() {
                   {t("addItems.failedToLoad")}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sign-up Modal */}
+      {showSignUpModal && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.7)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: 24,
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowSignUpModal(false);
+          }}
+        >
+          <div
+            style={{
+              background: "white",
+              borderRadius: 24,
+              width: "100%",
+              maxWidth: 400,
+              maxHeight: "90vh",
+              overflow: "auto",
+              animation: "fadeIn 0.2s ease",
+            }}
+          >
+            <style>
+              {`
+                @keyframes fadeIn {
+                  from { opacity: 0; transform: scale(0.95); }
+                  to { opacity: 1; transform: scale(1); }
+                }
+              `}
+            </style>
+
+            {/* Modal Header */}
+            <div
+              style={{
+                background: "linear-gradient(135deg, #7C7A67 0%, #5a584a 100%)",
+                padding: "32px 24px",
+                borderRadius: "24px 24px 0 0",
+                textAlign: "center",
+                position: "relative",
+              }}
+            >
+              <button
+                onClick={() => setShowSignUpModal(false)}
+                style={{
+                  position: "absolute",
+                  top: 16,
+                  right: 16,
+                  background: "rgba(255,255,255,0.2)",
+                  border: "none",
+                  borderRadius: "50%",
+                  width: 32,
+                  height: 32,
+                  fontSize: "1.2rem",
+                  cursor: "pointer",
+                  color: "white",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                ✕
+              </button>
+              <div style={{ fontSize: "3rem", marginBottom: 8 }}>⭐</div>
+              <h2
+                style={{
+                  color: "white",
+                  margin: 0,
+                  fontSize: "1.4rem",
+                }}
+              >
+                {t("signUp.modalTitle")}
+              </h2>
+              <p
+                style={{
+                  color: "rgba(255,255,255,0.85)",
+                  margin: "8px 0 0 0",
+                  fontSize: "0.9rem",
+                }}
+              >
+                {t("signUp.modalSubtitle")}
+              </p>
+            </div>
+
+            {/* Modal Content */}
+            <div style={{ padding: 24 }}>
+              {/* Benefits List */}
+              <div style={{ marginBottom: 24 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 12,
+                  }}
+                >
+                  {[
+                    { icon: "🎁", text: t("signUp.benefit1") },
+                    { icon: "📊", text: t("signUp.benefit2") },
+                    { icon: "🏆", text: t("signUp.benefit3") },
+                    { icon: "🎉", text: t("signUp.benefit4") },
+                  ].map((benefit, index) => (
+                    <div
+                      key={index}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 12,
+                        padding: 12,
+                        background: "#f5f5f0",
+                        borderRadius: 12,
+                      }}
+                    >
+                      <span style={{ fontSize: "1.25rem" }}>{benefit.icon}</span>
+                      <span style={{ fontSize: "0.9rem", color: "#3d3c35" }}>
+                        {benefit.text}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Order Badge */}
+              <div
+                style={{
+                  background: "#f5f5f0",
+                  borderRadius: 12,
+                  padding: 16,
+                  marginBottom: 24,
+                  textAlign: "center",
+                  border: "2px dashed #7C7A67",
+                }}
+              >
+                <div style={{ fontSize: "0.8rem", color: "#7C7A67", marginBottom: 4 }}>
+                  {t("signUp.thisOrder")}
+                </div>
+                <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#3d3c35" }}>
+                  #{order.kitchenOrderNumber || order.orderNumber}
+                </div>
+                <div style={{ fontSize: "0.85rem", color: "#5a584a", marginTop: 4 }}>
+                  {t("signUp.willBeLinked")}
+                </div>
+              </div>
+
+              {/* Sign-up Buttons */}
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <button
+                  onClick={() => {
+                    // Store order info for linking after sign-up
+                    localStorage.setItem("pendingOrderLink", JSON.stringify({
+                      orderQrCode: order.orderQrCode,
+                      orderId: order.id,
+                    }));
+                    router.push(`/sign-up?redirect_url=${encodeURIComponent(window.location.href)}`);
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: 16,
+                    background: "#7C7A67",
+                    color: "white",
+                    border: "none",
+                    borderRadius: 12,
+                    fontSize: "1rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  {t("signUp.createAccount")}
+                </button>
+                <button
+                  onClick={() => {
+                    localStorage.setItem("pendingOrderLink", JSON.stringify({
+                      orderQrCode: order.orderQrCode,
+                      orderId: order.id,
+                    }));
+                    router.push(`/sign-in?redirect_url=${encodeURIComponent(window.location.href)}`);
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: 16,
+                    background: "white",
+                    color: "#7C7A67",
+                    border: "2px solid #7C7A67",
+                    borderRadius: 12,
+                    fontSize: "1rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  {t("signUp.alreadyHaveAccount")}
+                </button>
+              </div>
+
+              <p
+                style={{
+                  textAlign: "center",
+                  color: "#9ca3af",
+                  fontSize: "0.75rem",
+                  marginTop: 16,
+                  marginBottom: 0,
+                }}
+              >
+                {t("signUp.privacyNote")}
+              </p>
             </div>
           </div>
         </div>

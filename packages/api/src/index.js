@@ -1521,6 +1521,83 @@ app.get("/orders/status", async (req, reply) => {
   return response;
 });
 
+// POST /orders/link-to-account - Link a guest order to a user account
+app.post("/orders/link-to-account", async (req, reply) => {
+  const { orderQrCode, userId } = req.body || {};
+
+  if (!orderQrCode) {
+    return reply.code(400).send({ error: "orderQrCode required" });
+  }
+
+  if (!userId) {
+    return reply.code(400).send({ error: "userId required" });
+  }
+
+  // Find the order
+  const order = await prisma.order.findUnique({
+    where: { orderQrCode },
+    include: { user: true, items: true },
+  });
+
+  if (!order) {
+    return reply.code(404).send({ error: "Order not found" });
+  }
+
+  // Check if order is already linked to an account
+  if (order.userId) {
+    // If already linked to this user, that's fine
+    if (order.userId === userId) {
+      return { success: true, message: "Order already linked to your account" };
+    }
+    // If linked to a different user, reject
+    return reply.code(400).send({ error: "Order is already linked to another account" });
+  }
+
+  // Find or create the user record (userId is the Clerk ID)
+  let user = await prisma.user.findUnique({
+    where: { clerkId: userId },
+  });
+
+  if (!user) {
+    // Create user record if it doesn't exist
+    user = await prisma.user.create({
+      data: {
+        clerkId: userId,
+        tenantId: order.tenantId,
+        totalSpentCents: 0,
+        visitCount: 0,
+        loyaltyPointsBalance: 0,
+      },
+    });
+  }
+
+  // Calculate points to award (1 point per dollar spent)
+  const pointsToAward = Math.floor(order.totalCents / 100);
+
+  // Link the order to the user and award points
+  const [updatedOrder, updatedUser] = await prisma.$transaction([
+    prisma.order.update({
+      where: { id: order.id },
+      data: { userId: user.id },
+    }),
+    prisma.user.update({
+      where: { id: user.id },
+      data: {
+        loyaltyPointsBalance: { increment: pointsToAward },
+        totalSpentCents: { increment: order.totalCents },
+        visitCount: { increment: 1 },
+      },
+    }),
+  ]);
+
+  return {
+    success: true,
+    message: "Order linked successfully",
+    pointsAwarded: pointsToAward,
+    newPointsBalance: updatedUser.loyaltyPointsBalance,
+  };
+});
+
 // POST /orders/confirm-pod - Confirm customer arrived at assigned pod
 app.post("/orders/confirm-pod", async (req, reply) => {
   const { orderQrCode } = req.body || {};

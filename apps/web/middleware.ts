@@ -1,14 +1,22 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { clerkMiddleware, createRouteMatcher, clerkClient } from "@clerk/nextjs/server";
 import createIntlMiddleware from "next-intl/middleware";
 import { routing } from "./i18n/routing";
 import { NextRequest, NextResponse } from "next/server";
 
 const intlMiddleware = createIntlMiddleware(routing);
 
+// Allowed kiosk user email addresses
+const ALLOWED_KIOSK_USERS = [
+  "danodeen@me.com",
+  "danodeen@gmail.com",
+];
+
 // Protected routes that require authentication (with locale prefix)
 const isProtectedRoute = createRouteMatcher([
   "/:locale/member(.*)",
   "/:locale/referral(.*)",
+  "/:locale/kiosk",
+  "/:locale/kiosk/(.*)",
 ]);
 
 // Public routes (with locale prefix)
@@ -29,11 +37,11 @@ const isPublicRoute = createRouteMatcher([
   "/:locale/accessibility(.*)",
   "/:locale/tenants(.*)",
   "/:locale/pod(.*)",
-  "/:locale/kiosk(.*)",
+  "/:locale/kiosk-unauthorized(.*)",
 ]);
 
-// Check if this is a kiosk route
-const isKioskRoute = createRouteMatcher(["/:locale/kiosk(.*)"]);
+// Check if this is a kiosk route (excludes kiosk-unauthorized)
+const isKioskRoute = createRouteMatcher(["/:locale/kiosk", "/:locale/kiosk/(.*)"]);
 
 export default clerkMiddleware(async (auth, request: NextRequest) => {
   // Run the intl middleware first to handle locale routing
@@ -41,7 +49,24 @@ export default clerkMiddleware(async (auth, request: NextRequest) => {
 
   // Check if this is a protected route
   if (isProtectedRoute(request)) {
-    await auth.protect();
+    const { userId } = await auth.protect();
+
+    // For kiosk routes, verify user is in allowlist
+    if (isKioskRoute(request) && userId) {
+      const client = await clerkClient();
+      const user = await client.users.getUser(userId);
+
+      const primaryEmail = user.emailAddresses.find(
+        (email) => email.id === user.primaryEmailAddressId
+      )?.emailAddress;
+
+      if (!primaryEmail || !ALLOWED_KIOSK_USERS.includes(primaryEmail.toLowerCase())) {
+        // Extract locale from URL path
+        const locale = request.nextUrl.pathname.split("/")[1] || "en";
+        const url = new URL(`/${locale}/kiosk-unauthorized`, request.url);
+        return NextResponse.redirect(url);
+      }
+    }
   }
 
   // Set x-pathname header for kiosk detection in layout

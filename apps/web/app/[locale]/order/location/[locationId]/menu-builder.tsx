@@ -104,14 +104,17 @@ export default function MenuBuilder({
       return 0;
     }
 
+    // If additionalPriceCents is 0, use basePriceCents for each item
+    const effectiveAdditionalPrice = item.additionalPriceCents || item.basePriceCents;
+
     // If there's an included quantity, only charge for extras
     if (item.includedQuantity > 0) {
       const extraQuantity = quantity - item.includedQuantity;
-      return item.basePriceCents + item.additionalPriceCents * (extraQuantity - 1);
+      return item.basePriceCents + effectiveAdditionalPrice * (extraQuantity - 1);
     }
 
     // Standard pricing: base + additional for each extra
-    return item.basePriceCents + item.additionalPriceCents * (quantity - 1);
+    return item.basePriceCents + effectiveAdditionalPrice * (quantity - 1);
   }
 
   // Separate menu by category

@@ -66,6 +66,8 @@ export function CheckboxGroup({
           const isMaxed = maxQuantity !== undefined && qty >= maxQuantity;
 
           // Calculate price for this item
+          // If additionalPriceCents is 0, use basePriceCents for each item
+          const effectiveAdditionalPrice = item.additionalPriceCents || item.basePriceCents;
           let itemPrice = 0;
           if (qty > 0) {
             if (qty <= item.includedQuantity) {
@@ -73,10 +75,10 @@ export function CheckboxGroup({
             } else if (item.includedQuantity > 0) {
               // Some included, charge for extras
               const extraQty = qty - item.includedQuantity;
-              itemPrice = item.basePriceCents + item.additionalPriceCents * (extraQty - 1);
+              itemPrice = item.basePriceCents + effectiveAdditionalPrice * (extraQty - 1);
             } else {
               // Standard pricing
-              itemPrice = item.basePriceCents + item.additionalPriceCents * (qty - 1);
+              itemPrice = item.basePriceCents + effectiveAdditionalPrice * (qty - 1);
             }
           }
 
