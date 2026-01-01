@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import "./kiosk.css";
 import { IdleTimer } from "@/components/kiosk";
 
@@ -9,6 +10,8 @@ const STAFF_PIN = process.env.NEXT_PUBLIC_KIOSK_STAFF_PIN || "1234";
 
 export default function KioskLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const t = useTranslations("kiosk");
+  const tCommon = useTranslations("common");
   const [showPinModal, setShowPinModal] = useState(false);
   const [pinInput, setPinInput] = useState("");
   const [pinError, setPinError] = useState(false);
@@ -76,8 +79,8 @@ export default function KioskLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="kiosk-container kiosk-no-select" style={{ position: "relative" }}>
-      {/* Idle Timer - auto-return to attract screen after 60s inactivity */}
-      <IdleTimer timeout={60000} redirectPath="/kiosk" showWarning />
+      {/* Idle Timer - auto-return to attract screen after 60s inactivity, reset to English */}
+      <IdleTimer timeout={60000} redirectPath="/en/kiosk" showWarning />
 
       {/* Hidden exit button - triple tap to reveal */}
       <button
@@ -121,9 +124,9 @@ export default function KioskLayout({ children }: { children: ReactNode }) {
               minWidth: 350,
             }}
           >
-            <h2 style={{ marginBottom: 8, fontSize: "1.5rem" }}>Staff Access</h2>
+            <h2 style={{ marginBottom: 8, fontSize: "1.5rem" }}>{t("staff.staffAccess")}</h2>
             <p style={{ color: "#999", marginBottom: 32, fontSize: "0.9rem" }}>
-              Enter PIN to exit kiosk mode
+              {t("staff.enterPin")}
             </p>
 
             {/* PIN Display */}
@@ -169,7 +172,7 @@ export default function KioskLayout({ children }: { children: ReactNode }) {
                   fontSize: "0.9rem",
                 }}
               >
-                Incorrect PIN. Try again.
+                {t("staff.incorrectPin")}
               </div>
             )}
 
@@ -187,7 +190,7 @@ export default function KioskLayout({ children }: { children: ReactNode }) {
                       fontSize: key === "clear" || key === "back" ? "1rem" : "1.75rem",
                     }}
                   >
-                    {key === "clear" ? "Clear" : key === "back" ? "<" : key}
+                    {key === "clear" ? t("staff.clear") : key === "back" ? "<" : key}
                   </button>
                 )
               )}
@@ -205,7 +208,7 @@ export default function KioskLayout({ children }: { children: ReactNode }) {
                 cursor: "pointer",
               }}
             >
-              Cancel
+              {tCommon("cancel")}
             </button>
           </div>
         </div>

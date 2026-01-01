@@ -1,9 +1,10 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { QRCodeSVG } from "qrcode.react";
-import { VirtualKeyboard } from "@/components/kiosk";
+import { pdf } from "@react-pdf/renderer";
+import { VirtualKeyboard, PrintableReceipt, generateQRDataUrl, LanguageSelector } from "@/components/kiosk";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -75,6 +76,7 @@ const sliderThumbStyles = `
 
 // Brand component for consistent branding across all kiosk screens
 function KioskBrand({ size = "normal" }: { size?: "small" | "normal" | "large" | "xlarge" }) {
+  const tHome = useTranslations("home");
   const sizes = {
     small: { logo: 32, chinese: "1.2rem", english: "0.65rem", gap: 4 },
     normal: { logo: 48, chinese: "1.8rem", english: "0.95rem", gap: 6 },
@@ -90,28 +92,31 @@ function KioskBrand({ size = "normal" }: { size?: "small" | "normal" | "large" |
         alt="Oh! Logo"
         style={{ width: s.logo, height: s.logo, objectFit: "contain" }}
       />
-      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-        <span
-          style={{
-            fontFamily: '"Ma Shan Zheng", cursive',
-            fontSize: s.chinese,
-            color: "#C7A878",
-            lineHeight: 1,
-          }}
-        >
-          哦
-        </span>
-        <span
-          style={{
-            fontFamily: '"Bebas Neue", sans-serif',
-            fontSize: s.english,
-            color: COLORS.text,
-            letterSpacing: "0.02em",
-            lineHeight: 1,
-          }}
-        >
-          Oh! Beef Noodle Soup
-        </span>
+      <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: s.english, lineHeight: 1 }}>
+        {tHome.rich("brandName", {
+          oh: () => (
+            <span
+              style={{
+                fontFamily: '"Ma Shan Zheng", cursive',
+                fontSize: s.chinese,
+                color: "#C7A878",
+              }}
+            >
+              哦
+            </span>
+          ),
+          bebas: (chunks) => (
+            <span
+              style={{
+                fontFamily: '"Bebas Neue", sans-serif',
+                color: COLORS.text,
+                letterSpacing: "0.02em",
+              }}
+            >
+              {chunks}
+            </span>
+          ),
+        })}
       </div>
     </div>
   );
@@ -189,24 +194,48 @@ function DietaryBadges({
 }
 
 // Menu item image mapping - using correct file names from /public/menu images/
-// Keys match exact API names from /menu/steps endpoint
+// Keys match exact API names from /menu/steps endpoint (includes English, zh-TW, zh-CN)
 const MENU_IMAGES: Record<string, string> = {
-  // Bowls - exact API names
+  // Bowls - English
   "A5 Wagyu Beef Noodle Soup": "/menu images/A5 Wagyu Bowl.png",
   "Classic Beef Noodle Soup": "/menu images/Classic Bowl.png",
   "Classic Beef Noodle Soup (no beef)": "/menu images/Classic Bowl No Beef.png",
+  // Bowls - Chinese Traditional (zh-TW)
+  "A5和牛牛肉麵": "/menu images/A5 Wagyu Bowl.png",
+  "經典牛肉麵": "/menu images/Classic Bowl.png",
+  "經典牛肉麵（無牛肉）": "/menu images/Classic Bowl No Beef.png",
+  // Bowls - Chinese Simplified (zh-CN)
+  "A5和牛牛肉面": "/menu images/A5 Wagyu Bowl.png",
+  "经典牛肉面": "/menu images/Classic Bowl.png",
+  "经典牛肉面（无牛肉）": "/menu images/Classic Bowl No Beef.png",
   // Legacy/alternate names
   "A5 Wagyu Noodle Soup": "/menu images/A5 Wagyu Bowl.png",
   "Classic Beef Noodle Soup (No Beef)": "/menu images/Classic Bowl No Beef.png",
   "Classic Bowl": "/menu images/Classic Bowl.png",
   "Classic Bowl (No Beef)": "/menu images/Classic Bowl No Beef.png",
   "A5 Wagyu Bowl": "/menu images/A5 Wagyu Bowl.png",
-  // Noodles
+  // Noodles - English
   "Ramen Noodles": "/menu images/Ramen Noodles.png",
   "Shaved Noodles": "/menu images/Shaved Noodles.png",
   "Wide Noodles": "/menu images/Wide Noodles.png",
   "Wide Noodles (Gluten Free)": "/menu images/Wide Noodles.png",
-  // Toppings & Add-Ons
+  // "No Noodles" items should NOT have images - they render as buttons
+  // Noodles - Chinese Traditional (zh-TW)
+  "拉麵": "/menu images/Ramen Noodles.png",
+  "刀削麵": "/menu images/Shaved Noodles.png",
+  "寬麵": "/menu images/Wide Noodles.png",
+  "寬麵（無麩質）": "/menu images/Wide Noodles.png",
+  // Noodles - Chinese Simplified (zh-CN)
+  "拉面": "/menu images/Ramen Noodles.png",
+  "刀削面": "/menu images/Shaved Noodles.png",
+  "宽面": "/menu images/Wide Noodles.png",
+  "宽面（无麸质）": "/menu images/Wide Noodles.png",
+  // Noodles - Spanish (es)
+  "Fideos Ramen": "/menu images/Ramen Noodles.png",
+  "Fideos Cortados": "/menu images/Shaved Noodles.png",
+  "Fideos Anchos": "/menu images/Wide Noodles.png",
+  "Fideos Anchos (Sin Gluten)": "/menu images/Wide Noodles.png",
+  // Toppings & Add-Ons - English
   "Baby Bok Choy": "/menu images/Baby Bok Choy.png",
   "Beef Marrow": "/menu images/Beef Marrow.png",
   "Bone Marrow": "/menu images/Beef Marrow.png",
@@ -216,20 +245,85 @@ const MENU_IMAGES: Record<string, string> = {
   "Green Onions": "/menu images/Green Onions.png",
   "Pickled Greens": "/menu images/Pickled Greens.png",
   "Sprouts": "/menu images/Sprouts.png",
-  // Egg variants (API has typo "Soft-Boild Egg")
+  // Toppings & Add-Ons - Chinese (shared zh-TW/zh-CN where identical)
+  "青江菜": "/menu images/Baby Bok Choy.png",
+  "牛骨髓": "/menu images/Beef Marrow.png",
+  "香菜": "/menu images/Cilantro.png",
+  "加牛肉": "/menu images/Extra Beef.png",
+  "酸菜": "/menu images/Pickled Greens.png",
+  "豆芽菜": "/menu images/Sprouts.png",
+  // Toppings - Chinese Traditional (zh-TW) specific
+  "加麵": "/menu images/Wide Noodles.png",
+  "蔥花": "/menu images/Green Onions.png",
+  // Toppings - Chinese Simplified (zh-CN) specific
+  "加面": "/menu images/Wide Noodles.png",
+  "葱花": "/menu images/Green Onions.png",
+  // Toppings & Add-Ons - Spanish (es)
+  "Bok Choy Pequeño": "/menu images/Baby Bok Choy.png",
+  "Tuétano de Res": "/menu images/Beef Marrow.png",
+  "Tuétano": "/menu images/Beef Marrow.png",
+  "Carne Extra": "/menu images/Extra Beef.png",
+  "Fideos Extra": "/menu images/Wide Noodles.png",
+  "Cebollín": "/menu images/Green Onions.png",
+  "Cebollines": "/menu images/Green Onions.png",
+  "Verduras Encurtidas": "/menu images/Pickled Greens.png",
+  "Germinados": "/menu images/Sprouts.png",
+  "Brotes": "/menu images/Sprouts.png",
+  "Brotes de Soja": "/menu images/Sprouts.png",
+  // Egg variants - English (API has typo "Soft-Boild Egg")
   "Soft-Boild Egg": "/menu images/Soft Boiled Egg.png",
   "Soft-Boiled Egg": "/menu images/Soft Boiled Egg.png",
   "Soft Boiled Egg": "/menu images/Soft Boiled Egg.png",
-  // Sides
+  // Egg - Chinese Traditional & Simplified
+  "溏心蛋": "/menu images/Soft Boiled Egg.png",
+  "糖心蛋": "/menu images/Soft Boiled Egg.png",
+  "半熟蛋": "/menu images/Soft Boiled Egg.png",
+  "溫泉蛋": "/menu images/Soft Boiled Egg.png",
+  "温泉蛋": "/menu images/Soft Boiled Egg.png",
+  "水煮蛋": "/menu images/Soft Boiled Egg.png",
+  // Egg - Spanish
+  "Huevo Cocido": "/menu images/Soft Boiled Egg.png",
+  "Huevo Tibio": "/menu images/Soft Boiled Egg.png",
+  "Huevo Pasado por Agua": "/menu images/Soft Boiled Egg.png",
+  // Sides - English
   "Spicy Cucumbers": "/menu images/Spicy Cucumbers.png",
   "Spicy Green Beans": "/menu images/Spicy Green Beans.png",
-  // Desserts
+  // Sides - Chinese Traditional (zh-TW)
+  "涼拌小黃瓜": "/menu images/Spicy Cucumbers.png",
+  "乾煸四季豆": "/menu images/Spicy Green Beans.png",
+  // Sides - Chinese Simplified (zh-CN)
+  "凉拌小黄瓜": "/menu images/Spicy Cucumbers.png",
+  "干煸四季豆": "/menu images/Spicy Green Beans.png",
+  // Sides - Spanish (es)
+  "Pepinos Picantes": "/menu images/Spicy Cucumbers.png",
+  "Ejotes Picantes": "/menu images/Spicy Green Beans.png",
+  // Desserts - English
   "Mandarin Orange Sherbet": "/menu images/Mandarin Orange Sherbet.png",
-  // Beverages - exact API names
+  // Desserts - Chinese (same for zh-TW & zh-CN)
+  "橘子雪酪": "/menu images/Mandarin Orange Sherbet.png",
+  // Desserts - Spanish (es)
+  "Sorbete de Mandarina": "/menu images/Mandarin Orange Sherbet.png",
+  // Beverages - English
   "Pepsi": "/menu images/Pepsi.jpg",
   "Diet Pepsi": "/menu images/DietPepsi.jpg",
   "Water (cold)": "/menu images/IceWater.jpeg",
   "Water (room temp)": "/menu images/RoomTempWater.jpeg",
+  // Beverages - Chinese (shared zh-TW/zh-CN)
+  "冰水": "/menu images/IceWater.jpeg",
+  // Beverages - Chinese Traditional (zh-TW)
+  "百事可樂": "/menu images/Pepsi.jpg",
+  "無糖百事": "/menu images/DietPepsi.jpg",
+  "常溫水": "/menu images/RoomTempWater.jpeg",
+  // Beverages - Chinese Simplified (zh-CN)
+  "百事可乐": "/menu images/Pepsi.jpg",
+  "无糖百事": "/menu images/DietPepsi.jpg",
+  "常温水": "/menu images/RoomTempWater.jpeg",
+  // Beverages - Spanish (es)
+  "Pepsi Light": "/menu images/DietPepsi.jpg",
+  "Agua (fría)": "/menu images/IceWater.jpeg",
+  "Agua (ambiente)": "/menu images/RoomTempWater.jpeg",
+  "Agua Fría": "/menu images/IceWater.jpeg",
+  "Agua Ambiente": "/menu images/RoomTempWater.jpeg",
 };
 
 type Location = {
@@ -253,6 +347,7 @@ type Seat = {
 type MenuItem = {
   id: string;
   name: string;
+  nameEn?: string;
   basePriceCents: number;
   additionalPriceCents: number;
   includedQuantity: number;
@@ -292,12 +387,15 @@ type GuestOrder = {
   selections: Record<string, string>;
   orderId?: string;
   orderNumber?: string;
+  orderQrCode?: string;
   dailyOrderNumber?: number;
   subtotalCents?: number;
   taxCents?: number;
   totalCents?: number;
   paid: boolean;
   selectedPodId?: string;
+  queuePosition?: number;
+  estimatedWaitMinutes?: number;
 };
 
 // Helper to calculate item price
@@ -326,6 +424,9 @@ export default function KioskOrderFlow({
 }) {
   const router = useRouter();
   const t = useTranslations("order");
+  const tKiosk = useTranslations("kiosk");
+  const tCommon = useTranslations("common");
+  const locale = useLocale();
   const [menuSteps, setMenuSteps] = useState<MenuStep[]>([]);
   const [seats, setSeats] = useState<Seat[]>([]);
   const [loading, setLoading] = useState(true);
@@ -370,7 +471,7 @@ export default function KioskOrderFlow({
     async function loadData() {
       try {
         const [menuRes, seatsRes] = await Promise.all([
-          fetch(`${BASE}/menu/steps`, {
+          fetch(`${BASE}/menu/steps?locale=${locale}`, {
             headers: { "x-tenant-slug": "oh" },
           }),
           fetch(`${BASE}/locations/${location.id}/seats`, {
@@ -417,7 +518,7 @@ export default function KioskOrderFlow({
     }
 
     loadData();
-  }, [location.id]);
+  }, [location.id, locale]);
 
   // Calculate running total for current guest
   const calculateRunningTotal = useCallback(() => {
@@ -505,11 +606,52 @@ export default function KioskOrderFlow({
     updateCurrentGuest({ selectedPodId: podId });
   }
 
+  // Helper to check if a seat is a dual pod
+  function isDualPodSeat(seatId: string): boolean {
+    const seat = seats.find(s => s.id === seatId);
+    if (!seat) return false;
+    if (seat.podType !== "DUAL") return false;
+    if (seat.dualPartnerId) return true;
+    return seats.some(s => s.dualPartnerId === seat.id);
+  }
+
   function handlePodConfirm() {
+    const currentPodId = guestOrders[currentGuestIndex]?.selectedPodId;
+
     if (paymentType === "single" && currentGuestIndex < partySize - 1) {
-      // Single payment: cycle through all guests for pod selection
-      setCurrentGuestIndex((prev) => prev + 1);
-      // Stay on pod-selection view for next guest
+      // Check if current guest selected a dual pod
+      if (currentPodId && isDualPodSeat(currentPodId)) {
+        // Dual pod selected - auto-assign remaining guests (up to 1 more for dual pod)
+        // and skip their pod selection
+        const nextGuestIndex = currentGuestIndex + 1;
+
+        // Assign the same dual pod to the next guest
+        setGuestOrders(prev => {
+          const updated = [...prev];
+          if (updated[nextGuestIndex]) {
+            updated[nextGuestIndex] = {
+              ...updated[nextGuestIndex],
+              selectedPodId: currentPodId,
+            };
+          }
+          return updated;
+        });
+
+        // If there are only 2 guests total, go straight to payment
+        // If more than 2 guests, continue pod selection for remaining guests
+        if (partySize === 2) {
+          setView("payment");
+        } else {
+          // Skip the next guest (already assigned) and continue with guest after that
+          setCurrentGuestIndex(nextGuestIndex + 1);
+          if (nextGuestIndex + 1 >= partySize) {
+            setView("payment");
+          }
+        }
+      } else {
+        // Single pod selected - continue to next guest's pod selection
+        setCurrentGuestIndex((prev) => prev + 1);
+      }
     } else {
       // Move to payment after all pod selections
       setView("payment");
@@ -566,6 +708,7 @@ export default function KioskOrderFlow({
       updateCurrentGuest({
         orderId: order.id,
         orderNumber: order.orderNumber,
+        orderQrCode: order.orderQrCode,
         dailyOrderNumber: order.kitchenOrderNumber,
         subtotalCents,
         taxCents,
@@ -668,7 +811,8 @@ export default function KioskOrderFlow({
   }
 
   function startOver() {
-    router.push("/kiosk");
+    // Go back to the kiosk welcome page with the location preserved
+    router.push(`/kiosk?locationId=${location.id}`);
   }
 
   if (loading) {
@@ -683,10 +827,17 @@ export default function KioskOrderFlow({
           color: COLORS.text,
         }}
       >
-        <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: "4rem", marginBottom: 16, color: COLORS.primary }}>Oh!</div>
-          <div style={{ fontSize: "1.25rem", color: COLORS.textMuted }}>Loading menu...</div>
-        </div>
+        {/* Animated Oh! logo loader */}
+        <img
+          src="/Oh_Logo_Mark_Web.png"
+          alt="Loading..."
+          style={{
+            width: 200,
+            height: 200,
+            objectFit: "contain",
+            animation: "spin-pulse 2s ease-in-out infinite",
+          }}
+        />
       </main>
     );
   }
@@ -724,7 +875,7 @@ export default function KioskOrderFlow({
             <line x1="9" y1="9" x2="15" y2="15" />
           </svg>
         </div>
-        <h1 className="kiosk-subtitle" style={{ marginBottom: 12 }}>Something went wrong</h1>
+        <h1 className="kiosk-subtitle" style={{ marginBottom: 12 }}>{tKiosk("orderFlow.somethingWentWrong")}</h1>
         <p className="kiosk-body" style={{ color: COLORS.textMuted, marginBottom: 40, textAlign: "center" }}>
           {errorMessage}
         </p>
@@ -733,13 +884,13 @@ export default function KioskOrderFlow({
             onClick={() => setErrorMessage(null)}
             className="kiosk-btn kiosk-btn-secondary"
           >
-            Try Again
+            {tKiosk("orderFlow.tryAgain")}
           </button>
           <button
             onClick={startOver}
             className="kiosk-btn kiosk-btn-primary"
           >
-            Start Over
+            {tKiosk("orderFlow.startOver")}
           </button>
         </div>
       </main>
@@ -846,7 +997,7 @@ export default function KioskOrderFlow({
         seats={seats}
         taxRate={location.taxRate}
         onPay={handlePayment}
-        onBack={() => setView("pods")}
+        onBack={() => setView("pod-selection")}
         submitting={submitting}
       />
     );
@@ -858,6 +1009,7 @@ export default function KioskOrderFlow({
       <CompleteView
         guestOrders={guestOrders}
         seats={seats}
+        location={location}
         onNewOrder={startOver}
       />
     );
@@ -880,6 +1032,8 @@ function NameEntryView({
   onCancel: () => void;
 }) {
   const [name, setName] = useState("");
+  const tCommon = useTranslations("common");
+  const tKiosk = useTranslations("kiosk");
 
   const handleSubmit = () => {
     if (name.trim()) {
@@ -927,6 +1081,11 @@ function NameEntryView({
         <KioskBrand size="xlarge" />
       </div>
 
+      {/* Language Selector - top right */}
+      <div style={{ position: "absolute", top: 48, right: 48, zIndex: 1 }}>
+        <LanguageSelector variant="compact" />
+      </div>
+
       {/* Centered content area - title and input display */}
       <div
         style={{
@@ -940,10 +1099,10 @@ function NameEntryView({
         }}
       >
         <div style={{ fontSize: "1.5rem", color: COLORS.textMuted, marginBottom: 12 }}>
-          Guest {guestNumber} of {totalGuests}
+          {tKiosk("orderFlow.guestOf", { current: guestNumber, total: totalGuests })}
         </div>
         <h1 className="kiosk-title" style={{ marginBottom: 40, textAlign: "center", fontSize: "3.5rem" }}>
-          What's your name?
+          {tKiosk("orderFlow.whatsYourName")}
         </h1>
 
         {/* Name display field */}
@@ -971,7 +1130,7 @@ function NameEntryView({
               letterSpacing: '0.05em',
             }}
           >
-            {name || "Tap keys below"}
+            {name || tKiosk("orderFlow.tapKeysBelow")}
           </span>
           {name && (
             <span
@@ -1003,7 +1162,7 @@ function NameEntryView({
           zIndex: 2,
         }}
       >
-        Cancel
+        {tCommon("cancel")}
       </button>
 
       {/* Keyboard fixed at bottom - centered */}
@@ -1077,9 +1236,26 @@ function MenuView({
   canGoBack: boolean;
   menuSteps: MenuStep[];
 }) {
+  const t = useTranslations("order");
+  const tCommon = useTranslations("common");
+  const tKiosk = useTranslations("kiosk");
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showScrollHint, setShowScrollHint] = useState(true); // Start visible
   const [showAllergenPopup, setShowAllergenPopup] = useState(false);
+
+  // Helper to translate slider labels
+  const translateSliderLabel = (label: string): string => {
+    try {
+      const key = `builder.sliderLabels.${label}` as any;
+      const translated = t(key);
+      if (translated && translated !== key) {
+        return translated;
+      }
+    } catch {
+      // Fall through to return original
+    }
+    return label;
+  };
 
   // Check if there's content below the fold - update on scroll
   const checkScrollPosition = useCallback(() => {
@@ -1121,8 +1297,17 @@ function MenuView({
     onSliderUpdate(itemId, value, labels[value] || String(value));
   };
 
-  // Check if this is the drinks & dessert step
-  const isDrinksAndDessertStep = step.title.toLowerCase().includes("drink") || step.title.toLowerCase().includes("dessert");
+  // Check if this is the drinks & dessert step (multi-language)
+  const isDrinksAndDessertStep = (() => {
+    const lower = step.title.toLowerCase();
+    // English
+    if (lower.includes("drink") || lower.includes("dessert") || lower.includes("beverage")) return true;
+    // Spanish
+    if (lower.includes("bebida") || lower.includes("postre")) return true;
+    // Chinese
+    if (step.title.includes("飲") || step.title.includes("饮") || step.title.includes("甜") || step.title.includes("點心") || step.title.includes("点心")) return true;
+    return false;
+  })();
 
   // Check if required selections are made for current step (step 1 = Build the Foundation)
   // On step 1, both soup and noodles sections must have a selection
@@ -1191,7 +1376,7 @@ function MenuView({
           {/* Left: Guest info and step title */}
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: "1.1rem", color: COLORS.textMuted }}>
-              <strong style={{ color: COLORS.text }}>{guestName}'s</strong> Order ({guestNumber}/{totalGuests})
+              {tKiosk("orderFlow.guestsOrder", { name: guestName, current: guestNumber, total: totalGuests })}
             </div>
             <h1 style={{ fontSize: "2rem", fontWeight: 700, margin: "4px 0 0 0" }}>{step.title}</h1>
           </div>
@@ -1212,7 +1397,7 @@ function MenuView({
             }}
           >
             <span style={{ fontSize: "1.6rem", color: COLORS.text, fontWeight: 700 }}>
-              Step {stepIndex + 1} of {totalSteps}
+              {tKiosk("orderFlow.stepOf", { current: stepIndex + 1, total: totalSteps })}
             </span>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               {Array.from({ length: totalSteps }).map((_, i) => (
@@ -1266,7 +1451,7 @@ function MenuView({
                 }}
               />
               <span style={{ fontWeight: 500, display: "flex", alignItems: "center", gap: 4 }}>
-                <span style={{ fontSize: "1.5rem" }}>=</span> <span style={{ fontFamily: '"Ma Shan Zheng", cursive', color: "#C7A878", fontSize: "1.5rem" }}>哦</span> Oh! Recommendation
+                <span style={{ fontSize: "1.5rem" }}>=</span> <span style={{ fontFamily: '"Ma Shan Zheng", cursive', color: "#C7A878", fontSize: "1.5rem" }}>哦</span> {tKiosk("orderFlow.ohRecommendation")}
               </span>
             </div>
           )}
@@ -1280,7 +1465,7 @@ function MenuView({
                       .replace(/Premium Add-?[Oo]ns/i, "Add-Ons")
                       .replace("Choose Your Noodles", "Choose Your Noodle Style")}
                     <span style={{ color: COLORS.primary, marginLeft: 8, fontSize: "0.85rem", fontWeight: 600 }}>
-                      Required
+                      {t("builder.required")}
                     </span>
                   </h2>
                   {section.description && (
@@ -1289,9 +1474,22 @@ function MenuView({
                     </p>
                   )}
                   {(() => {
-                    const isNoodleSection = section.name.toLowerCase().includes("noodle");
-                    const noNoodlesItem = isNoodleSection ? section.items?.find(item => item.name.toLowerCase().includes("no noodle")) : null;
-                    const gridItems = isNoodleSection ? section.items?.filter(item => !item.name.toLowerCase().includes("no noodle")) : section.items;
+                    const isNoodleSection = section.name.toLowerCase().includes("noodle") ||
+                      section.name.toLowerCase().includes("fideos") ||
+                      section.name.includes("麵") ||
+                      section.name.includes("面");
+                    // Match "No Noodles" in English, Chinese (不要麵/不要面/無麵/无面), or Spanish (sin fideos)
+                    const isNoNoodlesItem = (item: MenuItem) => {
+                      const lowerName = item.name.toLowerCase();
+                      return lowerName.includes("no noodle") ||
+                        lowerName.includes("sin fideos") ||
+                        item.name.includes("不要麵") ||
+                        item.name.includes("不要面") ||
+                        item.name.includes("無麵") ||
+                        item.name.includes("无面");
+                    };
+                    const noNoodlesItem = isNoodleSection ? section.items?.find(isNoNoodlesItem) : null;
+                    const gridItems = isNoodleSection ? section.items?.filter(item => !isNoNoodlesItem(item)) : section.items;
                     const hasSelection = !!selections[section.id];
 
                     return (
@@ -1303,7 +1501,7 @@ function MenuView({
                         }}>
                           {gridItems?.map((item) => {
                             const isSelected = selections[section.id] === item.id;
-                            const imageUrl = MENU_IMAGES[item.name];
+                            const imageUrl = MENU_IMAGES[item.nameEn || item.name] || MENU_IMAGES[item.name];
 
                             return (
                               <button
@@ -1394,7 +1592,7 @@ function MenuView({
                                     </div>
                                   ) : (
                                     <div style={{ color: COLORS.primary, fontSize: "1.1rem", marginTop: 2, fontWeight: 700 }}>
-                                      (included)
+                                      ({t("builder.included")})
                                     </div>
                                   )}
                                 </div>
@@ -1443,7 +1641,7 @@ function MenuView({
                               }}
                             >
                               <span style={{ fontSize: "1.2rem", color: COLORS.textOnPrimary, fontWeight: 700 }}>
-                                No Noodles 🚫
+                                {noNoodlesItem.name} 🚫
                               </span>
                             </button>
                           </div>
@@ -1458,11 +1656,27 @@ function MenuView({
 
           {/* Step 3: Add-Ons & Sides - side by side layout */}
           {(() => {
-            const isStep3 = step.title?.toLowerCase().includes("add-on") || step.sections.some(s => s.name.toLowerCase().includes("add-on") && s.selectionMode === "MULTIPLE");
+            // Helper to detect add-ons section in any language
+            const isAddOnSection = (name: string) => {
+              const lower = name.toLowerCase();
+              return lower.includes("add-on") || lower.includes("addon") ||
+                lower.includes("extras") || lower.includes("adicional") ||
+                name.includes("加購") || name.includes("加购") ||
+                name.includes("加料") || name.includes("配料") || name.includes("加點") || name.includes("加点");
+            };
+            // Helper to detect sides section in any language
+            const isSideSection = (name: string) => {
+              const lower = name.toLowerCase();
+              return lower.includes("side") || lower.includes("acompañamiento") ||
+                name.includes("配菜") || name.includes("小菜");
+            };
+
+            const isStep3 = step.title?.toLowerCase().includes("add-on") ||
+              step.sections.some(s => isAddOnSection(s.name) && s.selectionMode === "MULTIPLE");
             if (!isStep3) return null;
 
-            const addOnsSection = step.sections.find(s => s.name.toLowerCase().includes("add-on") || s.name.toLowerCase().includes("addon"));
-            const sidesSection = step.sections.find(s => s.name.toLowerCase().includes("side"));
+            const addOnsSection = step.sections.find(s => isAddOnSection(s.name));
+            const sidesSection = step.sections.find(s => isSideSection(s.name));
 
             if (!addOnsSection && !sidesSection) return null;
 
@@ -1481,7 +1695,7 @@ function MenuView({
                     }}>
                       {addOnsSection.items.map((item) => {
                         const qty = cart[item.id] || 0;
-                        const imageUrl = MENU_IMAGES[item.name];
+                        const imageUrl = MENU_IMAGES[item.nameEn || item.name] || MENU_IMAGES[item.name];
                         const maxQty = addOnsSection.maxQuantity;
 
                         return (
@@ -1601,7 +1815,7 @@ function MenuView({
                     }}>
                       {sidesSection.items.map((item) => {
                         const qty = cart[item.id] || 0;
-                        const imageUrl = MENU_IMAGES[item.name];
+                        const imageUrl = MENU_IMAGES[item.nameEn || item.name] || MENU_IMAGES[item.name];
                         const maxQty = sidesSection.maxQuantity;
 
                         return (
@@ -1716,13 +1930,23 @@ function MenuView({
             const isStep4 = isDrinksAndDessertStep;
             if (!isStep4) return null;
 
-            const beveragesSection = step.sections.find(s =>
-              s.name.toLowerCase().includes("drink") ||
-              s.name.toLowerCase().includes("beverage")
-            );
-            const dessertSection = step.sections.find(s =>
-              s.name.toLowerCase().includes("dessert")
-            );
+            // Multi-language beverage detection
+            const isBeverageSection = (name: string) => {
+              const lower = name.toLowerCase();
+              return lower.includes("drink") || lower.includes("beverage") ||
+                lower.includes("bebida") ||
+                name.includes("飲") || name.includes("饮") || name.includes("飲料") || name.includes("饮料");
+            };
+            // Multi-language dessert detection
+            const isDessertSection = (name: string) => {
+              const lower = name.toLowerCase();
+              return lower.includes("dessert") ||
+                lower.includes("postre") ||
+                name.includes("甜") || name.includes("點心") || name.includes("点心") || name.includes("甜點") || name.includes("甜点");
+            };
+
+            const beveragesSection = step.sections.find(s => isBeverageSection(s.name));
+            const dessertSection = step.sections.find(s => isDessertSection(s.name));
 
             if (!beveragesSection && !dessertSection) return null;
 
@@ -1732,7 +1956,7 @@ function MenuView({
                 {beveragesSection && beveragesSection.items && (
                   <div style={{ flex: 1 }}>
                     <h2 style={{ fontSize: "1.3rem", fontWeight: 700, marginBottom: 8, color: COLORS.text, textAlign: "center" }}>
-                      {beveragesSection.name} <span style={{ fontWeight: 500, fontSize: "0.9rem", color: COLORS.textMuted }}>(free refills)</span>
+                      {beveragesSection.name} <span style={{ fontWeight: 500, fontSize: "0.9rem", color: COLORS.textMuted }}>({tKiosk("orderFlow.freeRefills")})</span>
                     </h2>
                     <div style={{
                       display: "grid",
@@ -1741,7 +1965,7 @@ function MenuView({
                     }}>
                       {beveragesSection.items.map((item) => {
                         const qty = cart[item.id] || 0;
-                        const imageUrl = MENU_IMAGES[item.name];
+                        const imageUrl = MENU_IMAGES[item.nameEn || item.name] || MENU_IMAGES[item.name];
                         const maxQty = beveragesSection.maxQuantity || 1;
 
                         return (
@@ -1802,7 +2026,7 @@ function MenuView({
                               <div style={{ flex: 1 }}>
                                 <div style={{ fontWeight: 700, fontSize: "1rem", color: COLORS.text }}>{item.name}</div>
                                 <div style={{ color: item.basePriceCents > 0 ? COLORS.primary : COLORS.success, fontSize: "1.1rem", marginTop: 2, fontWeight: 700 }}>
-                                  {item.basePriceCents > 0 ? `$${(item.basePriceCents / 100).toFixed(2)}` : "FREE"}
+                                  {item.basePriceCents > 0 ? `$${(item.basePriceCents / 100).toFixed(2)}` : tKiosk("orderFlow.free")}
                                 </div>
                               </div>
                               {/* Qty display with minus button - right side */}
@@ -1850,7 +2074,7 @@ function MenuView({
                 {dessertSection && dessertSection.items && (
                   <div style={{ flex: 1, borderLeft: `2px solid ${COLORS.border}`, paddingLeft: 32 }}>
                     <h2 style={{ fontSize: "1.3rem", fontWeight: 700, marginBottom: 8, color: COLORS.text, textAlign: "center" }}>
-                      {dessertSection.name} <span style={{ fontWeight: 500, fontSize: "0.9rem", color: COLORS.textMuted }}>(free)</span>
+                      {dessertSection.name} <span style={{ fontWeight: 500, fontSize: "0.9rem", color: COLORS.textMuted }}>({tKiosk("orderFlow.free")})</span>
                     </h2>
                     <div style={{
                       display: "flex",
@@ -1858,7 +2082,7 @@ function MenuView({
                     }}>
                       {dessertSection.items.map((item) => {
                         const qty = cart[item.id] || 0;
-                        const imageUrl = MENU_IMAGES[item.name];
+                        const imageUrl = MENU_IMAGES[item.nameEn || item.name] || MENU_IMAGES[item.name];
                         const maxQty = dessertSection.maxQuantity || 1;
 
                         return (
@@ -1920,7 +2144,7 @@ function MenuView({
                               <div style={{ flex: 1 }}>
                                 <div style={{ fontWeight: 700, fontSize: "1rem", color: COLORS.text }}>{item.name}</div>
                                 <div style={{ color: item.basePriceCents > 0 ? COLORS.primary : COLORS.success, fontSize: "1.1rem", marginTop: 2, fontWeight: 700 }}>
-                                  {item.basePriceCents > 0 ? `$${(item.basePriceCents / 100).toFixed(2)}` : "FREE"}
+                                  {item.basePriceCents > 0 ? `$${(item.basePriceCents / 100).toFixed(2)}` : tKiosk("orderFlow.free")}
                                 </div>
                               </div>
                               {/* Qty display with minus button - right side */}
@@ -1969,17 +2193,48 @@ function MenuView({
 
           {/* Check if this is a slider-only step (Customize Your Bowl) */}
           {(() => {
+            // Helper to detect add-ons section in any language
+            const isAddOnSection = (name: string) => {
+              const lower = name.toLowerCase();
+              return lower.includes("add-on") || lower.includes("addon") ||
+                lower.includes("extras") || lower.includes("adicional") ||
+                name.includes("加購") || name.includes("加购") ||
+                name.includes("加料") || name.includes("配料") || name.includes("加點") || name.includes("加点");
+            };
+            // Helper to detect sides section in any language
+            const isSideSection = (name: string) => {
+              const lower = name.toLowerCase();
+              return lower.includes("side") || lower.includes("acompañamiento") ||
+                name.includes("配菜") || name.includes("小菜");
+            };
+
             // Check if Step 3 (Add-Ons & Sides) - handled by special layout above
-            const isStep3 = step.title?.toLowerCase().includes("add-on") || step.sections.some(s => s.name.toLowerCase().includes("add-on") && s.selectionMode === "MULTIPLE");
+            const isStep3 = step.title?.toLowerCase().includes("add-on") ||
+              step.sections.some(s => isAddOnSection(s.name) && s.selectionMode === "MULTIPLE");
+
+            // Multi-language beverage detection for filtering
+            const isBeverageSectionFilter = (name: string) => {
+              const lower = name.toLowerCase();
+              return lower.includes("drink") || lower.includes("beverage") ||
+                lower.includes("bebida") ||
+                name.includes("飲") || name.includes("饮") || name.includes("飲料") || name.includes("饮料");
+            };
+            // Multi-language dessert detection for filtering
+            const isDessertSectionFilter = (name: string) => {
+              const lower = name.toLowerCase();
+              return lower.includes("dessert") ||
+                lower.includes("postre") ||
+                name.includes("甜") || name.includes("點心") || name.includes("点心") || name.includes("甜點") || name.includes("甜点");
+            };
 
             // Filter out sections handled by special layouts
             const filteredSections = step.sections.filter(section => {
               // Skip Step 1 required SINGLE sections (handled above)
               if (isStep1 && section.required && section.selectionMode === "SINGLE") return false;
               // Skip Step 3 Add-Ons and Sides sections (handled above)
-              if (isStep3 && (section.name.toLowerCase().includes("add-on") || section.name.toLowerCase().includes("addon") || section.name.toLowerCase().includes("side"))) return false;
+              if (isStep3 && (isAddOnSection(section.name) || isSideSection(section.name))) return false;
               // Skip Step 4 Drinks and Dessert sections (handled above)
-              if (isDrinksAndDessertStep && (section.name.toLowerCase().includes("drink") || section.name.toLowerCase().includes("beverage") || section.name.toLowerCase().includes("dessert"))) return false;
+              if (isDrinksAndDessertStep && (isBeverageSectionFilter(section.name) || isDessertSectionFilter(section.name))) return false;
               return true;
             });
             const allSliders = filteredSections.every(s => s.selectionMode === "SLIDER");
@@ -2004,8 +2259,10 @@ function MenuView({
                           const itemName = section.item!.name.toLowerCase();
                           const sliderValue = cart[section.item!.id] || 0;
 
-                          // Spice Level - Progressive red
-                          const isSpiceSlider = sliderName.includes("spice");
+                          // Spice Level - Progressive red (English, Chinese, Spanish)
+                          const isSpiceSlider = sliderName.includes("spice") ||
+                            section.name.includes("辣") || section.name.includes("辛") ||
+                            sliderName.includes("picante");
                           const spiceColors = [
                             null,
                             "rgba(244, 114, 182, 0.6)",
@@ -2014,8 +2271,10 @@ function MenuView({
                             "rgba(185, 28, 28, 1)",
                           ];
 
-                          // Soup Richness - Progressive deep brown
-                          const isRichnessSlider = sliderName.includes("richness") || sliderName.includes("broth");
+                          // Soup Richness - Progressive deep brown (English, Chinese, Spanish)
+                          const isRichnessSlider = sliderName.includes("richness") || sliderName.includes("broth") ||
+                            section.name.includes("濃") || section.name.includes("浓") || section.name.includes("湯") || section.name.includes("汤") ||
+                            sliderName.includes("intensidad") || sliderName.includes("caldo");
                           const richnessColors = [
                             "rgba(139, 90, 43, 0.4)",    // Light - subtle brown
                             "rgba(120, 70, 30, 0.6)",    // Medium - moderate brown
@@ -2023,17 +2282,21 @@ function MenuView({
                             "rgba(75, 40, 10, 1)",       // Extra Rich - deep dark brown
                           ];
 
-                          // Noodle Texture - Tan colors (Firm=bold, Medium=normal, Soft=light)
-                          const isTextureSlider = sliderName.includes("texture") || sliderName.includes("noodle texture");
+                          // Noodle Texture - Tan colors (English, Chinese, Spanish)
+                          const isTextureSlider = sliderName.includes("texture") || sliderName.includes("noodle texture") ||
+                            section.name.includes("麵") || section.name.includes("面") || section.name.includes("口感") ||
+                            sliderName.includes("textura") || sliderName.includes("firmeza");
                           const textureColors = [
                             "rgba(139, 90, 43, 0.85)",  // Firm - bold tan
                             "rgba(160, 120, 70, 0.6)",  // Medium - normal tan
                             "rgba(180, 150, 100, 0.4)", // Soft - light tan
                           ];
 
-                          // Vegetables - Deep green
-                          const isVegetableSlider = ["bok choy", "green onion", "sprout", "cilantro", "pickled green"].some(
-                            veg => itemName.includes(veg)
+                          // Vegetables - Deep green (English, Chinese, Spanish)
+                          const isVegetableSlider = ["bok choy", "green onion", "sprout", "cilantro", "pickled green",
+                            "青江菜", "蔥", "葱", "芽", "香菜", "酸菜",
+                            "cebollín", "germinado", "brote", "cilantro", "verdura", "soja"].some(
+                            veg => itemName.includes(veg.toLowerCase()) || section.item!.name.includes(veg)
                           );
                           const vegetableColors = [
                             null,                        // None
@@ -2079,6 +2342,9 @@ function MenuView({
                             }
                           }
 
+                          // Get image URL for vegetable sliders
+                          const imageUrl = isVegetableSlider ? (MENU_IMAGES[section.item!.nameEn || section.item!.name] || MENU_IMAGES[section.item!.name]) : null;
+
                           return (
                             <div
                               style={{
@@ -2090,61 +2356,84 @@ function MenuView({
                                 boxShadow: glowColor && glowSize > 0
                                   ? `0 0 ${glowSize}px ${glowColor}`
                                   : undefined,
-                                padding: 12,
+                                overflow: "hidden",
                                 transition: "all 0.3s ease",
+                                display: "flex",
+                                alignItems: "stretch",
                               }}
                             >
-                              {/* Compact header with name */}
-                              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-                                <span style={{ fontWeight: 600, fontSize: "0.95rem", color: COLORS.text }}>{section.item.name}</span>
-                                <DietaryBadges
-                                  isVegetarian={section.item.isVegetarian}
-                                  isVegan={section.item.isVegan}
-                                  isGlutenFree={section.item.isGlutenFree}
-                                  spiceLevel={section.item.spiceLevel}
-                                  size="small"
-                                />
-                              </div>
-
-                              {/* Compact slider */}
-                              <div style={{ paddingLeft: 8, paddingRight: 8 }}>
-                                <input
-                                  type="range"
-                                  className="kiosk-slider"
-                                  min={section.sliderConfig.min || 0}
-                                  max={section.sliderConfig.max || 3}
-                                  value={cart[section.item.id] || 0}
-                                  onChange={(e) => {
-                                    const val = parseInt(e.target.value);
-                                    const labels = section.sliderConfig.labels || [];
-                                    handleSliderChange(section.item!.id, val, labels, section.sliderConfig.default ?? 0);
+                              {/* Thumbnail for vegetable sliders */}
+                              {isVegetableSlider && imageUrl && (
+                                <div
+                                  style={{
+                                    width: 100,
+                                    minHeight: 90,
+                                    flexShrink: 0,
+                                    background: "#f5f5f5",
+                                    position: "relative",
                                   }}
-                                  style={{ width: "100%", height: 8, cursor: "pointer" }}
-                                />
-                              </div>
+                                >
+                                  <img
+                                    src={imageUrl}
+                                    alt={section.item!.name}
+                                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                  />
+                                </div>
+                              )}
 
-                              {/* Compact labels */}
-                              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, paddingLeft: 8, paddingRight: 8 }}>
-                                {section.sliderConfig.labels?.map((label: string, i: number) => {
-                                  const isDefault = i === (section.sliderConfig.default ?? 0);
-                                  const isSelected = cart[section.item!.id] === i;
-                                  return (
-                                    <span
-                                      key={i}
-                                      style={{
-                                        fontSize: "0.75rem",
-                                        color: isSelected ? COLORS.primary : COLORS.textMuted,
-                                        fontWeight: isSelected ? 700 : 500,
-                                        padding: isDefault ? "2px 6px" : undefined,
-                                        border: isDefault ? `1.5px dashed ${COLORS.primary}` : undefined,
-                                        borderRadius: isDefault ? 4 : undefined,
-                                        whiteSpace: "nowrap",
-                                      }}
-                                    >
-                                      {label}
-                                    </span>
-                                  );
-                                })}
+                              <div style={{ flex: 1, padding: 12 }}>
+                                {/* Compact header with name */}
+                                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                                  <span style={{ fontWeight: 600, fontSize: "0.95rem", color: COLORS.text }}>{section.item.name}</span>
+                                  <DietaryBadges
+                                    isVegetarian={section.item.isVegetarian}
+                                    isVegan={section.item.isVegan}
+                                    isGlutenFree={section.item.isGlutenFree}
+                                    spiceLevel={section.item.spiceLevel}
+                                    size="small"
+                                  />
+                                </div>
+
+                                {/* Compact slider */}
+                                <div style={{ paddingLeft: 8, paddingRight: 8 }}>
+                                  <input
+                                    type="range"
+                                    className="kiosk-slider"
+                                    min={section.sliderConfig.min || 0}
+                                    max={section.sliderConfig.max || 3}
+                                    value={cart[section.item.id] || 0}
+                                    onChange={(e) => {
+                                      const val = parseInt(e.target.value);
+                                      const labels = section.sliderConfig.labels || [];
+                                      handleSliderChange(section.item!.id, val, labels, section.sliderConfig.default ?? 0);
+                                    }}
+                                    style={{ width: "100%", height: 8, cursor: "pointer" }}
+                                  />
+                                </div>
+
+                                {/* Compact labels */}
+                                <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, paddingLeft: 8, paddingRight: 8 }}>
+                                  {section.sliderConfig.labels?.map((label: string, i: number) => {
+                                    const isDefault = i === (section.sliderConfig.default ?? 0);
+                                    const isSelected = cart[section.item!.id] === i;
+                                    return (
+                                      <span
+                                        key={i}
+                                        style={{
+                                          fontSize: "0.75rem",
+                                          color: isSelected ? COLORS.primary : COLORS.textMuted,
+                                          fontWeight: isSelected ? 700 : 500,
+                                          padding: isDefault ? "2px 6px" : undefined,
+                                          border: isDefault ? `1.5px dashed ${COLORS.primary}` : undefined,
+                                          borderRadius: isDefault ? 4 : undefined,
+                                          whiteSpace: "nowrap",
+                                        }}
+                                      >
+                                        {translateSliderLabel(label)}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
                               </div>
                             </div>
                           );
@@ -2167,7 +2456,7 @@ function MenuView({
                         .replace("Choose Your Noodles", "Choose Your Noodle Style")}
                       {section.required && (
                         <span style={{ color: COLORS.primary, marginLeft: 8, fontSize: "0.9rem", fontWeight: 600 }}>
-                          Required
+                          {t("builder.required")}
                         </span>
                       )}
                     </h2>
@@ -2199,8 +2488,14 @@ function MenuView({
                   {section.items.map((item) => {
                     const isSelected = selections[section.id] === item.id;
                     const hasSelection = !!selections[section.id];
-                    const imageUrl = MENU_IMAGES[item.name];
-                    const isNoNoodles = item.name.toLowerCase().includes("no noodle");
+                    const imageUrl = MENU_IMAGES[item.nameEn || item.name] || MENU_IMAGES[item.name];
+                    const lowerItemName = item.name.toLowerCase();
+                    const isNoNoodles = lowerItemName.includes("no noodle") ||
+                      lowerItemName.includes("sin fideos") ||
+                      item.name.includes("不要麵") ||
+                      item.name.includes("不要面") ||
+                      item.name.includes("無麵") ||
+                      item.name.includes("无面");
 
                     return (
                       <button
@@ -2270,7 +2565,7 @@ function MenuView({
                             }}
                           >
                             <span style={{ fontSize: "1.8rem", color: "#fff", fontWeight: 700, textAlign: "center" }}>
-                              No Noodles 🚫
+                              {tKiosk("orderFlow.noNoodles")} 🚫
                             </span>
                           </div>
                         ) : (
@@ -2339,8 +2634,14 @@ function MenuView({
 
               {/* Multiple selection mode with images and prices */}
               {section.selectionMode === "MULTIPLE" && section.items && (() => {
-                const isAddOnsSection = section.name.toLowerCase().includes("add-on") || section.name.toLowerCase().includes("addon");
-                const isSidesSection = section.name.toLowerCase().includes("side");
+                const sectionLower = section.name.toLowerCase();
+                const isAddOnsSection = sectionLower.includes("add-on") || sectionLower.includes("addon") ||
+                  sectionLower.includes("extras") || sectionLower.includes("adicional") ||
+                  section.name.includes("加購") || section.name.includes("加购") ||
+                  section.name.includes("加料") || section.name.includes("配料") ||
+                  section.name.includes("加點") || section.name.includes("加点");
+                const isSidesSection = sectionLower.includes("side") || sectionLower.includes("acompañamiento") ||
+                  section.name.includes("配菜") || section.name.includes("小菜");
                 const isStep3Style = isAddOnsSection || isSidesSection;
 
                 // Use fixed 2-column grid for Add-Ons & Sides (Step 3 style)
@@ -2354,11 +2655,13 @@ function MenuView({
                   }}>
                     {section.items.map((item) => {
                       const qty = cart[item.id] || 0;
-                      const imageUrl = MENU_IMAGES[item.name];
+                      const imageUrl = MENU_IMAGES[item.nameEn || item.name] || MENU_IMAGES[item.name];
                       const maxQty = section.maxQuantity;
                       const itemPrice = calculateItemPrice(item, qty);
                       const isComplimentary = item.basePriceCents === 0 && item.additionalPriceCents === 0;
-                      const isDessert = item.category?.toLowerCase() === "dessert" || section.name.toLowerCase().includes("dessert");
+                      const isDessert = item.category?.toLowerCase() === "dessert" ||
+                        section.name.toLowerCase().includes("dessert") || section.name.toLowerCase().includes("postre") ||
+                        section.name.includes("甜") || section.name.includes("點心") || section.name.includes("点心");
 
                       // Step 3 style - simpler cards matching Step 1
                       if (isStep3Style) {
@@ -2591,9 +2894,9 @@ function MenuView({
                               }}
                             >
                               <span style={{ fontSize: "4rem" }}>
-                                {item.name.toLowerCase().includes("drink") ? "🥤" :
-                                 item.name.toLowerCase().includes("tea") ? "🍵" :
-                                 item.name.toLowerCase().includes("water") ? "💧" : "🍽️"}
+                                {(item.name.toLowerCase().includes("drink") || item.name.toLowerCase().includes("bebida") || item.name.includes("飲") || item.name.includes("饮")) ? "🥤" :
+                                 (item.name.toLowerCase().includes("tea") || item.name.toLowerCase().includes("té") || item.name.includes("茶")) ? "🍵" :
+                                 (item.name.toLowerCase().includes("water") || item.name.toLowerCase().includes("agua") || item.name.includes("水")) ? "💧" : "🍽️"}
                               </span>
                               {/* Dietary badges - top left (for items without images) */}
                               <div style={{ position: "absolute", top: 8, left: 8 }}>
@@ -2701,8 +3004,10 @@ function MenuView({
                 const itemName = section.item!.name.toLowerCase();
                 const sliderValue = cart[section.item!.id] || 0;
 
-                // Spice Level - Progressive red
-                const isSpiceSlider = sliderName.includes("spice");
+                // Spice Level - Progressive red (English, Chinese, Spanish)
+                const isSpiceSlider = sliderName.includes("spice") ||
+                  section.name.includes("辣") || section.name.includes("辛") ||
+                  sliderName.includes("picante");
                 const spiceColors = [
                   null,
                   "rgba(244, 114, 182, 0.6)",
@@ -2711,8 +3016,10 @@ function MenuView({
                   "rgba(185, 28, 28, 1)",
                 ];
 
-                // Soup Richness - Progressive deep brown
-                const isRichnessSlider = sliderName.includes("richness") || sliderName.includes("broth");
+                // Soup Richness - Progressive deep brown (English, Chinese, Spanish)
+                const isRichnessSlider = sliderName.includes("richness") || sliderName.includes("broth") ||
+                  section.name.includes("濃") || section.name.includes("浓") || section.name.includes("湯") || section.name.includes("汤") ||
+                  sliderName.includes("intensidad") || sliderName.includes("caldo");
                 const richnessColors = [
                   "rgba(139, 90, 43, 0.4)",
                   "rgba(120, 70, 30, 0.6)",
@@ -2720,17 +3027,21 @@ function MenuView({
                   "rgba(75, 40, 10, 1)",
                 ];
 
-                // Noodle Texture - Tan colors
-                const isTextureSlider = sliderName.includes("texture") || sliderName.includes("noodle texture");
+                // Noodle Texture - Tan colors (English, Chinese, Spanish)
+                const isTextureSlider = sliderName.includes("texture") || sliderName.includes("noodle texture") ||
+                  section.name.includes("麵") || section.name.includes("面") || section.name.includes("口感") ||
+                  sliderName.includes("textura") || sliderName.includes("firmeza");
                 const textureColors = [
                   "rgba(139, 90, 43, 0.85)",
                   "rgba(160, 120, 70, 0.6)",
                   "rgba(180, 150, 100, 0.4)",
                 ];
 
-                // Vegetables - Deep green
-                const isVegetableSlider = ["bok choy", "green onion", "sprout", "cilantro", "pickled green"].some(
-                  veg => itemName.includes(veg)
+                // Vegetables - Deep green (English, Chinese, Spanish)
+                const isVegetableSlider = ["bok choy", "green onion", "sprout", "cilantro", "pickled green",
+                  "青江菜", "蔥", "葱", "芽", "香菜", "酸菜",
+                  "cebollín", "germinado", "brote", "cilantro", "verdura", "soja"].some(
+                  veg => itemName.includes(veg.toLowerCase()) || section.item!.name.includes(veg)
                 );
                 const vegetableColors = [
                   null,
@@ -2793,7 +3104,7 @@ function MenuView({
                   }}
                 >
                   {/* Image on left */}
-                  {MENU_IMAGES[section.item.name] && (
+                  {(MENU_IMAGES[section.item.nameEn || section.item.name] || MENU_IMAGES[section.item.name]) && (
                     <div
                       style={{
                         width: 100,
@@ -2804,7 +3115,7 @@ function MenuView({
                       }}
                     >
                       <img
-                        src={MENU_IMAGES[section.item.name]}
+                        src={MENU_IMAGES[section.item.nameEn || section.item.name] || MENU_IMAGES[section.item.name]}
                         alt={section.item.name}
                         style={{
                           width: "100%",
@@ -2888,7 +3199,7 @@ function MenuView({
                                 whiteSpace: "nowrap",
                               }}
                             >
-                              {label}
+                              {translateSliderLabel(label)}
                             </span>
                           </div>
                         );
@@ -2973,7 +3284,7 @@ function MenuView({
               fontWeight: 600,
             }}
           >
-            <span>Scroll for more options</span>
+            <span>{tKiosk("orderFlow.scrollForMore")}</span>
           </div>
 
           {/* Animated chevrons on right - pointing down */}
@@ -3049,7 +3360,7 @@ function MenuView({
               border: `1px solid ${COLORS.primaryBorder}`,
             }}
           >
-            <span style={{ color: COLORS.textMuted, fontSize: "1.15rem", fontWeight: 500 }}>Order Subtotal:</span>
+            <span style={{ color: COLORS.textMuted, fontSize: "1.15rem", fontWeight: 500 }}>{t("builder.subtotalLabel")}</span>
             <span style={{ color: COLORS.primary, fontWeight: 700, fontSize: "1.5rem" }}>
               ${(runningTotal / 100).toFixed(2)}
             </span>
@@ -3073,7 +3384,7 @@ function MenuView({
             textDecoration: "underline",
           }}
         >
-          ⚠️ Oh! Allergen Info
+          ⚠️ {tKiosk("orderFlow.ohAllergenInfo")}
         </button>
 
         <div style={{ display: "flex", justifyContent: "center", gap: 16 }}>
@@ -3092,7 +3403,7 @@ function MenuView({
                 cursor: "pointer",
               }}
             >
-              Cancel
+              {tCommon("cancel")}
             </button>
           ) : (
             <button
@@ -3108,7 +3419,7 @@ function MenuView({
                 cursor: "pointer",
               }}
             >
-              Back
+              {tCommon("back")}
             </button>
           )}
           <button
@@ -3128,7 +3439,7 @@ function MenuView({
               gap: 8,
             }}
           >
-            {stepIndex === totalSteps - 1 ? "Review Order" : "Next"}
+            {stepIndex === totalSteps - 1 ? tKiosk("orderFlow.reviewOrder") : tCommon("next")}
             <span style={{
               display: "inline-block",
               animation: canProceed ? "chevronBounceHorizontal 1s ease-in-out infinite" : "none",
@@ -3199,33 +3510,32 @@ function MenuView({
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <span style={{ fontSize: "1.3rem" }}>⚠️</span>
                 <h2 style={{ fontSize: "1.4rem", fontWeight: 700, color: COLORS.text, margin: 0 }}>
-                  Oh! Allergen Information
+                  {tKiosk("orderFlow.ohAllergenInformation")}
                 </h2>
               </div>
             </div>
 
             {/* Description */}
             <p style={{ fontSize: "1rem", color: COLORS.textLight, lineHeight: 1.6, marginBottom: 24 }}>
-              Please inform our staff of any food allergies or dietary restrictions before ordering.
-              While we take precautions, cross-contamination may occur in our kitchen.
+              {tKiosk("orderFlow.allergenDisclaimer")}
             </p>
 
             {/* Legend */}
             <h3 style={{ fontSize: "1.1rem", fontWeight: 600, color: COLORS.text, marginBottom: 16 }}>
-              Dietary Symbol Legend
+              {tKiosk("orderFlow.dietarySymbolLegend")}
             </h3>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <img src="/allergens/vegetarian.png" alt="Vegetarian" style={{ width: 32, height: 32, objectFit: "contain" }} />
-                <span style={{ fontSize: "1rem", color: COLORS.text }}>Vegetarian</span>
+                <img src="/allergens/vegetarian.png" alt={tKiosk("orderFlow.vegetarian")} style={{ width: 32, height: 32, objectFit: "contain" }} />
+                <span style={{ fontSize: "1rem", color: COLORS.text }}>{tKiosk("orderFlow.vegetarian")}</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <img src="/allergens/vegan.png" alt="Vegan" style={{ width: 32, height: 32, objectFit: "contain" }} />
-                <span style={{ fontSize: "1rem", color: COLORS.text }}>Vegan</span>
+                <img src="/allergens/vegan.png" alt={tKiosk("orderFlow.vegan")} style={{ width: 32, height: 32, objectFit: "contain" }} />
+                <span style={{ fontSize: "1rem", color: COLORS.text }}>{tKiosk("orderFlow.vegan")}</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <img src="/allergens/gluten-free.png" alt="Gluten-Free" style={{ width: 32, height: 32, objectFit: "contain" }} />
-                <span style={{ fontSize: "1rem", color: COLORS.text }}>Gluten-Free</span>
+                <img src="/allergens/gluten-free.png" alt={tKiosk("orderFlow.glutenFree")} style={{ width: 32, height: 32, objectFit: "contain" }} />
+                <span style={{ fontSize: "1rem", color: COLORS.text }}>{tKiosk("orderFlow.glutenFree")}</span>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <span style={{
@@ -3241,13 +3551,13 @@ function MenuView({
                 }}>
                   🌶️🌶️🌶️
                 </span>
-                <span style={{ fontSize: "1rem", color: COLORS.text }}>Spicy (1-3 peppers indicate heat level)</span>
+                <span style={{ fontSize: "1rem", color: COLORS.text }}>{tKiosk("orderFlow.spicyDescription")}</span>
               </div>
             </div>
 
             {/* Footer note */}
             <p style={{ fontSize: "0.85rem", color: COLORS.textMuted, fontStyle: "italic", marginTop: 20, textAlign: "center" }}>
-              Please ask our staff for detailed allergen information.
+              {tKiosk("orderFlow.allergenInfoDetail")}
             </p>
           </div>
         </div>
@@ -3301,10 +3611,28 @@ function ReviewView({
   onBack: () => void;
   submitting: boolean;
 }) {
+  const tKiosk = useTranslations("kiosk");
+  const tOrder = useTranslations("order");
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showScrollHint, setShowScrollHint] = useState(false);
   const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [isAutoScrolling, setIsAutoScrolling] = useState(false);
+
+  // Helper to translate slider labels
+  const translateSliderLabel = (label: string): string => {
+    // Try to get the translation from order.builder.sliderLabels
+    try {
+      const key = `builder.sliderLabels.${label}` as any;
+      const translated = tOrder(key);
+      // If translation exists and is different from key, use it
+      if (translated && translated !== key) {
+        return translated;
+      }
+    } catch {
+      // Fall through to return original
+    }
+    return label;
+  };
 
   // Check if there's content below the fold
   const checkScrollPosition = useCallback(() => {
@@ -3396,23 +3724,49 @@ function ReviewView({
   const drinkItems: Array<{ name: string; quantity: number; price: number; image?: string }> = [];
   const dessertItems: Array<{ name: string; quantity: number; price: number; image?: string }> = [];
 
+  // Multi-language detection helpers for order review
+  const isBowlSection = (stepTitle: string, sectionName: string) => {
+    const stepLower = stepTitle.toLowerCase();
+    const sectionLower = sectionName.toLowerCase();
+    // English
+    if (stepLower.includes("foundation") || sectionLower.includes("bowl") ||
+        sectionLower.includes("base") || sectionLower.includes("soup") || sectionLower.includes("broth")) return true;
+    // Spanish
+    if (sectionLower.includes("sopa") || sectionLower.includes("caldo") || stepLower.includes("base")) return true;
+    // Chinese
+    if (stepTitle.includes("湯") || stepTitle.includes("汤") || sectionName.includes("湯") || sectionName.includes("汤") ||
+        sectionName.includes("碗") || stepTitle.includes("基") || sectionName.includes("底")) return true;
+    return false;
+  };
+
+  const isNoodleSection = (sectionName: string) => {
+    const sectionLower = sectionName.toLowerCase();
+    // English
+    if (sectionLower.includes("noodle")) return true;
+    // Spanish
+    if (sectionLower.includes("fideo") || sectionLower.includes("pasta")) return true;
+    // Chinese
+    if (sectionName.includes("麵") || sectionName.includes("面")) return true;
+    return false;
+  };
+
   menuSteps.forEach((step) => {
     step.sections.forEach((section) => {
       if (section.selectionMode === "SINGLE" && selections[section.id]) {
         const selectedItem = section.items?.find((i) => i.id === selections[section.id]);
         if (selectedItem) {
-          // Check if it's a bowl/base or noodle selection
-          if (step.title.toLowerCase().includes("foundation") || section.name.toLowerCase().includes("bowl") || section.name.toLowerCase().includes("base")) {
+          // Check if it's a bowl/base or noodle selection (multi-language)
+          if (isBowlSection(step.title, section.name)) {
             bowlItems.push({
               name: selectedItem.name,
               price: selectedItem.basePriceCents,
-              image: MENU_IMAGES[selectedItem.name],
+              image: MENU_IMAGES[selectedItem.nameEn || selectedItem.name] || MENU_IMAGES[selectedItem.name],
             });
-          } else if (section.name.toLowerCase().includes("noodle")) {
+          } else if (isNoodleSection(section.name)) {
             bowlItems.push({
               name: selectedItem.name,
               price: 0,
-              image: MENU_IMAGES[selectedItem.name],
+              image: MENU_IMAGES[selectedItem.nameEn || selectedItem.name] || MENU_IMAGES[selectedItem.name],
             });
           }
         }
@@ -3430,13 +3784,21 @@ function ReviewView({
               name: item.name,
               quantity: qty,
               price,
-              image: MENU_IMAGES[item.name],
+              image: MENU_IMAGES[item.nameEn || item.name] || MENU_IMAGES[item.name],
             };
 
-            // Categorize by type
-            if (item.category?.toLowerCase() === "dessert" || section.name.toLowerCase().includes("dessert")) {
+            // Categorize by type (multi-language)
+            const sectionLower = section.name.toLowerCase();
+            const isDessertItem = item.category?.toLowerCase() === "dessert" ||
+              sectionLower.includes("dessert") || sectionLower.includes("postre") ||
+              section.name.includes("甜") || section.name.includes("點心") || section.name.includes("点心");
+            const isDrinkItem = item.category?.toLowerCase() === "drink" ||
+              sectionLower.includes("drink") || sectionLower.includes("beverage") || sectionLower.includes("bebida") ||
+              section.name.includes("飲") || section.name.includes("饮") || section.name.includes("飲料") || section.name.includes("饮料");
+
+            if (isDessertItem) {
               dessertItems.push(itemData);
-            } else if (item.category?.toLowerCase() === "drink" || section.name.toLowerCase().includes("drink") || section.name.toLowerCase().includes("beverage")) {
+            } else if (isDrinkItem) {
               drinkItems.push(itemData);
             } else {
               addOnItems.push(itemData);
@@ -3507,12 +3869,12 @@ function ReviewView({
         zIndex: 1,
       }}>
         <div style={{ fontSize: "1.5rem", color: COLORS.textMuted, marginBottom: 8 }}>
-          Guest {guestNumber} of {totalGuests}
+          {tKiosk("orderFlow.guestOf", { current: guestNumber, total: totalGuests })}
         </div>
         <h1 className="kiosk-title" style={{ fontSize: "3.5rem", fontWeight: 700, marginBottom: 8 }}>
-          {guestName}'s Order
+          {guestName}
         </h1>
-        <p style={{ color: COLORS.textMuted, margin: 0, fontSize: "1.25rem" }}>Review before submitting</p>
+        <p style={{ color: COLORS.textMuted, margin: 0, fontSize: "1.25rem" }}>{tKiosk("orderFlow.reviewBeforeSubmitting")}</p>
       </div>
 
       {/* Scrollable Content */}
@@ -3542,7 +3904,7 @@ function ReviewView({
             }}
           >
             <h3 style={{ fontSize: "0.95rem", fontWeight: 600, marginBottom: 8, color: COLORS.primary }}>
-              Bowl Configuration
+              {tKiosk("orderFlow.bowlConfiguration")}
             </h3>
 
             {/* Bowl selections - compact rows */}
@@ -3576,7 +3938,7 @@ function ReviewView({
                   <span style={{ fontWeight: 500, fontSize: "0.95rem" }}>{item.name}</span>
                 </div>
                 <span style={{ color: COLORS.primary, fontWeight: 600, fontSize: "0.95rem" }}>
-                  {item.price > 0 ? `$${(item.price / 100).toFixed(2)}` : "Included"}
+                  {item.price > 0 ? `$${(item.price / 100).toFixed(2)}` : tKiosk("orderFlow.included")}
                 </span>
               </div>
             ))}
@@ -3586,7 +3948,7 @@ function ReviewView({
               <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 16px", marginTop: 6 }}>
                 {customizations.map((item, i) => (
                   <span key={`custom-${i}`} style={{ fontSize: "0.85rem", color: COLORS.textLight }}>
-                    {item.name}: <span style={{ color: COLORS.textMuted, fontWeight: 500 }}>{item.value}</span>
+                    {item.name}: <span style={{ color: COLORS.textMuted, fontWeight: 500 }}>{translateSliderLabel(item.value)}</span>
                   </span>
                 ))}
               </div>
@@ -3594,7 +3956,7 @@ function ReviewView({
 
             {/* Bowl subtotal */}
             <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 8, marginTop: 6, borderTop: `1px dashed ${COLORS.border}` }}>
-              <span style={{ fontWeight: 500, fontSize: "0.9rem" }}>Bowl Subtotal</span>
+              <span style={{ fontWeight: 500, fontSize: "0.9rem" }}>{tKiosk("orderFlow.bowlSubtotal")}</span>
               <span style={{ fontWeight: 600, color: COLORS.primary, fontSize: "0.95rem" }}>${(bowlSubtotal / 100).toFixed(2)}</span>
             </div>
           </div>
@@ -3612,7 +3974,7 @@ function ReviewView({
             }}
           >
             <h3 style={{ fontSize: "0.95rem", fontWeight: 600, marginBottom: 8, color: COLORS.primary }}>
-              Extras
+              {tKiosk("orderFlow.extras")}
             </h3>
 
             {/* Add-Ons & Sides */}
@@ -3642,7 +4004,7 @@ function ReviewView({
                   {item.quantity > 1 && <span style={{ color: COLORS.textMuted, fontSize: "0.9rem" }}> x{item.quantity}</span>}
                 </div>
                 <span style={{ color: COLORS.primary, fontWeight: 600, fontSize: "0.95rem" }}>
-                  {item.price > 0 ? `$${(item.price / 100).toFixed(2)}` : "Included"}
+                  {item.price > 0 ? `$${(item.price / 100).toFixed(2)}` : tKiosk("orderFlow.included")}
                 </span>
               </div>
             ))}
@@ -3674,7 +4036,7 @@ function ReviewView({
                   {item.quantity > 1 && <span style={{ color: COLORS.textMuted, fontSize: "0.9rem" }}> x{item.quantity}</span>}
                 </div>
                 <span style={{ color: COLORS.primary, fontWeight: 600, fontSize: "0.95rem" }}>
-                  {item.price > 0 ? `$${(item.price / 100).toFixed(2)}` : "FREE"}
+                  {item.price > 0 ? `$${(item.price / 100).toFixed(2)}` : tKiosk("orderFlow.free")}
                 </span>
               </div>
             ))}
@@ -3706,14 +4068,14 @@ function ReviewView({
                   {item.quantity > 1 && <span style={{ color: COLORS.textMuted, fontSize: "0.9rem" }}> x{item.quantity}</span>}
                 </div>
                 <span style={{ color: item.price === 0 ? COLORS.success : COLORS.primary, fontWeight: 600, fontSize: "0.95rem" }}>
-                  {item.price === 0 ? "FREE" : `$${(item.price / 100).toFixed(2)}`}
+                  {item.price === 0 ? tKiosk("orderFlow.free") : `$${(item.price / 100).toFixed(2)}`}
                 </span>
               </div>
             ))}
 
             {/* Extras subtotal */}
             <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 8, marginTop: 6, borderTop: `1px dashed ${COLORS.border}` }}>
-              <span style={{ fontWeight: 500, fontSize: "0.9rem" }}>Extras Subtotal</span>
+              <span style={{ fontWeight: 500, fontSize: "0.9rem" }}>{tKiosk("orderFlow.extrasSubtotal")}</span>
               <span style={{ fontWeight: 600, color: COLORS.primary, fontSize: "0.95rem" }}>${((addOnsSubtotal + drinksSubtotal + dessertSubtotal) / 100).toFixed(2)}</span>
             </div>
           </div>
@@ -3730,7 +4092,7 @@ function ReviewView({
         >
           {/* Subtotal */}
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-            <span style={{ color: COLORS.textOnPrimary, fontSize: "0.9rem", opacity: 0.9 }}>Subtotal</span>
+            <span style={{ color: COLORS.textOnPrimary, fontSize: "0.9rem", opacity: 0.9 }}>{tKiosk("orderFlow.subtotal")}</span>
             <span style={{ color: COLORS.textOnPrimary, fontSize: "0.9rem" }}>
               ${(subtotal / 100).toFixed(2)}
             </span>
@@ -3738,7 +4100,7 @@ function ReviewView({
           {/* Tax */}
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, paddingBottom: 8, borderBottom: "1px solid rgba(255,255,255,0.2)" }}>
             <span style={{ color: COLORS.textOnPrimary, fontSize: "0.9rem", opacity: 0.9 }}>
-              Tax ({(taxRate * 100).toFixed(2)}%)
+              {tKiosk("orderFlow.tax")} ({(taxRate * 100).toFixed(2)}%)
             </span>
             <span style={{ color: COLORS.textOnPrimary, fontSize: "0.9rem" }}>
               ${(taxCents / 100).toFixed(2)}
@@ -3746,7 +4108,7 @@ function ReviewView({
           </div>
           {/* Total */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ color: COLORS.textOnPrimary, fontSize: "1rem", fontWeight: 600 }}>Total</span>
+            <span style={{ color: COLORS.textOnPrimary, fontSize: "1rem", fontWeight: 600 }}>{tKiosk("orderFlow.total")}</span>
             <span style={{ color: COLORS.textOnPrimary, fontSize: "1.25rem", fontWeight: 700 }}>
               ${(orderTotal / 100).toFixed(2)}
             </span>
@@ -3795,7 +4157,7 @@ function ReviewView({
               fontWeight: 600,
             }}
           >
-            <span>Scroll to see more</span>
+            <span>{tKiosk("orderFlow.scrollToSeeMore")}</span>
           </div>
 
           {/* Animated chevrons on right */}
@@ -3839,7 +4201,7 @@ function ReviewView({
             cursor: "pointer",
           }}
         >
-          Edit Order
+          {tKiosk("orderFlow.editOrder")}
         </button>
         <button
           onClick={onSubmit}
@@ -3858,7 +4220,7 @@ function ReviewView({
             gap: 8,
           }}
         >
-          <strong>{submitting ? "Submitting..." : "Continue to Pod Selection"}</strong>
+          <strong>{submitting ? tKiosk("orderFlow.submitting") : tKiosk("orderFlow.continueToPodSelection")}</strong>
           {!submitting && (
             <span style={{
               display: "inline-block",
@@ -3909,6 +4271,8 @@ function PodSelectionView({
   onConfirm: () => void;
   onBack: () => void;
 }) {
+  const tKiosk = useTranslations("kiosk");
+
   // Scroll to top on mount
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
@@ -4025,14 +4389,14 @@ function PodSelectionView({
       }}>
         {partySize > 1 && (
           <div style={{ fontSize: "1.5rem", color: COLORS.textMuted, marginBottom: 8 }}>
-            Guest {currentGuestIndex + 1} of {partySize}
+            {tKiosk("orderFlow.guestOf", { current: currentGuestIndex + 1, total: partySize })}
           </div>
         )}
         <h1 className="kiosk-title" style={{ fontSize: "3.5rem", fontWeight: 700, marginBottom: 8 }}>
-          Choose Your Pod
+          {tKiosk("orderFlow.chooseYourPod")}
         </h1>
         <p style={{ color: COLORS.textMuted, margin: 0, fontSize: "1.25rem" }}>
-          <strong style={{ color: COLORS.text }}>{guestOrders[currentGuestIndex].guestName}</strong>, pick your private dining pod
+          <strong style={{ color: COLORS.text }}>{guestOrders[currentGuestIndex].guestName}</strong>, {tKiosk("orderFlow.pickPrivatePod")}
         </p>
       </div>
 
@@ -4061,7 +4425,7 @@ function PodSelectionView({
           }}
         >
           <div style={{ fontWeight: 600, marginBottom: 12, color: COLORS.success }}>
-            We recommend Pod {recommendedPods[0].number}
+            {tKiosk("orderFlow.weRecommendPod", { number: recommendedPods[0].number })}
           </div>
           <button
             onClick={() => onSelectPod(recommendedPods[0].id)}
@@ -4076,7 +4440,7 @@ function PodSelectionView({
               cursor: "pointer",
             }}
           >
-            Accept Recommendation
+            {tKiosk("orderFlow.acceptRecommendation")}
           </button>
         </div>
       )}
@@ -4093,7 +4457,7 @@ function PodSelectionView({
       >
         {/* Entrance Label at top */}
         <div style={{ color: COLORS.textMuted, fontSize: "1.1rem", marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
-          <span>🚪</span> Entrance
+          <span>🚪</span> {tKiosk("orderFlow.entrance")}
         </div>
 
         {/* U-Shape Container: Left Column | Kitchen | Right Column */}
@@ -4131,7 +4495,7 @@ function PodSelectionView({
             minHeight: 200,
           }}>
             <span style={{ fontSize: "4rem", marginBottom: 8 }}>👨‍🍳</span>
-            <span style={{ fontSize: "1.25rem", fontWeight: 600, color: COLORS.textMuted }}>Kitchen</span>
+            <span style={{ fontSize: "1.25rem", fontWeight: 600, color: COLORS.textMuted }}>{tKiosk("orderFlow.kitchen")}</span>
           </div>
 
           {/* Right Column */}
@@ -4189,7 +4553,7 @@ function PodSelectionView({
 
         {/* Exit Label at bottom */}
         <div style={{ color: COLORS.textMuted, fontSize: "1.1rem", marginTop: 8 }}>
-          EXIT
+          {tKiosk("orderFlow.exit")}
         </div>
       </div>
 
@@ -4197,19 +4561,19 @@ function PodSelectionView({
       <div style={{ display: "flex", gap: 32, marginBottom: 32, flexWrap: "wrap", justifyContent: "center" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ width: 28, height: 28, borderRadius: 6, background: COLORS.success }} />
-          <span style={{ fontSize: "1rem", color: COLORS.textMuted }}>Available</span>
+          <span style={{ fontSize: "1rem", color: COLORS.textMuted }}>{tKiosk("orderFlow.available")}</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ width: 28, height: 56, borderRadius: 6, background: "#22d3ee" }} />
-          <span style={{ fontSize: "1rem", color: COLORS.textMuted }}>Dual Pod</span>
+          <span style={{ fontSize: "1rem", color: COLORS.textMuted }}>{tKiosk("orderFlow.dualPod")}</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ width: 28, height: 28, borderRadius: 6, background: "#ef4444" }} />
-          <span style={{ fontSize: "1rem", color: COLORS.textMuted }}>Occupied</span>
+          <span style={{ fontSize: "1rem", color: COLORS.textMuted }}>{tKiosk("orderFlow.occupied")}</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ width: 28, height: 28, borderRadius: 6, background: COLORS.primary, border: `3px solid ${COLORS.text}` }} />
-          <span style={{ fontSize: "1rem", color: COLORS.textMuted }}>Your Selection</span>
+          <span style={{ fontSize: "1rem", color: COLORS.textMuted }}>{tKiosk("orderFlow.yourSelection")}</span>
         </div>
       </div>
 
@@ -4233,14 +4597,14 @@ function PodSelectionView({
                 if (partner) {
                   const num1 = parseInt(selectedSeat.number);
                   const num2 = parseInt(partner.number);
-                  return `Dual Pod ${Math.min(num1, num2).toString().padStart(2, '0')} & ${Math.max(num1, num2).toString().padStart(2, '0')} Selected`;
+                  return tKiosk("pod.dualPodSelected", { numbers: `${Math.min(num1, num2).toString().padStart(2, '0')} & ${Math.max(num1, num2).toString().padStart(2, '0')}` });
                 }
               }
-              return `Pod ${selectedSeat.number} Selected`;
+              return tKiosk("pod.podSelected", { number: selectedSeat.number });
             })()}
           </div>
           <div style={{ color: COLORS.textMuted, fontSize: "0.9rem" }}>
-            {isDualPod(selectedSeat) ? "Dual Pod (fits 2)" : "Single Pod"}
+            {isDualPod(selectedSeat) ? tKiosk("pod.dualPod") : tKiosk("pod.singlePod")}
           </div>
         </div>
       )}
@@ -4274,7 +4638,7 @@ function PodSelectionView({
             cursor: "pointer",
           }}
         >
-          Back
+          {tKiosk("orderFlow.back")}
         </button>
         <button
           onClick={onConfirm}
@@ -4293,7 +4657,7 @@ function PodSelectionView({
             gap: 8,
           }}
         >
-          <strong>Continue to Payment</strong>
+          <strong>{tKiosk("orderFlow.continueToPayment")}</strong>
           {selectedPodId && (
             <span style={{
               display: "inline-block",
@@ -4465,6 +4829,8 @@ function PassView({
   selectedPod?: Seat;
   onPassDevice: () => void;
 }) {
+  const tKiosk = useTranslations("kiosk");
+
   return (
     <main
       style={{
@@ -4528,18 +4894,18 @@ function PassView({
       </div>
 
       <h1 style={{ fontSize: "2rem", fontWeight: 700, marginBottom: 8 }}>
-        {paymentType === "separate" ? "Payment Complete!" : "Order Added!"}
+        {paymentType === "separate" ? tKiosk("orderFlow.paymentComplete") : tKiosk("orderFlow.orderAdded")}
       </h1>
       <p style={{ color: COLORS.textMuted, marginBottom: 8 }}>
-        {completedGuestName}'s order is {paymentType === "separate" ? "complete" : "saved"}
+        {tKiosk("orderFlow.orderSaved", { name: completedGuestName })}
       </p>
       {dailyOrderNumber && (
         <p style={{ color: COLORS.primary, fontWeight: 600, fontSize: "1.25rem" }}>
-          Order #{dailyOrderNumber}
+          {tKiosk("orderFlow.orderNumber", { number: dailyOrderNumber })}
         </p>
       )}
       {selectedPod && (
-        <p style={{ color: COLORS.primary, fontWeight: 600 }}>Pod {selectedPod.number}</p>
+        <p style={{ color: COLORS.primary, fontWeight: 600 }}>{tKiosk("pod.podNumber", { number: selectedPod.number })}</p>
       )}
 
       <div
@@ -4552,11 +4918,12 @@ function PassView({
         }}
       >
         <div style={{ fontSize: "1.25rem", marginBottom: 8 }}>
-          Pass the device to Guest #{nextGuestNumber}
+          {tKiosk("orderFlow.passDevice", { number: nextGuestNumber })}
         </div>
         <div style={{ color: COLORS.textMuted, fontSize: "0.9rem" }}>
-          {totalGuests - nextGuestNumber + 1} guest{totalGuests - nextGuestNumber > 0 ? "s" : ""}{" "}
-          remaining
+          {totalGuests - nextGuestNumber + 1 > 1
+            ? tKiosk("orderFlow.guestsRemaining", { count: totalGuests - nextGuestNumber + 1 })
+            : tKiosk("orderFlow.guestRemaining", { count: totalGuests - nextGuestNumber + 1 })}
         </div>
       </div>
 
@@ -4574,7 +4941,7 @@ function PassView({
           cursor: "pointer",
         }}
       >
-        Next Guest Ready
+        {tKiosk("orderFlow.nextGuestReady")}
       </button>
     </main>
   );
@@ -4599,6 +4966,8 @@ function PaymentView({
   onBack: () => void;
   submitting: boolean;
 }) {
+  const tKiosk = useTranslations("kiosk");
+
   // Scroll to top on mount
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
@@ -4672,12 +5041,12 @@ function PaymentView({
         zIndex: 1,
       }}>
         <h1 className="kiosk-title" style={{ fontSize: "3.5rem", fontWeight: 700, marginBottom: 8 }}>
-          Payment
+          {tKiosk("orderFlow.payment")}
         </h1>
         <p style={{ color: COLORS.textMuted, margin: 0, fontSize: "1.25rem" }}>
           {paymentType === "single"
-            ? `One check for ${guestOrders.length} guest${guestOrders.length > 1 ? "s" : ""}`
-            : `${currentGuest.guestName}'s payment`}
+            ? tKiosk("orderFlow.oneCheckForGuests", { count: guestOrders.length })
+            : `${currentGuest.guestName}`}
         </p>
       </div>
 
@@ -4721,7 +5090,7 @@ function PaymentView({
                       <span style={{ fontWeight: 500 }}>{g.guestName}</span>
                       {pod && (
                         <span style={{ color: COLORS.textMuted, marginLeft: 8, fontSize: "0.9rem" }}>
-                          Pod {pod.number}
+                          {tKiosk("pod.podNumber", { number: pod.number })}
                         </span>
                       )}
                     </div>
@@ -4740,7 +5109,7 @@ function PaymentView({
                   fontSize: "1.05rem",
                 }}
               >
-                <span style={{ color: COLORS.textMuted }}>Subtotal</span>
+                <span style={{ color: COLORS.textMuted }}>{tKiosk("orderFlow.subtotal")}</span>
                 <span>${(subtotalCents / 100).toFixed(2)}</span>
               </div>
               {/* Tax */}
@@ -4752,7 +5121,7 @@ function PaymentView({
                   fontSize: "1.05rem",
                 }}
               >
-                <span style={{ color: COLORS.textMuted }}>Tax ({(taxRate * 100).toFixed(2)}%)</span>
+                <span style={{ color: COLORS.textMuted }}>{tKiosk("orderFlow.tax")} ({(taxRate * 100).toFixed(2)}%)</span>
                 <span>${(taxCents / 100).toFixed(2)}</span>
               </div>
               {/* Total */}
@@ -4767,7 +5136,7 @@ function PaymentView({
                   fontSize: "1.4rem",
                 }}
               >
-                <span>Total</span>
+                <span>{tKiosk("orderFlow.total")}</span>
                 <span style={{ color: COLORS.primary }}>${(totalCents / 100).toFixed(2)}</span>
               </div>
             </div>
@@ -4784,7 +5153,7 @@ function PaymentView({
                   }}
                 >
                   <div style={{ fontWeight: 600, color: COLORS.primary, fontSize: "1.1rem" }}>
-                    Pod {seats.find((s) => s.id === currentGuest.selectedPodId)?.number}
+                    {tKiosk("pod.podNumber", { number: seats.find((s) => s.id === currentGuest.selectedPodId)?.number })}
                   </div>
                 </div>
               )}
@@ -4800,10 +5169,10 @@ function PaymentView({
                 }}
               >
                 <div style={{ color: COLORS.textMuted, fontSize: "1.1rem", marginBottom: 8 }}>
-                  Subtotal: ${(subtotalCents / 100).toFixed(2)}
+                  {tKiosk("orderFlow.subtotal")}: ${(subtotalCents / 100).toFixed(2)}
                 </div>
                 <div style={{ color: COLORS.textMuted, fontSize: "1.1rem", marginBottom: 16 }}>
-                  Tax ({(taxRate * 100).toFixed(2)}%): ${(taxCents / 100).toFixed(2)}
+                  {tKiosk("orderFlow.tax")} ({(taxRate * 100).toFixed(2)}%): ${(taxCents / 100).toFixed(2)}
                 </div>
                 <div
                   style={{
@@ -4829,9 +5198,9 @@ function PaymentView({
                 textAlign: "center",
               }}
             >
-              <div style={{ fontWeight: 600, marginBottom: 4, fontSize: "1.1rem" }}>Your Pod(s)</div>
+              <div style={{ fontWeight: 600, marginBottom: 4, fontSize: "1.1rem" }}>{tKiosk("orderFlow.yourPods")}</div>
               <div style={{ color: COLORS.textMuted, fontSize: "1.05rem" }}>
-                {selectedPods.map((p) => `Pod ${p.number}`).join(", ")}
+                {selectedPods.map((p) => tKiosk("pod.podNumber", { number: p.number })).join(", ")}
               </div>
             </div>
           )}
@@ -4847,7 +5216,7 @@ function PaymentView({
               textAlign: "center",
             }}
           >
-            Demo Mode - Tap to simulate payment
+            {tKiosk("orderFlow.demoModeTap")}
           </div>
         </div>
       </div>
@@ -4881,7 +5250,7 @@ function PaymentView({
             cursor: submitting ? "not-allowed" : "pointer",
           }}
         >
-          Back
+          {tKiosk("orderFlow.back")}
         </button>
         <button
           onClick={onPay}
@@ -4897,7 +5266,7 @@ function PaymentView({
             cursor: submitting ? "wait" : "pointer",
           }}
         >
-          {submitting ? "Processing..." : `Pay $${(totalCents / 100).toFixed(2)}`}
+          {submitting ? tKiosk("orderFlow.submitting") : `${tKiosk("orderFlow.pay")} $${(totalCents / 100).toFixed(2)}`}
         </button>
       </div>
     </main>
@@ -4907,14 +5276,19 @@ function PaymentView({
 function CompleteView({
   guestOrders,
   seats,
+  location,
   onNewOrder,
 }: {
   guestOrders: GuestOrder[];
   seats: Seat[];
+  location: Location;
   onNewOrder: () => void;
 }) {
+  const locale = useLocale();
+  const tKiosk = useTranslations("kiosk");
   const [countdown, setCountdown] = useState(30);
   const [shouldRedirect, setShouldRedirect] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
 
   // Scroll to top on mount
   useEffect(() => {
@@ -4942,26 +5316,63 @@ function CompleteView({
     }
   }, [shouldRedirect, onNewOrder]);
 
-  // Generate QR code value for an order
+  // Generate QR code value for an order - web URL for phone scanning
   const getQRValue = (guest: GuestOrder) => {
-    if (guest.orderId) {
-      return `oh://order/${guest.orderId}`;
+    const qrCode = guest.orderQrCode || guest.orderId;
+    const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+    return `${baseUrl}/order/status?orderQrCode=${encodeURIComponent(qrCode || "")}`;
+  };
+
+  // Handle printing receipts
+  const handlePrint = async () => {
+    setIsPrinting(true);
+    try {
+      for (const guest of guestOrders) {
+        const pod = seats.find((s) => s.id === guest.selectedPodId);
+        const qrUrl = getQRValue(guest);
+        const qrDataUrl = await generateQRDataUrl(qrUrl);
+
+        const doc = (
+          <PrintableReceipt
+            guestName={guest.guestName}
+            orderNumber={guest.orderNumber || ""}
+            dailyOrderNumber={String(guest.dailyOrderNumber || "")}
+            qrCodeUrl={qrUrl}
+            qrDataUrl={qrDataUrl}
+            podNumber={pod?.number}
+            queuePosition={guest.queuePosition}
+            estimatedWaitMinutes={guest.estimatedWaitMinutes}
+            locationName={location.name}
+            locale={locale}
+          />
+        );
+
+        const blob = await pdf(doc).toBlob();
+        const url = URL.createObjectURL(blob);
+
+        // Open PDF in new window for printing
+        const printWindow = window.open(url, "_blank");
+        if (printWindow) {
+          printWindow.onload = () => {
+            printWindow.print();
+          };
+        }
+      }
+    } catch (error) {
+      console.error("Failed to print receipts:", error);
+    } finally {
+      setIsPrinting(false);
     }
-    return `oh://order/${guest.orderNumber || guest.dailyOrderNumber}`;
   };
 
   return (
     <main
-      className="kiosk-screen"
       style={{
+        minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
         background: COLORS.surface,
         color: COLORS.text,
-        padding: 48,
-        textAlign: "center",
         position: "relative",
         overflow: "hidden",
       }}
@@ -4989,126 +5400,211 @@ function CompleteView({
         />
       </div>
 
-      {/* Brand header */}
-      <div style={{ position: "absolute", top: 24, left: 24, zIndex: 1 }}>
-        <KioskBrand size="normal" />
+      {/* Large Brand Header - top left (matching other views) */}
+      <div style={{ position: "absolute", top: 48, left: 48, zIndex: 1 }}>
+        <KioskBrand size="xlarge" />
       </div>
 
+      {/* Fixed Header with success color */}
       <div
         style={{
-          width: 120,
-          height: 120,
-          borderRadius: 60,
+          textAlign: "center",
+          paddingTop: 32,
+          paddingBottom: 24,
           background: COLORS.successLight,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          marginBottom: 40,
+          borderBottom: `1px solid ${COLORS.success}`,
           zIndex: 1,
         }}
       >
-        <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke={COLORS.success} strokeWidth="2.5">
-          <path d="M20 6L9 17l-5-5" />
-        </svg>
+        <div
+          style={{
+            width: 80,
+            height: 80,
+            borderRadius: 40,
+            background: "white",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            margin: "0 auto 16px",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+          }}
+        >
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke={COLORS.success} strokeWidth="2.5">
+            <path d="M20 6L9 17l-5-5" />
+          </svg>
+        </div>
+        <h1 className="kiosk-title" style={{ fontSize: "3rem", fontWeight: 700, marginBottom: 8 }}>
+          {tKiosk("orderFlow.allSet")}
+        </h1>
+        <p style={{ color: COLORS.textMuted, margin: 0, fontSize: "1.25rem" }}>
+          {tKiosk("orderFlow.scanQrAtPod")}
+        </p>
       </div>
 
-      <h1 className="kiosk-title" style={{ marginBottom: 16 }}>
-        You're All Set!
-      </h1>
-      <p className="kiosk-body" style={{ color: COLORS.textMuted, marginBottom: 48 }}>
-        Proceed to your pod(s) and scan your QR code when you arrive
-      </p>
-
-      {/* Order cards with QR codes */}
+      {/* Scrollable Content - Order Cards */}
       <div
         style={{
+          flex: 1,
+          overflowY: "auto",
+          padding: "32px 24px",
+          paddingBottom: 140,
           display: "flex",
-          flexWrap: "wrap",
-          gap: 24,
-          justifyContent: "center",
-          marginBottom: 48,
-          maxWidth: 1200,
+          flexDirection: "column",
+          alignItems: "center",
         }}
       >
-        {guestOrders.map((g) => {
-          const pod = seats.find((s) => s.id === g.selectedPodId);
-          return (
-            <div
-              key={g.guestNumber}
-              style={{
-                background: COLORS.surfaceElevated,
-                borderRadius: 24,
-                padding: 28,
-                border: `2px solid ${COLORS.primary}`,
-                minWidth: 240,
-                textAlign: "center",
-              }}
-            >
-              {/* Guest name */}
-              <div style={{ fontSize: "1.25rem", fontWeight: 600, marginBottom: 4, color: COLORS.text }}>
-                {g.guestName}
-              </div>
-
-              {/* Order number */}
-              <div style={{ fontSize: "2.5rem", fontWeight: 700, color: COLORS.primary, marginBottom: 16 }}>
-                #{g.dailyOrderNumber || "---"}
-              </div>
-
-              {/* QR Code */}
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 24,
+            justifyContent: "center",
+            maxWidth: 1200,
+          }}
+        >
+          {guestOrders.map((g) => {
+            const pod = seats.find((s) => s.id === g.selectedPodId);
+            const isQueued = !pod && g.queuePosition;
+            return (
               <div
+                key={g.guestNumber}
                 style={{
-                  background: "#FFFFFF",
-                  padding: 16,
-                  borderRadius: 16,
-                  display: "inline-block",
-                  marginBottom: 16,
+                  background: COLORS.surfaceElevated,
+                  borderRadius: 24,
+                  padding: 28,
+                  border: `2px solid ${isQueued ? COLORS.warning : COLORS.primary}`,
+                  minWidth: 280,
+                  textAlign: "center",
                 }}
               >
-                <QRCodeSVG
-                  value={getQRValue(g)}
-                  size={160}
-                  level="M"
-                  includeMargin={false}
-                  fgColor="#1a1a1a"
-                  bgColor="#FFFFFF"
-                />
-              </div>
+                {/* Guest name */}
+                <div style={{ fontSize: "1.4rem", fontWeight: 600, marginBottom: 4, color: COLORS.text }}>
+                  {g.guestName}
+                </div>
 
-              {/* Pod assignment */}
-              {pod && (
+                {/* Order number */}
+                <div style={{ fontSize: "2.5rem", fontWeight: 700, color: COLORS.primary, marginBottom: 16 }}>
+                  #{g.dailyOrderNumber || "---"}
+                </div>
+
+                {/* QR Code */}
                 <div
                   style={{
-                    background: COLORS.primary,
+                    background: "#FFFFFF",
+                    padding: 12,
                     borderRadius: 12,
-                    padding: "12px 20px",
-                    color: COLORS.textOnPrimary,
-                    fontSize: "1.125rem",
-                    fontWeight: 600,
+                    display: "inline-block",
+                    marginBottom: 16,
                   }}
                 >
-                  Go to Pod {pod.number}
+                  <QRCodeSVG
+                    value={getQRValue(g)}
+                    size={140}
+                    level="M"
+                    includeMargin={false}
+                    fgColor="#1a1a1a"
+                    bgColor="#FFFFFF"
+                  />
                 </div>
-              )}
 
-              {/* Scan instruction */}
-              <p style={{ color: COLORS.textMuted, fontSize: "0.9rem", marginTop: 12 }}>
-                Scan at your pod to begin
-              </p>
-            </div>
-          );
-        })}
+                {/* Pod assignment or Queue position */}
+                {pod ? (
+                  <div
+                    style={{
+                      background: COLORS.primaryLight,
+                      borderRadius: 12,
+                      padding: 16,
+                    }}
+                  >
+                    <div style={{ fontSize: "1rem", color: COLORS.textMuted }}>{tKiosk("orderFlow.yourPod")}</div>
+                    <div style={{ fontSize: "2rem", fontWeight: 700, color: COLORS.primary }}>
+                      {tKiosk("pod.podNumber", { number: pod.number })}
+                    </div>
+                  </div>
+                ) : g.queuePosition ? (
+                  <div
+                    style={{
+                      background: COLORS.warningLight,
+                      borderRadius: 12,
+                      padding: 16,
+                    }}
+                  >
+                    <div style={{ fontSize: "1rem", color: COLORS.warning }}>{tKiosk("orderFlow.queuePosition")}</div>
+                    <div style={{ fontSize: "2rem", fontWeight: 700, color: COLORS.warning }}>
+                      #{g.queuePosition}
+                    </div>
+                    {g.estimatedWaitMinutes && (
+                      <div style={{ fontSize: "0.9rem", color: COLORS.textMuted, marginTop: 4 }}>
+                        {tKiosk("orderFlow.minWait", { minutes: g.estimatedWaitMinutes })}
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Instructions */}
+        <div style={{ marginTop: 32, textAlign: "center", maxWidth: 500 }}>
+          <p style={{ fontSize: "1.1rem", color: COLORS.textMuted, lineHeight: 1.6 }}>
+            {tKiosk("orderFlow.scanQrPhone")}
+          </p>
+        </div>
       </div>
 
-      <button
-        onClick={onNewOrder}
-        className="kiosk-btn kiosk-btn-primary"
+      {/* Fixed Bottom Navigation */}
+      <div
+        style={{
+          position: "fixed",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          padding: "20px 32px",
+          background: COLORS.primaryLight,
+          borderTop: `1px solid ${COLORS.primaryBorder}`,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          gap: 24,
+          zIndex: 10,
+        }}
       >
-        Start New Order
-      </button>
-
-      <p style={{ marginTop: 24, color: COLORS.textMuted, fontSize: "1rem" }}>
-        Screen will reset automatically in {countdown} seconds
-      </p>
+        <div style={{ color: COLORS.textMuted, fontSize: "1rem" }}>
+          {tKiosk("orderFlow.screenResetsIn", { seconds: countdown })}
+        </div>
+        <button
+          onClick={handlePrint}
+          disabled={isPrinting}
+          style={{
+            padding: "14px 28px",
+            background: "transparent",
+            border: `2px solid ${COLORS.border}`,
+            borderRadius: 12,
+            color: COLORS.textMuted,
+            fontSize: "1rem",
+            cursor: isPrinting ? "wait" : "pointer",
+            opacity: isPrinting ? 0.7 : 1,
+          }}
+        >
+          {tKiosk("orderFlow.reprintReceipts")}
+        </button>
+        <button
+          onClick={onNewOrder}
+          style={{
+            padding: "14px 40px",
+            background: COLORS.primary,
+            border: "none",
+            borderRadius: 12,
+            color: COLORS.textOnPrimary,
+            fontSize: "1.1rem",
+            fontWeight: 600,
+            cursor: "pointer",
+          }}
+        >
+          {tKiosk("orderFlow.startNewOrder")}
+        </button>
+      </div>
     </main>
   );
 }

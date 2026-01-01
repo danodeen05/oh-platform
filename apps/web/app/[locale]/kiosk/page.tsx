@@ -1,7 +1,17 @@
 import { API_URL } from "@/lib/api";
+import { currentUser } from "@clerk/nextjs/server";
+import { getTranslations } from "next-intl/server";
 import KioskWelcome from "./kiosk-welcome";
+import KioskLocationSelector from "./kiosk-location-selector";
 
-async function getLocations() {
+type Location = {
+  id: string;
+  name: string;
+  address: string;
+  city: string;
+};
+
+async function getLocations(): Promise<Location[]> {
   const res = await fetch(`${API_URL}/locations`, {
     cache: "no-store",
     headers: { "x-tenant-slug": "oh" },
@@ -18,13 +28,11 @@ export default async function KioskPage({
 }) {
   const params = await searchParams;
   const locations = await getLocations();
+  const user = await currentUser();
+  const t = await getTranslations("kiosk");
 
-  // If locationId is provided, use that location
-  // Otherwise, use the first available location (for single-location setups)
-  const locationId = params.locationId || locations[0]?.id;
-  const location = locations.find((l: any) => l.id === locationId) || locations[0];
-
-  if (!location) {
+  // If no locations configured
+  if (locations.length === 0) {
     return (
       <main
         style={{
@@ -37,12 +45,26 @@ export default async function KioskPage({
         }}
       >
         <div style={{ textAlign: "center" }}>
-          <h1>Kiosk Unavailable</h1>
-          <p style={{ color: "#999" }}>No locations configured.</p>
+          <h1>{t("errors.kioskUnavailable")}</h1>
+          <p style={{ color: "#999" }}>{t("errors.noLocations")}</p>
         </div>
       </main>
     );
   }
 
-  return <KioskWelcome location={location} />;
+  // If locationId is provided, use that location
+  if (params.locationId) {
+    const location = locations.find((l) => l.id === params.locationId);
+    if (location) {
+      return <KioskWelcome location={location} />;
+    }
+  }
+
+  // No locationId provided - show location selector
+  return (
+    <KioskLocationSelector
+      locations={locations}
+      userName={user?.firstName || user?.emailAddresses?.[0]?.emailAddress || "Staff"}
+    />
+  );
 }

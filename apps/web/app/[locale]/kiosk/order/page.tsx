@@ -1,4 +1,5 @@
 import { API_URL } from "@/lib/api";
+import { getTranslations } from "next-intl/server";
 import KioskOrderFlow from "./kiosk-order-flow";
 
 async function getLocation(locationId: string) {
@@ -22,6 +23,7 @@ export default async function KioskOrderPage({
 }) {
   const params = await searchParams;
   const location = await getLocation(params.locationId);
+  const t = await getTranslations("kiosk");
 
   if (!location) {
     return (
@@ -36,9 +38,9 @@ export default async function KioskOrderPage({
         }}
       >
         <div style={{ textAlign: "center" }}>
-          <h1>Location Not Found</h1>
+          <h1>{t("errors.locationNotFound")}</h1>
           <a href="/kiosk" style={{ color: "#7C7A67" }}>
-            Return to Start
+            {t("errors.returnToStart")}
           </a>
         </div>
       </main>
