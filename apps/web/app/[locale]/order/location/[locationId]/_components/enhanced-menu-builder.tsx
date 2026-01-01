@@ -503,6 +503,9 @@ export default function EnhancedMenuBuilder({
   function getItemPrice(item: MenuItem, quantity: number): number {
     if (quantity === 0) return 0;
 
+    // If additionalPriceCents is 0, use basePriceCents for each item
+    const effectiveAdditionalPrice = item.additionalPriceCents || item.basePriceCents;
+
     // For sliders, quantity represents the slider value
     if (item.selectionMode === 'SLIDER') {
       // Check if this is a premium ingredient with additional pricing
@@ -510,7 +513,7 @@ export default function EnhancedMenuBuilder({
         return 0;
       }
       const extraQuantity = quantity - item.includedQuantity;
-      return item.additionalPriceCents * extraQuantity;
+      return effectiveAdditionalPrice * extraQuantity;
     }
 
     // Standard quantity-based pricing
@@ -520,10 +523,10 @@ export default function EnhancedMenuBuilder({
 
     if (item.includedQuantity > 0) {
       const extraQuantity = quantity - item.includedQuantity;
-      return item.basePriceCents + item.additionalPriceCents * (extraQuantity - 1);
+      return item.basePriceCents + effectiveAdditionalPrice * (extraQuantity - 1);
     }
 
-    return item.basePriceCents + item.additionalPriceCents * (quantity - 1);
+    return item.basePriceCents + effectiveAdditionalPrice * (quantity - 1);
   }
 
   // Get all menu items for price calculation
