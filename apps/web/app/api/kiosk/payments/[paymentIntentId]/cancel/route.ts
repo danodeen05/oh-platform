@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-01-27.acacia',
-});
+function getStripe() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('STRIPE_SECRET_KEY is not configured');
+  }
+  return new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2025-01-27.acacia',
+  });
+}
 
 /**
  * POST /api/kiosk/payments/[paymentIntentId]/cancel
@@ -22,6 +27,8 @@ export async function POST(
         { status: 400 }
       );
     }
+
+    const stripe = getStripe();
 
     // Cancel the reader action if in progress
     const readerId = process.env.STRIPE_TERMINAL_READER_ID;
