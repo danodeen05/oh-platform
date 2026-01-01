@@ -195,7 +195,7 @@ export function RadioGroup({ title, items, selectedId, onSelect, required = fals
                   }}
                 >
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: "600", fontSize: "1rem", marginBottom: 4 }}>
+                    <div style={{ fontWeight: "600", fontSize: "1rem", marginBottom: 4, color: "#1a1a1a" }}>
                       {item.name}
                     </div>
                     {item.description && (
