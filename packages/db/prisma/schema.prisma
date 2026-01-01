@@ -89,6 +89,9 @@ model Location {
   timezone       String  @default("America/Denver")
   isClosed       Boolean @default(false) // For temporary closures
 
+  // Wallet notification settings
+  notificationRadiusMiles Float @default(20.0) // Configurable radius for geofencing (miles)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -484,6 +487,10 @@ model User {
   givenMealGifts    MealGift[]      @relation("GivenMealGifts")
   acceptedMealGifts MealGift[]      @relation("AcceptedMealGifts")
   mealGiftChain     MealGiftChain[]
+
+  // Wallet pass notifications
+  walletRegistrations WalletPassRegistration[]
+  walletNotifications WalletNotificationLog[]
 }
 
 enum MembershipTier {
@@ -491,7 +498,45 @@ enum MembershipTier {
   NOODLE_MASTER
   BEEF_BOSS
 }
-  
+
+// ==========================================
+// WALLET PASS NOTIFICATIONS
+// ==========================================
+
+model WalletPassRegistration {
+  id                   String   @id @default(cuid())
+  userId               String
+  user                 User     @relation(fields: [userId], references: [id])
+
+  deviceLibraryId      String   // Apple device identifier
+  pushToken            String   // APNs push token
+  passTypeId           String   // pass.com.ohbeef.loyalty
+  serialNumber         String   // oh-member-{userId}
+
+  lastNotificationAt   DateTime?
+  lastNotificationType String?
+
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@unique([deviceLibraryId, passTypeId, serialNumber])
+  @@index([userId])
+  @@index([pushToken])
+}
+
+model WalletNotificationLog {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id])
+
+  notificationType String   // NEAR_RESTAURANT, STREAK_AT_RISK, TIER_PROGRESS, CHALLENGE_DEADLINE, AVAILABLE_CREDITS
+  locationId       String?  // For location-specific notifications
+  messageContent   String
+
+  sentAt           DateTime @default(now())
+
+  @@index([userId, notificationType, sentAt])
+}
 
 model CreditEvent {
   id     String @id @default(cuid())

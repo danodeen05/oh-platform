@@ -22,6 +22,21 @@ import {
   isGoogleWalletConfigured,
 } from "./wallet/wallet-pass.js";
 import {
+  validateAuthToken,
+  registerDevice,
+  unregisterDevice,
+  getPassesForDevice,
+  getUpdatedPass,
+} from "./wallet/wallet-web-service.js";
+import {
+  sendBatchStreakAtRiskNotifications,
+  sendBatchCreditsReminder,
+  sendBatchTierProgressNotifications,
+  checkAndSendChallengeDeadlineNotifications,
+  sendOrderCompletedNotification,
+  checkAndSendTierProgressNotification,
+} from "./wallet/wallet-notification-service.js";
+import {
   getLocationStatus,
   validateArrivalTime,
   DEFAULT_HOURS,
@@ -510,8 +525,8 @@ app.get("/locations", async (req, reply) => {
         console.error('WaitQueue query failed:', error.message);
       }
 
-      // Estimate: 15 minutes per order in queue, max 60 minutes
-      const avgWaitMinutes = Math.min(queuedOrders * 15, 60);
+      // Estimate: 5 minutes per order in queue, max 60 minutes
+      const avgWaitMinutes = Math.min(queuedOrders * 5, 60);
 
       // Get operating hours availability
       const availability = getLocationStatus(location);
@@ -1310,8 +1325,8 @@ app.post("/orders/check-in", async (req, reply) => {
 
   const queuePosition = queueCount + 1;
 
-  // Estimate wait time (rough: 15 min per person ahead)
-  const estimatedWaitMinutes = queuePosition * 15;
+  // Estimate wait time (5 min per person ahead)
+  const estimatedWaitMinutes = queuePosition * 5;
 
   // Create queue entry and update order
   const [queueEntry, updatedOrder] = await prisma.$transaction([
@@ -3109,6 +3124,16 @@ app.patch("/orders/:id", async (req, reply) => {
     // Award badges
     await checkAndAwardBadges(user.id);
 
+    // Send wallet notification for order completion
+    sendOrderCompletedNotification(user.id, order.id).catch((err) => {
+      console.error("Failed to send wallet order notification:", err);
+    });
+
+    // Send tier progress notification if close to upgrade
+    checkAndSendTierProgressNotification(user.id).catch((err) => {
+      console.error("Failed to send wallet tier progress notification:", err);
+    });
+
     // Update challenge progress
     await updateChallengeProgress(user.id, {
       totalCents: order.totalCents,
@@ -4154,7 +4179,24 @@ app.get("/users/:id/wallet/apple", async (req, reply) => {
   }
 
   try {
-    const passBuffer = await generateAppleWalletPass(user);
+    // Fetch all open locations for relevantLocations (geofencing)
+    const locations = await prisma.location.findMany({
+      where: { isClosed: false },
+      select: {
+        lat: true,
+        lng: true,
+        notificationRadiusMiles: true,
+        name: true,
+      },
+    });
+
+    // Add relevantText to each location
+    const locationsWithText = locations.map((loc) => ({
+      ...loc,
+      relevantText: `${loc.name} is nearby!`,
+    }));
+
+    const passBuffer = await generateAppleWalletPass(user, locationsWithText);
 
     reply
       .header("Content-Type", "application/vnd.apple.pkpass")
@@ -4251,6 +4293,97 @@ app.get("/users/:id/wallet", async (req, reply) => {
 });
 
 // ====================
+// APPLE WALLET WEB SERVICE ENDPOINTS
+// ====================
+// Required by Apple for pass updates: https://developer.apple.com/documentation/walletpasses
+
+// Register device for push notifications (called when user adds pass to wallet)
+app.post(
+  "/wallet/v1/devices/:deviceLibraryId/registrations/:passTypeId/:serialNumber",
+  async (req, reply) => {
+    const { deviceLibraryId, passTypeId, serialNumber } = req.params;
+    const authHeader = req.headers.authorization;
+
+    if (!validateAuthToken(authHeader, serialNumber)) {
+      return reply.code(401).send();
+    }
+
+    const { pushToken } = req.body || {};
+    const result = await registerDevice(
+      deviceLibraryId,
+      passTypeId,
+      serialNumber,
+      pushToken
+    );
+    return reply.code(result.status).send();
+  }
+);
+
+// Unregister device (called when user removes pass from wallet)
+app.delete(
+  "/wallet/v1/devices/:deviceLibraryId/registrations/:passTypeId/:serialNumber",
+  async (req, reply) => {
+    const { deviceLibraryId, passTypeId, serialNumber } = req.params;
+    const authHeader = req.headers.authorization;
+
+    if (!validateAuthToken(authHeader, serialNumber)) {
+      return reply.code(401).send();
+    }
+
+    const result = await unregisterDevice(deviceLibraryId, passTypeId, serialNumber);
+    return reply.code(result.status).send();
+  }
+);
+
+// Get list of updated passes for a device
+app.get(
+  "/wallet/v1/devices/:deviceLibraryId/registrations/:passTypeId",
+  async (req, reply) => {
+    const { deviceLibraryId, passTypeId } = req.params;
+    const { passesUpdatedSince } = req.query;
+
+    const result = await getPassesForDevice(
+      deviceLibraryId,
+      passTypeId,
+      passesUpdatedSince
+    );
+
+    if (result.status === 204) {
+      return reply.code(204).send();
+    }
+    return reply.code(200).send(result.body);
+  }
+);
+
+// Get updated pass content
+app.get("/wallet/v1/passes/:passTypeId/:serialNumber", async (req, reply) => {
+  const { passTypeId, serialNumber } = req.params;
+  const authHeader = req.headers.authorization;
+
+  if (!validateAuthToken(authHeader, serialNumber)) {
+    return reply.code(401).send();
+  }
+
+  const result = await getUpdatedPass(passTypeId, serialNumber);
+
+  if (result.status === 404) {
+    return reply.code(404).send();
+  }
+
+  if (result.status === 500) {
+    return reply.code(500).send({ error: "Failed to generate pass" });
+  }
+
+  reply.header("Content-Type", result.contentType).send(result.body);
+});
+
+// Logging endpoint for Apple Wallet (receives error logs from devices)
+app.post("/wallet/v1/log", async (req, reply) => {
+  console.log("[Apple Wallet Log]:", JSON.stringify(req.body));
+  return reply.code(200).send();
+});
+
+// ====================
 // CRON ENDPOINTS
 // ====================
 
@@ -4324,6 +4457,71 @@ app.post("/cron/disburse-credits", async (req, reply) => {
   }
 
   console.log(`💰 Disbursement complete: ${results.processed} credits totaling $${results.totalAmountCents / 100}`);
+
+  return results;
+});
+
+// Wallet notification cron: Streak at risk - run daily at 5pm local time
+app.post("/cron/wallet-streak-notifications", async (req, reply) => {
+  const cronSecret = req.headers["x-cron-secret"];
+  const expectedSecret = process.env.CRON_SECRET || "dev-cron-secret";
+
+  if (cronSecret !== expectedSecret) {
+    return reply.code(401).send({ error: "Unauthorized" });
+  }
+
+  console.log("📱 Sending streak-at-risk wallet notifications...");
+  const results = await sendBatchStreakAtRiskNotifications();
+  console.log(`📱 Streak notifications: ${results.sent} sent, ${results.skipped} skipped`);
+
+  return results;
+});
+
+// Wallet notification cron: Challenge deadlines - run daily
+app.post("/cron/wallet-challenge-notifications", async (req, reply) => {
+  const cronSecret = req.headers["x-cron-secret"];
+  const expectedSecret = process.env.CRON_SECRET || "dev-cron-secret";
+
+  if (cronSecret !== expectedSecret) {
+    return reply.code(401).send({ error: "Unauthorized" });
+  }
+
+  console.log("📱 Sending challenge deadline wallet notifications...");
+  const results = await checkAndSendChallengeDeadlineNotifications();
+  const sent = results.filter((r) => r.sent).length;
+  console.log(`📱 Challenge notifications: ${sent} sent`);
+
+  return { processed: results.length, sent, results };
+});
+
+// Wallet notification cron: Credits reminder - run weekly
+app.post("/cron/wallet-credits-reminder", async (req, reply) => {
+  const cronSecret = req.headers["x-cron-secret"];
+  const expectedSecret = process.env.CRON_SECRET || "dev-cron-secret";
+
+  if (cronSecret !== expectedSecret) {
+    return reply.code(401).send({ error: "Unauthorized" });
+  }
+
+  console.log("📱 Sending credits reminder wallet notifications...");
+  const results = await sendBatchCreditsReminder();
+  console.log(`📱 Credits notifications: ${results.sent} sent, ${results.skipped} skipped`);
+
+  return results;
+});
+
+// Wallet notification cron: Tier progress - run after order completion
+app.post("/cron/wallet-tier-progress", async (req, reply) => {
+  const cronSecret = req.headers["x-cron-secret"];
+  const expectedSecret = process.env.CRON_SECRET || "dev-cron-secret";
+
+  if (cronSecret !== expectedSecret) {
+    return reply.code(401).send({ error: "Unauthorized" });
+  }
+
+  console.log("📱 Sending tier progress wallet notifications...");
+  const results = await sendBatchTierProgressNotifications();
+  console.log(`📱 Tier progress notifications: ${results.sent} sent, ${results.skipped} skipped`);
 
   return results;
 });

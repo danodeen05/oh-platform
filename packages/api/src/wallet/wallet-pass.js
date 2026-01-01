@@ -30,6 +30,7 @@ import { PKPass } from 'passkit-generator';
 import { readFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import crypto from 'crypto';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -52,6 +53,19 @@ const TIER_CONFIG = {
     color: 'rgb(75, 73, 60)', // Darkest olive
   },
 };
+
+/**
+ * Generate authentication token for wallet pass web service
+ * Used to verify requests from Apple Wallet
+ */
+export function generateAuthToken(userId) {
+  const secret = process.env.WALLET_AUTH_SECRET || 'default-wallet-secret';
+  return crypto
+    .createHmac('sha256', secret)
+    .update(userId)
+    .digest('hex')
+    .substring(0, 32);
+}
 
 /**
  * Check if Apple Wallet certificates are configured
@@ -113,9 +127,10 @@ function loadCertificates() {
  * @param {number} user.currentStreak - Current order streak
  * @param {string} user.referralCode - User's referral code
  * @param {Date} user.createdAt - Account creation date
+ * @param {Array} locations - Array of location objects with lat, lng, notificationRadiusMiles
  * @returns {Promise<Buffer>} - .pkpass file buffer
  */
-export async function generateAppleWalletPass(user) {
+export async function generateAppleWalletPass(user, locations = []) {
   if (!isAppleWalletConfigured()) {
     throw new Error('Apple Wallet certificates not configured. See wallet-pass.js for setup instructions.');
   }
@@ -151,11 +166,25 @@ export async function generateAppleWalletPass(user) {
       foregroundColor: 'rgb(255, 255, 255)',
       labelColor: 'rgb(255, 255, 255)',
       logoText: 'Oh!',
+      // Web service for push updates
+      webServiceURL: process.env.WALLET_WEB_SERVICE_URL || 'https://api.ohbeef.com/wallet',
+      authenticationToken: generateAuthToken(user.id),
     }
   );
 
   // Set pass type - using generic for better layout control
   pass.type = 'generic';
+
+  // Add relevant locations for geofencing notifications
+  if (locations.length > 0) {
+    pass.relevantLocations = locations.map(loc => ({
+      latitude: loc.lat,
+      longitude: loc.lng,
+      relevantText: loc.relevantText || 'Oh! is nearby!',
+      // Convert miles to meters (1 mile = 1609.34 meters)
+      maxDistance: (loc.notificationRadiusMiles || 20) * 1609.34,
+    }));
+  }
 
   // Header - Credit balance (top right)
   pass.headerFields.push({

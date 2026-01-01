@@ -9,7 +9,7 @@
   "backgroundColor": "rgb(220, 38, 38)",
   "labelColor": "rgb(255, 255, 255)",
   "logoText": "Oh!",
-  "storeCard": {
+  "generic": {
     "headerFields": [],
     "primaryFields": [],
     "secondaryFields": [],
