@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 import "../kiosk.css";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "";
@@ -61,6 +62,8 @@ type Order = {
 export default function CheckInPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const t = useTranslations("kiosk");
+  const tCommon = useTranslations("common");
   const orderId = searchParams.get("orderId");
   const locationId = searchParams.get("locationId");
 
@@ -77,7 +80,7 @@ export default function CheckInPage() {
   useEffect(() => {
     async function loadData() {
       if (!orderId || !locationId) {
-        setError("Missing order or location information");
+        setError(t("errors.missingInfo"));
         setLoading(false);
         return;
       }
@@ -93,7 +96,7 @@ export default function CheckInPage() {
         ]);
 
         if (!orderRes.ok) {
-          setError("Order not found");
+          setError(t("errors.orderNotFound"));
           setLoading(false);
           return;
         }
@@ -113,7 +116,7 @@ export default function CheckInPage() {
 
         setLoading(false);
       } catch (err) {
-        setError("Failed to load order details");
+        setError(t("errors.failedToLoad"));
         setLoading(false);
       }
     }
@@ -172,10 +175,17 @@ export default function CheckInPage() {
           color: COLORS.text,
         }}
       >
-        <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: "4rem", marginBottom: 16, color: COLORS.primary }}>Oh!</div>
-          <div className="kiosk-body" style={{ color: COLORS.textMuted }}>Loading your order...</div>
-        </div>
+        {/* Animated Oh! logo loader */}
+        <img
+          src="/Oh_Logo_Mark_Web.png"
+          alt="Loading..."
+          style={{
+            width: 200,
+            height: 200,
+            objectFit: "contain",
+            animation: "spin-pulse 2s ease-in-out infinite",
+          }}
+        />
       </main>
     );
   }
@@ -212,10 +222,10 @@ export default function CheckInPage() {
             <line x1="9" y1="9" x2="15" y2="15" />
           </svg>
         </div>
-        <h1 className="kiosk-subtitle" style={{ marginBottom: 12 }}>Oops!</h1>
+        <h1 className="kiosk-subtitle" style={{ marginBottom: 12 }}>{t("errors.oops")}</h1>
         <p className="kiosk-body" style={{ color: COLORS.textMuted, marginBottom: 40, textAlign: "center" }}>{error}</p>
         <button onClick={handleBackToHome} className="kiosk-btn kiosk-btn-primary">
-          Back to Home
+          {tCommon("back")}
         </button>
       </main>
     );
@@ -254,11 +264,8 @@ export default function CheckInPage() {
         </div>
 
         <h1 className="kiosk-title" style={{ marginBottom: 16 }}>
-          Welcome Back!
+          {t("pod.welcome", { name: order?.user?.name || order?.guestName || "Guest" })}
         </h1>
-        <p className="kiosk-body" style={{ color: COLORS.textMuted, marginBottom: 8 }}>
-          {order?.user?.name || order?.guestName || "Guest"}
-        </p>
 
         {assignedSeat && (
           <div
@@ -272,9 +279,9 @@ export default function CheckInPage() {
             }}
           >
             <div style={{ fontSize: "1.125rem", opacity: 0.85, marginBottom: 12 }}>
-              Please proceed to
+              {t("pod.proceedTo")}
             </div>
-            <div style={{ fontSize: "5rem", fontWeight: 700, lineHeight: 1 }}>Pod {assignedSeat.number}</div>
+            <div style={{ fontSize: "5rem", fontWeight: 700, lineHeight: 1 }}>{t("pod.podNumber", { number: assignedSeat.number })}</div>
           </div>
         )}
 
@@ -288,7 +295,7 @@ export default function CheckInPage() {
             minWidth: 320,
           }}
         >
-          <div style={{ fontWeight: 600, marginBottom: 16, fontSize: "1.25rem" }}>Order #{order?.orderNumber}</div>
+          <div style={{ fontWeight: 600, marginBottom: 16, fontSize: "1.25rem" }}>{t("pod.orderNumber", { number: order?.orderNumber })}</div>
           <div style={{ color: COLORS.textMuted, fontSize: "1.125rem" }}>
             {order?.items.map((item) => (
               <div key={item.id}>
@@ -299,11 +306,11 @@ export default function CheckInPage() {
         </div>
 
         <p className="kiosk-body" style={{ color: COLORS.textMuted, marginBottom: 40 }}>
-          Your food is being prepared and will arrive at your pod shortly.
+          {t("pod.foodBeingPrepared")}
         </p>
 
         <button onClick={handleBackToHome} className="kiosk-btn kiosk-btn-primary">
-          Done
+          {tCommon("ok")}
         </button>
       </main>
     );
@@ -333,10 +340,10 @@ export default function CheckInPage() {
       }}
     >
       <h1 className="kiosk-title" style={{ marginBottom: 12 }}>
-        Welcome, {order?.user?.name || order?.guestName || "Guest"}!
+        {t("pod.welcome", { name: order?.user?.name || order?.guestName || "Guest" })}
       </h1>
       <p className="kiosk-body" style={{ color: COLORS.textMuted, marginBottom: 8 }}>
-        Order #{order?.orderNumber}
+        {t("pod.orderNumber", { number: order?.orderNumber })}
       </p>
       {order?.user?.membershipTier && (
         <div
@@ -350,12 +357,12 @@ export default function CheckInPage() {
             marginBottom: 32,
           }}
         >
-          {order.user.membershipTier} Member
+          {t("pod.member", { tier: order.user.membershipTier })}
         </div>
       )}
 
       <p style={{ color: COLORS.text, marginBottom: 32, fontSize: "1.1rem" }}>
-        Select your pod to complete check-in
+        {t("pod.selectPod")}
       </p>
 
       {/* Recommended Pods */}
@@ -372,7 +379,7 @@ export default function CheckInPage() {
           }}
         >
           <div style={{ fontWeight: 600, marginBottom: 12, color: COLORS.success }}>
-            We recommend Pod {recommendedPods[0].number}
+            {t("pod.weRecommend", { number: recommendedPods[0].number })}
           </div>
           <button
             onClick={() => setSelectedPodId(recommendedPods[0].id)}
@@ -387,7 +394,7 @@ export default function CheckInPage() {
               cursor: "pointer",
             }}
           >
-            Accept Recommendation
+            {t("pod.acceptRecommendation")}
           </button>
         </div>
       )}
@@ -402,7 +409,7 @@ export default function CheckInPage() {
           marginBottom: 32,
         }}
       >
-        <div style={{ color: COLORS.textMuted, fontSize: "0.85rem" }}>Kitchen</div>
+        <div style={{ color: COLORS.textMuted, fontSize: "0.85rem" }}>{t("pod.kitchen")}</div>
 
         <div style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
           {/* Left Column */}
@@ -452,22 +459,22 @@ export default function CheckInPage() {
           </div>
         </div>
 
-        <div style={{ color: COLORS.textMuted, fontSize: "0.85rem", marginTop: 8 }}>Entrance</div>
+        <div style={{ color: COLORS.textMuted, fontSize: "0.85rem", marginTop: 8 }}>{t("pod.entrance")}</div>
       </div>
 
       {/* Legend */}
       <div style={{ display: "flex", gap: 24, marginBottom: 32 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <div style={{ width: 20, height: 20, borderRadius: 4, background: COLORS.success }} />
-          <span style={{ fontSize: "0.85rem", color: COLORS.textMuted }}>Available</span>
+          <span style={{ fontSize: "0.85rem", color: COLORS.textMuted }}>{t("pod.available")}</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <div style={{ width: 20, height: 20, borderRadius: 4, background: "#ef4444" }} />
-          <span style={{ fontSize: "0.85rem", color: COLORS.textMuted }}>Occupied</span>
+          <span style={{ fontSize: "0.85rem", color: COLORS.textMuted }}>{t("pod.occupied")}</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <div style={{ width: 20, height: 20, borderRadius: 4, background: COLORS.primary, border: `3px solid ${COLORS.text}` }} />
-          <span style={{ fontSize: "0.85rem", color: COLORS.textMuted }}>Your Selection</span>
+          <span style={{ fontSize: "0.85rem", color: COLORS.textMuted }}>{t("pod.yourSelection")}</span>
         </div>
       </div>
 
@@ -484,10 +491,10 @@ export default function CheckInPage() {
           }}
         >
           <div style={{ fontSize: "1.25rem", fontWeight: 600 }}>
-            Pod {selectedSeat.number} Selected
+            {t("pod.podSelected", { number: selectedSeat.number })}
           </div>
           <div style={{ color: COLORS.textMuted, fontSize: "0.9rem" }}>
-            {selectedSeat.podType === "DUAL" ? "Dual Pod (fits 2)" : "Single Pod"}
+            {selectedSeat.podType === "DUAL" ? t("pod.dualPod") : t("pod.singlePod")}
           </div>
         </div>
       )}
@@ -495,7 +502,7 @@ export default function CheckInPage() {
       {/* Actions */}
       <div style={{ display: "flex", gap: 20 }}>
         <button onClick={handleBackToHome} className="kiosk-btn kiosk-btn-ghost">
-          Cancel
+          {tCommon("cancel")}
         </button>
         <button
           onClick={handleCheckIn}
@@ -506,7 +513,7 @@ export default function CheckInPage() {
             cursor: selectedPodId && !checkingIn ? "pointer" : "not-allowed",
           }}
         >
-          {checkingIn ? "Checking In..." : "Check In"}
+          {checkingIn ? tCommon("loading") : t("pod.checkInButton")}
         </button>
       </div>
     </main>

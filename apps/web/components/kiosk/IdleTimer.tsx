@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 
 // Default idle timeout: 60 seconds
 const DEFAULT_IDLE_TIMEOUT = 60000;
@@ -20,6 +20,8 @@ interface IdleTimerProps {
   showWarning?: boolean;
   /** Callback when idle timeout is about to trigger */
   onIdle?: () => void;
+  /** Query parameters to preserve on redirect (e.g., ['locationId']) */
+  preserveParams?: string[];
 }
 
 /**
@@ -32,14 +34,29 @@ export function IdleTimer({
   excludePaths = [],
   showWarning = true,
   onIdle,
+  preserveParams = ['locationId'],
 }: IdleTimerProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const warningTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
   const [showWarningModal, setShowWarningModal] = useState(false);
   const [countdown, setCountdown] = useState(WARNING_COUNTDOWN / 1000);
+
+  // Build redirect URL with preserved query params
+  const getRedirectUrl = useCallback(() => {
+    const params = new URLSearchParams();
+    preserveParams.forEach(param => {
+      const value = searchParams.get(param);
+      if (value) {
+        params.set(param, value);
+      }
+    });
+    const queryString = params.toString();
+    return queryString ? `${redirectPath}?${queryString}` : redirectPath;
+  }, [redirectPath, searchParams, preserveParams]);
 
   // Check if current path should be excluded from idle timeout
   const isExcludedPath = useCallback(() => {
@@ -96,16 +113,16 @@ export function IdleTimer({
 
           if (count <= 0) {
             clearAllTimers();
-            router.push(redirectPath);
+            router.push(getRedirectUrl());
           }
         }, 1000);
       } else {
         // Redirect immediately
         onIdle?.();
-        router.push(redirectPath);
+        router.push(getRedirectUrl());
       }
     }, timeout);
-  }, [pathname, timeout, redirectPath, showWarning, isExcludedPath, clearAllTimers, router, onIdle]);
+  }, [pathname, timeout, showWarning, isExcludedPath, clearAllTimers, router, onIdle, getRedirectUrl]);
 
   // Handle user activity
   useEffect(() => {

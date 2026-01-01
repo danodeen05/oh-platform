@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useCallback, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { BrowserMultiFormatReader, BarcodeFormat, DecodeHintType, NotFoundException } from '@zxing/library';
 
 // Kiosk color system
@@ -37,6 +38,7 @@ export function QRScanner({
   width = 320,
   height = 320,
 }: QRScannerProps) {
+  const t = useTranslations("kiosk");
   const videoRef = useRef<HTMLVideoElement>(null);
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
   const [isScanning, setIsScanning] = useState(false);
@@ -183,7 +185,7 @@ export function QRScanner({
               borderRadius: 8,
             }}
           >
-            Camera not available
+            {t("qrScanner.cameraNotAvailable")}
           </span>
         ) : isScanning ? (
           <span
@@ -195,7 +197,7 @@ export function QRScanner({
               borderRadius: 10,
             }}
           >
-            Position QR code in frame
+            {t("qrScanner.positionQR")}
           </span>
         ) : (
           <span
@@ -207,7 +209,7 @@ export function QRScanner({
               borderRadius: 8,
             }}
           >
-            Starting camera...
+            {t("qrScanner.startingCamera")}
           </span>
         )}
       </div>
