@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
-import { QRScanner, parseKioskQR, LanguageSelector } from "@/components/kiosk";
+import { QRScanner, parseKioskQR, LanguageSelector, AnimatedOrderQR } from "@/components/kiosk";
 
 // Welcome messages in different languages for cycling animation
 const WELCOME_MESSAGES = [
@@ -518,6 +518,21 @@ export default function KioskWelcome({ location }: { location: Location }) {
             }}
           >
             {location.name}
+          </div>
+
+          {/* QR Code for online ordering - bottom right, aligned with CTA buttons */}
+          <div
+            style={{
+              position: "absolute",
+              bottom: 80,
+              right: 48,
+            }}
+          >
+            <AnimatedOrderQR
+              locationId={location.id}
+              size={184}
+              showVideo={true}
+            />
           </div>
         </div>
       </main>
