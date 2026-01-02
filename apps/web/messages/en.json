@@ -1553,7 +1553,7 @@
     "mentalHealth": {
       "label": "Mental Health Matters",
       "loading": "Loading mental health awareness...",
-      "skipTip": "Skip the tip. Make a difference instead.",
+      "skipTip": "{name}, you already skipped the tip today because Oh! believes in fair wages for all. Want to make a real difference instead?",
       "supportCause": "Support the Cause",
       "foundation": "One Red Step at a Time Foundation • 501(c)(3)"
     },
