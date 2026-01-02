@@ -450,3 +450,74 @@ const COLORS = {
 - Cards have consistent border-radius (10-12px)
 - Touch-friendly sizing throughout
 - Dietary badges use compact icons
+
+## Apple Wallet Pass System - Implementation Complete (Jan 2, 2026)
+
+### Overview
+Apple Wallet loyalty passes with real-time updates for credit balance, pod availability, and geolocation notifications.
+
+### Key Files
+```
+packages/api/src/wallet/
+├── wallet-pass.js           # Pass generation (PKPass)
+├── apns-service.js          # Apple Push Notification Service
+├── wallet-web-service.js    # Apple's required web service endpoints
+├── wallet-notification-service.js  # 6 notification types
+└── pass-template.pass/      # Pass images (logo, icon)
+
+packages/api/src/services/
+├── credit-service.js        # Credits + auto wallet refresh
+└── wallet-realtime-service.js  # Pod availability tracking
+```
+
+### How Real-Time Updates Work
+1. When data changes (credits, pod availability), `markPassUpdated()` updates `WalletPassRegistration.updatedAt`
+2. APNs push sent to device via `notifyUserPassUpdate()`
+3. Apple Wallet checks `GET /wallet/v1/devices/:id/registrations/:passTypeId`
+4. If `updatedAt` is newer, fetches `GET /wallet/v1/passes/:passTypeId/:serialNumber`
+5. Pass regenerated with current data, returned with `Last-Modified` header
+
+### Production Environment Variables (Railway)
+```bash
+# Pass Signing (required)
+APPLE_PASS_TYPE_ID=pass.com.ohbeef.loyalty
+APPLE_TEAM_ID=<10-char team ID>
+APPLE_PASS_CERT_BASE64=<base64 cert>
+APPLE_PASS_KEY_BASE64=<base64 key>
+APPLE_WWDR_CERT_BASE64=<base64 WWDR cert>
+
+# APNs Push Notifications (required for real-time updates)
+APPLE_APNS_KEY_ID=<10-char key ID>
+APPLE_APNS_PRIVATE_KEY_BASE64=<base64 .p8 file>
+
+# Web Service
+WALLET_WEB_SERVICE_URL=https://api.ohbeef.com/wallet
+WALLET_AUTH_SECRET=<random secret>
+```
+
+### Cron Jobs (cron-job.org)
+All require header: `x-cron-secret: <CRON_SECRET>`
+
+| Job | Endpoint | Schedule |
+|-----|----------|----------|
+| Pod Availability | `POST /cron/wallet-pod-availability` | Every 5 min |
+| Streak Reminders | `POST /cron/wallet-streak-notifications` | Daily 5pm MT |
+| Challenge Deadlines | `POST /cron/wallet-challenge-notifications` | Daily 10am MT |
+| Credits Reminder | `POST /cron/wallet-credits-reminder` | Weekly Mon 11am |
+| Tier Progress | `POST /cron/wallet-tier-progress` | Daily noon MT |
+
+### Debug/Test Endpoints
+- `GET /wallet/debug` - Check APNs config & registrations
+- `POST /wallet/test-push/:userId` - Send test push notification
+- `POST /wallet/refresh-all` - Force refresh all passes
+
+### Geolocation Notification Message Format
+```
+"Our [location] location is so close! We have X pods currently available with X min wait. Stop by and use your $X.XX available credit!!"
+```
+
+### Important Notes
+- APNs defaults to **production** (wallet passes use production certs)
+- `Last-Modified` header is required for Apple Wallet to track updates
+- Location coordinates must match production for geofencing to work
+- DNS: `api.ohbeef.com` → `ohapi-production.up.railway.app` (CNAME)
