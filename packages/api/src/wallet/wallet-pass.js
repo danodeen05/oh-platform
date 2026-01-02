@@ -259,7 +259,7 @@ export async function generateAppleWalletPass(user, locations = []) {
     }
   );
 
-  // Back of pass - Additional info
+  // Back of pass - Additional info (use unique keys to avoid conflicts with front fields)
   pass.backFields.push(
     {
       key: 'member-name',
@@ -267,17 +267,17 @@ export async function generateAppleWalletPass(user, locations = []) {
       value: user.name || 'Oh! Member',
     },
     {
-      key: 'orders',
+      key: 'lifetime-orders',
       label: 'Lifetime Orders',
       value: user.lifetimeOrderCount.toString(),
     },
     {
-      key: 'cashback',
+      key: 'cashback-rate',
       label: 'Current Cashback Rate',
       value: tierConfig.cashback,
     },
     {
-      key: 'streak',
+      key: 'longest-streak',
       label: 'Longest Streak',
       value: `${user.currentStreak} day${user.currentStreak !== 1 ? 's' : ''}`,
     },
