@@ -41,6 +41,14 @@ import {
   validateArrivalTime,
   DEFAULT_HOURS,
 } from "./utils/operating-hours.js";
+import {
+  updateUserCredits,
+  refreshUserWalletPass,
+} from "./services/credit-service.js";
+import {
+  checkAndRefreshPasses,
+  initializeAvailabilityTracking,
+} from "./services/wallet-realtime-service.js";
 
 const prisma = new PrismaClient();
 const app = Fastify({ logger: true });
@@ -3167,6 +3175,9 @@ app.patch("/orders/:id", async (req, reply) => {
           creditsCents: { increment: cashbackAmount },
         },
       });
+
+      // Refresh wallet pass to show updated credit balance
+      refreshUserWalletPass(user.id).catch(console.error);
     }
   }
 
@@ -3528,6 +3539,9 @@ app.post("/users/:id/deduct-credits", async (req, reply) => {
     },
   });
 
+  // Refresh wallet pass to show updated credit balance
+  refreshUserWalletPass(id).catch(console.error);
+
   return {
     success: true,
     deducted: amountCents,
@@ -3579,6 +3593,9 @@ app.post("/orders/:id/apply-credits", async (req, reply) => {
       description: `Applied to order ${order.orderNumber}`,
     },
   });
+
+  // Refresh wallet pass to show updated credit balance
+  refreshUserWalletPass(userId).catch(console.error);
 
   return { appliedCredits: maxCredits, newTotal: order.totalCents };
 });
@@ -3846,6 +3863,10 @@ app.post("/users/:userId/challenges/:challengeId/claim", async (req, reply) => {
   ]);
 
   console.log(`🎉 User ${userId} claimed reward for challenge: ${userChallenge.challenge.name}`);
+
+  // Refresh wallet pass to show updated credit balance
+  refreshUserWalletPass(userId).catch(console.error);
+
   return { success: true, rewardCents: userChallenge.challenge.rewardCents };
 });
 
@@ -4469,6 +4490,9 @@ app.post("/cron/disburse-credits", async (req, reply) => {
       results.totalAmountCents += pending.amountCents;
 
       console.log(`✅ Disbursed $${pending.amountCents / 100} to ${pending.user.email}`);
+
+      // Refresh wallet pass to show updated credit balance
+      refreshUserWalletPass(pending.userId).catch(console.error);
     } catch (error) {
       console.error(`❌ Failed to disburse credit ${pending.id}:`, error);
       results.errors.push({ id: pending.id, error: error.message });
@@ -4543,6 +4567,35 @@ app.post("/cron/wallet-tier-progress", async (req, reply) => {
   console.log(`📱 Tier progress notifications: ${results.sent} sent, ${results.skipped} skipped`);
 
   return results;
+});
+
+// Wallet cron: Pod availability refresh - run every 5 minutes
+// Updates pass relevantText with current pod availability
+app.post("/cron/wallet-pod-availability", async (req, reply) => {
+  const cronSecret = req.headers["x-cron-secret"];
+  const expectedSecret = process.env.CRON_SECRET || "dev-cron-secret";
+
+  if (cronSecret !== expectedSecret) {
+    return reply.code(401).send({ error: "Unauthorized" });
+  }
+
+  console.log("📱 Checking pod availability changes...");
+  const result = await checkAndRefreshPasses();
+
+  if (result.triggered) {
+    console.log(`📱 Pod changes detected, refreshed passes:`, result.refreshResult);
+  } else {
+    console.log("📱 No significant pod changes");
+  }
+
+  return result;
+});
+
+// Manual endpoint to force refresh all wallet passes (for testing)
+app.post("/wallet/refresh-all", async (req, reply) => {
+  console.log("📱 Force refreshing all wallet passes...");
+  const result = await checkAndRefreshPasses();
+  return result;
 });
 
 // Get user's order history
@@ -4819,6 +4872,9 @@ app.patch("/kitchen/orders/:id/status", async (req, reply) => {
           await checkTierUpgrade(user.referredById);
 
           console.log(`✅ Referral credit of $${referralBonus / 100} awarded to ${referrer.email} (order COMPLETED)`);
+
+          // Refresh referrer's wallet pass to show updated credit balance
+          refreshUserWalletPass(user.referredById).catch(console.error);
         }
       } else {
         console.log(`❌ Referral credit not awarded - order total $${order.totalCents / 100} below $20 minimum`);
@@ -9537,6 +9593,9 @@ app.post("/meal-gifts/:id/accept", async (req, reply) => {
           },
         },
       });
+
+      // Refresh recipient's wallet pass to show updated credit balance
+      refreshUserWalletPass(recipientId).catch(console.error);
     }
   }
 
@@ -9578,6 +9637,9 @@ app.post("/meal-gifts/:id/accept", async (req, reply) => {
         },
       },
     });
+
+    // Refresh giver's wallet pass to show updated credit balance
+    refreshUserWalletPass(mealGift.giverId).catch(console.error);
 
     // Mark challenge as completed for giver
     if (challenge) {
@@ -10180,4 +10242,7 @@ app.listen({ port: PORT, host: "0.0.0.0" }, (err) => {
   // Run initial cleanup and synchronization on startup
   releaseExpiredReservations();
   synchronizePodStatuses();
+
+  // Initialize wallet pass availability tracking
+  initializeAvailabilityTracking();
 });

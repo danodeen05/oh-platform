@@ -299,6 +299,31 @@ pnpm api:dev      # API (port 4000) → https://devapi.ohbeef.com
 - This pushes the current worktree branch directly to main to trigger Railway deployment
 - Do NOT try to checkout main (it's already checked out in the main repo)
 
+## CRITICAL: Testing Workflow
+
+**NEVER test API changes locally when the user is testing via dev subdomains.**
+
+The user tests via:
+- `https://devwebapp.ohbeef.com` → Railway web app
+- `https://devadmin.ohbeef.com` → Railway admin
+- `https://devapi.ohbeef.com` → Railway API
+
+**Workflow for API/backend changes:**
+1. Make code changes locally
+2. Commit and push to main: `git push origin <branch>:main`
+3. Railway auto-deploys from main
+4. User tests via dev subdomains (NOT localhost)
+
+**DO NOT:**
+- Run `node src/index.js` locally and expect user to see changes
+- Test wallet passes or push notifications against localhost:4000
+- Assume local server changes are visible to user's phone/browser
+
+**The local API server (port 4000) is only for:**
+- Quick syntax checks
+- Local development when explicitly requested
+- Testing endpoints with curl before deploying
+
 ## Meal for a Stranger Challenge - Implementation Status (Dec 30, 2024)
 
 ### Status: READY FOR TESTING
@@ -328,3 +353,100 @@ The recipient notification modal has been implemented. Changes made:
 **Backups Created:**
 - `/tmp/enhanced-menu-builder-backup.tsx`
 - `/tmp/payment-form-backup.tsx`
+
+## Kiosk Order Flow UI - Implementation Status (Dec 31, 2024)
+
+### Status: IN PROGRESS - READY FOR FINAL TESTING
+
+The kiosk ordering screens have been redesigned for a better touch-screen experience. All 4 steps have been styled but need final testing and polish.
+
+### Key File
+`apps/web/app/[locale]/kiosk/order/kiosk-order-flow.tsx`
+
+### COLORS Constant (for reference)
+```typescript
+const COLORS = {
+  primary: "#7C7A67",        // Olive/sage - main brand color
+  primaryDark: "#5a5848",    // Darker olive for selected states
+  primaryLight: "#f5f4f0",   // Light olive tint for backgrounds
+  textOnPrimary: "#FFFFFF",  // White text on primary buttons
+  text: "#1a1a1a",           // Dark text
+  textMuted: "#666666",      // Muted text
+  border: "#e5e7eb",         // Light gray borders
+  success: "#22c55e",        // Green for FREE labels
+  surfaceElevated: "#ffffff" // White card backgrounds
+};
+```
+
+### Step 1: Choose Your Base (COMPLETE)
+- **Layout**: 2-column side-by-side (Noodle Type | Soup Base)
+- **Selection style**: Tap-to-select cards with images
+- **Selected indicator**: 哦 logo + checkmark overlay, gold border
+- **"No Noodles" button**: Centered below noodle grid
+- **Dietary badges**: Show on cards (vegetarian, vegan, GF, spice)
+
+### Step 2: Customize Your Bowl (COMPLETE)
+- **Layout**: 2-column grid for sliders
+- **Sliders**:
+  - Spice Level: Progressive red glow (pink → deep red)
+  - Soup Richness: Progressive deep brown glow
+  - Noodle Texture: Progressive tan glow (Firm=bold, Soft=light)
+  - Vegetables: Deep green highlight
+- **Slider cards**: Show image + label, no selection indicator pills
+- **Allergen Info**: Modal popup accessible from header
+
+### Step 3: Add-Ons & Sides (COMPLETE)
+- **Layout**: Side-by-side columns (Add-Ons | Side Dishes)
+- **Card style**: Smaller cards matching Step 1 sizing
+- **Interaction**: Tap anywhere on card to add (+1)
+- **Qty controls**: Right-justified, inline with name/price
+  - Minus button (29x29px) + qty number
+  - Tap card to increase, tap minus to decrease
+- **Pricing**: Shows "$X.XX each" format
+- **Subtotal**: Updates correctly for multiple quantities
+
+### Step 4: Drinks & Dessert (COMPLETE - NEEDS TESTING)
+- **Layout**: Side-by-side with vertical divider
+  - Beverages (left): 2-column grid, "(free refills)" in title
+  - Dessert (right): Single column, centered, "(free)" in title
+- **Separation**: Left border + padding on Dessert column
+- **Pricing**:
+  - Shows price for paid items
+  - Shows "FREE" (green) for $0 items (water, dessert)
+- **Dessert card**: Same size as beverage cards (50% width)
+
+### Known Bug Fixes Applied
+1. **Price calculation bug**: Fixed in 4 files - `additionalPriceCents` defaulting to 0 caused subtotal to not update. Now uses `effectiveAdditionalPrice = item.additionalPriceCents || item.basePriceCents`
+   - `kiosk-order-flow.tsx`
+   - `menu-builder.tsx`
+   - `enhanced-menu-builder.tsx`
+   - `checkbox-group.tsx`
+
+### Testing Checklist
+- [ ] Step 1: Verify noodle and soup base selection works
+- [ ] Step 1: Verify "No Noodles" button works
+- [ ] Step 1: Verify dietary badges display correctly
+- [ ] Step 2: Verify all sliders work and show color glows
+- [ ] Step 2: Verify Allergen Info popup works
+- [ ] Step 3: Verify tap-to-add on cards works
+- [ ] Step 3: Verify minus button decreases qty
+- [ ] Step 3: Verify subtotal calculates correctly for multiple items
+- [ ] Step 4: Verify beverage selection works
+- [ ] Step 4: Verify dessert selection works
+- [ ] Step 4: Verify "FREE" label shows for water/dessert
+- [ ] Complete order: Verify total at bottom updates correctly
+- [ ] Complete order: Verify payment flow works
+
+### Related Files
+- `apps/web/app/[locale]/kiosk/kiosk.css` - Custom kiosk styles
+- `apps/web/app/[locale]/kiosk/layout.tsx` - Kiosk layout wrapper
+- `apps/web/app/[locale]/kiosk/check-in/page.tsx` - Check-in screen
+- `apps/web/app/[locale]/kiosk/kiosk-welcome.tsx` - Welcome screen
+- `apps/web/components/kiosk/` - Kiosk-specific components
+
+### UI Polish Applied
+- Decorative 哦 logo appears on all kiosk pages
+- Header/footer use COLORS.primary (olive) background
+- Cards have consistent border-radius (10-12px)
+- Touch-friendly sizing throughout
+- Dietary badges use compact icons
