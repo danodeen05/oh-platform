@@ -173,7 +173,7 @@ export async function getUpdatedPass(passTypeId, serialNumber) {
     return { status: 404 };
   }
 
-  // Get all open locations for relevantLocations
+  // Get all open locations with seat data for relevantLocations
   const locations = await prisma.location.findMany({
     where: { isClosed: false },
     select: {
@@ -181,17 +181,33 @@ export async function getUpdatedPass(passTypeId, serialNumber) {
       lng: true,
       notificationRadiusMiles: true,
       name: true,
+      seats: {
+        select: {
+          status: true,
+        },
+      },
     },
   });
 
-  // Add relevantText to each location
-  const locationsWithText = locations.map(loc => ({
-    ...loc,
-    relevantText: `${loc.name} is nearby!`,
-  }));
+  // Calculate availability stats for each location
+  const locationsWithStats = locations.map(loc => {
+    const availablePods = loc.seats.filter(s => s.status === 'AVAILABLE').length;
+    const occupiedPods = loc.seats.filter(s => s.status === 'OCCUPIED').length;
+    // Estimate wait time: ~5 min per occupied pod if no pods available
+    const avgWaitMinutes = availablePods === 0 && occupiedPods > 0 ? Math.ceil(occupiedPods * 5 / 2) : 0;
+
+    return {
+      lat: loc.lat,
+      lng: loc.lng,
+      notificationRadiusMiles: loc.notificationRadiusMiles,
+      name: loc.name,
+      availablePods,
+      avgWaitMinutes,
+    };
+  });
 
   try {
-    const passBuffer = await generateAppleWalletPass(user, locationsWithText);
+    const passBuffer = await generateAppleWalletPass(user, locationsWithStats);
 
     return {
       status: 200,

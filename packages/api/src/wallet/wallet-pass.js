@@ -127,7 +127,7 @@ function loadCertificates() {
  * @param {number} user.currentStreak - Current order streak
  * @param {string} user.referralCode - User's referral code
  * @param {Date} user.createdAt - Account creation date
- * @param {Array} locations - Array of location objects with lat, lng, notificationRadiusMiles
+ * @param {Array} locations - Array of location objects with lat, lng, notificationRadiusMiles, availablePods, avgWaitMinutes
  * @returns {Promise<Buffer>} - .pkpass file buffer
  */
 export async function generateAppleWalletPass(user, locations = []) {
@@ -145,7 +145,46 @@ export async function generateAppleWalletPass(user, locations = []) {
   // Create the pass using the model directory for images
   const modelPath = join(__dirname, 'pass-template.pass');
 
+  // Build relevantLocations for geofencing notifications
+  // Note: This data is a snapshot at pass generation time. For live updates,
+  // push notifications should be sent when availability changes significantly.
+  const relevantLocations = locations.map(loc => {
+    const availablePods = loc.availablePods ?? 0;
+    const avgWaitMinutes = loc.avgWaitMinutes ?? 0;
+    const locationName = loc.name || 'Oh!';
+
+    // Build dynamic notification message
+    let relevantText = `${locationName} is nearby!`;
+    if (availablePods > 0) {
+      relevantText += ` Currently, we have ${availablePods} pod${availablePods !== 1 ? 's' : ''} available`;
+      if (avgWaitMinutes > 0) {
+        relevantText += ` and ${avgWaitMinutes} min wait time`;
+      } else {
+        relevantText += ` with no wait`;
+      }
+      relevantText += `.`;
+    } else if (avgWaitMinutes > 0) {
+      relevantText += ` Currently, ${avgWaitMinutes} min wait time.`;
+    }
+
+    // Add credit balance if user has credits
+    if (user.creditsCents > 0) {
+      relevantText += ` Stop by and use your ${creditsFormatted} credit!`;
+    } else {
+      relevantText += ` Stop by for some delicious noodles!`;
+    }
+
+    return {
+      latitude: loc.lat,
+      longitude: loc.lng,
+      relevantText,
+      // Convert miles to meters (1 mile = 1609.34 meters)
+      maxDistance: (loc.notificationRadiusMiles || 20) * 1609.34,
+    };
+  });
+
   // passkit-generator v3 uses PKPass.from() with model path
+  // IMPORTANT: relevantLocations must be in the override object, not set after creation
   const pass = await PKPass.from(
     {
       model: modelPath,
@@ -169,22 +208,13 @@ export async function generateAppleWalletPass(user, locations = []) {
       // Web service for push updates
       webServiceURL: process.env.WALLET_WEB_SERVICE_URL || 'https://api.ohbeef.com/wallet',
       authenticationToken: generateAuthToken(user.id),
+      // Geofencing locations for lock screen notifications
+      relevantLocations: relevantLocations.length > 0 ? relevantLocations : undefined,
     }
   );
 
   // Set pass type - using generic for better layout control
   pass.type = 'generic';
-
-  // Add relevant locations for geofencing notifications
-  if (locations.length > 0) {
-    pass.relevantLocations = locations.map(loc => ({
-      latitude: loc.lat,
-      longitude: loc.lng,
-      relevantText: loc.relevantText || 'Oh! is nearby!',
-      // Convert miles to meters (1 mile = 1609.34 meters)
-      maxDistance: (loc.notificationRadiusMiles || 20) * 1609.34,
-    }));
-  }
 
   // Header - Credit balance (top right)
   pass.headerFields.push({
