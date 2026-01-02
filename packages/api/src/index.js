@@ -1518,6 +1518,9 @@ app.get("/orders/status", async (req, reply) => {
         city: order.location.city,
       },
 
+      // Guest name (for non-authenticated orders)
+      guestName: order.guestName,
+
       // Items - localized based on user's language preference
       items: order.items.map((item) => {
         const localizedMenuItem = localizeMenuItem(item.menuItem, locale);

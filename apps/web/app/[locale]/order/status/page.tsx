@@ -42,6 +42,7 @@ interface OrderStatus {
       priceCents: number;
       categoryType: string | null;
     }>;
+    guestName: string | null;
   };
 }
 
@@ -2205,7 +2206,7 @@ function StatusContent() {
             translations={{
               label: t("mentalHealth.label"),
               loading: t("mentalHealth.loading"),
-              skipTip: t("mentalHealth.skipTip"),
+              skipTip: t("mentalHealth.skipTip", { name: user?.firstName || order.guestName?.split(" ")[0] || "Dear Guest" }),
               supportCause: t("mentalHealth.supportCause"),
               foundation: t("mentalHealth.foundation"),
             }}
