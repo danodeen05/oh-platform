@@ -159,7 +159,7 @@ export async function getPassesForDevice(deviceLibraryId, passTypeId, passesUpda
  *
  * @param {string} passTypeId - Pass type ID
  * @param {string} serialNumber - Pass serial number
- * @returns {Object} - { status: 200|404, contentType?, body? }
+ * @returns {Object} - { status: 200|404, contentType?, body?, lastModified? }
  */
 export async function getUpdatedPass(passTypeId, serialNumber) {
   const userId = serialNumber.replace('oh-member-', '');
@@ -172,6 +172,12 @@ export async function getUpdatedPass(passTypeId, serialNumber) {
   if (!user) {
     return { status: 404 };
   }
+
+  // Get the registration to get last modified timestamp
+  const registration = await prisma.walletPassRegistration.findFirst({
+    where: { userId, passTypeId, serialNumber },
+    select: { updatedAt: true },
+  });
 
   // Get all open locations with seat data for relevantLocations
   const locations = await prisma.location.findMany({
@@ -209,10 +215,14 @@ export async function getUpdatedPass(passTypeId, serialNumber) {
   try {
     const passBuffer = await generateAppleWalletPass(user, locationsWithStats);
 
+    // Use registration updatedAt or current time for Last-Modified header
+    const lastModified = registration?.updatedAt || new Date();
+
     return {
       status: 200,
       contentType: 'application/vnd.apple.pkpass',
       body: passBuffer,
+      lastModified: lastModified.toUTCString(),
     };
   } catch (error) {
     console.error('Error generating pass:', error);

@@ -154,22 +154,23 @@ export async function generateAppleWalletPass(user, locations = []) {
     const locationName = loc.name || 'Oh!';
 
     // Build dynamic notification message
-    let relevantText = `${locationName} is nearby!`;
+    // Format: "Our [location] location is so close! We have X pods currently available with X min wait. Stop by and use your $X.XX available credit!!"
+    let relevantText = `Our ${locationName} location is so close!`;
+
     if (availablePods > 0) {
-      relevantText += ` Currently, we have ${availablePods} pod${availablePods !== 1 ? 's' : ''} available`;
+      relevantText += ` We have ${availablePods} pod${availablePods !== 1 ? 's' : ''} currently available`;
       if (avgWaitMinutes > 0) {
-        relevantText += ` and ${avgWaitMinutes} min wait time`;
+        relevantText += ` with ${avgWaitMinutes} min wait.`;
       } else {
-        relevantText += ` with no wait`;
+        relevantText += ` with no wait.`;
       }
-      relevantText += `.`;
     } else if (avgWaitMinutes > 0) {
-      relevantText += ` Currently, ${avgWaitMinutes} min wait time.`;
+      relevantText += ` Currently ${avgWaitMinutes} min wait.`;
     }
 
     // Add credit balance if user has credits
     if (user.creditsCents > 0) {
-      relevantText += ` Stop by and use your ${creditsFormatted} credit!`;
+      relevantText += ` Stop by and use your ${creditsFormatted} available credit!!`;
     } else {
       relevantText += ` Stop by for some delicious noodles!`;
     }
