@@ -49,6 +49,10 @@ import {
   checkAndRefreshPasses,
   initializeAvailabilityTracking,
 } from "./services/wallet-realtime-service.js";
+import {
+  isAPNsConfigured,
+  sendPassUpdatePush,
+} from "./wallet/apns-service.js";
 
 const prisma = new PrismaClient();
 const app = Fastify({ logger: true });
@@ -4596,6 +4600,60 @@ app.post("/wallet/refresh-all", async (req, reply) => {
   console.log("📱 Force refreshing all wallet passes...");
   const result = await checkAndRefreshPasses();
   return result;
+});
+
+// Diagnostic endpoint to check APNs status and test push
+app.get("/wallet/debug", async (req, reply) => {
+  const apnsConfigured = isAPNsConfigured();
+
+  // Get all registrations
+  const registrations = await prisma.walletPassRegistration.findMany({
+    include: { user: { select: { email: true, creditsCents: true } } }
+  });
+
+  return {
+    apns: {
+      configured: apnsConfigured,
+      keyId: process.env.APPLE_APNS_KEY_ID ? "SET" : "NOT SET",
+      privateKey: process.env.APPLE_APNS_PRIVATE_KEY_BASE64 ? "SET" : "NOT SET",
+    },
+    registrations: registrations.map(r => ({
+      email: r.user?.email,
+      credits: r.user?.creditsCents,
+      deviceId: r.deviceLibraryId.substring(0, 10) + "...",
+      pushToken: r.pushToken.substring(0, 20) + "...",
+      lastUpdated: r.lastUpdated,
+    })),
+    webServiceURL: process.env.WALLET_WEB_SERVICE_URL || "https://api.ohbeef.com/wallet",
+  };
+});
+
+// Test push notification for a specific user
+app.post("/wallet/test-push/:userId", async (req, reply) => {
+  const { userId } = req.params;
+
+  console.log(`📱 Testing push notification for user ${userId}...`);
+
+  // Get user's registration
+  const registration = await prisma.walletPassRegistration.findFirst({
+    where: { userId },
+    include: { user: { select: { email: true } } }
+  });
+
+  if (!registration) {
+    return { success: false, error: "No wallet registration found for this user" };
+  }
+
+  // Try to send push
+  const pushResult = await sendPassUpdatePush(registration.pushToken);
+
+  console.log(`📱 Push result for ${registration.user?.email}:`, pushResult);
+
+  return {
+    user: registration.user?.email,
+    pushToken: registration.pushToken.substring(0, 20) + "...",
+    result: pushResult,
+  };
 });
 
 // Get user's order history
