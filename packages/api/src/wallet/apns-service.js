@@ -12,6 +12,7 @@
  *    - APPLE_APNS_PRIVATE_KEY_BASE64 (base64-encoded .p8 file content)
  *    - APPLE_TEAM_ID (already set for wallet pass)
  *    - APPLE_PASS_TYPE_ID (already set for wallet pass)
+ *    - APPLE_APNS_ENVIRONMENT (optional: 'production' or 'sandbox', defaults to NODE_ENV-based)
  */
 
 import http2 from 'http2';
@@ -22,6 +23,24 @@ const prisma = new PrismaClient();
 
 const APNS_HOST_PRODUCTION = 'api.push.apple.com';
 const APNS_HOST_SANDBOX = 'api.sandbox.push.apple.com';
+
+/**
+ * Determine APNs environment
+ *
+ * For Apple Wallet passes, the APNs environment depends on how the PASS is signed,
+ * not the app. Passes signed with production certificates use production APNs.
+ *
+ * APPLE_APNS_ENVIRONMENT env var allows explicit override if needed.
+ * Default: 'production' (correct for production-signed wallet passes)
+ */
+export function getAPNsEnvironment() {
+  // Explicit override takes precedence
+  if (process.env.APPLE_APNS_ENVIRONMENT) {
+    return process.env.APPLE_APNS_ENVIRONMENT === 'sandbox' ? 'sandbox' : 'production';
+  }
+  // Default to production - wallet passes are signed with production certificates
+  return 'production';
+}
 
 // Cache for JWT tokens (valid for 1 hour)
 let cachedJWT = null;
@@ -91,9 +110,11 @@ export async function sendPassUpdatePush(pushToken) {
     return { success: false, error: 'not_configured' };
   }
 
-  const isProduction = process.env.NODE_ENV === 'production';
-  const host = isProduction ? APNS_HOST_PRODUCTION : APNS_HOST_SANDBOX;
+  const environment = getAPNsEnvironment();
+  const host = environment === 'production' ? APNS_HOST_PRODUCTION : APNS_HOST_SANDBOX;
   const passTypeId = process.env.APPLE_PASS_TYPE_ID;
+
+  console.log(`[APNs] Sending push to ${environment} (${host}), topic: ${passTypeId}`);
 
   return new Promise((resolve) => {
     let client;
@@ -130,12 +151,24 @@ export async function sendPassUpdatePush(pushToken) {
       req.on('response', (headers) => {
         const status = headers[':status'];
 
-        if (status === 200) {
-          resolve({ success: true });
-        } else {
-          console.error('APNs push failed:', status, responseData);
-          resolve({ success: false, status, error: responseData });
-        }
+        // Wait for all data before resolving
+        req.on('end', () => {
+          if (status === 200) {
+            console.log('[APNs] Push sent successfully');
+            resolve({ success: true });
+          } else {
+            // Parse error response from APNs
+            let errorInfo = responseData;
+            try {
+              const parsed = JSON.parse(responseData);
+              errorInfo = parsed.reason || responseData;
+            } catch (e) {
+              // responseData is not JSON
+            }
+            console.error(`[APNs] Push failed: status=${status}, reason=${errorInfo}, token=${pushToken.substring(0, 20)}...`);
+            resolve({ success: false, status, error: errorInfo });
+          }
+        });
       });
 
       req.on('error', (err) => {

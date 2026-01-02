@@ -52,6 +52,7 @@ import {
 import {
   isAPNsConfigured,
   sendPassUpdatePush,
+  getAPNsEnvironment,
 } from "./wallet/apns-service.js";
 
 const prisma = new PrismaClient();
@@ -4418,7 +4419,11 @@ app.get("/wallet/v1/passes/:passTypeId/:serialNumber", async (req, reply) => {
     return reply.code(500).send({ error: "Failed to generate pass" });
   }
 
-  reply.header("Content-Type", result.contentType).send(result.body);
+  // Apple Wallet requires Last-Modified header to properly track pass updates
+  reply
+    .header("Content-Type", result.contentType)
+    .header("Last-Modified", result.lastModified)
+    .send(result.body);
 });
 
 // Logging endpoint for Apple Wallet (receives error logs from devices)
@@ -4605,6 +4610,7 @@ app.post("/wallet/refresh-all", async (req, reply) => {
 // Diagnostic endpoint to check APNs status and test push
 app.get("/wallet/debug", async (req, reply) => {
   const apnsConfigured = isAPNsConfigured();
+  const apnsEnvironment = getAPNsEnvironment();
 
   // Get all registrations
   const registrations = await prisma.walletPassRegistration.findMany({
@@ -4614,15 +4620,18 @@ app.get("/wallet/debug", async (req, reply) => {
   return {
     apns: {
       configured: apnsConfigured,
+      environment: apnsEnvironment,
+      host: apnsEnvironment === 'production' ? 'api.push.apple.com' : 'api.sandbox.push.apple.com',
       keyId: process.env.APPLE_APNS_KEY_ID ? "SET" : "NOT SET",
       privateKey: process.env.APPLE_APNS_PRIVATE_KEY_BASE64 ? "SET" : "NOT SET",
+      passTypeId: process.env.APPLE_PASS_TYPE_ID || "NOT SET",
     },
     registrations: registrations.map(r => ({
       email: r.user?.email,
       credits: r.user?.creditsCents,
       deviceId: r.deviceLibraryId.substring(0, 10) + "...",
       pushToken: r.pushToken.substring(0, 20) + "...",
-      lastUpdated: r.lastUpdated,
+      updatedAt: r.updatedAt,
     })),
     webServiceURL: process.env.WALLET_WEB_SERVICE_URL || "https://api.ohbeef.com/wallet",
   };
