@@ -90,7 +90,7 @@ model Location {
   isClosed       Boolean @default(false) // For temporary closures
 
   // Wallet notification settings
-  notificationRadiusMiles Float @default(20.0) // Configurable radius for geofencing (miles)
+  notificationRadiusMiles Float @default(0.062) // ~100 meters - Apple's actual notification trigger radius
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

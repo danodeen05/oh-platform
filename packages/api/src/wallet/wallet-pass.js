@@ -184,7 +184,8 @@ export async function generateAppleWalletPass(user, locations = []) {
 
   // Calculate max notification radius from locations (use largest radius)
   // Convert miles to meters (1 mile = 1609.34 meters)
-  const maxRadiusMiles = Math.max(...locations.map(loc => loc.notificationRadiusMiles || 20), 20);
+  // Note: Apple caps location notifications at ~100m for loyalty cards regardless of this value
+  const maxRadiusMiles = Math.max(...locations.map(loc => loc.notificationRadiusMiles || 0.062), 0.062);
   const maxDistanceMeters = maxRadiusMiles * 1609.34;
 
   // passkit-generator v3 uses PKPass.from() with model path
