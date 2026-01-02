@@ -145,10 +145,10 @@ export async function generateAppleWalletPass(user, locations = []) {
   // Create the pass using the model directory for images
   const modelPath = join(__dirname, 'pass-template.pass');
 
-  // Build relevantLocations for geofencing notifications
+  // Build locations for geofencing notifications
   // Note: This data is a snapshot at pass generation time. For live updates,
   // push notifications should be sent when availability changes significantly.
-  const relevantLocations = locations.map(loc => {
+  const passLocations = locations.map(loc => {
     const availablePods = loc.availablePods ?? 0;
     const avgWaitMinutes = loc.avgWaitMinutes ?? 0;
     const locationName = loc.name || 'Oh!';
@@ -174,17 +174,21 @@ export async function generateAppleWalletPass(user, locations = []) {
       relevantText += ` Stop by for some delicious noodles!`;
     }
 
+    // Location schema requires latitude/longitude, relevantText is optional
     return {
       latitude: loc.lat,
       longitude: loc.lng,
       relevantText,
-      // Convert miles to meters (1 mile = 1609.34 meters)
-      maxDistance: (loc.notificationRadiusMiles || 20) * 1609.34,
     };
   });
 
+  // Calculate max notification radius from locations (use largest radius)
+  // Convert miles to meters (1 mile = 1609.34 meters)
+  const maxRadiusMiles = Math.max(...locations.map(loc => loc.notificationRadiusMiles || 20), 20);
+  const maxDistanceMeters = maxRadiusMiles * 1609.34;
+
   // passkit-generator v3 uses PKPass.from() with model path
-  // IMPORTANT: relevantLocations must be in the override object, not set after creation
+  // NOTE: locations must be set via setLocations() method, not in the override object
   const pass = await PKPass.from(
     {
       model: modelPath,
@@ -208,10 +212,16 @@ export async function generateAppleWalletPass(user, locations = []) {
       // Web service for push updates
       webServiceURL: process.env.WALLET_WEB_SERVICE_URL || 'https://api.ohbeef.com/wallet',
       authenticationToken: generateAuthToken(user.id),
-      // Geofencing locations for lock screen notifications
-      relevantLocations: relevantLocations.length > 0 ? relevantLocations : undefined,
+      // maxDistance is a pass-level property (in meters)
+      maxDistance: maxDistanceMeters,
     }
   );
+
+  // Set geofencing locations using the setLocations method
+  // This is required because locations can't be passed in the override object
+  if (passLocations.length > 0) {
+    pass.setLocations(...passLocations);
+  }
 
   // Set pass type - using generic for better layout control
   pass.type = 'generic';
