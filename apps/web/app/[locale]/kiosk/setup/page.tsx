@@ -1,25 +1,86 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useLocale } from "next-intl";
 import { API_URL } from "@/lib/api";
 
 const STAFF_PIN = process.env.NEXT_PUBLIC_KIOSK_STAFF_PIN || "1234";
 const STORAGE_KEY = "oh_kiosk_api_key";
 
-export default function KioskSetupPage() {
+function KioskSetupContent() {
   const router = useRouter();
   const locale = useLocale();
+  const searchParams = useSearchParams();
 
-  const [step, setStep] = useState<"pin" | "setup">("pin");
+  // Check for key in URL for auto-setup
+  const urlKey = searchParams.get("key");
+
+  const [step, setStep] = useState<"pin" | "setup" | "auto">(urlKey ? "auto" : "pin");
   const [pinInput, setPinInput] = useState("");
   const [pinError, setPinError] = useState(false);
 
-  const [apiKey, setApiKey] = useState("");
+  const [apiKey, setApiKey] = useState(urlKey || "");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<{ deviceName: string; locationName: string } | null>(null);
+
+  // Auto-setup when key is in URL
+  useEffect(() => {
+    if (urlKey && step === "auto") {
+      handleAutoSetup(urlKey);
+    }
+  }, [urlKey, step]);
+
+  async function handleAutoSetup(key: string) {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch(`${API_URL}/kiosk/auth`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${key}`,
+          "x-tenant-slug": "oh",
+        },
+        body: JSON.stringify({
+          appVersion: "1.0.0",
+          deviceInfo: {
+            userAgent: navigator.userAgent,
+            screenWidth: window.screen.width,
+            screenHeight: window.screen.height,
+            setupAt: new Date().toISOString(),
+            setupMethod: "url",
+          },
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || "Invalid API key");
+        setStep("setup"); // Fall back to manual entry
+        setIsLoading(false);
+        return;
+      }
+
+      const data = await res.json();
+      localStorage.setItem(STORAGE_KEY, key);
+      setSuccess({
+        deviceName: data.device.name,
+        locationName: data.location.name,
+      });
+
+      setTimeout(() => {
+        router.push(`/${locale}/kiosk`);
+      }, 2000);
+
+    } catch (err) {
+      setError("Connection error. Please check your network.");
+      setStep("setup");
+      setIsLoading(false);
+    }
+  }
 
   // Handle PIN entry
   function handlePinKey(key: string) {
@@ -129,7 +190,35 @@ export default function KioskSetupPage() {
         padding: 24,
       }}
     >
-      {step === "pin" ? (
+      {step === "auto" ? (
+        // Auto-setup in progress
+        <div
+          style={{
+            background: "#252525",
+            borderRadius: 24,
+            padding: 48,
+            textAlign: "center",
+            minWidth: 350,
+          }}
+        >
+          <div
+            style={{
+              width: 60,
+              height: 60,
+              border: "4px solid #7C7A67",
+              borderTopColor: "transparent",
+              borderRadius: "50%",
+              animation: "spin 1s linear infinite",
+              margin: "0 auto 24px",
+            }}
+          />
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+          <h1 style={{ marginBottom: 8, fontSize: "1.5rem" }}>Configuring Kiosk...</h1>
+          <p style={{ color: "#999", fontSize: "0.9rem" }}>
+            Please wait while we set up this device
+          </p>
+        </div>
+      ) : step === "pin" ? (
         // PIN Entry Screen
         <div
           style={{
@@ -410,5 +499,39 @@ export default function KioskSetupPage() {
         </div>
       )}
     </main>
+  );
+}
+
+// Wrapper with Suspense for useSearchParams
+export default function KioskSetupPage() {
+  return (
+    <Suspense
+      fallback={
+        <main
+          style={{
+            minHeight: "100vh",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "#1a1a1a",
+            color: "white",
+          }}
+        >
+          <div
+            style={{
+              width: 40,
+              height: 40,
+              border: "3px solid #7C7A67",
+              borderTopColor: "transparent",
+              borderRadius: "50%",
+              animation: "spin 1s linear infinite",
+            }}
+          />
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </main>
+      }
+    >
+      <KioskSetupContent />
+    </Suspense>
   );
 }
