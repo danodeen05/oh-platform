@@ -10,6 +10,7 @@ import {
   sendOrderReadyNotification,
   sendQueueUpdateNotification,
   getNotificationStatus,
+  sendAdminNewUserNotification,
 } from "./notifications.js";
 import { BetaAnalyticsDataClient } from "@google-analytics/data";
 import { readFileSync } from "fs";
@@ -780,6 +781,296 @@ app.post("/locations/validate-address", async (req, reply) => {
     app.log.error(error);
     return reply.code(500).send({ error: "Failed to validate address" });
   }
+});
+
+// ====================
+// KIOSK DEVICES
+// ====================
+
+// Helper: Generate secure API key for kiosk device
+function generateKioskApiKey() {
+  return `kiosk_${crypto.randomBytes(32).toString('hex')}`;
+}
+
+// Helper: Validate kiosk API key and return device
+async function validateKioskApiKey(req) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return null;
+  }
+  const apiKey = authHeader.substring(7);
+  const device = await prisma.kioskDevice.findUnique({
+    where: { apiKey },
+    include: { location: true }
+  });
+  if (!device || !device.isActive) {
+    return null;
+  }
+  return device;
+}
+
+// POST /kiosk-devices - Register a new kiosk device (admin only)
+app.post("/kiosk-devices", async (req, reply) => {
+  const { deviceId, name, locationId } = req.body || {};
+
+  if (!deviceId || !name || !locationId) {
+    return reply.code(400).send({ error: "deviceId, name, and locationId are required" });
+  }
+
+  // Verify location exists
+  const location = await prisma.location.findUnique({
+    where: { id: locationId }
+  });
+  if (!location) {
+    return reply.code(404).send({ error: "Location not found" });
+  }
+
+  // Check if device already exists
+  const existing = await prisma.kioskDevice.findUnique({
+    where: { deviceId }
+  });
+  if (existing) {
+    return reply.code(409).send({ error: "Device already registered", deviceId: existing.id });
+  }
+
+  // Create device with API key
+  const apiKey = generateKioskApiKey();
+  const device = await prisma.kioskDevice.create({
+    data: {
+      deviceId,
+      name,
+      locationId,
+      apiKey,
+    },
+    include: { location: true }
+  });
+
+  return {
+    id: device.id,
+    deviceId: device.deviceId,
+    name: device.name,
+    location: {
+      id: device.location.id,
+      name: device.location.name,
+    },
+    apiKey, // Only returned on creation
+    isActive: device.isActive,
+    createdAt: device.createdAt,
+  };
+});
+
+// GET /kiosk-devices - List all kiosk devices (admin only)
+app.get("/kiosk-devices", async (req, reply) => {
+  const { locationId } = req.query || {};
+
+  const where = {};
+  if (locationId) {
+    where.locationId = locationId;
+  }
+
+  const devices = await prisma.kioskDevice.findMany({
+    where,
+    include: { location: true },
+    orderBy: { createdAt: 'desc' }
+  });
+
+  return devices.map(d => ({
+    id: d.id,
+    deviceId: d.deviceId,
+    name: d.name,
+    location: {
+      id: d.location.id,
+      name: d.location.name,
+    },
+    isActive: d.isActive,
+    lastHeartbeat: d.lastHeartbeat,
+    appVersion: d.appVersion,
+    createdAt: d.createdAt,
+  }));
+});
+
+// GET /kiosk-devices/:id - Get kiosk device details (admin only)
+app.get("/kiosk-devices/:id", async (req, reply) => {
+  const { id } = req.params;
+
+  const device = await prisma.kioskDevice.findUnique({
+    where: { id },
+    include: { location: true }
+  });
+
+  if (!device) {
+    return reply.code(404).send({ error: "Device not found" });
+  }
+
+  return {
+    id: device.id,
+    deviceId: device.deviceId,
+    name: device.name,
+    location: {
+      id: device.location.id,
+      name: device.location.name,
+    },
+    isActive: device.isActive,
+    lastHeartbeat: device.lastHeartbeat,
+    appVersion: device.appVersion,
+    deviceInfo: device.deviceInfo,
+    createdAt: device.createdAt,
+    updatedAt: device.updatedAt,
+  };
+});
+
+// PUT /kiosk-devices/:id - Update kiosk device (admin only)
+app.put("/kiosk-devices/:id", async (req, reply) => {
+  const { id } = req.params;
+  const { name, locationId, isActive } = req.body || {};
+
+  const device = await prisma.kioskDevice.findUnique({
+    where: { id }
+  });
+
+  if (!device) {
+    return reply.code(404).send({ error: "Device not found" });
+  }
+
+  const updateData = {};
+  if (name !== undefined) updateData.name = name;
+  if (isActive !== undefined) updateData.isActive = isActive;
+  if (locationId !== undefined) {
+    // Verify new location exists
+    const location = await prisma.location.findUnique({
+      where: { id: locationId }
+    });
+    if (!location) {
+      return reply.code(404).send({ error: "Location not found" });
+    }
+    updateData.locationId = locationId;
+  }
+
+  const updated = await prisma.kioskDevice.update({
+    where: { id },
+    data: updateData,
+    include: { location: true }
+  });
+
+  return {
+    id: updated.id,
+    deviceId: updated.deviceId,
+    name: updated.name,
+    location: {
+      id: updated.location.id,
+      name: updated.location.name,
+    },
+    isActive: updated.isActive,
+  };
+});
+
+// POST /kiosk-devices/:id/rotate-key - Rotate API key for a device (admin only)
+app.post("/kiosk-devices/:id/rotate-key", async (req, reply) => {
+  const { id } = req.params;
+
+  const device = await prisma.kioskDevice.findUnique({
+    where: { id }
+  });
+
+  if (!device) {
+    return reply.code(404).send({ error: "Device not found" });
+  }
+
+  const newApiKey = generateKioskApiKey();
+  await prisma.kioskDevice.update({
+    where: { id },
+    data: { apiKey: newApiKey }
+  });
+
+  return {
+    id: device.id,
+    deviceId: device.deviceId,
+    apiKey: newApiKey, // Return new key
+    message: "API key rotated successfully. Update the device configuration."
+  };
+});
+
+// DELETE /kiosk-devices/:id - Delete kiosk device (admin only)
+app.delete("/kiosk-devices/:id", async (req, reply) => {
+  const { id } = req.params;
+
+  const device = await prisma.kioskDevice.findUnique({
+    where: { id }
+  });
+
+  if (!device) {
+    return reply.code(404).send({ error: "Device not found" });
+  }
+
+  await prisma.kioskDevice.delete({
+    where: { id }
+  });
+
+  return { success: true, message: "Device deleted" };
+});
+
+// POST /kiosk/auth - Authenticate kiosk device and get location info
+app.post("/kiosk/auth", async (req, reply) => {
+  const device = await validateKioskApiKey(req);
+
+  if (!device) {
+    return reply.code(401).send({ error: "Invalid or inactive API key" });
+  }
+
+  // Update heartbeat
+  await prisma.kioskDevice.update({
+    where: { id: device.id },
+    data: {
+      lastHeartbeat: new Date(),
+      deviceInfo: req.body?.deviceInfo || device.deviceInfo,
+      appVersion: req.body?.appVersion || device.appVersion,
+    }
+  });
+
+  return {
+    authenticated: true,
+    device: {
+      id: device.id,
+      name: device.name,
+    },
+    location: {
+      id: device.location.id,
+      name: device.location.name,
+      city: device.location.city,
+      address: device.location.address,
+      taxRate: device.location.taxRate,
+      timezone: device.location.timezone,
+    }
+  };
+});
+
+// POST /kiosk/heartbeat - Update device heartbeat and status
+app.post("/kiosk/heartbeat", async (req, reply) => {
+  const device = await validateKioskApiKey(req);
+
+  if (!device) {
+    return reply.code(401).send({ error: "Invalid or inactive API key" });
+  }
+
+  const { appVersion, deviceInfo, screenResolution } = req.body || {};
+
+  await prisma.kioskDevice.update({
+    where: { id: device.id },
+    data: {
+      lastHeartbeat: new Date(),
+      appVersion: appVersion || device.appVersion,
+      deviceInfo: deviceInfo ? { ...device.deviceInfo, ...deviceInfo, screenResolution } : device.deviceInfo,
+    }
+  });
+
+  return {
+    success: true,
+    serverTime: new Date().toISOString(),
+    location: {
+      id: device.location.id,
+      name: device.location.name,
+    }
+  };
 });
 
 // ====================
@@ -3298,6 +3589,11 @@ app.post("/users", async (req, reply) => {
       creditsCents: referredById ? 500 : 0, // $5 welcome bonus if referred
     },
   });
+
+  // Notify admin of new user (fire-and-forget)
+  sendAdminNewUserNotification(user).catch((err) =>
+    console.error("[ADMIN SMS] Failed:", err)
+  );
 
   // If referred, create a credit event for the new user
   if (referredById) {
