@@ -2,8 +2,27 @@
 
 import { useState, useEffect } from "react";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
-const WEB_URL = process.env.NEXT_PUBLIC_WEB_URL || "https://ohbeef.com";
+// Auto-detect environment based on hostname
+function getApiUrl() {
+  if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
+  if (typeof window === "undefined") return "http://localhost:4000";
+  const host = window.location.hostname;
+  if (host.includes("devadmin")) return "https://devapi.ohbeef.com";
+  if (host.includes("ohbeef")) return "https://api.ohbeef.com";
+  return "http://localhost:4000";
+}
+
+function getWebUrl() {
+  if (process.env.NEXT_PUBLIC_WEB_URL) return process.env.NEXT_PUBLIC_WEB_URL;
+  if (typeof window === "undefined") return "http://localhost:3000";
+  const host = window.location.hostname;
+  if (host.includes("devadmin") || host.includes("devwebapp")) return "https://devwebapp.ohbeef.com";
+  if (host.includes("ohbeef")) return "https://ohbeef.com";
+  return "http://localhost:3000";
+}
+
+const API_URL = getApiUrl();
+const WEB_URL = getWebUrl();
 
 type KioskDevice = {
   id: string;
@@ -133,8 +152,28 @@ export default function KiosksPage() {
     }
   }
 
+  async function handleSetupDevice(device: KioskDevice) {
+    if (!confirm(`Setup "${device.name}" on this device?\n\nThis will generate a new API key and open the kiosk setup page.`)) return;
+
+    try {
+      const res = await fetch(`${API_URL}/kiosk-devices/${device.id}/rotate-key`, {
+        method: "POST",
+        headers: { "x-tenant-slug": "oh" },
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to generate setup URL");
+
+      // Navigate directly to setup URL
+      const setupUrl = `${WEB_URL}/en/kiosk/setup?key=${data.apiKey}`;
+      window.location.href = setupUrl;
+    } catch (err: any) {
+      alert("Error: " + err.message);
+    }
+  }
+
   async function handleRotateKey(device: KioskDevice) {
-    if (!confirm(`Rotate API key for "${device.name}"? The device will need to be reconfigured.`)) return;
+    if (!confirm(`Generate new setup URL for "${device.name}"?\n\nThis will invalidate any previous setup URLs.`)) return;
 
     try {
       const res = await fetch(`${API_URL}/kiosk-devices/${device.id}/rotate-key`, {
@@ -147,7 +186,7 @@ export default function KiosksPage() {
 
       const setupUrl = `${WEB_URL}/en/kiosk/setup?key=${data.apiKey}`;
       await navigator.clipboard.writeText(setupUrl);
-      alert(`New API key generated!\n\nSetup URL copied to clipboard:\n${setupUrl}`);
+      alert(`Setup URL copied to clipboard!\n\n${setupUrl}`);
     } catch (err: any) {
       alert("Error: " + err.message);
     }
@@ -469,8 +508,24 @@ export default function KiosksPage() {
                   <td style={{ padding: "12px 16px", textAlign: "right" }}>
                     <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                       <button
+                        onClick={() => handleSetupDevice(device)}
+                        title="Generate setup URL and open on this device"
+                        style={{
+                          padding: "6px 12px",
+                          background: "#5A5847",
+                          color: "white",
+                          border: "none",
+                          borderRadius: 4,
+                          fontSize: "0.8rem",
+                          fontWeight: 500,
+                          cursor: "pointer",
+                        }}
+                      >
+                        Setup This Device
+                      </button>
+                      <button
                         onClick={() => handleRotateKey(device)}
-                        title="Generate new setup URL"
+                        title="Generate new setup URL (copy to clipboard)"
                         style={{
                           padding: "6px 12px",
                           background: "#eff6ff",
@@ -481,7 +536,7 @@ export default function KiosksPage() {
                           cursor: "pointer",
                         }}
                       >
-                        New Setup URL
+                        Copy Setup URL
                       </button>
                       <button
                         onClick={() => handleToggleActive(device)}
