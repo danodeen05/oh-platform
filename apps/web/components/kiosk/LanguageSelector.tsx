@@ -143,7 +143,7 @@ export function LanguageSelector({ variant = "full", onSelect }: LanguageSelecto
     );
   }
 
-  // Prominent variant - larger, top-center with animated cycling highlight
+  // Prominent variant - stacked vertically for kiosk sidebar
   if (variant === "prominent") {
     return (
       <div
@@ -151,25 +151,27 @@ export function LanguageSelector({ variant = "full", onSelect }: LanguageSelecto
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          gap: 12,
+          gap: 10,
         }}
       >
-        {/* Globe icon with subtle animation */}
+        {/* Globe icon with label */}
         <div
           style={{
             display: "flex",
+            flexDirection: "column",
             alignItems: "center",
-            gap: 10,
+            gap: 6,
             color: "#7C7A67",
-            fontSize: "0.9rem",
+            fontSize: "0.75rem",
             fontWeight: 600,
             textTransform: "uppercase",
-            letterSpacing: "0.15em",
+            letterSpacing: "0.1em",
+            marginBottom: 4,
           }}
         >
           <svg
-            width="24"
-            height="24"
+            width="28"
+            height="28"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -184,12 +186,13 @@ export function LanguageSelector({ variant = "full", onSelect }: LanguageSelecto
           {tCommon("selectLanguage")}
         </div>
 
-        {/* Language buttons in a row */}
+        {/* Language buttons stacked vertically */}
         <div
           style={{
             display: "flex",
-            gap: 10,
-            padding: 6,
+            flexDirection: "column",
+            gap: 8,
+            padding: 8,
             background: "rgba(255, 255, 255, 0.95)",
             borderRadius: 16,
             boxShadow: "0 4px 24px rgba(0,0,0,0.15)",
@@ -204,7 +207,7 @@ export function LanguageSelector({ variant = "full", onSelect }: LanguageSelecto
                 key={lang.code}
                 onClick={() => handleSelectLanguage(lang.code)}
                 style={{
-                  padding: "13px 22px",
+                  padding: "12px 20px",
                   background: isSelected
                     ? "#7C7A67"
                     : isHighlighted
@@ -217,14 +220,15 @@ export function LanguageSelector({ variant = "full", onSelect }: LanguageSelecto
                       ? "#7C7A67"
                       : "rgba(124, 122, 103, 0.2)"
                   }`,
-                  borderRadius: 11,
+                  borderRadius: 10,
                   cursor: "pointer",
                   fontSize: "1rem",
                   color: isSelected ? "white" : "#3d3c35",
                   fontWeight: isSelected ? 700 : 500,
                   transition: "all 0.3s ease",
-                  transform: isHighlighted ? "scale(1.05)" : "scale(1)",
-                  minWidth: 96,
+                  transform: isHighlighted ? "scale(1.03)" : "scale(1)",
+                  minWidth: 120,
+                  textAlign: "center",
                 }}
               >
                 {lang.nativeName}
