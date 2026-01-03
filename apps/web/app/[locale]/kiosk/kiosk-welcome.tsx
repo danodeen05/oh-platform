@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
-import { QRScanner, parseKioskQR, LanguageSelector, AnimatedOrderQR } from "@/components/kiosk";
+import { QRScanner, parseKioskQR, LanguageSelector, AnimatedOrderQR, useKioskMode } from "@/components/kiosk";
 
 // Welcome messages in different languages for cycling animation
 const WELCOME_MESSAGES = [
@@ -96,6 +96,32 @@ export default function KioskWelcome({ location }: { location: Location }) {
   const pauseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [welcomeIndex, setWelcomeIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const { isFullscreen, isSupported, toggleFullscreen, exitFullscreen, enterFullscreen } = useKioskMode();
+
+  // Triple-tap detection for exiting fullscreen
+  const tapCountRef = useRef(0);
+  const tapTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleSecretTap = useCallback(() => {
+    tapCountRef.current += 1;
+
+    // Clear existing timeout
+    if (tapTimeoutRef.current) {
+      clearTimeout(tapTimeoutRef.current);
+    }
+
+    // If we hit 3 taps, exit fullscreen
+    if (tapCountRef.current >= 3) {
+      tapCountRef.current = 0;
+      exitFullscreen();
+      return;
+    }
+
+    // Reset tap count after 1 second of no taps
+    tapTimeoutRef.current = setTimeout(() => {
+      tapCountRef.current = 0;
+    }, 1000);
+  }, [exitFullscreen]);
 
   // Cycle through welcome messages
   useEffect(() => {
@@ -179,6 +205,7 @@ export default function KioskWelcome({ location }: { location: Location }) {
     return (
       <main
         className="kiosk-screen"
+        onClick={handleStartOrder}
         style={{
           display: "flex",
           flexDirection: "column",
@@ -187,8 +214,79 @@ export default function KioskWelcome({ location }: { location: Location }) {
           background: COLORS.surface,
           position: "relative",
           overflow: "hidden",
+          cursor: "pointer",
         }}
       >
+        {/* Hidden triple-tap zone in top-right corner to exit fullscreen (for staff) */}
+        {isFullscreen && (
+          <div
+            onClick={(e) => { e.stopPropagation(); handleSecretTap(); }}
+            style={{
+              position: "absolute",
+              top: 0,
+              right: 0,
+              width: 100,
+              height: 100,
+              zIndex: 9999,
+              background: "transparent",
+              cursor: "default",
+            }}
+            aria-hidden="true"
+          />
+        )}
+
+        {/* Visible Enter Fullscreen button - only shown when NOT in fullscreen */}
+        {isSupported && !isFullscreen && (
+          <button
+            onClick={(e) => { e.stopPropagation(); enterFullscreen(); }}
+            aria-label="Enter fullscreen"
+            style={{
+              position: "absolute",
+              top: 20,
+              right: 20,
+              zIndex: 9999,
+              background: "rgba(255, 255, 255, 0.95)",
+              border: `3px solid ${COLORS.primary}`,
+              borderRadius: 16,
+              padding: 16,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+              touchAction: "manipulation",
+              WebkitTapHighlightColor: "rgba(124, 122, 103, 0.3)",
+              userSelect: "none",
+              minWidth: 120,
+              minHeight: 48,
+            }}
+          >
+            <svg
+              width="28"
+              height="28"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke={COLORS.primary}
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M8 3H5a2 2 0 0 0-2 2v3" />
+              <path d="M21 8V5a2 2 0 0 0-2-2h-3" />
+              <path d="M3 16v3a2 2 0 0 0 2 2h3" />
+              <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
+            </svg>
+            <span style={{
+              fontSize: "0.85rem",
+              fontWeight: 600,
+              color: COLORS.primary
+            }}>
+              Fullscreen
+            </span>
+          </button>
+        )}
+
         {/* Animated Welcome Title */}
         <div
           style={{
@@ -196,14 +294,14 @@ export default function KioskWelcome({ location }: { location: Location }) {
             top: 0,
             left: 0,
             right: 0,
-            height: "18%",
+            height: "22%",
             background: "linear-gradient(to bottom, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.95) 70%, transparent 100%)",
             zIndex: 4,
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            paddingTop: 20,
+            paddingTop: 52,
           }}
         >
           {/* Cycling welcome text */}
@@ -257,7 +355,7 @@ export default function KioskWelcome({ location }: { location: Location }) {
           playsInline
           onEnded={handleVideoEnded}
           className="kiosk-video-bg"
-          style={{ top: "12%", height: "88%" }}
+          style={{ top: "calc(14% - 20px)", height: "86%" }}
         >
           <source src="/kiosk-video.mp4" type="video/mp4" />
         </video>
@@ -367,17 +465,18 @@ export default function KioskWelcome({ location }: { location: Location }) {
             alignItems: "center",
             justifyContent: "flex-end",
             minHeight: "100vh",
-            paddingBottom: 80,
+            paddingBottom: 1,
             width: "100%",
           }}
         >
-          {/* Language Selector - below title area */}
+          {/* Language Selector - vertically centered on the left */}
           <div
+            onClick={(e) => e.stopPropagation()}
             style={{
               position: "absolute",
-              top: "20%",
-              left: "50%",
-              transform: "translateX(-50%)",
+              top: "50%",
+              left: 48,
+              transform: "translateY(-50%)",
             }}
           >
             <LanguageSelector variant="prominent" />
@@ -388,7 +487,7 @@ export default function KioskWelcome({ location }: { location: Location }) {
             style={{
               position: "relative",
               display: "flex",
-              gap: 24,
+              gap: 20,
               alignItems: "center",
             }}
           >
@@ -397,10 +496,10 @@ export default function KioskWelcome({ location }: { location: Location }) {
               className="kiosk-glow"
               style={{
                 position: "absolute",
-                top: -40,
-                left: -60,
-                right: -60,
-                bottom: -40,
+                top: -34,
+                left: -50,
+                right: -50,
+                bottom: -34,
                 zIndex: 0,
               }}
             />
@@ -411,24 +510,27 @@ export default function KioskWelcome({ location }: { location: Location }) {
               className="kiosk-btn kiosk-btn-primary"
               style={{
                 position: "relative",
-                padding: "27px 54px",
-                borderRadius: 20,
-                fontSize: "1.7rem",
+                padding: "23px 40px",
+                borderRadius: 17,
+                fontSize: "1.45rem",
                 border: `3px solid ${COLORS.primary}`,
-                boxShadow: "0 8px 32px rgba(0,0,0,0.25)",
+                boxShadow: "0 6px 24px rgba(0,0,0,0.2)",
                 display: "flex",
                 alignItems: "center",
-                gap: 15,
+                justifyContent: "center",
+                gap: 12,
                 overflow: "hidden",
                 zIndex: 1,
+                width: 440,
+                height: 65,
               }}
             >
               {/* Shimmer effect */}
               <div className="kiosk-shimmer" />
               {/* Animated tap/hand icon */}
               <svg
-                width="30"
-                height="30"
+                width="26"
+                height="26"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -437,6 +539,7 @@ export default function KioskWelcome({ location }: { location: Location }) {
                 strokeLinejoin="round"
                 style={{
                   animation: "tap-bounce 1.2s ease-in-out infinite",
+                  flexShrink: 0,
                 }}
               >
                 <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0" />
@@ -449,31 +552,34 @@ export default function KioskWelcome({ location }: { location: Location }) {
 
             {/* Secondary CTA - Online Order Check-in */}
             <button
-              onClick={handleScanQR}
+              onClick={(e) => { e.stopPropagation(); handleScanQR(); }}
               className="kiosk-btn"
               style={{
                 position: "relative",
-                padding: "27px 54px",
+                padding: "23px 40px",
                 background: "rgba(255, 255, 255, 0.95)",
-                borderRadius: 20,
+                borderRadius: 17,
                 border: `3px solid ${COLORS.primary}`,
                 color: COLORS.primary,
-                fontSize: "1.7rem",
+                fontSize: "1.45rem",
                 fontWeight: 600,
-                boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
+                boxShadow: "0 4px 14px rgba(0,0,0,0.1)",
                 display: "flex",
                 alignItems: "center",
-                gap: 15,
+                justifyContent: "center",
+                gap: 12,
                 overflow: "hidden",
                 zIndex: 1,
+                width: 440,
+                height: 65,
               }}
             >
               {/* Shimmer effect */}
               <div className="kiosk-shimmer" style={{ animationDelay: "1.5s" }} />
               {/* Animated QR code icon */}
               <svg
-                width="30"
-                height="30"
+                width="26"
+                height="26"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -482,6 +588,7 @@ export default function KioskWelcome({ location }: { location: Location }) {
                 strokeLinejoin="round"
                 style={{
                   animation: "qr-scan 2s ease-in-out infinite",
+                  flexShrink: 0,
                 }}
               >
                 {/* Top-left QR block */}
@@ -506,10 +613,7 @@ export default function KioskWelcome({ location }: { location: Location }) {
           {/* Location indicator */}
           <div
             style={{
-              position: "absolute",
-              bottom: 24,
-              left: "50%",
-              transform: "translateX(-50%)",
+              marginTop: 6,
               color: COLORS.textMuted,
               fontSize: "0.9rem",
               background: "rgba(255,255,255,0.9)",
@@ -520,12 +624,14 @@ export default function KioskWelcome({ location }: { location: Location }) {
             {location.name}
           </div>
 
-          {/* QR Code for online ordering - bottom right, aligned with CTA buttons */}
+          {/* QR Code for online ordering - vertically centered on the right */}
           <div
+            onClick={(e) => e.stopPropagation()}
             style={{
               position: "absolute",
-              bottom: 80,
+              top: "50%",
               right: 48,
+              transform: "translateY(-50%)",
             }}
           >
             <AnimatedOrderQR

@@ -7,3 +7,4 @@ export type { PrintableReceiptProps } from './PrintableReceipt';
 export { LanguageSelector } from './LanguageSelector';
 export { default as AnimatedOrderQR } from './AnimatedOrderQR';
 export { KioskDeviceProvider, useKioskDevice, useHasDeviceAuth } from './KioskDeviceProvider';
+export { useKioskMode, useKioskModePreference } from './useKioskMode';
