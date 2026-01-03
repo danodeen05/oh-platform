@@ -13,6 +13,7 @@ const navItems: NavItem[] = [
   { href: "/kitchen", label: "Kitchen" },
   { href: "/cleaning", label: "Cleaning" },
   { href: "/cleaning/config", label: "Pod Config" },
+  { href: "/kiosks", label: "Kiosks" },
   { href: "/analytics", label: "Analytics", highlight: true },
   { href: "/menu", label: "Menu" },
   { href: "/locations", label: "Locations" },
