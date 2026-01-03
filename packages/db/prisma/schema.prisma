@@ -95,12 +95,13 @@ model Location {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  seats       Seat[]
-  orders      Order[]
-  stats       LocationStats?
-  waitQueue   WaitQueue[]
-  groupOrders GroupOrder[]
-  mealGifts   MealGift[]
+  seats        Seat[]
+  orders       Order[]
+  stats        LocationStats?
+  waitQueue    WaitQueue[]
+  groupOrders  GroupOrder[]
+  mealGifts    MealGift[]
+  kioskDevices KioskDevice[]
 }
 
 model LocationStats {
@@ -114,6 +115,32 @@ model LocationStats {
   avgWaitMinutes Int @default(0)
 
   updatedAt DateTime @updatedAt
+}
+
+// ==========================================
+// KIOSK DEVICES
+// ==========================================
+
+model KioskDevice {
+  id         String   @id @default(cuid())
+  deviceId   String   @unique // Hardware identifier or unique device ID
+  name       String   // Friendly name, e.g., "Front Counter Kiosk"
+  locationId String
+  location   Location @relation(fields: [locationId], references: [id])
+
+  apiKey   String  @unique // For API authentication
+  isActive Boolean @default(true)
+
+  // Monitoring
+  lastHeartbeat DateTime?
+  appVersion    String? // Track deployed app version
+  deviceInfo    Json?   // OS version, browser, etc.
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([locationId])
+  @@index([isActive])
 }
 
 // ==========================================

@@ -1,12 +1,73 @@
 "use client";
-import { useState, useEffect, ReactNode } from "react";
-import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useState, useEffect, ReactNode, Suspense } from "react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { useTranslations, useLocale } from "next-intl";
 import "./kiosk.css";
-import { IdleTimer } from "@/components/kiosk";
+import { IdleTimer, KioskDeviceProvider, useKioskDevice } from "@/components/kiosk";
 
 // Default staff PIN - in production this would come from environment/config
 const STAFF_PIN = process.env.NEXT_PUBLIC_KIOSK_STAFF_PIN || "1234";
+
+// Inner component that uses useSearchParams (needs Suspense)
+function DeviceAuthRedirectInner({ children }: { children: ReactNode }) {
+  const { isAuthenticated, isLoading, location } = useKioskDevice();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const locale = useLocale();
+
+  useEffect(() => {
+    // Only redirect on main kiosk page, not on order flow or other sub-pages
+    const isMainKioskPage = pathname === `/${locale}/kiosk`;
+    const hasLocationParam = searchParams.has("locationId");
+
+    // If authenticated with a location and we're on main page without locationId, redirect
+    if (!isLoading && isAuthenticated && location && isMainKioskPage && !hasLocationParam) {
+      router.replace(`/${locale}/kiosk?locationId=${location.id}`);
+    }
+  }, [isAuthenticated, isLoading, location, pathname, searchParams, locale, router]);
+
+  // Show loading while checking device auth (brief)
+  if (isLoading) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#FAF9F6",
+        }}
+      >
+        <div style={{ textAlign: "center", color: "#7C7A67" }}>
+          <div
+            style={{
+              width: 40,
+              height: 40,
+              border: "3px solid #7C7A67",
+              borderTopColor: "transparent",
+              borderRadius: "50%",
+              animation: "spin 1s linear infinite",
+              margin: "0 auto 16px",
+            }}
+          />
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </div>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+}
+
+// Wrapper with Suspense for useSearchParams
+function DeviceAuthRedirect({ children }: { children: ReactNode }) {
+  return (
+    <Suspense fallback={null}>
+      <DeviceAuthRedirectInner>{children}</DeviceAuthRedirectInner>
+    </Suspense>
+  );
+}
 
 export default function KioskLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -78,28 +139,30 @@ export default function KioskLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="kiosk-container kiosk-no-select" style={{ position: "relative" }}>
-      {/* Idle Timer - auto-return to attract screen after 60s inactivity, reset to English */}
-      <IdleTimer timeout={60000} redirectPath="/en/kiosk" showWarning />
+    <KioskDeviceProvider>
+      <DeviceAuthRedirect>
+        <div className="kiosk-container kiosk-no-select" style={{ position: "relative" }}>
+          {/* Idle Timer - auto-return to attract screen after 60s inactivity, reset to English */}
+          <IdleTimer timeout={60000} redirectPath="/en/kiosk" showWarning />
 
-      {/* Hidden exit button - triple tap to reveal */}
-      <button
-        onClick={handleCornerTap}
-        style={{
-          position: "fixed",
-          top: 0,
-          right: 0,
-          width: 80,
-          height: 80,
-          background: "transparent",
-          border: "none",
-          zIndex: 9999,
-          cursor: "default",
-        }}
-        aria-label="Staff access"
-      />
+          {/* Hidden exit button - triple tap to reveal */}
+          <button
+            onClick={handleCornerTap}
+            style={{
+              position: "fixed",
+              top: 0,
+              right: 0,
+              width: 80,
+              height: 80,
+              background: "transparent",
+              border: "none",
+              zIndex: 9999,
+              cursor: "default",
+            }}
+            aria-label="Staff access"
+          />
 
-      {children}
+          {children}
 
       {/* Staff PIN Modal */}
       {showPinModal && (
@@ -213,6 +276,8 @@ export default function KioskLayout({ children }: { children: ReactNode }) {
           </div>
         </div>
       )}
-    </div>
+        </div>
+      </DeviceAuthRedirect>
+    </KioskDeviceProvider>
   );
 }
