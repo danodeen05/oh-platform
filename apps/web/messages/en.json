@@ -1925,7 +1925,15 @@
       "dualPodSelected": "Dual Pod {numbers} Selected",
       "dualPod": "Dual Pod (fits 2)",
       "singlePod": "Single Pod",
-      "checkInButton": "Check In"
+      "checkInButton": "Check In",
+      "statusOccupied": "Occupied",
+      "statusCleaning": "Cleaning",
+      "statusAvailable": "Available!",
+      "dualPodRulesTitle": "Dual Pod Requirements",
+      "dualPodRulesMessage": "Dual pods are designed for two guests dining together. To select a dual pod:",
+      "dualPodRule1": "Your party must have 2 or more guests",
+      "dualPodRule2": "You must be paying on a single check (not separate)",
+      "gotIt": "Got It"
     },
     "status": {
       "available": "Available",
@@ -2036,10 +2044,15 @@
       "dietarySymbolLegend": "Dietary Symbol Legend",
       "available": "Available",
       "occupied": "Occupied",
+      "cleaning": "Cleaning",
       "vegetarian": "Vegetarian",
       "vegan": "Vegan",
       "glutenFree": "Gluten-Free",
-      "spicyDescription": "Spicy (1-3 peppers indicate heat level)"
+      "spicyDescription": "Spicy (1-3 peppers indicate heat level)",
+      "noPreferenceTitle": "No preference? We'll pick for you!",
+      "autoAssignPod": "Auto-Assign My Pod",
+      "restrooms": "Restrooms",
+      "store": "Store"
     }
   }
 }
