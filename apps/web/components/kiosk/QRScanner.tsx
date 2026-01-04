@@ -220,6 +220,14 @@ export function QRScanner({
 /**
  * Parse kiosk QR code data
  * Returns structured data based on QR code format
+ *
+ * Supported formats:
+ * - Member deep link: oh://member/{userId}
+ * - Member ID (raw): Just the user ID string from wallet pass
+ * - Referral deep link: oh://referral/{referralCode}
+ * - Referral URL: https://...?ref={referralCode} (Member Referral QR codes)
+ * - Order deep link: oh://order/{orderQrCode}
+ * - Order QR code: ORDER-{loc8}-{timestamp}-{random}
  */
 export function parseKioskQR(data: string): {
   type: 'member' | 'order' | 'unknown';
@@ -227,6 +235,7 @@ export function parseKioskQR(data: string): {
   token?: string;
   raw: string;
 } {
+  // Member deep link format: oh://member/{userId}
   if (data.startsWith('oh://member/')) {
     return {
       type: 'member',
@@ -235,10 +244,59 @@ export function parseKioskQR(data: string): {
     };
   }
 
+  // Referral deep link format: oh://referral/{referralCode}
+  // The API supports looking up by referral code, so we treat this like a member lookup
+  if (data.startsWith('oh://referral/')) {
+    return {
+      type: 'member',
+      id: data.replace('oh://referral/', ''),
+      raw: data,
+    };
+  }
+
+  // Member Referral URL format: https://...?ref={referralCode} or https://...?REF={referralCode}
+  // Example: HTTPS://DEVWEBAPP.OHBEEF.COM/ORDER?REF=CMJRJS8GD000A146JZD60LS6B
+  // These URLs contain referral codes that can be used to look up members
+  try {
+    const url = new URL(data);
+    const refCode = url.searchParams.get('ref') || url.searchParams.get('REF');
+    if (refCode) {
+      return {
+        type: 'member',
+        id: refCode,
+        raw: data,
+      };
+    }
+  } catch {
+    // Not a valid URL, continue checking other formats
+  }
+
+  // Order deep link format: oh://order/{orderQrCode}
   if (data.startsWith('oh://order/')) {
     return {
       type: 'order',
       token: data.replace('oh://order/', ''),
+      raw: data,
+    };
+  }
+
+  // Order QR code format: ORDER-{loc8}-{timestamp}-{random}
+  // Example: ORDER-avpp161j-1765302140841-0670D9
+  if (data.startsWith('ORDER-')) {
+    return {
+      type: 'order',
+      token: data,
+      raw: data,
+    };
+  }
+
+  // Raw member ID or referral code from wallet pass (cuid format, typically starts with c and is ~25 chars)
+  // These could be user IDs or referral codes stored directly in the wallet pass barcode
+  // The API will try both user ID and referral code lookups
+  if (/^c[a-z0-9]{20,30}$/.test(data)) {
+    return {
+      type: 'member',
+      id: data,
       raw: data,
     };
   }

@@ -1467,7 +1467,10 @@ app.get("/locations/:id/seats", async (req, reply) => {
 
 // POST /orders/check-in - Customer arrives and scans order QR at kiosk
 app.post("/orders/check-in", async (req, reply) => {
-  const { orderQrCode } = req.body || {};
+  const { orderQrCode, selectedSeatId } = req.body || {};
+
+  console.log("[check-in] Request body:", JSON.stringify(req.body));
+  console.log("[check-in] orderQrCode:", orderQrCode, "selectedSeatId:", selectedSeatId);
 
   if (!orderQrCode) {
     return reply.code(400).send({ error: "orderQrCode required" });
@@ -1501,6 +1504,56 @@ app.post("/orders/check-in", async (req, reply) => {
   let arrivalDeviation = null;
   if (order.estimatedArrival) {
     arrivalDeviation = Math.round((now - order.estimatedArrival) / 60000);
+  }
+
+  // CASE 0: Customer selected a pod at kiosk during check-in
+  console.log("[check-in] Checking selectedSeatId:", selectedSeatId, "type:", typeof selectedSeatId);
+  if (selectedSeatId) {
+    const selectedPod = await prisma.seat.findUnique({
+      where: { id: selectedSeatId },
+    });
+    console.log("[check-in] Found selectedPod:", selectedPod?.number, "status:", selectedPod?.status);
+
+    if (selectedPod && selectedPod.status === "AVAILABLE") {
+      console.log("[check-in] Using customer-selected pod:", selectedPod.number);
+      const [updatedOrder, updatedSeat] = await prisma.$transaction([
+        prisma.order.update({
+          where: { id: order.id },
+          data: {
+            arrivedAt: now,
+            arrivalDeviation,
+            seatId: selectedSeatId,
+            podAssignedAt: now,
+            podSelectionMethod: "CUSTOMER_SELECTED",
+            status: "QUEUED",
+            queuedAt: now,
+            paidAt: order.paidAt || now,
+          },
+          include: {
+            seat: true,
+            location: true,
+            items: {
+              include: {
+                menuItem: true,
+              },
+            },
+          },
+        }),
+        prisma.seat.update({
+          where: { id: selectedSeatId },
+          data: { status: "RESERVED" },
+        }),
+      ]);
+
+      return {
+        status: "ASSIGNED",
+        message: `Go to Pod ${selectedPod.number}`,
+        order: updatedOrder,
+        podNumber: selectedPod.number,
+        customerSelected: true,
+      };
+    }
+    // If selected pod is not available, fall through to auto-assign
   }
 
   // CASE 1: Customer pre-selected a seat during online ordering
@@ -1693,6 +1746,143 @@ app.post("/orders/check-in", async (req, reply) => {
   };
 });
 
+// GET /orders/by-member - Look up member's active orders for kiosk check-in
+// Supports lookup by user ID or referral code
+app.get("/orders/by-member", async (req, reply) => {
+  const { memberId, locationId } = req.query || {};
+
+  if (!memberId) {
+    return reply.code(400).send({ error: "memberId required" });
+  }
+
+  try {
+    // First, try to find the user by ID or by referral code
+    let userId = memberId;
+
+    // Check if this ID belongs to a user directly
+    let user = await prisma.user.findUnique({
+      where: { id: memberId },
+      select: { id: true, name: true, membershipTier: true, referralCode: true },
+    });
+
+    // If not found by ID, try looking up by referral code
+    if (!user) {
+      user = await prisma.user.findUnique({
+        where: { referralCode: memberId },
+        select: { id: true, name: true, membershipTier: true, referralCode: true },
+      });
+      if (user) {
+        userId = user.id;
+      }
+    }
+
+    if (!user) {
+      return reply.code(404).send({
+        error: "Member not found",
+        memberId,
+      });
+    }
+
+    // Find orders for this member that are paid but not yet checked in
+    const whereClause = {
+      userId: userId,
+      paymentStatus: "PAID",
+      arrivedAt: null, // Not yet checked in
+      status: { in: ["PAID", "QUEUED"] }, // Active order statuses awaiting check-in
+    };
+
+    // Optionally filter by location
+    if (locationId) {
+      whereClause.locationId = locationId;
+    }
+
+    const orderInclude = {
+      seat: true,
+      location: true,
+      items: {
+        include: {
+          menuItem: true,
+        },
+      },
+      user: {
+        select: {
+          id: true,
+          name: true,
+          membershipTier: true,
+          referralCode: true,
+        },
+      },
+      groupOrder: {
+        select: {
+          id: true,
+          paymentMethod: true,
+          _count: { select: { orders: true } },
+        },
+      },
+    };
+
+    let orders = await prisma.order.findMany({
+      where: whereClause,
+      include: orderInclude,
+      orderBy: { createdAt: "desc" },
+    });
+
+    // If no pending orders, check for recently checked-in orders (within last 2 hours)
+    // This allows customers to scan their code again to see their pod assignment
+    if (orders.length === 0) {
+      const twoHoursAgo = new Date();
+      twoHoursAgo.setHours(twoHoursAgo.getHours() - 2);
+
+      const checkedInWhereClause = {
+        userId: userId,
+        paymentStatus: "PAID",
+        arrivedAt: { not: null, gte: twoHoursAgo },
+        status: { in: ["QUEUED", "PREPPING", "READY", "SERVING"] },
+      };
+
+      if (locationId) {
+        checkedInWhereClause.locationId = locationId;
+      }
+
+      const checkedInOrders = await prisma.order.findMany({
+        where: checkedInWhereClause,
+        include: orderInclude,
+        orderBy: { arrivedAt: "desc" },
+      });
+
+      if (checkedInOrders.length > 0) {
+        // Return as "already checked in" so frontend can show pod assignment
+        return reply.code(400).send({
+          error: "Order already checked in",
+          arrivedAt: checkedInOrders[0].arrivedAt,
+          seatNumber: checkedInOrders[0].seat?.number,
+          order: checkedInOrders[0],
+        });
+      }
+    }
+
+    if (orders.length === 0) {
+      return reply.code(404).send({
+        error: "No active orders found",
+        memberId,
+        memberName: user.name,
+        locationId,
+      });
+    }
+
+    return reply.send({
+      orders,
+      member: user,
+    });
+  } catch (err) {
+    console.error("Error in /orders/by-member:", err);
+    return reply.code(500).send({
+      error: "Failed to look up member orders",
+      details: err.message,
+    });
+  }
+});
+
 // GET /orders/lookup - Look up order by order number or QR code (for kiosk check-in)
 app.get("/orders/lookup", async (req, reply) => {
   const { code } = req.query || {};
@@ -1713,6 +1903,13 @@ app.get("/orders/lookup", async (req, reply) => {
         },
       },
       user: true,
+      groupOrder: {
+        select: {
+          id: true,
+          paymentMethod: true,
+          _count: { select: { orders: true } },
+        },
+      },
     },
   });
 
@@ -1729,6 +1926,13 @@ app.get("/orders/lookup", async (req, reply) => {
           },
         },
         user: true,
+        groupOrder: {
+          select: {
+            id: true,
+            paymentMethod: true,
+            _count: { select: { orders: true } },
+          },
+        },
       },
     });
   }
@@ -1752,6 +1956,18 @@ app.get("/orders/lookup", async (req, reply) => {
       error: "Order already checked in",
       arrivedAt: order.arrivedAt,
       seatNumber: order.seat?.number,
+      order: {
+        id: order.id,
+        orderNumber: order.orderNumber,
+        orderQrCode: order.orderQrCode,
+        status: order.status,
+        seatId: order.seatId,
+        seat: order.seat, // Include full seat object for display
+        totalCents: order.totalCents,
+        guestName: order.guestName,
+        items: order.items,
+        user: order.user ? { name: order.user.name, membershipTier: order.user.membershipTier } : null,
+      },
     });
   }
 
