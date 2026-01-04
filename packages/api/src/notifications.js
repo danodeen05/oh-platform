@@ -1,6 +1,7 @@
 /**
  * Notification Service
  * Handles email (Resend) and SMS (Twilio) notifications for orders
+ * Updated: 2026-01-04
  */
 
 import { Resend } from "resend";
