@@ -239,6 +239,26 @@ export async function sendOrderReadyNotification(order, user) {
 }
 
 /**
+ * Send admin notification for new user creation
+ */
+export async function sendAdminNewUserNotification(user) {
+  const adminPhone = process.env.ADMIN_PHONE_NUMBER;
+  if (!adminPhone) {
+    console.log("[ADMIN SMS] ADMIN_PHONE_NUMBER not configured, skipping");
+    return { success: false, reason: "not_configured" };
+  }
+
+  const name = user.name || "Not provided";
+  const contact = user.email || user.phone || "Unknown";
+  const referred = user.referredById ? "Yes" : "No";
+
+  return sendSMS({
+    to: adminPhone,
+    body: `[Oh! Admin] New user created\nName: ${name}\nContact: ${contact}\nReferred: ${referred}`,
+  });
+}
+
+/**
  * Check if notification providers are configured
  */
 export function getNotificationStatus() {

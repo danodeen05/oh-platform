@@ -22,6 +22,8 @@ interface VirtualKeyboardProps {
   placeholder?: string;
   /** Hide the built-in input display (when parent renders its own) */
   showInput?: boolean;
+  /** Scale factor for keyboard size (default 1.0, use 1.15 for 15% larger) */
+  scale?: number;
 }
 
 // QWERTY keyboard layout
@@ -43,7 +45,10 @@ export function VirtualKeyboard({
   maxLength = 30,
   placeholder = "Enter text...",
   showInput = true,
+  scale = 1,
 }: VirtualKeyboardProps) {
+  // Scale helper for sizing
+  const s = (px: number) => Math.round(px * scale);
   const handleKeyPress = useCallback((key: string) => {
     if (value.length >= maxLength) return;
     onChange(value + key.toUpperCase());
@@ -63,17 +68,17 @@ export function VirtualKeyboard({
   }, [onChange]);
 
   return (
-    <div style={{ width: '100%', maxWidth: 900 }}>
+    <div style={{ width: '100%', maxWidth: s(900) }}>
       {/* Input display - only shown if showInput is true */}
       {showInput && (
         <div
           style={{
             background: COLORS.surface,
-            border: `3px solid ${COLORS.primary}`,
-            borderRadius: 16,
-            padding: '20px 24px',
-            marginBottom: 24,
-            minHeight: 72,
+            border: `${s(3)}px solid ${COLORS.primary}`,
+            borderRadius: s(16),
+            padding: `${s(20)}px ${s(24)}px`,
+            marginBottom: s(24),
+            minHeight: s(72),
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -109,49 +114,49 @@ export function VirtualKeyboard({
       <div
         style={{
           background: COLORS.surfaceElevated,
-          borderRadius: 20,
-          padding: 16,
+          borderRadius: s(20),
+          padding: s(16),
           display: 'flex',
           flexDirection: 'column',
-          gap: 10,
+          gap: s(10),
         }}
       >
         {/* Number row */}
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: s(8) }}>
           {KEYBOARD_ROWS[0].map((key) => (
-            <KeyButton key={key} onClick={() => handleKeyPress(key)}>
+            <KeyButton key={key} onClick={() => handleKeyPress(key)} scale={scale}>
               {key}
             </KeyButton>
           ))}
         </div>
 
         {/* QWERTY row */}
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: s(8) }}>
           {KEYBOARD_ROWS[1].map((key) => (
-            <KeyButton key={key} onClick={() => handleKeyPress(key)}>
+            <KeyButton key={key} onClick={() => handleKeyPress(key)} scale={scale}>
               {key}
             </KeyButton>
           ))}
         </div>
 
         {/* ASDF row */}
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: s(8) }}>
           {KEYBOARD_ROWS[2].map((key) => (
-            <KeyButton key={key} onClick={() => handleKeyPress(key)}>
+            <KeyButton key={key} onClick={() => handleKeyPress(key)} scale={scale}>
               {key}
             </KeyButton>
           ))}
         </div>
 
         {/* ZXCV row with shift */}
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: s(8) }}>
           {KEYBOARD_ROWS[3].map((key) => (
-            <KeyButton key={key} onClick={() => handleKeyPress(key)}>
+            <KeyButton key={key} onClick={() => handleKeyPress(key)} scale={scale}>
               {key}
             </KeyButton>
           ))}
-          <KeyButton onClick={handleBackspace} width={80}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <KeyButton onClick={handleBackspace} width={s(80)} scale={scale}>
+            <svg width={s(24)} height={s(24)} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M21 4H8l-7 8 7 8h13a2 2 0 002-2V6a2 2 0 00-2-2z" />
               <line x1="18" y1="9" x2="12" y2="15" />
               <line x1="12" y1="9" x2="18" y2="15" />
@@ -160,17 +165,18 @@ export function VirtualKeyboard({
         </div>
 
         {/* Bottom row - space bar and actions */}
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 4 }}>
-          <KeyButton onClick={handleClear} width={100}>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: s(8), marginTop: s(4) }}>
+          <KeyButton onClick={handleClear} width={s(100)} scale={scale}>
             Clear
           </KeyButton>
-          <KeyButton onClick={handleSpace} width={400}>
+          <KeyButton onClick={handleSpace} width={s(400)} scale={scale}>
             Space
           </KeyButton>
           {onSubmit && (
             <KeyButton
               onClick={onSubmit}
-              width={120}
+              width={s(120)}
+              scale={scale}
               primary
               disabled={!value.trim()}
             >
@@ -195,10 +201,11 @@ export function VirtualKeyboard({
 function KeyButton({
   children,
   onClick,
-  width = 64,
+  width,
   primary = false,
   active = false,
   disabled = false,
+  scale = 1,
 }: {
   children: React.ReactNode;
   onClick: () => void;
@@ -206,15 +213,20 @@ function KeyButton({
   primary?: boolean;
   active?: boolean;
   disabled?: boolean;
+  scale?: number;
 }) {
+  const s = (px: number) => Math.round(px * scale);
+  const buttonWidth = width ?? s(64);
+  const buttonHeight = s(64);
+
   return (
     <button
       onClick={onClick}
       disabled={disabled}
       style={{
-        width,
-        height: 64,
-        borderRadius: 12,
+        width: buttonWidth,
+        height: buttonHeight,
+        borderRadius: s(12),
         border: 'none',
         background: disabled
           ? '#ccc'
