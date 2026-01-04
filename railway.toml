@@ -3,6 +3,7 @@ builder = "NIXPACKS"
 
 [build.nixpacksPlan]
 phases.setup.nixPkgs = ["nodejs_20", "pnpm-9_x"]
+phases.setup.cmds = ["echo 'Build cache invalidation: 2026-01-04'"]
 
 phases.install.cmds = [
   "cd /app",
