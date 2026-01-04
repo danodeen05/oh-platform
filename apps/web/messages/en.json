@@ -1899,7 +1899,11 @@
       "backToScanner": "Back to Scanner",
       "orderNotFound": "Order not found. Please check your order number.",
       "somethingWrong": "Something went wrong. Please try again.",
-      "unableToConnect": "Unable to connect. Please try again."
+      "unableToConnect": "Unable to connect. Please try again.",
+      "selectOrder": "You have multiple active orders. Which one would you like to check in?",
+      "redirectingIn": "Returning to home screen in {seconds} seconds...",
+      "alreadyCheckedInTitle": "You're already checked in, {name}!",
+      "alreadyCheckedInMessage": "This order has already been checked in. Head to your assigned pod and your food will be ready shortly."
     },
     "qrScanner": {
       "cameraNotAvailable": "Camera not available",
@@ -1908,6 +1912,7 @@
     },
     "pod": {
       "proceedTo": "Please proceed to",
+      "yourPod": "Your Pod",
       "podNumber": "Pod {number}",
       "foodBeingPrepared": "Your food is being prepared and will arrive at your pod shortly.",
       "welcome": "Welcome, {name}!",
@@ -1972,7 +1977,14 @@
       "missingInfo": "Missing order or location information",
       "orderNotFound": "Order not found",
       "failedToLoad": "Failed to load order details",
-      "oops": "Oops!"
+      "oops": "Oops!",
+      "alreadyCheckedIn": "This order has already been checked in.",
+      "orderNotPaid": "This order has not been paid yet.",
+      "noActiveOrders": "No active orders found for your account at this location.",
+      "noActiveOrdersForMember": "Hi {name}! We couldn't find any active orders for you at this location.",
+      "memberNotFound": "Member not found. Please try scanning again.",
+      "tryAgain": "Try Again",
+      "scanDifferentCode": "Scan Different Code"
     },
     "loading": "Loading your order...",
     "orderFlow": {

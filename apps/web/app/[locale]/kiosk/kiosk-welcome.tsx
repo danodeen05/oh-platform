@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
-import { QRScanner, parseKioskQR, LanguageSelector, AnimatedOrderQR, useKioskMode } from "@/components/kiosk";
+import { QRScanner, parseKioskQR, LanguageSelector, AnimatedOrderQR, useKioskMode, useKioskScale } from "@/components/kiosk";
 
 // Welcome messages in different languages for cycling animation
 const WELCOME_MESSAGES = [
@@ -38,28 +38,30 @@ const COLORS = {
 // Brand component for consistent branding across kiosk screens
 function KioskBrand({ size = "normal" }: { size?: "small" | "normal" | "large" | "xlarge" }) {
   const tHome = useTranslations("home");
+  const { s: scale } = useKioskScale();
+  // Base sizes for 720p, scales up for 1080p
   const sizes = {
-    small: { logo: 32, chinese: "1.2rem", english: "0.65rem", gap: 4 },
-    normal: { logo: 48, chinese: "1.8rem", english: "0.95rem", gap: 6 },
-    large: { logo: 96, chinese: "3.5rem", english: "1.8rem", gap: 10 },
-    xlarge: { logo: 160, chinese: "5.6rem", english: "2.8rem", gap: 12 },
+    small: { logo: scale(22), chinese: `${0.8 * (scale(10) / 10)}rem`, english: `${0.45 * (scale(10) / 10)}rem`, gap: scale(3) },
+    normal: { logo: scale(32), chinese: `${1.2 * (scale(10) / 10)}rem`, english: `${0.65 * (scale(10) / 10)}rem`, gap: scale(4) },
+    large: { logo: scale(64), chinese: `${2.3 * (scale(10) / 10)}rem`, english: `${1.2 * (scale(10) / 10)}rem`, gap: scale(7) },
+    xlarge: { logo: scale(107), chinese: `${3.7 * (scale(10) / 10)}rem`, english: `${1.9 * (scale(10) / 10)}rem`, gap: scale(8) },
   };
-  const s = sizes[size];
+  const sz = sizes[size];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: s.gap }}>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: sz.gap }}>
       <img
         src="/Oh_Logo_Large.png"
         alt="Oh! Logo"
-        style={{ width: s.logo, height: s.logo, objectFit: "contain" }}
+        style={{ width: sz.logo, height: sz.logo, objectFit: "contain" }}
       />
-      <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: s.english, lineHeight: 1 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: scale(3), fontSize: sz.english, lineHeight: 1 }}>
         {tHome.rich("brandName", {
           oh: () => (
             <span
               style={{
                 fontFamily: '"Ma Shan Zheng", cursive',
-                fontSize: s.chinese,
+                fontSize: sz.chinese,
                 color: "#C7A878",
               }}
             >
@@ -97,6 +99,7 @@ export default function KioskWelcome({ location }: { location: Location }) {
   const [welcomeIndex, setWelcomeIndex] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const { isFullscreen, isSupported, toggleFullscreen, exitFullscreen, enterFullscreen } = useKioskMode();
+  const { s: scale, rem } = useKioskScale();
 
   // Triple-tap detection for exiting fullscreen
   const tapCountRef = useRef(0);
@@ -308,7 +311,7 @@ export default function KioskWelcome({ location }: { location: Location }) {
           <div
             style={{
               fontFamily: '"Bebas Neue", sans-serif',
-              fontSize: "2.5rem",
+              fontSize: rem(1.7),
               color: COLORS.textMuted,
               letterSpacing: "0.15em",
               textTransform: "uppercase",
@@ -323,7 +326,7 @@ export default function KioskWelcome({ location }: { location: Location }) {
           <div
             style={{
               fontFamily: '"Bebas Neue", sans-serif',
-              fontSize: "4.5rem",
+              fontSize: rem(3),
               color: COLORS.text,
               letterSpacing: "0.08em",
               display: "flex",
@@ -510,27 +513,27 @@ export default function KioskWelcome({ location }: { location: Location }) {
               className="kiosk-btn kiosk-btn-primary"
               style={{
                 position: "relative",
-                padding: "23px 40px",
-                borderRadius: 17,
-                fontSize: "1.45rem",
-                border: `3px solid ${COLORS.primary}`,
+                padding: `${scale(20)}px ${scale(36)}px`,
+                borderRadius: scale(16),
+                fontSize: rem(1.3),
+                border: `${scale(2)}px solid ${COLORS.primary}`,
                 boxShadow: "0 6px 24px rgba(0,0,0,0.2)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: 12,
+                gap: scale(12),
                 overflow: "hidden",
                 zIndex: 1,
-                width: 440,
-                height: 65,
+                width: scale(437),
+                height: scale(72),
               }}
             >
               {/* Shimmer effect */}
               <div className="kiosk-shimmer" />
               {/* Animated tap/hand icon */}
               <svg
-                width="26"
-                height="26"
+                width={scale(24)}
+                height={scale(24)}
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -556,30 +559,30 @@ export default function KioskWelcome({ location }: { location: Location }) {
               className="kiosk-btn"
               style={{
                 position: "relative",
-                padding: "23px 40px",
+                padding: `${scale(20)}px ${scale(36)}px`,
                 background: "rgba(255, 255, 255, 0.95)",
-                borderRadius: 17,
-                border: `3px solid ${COLORS.primary}`,
+                borderRadius: scale(16),
+                border: `${scale(2)}px solid ${COLORS.primary}`,
                 color: COLORS.primary,
-                fontSize: "1.45rem",
+                fontSize: rem(1.3),
                 fontWeight: 600,
                 boxShadow: "0 4px 14px rgba(0,0,0,0.1)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: 12,
+                gap: scale(12),
                 overflow: "hidden",
                 zIndex: 1,
-                width: 440,
-                height: 65,
+                width: scale(437),
+                height: scale(72),
               }}
             >
               {/* Shimmer effect */}
               <div className="kiosk-shimmer" style={{ animationDelay: "1.5s" }} />
               {/* Animated QR code icon */}
               <svg
-                width="26"
-                height="26"
+                width={scale(24)}
+                height={scale(24)}
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -919,17 +922,146 @@ function QRScanView({ location, onBack }: { location: Location; onBack: () => vo
         justifyContent: "center",
         background: COLORS.surface,
         padding: 48,
+        position: "relative",
+        overflow: "hidden",
       }}
     >
-      {/* Oh! Character Logo */}
+      {/* Decorative Oh! mark on right side - 30% cut off */}
+      <div
+        style={{
+          position: "absolute",
+          top: "50%",
+          right: "-15%",
+          transform: "translateY(-50%)",
+          opacity: 0.08,
+          pointerEvents: "none",
+          zIndex: 0,
+        }}
+      >
+        <img
+          src="/Oh_Logo_Mark_Web.png"
+          alt=""
+          style={{
+            height: "90vh",
+            width: "auto",
+            objectFit: "contain",
+          }}
+        />
+      </div>
+
+      {/* Large Camera indicator banner at top - where the actual camera is */}
+      {!showManualEntry && (
+        <div
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            padding: "24px 0 32px",
+            background: "linear-gradient(to bottom, rgba(124, 122, 103, 0.12) 0%, rgba(124, 122, 103, 0.05) 70%, transparent 100%)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 12,
+            zIndex: 10,
+          }}
+        >
+          {/* Multiple animated up arrows */}
+          <div style={{ display: "flex", gap: 24, marginBottom: 8 }}>
+            <svg
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke={COLORS.primary}
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              style={{ animation: "arrow-bounce-up 1s ease-in-out infinite" }}
+            >
+              <path d="M12 19V5M5 12l7-7 7 7" />
+            </svg>
+            <svg
+              width="40"
+              height="40"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke={COLORS.primary}
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              style={{ animation: "arrow-bounce-up 1s ease-in-out infinite", animationDelay: "0.15s" }}
+            >
+              <path d="M12 19V5M5 12l7-7 7 7" />
+            </svg>
+            <svg
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke={COLORS.primary}
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              style={{ animation: "arrow-bounce-up 1s ease-in-out infinite", animationDelay: "0.3s" }}
+            >
+              <path d="M12 19V5M5 12l7-7 7 7" />
+            </svg>
+          </div>
+
+          {/* Camera icon with pulsing glow */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 16,
+              padding: "16px 32px",
+              background: COLORS.primaryLight,
+              borderRadius: 20,
+              animation: "camera-pulse 2s ease-in-out infinite",
+            }}
+          >
+            <svg
+              width="48"
+              height="48"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke={COLORS.primary}
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+              <circle cx="12" cy="13" r="4" />
+            </svg>
+            <span
+              style={{
+                fontSize: "1.8rem",
+                fontWeight: 700,
+                color: COLORS.primary,
+                letterSpacing: "0.05em",
+                fontFamily: '"Bebas Neue", sans-serif',
+              }}
+            >
+              CAMERA
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Spacer to push content down when camera indicator is shown */}
+      {!showManualEntry && <div style={{ height: 100 }} />}
+
+      {/* Oh! Character Logo - larger */}
       <img
         src="/Oh_Logo_Mark_Web.png"
         alt="Oh!"
         style={{
-          width: 180,
-          height: 180,
+          width: 220,
+          height: 220,
           objectFit: "contain",
-          marginBottom: 24,
+          marginBottom: 16,
+          zIndex: 1,
         }}
       />
 
@@ -942,6 +1074,7 @@ function QRScanView({ location, onBack }: { location: Location; onBack: () => vo
           fontFamily: '"Bebas Neue", sans-serif',
           fontSize: "3rem",
           letterSpacing: "0.05em",
+          zIndex: 1,
         }}
       >
         Online Order Check-In
@@ -1039,74 +1172,9 @@ function QRScanView({ location, onBack }: { location: Location; onBack: () => vo
         </div>
       )}
 
-      <button onClick={onBack} className="kiosk-btn kiosk-btn-ghost">
+      <button onClick={onBack} className="kiosk-btn kiosk-btn-ghost" style={{ zIndex: 1 }}>
         {tCommon("back")}
       </button>
-
-      {/* Camera indicator at bottom - hidden when manual entry is shown */}
-      {!showManualEntry && (
-      <div
-        style={{
-          position: "absolute",
-          bottom: 24,
-          left: "50%",
-          transform: "translateX(-50%)",
-          display: "flex",
-          alignItems: "center",
-          gap: 12,
-          color: COLORS.textMuted,
-          fontSize: "1.1rem",
-          fontWeight: 500,
-        }}
-      >
-        {/* Animated down arrow - left */}
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          style={{ animation: "arrow-bounce 1.5s ease-in-out infinite" }}
-        >
-          <path d="M12 5v14M5 12l7 7 7-7" />
-        </svg>
-
-        {/* Camera icon */}
-        <svg
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-          <circle cx="12" cy="13" r="4" />
-        </svg>
-
-        <span>Camera</span>
-
-        {/* Animated down arrow - right */}
-        <svg
-          width="20"
-          height="20"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          style={{ animation: "arrow-bounce 1.5s ease-in-out infinite", animationDelay: "0.2s" }}
-        >
-          <path d="M12 5v14M5 12l7 7 7-7" />
-        </svg>
-      </div>
-      )}
     </main>
   );
 }

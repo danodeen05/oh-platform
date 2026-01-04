@@ -26,6 +26,23 @@ const DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 const ORDER_OPEN_OFFSET_MINUTES = -60; // Opens 1 hour early
 const ORDER_CLOSE_OFFSET_MINUTES = -15; // Closes 15 min before restaurant
 
+// Locations that bypass time restrictions (for testing)
+// Can be set via environment variable as comma-separated slugs
+const BYPASS_TIME_RESTRICTIONS = (process.env.BYPASS_TIME_RESTRICTIONS || "")
+  .split(",")
+  .map(s => s.trim().toLowerCase())
+  .filter(Boolean);
+
+/**
+ * Check if a location should bypass time restrictions
+ */
+function shouldBypassTimeRestrictions(location) {
+  if (!location) return false;
+  const slug = (location.slug || "").toLowerCase();
+  const name = (location.name || "").toLowerCase().replace(/\s+/g, "-");
+  return BYPASS_TIME_RESTRICTIONS.includes(slug) || BYPASS_TIME_RESTRICTIONS.includes(name);
+}
+
 /**
  * Parse a time string like "11:00" or "21:00" into minutes from midnight
  */
@@ -113,6 +130,11 @@ export function isLocationOpen(location, date = new Date()) {
 export function canAcceptOrders(location, date = new Date()) {
   if (location?.isClosed) return false;
 
+  // Bypass time restrictions for testing locations
+  if (shouldBypassTimeRestrictions(location)) {
+    return true;
+  }
+
   const { weekday, currentMinutes } = getLocationTime(location?.timezone, date);
   const dayHours = getHoursForDay(location, weekday);
 
@@ -178,6 +200,11 @@ export function getNextOpenTime(location, date = new Date()) {
  * Returns array of valid options like ["asap", "15", "30", "45", "60"]
  */
 export function getValidArrivalTimes(location, date = new Date()) {
+  // Bypass time restrictions for testing locations - return all options
+  if (shouldBypassTimeRestrictions(location)) {
+    return ["asap", "15", "30", "45", "60", "90"];
+  }
+
   const { weekday, currentMinutes } = getLocationTime(location?.timezone, date);
   const dayHours = getHoursForDay(location, weekday);
 
@@ -230,6 +257,11 @@ export function getValidArrivalTimes(location, date = new Date()) {
  * Used when processing orders
  */
 export function validateArrivalTime(location, arrivalMinutesFromNow, date = new Date()) {
+  // Bypass time restrictions for testing locations
+  if (shouldBypassTimeRestrictions(location)) {
+    return { valid: true };
+  }
+
   const { weekday, currentMinutes } = getLocationTime(location?.timezone, date);
   const dayHours = getHoursForDay(location, weekday);
 
@@ -277,7 +309,8 @@ export function validateArrivalTime(location, arrivalMinutesFromNow, date = new 
  * Get comprehensive location status for display
  */
 export function getLocationStatus(location, date = new Date()) {
-  const isOpen = isLocationOpen(location, date);
+  const bypassActive = shouldBypassTimeRestrictions(location);
+  const isOpen = isLocationOpen(location, date) || bypassActive;
   const canOrder = canAcceptOrders(location, date);
   const nextOpen = !canOrder ? getNextOpenTime(location, date) : null;
   const validTimes = canOrder ? getValidArrivalTimes(location, date) : [];
@@ -288,7 +321,10 @@ export function getLocationStatus(location, date = new Date()) {
   let statusMessage = null;
   let preOrderMessage = null;
 
-  if (location?.isClosed) {
+  // If bypass is active, don't show any closed messages
+  if (bypassActive) {
+    // No status message needed - ordering is available
+  } else if (location?.isClosed) {
     statusMessage = "Temporarily Closed";
   } else if (!dayHours) {
     statusMessage = "Closed Today";
@@ -310,6 +346,10 @@ export function getLocationStatus(location, date = new Date()) {
     const closeMinutes = parseTimeToMinutes(dayHours.close);
     closesAt = formatMinutesToDisplay(closeMinutes);
     orderingClosesAt = formatMinutesToDisplay(closeMinutes + ORDER_CLOSE_OFFSET_MINUTES);
+  } else if (bypassActive) {
+    // For bypassed locations without hours, show default times
+    closesAt = "11pm";
+    orderingClosesAt = "10:45pm";
   }
 
   return {

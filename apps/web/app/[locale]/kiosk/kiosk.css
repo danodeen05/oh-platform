@@ -1,6 +1,17 @@
-/* Kiosk Display Optimization for Elo I-Series 5 (1920x1080 landscape) */
+/* Kiosk Display Optimization - Dual Resolution Support (720p & 1080p) */
+/* Base design: 720p (1280x720), scales up to 1080p (1920x1080) */
 
-/* Base kiosk container - fixed dimensions for kiosk display */
+:root {
+  --kiosk-scale: 1;
+}
+
+@media (min-height: 900px) {
+  :root {
+    --kiosk-scale: 1.5;
+  }
+}
+
+/* Base kiosk container - responsive dimensions */
 .kiosk-container {
   width: 100vw;
   height: 100vh;
@@ -44,14 +55,14 @@
   border-radius: 6px;
 }
 
-/* Touch-optimized buttons - minimum 56px for primary actions */
+/* Touch-optimized buttons - minimum 44px at 720p, 66px at 1080p */
 .kiosk-btn {
-  min-height: 56px;
-  min-width: 56px;
-  padding: 16px 32px;
-  font-size: 1.125rem;
+  min-height: calc(44px * var(--kiosk-scale));
+  min-width: calc(44px * var(--kiosk-scale));
+  padding: calc(12px * var(--kiosk-scale)) calc(24px * var(--kiosk-scale));
+  font-size: calc(1rem * var(--kiosk-scale));
   font-weight: 600;
-  border-radius: 14px;
+  border-radius: calc(10px * var(--kiosk-scale));
   cursor: pointer;
   transition: transform 0.1s, box-shadow 0.1s;
   touch-action: manipulation;
@@ -62,11 +73,11 @@
   transform: scale(0.98);
 }
 
-/* Primary CTA button - larger for main actions */
+/* Primary CTA button - larger for main actions (48px at 720p, 72px at 1080p) */
 .kiosk-btn-primary {
-  min-height: 64px;
-  padding: 20px 48px;
-  font-size: 1.375rem;
+  min-height: calc(48px * var(--kiosk-scale));
+  padding: calc(14px * var(--kiosk-scale)) calc(32px * var(--kiosk-scale));
+  font-size: calc(1.1rem * var(--kiosk-scale));
   background: #7C7A67;
   color: #FFFFFF;
   border: none;
@@ -91,12 +102,12 @@
   border: 2px solid #e5e5e5;
 }
 
-/* Large touch targets for quantity controls */
+/* Large touch targets for quantity controls (44px at 720p, 66px at 1080p) */
 .kiosk-qty-btn {
-  width: 64px;
-  height: 64px;
-  border-radius: 16px;
-  font-size: 2rem;
+  width: calc(44px * var(--kiosk-scale));
+  height: calc(44px * var(--kiosk-scale));
+  border-radius: calc(12px * var(--kiosk-scale));
+  font-size: calc(1.5rem * var(--kiosk-scale));
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -106,12 +117,12 @@
   touch-action: manipulation;
 }
 
-/* Party size selector buttons */
+/* Party size selector buttons (94px at 720p, 141px at 1080p) */
 .kiosk-party-btn {
-  width: 140px;
-  height: 140px;
-  border-radius: 24px;
-  font-size: 3rem;
+  width: calc(94px * var(--kiosk-scale));
+  height: calc(94px * var(--kiosk-scale));
+  border-radius: calc(16px * var(--kiosk-scale));
+  font-size: calc(2rem * var(--kiosk-scale));
   font-weight: 700;
   display: flex;
   flex-direction: column;
@@ -122,12 +133,12 @@
   touch-action: manipulation;
 }
 
-/* Pod selection buttons */
+/* Pod selection buttons (48px at 720p, 72px at 1080p) */
 .kiosk-pod-btn {
-  width: 72px;
-  height: 72px;
-  border-radius: 16px;
-  font-size: 1.25rem;
+  width: calc(48px * var(--kiosk-scale));
+  height: calc(48px * var(--kiosk-scale));
+  border-radius: calc(12px * var(--kiosk-scale));
+  font-size: calc(1rem * var(--kiosk-scale));
   font-weight: 700;
   display: flex;
   flex-direction: column;
@@ -141,11 +152,18 @@
 /* Menu item cards - optimized grid */
 .kiosk-menu-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(calc(180px * var(--kiosk-scale)), 1fr));
+  gap: calc(12px * var(--kiosk-scale));
 }
 
-/* For 1920px width, show 4-5 columns */
+/* For 720p (1280px width), show 3-4 columns */
+@media (min-width: 900px) {
+  .kiosk-menu-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* For larger screens, show more columns */
 @media (min-width: 1200px) {
   .kiosk-menu-grid {
     grid-template-columns: repeat(4, 1fr);
@@ -160,7 +178,7 @@
 
 /* Menu item card */
 .kiosk-menu-card {
-  border-radius: 16px;
+  border-radius: calc(12px * var(--kiosk-scale));
   overflow: hidden;
   transition: all 0.2s;
   cursor: pointer;
@@ -216,31 +234,31 @@
   border-radius: 6px;
 }
 
-/* Typography optimized for 21.5" display at viewing distance */
+/* Typography - scales with resolution (720p base) */
 .kiosk-title {
-  font-size: 2.5rem;
+  font-size: calc(1.75rem * var(--kiosk-scale));
   font-weight: 700;
   line-height: 1.2;
 }
 
 .kiosk-subtitle {
-  font-size: 1.5rem;
+  font-size: calc(1.1rem * var(--kiosk-scale));
   font-weight: 600;
   line-height: 1.3;
 }
 
 .kiosk-body {
-  font-size: 1.25rem;
+  font-size: calc(0.95rem * var(--kiosk-scale));
   line-height: 1.4;
 }
 
 .kiosk-body-sm {
-  font-size: 1.125rem;
+  font-size: calc(0.85rem * var(--kiosk-scale));
   line-height: 1.4;
 }
 
 .kiosk-caption {
-  font-size: 1rem;
+  font-size: calc(0.75rem * var(--kiosk-scale));
   line-height: 1.4;
 }
 
@@ -255,13 +273,13 @@
   z-index: 0;
 }
 
-/* Input fields - larger for touch */
+/* Input fields - larger for touch (720p base) */
 .kiosk-input {
   width: 100%;
-  padding: 20px 24px;
-  font-size: 1.5rem;
-  border: 3px solid #7C7A67;
-  border-radius: 16px;
+  padding: calc(14px * var(--kiosk-scale)) calc(16px * var(--kiosk-scale));
+  font-size: calc(1.1rem * var(--kiosk-scale));
+  border: calc(2px * var(--kiosk-scale)) solid #7C7A67;
+  border-radius: calc(12px * var(--kiosk-scale));
   background: #FFFFFF;
   text-align: center;
   touch-action: manipulation;
@@ -273,19 +291,19 @@
   box-shadow: 0 0 0 4px rgba(124, 122, 103, 0.2);
 }
 
-/* Number pad for PIN entry */
+/* Number pad for PIN entry (720p base) */
 .kiosk-numpad {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  max-width: 320px;
+  gap: calc(8px * var(--kiosk-scale));
+  max-width: calc(220px * var(--kiosk-scale));
 }
 
 .kiosk-numpad-btn {
-  width: 96px;
-  height: 72px;
-  border-radius: 16px;
-  font-size: 1.75rem;
+  width: calc(64px * var(--kiosk-scale));
+  height: calc(48px * var(--kiosk-scale));
+  border-radius: calc(12px * var(--kiosk-scale));
+  font-size: calc(1.25rem * var(--kiosk-scale));
   font-weight: 600;
   display: flex;
   align-items: center;
@@ -296,13 +314,13 @@
   touch-action: manipulation;
 }
 
-/* Fixed bottom bar for navigation */
+/* Fixed bottom bar for navigation (720p base) */
 .kiosk-bottom-bar {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 20px 32px;
+  padding: calc(14px * var(--kiosk-scale)) calc(24px * var(--kiosk-scale));
   background: linear-gradient(to top, #FFFFFF 80%, transparent);
   display: flex;
   justify-content: space-between;
@@ -587,7 +605,7 @@
   }
 }
 
-/* Arrow bounce animation for camera indicator */
+/* Arrow bounce animation for camera indicator (pointing down) */
 @keyframes arrow-bounce {
   0%, 100% {
     transform: translateY(0);
@@ -596,6 +614,30 @@
   50% {
     transform: translateY(6px);
     opacity: 0.6;
+  }
+}
+
+/* Arrow bounce animation for camera indicator (pointing up) */
+@keyframes arrow-bounce-up {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(-8px);
+    opacity: 0.6;
+  }
+}
+
+/* Camera indicator pulsing glow */
+@keyframes camera-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(124, 122, 103, 0.4);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 20px 8px rgba(124, 122, 103, 0.3);
+    transform: scale(1.02);
   }
 }
 
@@ -649,12 +691,12 @@
   user-select: none;
 }
 
-/* QR Scanner viewfinder */
+/* QR Scanner viewfinder (220px at 720p, 330px at 1080p) */
 .kiosk-qr-viewfinder {
   position: relative;
-  width: 320px;
-  height: 320px;
-  border-radius: 24px;
+  width: calc(220px * var(--kiosk-scale));
+  height: calc(220px * var(--kiosk-scale));
+  border-radius: calc(16px * var(--kiosk-scale));
   overflow: hidden;
 }
 
@@ -666,56 +708,56 @@
 
 .kiosk-qr-corner {
   position: absolute;
-  width: 48px;
-  height: 48px;
+  width: calc(32px * var(--kiosk-scale));
+  height: calc(32px * var(--kiosk-scale));
   border-color: #7C7A67;
   border-style: solid;
   border-width: 0;
 }
 
 .kiosk-qr-corner-tl {
-  top: 16px;
-  left: 16px;
-  border-top-width: 4px;
-  border-left-width: 4px;
-  border-top-left-radius: 12px;
+  top: calc(12px * var(--kiosk-scale));
+  left: calc(12px * var(--kiosk-scale));
+  border-top-width: calc(3px * var(--kiosk-scale));
+  border-left-width: calc(3px * var(--kiosk-scale));
+  border-top-left-radius: calc(8px * var(--kiosk-scale));
 }
 
 .kiosk-qr-corner-tr {
-  top: 16px;
-  right: 16px;
-  border-top-width: 4px;
-  border-right-width: 4px;
-  border-top-right-radius: 12px;
+  top: calc(12px * var(--kiosk-scale));
+  right: calc(12px * var(--kiosk-scale));
+  border-top-width: calc(3px * var(--kiosk-scale));
+  border-right-width: calc(3px * var(--kiosk-scale));
+  border-top-right-radius: calc(8px * var(--kiosk-scale));
 }
 
 .kiosk-qr-corner-bl {
-  bottom: 16px;
-  left: 16px;
-  border-bottom-width: 4px;
-  border-left-width: 4px;
-  border-bottom-left-radius: 12px;
+  bottom: calc(12px * var(--kiosk-scale));
+  left: calc(12px * var(--kiosk-scale));
+  border-bottom-width: calc(3px * var(--kiosk-scale));
+  border-left-width: calc(3px * var(--kiosk-scale));
+  border-bottom-left-radius: calc(8px * var(--kiosk-scale));
 }
 
 .kiosk-qr-corner-br {
-  bottom: 16px;
-  right: 16px;
-  border-bottom-width: 4px;
-  border-right-width: 4px;
-  border-bottom-right-radius: 12px;
+  bottom: calc(12px * var(--kiosk-scale));
+  right: calc(12px * var(--kiosk-scale));
+  border-bottom-width: calc(3px * var(--kiosk-scale));
+  border-right-width: calc(3px * var(--kiosk-scale));
+  border-bottom-right-radius: calc(8px * var(--kiosk-scale));
 }
 
-/* Scanning animation line */
+/* Scanning animation line (720p base) */
 @keyframes scan-line {
-  0%, 100% { top: 32px; opacity: 1; }
-  50% { top: calc(100% - 32px); opacity: 0.5; }
+  0%, 100% { top: calc(20px * var(--kiosk-scale, 1)); opacity: 1; }
+  50% { top: calc(100% - 20px * var(--kiosk-scale, 1)); opacity: 0.5; }
 }
 
 .kiosk-scan-line {
   position: absolute;
-  left: 32px;
-  right: 32px;
-  height: 2px;
+  left: calc(20px * var(--kiosk-scale));
+  right: calc(20px * var(--kiosk-scale));
+  height: calc(2px * var(--kiosk-scale));
   background: #7C7A67;
   animation: scan-line 2s ease-in-out infinite;
 }

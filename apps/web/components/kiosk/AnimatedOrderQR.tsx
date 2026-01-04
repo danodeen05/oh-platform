@@ -213,16 +213,17 @@ export default function AnimatedOrderQR({
       <div
         style={{
           position: "absolute",
-          bottom: -32,
+          bottom: -42,
           left: "50%",
           transform: "translateX(-50%)",
           whiteSpace: "nowrap",
           fontSize: "0.875rem",
           fontWeight: 600,
           color: COLORS.primary,
-          background: "rgba(255,255,255,0.95)",
-          padding: "5px 14px",
-          borderRadius: 14,
+          background: "rgba(124, 122, 103, 0.12)",
+          border: `2px solid ${COLORS.primary}`,
+          padding: "6px 16px",
+          borderRadius: 16,
           boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
           animation: "qr-label-bounce 2s ease-in-out infinite",
         }}
