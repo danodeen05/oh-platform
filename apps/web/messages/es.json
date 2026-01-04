@@ -1908,7 +1908,15 @@
       "dualPodSelected": "Cabina doble {numbers} seleccionada",
       "dualPod": "Cabina doble (2 personas)",
       "singlePod": "Cabina individual",
-      "checkInButton": "Registrarme"
+      "checkInButton": "Registrarme",
+      "statusOccupied": "Ocupado",
+      "statusCleaning": "Limpieza",
+      "statusAvailable": "¡Disponible!",
+      "dualPodRulesTitle": "Requisitos para cabina doble",
+      "dualPodRulesMessage": "Las cabinas dobles están diseñadas para dos comensales que cenan juntos. Para seleccionar una cabina doble:",
+      "dualPodRule1": "Tu grupo debe tener 2 o más comensales",
+      "dualPodRule2": "Deben pagar en una sola cuenta (no separada)",
+      "gotIt": "Entendido"
     },
     "status": {
       "available": "Disponible",
@@ -2019,10 +2027,15 @@
       "dietarySymbolLegend": "Leyenda de símbolos dietéticos",
       "available": "Disponible",
       "occupied": "Ocupado",
+      "cleaning": "Limpieza",
       "vegetarian": "Vegetariano",
       "vegan": "Vegano",
       "glutenFree": "Sin gluten",
-      "spicyDescription": "Picante (1-3 chiles indican nivel de picor)"
+      "spicyDescription": "Picante (1-3 chiles indican nivel de picor)",
+      "noPreferenceTitle": "¿Sin preferencia? ¡Nosotros elegimos por ti!",
+      "autoAssignPod": "Asignar cabina automáticamente",
+      "restrooms": "Baños",
+      "store": "Tienda"
     },
     "signUp": {
       "title": "¡Gana recompensas en este pedido!",

@@ -1908,7 +1908,15 @@
       "dualPodSelected": "已选择{numbers}号双人包厢",
       "dualPod": "双人包厢",
       "singlePod": "单人包厢",
-      "checkInButton": "签到"
+      "checkInButton": "签到",
+      "statusOccupied": "使用中",
+      "statusCleaning": "清洁中",
+      "statusAvailable": "可用!",
+      "dualPodRulesTitle": "双人包厢要求",
+      "dualPodRulesMessage": "双人包厢专为两位宾客共同用餐设计。要选择双人包厢：",
+      "dualPodRule1": "您的团队必须有2位或更多宾客",
+      "dualPodRule2": "必须使用单一账单付款（非分开付款）",
+      "gotIt": "知道了"
     },
     "status": {
       "available": "可用",
@@ -2019,10 +2027,15 @@
       "dietarySymbolLegend": "饮食标志说明",
       "available": "可用",
       "occupied": "已占用",
+      "cleaning": "清洁中",
       "vegetarian": "素食",
       "vegan": "纯素",
       "glutenFree": "无麸质",
-      "spicyDescription": "辣度（1-3 颗辣椒表示辣度等级）"
+      "spicyDescription": "辣度（1-3 颗辣椒表示辣度等级）",
+      "noPreferenceTitle": "没有偏好？我们来为您选择！",
+      "autoAssignPod": "自动分配包厢",
+      "restrooms": "洗手间",
+      "store": "商店"
     },
     "signUp": {
       "title": "本单即可赚取奖励！",
