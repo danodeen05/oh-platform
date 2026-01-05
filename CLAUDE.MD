@@ -537,6 +537,33 @@ All require header: `x-cron-secret: <CRON_SECRET>`
 - Location coordinates must match production for geofencing to work
 - DNS: `api.ohbeef.com` → `ohapi-production.up.railway.app` (CNAME)
 
+## Railway CLI - Deployment Management
+
+### Usage
+Railway CLI is available via npx. Set `RAILWAY_TOKEN` env var for authentication.
+
+```bash
+# Export token (get from Railway dashboard → Project Settings → Tokens)
+export RAILWAY_TOKEN="<your-project-token>"
+
+# Check project status
+npx @railway/cli status
+
+# Trigger API redeploy
+npx @railway/cli redeploy --service "@oh/api" --yes
+
+# View deployment logs
+npx @railway/cli logs
+```
+
+### Project Info
+- **Project Name**: oh-beef
+- **Environment**: production
+- **API Service**: @oh/api
+- **Token Location**: Railway dashboard → Project Settings → Tokens
+
+---
+
 ## Twilio SMS - Credentials & Configuration
 
 ### Credentials
