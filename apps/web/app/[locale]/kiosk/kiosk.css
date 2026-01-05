@@ -1,6 +1,65 @@
 /* Kiosk Display Optimization - Dual Resolution Support (720p & 1080p) */
 /* Base design: 720p (1280x720), scales up to 1080p (1920x1080) */
 
+/* ============================================
+   KIOSK LOCKDOWN - Prevent accidental exits
+   ============================================ */
+
+/* Prevent pull-to-refresh and overscroll bounce */
+html.kiosk-mode,
+html.kiosk-mode body {
+  overscroll-behavior: none;
+  overscroll-behavior-y: none;
+  overscroll-behavior-x: none;
+  -webkit-overflow-scrolling: auto;
+}
+
+/* Prevent zoom gestures */
+html.kiosk-mode {
+  touch-action: pan-x pan-y;
+  -ms-touch-action: pan-x pan-y;
+}
+
+/* Prevent text selection in kiosk mode */
+html.kiosk-mode body {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Disable tap highlight color globally in kiosk mode */
+html.kiosk-mode *,
+html.kiosk-mode *::before,
+html.kiosk-mode *::after {
+  -webkit-tap-highlight-color: transparent !important;
+  tap-highlight-color: transparent !important;
+}
+
+/* Block edge swipe zones - invisible barriers */
+html.kiosk-mode::before,
+html.kiosk-mode::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: 20px;
+  z-index: 99998;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+html.kiosk-mode::before {
+  left: 0;
+}
+
+html.kiosk-mode::after {
+  right: 0;
+}
+
+/* ============================================ */
+
 :root {
   --kiosk-scale: 1;
 }

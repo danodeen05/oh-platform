@@ -238,58 +238,6 @@ export default function KioskWelcome({ location }: { location: Location }) {
           />
         )}
 
-        {/* Visible Enter Fullscreen button - only shown when NOT in fullscreen */}
-        {isSupported && !isFullscreen && (
-          <button
-            onClick={(e) => { e.stopPropagation(); enterFullscreen(); }}
-            aria-label="Enter fullscreen"
-            style={{
-              position: "absolute",
-              top: 20,
-              right: 20,
-              zIndex: 9999,
-              background: "rgba(255, 255, 255, 0.95)",
-              border: `3px solid ${COLORS.primary}`,
-              borderRadius: 16,
-              padding: 16,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
-              touchAction: "manipulation",
-              WebkitTapHighlightColor: "rgba(124, 122, 103, 0.3)",
-              userSelect: "none",
-              minWidth: 120,
-              minHeight: 48,
-            }}
-          >
-            <svg
-              width="28"
-              height="28"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke={COLORS.primary}
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M8 3H5a2 2 0 0 0-2 2v3" />
-              <path d="M21 8V5a2 2 0 0 0-2-2h-3" />
-              <path d="M3 16v3a2 2 0 0 0 2 2h3" />
-              <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
-            </svg>
-            <span style={{
-              fontSize: "0.85rem",
-              fontWeight: 600,
-              color: COLORS.primary
-            }}>
-              Fullscreen
-            </span>
-          </button>
-        )}
-
         {/* Animated Welcome Title */}
         <div
           style={{

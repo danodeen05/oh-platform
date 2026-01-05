@@ -566,7 +566,8 @@
         "selected": "已选择",
         "reserved": "已预订",
         "occupied": "使用中",
-        "dualPod": "双人座"
+        "dualPod": "双人座",
+        "cleaning": "清洁中"
       },
       "podMap": {
         "entrance": "入口",

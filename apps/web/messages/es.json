@@ -566,7 +566,8 @@
         "selected": "Seleccionado",
         "reserved": "Reservado",
         "occupied": "Ocupado",
-        "dualPod": "Pod Doble"
+        "dualPod": "Pod Doble",
+        "cleaning": "Limpiando"
       },
       "podMap": {
         "entrance": "ENTRADA",

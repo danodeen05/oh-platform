@@ -3,8 +3,8 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 
-// Default idle timeout: 60 seconds
-const DEFAULT_IDLE_TIMEOUT = 60000;
+// Default idle timeout: 45 seconds
+const DEFAULT_IDLE_TIMEOUT = 45000;
 
 // Warning countdown: 10 seconds before redirect
 const WARNING_COUNTDOWN = 10000;

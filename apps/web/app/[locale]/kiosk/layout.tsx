@@ -3,7 +3,7 @@ import { useState, useEffect, ReactNode, Suspense } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import "./kiosk.css";
-import { IdleTimer, KioskDeviceProvider, useKioskDevice } from "@/components/kiosk";
+import { IdleTimer, KioskDeviceProvider, useKioskDevice, KioskLockdown } from "@/components/kiosk";
 
 // Default staff PIN - in production this would come from environment/config
 const STAFF_PIN = process.env.NEXT_PUBLIC_KIOSK_STAFF_PIN || "1234";
@@ -79,6 +79,14 @@ export default function KioskLayout({ children }: { children: ReactNode }) {
   const [tapCount, setTapCount] = useState(0);
   const [lastTap, setLastTap] = useState(0);
 
+  // Add kiosk-mode class to html element for CSS lockdown styles
+  useEffect(() => {
+    document.documentElement.classList.add('kiosk-mode');
+    return () => {
+      document.documentElement.classList.remove('kiosk-mode');
+    };
+  }, []);
+
   // Triple-tap in corner to show PIN modal
   function handleCornerTap() {
     const now = Date.now();
@@ -142,8 +150,14 @@ export default function KioskLayout({ children }: { children: ReactNode }) {
     <KioskDeviceProvider>
       <DeviceAuthRedirect>
         <div className="kiosk-container kiosk-no-select" style={{ position: "relative" }}>
-          {/* Idle Timer - auto-return to attract screen after 60s inactivity, reset to English */}
-          <IdleTimer timeout={60000} redirectPath="/en/kiosk" showWarning />
+          {/* Idle Timer - auto-return to attract screen after 45s inactivity, reset to English */}
+          <IdleTimer timeout={45000} redirectPath="/en/kiosk" showWarning />
+
+          {/* Kiosk Lockdown - prevents accidental swipe/gesture exits */}
+          <KioskLockdown
+            autoRecoverFullscreen={true}
+            showFullscreenPrompt={true}
+          />
 
           {/* Hidden exit button - triple tap to reveal */}
           <button

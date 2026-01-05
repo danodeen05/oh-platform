@@ -566,7 +566,8 @@
         "selected": "Selected",
         "reserved": "Reserved",
         "occupied": "Occupied",
-        "dualPod": "Dual Pod"
+        "dualPod": "Dual Pod",
+        "cleaning": "Cleaning"
       },
       "podMap": {
         "entrance": "ENTRANCE",
@@ -998,6 +999,51 @@
       "title": "Ready to Give the Gift of Oh?",
       "description": "A perfect bowl of beef noodle soup is always a welcome surprise.",
       "button": "Get Started"
+    },
+    "purchase": {
+      "title": "Purchase Gift Card",
+      "backToGiftCards": "Back to Gift Cards",
+      "steps": {
+        "amount": "Amount",
+        "recipient": "Recipient",
+        "payment": "Payment",
+        "confirmation": "Confirmation"
+      },
+      "chooseDesign": "Choose Design",
+      "selectAmount": "Select Amount",
+      "customAmountLabel": "Or enter custom amount ($10-$500)",
+      "minimumAmount": "Minimum amount is $10",
+      "recipient": {
+        "title": "Recipient Information",
+        "email": "Recipient Email",
+        "emailPlaceholder": "email@example.com",
+        "name": "Recipient Name",
+        "namePlaceholder": "John Doe",
+        "message": "Personal Message (optional)",
+        "messagePlaceholder": "Add a personal message to your gift card..."
+      },
+      "delivery": {
+        "title": "Delivery",
+        "sendImmediately": "Send immediately",
+        "sendImmediatelyDesc": "Recipient will receive the gift card via email right after purchase",
+        "scheduleLater": "Schedule for later",
+        "scheduleLaterDesc": "Choose a date for the gift card to be delivered"
+      },
+      "orderSummary": "Order Summary",
+      "applyCredits": "Apply Credits",
+      "availableCredits": "Available: ${amount}",
+      "paymentMethod": "Payment Method",
+      "creditsFullyCover": "Your credits cover the full amount!",
+      "noPaymentNeeded": "No additional payment needed.",
+      "loadingPayment": "Loading payment options...",
+      "completePurchase": "Complete Purchase",
+      "processing": "Processing...",
+      "confirmation": {
+        "title": "Gift Card Purchased!",
+        "willBeSent": "A ${amount} gift card will be sent to",
+        "buyAnother": "Buy Another Gift Card",
+        "returnHome": "Return Home"
+      }
     }
   },
   "store": {

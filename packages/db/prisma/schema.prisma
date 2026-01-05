@@ -124,7 +124,7 @@ model LocationStats {
 model KioskDevice {
   id         String   @id @default(cuid())
   deviceId   String   @unique // Hardware identifier or unique device ID
-  name       String   // Friendly name, e.g., "Front Counter Kiosk"
+  name       String // Friendly name, e.g., "Front Counter Kiosk"
   locationId String
   location   Location @relation(fields: [locationId], references: [id])
 
@@ -134,7 +134,7 @@ model KioskDevice {
   // Monitoring
   lastHeartbeat DateTime?
   appVersion    String? // Track deployed app version
-  deviceInfo    Json?   // OS version, browser, etc.
+  deviceInfo    Json? // OS version, browser, etc.
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -153,7 +153,7 @@ model MenuItem {
   tenant   Tenant @relation(fields: [tenantId], references: [id])
 
   // Name translations (English is required, others optional)
-  name     String  // English (default)
+  name     String // English (default)
   nameZhTW String? // Traditional Chinese (Taiwan)
   nameZhCN String? // Simplified Chinese (China)
   nameEs   String? // Spanish
@@ -163,7 +163,7 @@ model MenuItem {
   additionalPriceCents Int @default(0) // Price for extra servings
   includedQuantity     Int @default(0) // Number of servings included (1 for baby bok choy, 0 for others)
 
-  category    String? // e.g., "protein", "vegetables", "noodles", "main01", "slider01", etc.
+  category String? // e.g., "protein", "vegetables", "noodles", "main01", "slider01", etc.
 
   // Description translations
   description     String? // English (default)
@@ -180,11 +180,11 @@ model MenuItem {
   sliderConfig  Json? // Slider metadata: {min, max, default, labels, step}
 
   // Dietary information
-  isVegetarian  Boolean @default(false) // V - Vegetarian
-  isVegan       Boolean @default(false) // VG - Vegan
-  isGlutenFree  Boolean @default(false) // GF - Gluten Free
-  spiceLevel    Int     @default(0) // 0=none, 1=mild, 2=medium, 3=hot
-  allergens     String? // Comma-separated list of allergens (e.g., "soy,sesame,egg")
+  isVegetarian Boolean @default(false) // V - Vegetarian
+  isVegan      Boolean @default(false) // VG - Vegan
+  isGlutenFree Boolean @default(false) // GF - Gluten Free
+  spiceLevel   Int     @default(0) // 0=none, 1=mild, 2=medium, 3=hot
+  allergens    String? // Comma-separated list of allergens (e.g., "soy,sesame,egg")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -293,8 +293,8 @@ model Order {
   podReleasedNumber    String? // Which pod was released (for notification display)
 
   // Dual Pod (2-person seating)
-  dualPartnerSeatId  String? // ID of the partner seat in a dual pod booking
-  isDualPod          Boolean @default(false) // Whether this order uses a dual pod
+  dualPartnerSeatId String? // ID of the partner seat in a dual pod booking
+  isDualPod         Boolean @default(false) // Whether this order uses a dual pod
 
   // Queue Management
   queuePosition        Int? // Current position in queue
@@ -338,7 +338,7 @@ model Order {
 
   creditEvents   CreditEvent[]
   waitQueueEntry WaitQueue?
-  mealGift      MealGift?
+  mealGift       MealGift?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -370,10 +370,10 @@ enum PaymentStatus {
 }
 
 enum OrderSource {
-  WEB       // Order placed via web app (desktop or mobile browser)
-  KIOSK     // Order placed at physical kiosk in-store
-  MOBILE    // Order placed via native mobile app (future)
-  STAFF     // Order placed by staff on behalf of customer
+  WEB // Order placed via web app (desktop or mobile browser)
+  KIOSK // Order placed at physical kiosk in-store
+  MOBILE // Order placed via native mobile app (future)
+  STAFF // Order placed by staff on behalf of customer
 }
 
 model OrderItem {
@@ -413,6 +413,9 @@ model Guest {
   orders            Order[]
   groupOrdersAsHost GroupOrder[] @relation("GroupOrderHost")
   groupOrders       GroupOrder[] @relation("GroupOrderMemberGuests")
+
+  // Shop Orders
+  shopOrders ShopOrder[]
 }
 
 // ==========================================
@@ -474,6 +477,9 @@ model User {
   phone String? @unique
   name  String?
 
+  // Stripe integration
+  stripeCustomerId String? @unique
+
   // Referral system
   referralCode String  @unique @default(cuid())
   referredById String?
@@ -509,7 +515,7 @@ model User {
   // Group Orders
   groupOrdersAsHost GroupOrder[] @relation("GroupOrderHost")
   groupOrders       GroupOrder[] @relation("GroupOrderMemberUsers")
-  
+
   // Meal for a Stranger
   givenMealGifts    MealGift[]      @relation("GivenMealGifts")
   acceptedMealGifts MealGift[]      @relation("AcceptedMealGifts")
@@ -518,6 +524,16 @@ model User {
   // Wallet pass notifications
   walletRegistrations WalletPassRegistration[]
   walletNotifications WalletNotificationLog[]
+
+  // Gift Cards
+  purchasedGiftCards GiftCard[] @relation("PurchasedGiftCards")
+  redeemedGiftCards  GiftCard[] @relation("RedeemedGiftCards")
+
+  // Shop Orders
+  shopOrders ShopOrder[]
+
+  // Saved Payment Methods
+  savedPaymentMethods SavedPaymentMethod[]
 }
 
 enum MembershipTier {
@@ -531,20 +547,20 @@ enum MembershipTier {
 // ==========================================
 
 model WalletPassRegistration {
-  id                   String   @id @default(cuid())
-  userId               String
-  user                 User     @relation(fields: [userId], references: [id])
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
 
-  deviceLibraryId      String   // Apple device identifier
-  pushToken            String   // APNs push token
-  passTypeId           String   // pass.com.ohbeef.loyalty
-  serialNumber         String   // oh-member-{userId}
+  deviceLibraryId String // Apple device identifier
+  pushToken       String // APNs push token
+  passTypeId      String // pass.com.ohbeef.loyalty
+  serialNumber    String // oh-member-{userId}
 
   lastNotificationAt   DateTime?
   lastNotificationType String?
 
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([deviceLibraryId, passTypeId, serialNumber])
   @@index([userId])
@@ -552,15 +568,15 @@ model WalletPassRegistration {
 }
 
 model WalletNotificationLog {
-  id               String   @id @default(cuid())
-  userId           String
-  user             User     @relation(fields: [userId], references: [id])
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
 
-  notificationType String   // NEAR_RESTAURANT, STREAK_AT_RISK, TIER_PROGRESS, CHALLENGE_DEADLINE, AVAILABLE_CREDITS
-  locationId       String?  // For location-specific notifications
+  notificationType String // NEAR_RESTAURANT, STREAK_AT_RISK, TIER_PROGRESS, CHALLENGE_DEADLINE, AVAILABLE_CREDITS
+  locationId       String? // For location-specific notifications
   messageContent   String
 
-  sentAt           DateTime @default(now())
+  sentAt DateTime @default(now())
 
   @@index([userId, notificationType, sentAt])
 }
@@ -816,10 +832,10 @@ enum TransactionType {
 model LanguageVisit {
   id String @id @default(cuid())
 
-  browserLanguage  String // Raw Accept-Language header value (e.g., "zh-TW,zh;q=0.9,en;q=0.8")
-  primaryLanguage  String // Primary language code (e.g., "zh-TW", "fr", "de")
-  resolvedLocale   String // The locale actually shown (e.g., "en", "zh-TW")
-  wasSupported     Boolean // Whether primaryLanguage was supported
+  browserLanguage String // Raw Accept-Language header value (e.g., "zh-TW,zh;q=0.9,en;q=0.8")
+  primaryLanguage String // Primary language code (e.g., "zh-TW", "fr", "de")
+  resolvedLocale  String // The locale actually shown (e.g., "en", "zh-TW")
+  wasSupported    Boolean // Whether primaryLanguage was supported
 
   // Optional user/session tracking
   userId    String?
@@ -847,12 +863,12 @@ model MealGift {
   locationId String
   location   Location @relation(fields: [locationId], references: [id])
 
-  amountCents       Int // Gift amount (5.99 - 5.00)
-  messageFromGiver  String? // Optional message from giver
-  payForwardCount   Int @default(0) // How many times it was paid forward
+  amountCents      Int // Gift amount (5.99 - 5.00)
+  messageFromGiver String? // Optional message from giver
+  payForwardCount  Int     @default(0) // How many times it was paid forward
 
   status MealGiftStatus @default(PENDING)
-  
+
   // Tracking
   acceptedById String? // Final recipient who accepted
   acceptedBy   User?   @relation("AcceptedMealGifts", fields: [acceptedById], references: [id])
@@ -860,8 +876,8 @@ model MealGift {
   order        Order?  @relation(fields: [orderId], references: [id])
 
   // Timestamps
-  createdAt DateTime  @default(now())
-  expiresAt DateTime  // End of business day at location
+  createdAt  DateTime  @default(now())
+  expiresAt  DateTime // End of business day at location
   acceptedAt DateTime? // When finally accepted
   expiredAt  DateTime? // When it expired and was refunded
 
@@ -879,7 +895,7 @@ model MealGiftChain {
   recipientId String
   recipient   User     @relation(fields: [recipientId], references: [id])
 
-  action              MealGiftAction // ACCEPTED or PAID_FORWARD
+  action               MealGiftAction // ACCEPTED or PAID_FORWARD
   messageFromRecipient String? // Optional thank you or message
 
   createdAt DateTime @default(now())
@@ -888,12 +904,250 @@ model MealGiftChain {
 }
 
 enum MealGiftStatus {
-  PENDING  // Waiting for someone to claim
+  PENDING // Waiting for someone to claim
   ACCEPTED // Someone accepted and used it
-  EXPIRED  // End of day, refunded to giver as credit
+  EXPIRED // End of day, refunded to giver as credit
 }
 
 enum MealGiftAction {
-  ACCEPTED      // Recipient applied to their order
-  PAID_FORWARD  // Recipient passed to next person
+  ACCEPTED // Recipient applied to their order
+  PAID_FORWARD // Recipient passed to next person
+}
+
+// ==========================================
+// GIFT CARDS
+// ==========================================
+
+model GiftCard {
+  id   String @id @default(cuid())
+  code String @unique // XXXX-XXXX-XXXX-XXXX format
+
+  amountCents  Int // Original gift card value
+  balanceCents Int // Remaining balance (for partial use)
+  designId     String @default("classic") // "classic", "dark", "gold"
+
+  // Purchaser (optional - guest purchases allowed)
+  purchaserId String?
+  purchaser   User?   @relation("PurchasedGiftCards", fields: [purchaserId], references: [id])
+
+  // Recipient info for email delivery
+  recipientEmail  String?
+  recipientName   String?
+  personalMessage String?
+
+  // Payment tracking
+  stripePaymentId String?
+
+  status GiftCardStatus @default(ACTIVE)
+
+  // Timestamps
+  purchasedAt  DateTime  @default(now())
+  deliveredAt  DateTime? // When email was sent
+  redeemedById String? // User who added to balance
+  redeemedBy   User?     @relation("RedeemedGiftCards", fields: [redeemedById], references: [id])
+  redeemedAt   DateTime?
+  expiresAt    DateTime? // Optional expiration
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Orders where this gift card was applied
+  shopOrders ShopOrder[]
+
+  @@index([code])
+  @@index([purchaserId])
+  @@index([status])
+}
+
+enum GiftCardStatus {
+  ACTIVE // Can be redeemed or used at checkout
+  REDEEMED // Added to user balance (full balance consumed)
+  EXHAUSTED // Used at checkout, balance is zero
+  EXPIRED
+  CANCELLED
+}
+
+// ==========================================
+// SHOP PRODUCTS (E-commerce)
+// ==========================================
+
+model ShopProduct {
+  id   String  @id @default(cuid())
+  slug String  @unique
+  sku  String? @unique // Stock keeping unit
+
+  // Name translations
+  name     String
+  nameZhTW String?
+  nameZhCN String?
+  nameEs   String?
+
+  // Description translations
+  description     String?
+  descriptionZhTW String?
+  descriptionZhCN String?
+  descriptionEs   String?
+
+  priceCents Int
+  category   ShopCategory
+  imageUrl   String?
+
+  // Availability and inventory
+  isAvailable       Boolean @default(true)
+  stockCount        Int? // null = unlimited, 0 = out of stock
+  lowStockThreshold Int? // Alert when stock drops below this
+
+  // For variants (sizes, colors, etc.)
+  // Example: [{size: "S", stock: 5, sku: "TSH-S"}, {size: "M", stock: 10, sku: "TSH-M"}]
+  variants Json?
+
+  // QR code for in-store scanning
+  qrCode String? @unique // Unique identifier for QR code
+
+  // Location-specific inventory (optional)
+  // If empty array, product available everywhere
+  // Otherwise, only at specified locations
+  locationIds String[]
+
+  // Weight for shipping calculations (in ounces)
+  weightOz Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orderItems ShopOrderItem[]
+
+  @@index([category])
+  @@index([isAvailable])
+}
+
+enum ShopCategory {
+  FOOD // Home Kit, Beef Broth Concentrate
+  CONDIMENTS // Chili Oil, etc.
+  MERCHANDISE // Ceramic Bowl, Chopsticks, Apron
+  APPAREL // T-Shirt, Hoodie
+  LIMITED_EDITION // Special items like Wooden Bowl
+}
+
+// ==========================================
+// SHOP ORDERS
+// ==========================================
+
+model ShopOrder {
+  id          String @id @default(cuid())
+  orderNumber String @unique
+
+  // Customer (user or guest)
+  userId  String?
+  user    User?   @relation(fields: [userId], references: [id])
+  guestId String?
+  guest   Guest?  @relation(fields: [guestId], references: [id])
+
+  // Location for in-store pickup orders
+  locationId String?
+
+  items ShopOrderItem[]
+
+  // Pricing
+  subtotalCents Int
+  shippingCents Int @default(0)
+  taxCents      Int @default(0)
+  totalCents    Int
+
+  // Credits and gift cards applied (NO LIMIT for shop orders)
+  creditsApplied  Int       @default(0)
+  giftCardApplied Int       @default(0)
+  giftCardId      String?
+  giftCard        GiftCard? @relation(fields: [giftCardId], references: [id])
+
+  // Fulfillment type
+  fulfillmentType ShopFulfillmentType
+
+  // Shipping address (for SHIPPING type)
+  shippingName     String?
+  shippingAddress1 String?
+  shippingAddress2 String?
+  shippingCity     String?
+  shippingState    String?
+  shippingZip      String?
+  shippingCountry  String? @default("US")
+  shippingPhone    String?
+  shippingEmail    String?
+
+  // Payment
+  stripePaymentId String?
+  paymentStatus   PaymentStatus @default(PENDING)
+
+  // Fulfillment tracking
+  fulfillmentStatus ShopFulfillmentStatus @default(PENDING)
+  trackingNumber    String?
+  trackingUrl       String?
+  shippedAt         DateTime?
+  deliveredAt       DateTime?
+  pickedUpAt        DateTime? // For in-store pickup
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([paymentStatus])
+  @@index([fulfillmentStatus])
+  @@index([orderNumber])
+}
+
+enum ShopFulfillmentType {
+  SHIPPING // Ship to customer address
+  IN_STORE_PICKUP // Customer picks up at location
+}
+
+enum ShopFulfillmentStatus {
+  PENDING // Awaiting processing
+  PROCESSING // Being prepared
+  SHIPPED // Shipped (for shipping orders)
+  READY_PICKUP // Ready for pickup (for in-store)
+  COMPLETED // Delivered or picked up
+  CANCELLED
+}
+
+model ShopOrderItem {
+  id        String      @id @default(cuid())
+  orderId   String
+  order     ShopOrder   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   ShopProduct @relation(fields: [productId], references: [id])
+
+  quantity   Int
+  priceCents Int // Price at time of purchase
+
+  // For variant items (size, color, etc.)
+  variant String?
+
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+// ==========================================
+// SAVED PAYMENT METHODS
+// ==========================================
+
+model SavedPaymentMethod {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  stripePaymentMethodId String  @unique
+  type                  String // "card", "link", etc.
+  last4                 String?
+  brand                 String? // "visa", "mastercard", "amex", etc.
+  expiryMonth           Int?
+  expiryYear            Int?
+
+  isDefault Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }

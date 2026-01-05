@@ -38,11 +38,39 @@ export async function POST(request: NextRequest) {
 
     const stripe = getStripe();
 
-    // Send payment to the S700 reader
-    const reader = await stripe.terminal.readers.processPaymentIntent(
-      terminalReaderId,
-      { payment_intent: paymentIntentId }
-    );
+    // Helper to process with retry on busy
+    const processWithRetry = async (maxRetries = 3): Promise<Stripe.Terminal.Reader> => {
+      for (let attempt = 0; attempt < maxRetries; attempt++) {
+        // Cancel any existing action first
+        try {
+          await stripe.terminal.readers.cancelAction(terminalReaderId);
+          // Wait a moment for the cancel to fully process
+          await new Promise(r => setTimeout(r, 300));
+        } catch {
+          // No action to cancel - that's fine
+        }
+
+        try {
+          return await stripe.terminal.readers.processPaymentIntent(
+            terminalReaderId,
+            { payment_intent: paymentIntentId }
+          );
+        } catch (err) {
+          const isLastAttempt = attempt === maxRetries - 1;
+          const isBusyError = err instanceof Error && err.message.includes('busy');
+
+          if (isBusyError && !isLastAttempt) {
+            // Wait longer before retry
+            await new Promise(r => setTimeout(r, 500));
+            continue;
+          }
+          throw err;
+        }
+      }
+      throw new Error('Failed to process after retries');
+    };
+
+    const reader = await processWithRetry();
 
     return NextResponse.json({
       status: reader.action?.status,

@@ -4,14 +4,17 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
+import { useCart } from "@/contexts/cart-context";
 
 export default function StorePage() {
   const t = useTranslations("store");
   const tCommon = useTranslations("common");
   const locale = useLocale();
+  const { addItem, itemCount } = useCart();
 
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [hoveredProduct, setHoveredProduct] = useState<string | null>(null);
+  const [addedToCart, setAddedToCart] = useState<string | null>(null);
 
   const products = [
     {
@@ -234,18 +237,39 @@ export default function StorePage() {
         </div>
       </section>
 
-      {/* Coming Soon Banner */}
-      <section
-        style={{
-          background: "linear-gradient(135deg, #C7A878 0%, #a08860 100%)",
-          padding: "24px 24px",
-          textAlign: "center",
-        }}
-      >
-        <p style={{ color: "#222222", fontWeight: "500", margin: 0, fontSize: "1.05rem" }}>
-          {t("launchingSoon")}
-        </p>
-      </section>
+      {/* Cart Banner */}
+      {itemCount > 0 && (
+        <section
+          style={{
+            background: "linear-gradient(135deg, #7C7A67 0%, #5a584a 100%)",
+            padding: "16px 24px",
+            textAlign: "center",
+          }}
+        >
+          <Link
+            href={`/${locale}/store/cart`}
+            style={{
+              color: "white",
+              fontWeight: "500",
+              fontSize: "1rem",
+              textDecoration: "none",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "12px",
+            }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="9" cy="21" r="1" />
+              <circle cx="20" cy="21" r="1" />
+              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+            </svg>
+            {itemCount} {itemCount === 1 ? "item" : "items"} in cart - View Cart
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </Link>
+        </section>
+      )}
 
       {/* Category Filter */}
       <section style={{ maxWidth: "1200px", margin: "0 auto", padding: "48px 24px 0" }}>
@@ -350,23 +374,6 @@ export default function StorePage() {
                   </span>
                 )}
 
-                {/* Coming Soon Overlay */}
-                <div
-                  style={{
-                    position: "absolute",
-                    bottom: "16px",
-                    right: "16px",
-                    background: "rgba(34, 34, 34, 0.9)",
-                    color: "#E5E5E5",
-                    padding: "8px 16px",
-                    borderRadius: "20px",
-                    fontSize: "0.75rem",
-                    fontWeight: "500",
-                    letterSpacing: "0.5px",
-                  }}
-                >
-                  {tCommon("comingSoon")}
-                </div>
               </div>
 
               {/* Product Info */}
@@ -423,9 +430,20 @@ export default function StorePage() {
                     ${product.price.toFixed(2)}
                   </span>
                   <button
+                    onClick={() => {
+                      addItem({
+                        id: product.id,
+                        slug: product.id,
+                        name: product.name,
+                        priceCents: Math.round(product.price * 100),
+                        imageUrl: product.image,
+                      });
+                      setAddedToCart(product.id);
+                      setTimeout(() => setAddedToCart(null), 2000);
+                    }}
                     style={{
                       padding: "12px 24px",
-                      background: "#7C7A67",
+                      background: addedToCart === product.id ? "#16a34a" : "#7C7A67",
                       color: "white",
                       border: "none",
                       borderRadius: "10px",
@@ -434,9 +452,28 @@ export default function StorePage() {
                       fontWeight: "600",
                       transition: "all 0.3s ease",
                       boxShadow: "0 4px 12px rgba(124, 122, 103, 0.25)",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
                     }}
                   >
-                    {tCommon("notifyMe")}
+                    {addedToCart === product.id ? (
+                      <>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M5 12l5 5L20 7" />
+                        </svg>
+                        Added!
+                      </>
+                    ) : (
+                      <>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <circle cx="9" cy="21" r="1" />
+                          <circle cx="20" cy="21" r="1" />
+                          <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+                        </svg>
+                        Add to Cart
+                      </>
+                    )}
                   </button>
                 </div>
               </div>

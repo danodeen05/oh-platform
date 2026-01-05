@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 // Kiosk color system
 const COLORS = {
@@ -52,6 +52,7 @@ export function PaymentScreen({
   const [status, setStatus] = useState<PaymentStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
+  const initiatedRef = useRef(false);
 
   // Format amount for display
   const formattedAmount = (amountCents / 100).toLocaleString('en-US', {
@@ -66,26 +67,44 @@ export function PaymentScreen({
         const res = await fetch(`/api/kiosk/payments/${intentId}/status`);
         const data = await res.json();
 
+        // Check if payment succeeded
         if (data.status === 'succeeded') {
           return data;
         }
 
-        if (data.status === 'canceled' || data.status === 'requires_payment_method') {
-          throw new Error('Payment was canceled or declined');
+        // Check if reader action failed (faster than waiting for PI status update)
+        if (data.readerActionStatus === 'failed') {
+          throw new Error(data.readerActionError || 'Card was declined');
         }
 
-        // Wait 1 second before next poll
-        await new Promise(r => setTimeout(r, 1000));
+        // Check PaymentIntent status for cancellation
+        if (data.status === 'canceled') {
+          throw new Error('Payment was canceled');
+        }
+
+        // If reader has no action and PI still requires payment, it was declined
+        if (data.readerActionStatus === null && data.status === 'requires_payment_method' && i > 2) {
+          throw new Error('Card was declined - please try again');
+        }
+
+        // Wait 500ms before next poll (faster polling)
+        await new Promise(r => setTimeout(r, 500));
       } catch (err) {
         if (i === maxAttempts - 1) throw err;
-        await new Promise(r => setTimeout(r, 1000));
+        if (err instanceof Error && err.message.includes('declined')) throw err;
+        if (err instanceof Error && err.message.includes('canceled')) throw err;
+        await new Promise(r => setTimeout(r, 500));
       }
     }
     throw new Error('Payment timeout - please try again');
   }, []);
 
   // Initiate payment flow
-  const initiatePayment = useCallback(async () => {
+  const initiatePayment = useCallback(async (isRetry = false) => {
+    // Prevent double-initiation (React StrictMode or unstable deps)
+    if (!isRetry && initiatedRef.current) return;
+    initiatedRef.current = true;
+
     try {
       setStatus('initializing');
       setError(null);
@@ -139,9 +158,15 @@ export function PaymentScreen({
     }
   }, [orderId, amountCents, locationId, onSuccess, onError, pollPaymentStatus]);
 
-  // Start payment on mount
+  // Start payment on mount, cancel on unmount
   useEffect(() => {
     initiatePayment();
+
+    // Cleanup: cancel reader action when component unmounts
+    return () => {
+      // Cancel reader action directly (fire-and-forget)
+      fetch('/api/kiosk/payments/cancel-reader', { method: 'POST' }).catch(() => {});
+    };
   }, [initiatePayment]);
 
   // Handle cancel
@@ -297,7 +322,7 @@ export function PaymentScreen({
               {error || 'Please try again'}
             </p>
             <button
-              onClick={initiatePayment}
+              onClick={() => initiatePayment(true)}
               className="kiosk-btn kiosk-btn-primary"
               style={{ marginBottom: 12 }}
             >

@@ -376,33 +376,38 @@ export default function GiftCardsPage() {
           </div>
         </div>
 
-        {/* Continue button (visual only) */}
+        {/* Continue button - links to purchase flow */}
         <div style={{ marginTop: "40px", textAlign: "center" }}>
-          <button
+          <Link
+            href={`/gift-cards/purchase?amount=${displayAmount}&design=${selectedDesign}`}
             style={{
               padding: "20px 60px",
-              background: "#7C7A67",
+              background: displayAmount >= 10 ? "#7C7A67" : "#d1d5db",
               color: "white",
               border: "none",
               borderRadius: "12px",
               fontSize: "1.1rem",
               fontWeight: "600",
-              cursor: "pointer",
+              cursor: displayAmount >= 10 ? "pointer" : "not-allowed",
               transition: "all 0.3s ease",
-              boxShadow: "0 8px 24px rgba(124, 122, 103, 0.3)",
+              boxShadow: displayAmount >= 10 ? "0 8px 24px rgba(124, 122, 103, 0.3)" : "none",
               display: "inline-flex",
               alignItems: "center",
               gap: "12px",
+              textDecoration: "none",
+              pointerEvents: displayAmount >= 10 ? "auto" : "none",
             }}
           >
             {t("continue")}
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M5 12h14M12 5l7 7-7 7" />
             </svg>
-          </button>
-          <p style={{ color: "#888", fontSize: "0.9rem", marginTop: "16px" }}>
-            {t("purchaseComingSoon")}
-          </p>
+          </Link>
+          {displayAmount > 0 && displayAmount < 10 && (
+            <p style={{ color: "#ef4444", fontSize: "0.9rem", marginTop: "16px" }}>
+              Minimum amount is $10
+            </p>
+          )}
         </div>
       </section>
 

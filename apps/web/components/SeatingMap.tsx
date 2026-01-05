@@ -1,5 +1,8 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import { POD_COLORS } from "@/lib/pod-selection/constants";
+
 export interface Seat {
   id: string;
   number: string;
@@ -21,8 +24,9 @@ interface SeatingMapLabels {
   kitchen?: string;
   exit?: string;
   dual?: string;
-  selectedPrefix?: string; // "Selected:" prefix text
-  pod?: string; // "Pod" label for selection info
+  selectedPrefix?: string;
+  pod?: string;
+  cleaning?: string;
 }
 
 interface SeatingMapProps {
@@ -30,9 +34,30 @@ interface SeatingMapProps {
   selectedSeatId?: string | null;
   onSelectSeat: (seat: Seat) => void;
   disabled?: boolean;
-  groupSize?: number; // Number of people in the order/group
-  hostPaysAll?: boolean; // True if host is paying for all orders in the group (required for dual pod selection)
-  labels?: SeatingMapLabels; // Translated labels
+  groupSize?: number;
+  hostPaysAll?: boolean;
+  labels?: SeatingMapLabels;
+  locationId?: string;
+}
+
+// Hook to get responsive pod size
+function useResponsivePodSize() {
+  const [size, setSize] = useState(48);
+
+  useEffect(() => {
+    const updateSize = () => {
+      const width = window.innerWidth;
+      if (width >= 1024) setSize(64);
+      else if (width >= 640) setSize(56);
+      else setSize(48);
+    };
+
+    updateSize();
+    window.addEventListener("resize", updateSize);
+    return () => window.removeEventListener("resize", updateSize);
+  }, []);
+
+  return size;
 }
 
 export default function SeatingMap({
@@ -43,7 +68,11 @@ export default function SeatingMap({
   groupSize = 1,
   hostPaysAll = false,
   labels = {},
+  locationId,
 }: SeatingMapProps) {
+  const podSize = useResponsivePodSize();
+  const gap = podSize >= 64 ? 10 : podSize >= 56 ? 8 : 6;
+
   // Default labels with fallbacks
   const l = {
     available: labels.available || "Available",
@@ -57,138 +86,111 @@ export default function SeatingMap({
     dual: labels.dual || "Dual",
     selectedPrefix: labels.selectedPrefix || "Selected:",
     pod: labels.pod || "Pod",
+    cleaning: labels.cleaning || "Cleaning",
   };
-  // Helper to check if a seat is part of a dual pod (either it points to a partner, or another seat points to it)
+
   const isDualPod = (seat: Seat) => {
     if (seat.podType !== "DUAL") return false;
-    // Check if this seat has a partner reference
     if (seat.dualPartnerId) return true;
-    // Check if another seat points to this one
-    return seats.some(s => s.dualPartnerId === seat.id);
+    return seats.some((s) => s.dualPartnerId === seat.id);
   };
 
-  // Helper to get partner seat (works both directions)
   const getPartner = (seat: Seat) => {
-    // If this seat has a partner reference, use it
     if (seat.dualPartnerId) {
-      return seats.find(s => s.id === seat.dualPartnerId);
+      return seats.find((s) => s.id === seat.dualPartnerId);
     }
-    // Otherwise, find the seat that points to this one
-    return seats.find(s => s.dualPartnerId === seat.id);
+    return seats.find((s) => s.dualPartnerId === seat.id);
   };
 
-  // For dual pods, check if the dual pod can be selected
-  // Dual pods require: group of 2+ people AND host paying for all orders
   const canSelectDualPod = groupSize >= 2 && hostPaysAll;
 
-  // Check if a seat should be hidden (it's the secondary seat of a dual pod pair)
-  // The secondary seat is the one that does NOT have the dualPartnerId set (it's pointed TO)
   const shouldHideSeat = (seat: Seat) => {
     if (seat.podType !== "DUAL") return false;
-    // If this seat has the dualPartnerId, it's the primary - don't hide it
     if (seat.dualPartnerId) return false;
-    // If another seat points to this one, this is the secondary - hide it
-    return seats.some(s => s.dualPartnerId === seat.id);
+    return seats.some((s) => s.dualPartnerId === seat.id);
   };
 
   // Group seats by side
-  // Left: top to bottom (col ascending)
-  // Bottom: left to right (col ascending)
-  // Right: bottom to top (col descending) - to continue the U-shape flow
-  const leftSeats = seats.filter((s) => s.side === "left").sort((a, b) => a.col - b.col);
-  const bottomSeats = seats.filter((s) => s.side === "bottom").sort((a, b) => a.col - b.col);
-  const rightSeats = seats.filter((s) => s.side === "right").sort((a, b) => b.col - a.col);
+  const leftSeats = seats
+    .filter((s) => s.side === "left")
+    .sort((a, b) => a.col - b.col);
+  const bottomSeats = seats
+    .filter((s) => s.side === "bottom")
+    .sort((a, b) => a.col - b.col);
+  const rightSeats = seats
+    .filter((s) => s.side === "right")
+    .sort((a, b) => b.col - a.col);
 
-  const getSeatStyle = (seat: Seat, isDual: boolean = false) => {
-    const isSelected = seat.id === selectedSeatId || (isDual && getPartner(seat)?.id === selectedSeatId);
+  const getPodStyle = (seat: Seat, isDual: boolean = false) => {
+    const isSelected =
+      seat.id === selectedSeatId ||
+      (isDual && getPartner(seat)?.id === selectedSeatId);
     const isAvailable = seat.status === "AVAILABLE";
     const partner = isDual ? getPartner(seat) : null;
     const partnerAvailable = partner ? partner.status === "AVAILABLE" : true;
     const bothAvailable = isAvailable && partnerAvailable;
-
-    // For dual pods: only clickable if groupSize is 2
-    // For single pods: clickable as normal
     const canClick = bothAvailable && !disabled && (!isDual || canSelectDualPod);
 
-    let backgroundColor = "#e5e7eb"; // gray - unavailable
-    let borderColor = "#d1d5db";
-    let textColor = "#9ca3af";
-    let cursor = "not-allowed";
+    // Determine orientation
+    const isBottomDual = isDual && seat.side === "bottom";
+
+    // Color logic matching kiosk design
+    let bgColor = POD_COLORS.occupied;
+    let textColor = "rgba(255,255,255,0.7)";
 
     if (bothAvailable) {
       if (isDual) {
-        // Dual pod available styling - cyan/teal theme
         if (canSelectDualPod) {
-          backgroundColor = "#cffafe"; // cyan-100
-          borderColor = "#22d3ee"; // cyan-400
-          textColor = "#0e7490"; // cyan-700
-          cursor = disabled ? "not-allowed" : "pointer";
+          bgColor = POD_COLORS.dualPod;
+          textColor = "#ffffff";
         } else {
-          // Dual pod not selectable (wrong group size) - dimmed cyan
-          backgroundColor = "#ecfeff"; // cyan-50
-          borderColor = "#a5f3fc"; // cyan-200
-          textColor = "#0891b2"; // cyan-600
-          cursor = "not-allowed";
+          bgColor = POD_COLORS.unavailableDual;
+          textColor = "rgba(255,255,255,0.7)";
         }
       } else {
-        // Regular single pod available styling - green
-        backgroundColor = "#dcfce7"; // green
-        borderColor = "#86efac";
-        textColor = "#166534";
-        cursor = disabled ? "not-allowed" : "pointer";
+        bgColor = POD_COLORS.available;
+        textColor = "#ffffff";
       }
     }
 
-    if (seat.status === "RESERVED" || (partner && partner.status === "RESERVED")) {
-      backgroundColor = "#fef3c7"; // yellow
-      borderColor = "#fcd34d";
-      textColor = "#92400e";
-    }
-
     if (seat.status === "CLEANING" || (partner && partner.status === "CLEANING")) {
-      backgroundColor = "#dbeafe"; // blue
-      borderColor = "#93c5fd";
-      textColor = "#1e40af";
-    }
-
-    if (isSelected) {
-      backgroundColor = "#7C7A67";
-      borderColor = "#5c5a4f";
+      bgColor = POD_COLORS.cleaning;
       textColor = "#ffffff";
     }
 
-    // Bottom dual pods should be horizontal, left/right dual pods should be vertical
-    const isBottomDual = isDual && seat.side === "bottom";
+    if (isSelected) {
+      bgColor = POD_COLORS.selected;
+      textColor = "#ffffff";
+    }
 
     return {
-      position: "relative" as const,
-      width: isDual ? (isBottomDual ? "120px" : "60px") : "60px",
-      height: isDual ? (isBottomDual ? "60px" : "120px") : "60px",
-      borderRadius: "8px",
-      border: `2px solid ${borderColor}`,
-      backgroundColor,
+      width: isDual ? (isBottomDual ? podSize * 2 + gap : podSize) : podSize,
+      height: isDual ? (isBottomDual ? podSize : podSize * 2 + gap) : podSize,
+      borderRadius: 12,
+      border: isSelected ? `3px solid #1a1a1a` : "none",
+      backgroundColor: bgColor,
       color: textColor,
       display: "flex",
-      flexDirection: (isBottomDual ? "row" : "column") as const,
+      flexDirection: isBottomDual ? "row" as const : "column" as const,
       alignItems: "center",
       justifyContent: "center",
-      cursor,
-      transition: "all 0.2s ease",
-      fontWeight: isSelected ? "600" : "500",
-      fontSize: "14px",
-      opacity: disabled && !isSelected ? 0.7 : 1,
-      gap: isBottomDual ? "8px" : undefined,
+      cursor: canClick ? "pointer" : "not-allowed",
+      transition: "all 0.2s",
+      fontWeight: 700,
+      fontSize: podSize >= 64 ? 18 : podSize >= 56 ? 16 : 14,
+      gap: isDual ? (podSize >= 64 ? 6 : 4) : 0,
+      opacity: disabled && !isSelected ? 0.6 : 1,
+      boxShadow: isSelected ? "0 2px 8px rgba(0,0,0,0.15)" : "none",
     };
   };
 
   const handleSeatClick = (seat: Seat) => {
     const isDual = isDualPod(seat);
     const partner = isDual ? getPartner(seat) : null;
-    const bothAvailable = seat.status === "AVAILABLE" && (!partner || partner.status === "AVAILABLE");
+    const bothAvailable =
+      seat.status === "AVAILABLE" && (!partner || partner.status === "AVAILABLE");
 
     if (!bothAvailable || disabled) return;
-
-    // For dual pods, only allow selection if groupSize is 2
     if (isDual && !canSelectDualPod) return;
 
     onSelectSeat(seat);
@@ -198,18 +200,17 @@ export default function SeatingMap({
     const isDual = isDualPod(seat);
     const partner = isDual ? getPartner(seat) : null;
 
-    // Skip rendering the secondary seat of a dual pod (it's merged into the primary)
     if (shouldHideSeat(seat)) {
       return null;
     }
 
-    // Generate title based on status and type
     let title = `Pod ${seat.number}`;
     if (isDual && partner) {
       title = `Dual Pod ${seat.number} & ${partner.number}`;
     }
 
-    const bothAvailable = seat.status === "AVAILABLE" && (!partner || partner.status === "AVAILABLE");
+    const bothAvailable =
+      seat.status === "AVAILABLE" && (!partner || partner.status === "AVAILABLE");
     if (bothAvailable) {
       if (isDual && !canSelectDualPod) {
         title += " - Dual Pod (requires group of 2+ with shared payment)";
@@ -221,175 +222,105 @@ export default function SeatingMap({
       title += ` - ${status}`;
     }
 
+    const isBottomRow = seat.side === "bottom";
+    const isRightSide = seat.side === "right";
+
     return (
-      <div
+      <button
         key={seat.id}
-        style={getSeatStyle(seat, isDual)}
+        style={getPodStyle(seat, isDual) as React.CSSProperties}
         onClick={() => handleSeatClick(seat)}
         title={title}
+        disabled={disabled || (!bothAvailable && seat.id !== selectedSeatId)}
+        type="button"
       >
         {isDual && partner ? (
-          // Combined dual pod display
-          // Bottom row: horizontal (left to right), Side columns: vertical
           (() => {
             const seatNum = parseInt(seat.number);
             const partnerNum = parseInt(partner.number);
-            const isBottomRow = seat.side === "bottom";
-            const isRightSide = seat.side === "right";
 
-            // For bottom row (horizontal): lower number on left
-            // For right side (vertical): higher number on top
-            // For left side (vertical): lower number on top
             let firstNum: string, secondNum: string;
             if (isBottomRow) {
-              // Horizontal: lower number on left
               firstNum = seatNum < partnerNum ? seat.number : partner.number;
               secondNum = seatNum < partnerNum ? partner.number : seat.number;
             } else if (isRightSide) {
-              // Vertical: higher number on top
               firstNum = seatNum > partnerNum ? seat.number : partner.number;
               secondNum = seatNum > partnerNum ? partner.number : seat.number;
             } else {
-              // Left side vertical: lower number on top
               firstNum = seatNum < partnerNum ? seat.number : partner.number;
               secondNum = seatNum < partnerNum ? partner.number : seat.number;
             }
 
             return (
               <>
-                <span style={{ fontSize: "16px", fontWeight: "bold" }}>{firstNum}</span>
-                <span style={{ fontSize: "9px", margin: isBottomRow ? "0 4px" : "4px 0" }}>{l.dual}</span>
-                <span style={{ fontSize: "16px", fontWeight: "bold" }}>{secondNum}</span>
-                {!bothAvailable && (
-                  <span style={{ fontSize: "9px", marginTop: isBottomRow ? "0" : "4px", marginLeft: isBottomRow ? "4px" : "0" }}>
-                    {seat.status === "RESERVED" || partner.status === "RESERVED" ? "Reserved" : ""}
-                    {seat.status === "OCCUPIED" || partner.status === "OCCUPIED" ? "In Use" : ""}
-                    {seat.status === "CLEANING" || partner.status === "CLEANING" ? "Cleaning" : ""}
-                  </span>
-                )}
+                <span style={{ fontWeight: "bold" }}>{firstNum}</span>
+                <span
+                  style={{
+                    fontSize: podSize >= 64 ? 10 : 8,
+                    opacity: 0.8,
+                  }}
+                >
+                  {l.dual}
+                </span>
+                <span style={{ fontWeight: "bold" }}>{secondNum}</span>
               </>
             );
           })()
         ) : (
-          // Regular single pod display
-          <>
-            <span style={{ fontSize: "16px", fontWeight: "bold" }}>{seat.number}</span>
-            {seat.status !== "AVAILABLE" && (
-              <span style={{ fontSize: "10px", marginTop: "2px" }}>
-                {seat.status === "RESERVED" && "Reserved"}
-                {seat.status === "OCCUPIED" && "In Use"}
-                {seat.status === "CLEANING" && "Cleaning"}
-              </span>
-            )}
-          </>
+          <span style={{ fontWeight: "bold" }}>{seat.number}</span>
         )}
-      </div>
+      </button>
     );
   };
 
-  return (
-    <div style={{ padding: "20px" }}>
-      {/* Legend */}
-      <div
-        style={{
-          display: "flex",
-          gap: "16px",
-          marginBottom: "20px",
-          justifyContent: "center",
-          flexWrap: "wrap",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <div
-            style={{
-              width: "16px",
-              height: "16px",
-              borderRadius: "4px",
-              backgroundColor: "#dcfce7",
-              border: "2px solid #86efac",
-            }}
-          />
-          <span style={{ fontSize: "12px", color: "#666" }}>{l.available}</span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <div
-            style={{
-              width: "16px",
-              height: "16px",
-              borderRadius: "4px",
-              backgroundColor: "#7C7A67",
-              border: "2px solid #5c5a4f",
-            }}
-          />
-          <span style={{ fontSize: "12px", color: "#666" }}>{l.selected}</span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <div
-            style={{
-              width: "16px",
-              height: "16px",
-              borderRadius: "4px",
-              backgroundColor: "#fef3c7",
-              border: "2px solid #fcd34d",
-            }}
-          />
-          <span style={{ fontSize: "12px", color: "#666" }}>{l.reserved}</span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <div
-            style={{
-              width: "16px",
-              height: "16px",
-              borderRadius: "4px",
-              backgroundColor: "#e5e7eb",
-              border: "2px solid #d1d5db",
-            }}
-          />
-          <span style={{ fontSize: "12px", color: "#666" }}>{l.occupied}</span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <div
-            style={{
-              width: "16px",
-              height: "32px",
-              borderRadius: "4px",
-              backgroundColor: "#cffafe",
-              border: "2px solid #22d3ee",
-            }}
-          />
-          <span style={{ fontSize: "12px", color: "#666" }}>{l.dualPod}</span>
-        </div>
-      </div>
+  // Kitchen center size
+  const kitchenSize = podSize >= 64 ? 80 : podSize >= 56 ? 70 : 60;
 
-      {/* U-Shape Layout */}
+  return (
+    <div style={{ padding: podSize >= 64 ? 24 : 16 }}>
+      {/* Store Floor Plan Container */}
       <div
         style={{
+          position: "relative",
+          padding: podSize >= 64 ? "32px 40px" : podSize >= 56 ? "24px 32px" : "20px 24px",
+          background: POD_COLORS.background,
+          border: `4px solid ${POD_COLORS.border}`,
+          borderRadius: 16,
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          gap: "8px",
-          maxWidth: "500px",
-          margin: "0 auto",
         }}
       >
-        {/* Entrance Label */}
+        {/* Entrance Opening */}
         <div
           style={{
-            fontSize: "12px",
-            color: "#666",
-            textTransform: "uppercase",
-            letterSpacing: "1px",
-            marginBottom: "8px",
+            position: "absolute",
+            top: -4,
+            left: "50%",
+            transform: "translateX(-50%)",
+            background: "#f9fafb",
+            padding: "0 16px",
           }}
         >
-          {l.entrance}
+          <span
+            style={{
+              fontSize: 11,
+              color: "#666",
+              textTransform: "uppercase",
+              letterSpacing: 1,
+              fontWeight: 600,
+            }}
+          >
+            {l.entrance}
+          </span>
         </div>
 
-        {/* Main Layout Container */}
+        {/* Main U-Shape Layout */}
         <div
           style={{
             display: "flex",
-            gap: "8px",
+            gap: gap * 2,
+            marginTop: 8,
           }}
         >
           {/* Left Column */}
@@ -397,44 +328,60 @@ export default function SeatingMap({
             style={{
               display: "flex",
               flexDirection: "column",
-              gap: "8px",
+              gap,
             }}
           >
             {leftSeats.map(renderSeat)}
           </div>
 
-          {/* Center - Kitchen */}
+          {/* Kitchen Center */}
           <div
             style={{
               display: "flex",
               flexDirection: "column",
               justifyContent: "center",
               alignItems: "center",
-              minWidth: "120px",
-              padding: "20px",
+              minWidth: kitchenSize + 40,
+              padding: 16,
             }}
           >
             <div
               style={{
-                backgroundColor: "#f3f4f6",
-                borderRadius: "12px",
-                padding: "30px 20px",
-                border: "2px dashed #d1d5db",
-                textAlign: "center",
+                width: kitchenSize,
+                height: kitchenSize,
+                borderRadius: "50%",
+                border: `3px solid ${POD_COLORS.border}`,
+                background: POD_COLORS.kitchenBg,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                overflow: "hidden",
               }}
             >
-              <div style={{ fontSize: "24px", marginBottom: "4px" }}>👨‍🍳</div>
-              <div
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/Oh_Logo_Mark_Web.png"
+                alt="Oh! Kitchen"
+                width={kitchenSize - 20}
+                height={kitchenSize - 20}
                 style={{
-                  fontSize: "12px",
-                  color: "#666",
-                  textTransform: "uppercase",
-                  letterSpacing: "1px",
+                  objectFit: "contain",
+                  animation: "gentle-pulse 3s ease-in-out infinite",
                 }}
-              >
-                {l.kitchen}
-              </div>
+              />
             </div>
+            <span
+              style={{
+                marginTop: 8,
+                fontSize: 11,
+                color: "#666",
+                textTransform: "uppercase",
+                letterSpacing: 1,
+                fontWeight: 600,
+              }}
+            >
+              {l.kitchen}
+            </span>
           </div>
 
           {/* Right Column */}
@@ -442,7 +389,7 @@ export default function SeatingMap({
             style={{
               display: "flex",
               flexDirection: "column",
-              gap: "8px",
+              gap,
             }}
           >
             {rightSeats.map(renderSeat)}
@@ -453,24 +400,103 @@ export default function SeatingMap({
         <div
           style={{
             display: "flex",
-            gap: "8px",
-            marginTop: "8px",
+            gap,
+            marginTop: gap * 2,
           }}
         >
           {bottomSeats.map(renderSeat)}
         </div>
 
-        {/* Exit Label */}
+        {/* Exit Opening */}
         <div
           style={{
-            fontSize: "12px",
-            color: "#666",
-            textTransform: "uppercase",
-            letterSpacing: "1px",
-            marginTop: "8px",
+            position: "absolute",
+            bottom: -4,
+            left: "50%",
+            transform: "translateX(-50%)",
+            background: "#f9fafb",
+            padding: "0 16px",
           }}
         >
-          {l.exit}
+          <span
+            style={{
+              fontSize: 11,
+              color: "#666",
+              textTransform: "uppercase",
+              letterSpacing: 1,
+              fontWeight: 600,
+            }}
+          >
+            {l.exit}
+          </span>
+        </div>
+      </div>
+
+      {/* Legend */}
+      <div
+        style={{
+          display: "flex",
+          gap: 16,
+          marginTop: 20,
+          justifyContent: "center",
+          flexWrap: "wrap",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div
+            style={{
+              width: 16,
+              height: 16,
+              borderRadius: 4,
+              backgroundColor: POD_COLORS.available,
+            }}
+          />
+          <span style={{ fontSize: 12, color: "#666" }}>{l.available}</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div
+            style={{
+              width: 16,
+              height: 24,
+              borderRadius: 4,
+              backgroundColor: POD_COLORS.dualPod,
+            }}
+          />
+          <span style={{ fontSize: 12, color: "#666" }}>{l.dualPod}</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div
+            style={{
+              width: 16,
+              height: 16,
+              borderRadius: 4,
+              backgroundColor: POD_COLORS.cleaning,
+            }}
+          />
+          <span style={{ fontSize: 12, color: "#666" }}>{l.cleaning}</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div
+            style={{
+              width: 16,
+              height: 16,
+              borderRadius: 4,
+              backgroundColor: POD_COLORS.occupied,
+            }}
+          />
+          <span style={{ fontSize: 12, color: "#666" }}>{l.occupied}</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div
+            style={{
+              width: 16,
+              height: 16,
+              borderRadius: 4,
+              backgroundColor: POD_COLORS.selected,
+              border: "2px solid #1a1a1a",
+            }}
+          />
+          <span style={{ fontSize: 12, color: "#666" }}>{l.selected}</span>
         </div>
       </div>
 
@@ -478,15 +504,16 @@ export default function SeatingMap({
       {selectedSeatId && (
         <div
           style={{
-            marginTop: "24px",
-            padding: "16px",
-            backgroundColor: "#f9fafb",
-            borderRadius: "8px",
+            marginTop: 20,
+            padding: 16,
+            backgroundColor: "rgba(124, 122, 103, 0.1)",
+            borderRadius: 12,
             textAlign: "center",
+            border: `1px solid ${POD_COLORS.borderLight}`,
           }}
         >
           <span style={{ color: "#666" }}>{l.selectedPrefix} </span>
-          <span style={{ fontWeight: "600", color: "#222" }}>
+          <span style={{ fontWeight: 600, color: "#222" }}>
             {(() => {
               const selectedSeat = seats.find((s) => s.id === selectedSeatId);
               if (!selectedSeat) return "";
@@ -495,7 +522,7 @@ export default function SeatingMap({
                 if (partner) {
                   const num1 = parseInt(selectedSeat.number);
                   const num2 = parseInt(partner.number);
-                  return `${l.dualPod} ${Math.min(num1, num2).toString().padStart(2, '0')} & ${Math.max(num1, num2).toString().padStart(2, '0')}`;
+                  return `${l.dualPod} ${Math.min(num1, num2).toString().padStart(2, "0")} & ${Math.max(num1, num2).toString().padStart(2, "0")}`;
                 }
               }
               return `${l.pod} ${selectedSeat.number}`;
@@ -503,6 +530,24 @@ export default function SeatingMap({
           </span>
         </div>
       )}
+
+      {/* CSS Animation - using dangerouslySetInnerHTML to avoid styled-jsx TS issues */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            @keyframes gentle-pulse {
+              0%, 100% {
+                transform: scale(1);
+                opacity: 0.9;
+              }
+              50% {
+                transform: scale(1.05);
+                opacity: 1;
+              }
+            }
+          `,
+        }}
+      />
     </div>
   );
 }
