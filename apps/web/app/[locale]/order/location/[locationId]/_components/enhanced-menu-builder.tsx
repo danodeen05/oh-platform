@@ -1210,6 +1210,7 @@ export default function EnhancedMenuBuilder({
               <SeatingMap
                 seats={seats}
                 selectedSeatId={selectedSeatId}
+                locationId={location.id}
                 onSelectSeat={(seat) => {
                   setSelectedSeatId(seat.id);
                   trackPodSelected({
@@ -1223,6 +1224,7 @@ export default function EnhancedMenuBuilder({
                   reserved: t("builder.podLegend.reserved"),
                   occupied: t("builder.podLegend.occupied"),
                   dualPod: t("builder.podLegend.dualPod"),
+                  cleaning: t("builder.podLegend.cleaning"),
                   entrance: t("builder.podMap.entrance"),
                   kitchen: t("builder.podMap.kitchen"),
                   exit: t("builder.podMap.exit"),

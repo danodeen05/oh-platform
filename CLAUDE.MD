@@ -299,30 +299,45 @@ pnpm api:dev      # API (port 4000) → https://devapi.ohbeef.com
 - This pushes the current worktree branch directly to main to trigger Railway deployment
 - Do NOT try to checkout main (it's already checked out in the main repo)
 
-## CRITICAL: Testing Workflow
+## CRITICAL: Dev Environment Architecture
 
-**NEVER test API changes locally when the user is testing via dev subdomains.**
+**Dev subdomains point to LOCAL dev servers on this droplet (NOT Railway/Vercel):**
 
-The user tests via:
-- `https://devwebapp.ohbeef.com` → Railway web app
-- `https://devadmin.ohbeef.com` → Railway admin
-- `https://devapi.ohbeef.com` → Railway API
+| Subdomain | Points To | Process |
+|-----------|-----------|---------|
+| `https://devwebapp.ohbeef.com` | `localhost:3000` | `pnpm dev` |
+| `https://devadmin.ohbeef.com` | `localhost:3001` | `pnpm admin:dev` |
+| `https://devapi.ohbeef.com` | `localhost:4000` | `pnpm api:dev` |
 
-**Workflow for API/backend changes:**
-1. Make code changes locally
-2. Commit and push to main: `git push origin <branch>:main`
-3. Railway auto-deploys from main
-4. User tests via dev subdomains (NOT localhost)
+Nginx on the droplet proxies these subdomains to the local ports.
 
-**DO NOT:**
-- Run `node src/index.js` locally and expect user to see changes
-- Test wallet passes or push notifications against localhost:4000
-- Assume local server changes are visible to user's phone/browser
+### Dev Testing Workflow (NO git push needed!)
+1. Make code changes in `/home/claude-user/projects/oh-platform`
+2. Restart the relevant dev server (see commands below)
+3. User tests via dev subdomains immediately
 
-**The local API server (port 4000) is only for:**
-- Quick syntax checks
-- Local development when explicitly requested
-- Testing endpoints with curl before deploying
+### Restarting Dev Servers
+```bash
+# Use screen sessions to keep servers running
+screen -ls                    # List existing sessions
+screen -S api -X quit         # Kill old API session
+screen -dmS api bash -c "pnpm api:dev 2>&1 | tee api.log"
+
+screen -S admin -X quit       # Kill old admin session
+screen -dmS admin bash -c "pnpm admin:dev 2>&1 | tee admin.log"
+
+screen -S web -X quit         # Kill old web session
+screen -dmS web bash -c "pnpm dev 2>&1 | tee web.log"
+```
+
+### IMPORTANT: User Accounts
+- **claude-user**: YOUR development environment. All dev servers should run under this user.
+- **ohdev**: Legacy/separate environment. DO NOT modify or use ohdev's processes.
+
+### Production Deployment (separate from dev)
+- Production uses Vercel/Railway deployed from `main` branch
+- Only push to `main` when changes are tested and ready for production
+- Dev testing does NOT require git push
 
 ## Meal for a Stranger Challenge - Implementation Status (Dec 30, 2024)
 
@@ -521,3 +536,17 @@ All require header: `x-cron-secret: <CRON_SECRET>`
 - `Last-Modified` header is required for Apple Wallet to track updates
 - Location coordinates must match production for geofencing to work
 - DNS: `api.ohbeef.com` → `ohapi-production.up.railway.app` (CNAME)
+
+## Twilio SMS - Credentials & Configuration
+
+### Credentials
+Twilio credentials are stored in environment variables. See `.env.example` for required variables:
+- `TWILIO_ACCOUNT_SID` - Account SID from Twilio console
+- `TWILIO_AUTH_TOKEN` - Auth token from Twilio console
+- `TWILIO_PHONE_NUMBER` - Toll-free number (requires verification)
+- `ADMIN_PHONE_NUMBER` - Receives new user SMS alerts
+
+### Status
+- **Toll-free verification**: Pending (required for SMS delivery)
+- **Admin SMS on new user**: Implemented in `POST /users` endpoint
+- **Notification file**: `packages/api/src/notifications.js`

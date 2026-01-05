@@ -5,6 +5,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { QRCodeSVG } from "qrcode.react";
 import { pdf } from "@react-pdf/renderer";
 import { VirtualKeyboard, PrintableReceipt, generateQRDataUrl, LanguageSelector, useKioskScale } from "@/components/kiosk";
+import { PaymentScreen } from "@/components/kiosk/PaymentScreen";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -458,7 +459,7 @@ export default function KioskOrderFlow({
 
   // Current view
   const [view, setView] = useState<
-    "name" | "menu" | "review" | "pod-selection" | "pass" | "payment" | "complete"
+    "name" | "menu" | "review" | "pod-selection" | "pass" | "payment" | "processing-payment" | "complete"
   >("name");
 
   // Scroll to top when view or step changes
@@ -835,13 +836,23 @@ export default function KioskOrderFlow({
     }
   }
 
-  async function handlePayment() {
+  // Transition to payment processing screen (S700 terminal)
+  function handlePayment() {
+    setView("processing-payment");
+  }
+
+  // Called when Stripe Terminal payment succeeds
+  async function onPaymentSuccess(paymentIntentId: string) {
     setSubmitting(true);
 
     try {
       if (paymentType === "separate") {
         // Pay only current guest's order and assign pod
-        const updates: any = { paymentStatus: "PAID", orderSource: "KIOSK" };
+        const updates: any = {
+          paymentStatus: "PAID",
+          orderSource: "KIOSK",
+          stripePaymentIntentId: paymentIntentId,
+        };
         if (currentGuest.selectedPodId) {
           updates.seatId = currentGuest.selectedPodId;
           updates.podSelectionMethod = currentGuest.podAutoAssigned ? "AUTO_ASSIGNED" : "CUSTOMER_SELECTED";
@@ -856,7 +867,7 @@ export default function KioskOrderFlow({
           body: JSON.stringify(updates),
         });
 
-        if (!response.ok) throw new Error("Payment failed");
+        if (!response.ok) throw new Error("Failed to update order");
 
         updateCurrentGuest({ paid: true });
 
@@ -870,7 +881,11 @@ export default function KioskOrderFlow({
         // Single check - pay all orders and assign pods
         for (const guest of guestOrders) {
           if (guest.orderId) {
-            const updates: any = { paymentStatus: "PAID", orderSource: "KIOSK" };
+            const updates: any = {
+              paymentStatus: "PAID",
+              orderSource: "KIOSK",
+              stripePaymentIntentId: paymentIntentId,
+            };
             if (guest.selectedPodId) {
               updates.seatId = guest.selectedPodId;
               updates.podSelectionMethod = guest.podAutoAssigned ? "AUTO_ASSIGNED" : "CUSTOMER_SELECTED";
@@ -892,11 +907,16 @@ export default function KioskOrderFlow({
         setView("complete");
       }
     } catch (error) {
-      console.error("Payment failed:", error);
-      setErrorMessage("Payment failed. Please try again.");
+      console.error("Failed to update order after payment:", error);
+      setErrorMessage("Payment succeeded but failed to update order. Please contact staff.");
     } finally {
       setSubmitting(false);
     }
+  }
+
+  // Called when payment is canceled
+  function onPaymentCancel() {
+    setView("payment");
   }
 
   function passToNextGuest() {
@@ -1095,6 +1115,40 @@ export default function KioskOrderFlow({
         onPay={handlePayment}
         onBack={() => setView("pod-selection")}
         submitting={submitting}
+      />
+    );
+  }
+
+  // Processing payment view - Stripe Terminal S700
+  if (view === "processing-payment") {
+    // Calculate payment amount
+    const paymentSubtotalCents =
+      paymentType === "single"
+        ? guestOrders.reduce((sum, g) => sum + (g.subtotalCents || 0), 0)
+        : currentGuest.subtotalCents || 0;
+    const paymentTaxCents =
+      paymentType === "single"
+        ? guestOrders.reduce((sum, g) => sum + (g.taxCents || 0), 0)
+        : currentGuest.taxCents || 0;
+    const paymentTotalCents = paymentSubtotalCents + paymentTaxCents;
+
+    // Use first order ID for payment tracking (or current guest's order for separate payments)
+    const paymentOrderId =
+      paymentType === "single"
+        ? guestOrders[0]?.orderId || "unknown"
+        : currentGuest.orderId || "unknown";
+
+    return (
+      <PaymentScreen
+        orderId={paymentOrderId}
+        amountCents={paymentTotalCents}
+        locationId={location.id}
+        onSuccess={onPaymentSuccess}
+        onCancel={onPaymentCancel}
+        onError={(error) => {
+          console.error("Payment error:", error);
+          setErrorMessage(error);
+        }}
       />
     );
   }
@@ -4680,10 +4734,17 @@ function PodSelectionView({
                 playsInline
                 onEnded={(e) => {
                   // Pause for 3 seconds at end, then loop
+                  const video = e.currentTarget;
                   setTimeout(() => {
-                    const video = e.currentTarget;
-                    video.currentTime = 0;
-                    video.play();
+                    // Check if video still exists and is connected to DOM
+                    if (video && video.isConnected) {
+                      try {
+                        video.currentTime = 0;
+                        video.play();
+                      } catch {
+                        // Video element was removed, ignore
+                      }
+                    }
                   }, 3000);
                 }}
                 style={{

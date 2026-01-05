@@ -29,7 +29,23 @@ export async function GET(
     }
 
     const stripe = getStripe();
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    const readerId = process.env.STRIPE_TERMINAL_READER_ID;
+
+    // Check both PaymentIntent and reader status for faster response
+    const [paymentIntent, reader] = await Promise.all([
+      stripe.paymentIntents.retrieve(paymentIntentId),
+      readerId ? stripe.terminal.readers.retrieve(readerId) : null,
+    ]);
+
+    // Check if reader action failed (declined, canceled, etc.)
+    let readerActionStatus = null;
+    let readerActionError = null;
+    if (reader?.action) {
+      readerActionStatus = reader.action.status;
+      if (reader.action.failure_code) {
+        readerActionError = reader.action.failure_message || reader.action.failure_code;
+      }
+    }
 
     return NextResponse.json({
       status: paymentIntent.status,
@@ -37,6 +53,8 @@ export async function GET(
       amount: paymentIntent.amount,
       currency: paymentIntent.currency,
       metadata: paymentIntent.metadata,
+      readerActionStatus,
+      readerActionError,
     });
   } catch (error) {
     console.error('Failed to get payment status:', error);

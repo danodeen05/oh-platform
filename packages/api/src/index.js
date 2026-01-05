@@ -10808,6 +10808,922 @@ app.get("/analytics/badges", async (req, reply) => {
 });
 
 // ====================
+// STRIPE CUSTOMER & PAYMENT METHODS
+// ====================
+
+// Create or get Stripe Customer for a user
+app.post("/users/:id/stripe-customer", async (req, reply) => {
+  try {
+    if (!stripe) {
+      return reply.status(500).send({ error: "Stripe is not configured" });
+    }
+
+    const { id } = req.params;
+
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) {
+      return reply.status(404).send({ error: "User not found" });
+    }
+
+    // Return existing customer if already created
+    if (user.stripeCustomerId) {
+      return reply.send({ customerId: user.stripeCustomerId });
+    }
+
+    // Create new Stripe customer
+    const customer = await stripe.customers.create({
+      email: user.email || undefined,
+      name: user.name || undefined,
+      metadata: { userId: id },
+    });
+
+    // Save to database
+    await prisma.user.update({
+      where: { id },
+      data: { stripeCustomerId: customer.id },
+    });
+
+    return reply.send({ customerId: customer.id });
+  } catch (error) {
+    console.error("Error creating Stripe customer:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Get saved payment methods for a user
+app.get("/users/:id/payment-methods", async (req, reply) => {
+  try {
+    const { id } = req.params;
+
+    const methods = await prisma.savedPaymentMethod.findMany({
+      where: { userId: id },
+      orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }],
+    });
+
+    return reply.send(methods);
+  } catch (error) {
+    console.error("Error fetching payment methods:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Save a payment method for a user
+app.post("/users/:id/payment-methods", async (req, reply) => {
+  try {
+    if (!stripe) {
+      return reply.status(500).send({ error: "Stripe is not configured" });
+    }
+
+    const { id } = req.params;
+    const { paymentMethodId, setDefault } = req.body;
+
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user?.stripeCustomerId) {
+      return reply.status(400).send({ error: "User has no Stripe customer" });
+    }
+
+    // Attach payment method to customer in Stripe
+    const paymentMethod = await stripe.paymentMethods.attach(paymentMethodId, {
+      customer: user.stripeCustomerId,
+    });
+
+    // If setting as default, unset other defaults
+    if (setDefault) {
+      await prisma.savedPaymentMethod.updateMany({
+        where: { userId: id },
+        data: { isDefault: false },
+      });
+    }
+
+    // Save to database
+    const saved = await prisma.savedPaymentMethod.create({
+      data: {
+        userId: id,
+        stripePaymentMethodId: paymentMethodId,
+        type: paymentMethod.type,
+        last4: paymentMethod.card?.last4 || null,
+        brand: paymentMethod.card?.brand || null,
+        expiryMonth: paymentMethod.card?.exp_month || null,
+        expiryYear: paymentMethod.card?.exp_year || null,
+        isDefault: setDefault || false,
+      },
+    });
+
+    return reply.send(saved);
+  } catch (error) {
+    console.error("Error saving payment method:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Delete a saved payment method
+app.delete("/users/:id/payment-methods/:methodId", async (req, reply) => {
+  try {
+    if (!stripe) {
+      return reply.status(500).send({ error: "Stripe is not configured" });
+    }
+
+    const { id, methodId } = req.params;
+
+    const method = await prisma.savedPaymentMethod.findFirst({
+      where: { id: methodId, userId: id },
+    });
+
+    if (!method) {
+      return reply.status(404).send({ error: "Payment method not found" });
+    }
+
+    // Detach from Stripe
+    try {
+      await stripe.paymentMethods.detach(method.stripePaymentMethodId);
+    } catch (stripeErr) {
+      console.warn("Could not detach from Stripe:", stripeErr.message);
+    }
+
+    // Remove from database
+    await prisma.savedPaymentMethod.delete({ where: { id: methodId } });
+
+    return reply.send({ success: true });
+  } catch (error) {
+    console.error("Error deleting payment method:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// ====================
+// GIFT CARDS
+// ====================
+
+// Generate secure gift card code (XXXX-XXXX-XXXX-XXXX)
+function generateGiftCardCode() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // No I, O, 0, 1 for clarity
+  let code = "";
+  for (let i = 0; i < 16; i++) {
+    if (i > 0 && i % 4 === 0) code += "-";
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
+// Purchase a gift card
+app.post("/gift-cards", async (req, reply) => {
+  try {
+    const {
+      amountCents,
+      designId,
+      recipientEmail,
+      recipientName,
+      personalMessage,
+      purchaserId,
+      stripePaymentId,
+    } = req.body;
+
+    if (!amountCents || amountCents < 1000) {
+      return reply.status(400).send({ error: "Minimum gift card amount is $10" });
+    }
+
+    if (amountCents > 50000) {
+      return reply.status(400).send({ error: "Maximum gift card amount is $500" });
+    }
+
+    // Generate unique code with retry
+    let code;
+    let attempts = 0;
+    while (!code && attempts < 10) {
+      const candidate = generateGiftCardCode();
+      const existing = await prisma.giftCard.findUnique({ where: { code: candidate } });
+      if (!existing) code = candidate;
+      attempts++;
+    }
+
+    if (!code) {
+      return reply.status(500).send({ error: "Failed to generate unique code" });
+    }
+
+    const giftCard = await prisma.giftCard.create({
+      data: {
+        code,
+        amountCents,
+        balanceCents: amountCents,
+        designId: designId || "classic",
+        purchaserId: purchaserId || null,
+        recipientEmail: recipientEmail || null,
+        recipientName: recipientName || null,
+        personalMessage: personalMessage || null,
+        stripePaymentId: stripePaymentId || null,
+        status: "ACTIVE",
+      },
+    });
+
+    // Send email delivery if recipient email provided
+    if (recipientEmail) {
+      try {
+        await sendGiftCardEmail(giftCard);
+        await prisma.giftCard.update({
+          where: { id: giftCard.id },
+          data: { deliveredAt: new Date() },
+        });
+      } catch (emailErr) {
+        console.error("Failed to send gift card email:", emailErr);
+        // Don't fail the purchase if email fails
+      }
+    }
+
+    return reply.send(giftCard);
+  } catch (error) {
+    console.error("Error creating gift card:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Get gift card by ID
+app.get("/gift-cards/:id", async (req, reply) => {
+  try {
+    const { id } = req.params;
+
+    const giftCard = await prisma.giftCard.findUnique({
+      where: { id },
+      include: {
+        purchaser: { select: { id: true, name: true } },
+        redeemedBy: { select: { id: true, name: true } },
+      },
+    });
+
+    if (!giftCard) {
+      return reply.status(404).send({ error: "Gift card not found" });
+    }
+
+    return reply.send(giftCard);
+  } catch (error) {
+    console.error("Error fetching gift card:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Lookup gift card by code (for redemption)
+app.get("/gift-cards/code/:code", async (req, reply) => {
+  try {
+    const { code } = req.params;
+    // Normalize code (remove dashes, uppercase)
+    const normalizedCode = code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+
+    // Build code with dashes for lookup
+    const formattedCode = normalizedCode.length === 16
+      ? `${normalizedCode.slice(0, 4)}-${normalizedCode.slice(4, 8)}-${normalizedCode.slice(8, 12)}-${normalizedCode.slice(12, 16)}`
+      : code.toUpperCase();
+
+    const giftCard = await prisma.giftCard.findFirst({
+      where: {
+        OR: [
+          { code: formattedCode },
+          { code: code.toUpperCase() },
+        ],
+        status: "ACTIVE",
+        balanceCents: { gt: 0 },
+      },
+    });
+
+    if (!giftCard) {
+      return reply.status(404).send({ error: "Gift card not found or has no balance" });
+    }
+
+    // Return limited info for security
+    return reply.send({
+      id: giftCard.id,
+      balanceCents: giftCard.balanceCents,
+      designId: giftCard.designId,
+    });
+  } catch (error) {
+    console.error("Error looking up gift card:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Redeem gift card to user balance (adds full balance to user credits)
+app.post("/gift-cards/:id/redeem", async (req, reply) => {
+  try {
+    const { id } = req.params;
+    const { userId } = req.body;
+
+    if (!userId) {
+      return reply.status(400).send({ error: "User ID required" });
+    }
+
+    const giftCard = await prisma.giftCard.findUnique({ where: { id } });
+    if (!giftCard) {
+      return reply.status(404).send({ error: "Gift card not found" });
+    }
+
+    if (giftCard.status !== "ACTIVE" || giftCard.balanceCents <= 0) {
+      return reply.status(400).send({ error: "Gift card is not available for redemption" });
+    }
+
+    // Add to user credits (NO LIMIT for gift cards/shop)
+    await prisma.user.update({
+      where: { id: userId },
+      data: { creditsCents: { increment: giftCard.balanceCents } },
+    });
+
+    // Record credit event
+    await prisma.creditEvent.create({
+      data: {
+        userId,
+        type: "ADMIN_ADJUSTMENT", // Using existing type for now
+        amountCents: giftCard.balanceCents,
+        description: `Gift card ${giftCard.code} redeemed to account balance`,
+        metadata: { giftCardId: giftCard.id, giftCardCode: giftCard.code },
+      },
+    });
+
+    // Mark gift card as redeemed
+    const updated = await prisma.giftCard.update({
+      where: { id },
+      data: {
+        status: "REDEEMED",
+        redeemedById: userId,
+        redeemedAt: new Date(),
+        balanceCents: 0,
+      },
+    });
+
+    return reply.send({
+      success: true,
+      creditsAdded: giftCard.balanceCents,
+      giftCard: updated,
+    });
+  } catch (error) {
+    console.error("Error redeeming gift card:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Apply gift card at checkout (partial use allowed)
+app.post("/gift-cards/:id/apply", async (req, reply) => {
+  try {
+    const { id } = req.params;
+    const { amountCents } = req.body;
+
+    if (!amountCents || amountCents <= 0) {
+      return reply.status(400).send({ error: "Amount required" });
+    }
+
+    const giftCard = await prisma.giftCard.findUnique({ where: { id } });
+    if (!giftCard) {
+      return reply.status(404).send({ error: "Gift card not found" });
+    }
+
+    if (giftCard.status !== "ACTIVE" || giftCard.balanceCents <= 0) {
+      return reply.status(400).send({ error: "Gift card is not available" });
+    }
+
+    const amountToApply = Math.min(amountCents, giftCard.balanceCents);
+    const newBalance = giftCard.balanceCents - amountToApply;
+
+    await prisma.giftCard.update({
+      where: { id },
+      data: {
+        balanceCents: newBalance,
+        status: newBalance === 0 ? "EXHAUSTED" : "ACTIVE",
+      },
+    });
+
+    return reply.send({
+      applied: amountToApply,
+      remainingBalance: newBalance,
+    });
+  } catch (error) {
+    console.error("Error applying gift card:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Confirm gift card payment (called by webhook)
+app.post("/gift-cards/:id/confirm-payment", async (req, reply) => {
+  try {
+    const { id } = req.params;
+    const { stripePaymentId } = req.body;
+
+    await prisma.giftCard.update({
+      where: { id },
+      data: { stripePaymentId },
+    });
+
+    return reply.send({ success: true });
+  } catch (error) {
+    console.error("Error confirming gift card payment:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Helper function to send gift card email
+async function sendGiftCardEmail(giftCard) {
+  if (!resend || !giftCard.recipientEmail) return;
+
+  const amountFormatted = `$${(giftCard.amountCents / 100).toFixed(2)}`;
+  const designColors = {
+    classic: { bg: "#7C7A67", text: "white" },
+    dark: { bg: "#222222", text: "white" },
+    gold: { bg: "#C7A878", text: "white" },
+  };
+  const design = designColors[giftCard.designId] || designColors.classic;
+
+  const html = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="background: ${design.bg}; color: ${design.text}; padding: 40px; text-align: center; border-radius: 12px 12px 0 0;">
+        <h1 style="margin: 0; font-size: 28px;">Oh! Beef Noodle Soup</h1>
+        <p style="margin: 16px 0 0; opacity: 0.9;">Digital Gift Card</p>
+      </div>
+
+      <div style="padding: 32px; background: #f9fafb;">
+        <p style="font-size: 18px; margin-bottom: 24px;">
+          ${giftCard.recipientName ? `Hi ${giftCard.recipientName},` : "Hello!"}
+        </p>
+
+        <p>You've received a gift card for Oh! Beef Noodle Soup!</p>
+
+        ${giftCard.personalMessage ? `
+          <div style="background: white; padding: 16px; border-left: 4px solid #C7A878; margin: 24px 0;">
+            <p style="margin: 0; font-style: italic;">"${giftCard.personalMessage}"</p>
+          </div>
+        ` : ""}
+
+        <div style="background: white; padding: 24px; border-radius: 12px; text-align: center; margin: 24px 0;">
+          <p style="margin: 0 0 8px; color: #666;">Your Gift Card Value</p>
+          <p style="font-size: 36px; font-weight: bold; margin: 0; color: #7C7A67;">${amountFormatted}</p>
+        </div>
+
+        <div style="background: #222; color: white; padding: 24px; border-radius: 12px; text-align: center;">
+          <p style="margin: 0 0 8px; font-size: 14px; opacity: 0.7;">Your Gift Card Code</p>
+          <p style="font-size: 24px; font-weight: bold; margin: 0; letter-spacing: 4px; font-family: monospace;">
+            ${giftCard.code}
+          </p>
+        </div>
+
+        <p style="margin-top: 24px; color: #666; font-size: 14px;">
+          To redeem, visit ohbeefnoodlesoup.com and enter this code at checkout,
+          or add it to your account balance in your member profile.
+        </p>
+      </div>
+
+      <div style="padding: 24px; text-align: center; color: #666; font-size: 12px;">
+        <p>This gift card never expires. &copy; Oh! Beef Noodle Soup</p>
+      </div>
+    </div>
+  `;
+
+  await resend.emails.send({
+    from: process.env.FROM_EMAIL || "noreply@oh-beef.com",
+    to: giftCard.recipientEmail,
+    subject: `You've received an Oh! Gift Card - ${amountFormatted}`,
+    html,
+  });
+}
+
+// ====================
+// SHOP PRODUCTS
+// ====================
+
+// Get all shop products
+app.get("/shop/products", async (req, reply) => {
+  try {
+    const products = await prisma.shopProduct.findMany({
+      where: { isAvailable: true },
+      orderBy: [{ category: "asc" }, { createdAt: "desc" }],
+    });
+
+    return reply.send(products);
+  } catch (error) {
+    console.error("Error fetching shop products:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Get single shop product by slug
+app.get("/shop/products/:slug", async (req, reply) => {
+  try {
+    const { slug } = req.params;
+
+    const product = await prisma.shopProduct.findUnique({
+      where: { slug },
+    });
+
+    if (!product) {
+      return reply.status(404).send({ error: "Product not found" });
+    }
+
+    return reply.send(product);
+  } catch (error) {
+    console.error("Error fetching shop product:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Get shop product by QR code (for in-store scanning)
+app.get("/shop/products/qr/:qrCode", async (req, reply) => {
+  try {
+    const { qrCode } = req.params;
+
+    const product = await prisma.shopProduct.findUnique({
+      where: { qrCode },
+    });
+
+    if (!product) {
+      return reply.status(404).send({ error: "Product not found" });
+    }
+
+    if (!product.isAvailable) {
+      return reply.status(400).send({ error: "Product is not available" });
+    }
+
+    return reply.send(product);
+  } catch (error) {
+    console.error("Error fetching shop product by QR:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Update product inventory
+app.patch("/shop/products/:id/inventory", async (req, reply) => {
+  try {
+    const { id } = req.params;
+    const { stockCount, adjustment } = req.body;
+
+    const product = await prisma.shopProduct.findUnique({ where: { id } });
+    if (!product) {
+      return reply.status(404).send({ error: "Product not found" });
+    }
+
+    let newStock;
+    if (typeof stockCount === "number") {
+      newStock = stockCount;
+    } else if (typeof adjustment === "number") {
+      newStock = (product.stockCount || 0) + adjustment;
+    } else {
+      return reply.status(400).send({ error: "stockCount or adjustment required" });
+    }
+
+    const updated = await prisma.shopProduct.update({
+      where: { id },
+      data: { stockCount: Math.max(0, newStock) },
+    });
+
+    return reply.send(updated);
+  } catch (error) {
+    console.error("Error updating inventory:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Get low stock products
+app.get("/shop/products/inventory/low-stock", async (req, reply) => {
+  try {
+    const products = await prisma.shopProduct.findMany({
+      where: {
+        isAvailable: true,
+        stockCount: { not: null },
+        lowStockThreshold: { not: null },
+      },
+    });
+
+    const lowStock = products.filter(
+      (p) => p.stockCount !== null && p.lowStockThreshold !== null && p.stockCount <= p.lowStockThreshold
+    );
+
+    return reply.send(lowStock);
+  } catch (error) {
+    console.error("Error fetching low stock products:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// ====================
+// SHOP ORDERS
+// ====================
+
+// Generate shop order number
+function generateShopOrderNumber() {
+  const timestamp = Date.now().toString(36).toUpperCase();
+  const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+  return `SHOP-${timestamp}-${random}`;
+}
+
+// Create shop order
+app.post("/shop/orders", async (req, reply) => {
+  try {
+    const {
+      items, // [{productId, quantity, variant}]
+      userId,
+      guestId,
+      locationId,
+      fulfillmentType, // SHIPPING or IN_STORE_PICKUP
+      shipping, // {name, address1, address2, city, state, zip, phone, email}
+      creditsToApply,
+      giftCardId,
+      stripePaymentId,
+    } = req.body;
+
+    if (!items || items.length === 0) {
+      return reply.status(400).send({ error: "Items required" });
+    }
+
+    if (!fulfillmentType) {
+      return reply.status(400).send({ error: "Fulfillment type required" });
+    }
+
+    // Calculate totals
+    let subtotalCents = 0;
+    const orderItems = [];
+
+    for (const item of items) {
+      const product = await prisma.shopProduct.findUnique({
+        where: { id: item.productId },
+      });
+
+      if (!product) {
+        return reply.status(400).send({ error: `Product ${item.productId} not found` });
+      }
+
+      if (!product.isAvailable) {
+        return reply.status(400).send({ error: `Product ${product.name} is not available` });
+      }
+
+      // Check stock
+      if (product.stockCount !== null && product.stockCount < item.quantity) {
+        return reply.status(400).send({ error: `Insufficient stock for ${product.name}` });
+      }
+
+      subtotalCents += product.priceCents * item.quantity;
+      orderItems.push({
+        productId: product.id,
+        quantity: item.quantity,
+        priceCents: product.priceCents,
+        variant: item.variant || null,
+      });
+    }
+
+    // Calculate shipping (free over $75 for shipping orders)
+    const shippingCents = fulfillmentType === "SHIPPING" && subtotalCents < 7500 ? 899 : 0;
+
+    // Apply credits (NO LIMIT for shop orders)
+    let creditsApplied = 0;
+    if (creditsToApply && userId) {
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (user) {
+        creditsApplied = Math.min(creditsToApply, user.creditsCents, subtotalCents + shippingCents);
+      }
+    }
+
+    // Apply gift card
+    let giftCardApplied = 0;
+    if (giftCardId) {
+      const gc = await prisma.giftCard.findUnique({ where: { id: giftCardId } });
+      if (gc?.status === "ACTIVE" && gc.balanceCents > 0) {
+        const remaining = subtotalCents + shippingCents - creditsApplied;
+        giftCardApplied = Math.min(gc.balanceCents, remaining);
+      }
+    }
+
+    // Calculate tax (approximate 8% on taxable amount)
+    const taxableAmount = subtotalCents - creditsApplied - giftCardApplied;
+    const taxCents = Math.round(Math.max(0, taxableAmount) * 0.08);
+
+    const totalCents = subtotalCents + shippingCents + taxCents - creditsApplied - giftCardApplied;
+
+    // Generate order number
+    const orderNumber = generateShopOrderNumber();
+
+    // Create order
+    const shopOrder = await prisma.shopOrder.create({
+      data: {
+        orderNumber,
+        userId: userId || null,
+        guestId: guestId || null,
+        locationId: locationId || null,
+        subtotalCents,
+        shippingCents,
+        taxCents,
+        totalCents: Math.max(0, totalCents),
+        creditsApplied,
+        giftCardApplied,
+        giftCardId: giftCardId || null,
+        fulfillmentType,
+        shippingName: shipping?.name || null,
+        shippingAddress1: shipping?.address1 || null,
+        shippingAddress2: shipping?.address2 || null,
+        shippingCity: shipping?.city || null,
+        shippingState: shipping?.state || null,
+        shippingZip: shipping?.zip || null,
+        shippingCountry: shipping?.country || "US",
+        shippingPhone: shipping?.phone || null,
+        shippingEmail: shipping?.email || null,
+        stripePaymentId: stripePaymentId || null,
+        paymentStatus: stripePaymentId ? "PAID" : "PENDING",
+        fulfillmentStatus: "PENDING",
+        items: { create: orderItems },
+      },
+      include: { items: { include: { product: true } } },
+    });
+
+    // Deduct credits if applied
+    if (creditsApplied > 0 && userId) {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { creditsCents: { decrement: creditsApplied } },
+      });
+
+      await prisma.creditEvent.create({
+        data: {
+          userId,
+          type: "CREDIT_APPLIED",
+          amountCents: -creditsApplied,
+          description: `Credits applied to shop order ${orderNumber}`,
+          metadata: { shopOrderId: shopOrder.id },
+        },
+      });
+    }
+
+    // Update gift card balance
+    if (giftCardApplied > 0 && giftCardId) {
+      const gc = await prisma.giftCard.findUnique({ where: { id: giftCardId } });
+      if (gc) {
+        const newBalance = gc.balanceCents - giftCardApplied;
+        await prisma.giftCard.update({
+          where: { id: giftCardId },
+          data: {
+            balanceCents: newBalance,
+            status: newBalance === 0 ? "EXHAUSTED" : "ACTIVE",
+          },
+        });
+      }
+    }
+
+    // Decrement product stock
+    for (const item of orderItems) {
+      const product = await prisma.shopProduct.findUnique({ where: { id: item.productId } });
+      if (product?.stockCount !== null) {
+        await prisma.shopProduct.update({
+          where: { id: item.productId },
+          data: { stockCount: { decrement: item.quantity } },
+        });
+      }
+    }
+
+    // TODO: Send order confirmation email
+
+    return reply.send(shopOrder);
+  } catch (error) {
+    console.error("Error creating shop order:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Get shop order by ID
+app.get("/shop/orders/:id", async (req, reply) => {
+  try {
+    const { id } = req.params;
+
+    const order = await prisma.shopOrder.findUnique({
+      where: { id },
+      include: {
+        items: { include: { product: true } },
+        user: { select: { id: true, name: true, email: true } },
+        guest: { select: { id: true, name: true, email: true } },
+        giftCard: { select: { id: true, code: true } },
+      },
+    });
+
+    if (!order) {
+      return reply.status(404).send({ error: "Order not found" });
+    }
+
+    return reply.send(order);
+  } catch (error) {
+    console.error("Error fetching shop order:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Update shop order (payment status, fulfillment, tracking)
+app.patch("/shop/orders/:id", async (req, reply) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+
+    // Allowed updates
+    const allowedFields = [
+      "paymentStatus",
+      "stripePaymentId",
+      "fulfillmentStatus",
+      "trackingNumber",
+      "trackingUrl",
+      "shippedAt",
+      "deliveredAt",
+      "pickedUpAt",
+    ];
+
+    const data = {};
+    for (const field of allowedFields) {
+      if (updates[field] !== undefined) {
+        data[field] = updates[field];
+      }
+    }
+
+    const order = await prisma.shopOrder.update({
+      where: { id },
+      data,
+      include: { items: { include: { product: true } } },
+    });
+
+    return reply.send(order);
+  } catch (error) {
+    console.error("Error updating shop order:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Apply credits to shop order (NO LIMIT for shop orders)
+app.post("/shop/orders/:id/apply-credits", async (req, reply) => {
+  try {
+    const { id } = req.params;
+    const { userId, amountCents } = req.body;
+
+    if (!userId || !amountCents) {
+      return reply.status(400).send({ error: "userId and amountCents required" });
+    }
+
+    const order = await prisma.shopOrder.findUnique({ where: { id } });
+    if (!order) {
+      return reply.status(404).send({ error: "Order not found" });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      return reply.status(404).send({ error: "User not found" });
+    }
+
+    // NO LIMIT for shop orders - apply full requested amount up to user balance
+    const creditsToApply = Math.min(amountCents, user.creditsCents, order.totalCents);
+
+    if (creditsToApply <= 0) {
+      return reply.status(400).send({ error: "No credits to apply" });
+    }
+
+    // Deduct from user
+    await prisma.user.update({
+      where: { id: userId },
+      data: { creditsCents: { decrement: creditsToApply } },
+    });
+
+    // Update order
+    const updatedOrder = await prisma.shopOrder.update({
+      where: { id },
+      data: {
+        creditsApplied: { increment: creditsToApply },
+        totalCents: { decrement: creditsToApply },
+      },
+    });
+
+    // Record event
+    await prisma.creditEvent.create({
+      data: {
+        userId,
+        type: "CREDIT_APPLIED",
+        amountCents: -creditsToApply,
+        description: `Credits applied to shop order ${order.orderNumber}`,
+        metadata: { shopOrderId: id },
+      },
+    });
+
+    return reply.send({
+      success: true,
+      creditsApplied: creditsToApply,
+      newTotal: updatedOrder.totalCents,
+    });
+  } catch (error) {
+    console.error("Error applying credits to shop order:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Get user's shop orders
+app.get("/users/:id/shop-orders", async (req, reply) => {
+  try {
+    const { id } = req.params;
+
+    const orders = await prisma.shopOrder.findMany({
+      where: { userId: id },
+      include: { items: { include: { product: true } } },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return reply.send(orders);
+  } catch (error) {
+    console.error("Error fetching user shop orders:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// ====================
 // START SERVER
 // ====================
 
