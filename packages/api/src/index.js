@@ -11,6 +11,7 @@ import {
   sendQueueUpdateNotification,
   getNotificationStatus,
   sendAdminNewUserNotification,
+  sendShopOrderConfirmation,
 } from "./notifications.js";
 import { BetaAnalyticsDataClient } from "@google-analytics/data";
 import { readFileSync } from "fs";
@@ -11435,9 +11436,15 @@ app.post("/shop/orders", async (req, reply) => {
     const orderItems = [];
 
     for (const item of items) {
-      const product = await prisma.shopProduct.findUnique({
+      // Support both database ID and slug for product lookup
+      let product = await prisma.shopProduct.findUnique({
         where: { id: item.productId },
       });
+      if (!product) {
+        product = await prisma.shopProduct.findUnique({
+          where: { slug: item.productId },
+        });
+      }
 
       if (!product) {
         return reply.status(400).send({ error: `Product ${item.productId} not found` });
@@ -11568,7 +11575,10 @@ app.post("/shop/orders", async (req, reply) => {
       }
     }
 
-    // TODO: Send order confirmation email
+    // Send order confirmation email
+    sendShopOrderConfirmation(shopOrder).catch(err => {
+      console.error("Failed to send shop order confirmation email:", err);
+    });
 
     return reply.send(shopOrder);
   } catch (error) {
@@ -11719,6 +11729,749 @@ app.get("/users/:id/shop-orders", async (req, reply) => {
     return reply.send(orders);
   } catch (error) {
     console.error("Error fetching user shop orders:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// ====================
+// PROMO CODES
+// ====================
+
+// List all promo codes (admin)
+app.get("/promo-codes", async (req, reply) => {
+  try {
+    const { active, scope } = req.query;
+
+    const where = {};
+    if (active !== undefined) {
+      where.isActive = active === "true";
+    }
+    if (scope) {
+      where.scope = scope;
+    }
+
+    const promoCodes = await prisma.promoCode.findMany({
+      where,
+      include: {
+        _count: { select: { usages: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return reply.send(promoCodes);
+  } catch (error) {
+    console.error("Error fetching promo codes:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Get single promo code
+app.get("/promo-codes/:id", async (req, reply) => {
+  try {
+    const { id } = req.params;
+
+    const promoCode = await prisma.promoCode.findUnique({
+      where: { id },
+      include: {
+        usages: {
+          orderBy: { createdAt: "desc" },
+          take: 50,
+        },
+        _count: { select: { usages: true } },
+      },
+    });
+
+    if (!promoCode) {
+      return reply.status(404).send({ error: "Promo code not found" });
+    }
+
+    return reply.send(promoCode);
+  } catch (error) {
+    console.error("Error fetching promo code:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Create promo code (admin)
+app.post("/promo-codes", async (req, reply) => {
+  try {
+    const {
+      code,
+      discountType,
+      discountValue,
+      maxDiscountCents,
+      scope = "ALL",
+      targetCategories = [],
+      targetProductIds = [],
+      excludedProductIds = [],
+      locationIds = [],
+      totalUsageLimit,
+      perUserLimit = 1,
+      minimumOrderCents,
+      startsAt,
+      expiresAt,
+      description,
+      createdById,
+    } = req.body;
+
+    // Validate required fields
+    if (!code || !discountType || discountValue === undefined) {
+      return reply.status(400).send({
+        error: "Missing required fields: code, discountType, discountValue",
+      });
+    }
+
+    // Validate discount type
+    if (!["PERCENTAGE", "FIXED_AMOUNT", "FREE_SHIPPING"].includes(discountType)) {
+      return reply.status(400).send({
+        error: "Invalid discountType. Must be PERCENTAGE, FIXED_AMOUNT, or FREE_SHIPPING",
+      });
+    }
+
+    // Validate percentage range
+    if (discountType === "PERCENTAGE" && (discountValue < 0 || discountValue > 100)) {
+      return reply.status(400).send({
+        error: "Percentage discount must be between 0 and 100",
+      });
+    }
+
+    // Check for duplicate code
+    const existing = await prisma.promoCode.findUnique({
+      where: { code: code.toUpperCase() },
+    });
+
+    if (existing) {
+      return reply.status(400).send({ error: "Promo code already exists" });
+    }
+
+    const promoCode = await prisma.promoCode.create({
+      data: {
+        code: code.toUpperCase(),
+        discountType,
+        discountValue,
+        maxDiscountCents,
+        scope,
+        targetCategories,
+        targetProductIds,
+        excludedProductIds,
+        locationIds,
+        totalUsageLimit,
+        perUserLimit,
+        minimumOrderCents,
+        startsAt: startsAt ? new Date(startsAt) : new Date(),
+        expiresAt: expiresAt ? new Date(expiresAt) : null,
+        description,
+        createdById,
+        isActive: true,
+      },
+    });
+
+    return reply.send(promoCode);
+  } catch (error) {
+    console.error("Error creating promo code:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Update promo code (admin)
+app.patch("/promo-codes/:id", async (req, reply) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+
+    // Prevent code changes (to maintain integrity)
+    delete updates.code;
+    delete updates.currentUsageCount;
+
+    // Parse dates if provided
+    if (updates.startsAt) {
+      updates.startsAt = new Date(updates.startsAt);
+    }
+    if (updates.expiresAt) {
+      updates.expiresAt = new Date(updates.expiresAt);
+    }
+
+    const promoCode = await prisma.promoCode.update({
+      where: { id },
+      data: updates,
+    });
+
+    return reply.send(promoCode);
+  } catch (error) {
+    console.error("Error updating promo code:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Delete promo code (admin)
+app.delete("/promo-codes/:id", async (req, reply) => {
+  try {
+    const { id } = req.params;
+
+    // Check if promo code has been used
+    const usageCount = await prisma.promoCodeUsage.count({
+      where: { promoCodeId: id },
+    });
+
+    if (usageCount > 0) {
+      // Soft delete by deactivating
+      await prisma.promoCode.update({
+        where: { id },
+        data: { isActive: false },
+      });
+      return reply.send({ message: "Promo code deactivated (has usage history)" });
+    }
+
+    // Hard delete if never used
+    await prisma.promoCode.delete({ where: { id } });
+    return reply.send({ message: "Promo code deleted" });
+  } catch (error) {
+    console.error("Error deleting promo code:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Validate promo code (public - for checkout)
+app.post("/promo-codes/validate", async (req, reply) => {
+  try {
+    const {
+      code,
+      scope,
+      userId,
+      guestId,
+      subtotalCents,
+      locationId,
+      items = [],
+    } = req.body;
+
+    if (!code) {
+      return reply.status(400).send({ valid: false, error: "No code provided" });
+    }
+
+    // Find promo code
+    const promoCode = await prisma.promoCode.findUnique({
+      where: { code: code.toUpperCase() },
+      include: {
+        usages: userId ? { where: { userId } } : undefined,
+        _count: { select: { usages: true } },
+      },
+    });
+
+    if (!promoCode) {
+      return reply.send({ valid: false, error: "Invalid promo code" });
+    }
+
+    // Check if active
+    if (!promoCode.isActive) {
+      return reply.send({ valid: false, error: "This promo code is no longer active" });
+    }
+
+    // Check date validity
+    const now = new Date();
+    if (promoCode.startsAt > now) {
+      return reply.send({ valid: false, error: "This promo code is not yet active" });
+    }
+    if (promoCode.expiresAt && promoCode.expiresAt < now) {
+      return reply.send({ valid: false, error: "This promo code has expired" });
+    }
+
+    // Check scope compatibility
+    if (promoCode.scope !== "ALL" && promoCode.scope !== scope) {
+      const scopeLabels = { MENU: "dining orders", SHOP: "shop orders", GIFT_CARD: "gift card purchases" };
+      return reply.send({
+        valid: false,
+        error: `This promo code is only valid for ${scopeLabels[promoCode.scope] || promoCode.scope}`,
+      });
+    }
+
+    // Check total usage limit
+    if (promoCode.totalUsageLimit && promoCode.currentUsageCount >= promoCode.totalUsageLimit) {
+      return reply.send({ valid: false, error: "This promo code has reached its usage limit" });
+    }
+
+    // Check per-user limit
+    if (userId && promoCode.usages && promoCode.usages.length >= promoCode.perUserLimit) {
+      return reply.send({ valid: false, error: "You have already used this promo code" });
+    }
+
+    // Check minimum order
+    if (promoCode.minimumOrderCents && subtotalCents < promoCode.minimumOrderCents) {
+      const minAmount = (promoCode.minimumOrderCents / 100).toFixed(2);
+      return reply.send({
+        valid: false,
+        error: `Minimum order of $${minAmount} required for this promo code`,
+      });
+    }
+
+    // Check location restrictions
+    if (promoCode.locationIds.length > 0 && locationId) {
+      if (!promoCode.locationIds.includes(locationId)) {
+        return reply.send({ valid: false, error: "This promo code is not valid at this location" });
+      }
+    }
+
+    // Calculate discount
+    let discountCents = 0;
+
+    if (promoCode.discountType === "PERCENTAGE") {
+      discountCents = Math.round((subtotalCents * promoCode.discountValue) / 100);
+      // Apply cap if set
+      if (promoCode.maxDiscountCents && discountCents > promoCode.maxDiscountCents) {
+        discountCents = promoCode.maxDiscountCents;
+      }
+    } else if (promoCode.discountType === "FIXED_AMOUNT") {
+      discountCents = promoCode.discountValue;
+      // Don't exceed subtotal
+      if (discountCents > subtotalCents) {
+        discountCents = subtotalCents;
+      }
+    } else if (promoCode.discountType === "FREE_SHIPPING") {
+      // Free shipping is handled at checkout, just mark as valid
+      discountCents = 0; // Actual shipping discount applied at checkout
+    }
+
+    return reply.send({
+      valid: true,
+      promoCode: {
+        id: promoCode.id,
+        code: promoCode.code,
+        discountType: promoCode.discountType,
+        discountValue: promoCode.discountValue,
+        maxDiscountCents: promoCode.maxDiscountCents,
+        scope: promoCode.scope,
+      },
+      discountCents,
+    });
+  } catch (error) {
+    console.error("Error validating promo code:", error);
+    return reply.status(500).send({ valid: false, error: "Error validating promo code" });
+  }
+});
+
+// Apply promo code usage (internal - called when order is created)
+app.post("/promo-codes/:id/apply", async (req, reply) => {
+  try {
+    const { id } = req.params;
+    const { userId, guestId, orderId, shopOrderId, giftCardId, discountCents } = req.body;
+
+    // Record usage
+    await prisma.promoCodeUsage.create({
+      data: {
+        promoCodeId: id,
+        userId,
+        guestId,
+        orderId,
+        shopOrderId,
+        giftCardId,
+        discountCents,
+      },
+    });
+
+    // Increment usage counter
+    await prisma.promoCode.update({
+      where: { id },
+      data: { currentUsageCount: { increment: 1 } },
+    });
+
+    return reply.send({ success: true });
+  } catch (error) {
+    console.error("Error applying promo code:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// ====================
+// GIFT CARD CONFIGURATION
+// ====================
+
+// Get gift card config (public)
+app.get("/gift-card-config", async (req, reply) => {
+  try {
+    const configs = await prisma.giftCardConfig.findMany({
+      where: { isActive: true },
+      orderBy: { displayOrder: "asc" },
+    });
+
+    // Organize by type
+    const denominations = configs
+      .filter((c) => c.configType === "DENOMINATION" && c.isPreset)
+      .map((c) => ({ id: c.id, amountCents: c.amountCents, displayOrder: c.displayOrder }));
+
+    const customRange = configs.find((c) => c.configType === "DENOMINATION" && !c.isPreset);
+
+    const designs = configs
+      .filter((c) => c.configType === "DESIGN")
+      .map((c) => ({
+        id: c.id,
+        designId: c.designId,
+        designName: c.designName,
+        gradient: c.gradient,
+        displayOrder: c.displayOrder,
+      }));
+
+    return reply.send({
+      denominations,
+      customAmountRange: customRange
+        ? { minAmountCents: customRange.minAmountCents, maxAmountCents: customRange.maxAmountCents }
+        : null,
+      designs,
+    });
+  } catch (error) {
+    console.error("Error fetching gift card config:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Get all gift card config (admin)
+app.get("/admin/gift-card-config", async (req, reply) => {
+  try {
+    const configs = await prisma.giftCardConfig.findMany({
+      orderBy: { displayOrder: "asc" },
+    });
+
+    const denominations = configs
+      .filter((c) => c.configType === "DENOMINATION" && c.isPreset);
+
+    const customRange = configs.find((c) => c.configType === "DENOMINATION" && !c.isPreset);
+
+    const designs = configs.filter((c) => c.configType === "DESIGN");
+
+    return reply.send({ denominations, customRange, designs });
+  } catch (error) {
+    console.error("Error fetching admin gift card config:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Add denomination
+app.post("/admin/gift-card-config/denominations", async (req, reply) => {
+  try {
+    const { amountCents, displayOrder = 0 } = req.body;
+
+    if (!amountCents || amountCents <= 0) {
+      return reply.status(400).send({ error: "Invalid amount" });
+    }
+
+    const config = await prisma.giftCardConfig.create({
+      data: {
+        configType: "DENOMINATION",
+        isPreset: true,
+        amountCents,
+        displayOrder,
+        isActive: true,
+      },
+    });
+
+    return reply.send(config);
+  } catch (error) {
+    console.error("Error adding denomination:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Update denomination
+app.patch("/admin/gift-card-config/denominations/:id", async (req, reply) => {
+  try {
+    const { id } = req.params;
+    const { amountCents, displayOrder, isActive } = req.body;
+
+    const config = await prisma.giftCardConfig.update({
+      where: { id },
+      data: {
+        ...(amountCents !== undefined && { amountCents }),
+        ...(displayOrder !== undefined && { displayOrder }),
+        ...(isActive !== undefined && { isActive }),
+      },
+    });
+
+    return reply.send(config);
+  } catch (error) {
+    console.error("Error updating denomination:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Delete denomination
+app.delete("/admin/gift-card-config/denominations/:id", async (req, reply) => {
+  try {
+    const { id } = req.params;
+    await prisma.giftCardConfig.delete({ where: { id } });
+    return reply.send({ message: "Denomination deleted" });
+  } catch (error) {
+    console.error("Error deleting denomination:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Update custom amount range
+app.patch("/admin/gift-card-config/custom-range", async (req, reply) => {
+  try {
+    const { minAmountCents, maxAmountCents } = req.body;
+
+    // Find existing custom range config
+    let config = await prisma.giftCardConfig.findFirst({
+      where: { configType: "DENOMINATION", isPreset: false },
+    });
+
+    if (config) {
+      config = await prisma.giftCardConfig.update({
+        where: { id: config.id },
+        data: { minAmountCents, maxAmountCents },
+      });
+    } else {
+      config = await prisma.giftCardConfig.create({
+        data: {
+          configType: "DENOMINATION",
+          isPreset: false,
+          minAmountCents,
+          maxAmountCents,
+          displayOrder: 99,
+          isActive: true,
+        },
+      });
+    }
+
+    return reply.send(config);
+  } catch (error) {
+    console.error("Error updating custom range:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Add design
+app.post("/admin/gift-card-config/designs", async (req, reply) => {
+  try {
+    const { designId, designName, gradient, displayOrder = 0 } = req.body;
+
+    if (!designId || !designName || !gradient) {
+      return reply.status(400).send({ error: "Missing required fields: designId, designName, gradient" });
+    }
+
+    const config = await prisma.giftCardConfig.create({
+      data: {
+        configType: "DESIGN",
+        designId,
+        designName,
+        gradient,
+        displayOrder,
+        isActive: true,
+      },
+    });
+
+    return reply.send(config);
+  } catch (error) {
+    console.error("Error adding design:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Update design
+app.patch("/admin/gift-card-config/designs/:id", async (req, reply) => {
+  try {
+    const { id } = req.params;
+    const { designName, gradient, displayOrder, isActive } = req.body;
+
+    const config = await prisma.giftCardConfig.update({
+      where: { id },
+      data: {
+        ...(designName !== undefined && { designName }),
+        ...(gradient !== undefined && { gradient }),
+        ...(displayOrder !== undefined && { displayOrder }),
+        ...(isActive !== undefined && { isActive }),
+      },
+    });
+
+    return reply.send(config);
+  } catch (error) {
+    console.error("Error updating design:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Delete design
+app.delete("/admin/gift-card-config/designs/:id", async (req, reply) => {
+  try {
+    const { id } = req.params;
+    await prisma.giftCardConfig.delete({ where: { id } });
+    return reply.send({ message: "Design deleted" });
+  } catch (error) {
+    console.error("Error deleting design:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// ====================
+// SHOP PRODUCTS (Admin)
+// ====================
+
+// List all products (admin - includes unavailable)
+app.get("/admin/shop/products", async (req, reply) => {
+  try {
+    const { category, available } = req.query;
+
+    const where = {};
+    if (category) {
+      where.category = category;
+    }
+    if (available !== undefined) {
+      where.isAvailable = available === "true";
+    }
+
+    const products = await prisma.shopProduct.findMany({
+      where,
+      orderBy: [{ category: "asc" }, { createdAt: "desc" }],
+    });
+
+    return reply.send(products);
+  } catch (error) {
+    console.error("Error fetching admin shop products:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Create product (admin)
+app.post("/admin/shop/products", async (req, reply) => {
+  try {
+    const {
+      slug,
+      sku,
+      name,
+      nameZhTW,
+      nameZhCN,
+      nameEs,
+      description,
+      descriptionZhTW,
+      descriptionZhCN,
+      descriptionEs,
+      priceCents,
+      category,
+      imageUrl,
+      isAvailable = true,
+      stockCount,
+      lowStockThreshold,
+      variants,
+      weightOz,
+      locationIds = [],
+    } = req.body;
+
+    // Validate required fields
+    if (!slug || !name || priceCents === undefined || !category) {
+      return reply.status(400).send({
+        error: "Missing required fields: slug, name, priceCents, category",
+      });
+    }
+
+    // Validate category
+    const validCategories = ["FOOD", "CONDIMENTS", "MERCHANDISE", "APPAREL", "LIMITED_EDITION"];
+    if (!validCategories.includes(category)) {
+      return reply.status(400).send({ error: `Invalid category. Must be one of: ${validCategories.join(", ")}` });
+    }
+
+    // Check for duplicate slug
+    const existing = await prisma.shopProduct.findUnique({ where: { slug } });
+    if (existing) {
+      return reply.status(400).send({ error: "Product slug already exists" });
+    }
+
+    const product = await prisma.shopProduct.create({
+      data: {
+        slug,
+        sku,
+        name,
+        nameZhTW,
+        nameZhCN,
+        nameEs,
+        description,
+        descriptionZhTW,
+        descriptionZhCN,
+        descriptionEs,
+        priceCents,
+        category,
+        imageUrl,
+        isAvailable,
+        stockCount,
+        lowStockThreshold,
+        variants: variants ? JSON.parse(variants) : undefined,
+        weightOz,
+        locationIds,
+      },
+    });
+
+    return reply.send(product);
+  } catch (error) {
+    console.error("Error creating shop product:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Update product (admin)
+app.patch("/admin/shop/products/:id", async (req, reply) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+
+    // Parse variants if provided as string
+    if (updates.variants && typeof updates.variants === "string") {
+      updates.variants = JSON.parse(updates.variants);
+    }
+
+    const product = await prisma.shopProduct.update({
+      where: { id },
+      data: updates,
+    });
+
+    return reply.send(product);
+  } catch (error) {
+    console.error("Error updating shop product:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Delete product (admin)
+app.delete("/admin/shop/products/:id", async (req, reply) => {
+  try {
+    const { id } = req.params;
+
+    // Check if product has order history
+    const orderCount = await prisma.shopOrderItem.count({
+      where: { productId: id },
+    });
+
+    if (orderCount > 0) {
+      // Soft delete by marking unavailable
+      await prisma.shopProduct.update({
+        where: { id },
+        data: { isAvailable: false },
+      });
+      return reply.send({ message: "Product marked as unavailable (has order history)" });
+    }
+
+    // Hard delete if never ordered
+    await prisma.shopProduct.delete({ where: { id } });
+    return reply.send({ message: "Product deleted" });
+  } catch (error) {
+    console.error("Error deleting shop product:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Bulk update availability (admin)
+app.patch("/admin/shop/products/bulk-availability", async (req, reply) => {
+  try {
+    const { productIds, isAvailable } = req.body;
+
+    if (!productIds || !Array.isArray(productIds)) {
+      return reply.status(400).send({ error: "productIds must be an array" });
+    }
+
+    const result = await prisma.shopProduct.updateMany({
+      where: { id: { in: productIds } },
+      data: { isAvailable },
+    });
+
+    return reply.send({ updated: result.count });
+  } catch (error) {
+    console.error("Error bulk updating product availability:", error);
     return reply.status(500).send({ error: error.message });
   }
 });

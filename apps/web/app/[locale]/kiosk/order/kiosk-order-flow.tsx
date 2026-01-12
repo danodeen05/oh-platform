@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { QRCodeSVG } from "qrcode.react";
 import { pdf } from "@react-pdf/renderer";
-import { VirtualKeyboard, PrintableReceipt, generateQRDataUrl, LanguageSelector, useKioskScale } from "@/components/kiosk";
+import { VirtualKeyboard, PrintableReceipt, generateQRDataUrl, LanguageSelector, useKioskScale, useKioskPrinter } from "@/components/kiosk";
 import { PaymentScreen } from "@/components/kiosk/PaymentScreen";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -5717,11 +5717,25 @@ function CompleteView({
   const [countdown, setCountdown] = useState(30);
   const [shouldRedirect, setShouldRedirect] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
+  const { printQRSlip, isConnected: isPrinterConnected } = useKioskPrinter();
+  const hasAutoPrinted = useRef(false);
 
   // Scroll to top on mount
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
   }, []);
+
+  // Auto-print receipts when order completes (if thermal printer connected)
+  useEffect(() => {
+    if (isPrinterConnected && guestOrders.length > 0 && !hasAutoPrinted.current) {
+      hasAutoPrinted.current = true;
+      // Small delay to ensure UI is ready
+      const timer = setTimeout(() => {
+        handlePrint();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isPrinterConnected, guestOrders.length]);
 
   // Auto-reset countdown
   useEffect(() => {
@@ -5751,15 +5765,33 @@ function CompleteView({
     return `${baseUrl}/order/status?orderQrCode=${encodeURIComponent(qrCode || "")}`;
   };
 
-  // Handle printing receipts
+  // Handle printing receipts - uses thermal printer if available, falls back to PDF
   const handlePrint = async () => {
     setIsPrinting(true);
     try {
       for (const guest of guestOrders) {
         const pod = seats.find((s) => s.id === guest.selectedPodId);
         const qrUrl = getQRValue(guest);
-        const qrDataUrl = await generateQRDataUrl(qrUrl);
 
+        // Try thermal printer first (Epson TM-m30III via ePOS SDK)
+        if (isPrinterConnected) {
+          const success = await printQRSlip({
+            guestName: guest.guestName,
+            dailyOrderNumber: String(guest.dailyOrderNumber || guest.orderNumber || ""),
+            qrCodeUrl: qrUrl,
+            podNumber: pod?.number,
+            queuePosition: guest.queuePosition,
+            estimatedWaitMinutes: guest.estimatedWaitMinutes,
+          });
+          if (success) {
+            console.log("[Kiosk] Thermal receipt printed for", guest.guestName);
+            continue; // Move to next guest
+          }
+          console.warn("[Kiosk] Thermal print failed, falling back to PDF");
+        }
+
+        // Fallback to PDF printing (browser print dialog)
+        const qrDataUrl = await generateQRDataUrl(qrUrl);
         const doc = (
           <PrintableReceipt
             guestName={guest.guestName}

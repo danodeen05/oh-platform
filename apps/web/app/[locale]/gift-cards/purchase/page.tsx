@@ -8,20 +8,37 @@ import { useTranslations } from "next-intl";
 import { useUser } from "@clerk/nextjs";
 import { useGuest } from "@/contexts/guest-context";
 import { StripeProvider, PaymentForm, type SavedPaymentMethod } from "@/components/payments";
+import { PromoCodeInput, type AppliedPromo } from "@/components/PromoCodeInput";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 // Step definitions
 type Step = "amount" | "recipient" | "payment" | "confirmation";
 
-// Gift card design options
-const cardDesigns = [
-  { id: "classic", name: "Classic", gradient: "linear-gradient(135deg, #7C7A67 0%, #5a584a 100%)" },
-  { id: "dark", name: "Dark", gradient: "linear-gradient(135deg, #222222 0%, #444444 100%)" },
-  { id: "gold", name: "Gold", gradient: "linear-gradient(135deg, #C7A878 0%, #8B7355 100%)" },
+// Types for gift card config from API
+interface GiftCardDesign {
+  id: string;
+  designId: string;
+  designName: string;
+  gradient: string;
+  displayOrder: number;
+}
+
+interface GiftCardConfig {
+  denominations: { id: string; amountCents: number; displayOrder: number }[];
+  customAmountRange: { minAmountCents: number; maxAmountCents: number } | null;
+  designs: GiftCardDesign[];
+}
+
+// Fallback values (used while loading or if API fails)
+const fallbackDesigns = [
+  { id: "classic", designId: "classic", designName: "Classic", gradient: "linear-gradient(135deg, #7C7A67 0%, #5a584a 100%)", displayOrder: 0 },
+  { id: "dark", designId: "dark", designName: "Dark", gradient: "linear-gradient(135deg, #222222 0%, #444444 100%)", displayOrder: 1 },
+  { id: "gold", designId: "gold", designName: "Gold", gradient: "linear-gradient(135deg, #C7A878 0%, #8B7355 100%)", displayOrder: 2 },
 ];
 
-const presetAmounts = [25, 50, 75, 100, 150, 200];
+const fallbackAmounts = [25, 50, 75, 100, 150, 200];
+const fallbackCustomRange = { minAmountCents: 1000, maxAmountCents: 50000 };
 
 interface UserCredits {
   referralCredits: number;
@@ -51,6 +68,47 @@ export default function GiftCardPurchasePage() {
   const initialAmount = searchParams.get("amount");
   const initialDesign = searchParams.get("design");
 
+  // Gift card config from API
+  const [configLoading, setConfigLoading] = useState(true);
+  const [cardDesigns, setCardDesigns] = useState<GiftCardDesign[]>(fallbackDesigns);
+  const [presetAmounts, setPresetAmounts] = useState<number[]>(fallbackAmounts);
+  const [customAmountRange, setCustomAmountRange] = useState(fallbackCustomRange);
+
+  // Fetch gift card config on mount
+  useEffect(() => {
+    async function fetchConfig() {
+      try {
+        const res = await fetch(`${API_URL}/gift-card-config`);
+        if (res.ok) {
+          const config: GiftCardConfig = await res.json();
+
+          // Update designs
+          if (config.designs && config.designs.length > 0) {
+            setCardDesigns(config.designs);
+          }
+
+          // Update preset amounts (convert from cents to dollars)
+          if (config.denominations && config.denominations.length > 0) {
+            const amounts = config.denominations
+              .sort((a, b) => a.displayOrder - b.displayOrder)
+              .map(d => d.amountCents / 100);
+            setPresetAmounts(amounts);
+          }
+
+          // Update custom amount range
+          if (config.customAmountRange) {
+            setCustomAmountRange(config.customAmountRange);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch gift card config:", err);
+        // Keep fallback values
+      }
+      setConfigLoading(false);
+    }
+    fetchConfig();
+  }, []);
+
   // Step tracking
   const [currentStep, setCurrentStep] = useState<Step>("amount");
 
@@ -58,7 +116,7 @@ export default function GiftCardPurchasePage() {
   const [selectedAmount, setSelectedAmount] = useState<number | null>(() => {
     if (initialAmount) {
       const amount = parseInt(initialAmount, 10);
-      if (presetAmounts.includes(amount)) return amount;
+      if (fallbackAmounts.includes(amount)) return amount;
       return null;
     }
     return 50;
@@ -66,14 +124,14 @@ export default function GiftCardPurchasePage() {
   const [customAmount, setCustomAmount] = useState(() => {
     if (initialAmount) {
       const amount = parseInt(initialAmount, 10);
-      if (!presetAmounts.includes(amount) && amount >= 10 && amount <= 500) {
+      if (!fallbackAmounts.includes(amount) && amount >= 10 && amount <= 500) {
         return initialAmount;
       }
     }
     return "";
   });
   const [selectedDesign, setSelectedDesign] = useState(() => {
-    if (initialDesign && cardDesigns.some(d => d.id === initialDesign)) {
+    if (initialDesign && fallbackDesigns.some(d => d.designId === initialDesign)) {
       return initialDesign;
     }
     return "classic";
@@ -89,6 +147,7 @@ export default function GiftCardPurchasePage() {
   // Payment state
   const [applyCredits, setApplyCredits] = useState(true);
   const [userCredits, setUserCredits] = useState<UserCredits | null>(null);
+  const [appliedPromo, setAppliedPromo] = useState<AppliedPromo | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [savedPaymentMethods, setSavedPaymentMethods] = useState<SavedPaymentMethod[]>([]);
   const [stripeCustomerId, setStripeCustomerId] = useState<string | null>(null);
@@ -108,43 +167,65 @@ export default function GiftCardPurchasePage() {
 
   // Calculate amounts
   const amountCents = (selectedAmount || Number(customAmount) || 0) * 100;
-  const currentDesign = cardDesigns.find(d => d.id === selectedDesign) || cardDesigns[0];
+  const currentDesign = cardDesigns.find(d => d.designId === selectedDesign) || cardDesigns[0];
+
+  // Min/max custom amounts in dollars
+  const minCustomAmount = customAmountRange.minAmountCents / 100;
+  const maxCustomAmount = customAmountRange.maxAmountCents / 100;
+
+  // Promo discount applied
+  const promoDiscount = appliedPromo?.discountCents || 0;
+  const amountAfterPromo = Math.max(0, amountCents - promoDiscount);
 
   // Credits applied (UNLIMITED for gift cards)
   const creditsToApply = applyCredits && userCredits
-    ? Math.min(userCredits.totalCredits, amountCents)
+    ? Math.min(userCredits.totalCredits, amountAfterPromo)
     : 0;
-  const amountAfterCredits = amountCents - creditsToApply;
+  const amountAfterCredits = amountAfterPromo - creditsToApply;
+
+  // Internal user ID from our database
+  const [internalUserId, setInternalUserId] = useState<string | null>(null);
 
   // Fetch user credits and saved payment methods
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.primaryEmailAddress?.emailAddress) return;
 
     const fetchUserData = async () => {
       try {
-        // Fetch user with credits
-        const userRes = await fetch(`${API_URL}/users/${user.id}`);
-        if (userRes.ok) {
-          const userData = await userRes.json();
-          setUserCredits({
-            referralCredits: userData.referralCredits || 0,
-            giftCreditsReceived: userData.giftCreditsReceived || 0,
-            totalCredits: (userData.referralCredits || 0) + (userData.giftCreditsReceived || 0),
-          });
-        }
-
-        // Fetch or create Stripe customer
-        const customerRes = await fetch(`${API_URL}/users/${user.id}/stripe-customer`, {
+        // Create or get user in our system
+        const userRes = await fetch(`${API_URL}/users`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: user.primaryEmailAddress?.emailAddress,
+            name: user.fullName || user.firstName || undefined,
+          }),
+        });
+
+        if (!userRes.ok) {
+          console.error("Failed to initialize user");
+          return;
+        }
+
+        const userData = await userRes.json();
+        setInternalUserId(userData.id);
+        setUserCredits({
+          referralCredits: userData.creditsCents || 0,
+          giftCreditsReceived: 0,
+          totalCredits: userData.creditsCents || 0,
+        });
+
+        // Fetch or create Stripe customer
+        const customerRes = await fetch(`${API_URL}/users/${userData.id}/stripe-customer`, {
+          method: "POST",
         });
         if (customerRes.ok) {
           const customerData = await customerRes.json();
-          setStripeCustomerId(customerData.stripeCustomerId);
+          setStripeCustomerId(customerData.customerId);
         }
 
         // Fetch saved payment methods
-        const methodsRes = await fetch(`${API_URL}/users/${user.id}/payment-methods`);
+        const methodsRes = await fetch(`${API_URL}/users/${userData.id}/payment-methods`);
         if (methodsRes.ok) {
           const methods = await methodsRes.json();
           setSavedPaymentMethods(methods);
@@ -155,7 +236,7 @@ export default function GiftCardPurchasePage() {
     };
 
     fetchUserData();
-  }, [user?.id]);
+  }, [user?.primaryEmailAddress?.emailAddress, user?.fullName, user?.firstName]);
 
   // Create PaymentIntent when entering payment step
   const createPaymentIntent = useCallback(async () => {
@@ -203,7 +284,7 @@ export default function GiftCardPurchasePage() {
   const validateStep = (step: Step): boolean => {
     switch (step) {
       case "amount":
-        return amountCents >= 1000 && amountCents <= 50000; // $10-$500
+        return amountCents >= customAmountRange.minAmountCents && amountCents <= customAmountRange.maxAmountCents;
       case "recipient":
         return (
           recipientEmail.includes("@") &&
@@ -243,9 +324,11 @@ export default function GiftCardPurchasePage() {
           recipientEmail,
           recipientName,
           personalMessage,
-          purchaserId: user?.id,
+          purchaserId: internalUserId,
           guestId: isGuest ? guestId : undefined,
           creditsApplied: creditsToApply,
+          promoCodeId: appliedPromo?.id,
+          promoDiscountCents: promoDiscount,
           // No stripePaymentId since it's free
         }),
       });
@@ -280,9 +363,11 @@ export default function GiftCardPurchasePage() {
           recipientEmail,
           recipientName,
           personalMessage,
-          purchaserId: user?.id,
+          purchaserId: internalUserId,
           guestId: isGuest ? guestId : undefined,
           creditsApplied: creditsToApply,
+          promoCodeId: appliedPromo?.id,
+          promoDiscountCents: promoDiscount,
           stripePaymentId: stripePaymentIntentId,
         }),
       });
@@ -477,19 +562,19 @@ export default function GiftCardPurchasePage() {
               <div style={{ display: "flex", gap: "12px" }}>
                 {cardDesigns.map((design) => (
                   <button
-                    key={design.id}
-                    onClick={() => setSelectedDesign(design.id)}
+                    key={design.designId}
+                    onClick={() => setSelectedDesign(design.designId)}
                     style={{
                       width: "64px",
                       height: "40px",
                       borderRadius: "10px",
                       background: design.gradient,
-                      border: selectedDesign === design.id ? "3px solid #7C7A67" : "3px solid transparent",
+                      border: selectedDesign === design.designId ? "3px solid #7C7A67" : "3px solid transparent",
                       cursor: "pointer",
                       transition: "all 0.2s ease",
-                      boxShadow: selectedDesign === design.id ? "0 4px 12px rgba(0,0,0,0.2)" : "none",
+                      boxShadow: selectedDesign === design.designId ? "0 4px 12px rgba(0,0,0,0.2)" : "none",
                     }}
-                    title={design.name}
+                    title={design.designName}
                   />
                 ))}
               </div>
@@ -529,7 +614,7 @@ export default function GiftCardPurchasePage() {
               {/* Custom Amount */}
               <div style={{ background: "white", borderRadius: "12px", padding: "16px", boxShadow: "0 2px 8px rgba(0,0,0,0.05)" }}>
                 <label style={{ fontSize: "0.85rem", color: "#666", display: "block", marginBottom: "8px" }}>
-                  Or enter custom amount ($10-$500)
+                  Or enter custom amount (${customAmountRange.minAmountCents / 100}-${customAmountRange.maxAmountCents / 100})
                 </label>
                 <div style={{ position: "relative" }}>
                   <span style={{ position: "absolute", left: "16px", top: "50%", transform: "translateY(-50%)", color: "#7C7A67", fontSize: "1.25rem", fontWeight: "500" }}>
@@ -537,8 +622,8 @@ export default function GiftCardPurchasePage() {
                   </span>
                   <input
                     type="number"
-                    min="10"
-                    max="500"
+                    min={customAmountRange.minAmountCents / 100}
+                    max={customAmountRange.maxAmountCents / 100}
                     value={customAmount}
                     onChange={(e) => {
                       setCustomAmount(e.target.value);
@@ -822,6 +907,23 @@ export default function GiftCardPurchasePage() {
                 </div>
               </div>
 
+              {/* Promo Code Section */}
+              <div style={{ marginBottom: "20px", paddingBottom: "20px", borderBottom: "1px solid #e5e7eb" }}>
+                <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "500", color: "#555", marginBottom: "8px" }}>
+                  Promo Code
+                </label>
+                <PromoCodeInput
+                  scope="GIFT_CARD"
+                  subtotalCents={amountCents}
+                  userId={internalUserId || undefined}
+                  guestId={isGuest ? guestId || undefined : undefined}
+                  onApply={(promo) => setAppliedPromo(promo)}
+                  onRemove={() => setAppliedPromo(null)}
+                  appliedPromo={appliedPromo}
+                  placeholder="Enter promo code"
+                />
+              </div>
+
               {/* Credits Section - Only for signed-in users */}
               {user && userCredits && userCredits.totalCredits > 0 && (
                 <div style={{ marginBottom: "20px", paddingBottom: "20px", borderBottom: "1px solid #e5e7eb" }}>
@@ -856,11 +958,29 @@ export default function GiftCardPurchasePage() {
                 </div>
               )}
 
-              {/* Total */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div style={{ fontSize: "1.1rem", fontWeight: "600", color: "#222" }}>Total</div>
-                <div style={{ fontSize: "1.25rem", fontWeight: "700", color: "#7C7A67" }}>
-                  ${(amountAfterCredits / 100).toFixed(2)}
+              {/* Totals Summary */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ fontSize: "0.95rem", color: "#666" }}>Subtotal</div>
+                  <div style={{ fontWeight: "500", color: "#222" }}>${(amountCents / 100).toFixed(2)}</div>
+                </div>
+                {promoDiscount > 0 && (
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ fontSize: "0.95rem", color: "#16a34a" }}>Promo ({appliedPromo?.code})</div>
+                    <div style={{ fontWeight: "500", color: "#16a34a" }}>-${(promoDiscount / 100).toFixed(2)}</div>
+                  </div>
+                )}
+                {creditsToApply > 0 && (
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div style={{ fontSize: "0.95rem", color: "#16a34a" }}>Credits Applied</div>
+                    <div style={{ fontWeight: "500", color: "#16a34a" }}>-${(creditsToApply / 100).toFixed(2)}</div>
+                  </div>
+                )}
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "8px", borderTop: "1px solid #e5e7eb" }}>
+                  <div style={{ fontSize: "1.1rem", fontWeight: "600", color: "#222" }}>Total</div>
+                  <div style={{ fontSize: "1.25rem", fontWeight: "700", color: "#7C7A67" }}>
+                    ${(amountAfterCredits / 100).toFixed(2)}
+                  </div>
                 </div>
               </div>
             </div>

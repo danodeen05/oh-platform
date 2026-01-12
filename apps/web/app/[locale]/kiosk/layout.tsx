@@ -3,7 +3,7 @@ import { useState, useEffect, ReactNode, Suspense } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import "./kiosk.css";
-import { IdleTimer, KioskDeviceProvider, useKioskDevice, KioskLockdown } from "@/components/kiosk";
+import { IdleTimer, KioskDeviceProvider, useKioskDevice, KioskLockdown, KioskPrinterProvider } from "@/components/kiosk";
 
 // Default staff PIN - in production this would come from environment/config
 const STAFF_PIN = process.env.NEXT_PUBLIC_KIOSK_STAFF_PIN || "1234";
@@ -148,6 +148,7 @@ export default function KioskLayout({ children }: { children: ReactNode }) {
 
   return (
     <KioskDeviceProvider>
+      <KioskPrinterProvider autoConnect>
       <DeviceAuthRedirect>
         <div className="kiosk-container kiosk-no-select" style={{ position: "relative" }}>
           {/* Idle Timer - auto-return to attract screen after 45s inactivity, reset to English */}
@@ -292,6 +293,7 @@ export default function KioskLayout({ children }: { children: ReactNode }) {
       )}
         </div>
       </DeviceAuthRedirect>
+      </KioskPrinterProvider>
     </KioskDeviceProvider>
   );
 }

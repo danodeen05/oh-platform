@@ -340,6 +340,11 @@ model Order {
   waitQueueEntry WaitQueue?
   mealGift       MealGift?
 
+  // Promo code applied
+  promoCodeId        String?
+  promoCode          PromoCode? @relation(fields: [promoCodeId], references: [id])
+  promoDiscountCents Int        @default(0)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -938,6 +943,11 @@ model GiftCard {
   // Payment tracking
   stripePaymentId String?
 
+  // Promo code applied during purchase
+  promoCodeId        String?
+  promoCode          PromoCode? @relation(fields: [promoCodeId], references: [id])
+  promoDiscountCents Int        @default(0)
+
   status GiftCardStatus @default(ACTIVE)
 
   // Timestamps
@@ -1060,6 +1070,11 @@ model ShopOrder {
   giftCardId      String?
   giftCard        GiftCard? @relation(fields: [giftCardId], references: [id])
 
+  // Promo code applied
+  promoCodeId        String?
+  promoCode          PromoCode? @relation(fields: [promoCodeId], references: [id])
+  promoDiscountCents Int        @default(0)
+
   // Fulfillment type
   fulfillmentType ShopFulfillmentType
 
@@ -1126,6 +1141,139 @@ model ShopOrderItem {
 
   @@index([orderId])
   @@index([productId])
+}
+
+// ==========================================
+// PROMO CODES
+// ==========================================
+
+model PromoCode {
+  id   String @id @default(cuid())
+  code String @unique // e.g., "SUMMER20", "FREESHIP50"
+
+  // Discount Configuration
+  discountType     PromoDiscountType
+  discountValue    Int // Cents for FIXED_AMOUNT, percentage (0-100) for PERCENTAGE
+  maxDiscountCents Int? // Cap for percentage discounts (e.g., max $50 off)
+
+  // Scope - where this code can be used
+  scope PromoScope @default(ALL)
+
+  // Category/Product targeting (arrays for flexibility)
+  // For MENU scope: ["MAIN", "SLIDER", "ADDON", "SIDE", "DRINK", "DESSERT"]
+  // For SHOP scope: ["FOOD", "CONDIMENTS", "MERCHANDISE", "APPAREL", "LIMITED_EDITION"]
+  targetCategories   String[] // Empty = all categories
+  targetProductIds   String[] // Empty = all products, specific IDs = only those products
+  excludedProductIds String[] // Products explicitly excluded
+
+  // Location restrictions
+  locationIds String[] // Empty = all locations
+
+  // Usage Limits
+  totalUsageLimit   Int? // null = unlimited
+  perUserLimit      Int  @default(1)
+  currentUsageCount Int  @default(0)
+
+  // Order Requirements
+  minimumOrderCents Int? // Minimum subtotal required
+
+  // Validity Period
+  startsAt  DateTime @default(now())
+  expiresAt DateTime?
+
+  // Status
+  isActive Boolean @default(true)
+
+  // Metadata
+  description String? // Internal description for admin
+  createdById String? // Admin who created it
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  usages     PromoCodeUsage[]
+  orders     Order[]
+  shopOrders ShopOrder[]
+  giftCards  GiftCard[]
+
+  @@index([code])
+  @@index([isActive, expiresAt])
+  @@index([scope])
+}
+
+enum PromoDiscountType {
+  PERCENTAGE // e.g., 20% off
+  FIXED_AMOUNT // e.g., $10 off
+  FREE_SHIPPING // Waive shipping cost (shop orders only)
+}
+
+enum PromoScope {
+  ALL // Works on menu orders, shop orders, and gift cards
+  MENU // Menu/dining orders only
+  SHOP // E-commerce shop orders only
+  GIFT_CARD // Gift card purchases only
+}
+
+model PromoCodeUsage {
+  id          String    @id @default(cuid())
+  promoCodeId String
+  promoCode   PromoCode @relation(fields: [promoCodeId], references: [id])
+
+  // Who used it
+  userId  String?
+  guestId String?
+
+  // What it was applied to (only one will be set)
+  orderId     String? // For menu orders
+  shopOrderId String? // For shop orders
+  giftCardId  String? // For gift card purchases
+
+  // Discount applied
+  discountCents Int
+
+  createdAt DateTime @default(now())
+
+  @@index([promoCodeId])
+  @@index([userId])
+}
+
+// ==========================================
+// GIFT CARD CONFIGURATION
+// ==========================================
+
+model GiftCardConfig {
+  id String @id @default(cuid())
+
+  // Configuration type
+  configType GiftCardConfigType
+
+  // For DENOMINATION type (preset amounts)
+  amountCents Int?
+  isPreset    Boolean @default(true) // false = custom amount range config
+
+  // For custom amount range (only one record with isPreset=false)
+  minAmountCents Int?
+  maxAmountCents Int?
+
+  // For DESIGN type
+  designId   String? @unique // e.g., "classic", "dark", "gold"
+  designName String?
+  gradient   String? // CSS gradient string
+
+  // Ordering and display
+  displayOrder Int     @default(0)
+  isActive     Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([configType, isActive])
+}
+
+enum GiftCardConfigType {
+  DENOMINATION
+  DESIGN
 }
 
 // ==========================================

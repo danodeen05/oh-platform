@@ -9,6 +9,7 @@ import { useUser } from "@clerk/nextjs";
 import { useGuest } from "@/contexts/guest-context";
 import { useCart } from "@/contexts/cart-context";
 import { StripeProvider, PaymentForm, type SavedPaymentMethod } from "@/components/payments";
+import { PromoCodeInput, type AppliedPromo } from "@/components/PromoCodeInput";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
@@ -27,12 +28,15 @@ export default function CheckoutPage() {
   const { guestId, isGuest } = useGuest();
   const { items, itemCount, subtotalCents, clearCart } = useCart();
 
-  // Redirect if cart is empty
+  // Track if order completed successfully (to prevent redirect race condition)
+  const [orderCompleted, setOrderCompleted] = useState(false);
+
+  // Redirect if cart is empty (but not if order just completed)
   useEffect(() => {
-    if (items.length === 0) {
+    if (items.length === 0 && !orderCompleted) {
       router.push(`/${locale}/store`);
     }
-  }, [items.length, router, locale]);
+  }, [items.length, router, locale, orderCompleted]);
 
   // Shipping form
   const [shippingName, setShippingName] = useState("");
@@ -56,6 +60,9 @@ export default function CheckoutPage() {
   const [giftCardError, setGiftCardError] = useState<string | null>(null);
   const [giftCardLoading, setGiftCardLoading] = useState(false);
 
+  // Promo Code
+  const [appliedPromo, setAppliedPromo] = useState<AppliedPromo | null>(null);
+
   // Payment
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [savedPaymentMethods, setSavedPaymentMethods] = useState<SavedPaymentMethod[]>([]);
@@ -69,7 +76,12 @@ export default function CheckoutPage() {
   // Calculate totals
   const shippingCents = subtotalCents >= 7500 ? 0 : 799;
   const taxCents = Math.round(subtotalCents * 0.0825);
-  const orderTotalCents = subtotalCents + shippingCents + taxCents;
+
+  // Promo discount applied (applies to subtotal, or shipping for FREE_SHIPPING)
+  const promoDiscount = appliedPromo?.discountCents || 0;
+  const effectiveShipping = appliedPromo?.discountType === 'FREE_SHIPPING' ? 0 : shippingCents;
+
+  const orderTotalCents = subtotalCents + effectiveShipping + taxCents - (appliedPromo?.discountType !== 'FREE_SHIPPING' ? promoDiscount : 0);
 
   // Credits applied (UNLIMITED for shop orders)
   const creditsToApply = applyCredits && userCredits
@@ -79,7 +91,7 @@ export default function CheckoutPage() {
   // Gift card applied
   const giftCardToApply = giftCardApplied?.amountToApply || 0;
 
-  // Amount after discounts
+  // Amount after all discounts
   const amountAfterCredits = orderTotalCents - creditsToApply - giftCardToApply;
 
   // Pre-fill email for signed-in users
@@ -92,35 +104,49 @@ export default function CheckoutPage() {
     }
   }, [user]);
 
+  // Internal user ID from our database
+  const [internalUserId, setInternalUserId] = useState<string | null>(null);
+
   // Fetch user credits and saved payment methods
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.primaryEmailAddress?.emailAddress) return;
 
     const fetchUserData = async () => {
       try {
-        // Fetch user with credits
-        const userRes = await fetch(`${API_URL}/users/${user.id}`);
-        if (userRes.ok) {
-          const userData = await userRes.json();
-          setUserCredits({
-            referralCredits: userData.referralCredits || 0,
-            giftCreditsReceived: userData.giftCreditsReceived || 0,
-            totalCredits: (userData.referralCredits || 0) + (userData.giftCreditsReceived || 0),
-          });
-        }
-
-        // Fetch or create Stripe customer
-        const customerRes = await fetch(`${API_URL}/users/${user.id}/stripe-customer`, {
+        // Create or get user in our system (same pattern as order payment)
+        const userRes = await fetch(`${API_URL}/users`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: user.primaryEmailAddress?.emailAddress,
+            name: user.fullName || user.firstName || undefined,
+          }),
+        });
+
+        if (!userRes.ok) {
+          console.error("Failed to initialize user");
+          return;
+        }
+
+        const userData = await userRes.json();
+        setInternalUserId(userData.id);
+        setUserCredits({
+          referralCredits: userData.creditsCents || 0,
+          giftCreditsReceived: 0,
+          totalCredits: userData.creditsCents || 0,
+        });
+
+        // Fetch or create Stripe customer
+        const customerRes = await fetch(`${API_URL}/users/${userData.id}/stripe-customer`, {
+          method: "POST",
         });
         if (customerRes.ok) {
           const customerData = await customerRes.json();
-          setStripeCustomerId(customerData.stripeCustomerId);
+          setStripeCustomerId(customerData.customerId);
         }
 
         // Fetch saved payment methods
-        const methodsRes = await fetch(`${API_URL}/users/${user.id}/payment-methods`);
+        const methodsRes = await fetch(`${API_URL}/users/${userData.id}/payment-methods`);
         if (methodsRes.ok) {
           const methods = await methodsRes.json();
           setSavedPaymentMethods(methods);
@@ -131,7 +157,7 @@ export default function CheckoutPage() {
     };
 
     fetchUserData();
-  }, [user?.id]);
+  }, [user?.primaryEmailAddress?.emailAddress, user?.fullName, user?.firstName]);
 
   // Create PaymentIntent when amount changes
   const createPaymentIntent = useCallback(async () => {
@@ -169,12 +195,14 @@ export default function CheckoutPage() {
   }, [amountAfterCredits, stripeCustomerId, itemCount, subtotalCents, creditsToApply, giftCardToApply]);
 
   useEffect(() => {
-    if (amountAfterCredits > 0) {
+    // Only create payment intent once we have customer ID (or for guest checkout)
+    // Don't create if we already have a clientSecret to avoid duplicate intents
+    if (amountAfterCredits > 0 && !clientSecret && (stripeCustomerId || isGuest)) {
       createPaymentIntent();
-    } else {
+    } else if (amountAfterCredits <= 0) {
       setClientSecret(null);
     }
-  }, [amountAfterCredits, createPaymentIntent]);
+  }, [amountAfterCredits, stripeCustomerId, isGuest, clientSecret, createPaymentIntent]);
 
   // Apply gift card
   const handleApplyGiftCard = async () => {
@@ -234,7 +262,7 @@ export default function CheckoutPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: user?.id,
+          userId: internalUserId,
           guestId: isGuest ? guestId : undefined,
           items: items.map((item) => ({
             productId: item.id,
@@ -243,20 +271,23 @@ export default function CheckoutPage() {
             variant: item.variant,
           })),
           subtotalCents,
-          shippingCents,
+          shippingCents: effectiveShipping,
           taxCents,
           totalCents: orderTotalCents,
-          creditsApplied: creditsToApply,
-          giftCardApplied: giftCardToApply,
+          creditsToApply: creditsToApply,
           giftCardId: giftCardApplied?.id,
+          promoCodeId: appliedPromo?.id,
+          promoDiscountCents: promoDiscount,
           fulfillmentType: "SHIPPING",
-          shippingName,
-          shippingEmail,
-          shippingAddress1,
-          shippingAddress2,
-          shippingCity,
-          shippingState,
-          shippingZip,
+          shipping: {
+            name: shippingName,
+            email: shippingEmail,
+            address1: shippingAddress1,
+            address2: shippingAddress2,
+            city: shippingCity,
+            state: shippingState,
+            zip: shippingZip,
+          },
         }),
       });
 
@@ -266,6 +297,7 @@ export default function CheckoutPage() {
       }
 
       const order = await res.json();
+      setOrderCompleted(true); // Prevent empty cart redirect
       clearCart();
       router.push(`/${locale}/store/confirmation/${order.orderNumber}`);
     } catch (err) {
@@ -290,7 +322,7 @@ export default function CheckoutPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: user?.id,
+          userId: internalUserId,
           guestId: isGuest ? guestId : undefined,
           items: items.map((item) => ({
             productId: item.id,
@@ -299,21 +331,24 @@ export default function CheckoutPage() {
             variant: item.variant,
           })),
           subtotalCents,
-          shippingCents,
+          shippingCents: effectiveShipping,
           taxCents,
           totalCents: orderTotalCents,
-          creditsApplied: creditsToApply,
-          giftCardApplied: giftCardToApply,
+          creditsToApply: creditsToApply,
           giftCardId: giftCardApplied?.id,
+          promoCodeId: appliedPromo?.id,
+          promoDiscountCents: promoDiscount,
           stripePaymentId: stripePaymentIntentId,
           fulfillmentType: "SHIPPING",
-          shippingName,
-          shippingEmail,
-          shippingAddress1,
-          shippingAddress2,
-          shippingCity,
-          shippingState,
-          shippingZip,
+          shipping: {
+            name: shippingName,
+            email: shippingEmail,
+            address1: shippingAddress1,
+            address2: shippingAddress2,
+            city: shippingCity,
+            state: shippingState,
+            zip: shippingZip,
+          },
         }),
       });
 
@@ -323,6 +358,7 @@ export default function CheckoutPage() {
       }
 
       const order = await res.json();
+      setOrderCompleted(true); // Prevent empty cart redirect
       clearCart();
       router.push(`/${locale}/store/confirmation/${order.orderNumber}`);
     } catch (err) {
@@ -550,6 +586,24 @@ export default function CheckoutPage() {
               <h2 style={{ fontSize: "1.2rem", fontWeight: "600", color: "#222", marginBottom: "20px" }}>
                 Discounts
               </h2>
+
+              {/* Promo Code Section */}
+              <div style={{ marginBottom: "20px", paddingBottom: "20px", borderBottom: "1px solid #e5e7eb" }}>
+                <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "500", color: "#555", marginBottom: "8px" }}>
+                  Promo Code
+                </label>
+                <PromoCodeInput
+                  scope="SHOP"
+                  subtotalCents={subtotalCents}
+                  userId={internalUserId || undefined}
+                  guestId={isGuest ? guestId || undefined : undefined}
+                  shippingCents={shippingCents}
+                  onApply={(promo) => setAppliedPromo(promo)}
+                  onRemove={() => setAppliedPromo(null)}
+                  appliedPromo={appliedPromo}
+                  placeholder="Enter promo code"
+                />
+              </div>
 
               {/* Credits Section */}
               {user && userCredits && userCredits.totalCredits > 0 && (
@@ -837,14 +891,29 @@ export default function CheckoutPage() {
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <span style={{ color: "#666", fontSize: "0.95rem" }}>Shipping</span>
-                  <span style={{ fontWeight: "500", color: shippingCents === 0 ? "#16a34a" : undefined }}>
-                    {shippingCents === 0 ? "FREE" : `$${(shippingCents / 100).toFixed(2)}`}
+                  <span style={{ fontWeight: "500", color: effectiveShipping === 0 ? "#16a34a" : undefined }}>
+                    {effectiveShipping === 0 ? "FREE" : `$${(effectiveShipping / 100).toFixed(2)}`}
+                    {appliedPromo?.discountType === 'FREE_SHIPPING' && shippingCents > 0 && (
+                      <span style={{ textDecoration: "line-through", color: "#9ca3af", marginLeft: "8px" }}>
+                        ${(shippingCents / 100).toFixed(2)}
+                      </span>
+                    )}
                   </span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between" }}>
                   <span style={{ color: "#666", fontSize: "0.95rem" }}>Tax</span>
                   <span style={{ fontWeight: "500" }}>${(taxCents / 100).toFixed(2)}</span>
                 </div>
+                {promoDiscount > 0 && appliedPromo?.discountType !== 'FREE_SHIPPING' && (
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span style={{ color: "#16a34a", fontSize: "0.95rem" }}>
+                      Promo ({appliedPromo?.code})
+                    </span>
+                    <span style={{ fontWeight: "500", color: "#16a34a" }}>
+                      -${(promoDiscount / 100).toFixed(2)}
+                    </span>
+                  </div>
+                )}
                 {creditsToApply > 0 && (
                   <div style={{ display: "flex", justifyContent: "space-between" }}>
                     <span style={{ color: "#16a34a", fontSize: "0.95rem" }}>Credits Applied</span>
