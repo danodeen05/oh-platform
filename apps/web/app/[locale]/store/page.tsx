@@ -1,113 +1,117 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
 import { useCart } from "@/contexts/cart-context";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
+
+interface ShopProduct {
+  id: string;
+  slug: string;
+  name: string;
+  nameZhTW?: string;
+  nameZhCN?: string;
+  nameEs?: string;
+  description?: string;
+  descriptionZhTW?: string;
+  descriptionZhCN?: string;
+  descriptionEs?: string;
+  priceCents: number;
+  category: string;
+  imageUrl?: string;
+  isAvailable: boolean;
+  stockCount?: number;
+}
+
+// Map API category to display category key
+const categoryMap: Record<string, string> = {
+  FOOD: "Food",
+  CONDIMENTS: "Condiments",
+  MERCHANDISE: "Merchandise",
+  APPAREL: "Apparel",
+  LIMITED_EDITION: "Limited Edition",
+};
+
 export default function StorePage() {
   const t = useTranslations("store");
   const tCommon = useTranslations("common");
   const locale = useLocale();
-  const { addItem, itemCount } = useCart();
+  const { addItem, updateQuantity, getItemQuantity } = useCart();
 
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [hoveredProduct, setHoveredProduct] = useState<string | null>(null);
-  const [addedToCart, setAddedToCart] = useState<string | null>(null);
+  const [apiProducts, setApiProducts] = useState<ShopProduct[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const products = [
-    {
-      id: "home-kit",
-      name: t("products.homeKit.name"),
-      category: t("categories.food"),
-      categoryKey: "Food",
-      description: t("products.homeKit.description"),
-      price: 34.99,
-      badge: t("badges.bestSeller"),
-      image: "/store/HomeKit.png",
-    },
-    {
-      id: "chili-oil",
-      name: t("products.chiliOil.name"),
-      category: t("categories.condiments"),
-      categoryKey: "Condiments",
-      description: t("products.chiliOil.description"),
-      price: 14.99,
-      badge: null,
-      image: "/store/SignatureChiliOil.png",
-    },
-    {
-      id: "broth-concentrate",
-      name: t("products.brothConcentrate.name"),
-      category: t("categories.food"),
-      categoryKey: "Food",
-      description: t("products.brothConcentrate.description"),
-      price: 24.99,
-      badge: t("badges.new"),
-      image: "/store/BeefBoneBrothConcentrate.png",
-    },
-    {
-      id: "ceramic-bowl",
-      name: t("products.ceramicBowl.name"),
-      category: t("categories.merchandise"),
-      categoryKey: "Merchandise",
-      description: t("products.ceramicBowl.description"),
-      price: 42.00,
-      badge: null,
-      image: "/store/CeramicBowl.png",
-    },
-    {
-      id: "chopsticks",
-      name: t("products.chopsticks.name"),
-      category: t("categories.merchandise"),
-      categoryKey: "Merchandise",
-      description: t("products.chopsticks.description"),
-      price: 28.00,
-      badge: null,
-      image: "/store/Chopsticks.png",
-    },
-    {
-      id: "tshirt",
-      name: t("products.tshirt.name"),
-      category: t("categories.apparel"),
-      categoryKey: "Apparel",
-      description: t("products.tshirt.description"),
-      price: 32.00,
-      badge: null,
-      image: "/store/T-Shirt.png",
-    },
-    {
-      id: "hoodie",
-      name: t("products.hoodie.name"),
-      category: t("categories.apparel"),
-      categoryKey: "Apparel",
-      description: t("products.hoodie.description"),
-      price: 68.00,
-      badge: null,
-      image: "/store/ComfortHoodie.png",
-    },
-    {
-      id: "apron",
-      name: t("products.apron.name"),
-      category: t("categories.merchandise"),
-      categoryKey: "Merchandise",
-      description: t("products.apron.description"),
-      price: 45.00,
-      badge: null,
-      image: "/store/ChefsApron.png",
-    },
-    {
-      id: "wooden-bowl",
-      name: t("products.woodenBowl.name"),
-      category: t("categories.limitedEdition"),
-      categoryKey: "Limited Edition",
-      description: t("products.woodenBowl.description"),
-      price: 145.00,
-      badge: t("badges.limited"),
-      image: "/store/ArtisanWoodenSoupBowl.png",
-    },
-  ];
+  // Fetch products from API
+  useEffect(() => {
+    async function fetchProducts() {
+      try {
+        const res = await fetch(`${API_URL}/shop/products`);
+        if (res.ok) {
+          const data = await res.json();
+          setApiProducts(Array.isArray(data) ? data.filter((p: ShopProduct) => p.isAvailable) : []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch products:", err);
+      }
+      setLoading(false);
+    }
+    fetchProducts();
+  }, []);
+
+  // Get localized name based on current locale
+  const getLocalizedName = (product: ShopProduct): string => {
+    if (locale === "zh-TW" && product.nameZhTW) return product.nameZhTW;
+    if (locale === "zh-CN" && product.nameZhCN) return product.nameZhCN;
+    if (locale === "es" && product.nameEs) return product.nameEs;
+    return product.name;
+  };
+
+  // Get localized description based on current locale
+  const getLocalizedDescription = (product: ShopProduct): string => {
+    if (locale === "zh-TW" && product.descriptionZhTW) return product.descriptionZhTW;
+    if (locale === "zh-CN" && product.descriptionZhCN) return product.descriptionZhCN;
+    if (locale === "es" && product.descriptionEs) return product.descriptionEs;
+    return product.description || "";
+  };
+
+  // Get localized category label
+  const getCategoryLabel = (category: string): string => {
+    const labels: Record<string, string> = {
+      Food: t("categories.food"),
+      Condiments: t("categories.condiments"),
+      Merchandise: t("categories.merchandise"),
+      Apparel: t("categories.apparel"),
+      "Limited Edition": t("categories.limitedEdition"),
+    };
+    return labels[category] || category;
+  };
+
+  // Get badge for product (based on category or stock)
+  const getBadge = (product: ShopProduct): string | null => {
+    if (product.category === "LIMITED_EDITION") return t("badges.limited");
+    if (product.stockCount !== null && product.stockCount !== undefined && product.stockCount < 10) return t("badges.limited");
+    // You could add more badge logic here based on product data
+    return null;
+  };
+
+  // Transform API products to display format
+  const products = apiProducts.map((p) => ({
+    id: p.slug,
+    dbId: p.id,
+    name: getLocalizedName(p),
+    category: getCategoryLabel(categoryMap[p.category] || p.category),
+    categoryKey: categoryMap[p.category] || p.category,
+    description: getLocalizedDescription(p),
+    price: p.priceCents / 100,
+    priceCents: p.priceCents,
+    badge: getBadge(p),
+    image: p.imageUrl || "/store/placeholder.png",
+  }));
 
   const categories = [
     { key: "All", label: t("categories.all") },
@@ -237,40 +241,6 @@ export default function StorePage() {
         </div>
       </section>
 
-      {/* Cart Banner */}
-      {itemCount > 0 && (
-        <section
-          style={{
-            background: "linear-gradient(135deg, #7C7A67 0%, #5a584a 100%)",
-            padding: "16px 24px",
-            textAlign: "center",
-          }}
-        >
-          <Link
-            href={`/${locale}/store/cart`}
-            style={{
-              color: "white",
-              fontWeight: "500",
-              fontSize: "1rem",
-              textDecoration: "none",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "12px",
-            }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="9" cy="21" r="1" />
-              <circle cx="20" cy="21" r="1" />
-              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-            </svg>
-            {itemCount} {itemCount === 1 ? "item" : "items"} in cart - View Cart
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M5 12h14M12 5l7 7-7 7" />
-            </svg>
-          </Link>
-        </section>
-      )}
-
       {/* Category Filter */}
       <section style={{ maxWidth: "1200px", margin: "0 auto", padding: "48px 24px 0" }}>
         <div
@@ -308,6 +278,26 @@ export default function StorePage() {
 
       {/* Products Grid */}
       <section style={{ maxWidth: "1300px", margin: "0 auto", padding: "48px 24px 100px" }}>
+        {loading ? (
+          <div style={{ textAlign: "center", padding: "60px 24px" }}>
+            <div
+              style={{
+                width: "48px",
+                height: "48px",
+                border: "3px solid #e5e7eb",
+                borderTopColor: "#7C7A67",
+                borderRadius: "50%",
+                margin: "0 auto 16px",
+                animation: "spin 0.8s linear infinite",
+              }}
+            />
+            <p style={{ color: "#666", fontSize: "1rem" }}>Loading products...</p>
+          </div>
+        ) : filteredProducts.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "60px 24px" }}>
+            <p style={{ color: "#666", fontSize: "1.1rem" }}>No products found in this category.</p>
+          </div>
+        ) : (
         <div
           style={{
             display: "grid",
@@ -429,57 +419,118 @@ export default function StorePage() {
                   >
                     ${product.price.toFixed(2)}
                   </span>
-                  <button
-                    onClick={() => {
-                      addItem({
-                        id: product.id,
-                        slug: product.id,
-                        name: product.name,
-                        priceCents: Math.round(product.price * 100),
-                        imageUrl: product.image,
-                      });
-                      setAddedToCart(product.id);
-                      setTimeout(() => setAddedToCart(null), 2000);
-                    }}
-                    style={{
-                      padding: "12px 24px",
-                      background: addedToCart === product.id ? "#16a34a" : "#7C7A67",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "10px",
-                      cursor: "pointer",
-                      fontSize: "0.9rem",
-                      fontWeight: "600",
-                      transition: "all 0.3s ease",
-                      boxShadow: "0 4px 12px rgba(124, 122, 103, 0.25)",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                    }}
-                  >
-                    {addedToCart === product.id ? (
-                      <>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <path d="M5 12l5 5L20 7" />
-                        </svg>
-                        Added!
-                      </>
-                    ) : (
-                      <>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <circle cx="9" cy="21" r="1" />
-                          <circle cx="20" cy="21" r="1" />
-                          <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-                        </svg>
-                        Add to Cart
-                      </>
-                    )}
-                  </button>
+                  {getItemQuantity(product.id) === 0 ? (
+                    <button
+                      onClick={() => {
+                        addItem({
+                          id: product.id,
+                          slug: product.id,
+                          name: product.name,
+                          priceCents: Math.round(product.price * 100),
+                          imageUrl: product.image,
+                        });
+                      }}
+                      style={{
+                        padding: "12px 24px",
+                        background: "#7C7A67",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "10px",
+                        cursor: "pointer",
+                        fontSize: "0.9rem",
+                        fontWeight: "600",
+                        transition: "all 0.3s ease",
+                        boxShadow: "0 4px 12px rgba(124, 122, 103, 0.25)",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                      }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <circle cx="9" cy="21" r="1" />
+                        <circle cx="20" cy="21" r="1" />
+                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+                      </svg>
+                      Add to Cart
+                    </button>
+                  ) : (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "4px",
+                        background: "#f5f5f5",
+                        borderRadius: "10px",
+                        padding: "4px",
+                      }}
+                    >
+                      <button
+                        onClick={() => updateQuantity(product.id, getItemQuantity(product.id) - 1)}
+                        style={{
+                          width: "36px",
+                          height: "36px",
+                          borderRadius: "8px",
+                          border: "none",
+                          background: "#7C7A67",
+                          color: "white",
+                          cursor: "pointer",
+                          fontSize: "1.2rem",
+                          fontWeight: "600",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          transition: "all 0.2s ease",
+                        }}
+                      >
+                        −
+                      </button>
+                      <span
+                        style={{
+                          minWidth: "40px",
+                          textAlign: "center",
+                          fontSize: "1rem",
+                          fontWeight: "600",
+                          color: "#222",
+                        }}
+                      >
+                        {getItemQuantity(product.id)}
+                      </span>
+                      <button
+                        onClick={() => {
+                          addItem({
+                            id: product.id,
+                            slug: product.id,
+                            name: product.name,
+                            priceCents: Math.round(product.price * 100),
+                            imageUrl: product.image,
+                          });
+                        }}
+                        style={{
+                          width: "36px",
+                          height: "36px",
+                          borderRadius: "8px",
+                          border: "none",
+                          background: "#7C7A67",
+                          color: "white",
+                          cursor: "pointer",
+                          fontSize: "1.2rem",
+                          fontWeight: "600",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          transition: "all 0.2s ease",
+                        }}
+                      >
+                        +
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           ))}
         </div>
+        )}
       </section>
 
       {/* Why Shop Oh! Section - The Oh! Way style */}
@@ -714,6 +765,9 @@ export default function StorePage() {
         @keyframes float {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(-12px); }
+        }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
         }
       `}</style>
     </div>

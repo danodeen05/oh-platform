@@ -16,6 +16,9 @@ const navItems: NavItem[] = [
   { href: "/kiosks", label: "Kiosks" },
   { href: "/analytics", label: "Analytics", highlight: true },
   { href: "/menu", label: "Menu" },
+  { href: "/products", label: "Products" },
+  { href: "/promos", label: "Promos", highlight: true },
+  { href: "/gift-cards/config", label: "Gift Cards" },
   { href: "/locations", label: "Locations" },
 ];
 

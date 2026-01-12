@@ -10,3 +10,4 @@ export { KioskDeviceProvider, useKioskDevice, useHasDeviceAuth } from './KioskDe
 export { useKioskMode, useKioskModePreference } from './useKioskMode';
 export { useKioskScale, KIOSK_SCALE_CSS_VAR } from './useKioskScale';
 export { KioskLockdown } from './KioskLockdown';
+export { KioskPrinterProvider, useKioskPrinter, PrinterStatusIndicator } from './KioskPrinterProvider';
