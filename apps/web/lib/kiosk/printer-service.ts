@@ -71,7 +71,7 @@ interface EPOSPrinter {
 
 // Constants for ePOS SDK
 const EPOS_CONSTANTS = {
-  DEVICE_TYPE_PRINTER: 1,
+  DEVICE_TYPE_PRINTER: 'type_printer',
   ALIGN_LEFT: 0,
   ALIGN_CENTER: 1,
   ALIGN_RIGHT: 2,
@@ -101,7 +101,7 @@ export class KioskPrinterService {
 
     return new Promise((resolve) => {
       const script = document.createElement('script');
-      script.src = 'https://cdn.epson.com/epos-print/epos-2.27.0.js';
+      script.src = '/epos-2.23.0.js';
       script.onload = () => resolve(true);
       script.onerror = () => {
         console.error('[Printer] Failed to load Epson ePOS SDK');
@@ -132,11 +132,12 @@ export class KioskPrinterService {
           if (result === 'OK' || result === 'SSL_CONNECT_OK') {
             console.log('[Printer] Connected to device');
 
-            // Create printer object
+            // Create printer object (crypto: true for secure connection on port 8043)
+            const useSSL = port === 8043;
             this.eposDevice?.createDevice(
               'local_printer',
-              EPOS_CONSTANTS.DEVICE_TYPE_PRINTER,
-              { crypto: false, buffer: false },
+              (this.eposDevice as any).DEVICE_TYPE_PRINTER,
+              { crypto: useSSL, buffer: false },
               (device, code) => {
                 if (code === 'OK' && device) {
                   this.printer = device;
@@ -151,6 +152,8 @@ export class KioskPrinterService {
             );
           } else {
             console.error('[Printer] Connection failed:', result);
+            // Store the error for display
+            (this as any).lastError = `Connection failed: ${result}`;
             resolve(false);
           }
         });
@@ -194,32 +197,58 @@ export class KioskPrinterService {
     }
 
     return new Promise((resolve) => {
-      try {
-        const printer = this.printer!;
+      (async () => {
+        try {
+          const printer = this.printer! as any;
 
-        // Set up response handler
-        printer.onreceive = (res) => {
-          if (res.success) {
-            console.log('[Printer] Print successful');
-            resolve(true);
-          } else {
-            console.error('[Printer] Print failed:', res.code);
+          // Set up response handler
+          printer.onreceive = (res: any) => {
+            if (res.success) {
+              console.log('[Printer] Print successful');
+              resolve(true);
+            } else {
+              console.error('[Printer] Print failed:', res.code);
+              resolve(false);
+            }
+          };
+
+          printer.onerror = (err: any) => {
+            console.error('[Printer] Print error:', err);
             resolve(false);
+          };
+
+          // Build receipt using printer object constants
+          // Header with logo image
+          printer.addTextAlign(printer.ALIGN_CENTER);
+
+          // Try to add logo image
+          try {
+            const logoImg = new Image();
+            logoImg.crossOrigin = 'anonymous';
+            await new Promise<void>((resolveImg, rejectImg) => {
+              logoImg.onload = () => resolveImg();
+              logoImg.onerror = () => rejectImg(new Error('Failed to load logo'));
+              logoImg.src = '/Oh_Logo_Mark_Web.png';
+            });
+
+            // Create canvas for the logo (scale down for receipt - ~150px wide)
+            const canvas = document.createElement('canvas');
+            const scale = 150 / logoImg.width;
+            canvas.width = 150;
+            canvas.height = logoImg.height * scale;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(logoImg, 0, 0, canvas.width, canvas.height);
+              printer.addImage(ctx, 0, 0, canvas.width, canvas.height, printer.COLOR_1, printer.MODE_MONO);
+            }
+          } catch (imgErr) {
+            // Fallback to text if image fails
+            console.warn('[Printer] Logo image failed, using text fallback:', imgErr);
+            printer.addTextStyle(false, false, true, printer.COLOR_1);
+            printer.addTextSize(3, 3);
+            printer.addText('哦!\n');
           }
-        };
-
-        printer.onerror = (err) => {
-          console.error('[Printer] Print error:', err);
-          resolve(false);
-        };
-
-        // Build receipt
-        // Header
-        printer.addTextAlign(EPOS_CONSTANTS.ALIGN_CENTER);
-        printer.addTextStyle(false, false, true, 0);  // Bold
-        printer.addTextSize(2, 2);
-        printer.addText('Oh!\n');
-        printer.addFeedLine(1);
+          printer.addFeedLine(1);
 
         // Guest name
         printer.addTextSize(2, 2);
@@ -227,15 +256,15 @@ export class KioskPrinterService {
 
         // Order number
         printer.addTextSize(1, 1);
-        printer.addTextStyle(false, false, false, 0);  // Normal
+        printer.addTextStyle(false, false, false, printer.COLOR_1);  // Normal
         printer.addText(`Order #${data.dailyOrderNumber}\n`);
         printer.addFeedLine(2);
 
-        // QR Code (200px = ~6 dots/mm = ~33mm width)
+        // QR Code
         printer.addSymbol(
           data.qrCodeUrl,
-          EPOS_CONSTANTS.SYMBOL_QRCODE_MODEL_2,
-          EPOS_CONSTANTS.LEVEL_Q,
+          printer.SYMBOL_QRCODE_MODEL_2,
+          printer.LEVEL_Q,
           6,  // Module width
           6,  // Module height
           200 // Size
@@ -244,7 +273,7 @@ export class KioskPrinterService {
 
         // Pod or Queue info
         printer.addTextSize(2, 2);
-        printer.addTextStyle(false, false, true, 0);  // Bold
+        printer.addTextStyle(false, false, true, printer.COLOR_1);  // Bold
         if (data.podNumber) {
           printer.addText(`POD ${data.podNumber}\n`);
         } else if (data.queuePosition) {
@@ -256,13 +285,13 @@ export class KioskPrinterService {
 
         // Footer
         printer.addTextSize(1, 1);
-        printer.addTextStyle(false, false, false, 0);  // Normal
+        printer.addTextStyle(false, false, false, printer.COLOR_1);  // Normal
         printer.addText('Scan to track your order\n');
         printer.addText('& earn rewards!\n');
         printer.addFeedLine(3);
 
         // Cut paper
-        printer.addCut(EPOS_CONSTANTS.CUT_FEED);
+        printer.addCut(printer.CUT_FEED);
 
         // Send to printer
         printer.send();
@@ -271,7 +300,8 @@ export class KioskPrinterService {
         console.error('[Printer] Error building receipt:', err);
         resolve(false);
       }
-    });
+    })();
+  });
   }
 
   /**
@@ -285,17 +315,18 @@ export class KioskPrinterService {
 
     return new Promise((resolve) => {
       try {
-        const printer = this.printer!;
+        const printer = this.printer! as any;
 
-        printer.onreceive = (res) => {
+        printer.onreceive = (res: any) => {
           resolve(res.success);
         };
 
-        printer.onerror = () => {
+        printer.onerror = (err: any) => {
+          console.error('[Printer] Print error:', err);
           resolve(false);
         };
 
-        printer.addTextAlign(EPOS_CONSTANTS.ALIGN_CENTER);
+        printer.addTextAlign(printer.ALIGN_CENTER);
         printer.addTextSize(2, 2);
         printer.addText('=== TEST PRINT ===\n');
         printer.addFeedLine(1);
@@ -305,7 +336,7 @@ export class KioskPrinterService {
         printer.addFeedLine(1);
         printer.addText('Printer is working!\n');
         printer.addFeedLine(3);
-        printer.addCut(EPOS_CONSTANTS.CUT_FEED);
+        printer.addCut(printer.CUT_FEED);
         printer.send();
 
       } catch (err) {

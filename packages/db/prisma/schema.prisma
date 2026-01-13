@@ -950,6 +950,9 @@ model GiftCard {
 
   status GiftCardStatus @default(ACTIVE)
 
+  // Admin
+  adminNotes String? // Internal notes for staff
+
   // Timestamps
   purchasedAt  DateTime  @default(now())
   deliveredAt  DateTime? // When email was sent
@@ -1097,9 +1100,13 @@ model ShopOrder {
   fulfillmentStatus ShopFulfillmentStatus @default(PENDING)
   trackingNumber    String?
   trackingUrl       String?
+  trackingCarrier   String? // e.g., "USPS", "UPS", "FedEx" - for future ShipStation integration
   shippedAt         DateTime?
   deliveredAt       DateTime?
   pickedUpAt        DateTime? // For in-store pickup
+
+  // Admin
+  adminNotes String? // Internal notes for staff
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

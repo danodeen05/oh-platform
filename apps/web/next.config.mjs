@@ -7,6 +7,14 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'ohbeef.com',
+      },
+    ],
+  },
 };
 
 export default withNextIntl(nextConfig);

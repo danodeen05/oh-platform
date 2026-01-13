@@ -104,6 +104,42 @@ export default function CheckoutPage() {
     }
   }, [user]);
 
+  // Auto-apply pending gift card from balance page
+  useEffect(() => {
+    const pendingCode = localStorage.getItem("pendingGiftCardCode");
+    if (pendingCode && !giftCardApplied && !giftCardLoading) {
+      setGiftCardCode(pendingCode);
+      // Trigger auto-apply
+      const autoApply = async () => {
+        setGiftCardLoading(true);
+        setGiftCardError(null);
+        try {
+          const res = await fetch(`${API_URL}/gift-cards/code/${encodeURIComponent(pendingCode.trim())}`);
+          if (res.ok) {
+            const giftCard = await res.json();
+            if (giftCard.balanceCents > 0) {
+              const amountToApply = Math.min(giftCard.balanceCents, orderTotalCents);
+              setGiftCardApplied({
+                id: giftCard.id,
+                code: giftCard.code,
+                balanceCents: giftCard.balanceCents,
+                amountToApply,
+              });
+              setGiftCardCode("");
+            }
+          }
+          // Clear from storage after attempting to apply
+          localStorage.removeItem("pendingGiftCardCode");
+        } catch (err) {
+          console.error("Error auto-applying gift card:", err);
+        } finally {
+          setGiftCardLoading(false);
+        }
+      };
+      autoApply();
+    }
+  }, [orderTotalCents]);
+
   // Internal user ID from our database
   const [internalUserId, setInternalUserId] = useState<string | null>(null);
 

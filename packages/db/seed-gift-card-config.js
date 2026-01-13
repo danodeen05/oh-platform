@@ -8,8 +8,6 @@ const denominations = [
   { amountCents: 5000, displayOrder: 1 },  // $50
   { amountCents: 7500, displayOrder: 2 },  // $75
   { amountCents: 10000, displayOrder: 3 }, // $100
-  { amountCents: 15000, displayOrder: 4 }, // $150
-  { amountCents: 20000, displayOrder: 5 }, // $200
 ];
 
 // Custom amount range config

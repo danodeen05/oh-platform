@@ -83,32 +83,47 @@ export default function InStoreItemPage({ params }: Props) {
     fetchProduct();
   }, [qrCode]);
 
+  // Internal user ID from our database
+  const [internalUserId, setInternalUserId] = useState<string | null>(null);
+
   // Fetch user data
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.primaryEmailAddress?.emailAddress) return;
 
     const fetchUserData = async () => {
       try {
-        const userRes = await fetch(`${API_URL}/users/${user.id}`);
-        if (userRes.ok) {
-          const userData = await userRes.json();
-          setUserCredits({
-            referralCredits: userData.referralCredits || 0,
-            giftCreditsReceived: userData.giftCreditsReceived || 0,
-            totalCredits: (userData.referralCredits || 0) + (userData.giftCreditsReceived || 0),
-          });
-        }
-
-        const customerRes = await fetch(`${API_URL}/users/${user.id}/stripe-customer`, {
+        // Create or get user in our system
+        const userRes = await fetch(`${API_URL}/users`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: user.primaryEmailAddress?.emailAddress,
+            name: user.fullName || user.firstName || undefined,
+          }),
+        });
+
+        if (!userRes.ok) {
+          console.error("Failed to initialize user");
+          return;
+        }
+
+        const userData = await userRes.json();
+        setInternalUserId(userData.id);
+        setUserCredits({
+          referralCredits: userData.creditsCents || 0,
+          giftCreditsReceived: 0,
+          totalCredits: userData.creditsCents || 0,
+        });
+
+        const customerRes = await fetch(`${API_URL}/users/${userData.id}/stripe-customer`, {
+          method: "POST",
         });
         if (customerRes.ok) {
           const customerData = await customerRes.json();
-          setStripeCustomerId(customerData.stripeCustomerId);
+          setStripeCustomerId(customerData.customerId);
         }
 
-        const methodsRes = await fetch(`${API_URL}/users/${user.id}/payment-methods`);
+        const methodsRes = await fetch(`${API_URL}/users/${userData.id}/payment-methods`);
         if (methodsRes.ok) {
           const methods = await methodsRes.json();
           setSavedPaymentMethods(methods);
@@ -119,7 +134,7 @@ export default function InStoreItemPage({ params }: Props) {
     };
 
     fetchUserData();
-  }, [user?.id]);
+  }, [user?.primaryEmailAddress?.emailAddress, user?.fullName, user?.firstName]);
 
   // Calculate totals
   const subtotalCents = product ? product.priceCents * quantity : 0;
@@ -190,7 +205,7 @@ export default function InStoreItemPage({ params }: Props) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: user?.id,
+          userId: internalUserId,
           guestId: isGuest ? guestId : undefined,
           items: [{
             productId: product.id,
@@ -233,7 +248,7 @@ export default function InStoreItemPage({ params }: Props) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: user?.id,
+          userId: internalUserId,
           guestId: isGuest ? guestId : undefined,
           items: [{
             productId: product.id,

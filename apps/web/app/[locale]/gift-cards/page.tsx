@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 
-const giftCardAmounts = [25, 50, 75, 100, 150, 200];
+const giftCardAmounts = [25, 50, 75, 100];
 
 export default function GiftCardsPage() {
   const t = useTranslations("giftCards");
@@ -555,8 +555,63 @@ export default function GiftCardsPage() {
         </div>
       </section>
 
+      {/* Check Balance Section */}
+      <section style={{ background: "white", padding: "80px 24px", borderTop: "1px solid #eee" }}>
+        <div style={{ maxWidth: "500px", margin: "0 auto", textAlign: "center" }}>
+          <div
+            style={{
+              width: "64px",
+              height: "64px",
+              borderRadius: "50%",
+              background: "linear-gradient(135deg, #7C7A67 0%, #5a584a 100%)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 24px",
+              fontSize: "1.5rem",
+            }}
+          >
+            💳
+          </div>
+          <h2
+            style={{
+              fontSize: "clamp(1.5rem, 4vw, 2rem)",
+              fontWeight: "400",
+              color: "#222",
+              marginBottom: "16px",
+            }}
+          >
+            Already Have a Gift Card?
+          </h2>
+          <p style={{ color: "#666", fontSize: "1.05rem", marginBottom: "32px", lineHeight: "1.7" }}>
+            Check your remaining balance or start using your gift card today.
+          </p>
+          <Link
+            href="/gift-cards/balance"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "10px",
+              padding: "16px 40px",
+              background: "#222",
+              color: "white",
+              borderRadius: "10px",
+              textDecoration: "none",
+              fontWeight: "600",
+              fontSize: "1rem",
+              transition: "all 0.3s ease",
+            }}
+          >
+            Check Balance
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M5 12h14M12 5l7 7-7 7" />
+            </svg>
+          </Link>
+        </div>
+      </section>
+
       {/* FAQ Section */}
-      <section style={{ background: "white", padding: "100px 24px" }}>
+      <section style={{ background: "#faf9f7", padding: "100px 24px" }}>
         <div style={{ maxWidth: "700px", margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: "48px" }}>
             <p
@@ -593,9 +648,10 @@ export default function GiftCardsPage() {
               <div
                 key={idx}
                 style={{
-                  background: "#faf9f7",
+                  background: "white",
                   padding: "28px",
                   borderRadius: "16px",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
                 }}
               >
                 <h4 style={{ fontSize: "1.05rem", fontWeight: "600", color: "#222", marginBottom: "12px" }}>

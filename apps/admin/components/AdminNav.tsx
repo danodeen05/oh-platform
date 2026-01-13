@@ -17,8 +17,9 @@ const navItems: NavItem[] = [
   { href: "/analytics", label: "Analytics", highlight: true },
   { href: "/menu", label: "Menu" },
   { href: "/products", label: "Products" },
-  { href: "/promos", label: "Promos", highlight: true },
-  { href: "/gift-cards/config", label: "Gift Cards" },
+  { href: "/shop-orders", label: "Shop Orders", highlight: true },
+  { href: "/promos", label: "Promos" },
+  { href: "/gift-cards", label: "Gift Cards" },
   { href: "/locations", label: "Locations" },
 ];
 
@@ -35,6 +36,10 @@ export function AdminNav() {
     // but make sure /cleaning doesn't match /cleaning/config
     if (href === "/cleaning") {
       return pathname === "/cleaning" || (pathname?.startsWith("/cleaning/") && !pathname.startsWith("/cleaning/config"));
+    }
+    // Gift cards should match both main page and config/detail pages
+    if (href === "/gift-cards") {
+      return pathname === "/gift-cards" || pathname?.startsWith("/gift-cards/");
     }
     return pathname === href || pathname?.startsWith(href + "/");
   };

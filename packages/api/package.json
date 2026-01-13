@@ -20,6 +20,7 @@
     "fastify": "4.28.1",
     "jsonwebtoken": "^9.0.3",
     "passkit-generator": "^3.5.7",
+    "qrcode": "^1.5.4",
     "resend": "^4.0.0",
     "stripe": "^20.0.0",
     "twilio": "^5.0.0"
