@@ -5717,7 +5717,7 @@ function CompleteView({
   const [countdown, setCountdown] = useState(30);
   const [shouldRedirect, setShouldRedirect] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
-  const { printQRSlip, isConnected: isPrinterConnected } = useKioskPrinter();
+  const { printQRSlip, isConnected: isPrinterConnected, isConnecting: isPrinterConnecting, error: printerError, connect: connectPrinter } = useKioskPrinter();
   const hasAutoPrinted = useRef(false);
 
   // Scroll to top on mount
@@ -5727,15 +5727,35 @@ function CompleteView({
 
   // Auto-print receipts when order completes (if thermal printer connected)
   useEffect(() => {
+    console.log('[Kiosk] Auto-print check:', {
+      isPrinterConnected,
+      guestOrdersLength: guestOrders.length,
+      hasAutoPrinted: hasAutoPrinted.current,
+    });
     if (isPrinterConnected && guestOrders.length > 0 && !hasAutoPrinted.current) {
       hasAutoPrinted.current = true;
-      // Small delay to ensure UI is ready
-      const timer = setTimeout(() => {
-        handlePrint();
-      }, 500);
+      console.log('[Kiosk] Auto-printing receipts...');
+      // Delay to ensure printer is fully ready
+      const timer = setTimeout(async () => {
+        for (const guest of guestOrders) {
+          const pod = seats.find((s) => s.id === guest.selectedPodId);
+          const qrCode = guest.orderQrCode || guest.orderId;
+          const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+          const qrUrl = `${baseUrl}/order/status?orderQrCode=${encodeURIComponent(qrCode || "")}`;
+
+          await printQRSlip({
+            guestName: guest.guestName,
+            dailyOrderNumber: String(guest.dailyOrderNumber || guest.orderNumber || ""),
+            qrCodeUrl: qrUrl,
+            podNumber: pod?.number,
+            queuePosition: guest.queuePosition,
+            estimatedWaitMinutes: guest.estimatedWaitMinutes,
+          });
+        }
+      }, 1000);
       return () => clearTimeout(timer);
     }
-  }, [isPrinterConnected, guestOrders.length]);
+  }, [isPrinterConnected, guestOrders, seats, printQRSlip]);
 
   // Auto-reset countdown
   useEffect(() => {
@@ -5863,6 +5883,25 @@ function CompleteView({
       {/* Large Brand Header - top left (matching other views) */}
       <div style={{ position: "absolute", top: 48, left: 48, zIndex: 1 }}>
         <KioskBrand size="xlarge" />
+      </div>
+
+      {/* Printer Status Indicator - top right for debugging */}
+      <div style={{
+        position: "absolute",
+        top: 16,
+        right: 16,
+        zIndex: 10,
+        background: isPrinterConnected ? "#22c55e" : printerError ? "#ef4444" : isPrinterConnecting ? "#f59e0b" : "#9ca3af",
+        color: "white",
+        padding: "8px 16px",
+        borderRadius: 8,
+        fontSize: "0.875rem",
+        fontWeight: 500,
+      }}>
+        {isPrinterConnecting ? "Printer: Connecting..." :
+         isPrinterConnected ? "Printer: Connected" :
+         printerError ? `Printer: ${printerError}` :
+         "Printer: Not configured"}
       </div>
 
       {/* Fixed Header with success color */}

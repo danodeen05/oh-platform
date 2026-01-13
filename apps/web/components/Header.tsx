@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { SignedIn, SignedOut, SignInButton, UserButton, useAuth } from "@clerk/nextjs";
 import { useTranslations, useLocale } from "next-intl";
+import { useCart } from "@/contexts/cart-context";
 
 // Custom icon for the Oh! Account menu item
 const OhAccountIcon = () => (
@@ -132,6 +133,7 @@ export default function Header() {
   const { isSignedIn: clerkSignedIn } = useAuth();
   const t = useTranslations("navigation");
   const locale = useLocale();
+  const { itemCount } = useCart();
 
   // Track authentication state
   useEffect(() => {
@@ -262,14 +264,61 @@ export default function Header() {
           />
         </div>
 
-        {/* Right side: Auth Button */}
+        {/* Right side: Cart & Auth Button */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
-            gap: "16px",
+            gap: "12px",
           }}
         >
+          {/* Cart Indicator - only show when items in cart */}
+          {itemCount > 0 && (
+            <Link
+              href={`/${locale}/store/cart`}
+              style={{
+                position: "relative",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "40px",
+                height: "40px",
+                borderRadius: "50%",
+                background: "#7C7A67",
+                color: "white",
+                textDecoration: "none",
+                transition: "background 0.2s ease",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "#6a6857")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "#7C7A67")}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="9" cy="21" r="1" />
+                <circle cx="20" cy="21" r="1" />
+                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+              </svg>
+              <span
+                style={{
+                  position: "absolute",
+                  top: "-4px",
+                  right: "-4px",
+                  background: "#C7A878",
+                  color: "white",
+                  fontSize: "10px",
+                  fontWeight: "700",
+                  minWidth: "18px",
+                  height: "18px",
+                  borderRadius: "50%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  border: "2px solid #e5e5e5",
+                }}
+              >
+                {itemCount}
+              </span>
+            </Link>
+          )}
           <SignedOut>
             <SignInButton mode="modal">
               <button

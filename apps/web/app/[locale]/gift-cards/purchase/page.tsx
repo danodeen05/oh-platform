@@ -37,7 +37,7 @@ const fallbackDesigns = [
   { id: "gold", designId: "gold", designName: "Gold", gradient: "linear-gradient(135deg, #C7A878 0%, #8B7355 100%)", displayOrder: 2 },
 ];
 
-const fallbackAmounts = [25, 50, 75, 100, 150, 200];
+const fallbackAmounts = [25, 50, 75, 100];
 const fallbackCustomRange = { minAmountCents: 1000, maxAmountCents: 50000 };
 
 interface UserCredits {
@@ -109,8 +109,20 @@ export default function GiftCardPurchasePage() {
     fetchConfig();
   }, []);
 
-  // Step tracking
-  const [currentStep, setCurrentStep] = useState<Step>("amount");
+  // Step tracking - skip to recipient step if valid amount and design are passed from main page
+  const [currentStep, setCurrentStep] = useState<Step>(() => {
+    if (initialAmount && initialDesign) {
+      const amount = parseInt(initialAmount, 10);
+      const isPresetAmount = fallbackAmounts.includes(amount);
+      const isValidCustomAmount = amount >= fallbackCustomRange.minAmountCents / 100 && amount <= fallbackCustomRange.maxAmountCents / 100;
+      const isValidDesign = fallbackDesigns.some(d => d.designId === initialDesign);
+
+      if ((isPresetAmount || isValidCustomAmount) && isValidDesign) {
+        return "recipient";
+      }
+    }
+    return "amount";
+  });
 
   // Amount & Design state - initialize from URL params if available
   const [selectedAmount, setSelectedAmount] = useState<number | null>(() => {

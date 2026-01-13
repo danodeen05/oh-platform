@@ -12,6 +12,7 @@ import {
   getNotificationStatus,
   sendAdminNewUserNotification,
   sendShopOrderConfirmation,
+  sendGiftCardEmail,
 } from "./notifications.js";
 import { BetaAnalyticsDataClient } from "@google-analytics/data";
 import { readFileSync } from "fs";
@@ -3483,6 +3484,9 @@ app.patch("/orders/:id", async (req, reply) => {
     podConfirmedAt,
     podReservationExpiry,
     orderSource,
+    stripePaymentId,
+    promoCodeId,
+    promoDiscountCents,
   } = req.body || {};
 
   const data = {};
@@ -3504,6 +3508,9 @@ app.patch("/orders/:id", async (req, reply) => {
   if (podConfirmedAt) data.podConfirmedAt = new Date(podConfirmedAt);
   if (podReservationExpiry) data.podReservationExpiry = new Date(podReservationExpiry);
   if (orderSource) data.orderSource = orderSource;
+  if (stripePaymentId) data.stripePaymentId = stripePaymentId;
+  if (promoCodeId) data.promoCodeId = promoCodeId;
+  if (promoDiscountCents !== undefined) data.promoDiscountCents = promoDiscountCents;
 
   if (!Object.keys(data).length) {
     return reply
@@ -3527,6 +3534,24 @@ app.patch("/orders/:id", async (req, reply) => {
       user: true,
     },
   });
+
+  // Record promo code usage if promo was applied
+  if (promoCodeId && paymentStatus === "PAID") {
+    try {
+      await prisma.promoCodeUsage.create({
+        data: {
+          promoCodeId,
+          userId: userId || null,
+          guestId: guestId || null,
+          orderId: order.id,
+          discountCents: promoDiscountCents || 0,
+        },
+      });
+    } catch (err) {
+      console.error("Error recording promo code usage:", err);
+      // Don't fail the order update if usage recording fails
+    }
+  }
 
   // If order just got paid and has a pre-selected seat, reserve it
   if (paymentStatus === "PAID" && order.seatId) {
@@ -11216,70 +11241,6 @@ app.post("/gift-cards/:id/confirm-payment", async (req, reply) => {
   }
 });
 
-// Helper function to send gift card email
-async function sendGiftCardEmail(giftCard) {
-  if (!resend || !giftCard.recipientEmail) return;
-
-  const amountFormatted = `$${(giftCard.amountCents / 100).toFixed(2)}`;
-  const designColors = {
-    classic: { bg: "#7C7A67", text: "white" },
-    dark: { bg: "#222222", text: "white" },
-    gold: { bg: "#C7A878", text: "white" },
-  };
-  const design = designColors[giftCard.designId] || designColors.classic;
-
-  const html = `
-    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-      <div style="background: ${design.bg}; color: ${design.text}; padding: 40px; text-align: center; border-radius: 12px 12px 0 0;">
-        <h1 style="margin: 0; font-size: 28px;">Oh! Beef Noodle Soup</h1>
-        <p style="margin: 16px 0 0; opacity: 0.9;">Digital Gift Card</p>
-      </div>
-
-      <div style="padding: 32px; background: #f9fafb;">
-        <p style="font-size: 18px; margin-bottom: 24px;">
-          ${giftCard.recipientName ? `Hi ${giftCard.recipientName},` : "Hello!"}
-        </p>
-
-        <p>You've received a gift card for Oh! Beef Noodle Soup!</p>
-
-        ${giftCard.personalMessage ? `
-          <div style="background: white; padding: 16px; border-left: 4px solid #C7A878; margin: 24px 0;">
-            <p style="margin: 0; font-style: italic;">"${giftCard.personalMessage}"</p>
-          </div>
-        ` : ""}
-
-        <div style="background: white; padding: 24px; border-radius: 12px; text-align: center; margin: 24px 0;">
-          <p style="margin: 0 0 8px; color: #666;">Your Gift Card Value</p>
-          <p style="font-size: 36px; font-weight: bold; margin: 0; color: #7C7A67;">${amountFormatted}</p>
-        </div>
-
-        <div style="background: #222; color: white; padding: 24px; border-radius: 12px; text-align: center;">
-          <p style="margin: 0 0 8px; font-size: 14px; opacity: 0.7;">Your Gift Card Code</p>
-          <p style="font-size: 24px; font-weight: bold; margin: 0; letter-spacing: 4px; font-family: monospace;">
-            ${giftCard.code}
-          </p>
-        </div>
-
-        <p style="margin-top: 24px; color: #666; font-size: 14px;">
-          To redeem, visit ohbeefnoodlesoup.com and enter this code at checkout,
-          or add it to your account balance in your member profile.
-        </p>
-      </div>
-
-      <div style="padding: 24px; text-align: center; color: #666; font-size: 12px;">
-        <p>This gift card never expires. &copy; Oh! Beef Noodle Soup</p>
-      </div>
-    </div>
-  `;
-
-  await resend.emails.send({
-    from: process.env.FROM_EMAIL || "noreply@oh-beef.com",
-    to: giftCard.recipientEmail,
-    subject: `You've received an Oh! Gift Card - ${amountFormatted}`,
-    html,
-  });
-}
-
 // ====================
 // SHOP PRODUCTS
 // ====================
@@ -11851,10 +11812,10 @@ app.post("/promo-codes", async (req, reply) => {
         discountValue,
         maxDiscountCents,
         scope,
-        targetCategories,
-        targetProductIds,
-        excludedProductIds,
-        locationIds,
+        targetCategories: targetCategories || [],
+        targetProductIds: targetProductIds || [],
+        excludedProductIds: excludedProductIds || [],
+        locationIds: locationIds || [],
         totalUsageLimit,
         perUserLimit,
         minimumOrderCents,
@@ -12472,6 +12433,623 @@ app.patch("/admin/shop/products/bulk-availability", async (req, reply) => {
     return reply.send({ updated: result.count });
   } catch (error) {
     console.error("Error bulk updating product availability:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// ====================
+// SHOP ORDERS (Admin)
+// ====================
+
+// List all shop orders (admin) with pagination and filtering
+app.get("/admin/shop/orders", async (req, reply) => {
+  try {
+    const {
+      page = "1",
+      limit = "20",
+      paymentStatus,
+      fulfillmentStatus,
+      fulfillmentType,
+      search,
+      startDate,
+      endDate,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = req.query;
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const take = parseInt(limit);
+
+    // Build where clause
+    const where = {};
+
+    if (paymentStatus) {
+      where.paymentStatus = paymentStatus;
+    }
+
+    if (fulfillmentStatus) {
+      where.fulfillmentStatus = fulfillmentStatus;
+    }
+
+    if (fulfillmentType) {
+      where.fulfillmentType = fulfillmentType;
+    }
+
+    if (search) {
+      where.OR = [
+        { orderNumber: { contains: search, mode: "insensitive" } },
+        { shippingEmail: { contains: search, mode: "insensitive" } },
+        { shippingName: { contains: search, mode: "insensitive" } },
+      ];
+    }
+
+    if (startDate || endDate) {
+      where.createdAt = {};
+      if (startDate) {
+        where.createdAt.gte = new Date(startDate);
+      }
+      if (endDate) {
+        where.createdAt.lte = new Date(endDate);
+      }
+    }
+
+    // Get orders with pagination
+    const [orders, totalCount] = await Promise.all([
+      prisma.shopOrder.findMany({
+        where,
+        include: {
+          items: {
+            include: {
+              product: {
+                select: { id: true, name: true, imageUrl: true, slug: true },
+              },
+            },
+          },
+          user: { select: { id: true, name: true, email: true } },
+          guest: { select: { id: true, name: true, email: true } },
+        },
+        orderBy: { [sortBy]: sortOrder },
+        skip,
+        take,
+      }),
+      prisma.shopOrder.count({ where }),
+    ]);
+
+    return reply.send({
+      orders,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalCount,
+        totalPages: Math.ceil(totalCount / take),
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching admin shop orders:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Get shop order details (admin)
+app.get("/admin/shop/orders/:id", async (req, reply) => {
+  try {
+    const { id } = req.params;
+
+    const order = await prisma.shopOrder.findUnique({
+      where: { id },
+      include: {
+        items: {
+          include: {
+            product: true,
+          },
+        },
+        user: { select: { id: true, name: true, email: true, phone: true } },
+        guest: { select: { id: true, name: true, email: true, phone: true } },
+        giftCard: { select: { id: true, code: true, amountCents: true } },
+        promoCode: { select: { id: true, code: true, discountType: true, discountValue: true } },
+      },
+    });
+
+    if (!order) {
+      return reply.status(404).send({ error: "Order not found" });
+    }
+
+    return reply.send(order);
+  } catch (error) {
+    console.error("Error fetching admin shop order:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Update shop order (admin) - more permissive than public endpoint
+app.patch("/admin/shop/orders/:id", async (req, reply) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+
+    // Admin-allowed fields (more than public)
+    const allowedFields = [
+      "paymentStatus",
+      "stripePaymentId",
+      "fulfillmentStatus",
+      "trackingNumber",
+      "trackingUrl",
+      "trackingCarrier",
+      "shippedAt",
+      "deliveredAt",
+      "pickedUpAt",
+      "shippingName",
+      "shippingAddress1",
+      "shippingAddress2",
+      "shippingCity",
+      "shippingState",
+      "shippingZip",
+      "shippingPhone",
+      "shippingEmail",
+      "adminNotes",
+    ];
+
+    const data = {};
+    for (const field of allowedFields) {
+      if (updates[field] !== undefined) {
+        // Handle date fields
+        if (["shippedAt", "deliveredAt", "pickedUpAt"].includes(field) && updates[field]) {
+          data[field] = new Date(updates[field]);
+        } else {
+          data[field] = updates[field];
+        }
+      }
+    }
+
+    // Auto-set timestamps based on status changes
+    if (updates.fulfillmentStatus === "SHIPPED" && !updates.shippedAt) {
+      data.shippedAt = new Date();
+    }
+    if (updates.fulfillmentStatus === "COMPLETED" && !updates.deliveredAt) {
+      data.deliveredAt = new Date();
+    }
+    if (updates.fulfillmentStatus === "READY_PICKUP") {
+      // Could trigger notification here
+    }
+
+    const order = await prisma.shopOrder.update({
+      where: { id },
+      data,
+      include: {
+        items: { include: { product: true } },
+        user: { select: { id: true, name: true, email: true } },
+        guest: { select: { id: true, name: true, email: true } },
+      },
+    });
+
+    return reply.send(order);
+  } catch (error) {
+    console.error("Error updating admin shop order:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Get shop orders statistics (admin dashboard)
+app.get("/admin/shop/orders/stats", async (req, reply) => {
+  try {
+    const { startDate, endDate } = req.query;
+
+    const dateFilter = {};
+    if (startDate || endDate) {
+      dateFilter.createdAt = {};
+      if (startDate) dateFilter.createdAt.gte = new Date(startDate);
+      if (endDate) dateFilter.createdAt.lte = new Date(endDate);
+    }
+
+    // Get counts by status
+    const [
+      totalOrders,
+      pendingOrders,
+      processingOrders,
+      shippedOrders,
+      completedOrders,
+      cancelledOrders,
+      totalRevenue,
+      recentOrders,
+    ] = await Promise.all([
+      prisma.shopOrder.count({ where: { ...dateFilter } }),
+      prisma.shopOrder.count({ where: { ...dateFilter, fulfillmentStatus: "PENDING" } }),
+      prisma.shopOrder.count({ where: { ...dateFilter, fulfillmentStatus: "PROCESSING" } }),
+      prisma.shopOrder.count({ where: { ...dateFilter, fulfillmentStatus: "SHIPPED" } }),
+      prisma.shopOrder.count({ where: { ...dateFilter, fulfillmentStatus: "COMPLETED" } }),
+      prisma.shopOrder.count({ where: { ...dateFilter, fulfillmentStatus: "CANCELLED" } }),
+      prisma.shopOrder.aggregate({
+        where: { ...dateFilter, paymentStatus: "PAID" },
+        _sum: { totalCents: true },
+      }),
+      prisma.shopOrder.findMany({
+        where: dateFilter,
+        orderBy: { createdAt: "desc" },
+        take: 5,
+        include: {
+          items: { include: { product: { select: { name: true } } } },
+        },
+      }),
+    ]);
+
+    return reply.send({
+      totalOrders,
+      byStatus: {
+        pending: pendingOrders,
+        processing: processingOrders,
+        shipped: shippedOrders,
+        completed: completedOrders,
+        cancelled: cancelledOrders,
+      },
+      totalRevenueCents: totalRevenue._sum.totalCents || 0,
+      recentOrders,
+    });
+  } catch (error) {
+    console.error("Error fetching shop order stats:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// ====================
+// GIFT CARDS (Admin)
+// ====================
+
+// List all gift cards (admin) with pagination and filtering
+app.get("/admin/gift-cards", async (req, reply) => {
+  try {
+    const {
+      page = "1",
+      limit = "20",
+      status,
+      hasBalance,
+      search,
+      startDate,
+      endDate,
+      sortBy = "purchasedAt",
+      sortOrder = "desc",
+    } = req.query;
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const take = parseInt(limit);
+
+    // Build where clause
+    const where = {};
+
+    if (status) {
+      where.status = status;
+    }
+
+    if (hasBalance === "true") {
+      where.balanceCents = { gt: 0 };
+    } else if (hasBalance === "false") {
+      where.balanceCents = 0;
+    }
+
+    if (search) {
+      where.OR = [
+        { code: { contains: search, mode: "insensitive" } },
+        { recipientEmail: { contains: search, mode: "insensitive" } },
+        { recipientName: { contains: search, mode: "insensitive" } },
+      ];
+    }
+
+    if (startDate || endDate) {
+      where.purchasedAt = {};
+      if (startDate) {
+        where.purchasedAt.gte = new Date(startDate);
+      }
+      if (endDate) {
+        where.purchasedAt.lte = new Date(endDate);
+      }
+    }
+
+    // Get gift cards with pagination
+    const [giftCards, totalCount] = await Promise.all([
+      prisma.giftCard.findMany({
+        where,
+        include: {
+          purchaser: { select: { id: true, name: true, email: true } },
+          redeemedBy: { select: { id: true, name: true, email: true } },
+          shopOrders: {
+            select: { id: true, orderNumber: true, giftCardApplied: true },
+            take: 5,
+          },
+        },
+        orderBy: { [sortBy]: sortOrder },
+        skip,
+        take,
+      }),
+      prisma.giftCard.count({ where }),
+    ]);
+
+    return reply.send({
+      giftCards,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalCount,
+        totalPages: Math.ceil(totalCount / take),
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching admin gift cards:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Get gift card details (admin)
+app.get("/admin/gift-cards/:id", async (req, reply) => {
+  try {
+    const { id } = req.params;
+
+    const giftCard = await prisma.giftCard.findUnique({
+      where: { id },
+      include: {
+        purchaser: { select: { id: true, name: true, email: true } },
+        redeemedBy: { select: { id: true, name: true, email: true } },
+        shopOrders: {
+          select: {
+            id: true,
+            orderNumber: true,
+            giftCardApplied: true,
+            createdAt: true,
+            totalCents: true,
+          },
+          orderBy: { createdAt: "desc" },
+        },
+        promoCode: { select: { id: true, code: true } },
+      },
+    });
+
+    if (!giftCard) {
+      return reply.status(404).send({ error: "Gift card not found" });
+    }
+
+    return reply.send(giftCard);
+  } catch (error) {
+    console.error("Error fetching admin gift card:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Update gift card (admin) - status changes, balance adjustments
+app.patch("/admin/gift-cards/:id", async (req, reply) => {
+  try {
+    const { id } = req.params;
+    const { status, balanceCents, balanceAdjustment, adminNotes, adjustmentReason } = req.body;
+
+    const giftCard = await prisma.giftCard.findUnique({ where: { id } });
+    if (!giftCard) {
+      return reply.status(404).send({ error: "Gift card not found" });
+    }
+
+    const data = {};
+
+    // Status change
+    if (status && status !== giftCard.status) {
+      data.status = status;
+    }
+
+    // Balance adjustment (increment/decrement)
+    if (balanceAdjustment !== undefined && balanceAdjustment !== 0) {
+      const newBalance = Math.max(0, giftCard.balanceCents + balanceAdjustment);
+      data.balanceCents = Math.min(newBalance, giftCard.amountCents); // Can't exceed original amount
+      // Auto-update status based on new balance
+      if (data.balanceCents === 0 && !status) {
+        data.status = "EXHAUSTED";
+      } else if (data.balanceCents > 0 && giftCard.status === "EXHAUSTED" && !status) {
+        data.status = "ACTIVE";
+      }
+      // Log the adjustment reason in admin notes
+      if (adjustmentReason) {
+        const timestamp = new Date().toISOString();
+        const existingNotes = giftCard.adminNotes || "";
+        data.adminNotes = `${existingNotes}${existingNotes ? "\n" : ""}[${timestamp}] Balance adjusted by ${balanceAdjustment > 0 ? "+" : ""}${balanceAdjustment} cents: ${adjustmentReason}`;
+      }
+    }
+    // Direct balance set (admin override)
+    else if (balanceCents !== undefined && balanceCents !== giftCard.balanceCents) {
+      data.balanceCents = balanceCents;
+      // Auto-update status based on balance
+      if (balanceCents === 0 && !status) {
+        data.status = "EXHAUSTED";
+      } else if (balanceCents > 0 && giftCard.status === "EXHAUSTED" && !status) {
+        data.status = "ACTIVE";
+      }
+    }
+
+    // Admin notes (direct set, if not already set by adjustment)
+    if (adminNotes !== undefined && !data.adminNotes) {
+      data.adminNotes = adminNotes;
+    }
+
+    const updated = await prisma.giftCard.update({
+      where: { id },
+      data,
+      include: {
+        purchaser: { select: { id: true, name: true, email: true } },
+        redeemedBy: { select: { id: true, name: true, email: true } },
+      },
+    });
+
+    return reply.send(updated);
+  } catch (error) {
+    console.error("Error updating admin gift card:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Get gift card statistics (admin dashboard)
+app.get("/admin/gift-cards/stats", async (req, reply) => {
+  try {
+    const { startDate, endDate } = req.query;
+
+    const dateFilter = {};
+    if (startDate || endDate) {
+      dateFilter.purchasedAt = {};
+      if (startDate) dateFilter.purchasedAt.gte = new Date(startDate);
+      if (endDate) dateFilter.purchasedAt.lte = new Date(endDate);
+    }
+
+    const [
+      totalCards,
+      activeCards,
+      redeemedCards,
+      exhaustedCards,
+      totalSold,
+      totalBalance,
+    ] = await Promise.all([
+      prisma.giftCard.count({ where: dateFilter }),
+      prisma.giftCard.count({ where: { ...dateFilter, status: "ACTIVE" } }),
+      prisma.giftCard.count({ where: { ...dateFilter, status: "REDEEMED" } }),
+      prisma.giftCard.count({ where: { ...dateFilter, status: "EXHAUSTED" } }),
+      prisma.giftCard.aggregate({
+        where: dateFilter,
+        _sum: { amountCents: true },
+      }),
+      prisma.giftCard.aggregate({
+        where: { ...dateFilter, status: "ACTIVE" },
+        _sum: { balanceCents: true },
+      }),
+    ]);
+
+    return reply.send({
+      totalCards,
+      byStatus: {
+        active: activeCards,
+        redeemed: redeemedCards,
+        exhausted: exhaustedCards,
+      },
+      totalSoldCents: totalSold._sum.amountCents || 0,
+      outstandingBalanceCents: totalBalance._sum.balanceCents || 0,
+    });
+  } catch (error) {
+    console.error("Error fetching gift card stats:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// ====================
+// PROMO CODES (Admin Enhancements)
+// ====================
+
+// Update promo code (admin) - full edit capability
+app.patch("/admin/promo-codes/:id", async (req, reply) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+
+    // Allowed update fields
+    const allowedFields = [
+      "code",
+      "description",
+      "discountType",
+      "discountValue",
+      "maxDiscountCents",
+      "minimumOrderCents",
+      "scope",
+      "targetCategories",
+      "targetProductIds",
+      "excludedProductIds",
+      "locationIds",
+      "totalUsageLimit",
+      "perUserLimit",
+      "startsAt",
+      "expiresAt",
+      "isActive",
+    ];
+
+    const arrayFields = ["targetCategories", "targetProductIds", "excludedProductIds", "locationIds"];
+
+    const data = {};
+    for (const field of allowedFields) {
+      if (updates[field] !== undefined) {
+        // Handle date fields
+        if (["startsAt", "expiresAt"].includes(field) && updates[field]) {
+          data[field] = new Date(updates[field]);
+        // Handle array fields - convert null to empty array
+        } else if (arrayFields.includes(field)) {
+          data[field] = updates[field] || [];
+        } else {
+          data[field] = updates[field];
+        }
+      }
+    }
+
+    const promoCode = await prisma.promoCode.update({
+      where: { id },
+      data,
+    });
+
+    return reply.send(promoCode);
+  } catch (error) {
+    console.error("Error updating promo code:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Get promo code analytics (admin)
+app.get("/admin/promo-codes/analytics", async (req, reply) => {
+  try {
+    const { startDate, endDate } = req.query;
+
+    const dateFilter = {};
+    if (startDate || endDate) {
+      dateFilter.usedAt = {};
+      if (startDate) dateFilter.usedAt.gte = new Date(startDate);
+      if (endDate) dateFilter.usedAt.lte = new Date(endDate);
+    }
+
+    // Get all promo codes with usage stats
+    const promoCodes = await prisma.promoCode.findMany({
+      include: {
+        _count: {
+          select: { usages: true },
+        },
+        usages: {
+          where: dateFilter,
+          select: {
+            discountCents: true,
+            usedAt: true,
+          },
+        },
+      },
+      orderBy: { currentUsageCount: "desc" },
+    });
+
+    // Calculate analytics per code
+    const analytics = promoCodes.map((code) => {
+      const totalDiscountCents = code.usages.reduce((sum, u) => sum + u.discountCents, 0);
+      return {
+        id: code.id,
+        code: code.code,
+        discountType: code.discountType,
+        discountValue: code.discountValue,
+        scope: code.scope,
+        isActive: code.isActive,
+        totalUsages: code.currentUsageCount,
+        usagesInPeriod: code.usages.length,
+        totalDiscountGivenCents: totalDiscountCents,
+        usageLimit: code.totalUsageLimit,
+        expiresAt: code.expiresAt,
+      };
+    });
+
+    // Overall stats
+    const totalUsages = analytics.reduce((sum, a) => sum + a.usagesInPeriod, 0);
+    const totalDiscountCents = analytics.reduce((sum, a) => sum + a.totalDiscountGivenCents, 0);
+
+    return reply.send({
+      promoCodes: analytics,
+      summary: {
+        totalCodes: promoCodes.length,
+        activeCodes: promoCodes.filter((c) => c.isActive).length,
+        totalUsagesInPeriod: totalUsages,
+        totalDiscountGivenCents: totalDiscountCents,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching promo code analytics:", error);
     return reply.status(500).send({ error: error.message });
   }
 });

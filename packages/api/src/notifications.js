@@ -1,11 +1,34 @@
 /**
  * Notification Service
  * Handles email (Resend) and SMS (Twilio) notifications for orders
- * Updated: 2026-01-04
+ * Updated: 2026-01-13
  */
 
 import { Resend } from "resend";
 import twilio from "twilio";
+import QRCode from "qrcode";
+
+/**
+ * Generate a QR code as a base64 data URL
+ * Uses high error correction to allow for logo overlay
+ */
+async function generateQRCodeDataURL(data, size = 200) {
+  try {
+    const dataUrl = await QRCode.toDataURL(data, {
+      width: size,
+      margin: 1,
+      errorCorrectionLevel: "H", // High error correction for logo overlay
+      color: {
+        dark: "#222222",
+        light: "#FFFFFF",
+      },
+    });
+    return dataUrl;
+  } catch (error) {
+    console.error("[QR] Failed to generate QR code:", error);
+    return null;
+  }
+}
 
 // Initialize providers (will be null if env vars not set)
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
@@ -19,26 +42,29 @@ const TWILIO_PHONE = process.env.TWILIO_PHONE_NUMBER;
 
 /**
  * Send an email notification
+ * @param {string} from - Optional custom from address (defaults to FROM_EMAIL env var)
  */
-export async function sendEmail({ to, subject, html, text }) {
+export async function sendEmail({ to, subject, html, text, from }) {
   if (!resend) {
     console.log("[EMAIL] Resend not configured, skipping email");
     return { success: false, reason: "not_configured" };
   }
 
+  const fromEmail = from || FROM_EMAIL;
+
   try {
     const result = await resend.emails.send({
-      from: `Oh! Beef Noodle Soup <${FROM_EMAIL}>`,
+      from: `Oh! Beef Noodle Soup <${fromEmail}>`,
       to,
       subject,
       html,
       text,
     });
 
-    console.log(`[EMAIL] Sent to ${to}: ${subject}`);
+    console.log(`[EMAIL] Sent to ${to}: ${subject}`, JSON.stringify(result));
     return { success: true, id: result.id };
   } catch (error) {
-    console.error("[EMAIL] Failed to send:", error);
+    console.error("[EMAIL] Failed to send:", error.message, error);
     return { success: false, error: error.message };
   }
 }
@@ -108,6 +134,7 @@ export async function sendOrderConfirmation(order, user) {
         </div>
       `,
       text: `Order Confirmed!\n\nOrder Number: #${orderNumber}\nTotal: ${totalFormatted}\n\nTrack your order at our website or check in at the kiosk.\n\nSee you soon!\n— The Oh! Team`,
+      from: "receipt@ohbeef.com",
     });
   }
 
@@ -158,6 +185,7 @@ export async function sendPodReadyNotification(order, user, podNumber) {
         </div>
       `,
       text: `Your Pod is Ready!\n\nPod #${podNumber}\n\nOrder #${orderNumber} is ready. Please head to your assigned pod to enjoy your meal!\n\nEnjoy!\n— The Oh! Team`,
+      from: "noreply@ohbeef.com",
     });
   }
 
@@ -225,6 +253,7 @@ export async function sendOrderReadyNotification(order, user) {
         </div>
       `,
       text: `Your Order is Ready!\n\nOrder #${orderNumber} is ready and waiting for you. Head over to pick it up!\n\nEnjoy!\n— The Oh! Team`,
+      from: "noreply@ohbeef.com",
     });
   }
 
@@ -651,5 +680,304 @@ Thank you for shopping with Oh!
     subject: `Order Confirmed - #${order.orderNumber} | Oh! Beef Noodle Soup`,
     html,
     text,
+    from: "noreply@ohbeef.com",
+  });
+}
+
+/**
+ * Send gift card delivery email to recipient
+ * Beautiful email with gift card preview, QR code, and redemption instructions
+ */
+export async function sendGiftCardEmail(giftCard) {
+  const email = giftCard.recipientEmail;
+  if (!email) {
+    console.log("[EMAIL] No recipient email, skipping gift card delivery");
+    return { success: false, reason: "no_email" };
+  }
+
+  const amountFormatted = `$${(giftCard.amountCents / 100).toFixed(0)}`;
+  const recipientName = giftCard.recipientName || "Friend";
+  const personalMessage = giftCard.personalMessage || null;
+
+  // Balance page URL with code pre-filled
+  const qrCodeUrl = `https://ohbeef.com/gift-cards/balance?code=${encodeURIComponent(giftCard.code)}`;
+
+  // Design gradients matching the frontend
+  const designGradients = {
+    classic: "linear-gradient(135deg, #7C7A67 0%, #5a584a 100%)",
+    dark: "linear-gradient(135deg, #222222 0%, #444444 100%)",
+    gold: "linear-gradient(135deg, #C7A878 0%, #8B7355 100%)",
+  };
+  const cardGradient = designGradients[giftCard.designId] || designGradients.classic;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>You've Received an Oh! Gift Card</title>
+  <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500;600;700&family=Noto+Serif+TC:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body style="margin: 0; padding: 0; background-color: #E5E5E5; font-family: 'Raleway', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #E5E5E5;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table cellpadding="0" cellspacing="0" border="0" width="600" style="max-width: 600px;">
+
+          <!-- Header with Logo -->
+          <tr>
+            <td style="background: #222222; border-radius: 16px 16px 0 0; padding: 48px 40px 40px; text-align: center;">
+              <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                  <td align="center">
+                    <!-- Oh! Character Logo with light background circle -->
+                    <div style="width: 120px; height: 120px; background: #E5E5E5; border-radius: 50%; margin: 0 auto 24px; display: inline-block; padding: 10px; box-sizing: border-box;">
+                      <img src="https://ohbeef.com/Oh_Logo_Mark_Web.png" alt="Oh!" width="100" height="100" style="display: block; border: 0;">
+                    </div>
+
+                    <!-- Title in Noto Serif TC style -->
+                    <h1 style="margin: 0; color: #ffffff; font-family: 'Noto Serif TC', Georgia, serif; font-size: 32px; font-weight: 400; letter-spacing: 2px;">You've Received a Gift!</h1>
+                    <p style="margin: 16px 0 0; color: #C7A878; font-family: 'Raleway', sans-serif; font-size: 14px; font-weight: 500; letter-spacing: 1px;">Someone special is treating you to Oh!</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Greeting Banner -->
+          <tr>
+            <td style="background: #7C7A67; padding: 28px 40px; text-align: center;">
+              <p style="margin: 0; color: #ffffff; font-family: 'Noto Serif TC', Georgia, serif; font-size: 22px; font-weight: 400;">
+                Hello, ${recipientName}!
+              </p>
+            </td>
+          </tr>
+
+          <!-- Main Content -->
+          <tr>
+            <td style="background: #ffffff; padding: 40px;">
+
+              <!-- Gift Card Visual Preview -->
+              <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom: 32px;">
+                <tr>
+                  <td align="center">
+                    <div style="width: 320px; max-width: 100%; aspect-ratio: 1.6; border-radius: 16px; background: ${cardGradient}; box-shadow: 0 16px 40px rgba(0,0,0,0.2); position: relative; overflow: hidden;">
+                      <!-- Using table-based layout for better email client support -->
+                      <table cellpadding="0" cellspacing="0" border="0" width="100%" height="200" style="height: 200px;">
+                        <tr>
+                          <td style="padding: 24px; vertical-align: top;">
+                            <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                              <tr>
+                                <td>
+                                  <p style="margin: 0; font-size: 10px; color: rgba(255,255,255,0.6); letter-spacing: 2px; text-transform: uppercase; font-family: 'Raleway', sans-serif;">Digital Gift Card</p>
+                                </td>
+                                <td align="right">
+                                  <img src="https://ohbeef.com/Oh_Logo_Mark_Web.png" alt="Oh!" width="50" height="50" style="display: block; border: 0; filter: brightness(0) invert(1); opacity: 0.85;">
+                                </td>
+                              </tr>
+                            </table>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td align="center" style="vertical-align: middle;">
+                            <p style="margin: 0; font-size: 48px; font-weight: 300; color: #ffffff; font-family: 'Raleway', sans-serif; text-shadow: 0 2px 8px rgba(0,0,0,0.2);">${amountFormatted}</p>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 24px; vertical-align: bottom;">
+                            <p style="margin: 0; font-size: 14px; font-weight: 300; color: #ffffff; font-family: 'Raleway', sans-serif;">Oh! Beef Noodle Soup</p>
+                            <p style="margin: 4px 0 0; font-size: 11px; color: rgba(255,255,255,0.6); font-family: 'Raleway', sans-serif;">ohbeef.com</p>
+                          </td>
+                        </tr>
+                      </table>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+              ${personalMessage ? `
+              <!-- Personal Message -->
+              <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom: 32px;">
+                <tr>
+                  <td style="background: #fafaf9; border-radius: 12px; padding: 28px; border-left: 4px solid #C7A878;">
+                    <p style="margin: 0 0 12px; font-size: 12px; text-transform: uppercase; letter-spacing: 2px; color: #7C7A67; font-family: 'Raleway', sans-serif; font-weight: 600;">Personal Message</p>
+                    <p style="margin: 0; font-size: 16px; color: #222222; line-height: 1.7; font-family: 'Raleway', sans-serif; font-style: italic;">"${personalMessage}"</p>
+                  </td>
+                </tr>
+              </table>
+              ` : ''}
+
+              <!-- Gift Card Code & QR Section -->
+              <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom: 32px;">
+                <tr>
+                  <td align="center">
+                    <p style="margin: 0 0 16px; font-size: 13px; text-transform: uppercase; letter-spacing: 2px; color: #666666; font-family: 'Raleway', sans-serif; font-weight: 500;">Your Gift Card Code</p>
+                    <div style="background: #222222; border-radius: 12px; padding: 24px 32px; display: inline-block;">
+                      <p style="margin: 0; font-size: 28px; font-weight: 600; letter-spacing: 4px; color: #ffffff; font-family: 'Courier New', monospace;">${giftCard.code}</p>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Check Balance Button -->
+              <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom: 32px;">
+                <tr>
+                  <td align="center">
+                    <a href="${qrCodeUrl}" style="display: inline-block; padding: 16px 40px; background: #7C7A67; color: #ffffff; text-decoration: none; border-radius: 8px; font-size: 15px; font-weight: 600; font-family: 'Raleway', sans-serif;">Check Balance</a>
+                    <p style="margin: 12px 0 0; font-size: 12px; color: #999999; font-family: 'Raleway', sans-serif;">View your balance and start using your gift card</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Value Summary -->
+              <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                  <td style="background: linear-gradient(135deg, #7C7A67 0%, #6a6857 100%); border-radius: 12px; padding: 20px 24px;">
+                    <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                      <tr>
+                        <td style="color: rgba(255,255,255,0.9); font-size: 14px; font-family: 'Raleway', sans-serif;">Gift Card Value</td>
+                        <td align="right" style="color: #ffffff; font-size: 24px; font-weight: 700; font-family: 'Raleway', sans-serif;">${amountFormatted}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- How to Redeem Section -->
+          <tr>
+            <td style="background: #fafaf9; padding: 36px 40px; border-top: 1px solid #E5E5E5;">
+              <p style="margin: 0 0 24px; color: #222222; font-family: 'Noto Serif TC', Georgia, serif; font-size: 18px; font-weight: 500;">How to Redeem</p>
+
+              <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                  <td style="padding-bottom: 20px;">
+                    <table cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="width: 36px; height: 36px; background: #7C7A67; border-radius: 50%; text-align: center; vertical-align: middle; color: white; font-weight: 600; font-size: 14px; font-family: 'Raleway', sans-serif;">1</td>
+                        <td style="padding-left: 16px;">
+                          <p style="margin: 0; color: #222222; font-size: 15px; font-weight: 600; font-family: 'Raleway', sans-serif;">Visit Oh! Beef Noodle Soup</p>
+                          <p style="margin: 4px 0 0; color: #666666; font-size: 13px; font-family: 'Raleway', sans-serif;">Dine in, order online, or shop our store</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding-bottom: 20px;">
+                    <table cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="width: 36px; height: 36px; background: #C7A878; border-radius: 50%; text-align: center; vertical-align: middle; color: white; font-weight: 600; font-size: 14px; font-family: 'Raleway', sans-serif;">2</td>
+                        <td style="padding-left: 16px;">
+                          <p style="margin: 0; color: #222222; font-size: 15px; font-weight: 600; font-family: 'Raleway', sans-serif;">Scan QR or Enter Code</p>
+                          <p style="margin: 4px 0 0; color: #666666; font-size: 13px; font-family: 'Raleway', sans-serif;">Scan the QR code at our kiosk, or enter your code at checkout</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <table cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="width: 36px; height: 36px; background: #222222; border-radius: 50%; text-align: center; vertical-align: middle; color: white; font-weight: 600; font-size: 14px; font-family: 'Raleway', sans-serif;">3</td>
+                        <td style="padding-left: 16px;">
+                          <p style="margin: 0; color: #222222; font-size: 15px; font-weight: 600; font-family: 'Raleway', sans-serif;">Enjoy!</p>
+                          <p style="margin: 4px 0 0; color: #666666; font-size: 13px; font-family: 'Raleway', sans-serif;">Your balance never expires</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- CTA Button -->
+          <tr>
+            <td style="background: #ffffff; padding: 36px 40px; text-align: center; border-top: 1px solid #E5E5E5;">
+              <a href="https://ohbeef.com/gift-cards/balance?code=${encodeURIComponent(giftCard.code)}" style="display: inline-block; background: #222222; color: #E5E5E5; text-decoration: none; padding: 16px 48px; border-radius: 2px; font-weight: 500; font-size: 14px; font-family: 'Raleway', sans-serif; letter-spacing: 0.5px;">Start Ordering</a>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background: #222222; border-radius: 0 0 16px 16px; padding: 40px; text-align: center;">
+              <!-- Small logo in footer with light background circle -->
+              <div style="width: 60px; height: 60px; background: #E5E5E5; border-radius: 50%; margin: 0 auto 16px; display: inline-block; padding: 5px; box-sizing: border-box;">
+                <img src="https://ohbeef.com/Oh_Logo_Mark_Web.png" alt="Oh!" width="50" height="50" style="display: block; border: 0;">
+              </div>
+
+              <p style="margin: 0 0 6px; color: #C7A878; font-family: 'Noto Serif TC', Georgia, serif; font-size: 18px; font-weight: 400;">Oh! Beef Noodle Soup</p>
+              <p style="margin: 0 0 24px; color: rgba(255,255,255,0.5); font-family: 'Raleway', sans-serif; font-size: 12px; letter-spacing: 1px;">The only restaurant built around <strong style="color: rgba(255,255,255,0.7);">you</strong></p>
+
+              <table cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto;">
+                <tr>
+                  <td style="padding: 0 12px;">
+                    <a href="https://instagram.com/ohbeefnoodlesoup" style="color: rgba(255,255,255,0.6); text-decoration: none; font-size: 12px; font-family: 'Raleway', sans-serif;">Instagram</a>
+                  </td>
+                  <td style="color: rgba(255,255,255,0.2);">|</td>
+                  <td style="padding: 0 12px;">
+                    <a href="https://ohbeef.com" style="color: rgba(255,255,255,0.6); text-decoration: none; font-size: 12px; font-family: 'Raleway', sans-serif;">Website</a>
+                  </td>
+                  <td style="color: rgba(255,255,255,0.2);">|</td>
+                  <td style="padding: 0 12px;">
+                    <a href="mailto:hello@ohbeef.com" style="color: rgba(255,255,255,0.6); text-decoration: none; font-size: 12px; font-family: 'Raleway', sans-serif;">Contact</a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin: 28px 0 0; color: rgba(255,255,255,0.35); font-size: 11px; font-family: 'Raleway', sans-serif; line-height: 1.6;">
+                This gift card never expires and can be used<br>
+                for any purchase at Oh! Beef Noodle Soup.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+
+  const text = `
+OH! BEEF NOODLE SOUP
+You've Received a Gift!
+
+Hello, ${recipientName}!
+
+Someone special has sent you an Oh! Gift Card worth ${amountFormatted}!
+
+${personalMessage ? `PERSONAL MESSAGE\n"${personalMessage}"\n\n` : ''}YOUR GIFT CARD CODE
+${giftCard.code}
+
+CHECK BALANCE & REDEEM
+${qrCodeUrl}
+
+VALUE: ${amountFormatted}
+
+HOW TO REDEEM
+1. Visit Oh! Beef Noodle Soup - Dine in, order online, or shop our store
+2. Scan QR or Enter Code - Scan the QR code at our kiosk, or enter your code at checkout
+3. Enjoy! - Your balance never expires
+
+Start ordering: ${qrCodeUrl}
+
+Questions? Contact us at hello@ohbeef.com
+
+Thank you for being part of the Oh! family!
+  `.trim();
+
+  return sendEmail({
+    to: email,
+    subject: `You've Received a ${amountFormatted} Oh! Gift Card!`,
+    html,
+    text,
+    from: "noreply@ohbeef.com",
   });
 }

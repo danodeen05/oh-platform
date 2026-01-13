@@ -19,6 +19,7 @@ interface CartContextType {
   addItem: (item: Omit<CartItem, "quantity">, quantity?: number) => void;
   removeItem: (id: string, variant?: string) => void;
   updateQuantity: (id: string, quantity: number, variant?: string) => void;
+  getItemQuantity: (id: string, variant?: string) => number;
   clearCart: () => void;
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
@@ -116,6 +117,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setItems([]);
   }, []);
 
+  const getItemQuantity = useCallback((id: string, variant?: string) => {
+    const item = items.find((i) => i.id === id && i.variant === variant);
+    return item?.quantity || 0;
+  }, [items]);
+
   return (
     <CartContext.Provider
       value={{
@@ -125,6 +131,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         addItem,
         removeItem,
         updateQuantity,
+        getItemQuantity,
         clearCart,
         isOpen,
         setIsOpen,

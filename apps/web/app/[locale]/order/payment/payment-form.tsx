@@ -6,6 +6,7 @@ import { useGuest } from "@/contexts/guest-context";
 import { trackBeginCheckout, trackReferralCodeUsed } from "@/lib/analytics";
 import { useTranslations } from "next-intl";
 import { StripeProvider, PaymentForm, SavedPaymentMethod } from "@/components/payments";
+import { PromoCodeInput, type AppliedPromo } from "@/components/PromoCodeInput";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -55,6 +56,9 @@ export default function OrderPaymentForm({
   const [giftCardError, setGiftCardError] = useState<string | null>(null);
   const [giftCardLoading, setGiftCardLoading] = useState(false);
 
+  // Promo code state
+  const [appliedPromo, setAppliedPromo] = useState<AppliedPromo | null>(null);
+
   // Guest checkout form state
   const [guestName, setGuestName] = useState(guest?.name === "Guest" ? "" : guest?.name || "");
   const [guestPhone, setGuestPhone] = useState(guest?.phone || "");
@@ -63,15 +67,18 @@ export default function OrderPaymentForm({
 
   // Calculate discounted total
   const validTotalCents = typeof totalCents === "number" && !isNaN(totalCents) ? totalCents : 0;
-  const creditsApplied = applyCredits ? Math.min(userCredits, validTotalCents, MAX_CREDITS_PER_ORDER) : 0;
-  const afterCreditsTotal = validTotalCents - creditsApplied;
+  // Apply promo discount first
+  const promoDiscount = appliedPromo?.discountCents || 0;
+  const afterPromoTotal = Math.max(0, validTotalCents - promoDiscount);
+  const creditsApplied = applyCredits ? Math.min(userCredits, afterPromoTotal, MAX_CREDITS_PER_ORDER) : 0;
+  const afterCreditsTotal = afterPromoTotal - creditsApplied;
   const giftApplied = Math.min(mealGiftCredit, afterCreditsTotal);
   const giftExcess = mealGiftCredit - giftApplied;
   const afterMealGiftTotal = afterCreditsTotal - giftApplied;
   // Apply gift card to remaining amount
   const giftCardAmount = giftCardApplied?.amountToApply || 0;
   const discountedTotal = Math.max(0, afterMealGiftTotal - giftCardAmount);
-  const showCreditsBreakdown = (applyCredits && creditsApplied > 0) || giftApplied > 0 || giftCardAmount > 0;
+  const showCreditsBreakdown = promoDiscount > 0 || (applyCredits && creditsApplied > 0) || giftApplied > 0 || giftCardAmount > 0;
 
   useEffect(() => {
     const referralCode = localStorage.getItem("pendingReferralCode");
@@ -84,6 +91,43 @@ export default function OrderPaymentForm({
       total: totalCents / 100,
     });
   }, [totalCents]);
+
+  // Auto-apply pending gift card from balance page
+  useEffect(() => {
+    const pendingCode = localStorage.getItem("pendingGiftCardCode");
+    if (pendingCode && !giftCardApplied && !giftCardLoading) {
+      setGiftCardCode(pendingCode);
+      // Trigger auto-apply
+      const autoApply = async () => {
+        setGiftCardLoading(true);
+        setGiftCardError(null);
+        try {
+          const response = await fetch(`${BASE}/gift-cards/code/${encodeURIComponent(pendingCode.trim())}`);
+          if (response.ok) {
+            const giftCard = await response.json();
+            if (giftCard.balanceCents > 0) {
+              const remainingTotal = validTotalCents;
+              const amountToApply = Math.min(giftCard.balanceCents, remainingTotal);
+              setGiftCardApplied({
+                id: giftCard.id,
+                code: giftCard.code,
+                balanceCents: giftCard.balanceCents,
+                amountToApply,
+              });
+              setGiftCardCode("");
+            }
+          }
+          // Clear from storage after attempting to apply
+          localStorage.removeItem("pendingGiftCardCode");
+        } catch (err) {
+          console.error("Error auto-applying gift card:", err);
+        } finally {
+          setGiftCardLoading(false);
+        }
+      };
+      autoApply();
+    }
+  }, [validTotalCents]);
 
   useEffect(() => {
     if (isLoaded && isSignedIn && user && !userInitialized && !initializingRef.current) {
@@ -162,10 +206,15 @@ export default function OrderPaymentForm({
 
   // Create PaymentIntent for guest checkout
   useEffect(() => {
-    if (isGuest && guest && validTotalCents > 0 && !clientSecret) {
-      createPaymentIntent(validTotalCents);
+    // Use discounted total (after promo) for guests
+    const guestTotal = discountedTotal;
+    if (isGuest && guest && guestTotal > 0 && !clientSecret) {
+      createPaymentIntent(guestTotal);
+    } else if (isGuest && guest && guestTotal <= 0) {
+      // No payment needed - clear clientSecret
+      setClientSecret(null);
     }
-  }, [isGuest, guest, validTotalCents, clientSecret, createPaymentIntent]);
+  }, [isGuest, guest, discountedTotal, clientSecret, createPaymentIntent]);
 
   async function initializeUser() {
     if (!user?.primaryEmailAddress?.emailAddress) return;
@@ -381,6 +430,8 @@ export default function OrderPaymentForm({
           paymentStatus: "PAID",
           stripePaymentId: stripePaymentIntentId,
           userId: userId || undefined,
+          promoCodeId: appliedPromo?.id,
+          promoDiscountCents: promoDiscount > 0 ? promoDiscount : undefined,
         }),
       });
 
@@ -418,6 +469,8 @@ export default function OrderPaymentForm({
         body: JSON.stringify({
           paymentStatus: "PAID",
           userId: userId || undefined,
+          promoCodeId: appliedPromo?.id,
+          promoDiscountCents: promoDiscount > 0 ? promoDiscount : undefined,
         }),
       });
 
@@ -458,6 +511,8 @@ export default function OrderPaymentForm({
           paymentStatus: "PAID",
           stripePaymentId: stripePaymentIntentId,
           guestId: guest?.id,
+          promoCodeId: appliedPromo?.id,
+          promoDiscountCents: promoDiscount > 0 ? promoDiscount : undefined,
         }),
       });
 
@@ -577,6 +632,83 @@ export default function OrderPaymentForm({
             </div>
           </div>
 
+          {/* Promo Code for Guests */}
+          <div
+            style={{
+              background: "#f9fafb",
+              border: "1px solid #e5e7eb",
+              borderRadius: 8,
+              padding: "12px 14px",
+              marginBottom: 16,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+              <img
+                src="/Oh_Logo_Large.png"
+                alt="Oh!"
+                style={{
+                  width: 20,
+                  height: 20,
+                  objectFit: "contain",
+                  opacity: 0.85,
+                }}
+              />
+              <span style={{ fontWeight: "600", color: "#222", fontSize: "0.9rem" }}>Have a promo code?</span>
+            </div>
+            <PromoCodeInput
+              scope="MENU"
+              subtotalCents={validTotalCents}
+              guestId={guest?.id}
+              onApply={(promo) => setAppliedPromo(promo)}
+              onRemove={() => setAppliedPromo(null)}
+              appliedPromo={appliedPromo}
+              placeholder="Enter promo code"
+            />
+          </div>
+
+          {/* Order Total with Promo for Guests */}
+          {promoDiscount > 0 && appliedPromo && (
+            <div
+              style={{
+                background: "#f9fafb",
+                border: "1px solid #e5e7eb",
+                borderRadius: 8,
+                padding: "12px 14px",
+                marginBottom: 16,
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
+                <span style={{ color: "#666" }}>{t("subtotal")}</span>
+                <span>${(totalCents / 100).toFixed(2)}</span>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginBottom: 8,
+                  color: "#16a34a",
+                  fontWeight: "bold",
+                }}
+              >
+                <span>🏷️ Promo ({appliedPromo.code})</span>
+                <span>-${(promoDiscount / 100).toFixed(2)}</span>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  paddingTop: 12,
+                  borderTop: "2px solid #e5e7eb",
+                  fontSize: "1.2rem",
+                  fontWeight: "bold",
+                }}
+              >
+                <span>{t("total")}</span>
+                <span>${(discountedTotal / 100).toFixed(2)}</span>
+              </div>
+            </div>
+          )}
+
           {/* Payment Method */}
           <div style={{ marginBottom: 24 }}>
             <h3 style={{ marginBottom: 16 }}>{t("paymentMethod")}</h3>
@@ -594,10 +726,77 @@ export default function OrderPaymentForm({
               >
                 Please enter your name above to continue with payment
               </div>
+            ) : discountedTotal === 0 && promoDiscount > 0 ? (
+              /* Free order - promo covers full amount for guest */
+              <div>
+                <div
+                  style={{
+                    background: "rgba(34, 197, 94, 0.1)",
+                    border: "2px solid #22c55e",
+                    borderRadius: 12,
+                    padding: 20,
+                    marginBottom: 16,
+                    textAlign: "center",
+                  }}
+                >
+                  <div style={{ fontSize: "2rem", marginBottom: 8 }}>🎉</div>
+                  <div style={{ fontWeight: "bold", color: "#15803d", marginBottom: 4 }}>
+                    Your order is fully covered!
+                  </div>
+                  <div style={{ fontSize: "0.9rem", color: "#166534" }}>
+                    No payment required - your promo code covers the full amount.
+                  </div>
+                </div>
+                <button
+                  onClick={async () => {
+                    setProcessing(true);
+                    try {
+                      await acceptMealGift();
+                      if (guest && (guestName !== guest.name || guestPhone !== guest.phone || guestEmail !== guest.email)) {
+                        await updateGuest({
+                          name: guestName.trim(),
+                          phone: guestPhone.trim() || undefined,
+                          email: guestEmail.trim() || undefined,
+                        });
+                      }
+                      const response = await fetch(`${BASE}/orders/${orderId}`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          paymentStatus: "PAID",
+                          guestId: guest?.id,
+                          promoCodeId: appliedPromo?.id,
+                          promoDiscountCents: promoDiscount > 0 ? promoDiscount : undefined,
+                        }),
+                      });
+                      if (!response.ok) throw new Error("Failed to complete order");
+                      const updatedOrder = await response.json();
+                      router.push(`/order/confirmation?orderId=${orderId}&orderNumber=${orderNumber}&total=${updatedOrder.totalCents}&paid=true`);
+                    } catch (err: any) {
+                      setError(err.message || "Failed to complete order");
+                      setProcessing(false);
+                    }
+                  }}
+                  disabled={processing || !guestName.trim()}
+                  style={{
+                    width: "100%",
+                    padding: 16,
+                    background: processing || !guestName.trim() ? "#d1d5db" : "#22c55e",
+                    color: "white",
+                    border: "none",
+                    borderRadius: 12,
+                    fontSize: "1.1rem",
+                    fontWeight: "bold",
+                    cursor: processing || !guestName.trim() ? "not-allowed" : "pointer",
+                  }}
+                >
+                  {processing ? "Processing..." : "Complete Order"}
+                </button>
+              </div>
             ) : clientSecret ? (
               <StripeProvider clientSecret={clientSecret}>
                 <PaymentForm
-                  amountCents={validTotalCents}
+                  amountCents={discountedTotal}
                   onSuccess={handleGuestPaymentSuccess}
                   onError={handlePaymentError}
                   onProcessingChange={setProcessing}
@@ -847,19 +1046,82 @@ export default function OrderPaymentForm({
             </div>
           )}
 
+          {/* Promo Code Entry */}
+          <div
+            style={{
+              background: "#f9fafb",
+              border: "1px solid #e5e7eb",
+              borderRadius: 8,
+              padding: "12px 14px",
+              marginBottom: 16,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+              <img
+                src="/Oh_Logo_Large.png"
+                alt="Oh!"
+                style={{
+                  width: 20,
+                  height: 20,
+                  objectFit: "contain",
+                  opacity: 0.85,
+                }}
+              />
+              <span style={{ fontWeight: "600", color: "#222", fontSize: "0.9rem" }}>Have a promo code?</span>
+            </div>
+            <PromoCodeInput
+              scope="MENU"
+              subtotalCents={validTotalCents}
+              userId={userId || undefined}
+              guestId={guest?.id}
+              onApply={(promo) => setAppliedPromo(promo)}
+              onRemove={() => setAppliedPromo(null)}
+              appliedPromo={appliedPromo}
+              placeholder="Enter promo code"
+            />
+          </div>
+
           {/* Gift Card Code Entry */}
           <div
             style={{
               background: "#f9fafb",
               border: "1px solid #e5e7eb",
               borderRadius: 8,
-              padding: 16,
-              marginBottom: 24,
+              padding: "12px 14px",
+              marginBottom: 16,
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-              <span style={{ fontSize: "1.2rem" }}>🎁</span>
-              <span style={{ fontWeight: "600", color: "#222" }}>Have a gift card?</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+              {/* Mini gift card visual with Oh! logo */}
+              <div
+                style={{
+                  width: 32,
+                  height: 20,
+                  borderRadius: 3,
+                  background: "linear-gradient(135deg, #7C7A67 0%, #5a584a 100%)",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  position: "relative",
+                  overflow: "hidden",
+                }}
+              >
+                <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 50%)" }} />
+                <img
+                  src="/Oh_Logo_Large.png"
+                  alt="Oh!"
+                  style={{
+                    width: 16,
+                    height: 16,
+                    objectFit: "contain",
+                    filter: "brightness(0) invert(1)",
+                    opacity: 0.9,
+                    position: "relative",
+                  }}
+                />
+              </div>
+              <span style={{ fontWeight: "600", color: "#222", fontSize: "0.9rem" }}>Have a gift card?</span>
             </div>
 
             {giftCardApplied ? (
@@ -906,12 +1168,12 @@ export default function OrderPaymentForm({
                     placeholder="Enter gift card code"
                     style={{
                       flex: 1,
-                      padding: "10px 12px",
-                      border: giftCardError ? "1px solid #ef4444" : "1px solid #d1d5db",
-                      borderRadius: 6,
-                      fontSize: "0.95rem",
-                      textTransform: "uppercase",
-                      letterSpacing: "1px",
+                      padding: "12px 16px",
+                      border: giftCardError ? "1px solid #ef4444" : "1px solid #e5e7eb",
+                      borderRadius: 8,
+                      fontSize: "14px",
+                      letterSpacing: "0.5px",
+                      outline: "none",
                     }}
                     disabled={giftCardLoading}
                   />
@@ -919,14 +1181,19 @@ export default function OrderPaymentForm({
                     onClick={handleApplyGiftCard}
                     disabled={!giftCardCode.trim() || giftCardLoading}
                     style={{
-                      padding: "10px 16px",
-                      background: giftCardCode.trim() && !giftCardLoading ? "#7C7A67" : "#d1d5db",
+                      padding: "12px 20px",
+                      background: "#5A5847",
                       color: "white",
                       border: "none",
-                      borderRadius: 6,
-                      fontSize: "0.9rem",
+                      borderRadius: 8,
+                      fontSize: "14px",
                       fontWeight: "600",
                       cursor: giftCardCode.trim() && !giftCardLoading ? "pointer" : "not-allowed",
+                      minWidth: 80,
+                      opacity: !giftCardCode.trim() || giftCardLoading ? 0.5 : 1,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
                     }}
                   >
                     {giftCardLoading ? "..." : "Apply"}
@@ -956,6 +1223,20 @@ export default function OrderPaymentForm({
                 <span style={{ color: "#666" }}>{t("subtotal")}</span>
                 <span>${(totalCents / 100).toFixed(2)}</span>
               </div>
+              {promoDiscount > 0 && appliedPromo && (
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: 8,
+                    color: "#16a34a",
+                    fontWeight: "bold",
+                  }}
+                >
+                  <span>🏷️ Promo ({appliedPromo.code})</span>
+                  <span>-${(promoDiscount / 100).toFixed(2)}</span>
+                </div>
+              )}
               {creditsApplied > 0 && (
                 <div
                   style={{

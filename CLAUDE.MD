@@ -577,3 +577,197 @@ Twilio credentials are stored in environment variables. See `.env.example` for r
 - **Toll-free verification**: Pending (required for SMS delivery)
 - **Admin SMS on new user**: Implemented in `POST /users` endpoint
 - **Notification file**: `packages/api/src/notifications.js`
+
+---
+
+## Online Store & Email Receipts - Implementation (Jan 11, 2026)
+
+### Store Cart UI
+- **Quantity controls**: "Add to Cart" button shows `[−] qty [+]` controls after first add
+- **Cart indicator**: 40x40px circular button in Header, left of Clerk profile
+  - Only shows when items in cart
+  - Displays item count badge
+  - Uses Subtle Olive (#7C7A67) background
+
+### Key Files
+- `apps/web/contexts/cart-context.tsx` - Cart state with `getItemQuantity()` function
+- `apps/web/components/Header.tsx` - Cart indicator placement
+- `apps/web/app/[locale]/store/page.tsx` - Quantity controls on product cards
+- `apps/web/app/[locale]/store/checkout/page.tsx` - Checkout flow
+
+### Email Receipt System (Resend)
+
+**Configuration:**
+```bash
+RESEND_API_KEY=re_BDt8e6GB_47FMmrrxfo2HZGoZ5MSYW57S
+FROM_EMAIL=onboarding@resend.dev  # Change after domain verification
+```
+
+**IMPORTANT - Domain Verification Required:**
+Without verifying `ohbeef.com` in Resend, emails can ONLY be sent to the account owner (`dano@ohbeefnoodlesoup.com`). To send to all customers:
+1. Go to https://resend.com/domains
+2. Add and verify `ohbeef.com` with DNS records
+3. Update `FROM_EMAIL` to `noreply@ohbeef.com` or `orders@ohbeef.com`
+
+**Email Template Features:**
+- Oh! Logo with light gray (#E5E5E5) circular background
+- Brand colors: Soft Black (#222222), Mist Gray (#E5E5E5), Subtle Olive (#7C7A67), Natural Tan (#C7A878)
+- Fonts: Raleway (body), Noto Serif TC (headings)
+- Product images from database
+- Order summary with subtotal, shipping, tax, discounts
+- Shipping address display
+- "What Happens Next?" 3-step timeline
+- Footer tagline: "The only restaurant built around **you**"
+- Contact: orders@ohbeef.com
+
+**Notification File:** `packages/api/src/notifications.js`
+- `sendShopOrderConfirmation(order)` - Branded HTML email for shop orders
+- `sendOrderConfirmation(order, user)` - Restaurant order confirmation
+- `sendPodReadyNotification(order, user, podNumber)` - Pod ready alert
+
+### Shop Product Images
+Product images stored in database `ShopProduct.imageUrl` field. Images hosted at:
+```
+https://ohbeef.com/store/HomeKit.png
+https://ohbeef.com/store/SignatureChiliOil.png
+https://ohbeef.com/store/BeefBoneBrothConcentrate.png
+https://ohbeef.com/store/CeramicBowl.png
+https://ohbeef.com/store/Chopsticks.png
+https://ohbeef.com/store/T-Shirt.png
+https://ohbeef.com/store/ComfortHoodie.png
+https://ohbeef.com/store/ChefsApron.png
+https://ohbeef.com/store/ArtisanWoodenSoupBowl.png
+```
+
+### Checkout API Format
+Frontend must send shipping data as nested object:
+```javascript
+{
+  fulfillmentType: "SHIPPING",
+  shipping: {
+    name: "...",
+    email: "...",  // Required for email receipt
+    address1: "...",
+    address2: "...",
+    city: "...",
+    state: "...",
+    zip: "..."
+  },
+  creditsToApply: 0,  // Not creditsApplied
+  giftCardId: "...",
+  // ... other fields
+}
+```
+
+---
+
+## Admin Panel - Shop Orders, Gift Cards, Promo Codes (Jan 13, 2026)
+
+### Overview
+Full admin management for e-commerce operations including shop orders, gift cards, and promo codes.
+
+### Shop Orders Admin (`/shop-orders`)
+
+**List Page** (`apps/admin/app/shop-orders/page.tsx`):
+- Paginated table with filters (payment status, fulfillment status, type, date range, search)
+- Stats cards: Total Orders, Pending Fulfillment, Today's Orders, Total Revenue
+- Columns: Order #, Customer, Items, Total, Payment Status, Fulfillment Status, Type
+
+**Detail Page** (`apps/admin/app/shop-orders/[id]/page.tsx`):
+- Order items with full pricing breakdown (subtotal, discount, shipping, tax, total)
+- Customer info and shipping address
+- Fulfillment controls:
+  - Status dropdown (PENDING → PROCESSING → SHIPPED → DELIVERED → CANCELLED)
+  - Carrier selection (USPS, UPS, FedEx, DHL, Other)
+  - Tracking number and URL fields
+  - Admin notes
+- "Mark as Shipped" quick action button
+
+**API Endpoints:**
+```
+GET  /admin/shop/orders           - List orders (paginated, filtered)
+GET  /admin/shop/orders/:id       - Get order with items
+PATCH /admin/shop/orders/:id      - Update fulfillment, tracking, notes
+GET  /admin/shop/orders/stats     - Dashboard statistics
+```
+
+### Gift Cards Admin (`/gift-cards`)
+
+**Inventory Page** (`apps/admin/app/gift-cards/page.tsx`):
+- Paginated table with filters (status, balance, date range, search)
+- Stats cards: Total Cards Sold, Active Cards, Total Value Sold, Outstanding Balance
+- Balance display with visual progress bar (remaining/original)
+- Link to config page for denominations/designs
+
+**Detail Page** (`apps/admin/app/gift-cards/[id]/page.tsx`):
+- Balance overview with percentage used
+- Balance adjustment with required reason field
+- Usage history with linked shop orders
+- Purchaser and recipient info (including gift message)
+- Admin controls:
+  - Status management (ACTIVE, REDEEMED, EXHAUSTED, EXPIRED, CANCELLED)
+  - Deactivate/Reactivate buttons
+  - Admin notes field
+
+**Config Page** (`apps/admin/app/gift-cards/config/page.tsx`) - existing:
+- Manage preset denominations
+- Configure custom amount range
+- Manage gift card designs (gradients, names)
+
+**API Endpoints:**
+```
+GET  /admin/gift-cards           - List cards (paginated, filtered)
+GET  /admin/gift-cards/:id       - Get card with usage history
+PATCH /admin/gift-cards/:id      - Update status, balance, notes
+GET  /admin/gift-cards/stats     - Dashboard statistics
+```
+
+### Promo Codes Admin (`/promos`)
+
+**Enhanced Page** (`apps/admin/app/promos/page.tsx`):
+- Create/Edit modal with tabbed interface:
+  - **Basic Info**: Code, scope, discount type/value, description
+  - **Limits**: Usage limits (total/per-user), min order, max discount, expiration
+  - **Targeting**: Categories, include/exclude products, locations
+- Analytics section (toggle checkbox):
+  - Total usages, total discount given
+  - Usage breakdown by scope
+  - Top codes table with usage counts
+- "Targeted" badge on codes with targeting rules
+- Edit button opens pre-filled modal
+
+**API Endpoints:**
+```
+GET  /promo-codes                    - List codes (existing)
+POST /promo-codes                    - Create code (existing)
+PATCH /admin/promo-codes/:id         - Full edit (new)
+DELETE /promo-codes/:id              - Delete code (existing)
+GET  /admin/promo-codes/analytics    - Usage analytics (new)
+```
+
+**Targeting Fields (from schema):**
+- `targetCategories[]` - FOOD, CONDIMENTS, MERCHANDISE, APPAREL, LIMITED_EDITION
+- `targetProductIds[]` - Include specific products only
+- `excludedProductIds[]` - Exclude specific products
+- `locationIds[]` - Restrict to specific locations
+
+### Navigation Updates
+**File:** `apps/admin/components/AdminNav.tsx`
+
+Nav order: Kitchen → Cleaning → Pod Config → Kiosks → Analytics → Menu → Products → **Shop Orders** → Promos → Gift Cards → Locations
+
+- "Shop Orders" highlighted (new)
+- "Gift Cards" now links to `/gift-cards` (inventory page) instead of `/gift-cards/config`
+
+### Database Fields Added
+**ShopOrder model:**
+- `trackingCarrier` - String (USPS, UPS, FedEx, etc.)
+- `adminNotes` - String (internal notes)
+
+**GiftCard model:**
+- `adminNotes` - String (internal notes)
+
+### Future Enhancements (Designed For)
+- **ShipStation Integration**: Carrier dropdown and tracking fields ready for API integration
+- **Gift Card Refunds**: Stripe refund processing (uses `stripePaymentId`)
+- **Gift Card Audit Log**: Schema support for `GiftCardAuditLog` model (optional)
