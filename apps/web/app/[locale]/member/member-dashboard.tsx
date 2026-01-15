@@ -36,10 +36,10 @@ type UserProfile = {
   lifetimeSpentCents: number;
   currentStreak: number;
   longestStreak: number;
-  tierBenefits: TierBenefits;
-  tierProgress: any;
-  nextTier: any;
-  badges: Array<{ badge: Badge; earnedAt: string }>;
+  tierBenefits?: TierBenefits;
+  tierProgress?: any;
+  nextTier?: any;
+  badges?: Array<{ badge: Badge; earnedAt: string }>;
 };
 
 type Order = {
@@ -387,10 +387,32 @@ export default function MemberDashboard() {
       console.log("Fetching profile from:", url);
       const response = await fetch(url);
       console.log("Response status:", response.status);
+
+      if (!response.ok) {
+        console.error("Profile request failed with status:", response.status);
+        // Clear invalid userId from localStorage if user not found
+        if (response.status === 404) {
+          localStorage.removeItem("userId");
+          setUserId(null);
+        }
+        setLoading(false);
+        return;
+      }
+
       const data = await response.json();
       console.log("Profile data received:", data);
       console.log("Has badges?", data.badges);
       console.log("Has tierBenefits?", data.tierBenefits);
+
+      // Validate that the response has the minimum required profile data
+      if (!data || !data.id || !data.membershipTier) {
+        console.error("Invalid profile data received:", data);
+        localStorage.removeItem("userId");
+        setUserId(null);
+        setLoading(false);
+        return;
+      }
+
       setProfile(data);
 
       // Set GA4 user properties for segmentation
@@ -420,6 +442,10 @@ export default function MemberDashboard() {
   async function loadOrders(uid: string) {
     try {
       const response = await fetch(`${BASE}/users/${uid}/orders`);
+      if (!response.ok) {
+        console.error("Orders request failed with status:", response.status);
+        return;
+      }
       const data = await response.json();
       setOrders(data);
     } catch (error) {
@@ -430,6 +456,10 @@ export default function MemberDashboard() {
   async function loadBadgeProgress(uid: string) {
     try {
       const response = await fetch(`${BASE}/users/${uid}/badge-progress`);
+      if (!response.ok) {
+        console.error("Badge progress request failed with status:", response.status);
+        return;
+      }
       const data = await response.json();
       setBadgeProgress(data.progress || {});
     } catch (error) {
@@ -440,6 +470,10 @@ export default function MemberDashboard() {
   async function loadUserChallenges(uid: string) {
     try {
       const response = await fetch(`${BASE}/users/${uid}/challenges`);
+      if (!response.ok) {
+        console.error("User challenges request failed with status:", response.status);
+        return;
+      }
       const data = await response.json();
       setUserChallenges(data);
     } catch (error) {
@@ -450,6 +484,10 @@ export default function MemberDashboard() {
   async function loadMealGifts(uid: string) {
     try {
       const response = await fetch(`${BASE}/users/${uid}/meal-gifts`);
+      if (!response.ok) {
+        console.error("Meal gifts request failed with status:", response.status);
+        return;
+      }
       const data = await response.json();
       setMealGifts(data);
     } catch (error) {
@@ -690,7 +728,9 @@ export default function MemberDashboard() {
   }
 
   const tierColor = getTierColor(profile.membershipTier);
-  const earnedBadgeIds = (profile.badges || []).map((b) => b.badge.id);
+  const earnedBadgeIds = (profile.badges || [])
+    .filter((b) => b && b.badge && b.badge.id)
+    .map((b) => b.badge.id);
 
   return (
     <div style={{ minHeight: "100vh", paddingBottom: 80 }}>
@@ -805,32 +845,34 @@ export default function MemberDashboard() {
           {/* Tier Content */}
           <div style={{ padding: 24 }}>
             {/* Tier Benefits */}
-            <div
-              style={{
-                background: "#f9fafb",
-                borderRadius: 12,
-                padding: 16,
-                marginBottom: 16,
-              }}
-            >
-              <div style={{ fontWeight: "bold", marginBottom: 12 }}>
-                {t("yourBenefits")}
+            {profile.tierBenefits && profile.tierBenefits.perks && profile.tierBenefits.perks.length > 0 && (
+              <div
+                style={{
+                  background: "#f9fafb",
+                  borderRadius: 12,
+                  padding: 16,
+                  marginBottom: 16,
+                }}
+              >
+                <div style={{ fontWeight: "bold", marginBottom: 12 }}>
+                  {t("yourBenefits")}
+                </div>
+                <div style={{ display: "grid", gap: 8 }}>
+                  {profile.tierBenefits.perks.map((perkKey, idx) => (
+                    <div
+                      key={idx}
+                      style={{ display: "flex", alignItems: "center", gap: 8 }}
+                    >
+                      <span style={{ color: tierColor }}>✓</span>
+                      <span style={{ fontSize: "0.9rem" }}>{t(`perks.${perkKey}`)}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div style={{ display: "grid", gap: 8 }}>
-                {profile.tierBenefits.perks.map((perkKey, idx) => (
-                  <div
-                    key={idx}
-                    style={{ display: "flex", alignItems: "center", gap: 8 }}
-                  >
-                    <span style={{ color: tierColor }}>✓</span>
-                    <span style={{ fontSize: "0.9rem" }}>{t(`perks.${perkKey}`)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            )}
 
             {/* Progress to Next Tier */}
-            {profile.nextTier && (
+            {profile.nextTier && profile.tierProgress && profile.tierProgress.orders && profile.tierProgress.referrals && (
               <div>
                 <div
                   style={{
