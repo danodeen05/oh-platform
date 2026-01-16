@@ -98,51 +98,459 @@ export async function sendSMS({ to, body }) {
 
 /**
  * Send order confirmation notification
+ * Beautiful receipt email with full order details, QR code, and member benefits
  */
 export async function sendOrderConfirmation(order, user) {
   const results = { email: null, sms: null };
   const orderNumber = order.kitchenOrderNumber || order.orderNumber.slice(-6);
   const totalFormatted = `$${(order.totalCents / 100).toFixed(2)}`;
+  const customerName = user?.name || order.guest?.name || "Valued Guest";
+  const isGuest = !user?.id || order.guestId;
+
+  // Calculate order breakdown
+  const subtotalCents = order.totalCents || 0;
+  const taxRate = order.location?.taxRate || 0.0725; // Default 7.25% if not set
+  const taxCents = order.taxCents || Math.round(subtotalCents * taxRate);
+  const totalWithTaxCents = subtotalCents + taxCents;
+
+  // Calculate potential member credit (1% cashback for Chopstick tier)
+  const potentialCredit = Math.round(subtotalCents * 0.01); // 1% cashback
+  const potentialCreditFormatted = `$${(potentialCredit / 100).toFixed(2)}`;
+
+  // Payment method info
+  const paymentLast4 = order.paymentMethodLast4;
+  const paymentBrand = order.paymentMethodBrand ? order.paymentMethodBrand.charAt(0).toUpperCase() + order.paymentMethodBrand.slice(1) : null;
+
+  // Order date
+  const orderDate = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit'
+  });
+
+  // Location name
+  const locationName = order.location?.name || "Oh! Beef Noodle Soup";
+
+  // Group items by category
+  // Extras (add-ons, sides, drinks, desserts) - these are separate from the bowl
+  const extrasItems = order.items?.filter(item => {
+    const cat = item.menuItem?.category || "";
+    return cat.startsWith("add-on") || cat.startsWith("side") || cat.startsWith("drink") || cat.startsWith("dessert");
+  }) || [];
+  // Bowl items = everything else (main, slider, topping, garnish, etc.)
+  const bowlItems = order.items?.filter(item => {
+    const cat = item.menuItem?.category || "";
+    return !cat.startsWith("add-on") && !cat.startsWith("side") && !cat.startsWith("drink") && !cat.startsWith("dessert");
+  }) || [];
+
+  // Generate QR code for email
+  const qrCodeUrl = order.orderQrCode ? `https://ohbeef.com/order/check-in?orderQrCode=${encodeURIComponent(order.orderQrCode)}` : null;
+  const orderStatusUrl = order.orderQrCode ? `https://ohbeef.com/order/status?orderQrCode=${encodeURIComponent(order.orderQrCode)}` : null;
+  const qrCodeDataUrl = order.orderQrCode ? await generateQRCodeDataURL(order.orderQrCode, 180) : null;
+
+  // Build items HTML for extras (add-ons, sides, drinks, desserts)
+  const buildItemsHtml = (items, sectionTitle, bgColor) => {
+    if (!items || items.length === 0) return '';
+    return `
+      <tr>
+        <td style="padding-bottom: 20px;">
+          <p style="margin: 0 0 12px; font-size: 12px; font-weight: 600; color: #7C7A67; text-transform: uppercase; letter-spacing: 1px; font-family: 'Raleway', sans-serif;">${sectionTitle}</p>
+          <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background: ${bgColor}; border-radius: 8px; padding: 12px 16px;">
+            ${items.map(item => `
+              <tr>
+                <td style="padding: 4px 0; font-family: 'Raleway', sans-serif;">
+                  <p style="margin: 0; font-size: 13px; color: #222222;">${item.menuItem?.name || 'Item'}${item.quantity > 1 ? ` <span style="color: #666666;">x${item.quantity}</span>` : ''}</p>
+                </td>
+                <td style="padding: 4px 0; text-align: right; vertical-align: top; white-space: nowrap;">
+                  ${item.priceCents > 0 ? `<p style="margin: 0; font-size: 13px; color: #222222; font-family: 'Raleway', sans-serif;">$${((item.priceCents * item.quantity) / 100).toFixed(2)}</p>` : `<p style="margin: 0; font-size: 12px; color: #7C7A67; font-family: 'Raleway', sans-serif;">Included</p>`}
+                </td>
+              </tr>
+            `).join('')}
+          </table>
+        </td>
+      </tr>
+    `;
+  };
+
+  // Build bowl section HTML - all items as a clean consolidated list with total price
+  const buildBowlSectionHtml = (items) => {
+    if (!items || items.length === 0) return '';
+
+    // Calculate total bowl price
+    const bowlTotalCents = items.reduce((sum, item) => sum + ((item.priceCents || 0) * (item.quantity || 1)), 0);
+    const bowlTotalFormatted = `$${(bowlTotalCents / 100).toFixed(2)}`;
+
+    // Build each line - if it has a selectedValue, show "Name: Value", otherwise just the name
+    const itemLines = items.map(item => {
+      const name = item.menuItem?.name || 'Item';
+      const value = item.selectedValue || '';
+      if (value) {
+        return `<p style="margin: 0 0 4px; font-size: 13px; font-family: 'Raleway', sans-serif;"><span style="color: #222222;">${name}:</span> <span style="color: #666666;">${value}</span></p>`;
+      } else {
+        return `<p style="margin: 0 0 4px; font-size: 13px; color: #222222; font-weight: 500; font-family: 'Raleway', sans-serif;">${name}</p>`;
+      }
+    }).join('');
+
+    return `
+      <tr>
+        <td style="padding-bottom: 20px;">
+          <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom: 12px;">
+            <tr>
+              <td style="font-size: 12px; font-weight: 600; color: #7C7A67; text-transform: uppercase; letter-spacing: 1px; font-family: 'Raleway', sans-serif;">Your Bowl</td>
+              <td style="text-align: right; font-size: 14px; font-weight: 600; color: #222222; font-family: 'Raleway', sans-serif;">${bowlTotalFormatted}</td>
+            </tr>
+          </table>
+          <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background: rgba(124, 122, 103, 0.08); border-radius: 8px;">
+            <tr>
+              <td style="padding: 14px 16px;">
+                ${itemLines}
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    `;
+  };
+
+  // Build plain text items list
+  const buildItemsText = (items, sectionTitle) => {
+    if (!items || items.length === 0) return '';
+    return `${sectionTitle}\n${items.map(item =>
+      `  - ${item.menuItem?.name || 'Item'}${item.selectedValue ? ` (${item.selectedValue})` : ''}${item.quantity > 1 ? ` x${item.quantity}` : ''}: ${item.priceCents > 0 ? `$${((item.priceCents * item.quantity) / 100).toFixed(2)}` : 'Included'}`
+    ).join('\n')}\n`;
+  };
+
+  // Build plain text bowl section - all items as a clean list
+  const buildBowlSectionText = (items) => {
+    if (!items || items.length === 0) return '';
+    let text = 'Your Bowl\n';
+    items.forEach(item => {
+      const name = item.menuItem?.name || 'Item';
+      const value = item.selectedValue || '';
+      if (value) {
+        text += `  ${name}: ${value}\n`;
+      } else {
+        text += `  ${name}\n`;
+      }
+    });
+    return text;
+  };
 
   // Email notification
-  if (user?.email) {
+  if (user?.email || order.guest?.email) {
+    const emailTo = user?.email || order.guest?.email;
+
+    const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Receipt</title>
+  <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500;600;700&family=Noto+Serif+TC:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body style="margin: 0; padding: 0; background-color: #E5E5E5; font-family: 'Raleway', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color: #E5E5E5;">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table cellpadding="0" cellspacing="0" border="0" width="600" style="max-width: 600px;">
+
+          <!-- Header with Logo -->
+          <tr>
+            <td style="background: #222222; border-radius: 16px 16px 0 0; padding: 48px 40px 40px; text-align: center;">
+              <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                  <td align="center">
+                    <div style="width: 100px; height: 100px; background: #E5E5E5; border-radius: 50%; margin: 0 auto 24px; display: inline-block; padding: 8px; box-sizing: border-box;">
+                      <img src="https://ohbeef.com/Oh_Logo_Mark_Web.png" alt="Oh!" width="84" height="84" style="display: block; border: 0;">
+                    </div>
+                    <h1 style="margin: 0; color: #ffffff; font-family: 'Noto Serif TC', Georgia, serif; font-size: 28px; font-weight: 400; letter-spacing: 2px;">Order Confirmed!</h1>
+                    <p style="margin: 16px 0 0; color: #C7A878; font-family: 'Raleway', sans-serif; font-size: 15px; font-weight: 400;">Thank you, ${customerName}!</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Order Number Banner -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); padding: 20px 40px; text-align: center;">
+              <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                  <td align="center">
+                    <p style="margin: 0 0 4px; color: rgba(255,255,255,0.9); font-family: 'Raleway', sans-serif; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; font-weight: 500;">Order Number</p>
+                    <p style="margin: 0; color: #ffffff; font-size: 32px; font-weight: 700; letter-spacing: 3px; font-family: 'Raleway', monospace;">#${orderNumber}</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- QR Code Section -->
+          ${qrCodeDataUrl ? `
+          <tr>
+            <td style="background: #7C7A67; padding: 32px 40px; text-align: center;">
+              <p style="margin: 0 0 8px; color: #ffffff; font-family: 'Noto Serif TC', Georgia, serif; font-size: 18px; font-weight: 400;">Scan at Check-In Kiosk</p>
+              <p style="margin: 0 0 20px; color: rgba(255,255,255,0.8); font-family: 'Raleway', sans-serif; font-size: 13px;">Show this QR code when you arrive at ${locationName}</p>
+              <div style="background: white; border-radius: 16px; padding: 16px; display: inline-block; position: relative;">
+                <img src="${qrCodeDataUrl}" alt="Order QR Code" width="180" height="180" style="display: block; border: 0;">
+                <!-- Oh! Logo overlay in center with rounded corners -->
+                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 44px; height: 44px; background: #ffffff; border-radius: 10px; padding: 4px; box-sizing: border-box; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
+                  <img src="https://ohbeef.com/Oh_Logo_Mark_Web.png" alt="Oh!" width="36" height="36" style="display: block; border: 0; border-radius: 6px;">
+                </div>
+              </div>
+              <p style="margin: 16px 0 0; color: rgba(255,255,255,0.7); font-family: monospace; font-size: 11px; letter-spacing: 1px;">${order.orderQrCode}</p>
+            </td>
+          </tr>
+          ` : ''}
+
+          <!-- Main Content -->
+          <tr>
+            <td style="background: #ffffff; padding: 36px 40px;">
+
+              <!-- Order Date & Location -->
+              <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom: 24px;">
+                <tr>
+                  <td>
+                    <p style="margin: 0; color: #666666; font-size: 13px; font-family: 'Raleway', sans-serif;">${orderDate}</p>
+                    <p style="margin: 4px 0 0; color: #7C7A67; font-size: 13px; font-family: 'Raleway', sans-serif; font-weight: 500;">${locationName}</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Order Items -->
+              <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                  <td>
+                    <p style="margin: 0 0 16px; color: #222222; font-family: 'Noto Serif TC', Georgia, serif; font-size: 18px; font-weight: 500;">Your Order</p>
+                  </td>
+                </tr>
+                ${buildBowlSectionHtml(bowlItems)}
+                ${buildItemsHtml(extrasItems, "Add-Ons & Extras", "rgba(199, 168, 120, 0.1)")}
+              </table>
+
+              <!-- Order Summary -->
+              <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top: 8px; border-top: 2px solid #E5E5E5; padding-top: 20px;">
+                <tr>
+                  <td style="padding: 8px 0; color: #666666; font-size: 14px; font-family: 'Raleway', sans-serif;">Subtotal</td>
+                  <td style="padding: 8px 0; text-align: right; color: #222222; font-size: 14px; font-family: 'Raleway', sans-serif;">$${(subtotalCents / 100).toFixed(2)}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #666666; font-size: 14px; font-family: 'Raleway', sans-serif;">Tax</td>
+                  <td style="padding: 8px 0; text-align: right; color: #222222; font-size: 14px; font-family: 'Raleway', sans-serif;">$${(taxCents / 100).toFixed(2)}</td>
+                </tr>
+                <tr>
+                  <td colspan="2" style="padding-top: 16px;">
+                    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="background: linear-gradient(135deg, #222222 0%, #333333 100%); border-radius: 8px;">
+                      <tr>
+                        <td style="padding: 16px 20px; font-weight: 600; color: #ffffff; font-size: 16px; font-family: 'Raleway', sans-serif;">Total Paid</td>
+                        <td style="padding: 16px 20px; text-align: right; font-weight: 700; color: #ffffff; font-size: 22px; font-family: 'Raleway', sans-serif;">$${(totalWithTaxCents / 100).toFixed(2)}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                ${paymentLast4 ? `
+                <tr>
+                  <td colspan="2" style="padding-top: 12px; text-align: center;">
+                    <p style="margin: 0; color: #666666; font-size: 12px; font-family: 'Raleway', sans-serif;">
+                      Paid with ${paymentBrand || 'Card'} ending in ${paymentLast4}
+                    </p>
+                  </td>
+                </tr>
+                ` : ''}
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- Track Order CTA -->
+          ${orderStatusUrl ? `
+          <tr>
+            <td style="background: #fafaf9; padding: 32px 40px; text-align: center; border-top: 1px solid #E5E5E5;">
+              <p style="margin: 0 0 16px; color: #222222; font-family: 'Raleway', sans-serif; font-size: 15px; font-weight: 500;">Track your order in real-time</p>
+              <a href="${orderStatusUrl}" style="display: inline-block; background: #7C7A67; color: #ffffff; text-decoration: none; padding: 14px 40px; border-radius: 8px; font-size: 14px; font-weight: 600; font-family: 'Raleway', sans-serif;">View Order Status</a>
+            </td>
+          </tr>
+          ` : ''}
+
+          <!-- Member Benefits CTA (for guests) -->
+          ${isGuest ? `
+          <tr>
+            <td style="background: linear-gradient(135deg, #C7A878 0%, #B8956A 100%); padding: 32px 40px; text-align: center;">
+              <p style="margin: 0 0 8px; color: #222222; font-family: 'Noto Serif TC', Georgia, serif; font-size: 20px; font-weight: 500;">Become an Oh! Member</p>
+              <p style="margin: 0 0 16px; color: rgba(34,34,34,0.8); font-family: 'Raleway', sans-serif; font-size: 14px; line-height: 1.6;">
+                Join Oh! Rewards and earn credits on every order!<br>
+                <strong>This order would have earned you ${potentialCreditFormatted} in credits.</strong>
+              </p>
+              <a href="https://ohbeef.com/member" style="display: inline-block; background: #222222; color: #E5E5E5; text-decoration: none; padding: 14px 40px; border-radius: 8px; font-size: 14px; font-weight: 600; font-family: 'Raleway', sans-serif;">Join Now — It's Free</a>
+              <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top: 24px;">
+                <tr>
+                  <td width="33%" style="text-align: center; padding: 0 8px;">
+                    <p style="margin: 0; font-size: 20px;">💰</p>
+                    <p style="margin: 4px 0 0; font-size: 11px; color: #222222; font-family: 'Raleway', sans-serif;">Earn Cashback</p>
+                  </td>
+                  <td width="33%" style="text-align: center; padding: 0 8px;">
+                    <p style="margin: 0; font-size: 20px;">🏆</p>
+                    <p style="margin: 4px 0 0; font-size: 11px; color: #222222; font-family: 'Raleway', sans-serif;">Collect Badges</p>
+                  </td>
+                  <td width="33%" style="text-align: center; padding: 0 8px;">
+                    <p style="margin: 0; font-size: 20px;">⭐</p>
+                    <p style="margin: 4px 0 0; font-size: 11px; color: #222222; font-family: 'Raleway', sans-serif;">VIP Perks</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          ` : ''}
+
+          <!-- What's Next Section -->
+          <tr>
+            <td style="background: #ffffff; padding: 36px 40px; border-top: 1px solid #E5E5E5;">
+              <p style="margin: 0 0 24px; color: #222222; font-family: 'Noto Serif TC', Georgia, serif; font-size: 18px; font-weight: 500;">What's Next?</p>
+
+              <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                  <td style="padding-bottom: 20px;">
+                    <table cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="width: 36px; height: 36px; background: #7C7A67; border-radius: 50%; text-align: center; vertical-align: middle; color: white; font-weight: 600; font-size: 14px; font-family: 'Raleway', sans-serif;">1</td>
+                        <td style="padding-left: 16px;">
+                          <p style="margin: 0; color: #222222; font-size: 15px; font-weight: 600; font-family: 'Raleway', sans-serif;">Head to ${locationName}</p>
+                          <p style="margin: 4px 0 0; color: #666666; font-size: 13px; font-family: 'Raleway', sans-serif;">We're preparing your meal fresh</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding-bottom: 20px;">
+                    <table cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="width: 36px; height: 36px; background: #C7A878; border-radius: 50%; text-align: center; vertical-align: middle; color: white; font-weight: 600; font-size: 14px; font-family: 'Raleway', sans-serif;">2</td>
+                        <td style="padding-left: 16px;">
+                          <p style="margin: 0; color: #222222; font-size: 15px; font-weight: 600; font-family: 'Raleway', sans-serif;">Scan Your QR Code</p>
+                          <p style="margin: 4px 0 0; color: #666666; font-size: 13px; font-family: 'Raleway', sans-serif;">Check in at our kiosk to get your pod</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <table cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="width: 36px; height: 36px; background: #222222; border-radius: 50%; text-align: center; vertical-align: middle; color: white; font-weight: 600; font-size: 14px; font-family: 'Raleway', sans-serif;">3</td>
+                        <td style="padding-left: 16px;">
+                          <p style="margin: 0; color: #222222; font-size: 15px; font-weight: 600; font-family: 'Raleway', sans-serif;">Enjoy Your Meal!</p>
+                          <p style="margin: 4px 0 0; color: #666666; font-size: 13px; font-family: 'Raleway', sans-serif;">Relax in your private pod</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background: #222222; border-radius: 0 0 16px 16px; padding: 40px; text-align: center;">
+              <div style="width: 60px; height: 60px; background: #E5E5E5; border-radius: 50%; margin: 0 auto 16px; display: inline-block; padding: 5px; box-sizing: border-box;">
+                <img src="https://ohbeef.com/Oh_Logo_Mark_Web.png" alt="Oh!" width="50" height="50" style="display: block; border: 0;">
+              </div>
+
+              <p style="margin: 0 0 6px; color: #C7A878; font-family: 'Noto Serif TC', Georgia, serif; font-size: 18px; font-weight: 400;">Oh! Beef Noodle Soup</p>
+              <p style="margin: 0 0 24px; color: rgba(255,255,255,0.5); font-family: 'Raleway', sans-serif; font-size: 12px; letter-spacing: 1px;">The only restaurant built around <strong style="color: rgba(255,255,255,0.7);">you</strong></p>
+
+              <table cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto;">
+                <tr>
+                  <td style="padding: 0 12px;">
+                    <a href="https://instagram.com/ohbeefnoodlesoup" style="color: rgba(255,255,255,0.6); text-decoration: none; font-size: 12px; font-family: 'Raleway', sans-serif;">Instagram</a>
+                  </td>
+                  <td style="color: rgba(255,255,255,0.2);">|</td>
+                  <td style="padding: 0 12px;">
+                    <a href="https://ohbeef.com" style="color: rgba(255,255,255,0.6); text-decoration: none; font-size: 12px; font-family: 'Raleway', sans-serif;">Website</a>
+                  </td>
+                  <td style="color: rgba(255,255,255,0.2);">|</td>
+                  <td style="padding: 0 12px;">
+                    <a href="mailto:orders@ohbeef.com" style="color: rgba(255,255,255,0.6); text-decoration: none; font-size: 12px; font-family: 'Raleway', sans-serif;">Contact</a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin: 28px 0 0; color: rgba(255,255,255,0.35); font-size: 11px; font-family: 'Raleway', sans-serif; line-height: 1.6;">
+                Questions about your order?<br>
+                Reply to this email or contact us at orders@ohbeef.com
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `;
+
+    const text = `
+OH! BEEF NOODLE SOUP
+Order Confirmed!
+
+Thank you, ${customerName}!
+
+ORDER #${orderNumber}
+${orderDate}
+${locationName}
+
+${order.orderQrCode ? `CHECK-IN QR CODE
+Scan this code at our kiosk when you arrive:
+${order.orderQrCode}
+
+` : ''}YOUR ORDER
+${buildBowlSectionText(bowlItems)}${buildItemsText(extrasItems, "Add-Ons & Extras")}
+ORDER SUMMARY
+Subtotal: $${(subtotalCents / 100).toFixed(2)}
+Tax: $${(taxCents / 100).toFixed(2)}
+Total Paid: $${(totalWithTaxCents / 100).toFixed(2)}
+${paymentLast4 ? `Paid with ${paymentBrand || 'Card'} ending in ${paymentLast4}` : ''}
+
+${orderStatusUrl ? `TRACK YOUR ORDER
+${orderStatusUrl}
+
+` : ''}${isGuest ? `BECOME AN OH! MEMBER
+Join Oh! Rewards and earn credits on every order!
+This order would have earned you ${potentialCreditFormatted} in credits.
+Sign up free at: https://ohbeef.com/member
+
+` : ''}WHAT'S NEXT?
+1. Head to ${locationName} - We're preparing your meal fresh
+2. Scan Your QR Code - Check in at our kiosk to get your pod
+3. Enjoy Your Meal! - Relax in your private pod
+
+Questions? Contact us at orders@ohbeef.com
+
+Thank you for dining with Oh!
+    `.trim();
+
     results.email = await sendEmail({
-      to: user.email,
-      subject: `Oh! Order Confirmed - #${orderNumber}`,
-      html: `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-          <div style="background: #7C7A67; color: white; padding: 24px; text-align: center;">
-            <h1 style="margin: 0; font-size: 24px;">Oh! Beef Noodle Soup</h1>
-          </div>
-          <div style="padding: 24px;">
-            <h2 style="margin-top: 0;">Order Confirmed!</h2>
-            <p>Thank you for your order. We're preparing your delicious meal!</p>
-
-            <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 16px 0;">
-              <p style="margin: 0;"><strong>Order Number:</strong> #${orderNumber}</p>
-              <p style="margin: 8px 0 0;"><strong>Total:</strong> ${totalFormatted}</p>
-            </div>
-
-            <p>You can track your order status at any time by visiting your order page or scanning your QR code at our check-in kiosk.</p>
-
-            <p style="margin-top: 24px;">See you soon!</p>
-            <p style="color: #666;">— The Oh! Team</p>
-          </div>
-          <div style="background: #f5f5f5; padding: 16px; text-align: center; font-size: 12px; color: #666;">
-            <p style="margin: 0;">Oh! Beef Noodle Soup</p>
-          </div>
-        </div>
-      `,
-      text: `Order Confirmed!\n\nOrder Number: #${orderNumber}\nTotal: ${totalFormatted}\n\nTrack your order at our website or check in at the kiosk.\n\nSee you soon!\n— The Oh! Team`,
+      to: emailTo,
+      subject: `Your Oh! Receipt - Order #${orderNumber}`,
+      html,
+      text,
       from: "receipt@ohbeef.com",
     });
   }
 
   // SMS notification
-  if (user?.phone) {
+  const phone = user?.phone || order.guest?.phone;
+  if (phone) {
     results.sms = await sendSMS({
-      to: user.phone,
-      body: `Oh! Order Confirmed #${orderNumber}. Total: ${totalFormatted}. Track your order at our website or check in at the kiosk when you arrive.`,
+      to: phone,
+      body: `Oh! Order #${orderNumber} confirmed! Total: ${totalFormatted}. ${order.orderQrCode ? `Check in at kiosk with code: ${order.orderQrCode.slice(-8)}` : 'Show this text at check-in.'}`,
     });
   }
 

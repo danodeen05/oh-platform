@@ -8,6 +8,24 @@ import { event, trackLoyaltySignup } from "@/lib/analytics";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
+type Badge = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  iconEmoji: string;
+  category: string;
+};
+
+type Challenge = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  rewardCents: number;
+  iconEmoji: string;
+};
+
 // Tier icon component that uses PNG files with transparent backgrounds
 function TierIcon({ tier, size = 80 }: { tier: "chopstick" | "noodle-master" | "beef-boss"; size?: number }) {
   const iconPath = `/tiers/${tier}.png`;
@@ -30,9 +48,31 @@ function TierIcon({ tier, size = 80 }: { tier: "chopstick" | "noodle-master" | "
 
 export default function LoyaltyPage() {
   const t = useTranslations("loyalty");
+  const tMember = useTranslations("member");
   const tCommon = useTranslations("common");
   const locale = useLocale();
   const [userTier, setUserTier] = useState<string | null>(null);
+  const [badges, setBadges] = useState<Badge[]>([]);
+  const [challenges, setChallenges] = useState<Challenge[]>([]);
+
+  // Fetch badges and challenges from API
+  useEffect(() => {
+    // Fetch all active badges
+    fetch(`${BASE}/badges`)
+      .then((res) => res.json())
+      .then((data) => setBadges(data))
+      .catch(() => {
+        console.error("Failed to load badges");
+      });
+
+    // Fetch all active challenges
+    fetch(`${BASE}/challenges`)
+      .then((res) => res.json())
+      .then((data) => setChallenges(data))
+      .catch(() => {
+        console.error("Failed to load challenges");
+      });
+  }, []);
 
   // Fetch user's current tier if logged in
   useEffect(() => {
@@ -100,16 +140,22 @@ export default function LoyaltyPage() {
     },
   ];
 
-  const badges = [
-    { emoji: "🌟", name: t("badges.firstBowl.name"), description: t("badges.firstBowl.description") },
-    { emoji: "🔥", name: t("badges.hotStreak.name"), description: t("badges.hotStreak.description") },
-    { emoji: "🎯", name: t("badges.perfectTen.name"), description: t("badges.perfectTen.description") },
-    { emoji: "💪", name: t("badges.proteinPower.name"), description: t("badges.proteinPower.description") },
-    { emoji: "🌶️", name: t("badges.heatSeeker.name"), description: t("badges.heatSeeker.description") },
-    { emoji: "🎁", name: t("badges.giftGiver.name"), description: t("badges.giftGiver.description") },
-    { emoji: "👥", name: t("badges.communityBuilder.name"), description: t("badges.communityBuilder.description") },
-    { emoji: "🏆", name: t("badges.legend.name"), description: t("badges.legend.description") },
-  ];
+  // Group badges by category for display
+  const badgesByCategory = badges.reduce((acc, badge) => {
+    const category = badge.category || "OTHER";
+    if (!acc[category]) acc[category] = [];
+    acc[category].push(badge);
+    return acc;
+  }, {} as Record<string, Badge[]>);
+
+  const categoryOrder = ["MILESTONE", "STREAK", "REFERRAL", "CHALLENGE", "SPECIAL"];
+  const categoryLabels: Record<string, string> = {
+    MILESTONE: t("badges.categories.milestone"),
+    STREAK: t("badges.categories.streak"),
+    REFERRAL: t("badges.categories.referral"),
+    CHALLENGE: t("badges.categories.challenge"),
+    SPECIAL: t("badges.categories.special"),
+  };
 
   return (
     <div style={{ background: "#E5E5E5", minHeight: "100vh" }}>
@@ -647,37 +693,167 @@ export default function LoyaltyPage() {
             {t("badges.description")}
           </p>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
-              gap: "16px",
-            }}
-          >
-            {badges.map((badge) => (
-              <div
-                key={badge.name}
-                style={{
-                  background: "rgba(255, 255, 255, 0.05)",
-                  borderRadius: "12px",
-                  padding: "20px",
-                  textAlign: "center",
-                  border: "1px solid rgba(255, 255, 255, 0.1)",
-                  transition: "all 0.3s ease",
-                }}
-              >
-                <div style={{ fontSize: "2.5rem", marginBottom: "12px" }}>{badge.emoji}</div>
-                <h4 style={{ fontSize: "1rem", fontWeight: "600", marginBottom: "8px", color: "#E5E5E5" }}>
-                  {badge.name}
-                </h4>
-                <p style={{ fontSize: "0.85rem", opacity: 0.7, lineHeight: "1.4", color: "#E5E5E5" }}>
-                  {badge.description}
-                </p>
+          {/* Badges by Category */}
+          {categoryOrder.map((category) => {
+            const categoryBadges = badgesByCategory[category];
+            if (!categoryBadges || categoryBadges.length === 0) return null;
+
+            return (
+              <div key={category} style={{ marginBottom: "32px" }}>
+                <h3
+                  style={{
+                    fontSize: "0.9rem",
+                    fontWeight: "600",
+                    color: "#C7A878",
+                    marginBottom: "16px",
+                    textTransform: "uppercase",
+                    letterSpacing: "1px",
+                  }}
+                >
+                  {categoryLabels[category] || category}
+                </h3>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+                    gap: "16px",
+                  }}
+                >
+                  {categoryBadges.map((badge) => (
+                    <div
+                      key={badge.id}
+                      style={{
+                        background: "rgba(255, 255, 255, 0.05)",
+                        borderRadius: "12px",
+                        padding: "20px",
+                        textAlign: "center",
+                        border: "1px solid rgba(255, 255, 255, 0.1)",
+                        transition: "all 0.3s ease",
+                      }}
+                    >
+                      <div style={{ fontSize: "2.5rem", marginBottom: "12px" }}>{badge.iconEmoji}</div>
+                      <h4 style={{ fontSize: "1rem", fontWeight: "600", marginBottom: "8px", color: "#E5E5E5" }}>
+                        {tMember(`badges.${badge.slug}.name`, { defaultValue: badge.name })}
+                      </h4>
+                      <p style={{ fontSize: "0.85rem", opacity: 0.7, lineHeight: "1.4", color: "#E5E5E5" }}>
+                        {tMember(`badges.${badge.slug}.description`, { defaultValue: badge.description })}
+                      </p>
+                    </div>
+                  ))}
+                </div>
               </div>
-            ))}
-          </div>
+            );
+          })}
         </div>
       </section>
+
+      {/* Challenges Section */}
+      {challenges.length > 0 && (
+        <section style={{ background: "white", padding: "80px 24px" }}>
+          <div style={{ maxWidth: "1000px", margin: "0 auto" }}>
+            <h2
+              style={{
+                fontSize: "clamp(1.5rem, 4vw, 2rem)",
+                fontWeight: "400",
+                marginBottom: "16px",
+                textAlign: "center",
+                color: "#222222",
+              }}
+            >
+              {t("challenges.title")}
+            </h2>
+            <p
+              style={{
+                fontSize: "1.1rem",
+                color: "#666",
+                marginBottom: "48px",
+                textAlign: "center",
+                maxWidth: "600px",
+                margin: "0 auto 48px",
+              }}
+            >
+              {t("challenges.description")}
+            </p>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+                gap: "24px",
+              }}
+            >
+              {challenges.map((challenge) => (
+                <div
+                  key={challenge.id}
+                  style={{
+                    background: "#f9fafb",
+                    borderRadius: "16px",
+                    padding: "24px",
+                    border: "1px solid #e5e7eb",
+                    transition: "all 0.3s ease",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "flex-start", gap: "16px" }}>
+                    <div
+                      style={{
+                        fontSize: "2.5rem",
+                        width: "64px",
+                        height: "64px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        background: "rgba(199, 168, 120, 0.15)",
+                        borderRadius: "12px",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {challenge.iconEmoji}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <h4 style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "8px", color: "#222222" }}>
+                        {challenge.name}
+                      </h4>
+                      <p style={{ fontSize: "0.9rem", color: "#666", marginBottom: "12px", lineHeight: "1.5" }}>
+                        {challenge.description}
+                      </p>
+                      <div
+                        style={{
+                          display: "inline-block",
+                          background: "#7C7A67",
+                          color: "white",
+                          padding: "6px 12px",
+                          borderRadius: "20px",
+                          fontSize: "0.85rem",
+                          fontWeight: "600",
+                        }}
+                      >
+                        {t("challenges.reward")}: ${(challenge.rewardCents / 100).toFixed(2)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ textAlign: "center", marginTop: "32px" }}>
+              <Link
+                href={`/${locale}/member`}
+                style={{
+                  display: "inline-block",
+                  padding: "14px 32px",
+                  background: "#7C7A67",
+                  color: "white",
+                  borderRadius: "8px",
+                  textDecoration: "none",
+                  fontWeight: "500",
+                }}
+              >
+                {t("challenges.viewProgress")}
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Referral Section */}
       <section style={{ padding: "80px 24px", background: "white" }}>

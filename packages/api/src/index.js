@@ -3477,6 +3477,7 @@ app.patch("/orders/:id", async (req, reply) => {
     userId,
     guestId,
     totalCents,
+    taxCents,
     estimatedArrival,
     seatId,
     podSelectionMethod,
@@ -3485,6 +3486,8 @@ app.patch("/orders/:id", async (req, reply) => {
     podReservationExpiry,
     orderSource,
     stripePaymentId,
+    paymentMethodLast4,
+    paymentMethodBrand,
     promoCodeId,
     promoDiscountCents,
   } = req.body || {};
@@ -3501,6 +3504,7 @@ app.patch("/orders/:id", async (req, reply) => {
   if (userId) data.userId = userId;
   if (guestId) data.guestId = guestId;
   if (totalCents !== undefined) data.totalCents = totalCents;
+  if (taxCents !== undefined) data.taxCents = taxCents;
   if (estimatedArrival) data.estimatedArrival = new Date(estimatedArrival);
   if (seatId) data.seatId = seatId;
   if (podSelectionMethod) data.podSelectionMethod = podSelectionMethod;
@@ -3509,6 +3513,8 @@ app.patch("/orders/:id", async (req, reply) => {
   if (podReservationExpiry) data.podReservationExpiry = new Date(podReservationExpiry);
   if (orderSource) data.orderSource = orderSource;
   if (stripePaymentId) data.stripePaymentId = stripePaymentId;
+  if (paymentMethodLast4) data.paymentMethodLast4 = paymentMethodLast4;
+  if (paymentMethodBrand) data.paymentMethodBrand = paymentMethodBrand;
   if (promoCodeId) data.promoCodeId = promoCodeId;
   if (promoDiscountCents !== undefined) data.promoDiscountCents = promoDiscountCents;
 
@@ -3522,6 +3528,23 @@ app.patch("/orders/:id", async (req, reply) => {
   if (paymentStatus === "PAID") {
     data.paidAt = new Date();
     data.queuedAt = new Date(); // Track when it entered the kitchen queue
+
+    // Retrieve payment method info from Stripe if we have a payment ID
+    if (stripePaymentId && stripe && !paymentMethodLast4) {
+      try {
+        const paymentIntent = await stripe.paymentIntents.retrieve(stripePaymentId);
+        if (paymentIntent.payment_method) {
+          const paymentMethod = await stripe.paymentMethods.retrieve(paymentIntent.payment_method);
+          if (paymentMethod.card) {
+            data.paymentMethodLast4 = paymentMethod.card.last4;
+            data.paymentMethodBrand = paymentMethod.card.brand;
+          }
+        }
+      } catch (err) {
+        console.error("Failed to retrieve payment method info from Stripe:", err.message);
+        // Don't fail the order update if we can't get payment method info
+      }
+    }
   }
 
   const order = await prisma.order.update({
@@ -3532,6 +3555,7 @@ app.patch("/orders/:id", async (req, reply) => {
       seat: true,
       location: true,
       user: true,
+      guest: true,
     },
   });
 
@@ -3585,7 +3609,7 @@ app.patch("/orders/:id", async (req, reply) => {
     }
 
     // Send order confirmation notification
-    if (order.user) {
+    if (order.user || order.guest) {
       sendOrderConfirmation(order, order.user).catch(err => {
         console.error("Failed to send order confirmation:", err);
       });
@@ -3593,7 +3617,7 @@ app.patch("/orders/:id", async (req, reply) => {
   }
 
   // Send order confirmation if paid (for orders without pre-selected seat)
-  if (paymentStatus === "PAID" && !order.seatId && order.user) {
+  if (paymentStatus === "PAID" && !order.seatId && (order.user || order.guest)) {
     sendOrderConfirmation(order, order.user).catch(err => {
       console.error("Failed to send order confirmation:", err);
     });
@@ -4640,13 +4664,6 @@ app.get("/users/:id/badge-progress", async (req, reply) => {
       percent: hasQuickReturn ? 100 : 0,
       earned: earnedSlugs.includes("quick-return"),
       description: "Order again within 24 hours",
-    },
-    "birthday-bowl": {
-      current: 0, // Would need birthday data from Clerk
-      required: 1,
-      percent: 0,
-      earned: earnedSlugs.includes("birthday-bowl"),
-      description: "Order on your birthday",
     },
   };
 

@@ -912,10 +912,6 @@
       "quick-return": {
         "name": "Regreso Rápido",
         "description": "Ordenaste de nuevo en menos de 24 horas"
-      },
-      "birthday-bowl": {
-        "name": "Tazón de Cumpleaños",
-        "description": "Ordenaste en tu cumpleaños"
       }
     }
   },

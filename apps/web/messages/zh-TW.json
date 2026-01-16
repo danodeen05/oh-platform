@@ -912,10 +912,6 @@
       "quick-return": {
         "name": "快速回頭客",
         "description": "24小時內再次下單"
-      },
-      "birthday-bowl": {
-        "name": "生日麵",
-        "description": "在生日當天下單"
       }
     }
   },

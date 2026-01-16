@@ -912,10 +912,6 @@
       "quick-return": {
         "name": "快速回头客",
         "description": "24小时内再次下单"
-      },
-      "birthday-bowl": {
-        "name": "生日面",
-        "description": "在生日当天下单"
       }
     }
   },

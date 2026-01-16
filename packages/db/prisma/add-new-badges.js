@@ -45,13 +45,6 @@ const NEW_BADGES = [
     iconEmoji: "⚡",
     category: "SPECIAL",
   },
-  {
-    slug: "birthday-bowl",
-    name: "Birthday Bowl",
-    description: "Ordered on your birthday",
-    iconEmoji: "🎂",
-    category: "SPECIAL",
-  },
 ];
 
 async function main() {
