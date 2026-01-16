@@ -448,7 +448,20 @@
       "legend": {
         "name": "Legend",
         "description": "Reach Beef Boss tier"
+      },
+      "categories": {
+        "milestone": "Milestones",
+        "streak": "Streaks",
+        "referral": "Referrals",
+        "challenge": "Challenges",
+        "special": "Special"
       }
+    },
+    "challenges": {
+      "title": "Active Challenges",
+      "description": "Complete challenges to earn bonus credits. Track your progress in your member dashboard.",
+      "reward": "Reward",
+      "viewProgress": "View My Progress"
     },
     "referral": {
       "title": "Share the Love, Earn Rewards",
@@ -912,10 +925,6 @@
       "quick-return": {
         "name": "Quick Return",
         "description": "Ordered again within 24 hours"
-      },
-      "birthday-bowl": {
-        "name": "Birthday Bowl",
-        "description": "Ordered on your birthday"
       }
     }
   },

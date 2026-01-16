@@ -325,6 +325,13 @@ model Order {
   paymentStatus   PaymentStatus @default(PENDING)
   stripePaymentId String?
 
+  // Payment method info (for receipts)
+  paymentMethodLast4 String? // Last 4 digits of card
+  paymentMethodBrand String? // visa, mastercard, amex, etc.
+
+  // Tax tracking
+  taxCents Int @default(0)
+
   // Order source tracking for analytics
   orderSource OrderSource @default(WEB)
 
