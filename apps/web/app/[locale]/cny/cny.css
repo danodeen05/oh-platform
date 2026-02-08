@@ -1,0 +1,313 @@
+/* CNY 2026 Party Invitation Styles */
+
+/* CSS Variables */
+:root {
+  --cny-red: #910C1E;
+  --cny-gold: #D7B66E;
+}
+
+/* Full-screen page wrapper */
+.cny-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  background-size: contain;
+  background-position: top center;
+  background-repeat: no-repeat;
+  position: relative;
+  overflow: hidden;
+}
+
+.cny-page-1 {
+  background-image: url('/cny/01a.svg');
+  background-color: #910C1E;
+}
+
+.cny-page-2 {
+  background-image: url('/cny/02.svg');
+  background-color: #D7B66E;
+}
+
+.cny-page-3 {
+  background-image: url('/cny/03.svg');
+  background-color: #D7B66E;
+}
+
+/* Bounce-in animation for text */
+@keyframes bounceIn {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.15);
+  }
+  70% {
+    transform: scale(0.95);
+  }
+  85% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Delayed bounce for staggered effect */
+@keyframes bounceInDelayed {
+  0%, 20% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.15);
+  }
+  75% {
+    transform: scale(0.95);
+  }
+  90% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Pulsing animation for buttons */
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+}
+
+/* Gentle floating animation */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+/* Shimmer effect for buttons */
+@keyframes shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+/* Page transition - fade out */
+@keyframes fadeSlideOut {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+}
+
+/* Page transition - fade in */
+@keyframes fadeSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Animated heading */
+.cny-heading {
+  font-family: 'Noto Serif TC', serif;
+  font-weight: 700;
+  color: #D7B66E;
+  text-align: center;
+  animation: bounceIn 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.cny-heading-red {
+  color: var(--cny-red);
+}
+
+/* Subheading with delay */
+.cny-subheading {
+  font-family: 'Raleway', sans-serif;
+  font-weight: 500;
+  text-align: center;
+  animation: bounceInDelayed 1s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+  opacity: 0;
+}
+
+/* Animated button */
+.cny-button {
+  font-family: 'Raleway', sans-serif;
+  font-weight: 600;
+  font-size: 1.1rem;
+  padding: 16px 40px;
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  background: linear-gradient(
+    90deg,
+    var(--cny-gold) 0%,
+    #E8C87D 25%,
+    var(--cny-gold) 50%,
+    #C9A55E 75%,
+    var(--cny-gold) 100%
+  );
+  background-size: 200% auto;
+  color: var(--cny-red);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  animation:
+    bounceIn 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) 0.3s forwards,
+    pulse 2s ease-in-out 1.5s infinite,
+    shimmer 3s linear 1.5s infinite;
+  opacity: 0;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.cny-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.cny-button:active {
+  transform: scale(0.98);
+}
+
+/* Red button variant */
+.cny-button-red {
+  background: linear-gradient(
+    90deg,
+    var(--cny-red) 0%,
+    #A51025 25%,
+    var(--cny-red) 50%,
+    #7A0A18 75%,
+    var(--cny-red) 100%
+  );
+  color: var(--cny-gold);
+}
+
+/* Form styles */
+.cny-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: 320px;
+  padding: 0 20px;
+}
+
+.cny-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cny-label {
+  font-family: 'Raleway', sans-serif;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--cny-red);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.cny-input {
+  font-family: 'Raleway', sans-serif;
+  font-size: 1rem;
+  padding: 14px 18px;
+  border: 2px solid var(--cny-gold);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #333;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.cny-input:focus {
+  border-color: var(--cny-red);
+  box-shadow: 0 0 0 3px rgba(145, 12, 30, 0.2);
+}
+
+.cny-input::placeholder {
+  color: #999;
+}
+
+/* Helper text */
+.cny-helper {
+  font-family: 'Raleway', sans-serif;
+  font-size: 0.8rem;
+  color: #666;
+  text-align: center;
+  line-height: 1.5;
+  margin-top: 8px;
+}
+
+/* Content wrapper for positioning */
+.cny-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  width: 100%;
+  animation: fadeSlideIn 0.5s ease forwards;
+}
+
+/* Event details list */
+.cny-details {
+  font-family: 'Raleway', sans-serif;
+  text-align: center;
+  color: var(--cny-red);
+  line-height: 1.8;
+}
+
+.cny-details-title {
+  font-family: 'Noto Serif TC', serif;
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.cny-details-info {
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.cny-details-activities {
+  font-size: 1rem;
+  margin-top: 16px;
+  line-height: 2;
+}
+
+/* Thank you page specific */
+.cny-thankyou {
+  animation: bounceIn 1s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+}
+
+/* Loading state */
+.cny-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  animation: pulse 1s ease-in-out infinite;
+}
