@@ -1,9 +1,12 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import createIntlMiddleware from "next-intl/middleware";
 import { routing } from "./i18n/routing";
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 const intlMiddleware = createIntlMiddleware(routing);
+
+// CNY subdomain detection
+const CNY_HOSTNAMES = ["cny.ohbeef.com", "cny.localhost"];
 
 // Protected routes that require authentication (with locale prefix)
 const isProtectedRoute = createRouteMatcher([
@@ -31,12 +34,39 @@ const isPublicRoute = createRouteMatcher([
   "/:locale/pod(.*)",
   "/:locale/kiosk",
   "/:locale/kiosk/(.*)",
+  "/:locale/cny",
+  "/:locale/cny/(.*)",
 ]);
 
 // Check if this is a kiosk route (excludes kiosk-unauthorized)
 const isKioskRoute = createRouteMatcher(["/:locale/kiosk", "/:locale/kiosk/(.*)"]);
 
 export default clerkMiddleware(async (auth, request: NextRequest) => {
+  const hostname = request.headers.get("host") || "";
+
+  // Handle CNY subdomain routing
+  if (CNY_HOSTNAMES.some(h => hostname.startsWith(h.split(".")[0]))) {
+    const url = request.nextUrl.clone();
+    const pathname = url.pathname;
+
+    // If not already on a CNY path, redirect to CNY
+    if (!pathname.includes("/cny")) {
+      // Handle root path -> /en/cny
+      if (pathname === "/" || pathname === "/en" || pathname === "/en/") {
+        url.pathname = "/en/cny";
+        return NextResponse.redirect(url);
+      }
+      // For other paths, prefix with /cny
+      const localeMatch = pathname.match(/^\/(en|zh-TW|zh-CN|es)/);
+      if (localeMatch) {
+        const locale = localeMatch[1];
+        const rest = pathname.slice(locale.length + 1);
+        url.pathname = `/${locale}/cny${rest}`;
+        return NextResponse.redirect(url);
+      }
+    }
+  }
+
   // Run the intl middleware first to handle locale routing
   const response = intlMiddleware(request);
 
