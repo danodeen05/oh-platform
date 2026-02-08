@@ -45,13 +45,14 @@ export default async function LocaleLayout({ children, params }: Props) {
   // Get Clerk localization for the current locale
   const clerkLocalization = clerkLocalizations[locale] || enUS;
 
-  // Check if this is a kiosk route - kiosk has its own layout without header/footer
+  // Check if this is a kiosk or CNY route - these have their own layout without header/footer
   const headersList = await headers();
   const pathname = headersList.get("x-pathname") || headersList.get("x-invoke-path") || "";
   const isKioskRoute = pathname.includes("/kiosk");
+  const isCNYRoute = pathname.includes("/cny");
 
-  // For kiosk routes, render without header/footer
-  if (isKioskRoute) {
+  // For kiosk and CNY routes, render without header/footer
+  if (isKioskRoute || isCNYRoute) {
     return (
       <ClerkProvider localization={clerkLocalization}>
         <NextIntlClientProvider messages={messages}>
