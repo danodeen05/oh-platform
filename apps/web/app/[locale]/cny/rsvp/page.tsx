@@ -3,8 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, FormEvent } from "react";
 
-// Replace with your Google Apps Script deployment URL
-const APPS_SCRIPT_URL = process.env.NEXT_PUBLIC_CNY_RSVP_URL || "";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzfVFuQlfvF8HXOylKCxumyyC1T6BPvKeR5bu6nXcAWhnUj_Lx86QVkVpF3BlNVjM9xKw/exec";
 
 export default function CNYRsvp() {
   const router = useRouter();
