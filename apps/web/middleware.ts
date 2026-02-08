@@ -41,6 +41,9 @@ const isPublicRoute = createRouteMatcher([
 // Check if this is a kiosk route (excludes kiosk-unauthorized)
 const isKioskRoute = createRouteMatcher(["/:locale/kiosk", "/:locale/kiosk/(.*)"]);
 
+// Check if this is a CNY route
+const isCNYRoute = createRouteMatcher(["/:locale/cny", "/:locale/cny/(.*)"]);
+
 export default clerkMiddleware(async (auth, request: NextRequest) => {
   const hostname = request.headers.get("host") || "";
 
@@ -75,8 +78,8 @@ export default clerkMiddleware(async (auth, request: NextRequest) => {
     await auth.protect();
   }
 
-  // Set x-pathname header for kiosk detection in layout
-  if (isKioskRoute(request)) {
+  // Set x-pathname header for kiosk and CNY detection in layout
+  if (isKioskRoute(request) || isCNYRoute(request)) {
     response.headers.set("x-pathname", request.nextUrl.pathname);
   }
 
