@@ -195,6 +195,52 @@
   transform: scale(0.98);
 }
 
+/* Hero button - 50% larger with more dramatic animations */
+.cny-button-hero {
+  font-size: 1.65rem;
+  padding: 24px 60px;
+  letter-spacing: 3px;
+  animation:
+    bounceIn 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) 0.3s forwards,
+    heroGlow 1.5s ease-in-out 1.5s infinite,
+    heroPulse 2s ease-in-out 1.5s infinite;
+  box-shadow:
+    0 4px 15px rgba(0, 0, 0, 0.3),
+    0 0 20px rgba(215, 182, 110, 0.4);
+}
+
+.cny-button-hero:hover {
+  transform: scale(1.1);
+  box-shadow:
+    0 8px 25px rgba(0, 0, 0, 0.4),
+    0 0 30px rgba(215, 182, 110, 0.6);
+}
+
+/* Hero button pulsing animation - more dramatic */
+@keyframes heroPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.12);
+  }
+}
+
+/* Glowing effect for hero button */
+@keyframes heroGlow {
+  0%, 100% {
+    box-shadow:
+      0 4px 15px rgba(0, 0, 0, 0.3),
+      0 0 20px rgba(215, 182, 110, 0.4);
+  }
+  50% {
+    box-shadow:
+      0 6px 20px rgba(0, 0, 0, 0.4),
+      0 0 40px rgba(215, 182, 110, 0.7),
+      0 0 60px rgba(215, 182, 110, 0.4);
+  }
+}
+
 /* Red button variant */
 .cny-button-red {
   background: linear-gradient(
@@ -280,24 +326,33 @@
   text-align: center;
   color: var(--cny-red);
   line-height: 1.8;
+  background: rgba(247, 231, 187, 0.92);
+  padding: 28px 32px;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(145, 12, 30, 0.15);
 }
 
 .cny-details-title {
   font-family: 'Noto Serif TC', serif;
   font-size: 1.8rem;
-  font-weight: 700;
+  font-weight: 900;
   margin-bottom: 12px;
+  color: var(--cny-red);
+  text-shadow: none;
 }
 
 .cny-details-info {
   font-size: 1.1rem;
-  font-weight: 500;
+  font-weight: 600;
+  color: var(--cny-red);
 }
 
 .cny-details-activities {
   font-size: 1rem;
   margin-top: 16px;
   line-height: 2;
+  color: var(--cny-red);
+  font-weight: 500;
 }
 
 /* Thank you page specific */
@@ -310,4 +365,9 @@
   opacity: 0.7;
   cursor: not-allowed;
   animation: pulse 1s ease-in-out infinite;
+}
+
+/* Red-colored horse SVG using CSS filter */
+.cny-horse-red {
+  filter: brightness(0) saturate(100%) invert(12%) sepia(95%) saturate(3000%) hue-rotate(340deg) brightness(85%);
 }
