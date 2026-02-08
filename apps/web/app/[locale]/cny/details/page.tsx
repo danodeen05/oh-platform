@@ -21,67 +21,76 @@ export default function CNYDetails() {
         opacity: isTransitioning ? 0 : 1,
         transform: isTransitioning ? "translateY(-30px)" : "translateY(0)",
         transition: "opacity 0.4s ease, transform 0.4s ease",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
       }}
     >
       {/* Event details content */}
       <div
         className="cny-content"
         style={{
-          position: "absolute",
-          top: "12%",
-          left: 0,
-          right: 0,
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          gap: "20px",
-          padding: "0 24px",
+          padding: "20px",
+          width: "100%",
         }}
       >
-        <div className="cny-details">
+        <div className="cny-details" style={{ maxWidth: "540px" }}>
           <h1
-            className="cny-details-title cny-heading"
+            className="cny-details-title"
             style={{
-              fontSize: "clamp(1.8rem, 8vw, 2.5rem)",
+              fontSize: "clamp(1.8rem, 9vw, 2.8rem)",
               marginBottom: "20px",
+              whiteSpace: "nowrap",
             }}
           >
             Year of the Horse
           </h1>
 
-          <div
-            className="cny-details-info cny-subheading"
+          <p
             style={{
-              animationDelay: "0.2s",
+              color: "#444",
+              fontSize: "clamp(1.05rem, 4vw, 1.25rem)",
+              lineHeight: 1.75,
+              marginBottom: "20px",
+              fontWeight: 500,
             }}
           >
-            <p style={{ margin: "8px 0", fontWeight: 600 }}>
-              Fri, Feb 20 · 6–8 PM
-            </p>
+            Dano & Kristy are back with their annual Chinese New Year party.
+            This year's beef noodle soup might be their best batch yet (bold
+            claim, we know). Pull up a seat at the mahjong table (yes, there are
+            prizes), pick up a few Chinese phrases, and find out what the Year
+            of the Horse has in store for your zodiac. Come hungry, leave
+            cultured.
+          </p>
+          <p
+            style={{
+              color: "#555",
+              fontSize: "clamp(1rem, 3.8vw, 1.15rem)",
+              lineHeight: 1.7,
+              marginBottom: "28px",
+              fontStyle: "italic",
+            }}
+          >
+            And if culture isn't your thing, there's a golf simulator. No
+            judgment. Your secret's safe with us.
+          </p>
+
+          <div
+            className="cny-details-info"
+            style={{
+              fontSize: "clamp(1.4rem, 5.5vw, 1.8rem)",
+              fontWeight: 700,
+              marginTop: "8px",
+            }}
+          >
+            <p style={{ margin: "8px 0" }}>Fri, Feb 20 · 6–8 PM</p>
             <p style={{ margin: "8px 0" }}>
               Embold Clubroom & Kitchen
               <br />
               Lehi, UT
-            </p>
-          </div>
-
-          <div
-            className="cny-details-activities cny-subheading"
-            style={{
-              marginTop: "28px",
-              animationDelay: "0.4s",
-            }}
-          >
-            <p style={{ margin: "6px 0" }}>Beef Noodle Soup</p>
-            <p style={{ margin: "6px 0" }}>Mahjong</p>
-            <p style={{ margin: "6px 0" }}>Learn Some Chinese</p>
-            <p style={{ margin: "6px 0" }}>Year of the Horse 101</p>
-            <p style={{ margin: "6px 0", fontSize: "0.9rem", opacity: 0.85 }}>
-              Golf Sim
-              <span style={{ fontSize: "0.8rem", opacity: 0.8 }}>
-                {" "}
-                (for the culturally uninterested)
-              </span>
             </p>
           </div>
         </div>
@@ -90,8 +99,11 @@ export default function CNYDetails() {
           className="cny-button cny-button-red"
           onClick={handleContinue}
           style={{
-            marginTop: "24px",
+            marginTop: "32px",
             animationDelay: "0.5s",
+            fontSize: "1.4rem",
+            padding: "24px 60px",
+            letterSpacing: "3px",
           }}
         >
           Continue to RSVP

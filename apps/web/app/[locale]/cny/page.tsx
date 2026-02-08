@@ -51,7 +51,7 @@ export default function CNYWelcome() {
         </h1>
 
         <button
-          className="cny-button"
+          className="cny-button cny-button-hero"
           onClick={handleRSVP}
           style={{
             marginTop: "16px",
