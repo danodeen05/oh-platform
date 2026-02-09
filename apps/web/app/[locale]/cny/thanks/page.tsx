@@ -1,6 +1,30 @@
 "use client";
 
-export default function CNYThanks() {
+import { useSearchParams } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { FortuneModal } from "@/components/cny/FortuneModal";
+
+function ThanksContent() {
+  const searchParams = useSearchParams();
+  const [showFortune, setShowFortune] = useState(false);
+
+  // Read query params from RSVP form
+  const name = searchParams.get("name") || "";
+  const phone = searchParams.get("phone") || "";
+  const birthdate = searchParams.get("birthdate") || "";
+
+  // Get first name for personalized greeting
+  const firstName = name ? name.split(" ")[0] : "";
+
+  // Auto-show fortune modal when page loads if we have a name
+  useEffect(() => {
+    if (name) {
+      // Small delay for page transition to complete
+      const timer = setTimeout(() => setShowFortune(true), 600);
+      return () => clearTimeout(timer);
+    }
+  }, [name]);
+
   return (
     <div className="cny-page cny-page-2">
       {/* Thank you content */}
@@ -21,7 +45,9 @@ export default function CNYThanks() {
         <h1
           className="cny-heading cny-heading-red cny-thankyou"
           style={{
-            fontSize: "clamp(1.5rem, 7vw, 2.4rem)",
+            fontSize: firstName
+              ? "clamp(1.3rem, 6vw, 2rem)"
+              : "clamp(1.5rem, 7vw, 2.4rem)",
             lineHeight: 1.1,
             margin: 0,
             background: "rgba(215, 182, 110, 0.5)",
@@ -30,7 +56,7 @@ export default function CNYThanks() {
             whiteSpace: "nowrap",
           }}
         >
-          THANK YOU!!
+          {firstName ? `THANK YOU, ${firstName.toUpperCase()}!` : "THANK YOU!!"}
         </h1>
 
         <div
@@ -63,10 +89,27 @@ export default function CNYThanks() {
             width: "clamp(275px, 81vw, 500px)",
             maxWidth: "85vw",
             height: "auto",
-            animation: "bounceIn 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) 0.6s forwards",
+            animation:
+              "bounceIn 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) 0.6s forwards",
             opacity: 0,
           }}
         />
+
+        {/* Button to re-open fortune if modal was closed */}
+        {name && !showFortune && (
+          <button
+            onClick={() => setShowFortune(true)}
+            className="cny-button"
+            style={{
+              marginTop: "8px",
+              fontSize: "0.85rem",
+              padding: "12px 24px",
+              animationDelay: "0.8s",
+            }}
+          >
+            View Your Fortune
+          </button>
+        )}
 
         <a
           href="/en/cny"
@@ -81,6 +124,53 @@ export default function CNYThanks() {
           RSVP for Someone Else
         </a>
       </div>
+
+      {/* Fortune Modal */}
+      <FortuneModal
+        open={showFortune}
+        onClose={() => setShowFortune(false)}
+        name={name}
+        phone={phone}
+        birthdate={birthdate}
+      />
     </div>
+  );
+}
+
+// Loading fallback for Suspense
+function LoadingFallback() {
+  return (
+    <div className="cny-page cny-page-2">
+      <div
+        className="cny-content"
+        style={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          textAlign: "center",
+        }}
+      >
+        <img
+          src="/cny/horse.svg"
+          alt="Loading..."
+          className="cny-horse-red"
+          style={{
+            width: "150px",
+            height: "auto",
+            animation: "pulse 1s ease-in-out infinite",
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+// Wrapper with Suspense for useSearchParams
+export default function CNYThanks() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <ThanksContent />
+    </Suspense>
   );
 }

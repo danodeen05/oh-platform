@@ -45,6 +45,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@anthropic-ai/sdk':
+        specifier: ^0.71.2
+        version: 0.71.2
       '@asialoop/epson-epos':
         specifier: ^2.0.0
         version: 2.0.0
