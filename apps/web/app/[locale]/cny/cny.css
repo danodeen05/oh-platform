@@ -15,8 +15,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  background-size: contain;
-  background-position: top center;
+  background-size: cover;
+  background-position: center center;
   background-repeat: no-repeat;
   position: relative;
   overflow: hidden;
@@ -367,7 +367,7 @@
   animation: pulse 1s ease-in-out infinite;
 }
 
-/* Red-colored horse SVG using CSS filter */
+/* Red-colored horse SVG using CSS filter - matches #910C1E */
 .cny-horse-red {
-  filter: brightness(0) saturate(100%) invert(12%) sepia(95%) saturate(3000%) hue-rotate(340deg) brightness(85%);
+  filter: brightness(0) saturate(100%) invert(8%) sepia(100%) saturate(7000%) hue-rotate(350deg) brightness(60%);
 }

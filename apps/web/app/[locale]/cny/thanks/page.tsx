@@ -8,25 +8,26 @@ export default function CNYThanks() {
         className="cny-content"
         style={{
           position: "absolute",
-          top: "22%",
+          top: "14%",
           left: 0,
           right: 0,
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          gap: "24px",
+          gap: "10px",
           padding: "0 24px",
         }}
       >
         <h1
           className="cny-heading cny-heading-red cny-thankyou"
           style={{
-            fontSize: "clamp(2.5rem, 12vw, 4rem)",
+            fontSize: "clamp(1.5rem, 7vw, 2.4rem)",
             lineHeight: 1.1,
             margin: 0,
             background: "rgba(215, 182, 110, 0.5)",
-            padding: "16px 32px",
-            borderRadius: "16px",
+            padding: "10px 20px",
+            borderRadius: "12px",
+            whiteSpace: "nowrap",
           }}
         >
           THANK YOU!!
@@ -35,14 +36,14 @@ export default function CNYThanks() {
         <div
           className="cny-subheading"
           style={{
-            fontSize: "clamp(1.8rem, 7vw, 2.5rem)",
+            fontSize: "clamp(1.1rem, 4.5vw, 1.5rem)",
             fontWeight: 700,
             color: "#D7B66E",
-            maxWidth: "350px",
+            maxWidth: "300px",
             animationDelay: "0.3s",
             background: "rgba(145, 12, 30, 0.85)",
-            padding: "20px 32px",
-            borderRadius: "16px",
+            padding: "12px 20px",
+            borderRadius: "12px",
             textAlign: "center",
             lineHeight: 1.3,
             boxShadow: "0 4px 20px rgba(0, 0, 0, 0.2)",
@@ -58,9 +59,9 @@ export default function CNYThanks() {
           alt="Year of the Horse"
           className="cny-horse-red"
           style={{
-            marginTop: "20px",
-            width: "clamp(345px, 92vw, 575px)",
-            maxWidth: "95vw",
+            marginTop: "8px",
+            width: "clamp(275px, 81vw, 500px)",
+            maxWidth: "85vw",
             height: "auto",
             animation: "bounceIn 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) 0.6s forwards",
             opacity: 0,
@@ -71,8 +72,10 @@ export default function CNYThanks() {
           href="/en/cny"
           className="cny-button cny-button-red"
           style={{
-            marginTop: "16px",
+            marginTop: "8px",
             textDecoration: "none",
+            fontSize: "0.9rem",
+            padding: "12px 24px",
           }}
         >
           RSVP for Someone Else
