@@ -1,0 +1,812 @@
+/* ========================================
+   CNY Animated Background Effects
+   ======================================== */
+
+.cny-animated-bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ========================================
+   Bokeh Effect - Floating Blurred Circles
+   ======================================== */
+
+.cny-bokeh-container {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.cny-bokeh {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(40px);
+  opacity: 0.4;
+  will-change: transform, opacity;
+}
+
+/* Bokeh color variants */
+.cny-bokeh-gold {
+  background: radial-gradient(circle, rgba(215, 182, 110, 0.8) 0%, rgba(215, 182, 110, 0) 70%);
+}
+
+.cny-bokeh-gold-soft {
+  background: radial-gradient(circle, rgba(232, 200, 125, 0.6) 0%, rgba(232, 200, 125, 0) 70%);
+}
+
+.cny-bokeh-red {
+  background: radial-gradient(circle, rgba(145, 12, 30, 0.85) 0%, rgba(145, 12, 30, 0) 70%);
+}
+
+.cny-bokeh-red-soft {
+  background: radial-gradient(circle, rgba(120, 15, 35, 0.7) 0%, rgba(120, 15, 35, 0) 70%);
+}
+
+/* Large bokeh circles */
+.cny-bokeh-1 {
+  width: 300px;
+  height: 300px;
+  top: -5%;
+  left: -10%;
+  animation: bokehFloat1 18s ease-in-out infinite, bokehPulse 6s ease-in-out infinite;
+}
+
+.cny-bokeh-2 {
+  width: 250px;
+  height: 250px;
+  top: 60%;
+  right: -8%;
+  animation: bokehFloat2 22s ease-in-out infinite, bokehPulse 8s ease-in-out infinite 2s;
+}
+
+.cny-bokeh-3 {
+  width: 200px;
+  height: 200px;
+  bottom: -5%;
+  left: 30%;
+  animation: bokehFloat3 20s ease-in-out infinite, bokehPulse 7s ease-in-out infinite 1s;
+}
+
+/* Medium bokeh circles */
+.cny-bokeh-4 {
+  width: 150px;
+  height: 150px;
+  top: 25%;
+  right: 15%;
+  animation: bokehFloat4 15s ease-in-out infinite, bokehPulse 5s ease-in-out infinite;
+}
+
+.cny-bokeh-5 {
+  width: 180px;
+  height: 180px;
+  top: 45%;
+  left: 5%;
+  animation: bokehFloat5 17s ease-in-out infinite, bokehPulse 6s ease-in-out infinite 3s;
+}
+
+.cny-bokeh-6 {
+  width: 120px;
+  height: 120px;
+  bottom: 20%;
+  right: 25%;
+  animation: bokehFloat1 14s ease-in-out infinite reverse, bokehPulse 5s ease-in-out infinite 2s;
+}
+
+/* Small bokeh circles */
+.cny-bokeh-7 {
+  width: 80px;
+  height: 80px;
+  top: 15%;
+  left: 40%;
+  animation: bokehFloat3 12s ease-in-out infinite, bokehPulse 4s ease-in-out infinite 1s;
+}
+
+.cny-bokeh-8 {
+  width: 100px;
+  height: 100px;
+  bottom: 35%;
+  left: 60%;
+  animation: bokehFloat2 13s ease-in-out infinite reverse, bokehPulse 5s ease-in-out infinite;
+}
+
+/* Bokeh floating animations */
+@keyframes bokehFloat1 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(30px, 20px) scale(1.1);
+  }
+  50% {
+    transform: translate(15px, 40px) scale(0.95);
+  }
+  75% {
+    transform: translate(-20px, 25px) scale(1.05);
+  }
+}
+
+@keyframes bokehFloat2 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(-25px, 30px) scale(1.08);
+  }
+  50% {
+    transform: translate(-40px, 10px) scale(0.92);
+  }
+  75% {
+    transform: translate(-15px, -20px) scale(1.12);
+  }
+}
+
+@keyframes bokehFloat3 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(20px, -25px) scale(1.15);
+  }
+  66% {
+    transform: translate(-15px, -15px) scale(0.9);
+  }
+}
+
+@keyframes bokehFloat4 {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg) scale(1);
+  }
+  50% {
+    transform: translate(-20px, 30px) rotate(10deg) scale(1.1);
+  }
+}
+
+@keyframes bokehFloat5 {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  25% {
+    transform: translate(35px, -15px) scale(1.05);
+  }
+  50% {
+    transform: translate(25px, 20px) scale(0.95);
+  }
+  75% {
+    transform: translate(-10px, 15px) scale(1.1);
+  }
+}
+
+@keyframes bokehPulse {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* ========================================
+   Smoke Effect - Swirling Wisps
+   ======================================== */
+
+.cny-smoke-container {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.cny-smoke {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  opacity: 0.15;
+  will-change: transform, opacity;
+}
+
+.cny-smoke-light {
+  background:
+    radial-gradient(ellipse 80% 40% at 20% 80%, rgba(255, 255, 255, 0.4) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 50% at 80% 20%, rgba(255, 255, 255, 0.3) 0%, transparent 50%),
+    radial-gradient(ellipse 70% 35% at 50% 50%, rgba(215, 182, 110, 0.2) 0%, transparent 50%);
+}
+
+.cny-smoke-dark {
+  background:
+    radial-gradient(ellipse 80% 40% at 20% 80%, rgba(145, 12, 30, 0.4) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 50% at 80% 20%, rgba(120, 10, 25, 0.35) 0%, transparent 50%),
+    radial-gradient(ellipse 70% 35% at 50% 50%, rgba(100, 8, 20, 0.3) 0%, transparent 50%);
+}
+
+.cny-smoke-1 {
+  animation: smokeSwirl1 25s ease-in-out infinite;
+}
+
+.cny-smoke-2 {
+  animation: smokeSwirl2 30s ease-in-out infinite;
+  animation-delay: -10s;
+}
+
+.cny-smoke-3 {
+  animation: smokeSwirl3 35s ease-in-out infinite;
+  animation-delay: -20s;
+}
+
+@keyframes smokeSwirl1 {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg) scale(1);
+    opacity: 0.12;
+  }
+  25% {
+    transform: translate(3%, 2%) rotate(3deg) scale(1.05);
+    opacity: 0.18;
+  }
+  50% {
+    transform: translate(1%, 4%) rotate(-2deg) scale(1.02);
+    opacity: 0.1;
+  }
+  75% {
+    transform: translate(-2%, 1%) rotate(1deg) scale(1.08);
+    opacity: 0.15;
+  }
+}
+
+@keyframes smokeSwirl2 {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg) scale(1);
+    opacity: 0.1;
+  }
+  33% {
+    transform: translate(-4%, 3%) rotate(-4deg) scale(1.1);
+    opacity: 0.16;
+  }
+  66% {
+    transform: translate(2%, -2%) rotate(2deg) scale(0.95);
+    opacity: 0.08;
+  }
+}
+
+@keyframes smokeSwirl3 {
+  0%, 100% {
+    transform: translate(0, 0) rotate(0deg) scale(1);
+    opacity: 0.08;
+  }
+  20% {
+    transform: translate(2%, -3%) rotate(2deg) scale(1.03);
+    opacity: 0.14;
+  }
+  40% {
+    transform: translate(-1%, -1%) rotate(-1deg) scale(1.06);
+    opacity: 0.1;
+  }
+  60% {
+    transform: translate(-3%, 2%) rotate(-3deg) scale(0.98);
+    opacity: 0.12;
+  }
+  80% {
+    transform: translate(1%, 3%) rotate(1deg) scale(1.04);
+    opacity: 0.08;
+  }
+}
+
+/* ========================================
+   Floating Lights - Small Sparkles
+   ======================================== */
+
+.cny-lights-container {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.cny-light {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  will-change: transform, opacity;
+}
+
+.cny-light-gold {
+  background: radial-gradient(circle, rgba(215, 182, 110, 1) 0%, rgba(215, 182, 110, 0.5) 50%, transparent 70%);
+  box-shadow:
+    0 0 6px 2px rgba(215, 182, 110, 0.6),
+    0 0 12px 4px rgba(215, 182, 110, 0.3);
+}
+
+.cny-light-red {
+  background: radial-gradient(circle, rgba(180, 20, 40, 1) 0%, rgba(145, 12, 30, 0.7) 50%, transparent 70%);
+  box-shadow:
+    0 0 8px 3px rgba(180, 20, 40, 0.9),
+    0 0 16px 6px rgba(145, 12, 30, 0.5);
+}
+
+/* Light floating animations - 5 variations */
+.cny-light-1 {
+  animation: lightFloat1 8s ease-in-out infinite, lightTwinkle 2s ease-in-out infinite;
+}
+
+.cny-light-2 {
+  animation: lightFloat2 10s ease-in-out infinite, lightTwinkle 2.5s ease-in-out infinite 0.5s;
+}
+
+.cny-light-3 {
+  animation: lightFloat3 7s ease-in-out infinite, lightTwinkle 1.8s ease-in-out infinite 1s;
+}
+
+.cny-light-4 {
+  animation: lightFloat4 9s ease-in-out infinite, lightTwinkle 2.2s ease-in-out infinite 0.3s;
+}
+
+.cny-light-5 {
+  animation: lightFloat5 11s ease-in-out infinite, lightTwinkle 2.8s ease-in-out infinite 0.8s;
+}
+
+@keyframes lightFloat1 {
+  0%, 100% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(15px, -30px);
+  }
+  50% {
+    transform: translate(5px, -50px);
+  }
+  75% {
+    transform: translate(-10px, -25px);
+  }
+}
+
+@keyframes lightFloat2 {
+  0%, 100% {
+    transform: translate(0, 0);
+  }
+  33% {
+    transform: translate(-20px, -40px);
+  }
+  66% {
+    transform: translate(10px, -60px);
+  }
+}
+
+@keyframes lightFloat3 {
+  0%, 100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(25px, -45px);
+  }
+}
+
+@keyframes lightFloat4 {
+  0%, 100% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(-15px, -20px);
+  }
+  50% {
+    transform: translate(-25px, -55px);
+  }
+  75% {
+    transform: translate(-5px, -35px);
+  }
+}
+
+@keyframes lightFloat5 {
+  0%, 100% {
+    transform: translate(0, 0);
+  }
+  20% {
+    transform: translate(10px, -15px);
+  }
+  40% {
+    transform: translate(20px, -40px);
+  }
+  60% {
+    transform: translate(5px, -55px);
+  }
+  80% {
+    transform: translate(-5px, -30px);
+  }
+}
+
+@keyframes lightTwinkle {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.5);
+  }
+}
+
+/* ========================================
+   Fireworks Effect - Bursting Particles
+   ======================================== */
+
+.cny-fireworks-container {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.cny-firework {
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.cny-firework-burst-1 {
+  animation: fireworkBurst1 4s ease-out infinite;
+}
+
+.cny-firework-burst-2 {
+  animation: fireworkBurst2 5s ease-out infinite;
+}
+
+.cny-firework-burst-3 {
+  animation: fireworkBurst3 4.5s ease-out infinite;
+}
+
+/* Firework particles that radiate outward */
+.cny-firework-particle {
+  position: absolute;
+  width: 3px;
+  height: 20px;
+  left: 50%;
+  top: 50%;
+  margin-left: -1.5px;
+  transform-origin: center center;
+  border-radius: 2px;
+  opacity: 0;
+}
+
+.cny-firework-gold {
+  background: linear-gradient(to top, rgba(215, 182, 110, 1), rgba(232, 200, 125, 0.8), transparent);
+  box-shadow: 0 0 6px 2px rgba(215, 182, 110, 0.8);
+}
+
+.cny-firework-red {
+  background: linear-gradient(to top, rgba(145, 12, 30, 1), rgba(180, 30, 50, 0.9), rgba(120, 10, 25, 0.5));
+  box-shadow: 0 0 8px 3px rgba(145, 12, 30, 0.9);
+}
+
+/* Firework center glow */
+.cny-firework-glow {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  opacity: 0;
+}
+
+.cny-firework-glow-gold {
+  background: radial-gradient(circle, rgba(255, 230, 150, 1) 0%, rgba(215, 182, 110, 0.6) 40%, transparent 70%);
+  box-shadow: 0 0 20px 10px rgba(215, 182, 110, 0.5);
+}
+
+.cny-firework-glow-red {
+  background: radial-gradient(circle, rgba(220, 80, 90, 1) 0%, rgba(145, 12, 30, 0.7) 40%, transparent 70%);
+  box-shadow: 0 0 25px 12px rgba(145, 12, 30, 0.6);
+}
+
+/* Burst animations */
+@keyframes fireworkBurst1 {
+  0% {
+    opacity: 0;
+  }
+  5% {
+    opacity: 1;
+  }
+  5%, 35% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes fireworkBurst2 {
+  0% {
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  8%, 40% {
+    opacity: 1;
+  }
+  55% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes fireworkBurst3 {
+  0% {
+    opacity: 0;
+  }
+  6% {
+    opacity: 1;
+  }
+  6%, 38% {
+    opacity: 1;
+  }
+  52% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Particle explosion animation - applied when parent becomes visible */
+.cny-firework-burst-1 .cny-firework-particle {
+  animation: particleExplode1 4s ease-out infinite;
+}
+
+.cny-firework-burst-2 .cny-firework-particle {
+  animation: particleExplode2 5s ease-out infinite;
+}
+
+.cny-firework-burst-3 .cny-firework-particle {
+  animation: particleExplode3 4.5s ease-out infinite;
+}
+
+.cny-firework-burst-1 .cny-firework-glow {
+  animation: glowPulse1 4s ease-out infinite;
+}
+
+.cny-firework-burst-2 .cny-firework-glow {
+  animation: glowPulse2 5s ease-out infinite;
+}
+
+.cny-firework-burst-3 .cny-firework-glow {
+  animation: glowPulse3 4.5s ease-out infinite;
+}
+
+@keyframes particleExplode1 {
+  0%, 5% {
+    opacity: 0;
+    height: 5px;
+    margin-top: -2px;
+  }
+  10% {
+    opacity: 1;
+    height: 25px;
+    margin-top: -35px;
+  }
+  35% {
+    opacity: 0.8;
+    height: 18px;
+    margin-top: -55px;
+  }
+  50% {
+    opacity: 0;
+    height: 8px;
+    margin-top: -70px;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes particleExplode2 {
+  0%, 8% {
+    opacity: 0;
+    height: 5px;
+    margin-top: -2px;
+  }
+  15% {
+    opacity: 1;
+    height: 28px;
+    margin-top: -40px;
+  }
+  40% {
+    opacity: 0.7;
+    height: 16px;
+    margin-top: -60px;
+  }
+  55% {
+    opacity: 0;
+    height: 6px;
+    margin-top: -75px;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes particleExplode3 {
+  0%, 6% {
+    opacity: 0;
+    height: 5px;
+    margin-top: -2px;
+  }
+  12% {
+    opacity: 1;
+    height: 26px;
+    margin-top: -38px;
+  }
+  38% {
+    opacity: 0.75;
+    height: 17px;
+    margin-top: -58px;
+  }
+  52% {
+    opacity: 0;
+    height: 7px;
+    margin-top: -72px;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes glowPulse1 {
+  0%, 5% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.3);
+  }
+  10% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.2);
+  }
+  25% {
+    opacity: 0.8;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.5);
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes glowPulse2 {
+  0%, 8% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.3);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.3);
+  }
+  30% {
+    opacity: 0.7;
+    transform: translate(-50%, -50%) scale(0.9);
+  }
+  55% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.4);
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes glowPulse3 {
+  0%, 6% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.3);
+  }
+  12% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.25);
+  }
+  28% {
+    opacity: 0.75;
+    transform: translate(-50%, -50%) scale(0.95);
+  }
+  52% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.45);
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* ========================================
+   Sparkle Trails - Rising Sparks
+   ======================================== */
+
+.cny-sparkle-container {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.cny-sparkle {
+  position: absolute;
+  bottom: -10px;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  will-change: transform, opacity;
+}
+
+.cny-sparkle-gold {
+  background: rgba(215, 182, 110, 1);
+  box-shadow:
+    0 0 4px 2px rgba(215, 182, 110, 0.8),
+    0 0 8px 4px rgba(215, 182, 110, 0.4);
+  animation: sparkleRise 4s ease-out infinite;
+}
+
+.cny-sparkle-red {
+  background: rgba(180, 20, 40, 1);
+  box-shadow:
+    0 0 6px 3px rgba(180, 20, 40, 0.9),
+    0 0 12px 6px rgba(145, 12, 30, 0.5);
+  animation: sparkleRise 4s ease-out infinite;
+}
+
+@keyframes sparkleRise {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scale(1);
+  }
+  10% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+  80% {
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-100vh) scale(0.5);
+  }
+}
+
+/* ========================================
+   Performance Optimizations
+   ======================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .cny-bokeh,
+  .cny-smoke,
+  .cny-light,
+  .cny-firework,
+  .cny-firework-particle,
+  .cny-firework-glow,
+  .cny-sparkle {
+    animation: none !important;
+  }
+
+  .cny-bokeh {
+    opacity: 0.25;
+  }
+
+  .cny-smoke {
+    opacity: 0.1;
+  }
+
+  .cny-light {
+    opacity: 0.5;
+  }
+
+  .cny-firework,
+  .cny-sparkle {
+    display: none;
+  }
+}

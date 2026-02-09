@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { AnimatedBackground } from "@/components/cny/AnimatedBackground";
 
 export default function CNYDetails() {
   const router = useRouter();
@@ -26,6 +27,7 @@ export default function CNYDetails() {
         alignItems: "center",
       }}
     >
+      <AnimatedBackground theme="gold" />
       {/* Event details content */}
       <div
         className="cny-content"
@@ -88,22 +90,34 @@ export default function CNYDetails() {
           >
             <p style={{ margin: "4px 0" }}>Fri, Feb 20 · 6–8 PM</p>
             <p style={{ margin: "4px 0" }}>
-              Embold Clubroom & Kitchen
-              <br />
-              Lehi, UT
+              <a
+                href="https://maps.app.goo.gl/uNwHb59PnDSHD2BV6"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  color: "inherit",
+                  textDecoration: "underline",
+                  textDecorationColor: "rgba(145, 12, 30, 0.4)",
+                  textUnderlineOffset: "3px",
+                  transition: "text-decoration-color 0.2s ease",
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.textDecorationColor = "rgba(145, 12, 30, 1)"}
+                onMouseLeave={(e) => e.currentTarget.style.textDecorationColor = "rgba(145, 12, 30, 0.4)"}
+              >
+                Embold Clubroom & Kitchen
+                <br />
+                Lehi, UT
+              </a>
             </p>
           </div>
         </div>
 
         <button
-          className="cny-button cny-button-red"
+          className="cny-button cny-button-red cny-button-glow-red"
           onClick={handleContinue}
           style={{
             marginTop: "20px",
             animationDelay: "0.5s",
-            fontSize: "1rem",
-            padding: "14px 36px",
-            letterSpacing: "2px",
           }}
         >
           Continue to RSVP

@@ -241,6 +241,198 @@
   }
 }
 
+/* Super animated glowing button */
+.cny-button-glow {
+  position: relative;
+  font-size: 1.2rem;
+  padding: 16px 40px;
+  letter-spacing: 3px;
+  animation:
+    bounceIn 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) 0.3s forwards,
+    glowPulse 2s ease-in-out 1.5s infinite,
+    floatButton 3s ease-in-out 1.5s infinite;
+  box-shadow:
+    0 0 20px rgba(215, 182, 110, 0.6),
+    0 0 40px rgba(215, 182, 110, 0.4),
+    0 0 60px rgba(215, 182, 110, 0.2),
+    0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.cny-button-glow::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 55px;
+  background: linear-gradient(
+    45deg,
+    rgba(215, 182, 110, 0.8),
+    rgba(255, 220, 150, 1),
+    rgba(215, 182, 110, 0.8),
+    rgba(200, 160, 90, 1),
+    rgba(215, 182, 110, 0.8)
+  );
+  background-size: 400% 400%;
+  z-index: -1;
+  animation: borderGlow 3s ease-in-out infinite;
+  filter: blur(8px);
+  opacity: 0.8;
+}
+
+.cny-button-glow::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shineSwipe 2.5s ease-in-out infinite;
+}
+
+.cny-button-glow:hover {
+  transform: scale(1.08);
+  box-shadow:
+    0 0 30px rgba(215, 182, 110, 0.8),
+    0 0 60px rgba(215, 182, 110, 0.5),
+    0 0 90px rgba(215, 182, 110, 0.3),
+    0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* Glow pulse animation */
+@keyframes glowPulse {
+  0%, 100% {
+    box-shadow:
+      0 0 20px rgba(215, 182, 110, 0.6),
+      0 0 40px rgba(215, 182, 110, 0.4),
+      0 0 60px rgba(215, 182, 110, 0.2),
+      0 4px 15px rgba(0, 0, 0, 0.3);
+  }
+  50% {
+    box-shadow:
+      0 0 30px rgba(215, 182, 110, 0.9),
+      0 0 60px rgba(215, 182, 110, 0.6),
+      0 0 100px rgba(215, 182, 110, 0.4),
+      0 0 140px rgba(215, 182, 110, 0.2),
+      0 6px 20px rgba(0, 0, 0, 0.4);
+  }
+}
+
+/* Floating animation for button */
+@keyframes floatButton {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+/* Animated border glow */
+@keyframes borderGlow {
+  0%, 100% {
+    background-position: 0% 50%;
+    opacity: 0.7;
+  }
+  50% {
+    background-position: 100% 50%;
+    opacity: 1;
+  }
+}
+
+/* Shine swipe across button */
+@keyframes shineSwipe {
+  0% {
+    background-position: -200% 0;
+  }
+  50%, 100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Super animated glowing button - RED variant */
+.cny-button-glow-red {
+  position: relative;
+  font-size: 1.2rem;
+  padding: 16px 40px;
+  letter-spacing: 3px;
+  animation:
+    bounceIn 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) 0.3s forwards,
+    glowPulseRed 2s ease-in-out 1.5s infinite,
+    floatButton 3s ease-in-out 1.5s infinite;
+  box-shadow:
+    0 0 20px rgba(145, 12, 30, 0.6),
+    0 0 40px rgba(145, 12, 30, 0.4),
+    0 0 60px rgba(145, 12, 30, 0.2),
+    0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.cny-button-glow-red::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 55px;
+  background: linear-gradient(
+    45deg,
+    rgba(145, 12, 30, 0.8),
+    rgba(180, 30, 50, 1),
+    rgba(145, 12, 30, 0.8),
+    rgba(120, 10, 25, 1),
+    rgba(145, 12, 30, 0.8)
+  );
+  background-size: 400% 400%;
+  z-index: -1;
+  animation: borderGlow 3s ease-in-out infinite;
+  filter: blur(8px);
+  opacity: 0.8;
+}
+
+.cny-button-glow-red::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shineSwipe 2.5s ease-in-out infinite;
+}
+
+.cny-button-glow-red:hover {
+  transform: scale(1.08);
+  box-shadow:
+    0 0 30px rgba(145, 12, 30, 0.8),
+    0 0 60px rgba(145, 12, 30, 0.5),
+    0 0 90px rgba(145, 12, 30, 0.3),
+    0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* Red glow pulse animation */
+@keyframes glowPulseRed {
+  0%, 100% {
+    box-shadow:
+      0 0 20px rgba(145, 12, 30, 0.6),
+      0 0 40px rgba(145, 12, 30, 0.4),
+      0 0 60px rgba(145, 12, 30, 0.2),
+      0 4px 15px rgba(0, 0, 0, 0.3);
+  }
+  50% {
+    box-shadow:
+      0 0 30px rgba(145, 12, 30, 0.9),
+      0 0 60px rgba(145, 12, 30, 0.6),
+      0 0 100px rgba(145, 12, 30, 0.4),
+      0 0 140px rgba(145, 12, 30, 0.2),
+      0 6px 20px rgba(0, 0, 0, 0.4);
+  }
+}
+
 /* Red button variant */
 .cny-button-red {
   background: linear-gradient(
@@ -318,6 +510,8 @@
   padding: 20px;
   width: 100%;
   animation: fadeSlideIn 0.5s ease forwards;
+  position: relative;
+  z-index: 2;
 }
 
 /* Event details list */
@@ -330,6 +524,8 @@
   padding: 28px 32px;
   border-radius: 16px;
   box-shadow: 0 4px 20px rgba(145, 12, 30, 0.15);
+  position: relative;
+  z-index: 2;
 }
 
 .cny-details-title {
@@ -369,7 +565,37 @@
 
 /* Red-colored horse SVG using CSS filter - matches #910C1E */
 .cny-horse-red {
-  filter: brightness(0) saturate(100%) invert(8%) sepia(100%) saturate(7000%) hue-rotate(350deg) brightness(60%);
+  filter: brightness(0) saturate(100%) invert(12%) sepia(80%) saturate(4000%) hue-rotate(345deg) brightness(60%);
+}
+
+/* Animated horse - gentle galloping/prancing motion */
+.cny-horse-animated {
+  animation: horseGallop 4s ease-in-out infinite, horseBounce 1.5s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+
+@keyframes horseGallop {
+  0%, 100% {
+    transform: rotate(-0.5deg);
+  }
+  25% {
+    transform: rotate(1deg);
+  }
+  50% {
+    transform: rotate(-0.3deg);
+  }
+  75% {
+    transform: rotate(0.8deg);
+  }
+}
+
+@keyframes horseBounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
 }
 
 /* ========================================

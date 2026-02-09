@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { AnimatedBackground } from "@/components/cny/AnimatedBackground";
 
 export default function CNYWelcome() {
   const router = useRouter();
@@ -23,6 +24,7 @@ export default function CNYWelcome() {
         transition: "opacity 0.4s ease, transform 0.4s ease",
       }}
     >
+      <AnimatedBackground theme="red" />
       {/* Content positioned in the red space above 2026 */}
       <div
         className="cny-content"
@@ -49,13 +51,10 @@ export default function CNYWelcome() {
         </h1>
 
         <button
-          className="cny-button"
+          className="cny-button cny-button-glow"
           onClick={handleRSVP}
           style={{
             marginTop: "12px",
-            fontSize: "1rem",
-            padding: "12px 28px",
-            letterSpacing: "2px",
           }}
         >
           RSVP Now
