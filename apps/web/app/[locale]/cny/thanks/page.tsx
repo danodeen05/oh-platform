@@ -3,6 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { useState, useEffect, Suspense } from "react";
 import { FortuneModal } from "@/components/cny/FortuneModal";
+import { AnimatedBackground } from "@/components/cny/AnimatedBackground";
 
 function ThanksContent() {
   const searchParams = useSearchParams();
@@ -27,6 +28,7 @@ function ThanksContent() {
 
   return (
     <div className="cny-page cny-page-2">
+      <AnimatedBackground theme="gold" />
       {/* Thank you content */}
       <div
         className="cny-content"
@@ -89,9 +91,8 @@ function ThanksContent() {
             width: "clamp(275px, 81vw, 500px)",
             maxWidth: "85vw",
             height: "auto",
-            animation:
-              "bounceIn 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) 0.6s forwards",
-            opacity: 0,
+            animation: "horseGallop 4s ease-in-out infinite, horseBounce 1.5s ease-in-out infinite",
+            transformOrigin: "center bottom",
           }}
         />
 
@@ -99,12 +100,11 @@ function ThanksContent() {
         {name && !showFortune && (
           <button
             onClick={() => setShowFortune(true)}
-            className="cny-button"
+            className="cny-button cny-button-glow"
             style={{
-              marginTop: "8px",
-              fontSize: "0.85rem",
-              padding: "12px 24px",
-              animationDelay: "0.8s",
+              marginTop: "24px",
+              fontSize: "0.95rem",
+              padding: "12px 28px",
             }}
           >
             View Your Fortune
@@ -113,12 +113,12 @@ function ThanksContent() {
 
         <a
           href="/en/cny"
-          className="cny-button cny-button-red"
+          className="cny-button cny-button-red cny-button-glow-red"
           style={{
-            marginTop: "8px",
+            marginTop: "32px",
             textDecoration: "none",
-            fontSize: "0.9rem",
-            padding: "12px 24px",
+            fontSize: "0.95rem",
+            padding: "12px 28px",
           }}
         >
           RSVP for Someone Else
@@ -141,6 +141,7 @@ function ThanksContent() {
 function LoadingFallback() {
   return (
     <div className="cny-page cny-page-2">
+      <AnimatedBackground theme="gold" />
       <div
         className="cny-content"
         style={{

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, FormEvent } from "react";
 import { getChineseZodiac } from "@/lib/cny/zodiac";
+import { AnimatedBackground } from "@/components/cny/AnimatedBackground";
 
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyUdlLe3sVsJcs5XSh4LvZcmBJA3IyUi0qNHkZVc4GdY7n6nFXcoQhFpZIK2_dOFLU2dg/exec";
 
@@ -102,6 +103,7 @@ export default function CNYRsvp() {
         transition: "opacity 0.4s ease, transform 0.4s ease",
       }}
     >
+      <AnimatedBackground theme="gold" />
       {/* RSVP Form */}
       <div
         className="cny-content"
@@ -220,16 +222,11 @@ export default function CNYRsvp() {
 
           <button
             type="submit"
-            className="cny-button"
+            className="cny-button cny-button-glow"
             disabled={isSubmitting}
             style={{
               marginTop: "10px",
               width: "100%",
-              fontSize: "1rem",
-              padding: "14px 36px",
-              letterSpacing: "2px",
-              background: "linear-gradient(90deg, #D7B66E 0%, #E8C87D 25%, #D7B66E 50%, #C9A55E 75%, #D7B66E 100%)",
-              color: "#910C1E",
             }}
           >
             {isSubmitting ? "Submitting..." : "RSVP Now!"}
@@ -239,6 +236,7 @@ export default function CNYRsvp() {
         <img
           src="/cny/horse.svg"
           alt="Year of the Horse"
+          className="cny-horse-animated"
           style={{
             marginTop: "0px",
             width: "clamp(200px, 60vw, 350px)",

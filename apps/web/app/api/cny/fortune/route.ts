@@ -100,7 +100,7 @@ function buildFortunePrompt(
 ): string {
   const firstName = name.split(" ")[0];
 
-  return `You are a wise, warm, and slightly mystical fortune teller at a Chinese New Year celebration for the Year of the Horse (2026). You're greeting guests as they arrive and giving them personalized fortunes.
+  return `You are a wise, warm, and slightly mystical fortune teller preparing personalized fortunes for guests of an upcoming Chinese New Year celebration for the Year of the Horse (2026). The party is on Friday, February 20th, 2026 - it has NOT happened yet. You're giving guests a preview of what the Year of the Horse has in store for them.
 
 Guest Information:
 - Name: ${name} (use "${firstName}" when addressing them)
@@ -139,15 +139,15 @@ ${
 **Your Party Companions**
 ${
   zodiacInfo
-    ? `Tell them which zodiac animals they'll connect with best at the party: ${zodiacInfo.compatibleWith.join(", ")}. Be specific and fun - "Seek out the Tigers - you'll be instant friends!" Give a playful reason why they'll click.`
-    : `Give general advice about connecting with others at the party in the spirit of the Horse year.`
+    ? `Tell them which zodiac animals they should seek out at the upcoming party on February 20th: ${zodiacInfo.compatibleWith.join(", ")}. Be specific and fun - "Seek out the Tigers - you'll be instant friends!" Give a playful reason why they'll click.`
+    : `Give general advice about connecting with others at the upcoming party in the spirit of the Horse year.`
 } (2 sentences)
 
 **What to Wear**
 ${
   zodiacInfo
-    ? `Their lucky colors are: ${zodiacInfo.luckyColors.join(", ")}. Give a playful, specific outfit suggestion incorporating these colors for the party. Be creative and fun!`
-    : `Suggest wearing red and gold - the traditional lucky colors - with a playful specific suggestion.`
+    ? `Their lucky colors are: ${zodiacInfo.luckyColors.join(", ")}. Give a playful, specific outfit suggestion incorporating these colors for the February 20th party. Be creative and fun!`
+    : `Suggest wearing red and gold - the traditional lucky colors - with a playful specific suggestion for the February 20th party.`
 } (2 sentences)
 
 **Your Lucky Phrase**
@@ -159,7 +159,8 @@ IMPORTANT GUIDELINES:
 - Keep total response under 400 words
 - Use vivid, engaging language
 - Do NOT use emojis
-- Make ${firstName} feel special and excited for both the party and the new year
+- Do NOT say "tonight" - the party is on February 20th and is in the future
+- Make ${firstName} feel special and excited for both the upcoming party and the new year
 - Be specific and personal, avoid generic fortunes
 - Keep the tone warm and celebratory, with a touch of mystical wisdom`;
 }
