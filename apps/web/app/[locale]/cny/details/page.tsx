@@ -37,12 +37,12 @@ export default function CNYDetails() {
           width: "100%",
         }}
       >
-        <div className="cny-details" style={{ maxWidth: "540px" }}>
+        <div className="cny-details" style={{ maxWidth: "340px", padding: "12px 16px" }}>
           <h1
             className="cny-details-title"
             style={{
-              fontSize: "clamp(1.8rem, 9vw, 2.8rem)",
-              marginBottom: "20px",
+              fontSize: "clamp(1.4rem, 6vw, 2rem)",
+              marginBottom: "12px",
               whiteSpace: "nowrap",
             }}
           >
@@ -52,9 +52,9 @@ export default function CNYDetails() {
           <p
             style={{
               color: "#444",
-              fontSize: "clamp(1.05rem, 4vw, 1.25rem)",
-              lineHeight: 1.75,
-              marginBottom: "20px",
+              fontSize: "clamp(0.85rem, 3.2vw, 1rem)",
+              lineHeight: 1.6,
+              marginBottom: "12px",
               fontWeight: 500,
             }}
           >
@@ -68,9 +68,9 @@ export default function CNYDetails() {
           <p
             style={{
               color: "#555",
-              fontSize: "clamp(1rem, 3.8vw, 1.15rem)",
-              lineHeight: 1.7,
-              marginBottom: "28px",
+              fontSize: "clamp(0.8rem, 3vw, 0.95rem)",
+              lineHeight: 1.5,
+              marginBottom: "16px",
               fontStyle: "italic",
             }}
           >
@@ -81,13 +81,13 @@ export default function CNYDetails() {
           <div
             className="cny-details-info"
             style={{
-              fontSize: "clamp(1.4rem, 5.5vw, 1.8rem)",
+              fontSize: "clamp(1rem, 4vw, 1.3rem)",
               fontWeight: 700,
-              marginTop: "8px",
+              marginTop: "4px",
             }}
           >
-            <p style={{ margin: "8px 0" }}>Fri, Feb 20 · 6–8 PM</p>
-            <p style={{ margin: "8px 0" }}>
+            <p style={{ margin: "4px 0" }}>Fri, Feb 20 · 6–8 PM</p>
+            <p style={{ margin: "4px 0" }}>
               Embold Clubroom & Kitchen
               <br />
               Lehi, UT
@@ -99,11 +99,11 @@ export default function CNYDetails() {
           className="cny-button cny-button-red"
           onClick={handleContinue}
           style={{
-            marginTop: "32px",
+            marginTop: "20px",
             animationDelay: "0.5s",
-            fontSize: "1.4rem",
-            padding: "24px 60px",
-            letterSpacing: "3px",
+            fontSize: "1rem",
+            padding: "14px 36px",
+            letterSpacing: "2px",
           }}
         >
           Continue to RSVP

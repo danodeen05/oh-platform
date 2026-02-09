@@ -57,35 +57,10 @@ export default function CNYRsvp() {
         const url = `${APPS_SCRIPT_URL}?${params.toString()}`;
         console.log("Submitting RSVP to:", url);
 
-        // Try multiple methods for reliability
-
-        // Method 1: fetch with no-cors (fire and forget)
-        fetch(url, { method: "GET", mode: "no-cors" })
-          .then(() => console.log("Fetch completed"))
-          .catch((err) => console.error("Fetch error:", err));
-
-        // Method 2: Image beacon (backup)
-        const img = new Image();
-        img.onload = () => console.log("Image beacon loaded");
-        img.onerror = () => console.log("Image beacon error (expected for non-image response)");
-        img.src = url;
-
-        // Method 3: Script tag injection (another backup)
-        const script = document.createElement("script");
-        script.src = url;
-        script.onload = () => {
-          console.log("Script loaded");
-          document.head.removeChild(script);
-        };
-        script.onerror = () => {
-          console.log("Script error (expected)");
-          document.head.removeChild(script);
-        };
-        document.head.appendChild(script);
+        // Use fetch with no-cors (fire and forget)
+        await fetch(url, { method: "GET", mode: "no-cors" });
+        console.log("RSVP submitted");
       }
-
-      // Wait a moment for requests to fire, then transition
-      await new Promise(resolve => setTimeout(resolve, 500));
 
       setIsTransitioning(true);
       setTimeout(() => {
@@ -114,30 +89,30 @@ export default function CNYRsvp() {
         className="cny-content"
         style={{
           position: "absolute",
-          top: "10%",
+          top: "4%",
           left: 0,
           right: 0,
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          gap: "20px",
+          gap: "12px",
           padding: "0 24px",
         }}
       >
         <h1
           className="cny-heading"
           style={{
-            fontSize: "clamp(2.5rem, 12vw, 4rem)",
-            marginBottom: "8px",
+            fontSize: "clamp(1.8rem, 8vw, 2.5rem)",
+            marginBottom: "4px",
             color: "#D7B66E",
           }}
         >
           RSVP!
         </h1>
 
-        <form className="cny-form" onSubmit={handleSubmit}>
+        <form className="cny-form" onSubmit={handleSubmit} style={{ gap: "10px" }}>
           <div className="cny-input-group">
-            <label className="cny-label" htmlFor="name" style={{ color: "#D7B66E", fontSize: "1.1rem", fontWeight: 700 }}>
+            <label className="cny-label" htmlFor="name" style={{ color: "#D7B66E", fontSize: "0.9rem", fontWeight: 700 }}>
               Name
             </label>
             <input
@@ -148,11 +123,12 @@ export default function CNYRsvp() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
+              style={{ padding: "10px 14px", fontSize: "0.95rem" }}
             />
           </div>
 
           <div className="cny-input-group">
-            <label className="cny-label" htmlFor="phone" style={{ color: "#D7B66E", fontSize: "1.1rem", fontWeight: 700 }}>
+            <label className="cny-label" htmlFor="phone" style={{ color: "#D7B66E", fontSize: "0.9rem", fontWeight: 700 }}>
               Phone
             </label>
             <input
@@ -162,17 +138,18 @@ export default function CNYRsvp() {
               placeholder="(xxx) xxx-xxxx"
               value={phone}
               onChange={(e) => setPhone(formatPhone(e.target.value))}
+              style={{ padding: "10px 14px", fontSize: "0.95rem" }}
             />
             <span
               className="cny-helper"
-              style={{ textAlign: "left", marginTop: "4px", color: "#D7B66E" }}
+              style={{ textAlign: "left", marginTop: "2px", color: "#D7B66E", fontSize: "0.75rem" }}
             >
               So we can text you any updates
             </span>
           </div>
 
           <div className="cny-input-group">
-            <label className="cny-label" htmlFor="birthdate" style={{ color: "#D7B66E", fontSize: "1.1rem", fontWeight: 700 }}>
+            <label className="cny-label" htmlFor="birthdate" style={{ color: "#D7B66E", fontSize: "0.9rem", fontWeight: 700 }}>
               Birthdate
             </label>
             <input
@@ -183,10 +160,11 @@ export default function CNYRsvp() {
               value={birthdate}
               onChange={(e) => setBirthdate(formatBirthdate(e.target.value))}
               inputMode="numeric"
+              style={{ padding: "10px 14px", fontSize: "0.95rem" }}
             />
             <span
               className="cny-helper"
-              style={{ textAlign: "left", marginTop: "4px", color: "#D7B66E" }}
+              style={{ textAlign: "left", marginTop: "2px", color: "#D7B66E", fontSize: "0.75rem" }}
             >
               Reveal your Chinese zodiac & what 2026 has in store!
             </span>
@@ -196,7 +174,7 @@ export default function CNYRsvp() {
             <p
               style={{
                 color: "#ef4444",
-                fontSize: "0.9rem",
+                fontSize: "0.85rem",
                 textAlign: "center",
                 margin: 0,
               }}
@@ -207,13 +185,13 @@ export default function CNYRsvp() {
 
           <p
             style={{
-              marginTop: "12px",
-              padding: "20px 24px",
+              marginTop: "6px",
+              padding: "12px 16px",
               background: "rgba(215, 182, 110, 0.3)",
-              borderRadius: "12px",
+              borderRadius: "10px",
               color: "#D7B66E",
-              fontSize: "1.1rem",
-              lineHeight: 1.6,
+              fontSize: "0.85rem",
+              lineHeight: 1.5,
               fontWeight: 500,
               textAlign: "center",
             }}
@@ -227,11 +205,11 @@ export default function CNYRsvp() {
             className="cny-button"
             disabled={isSubmitting}
             style={{
-              marginTop: "16px",
+              marginTop: "10px",
               width: "100%",
-              fontSize: "1.4rem",
-              padding: "24px 60px",
-              letterSpacing: "3px",
+              fontSize: "1rem",
+              padding: "14px 36px",
+              letterSpacing: "2px",
               background: "linear-gradient(90deg, #D7B66E 0%, #E8C87D 25%, #D7B66E 50%, #C9A55E 75%, #D7B66E 100%)",
               color: "#910C1E",
             }}
@@ -244,9 +222,9 @@ export default function CNYRsvp() {
           src="/cny/horse.svg"
           alt="Year of the Horse"
           style={{
-            marginTop: "12px",
-            width: "clamp(300px, 80vw, 500px)",
-            maxWidth: "90vw",
+            marginTop: "0px",
+            width: "clamp(200px, 60vw, 350px)",
+            maxWidth: "80vw",
             height: "auto",
           }}
         />

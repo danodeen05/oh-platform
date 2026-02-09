@@ -40,21 +40,22 @@ export default function CNYWelcome() {
         <h1
           className="cny-heading"
           style={{
-            fontSize: "clamp(2rem, 10vw, 3.5rem)",
+            fontSize: "clamp(1rem, 5vw, 1.75rem)",
             lineHeight: 1.1,
             margin: 0,
           }}
         >
-          YOU'RE
-          <br />
-          INVITED
+          YOU'RE INVITED!
         </h1>
 
         <button
-          className="cny-button cny-button-hero"
+          className="cny-button"
           onClick={handleRSVP}
           style={{
-            marginTop: "16px",
+            marginTop: "12px",
+            fontSize: "1rem",
+            padding: "12px 28px",
+            letterSpacing: "2px",
           }}
         >
           RSVP Now
