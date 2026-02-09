@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, FormEvent } from "react";
+import { getChineseZodiac } from "@/lib/cny/zodiac";
 
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyUdlLe3sVsJcs5XSh4LvZcmBJA3IyUi0qNHkZVc4GdY7n6nFXcoQhFpZIK2_dOFLU2dg/exec";
 
@@ -45,16 +46,20 @@ export default function CNYRsvp() {
     setIsSubmitting(true);
 
     try {
-      // Submit to Google Apps Script
+      // Calculate zodiac from birthdate if provided
+      const zodiac = birthdate ? getChineseZodiac(birthdate).animal : "";
+
+      // Submit to Google Apps Script (with zodiac for PowerPoint tracking)
       if (APPS_SCRIPT_URL) {
-        const params = new URLSearchParams({
+        const sheetParams = new URLSearchParams({
           name: name.trim(),
           phone: phone.trim(),
           birthdate: birthdate,
+          zodiac: zodiac,
           timestamp: new Date().toISOString(),
         });
 
-        const url = `${APPS_SCRIPT_URL}?${params.toString()}`;
+        const url = `${APPS_SCRIPT_URL}?${sheetParams.toString()}`;
         console.log("Submitting RSVP to:", url);
 
         // Use fetch with no-cors (fire and forget)
@@ -62,15 +67,28 @@ export default function CNYRsvp() {
         console.log("RSVP submitted");
       }
 
+      // Build query params for thanks page (for fortune modal)
+      const thanksParams = new URLSearchParams({
+        name: name.trim(),
+        phone: phone.trim(),
+        birthdate: birthdate,
+      });
+
       setIsTransitioning(true);
       setTimeout(() => {
-        router.push("/en/cny/thanks");
+        router.push(`/en/cny/thanks?${thanksParams.toString()}`);
       }, 400);
     } catch (err) {
       console.error("RSVP submission error:", err);
+      // Still redirect to thanks page even on error
+      const thanksParams = new URLSearchParams({
+        name: name.trim(),
+        phone: phone.trim(),
+        birthdate: birthdate,
+      });
       setIsTransitioning(true);
       setTimeout(() => {
-        router.push("/en/cny/thanks");
+        router.push(`/en/cny/thanks?${thanksParams.toString()}`);
       }, 400);
     }
   };

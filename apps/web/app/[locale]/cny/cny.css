@@ -371,3 +371,336 @@
 .cny-horse-red {
   filter: brightness(0) saturate(100%) invert(8%) sepia(100%) saturate(7000%) hue-rotate(350deg) brightness(60%);
 }
+
+/* ========================================
+   Fortune Modal Styles
+   ======================================== */
+
+/* Backdrop overlay */
+.fortune-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Modal panel */
+.fortune-modal-panel {
+  position: relative;
+  background: linear-gradient(145deg, #910C1E 0%, #6b0915 50%, #4a0610 100%);
+  border: 3px solid var(--cny-gold);
+  border-radius: 20px;
+  max-width: 420px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 28px 20px;
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.5),
+    0 0 40px rgba(215, 182, 110, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  animation: modalScaleIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+@keyframes modalScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.85) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Close button */
+.fortune-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--cny-gold);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--cny-gold);
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.fortune-modal-close:hover {
+  background: var(--cny-gold);
+  color: var(--cny-red);
+  transform: scale(1.1);
+}
+
+/* Loading state */
+.fortune-loading {
+  text-align: center;
+  padding: 20px 0;
+}
+
+.fortune-horse-loading {
+  width: 140px;
+  height: auto;
+  animation: horseGallop 1s ease-in-out infinite;
+}
+
+@keyframes horseGallop {
+  0%, 100% {
+    transform: translateY(0) rotate(-1deg);
+  }
+  20% {
+    transform: translateY(-12px) rotate(1deg);
+  }
+  40% {
+    transform: translateY(-4px) rotate(-0.5deg);
+  }
+  60% {
+    transform: translateY(-16px) rotate(2deg);
+  }
+  80% {
+    transform: translateY(-6px) rotate(0deg);
+  }
+}
+
+.fortune-loading-text {
+  color: var(--cny-gold);
+  font-family: 'Noto Serif TC', serif;
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 20px 0 6px;
+  animation: textPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes textPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.fortune-loading-subtext {
+  color: rgba(215, 182, 110, 0.7);
+  font-family: 'Raleway', sans-serif;
+  font-size: 0.9rem;
+}
+
+/* Error state */
+.fortune-error {
+  text-align: center;
+  padding: 30px 0;
+}
+
+.fortune-error-text {
+  color: var(--cny-gold);
+  font-family: 'Noto Serif TC', serif;
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.fortune-error-message {
+  color: rgba(255, 255, 255, 0.6);
+  font-family: 'Raleway', sans-serif;
+  font-size: 0.85rem;
+  margin-bottom: 24px;
+}
+
+.fortune-retry-button {
+  padding: 12px 36px;
+  background: var(--cny-gold);
+  color: var(--cny-red);
+  border: none;
+  border-radius: 25px;
+  font-family: 'Raleway', sans-serif;
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.fortune-retry-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 20px rgba(215, 182, 110, 0.4);
+}
+
+/* Success/Fortune content */
+.fortune-content {
+  text-align: center;
+}
+
+.fortune-title {
+  color: var(--cny-gold);
+  font-family: 'Noto Serif TC', serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 12px;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.fortune-zodiac-badge {
+  display: inline-block;
+  padding: 6px 16px;
+  background: rgba(215, 182, 110, 0.15);
+  border: 1px solid var(--cny-gold);
+  border-radius: 20px;
+  color: var(--cny-gold);
+  font-family: 'Raleway', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+/* Fortune text with typewriter */
+.fortune-text {
+  text-align: left;
+  color: rgba(255, 255, 255, 0.95);
+  font-family: 'Raleway', sans-serif;
+  font-size: 0.9rem;
+  line-height: 1.65;
+}
+
+.fortune-text p {
+  margin: 0 0 10px;
+}
+
+/* Section titles in fortune */
+.fortune-section-title {
+  color: var(--cny-gold);
+  font-family: 'Noto Serif TC', serif;
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 16px 0 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(215, 182, 110, 0.3);
+  text-align: left;
+}
+
+.fortune-section-title:first-of-type {
+  margin-top: 0;
+}
+
+/* Typewriter cursor */
+.fortune-typewriter-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: var(--cny-gold);
+  margin-left: 2px;
+  animation: cursorBlink 0.8s step-end infinite;
+  vertical-align: text-bottom;
+}
+
+@keyframes cursorBlink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+/* Close button at bottom */
+.fortune-close-button {
+  margin-top: 20px;
+  padding: 14px 40px;
+  background: linear-gradient(90deg, var(--cny-gold) 0%, #E8C87D 50%, var(--cny-gold) 100%);
+  background-size: 200% auto;
+  color: var(--cny-red);
+  border: none;
+  border-radius: 30px;
+  font-family: 'Raleway', sans-serif;
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  animation: shimmer 3s linear infinite;
+}
+
+.fortune-close-button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(215, 182, 110, 0.4);
+}
+
+/* Shareable card */
+.fortune-card {
+  margin-top: 20px;
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(215, 182, 110, 0.15) 0%, rgba(215, 182, 110, 0.05) 100%);
+  border: 1px solid rgba(215, 182, 110, 0.4);
+  border-radius: 12px;
+}
+
+.fortune-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.fortune-card-name {
+  color: var(--cny-gold);
+  font-family: 'Noto Serif TC', serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.fortune-card-zodiac {
+  color: rgba(255, 255, 255, 0.8);
+  font-family: 'Raleway', sans-serif;
+  font-size: 0.85rem;
+}
+
+.fortune-card-phrase {
+  color: var(--cny-gold);
+  font-family: 'Noto Serif TC', serif;
+  font-size: 1.3rem;
+  font-weight: 700;
+  text-align: center;
+  margin: 8px 0;
+}
+
+.fortune-card-phrase-meaning {
+  color: rgba(255, 255, 255, 0.7);
+  font-family: 'Raleway', sans-serif;
+  font-size: 0.8rem;
+  text-align: center;
+  font-style: italic;
+}
+
+.fortune-card-year {
+  color: rgba(215, 182, 110, 0.6);
+  font-family: 'Raleway', sans-serif;
+  font-size: 0.75rem;
+  text-align: center;
+  margin-top: 10px;
+  letter-spacing: 1px;
+}
