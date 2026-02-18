@@ -11,7 +11,7 @@ import { TitleSlide } from "@/components/cny/slides/TitleSlide";
 import { ZodiacSlide } from "@/components/cny/slides/ZodiacSlide";
 import { BabySlide } from "@/components/cny/slides/BabySlide";
 
-const SLIDE_DURATION = 120_000; // 2 minutes in milliseconds
+const SLIDE_DURATION = 150_000; // 2.5 minutes in milliseconds
 const TOTAL_SLIDES = 14; // 1 title + 12 zodiacs + 1 baby slide
 const DATA_REFRESH_INTERVAL = 60_000; // Refresh RSVP data every 1 minute
 

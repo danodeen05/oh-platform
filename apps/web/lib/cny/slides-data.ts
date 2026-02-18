@@ -104,6 +104,22 @@ export const ZODIAC_INCOMPATIBLE: Record<ZodiacAnimal, ZodiacAnimal[]> = {
   Pig: ["Snake", "Monkey"],
 };
 
+// Unique characteristics for each zodiac (~5 traits)
+export const ZODIAC_TRAITS: Record<ZodiacAnimal, string[]> = {
+  Rat: ["Clever", "Quick-witted", "Resourceful", "Adaptable", "Charming"],
+  Ox: ["Reliable", "Strong", "Patient", "Methodical", "Honest"],
+  Tiger: ["Brave", "Confident", "Competitive", "Bold", "Passionate"],
+  Rabbit: ["Gentle", "Elegant", "Cautious", "Gracious", "Sensitive"],
+  Dragon: ["Ambitious", "Powerful", "Charismatic", "Lucky", "Fearless"],
+  Snake: ["Wise", "Intuitive", "Mysterious", "Sophisticated", "Calm"],
+  Horse: ["Energetic", "Free-spirited", "Optimistic", "Independent", "Adventurous"],
+  Goat: ["Creative", "Gentle", "Artistic", "Kind", "Empathetic"],
+  Monkey: ["Witty", "Clever", "Curious", "Playful", "Inventive"],
+  Rooster: ["Honest", "Punctual", "Observant", "Hardworking", "Courageous"],
+  Dog: ["Loyal", "Faithful", "Honest", "Protective", "Dependable"],
+  Pig: ["Generous", "Compassionate", "Diligent", "Sincere", "Tolerant"],
+};
+
 // Zodiac SVG file mapping (Ox uses Cow.svg)
 export const ZODIAC_SVG_FILES: Record<ZodiacAnimal, string> = {
   Rat: "/cny/slides/Zodiacs/Rat.svg",
