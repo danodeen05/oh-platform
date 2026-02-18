@@ -13,6 +13,8 @@ type Order = {
   estimatedArrival?: string;
   prepStartTime?: string;
   fulfillmentType: string;
+  orderSource?: string; // EVENT for CNY orders
+  guestName?: string; // Guest name directly on order
   arrivedAt?: string; // When customer checked in at kiosk
   podConfirmedAt?: string; // When customer confirmed arrival at pod
   parentOrderId?: string; // If this is an add-on order
@@ -553,12 +555,17 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
               style={{
                 fontSize: "1.5rem",
                 fontWeight: "bold",
-                color: isArriving ? "#f59e0b" : customerIsVIP ? "#dc2626" : "#3b82f6",
+                color: isArriving ? "#f59e0b" : customerIsVIP ? "#dc2626" : order.orderSource === "EVENT" ? "#D7B66E" : "#3b82f6",
               }}
             >
-              {order.seat ? `Pod ${order.seat.number}` : "Dine-In"}
+              {order.orderSource === "EVENT"
+                ? (order.guestName || order.guest?.name || "CNY Guest")
+                : order.seat
+                  ? `Pod ${order.seat.number}`
+                  : "Dine-In"
+              }
             </div>
-            {getCustomerName(order) && (
+            {order.orderSource !== "EVENT" && getCustomerName(order) && (
               <div style={{ fontSize: "0.85rem", color: "#9ca3af", marginTop: 2 }}>
                 {getCustomerName(order)}
               </div>

@@ -314,8 +314,9 @@ model Order {
   user   User?   @relation(fields: [userId], references: [id])
 
   // Guest checkout (alternative to userId)
-  guestId String?
-  guest   Guest?  @relation(fields: [guestId], references: [id])
+  guestId   String?
+  guest     Guest?  @relation(fields: [guestId], references: [id])
+  guestName String? // Store guest name directly for display (especially for EVENT orders)
 
   // Group order association
   groupOrderId String?
@@ -386,6 +387,7 @@ enum OrderSource {
   KIOSK // Order placed at physical kiosk in-store
   MOBILE // Order placed via native mobile app (future)
   STAFF // Order placed by staff on behalf of customer
+  EVENT // Order placed for private event (e.g., CNY Party)
 }
 
 model OrderItem {
@@ -1288,6 +1290,75 @@ model GiftCardConfig {
 enum GiftCardConfigType {
   DENOMINATION
   DESIGN
+}
+
+// ==========================================
+// PARTY INVITATIONS
+// ==========================================
+
+model PartyInvitation {
+  id   String @id @default(cuid())
+  code String @unique // URL-friendly code (e.g., "cny2026")
+
+  // Event Details
+  title       String // "Chinese New Year Celebration 2026"
+  hostName    String // "The Didericksen Family"
+  eventDate   DateTime
+  eventTime   String // "6:00 PM"
+  location    String // Full address
+  dresscode   String? // "Festive Red & Gold"
+  description String? // Additional details
+
+  // Chinese New Year specific
+  zodiacYear   String? // "蛇年"
+  zodiacEnglish String? // "Year of the Snake"
+
+  // Settings
+  maxGuests        Int? // Maximum total guests allowed (null = unlimited)
+  rsvpDeadline     DateTime? // RSVP cutoff date
+  allowPlusOnes    Boolean @default(true)
+  maxGuestsPerRsvp Int     @default(4) // Max guests per RSVP submission
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  rsvps PartyRSVP[]
+}
+
+model PartyRSVP {
+  id          String          @id @default(cuid())
+  invitationId String
+  invitation   PartyInvitation @relation(fields: [invitationId], references: [id])
+
+  // Guest info
+  name       String
+  phone      String?
+  email      String?
+  guestCount Int     @default(1) // Number of guests attending (including self)
+
+  // RSVP status
+  status PartyRSVPStatus @default(ATTENDING)
+
+  // Optional message from guest
+  message String?
+
+  // Metadata
+  ipAddress String? // For spam prevention
+  userAgent String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([invitationId])
+  @@index([status])
+}
+
+enum PartyRSVPStatus {
+  ATTENDING     // Will be there
+  NOT_ATTENDING // Can't make it
+  MAYBE         // Tentative
 }
 
 // ==========================================

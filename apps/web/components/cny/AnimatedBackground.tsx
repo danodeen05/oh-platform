@@ -43,11 +43,11 @@ export function AnimatedBackground({
   // Generate random positions for lights - truly scattered
   const lightPositions = useMemo(() => {
     const random = seededRandom(42);
-    return Array.from({ length: 25 }).map((_, i) => ({
+    return Array.from({ length: 50 }).map((_, i) => ({
       left: random() * 90 + 5, // 5% to 95%
       top: random() * 80 + 10, // 10% to 90%
       delay: random() * 6,
-      size: random() * 3 + 2, // 2-5px
+      size: random() * 6 + 4, // 4-10px (bigger)
       animationType: Math.floor(random() * 5) + 1,
     }));
   }, []);
@@ -55,11 +55,11 @@ export function AnimatedBackground({
   // Generate random positions for fireworks
   const fireworkPositions = useMemo(() => {
     const random = seededRandom(123);
-    return Array.from({ length: 8 }).map((_, i) => ({
+    return Array.from({ length: 18 }).map((_, i) => ({
       left: random() * 80 + 10, // 10% to 90%
       top: random() * 60 + 10, // 10% to 70%
-      delay: random() * 12 + i * 1.5, // Staggered start
-      scale: random() * 0.5 + 0.7, // 0.7-1.2 scale
+      delay: random() * 8 + i * 0.8, // More frequent
+      scale: random() * 0.8 + 1.0, // 1.0-1.8 scale (bigger)
       burstType: Math.floor(random() * 3) + 1,
     }));
   }, []);
@@ -163,7 +163,7 @@ export function AnimatedBackground({
       {/* Sparkle trails - for extra festive feel */}
       {showFireworks && (
         <div className="cny-sparkle-container">
-          {Array.from({ length: 15 }).map((_, i) => {
+          {Array.from({ length: 35 }).map((_, i) => {
             const random = seededRandom(i * 7);
             return (
               <div
@@ -171,8 +171,8 @@ export function AnimatedBackground({
                 className={`cny-sparkle ${theme === "red" ? "cny-sparkle-gold" : "cny-sparkle-red"}`}
                 style={{
                   left: `${random() * 100}%`,
-                  animationDelay: `${random() * 8}s`,
-                  animationDuration: `${3 + random() * 2}s`,
+                  animationDelay: `${random() * 5}s`,
+                  animationDuration: `${2.5 + random() * 1.5}s`,
                 }}
               />
             );

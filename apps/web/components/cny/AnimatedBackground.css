@@ -23,48 +23,48 @@
 .cny-bokeh {
   position: absolute;
   border-radius: 50%;
-  filter: blur(40px);
-  opacity: 0.4;
+  filter: blur(50px);
+  opacity: 0.55;
   will-change: transform, opacity;
 }
 
 /* Bokeh color variants */
 .cny-bokeh-gold {
-  background: radial-gradient(circle, rgba(215, 182, 110, 0.8) 0%, rgba(215, 182, 110, 0) 70%);
+  background: radial-gradient(circle, rgba(255, 215, 0, 0.9) 0%, rgba(215, 182, 110, 0.6) 40%, rgba(215, 182, 110, 0) 70%);
 }
 
 .cny-bokeh-gold-soft {
-  background: radial-gradient(circle, rgba(232, 200, 125, 0.6) 0%, rgba(232, 200, 125, 0) 70%);
+  background: radial-gradient(circle, rgba(255, 230, 150, 0.8) 0%, rgba(232, 200, 125, 0.5) 40%, rgba(232, 200, 125, 0) 70%);
 }
 
 .cny-bokeh-red {
-  background: radial-gradient(circle, rgba(145, 12, 30, 0.85) 0%, rgba(145, 12, 30, 0) 70%);
+  background: radial-gradient(circle, rgba(200, 30, 50, 0.95) 0%, rgba(145, 12, 30, 0.6) 40%, rgba(145, 12, 30, 0) 70%);
 }
 
 .cny-bokeh-red-soft {
-  background: radial-gradient(circle, rgba(120, 15, 35, 0.7) 0%, rgba(120, 15, 35, 0) 70%);
+  background: radial-gradient(circle, rgba(180, 25, 45, 0.85) 0%, rgba(120, 15, 35, 0.5) 40%, rgba(120, 15, 35, 0) 70%);
 }
 
 /* Large bokeh circles */
 .cny-bokeh-1 {
-  width: 300px;
-  height: 300px;
+  width: 400px;
+  height: 400px;
   top: -5%;
   left: -10%;
   animation: bokehFloat1 18s ease-in-out infinite, bokehPulse 6s ease-in-out infinite;
 }
 
 .cny-bokeh-2 {
-  width: 250px;
-  height: 250px;
+  width: 350px;
+  height: 350px;
   top: 60%;
   right: -8%;
   animation: bokehFloat2 22s ease-in-out infinite, bokehPulse 8s ease-in-out infinite 2s;
 }
 
 .cny-bokeh-3 {
-  width: 200px;
-  height: 200px;
+  width: 300px;
+  height: 300px;
   bottom: -5%;
   left: 30%;
   animation: bokehFloat3 20s ease-in-out infinite, bokehPulse 7s ease-in-out infinite 1s;
@@ -72,24 +72,24 @@
 
 /* Medium bokeh circles */
 .cny-bokeh-4 {
-  width: 150px;
-  height: 150px;
+  width: 220px;
+  height: 220px;
   top: 25%;
   right: 15%;
   animation: bokehFloat4 15s ease-in-out infinite, bokehPulse 5s ease-in-out infinite;
 }
 
 .cny-bokeh-5 {
-  width: 180px;
-  height: 180px;
+  width: 260px;
+  height: 260px;
   top: 45%;
   left: 5%;
   animation: bokehFloat5 17s ease-in-out infinite, bokehPulse 6s ease-in-out infinite 3s;
 }
 
 .cny-bokeh-6 {
-  width: 120px;
-  height: 120px;
+  width: 180px;
+  height: 180px;
   bottom: 20%;
   right: 25%;
   animation: bokehFloat1 14s ease-in-out infinite reverse, bokehPulse 5s ease-in-out infinite 2s;
@@ -97,16 +97,16 @@
 
 /* Small bokeh circles */
 .cny-bokeh-7 {
-  width: 80px;
-  height: 80px;
+  width: 140px;
+  height: 140px;
   top: 15%;
   left: 40%;
   animation: bokehFloat3 12s ease-in-out infinite, bokehPulse 4s ease-in-out infinite 1s;
 }
 
 .cny-bokeh-8 {
-  width: 100px;
-  height: 100px;
+  width: 160px;
+  height: 160px;
   bottom: 35%;
   left: 60%;
   animation: bokehFloat2 13s ease-in-out infinite reverse, bokehPulse 5s ease-in-out infinite;
@@ -181,10 +181,10 @@
 
 @keyframes bokehPulse {
   0%, 100% {
-    opacity: 0.3;
+    opacity: 0.4;
   }
   50% {
-    opacity: 0.5;
+    opacity: 0.7;
   }
 }
 
@@ -310,17 +310,19 @@
 }
 
 .cny-light-gold {
-  background: radial-gradient(circle, rgba(215, 182, 110, 1) 0%, rgba(215, 182, 110, 0.5) 50%, transparent 70%);
+  background: radial-gradient(circle, rgba(255, 255, 200, 1) 0%, rgba(255, 215, 0, 0.8) 40%, rgba(215, 182, 110, 0.4) 70%, transparent 90%);
   box-shadow:
-    0 0 6px 2px rgba(215, 182, 110, 0.6),
-    0 0 12px 4px rgba(215, 182, 110, 0.3);
+    0 0 10px 4px rgba(255, 215, 0, 0.8),
+    0 0 25px 10px rgba(215, 182, 110, 0.5),
+    0 0 40px 15px rgba(215, 182, 110, 0.2);
 }
 
 .cny-light-red {
-  background: radial-gradient(circle, rgba(180, 20, 40, 1) 0%, rgba(145, 12, 30, 0.7) 50%, transparent 70%);
+  background: radial-gradient(circle, rgba(255, 180, 180, 1) 0%, rgba(255, 50, 50, 0.8) 40%, rgba(145, 12, 30, 0.5) 70%, transparent 90%);
   box-shadow:
-    0 0 8px 3px rgba(180, 20, 40, 0.9),
-    0 0 16px 6px rgba(145, 12, 30, 0.5);
+    0 0 12px 5px rgba(255, 50, 50, 0.9),
+    0 0 30px 12px rgba(180, 20, 40, 0.5),
+    0 0 50px 20px rgba(145, 12, 30, 0.2);
 }
 
 /* Light floating animations - 5 variations */
@@ -415,12 +417,12 @@
 
 @keyframes lightTwinkle {
   0%, 100% {
-    opacity: 0.3;
+    opacity: 0.4;
     transform: scale(1);
   }
   50% {
     opacity: 1;
-    transform: scale(1.5);
+    transform: scale(2);
   }
 }
 
@@ -436,8 +438,8 @@
 
 .cny-firework {
   position: absolute;
-  width: 100px;
-  height: 100px;
+  width: 200px;
+  height: 200px;
   opacity: 0;
   will-change: transform, opacity;
 }
@@ -457,31 +459,31 @@
 /* Firework particles that radiate outward */
 .cny-firework-particle {
   position: absolute;
-  width: 3px;
-  height: 20px;
+  width: 5px;
+  height: 35px;
   left: 50%;
   top: 50%;
-  margin-left: -1.5px;
+  margin-left: -2.5px;
   transform-origin: center center;
-  border-radius: 2px;
+  border-radius: 3px;
   opacity: 0;
 }
 
 .cny-firework-gold {
-  background: linear-gradient(to top, rgba(215, 182, 110, 1), rgba(232, 200, 125, 0.8), transparent);
-  box-shadow: 0 0 6px 2px rgba(215, 182, 110, 0.8);
+  background: linear-gradient(to top, rgba(255, 215, 0, 1), rgba(215, 182, 110, 1), rgba(232, 200, 125, 0.8), transparent);
+  box-shadow: 0 0 12px 4px rgba(255, 215, 0, 0.9), 0 0 25px 8px rgba(215, 182, 110, 0.6);
 }
 
 .cny-firework-red {
-  background: linear-gradient(to top, rgba(145, 12, 30, 1), rgba(180, 30, 50, 0.9), rgba(120, 10, 25, 0.5));
-  box-shadow: 0 0 8px 3px rgba(145, 12, 30, 0.9);
+  background: linear-gradient(to top, rgba(255, 50, 50, 1), rgba(180, 30, 50, 1), rgba(145, 12, 30, 0.8), transparent);
+  box-shadow: 0 0 15px 5px rgba(255, 50, 50, 0.9), 0 0 30px 10px rgba(145, 12, 30, 0.6);
 }
 
 /* Firework center glow */
 .cny-firework-glow {
   position: absolute;
-  width: 30px;
-  height: 30px;
+  width: 60px;
+  height: 60px;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
@@ -490,13 +492,13 @@
 }
 
 .cny-firework-glow-gold {
-  background: radial-gradient(circle, rgba(255, 230, 150, 1) 0%, rgba(215, 182, 110, 0.6) 40%, transparent 70%);
-  box-shadow: 0 0 20px 10px rgba(215, 182, 110, 0.5);
+  background: radial-gradient(circle, rgba(255, 255, 200, 1) 0%, rgba(255, 215, 0, 0.9) 30%, rgba(215, 182, 110, 0.5) 60%, transparent 80%);
+  box-shadow: 0 0 40px 20px rgba(255, 215, 0, 0.7), 0 0 80px 40px rgba(215, 182, 110, 0.4);
 }
 
 .cny-firework-glow-red {
-  background: radial-gradient(circle, rgba(220, 80, 90, 1) 0%, rgba(145, 12, 30, 0.7) 40%, transparent 70%);
-  box-shadow: 0 0 25px 12px rgba(145, 12, 30, 0.6);
+  background: radial-gradient(circle, rgba(255, 150, 150, 1) 0%, rgba(255, 50, 50, 0.9) 30%, rgba(145, 12, 30, 0.6) 60%, transparent 80%);
+  box-shadow: 0 0 50px 25px rgba(255, 50, 50, 0.7), 0 0 100px 50px rgba(145, 12, 30, 0.4);
 }
 
 /* Burst animations */
@@ -582,23 +584,23 @@
 @keyframes particleExplode1 {
   0%, 5% {
     opacity: 0;
-    height: 5px;
-    margin-top: -2px;
+    height: 8px;
+    margin-top: -4px;
   }
   10% {
     opacity: 1;
-    height: 25px;
-    margin-top: -35px;
+    height: 50px;
+    margin-top: -60px;
   }
   35% {
-    opacity: 0.8;
-    height: 18px;
-    margin-top: -55px;
+    opacity: 0.9;
+    height: 35px;
+    margin-top: -100px;
   }
   50% {
     opacity: 0;
-    height: 8px;
-    margin-top: -70px;
+    height: 15px;
+    margin-top: -130px;
   }
   100% {
     opacity: 0;
@@ -608,23 +610,23 @@
 @keyframes particleExplode2 {
   0%, 8% {
     opacity: 0;
-    height: 5px;
-    margin-top: -2px;
+    height: 8px;
+    margin-top: -4px;
   }
   15% {
     opacity: 1;
-    height: 28px;
-    margin-top: -40px;
+    height: 55px;
+    margin-top: -70px;
   }
   40% {
-    opacity: 0.7;
-    height: 16px;
-    margin-top: -60px;
+    opacity: 0.85;
+    height: 32px;
+    margin-top: -110px;
   }
   55% {
     opacity: 0;
-    height: 6px;
-    margin-top: -75px;
+    height: 12px;
+    margin-top: -140px;
   }
   100% {
     opacity: 0;
@@ -634,23 +636,23 @@
 @keyframes particleExplode3 {
   0%, 6% {
     opacity: 0;
-    height: 5px;
-    margin-top: -2px;
+    height: 8px;
+    margin-top: -4px;
   }
   12% {
     opacity: 1;
-    height: 26px;
-    margin-top: -38px;
+    height: 52px;
+    margin-top: -65px;
   }
   38% {
-    opacity: 0.75;
-    height: 17px;
-    margin-top: -58px;
+    opacity: 0.88;
+    height: 34px;
+    margin-top: -105px;
   }
   52% {
     opacity: 0;
-    height: 7px;
-    margin-top: -72px;
+    height: 14px;
+    margin-top: -135px;
   }
   100% {
     opacity: 0;
@@ -664,15 +666,15 @@
   }
   10% {
     opacity: 1;
-    transform: translate(-50%, -50%) scale(1.2);
+    transform: translate(-50%, -50%) scale(1.8);
   }
   25% {
-    opacity: 0.8;
-    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.9;
+    transform: translate(-50%, -50%) scale(1.4);
   }
   50% {
     opacity: 0;
-    transform: translate(-50%, -50%) scale(0.5);
+    transform: translate(-50%, -50%) scale(0.6);
   }
   100% {
     opacity: 0;
@@ -686,15 +688,15 @@
   }
   15% {
     opacity: 1;
-    transform: translate(-50%, -50%) scale(1.3);
+    transform: translate(-50%, -50%) scale(2);
   }
   30% {
-    opacity: 0.7;
-    transform: translate(-50%, -50%) scale(0.9);
+    opacity: 0.85;
+    transform: translate(-50%, -50%) scale(1.3);
   }
   55% {
     opacity: 0;
-    transform: translate(-50%, -50%) scale(0.4);
+    transform: translate(-50%, -50%) scale(0.5);
   }
   100% {
     opacity: 0;
@@ -708,15 +710,15 @@
   }
   12% {
     opacity: 1;
-    transform: translate(-50%, -50%) scale(1.25);
+    transform: translate(-50%, -50%) scale(1.9);
   }
   28% {
-    opacity: 0.75;
-    transform: translate(-50%, -50%) scale(0.95);
+    opacity: 0.88;
+    transform: translate(-50%, -50%) scale(1.35);
   }
   52% {
     opacity: 0;
-    transform: translate(-50%, -50%) scale(0.45);
+    transform: translate(-50%, -50%) scale(0.55);
   }
   100% {
     opacity: 0;
@@ -736,25 +738,27 @@
 .cny-sparkle {
   position: absolute;
   bottom: -10px;
-  width: 3px;
-  height: 3px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   will-change: transform, opacity;
 }
 
 .cny-sparkle-gold {
-  background: rgba(215, 182, 110, 1);
+  background: rgba(255, 230, 150, 1);
   box-shadow:
-    0 0 4px 2px rgba(215, 182, 110, 0.8),
-    0 0 8px 4px rgba(215, 182, 110, 0.4);
+    0 0 8px 4px rgba(255, 215, 0, 0.9),
+    0 0 20px 10px rgba(215, 182, 110, 0.6),
+    0 0 40px 15px rgba(215, 182, 110, 0.3);
   animation: sparkleRise 4s ease-out infinite;
 }
 
 .cny-sparkle-red {
-  background: rgba(180, 20, 40, 1);
+  background: rgba(255, 100, 100, 1);
   box-shadow:
-    0 0 6px 3px rgba(180, 20, 40, 0.9),
-    0 0 12px 6px rgba(145, 12, 30, 0.5);
+    0 0 10px 5px rgba(255, 50, 50, 0.9),
+    0 0 25px 12px rgba(180, 20, 40, 0.6),
+    0 0 50px 20px rgba(145, 12, 30, 0.3);
   animation: sparkleRise 4s ease-out infinite;
 }
 

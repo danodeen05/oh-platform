@@ -54,7 +54,7 @@ const ZODIAC_LUCKY_COLORS: Record<ZodiacAnimal, string[]> = {
 };
 
 // Compatible animals (best matches for friendship/partnership)
-const ZODIAC_COMPATIBLE: Record<ZodiacAnimal, ZodiacAnimal[]> = {
+export const ZODIAC_COMPATIBLE: Record<ZodiacAnimal, ZodiacAnimal[]> = {
   Rat: ["Dragon", "Monkey", "Ox"],
   Ox: ["Rat", "Snake", "Rooster"],
   Tiger: ["Horse", "Dog", "Pig"],
@@ -79,19 +79,31 @@ export interface ZodiacInfo {
 
 /**
  * Calculate Chinese zodiac from birthdate
- * @param birthdate - Date in MM/DD/YYYY format
+ * @param birthdate - Date in MM/DD/YYYY or YYYY-MM-DD format
  * @returns ZodiacInfo object with animal, element, lucky numbers, colors, and compatible animals
  */
 export function getChineseZodiac(birthdate: string): ZodiacInfo {
-  // Parse MM/DD/YYYY format
-  const parts = birthdate.split("/");
-  if (parts.length !== 3) {
-    // Default to Horse if invalid format
-    return getZodiacByYear(2026);
+  let year: number | null = null;
+
+  // Try YYYY-MM-DD format first (ISO format from Google Sheets)
+  if (birthdate.includes("-")) {
+    const parts = birthdate.split("-");
+    if (parts.length === 3 && parts[0].length === 4) {
+      year = parseInt(parts[0], 10);
+    }
   }
 
-  const year = parseInt(parts[2], 10);
-  if (isNaN(year) || year < 1900 || year > 2100) {
+  // Try MM/DD/YYYY format
+  if (year === null && birthdate.includes("/")) {
+    const parts = birthdate.split("/");
+    if (parts.length === 3) {
+      year = parseInt(parts[2], 10);
+    }
+  }
+
+  // Validate year
+  if (year === null || isNaN(year) || year < 1900 || year > 2100) {
+    // Default to Horse if invalid format
     return getZodiacByYear(2026);
   }
 
