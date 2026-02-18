@@ -13,6 +13,7 @@ import {
   sendAdminNewUserNotification,
   sendShopOrderConfirmation,
   sendGiftCardEmail,
+  sendSMS,
 } from "./notifications.js";
 import { BetaAnalyticsDataClient } from "@google-analytics/data";
 import { readFileSync } from "fs";
@@ -1996,6 +1997,7 @@ app.get("/orders/status", async (req, reply) => {
         },
       },
       user: true,
+      guest: true,
       waitQueueEntry: true,
     },
   });
@@ -2040,8 +2042,8 @@ app.get("/orders/status", async (req, reply) => {
         city: order.location.city,
       },
 
-      // Guest name (for non-authenticated orders)
-      guestName: order.guestName,
+      // Guest name (for non-authenticated orders) - fallback to guest record name
+      guestName: order.guestName || order.guest?.name || null,
 
       // Items - localized based on user's language preference
       items: order.items.map((item) => {
@@ -3467,6 +3469,567 @@ app.post("/orders", async (req, reply) => {
 
   return order;
 });
+
+// ==========================================
+// CNY PARTY 2026 EVENT ORDERING
+// ==========================================
+
+const CNY_PARTY_LOCATION_ID = "cny-party-2026";
+const CNY_EVENT_CODE = "cny-party-2026";
+const CNY_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyUdlLe3sVsJcs5XSh4LvZcmBJA3IyUi0qNHkZVc4GdY7n6nFXcoQhFpZIK2_dOFLU2dg/exec";
+const CNY_TEST_PHONE = "(801) 739-3205"; // Dano's number for testing
+
+// GET /orders/event/check - Check if guest already has an order
+app.get("/orders/event/check", async (req, reply) => {
+  const { phone } = req.query;
+
+  if (!phone) {
+    return reply.code(400).send({ error: "Phone number required" });
+  }
+
+  const normalizedPhone = phone.replace(/\D/g, "");
+
+  const existingOrder = await prisma.order.findFirst({
+    where: {
+      locationId: CNY_PARTY_LOCATION_ID,
+      status: { not: "CANCELLED" },
+      guest: {
+        phone: { contains: normalizedPhone.slice(-10) },
+      },
+    },
+    include: {
+      guest: true,
+      items: {
+        include: {
+          menuItem: true,
+        },
+      },
+    },
+  });
+
+  if (existingOrder) {
+    return {
+      exists: true,
+      kitchenOrderNumber: existingOrder.kitchenOrderNumber,
+      orderQrCode: existingOrder.orderQrCode,
+      items: existingOrder.items.map((item) => ({
+        menuItem: { name: item.menuItem.name },
+        selectedValue: item.selectedValue,
+      })),
+    };
+  }
+
+  return { exists: false };
+});
+
+// POST /orders/event - Create order for private event (no payment required)
+app.post("/orders/event", async (req, reply) => {
+  const { locationId, tenantId, items, guestName, guestPhone, eventCode } = req.body || {};
+
+  // Validate required fields
+  if (!locationId || !tenantId || !items || !items.length) {
+    return reply.code(400).send({ error: "locationId, tenantId, and items required" });
+  }
+
+  // Validate event code
+  if (eventCode !== CNY_EVENT_CODE) {
+    return reply.code(403).send({ error: "Invalid event code" });
+  }
+
+  // Validate location is the CNY party location
+  if (locationId !== CNY_PARTY_LOCATION_ID) {
+    return reply.code(403).send({ error: "Invalid location for this event" });
+  }
+
+  // Normalize phone number for comparison
+  const normalizedPhone = guestPhone ? guestPhone.replace(/\D/g, "") : null;
+
+  // Check one order per phone number
+  if (normalizedPhone) {
+    const existingOrder = await prisma.order.findFirst({
+      where: {
+        locationId,
+        status: { not: "CANCELLED" },
+        guest: {
+          phone: { contains: normalizedPhone.slice(-10) }, // Match last 10 digits
+        },
+      },
+      include: { guest: true },
+    });
+
+    if (existingOrder) {
+      return reply.code(400).send({
+        error: "One order per guest allowed",
+        existingOrderNumber: existingOrder.kitchenOrderNumber,
+        existingOrderQrCode: existingOrder.orderQrCode,
+      });
+    }
+  }
+
+  // Get menu items to build order
+  const menuItems = await prisma.menuItem.findMany({
+    where: {
+      id: { in: items.map((item) => item.menuItemId) },
+    },
+  });
+
+  // Build order items (no pricing for event)
+  const orderItems = items.map((item) => {
+    const menuItem = menuItems.find((m) => m.id === item.menuItemId);
+    if (!menuItem) throw new Error(`Menu item ${item.menuItemId} not found`);
+
+    return {
+      menuItemId: item.menuItemId,
+      quantity: item.quantity,
+      priceCents: 0, // Free for event
+      selectedValue: item.selectedValue || null,
+    };
+  });
+
+  // Generate unique order number
+  const orderNumber = `CNY-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+
+  // Generate order QR code
+  const orderQrCode = `CNY-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+
+  // Generate daily kitchen order number
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const todaysOrderCount = await prisma.order.count({
+    where: {
+      locationId,
+      createdAt: {
+        gte: today,
+        lt: tomorrow,
+      },
+    },
+  });
+
+  const kitchenOrderNumber = String(todaysOrderCount + 1).padStart(4, "0");
+
+  // Create guest record (store normalized phone for duplicate detection)
+  const guest = await prisma.guest.create({
+    data: {
+      name: guestName || "CNY Guest",
+      phone: normalizedPhone || null, // Store digits only for consistent matching
+      sessionToken: `cny-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+    },
+  });
+
+  // Create the order - start at QUEUED (skip payment)
+  const order = await prisma.order.create({
+    data: {
+      orderNumber,
+      orderQrCode,
+      kitchenOrderNumber,
+      tenantId,
+      locationId,
+      guestId: guest.id,
+      guestName: guestName || null, // Store guest name directly on order for display
+      totalCents: 0, // Free event
+      status: "QUEUED", // Skip PENDING_PAYMENT
+      paymentStatus: "PAID", // Mark as paid to bypass payment flows
+      orderSource: "EVENT",
+      queuedAt: new Date(),
+      items: {
+        create: orderItems,
+      },
+    },
+    include: {
+      items: {
+        include: {
+          menuItem: true,
+        },
+      },
+      guest: true,
+      location: true,
+    },
+  });
+
+  console.log(`[CNY] Created event order #${kitchenOrderNumber} for ${guestName}`);
+
+  return order;
+});
+
+// GET /cny/rsvps - Fetch RSVPs from Google Sheet for SMS
+app.get("/cny/rsvps", async (req, reply) => {
+  const { secret } = req.query;
+
+  // Protect with secret
+  if (secret !== process.env.CRON_SECRET) {
+    return reply.code(401).send({ error: "Unauthorized" });
+  }
+
+  try {
+    const response = await fetch(`${CNY_APPS_SCRIPT_URL}?action=getRSVPs`);
+    const rsvps = await response.json();
+    return rsvps;
+  } catch (error) {
+    console.error("[CNY] Failed to fetch RSVPs:", error);
+    return reply.code(500).send({ error: "Failed to fetch RSVPs" });
+  }
+});
+
+// POST /cron/cny-sms-reminder - Send 5pm party reminder SMS
+app.post("/cron/cny-sms-reminder", async (req, reply) => {
+  const cronSecret = req.headers["x-cron-secret"];
+  if (cronSecret !== process.env.CRON_SECRET) {
+    return reply.code(401).send({ error: "Unauthorized" });
+  }
+
+  const testMode = req.query.test === "true";
+
+  try {
+    // Fetch RSVPs from Google Sheet
+    const response = await fetch(`${CNY_APPS_SCRIPT_URL}?action=getRSVPs`);
+    const rsvps = await response.json();
+
+    const results = [];
+    for (const rsvp of rsvps) {
+      const phone = rsvp.phone;
+      if (!phone) continue;
+
+      // In test mode, only send to test phone
+      if (testMode) {
+        const normalizedTestPhone = CNY_TEST_PHONE.replace(/\D/g, "");
+        const normalizedRsvpPhone = phone.replace(/\D/g, "");
+        if (!normalizedRsvpPhone.endsWith(normalizedTestPhone.slice(-10))) {
+          continue;
+        }
+      }
+
+      const result = await sendSMS({
+        to: phone,
+        body: `🎉 Tonight's the night! We are so excited to spend the evening with you at our CNY Party!
+
+📍 Venue: https://maps.apple/r/goY408wKInW625
+🅿️ No covered parking - feel free to park at Weave: https://maps.apple/p/St56ZVvDYggGQ5
+
+See you soon!`,
+      });
+      results.push({ phone, name: rsvp.name, ...result });
+    }
+
+    console.log(`[CNY SMS] Sent ${results.filter(r => r.success).length}/${results.length} reminder SMS${testMode ? " (TEST MODE)" : ""}`);
+    return {
+      sent: results.filter(r => r.success).length,
+      total: results.length,
+      testMode,
+      results
+    };
+  } catch (error) {
+    console.error("[CNY SMS] Failed to send reminders:", error);
+    return reply.code(500).send({ error: "Failed to send SMS reminders" });
+  }
+});
+
+// POST /cron/cny-sms-order-link - Send 5:45pm ordering link SMS
+app.post("/cron/cny-sms-order-link", async (req, reply) => {
+  const cronSecret = req.headers["x-cron-secret"];
+  if (cronSecret !== process.env.CRON_SECRET) {
+    return reply.code(401).send({ error: "Unauthorized" });
+  }
+
+  const testMode = req.query.test === "true";
+
+  try {
+    // Fetch RSVPs from Google Sheet
+    const response = await fetch(`${CNY_APPS_SCRIPT_URL}?action=getRSVPs`);
+    const rsvps = await response.json();
+
+    const results = [];
+    for (const rsvp of rsvps) {
+      const phone = rsvp.phone;
+      if (!phone) continue;
+
+      // In test mode, only send to test phone
+      if (testMode) {
+        const normalizedTestPhone = CNY_TEST_PHONE.replace(/\D/g, "");
+        const normalizedRsvpPhone = phone.replace(/\D/g, "");
+        if (!normalizedRsvpPhone.endsWith(normalizedTestPhone.slice(-10))) {
+          continue;
+        }
+      }
+
+      // Build personalized order link with name and phone
+      const orderUrl = `https://ohbeef.com/en/cny/order?name=${encodeURIComponent(rsvp.name || "")}&phone=${encodeURIComponent(phone.replace(/\D/g, ""))}`;
+
+      const result = await sendSMS({
+        to: phone,
+        body: `🍜 Time to order, ${rsvp.name?.split(" ")[0] || "friend"}! Place your beef noodle soup order now:
+
+${orderUrl}
+
+Customize your bowl - we'll bring it right to you!`,
+      });
+      results.push({ phone, name: rsvp.name, ...result });
+    }
+
+    console.log(`[CNY SMS] Sent ${results.filter(r => r.success).length}/${results.length} order link SMS${testMode ? " (TEST MODE)" : ""}`);
+    return {
+      sent: results.filter(r => r.success).length,
+      total: results.length,
+      testMode,
+      results
+    };
+  } catch (error) {
+    console.error("[CNY SMS] Failed to send order links:", error);
+    return reply.code(500).send({ error: "Failed to send SMS order links" });
+  }
+});
+
+// POST /cron/cny-sms-test - Send test SMS directly (bypasses Google Sheet)
+app.post("/cron/cny-sms-test", async (req, reply) => {
+  const cronSecret = req.headers["x-cron-secret"];
+  if (cronSecret !== process.env.CRON_SECRET) {
+    return reply.code(401).send({ error: "Unauthorized" });
+  }
+
+  const { type } = req.query; // "reminder" or "order-link"
+  const testPhone = CNY_TEST_PHONE;
+  const testName = "Dano";
+
+  try {
+    let result;
+    if (type === "order-link") {
+      const orderUrl = `https://ohbeef.com/en/cny/order?name=${encodeURIComponent(testName)}&phone=${encodeURIComponent(testPhone.replace(/\D/g, ""))}`;
+      result = await sendSMS({
+        to: testPhone,
+        body: `🍜 Time to order, ${testName}! Place your beef noodle soup order now:
+
+${orderUrl}
+
+Customize your bowl - we'll bring it right to you!`,
+      });
+    } else {
+      // Default to reminder
+      result = await sendSMS({
+        to: testPhone,
+        body: `🎉 Tonight's the night! We are so excited to spend the evening with you at our CNY Party!
+
+📍 Venue: https://maps.apple/r/goY408wKInW625
+🅿️ No covered parking - feel free to park at Weave: https://maps.apple/p/St56ZVvDYggGQ5
+
+See you soon!`,
+      });
+    }
+
+    console.log(`[CNY SMS TEST] Sent ${type || "reminder"} SMS to ${testPhone}:`, result);
+    return { success: result.success, type: type || "reminder", phone: testPhone, ...result };
+  } catch (error) {
+    console.error("[CNY SMS TEST] Failed:", error);
+    return reply.code(500).send({ error: "Failed to send test SMS" });
+  }
+});
+
+// Chinese Zodiac helper functions
+const CHINESE_ZODIAC_ANIMALS = [
+  "Rat", "Ox", "Tiger", "Rabbit", "Dragon", "Snake",
+  "Horse", "Goat", "Monkey", "Rooster", "Dog", "Pig"
+];
+
+// Chinese New Year dates for accurate zodiac calculation (approximate - CNY falls between Jan 21 - Feb 20)
+const CNY_DATES = {
+  1948: "1948-02-10", 1949: "1949-01-29", 1950: "1950-02-17", 1951: "1951-02-06",
+  1952: "1952-01-27", 1953: "1953-02-14", 1954: "1954-02-03", 1955: "1955-01-24",
+  1956: "1956-02-12", 1957: "1957-01-31", 1958: "1958-02-18", 1959: "1959-02-08",
+  1960: "1960-01-28", 1961: "1961-02-15", 1962: "1962-02-05", 1963: "1963-01-25",
+  1964: "1964-02-13", 1965: "1965-02-02", 1966: "1966-01-21", 1967: "1967-02-09",
+  1968: "1968-01-30", 1969: "1969-02-17", 1970: "1970-02-06", 1971: "1971-01-27",
+  1972: "1972-02-15", 1973: "1973-02-03", 1974: "1974-01-23", 1975: "1975-02-11",
+  1976: "1976-01-31", 1977: "1977-02-18", 1978: "1978-02-07", 1979: "1979-01-28",
+  1980: "1980-02-16", 1981: "1981-02-05", 1982: "1982-01-25", 1983: "1983-02-13",
+  1984: "1984-02-02", 1985: "1985-02-20", 1986: "1986-02-09", 1987: "1987-01-29",
+  1988: "1988-02-17", 1989: "1989-02-06", 1990: "1990-01-27", 1991: "1991-02-15",
+  1992: "1992-02-04", 1993: "1993-01-23", 1994: "1994-02-10", 1995: "1995-01-31",
+  1996: "1996-02-19", 1997: "1997-02-07", 1998: "1998-01-28", 1999: "1999-02-16",
+  2000: "2000-02-05", 2001: "2001-01-24", 2002: "2002-02-12", 2003: "2003-02-01",
+  2004: "2004-01-22", 2005: "2005-02-09", 2006: "2006-01-29", 2007: "2007-02-18",
+  2008: "2008-02-07", 2009: "2009-01-26", 2010: "2010-02-14", 2011: "2011-02-03",
+  2012: "2012-01-23", 2013: "2013-02-10", 2014: "2014-01-31", 2015: "2015-02-19",
+  2016: "2016-02-08", 2017: "2017-01-28", 2018: "2018-02-16", 2019: "2019-02-05",
+  2020: "2020-01-25", 2021: "2021-02-12", 2022: "2022-02-01", 2023: "2023-01-22",
+  2024: "2024-02-10", 2025: "2025-01-29", 2026: "2026-02-17"
+};
+
+function getChineseZodiac(birthdate) {
+  if (!birthdate) return null;
+
+  const date = new Date(birthdate);
+  if (isNaN(date.getTime())) return null;
+
+  let year = date.getFullYear();
+
+  // Check if birthday is before Chinese New Year of that year
+  const cnyDate = CNY_DATES[year];
+  if (cnyDate && date < new Date(cnyDate)) {
+    year -= 1; // Use previous year's zodiac
+  }
+
+  // 1900 was Year of the Rat
+  const zodiacIndex = (year - 1900) % 12;
+  return CHINESE_ZODIAC_ANIMALS[zodiacIndex >= 0 ? zodiacIndex : zodiacIndex + 12];
+}
+
+// Zodiac compatibility - best matches and challenging matches
+const ZODIAC_COMPATIBILITY = {
+  Rat: { best: ["Dragon", "Monkey", "Ox"], avoid: ["Horse", "Goat", "Rabbit"] },
+  Ox: { best: ["Rat", "Snake", "Rooster"], avoid: ["Tiger", "Dragon", "Horse", "Goat"] },
+  Tiger: { best: ["Dragon", "Horse", "Pig"], avoid: ["Ox", "Tiger", "Snake", "Monkey"] },
+  Rabbit: { best: ["Goat", "Pig", "Dog"], avoid: ["Rat", "Dragon", "Rooster"] },
+  Dragon: { best: ["Rat", "Tiger", "Snake", "Monkey", "Rooster"], avoid: ["Ox", "Rabbit", "Dog"] },
+  Snake: { best: ["Dragon", "Rooster", "Ox"], avoid: ["Tiger", "Pig"] },
+  Horse: { best: ["Tiger", "Goat", "Dog"], avoid: ["Rat", "Ox", "Rabbit", "Horse"] },
+  Goat: { best: ["Rabbit", "Horse", "Pig"], avoid: ["Rat", "Ox", "Dog"] },
+  Monkey: { best: ["Rat", "Dragon", "Snake"], avoid: ["Tiger", "Pig"] },
+  Rooster: { best: ["Ox", "Dragon", "Snake"], avoid: ["Rabbit", "Rooster", "Dog"] },
+  Dog: { best: ["Rabbit", "Tiger", "Horse"], avoid: ["Dragon", "Goat", "Rooster"] },
+  Pig: { best: ["Tiger", "Rabbit", "Goat"], avoid: ["Snake", "Monkey", "Pig"] }
+};
+
+// GET /orders/zodiac-insights - Get personalized zodiac insights for CNY party
+app.get("/orders/zodiac-insights", async (req, reply) => {
+  const { guestName, guestPhone } = req.query;
+
+  if (!guestName && !guestPhone) {
+    return reply.code(400).send({ error: "guestName or guestPhone required" });
+  }
+
+  try {
+    // Fetch all RSVPs from Google Sheet
+    const response = await fetch(`${CNY_APPS_SCRIPT_URL}?action=getRSVPs`, { redirect: "follow" });
+    const text = await response.text();
+
+    let rsvps;
+    try {
+      rsvps = JSON.parse(text);
+    } catch {
+      console.error("[Zodiac] Failed to parse RSVPs:", text.slice(0, 200));
+      return reply.code(500).send({ error: "Failed to fetch guest list" });
+    }
+
+    if (!Array.isArray(rsvps)) {
+      console.error("[Zodiac] RSVPs not an array:", rsvps);
+      return reply.code(500).send({ error: "Invalid guest list format" });
+    }
+
+    // Find the current guest
+    const normalizedPhone = guestPhone?.replace(/\D/g, "");
+    const currentGuest = rsvps.find(r => {
+      if (guestPhone) {
+        const rsvpPhone = r.phone?.replace(/\D/g, "");
+        return rsvpPhone?.endsWith(normalizedPhone?.slice(-10));
+      }
+      return r.name?.toLowerCase() === guestName?.toLowerCase();
+    });
+
+    if (!currentGuest) {
+      return reply.code(404).send({ error: "Guest not found" });
+    }
+
+    // Calculate zodiac for current guest
+    const guestZodiac = getChineseZodiac(currentGuest.birthday);
+    if (!guestZodiac) {
+      return reply.code(400).send({ error: "Birthday not found for guest" });
+    }
+
+    // Calculate zodiac for all guests
+    const allGuests = rsvps
+      .filter(r => r.name && r.birthday)
+      .map(r => ({
+        name: r.name,
+        zodiac: getChineseZodiac(r.birthday),
+        birthday: r.birthday
+      }))
+      .filter(g => g.zodiac && g.name !== currentGuest.name);
+
+    // Find compatible and incompatible guests
+    const compatibility = ZODIAC_COMPATIBILITY[guestZodiac] || { best: [], avoid: [] };
+
+    const compatibleGuests = allGuests
+      .filter(g => compatibility.best.includes(g.zodiac))
+      .map(g => ({ name: g.name, zodiac: g.zodiac }));
+
+    const avoidGuests = allGuests
+      .filter(g => compatibility.avoid.includes(g.zodiac))
+      .map(g => ({ name: g.name, zodiac: g.zodiac }));
+
+    // Generate AI insights
+    let insights = null;
+    if (anthropic) {
+      try {
+        const firstName = currentGuest.name?.split(" ")[0] || "friend";
+        const prompt = `You are a fun, mystical Chinese zodiac expert at a Chinese New Year 2026 party (Year of the Horse).
+
+Guest: ${firstName}
+Their Zodiac: ${guestZodiac}
+Their Birthday: ${currentGuest.birthday}
+
+Compatible guests at the party (${compatibility.best.join(", ")} signs): ${compatibleGuests.map(g => `${g.name} (${g.zodiac})`).join(", ") || "None tonight"}
+
+Challenging matches (${compatibility.avoid.join(", ")} signs): ${avoidGuests.map(g => `${g.name} (${g.zodiac})`).join(", ") || "None tonight"}
+
+Generate a fun, personalized zodiac insight in this exact JSON format:
+{
+  "zodiacEmoji": "emoji for their animal",
+  "horseYearAdvice": "One playful sentence about what ${guestZodiac}s should remember during the Year of the Horse (2026). Make it specific and fun.",
+  "hangOutWith": "One fun sentence suggesting who they should seek out tonight and why, based on zodiac compatibility. Be specific with names if available.",
+  "avoidTonight": "One playful, lighthearted sentence about who to 'watch out for' tonight. Keep it fun and obviously joking - this is for entertainment!"
+}
+
+Be playful, mystical, and entertaining. Keep each response to ONE short sentence. Return ONLY valid JSON.`;
+
+        const message = await anthropic.messages.create({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 400,
+          messages: [{ role: "user", content: prompt }]
+        });
+
+        const responseText = message.content[0]?.text || "";
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          insights = JSON.parse(jsonMatch[0]);
+        }
+      } catch (err) {
+        console.error("[Zodiac] AI generation failed:", err);
+      }
+    }
+
+    return {
+      guestName: currentGuest.name,
+      firstName: currentGuest.name?.split(" ")[0],
+      birthday: currentGuest.birthday,
+      zodiac: guestZodiac,
+      zodiacEmoji: insights?.zodiacEmoji || getZodiacEmoji(guestZodiac),
+      horseYearAdvice: insights?.horseYearAdvice || `${guestZodiac}s should embrace new adventures this Year of the Horse!`,
+      compatibleGuests,
+      avoidGuests,
+      hangOutWith: insights?.hangOutWith || (compatibleGuests.length > 0
+        ? `Seek out ${compatibleGuests[0].name} - fellow ${compatibleGuests[0].zodiac}s make great companions!`
+        : "Mingle with everyone - your charm knows no bounds!"),
+      avoidTonight: insights?.avoidTonight || (avoidGuests.length > 0
+        ? `Watch out for ${avoidGuests[0].name} - just kidding, say hi anyway!`
+        : "No cosmic conflicts tonight - you're in the clear!"),
+      source: insights ? "ai" : "fallback"
+    };
+  } catch (error) {
+    console.error("[Zodiac] Failed to generate insights:", error);
+    return reply.code(500).send({ error: "Failed to generate zodiac insights" });
+  }
+});
+
+// Helper to get emoji for zodiac
+function getZodiacEmoji(zodiac) {
+  const emojis = {
+    Rat: "🐀", Ox: "🐂", Tiger: "🐅", Rabbit: "🐇", Dragon: "🐉", Snake: "🐍",
+    Horse: "🐴", Goat: "🐐", Monkey: "🐒", Rooster: "🐓", Dog: "🐕", Pig: "🐷"
+  };
+  return emojis[zodiac] || "✨";
+}
 
 // PATCH /orders/:id - Update order status
 app.patch("/orders/:id", async (req, reply) => {
@@ -13067,6 +13630,217 @@ app.get("/admin/promo-codes/analytics", async (req, reply) => {
     });
   } catch (error) {
     console.error("Error fetching promo code analytics:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// ====================
+// PARTY INVITATIONS
+// ====================
+
+// Get party invitation by code (public)
+app.get("/party-invitations/:code", async (request, reply) => {
+  try {
+    const { code } = request.params;
+
+    const invitation = await prisma.partyInvitation.findUnique({
+      where: { code },
+      include: {
+        rsvps: {
+          where: { status: "ATTENDING" },
+          select: {
+            id: true,
+            name: true,
+            guestCount: true,
+            createdAt: true,
+          },
+          orderBy: { createdAt: "asc" },
+        },
+      },
+    });
+
+    if (!invitation) {
+      return reply.status(404).send({ error: "Invitation not found" });
+    }
+
+    if (!invitation.isActive) {
+      return reply.status(410).send({ error: "This invitation is no longer active" });
+    }
+
+    // Calculate total attending
+    const totalAttending = invitation.rsvps.reduce((sum, rsvp) => sum + rsvp.guestCount, 0);
+
+    return reply.send({
+      ...invitation,
+      totalAttending,
+      spotsRemaining: invitation.maxGuests ? invitation.maxGuests - totalAttending : null,
+    });
+  } catch (error) {
+    console.error("Error fetching party invitation:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Submit RSVP (public)
+app.post("/party-invitations/:code/rsvp", async (request, reply) => {
+  try {
+    const { code } = request.params;
+    const { name, phone, email, guestCount, attending, message } = request.body;
+
+    // Validate required fields
+    if (!name || typeof name !== "string" || name.trim().length === 0) {
+      return reply.status(400).send({ error: "Name is required" });
+    }
+
+    const invitation = await prisma.partyInvitation.findUnique({
+      where: { code },
+      include: {
+        rsvps: {
+          where: { status: "ATTENDING" },
+        },
+      },
+    });
+
+    if (!invitation) {
+      return reply.status(404).send({ error: "Invitation not found" });
+    }
+
+    if (!invitation.isActive) {
+      return reply.status(410).send({ error: "This invitation is no longer active" });
+    }
+
+    // Check RSVP deadline
+    if (invitation.rsvpDeadline && new Date() > invitation.rsvpDeadline) {
+      return reply.status(400).send({ error: "RSVP deadline has passed" });
+    }
+
+    const status = attending === false ? "NOT_ATTENDING" : "ATTENDING";
+    const finalGuestCount = status === "NOT_ATTENDING" ? 0 : Math.min(guestCount || 1, invitation.maxGuestsPerRsvp);
+
+    // Check capacity if attending
+    if (status === "ATTENDING" && invitation.maxGuests) {
+      const currentTotal = invitation.rsvps.reduce((sum, rsvp) => sum + rsvp.guestCount, 0);
+      if (currentTotal + finalGuestCount > invitation.maxGuests) {
+        return reply.status(400).send({
+          error: "Sorry, there are not enough spots available",
+          spotsRemaining: invitation.maxGuests - currentTotal,
+        });
+      }
+    }
+
+    // Get client info for spam prevention
+    const ipAddress = request.headers["x-forwarded-for"]?.split(",")[0] || request.ip;
+    const userAgent = request.headers["user-agent"];
+
+    const rsvp = await prisma.partyRSVP.create({
+      data: {
+        invitationId: invitation.id,
+        name: name.trim(),
+        phone: phone?.trim() || null,
+        email: email?.trim() || null,
+        guestCount: finalGuestCount,
+        status,
+        message: message?.trim() || null,
+        ipAddress,
+        userAgent,
+      },
+    });
+
+    return reply.status(201).send({
+      success: true,
+      rsvp: {
+        id: rsvp.id,
+        name: rsvp.name,
+        guestCount: rsvp.guestCount,
+        status: rsvp.status,
+      },
+    });
+  } catch (error) {
+    console.error("Error submitting RSVP:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Get all RSVPs for a party (admin)
+app.get("/admin/party-invitations/:code/rsvps", async (request, reply) => {
+  try {
+    const { code } = request.params;
+
+    const invitation = await prisma.partyInvitation.findUnique({
+      where: { code },
+      include: {
+        rsvps: {
+          orderBy: { createdAt: "desc" },
+        },
+      },
+    });
+
+    if (!invitation) {
+      return reply.status(404).send({ error: "Invitation not found" });
+    }
+
+    const stats = {
+      totalRsvps: invitation.rsvps.length,
+      attending: invitation.rsvps.filter((r) => r.status === "ATTENDING").length,
+      notAttending: invitation.rsvps.filter((r) => r.status === "NOT_ATTENDING").length,
+      totalGuests: invitation.rsvps
+        .filter((r) => r.status === "ATTENDING")
+        .reduce((sum, r) => sum + r.guestCount, 0),
+    };
+
+    return reply.send({
+      invitation,
+      rsvps: invitation.rsvps,
+      stats,
+    });
+  } catch (error) {
+    console.error("Error fetching RSVPs:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
+// Create party invitation (admin)
+app.post("/admin/party-invitations", async (request, reply) => {
+  try {
+    const {
+      code,
+      title,
+      hostName,
+      eventDate,
+      eventTime,
+      location,
+      dresscode,
+      description,
+      zodiacYear,
+      zodiacEnglish,
+      maxGuests,
+      rsvpDeadline,
+      allowPlusOnes,
+      maxGuestsPerRsvp,
+    } = request.body;
+
+    const invitation = await prisma.partyInvitation.create({
+      data: {
+        code: code.toLowerCase().replace(/[^a-z0-9]/g, ""),
+        title,
+        hostName,
+        eventDate: new Date(eventDate),
+        eventTime,
+        location,
+        dresscode,
+        description,
+        zodiacYear,
+        zodiacEnglish,
+        maxGuests,
+        rsvpDeadline: rsvpDeadline ? new Date(rsvpDeadline) : null,
+        allowPlusOnes: allowPlusOnes ?? true,
+        maxGuestsPerRsvp: maxGuestsPerRsvp ?? 4,
+      },
+    });
+
+    return reply.status(201).send(invitation);
+  } catch (error) {
+    console.error("Error creating party invitation:", error);
     return reply.status(500).send({ error: error.message });
   }
 });
