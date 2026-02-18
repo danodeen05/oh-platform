@@ -7,6 +7,7 @@ import {
   ZODIAC_FORTUNES,
   ZODIAC_SVG_FILES,
   ZODIAC_INCOMPATIBLE,
+  ZODIAC_TRAITS,
 } from "@/lib/cny/slides-data";
 import { ZODIAC_YEARS } from "@/lib/cny/zodiac-years";
 import { AnimatedBackground } from "../AnimatedBackground";
@@ -30,6 +31,7 @@ export function ZodiacSlide({
 }: ZodiacSlideProps) {
   const fortune = ZODIAC_FORTUNES[zodiac];
   const years = ZODIAC_YEARS[zodiac];
+  const traits = ZODIAC_TRAITS[zodiac];
   const compatibleZodiacs = ZODIAC_COMPATIBLE[zodiac];
   const incompatibleZodiacs = ZODIAC_INCOMPATIBLE[zodiac];
 
@@ -75,6 +77,7 @@ export function ZodiacSlide({
           {/* Zodiac name */}
           <div>
             <h1 className="zodiac-name">{zodiac}</h1>
+            <p className="zodiac-traits">{traits.join(" · ")}</p>
             <p className="zodiac-years">{years.join(" · ")}</p>
           </div>
 
