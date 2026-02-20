@@ -1169,8 +1169,26 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
           Loading orders...
         </div>
       ) : orders.length === 0 ? (
-        <div style={{ textAlign: "center", padding: 48, color: "#9ca3af" }}>
-          No active orders
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            height: "calc(100vh - 250px)",
+          }}
+        >
+          <img
+            src="/Oh_Logo_Mark_Light.png"
+            alt="Oh!"
+            style={{
+              maxHeight: "70vh",
+              maxWidth: "70vw",
+              width: "auto",
+              height: "auto",
+              objectFit: "contain",
+              opacity: 0.9,
+            }}
+          />
         </div>
       ) : (
         <div
