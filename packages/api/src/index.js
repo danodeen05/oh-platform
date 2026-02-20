@@ -3620,6 +3620,28 @@ app.post("/orders/event", async (req, reply) => {
     },
   });
 
+  // Try to get guest's zodiac from Google Sheet RSVP data
+  let guestZodiac = null;
+  try {
+    const rsvpResponse = await fetch(`${CNY_APPS_SCRIPT_URL}?action=getRSVPs`, { redirect: "follow" });
+    const rsvpText = await rsvpResponse.text();
+    const rsvpData = JSON.parse(rsvpText);
+    const rsvps = rsvpData.rsvps || rsvpData || [];
+
+    // Find the guest by phone number
+    const matchingRsvp = rsvps.find(r => {
+      const rsvpPhone = r.phone?.replace(/\D/g, "") || "";
+      return normalizedPhone && rsvpPhone.includes(normalizedPhone.slice(-10));
+    });
+
+    if (matchingRsvp?.birthday) {
+      guestZodiac = getChineseZodiac(matchingRsvp.birthday);
+      console.log(`[CNY] Found zodiac for ${guestName}: ${guestZodiac}`);
+    }
+  } catch (err) {
+    console.error("[CNY] Failed to fetch zodiac from Google Sheet:", err.message);
+  }
+
   // Create the order - start at QUEUED (skip payment)
   const order = await prisma.order.create({
     data: {
@@ -3630,6 +3652,8 @@ app.post("/orders/event", async (req, reply) => {
       locationId,
       guestId: guest.id,
       guestName: guestName || null, // Store guest name directly on order for display
+      guestPhone: normalizedPhone || null, // Store phone for RSVP matching
+      guestZodiac: guestZodiac || null, // Store zodiac for kitchen display
       totalCents: 0, // Free event
       status: "QUEUED", // Skip PENDING_PAYMENT
       paymentStatus: "PAID", // Mark as paid to bypass payment flows
@@ -5889,7 +5913,48 @@ app.get("/kitchen/orders", async (req, reply) => {
     },
   });
 
-  return orders;
+  // For CNY orders, do on-the-fly zodiac lookup from Google Sheet
+  const hasCnyOrders = orders.some(o => o.orderSource === "EVENT");
+  let rsvpLookup = {};
+
+  if (hasCnyOrders) {
+    try {
+      const rsvpResponse = await fetch(`${CNY_APPS_SCRIPT_URL}?action=getRSVPs`, { redirect: "follow" });
+      const rsvpText = await rsvpResponse.text();
+      const rsvpData = JSON.parse(rsvpText);
+      const rsvps = rsvpData.rsvps || rsvpData || [];
+
+      // Build a lookup map by phone number (last 10 digits)
+      for (const rsvp of rsvps) {
+        if (rsvp.phone && rsvp.birthday) {
+          const normalizedPhone = rsvp.phone.replace(/\D/g, "").slice(-10);
+          rsvpLookup[normalizedPhone] = {
+            zodiac: getChineseZodiac(rsvp.birthday),
+            name: rsvp.name
+          };
+        }
+      }
+    } catch (err) {
+      console.error("[Kitchen] Failed to fetch RSVP data for zodiac lookup:", err.message);
+    }
+  }
+
+  // Enrich CNY orders with zodiac from Google Sheet
+  const enrichedOrders = orders.map(order => {
+    if (order.orderSource === "EVENT" && order.guestPhone) {
+      const normalizedPhone = order.guestPhone.replace(/\D/g, "").slice(-10);
+      const rsvpInfo = rsvpLookup[normalizedPhone];
+      if (rsvpInfo?.zodiac) {
+        return {
+          ...order,
+          guestZodiac: rsvpInfo.zodiac
+        };
+      }
+    }
+    return order;
+  });
+
+  return enrichedOrders;
 });
 
 // Get pickup orders (orders without a seat) in SERVING status
@@ -5936,6 +6001,71 @@ app.get("/kitchen/pickup-orders", async (req, reply) => {
   });
 
   return orders;
+});
+
+// GET /kitchen/cny-stats - Get CNY party order stats vs RSVPs
+app.get("/kitchen/cny-stats", async (req, reply) => {
+  const tenantSlug = getTenantContext(req);
+
+  const tenant = await prisma.tenant.findUnique({
+    where: { slug: tenantSlug },
+  });
+  if (!tenant) return reply.code(404).send({ error: "Tenant not found" });
+
+  try {
+    // Fetch RSVPs from Google Sheet
+    const rsvpResponse = await fetch(`${CNY_APPS_SCRIPT_URL}?action=getRSVPs`, { redirect: "follow" });
+    const rsvpText = await rsvpResponse.text();
+    const rsvpData = JSON.parse(rsvpText);
+    const rsvps = rsvpData.rsvps || rsvpData || [];
+
+    // Get all CNY orders (all statuses including COMPLETED)
+    const cnyOrders = await prisma.order.findMany({
+      where: {
+        tenantId: tenant.id,
+        locationId: CNY_PARTY_LOCATION_ID,
+        orderSource: "EVENT",
+        paymentStatus: "PAID",
+      },
+      select: {
+        guestPhone: true,
+        guestName: true,
+        status: true,
+      },
+    });
+
+    // Build set of phones that have ordered (last 10 digits)
+    const orderedPhones = new Set();
+    for (const order of cnyOrders) {
+      if (order.guestPhone) {
+        const normalizedPhone = order.guestPhone.replace(/\D/g, "").slice(-10);
+        orderedPhones.add(normalizedPhone);
+      }
+    }
+
+    // Find guests who haven't ordered yet
+    const notOrdered = [];
+    for (const rsvp of rsvps) {
+      if (rsvp.phone) {
+        const normalizedPhone = rsvp.phone.replace(/\D/g, "").slice(-10);
+        if (!orderedPhones.has(normalizedPhone)) {
+          notOrdered.push({
+            name: rsvp.name || "Unknown",
+            phone: rsvp.phone,
+          });
+        }
+      }
+    }
+
+    return {
+      totalRsvps: rsvps.length,
+      ordersPlaced: cnyOrders.length,
+      notOrdered: notOrdered,
+    };
+  } catch (err) {
+    console.error("[Kitchen] Failed to fetch CNY stats:", err.message);
+    return reply.code(500).send({ error: "Failed to fetch CNY stats" });
+  }
 });
 
 // Update order status with timestamps
@@ -6080,21 +6210,24 @@ app.get("/kitchen/stats", async (req, reply) => {
   });
   if (!tenant) return reply.code(404).send({ error: "Tenant not found" });
 
-  const where = {
+  const baseWhere = {
     tenantId: tenant.id,
     paymentStatus: "PAID",
-    podConfirmedAt: { not: null }, // Only count orders where customer has confirmed pod arrival
+    OR: [
+      { podConfirmedAt: { not: null } }, // Regular orders with confirmed pod arrival
+      { orderSource: "EVENT" }, // CNY/Event orders don't require pod confirmation
+    ],
   };
 
   if (locationId) {
-    where.locationId = locationId;
+    baseWhere.locationId = locationId;
   }
 
   const [queued, prepping, ready, serving] = await Promise.all([
-    prisma.order.count({ where: { ...where, status: "QUEUED" } }),
-    prisma.order.count({ where: { ...where, status: "PREPPING" } }),
-    prisma.order.count({ where: { ...where, status: "READY" } }),
-    prisma.order.count({ where: { ...where, status: "SERVING" } }),
+    prisma.order.count({ where: { ...baseWhere, status: "QUEUED" } }),
+    prisma.order.count({ where: { ...baseWhere, status: "PREPPING" } }),
+    prisma.order.count({ where: { ...baseWhere, status: "READY" } }),
+    prisma.order.count({ where: { ...baseWhere, status: "SERVING" } }),
   ]);
 
   return {
