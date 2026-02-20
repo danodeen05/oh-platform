@@ -3,6 +3,15 @@ import { useState, useEffect, useCallback } from "react";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "";
 
+// CNY Party 2026 location ID
+const CNY_PARTY_LOCATION_ID = "cny-party-2026";
+
+type CnyStats = {
+  totalRsvps: number;
+  ordersPlaced: number;
+  notOrdered: Array<{ name: string; phone: string }>;
+};
+
 type Order = {
   id: string;
   orderNumber: string;
@@ -15,6 +24,7 @@ type Order = {
   fulfillmentType: string;
   orderSource?: string; // EVENT for CNY orders
   guestName?: string; // Guest name directly on order
+  guestZodiac?: string; // Zodiac animal for CNY orders (e.g., "Rabbit", "Dragon")
   arrivedAt?: string; // When customer checked in at kiosk
   podConfirmedAt?: string; // When customer confirmed arrival at pod
   parentOrderId?: string; // If this is an add-on order
@@ -139,6 +149,22 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
     averageMinutes: 0,
     count: 0,
   });
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [cnyStats, setCnyStats] = useState<CnyStats | null>(null);
+  const [showNotOrderedModal, setShowNotOrderedModal] = useState(false);
+  const [currentTime, setCurrentTime] = useState<string>("");
+
+  // Check if CNY Party 2026 is selected
+  const isCnyPartySelected = selectedLocation === CNY_PARTY_LOCATION_ID;
+
+  // Update time on client only to avoid hydration mismatch
+  useEffect(() => {
+    setCurrentTime(new Date().toLocaleTimeString());
+    const timeInterval = setInterval(() => {
+      setCurrentTime(new Date().toLocaleTimeString());
+    }, 1000);
+    return () => clearInterval(timeInterval);
+  }, []);
 
   async function loadOrders() {
     try {
@@ -282,6 +308,23 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
     }
   }
 
+  async function loadCnyStats() {
+    if (selectedLocation !== CNY_PARTY_LOCATION_ID) {
+      setCnyStats(null);
+      return;
+    }
+    try {
+      const response = await fetch(`${BASE}/kitchen/cny-stats`, {
+        headers: { "x-tenant-slug": "oh" },
+      });
+      const data = await response.json();
+      setCnyStats(data);
+    } catch (error) {
+      console.error("Failed to load CNY stats:", error);
+      setCnyStats(null);
+    }
+  }
+
   async function acknowledgePodCall(callId: string) {
     try {
       const response = await fetch(`${BASE}/pod-calls/${callId}/acknowledge`, {
@@ -333,6 +376,7 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
     loadStats();
     loadAvgProcessingTime();
     loadPodCalls();
+    loadCnyStats();
 
     // Auto-refresh every 10 seconds
     const interval = setInterval(() => {
@@ -340,6 +384,7 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
       loadStats();
       loadAvgProcessingTime();
       loadPodCalls();
+      loadCnyStats();
     }, 10000);
 
     return () => clearInterval(interval);
@@ -423,31 +468,59 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
       );
     };
 
-    const renderItem = (item: any, showQty: boolean) => (
-      <div
-        style={{
-          padding: "4px 0",
-          fontSize: "0.85rem",
-        }}
-      >
-        {item.selectedValue ? (
-          // Combine menu item with selection on same line
-          <div>
-            <span style={{ color: "#9ca3af" }}>{item.menuItem.name}: </span>
-            <span style={{ fontWeight: "bold" }}>
+    // Check if a selection should be highlighted (No Beef, Soup Only, etc.)
+    const isSpecialDietSelection = (item: any) => {
+      const selectedValue = item.selectedValue?.toLowerCase() || "";
+      const menuItemName = item.menuItem?.name?.toLowerCase() || "";
+      return selectedValue.includes("no beef") || selectedValue.includes("soup only") || selectedValue.includes("vegetarian") ||
+             menuItemName.includes("no beef") || menuItemName.includes("soup only") || menuItemName.includes("vegetarian");
+    };
+
+    const renderItem = (item: any, showQty: boolean, isCnyOrder = false, isMainBowlItem = false) => {
+      const isSpecial = isSpecialDietSelection(item);
+      // For CNY orders, make main bowl items (not toppings) 1.5x larger
+      const baseFontSize = isCnyOrder && isMainBowlItem ? "1.275rem" : "0.85rem";
+
+      return (
+        <div
+          style={{
+            padding: isCnyOrder && isMainBowlItem ? "6px 0" : "4px 0",
+            fontSize: baseFontSize,
+          }}
+        >
+          {item.selectedValue ? (
+            // Combine menu item with selection on same line
+            <div>
+              <span style={{ color: "#9ca3af" }}>{item.menuItem.name}: </span>
+              <span
+                style={{
+                  fontWeight: "bold",
+                  color: isSpecial && isCnyOrder ? "#ef4444" : "inherit",
+                  textShadow: isSpecial && isCnyOrder ? "0 0 5px #ef4444, 0 0 10px #ef4444, 0 0 15px #ef4444" : "none",
+                  animation: isSpecial && isCnyOrder ? "pulse-glow 1.5s ease-in-out infinite" : "none",
+                }}
+              >
+                {showQty && item.quantity > 0 && `${item.quantity}x `}
+                {item.selectedValue}
+              </span>
+            </div>
+          ) : (
+            // No selection, just show item name
+            <div
+              style={{
+                fontWeight: "bold",
+                color: isSpecial && isCnyOrder ? "#ef4444" : "inherit",
+                textShadow: isSpecial && isCnyOrder ? "0 0 10px #ef4444, 0 0 20px #ef4444, 0 0 30px #ef4444" : "none",
+                animation: isSpecial && isCnyOrder ? "pulse-glow 1.5s ease-in-out infinite" : "none",
+              }}
+            >
               {showQty && item.quantity > 0 && `${item.quantity}x `}
-              {item.selectedValue}
-            </span>
-          </div>
-        ) : (
-          // No selection, just show item name
-          <div style={{ fontWeight: "bold" }}>
-            {showQty && item.quantity > 0 && `${item.quantity}x `}
-            {item.menuItem.name}
-          </div>
-        )}
-      </div>
-    );
+              {item.menuItem.name}
+            </div>
+          )}
+        </div>
+      );
+    };
 
     // Determine card styling based on order type
     const getCardBackground = () => {
@@ -553,13 +626,13 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
             </div>
             <div
               style={{
-                fontSize: "1.5rem",
+                fontSize: order.orderSource === "EVENT" ? "1.45rem" : "1.275rem",
                 fontWeight: "bold",
                 color: isArriving ? "#f59e0b" : customerIsVIP ? "#dc2626" : order.orderSource === "EVENT" ? "#D7B66E" : "#3b82f6",
               }}
             >
               {order.orderSource === "EVENT"
-                ? (order.guestName || order.guest?.name || "CNY Guest")
+                ? `${order.guestName || order.guest?.name || "CNY Guest"}${order.guestZodiac ? ` (${order.guestZodiac})` : ""}`
                 : order.seat
                   ? `Pod ${order.seat.number}`
                   : "Dine-In"
@@ -586,32 +659,58 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
         </div>
 
         {/* Bowl Configuration Section */}
-        {bowlItems.length > 0 && (
-          <div
-            style={{
-              background: "#111827",
-              padding: 10,
-              borderRadius: 6,
-              marginBottom: 10,
-            }}
-          >
+        {bowlItems.length > 0 && (() => {
+          const isCny = order.orderSource === "EVENT";
+          // Topping names to separate into 2-column grid for CNY
+          const toppingNames = ["baby bok choy", "green onions", "cilantro", "sprouts"];
+          const isTopping = (item: any) =>
+            toppingNames.some(t => item.menuItem.name.toLowerCase().includes(t));
+
+          const mainBowlItems = isCny ? bowlItems.filter(item => !isTopping(item)) : bowlItems;
+          const toppingItems = isCny ? bowlItems.filter(item => isTopping(item)) : [];
+
+          return (
             <div
               style={{
-                fontSize: "0.7rem",
-                color: "#9ca3af",
-                fontWeight: "bold",
-                marginBottom: 6,
-                textTransform: "uppercase",
-                letterSpacing: "0.5px",
+                background: "#111827",
+                padding: 10,
+                borderRadius: 6,
+                marginBottom: 10,
               }}
             >
-              Bowl Configuration
+              <div
+                style={{
+                  fontSize: "0.7rem",
+                  color: "#9ca3af",
+                  fontWeight: "bold",
+                  marginBottom: 6,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.5px",
+                }}
+              >
+                Bowl Configuration
+              </div>
+              {mainBowlItems.map((item) => (
+                <div key={item.id}>{renderItem(item, shouldShowQty(item.menuItem.categoryType), isCny, true)}</div>
+              ))}
+              {/* Toppings in 2-column grid for CNY */}
+              {toppingItems.length > 0 && (
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "4px 16px",
+                    marginTop: 8,
+                  }}
+                >
+                  {toppingItems.map((item) => (
+                    <div key={item.id}>{renderItem(item, false, isCny)}</div>
+                  ))}
+                </div>
+              )}
             </div>
-            {bowlItems.map((item) => (
-              <div key={item.id}>{renderItem(item, shouldShowQty(item.menuItem.categoryType))}</div>
-            ))}
-          </div>
-        )}
+          );
+        })()}
 
         {/* Add-ons Section */}
         {addonItems.length > 0 && (
@@ -767,8 +866,21 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
     ? "All Locations"
     : locations.find(l => l.id === selectedLocation)?.name || "Unknown";
 
-  return (
-    <div>
+  // Fullscreen toggle icons
+  const ExpandIcon = () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
+    </svg>
+  );
+
+  const CompressIcon = () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7" />
+    </svg>
+  );
+
+  const content = (
+    <>
       {/* Header with Location Name */}
       <div
         style={{
@@ -780,11 +892,31 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
           alignItems: "center",
         }}
       >
-        <h1 style={{ margin: 0, fontSize: "1.5rem", fontWeight: "bold" }}>
-          🍜 Kitchen Display for {selectedLocationName}
+        <h1 style={{ margin: 0, fontSize: "1.5rem", fontWeight: "bold", display: "flex", alignItems: "center", gap: "10px" }}>
+          {!isFullscreen && "🍜"}
+          Kitchen Display for {selectedLocationName}
         </h1>
-        <div style={{ fontSize: "0.9rem", color: "#9ca3af" }}>
-          {new Date().toLocaleTimeString()}
+        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          <div style={{ fontSize: "0.9rem", color: "#9ca3af" }}>
+            {currentTime || "--:--:--"}
+          </div>
+          <button
+            onClick={() => setIsFullscreen(!isFullscreen)}
+            style={{
+              background: "#374151",
+              border: "none",
+              borderRadius: 6,
+              padding: "8px",
+              cursor: "pointer",
+              color: "#9ca3af",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+            title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+          >
+            {isFullscreen ? <CompressIcon /> : <ExpandIcon />}
+          </button>
         </div>
       </div>
 
@@ -819,6 +951,35 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
             </option>
           ))}
         </select>
+
+        {/* CNY Orders vs RSVPs Indicator */}
+        {isCnyPartySelected && cnyStats && (
+          <button
+            onClick={() => setShowNotOrderedModal(true)}
+            style={{
+              background: cnyStats.ordersPlaced < cnyStats.totalRsvps ? "#f59e0b20" : "#22c55e20",
+              border: `1px solid ${cnyStats.ordersPlaced < cnyStats.totalRsvps ? "#f59e0b" : "#22c55e"}`,
+              borderRadius: 8,
+              padding: "8px 16px",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            <span style={{ fontSize: "1.25rem", fontWeight: "bold", color: cnyStats.ordersPlaced < cnyStats.totalRsvps ? "#f59e0b" : "#22c55e" }}>
+              {cnyStats.ordersPlaced} of {cnyStats.totalRsvps}
+            </span>
+            <span style={{ fontSize: "0.8rem", color: "#9ca3af" }}>
+              orders
+            </span>
+            {cnyStats.notOrdered.length > 0 && (
+              <span style={{ fontSize: "0.7rem", color: "#f59e0b", marginLeft: 4 }}>
+                ({cnyStats.notOrdered.length} pending)
+              </span>
+            )}
+          </button>
+        )}
 
         {/* Average Processing Time */}
         <div style={{ marginLeft: "auto", textAlign: "center" }}>
@@ -889,6 +1050,16 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
               @keyframes pulse {
                 0%, 100% { opacity: 1; }
                 50% { opacity: 0.85; }
+              }
+              @keyframes pulse-glow {
+                0%, 100% {
+                  text-shadow: 0 0 5px #ef4444, 0 0 10px #ef4444, 0 0 15px #ef4444;
+                  opacity: 1;
+                }
+                50% {
+                  text-shadow: 0 0 10px #ef4444, 0 0 20px #ef4444, 0 0 30px #ef4444;
+                  opacity: 0.95;
+                }
               }
             `}
           </style>
@@ -1091,6 +1262,135 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
         </div>
       )}
       </div>
+    </>
+  );
+
+  // Not Ordered Modal
+  const notOrderedModal = showNotOrderedModal && cnyStats && (
+    <div
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: "rgba(0, 0, 0, 0.75)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 2000,
+      }}
+      onClick={() => setShowNotOrderedModal(false)}
+    >
+      <div
+        style={{
+          background: "#1f2937",
+          borderRadius: 12,
+          padding: 24,
+          maxWidth: 500,
+          width: "90%",
+          maxHeight: "80vh",
+          overflow: "auto",
+          border: "2px solid #f59e0b",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <h2 style={{ margin: 0, fontSize: "1.25rem", color: "#f59e0b" }}>
+            Guests Who Haven't Ordered ({cnyStats.notOrdered.length})
+          </h2>
+          <button
+            onClick={() => setShowNotOrderedModal(false)}
+            style={{
+              background: "transparent",
+              border: "none",
+              color: "#9ca3af",
+              fontSize: "1.5rem",
+              cursor: "pointer",
+              lineHeight: 1,
+            }}
+          >
+            ×
+          </button>
+        </div>
+
+        {cnyStats.notOrdered.length === 0 ? (
+          <div style={{ textAlign: "center", padding: 24, color: "#22c55e" }}>
+            🎉 Everyone has ordered!
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {[...cnyStats.notOrdered].sort((a, b) => a.name.localeCompare(b.name)).map((guest, index) => (
+              <div
+                key={index}
+                style={{
+                  background: "#111827",
+                  padding: "12px 16px",
+                  borderRadius: 8,
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <span style={{ fontWeight: "bold", color: "#fff" }}>{guest.name}</span>
+                <span style={{ color: "#9ca3af", fontSize: "0.85rem" }}>{guest.phone}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div style={{ marginTop: 20, textAlign: "center" }}>
+          <div style={{ fontSize: "0.85rem", color: "#9ca3af" }}>
+            {cnyStats.ordersPlaced} of {cnyStats.totalRsvps} guests have placed orders
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // In fullscreen mode, render content in a fixed container that covers the entire viewport
+  if (isFullscreen) {
+    return (
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "#111827",
+          color: "white",
+          zIndex: 1000,
+          overflow: "auto",
+        }}
+      >
+        {/* Centered overlay logo at top */}
+        <div
+          style={{
+            position: "fixed",
+            top: "16px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 1001,
+            pointerEvents: "none",
+          }}
+        >
+          <img
+            src="/Oh_Logo_Mark_Light.png"
+            alt="Oh!"
+            style={{ height: "112px", width: "auto" }}
+          />
+        </div>
+        {content}
+        {notOrderedModal}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {content}
+      {notOrderedModal}
     </div>
   );
 }

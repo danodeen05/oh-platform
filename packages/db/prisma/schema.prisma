@@ -314,9 +314,11 @@ model Order {
   user   User?   @relation(fields: [userId], references: [id])
 
   // Guest checkout (alternative to userId)
-  guestId   String?
-  guest     Guest?  @relation(fields: [guestId], references: [id])
-  guestName String? // Store guest name directly for display (especially for EVENT orders)
+  guestId    String?
+  guest      Guest?  @relation(fields: [guestId], references: [id])
+  guestName  String? // Store guest name directly for display (especially for EVENT orders)
+  guestPhone String? // Store guest phone for EVENT orders (for RSVP matching)
+  guestZodiac String? // Store guest zodiac animal for EVENT orders (e.g., "Rabbit", "Dragon")
 
   // Group order association
   groupOrderId String?
