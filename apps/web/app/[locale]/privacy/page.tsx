@@ -146,6 +146,27 @@ export default function PrivacyPage() {
           </p>
 
           <h2 style={{ fontSize: "1.3rem", fontWeight: "600", color: "#222222", marginBottom: "16px" }}>
+            {t("sections.smsNotifications.title")}
+          </h2>
+          <p style={{ color: "#444", lineHeight: "1.8", marginBottom: "16px" }}>
+            {t("sections.smsNotifications.intro")}
+          </p>
+          <ul style={{ color: "#444", lineHeight: "1.8", marginBottom: "16px", paddingLeft: "24px" }}>
+            {(t.raw("sections.smsNotifications.messageTypes") as string[]).map((item, idx) => (
+              <li key={idx} style={{ marginBottom: "8px" }}>{item}</li>
+            ))}
+          </ul>
+          <p style={{ color: "#444", lineHeight: "1.8", marginBottom: "16px" }}>
+            {t("sections.smsNotifications.frequency")}
+          </p>
+          <p style={{ color: "#444", lineHeight: "1.8", marginBottom: "16px" }}>
+            {t("sections.smsNotifications.consent")}
+          </p>
+          <p style={{ color: "#444", lineHeight: "1.8", marginBottom: "24px", fontSize: "0.9rem" }}>
+            {t("sections.smsNotifications.carriers")} {t("sections.smsNotifications.help")}
+          </p>
+
+          <h2 style={{ fontSize: "1.3rem", fontWeight: "600", color: "#222222", marginBottom: "16px" }}>
             {t("sections.changes.title")}
           </h2>
           <p style={{ color: "#444", lineHeight: "1.8", marginBottom: "24px" }}>

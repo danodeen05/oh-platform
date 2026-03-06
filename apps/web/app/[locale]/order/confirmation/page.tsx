@@ -5,6 +5,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { useTranslations, useLocale } from "next-intl";
 import { trackPurchase, event } from "@/lib/analytics";
 import Image from "next/image";
+import { PhoneCollectionModal } from "@/components/PhoneCollectionModal";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -28,6 +29,8 @@ function ConfirmationContent() {
   const [groupOrders, setGroupOrders] = useState<any[]>([]);
   const [canNativeShare, setCanNativeShare] = useState(false);
   const purchaseTrackedRef = useRef(false);
+  const [showPhoneModal, setShowPhoneModal] = useState(false);
+  const [phoneModalDismissed, setPhoneModalDismissed] = useState(false);
 
   // Fetch order details (and group orders if applicable)
   useEffect(() => {
@@ -102,6 +105,22 @@ function ConfirmationContent() {
   useEffect(() => {
     setCanNativeShare(typeof navigator !== "undefined" && !!navigator.share);
   }, []);
+
+  // Show phone collection modal for authenticated users without phone
+  useEffect(() => {
+    const isPaidOrder = paid === "true";
+    if (
+      order?.user &&
+      !order.user.phone &&
+      isPaidOrder &&
+      !phoneModalDismissed &&
+      !showPhoneModal
+    ) {
+      // Small delay to let the confirmation page load first
+      const timer = setTimeout(() => setShowPhoneModal(true), 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [order, paid, phoneModalDismissed, showPhoneModal]);
 
   useEffect(() => {
     // Get user's referral code from localStorage
@@ -1003,6 +1022,23 @@ function ConfirmationContent() {
           </button>
         </div>
       </div>
+
+      {/* Phone Collection Modal for users without phone */}
+      {showPhoneModal && order?.user && (
+        <PhoneCollectionModal
+          userId={order.user.id}
+          userName={order.user.name?.split(" ")[0]}
+          onSubmit={(phone, smsOptIn) => {
+            setShowPhoneModal(false);
+            setPhoneModalDismissed(true);
+            // Optionally refresh order to get updated user data
+          }}
+          onSkip={() => {
+            setShowPhoneModal(false);
+            setPhoneModalDismissed(true);
+          }}
+        />
+      )}
     </main>
   );
 }

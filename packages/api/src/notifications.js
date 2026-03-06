@@ -70,6 +70,21 @@ export async function sendEmail({ to, subject, html, text, from }) {
 }
 
 /**
+ * Check if user/guest has opted in to SMS notifications
+ * @param {object} user - User object (may have smsOptIn field)
+ * @param {object} guest - Guest object (may have smsOptIn field)
+ * @returns {boolean} - Whether SMS is allowed
+ */
+function canSendSMS(user, guest) {
+  // Check user opt-in first
+  if (user?.smsOptIn === true) return true;
+  // Check guest opt-in
+  if (guest?.smsOptIn === true) return true;
+  // Default to false if no opt-in found
+  return false;
+}
+
+/**
  * Send an SMS notification
  */
 export async function sendSMS({ to, body }) {
@@ -545,13 +560,16 @@ Thank you for dining with Oh!
     });
   }
 
-  // SMS notification
+  // SMS notification - only if user/guest has opted in
   const phone = user?.phone || order.guest?.phone;
-  if (phone) {
+  if (phone && canSendSMS(user, order.guest)) {
     results.sms = await sendSMS({
       to: phone,
       body: `Oh! Order #${orderNumber} confirmed! Total: ${totalFormatted}. ${order.orderQrCode ? `Check in at kiosk with code: ${order.orderQrCode.slice(-8)}` : 'Show this text at check-in.'}`,
     });
+  } else if (phone && !canSendSMS(user, order.guest)) {
+    console.log(`[SMS] Skipping order confirmation - no SMS opt-in for phone ${phone.slice(-4)}`);
+    results.sms = { success: false, reason: "not_opted_in" };
   }
 
   return results;
@@ -597,12 +615,15 @@ export async function sendPodReadyNotification(order, user, podNumber) {
     });
   }
 
-  // SMS notification
-  if (user?.phone) {
+  // SMS notification - only if user has opted in
+  if (user?.phone && canSendSMS(user, null)) {
     results.sms = await sendSMS({
       to: user.phone,
       body: `Oh! Your Pod #${podNumber} is ready! Order #${orderNumber}. Head to your pod to enjoy your meal!`,
     });
+  } else if (user?.phone && !canSendSMS(user, null)) {
+    console.log(`[SMS] Skipping pod ready - no SMS opt-in for phone ${user.phone.slice(-4)}`);
+    results.sms = { success: false, reason: "not_opted_in" };
   }
 
   return results;
@@ -615,12 +636,15 @@ export async function sendQueueUpdateNotification(order, user, queuePosition, es
   const results = { email: null, sms: null };
   const orderNumber = order.kitchenOrderNumber || order.orderNumber.slice(-6);
 
-  // Only send SMS for queue updates (email would be too spammy)
-  if (user?.phone) {
+  // Only send SMS for queue updates (email would be too spammy) - check opt-in
+  if (user?.phone && canSendSMS(user, null)) {
     results.sms = await sendSMS({
       to: user.phone,
       body: `Oh! Order #${orderNumber}: You're #${queuePosition} in line. Estimated wait: ~${estimatedMinutes} min. We'll notify you when your pod is ready!`,
     });
+  } else if (user?.phone && !canSendSMS(user, null)) {
+    console.log(`[SMS] Skipping queue update - no SMS opt-in for phone ${user.phone.slice(-4)}`);
+    results.sms = { success: false, reason: "not_opted_in" };
   }
 
   return results;
@@ -665,12 +689,15 @@ export async function sendOrderReadyNotification(order, user) {
     });
   }
 
-  // SMS notification
-  if (user?.phone) {
+  // SMS notification - check opt-in
+  if (user?.phone && canSendSMS(user, null)) {
     results.sms = await sendSMS({
       to: user.phone,
       body: `Oh! Your order #${orderNumber} is ready! Head over to pick it up. Enjoy!`,
     });
+  } else if (user?.phone && !canSendSMS(user, null)) {
+    console.log(`[SMS] Skipping order ready - no SMS opt-in for phone ${user.phone.slice(-4)}`);
+    results.sms = { success: false, reason: "not_opted_in" };
   }
 
   return results;
@@ -678,6 +705,7 @@ export async function sendOrderReadyNotification(order, user) {
 
 /**
  * Send admin notification for new user creation
+ * Note: Admin SMS doesn't require user opt-in - it's internal notification
  */
 export async function sendAdminNewUserNotification(user) {
   const adminPhone = process.env.ADMIN_PHONE_NUMBER;

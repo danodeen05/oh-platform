@@ -4562,15 +4562,22 @@ app.get("/guests/session/:token", async (req, reply) => {
   return guest;
 });
 
-// PATCH /guests/:id - Update guest details (name, phone, email at checkout)
+// PATCH /guests/:id - Update guest details (name, phone, email, smsOptIn at checkout)
 app.patch("/guests/:id", async (req, reply) => {
   const { id } = req.params;
-  const { name, phone, email } = req.body || {};
+  const { name, phone, email, smsOptIn } = req.body || {};
 
   const data = {};
   if (name) data.name = name;
   if (phone !== undefined) data.phone = phone;
   if (email !== undefined) data.email = email;
+  if (smsOptIn !== undefined) {
+    data.smsOptIn = smsOptIn;
+    // Record opt-in date when opting in
+    if (smsOptIn === true) {
+      data.smsOptInDate = new Date();
+    }
+  }
 
   if (!Object.keys(data).length) {
     return reply.code(400).send({ error: "No fields to update" });
@@ -4807,6 +4814,38 @@ app.get("/users/:id/profile", async (req, reply) => {
     nextTier,
     tierProgress,
   };
+});
+
+// Update user phone and SMS preferences
+app.patch("/users/:id/phone", async (req, reply) => {
+  const { id } = req.params;
+  const { phone, smsOptIn } = req.body || {};
+
+  const data = {};
+  if (phone !== undefined) data.phone = phone;
+  if (smsOptIn !== undefined) {
+    data.smsOptIn = smsOptIn;
+    // Record opt-in date/method when opting in
+    if (smsOptIn === true) {
+      data.smsOptInDate = new Date();
+      data.smsOptInMethod = "ACCOUNT_SETTINGS";
+    }
+  }
+
+  if (!Object.keys(data).length) {
+    return reply.code(400).send({ error: "No fields to update" });
+  }
+
+  try {
+    const user = await prisma.user.update({
+      where: { id },
+      data,
+    });
+    return user;
+  } catch (error) {
+    console.error("[USERS] Failed to update phone/SMS preferences:", error);
+    return reply.code(500).send({ error: "Failed to update preferences" });
+  }
 });
 
 // Get all available badges

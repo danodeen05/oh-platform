@@ -13,6 +13,8 @@ export interface Guest {
   name: string;
   phone: string | null;
   email: string | null;
+  smsOptIn: boolean;
+  smsOptInDate: string | null;
   sessionToken: string;
   expiresAt: string;
   createdAt: string;
@@ -105,11 +107,11 @@ export async function getGuestFromSession(): Promise<Guest | null> {
 }
 
 /**
- * Update guest details (name, phone, email)
+ * Update guest details (name, phone, email, smsOptIn)
  */
 export async function updateGuestDetails(
   guestId: string,
-  data: { name?: string; phone?: string; email?: string }
+  data: { name?: string; phone?: string; email?: string; smsOptIn?: boolean }
 ): Promise<Guest> {
   const response = await fetch(`${API_URL}/guests/${guestId}`, {
     method: "PATCH",
