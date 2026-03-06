@@ -1426,6 +1426,20 @@
         "title": "Children's Privacy",
         "content": "Our services are not intended for children under 13. We do not knowingly collect personal information from children under 13."
       },
+      "smsNotifications": {
+        "title": "SMS Notifications",
+        "intro": "We use SMS to send you transactional notifications related to your orders:",
+        "messageTypes": [
+          "Order confirmation with your order number and QR code",
+          "Pod ready notifications when your table is available",
+          "Queue position updates while waiting",
+          "Order ready notifications for pickup orders"
+        ],
+        "frequency": "Message frequency varies based on your order activity. Typically 1-4 messages per visit.",
+        "consent": "You may opt-in to receive SMS notifications during checkout by providing your phone number and checking the consent box. You can opt-out at any time by texting STOP to our number or contacting us.",
+        "carriers": "Message and data rates may apply. Carriers are not responsible for delayed or undelivered messages.",
+        "help": "For help, text HELP or contact us at orders@ohbeefnoodlesoup.com."
+      },
       "changes": {
         "title": "Changes to This Policy",
         "content": "We may update this Privacy Policy from time to time. We will notify you of any changes by posting the new policy on this page and updating the \"Last Updated\" date."
@@ -1712,6 +1726,8 @@
     "yourName": "Your name",
     "forOrderUpdates": "For order updates",
     "forReceipt": "For receipt",
+    "smsConsent": "I agree to receive order updates via SMS (confirmation, ready notification). Msg & data rates may apply.",
+    "privacyPolicy": "Privacy Policy",
     "enterYourName": "Please enter your name",
     "wantToEarnRewards": "Want to earn rewards and track your orders?",
     "signInInstead": "Sign In Instead",
@@ -1784,6 +1800,22 @@
       "message": "Your order is now being prepared"
     },
     "loading": "Loading..."
+  },
+  "phoneCollection": {
+    "title": "Stay Updated on Your Order",
+    "greeting": "Hey {name}!",
+    "description": "Add your phone number to receive SMS updates about your order status, including when it's ready for pickup.",
+    "phoneLabel": "Phone Number",
+    "phonePlaceholder": "(555) 555-5555",
+    "smsConsent": "I agree to receive order updates via SMS. Msg & data rates may apply. Reply STOP to opt out.",
+    "privacyPolicy": "Privacy Policy",
+    "savePhone": "Save & Get Updates",
+    "saving": "Saving...",
+    "skipForNow": "Skip for now",
+    "skipNote": "You can always add your phone later in account settings.",
+    "phoneRequired": "Please enter your phone number",
+    "invalidPhone": "Please enter a valid phone number",
+    "updateFailed": "Failed to save phone number. Please try again."
   },
   "confirmation": {
     "title": "Order Confirmed!",

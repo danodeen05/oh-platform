@@ -63,6 +63,7 @@ export default function OrderPaymentForm({
   const [guestName, setGuestName] = useState(guest?.name === "Guest" ? "" : guest?.name || "");
   const [guestPhone, setGuestPhone] = useState(guest?.phone || "");
   const [guestEmail, setGuestEmail] = useState(guest?.email || "");
+  const [guestSmsOptIn, setGuestSmsOptIn] = useState(guest?.smsOptIn || false);
   const [guestFormError, setGuestFormError] = useState("");
 
   // Calculate discounted total
@@ -496,11 +497,12 @@ export default function OrderPaymentForm({
       await acceptMealGift();
 
       // Update guest details if changed
-      if (guest && (guestName !== guest.name || guestPhone !== guest.phone || guestEmail !== guest.email)) {
+      if (guest && (guestName !== guest.name || guestPhone !== guest.phone || guestEmail !== guest.email || guestSmsOptIn !== guest.smsOptIn)) {
         await updateGuest({
           name: guestName.trim(),
           phone: guestPhone.trim() || undefined,
           email: guestEmail.trim() || undefined,
+          smsOptIn: guestPhone.trim() ? guestSmsOptIn : false,
         });
       }
 
@@ -629,6 +631,41 @@ export default function OrderPaymentForm({
                   }}
                 />
               </div>
+
+              {/* SMS Consent Checkbox */}
+              {guestPhone.trim() && (
+                <div style={{ marginTop: 4 }}>
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: 10,
+                      cursor: "pointer",
+                      fontSize: "0.85rem",
+                      color: "#444",
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={guestSmsOptIn}
+                      onChange={(e) => setGuestSmsOptIn(e.target.checked)}
+                      style={{ marginTop: 3, cursor: "pointer", width: 16, height: 16 }}
+                    />
+                    <span>
+                      {t("smsConsent")}{" "}
+                      <a
+                        href="/privacy"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: "#7C7A67", textDecoration: "underline" }}
+                      >
+                        {t("privacyPolicy")}
+                      </a>
+                    </span>
+                  </label>
+                </div>
+              )}
             </div>
           </div>
 
@@ -752,11 +789,12 @@ export default function OrderPaymentForm({
                     setProcessing(true);
                     try {
                       await acceptMealGift();
-                      if (guest && (guestName !== guest.name || guestPhone !== guest.phone || guestEmail !== guest.email)) {
+                      if (guest && (guestName !== guest.name || guestPhone !== guest.phone || guestEmail !== guest.email || guestSmsOptIn !== guest.smsOptIn)) {
                         await updateGuest({
                           name: guestName.trim(),
                           phone: guestPhone.trim() || undefined,
                           email: guestEmail.trim() || undefined,
+                          smsOptIn: guestPhone.trim() ? guestSmsOptIn : false,
                         });
                       }
                       const response = await fetch(`${BASE}/orders/${orderId}`, {

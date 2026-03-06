@@ -420,6 +420,10 @@ model Guest {
   phone String? // Optional
   email String? // Optional
 
+  // SMS Consent
+  smsOptIn     Boolean   @default(false)
+  smsOptInDate DateTime?
+
   sessionToken String   @unique // For cookie-based session
   expiresAt    DateTime // Session expiry (24 hours from creation)
 
@@ -492,6 +496,11 @@ model User {
   email String? @unique
   phone String? @unique
   name  String?
+
+  // SMS Consent
+  smsOptIn       Boolean   @default(false)
+  smsOptInDate   DateTime?
+  smsOptInMethod String? // "CHECKOUT", "SIGNUP", "ACCOUNT_SETTINGS", "PHONE_MODAL"
 
   // Stripe integration
   stripeCustomerId String? @unique

@@ -15,7 +15,7 @@ interface GuestContextValue {
   isLoading: boolean;
   isGuest: boolean;
   startGuestSession: (data?: { name?: string; phone?: string; email?: string }) => Promise<Guest>;
-  updateGuest: (data: { name?: string; phone?: string; email?: string }) => Promise<Guest>;
+  updateGuest: (data: { name?: string; phone?: string; email?: string; smsOptIn?: boolean }) => Promise<Guest>;
   endGuestSession: () => void;
   refreshSession: () => Promise<void>;
 }
@@ -48,7 +48,7 @@ export function GuestProvider({ children }: { children: ReactNode }) {
     return newGuest;
   }, []);
 
-  const updateGuest = useCallback(async (data: { name?: string; phone?: string; email?: string }) => {
+  const updateGuest = useCallback(async (data: { name?: string; phone?: string; email?: string; smsOptIn?: boolean }) => {
     if (!guest) {
       throw new Error("No active guest session");
     }
