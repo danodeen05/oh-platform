@@ -831,7 +831,7 @@ export default function OrderPaymentForm({
                 </button>
               </div>
             ) : clientSecret ? (
-              <StripeProvider clientSecret={clientSecret}>
+              <StripeProvider key={clientSecret} clientSecret={clientSecret}>
                 <PaymentForm
                   amountCents={discountedTotal}
                   onSuccess={handleGuestPaymentSuccess}
@@ -1407,7 +1407,7 @@ export default function OrderPaymentForm({
                 </button>
               </div>
             ) : clientSecret ? (
-              <StripeProvider clientSecret={clientSecret}>
+              <StripeProvider key={clientSecret} clientSecret={clientSecret}>
                 <PaymentForm
                   amountCents={discountedTotal}
                   onSuccess={handlePaymentSuccess}
