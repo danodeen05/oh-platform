@@ -256,7 +256,6 @@ export default function OrderPaymentForm({
       try {
         const customerResponse = await fetch(`${BASE}/users/${userData.id}/stripe-customer`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
         });
 
         if (customerResponse.ok) {
