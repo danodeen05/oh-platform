@@ -74,7 +74,7 @@ export default function SmsConsentPage() {
             }}
           >
             <p style={{ color: "#222", fontStyle: "italic", lineHeight: "1.8", margin: 0 }}>
-              &ldquo;I agree to receive text messages from Oh regarding my order (confirmation &amp;
+              &ldquo;I agree to receive SMS text messages from Oh Beef Noodle Soup regarding my order (confirmation &amp;
               ready-for-pickup alerts). Message frequency varies. Msg &amp; data rates may apply.
               Reply STOP to unsubscribe.&rdquo;
             </p>
