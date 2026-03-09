@@ -1610,7 +1610,7 @@
     "creditsApplied": "已使用积分",
     "payAmount": "支付 ${amount}",
     "processingPayment": "付款处理中...",
-    "secureCheckout": "安全结账由 Stripe 提供（测试模式）",
+    "secureCheckout": "安全结账由 Stripe 提供",
     "paymentMethod": "付款方式",
     "testPayment": "测试付款",
     "demoMode": "演示模式 - 不会实际收费",
