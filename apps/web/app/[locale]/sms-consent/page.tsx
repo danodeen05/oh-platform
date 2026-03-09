@@ -36,7 +36,7 @@ export default function SmsConsentPage() {
             fontWeight: "300",
           }}
         >
-          Documentation of Oh&apos;s SMS messaging consent process for toll-free verification
+          Documentation of Oh Beef Noodle Soup&apos;s SMS messaging consent process
         </p>
       </section>
 
@@ -56,24 +56,49 @@ export default function SmsConsentPage() {
           </h2>
           <p style={{ color: "#444", lineHeight: "1.8", marginBottom: "24px" }}>
             Oh Beef Noodle Soup uses SMS messaging to send transactional order updates to customers
-            who explicitly opt-in. We collect consent through a clear, unchecked checkbox that customers
-            must actively select to receive text messages.
+            who explicitly opt-in. We collect consent through a <strong>clear, unchecked checkbox</strong> that customers
+            must actively select to receive text messages. <strong>Consent is not required to make a purchase.</strong>
           </p>
+
+          {/* Key Compliance Points */}
+          <div
+            style={{
+              background: "#f0fdf4",
+              border: "2px solid #22c55e",
+              borderRadius: "12px",
+              padding: "24px",
+              marginBottom: "32px",
+            }}
+          >
+            <h3 style={{ fontSize: "1.1rem", fontWeight: "600", color: "#15803d", marginBottom: "12px" }}>
+              Key Compliance Points
+            </h3>
+            <ul style={{ color: "#166534", lineHeight: "1.8", margin: 0, paddingLeft: "20px" }}>
+              <li>Checkbox is <strong>unchecked by default</strong> &mdash; requires active opt-in</li>
+              <li>Consent is <strong>separate from purchase</strong> &mdash; not required to complete order</li>
+              <li>Clear disclosure of message types, frequency, and data rates</li>
+              <li>STOP/HELP keywords prominently displayed</li>
+              <li>Link to Privacy Policy provided alongside consent</li>
+            </ul>
+          </div>
 
           {/* Consent Language */}
           <h2 style={{ fontSize: "1.5rem", fontWeight: "600", color: "#222222", marginBottom: "16px" }}>
-            Consent Language
+            Exact Consent Language
           </h2>
+          <p style={{ color: "#666", fontSize: "0.9rem", marginBottom: "12px" }}>
+            The following text is displayed next to the opt-in checkbox:
+          </p>
           <div
             style={{
-              background: "#f9fafb",
-              border: "1px solid #e5e7eb",
+              background: "#fffbeb",
+              border: "2px solid #f59e0b",
               borderRadius: "8px",
               padding: "20px",
               marginBottom: "24px",
             }}
           >
-            <p style={{ color: "#222", fontStyle: "italic", lineHeight: "1.8", margin: 0 }}>
+            <p style={{ color: "#222", fontWeight: "500", lineHeight: "1.8", margin: 0, fontSize: "1.05rem" }}>
               &ldquo;I agree to receive SMS text messages from Oh Beef Noodle Soup regarding my order (confirmation &amp;
               ready-for-pickup alerts). Message frequency varies. Msg &amp; data rates may apply.
               Reply STOP to unsubscribe.&rdquo;
@@ -82,24 +107,37 @@ export default function SmsConsentPage() {
 
           {/* Message Types */}
           <h2 style={{ fontSize: "1.5rem", fontWeight: "600", color: "#222222", marginBottom: "16px" }}>
-            Message Types
+            Message Types (Transactional Only)
           </h2>
-          <ul style={{ color: "#444", lineHeight: "1.8", marginBottom: "24px", paddingLeft: "24px" }}>
-            <li style={{ marginBottom: "8px" }}><strong>Order Confirmation:</strong> Sent immediately after order placement with order number and details</li>
-            <li style={{ marginBottom: "8px" }}><strong>Ready for Pickup:</strong> Sent when the order is ready to be picked up</li>
-          </ul>
-          <p style={{ color: "#666", fontSize: "0.9rem", marginBottom: "32px" }}>
-            Message frequency: 1-2 messages per order. We do not send marketing or promotional messages.
+          <p style={{ color: "#444", lineHeight: "1.8", marginBottom: "16px" }}>
+            We only send transactional messages related to customer orders. <strong>We do not send marketing, promotional, or advertising messages.</strong>
           </p>
+          <ul style={{ color: "#444", lineHeight: "1.8", marginBottom: "24px", paddingLeft: "24px" }}>
+            <li style={{ marginBottom: "8px" }}><strong>Order Confirmation:</strong> Sent immediately after order placement with order number</li>
+            <li style={{ marginBottom: "8px" }}><strong>Ready for Pickup:</strong> Sent when the order is ready to be picked up at the restaurant</li>
+          </ul>
+          <div
+            style={{
+              background: "#f9fafb",
+              border: "1px solid #e5e7eb",
+              borderRadius: "8px",
+              padding: "16px",
+              marginBottom: "32px",
+            }}
+          >
+            <p style={{ color: "#444", margin: 0 }}>
+              <strong>Message Frequency:</strong> 1-2 messages per order (one confirmation, one pickup notification)
+            </p>
+          </div>
 
           {/* Opt-In Flow 1: Guest Checkout */}
           <h2 style={{ fontSize: "1.5rem", fontWeight: "600", color: "#222222", marginBottom: "16px" }}>
             Opt-In Flow #1: Guest Checkout
           </h2>
           <p style={{ color: "#444", lineHeight: "1.8", marginBottom: "16px" }}>
-            During guest checkout, when a customer enters their phone number, an unchecked checkbox
-            appears allowing them to opt-in to SMS updates. The checkbox is NOT pre-checked &mdash;
-            customers must actively select it to consent.
+            During guest checkout on the payment page, when a customer enters their phone number, an <strong>unchecked checkbox</strong> appears
+            allowing them to opt-in to SMS updates. The checkbox is <strong>NOT pre-checked</strong> &mdash;
+            customers must actively click/tap the checkbox to consent. The phone number field is optional and SMS consent is not required to complete the purchase.
           </p>
           <div
             style={{
@@ -112,24 +150,25 @@ export default function SmsConsentPage() {
             }}
           >
             <Image
-              src="/sms-consent/checkout-sms-consent.png"
-              alt="SMS consent checkbox during guest checkout"
+              src="/sms-consent/Opt-In1.png"
+              alt="SMS consent checkbox during guest checkout - unchecked by default"
               width={600}
               height={400}
               style={{ maxWidth: "100%", height: "auto", borderRadius: "8px", border: "1px solid #ddd" }}
             />
             <p style={{ color: "#666", fontSize: "0.85rem", marginTop: "12px", marginBottom: 0 }}>
-              Screenshot: SMS consent checkbox on payment page (guest checkout)
+              Screenshot: Guest checkout payment page with SMS consent checkbox (unchecked by default)
             </p>
           </div>
 
           {/* Opt-In Flow 2: Phone Collection Modal */}
           <h2 style={{ fontSize: "1.5rem", fontWeight: "600", color: "#222222", marginBottom: "16px" }}>
-            Opt-In Flow #2: Phone Collection Modal
+            Opt-In Flow #2: Logged-In User Phone Collection
           </h2>
           <p style={{ color: "#444", lineHeight: "1.8", marginBottom: "16px" }}>
-            For logged-in customers without a phone number on file, a modal appears on the order
-            confirmation page giving them the option to add their phone number and consent to SMS updates.
+            For logged-in customers who do not have a phone number saved in their account, a modal appears on the order
+            confirmation page (after successful payment) giving them the <strong>optional</strong> opportunity to add their phone number and consent to SMS updates.
+            This modal can be dismissed by clicking &ldquo;Skip for now&rdquo; &mdash; providing a phone number is not required.
           </p>
           <div
             style={{
@@ -142,14 +181,14 @@ export default function SmsConsentPage() {
             }}
           >
             <Image
-              src="/sms-consent/phone-modal-consent.png"
-              alt="Phone collection modal with SMS consent"
+              src="/sms-consent/Opt-In2.png"
+              alt="Phone collection modal with SMS consent checkbox for logged-in users"
               width={600}
               height={400}
               style={{ maxWidth: "100%", height: "auto", borderRadius: "8px", border: "1px solid #ddd" }}
             />
             <p style={{ color: "#666", fontSize: "0.85rem", marginTop: "12px", marginBottom: 0 }}>
-              Screenshot: Phone collection modal with SMS consent checkbox
+              Screenshot: Phone collection modal for logged-in users with SMS consent checkbox (unchecked by default)
             </p>
           </div>
 
@@ -157,11 +196,14 @@ export default function SmsConsentPage() {
           <h2 style={{ fontSize: "1.5rem", fontWeight: "600", color: "#222222", marginBottom: "16px" }}>
             Opt-Out Process
           </h2>
-          <p style={{ color: "#444", lineHeight: "1.8", marginBottom: "24px" }}>
-            Customers can opt out at any time by replying <strong>STOP</strong> to any SMS message.
-            This is handled automatically by our messaging provider (Twilio). We also honor opt-out
-            requests sent to our customer service email.
+          <p style={{ color: "#444", lineHeight: "1.8", marginBottom: "16px" }}>
+            Customers can opt out at any time using the following methods:
           </p>
+          <ul style={{ color: "#444", lineHeight: "1.8", marginBottom: "24px", paddingLeft: "24px" }}>
+            <li style={{ marginBottom: "8px" }}><strong>Reply STOP:</strong> Text STOP to any message to immediately unsubscribe (handled automatically by Twilio)</li>
+            <li style={{ marginBottom: "8px" }}><strong>Reply HELP:</strong> Text HELP for assistance and opt-out instructions</li>
+            <li style={{ marginBottom: "8px" }}><strong>Email:</strong> Contact hello@eatoh.com to request removal from SMS list</li>
+          </ul>
 
           {/* Privacy Policy Link */}
           <h2 style={{ fontSize: "1.5rem", fontWeight: "600", color: "#222222", marginBottom: "16px" }}>
@@ -169,24 +211,29 @@ export default function SmsConsentPage() {
           </h2>
           <p style={{ color: "#444", lineHeight: "1.8", marginBottom: "24px" }}>
             Our complete privacy policy, including our SMS messaging practices, is available at:{" "}
-            <Link href="/privacy" style={{ color: "#7C7A67", textDecoration: "underline" }}>
-              Privacy Policy
+            <Link href="/privacy" style={{ color: "#7C7A67", textDecoration: "underline", fontWeight: "600" }}>
+              https://ohbeef.com/privacy
             </Link>
           </p>
 
           {/* Contact */}
           <h2 style={{ fontSize: "1.5rem", fontWeight: "600", color: "#222222", marginBottom: "16px" }}>
-            Contact Information
+            Business Contact Information
           </h2>
-          <p style={{ color: "#444", lineHeight: "1.8", marginBottom: "8px" }}>
-            <strong>Business Name:</strong> Oh Beef Noodle Soup LLC
-          </p>
-          <p style={{ color: "#444", lineHeight: "1.8", marginBottom: "8px" }}>
-            <strong>Website:</strong> eatoh.com
-          </p>
-          <p style={{ color: "#444", lineHeight: "1.8", marginBottom: "8px" }}>
-            <strong>Contact Email:</strong> hello@eatoh.com
-          </p>
+          <div style={{ color: "#444", lineHeight: "2" }}>
+            <p style={{ margin: "0 0 4px 0" }}>
+              <strong>Business Name:</strong> Oh Beef Noodle Soup LLC
+            </p>
+            <p style={{ margin: "0 0 4px 0" }}>
+              <strong>Website:</strong> https://ohbeef.com
+            </p>
+            <p style={{ margin: "0 0 4px 0" }}>
+              <strong>Contact Email:</strong> hello@ohbeef.com
+            </p>
+            <p style={{ margin: "0 0 4px 0" }}>
+              <strong>SMS Phone Number:</strong> +1 (866) 359-4863
+            </p>
+          </div>
         </div>
       </section>
     </div>
