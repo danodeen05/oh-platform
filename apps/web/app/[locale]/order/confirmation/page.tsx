@@ -6,6 +6,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { trackPurchase, event } from "@/lib/analytics";
 import Image from "next/image";
 import { PhoneCollectionModal } from "@/components/PhoneCollectionModal";
+import { useUser } from "@clerk/nextjs";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -17,12 +18,16 @@ function ConfirmationContent() {
   const tGroup = useTranslations("groupOrder");
   const tCommon = useTranslations("common");
   const locale = useLocale();
+  const { user: clerkUser, isLoaded: clerkLoaded, isSignedIn } = useUser();
   const orderNumber = searchParams.get("orderNumber");
   const orderId = searchParams.get("orderId");
   const total = searchParams.get("total");
   const paid = searchParams.get("paid");
   const groupCode = searchParams.get("groupCode");
   const orderCount = searchParams.get("orderCount");
+  // Stripe redirect params (present when returning from 3D Secure, etc.)
+  const paymentIntentClientSecret = searchParams.get("payment_intent_client_secret");
+  const redirectStatus = searchParams.get("redirect_status");
   const [copied, setCopied] = useState(false);
   const [shareText, setShareText] = useState("");
   const [order, setOrder] = useState<any>(null);
@@ -31,10 +36,135 @@ function ConfirmationContent() {
   const purchaseTrackedRef = useRef(false);
   const [showPhoneModal, setShowPhoneModal] = useState(false);
   const [phoneModalDismissed, setPhoneModalDismissed] = useState(false);
+  const redirectHandledRef = useRef(false);
+
+  // Handle Stripe redirect (3D Secure, bank redirects, etc.)
+  // This runs when returning from Stripe after payment authentication
+  useEffect(() => {
+    if (!orderId || !clerkLoaded || redirectHandledRef.current) return;
+
+    // Check if this is a Stripe redirect with successful payment
+    const isStripeRedirect = paymentIntentClientSecret && redirectStatus === "succeeded";
+
+    if (!isStripeRedirect) return;
+
+    redirectHandledRef.current = true;
+
+    async function handleStripeRedirect() {
+      console.log("Handling Stripe redirect for order:", orderId);
+
+      try {
+        // First, get the current order to check if it needs updating
+        const orderResponse = await fetch(`${BASE}/orders/${orderId}?locale=${locale}`, {
+          headers: { "x-tenant-slug": "oh" },
+        });
+
+        if (!orderResponse.ok) {
+          console.error("Failed to fetch order for redirect handling");
+          return;
+        }
+
+        const currentOrder = await orderResponse.json();
+
+        // If order is already paid and has a user, skip
+        if (currentOrder.paymentStatus === "PAID" && currentOrder.user) {
+          console.log("Order already finalized, skipping redirect handling");
+          setOrder(currentOrder);
+          return;
+        }
+
+        // Get user ID if signed in
+        let userId: string | undefined;
+        if (isSignedIn && clerkUser?.primaryEmailAddress?.emailAddress) {
+          try {
+            // Look up or create user in our system
+            const userResponse = await fetch(`${BASE}/users`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                email: clerkUser.primaryEmailAddress.emailAddress,
+                name: clerkUser.fullName || clerkUser.firstName || undefined,
+              }),
+            });
+
+            if (userResponse.ok) {
+              const userData = await userResponse.json();
+              userId = userData.id;
+              // Store for later use
+              localStorage.setItem("userId", userData.id);
+              if (userData.referralCode) {
+                localStorage.setItem("referralCode", userData.referralCode);
+              }
+            }
+          } catch (err) {
+            console.error("Failed to get user for redirect:", err);
+          }
+        }
+
+        // Extract payment intent ID from client secret
+        const paymentIntentId = paymentIntentClientSecret?.split("_secret_")[0];
+
+        // Update order with payment info and user link
+        const patchData: any = {
+          paymentStatus: "PAID",
+        };
+
+        if (paymentIntentId) {
+          patchData.stripePaymentId = paymentIntentId;
+        }
+
+        if (userId) {
+          patchData.userId = userId;
+        }
+
+        console.log("Patching order with redirect data:", patchData);
+
+        const patchResponse = await fetch(`${BASE}/orders/${orderId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(patchData),
+        });
+
+        if (patchResponse.ok) {
+          const updatedOrder = await patchResponse.json();
+          console.log("Order updated after redirect, user:", updatedOrder.user?.id);
+          setOrder(updatedOrder);
+        } else {
+          console.error("Failed to update order after redirect");
+          // Still try to fetch and display the order
+          setOrder(currentOrder);
+        }
+      } catch (error) {
+        console.error("Error handling Stripe redirect:", error);
+      }
+    }
+
+    handleStripeRedirect();
+  }, [orderId, clerkLoaded, isSignedIn, clerkUser, paymentIntentClientSecret, redirectStatus, locale]);
 
   // Fetch order details (and group orders if applicable)
   useEffect(() => {
     if (!orderId) return;
+
+    // Skip if redirect handling already set the order
+    if (redirectHandledRef.current && order) {
+      // Still need to fetch group orders if applicable
+      if ((order.groupOrderId || groupCode) && groupOrders.length === 0) {
+        fetch(`${BASE}/group-orders/${groupCode || order.groupOrderId}`, {
+          headers: { "x-tenant-slug": "oh" },
+        })
+          .then(res => res.ok ? res.json() : null)
+          .then(data => data?.orders && setGroupOrders(data.orders))
+          .catch(err => console.error("Failed to fetch group orders:", err));
+      }
+      return;
+    }
+
+    // If Stripe redirect is pending (params present but not yet handled), wait for that
+    const isStripeRedirect = paymentIntentClientSecret && redirectStatus === "succeeded";
+    if (isStripeRedirect && !redirectHandledRef.current) {
+      return;
+    }
 
     async function fetchOrder() {
       try {
@@ -64,7 +194,7 @@ function ConfirmationContent() {
     }
 
     fetchOrder();
-  }, [orderId, groupCode, locale]);
+  }, [orderId, groupCode, locale, paymentIntentClientSecret, redirectStatus, order, groupOrders.length]);
 
   // Store active order QR code in localStorage for the banner
   useEffect(() => {

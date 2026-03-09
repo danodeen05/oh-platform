@@ -240,7 +240,7 @@ export default function GroupPaymentForm({
           marginTop: 16,
         }}
       >
-        Secure checkout powered by Stripe (test mode)
+        Secure checkout powered by Stripe
       </p>
 
       <div style={{ marginTop: 24, textAlign: "center" }}>

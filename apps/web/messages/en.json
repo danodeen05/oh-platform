@@ -1699,7 +1699,7 @@
     "creditsApplied": "Credits Applied",
     "payAmount": "Pay ${amount}",
     "processingPayment": "Processing Payment...",
-    "secureCheckout": "Secure checkout powered by Stripe (test mode)",
+    "secureCheckout": "Secure checkout powered by Stripe",
     "paymentMethod": "Payment Method",
     "testPayment": "Test Payment",
     "demoMode": "Demo mode - no real charge",

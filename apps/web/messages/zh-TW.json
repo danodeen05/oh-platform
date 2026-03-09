@@ -1610,7 +1610,7 @@
     "creditsApplied": "已使用點數",
     "payAmount": "支付 ${amount}",
     "processingPayment": "付款處理中...",
-    "secureCheckout": "安全結帳由 Stripe 提供（測試模式）",
+    "secureCheckout": "安全結帳由 Stripe 提供",
     "paymentMethod": "付款方式",
     "testPayment": "測試付款",
     "demoMode": "示範模式 - 不會實際收費",
