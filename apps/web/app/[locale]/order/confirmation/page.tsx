@@ -106,12 +106,26 @@ function ConfirmationContent() {
     setCanNativeShare(typeof navigator !== "undefined" && !!navigator.share);
   }, []);
 
-  // Show phone collection modal for authenticated users without phone
+  // Show phone collection modal for authenticated users without phone or SMS opt-in
   useEffect(() => {
     const isPaidOrder = paid === "true";
+    // Show modal if user exists and either:
+    // 1. Has no phone number, OR
+    // 2. Has phone but hasn't opted into SMS
+    const needsPhoneOrSmsConsent = order?.user && (!order.user.phone || !order.user.smsOptIn);
+
+    console.log("SMS Modal check:", {
+      hasUser: !!order?.user,
+      userPhone: order?.user?.phone,
+      smsOptIn: order?.user?.smsOptIn,
+      isPaidOrder,
+      needsPhoneOrSmsConsent,
+      phoneModalDismissed,
+      showPhoneModal
+    });
+
     if (
-      order?.user &&
-      !order.user.phone &&
+      needsPhoneOrSmsConsent &&
       isPaidOrder &&
       !phoneModalDismissed &&
       !showPhoneModal
@@ -304,7 +318,7 @@ function ConfirmationContent() {
                   fontSize: "0.85rem",
                 }}
               >
-                {t("paymentConfirmed", { amount: `$${totalAmount}` })}
+                {t("paymentConfirmed", { amount: `$${order ? (totalWithTaxCents / 100).toFixed(2) : totalAmount}` })}
               </div>
             </div>
           </div>
