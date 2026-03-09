@@ -515,7 +515,10 @@ app.get("/locations", async (req, reply) => {
   if (!tenant) return reply.code(404).send({ error: "Tenant not found" });
 
   const locations = await prisma.location.findMany({
-    where: { tenantId: tenant.id },
+    where: {
+      tenantId: tenant.id,
+      isClosed: false, // Exclude closed/disabled locations
+    },
     include: {
       stats: true,
       seats: true, // Include all pods
@@ -3307,6 +3310,15 @@ app.get("/orders/:id", async (req, reply) => {
       },
       seat: true,
       location: true,
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          smsOptIn: true,
+        },
+      },
     },
   });
 
