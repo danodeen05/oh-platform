@@ -240,13 +240,16 @@ function ConfirmationContent() {
   useEffect(() => {
     const isPaidOrder = paid === "true";
     // Show modal if user exists and either:
-    // 1. Has no phone number, OR
+    // 1. Has no phone number (null, undefined, or empty string), OR
     // 2. Has phone but hasn't opted into SMS
-    const needsPhoneOrSmsConsent = order?.user && (!order.user.phone || !order.user.smsOptIn);
+    const userPhone = order?.user?.phone;
+    const hasValidPhone = userPhone && typeof userPhone === "string" && userPhone.trim() !== "";
+    const needsPhoneOrSmsConsent = order?.user && (!hasValidPhone || !order.user.smsOptIn);
 
     console.log("SMS Modal check:", {
       hasUser: !!order?.user,
       userPhone: order?.user?.phone,
+      hasValidPhone,
       smsOptIn: order?.user?.smsOptIn,
       isPaidOrder,
       needsPhoneOrSmsConsent,
