@@ -308,14 +308,14 @@ export function PaymentForm({
 
           {/* Save card for future purchases */}
           {showSaveCard && (
-            <label className="flex items-center mt-4 cursor-pointer">
+            <label className="flex items-center mt-4 cursor-pointer gap-3">
               <input
                 type="checkbox"
                 checked={saveCard}
                 onChange={(e) => setSaveCard(e.target.checked)}
                 className="w-4 h-4 text-[#7C7A67] rounded focus:ring-[#7C7A67] border-gray-300"
               />
-              <span className="ml-2 text-sm text-gray-600">
+              <span className="text-sm text-gray-600">
                 Save this card for future purchases
               </span>
             </label>
