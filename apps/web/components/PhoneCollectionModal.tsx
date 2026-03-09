@@ -19,7 +19,7 @@ export function PhoneCollectionModal({
 }: PhoneCollectionModalProps) {
   const t = useTranslations("phoneCollection");
   const [phone, setPhone] = useState("");
-  const [smsOptIn, setSmsOptIn] = useState(true);
+  const [smsOptIn, setSmsOptIn] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
