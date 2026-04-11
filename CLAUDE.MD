@@ -574,7 +574,10 @@ Twilio credentials are stored in environment variables. See `.env.example` for r
 - `ADMIN_PHONE_NUMBER` - Receives new user SMS alerts
 
 ### Status
-- **Toll-free verification**: Pending (required for SMS delivery)
+- **Toll-free verification**: ✅ APPROVED (March 11, 2026)
+  - Number: `+18663594863`
+  - Business: OH BEEF NOODLE SOUP LLC
+  - SMS and MMS enabled
 - **Admin SMS on new user**: Implemented in `POST /users` endpoint
 - **Notification file**: `packages/api/src/notifications.js`
 
