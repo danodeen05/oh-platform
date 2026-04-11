@@ -45,6 +45,7 @@ PRODUCTION_CREDENTIALS.md
 
 # Screenshots and test artifacts
 *.png
+!apps/web/public/*.png
 playwright-report/
 test-results/
 .playwright-mcp/
