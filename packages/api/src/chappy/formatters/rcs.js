@@ -72,9 +72,10 @@ export function formatForRCS(text, contentBlocks = []) {
 
 /**
  * Format response for SMS (plain text fallback)
+ * Splits long messages into multiple SMS segments
  *
  * @param {string} text - Response text
- * @returns {Object} - SMS message payload
+ * @returns {Object} - SMS message payload with messages array
  */
 export function formatForSMS(text) {
   // Clean up for SMS constraints
@@ -85,21 +86,99 @@ export function formatForSMS(text) {
   smsText = smsText.replace(/\*/g, "");
   smsText = smsText.replace(/`/g, "");
 
-  // Truncate if too long (SMS max is ~160 chars per segment, aim for 2 segments max)
-  const MAX_LENGTH = 320;
-  if (smsText.length > MAX_LENGTH) {
-    smsText = smsText.substring(0, MAX_LENGTH - 3) + "...";
+  // Remove bullet points and replace with dashes
+  smsText = smsText.replace(/^[•●◦▪]/gm, "-");
+
+  // Target ~300 chars per message (leaves room for segment indicators)
+  const MAX_SEGMENT_LENGTH = 300;
+  const MAX_SEGMENTS = 4; // Don't spam them with too many messages
+
+  // If short enough, return single message
+  if (smsText.length <= MAX_SEGMENT_LENGTH) {
+    return {
+      type: "sms",
+      text: smsText,
+      messages: [smsText],
+    };
   }
 
-  // Add signature if not present and fits
-  if (!smsText.includes("Chappy") && smsText.length < MAX_LENGTH - 15) {
-    smsText = `${smsText}\n- Chappy`;
-  }
+  // Split into multiple messages at natural break points
+  const messages = splitIntoSegments(smsText, MAX_SEGMENT_LENGTH, MAX_SEGMENTS);
 
   return {
     type: "sms",
-    text: smsText,
+    text: messages[0], // First message for backwards compatibility
+    messages: messages,
   };
+}
+
+/**
+ * Split text into SMS segments at natural break points
+ */
+function splitIntoSegments(text, maxLength, maxSegments) {
+  const segments = [];
+  let remaining = text;
+
+  while (remaining.length > 0 && segments.length < maxSegments) {
+    if (remaining.length <= maxLength) {
+      segments.push(remaining.trim());
+      break;
+    }
+
+    // Find a good break point (paragraph, sentence, or word boundary)
+    let breakPoint = findBreakPoint(remaining, maxLength);
+
+    const segment = remaining.substring(0, breakPoint).trim();
+    segments.push(segment);
+    remaining = remaining.substring(breakPoint).trim();
+  }
+
+  // If there's still content left after max segments, add continuation note
+  if (remaining.length > 0 && segments.length === maxSegments) {
+    const lastIdx = segments.length - 1;
+    if (segments[lastIdx].length > maxLength - 30) {
+      segments[lastIdx] = segments[lastIdx].substring(0, maxLength - 30);
+    }
+    segments[lastIdx] += "\n\n(Reply for more)";
+  }
+
+  return segments;
+}
+
+/**
+ * Find a natural break point in text
+ */
+function findBreakPoint(text, maxLength) {
+  // Look for paragraph break first
+  const paragraphBreak = text.lastIndexOf("\n\n", maxLength);
+  if (paragraphBreak > maxLength * 0.5) {
+    return paragraphBreak + 2;
+  }
+
+  // Look for sentence end
+  const sentenceBreak = Math.max(
+    text.lastIndexOf(". ", maxLength),
+    text.lastIndexOf("? ", maxLength),
+    text.lastIndexOf("! ", maxLength)
+  );
+  if (sentenceBreak > maxLength * 0.5) {
+    return sentenceBreak + 2;
+  }
+
+  // Look for line break
+  const lineBreak = text.lastIndexOf("\n", maxLength);
+  if (lineBreak > maxLength * 0.5) {
+    return lineBreak + 1;
+  }
+
+  // Fall back to word boundary
+  const wordBreak = text.lastIndexOf(" ", maxLength);
+  if (wordBreak > maxLength * 0.5) {
+    return wordBreak + 1;
+  }
+
+  // Last resort: hard break
+  return maxLength;
 }
 
 /**
