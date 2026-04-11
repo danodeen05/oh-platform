@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <!-- Background circle -->
+  <circle cx="50" cy="50" r="48" fill="#7C7A67"/>
+
+  <!-- Left chopstick -->
+  <g transform="rotate(-15, 50, 50)">
+    <rect x="30" y="15" width="6" height="60" rx="3" fill="#D4A574"/>
+    <rect x="30" y="15" width="6" height="12" rx="3" fill="#8B4513"/>
+    <!-- Left eye -->
+    <ellipse cx="33" cy="35" rx="2.5" ry="3" fill="#1a1a1a"/>
+    <circle cx="34" cy="34" r="1" fill="white"/>
+  </g>
+
+  <!-- Right chopstick -->
+  <g transform="rotate(15, 50, 50)">
+    <rect x="64" y="15" width="6" height="60" rx="3" fill="#D4A574"/>
+    <rect x="64" y="15" width="6" height="12" rx="3" fill="#8B4513"/>
+    <!-- Right eye -->
+    <ellipse cx="67" cy="35" rx="2.5" ry="3" fill="#1a1a1a"/>
+    <circle cx="68" cy="34" r="1" fill="white"/>
+  </g>
+
+  <!-- Smile -->
+  <path d="M 40 55 Q 50 65, 60 55" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+
+  <!-- Blush marks -->
+  <ellipse cx="35" cy="48" rx="4" ry="2.5" fill="#FFB6C1" opacity="0.6"/>
+  <ellipse cx="65" cy="48" rx="4" ry="2.5" fill="#FFB6C1" opacity="0.6"/>
+</svg>
