@@ -1582,10 +1582,33 @@ async function executeToolByName(name, input, context) {
 
       console.log("[CHAPPY] Using locationId:", applePayLocationId, "previousOrderId:", previousOrderId);
 
-      if (!applePayLocationId) {
+      // Handle location - might be ID or name
+      let resolvedLocationId = applePayLocationId;
+      if (applePayLocationId && !applePayLocationId.startsWith("cm")) {
+        // This looks like a name, not an ID - try to look it up
+        console.log("[CHAPPY] Location looks like a name, looking up:", applePayLocationId);
+        const location = await prisma.location.findFirst({
+          where: {
+            OR: [
+              { name: { contains: applePayLocationId, mode: "insensitive" } },
+              { city: { contains: applePayLocationId, mode: "insensitive" } },
+            ],
+          },
+        });
+        if (location) {
+          console.log("[CHAPPY] Found location by name:", location.name, location.id);
+          resolvedLocationId = location.id;
+        } else {
+          console.log("[CHAPPY] Could not find location by name:", applePayLocationId);
+          return { error: `Could not find location "${applePayLocationId}". Please specify a valid location.` };
+        }
+      }
+
+      if (!resolvedLocationId) {
         console.log("[CHAPPY] ERROR: No locationId provided");
         return { error: "Location is required for the order" };
       }
+
 
       // If previousOrderId provided, get items from that order
       if (previousOrderId) {
@@ -1595,8 +1618,17 @@ async function executeToolByName(name, input, context) {
           include: { items: true },
         });
         if (!previousOrder) {
+          // Check if the order exists but belongs to a different user
+          const orderExists = await prisma.order.findUnique({
+            where: { id: previousOrderId },
+            select: { id: true, userId: true },
+          });
+          if (orderExists) {
+            console.log("[CHAPPY] ERROR: Order exists but userId mismatch. Order userId:", orderExists.userId, "Request userId:", userId);
+            return { error: "Cannot access this order. Please start a new order." };
+          }
           console.log("[CHAPPY] ERROR: Previous order not found for id:", previousOrderId);
-          return { error: "Previous order not found" };
+          return { error: "Previous order not found. Please start a new order." };
         }
         console.log("[CHAPPY] Found previous order with", previousOrder.items.length, "items");
         applePayItems = previousOrder.items.map((i) => ({
@@ -1631,23 +1663,38 @@ async function executeToolByName(name, input, context) {
         return { error: "No items in order. Please specify what you'd like to order." };
       }
 
-      // Handle pod number string (e.g., "5" or "Pod 5") by looking up the actual seat ID
+      // Handle pod number string (e.g., "5", "05", or "Pod 5") by looking up the actual seat ID
       if (appleSeatId && !appleSeatId.startsWith("cm")) {
         // This looks like a pod number, not a seat ID - look it up
-        const podNumber = appleSeatId.replace(/[^0-9]/g, ""); // Extract just the number
-        console.log("[CHAPPY] Looking up seat by pod number:", podNumber, "at location:", applePayLocationId);
-        const seat = await prisma.seat.findFirst({
+        const rawNumber = appleSeatId.replace(/[^0-9]/g, ""); // Extract just the number
+        // Try both with and without leading zero (seats are stored as "01", "02", etc.)
+        const podNumberPadded = rawNumber.padStart(2, "0");
+        console.log("[CHAPPY] Looking up seat by pod number:", rawNumber, "or", podNumberPadded, "at location:", resolvedLocationId);
+
+        let seat = await prisma.seat.findFirst({
           where: {
-            locationId: applePayLocationId,
-            number: podNumber,
+            locationId: resolvedLocationId,
+            number: podNumberPadded,
             status: "AVAILABLE",
           },
         });
+
+        // Try without padding if not found
+        if (!seat && rawNumber !== podNumberPadded) {
+          seat = await prisma.seat.findFirst({
+            where: {
+              locationId: resolvedLocationId,
+              number: rawNumber,
+              status: "AVAILABLE",
+            },
+          });
+        }
+
         if (seat) {
-          console.log("[CHAPPY] Found seat ID:", seat.id, "for pod", podNumber);
+          console.log("[CHAPPY] Found seat ID:", seat.id, "for pod", seat.number);
           appleSeatId = seat.id;
         } else {
-          console.log("[CHAPPY] Pod", podNumber, "not found or not available");
+          console.log("[CHAPPY] Pod", rawNumber, "not found or not available");
           // Don't fail - just proceed without seat selection
           appleSeatId = null;
         }
@@ -1664,10 +1711,58 @@ async function executeToolByName(name, input, context) {
         where: { id: { in: applePayItems.map((i) => i.menuItemId) } },
       });
 
+      console.log("[CHAPPY] Found", menuItems.length, "menu items out of", applePayItems.length, "requested");
+
+      // Check for missing menu items before processing
+      const foundIds = new Set(menuItems.map((m) => m.id));
+      const missingItems = applePayItems.filter((i) => !foundIds.has(i.menuItemId));
+      if (missingItems.length > 0) {
+        console.log("[CHAPPY] Missing menu items:", missingItems.map((i) => i.menuItemId));
+
+        // Fallback: if user is logged in, try to get their most recent completed order instead
+        if (userId) {
+          console.log("[CHAPPY] Attempting fallback: using most recent completed order");
+          const fallbackOrder = await prisma.order.findFirst({
+            where: { userId, status: "COMPLETED" },
+            orderBy: { createdAt: "desc" },
+            include: { items: true },
+          });
+          if (fallbackOrder && fallbackOrder.items.length > 0) {
+            console.log("[CHAPPY] Using fallback order:", fallbackOrder.id, "with", fallbackOrder.items.length, "items");
+            applePayItems = fallbackOrder.items.map((i) => ({
+              menuItemId: i.menuItemId,
+              quantity: i.quantity,
+              selectedValue: i.selectedValue,
+            }));
+            // Re-fetch menu items for the new list
+            const fallbackMenuItems = await prisma.menuItem.findMany({
+              where: { id: { in: applePayItems.map((i) => i.menuItemId) } },
+            });
+            menuItems.length = 0;
+            menuItems.push(...fallbackMenuItems);
+          } else {
+            console.log("[CHAPPY] ERROR: Fallback failed, no completed orders found");
+            return {
+              error: `Some menu items are no longer available. Please start a new order.`,
+              missingItemIds: missingItems.map((i) => i.menuItemId),
+            };
+          }
+        } else {
+          return {
+            error: `Some menu items are no longer available. Please start a new order.`,
+            missingItemIds: missingItems.map((i) => i.menuItemId),
+          };
+        }
+      }
+
       let totalCents = 0;
       const itemsWithPrices = applePayItems.map((item) => {
         const menuItem = menuItems.find((m) => m.id === item.menuItemId);
-        if (!menuItem) throw new Error(`Menu item not found: ${item.menuItemId}`);
+        // This should never happen now due to the check above, but keep for safety
+        if (!menuItem) {
+          console.error("[CHAPPY] Unexpected: menu item not found after validation:", item.menuItemId);
+          return null;
+        }
 
         const priceCents = menuItem.basePriceCents * item.quantity;
         totalCents += priceCents;
@@ -1679,7 +1774,7 @@ async function executeToolByName(name, input, context) {
           selectedValue: item.selectedValue || null,
           name: menuItem.name,
         };
-      });
+      }).filter(Boolean);
 
       // Calculate tax (8.25% Utah state + local)
       const taxRate = 0.0825;
@@ -1715,7 +1810,7 @@ async function executeToolByName(name, input, context) {
 
       // Generate order numbers
       const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
-      const orderQrCode = `ORDER-${applePayLocationId.slice(-8)}-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+      const orderQrCode = `ORDER-${resolvedLocationId.slice(-8)}-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
 
       // Get kitchen order number
       const today = new Date();
@@ -1725,7 +1820,7 @@ async function executeToolByName(name, input, context) {
 
       const todaysOrderCount = await prisma.order.count({
         where: {
-          locationId: applePayLocationId,
+          locationId: resolvedLocationId,
           paymentStatus: "PAID",
           createdAt: { gte: today, lt: tomorrow },
         },
@@ -1747,7 +1842,7 @@ async function executeToolByName(name, input, context) {
           orderQrCode,
           kitchenOrderNumber,
           tenantId,
-          locationId: applePayLocationId,
+          locationId: resolvedLocationId,
           userId: userId || undefined,
           guestId: guestId || undefined,
           seatId: appleSeatId || null,
@@ -1783,7 +1878,7 @@ async function executeToolByName(name, input, context) {
         metadata: {
           orderId: pendingOrder.id,
           orderNumber: pendingOrder.orderNumber,
-          locationId: applePayLocationId,
+          locationId: resolvedLocationId,
           source: "chappy_apple_pay",
           userId: userId || "",
           guestId: guestId || "",
@@ -1804,7 +1899,7 @@ async function executeToolByName(name, input, context) {
       });
 
       // Get location name for display
-      const location = await prisma.location.findUnique({ where: { id: applePayLocationId } });
+      const location = await prisma.location.findUnique({ where: { id: resolvedLocationId } });
 
       return {
         success: true,
