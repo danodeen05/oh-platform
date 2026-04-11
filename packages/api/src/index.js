@@ -3302,6 +3302,104 @@ app.get("/orders", async (req, reply) => {
   return orders;
 });
 
+// Get order by order number (for payment page)
+app.get("/orders/by-number/:orderNumber", async (req, reply) => {
+  const { orderNumber } = req.params;
+
+  const order = await prisma.order.findFirst({
+    where: { orderNumber },
+    include: {
+      items: {
+        include: {
+          menuItem: true,
+        },
+      },
+      seat: true,
+      location: true,
+    },
+  });
+
+  if (!order) return reply.code(404).send({ error: "Order not found" });
+
+  // Calculate subtotal (total - tax)
+  const subtotalCents = order.totalCents - order.taxCents;
+
+  // If order is already paid, return success state
+  if (order.paymentStatus === "PAID") {
+    return {
+      id: order.id,
+      orderNumber: order.orderNumber,
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+      totalCents: order.totalCents,
+      taxCents: order.taxCents,
+      subtotalCents,
+      locationName: order.location?.name || "Unknown Location",
+      seatNumber: order.seat?.number || null,
+      items: order.items.map(item => ({
+        name: item.menuItem?.name || item.name || "Item",
+        quantity: item.quantity,
+        priceCents: item.priceCents,
+      })),
+      clientSecret: null,
+    };
+  }
+
+  // Create or retrieve Stripe payment intent
+  let clientSecret = null;
+  if (stripe && order.totalCents > 0) {
+    try {
+      // Check if we already have a payment intent
+      if (order.stripePaymentIntentId) {
+        const existingIntent = await stripe.paymentIntents.retrieve(order.stripePaymentIntentId);
+        if (existingIntent.status === "requires_payment_method" || existingIntent.status === "requires_confirmation") {
+          clientSecret = existingIntent.client_secret;
+        }
+      }
+
+      // Create new payment intent if needed
+      if (!clientSecret) {
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: order.totalCents,
+          currency: "usd",
+          metadata: {
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+          },
+        });
+
+        // Save payment intent ID to order
+        await prisma.order.update({
+          where: { id: order.id },
+          data: { stripePaymentIntentId: paymentIntent.id },
+        });
+
+        clientSecret = paymentIntent.client_secret;
+      }
+    } catch (err) {
+      console.error("Error creating payment intent:", err);
+    }
+  }
+
+  return {
+    id: order.id,
+    orderNumber: order.orderNumber,
+    status: order.status,
+    paymentStatus: order.paymentStatus,
+    totalCents: order.totalCents,
+    taxCents: order.taxCents,
+    subtotalCents,
+    locationName: order.location?.name || "Unknown Location",
+    seatNumber: order.seat?.number || null,
+    items: order.items.map(item => ({
+      name: item.menuItem?.name || item.name || "Item",
+      quantity: item.quantity,
+      priceCents: item.priceCents,
+    })),
+    clientSecret,
+  };
+});
+
 app.get("/orders/:id", async (req, reply) => {
   const { id } = req.params;
   const locale = getLocale(req);
@@ -4567,6 +4665,115 @@ app.post("/create-payment-intent", async (req, reply) => {
     reply.status(500).send({ error: error.message });
   }
 });
+
+// POST /payments/confirm - Confirm payment for SMS order link
+app.post("/payments/confirm", async (req, reply) => {
+  try {
+    const { orderNumber, paymentIntentId } = req.body;
+
+    if (!orderNumber || !paymentIntentId) {
+      return reply.status(400).send({ error: "orderNumber and paymentIntentId required" });
+    }
+
+    if (!stripe) {
+      return reply.status(500).send({ error: "Stripe is not configured" });
+    }
+
+    // Verify the payment intent succeeded
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+    if (paymentIntent.status !== "succeeded") {
+      return reply.status(400).send({ error: "Payment not completed" });
+    }
+
+    // Find and update the order
+    const order = await prisma.order.findFirst({
+      where: { orderNumber },
+      include: { location: true, seat: true },
+    });
+
+    if (!order) {
+      return reply.status(404).send({ error: "Order not found" });
+    }
+
+    // Determine if this is an ASAP order (arrival within 20 minutes)
+    const now = new Date();
+    const isASAP = order.estimatedArrival
+      ? (new Date(order.estimatedArrival).getTime() - now.getTime()) <= 20 * 60 * 1000
+      : true; // If no arrival time, treat as ASAP
+
+    const hasPodSelected = !!order.seatId;
+
+    // ASAP + pod selected → QUEUED (kitchen starts immediately)
+    // Scheduled for later OR no pod → PAID (customer checks in at kiosk)
+    const orderStatus = (isASAP && hasPodSelected) ? "QUEUED" : "PAID";
+
+    // Build update data - only include payment method details if available
+    const updateData = {
+      paymentStatus: "PAID",
+      status: orderStatus,
+      paidAt: new Date(),
+      stripePaymentId: paymentIntentId,
+    };
+
+    // Set queuedAt if going directly to QUEUED
+    if (orderStatus === "QUEUED") {
+      updateData.queuedAt = new Date();
+    }
+
+    // Try to get payment method details from the payment intent
+    // Note: charges may not be expanded, so we handle this gracefully
+    try {
+      if (paymentIntent.latest_charge) {
+        const charge = await stripe.charges.retrieve(paymentIntent.latest_charge);
+        if (charge.payment_method_details?.card) {
+          updateData.paymentMethodLast4 = charge.payment_method_details.card.last4;
+          updateData.paymentMethodBrand = charge.payment_method_details.card.brand;
+        }
+      }
+    } catch (chargeErr) {
+      console.log("Could not retrieve charge details:", chargeErr.message);
+    }
+
+    // If ASAP order with pod selected, set reservation expiry and reserve the seat
+    if (orderStatus === "QUEUED" && hasPodSelected) {
+      const expiryTime = new Date();
+      expiryTime.setMinutes(expiryTime.getMinutes() + 15); // 15-minute reservation
+      updateData.podReservationExpiry = expiryTime;
+      updateData.podAssignedAt = new Date();
+    }
+
+    // Update order payment status
+    const updatedOrder = await prisma.order.update({
+      where: { id: order.id },
+      data: updateData,
+    });
+
+    // Reserve the seat if ASAP + pod selected
+    if (orderStatus === "QUEUED" && hasPodSelected) {
+      await prisma.seat.update({
+        where: { id: order.seatId },
+        data: { status: "RESERVED" },
+      });
+      console.log(`[Payment Confirmed] Pod ${order.seat?.number} reserved for order ${orderNumber}`);
+    }
+
+    console.log(`[Payment Confirmed] Order ${orderNumber} paid via payment link, status: ${orderStatus}`);
+
+    return {
+      success: true,
+      orderNumber: updatedOrder.orderNumber,
+      paymentStatus: updatedOrder.paymentStatus,
+      status: orderStatus,
+      seatNumber: order.seat?.number || null,
+      locationName: order.location?.name || null,
+    };
+  } catch (error) {
+    console.error("Error confirming payment:", error);
+    return reply.status(500).send({ error: error.message });
+  }
+});
+
 // POST /guests - Create a guest session
 app.post("/guests", async (req, reply) => {
   const { name, phone, email } = req.body || {};
