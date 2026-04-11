@@ -14075,6 +14075,16 @@ import {
 } from "./chappy/agent.js";
 import { formatForRCS, formatForSMS, buildTwilioRCSMessage } from "./chappy/formatters/rcs.js";
 
+// Helper to escape XML special characters for TwiML
+function escapeXml(text) {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
 // SMS/RCS Webhook - Receives inbound messages from Twilio
 app.post("/chappy/sms", async (req, reply) => {
   try {
@@ -14137,16 +14147,22 @@ app.post("/chappy/sms", async (req, reply) => {
       prisma,
     });
 
-    // Format response for Twilio
-    const smsResponse = response.text || "Sorry, I couldn't process that. Try again?";
+    // Get messages array (supports multi-message responses)
+    const messages = response.messages || [response.text || "Sorry, I couldn't process that. Try again?"];
 
     // Log the conversation
-    console.log(`[Chappy SMS] ${phone}: "${Body}" -> "${smsResponse.substring(0, 50)}..."`);
+    console.log(`[Chappy SMS] ${phone}: "${Body}" -> ${messages.length} message(s), first: "${messages[0]?.substring(0, 50)}..."`);
+
+    // Build TwiML with multiple messages if needed
+    // Twilio sends them in order with slight delays
+    const messageElements = messages
+      .map((msg) => `<Message>${escapeXml(msg)}</Message>`)
+      .join("");
 
     // Return TwiML response
     return reply
       .type("text/xml")
-      .send(`<?xml version="1.0" encoding="UTF-8"?><Response><Message>${smsResponse}</Message></Response>`);
+      .send(`<?xml version="1.0" encoding="UTF-8"?><Response>${messageElements}</Response>`);
   } catch (error) {
     console.error("[Chappy SMS Error]", error);
     return reply

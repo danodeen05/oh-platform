@@ -593,6 +593,33 @@ Returns the previous order details for confirmation before creating new order.`,
   },
 
   {
+    name: "get_chefs_choice",
+    description: `Get the Chef's Choice quick order - a pre-configured bowl perfect for new customers or anyone wanting our recommended setup. Use when:
+- Customer asks for "Chef's Choice"
+- Customer says "chef's recommendation" or "chef's pick"
+- Customer is new and wants a suggested order
+- Customer asks "what do you recommend?" and wants to order quickly
+
+The Chef's Choice includes:
+- Classic Beef Noodle Soup ($15.99)
+- Wide noodles (our most popular)
+- Oh!'s recommended bowl configuration (medium broth richness, medium noodle texture, mild spice)
+- Standard toppings (bok choy, green onions, cilantro, sprouts)
+- Complimentary Mandarin Orange Sherbet
+
+Returns the configured items ready for ordering.`,
+    input_schema: {
+      type: "object",
+      properties: {
+        locationId: {
+          type: "string",
+          description: "Location ID. Uses context location if not provided.",
+        },
+      },
+    },
+  },
+
+  {
     name: "get_order_summary",
     description: `Build and display an order summary before payment. Use to show the customer what they're about to order with itemized prices, tax, and total.`,
     input_schema: {
@@ -1570,6 +1597,83 @@ async function executeToolByName(name, input, context) {
             quantity: i.quantity,
             selectedValue: i.selectedValue,
           })),
+      };
+    }
+
+    case "get_chefs_choice": {
+      console.log("[CHAPPY] get_chefs_choice called");
+      const chefsChoiceLocationId = input.locationId || locationId;
+
+      // Find the menu items for Chef's Choice
+      // Classic Beef Noodle Soup + Wide Noodles + recommended config + Mandarin Orange Sherbet
+      const classicSoup = await prisma.menuItem.findFirst({
+        where: { name: { contains: "Classic Beef Noodle Soup" }, isAvailable: true },
+      });
+      const wideNoodles = await prisma.menuItem.findFirst({
+        where: { name: { contains: "Wide Noodles" }, isAvailable: true },
+      });
+      const soupRichness = await prisma.menuItem.findFirst({
+        where: { name: { contains: "Soup Richness" }, isAvailable: true },
+      });
+      const noodleTexture = await prisma.menuItem.findFirst({
+        where: { name: { contains: "Noodle Texture" }, isAvailable: true },
+      });
+      const spiceLevel = await prisma.menuItem.findFirst({
+        where: { name: { contains: "Spice Level" }, isAvailable: true },
+      });
+      const bokChoy = await prisma.menuItem.findFirst({
+        where: { name: { contains: "Bok Choy" }, isAvailable: true },
+      });
+      const greenOnions = await prisma.menuItem.findFirst({
+        where: { name: { contains: "Green Onions" }, isAvailable: true },
+      });
+      const cilantro = await prisma.menuItem.findFirst({
+        where: { name: { contains: "Cilantro" }, isAvailable: true },
+      });
+      const sprouts = await prisma.menuItem.findFirst({
+        where: { name: { contains: "Sprouts" }, isAvailable: true },
+      });
+      const sherbet = await prisma.menuItem.findFirst({
+        where: { name: { contains: "Mandarin Orange Sherbet" }, isAvailable: true },
+      });
+
+      if (!classicSoup) {
+        return { error: "Chef's Choice items not available at this time." };
+      }
+
+      // Build the items array
+      const chefsChoiceItems = [
+        classicSoup && { menuItemId: classicSoup.id, name: classicSoup.name, quantity: 1, priceCents: classicSoup.basePriceCents },
+        wideNoodles && { menuItemId: wideNoodles.id, name: wideNoodles.name, quantity: 1, priceCents: 0, selectedValue: null },
+        soupRichness && { menuItemId: soupRichness.id, name: soupRichness.name, quantity: 1, priceCents: 0, selectedValue: "Medium" },
+        noodleTexture && { menuItemId: noodleTexture.id, name: noodleTexture.name, quantity: 1, priceCents: 0, selectedValue: "Medium" },
+        spiceLevel && { menuItemId: spiceLevel.id, name: spiceLevel.name, quantity: 1, priceCents: 0, selectedValue: "Mild" },
+        bokChoy && { menuItemId: bokChoy.id, name: bokChoy.name, quantity: 1, priceCents: 0 },
+        greenOnions && { menuItemId: greenOnions.id, name: greenOnions.name, quantity: 1, priceCents: 0 },
+        cilantro && { menuItemId: cilantro.id, name: cilantro.name, quantity: 1, priceCents: 0 },
+        sprouts && { menuItemId: sprouts.id, name: sprouts.name, quantity: 1, priceCents: 0 },
+        sherbet && { menuItemId: sherbet.id, name: sherbet.name, quantity: 1, priceCents: 0, note: "Complimentary" },
+      ].filter(Boolean);
+
+      const totalCents = chefsChoiceItems.reduce((sum, item) => sum + (item.priceCents || 0), 0);
+
+      return {
+        name: "Chef's Choice",
+        description: "Our recommended bowl for the perfect Oh! experience",
+        items: chefsChoiceItems,
+        totalCents,
+        totalFormatted: `$${(totalCents / 100).toFixed(2)}`,
+        includes: [
+          "Classic Beef Noodle Soup",
+          "Wide noodles (most popular)",
+          "Medium broth richness",
+          "Medium noodle texture",
+          "Mild spice level",
+          "Standard toppings (bok choy, green onions, cilantro, sprouts)",
+          "Complimentary Mandarin Orange Sherbet",
+        ],
+        readyToOrder: true,
+        message: "Chef's Choice is ready. This is our most popular configuration - $15.99 for the perfect bowl plus a complimentary sherbet. Want me to add this to your order?",
       };
     }
 
