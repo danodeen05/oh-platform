@@ -390,6 +390,7 @@ enum OrderSource {
   MOBILE // Order placed via native mobile app (future)
   STAFF // Order placed by staff on behalf of customer
   EVENT // Order placed for private event (e.g., CNY Party)
+  CHAPPY // Order placed via Chappy AI chat assistant
 }
 
 model OrderItem {
@@ -559,6 +560,9 @@ model User {
 
   // Saved Payment Methods
   savedPaymentMethods SavedPaymentMethod[]
+
+  // Agent Notifications
+  agentNotificationDevices AgentNotificationDevice[]
 }
 
 enum MembershipTier {
@@ -1394,4 +1398,168 @@ model SavedPaymentMethod {
   updatedAt DateTime @updatedAt
 
   @@index([userId])
+}
+
+// ==========================================
+// CHAPPY CHOPSTIX - AI CONVERSATION
+// ==========================================
+
+model ChappyConversation {
+  id         String @id @default(cuid())
+  identifier String // Phone number (SMS) or userId/guestId (web)
+  channel    String // "sms" | "rcs" | "web"
+
+  // Conversation state
+  messages Json   @default("[]") // Array of message objects
+  isActive Boolean @default(true)
+
+  // Context tracking
+  currentOrderId String? // Active order being discussed
+  locationId     String? // Location context
+
+  // Metadata
+  lastMessageAt DateTime?
+  messageCount  Int       @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([identifier, channel, isActive])
+  @@index([updatedAt])
+}
+
+// ==========================================
+// AUTONOMOUS AGENTS
+// ==========================================
+
+model AgentRun {
+  id     String @id @default(cuid())
+  userId String // User who initiated or owns this run
+
+  idea         String // Original idea/task description
+  status       String // pending, running, awaiting_approval, awaiting_answer, approved, rejected, completed, failed
+  currentPhase String // idea_submitted, ceo_review, specialist_review, architecture, implementation, code_review, completed, rejected
+  metadata     Json?  // Additional context
+
+  error       String? // Error message if failed
+  completedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  phases           AgentPhase[]
+  questions        AgentQuestion[]
+  approvalRequests AgentApprovalRequest[]
+  sessions         AgentSession[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model AgentPhase {
+  id    String @id @default(cuid())
+  runId String
+  run   AgentRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  phase     String // Phase name (ceo_review, specialist_review, etc.)
+  agentName String // Agent handling this phase
+  sessionId String? // Managed Agents session ID
+  status    String // running, completed, failed
+  result    Json?  // Phase result/output
+
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  @@index([runId])
+  @@index([phase])
+}
+
+model AgentSession {
+  id        String @id @default(cuid())
+  sessionId String @unique // Claude Managed Agents session ID
+  runId     String
+  run       AgentRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  agentName String
+  status    String // running, awaiting_approval, awaiting_answer, completed, error
+  task      String?
+  error     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([runId])
+  @@index([status])
+}
+
+model AgentQuestion {
+  id    String @id @default(cuid())
+  runId String
+  run   AgentRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  sessionId  String
+  questionId String // ID from Claude Managed Agents
+  question   String
+  options    Json?  // Array of options if multiple choice
+  status     String // pending, answered
+  answer     String?
+
+  createdAt  DateTime  @default(now())
+  answeredAt DateTime?
+
+  @@index([runId])
+  @@index([status])
+}
+
+model AgentApprovalRequest {
+  id    String @id @default(cuid())
+  runId String
+  run   AgentRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  sessionId String
+  type      String  // file_change, deploy, etc.
+  details   Json    // Change details
+  priority  String  // low, medium, high
+  status    String  // pending, approved, rejected
+  feedback  String? // User feedback
+
+  createdAt   DateTime  @default(now())
+  respondedAt DateTime?
+
+  @@index([runId])
+  @@index([status])
+}
+
+model AgentNotificationDevice {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  deviceId  String // Unique device identifier
+  pushToken String // APNs or FCM token
+  platform  String // ios, android
+  enabled   Boolean @default(true)
+
+  registeredAt DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([userId, deviceId])
+  @@index([userId])
+}
+
+model AgentNotificationLog {
+  id     String @id @default(cuid())
+  userId String
+
+  type    String  // approval_needed, question_asked, agent_completed, agent_error
+  message String
+  method  String  // push, sms, none
+  success Boolean
+
+  sentAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([type])
+  @@index([sentAt])
 }

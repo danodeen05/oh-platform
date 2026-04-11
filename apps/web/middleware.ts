@@ -12,6 +12,8 @@ const CNY_HOSTNAMES = ["cny.ohbeef.com", "cny.localhost"];
 const isProtectedRoute = createRouteMatcher([
   "/:locale/member(.*)",
   "/:locale/referral(.*)",
+  "/:locale/agents(.*)",
+  "/api/agents(.*)",
 ]);
 
 // Public routes (with locale prefix)
@@ -44,13 +46,27 @@ const isKioskRoute = createRouteMatcher(["/:locale/kiosk", "/:locale/kiosk/(.*)"
 // Check if this is a CNY route
 const isCNYRoute = createRouteMatcher(["/:locale/cny", "/:locale/cny/(.*)"]);
 
+// Check if this is an API route
+const isApiRoute = createRouteMatcher(["/api(.*)"]);
+
 export default clerkMiddleware(async (auth, request: NextRequest) => {
   const hostname = request.headers.get("host") || "";
+  const pathname = request.nextUrl.pathname;
+
+  // Handle API routes separately (no intl middleware, return 401 for unauthorized)
+  if (isApiRoute(request)) {
+    if (pathname.startsWith("/api/agents")) {
+      const { userId } = await auth();
+      if (!userId) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+    }
+    return NextResponse.next();
+  }
 
   // Handle CNY subdomain routing
   if (CNY_HOSTNAMES.some(h => hostname.startsWith(h.split(".")[0]))) {
     const url = request.nextUrl.clone();
-    const pathname = url.pathname;
 
     // If not already on a CNY path, redirect to CNY
     if (!pathname.includes("/cny")) {
@@ -88,7 +104,9 @@ export default clerkMiddleware(async (auth, request: NextRequest) => {
 
 export const config = {
   matcher: [
-    // Match all paths except static files and API routes
+    // Match all paths except static files and most API routes
     "/((?!_next|api|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest|mp4|webm|ogg|mov)).*)",
+    // Include agents API routes for authentication
+    "/api/agents/:path*",
   ],
 };

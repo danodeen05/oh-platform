@@ -58,6 +58,9 @@ import {
   sendPassUpdatePush,
   getAPNsEnvironment,
 } from "./wallet/apns-service.js";
+import { registerAutonomousRoutes } from "./autonomous/index.js";
+import { getScheduler } from "./triggers/index.js";
+import { getOrchestrator } from "./autonomous/index.js";
 
 const prisma = new PrismaClient();
 const app = Fastify({ logger: true });
@@ -96,6 +99,9 @@ await app.register(cors, {
   origin: true,
 });
 await app.register(formbody);
+
+// Register autonomous agent routes
+await registerAutonomousRoutes(app);
 
 const PORT = process.env.PORT || process.env.API_PORT || 4000;
 
@@ -4471,6 +4477,34 @@ app.post("/users", async (req, reply) => {
       },
     });
     return { ...user, referralJustApplied: true };
+  }
+
+  return user;
+});
+
+// Get user by email (for mapping Clerk ID to database ID)
+app.get("/users/by-email/:email", async (req, reply) => {
+  const { email } = req.params;
+
+  if (!email) {
+    return reply.code(400).send({ error: "Email required" });
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { email: decodeURIComponent(email) },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      membershipTier: true,
+      creditsCents: true,
+      currentStreak: true,
+      lifetimeOrderCount: true,
+    },
+  });
+
+  if (!user) {
+    return reply.code(404).send({ error: "User not found" });
   }
 
   return user;
@@ -14030,10 +14064,447 @@ app.post("/admin/party-invitations", async (request, reply) => {
 });
 
 // ====================
+// CHAPPY CHOPSTIX - AI ASSISTANT
+// ====================
+
+import {
+  handleChappyConversation,
+  handleChappyConversationStream,
+  resetConversation,
+  handleSpecialKeywords,
+} from "./chappy/agent.js";
+import { formatForRCS, formatForSMS, buildTwilioRCSMessage } from "./chappy/formatters/rcs.js";
+
+// SMS/RCS Webhook - Receives inbound messages from Twilio
+app.post("/chappy/sms", async (req, reply) => {
+  try {
+    const { From, Body, To, MessageSid } = req.body;
+
+    if (!From || !Body) {
+      return reply.status(400).send({ error: "Missing required fields" });
+    }
+
+    // Normalize phone number
+    const phone = From.replace(/\D/g, "");
+
+    // Check for special keywords (STOP, HELP, START)
+    const specialKeyword = handleSpecialKeywords(Body);
+    if (specialKeyword.handled) {
+      // Handle opt-out/opt-in in database
+      if (specialKeyword.action === "UNSUBSCRIBE") {
+        await prisma.user.updateMany({
+          where: { phone: { contains: phone } },
+          data: { smsOptIn: false },
+        });
+      } else if (specialKeyword.action === "RESUBSCRIBE") {
+        await prisma.user.updateMany({
+          where: { phone: { contains: phone } },
+          data: { smsOptIn: true, smsOptInDate: new Date() },
+        });
+      }
+
+      // Send response via Twilio
+      return reply
+        .type("text/xml")
+        .send(`<?xml version="1.0" encoding="UTF-8"?><Response><Message>${specialKeyword.response}</Message></Response>`);
+    }
+
+    // Get tenant
+    const tenant = await prisma.tenant.findUnique({
+      where: { slug: "oh" },
+    });
+
+    // Find user by phone
+    const user = await prisma.user.findFirst({
+      where: { phone: { contains: phone } },
+    });
+
+    // Get default location
+    const location = await prisma.location.findFirst({
+      where: { tenantId: tenant.id },
+    });
+
+    // Handle conversation with Chappy
+    const response = await handleChappyConversation({
+      channel: "sms", // Will upgrade to RCS when detected
+      identifier: phone,
+      message: Body,
+      context: {
+        user,
+        location,
+        tenantId: tenant.id,
+      },
+      prisma,
+    });
+
+    // Format response for Twilio
+    const smsResponse = response.text || "Sorry, I couldn't process that. Try again?";
+
+    // Log the conversation
+    console.log(`[Chappy SMS] ${phone}: "${Body}" -> "${smsResponse.substring(0, 50)}..."`);
+
+    // Return TwiML response
+    return reply
+      .type("text/xml")
+      .send(`<?xml version="1.0" encoding="UTF-8"?><Response><Message>${smsResponse}</Message></Response>`);
+  } catch (error) {
+    console.error("[Chappy SMS Error]", error);
+    return reply
+      .type("text/xml")
+      .send(`<?xml version="1.0" encoding="UTF-8"?><Response><Message>Oops! Something went wrong. Try again in a moment. - Chappy</Message></Response>`);
+  }
+});
+
+// Web Chat API - For in-app chat widget
+app.post("/chappy/chat", async (req, reply) => {
+  try {
+    const { message, userId, guestId, locationId, sessionId } = req.body;
+
+    if (!message) {
+      return reply.status(400).send({ error: "Message is required" });
+    }
+
+    // Get user context if logged in
+    let user = null;
+    let guest = null;
+    let identifier = sessionId || "anonymous";
+
+    if (userId) {
+      user = await prisma.user.findUnique({
+        where: { id: userId },
+      });
+      identifier = userId;
+    } else if (guestId) {
+      guest = await prisma.guest.findUnique({
+        where: { id: guestId },
+      });
+      identifier = guestId;
+    }
+
+    // Get tenant
+    const tenant = await prisma.tenant.findUnique({
+      where: { slug: "oh" },
+    });
+
+    // Get location context
+    let location = null;
+    if (locationId) {
+      location = await prisma.location.findUnique({
+        where: { id: locationId },
+      });
+    } else {
+      // Default to first location
+      location = await prisma.location.findFirst({
+        where: { tenantId: tenant.id },
+      });
+    }
+
+    // Handle conversation with Chappy
+    const response = await handleChappyConversation({
+      channel: "web",
+      identifier,
+      message,
+      context: {
+        user,
+        guest,
+        location,
+        tenantId: tenant.id,
+      },
+      prisma,
+    });
+
+    return reply.send({
+      success: true,
+      message: response,
+    });
+  } catch (error) {
+    console.error("[Chappy Web Error]", error);
+    return reply.status(500).send({
+      success: false,
+      error: "Failed to process message",
+      message: {
+        type: "web",
+        text: "Hmm, something went wrong on my end. Let me try again... - Chappy",
+        sender: "chappy",
+        timestamp: new Date().toISOString(),
+      },
+    });
+  }
+});
+
+// Web Chat Streaming API - Server-Sent Events for real-time responses
+app.get("/chappy/chat/stream", async (req, reply) => {
+  try {
+    const { message, userId, guestId, locationId, sessionId } = req.query;
+
+    if (!message) {
+      return reply.status(400).send({ error: "Message is required" });
+    }
+
+    // Get user context if logged in
+    let user = null;
+    let guest = null;
+    let identifier = sessionId || "anonymous";
+
+    if (userId) {
+      user = await prisma.user.findUnique({
+        where: { id: userId },
+      });
+      identifier = userId;
+    } else if (guestId) {
+      guest = await prisma.guest.findUnique({
+        where: { id: guestId },
+      });
+      identifier = guestId;
+    }
+
+    // Get tenant
+    const tenant = await prisma.tenant.findUnique({
+      where: { slug: "oh" },
+    });
+
+    // Get location context
+    let location = null;
+    if (locationId) {
+      location = await prisma.location.findUnique({
+        where: { id: locationId },
+      });
+    } else {
+      location = await prisma.location.findFirst({
+        where: { tenantId: tenant.id },
+      });
+    }
+
+    // Set up SSE headers (X-Accel-Buffering disables nginx proxy buffering)
+    reply.raw.writeHead(200, {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      "Connection": "keep-alive",
+      "X-Accel-Buffering": "no",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Headers": "Content-Type",
+    });
+
+    // Helper to send SSE events with immediate flush
+    const sendEvent = (type, data) => {
+      reply.raw.write(`event: ${type}\ndata: ${JSON.stringify(data)}\n\n`);
+      if (reply.raw.flush) reply.raw.flush();
+    };
+
+    // Stream the response
+    const streamGenerator = handleChappyConversationStream({
+      channel: "web",
+      identifier,
+      message: decodeURIComponent(message),
+      context: {
+        user,
+        guest,
+        location,
+        tenantId: tenant.id,
+      },
+      prisma,
+    });
+
+    for await (const chunk of streamGenerator) {
+      sendEvent(chunk.type, chunk.data);
+    }
+
+    // Close the connection
+    reply.raw.end();
+  } catch (error) {
+    console.error("[Chappy Stream Error]", error);
+
+    // Try to send error event if connection is still open
+    try {
+      reply.raw.write(`event: error\ndata: ${JSON.stringify({ message: "Something went wrong. Please try again." })}\n\n`);
+      reply.raw.end();
+    } catch (e) {
+      // Connection already closed
+    }
+  }
+});
+
+// Get conversation history (for web chat)
+app.get("/chappy/history", async (req, reply) => {
+  try {
+    const { userId, guestId, sessionId } = req.query;
+    const identifier = userId || guestId || sessionId;
+
+    if (!identifier) {
+      return reply.status(400).send({ error: "Identifier required" });
+    }
+
+    const conversation = await prisma.chappyConversation.findFirst({
+      where: {
+        identifier,
+        channel: "web",
+        isActive: true,
+      },
+      orderBy: { updatedAt: "desc" },
+    });
+
+    if (!conversation) {
+      return reply.send({
+        messages: [],
+        isNew: true,
+      });
+    }
+
+    // Format messages for display
+    const messages = (conversation.messages || []).map((msg) => ({
+      role: msg.role,
+      content: typeof msg.content === "string" ? msg.content : msg.content?.[0]?.text || "",
+      timestamp: msg.timestamp,
+    }));
+
+    return reply.send({
+      messages,
+      isNew: false,
+    });
+  } catch (error) {
+    console.error("[Chappy History Error]", error);
+    return reply.status(500).send({ error: "Failed to get history" });
+  }
+});
+
+// Clear conversation (start fresh)
+app.post("/chappy/reset", async (req, reply) => {
+  try {
+    const { userId, guestId, sessionId, channel = "web" } = req.body;
+    const identifier = userId || guestId || sessionId;
+
+    if (!identifier) {
+      return reply.status(400).send({ error: "Identifier required" });
+    }
+
+    await resetConversation(prisma, identifier, channel);
+
+    return reply.send({
+      success: true,
+      message: "Conversation reset. Ready for a fresh start!",
+    });
+  } catch (error) {
+    console.error("[Chappy Reset Error]", error);
+    return reply.status(500).send({ error: "Failed to reset conversation" });
+  }
+});
+
+// Confirm Apple Pay payment and complete order
+app.post("/chappy/confirm-payment", async (req, reply) => {
+  try {
+    const { orderId, paymentIntentId } = req.body;
+
+    if (!orderId || !paymentIntentId) {
+      return reply.status(400).send({ error: "orderId and paymentIntentId required" });
+    }
+
+    // Find the pending order
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        items: { include: { menuItem: true } },
+        location: true,
+        seat: true,
+        user: true,
+      },
+    });
+
+    if (!order) {
+      return reply.status(404).send({ error: "Order not found" });
+    }
+
+    if (order.paymentStatus === "PAID") {
+      // Already paid, return success
+      return reply.send({
+        success: true,
+        alreadyPaid: true,
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        kitchenOrderNumber: order.kitchenOrderNumber,
+      });
+    }
+
+    // Verify the payment intent with Stripe
+    const Stripe = (await import("stripe")).default;
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+    if (paymentIntent.status !== "succeeded") {
+      return reply.status(400).send({
+        error: "Payment not completed",
+        status: paymentIntent.status,
+      });
+    }
+
+    // Verify payment intent matches order
+    if (paymentIntent.metadata.orderId !== orderId) {
+      return reply.status(400).send({ error: "Payment intent does not match order" });
+    }
+
+    // Update order to PAID
+    const updatedOrder = await prisma.order.update({
+      where: { id: orderId },
+      data: {
+        paymentStatus: "PAID",
+        status: "PAID",
+        stripePaymentId: paymentIntentId,
+        podAssignedAt: order.seatId ? new Date() : null,
+      },
+      include: {
+        items: { include: { menuItem: true } },
+        location: true,
+        seat: true,
+      },
+    });
+
+    // Apply credits if user had any applied
+    if (order.userId && order.user?.creditsCents > 0) {
+      const creditsApplied = Math.min(500, order.user.creditsCents);
+      if (creditsApplied > 0) {
+        await prisma.user.update({
+          where: { id: order.userId },
+          data: { creditsCents: { decrement: creditsApplied } },
+        });
+      }
+    }
+
+    // Mark seat as occupied if one was selected
+    if (order.seatId) {
+      await prisma.seat.update({
+        where: { id: order.seatId },
+        data: { status: "OCCUPIED" },
+      });
+    }
+
+    return reply.send({
+      success: true,
+      orderId: updatedOrder.id,
+      orderNumber: updatedOrder.orderNumber,
+      kitchenOrderNumber: updatedOrder.kitchenOrderNumber,
+      total: `$${(updatedOrder.totalCents / 100).toFixed(2)}`,
+      location: updatedOrder.location.name,
+      podNumber: updatedOrder.seat?.number || null,
+      estimatedArrival: updatedOrder.estimatedArrival?.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
+      message: updatedOrder.seat
+        ? `Order confirmed! Head to Pod ${updatedOrder.seat.number} at ${updatedOrder.location.name}.`
+        : `Order confirmed! Head to ${updatedOrder.location.name} and check in when you arrive.`,
+      items: updatedOrder.items.map((i) => ({
+        name: i.menuItem.name,
+        quantity: i.quantity,
+      })),
+    });
+  } catch (error) {
+    console.error("[Chappy Confirm Payment Error]", error);
+    return reply.status(500).send({ error: "Failed to confirm payment" });
+  }
+});
+
+// ====================
 // START SERVER
 // ====================
 
-app.listen({ port: PORT, host: "0.0.0.0" }, (err) => {
+app.listen({ port: PORT, host: "0.0.0.0" }, async (err) => {
   if (err) {
     app.log.error(err);
     process.exit(1);
@@ -14046,4 +14517,26 @@ app.listen({ port: PORT, host: "0.0.0.0" }, (err) => {
 
   // Initialize wallet pass availability tracking
   initializeAvailabilityTracking();
+
+  // Initialize autonomous agent orchestrator
+  try {
+    const orchestrator = getOrchestrator();
+    await orchestrator.initialize();
+    console.log('✓ Autonomous orchestrator initialized');
+  } catch (error) {
+    console.warn('⚠ Autonomous orchestrator initialization skipped:', error.message);
+  }
+
+  // Start scheduler if Redis is configured
+  if (process.env.REDIS_URL) {
+    try {
+      const scheduler = getScheduler();
+      await scheduler.startAll();
+      console.log('✓ Autonomous scheduler started');
+    } catch (error) {
+      console.warn('⚠ Autonomous scheduler not started:', error.message);
+    }
+  } else {
+    console.log('ℹ Autonomous scheduler disabled (REDIS_URL not set)');
+  }
 });
