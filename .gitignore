@@ -39,3 +39,22 @@ Thumbs.db
 .vercel
 .env.production
 PRODUCTION_CREDENTIALS.md
+
+# Logs
+*.log
+
+# Screenshots and test artifacts
+*.png
+playwright-report/
+test-results/
+.playwright-mcp/
+
+# Apple resource forks
+._*
+
+# MCP config
+.mcp.json
+
+# Backup files
+*.backup
+*.broken
