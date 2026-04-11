@@ -325,8 +325,9 @@ model Order {
   groupOrder   GroupOrder? @relation(fields: [groupOrderId], references: [id])
   isGroupHost  Boolean     @default(false)
 
-  paymentStatus   PaymentStatus @default(PENDING)
-  stripePaymentId String?
+  paymentStatus        PaymentStatus @default(PENDING)
+  stripePaymentId      String?
+  stripePaymentIntentId String? // For payment link flow (SMS orders)
 
   // Payment method info (for receipts)
   paymentMethodLast4 String? // Last 4 digits of card

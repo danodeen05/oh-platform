@@ -137,8 +137,26 @@ function getChannelPrompt(channel) {
 - Keep messages SHORT - under 160 characters when possible, max 320
 - No rich formatting - use simple text and emojis sparingly
 - For menus, list top 3-4 items max
-- For payments, send a payment link
-- Break long responses into multiple messages if needed`;
+- Break long responses into multiple messages if needed
+- IMPORTANT: Be concise! Don't use too many tools in one turn - the webhook can timeout
+
+PAYMENT IN SMS (critical - READ CAREFULLY):
+- You CANNOT show Apple Pay buttons in SMS - it's text only
+- After creating the order with create_apple_pay_order, the tool response includes BOTH "orderId" and "orderNumber"
+- You MUST use BOTH values to build the payment URL
+
+CORRECT payment URL format (USE THIS EXACT FORMAT):
+ohbeef.com/order/payment?orderId={orderId}&orderNumber={orderNumber}
+
+Example with real values:
+"Pay at ohbeef.com/order/payment?orderId=cmnxyz123&orderNumber=ORD-123456"
+
+WRONG formats (NEVER USE THESE):
+- /pay/ORD-xxx (WRONG - this page doesn't exist!)
+- /pay/{orderNumber} (WRONG!)
+- Any URL without BOTH orderId AND orderNumber query params (WRONG!)
+
+Keep payment instructions SHORT but ALWAYS include the correct URL with both parameters.`;
 
     case "web":
       return `CHANNEL: Web Chat
