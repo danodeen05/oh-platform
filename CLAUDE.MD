@@ -233,29 +233,30 @@ Pods appear in Cleaning screen when:
 
 ## Production Database (Railway)
 ```
-DATABASE_URL=postgresql://postgres:kSmXgCyAMdHNuATuRYRTxxESkuyhkEHZ@postgres.railway.internal:5432/railway
-DATABASE_PUBLIC_URL=postgresql://postgres:kSmXgCyAMdHNuATuRYRTxxESkuyhkEHZ@yamabiko.proxy.rlwy.net:55841/railway
+DATABASE_URL=postgresql://...  # Get from Railway dashboard - NEVER COMMIT
+DATABASE_PUBLIC_URL=postgresql://...  # Get from Railway dashboard - NEVER COMMIT
 ```
 - Use `DATABASE_URL` (internal) when running from within Railway
 - Use `DATABASE_PUBLIC_URL` (public) when running migrations locally
+- **SECURITY**: Always get credentials from Railway dashboard, never commit to git
 
 ## Development Environment Variables
 **IMPORTANT**: All development happens on the DigitalOcean cloud server (162.243.3.7).
 
 ```bash
 # Clerk Authentication (REQUIRED - prevents keyless mode warning)
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_YWR2YW5jZWQtc3F1aXJyZWwtNTUuY2xlcmsuYWNjb3VudHMuZGV2JA
-CLERK_SECRET_KEY=sk_test_Imh9fiIh2PGJ43Ztc0PXhOsZ1qNJpJLNuRiEF1cgRO
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...  # Get from Clerk dashboard
+CLERK_SECRET_KEY=sk_test_...  # Get from Clerk dashboard - NEVER COMMIT
 
 # API Configuration (CLOUD SERVER - NOT localhost)
 API_PORT=4000
 NEXT_PUBLIC_API_URL=https://devapi.ohbeef.com
 
 # Database (Railway - production)
-DATABASE_URL=postgresql://postgres:kSmXgCyAMdHNuATuRYRTxxESkuyhkEHZ@yamabiko.proxy.rlwy.net:55841/railway
+DATABASE_URL=postgresql://...  # Get from Railway dashboard - NEVER COMMIT
 
 # Stripe (test mode)
-STRIPE_SECRET_KEY=sk_test_51SX7kS1o2n32UrrMkLymiIMW6BXVHWXkZtrtruf6ufZJK2OYYHCaVv6e87GZl8kvDlGyvbVkiEslaQP4X2KMsIub00LVIzWigJ
+STRIPE_SECRET_KEY=sk_test_...  # Get from Stripe dashboard - NEVER COMMIT
 
 # File Paths (CLOUD SERVER)
 GA_SERVICE_ACCOUNT_PATH=/home/claude-user/projects/oh-platform/oh-beef-noodle-soup-0b9bc2bc522b.json
@@ -602,7 +603,7 @@ Twilio credentials are stored in environment variables. See `.env.example` for r
 
 **Configuration:**
 ```bash
-RESEND_API_KEY=re_BDt8e6GB_47FMmrrxfo2HZGoZ5MSYW57S
+RESEND_API_KEY=re_...  # Set in .env file, never commit actual keys
 FROM_EMAIL=onboarding@resend.dev  # Change after domain verification
 ```
 
