@@ -26,8 +26,11 @@ const DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"];
 const ORDER_OPEN_OFFSET_MINUTES = -60; // Opens 1 hour early
 const ORDER_CLOSE_OFFSET_MINUTES = -15; // Closes 15 min before restaurant
 
+// Global bypass - set DISABLE_TIME_RESTRICTIONS=true to bypass all time checks
+const GLOBAL_TIME_BYPASS = process.env.DISABLE_TIME_RESTRICTIONS === "true";
+
 // Locations that bypass time restrictions (for testing)
-// Can be set via environment variable as comma-separated slugs
+// Can be set via environment variable as comma-separated slugs/names
 const BYPASS_TIME_RESTRICTIONS = (process.env.BYPASS_TIME_RESTRICTIONS || "")
   .split(",")
   .map(s => s.trim().toLowerCase())
@@ -37,6 +40,9 @@ const BYPASS_TIME_RESTRICTIONS = (process.env.BYPASS_TIME_RESTRICTIONS || "")
  * Check if a location should bypass time restrictions
  */
 function shouldBypassTimeRestrictions(location) {
+  // Global bypass for all locations
+  if (GLOBAL_TIME_BYPASS) return true;
+
   if (!location) return false;
   const slug = (location.slug || "").toLowerCase();
   const name = (location.name || "").toLowerCase().replace(/\s+/g, "-");
