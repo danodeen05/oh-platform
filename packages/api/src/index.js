@@ -101,6 +101,8 @@ const allowedOrigins = [
   'https://ohbeef.com',
   'https://www.ohbeef.com',
   'https://admin.ohbeef.com',
+  'https://devadmin.ohbeef.com',
+  'https://devweb.ohbeef.com',
   'https://devapi.ohbeef.com',
   'https://api.ohbeef.com',
   // Development origins
