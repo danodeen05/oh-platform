@@ -12,9 +12,7 @@
     "next": "16.1.0",
     "qrcode.react": "^4.2.0",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
-  },
-  "devDependencies": {
+    "react-dom": "19.2.3",
     "typescript": "^5",
     "@types/node": "^20",
     "@types/react": "npm:types-react@19.0.0-rc.1",
