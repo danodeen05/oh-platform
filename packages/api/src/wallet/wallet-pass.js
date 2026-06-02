@@ -59,9 +59,13 @@ const TIER_CONFIG = {
  * Used to verify requests from Apple Wallet
  */
 export function generateAuthToken(userId) {
-  const secret = process.env.WALLET_AUTH_SECRET || 'default-wallet-secret';
+  const secret = process.env.WALLET_AUTH_SECRET;
+  if (!secret && process.env.NODE_ENV === 'production') {
+    throw new Error('WALLET_AUTH_SECRET must be set in production');
+  }
+  const effectiveSecret = secret || 'dev-wallet-secret-DO-NOT-USE-IN-PROD';
   return crypto
-    .createHmac('sha256', secret)
+    .createHmac('sha256', effectiveSecret)
     .update(userId)
     .digest('hex')
     .substring(0, 32);

@@ -27,7 +27,7 @@ const prisma = new PrismaClient();
 
 // Configuration
 const API_URL = process.env.API_URL || 'http://localhost:3001';
-const CRON_SECRET = process.env.CRON_SECRET || 'dev-cron-secret';
+const CRON_SECRET = process.env.CRON_SECRET || (process.env.NODE_ENV === 'production' ? (() => { throw new Error('CRON_SECRET must be set in production'); })() : 'dev-cron-secret-DO-NOT-USE-IN-PROD');
 
 /**
  * Run a cron job directly (for standalone service mode)

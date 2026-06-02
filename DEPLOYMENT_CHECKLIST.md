@@ -59,9 +59,9 @@ cd packages/api
 # Deploy using your platform's CLI
 ```
 
-**IMPORTANT**: Make sure all three services use the production DATABASE_URL:
+**IMPORTANT**: Make sure all three services use the production DATABASE_URL from your Railway dashboard.
 ```
-postgresql://postgres:REDACTED@postgres.railway.internal:5432/railway
+# Get DATABASE_URL from Railway dashboard - NEVER commit credentials to git
 ```
 
 ### Step 2: Verify Production Environment Variables
@@ -70,7 +70,7 @@ Ensure these are set in your production environment:
 
 **For all apps:**
 ```env
-DATABASE_URL="postgresql://postgres:REDACTED@postgres.railway.internal:5432/railway"
+DATABASE_URL="[get-from-railway-dashboard]"
 NEXT_PUBLIC_API_URL="https://your-api-domain.com"
 ```
 

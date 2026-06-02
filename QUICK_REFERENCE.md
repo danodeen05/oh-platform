@@ -62,7 +62,8 @@ CLERK_SECRET_KEY=sk_live_...
 ### Database Schema Mismatch
 ```bash
 cd packages/db
-DATABASE_URL="postgresql://postgres:REDACTED@REDACTED_HOST/railway" pnpm prisma db push --accept-data-loss
+DATABASE_URL="$DATABASE_URL" pnpm prisma db push --accept-data-loss
+# Use the DATABASE_URL from your .env file or Railway dashboard
 ```
 
 ### CORS Errors in Admin

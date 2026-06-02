@@ -24,6 +24,16 @@ yarn-error.log*
 # misc
 .DS_Store
 *.pem
+*.key
+*.p12
+*.p8
+*.jks
+
+# Credential files
+credentials.json
+service-account*.json
+*-service-account*.json
+check-prod-db.js
 
 # database
 *.db
