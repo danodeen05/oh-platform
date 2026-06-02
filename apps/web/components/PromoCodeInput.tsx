@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
-export type PromoScope = 'MENU' | 'SHOP' | 'GIFT_CARD';
+export type PromoScope = 'MENU' | 'SHOP' | 'GIFT_CARD' | 'CATERING';
 
 export interface AppliedPromo {
   id: string;

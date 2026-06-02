@@ -10,7 +10,9 @@
   "scripts": {
     "prisma": "prisma",
     "seed:prod": "tsx scripts/export-to-production.js",
-    "seed:prod:preview": "tsx scripts/preview-export.js"
+    "seed:prod:preview": "tsx scripts/preview-export.js",
+    "seed:catering-menu": "node prisma/seed-catering-menu.js",
+    "seed:leland-event": "node prisma/seed-leland-event.js"
   },
   "dependencies": {
     "@prisma/client": "5.19.1"

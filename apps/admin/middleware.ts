@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server'
 // Allowed admin email addresses
 const ALLOWED_ADMINS = [
   'danodeen@me.com',
+  'danodeen@gmail.com',
 ]
 
 const isPublicRoute = createRouteMatcher(['/sign-in(.*)', '/sign-up(.*)', '/unauthorized(.*)'])

@@ -29,12 +29,13 @@ model Tenant {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  locations    Location[]
-  menuItems    MenuItem[]
-  orders       Order[]
-  users        TenantUser[]
-  transactions PlatformTransaction[]
-  groupOrders  GroupOrder[]
+  locations      Location[]
+  menuItems      MenuItem[]
+  orders         Order[]
+  users          TenantUser[]
+  transactions   PlatformTransaction[]
+  groupOrders    GroupOrder[]
+  cateringEvents CateringEvent[]
 }
 
 enum SubscriptionStatus {
@@ -95,13 +96,14 @@ model Location {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  seats        Seat[]
-  orders       Order[]
-  stats        LocationStats?
-  waitQueue    WaitQueue[]
-  groupOrders  GroupOrder[]
-  mealGifts    MealGift[]
-  kioskDevices KioskDevice[]
+  seats         Seat[]
+  orders        Order[]
+  stats         LocationStats?
+  waitQueue     WaitQueue[]
+  groupOrders   GroupOrder[]
+  mealGifts     MealGift[]
+  kioskDevices  KioskDevice[]
+  cateringEvent CateringEvent?
 }
 
 model LocationStats {
@@ -314,10 +316,10 @@ model Order {
   user   User?   @relation(fields: [userId], references: [id])
 
   // Guest checkout (alternative to userId)
-  guestId    String?
-  guest      Guest?  @relation(fields: [guestId], references: [id])
-  guestName  String? // Store guest name directly for display (especially for EVENT orders)
-  guestPhone String? // Store guest phone for EVENT orders (for RSVP matching)
+  guestId     String?
+  guest       Guest?  @relation(fields: [guestId], references: [id])
+  guestName   String? // Store guest name directly for display (especially for EVENT orders)
+  guestPhone  String? // Store guest phone for EVENT orders (for RSVP matching)
   guestZodiac String? // Store guest zodiac animal for EVENT orders (e.g., "Rabbit", "Dragon")
 
   // Group order association
@@ -325,8 +327,8 @@ model Order {
   groupOrder   GroupOrder? @relation(fields: [groupOrderId], references: [id])
   isGroupHost  Boolean     @default(false)
 
-  paymentStatus        PaymentStatus @default(PENDING)
-  stripePaymentId      String?
+  paymentStatus         PaymentStatus @default(PENDING)
+  stripePaymentId       String?
   stripePaymentIntentId String? // For payment link flow (SMS orders)
 
   // Payment method info (for receipts)
@@ -355,6 +357,10 @@ model Order {
   promoCodeId        String?
   promoCode          PromoCode? @relation(fields: [promoCodeId], references: [id])
   promoDiscountCents Int        @default(0)
+
+  // Catering event association (for CATERING source attendee orders)
+  cateringEventId String?
+  cateringEvent   CateringEvent? @relation(fields: [cateringEventId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -391,6 +397,7 @@ enum OrderSource {
   MOBILE // Order placed via native mobile app (future)
   STAFF // Order placed by staff on behalf of customer
   EVENT // Order placed for private event (e.g., CNY Party)
+  CATERING // Order placed by an attendee at a catered event
   CHAPPY // Order placed via Chappy AI chat assistant
 }
 
@@ -1210,7 +1217,7 @@ model PromoCode {
   minimumOrderCents Int? // Minimum subtotal required
 
   // Validity Period
-  startsAt  DateTime @default(now())
+  startsAt  DateTime  @default(now())
   expiresAt DateTime?
 
   // Status
@@ -1224,10 +1231,11 @@ model PromoCode {
   updatedAt DateTime @updatedAt
 
   // Relations
-  usages     PromoCodeUsage[]
-  orders     Order[]
-  shopOrders ShopOrder[]
-  giftCards  GiftCard[]
+  usages           PromoCodeUsage[]
+  orders           Order[]
+  shopOrders       ShopOrder[]
+  giftCards        GiftCard[]
+  cateringBookings CateringBooking[]
 
   @@index([code])
   @@index([isActive, expiresAt])
@@ -1245,6 +1253,7 @@ enum PromoScope {
   MENU // Menu/dining orders only
   SHOP // E-commerce shop orders only
   GIFT_CARD // Gift card purchases only
+  CATERING // Catering booking deposits only
 }
 
 model PromoCodeUsage {
@@ -1257,9 +1266,10 @@ model PromoCodeUsage {
   guestId String?
 
   // What it was applied to (only one will be set)
-  orderId     String? // For menu orders
-  shopOrderId String? // For shop orders
-  giftCardId  String? // For gift card purchases
+  orderId           String? // For menu orders
+  shopOrderId       String? // For shop orders
+  giftCardId        String? // For gift card purchases
+  cateringBookingId String? // For catering booking deposits
 
   // Discount applied
   discountCents Int
@@ -1326,14 +1336,14 @@ model PartyInvitation {
   description String? // Additional details
 
   // Chinese New Year specific
-  zodiacYear   String? // "蛇年"
+  zodiacYear    String? // "蛇年"
   zodiacEnglish String? // "Year of the Snake"
 
   // Settings
   maxGuests        Int? // Maximum total guests allowed (null = unlimited)
   rsvpDeadline     DateTime? // RSVP cutoff date
-  allowPlusOnes    Boolean @default(true)
-  maxGuestsPerRsvp Int     @default(4) // Max guests per RSVP submission
+  allowPlusOnes    Boolean   @default(true)
+  maxGuestsPerRsvp Int       @default(4) // Max guests per RSVP submission
 
   isActive Boolean @default(true)
 
@@ -1344,7 +1354,7 @@ model PartyInvitation {
 }
 
 model PartyRSVP {
-  id          String          @id @default(cuid())
+  id           String          @id @default(cuid())
   invitationId String
   invitation   PartyInvitation @relation(fields: [invitationId], references: [id])
 
@@ -1372,9 +1382,9 @@ model PartyRSVP {
 }
 
 enum PartyRSVPStatus {
-  ATTENDING     // Will be there
+  ATTENDING // Will be there
   NOT_ATTENDING // Can't make it
-  MAYBE         // Tentative
+  MAYBE // Tentative
 }
 
 // ==========================================
@@ -1411,7 +1421,7 @@ model ChappyConversation {
   channel    String // "sms" | "rcs" | "web"
 
   // Conversation state
-  messages Json   @default("[]") // Array of message objects
+  messages Json    @default("[]") // Array of message objects
   isActive Boolean @default(true)
 
   // Context tracking
@@ -1440,7 +1450,7 @@ model AgentRun {
   idea         String // Original idea/task description
   status       String // pending, running, awaiting_approval, awaiting_answer, approved, rejected, completed, failed
   currentPhase String // idea_submitted, ceo_review, specialist_review, architecture, implementation, code_review, completed, rejected
-  metadata     Json?  // Additional context
+  metadata     Json? // Additional context
 
   error       String? // Error message if failed
   completedAt DateTime?
@@ -1459,7 +1469,7 @@ model AgentRun {
 }
 
 model AgentPhase {
-  id    String @id @default(cuid())
+  id    String   @id @default(cuid())
   runId String
   run   AgentRun @relation(fields: [runId], references: [id], onDelete: Cascade)
 
@@ -1467,7 +1477,7 @@ model AgentPhase {
   agentName String // Agent handling this phase
   sessionId String? // Managed Agents session ID
   status    String // running, completed, failed
-  result    Json?  // Phase result/output
+  result    Json? // Phase result/output
 
   startedAt   DateTime  @default(now())
   completedAt DateTime?
@@ -1477,8 +1487,8 @@ model AgentPhase {
 }
 
 model AgentSession {
-  id        String @id @default(cuid())
-  sessionId String @unique // Claude Managed Agents session ID
+  id        String   @id @default(cuid())
+  sessionId String   @unique // Claude Managed Agents session ID
   runId     String
   run       AgentRun @relation(fields: [runId], references: [id], onDelete: Cascade)
 
@@ -1495,14 +1505,14 @@ model AgentSession {
 }
 
 model AgentQuestion {
-  id    String @id @default(cuid())
+  id    String   @id @default(cuid())
   runId String
   run   AgentRun @relation(fields: [runId], references: [id], onDelete: Cascade)
 
   sessionId  String
   questionId String // ID from Claude Managed Agents
   question   String
-  options    Json?  // Array of options if multiple choice
+  options    Json? // Array of options if multiple choice
   status     String // pending, answered
   answer     String?
 
@@ -1514,15 +1524,15 @@ model AgentQuestion {
 }
 
 model AgentApprovalRequest {
-  id    String @id @default(cuid())
+  id    String   @id @default(cuid())
   runId String
   run   AgentRun @relation(fields: [runId], references: [id], onDelete: Cascade)
 
   sessionId String
-  type      String  // file_change, deploy, etc.
-  details   Json    // Change details
-  priority  String  // low, medium, high
-  status    String  // pending, approved, rejected
+  type      String // file_change, deploy, etc.
+  details   Json // Change details
+  priority  String // low, medium, high
+  status    String // pending, approved, rejected
   feedback  String? // User feedback
 
   createdAt   DateTime  @default(now())
@@ -1553,9 +1563,9 @@ model AgentNotificationLog {
   id     String @id @default(cuid())
   userId String
 
-  type    String  // approval_needed, question_asked, agent_completed, agent_error
+  type    String // approval_needed, question_asked, agent_completed, agent_error
   message String
-  method  String  // push, sms, none
+  method  String // push, sms, none
   success Boolean
 
   sentAt DateTime @default(now())
@@ -1563,4 +1573,188 @@ model AgentNotificationLog {
   @@index([userId])
   @@index([type])
   @@index([sentAt])
+}
+
+// ==========================================
+// CATERING
+// ==========================================
+
+model CateringEvent {
+  id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  // Each event gets its own Location row so the existing Order/kitchen pipeline works unchanged
+  locationId String   @unique
+  location   Location @relation(fields: [locationId], references: [id])
+
+  slug      String @unique // used in shareable attendee URLs: /catering/e/{slug}
+  eventCode String @unique // passed to /orders/event (mirrors CNY eventCode)
+
+  // Client / booking party
+  clientCompany String
+  clientWebsite String?
+  contactName   String?
+  contactEmail  String?
+  contactPhone  String?
+
+  // Scheduling
+  eventDate DateTime // event start (date + slot time baked in)
+  slot      CateringSlot
+
+  // Pricing & sizing (cents)
+  pricePerBowlCents Int @default(2499)
+  minimumBowls      Int @default(10)
+  bookedBowls       Int @default(0)
+
+  status CateringEventStatus @default(PLANNING)
+
+  // AI enrichment / co-branding (owner-approved before going LIVE)
+  eventName          String?
+  logoUrl            String?
+  brandColors        String[] @default([])
+  companyDescription String?
+  enrichmentRaw      Json?
+
+  // AI shopping list (cached)
+  shoppingList   Json?
+  shoppingListAt DateTime?
+
+  notes String?
+
+  booking CateringBooking?
+  rsvps   CateringRSVP[]
+  orders  Order[]
+  charges CateringCharge[]
+  survey  CateringSurvey?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([eventDate])
+}
+
+enum CateringSlot {
+  LUNCH
+  DINNER
+}
+
+enum CateringEventStatus {
+  PLANNING // created, not yet enriched
+  ENRICHING // AI enrichment running
+  NEEDS_REVIEW // AI suggestions ready for owner approval
+  LIVE // approved and attendee-facing
+  COMPLETED // event finished
+}
+
+model CateringBooking {
+  id      String        @id @default(cuid())
+  eventId String        @unique
+  event   CateringEvent @relation(fields: [eventId], references: [id])
+
+  bowlsBooked Int
+  priceCents  Int // total deposit charged at booking (bowls * pricePerBowl - discount)
+  paidCents   Int @default(0)
+
+  paymentStatus         CateringBookingStatus @default(PENDING)
+  stripePaymentIntentId String?
+
+  promoCodeId String?
+  promoCode   PromoCode? @relation(fields: [promoCodeId], references: [id])
+
+  // Unguessable token for the no-login client dashboard
+  bookingToken String @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum CateringBookingStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+model CateringRSVP {
+  id      String        @id @default(cuid())
+  eventId String
+  event   CateringEvent @relation(fields: [eventId], references: [id])
+
+  name   String
+  phone  String
+  dob    String? // MM/DD/YYYY, optional (for digital fortune cookie / zodiac)
+  zodiac String?
+
+  // Token stored in the browser remember-me cookie
+  rememberToken String @unique @default(cuid())
+
+  createdAt DateTime @default(now())
+
+  @@unique([eventId, phone])
+  @@index([eventId])
+}
+
+model CateringCharge {
+  id      String        @id @default(cuid())
+  eventId String
+  event   CateringEvent @relation(fields: [eventId], references: [id])
+
+  type        CateringChargeType @default(OVERAGE)
+  bowlCount   Int
+  amountCents Int
+
+  stripeInvoiceId String?
+  invoiceUrl      String?
+  status          CateringChargeStatus @default(DRAFT)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([eventId])
+}
+
+enum CateringChargeType {
+  OVERAGE
+}
+
+enum CateringChargeStatus {
+  DRAFT
+  SENT
+  PAID
+  VOID
+}
+
+model CateringSurvey {
+  id      String        @id @default(cuid())
+  eventId String        @unique
+  event   CateringEvent @relation(fields: [eventId], references: [id])
+
+  overallScore Float? // rolled-up average
+  aiSummary    String? // AI summary of comments / areas to improve
+  summarizedAt DateTime?
+
+  responses CateringSurveyResponse[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CateringSurveyResponse {
+  id       String         @id @default(cuid())
+  surveyId String
+  survey   CateringSurvey @relation(fields: [surveyId], references: [id])
+
+  // Optional linkage to who responded
+  guestName   String?
+  guestPhone  String?
+  orderQrCode String?
+
+  overallScore Int // 1-5
+  areaScores   Json // { food: 5, speed: 4, experience: 5, recommend: 5 }
+  comment      String?
+
+  createdAt DateTime @default(now())
+
+  @@index([surveyId])
 }

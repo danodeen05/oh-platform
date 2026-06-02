@@ -20,6 +20,7 @@ const navItems: NavItem[] = [
   { href: "/shop-orders", label: "Shop Orders", highlight: true },
   { href: "/promos", label: "Promos" },
   { href: "/gift-cards", label: "Gift Cards" },
+  { href: "/catering", label: "Catering" },
   { href: "/locations", label: "Locations" },
 ];
 

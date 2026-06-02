@@ -38,6 +38,8 @@ const isPublicRoute = createRouteMatcher([
   "/:locale/kiosk/(.*)",
   "/:locale/cny",
   "/:locale/cny/(.*)",
+  "/:locale/catering",
+  "/:locale/catering/(.*)",
 ]);
 
 // Check if this is a kiosk route (excludes kiosk-unauthorized)
@@ -45,6 +47,8 @@ const isKioskRoute = createRouteMatcher(["/:locale/kiosk", "/:locale/kiosk/(.*)"
 
 // Check if this is a CNY route
 const isCNYRoute = createRouteMatcher(["/:locale/cny", "/:locale/cny/(.*)"]);
+
+const isCateringRoute = createRouteMatcher(["/:locale/catering", "/:locale/catering/(.*)"]);
 
 // Check if this is an API route
 const isApiRoute = createRouteMatcher(["/api(.*)"]);
@@ -94,8 +98,8 @@ export default clerkMiddleware(async (auth, request: NextRequest) => {
     await auth.protect();
   }
 
-  // Set x-pathname header for kiosk and CNY detection in layout
-  if (isKioskRoute(request) || isCNYRoute(request)) {
+  // Set x-pathname header for kiosk, CNY, and catering detection in layout
+  if (isKioskRoute(request) || isCNYRoute(request) || isCateringRoute(request)) {
     response.headers.set("x-pathname", request.nextUrl.pathname);
   }
 

@@ -16,6 +16,12 @@ export default function HomePage() {
     statusMessage: string | null;
     nextOpen?: { orderingOpens: string; dayName: string };
   } | null>(null);
+  // When dine-in ordering is turned off (catering mode), the home CTA becomes
+  // "Book Catering". Driven by the admin Order-Now toggle (public read), with an
+  // env fallback so it works even before the API responds.
+  const [dineInEnabled, setDineInEnabled] = useState<boolean>(
+    process.env.NEXT_PUBLIC_ORDER_NOW_ENABLED !== "false"
+  );
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY);
@@ -46,6 +52,22 @@ export default function HomePage() {
     // Refresh every 60 seconds
     const interval = setInterval(fetchAvailability, 60000);
     return () => clearInterval(interval);
+  }, []);
+
+  // Fetch the dine-in / catering-mode flag (admin toggle, public read)
+  useEffect(() => {
+    async function fetchFlag() {
+      try {
+        const res = await fetch(`${BASE}/catering/site-config/order-now`);
+        if (res.ok) {
+          const data = await res.json();
+          if (typeof data.enabled === "boolean") setDineInEnabled(data.enabled);
+        }
+      } catch {
+        /* keep env-based default */
+      }
+    }
+    fetchFlag();
   }, []);
 
   return (
@@ -200,7 +222,56 @@ export default function HomePage() {
             zIndex: 2,
           }}
         >
-          {availability?.canOrder !== false ? (
+          {!dineInEnabled ? (
+            // Catering mode: dine-in ordering is off → lead with Book Catering
+            <div style={{ textAlign: "center" }}>
+              <Link
+                href={`/${locale}/catering/book`}
+                style={{
+                  padding: "20px 64px",
+                  fontSize: "1.1rem",
+                  fontWeight: "500",
+                  background: "linear-gradient(135deg, #C7A878 0%, #B8956A 100%)",
+                  color: "#ffffff",
+                  borderRadius: "50px",
+                  textDecoration: "none",
+                  transition: "all 0.4s ease",
+                  display: "inline-block",
+                  letterSpacing: "2px",
+                  boxShadow: "0 8px 30px rgba(199, 168, 120, 0.35)",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "translateY(-3px)";
+                  e.currentTarget.style.boxShadow = "0 12px 40px rgba(199, 168, 120, 0.45)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow = "0 8px 30px rgba(199, 168, 120, 0.35)";
+                }}
+              >
+                Book Catering
+              </Link>
+              <div style={{ marginTop: 14 }}>
+                <Link
+                  href={`/${locale}/menu`}
+                  style={{
+                    padding: "12px 32px",
+                    fontSize: "0.9rem",
+                    fontWeight: "500",
+                    background: "transparent",
+                    color: "#ffffff",
+                    border: "2px solid rgba(255,255,255,0.5)",
+                    borderRadius: "50px",
+                    textDecoration: "none",
+                    display: "inline-block",
+                    letterSpacing: "1px",
+                  }}
+                >
+                  {tCommon("viewMenu")}
+                </Link>
+              </div>
+            </div>
+          ) : availability?.canOrder !== false ? (
             <Link
               href={`/${locale}/order`}
               style={{
@@ -244,7 +315,7 @@ export default function HomePage() {
               >
                 {availability?.statusMessage || t("opensAt")}
               </div>
-              <div>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
                 <Link
                   href={`/${locale}/menu`}
                   style={{
@@ -262,6 +333,28 @@ export default function HomePage() {
                 >
                   {tCommon("viewMenu")}
                 </Link>
+                {/* TODO: wire to a public backend flag (GET /catering/site-config/order-now)
+                    when that endpoint is available. Until then, gated on
+                    NEXT_PUBLIC_ORDER_NOW_ENABLED !== "false". */}
+                {process.env.NEXT_PUBLIC_ORDER_NOW_ENABLED !== "false" && (
+                  <Link
+                    href={`/${locale}/catering/book`}
+                    style={{
+                      padding: "12px 32px",
+                      fontSize: "0.9rem",
+                      fontWeight: "500",
+                      background: "linear-gradient(135deg, #C7A878 0%, #B8956A 100%)",
+                      color: "#ffffff",
+                      borderRadius: "50px",
+                      textDecoration: "none",
+                      display: "inline-block",
+                      letterSpacing: "1px",
+                      boxShadow: "0 4px 16px rgba(199,168,120,0.3)",
+                    }}
+                  >
+                    Book Catering
+                  </Link>
+                )}
               </div>
             </div>
           )}

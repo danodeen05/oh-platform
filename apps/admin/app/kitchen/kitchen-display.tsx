@@ -468,23 +468,25 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
       );
     };
 
-    // Check if a selection should be highlighted (No Beef, Soup Only, etc.)
+    // Check if a selection should be highlighted (No Beef, Soup Only, No Noodles, No Meat, etc.)
     const isSpecialDietSelection = (item: any) => {
       const selectedValue = item.selectedValue?.toLowerCase() || "";
       const menuItemName = item.menuItem?.name?.toLowerCase() || "";
       return selectedValue.includes("no beef") || selectedValue.includes("soup only") || selectedValue.includes("vegetarian") ||
-             menuItemName.includes("no beef") || menuItemName.includes("soup only") || menuItemName.includes("vegetarian");
+             selectedValue.includes("no noodles") || selectedValue.includes("no meat") ||
+             menuItemName.includes("no beef") || menuItemName.includes("soup only") || menuItemName.includes("vegetarian") ||
+             menuItemName.includes("no noodles") || menuItemName.includes("no meat");
     };
 
-    const renderItem = (item: any, showQty: boolean, isCnyOrder = false, isMainBowlItem = false) => {
+    const renderItem = (item: any, showQty: boolean, isEventLike = false, isMainBowlItem = false) => {
       const isSpecial = isSpecialDietSelection(item);
-      // For CNY orders, make main bowl items (not toppings) 1.5x larger
-      const baseFontSize = isCnyOrder && isMainBowlItem ? "1.275rem" : "0.85rem";
+      // For event/catering orders, make main bowl items (not toppings) 1.5x larger
+      const baseFontSize = isEventLike && isMainBowlItem ? "1.275rem" : "0.85rem";
 
       return (
         <div
           style={{
-            padding: isCnyOrder && isMainBowlItem ? "6px 0" : "4px 0",
+            padding: isEventLike && isMainBowlItem ? "6px 0" : "4px 0",
             fontSize: baseFontSize,
           }}
         >
@@ -495,9 +497,9 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
               <span
                 style={{
                   fontWeight: "bold",
-                  color: isSpecial && isCnyOrder ? "#ef4444" : "inherit",
-                  textShadow: isSpecial && isCnyOrder ? "0 0 5px #ef4444, 0 0 10px #ef4444, 0 0 15px #ef4444" : "none",
-                  animation: isSpecial && isCnyOrder ? "pulse-glow 1.5s ease-in-out infinite" : "none",
+                  color: isSpecial && isEventLike ? "#ef4444" : "inherit",
+                  textShadow: isSpecial && isEventLike ? "0 0 5px #ef4444, 0 0 10px #ef4444, 0 0 15px #ef4444" : "none",
+                  animation: isSpecial && isEventLike ? "pulse-glow 1.5s ease-in-out infinite" : "none",
                 }}
               >
                 {showQty && item.quantity > 0 && `${item.quantity}x `}
@@ -509,9 +511,9 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
             <div
               style={{
                 fontWeight: "bold",
-                color: isSpecial && isCnyOrder ? "#ef4444" : "inherit",
-                textShadow: isSpecial && isCnyOrder ? "0 0 10px #ef4444, 0 0 20px #ef4444, 0 0 30px #ef4444" : "none",
-                animation: isSpecial && isCnyOrder ? "pulse-glow 1.5s ease-in-out infinite" : "none",
+                color: isSpecial && isEventLike ? "#ef4444" : "inherit",
+                textShadow: isSpecial && isEventLike ? "0 0 10px #ef4444, 0 0 20px #ef4444, 0 0 30px #ef4444" : "none",
+                animation: isSpecial && isEventLike ? "pulse-glow 1.5s ease-in-out infinite" : "none",
               }}
             >
               {showQty && item.quantity > 0 && `${item.quantity}x `}
@@ -661,7 +663,9 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
         {/* Bowl Configuration Section */}
         {bowlItems.length > 0 && (() => {
           const isCny = order.orderSource === "EVENT";
-          // Topping names to separate into 2-column grid for CNY
+          // Event-like: EVENT (CNY) and CATERING orders get special-diet glow + larger main bowl items
+          const isEventLike = order.orderSource === "EVENT" || order.orderSource === "CATERING";
+          // Topping names to separate into 2-column grid for CNY only
           const toppingNames = ["baby bok choy", "green onions", "cilantro", "sprouts"];
           const isTopping = (item: any) =>
             toppingNames.some(t => item.menuItem.name.toLowerCase().includes(t));
@@ -691,7 +695,7 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
                 Bowl Configuration
               </div>
               {mainBowlItems.map((item) => (
-                <div key={item.id}>{renderItem(item, shouldShowQty(item.menuItem.categoryType), isCny, true)}</div>
+                <div key={item.id}>{renderItem(item, shouldShowQty(item.menuItem.categoryType), isEventLike, true)}</div>
               ))}
               {/* Toppings in 2-column grid for CNY */}
               {toppingItems.length > 0 && (
@@ -704,7 +708,7 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
                   }}
                 >
                   {toppingItems.map((item) => (
-                    <div key={item.id}>{renderItem(item, false, isCny)}</div>
+                    <div key={item.id}>{renderItem(item, false, isEventLike)}</div>
                   ))}
                 </div>
               )}

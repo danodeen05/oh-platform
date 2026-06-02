@@ -62,6 +62,7 @@ import {
 import { registerAutonomousRoutes } from "./autonomous/index.js";
 import { getScheduler } from "./triggers/index.js";
 import { getOrchestrator } from "./autonomous/index.js";
+import { registerCateringRoutes, isDineInOrdersEnabled } from "./catering/routes.js";
 
 const prisma = new PrismaClient();
 const app = Fastify({ logger: true });
@@ -185,6 +186,9 @@ app.addHook('onRequest', async (req, reply) => {
 
 // Register autonomous agent routes
 await registerAutonomousRoutes(app);
+
+// Register catering routes
+await registerCateringRoutes(app);
 
 const PORT = process.env.PORT || process.env.API_PORT || 4000;
 
@@ -3526,6 +3530,16 @@ app.get("/orders/:id", async (req, reply) => {
 });
 
 app.post("/orders", async (req, reply) => {
+  // Feature flag: dine-in ordering toggle.
+  // Controlled by DISABLE_DINE_IN_ORDERS env var (boot-time) or
+  // PATCH /admin/site-config/order-now (runtime, resets on restart).
+  // Does NOT affect /orders/event or catering attendee orders.
+  if (!isDineInOrdersEnabled()) {
+    return reply.code(403).send({
+      error: "Online ordering is currently unavailable. Please visit us in person.",
+    });
+  }
+
   const { locationId, tenantId, items, seatId, estimatedArrival, podSelectionMethod, userId, guestId, guestName, isKioskOrder, dualPartnerSeatId, isDualPod } =
     req.body || {};
 
