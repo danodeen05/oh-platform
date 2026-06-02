@@ -890,7 +890,6 @@ export async function registerCateringRoutes(app) {
       if (!stripe) return reply.code(500).send({ error: "Stripe not configured" });
 
       const {
-        tenantId,
         clientCompany,
         clientWebsite,
         contactName,
@@ -903,8 +902,8 @@ export async function registerCateringRoutes(app) {
         notes,
       } = req.body || {};
 
-      if (!tenantId || !clientCompany || !eventDate || !slot || !bowls) {
-        return reply.code(400).send({ error: "tenantId, clientCompany, eventDate, slot, bowls required" });
+      if (!clientCompany || !eventDate || !slot || !bowls) {
+        return reply.code(400).send({ error: "clientCompany, eventDate, slot, bowls required" });
       }
       if (!["LUNCH", "DINNER"].includes(slot)) {
         return reply.code(400).send({ error: "slot must be LUNCH or DINNER" });
@@ -913,8 +912,15 @@ export async function registerCateringRoutes(app) {
         return reply.code(400).send({ error: "bowls must be a positive number" });
       }
 
-      const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+      // Resolve tenant: explicit tenantId if provided, else default to the Oh! tenant
+      // (single-tenant platform — the public booking form doesn't send tenant ids).
+      let tenantId = req.body?.tenantId;
+      const tenant = tenantId
+        ? await prisma.tenant.findUnique({ where: { id: tenantId } })
+        : (await prisma.tenant.findUnique({ where: { slug: "oh" } })) ||
+          (await prisma.tenant.findFirst());
       if (!tenant) return reply.code(404).send({ error: "Tenant not found" });
+      tenantId = tenant.id;
 
       // Check slot isn't already taken
       const existing = await prisma.cateringEvent.findFirst({
