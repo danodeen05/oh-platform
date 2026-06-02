@@ -200,6 +200,38 @@ Include: proteins, noodles, broth ingredients, vegetables, condiments, and dispo
   }
 }
 
+// Recursively find the first string value under a key matching `key`.
+function deepFindString(obj, key) {
+  if (!obj || typeof obj !== "object") return null;
+  for (const k of Object.keys(obj)) {
+    if (k.toLowerCase() === key && typeof obj[k] === "string") return obj[k];
+  }
+  for (const k of Object.keys(obj)) {
+    const r = deepFindString(obj[k], key);
+    if (r) return r;
+  }
+  return null;
+}
+
+// Models sometimes wrap prose in ```json fences or a JSON object despite being
+// asked for plain text. Strip fences and, if the payload is JSON, pull out the
+// summary text so the UI never shows raw JSON.
+function extractSummaryText(raw) {
+  if (!raw) return "";
+  let t = raw.trim();
+  const fence = t.match(/```(?:json|markdown)?\s*([\s\S]*?)```/i);
+  if (fence) t = fence[1].trim();
+  if (t.startsWith("{") || t.startsWith("[")) {
+    try {
+      const obj = JSON.parse(t);
+      return deepFindString(obj, "summary") || t;
+    } catch {
+      // not valid JSON — fall through and return the cleaned text
+    }
+  }
+  return t;
+}
+
 /**
  * Summarize survey responses into an aggregate object.
  * @param {Array<{ overallScore: number, areaScores: object, comment: string | null }>} responses
@@ -253,12 +285,15 @@ Area averages: ${JSON.stringify(areaAverages)}
 Guest comments:
 ${comments || "(no comments)"}
 
-Write 2-3 sentences summarizing the highlights and any areas for improvement. Be concise and constructive.`,
+Write 2-3 sentences summarizing the highlights and any areas for improvement. Be concise and constructive.
+
+IMPORTANT: Respond with ONLY the summary as plain prose. Do NOT use JSON, markdown, code fences, headings, or any formatting — output just the sentences.`,
         },
       ],
     });
 
-    const summary = response.content[0]?.text?.trim() || "";
+    const raw = response.content[0]?.text?.trim() || "";
+    const summary = extractSummaryText(raw);
     return { overallScore: Math.round(overallScore * 10) / 10, areaAverages, summary };
   } catch (err) {
     console.error("[catering/ai] summarizeSurvey error:", err.message);
