@@ -1056,6 +1056,7 @@ export async function registerCateringRoutes(app) {
         clientSecret: paymentIntent.client_secret,
         paymentIntentId: paymentIntent.id,
         chargeCents,
+        amountCents: chargeCents, // alias the web payment page reads
         discountCents,
         subtotalCents,
         pricePerBowlCents,
