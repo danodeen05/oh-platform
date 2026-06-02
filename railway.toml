@@ -3,7 +3,7 @@ builder = "NIXPACKS"
 
 [build.nixpacksPlan]
 phases.setup.nixPkgs = ["nodejs_20", "pnpm-9_x"]
-phases.setup.cmds = ["echo 'Build cache invalidation: 2026-01-05'"]
+phases.setup.cmds = ["echo 'Build cache invalidation: 2026-06-02-prisma-eacces-fix'"]
 
 phases.install.cmds = [
   "cd /app",
@@ -11,7 +11,10 @@ phases.install.cmds = [
 ]
 
 phases.build.cmds = [
-  "cd /app/packages/db && pnpm prisma generate",
+  # Ensure the prisma CLI is executable (the cached pnpm store has intermittently
+  # produced a non-executable bin -> 'spawn prisma EACCES'); fall back to npx,
+  # which fetches a fresh prisma and bypasses the broken local bin entirely.
+  "cd /app/packages/db && (chmod -R +x /app/node_modules/.bin /app/node_modules/.pnpm 2>/dev/null || true) && (pnpm prisma generate || npx --yes prisma@5.19.1 generate)",
   "echo 'Prisma client generated successfully'"
 ]
 

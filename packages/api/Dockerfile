@@ -15,8 +15,9 @@ COPY packages/api ./packages/api
 # Install dependencies for db and api packages only
 RUN pnpm install --filter @oh/db --filter @oh/api --frozen-lockfile
 
-# Generate Prisma client
-RUN cd packages/db && pnpm prisma generate
+# Generate Prisma client (chmod guards against a non-executable cached prisma
+# bin -> 'spawn prisma EACCES'; npx fallback fetches a fresh prisma if needed)
+RUN cd packages/db && (chmod -R +x /app/node_modules/.bin /app/node_modules/.pnpm 2>/dev/null || true) && (pnpm prisma generate || npx --yes prisma@5.19.1 generate)
 
 # Set working directory to API
 WORKDIR /app/packages/api
