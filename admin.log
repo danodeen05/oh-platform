@@ -1,9 +1,9 @@
 
-> oh-platform@0.1.0 admin:dev /home/ohdev/projects/oh-platform
+> oh-platform@0.1.0 admin:dev /home/claude-user/projects/oh-platform
 > rm -rf apps/admin/.next apps/admin/.clerk && pnpm --filter @oh/admin dev
 
 
-> @oh/admin@0.1.0 dev /home/ohdev/projects/oh-platform/apps/admin
+> @oh/admin@0.1.0 dev /home/claude-user/projects/oh-platform/apps/admin
 > next dev -p 3001
 
 ▲ Next.js 16.1.0 (Turbopack)
@@ -13,74 +13,237 @@
 
 ✓ Starting...
 ⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
-✓ Ready in 1748ms
-⚠ Cross origin request detected from devadmin.ohbeef.com to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
-Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+✓ Ready in 3.3s
 ○ Compiling / ...
- GET / 200 in 5.0s (compile: 4.3s, proxy.ts: 227ms, render: 460ms)
- POST / 200 in 62ms (compile: 12ms, proxy.ts: 27ms, render: 22ms)
- GET /kitchen 200 in 2.5s (compile: 1069ms, proxy.ts: 11ms, render: 1409ms)
- HEAD / 200 in 78ms (compile: 4ms, proxy.ts: 9ms, render: 65ms)
- GET / 200 in 90ms (compile: 6ms, proxy.ts: 9ms, render: 75ms)
- POST / 200 in 31ms (compile: 9ms, proxy.ts: 12ms, render: 10ms)
- HEAD / 200 in 115ms (compile: 7ms, proxy.ts: 19ms, render: 88ms)
- GET / 200 in 85ms (compile: 7ms, proxy.ts: 8ms, render: 70ms)
- POST / 200 in 25ms (compile: 4ms, proxy.ts: 10ms, render: 10ms)
- GET / 200 in 95ms (compile: 5ms, proxy.ts: 7ms, render: 83ms)
- POST / 200 in 32ms (compile: 9ms, proxy.ts: 12ms, render: 12ms)
- GET / 200 in 96ms (compile: 6ms, proxy.ts: 8ms, render: 81ms)
- POST / 200 in 29ms (compile: 8ms, proxy.ts: 12ms, render: 9ms)
- GET / 200 in 84ms (compile: 4ms, proxy.ts: 7ms, render: 73ms)
- GET /kitchen 200 in 467ms (compile: 6ms, proxy.ts: 11ms, render: 450ms)
- GET / 200 in 131ms (compile: 8ms, proxy.ts: 9ms, render: 114ms)
- GET / 200 in 137ms (compile: 10ms, proxy.ts: 11ms, render: 115ms)
- GET / 200 in 132ms (compile: 5ms, proxy.ts: 9ms, render: 118ms)
- GET / 200 in 86ms (compile: 6ms, proxy.ts: 8ms, render: 72ms)
- GET / 200 in 85ms (compile: 4ms, proxy.ts: 9ms, render: 71ms)
- GET / 200 in 127ms (compile: 8ms, proxy.ts: 14ms, render: 105ms)
- GET / 200 in 108ms (compile: 6ms, proxy.ts: 8ms, render: 93ms)
- HEAD / 200 in 85ms (compile: 10ms, proxy.ts: 8ms, render: 67ms)
- GET / 200 in 104ms (compile: 7ms, proxy.ts: 9ms, render: 88ms)
- GET / 200 in 156ms (compile: 14ms, proxy.ts: 13ms, render: 129ms)
- GET / 200 in 70ms (compile: 4ms, proxy.ts: 8ms, render: 57ms)
- GET / 200 in 73ms (compile: 4ms, proxy.ts: 8ms, render: 61ms)
- GET /kitchen 200 in 997ms (compile: 4ms, proxy.ts: 8ms, render: 985ms)
- GET /analytics 200 in 2.0s (compile: 1642ms, proxy.ts: 20ms, render: 363ms)
- GET /cleaning/config 200 in 2.5s (compile: 1685ms, proxy.ts: 9ms, render: 796ms)
- GET /cleaning 200 in 3.2s (compile: 1976ms, proxy.ts: 8ms, render: 1255ms)
- GET /menu 200 in 3.0s (compile: 1730ms, proxy.ts: 22ms, render: 1283ms)
- GET /locations 200 in 3.2s (compile: 1675ms, proxy.ts: 18ms, render: 1543ms)
- GET /xlinkHref 404 in 727ms (compile: 373ms, proxy.ts: 19ms, render: 335ms)
- GET /glyphRef 404 in 921ms (compile: 616ms, proxy.ts: 10ms, render: 294ms)
- GET /href 404 in 1150ms (compile: 869ms, proxy.ts: 9ms, render: 271ms)
- GET /image 404 in 100ms (compile: 9ms, proxy.ts: 26ms, render: 65ms)
- GET /robots.txt 404 in 92ms (compile: 12ms, proxy.ts: 11ms, render: 69ms)
- GET / 200 in 80ms (compile: 8ms, proxy.ts: 8ms, render: 64ms)
- GET /cleaning 200 in 885ms (compile: 5ms, proxy.ts: 9ms, render: 871ms)
- GET /menu 200 in 454ms (compile: 6ms, proxy.ts: 9ms, render: 439ms)
- GET /locations 200 in 469ms (compile: 4ms, proxy.ts: 7ms, render: 458ms)
- GET /analytics 200 in 69ms (compile: 8ms, proxy.ts: 9ms, render: 52ms)
- GET /cleaning/config 200 in 618ms (compile: 6ms, proxy.ts: 6ms, render: 606ms)
- GET /kitchen 200 in 450ms (compile: 5ms, proxy.ts: 8ms, render: 437ms)
- GET /pods 404 in 74ms (compile: 9ms, proxy.ts: 6ms, render: 59ms)
- HEAD / 200 in 62ms (compile: 6ms, proxy.ts: 10ms, render: 46ms)
- HEAD / 200 in 95ms (compile: 4ms, proxy.ts: 10ms, render: 82ms)
+ GET / 200 in 9.9s (compile: 9.1s, proxy.ts: 206ms, render: 525ms)
+ GET / 200 in 191ms (compile: 15ms, proxy.ts: 28ms, render: 149ms)
 Error: Failed to find Server Action "x". This request might be from an older or newer deployment.
 Read more: https://nextjs.org/docs/messages/failed-to-find-server-action
     at ignore-listed frames
- POST / 404 in 804ms (compile: 5ms, proxy.ts: 11ms, render: 787ms)
+ POST / 404 in 858ms (compile: 10ms, proxy.ts: 21ms, render: 827ms)
+ GET /.git/config 404 in 1795ms (compile: 1494ms, proxy.ts: 23ms, render: 278ms)
+ GET /.env 404 in 104ms (compile: 13ms, proxy.ts: 16ms, render: 75ms)
+ GET / 200 in 133ms (compile: 11ms, proxy.ts: 18ms, render: 104ms)
+ PROPFIND / 200 in 134ms (compile: 11ms, proxy.ts: 17ms, render: 106ms)
+ GET /.openclaw/workspace/memory.md 404 in 155ms (compile: 20ms, proxy.ts: 13ms, render: 122ms)
+ GET /.env 404 in 149ms (compile: 17ms, proxy.ts: 17ms, render: 115ms)
+ POST / 200 in 133ms (compile: 8ms, proxy.ts: 30ms, render: 95ms)
 Error: Failed to find Server Action "x". This request might be from an older or newer deployment.
 Read more: https://nextjs.org/docs/messages/failed-to-find-server-action
     at ignore-listed frames
- POST /_next 404 in 547ms (compile: 8ms, render: 539ms)
- HEAD / 200 in 71ms (compile: 6ms, proxy.ts: 8ms, render: 56ms)
+ POST / 404 in 561ms (compile: 5ms, proxy.ts: 10ms, render: 546ms)
+ GET /ecp/Current/exporttool/microsoft.exchange.ediscovery.exporttool.application 404 in 147ms (compile: 16ms, proxy.ts: 18ms, render: 113ms)
+ PROPFIND / 200 in 124ms (compile: 9ms, proxy.ts: 10ms, render: 105ms)
+ GET /.git/config 404 in 126ms (compile: 18ms, proxy.ts: 12ms, render: 96ms)
+ GET /SDK/webLanguage 404 in 100ms (compile: 10ms, proxy.ts: 12ms, render: 78ms)
+ GET / 200 in 166ms (compile: 9ms, proxy.ts: 9ms, render: 148ms)
 Error: Failed to find Server Action "x". This request might be from an older or newer deployment.
 Read more: https://nextjs.org/docs/messages/failed-to-find-server-action
     at ignore-listed frames
- POST / 404 in 468ms (compile: 5ms, proxy.ts: 15ms, render: 448ms)
+ POST / 404 in 579ms (compile: 7ms, proxy.ts: 15ms, render: 557ms)
+ PROPFIND / 200 in 136ms (compile: 9ms, proxy.ts: 21ms, render: 106ms)
+ GET / 200 in 118ms (compile: 6ms, proxy.ts: 14ms, render: 98ms)
+ GET /robots.txt 404 in 103ms (compile: 12ms, proxy.ts: 10ms, render: 80ms)
+ GET / 200 in 146ms (compile: 13ms, proxy.ts: 13ms, render: 119ms)
+ GET / 200 in 174ms (compile: 11ms, proxy.ts: 9ms, render: 154ms)
 Error: Failed to find Server Action "x". This request might be from an older or newer deployment.
 Read more: https://nextjs.org/docs/messages/failed-to-find-server-action
     at ignore-listed frames
- POST /_next 404 in 389ms (compile: 6ms, render: 383ms)
- HEAD / 200 in 81ms (compile: 7ms, proxy.ts: 14ms, render: 61ms)
- HEAD / 200 in 87ms (compile: 7ms, proxy.ts: 8ms, render: 72ms)
+ POST / 404 in 566ms (compile: 8ms, proxy.ts: 13ms, render: 546ms)
+ GET / 200 in 145ms (compile: 12ms, proxy.ts: 21ms, render: 112ms)
+ GET /.env.dev.local 404 in 123ms (compile: 16ms, proxy.ts: 13ms, render: 95ms)
+ GET /configuration/.env 404 in 90ms (compile: 9ms, proxy.ts: 10ms, render: 71ms)
+ GET /core/.git/config 404 in 106ms (compile: 11ms, proxy.ts: 9ms, render: 86ms)
+ GET /server/.git/config 404 in 120ms (compile: 13ms, proxy.ts: 14ms, render: 94ms)
+ GET /api/.git/config 404 in 80ms (compile: 8ms, proxy.ts: 8ms, render: 63ms)
+ GET /admin/.git/config 404 in 118ms (compile: 12ms, proxy.ts: 11ms, render: 95ms)
+ GET /.env.bak 404 in 106ms (compile: 10ms, proxy.ts: 9ms, render: 86ms)
+ GET /.env.live 404 in 128ms (compile: 9ms, proxy.ts: 8ms, render: 111ms)
+ GET /.env.prod.local 404 in 72ms (compile: 8ms, proxy.ts: 10ms, render: 54ms)
+ GET /.env_sample 404 in 82ms (compile: 9ms, proxy.ts: 9ms, render: 64ms)
+ GET /.env.template 404 in 85ms (compile: 11ms, proxy.ts: 10ms, render: 65ms)
+ GET /config/.env 404 in 77ms (compile: 7ms, proxy.ts: 9ms, render: 62ms)
+ GET /.env.dist 404 in 92ms (compile: 10ms, proxy.ts: 8ms, render: 74ms)
+ GET /.env.ci 404 in 97ms (compile: 15ms, proxy.ts: 9ms, render: 73ms)
+ GET /.env.stage 404 in 103ms (compile: 10ms, proxy.ts: 7ms, render: 86ms)
+ GET /cms/.git/config 404 in 103ms (compile: 11ms, proxy.ts: 12ms, render: 80ms)
+ GET /.env.development.local 404 in 83ms (compile: 7ms, proxy.ts: 8ms, render: 68ms)
+ GET /.env.production.local 404 in 71ms (compile: 8ms, proxy.ts: 9ms, render: 54ms)
+ GET /build/.env 404 in 85ms (compile: 11ms, proxy.ts: 8ms, render: 67ms)
+ GET /www/.git/config 404 in 73ms (compile: 9ms, proxy.ts: 9ms, render: 55ms)
+ GET /.aws/credentials 404 in 84ms (compile: 17ms, proxy.ts: 9ms, render: 59ms)
+ GET /.env.prod 404 in 83ms (compile: 8ms, proxy.ts: 9ms, render: 66ms)
+ GET /.env.production 404 in 79ms (compile: 10ms, proxy.ts: 10ms, render: 59ms)
+ GET /.env.qa 404 in 157ms (compile: 12ms, proxy.ts: 12ms, render: 134ms)
+ GET /media../.git/config 404 in 133ms (compile: 15ms, proxy.ts: 15ms, render: 103ms)
+ GET /dev/.git/config 404 in 109ms (compile: 15ms, proxy.ts: 9ms, render: 85ms)
+ GET /.env.dev 404 in 74ms (compile: 8ms, proxy.ts: 14ms, render: 53ms)
+ GET /.env.preprod 404 in 90ms (compile: 9ms, proxy.ts: 13ms, render: 68ms)
+ GET /.env.sandbox 404 in 92ms (compile: 7ms, proxy.ts: 10ms, render: 75ms)
+ GET /app/.git/config 404 in 184ms (compile: 12ms, proxy.ts: 12ms, render: 161ms)
+ GET /config/.git/config 404 in 96ms (compile: 10ms, proxy.ts: 12ms, render: 74ms)
+ GET /.env.testing 404 in 93ms (compile: 9ms, proxy.ts: 10ms, render: 74ms)
+ GET /assets../.git/config 404 in 90ms (compile: 9ms, proxy.ts: 7ms, render: 73ms)
+ GET /data/.git/config 404 in 115ms (compile: 8ms, proxy.ts: 10ms, render: 98ms)
+ GET /docker-compose.prod.yml 404 in 70ms (compile: 8ms, proxy.ts: 9ms, render: 53ms)
+ GET /.env.save 404 in 86ms (compile: 8ms, proxy.ts: 9ms, render: 70ms)
+ GET /.env.test 404 in 89ms (compile: 7ms, proxy.ts: 9ms, render: 73ms)
+ GET /backup/.git/config 404 in 95ms (compile: 10ms, proxy.ts: 8ms, render: 77ms)
+ GET /public/.git/config 404 in 76ms (compile: 8ms, proxy.ts: 7ms, render: 61ms)
+ GET /config.json 404 in 107ms (compile: 18ms, proxy.ts: 10ms, render: 78ms)
+ GET /.env.secret 404 in 142ms (compile: 7ms, proxy.ts: 8ms, render: 127ms)
+ GET /.env.testing.local 404 in 90ms (compile: 12ms, proxy.ts: 12ms, render: 66ms)
+ GET /api/.env 404 in 100ms (compile: 8ms, proxy.ts: 9ms, render: 83ms)
+ GET /prod/.env 404 in 74ms (compile: 8ms, proxy.ts: 9ms, render: 57ms)
+ GET /files/.git/config 404 in 75ms (compile: 7ms, proxy.ts: 8ms, render: 60ms)
+ GET /.env 404 in 69ms (compile: 7ms, proxy.ts: 8ms, render: 54ms)
+ GET /.env.config 404 in 91ms (compile: 15ms, proxy.ts: 8ms, render: 67ms)
+ GET /.env.default 404 in 103ms (compile: 7ms, proxy.ts: 8ms, render: 88ms)
+ GET /src/.git/config 404 in 78ms (compile: 8ms, proxy.ts: 11ms, render: 58ms)
+ GET /media/.git/config 404 in 73ms (compile: 8ms, proxy.ts: 9ms, render: 57ms)
+ GET /.envrc 404 in 72ms (compile: 7ms, proxy.ts: 8ms, render: 57ms)
+ GET /.env.staging.local 404 in 85ms (compile: 9ms, proxy.ts: 11ms, render: 65ms)
+ GET /.git/config 404 in 92ms (compile: 11ms, proxy.ts: 10ms, render: 71ms)
+ GET /project/.git/config 404 in 83ms (compile: 8ms, proxy.ts: 10ms, render: 65ms)
+ GET /.env.backup 404 in 103ms (compile: 8ms, proxy.ts: 8ms, render: 87ms)
+ GET /.env.local 404 in 123ms (compile: 13ms, proxy.ts: 14ms, render: 96ms)
+ GET /.env.uat 404 in 95ms (compile: 10ms, proxy.ts: 9ms, render: 75ms)
+ GET /settings/.env 404 in 92ms (compile: 9ms, proxy.ts: 10ms, render: 73ms)
+ GET /static../.git/config 404 in 161ms (compile: 11ms, proxy.ts: 11ms, render: 140ms)
+ PROPFIND / 200 in 94ms (compile: 11ms, proxy.ts: 16ms, render: 66ms)
+ GET /.env 404 in 91ms (compile: 13ms, proxy.ts: 10ms, render: 69ms)
+ POST / 200 in 100ms (compile: 6ms, proxy.ts: 10ms, render: 84ms)
+ GET /developmentserver/metadatauploader 404 in 95ms (compile: 17ms, proxy.ts: 9ms, render: 69ms)
+ GET /.env 404 in 98ms (compile: 11ms, proxy.ts: 9ms, render: 78ms)
+ POST / 200 in 92ms (compile: 7ms, proxy.ts: 12ms, render: 73ms)
+ GET / 200 in 88ms (compile: 6ms, proxy.ts: 10ms, render: 72ms)
+ GET / 200 in 95ms (compile: 6ms, proxy.ts: 9ms, render: 80ms)
+ GET / 200 in 154ms (compile: 7ms, proxy.ts: 12ms, render: 135ms)
+ PROPFIND / 200 in 96ms (compile: 6ms, proxy.ts: 11ms, render: 79ms)
+ GET /.env 404 in 131ms (compile: 15ms, proxy.ts: 11ms, render: 105ms)
+ POST / 200 in 96ms (compile: 7ms, proxy.ts: 13ms, render: 76ms)
+Error: Failed to find Server Action "x". This request might be from an older or newer deployment.
+Read more: https://nextjs.org/docs/messages/failed-to-find-server-action
+    at ignore-listed frames
+ POST / 404 in 592ms (compile: 6ms, proxy.ts: 12ms, render: 574ms)
+ GET /.git/config 404 in 137ms (compile: 17ms, proxy.ts: 19ms, render: 102ms)
+Error: Failed to find Server Action "x". This request might be from an older or newer deployment.
+Read more: https://nextjs.org/docs/messages/failed-to-find-server-action
+    at ignore-listed frames
+ POST / 404 in 610ms (compile: 11ms, proxy.ts: 12ms, render: 587ms)
+ GET / 200 in 123ms (compile: 7ms, proxy.ts: 18ms, render: 98ms)
+ GET / 200 in 139ms (compile: 6ms, proxy.ts: 14ms, render: 118ms)
+ GET /robots.txt 404 in 243ms (compile: 16ms, proxy.ts: 12ms, render: 215ms)
+ GET / 200 in 151ms (compile: 9ms, proxy.ts: 22ms, render: 120ms)
+ GET /gift-cards 200 in 1031ms (compile: 905ms, proxy.ts: 11ms, render: 116ms)
+ GET /promos 200 in 1312ms (compile: 1148ms, proxy.ts: 12ms, render: 152ms)
+ GET /analytics 200 in 1149ms (compile: 1020ms, proxy.ts: 14ms, render: 115ms)
+ PROPFIND / 200 in 123ms (compile: 7ms, proxy.ts: 19ms, render: 97ms)
+ GET / 200 in 114ms (compile: 4ms, proxy.ts: 11ms, render: 98ms)
+ GET /.env 404 in 126ms (compile: 12ms, proxy.ts: 13ms, render: 100ms)
+ POST / 200 in 98ms (compile: 8ms, proxy.ts: 11ms, render: 79ms)
+ PROPFIND / 200 in 117ms (compile: 7ms, proxy.ts: 12ms, render: 98ms)
+ GET /SDK/webLanguage 404 in 188ms (compile: 13ms, proxy.ts: 12ms, render: 163ms)
+ GET / 200 in 209ms (compile: 14ms, proxy.ts: 27ms, render: 168ms)
+ PROPFIND / 200 in 102ms (compile: 5ms, proxy.ts: 12ms, render: 84ms)
+ GET /.env 404 in 123ms (compile: 16ms, proxy.ts: 13ms, render: 94ms)
+ POST / 200 in 115ms (compile: 8ms, proxy.ts: 12ms, render: 96ms)
+ GET / 200 in 127ms (compile: 9ms, proxy.ts: 9ms, render: 109ms)
+Error: Failed to find Server Action "x". This request might be from an older or newer deployment.
+Read more: https://nextjs.org/docs/messages/failed-to-find-server-action
+    at ignore-listed frames
+ POST / 404 in 798ms (compile: 8ms, proxy.ts: 15ms, render: 775ms)
+Error: Failed to find Server Action "x". This request might be from an older or newer deployment.
+Read more: https://nextjs.org/docs/messages/failed-to-find-server-action
+    at ignore-listed frames
+ POST / 404 in 695ms (compile: 8ms, proxy.ts: 27ms, render: 661ms)
+ GET /SDK/webLanguage 404 in 141ms (compile: 18ms, proxy.ts: 24ms, render: 99ms)
+ PROPFIND / 200 in 130ms (compile: 14ms, proxy.ts: 12ms, render: 105ms)
+ GET /.git/config 404 in 102ms (compile: 14ms, proxy.ts: 9ms, render: 80ms)
+ GET /.git/config 404 in 101ms (compile: 9ms, proxy.ts: 10ms, render: 82ms)
+ GET / 200 in 104ms (compile: 9ms, proxy.ts: 11ms, render: 84ms)
+ GET / 200 in 103ms (compile: 12ms, proxy.ts: 12ms, render: 80ms)
+ GET /robots.txt 404 in 97ms (compile: 14ms, proxy.ts: 8ms, render: 74ms)
+ GET / 200 in 116ms (compile: 8ms, proxy.ts: 11ms, render: 97ms)
+ GET /.well-known/security.txt 404 in 89ms (compile: 10ms, proxy.ts: 10ms, render: 69ms)
+ GET /Dr0v 404 in 103ms (compile: 13ms, proxy.ts: 12ms, render: 77ms)
+ GET / 200 in 136ms (compile: 14ms, proxy.ts: 15ms, render: 106ms)
+Error: Failed to find Server Action "1". This request might be from an older or newer deployment.
+Read more: https://nextjs.org/docs/messages/failed-to-find-server-action
+    at ignore-listed frames
+ POST / 404 in 566ms (compile: 4ms, proxy.ts: 11ms, render: 551ms)
+Error: Failed to find Server Action "1". This request might be from an older or newer deployment.
+Read more: https://nextjs.org/docs/messages/failed-to-find-server-action
+    at ignore-listed frames
+ POST / 404 in 702ms (compile: 9ms, proxy.ts: 24ms, render: 670ms)
+Error: Failed to find Server Action "1". This request might be from an older or newer deployment.
+Read more: https://nextjs.org/docs/messages/failed-to-find-server-action
+    at ignore-listed frames
+ POST / 404 in 663ms (compile: 6ms, proxy.ts: 21ms, render: 636ms)
+Error: Failed to find Server Action "1". This request might be from an older or newer deployment.
+Read more: https://nextjs.org/docs/messages/failed-to-find-server-action
+    at ignore-listed frames
+ POST / 404 in 559ms (compile: 8ms, proxy.ts: 18ms, render: 533ms)
+ PROPFIND / 200 in 145ms (compile: 9ms, proxy.ts: 21ms, render: 115ms)
+Error: Failed to find Server Action "x". This request might be from an older or newer deployment.
+Read more: https://nextjs.org/docs/messages/failed-to-find-server-action
+    at ignore-listed frames
+ POST / 404 in 596ms (compile: 5ms, proxy.ts: 10ms, render: 581ms)
+Error: Failed to find Server Action "x". This request might be from an older or newer deployment.
+Read more: https://nextjs.org/docs/messages/failed-to-find-server-action
+    at ignore-listed frames
+ POST /_next 404 in 555ms (compile: 12ms, render: 543ms)
+Error: Failed to find Server Action "x". This request might be from an older or newer deployment.
+Read more: https://nextjs.org/docs/messages/failed-to-find-server-action
+    at ignore-listed frames
+ POST /api 404 in 457ms (compile: 11ms, proxy.ts: 17ms, render: 429ms)
+Error: Failed to find Server Action "x". This request might be from an older or newer deployment.
+Read more: https://nextjs.org/docs/messages/failed-to-find-server-action
+    at ignore-listed frames
+ POST /_next/server 404 in 467ms (compile: 7ms, render: 460ms)
+Error: Failed to find Server Action "x". This request might be from an older or newer deployment.
+Read more: https://nextjs.org/docs/messages/failed-to-find-server-action
+    at ignore-listed frames
+ POST /app 404 in 465ms (compile: 9ms, proxy.ts: 10ms, render: 446ms)
+Error: Failed to find Server Action "x". This request might be from an older or newer deployment.
+Read more: https://nextjs.org/docs/messages/failed-to-find-server-action
+    at ignore-listed frames
+ POST /api/route 404 in 442ms (compile: 11ms, proxy.ts: 13ms, render: 419ms)
+Error: Failed to find Server Action "1". This request might be from an older or newer deployment.
+Read more: https://nextjs.org/docs/messages/failed-to-find-server-action
+    at ignore-listed frames
+ POST / 404 in 810ms (compile: 14ms, proxy.ts: 28ms, render: 768ms)
+Error: Failed to find Server Action "1". This request might be from an older or newer deployment.
+Read more: https://nextjs.org/docs/messages/failed-to-find-server-action
+    at ignore-listed frames
+ POST / 404 in 722ms (compile: 7ms, proxy.ts: 29ms, render: 686ms)
+ GET /.env 404 in 159ms (compile: 20ms, proxy.ts: 20ms, render: 119ms)
+ POST / 200 in 89ms (compile: 7ms, proxy.ts: 11ms, render: 72ms)
+Error: Failed to find Server Action "x". This request might be from an older or newer deployment.
+Read more: https://nextjs.org/docs/messages/failed-to-find-server-action
+    at ignore-listed frames
+ POST / 404 in 537ms (compile: 5ms, proxy.ts: 11ms, render: 522ms)
+ GET / 200 in 112ms (compile: 8ms, proxy.ts: 15ms, render: 89ms)
+ GET /?XDEBUG_SESSION_START=phpstorm 200 in 110ms (compile: 5ms, proxy.ts: 16ms, render: 89ms)
+ PROPFIND / 200 in 94ms (compile: 5ms, proxy.ts: 13ms, render: 77ms)
+ GET / 200 in 134ms (compile: 10ms, proxy.ts: 22ms, render: 101ms)
+ GET /aaa9 404 in 244ms (compile: 15ms, proxy.ts: 9ms, render: 220ms)
+ GET / 200 in 101ms (compile: 5ms, proxy.ts: 11ms, render: 84ms)
+ GET /aab9 404 in 111ms (compile: 12ms, proxy.ts: 28ms, render: 70ms)
+ GET / 200 in 84ms (compile: 7ms, proxy.ts: 9ms, render: 68ms)
+ GET /.env 404 in 85ms (compile: 9ms, proxy.ts: 7ms, render: 68ms)
+ POST / 200 in 100ms (compile: 6ms, proxy.ts: 14ms, render: 80ms)
+ GET /aaa9 404 in 138ms (compile: 18ms, proxy.ts: 14ms, render: 106ms)
+ GET /aab8 404 in 124ms (compile: 12ms, proxy.ts: 14ms, render: 97ms)
+ PROPFIND / 200 in 136ms (compile: 13ms, proxy.ts: 10ms, render: 113ms)
+○ Compiling middleware ...
+✓ Compiled in 34.8s
+○ Compiling /_not-found/page ...
+ GET /.git/config 404 in 4.8s (compile: 4.3s, proxy.ts: 17ms, render: 525ms)
+ GET / 200 in 1293ms (compile: 815ms, proxy.ts: 12ms, render: 467ms)
+ GET /actuator/gateway/routes 404 in 153ms (compile: 24ms, proxy.ts: 14ms, render: 115ms)
+ GET /.git/config 404 in 155ms (compile: 23ms, proxy.ts: 15ms, render: 118ms)
+ GET / 200 in 166ms (compile: 18ms, proxy.ts: 20ms, render: 128ms)
+ GET / 200 in 120ms (compile: 11ms, proxy.ts: 10ms, render: 99ms)
+ PROPFIND / 200 in 126ms (compile: 8ms, proxy.ts: 14ms, render: 104ms)
+ GET /admin/config.php 404 in 139ms (compile: 22ms, proxy.ts: 12ms, render: 105ms)

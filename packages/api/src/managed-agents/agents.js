@@ -11,9 +11,9 @@
  * - Metadata for orchestration
  */
 
-// Model mappings with cost optimization
+// Model mappings with cost optimization - Updated April 2026
 export const MODELS = {
-  opus: 'claude-opus-4-5-20250101',      // High-stakes decisions
+  opus: 'claude-opus-4-7-20260416',       // High-stakes decisions (Opus 4.7 - 13% better coding)
   sonnet: 'claude-sonnet-4-6-20260301',   // General implementation
   haiku: 'claude-haiku-4-5-20260301',     // Documentation, simple tasks
 };

@@ -216,6 +216,7 @@ export default async function PaymentPage({
                   hour: "numeric",
                   minute: "2-digit",
                   hour12: true,
+                  timeZone: order.location?.timezone || "America/Denver",
                 })}
               </span>
             </div>

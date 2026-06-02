@@ -333,6 +333,8 @@ export default function MenuBuilder({
             const timeStr = estimatedReadyTime.toLocaleTimeString("en-US", {
               hour: "numeric",
               minute: "2-digit",
+              hour12: true,
+              timeZone: location?.timezone || "America/Denver",
             });
 
             return (

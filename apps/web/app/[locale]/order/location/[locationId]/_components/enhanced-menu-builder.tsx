@@ -1135,6 +1135,8 @@ export default function EnhancedMenuBuilder({
             const timeStr = estimatedReadyTime.toLocaleTimeString(locale, {
               hour: "numeric",
               minute: "2-digit",
+              hour12: true,
+              timeZone: location?.timezone || "America/Denver",
             });
 
             return (

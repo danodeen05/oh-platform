@@ -20,7 +20,8 @@
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.6",
     "playwright": "^1.57.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vercel": "^54.7.1"
   },
   "dependencies": {
     "next": "^16.0.10"

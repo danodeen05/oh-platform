@@ -14,9 +14,13 @@ import { formatForWeb } from "./formatters/web.js";
 // Initialize Anthropic client
 const anthropic = new Anthropic();
 
-// Model configuration
-const MODEL = "claude-sonnet-4-20250514";
+// Model configuration - Upgraded to Opus 4.7 (April 2026)
+const MODEL = "claude-opus-4-7-20260416";
 const MAX_TOKENS = 1024;
+
+// Effort levels for Opus 4.7 adaptive thinking
+// xhigh = extra high reasoning for complex agentic tasks
+const EFFORT_LEVEL = "xhigh";
 
 /**
  * Clean up conversation history to remove orphaned tool_result blocks
@@ -108,10 +112,12 @@ export async function handleChappyConversation({
     tenantId: context.tenantId || "oh", // Default to Oh! tenant
   };
 
-  // Call Claude with tools
+  // Call Claude with tools - using xhigh effort for complex order scenarios
   let response = await anthropic.messages.create({
     model: MODEL,
     max_tokens: MAX_TOKENS,
+    thinking: { type: "adaptive" },
+    effort: EFFORT_LEVEL,
     system: systemPrompt,
     tools: CHAPPY_TOOLS,
     messages: history,
@@ -143,6 +149,8 @@ export async function handleChappyConversation({
     response = await anthropic.messages.create({
       model: MODEL,
       max_tokens: MAX_TOKENS,
+      thinking: { type: "adaptive" },
+      effort: EFFORT_LEVEL,
       system: systemPrompt,
       tools: CHAPPY_TOOLS,
       messages: history,
@@ -329,10 +337,12 @@ export async function* handleChappyConversationStream({
   // Yield thinking indicator
   yield { type: "thinking", data: { status: "started" } };
 
-  // Start with streaming API call
+  // Start with streaming API call - xhigh effort for complex scenarios
   let stream = await anthropic.messages.stream({
     model: MODEL,
     max_tokens: MAX_TOKENS,
+    thinking: { type: "adaptive" },
+    effort: EFFORT_LEVEL,
     system: systemPrompt,
     tools: CHAPPY_TOOLS,
     messages: history,
@@ -428,6 +438,8 @@ export async function* handleChappyConversationStream({
     stream = await anthropic.messages.stream({
       model: MODEL,
       max_tokens: MAX_TOKENS,
+      thinking: { type: "adaptive" },
+      effort: EFFORT_LEVEL,
       system: systemPrompt,
       tools: CHAPPY_TOOLS,
       messages: history,

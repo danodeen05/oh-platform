@@ -15,12 +15,12 @@
  */
 
 /**
- * Model identifiers
+ * Model identifiers - Updated April 2026
  */
 export const MODELS = {
   HAIKU: 'claude-haiku-4-5-20260301',
   SONNET: 'claude-sonnet-4-6-20260301',
-  OPUS: 'claude-opus-4-6-20260301',
+  OPUS: 'claude-opus-4-7-20260416',       // Upgraded to Opus 4.7
 };
 
 /**

@@ -1378,7 +1378,12 @@ function StatusContent() {
                   <div style={{ flex: 1, fontSize: "0.85rem" }}>
                     <span style={{ fontWeight: 500 }}>{t("timeline.paid")}</span>
                     <span style={{ color: "#666", marginLeft: 8 }}>
-                      {new Date(order.paidAt).toLocaleTimeString()}
+                      {new Date(order.paidAt).toLocaleTimeString("en-US", {
+                        hour: "numeric",
+                        minute: "2-digit",
+                        hour12: true,
+                        timeZone: order.location?.timezone || "America/Denver",
+                      })}
                     </span>
                   </div>
                 </div>
@@ -1396,7 +1401,12 @@ function StatusContent() {
                   <div style={{ flex: 1, fontSize: "0.85rem" }}>
                     <span style={{ fontWeight: 500 }}>{t("timeline.checkedIn")}</span>
                     <span style={{ color: "#666", marginLeft: 8 }}>
-                      {new Date(order.arrivedAt).toLocaleTimeString()}
+                      {new Date(order.arrivedAt).toLocaleTimeString("en-US", {
+                        hour: "numeric",
+                        minute: "2-digit",
+                        hour12: true,
+                        timeZone: order.location?.timezone || "America/Denver",
+                      })}
                     </span>
                   </div>
                 </div>
@@ -1414,7 +1424,12 @@ function StatusContent() {
                   <div style={{ flex: 1, fontSize: "0.85rem" }}>
                     <span style={{ fontWeight: 500 }}>{t("timeline.orderStarted")}</span>
                     <span style={{ color: "#666", marginLeft: 8 }}>
-                      {new Date(order.prepStartTime).toLocaleTimeString()}
+                      {new Date(order.prepStartTime).toLocaleTimeString("en-US", {
+                        hour: "numeric",
+                        minute: "2-digit",
+                        hour12: true,
+                        timeZone: order.location?.timezone || "America/Denver",
+                      })}
                     </span>
                   </div>
                 </div>
@@ -1432,7 +1447,12 @@ function StatusContent() {
                   <div style={{ flex: 1, fontSize: "0.85rem" }}>
                     <span style={{ fontWeight: 500 }}>{t("timeline.qualityCheck")}</span>
                     <span style={{ color: "#666", marginLeft: 8 }}>
-                      {new Date(order.readyTime).toLocaleTimeString()}
+                      {new Date(order.readyTime).toLocaleTimeString("en-US", {
+                        hour: "numeric",
+                        minute: "2-digit",
+                        hour12: true,
+                        timeZone: order.location?.timezone || "America/Denver",
+                      })}
                     </span>
                   </div>
                 </div>
@@ -1450,7 +1470,12 @@ function StatusContent() {
                   <div style={{ flex: 1, fontSize: "0.85rem" }}>
                     <span style={{ fontWeight: 500 }}>{t("timeline.delivered")}</span>
                     <span style={{ color: "#666", marginLeft: 8 }}>
-                      {new Date(order.deliveredAt).toLocaleTimeString()}
+                      {new Date(order.deliveredAt).toLocaleTimeString("en-US", {
+                        hour: "numeric",
+                        minute: "2-digit",
+                        hour12: true,
+                        timeZone: order.location?.timezone || "America/Denver",
+                      })}
                     </span>
                   </div>
                 </div>

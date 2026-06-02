@@ -606,7 +606,12 @@ function ConfirmationContent() {
             {/* Arrival Time */}
             {order.estimatedArrival && (
               <p style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.9)", marginTop: 12, marginBottom: 16 }}>
-                {t("expectedArrival", { time: new Date(order.estimatedArrival).toLocaleTimeString() })}
+                {t("expectedArrival", { time: new Date(order.estimatedArrival).toLocaleTimeString("en-US", {
+                  hour: "numeric",
+                  minute: "2-digit",
+                  hour12: true,
+                  timeZone: order.location?.timezone || "America/Denver",
+                }) })}
               </p>
             )}
 
