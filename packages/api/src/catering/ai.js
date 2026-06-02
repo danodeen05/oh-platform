@@ -1,7 +1,7 @@
 /**
  * Catering AI helpers
  *
- * Uses Anthropic claude-sonnet-4-6-20260301 for:
+ * Uses Anthropic claude-sonnet-4-6 for:
  *  - Website enrichment (logo, colors, company summary)
  *  - Shopping list generation
  *  - Survey summarization
@@ -11,7 +11,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 
 const anthropic = process.env.ANTHROPIC_API_KEY ? new Anthropic() : null;
-const MODEL = "claude-sonnet-4-6-20260301";
+const MODEL = "claude-sonnet-4-6";
 
 // Shared cacheable system prompt for catering context
 const CATERING_SYSTEM = {

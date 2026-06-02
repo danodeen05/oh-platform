@@ -4221,7 +4221,7 @@ Generate a fun, personalized zodiac insight in this exact JSON format:
 Be playful, mystical, and entertaining. Keep each response to ONE short sentence. Return ONLY valid JSON.`;
 
         const message = await anthropic.messages.create({
-          model: "claude-sonnet-4-6-20260301",
+          model: "claude-sonnet-4-6",
           max_tokens: 400,
           messages: [{ role: "user", content: prompt }]
         });
@@ -7362,7 +7362,7 @@ Return ONLY valid JSON in this exact format (no markdown):
 {"year":1234,"event":"Brief description of what happened in ${language.name}"}`;
 
       const message = await anthropic.messages.create({
-        model: "claude-sonnet-4-6-20260301",
+        model: "claude-sonnet-4-6",
         max_tokens: 150,
         temperature: 0.9,
         messages: [{ role: "user", content: prompt }],
@@ -7539,7 +7539,7 @@ Return ONLY valid JSON (no markdown):
 {"traditional":"字","pinyin":"zì","english":"English meaning","category":"${focusCategory.split(' ')[0]}","funFact":"Engaging fact about this word"}`;
 
     const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-6-20260301",
+      model: "claude-sonnet-4-6",
       max_tokens: 300,
       temperature: 0.95, // High temperature for variety
       messages: [{ role: "user", content: prompt }],
@@ -7704,7 +7704,7 @@ UNIQUE SEED: ${creativitySeed}-${Date.now() % 10000}
 Write ONE completely original fortune in ${language.name}. Return ONLY the fortune text. No quotes.`;
 
         const message = await anthropic.messages.create({
-          model: "claude-sonnet-4-6-20260301",
+          model: "claude-sonnet-4-6",
           max_tokens: 100,
           temperature: 0.95,
           messages: [{ role: "user", content: prompt }],
@@ -8082,7 +8082,7 @@ UNIQUE COMEDY SEED: ${roastSeed}-${Date.now() % 10000}
 Respond with ONLY the JSON object. No other text.`;
 
         const message = await anthropic.messages.create({
-          model: "claude-sonnet-4-6-20260301",
+          model: "claude-sonnet-4-6",
           max_tokens: 500,
           temperature: 0.95,
           messages: [{ role: "user", content: prompt }],
@@ -8409,7 +8409,7 @@ UNIQUE SEED: ${narratorSeed}-${Date.now() % 10000}
 Write the commentary now. No quotes.${languageInstruction}`;
 
         const message = await anthropic.messages.create({
-          model: "claude-sonnet-4-6-20260301",
+          model: "claude-sonnet-4-6",
           max_tokens: 200,
           temperature: 0.95,
           messages: [{ role: "user", content: prompt }],
@@ -8553,7 +8553,7 @@ EXAMPLES:
 Generate exactly 4 short backstory facts (one sentence each, max 150 chars each) about the ingredients in this order. Be specific to what they ordered. Return as JSON array of strings.${languageInstruction}`;
 
         const message = await anthropic.messages.create({
-          model: "claude-sonnet-4-6-20260301",
+          model: "claude-sonnet-4-6",
           max_tokens: 400,
           messages: [{ role: "user", content: prompt }],
         });
@@ -8679,7 +8679,7 @@ Return ONLY valid JSON (no markdown). The "question" field should be "${question
 {"question":"${questionText}","fact":"The specific fact here","source":"Organization Name, Year"}`;
 
     const message = await anthropic.messages.create({
-      model: "claude-sonnet-4-6-20260301",
+      model: "claude-sonnet-4-6",
       max_tokens: 250,
       temperature: 0.9,
       messages: [{ role: "user", content: prompt }],
@@ -9053,7 +9053,7 @@ ${insightDescriptions.map((d, i) => `${i + 1}. ${d}`).join("\n")}
 Return as JSON array of objects with format: [{"index": 0, "oneLiner": "your witty comment"}, ...]`;
 
         const message = await anthropic.messages.create({
-          model: "claude-sonnet-4-6-20260301",
+          model: "claude-sonnet-4-6",
           max_tokens: 500,
           messages: [{ role: "user", content: prompt }],
         });
