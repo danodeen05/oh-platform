@@ -97,18 +97,23 @@ export interface SurveyAreaAverages {
   recommend: number;
 }
 
-export interface SurveyComment {
+export interface SurveyResponse {
   id: string;
-  attendeeName?: string;
-  comment: string;
+  guestName?: string;
+  guestPhone?: string;
+  comment?: string | null;
+  overallScore: number;
+  areaScores?: Record<string, number>;
   createdAt: string;
 }
 
 export interface SurveyStats {
-  overallScore: number;
-  areaAverages: SurveyAreaAverages;
-  comments: SurveyComment[];
+  surveyId?: string;
+  responseCount?: number;
+  overallScore?: number;
+  areaAverages?: Partial<SurveyAreaAverages>;
   aiSummary?: string;
+  responses?: SurveyResponse[];
 }
 
 export interface CateringAnalytics {

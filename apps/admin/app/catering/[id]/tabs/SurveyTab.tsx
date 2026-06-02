@@ -58,24 +58,32 @@ export default function SurveyTab({ eventId }: SurveyTabProps) {
     );
   }
 
-  const score = survey.overallScore;
+  // The API returns { overallScore, areaAverages, responseCount, responses[] }.
+  // Be defensive: responses/areaAverages may be absent for an event with no
+  // survey activity yet.
+  const responses = survey.responses || [];
+  const areas = survey.areaAverages || { food: 0, speed: 0, experience: 0, recommend: 0 };
+  const responseCount = survey.responseCount ?? responses.length;
+  const score = survey.overallScore ?? 0;
   const scoreColor: "green" | "yellow" | "red" =
     score >= 4.0 ? "green" : score >= 3.0 ? "yellow" : "red";
 
   const areaData = [
-    { label: "Food", value: survey.areaAverages.food },
-    { label: "Speed", value: survey.areaAverages.speed },
-    { label: "Experience", value: survey.areaAverages.experience },
-    { label: "Recommend", value: survey.areaAverages.recommend },
+    { label: "Food", value: areas.food ?? 0 },
+    { label: "Speed", value: areas.speed ?? 0 },
+    { label: "Experience", value: areas.experience ?? 0 },
+    { label: "Recommend", value: areas.recommend ?? 0 },
   ];
 
-  const minArea = Math.min(...areaData.map((a) => a.value));
+  const minArea = areaData.length ? Math.min(...areaData.map((a) => a.value)) : 0;
 
-  const commentRows = survey.comments.map((c) => ({
-    name: c.attendeeName || "Anonymous",
-    comment: c.comment,
-    date: new Date(c.createdAt).toLocaleDateString(),
-  }));
+  const commentRows = responses
+    .filter((r) => r.comment)
+    .map((r) => ({
+      name: r.guestName || "Anonymous",
+      comment: r.comment as string,
+      date: new Date(r.createdAt).toLocaleDateString(),
+    }));
 
   return (
     <div>
@@ -91,7 +99,7 @@ export default function SurveyTab({ eventId }: SurveyTabProps) {
         <StatCard
           title="Overall Score"
           value={`${score.toFixed(1)} / 5`}
-          subtitle={`${survey.comments.length} response${survey.comments.length !== 1 ? "s" : ""}`}
+          subtitle={`${responseCount} response${responseCount !== 1 ? "s" : ""}`}
           color={scoreColor}
         />
         {areaData.map((a) => (
@@ -141,7 +149,7 @@ export default function SurveyTab({ eventId }: SurveyTabProps) {
       {/* Comments table */}
       {commentRows.length > 0 ? (
         <DataTable
-          title={`Comments (${survey.comments.length})`}
+          title={`Comments (${commentRows.length})`}
           columns={[
             { key: "name", label: "Attendee" },
             { key: "comment", label: "Comment" },
