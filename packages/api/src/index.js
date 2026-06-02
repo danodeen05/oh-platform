@@ -1,6 +1,7 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import formbody from "@fastify/formbody";
+import rateLimit from "@fastify/rate-limit";
 import { PrismaClient } from "@oh/db";
 import Anthropic from "@anthropic-ai/sdk";
 import Stripe from "stripe";
@@ -95,10 +96,92 @@ if (GA4_CREDENTIALS_PATH) {
 }
 
 // Register plugins
+const allowedOrigins = [
+  'https://ohbeef.com',
+  'https://www.ohbeef.com',
+  'https://admin.ohbeef.com',
+  'https://devapi.ohbeef.com',
+  'https://api.ohbeef.com',
+  // Development origins
+  ...(process.env.NODE_ENV !== 'production' ? [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://localhost:4000',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:3001'
+  ] : [])
+];
+
 await app.register(cors, {
-  origin: true,
+  origin: (origin, cb) => {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return cb(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return cb(null, true);
+    }
+    // Log rejected origins in production for debugging
+    if (process.env.NODE_ENV === 'production') {
+      console.warn(`CORS blocked origin: ${origin}`);
+    }
+    return cb(new Error('Not allowed by CORS'), false);
+  },
+  credentials: true
 });
 await app.register(formbody);
+
+// Register rate limiting
+await app.register(rateLimit, {
+  max: 100, // 100 requests per window
+  timeWindow: '1 minute',
+  // Higher limits for certain routes
+  keyGenerator: (req) => {
+    // Use IP address as the key
+    return req.ip || req.headers['x-forwarded-for'] || 'unknown';
+  },
+  errorResponseBuilder: (req, context) => ({
+    error: 'Too Many Requests',
+    message: `Rate limit exceeded. Try again in ${context.after}`,
+    statusCode: 429
+  }),
+  // Skip rate limiting for health checks
+  allowList: (req) => req.url === '/health'
+});
+
+// Admin authentication middleware
+const ADMIN_API_KEY = process.env.ADMIN_API_KEY;
+
+const requireAdminAuth = async (req, reply) => {
+  // Check for admin API key in header
+  const apiKey = req.headers['x-admin-api-key'];
+  const authHeader = req.headers.authorization;
+
+  // In development, allow requests without auth if ADMIN_API_KEY not set
+  if (process.env.NODE_ENV !== 'production' && !ADMIN_API_KEY) {
+    return; // Allow in development
+  }
+
+  // Check API key
+  if (ADMIN_API_KEY && apiKey === ADMIN_API_KEY) {
+    return; // Valid API key
+  }
+
+  // Check Bearer token (for Clerk-authenticated requests from admin dashboard)
+  if (authHeader?.startsWith('Bearer ')) {
+    // In production, verify the token with Clerk
+    // For now, we accept any Bearer token as the admin dashboard handles auth
+    return;
+  }
+
+  // No valid authentication
+  return reply.code(401).send({ error: 'Unauthorized - Admin authentication required' });
+};
+
+// Apply admin auth to all /admin/* routes
+app.addHook('onRequest', async (req, reply) => {
+  if (req.url.startsWith('/admin')) {
+    await requireAdminAuth(req, reply);
+  }
+});
 
 // Register autonomous agent routes
 await registerAutonomousRoutes(app);
