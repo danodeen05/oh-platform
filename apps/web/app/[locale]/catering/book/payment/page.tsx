@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense, use } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
-import { confirmBooking } from "@/lib/catering/api";
+import { confirmBooking, repriceCateringPromo } from "@/lib/catering/api";
 import { trackCateringPaymentSuccess } from "@/lib/catering/analytics";
 import PromoCodeInput, { type AppliedPromo } from "@/components/PromoCodeInput";
 import Image from "next/image";
@@ -30,11 +30,35 @@ function PaymentForm({ locale, bookingId, clientSecret, amountCents, bowls, slot
   const stripe = useStripe();
   const elements = useElements();
   const [appliedPromo, setAppliedPromo] = useState<AppliedPromo | null>(null);
+  // Server-authoritative pricing after a promo re-prices the PaymentIntent.
+  const [reprice, setReprice] = useState<{ discountCents: number; chargeCents: number } | null>(null);
+  const [promoError, setPromoError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  const discountCents = appliedPromo?.discountCents ?? 0;
-  const finalAmountCents = Math.max(0, amountCents - discountCents);
+  const discountCents = reprice?.discountCents ?? 0;
+  const finalAmountCents = reprice?.chargeCents ?? amountCents;
+
+  // Apply: re-price the booking's PaymentIntent on the server, then trust its
+  // numbers. Only mark the code applied if the server accepted it.
+  async function handleApplyPromo(promo: AppliedPromo) {
+    setPromoError("");
+    const r = await repriceCateringPromo(bookingId, promo.code);
+    if (r.valid && typeof r.chargeCents === "number") {
+      setAppliedPromo(promo);
+      setReprice({ discountCents: r.discountCents ?? 0, chargeCents: r.chargeCents });
+    } else {
+      setReprice(null);
+      setPromoError(r.error || "Could not apply this code.");
+    }
+  }
+
+  async function handleRemovePromo() {
+    setAppliedPromo(null);
+    setReprice(null);
+    setPromoError("");
+    await repriceCateringPromo(bookingId, null); // reset PaymentIntent to full price
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -102,16 +126,22 @@ function PaymentForm({ locale, bookingId, clientSecret, amountCents, bowls, slot
       </div>
 
       {/* Promo code */}
-      <PromoCodeInput
-        scope="CATERING"
-        subtotalCents={amountCents}
-        onApply={setAppliedPromo}
-        onRemove={() => setAppliedPromo(null)}
-        appliedPromo={appliedPromo}
-        placeholder="Promo code (optional)"
-        disabled={submitting}
-        variant="brand"
-      />
+      <div>
+        <PromoCodeInput
+          scope="CATERING"
+          subtotalCents={amountCents}
+          quantity={bowls}
+          onApply={handleApplyPromo}
+          onRemove={handleRemovePromo}
+          appliedPromo={appliedPromo}
+          placeholder="Promo code (optional)"
+          disabled={submitting}
+          variant="brand"
+        />
+        {promoError && (
+          <p style={{ margin: "8px 0 0", fontSize: "0.8rem", color: "#ef4444", fontFamily: "'Raleway', sans-serif" }}>{promoError}</p>
+        )}
+      </div>
 
       {/* Card element */}
       <div>

@@ -80,6 +80,27 @@ export default async function EventLandingPage({ params }: PageProps) {
             {" · "}
             {event.slot.charAt(0) + event.slot.slice(1).toLowerCase()}
           </p>
+          {event.eventAddress && (
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.eventAddress)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                margin: "10px 0 0",
+                fontSize: "0.9rem",
+                color: "var(--brand-primary)",
+                opacity: 0.75,
+                fontFamily: "'Raleway', sans-serif",
+                textDecoration: "none",
+              }}
+            >
+              <span aria-hidden>📍</span>
+              <span style={{ textDecoration: "underline" }}>{event.eventAddress}</span>
+            </a>
+          )}
         </div>
 
         {/* Countdown */}

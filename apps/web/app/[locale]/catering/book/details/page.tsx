@@ -7,6 +7,7 @@ import { formatPhone } from "@/lib/catering/format";
 import { trackCateringBookingSubmitted } from "@/lib/catering/analytics";
 import Image from "next/image";
 import ThemedBackground from "@/components/catering/ThemedBackground";
+import EventAddressField, { type ValidatedAddress } from "@/components/catering/EventAddressField";
 
 interface PageProps {
   params: Promise<{ locale: string }>;
@@ -26,6 +27,7 @@ function DetailsContent({ locale }: { locale: string }) {
   const [contactEmail, setContactEmail] = useState("");
   const [contactPhone, setContactPhone] = useState("");
   const [notes, setNotes] = useState("");
+  const [eventAddr, setEventAddr] = useState<ValidatedAddress | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -38,6 +40,7 @@ function DetailsContent({ locale }: { locale: string }) {
     if (!contactName.trim()) { setError("Contact name is required"); return; }
     if (!contactEmail.trim() || !contactEmail.includes("@")) { setError("Valid email is required"); return; }
     if (digits.length < 10) { setError("Valid phone number is required"); return; }
+    if (!eventAddr?.address) { setError("Event address is required"); return; }
 
     setIsSubmitting(true);
     try {
@@ -51,6 +54,9 @@ function DetailsContent({ locale }: { locale: string }) {
         slot,
         bowls,
         notes: notes.trim(),
+        eventAddress: eventAddr.address,
+        eventLat: eventAddr.lat,
+        eventLng: eventAddr.lng,
       });
 
       trackCateringBookingSubmitted(bowls);
@@ -94,8 +100,8 @@ function DetailsContent({ locale }: { locale: string }) {
 
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px", width: "100%", maxWidth: "420px" }}>
         <div>
-          <label style={labelStyle}>Company / Organization *</label>
-          <input type="text" value={clientCompany} onChange={e => setClientCompany(e.target.value)} placeholder="Acme Corp" required style={inputStyle} />
+          <label style={labelStyle}>Company or Group/Event Name *</label>
+          <input type="text" value={clientCompany} onChange={e => setClientCompany(e.target.value)} placeholder="Acme Corp or Smith Family Reunion" required style={inputStyle} />
         </div>
         <div>
           <label style={labelStyle}>Company Website <span style={{ fontWeight: 400, opacity: 0.5, fontSize: "0.78rem" }}>Optional</span></label>
@@ -113,6 +119,9 @@ function DetailsContent({ locale }: { locale: string }) {
           <label style={labelStyle}>Contact Phone *</label>
           <input type="tel" value={contactPhone} onChange={e => setContactPhone(formatPhone(e.target.value))} placeholder="(xxx) xxx-xxxx" required style={inputStyle} />
         </div>
+
+        <EventAddressField onChange={setEventAddr} />
+
         <div>
           <label style={labelStyle}>
             Additional Details <span style={{ fontWeight: 400, opacity: 0.5, fontSize: "0.78rem" }}>Optional</span>

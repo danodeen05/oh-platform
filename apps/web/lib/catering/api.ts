@@ -30,6 +30,7 @@ export interface CateringEvent {
   logoUrl: string | null;
   brandColors: string[];
   companyDescription: string | null;
+  eventAddress?: string | null;
   eventDate: string; // ISO
   slot: "LUNCH" | "DINNER";
   status: string;
@@ -116,6 +117,9 @@ export interface CreateBookingPayload {
   slot: "LUNCH" | "DINNER";
   bowls: number;
   notes?: string;
+  eventAddress?: string;
+  eventLat?: number;
+  eventLng?: number;
 }
 
 export async function createBooking(payload: CreateBookingPayload): Promise<BookingDraft> {
@@ -128,6 +132,28 @@ export async function createBooking(payload: CreateBookingPayload): Promise<Book
     const err = await res.json().catch(() => ({}));
     throw new Error((err as { error?: string }).error || "Failed to create booking");
   }
+  return res.json();
+}
+
+export interface RepriceResult {
+  valid: boolean;
+  error?: string;
+  code?: string | null;
+  discountCents?: number;
+  subtotalCents?: number;
+  chargeCents?: number;
+}
+
+/**
+ * Apply (or clear, with code=null) a promo code on a pending catering booking.
+ * The server re-prices the Stripe PaymentIntent so the charged amount matches.
+ */
+export async function repriceCateringPromo(bookingId: string, code: string | null): Promise<RepriceResult> {
+  const res = await fetch(`${BASE}/catering/bookings/${bookingId}/promo`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ code }),
+  });
   return res.json();
 }
 

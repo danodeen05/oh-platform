@@ -20,6 +20,8 @@ export interface PromoCodeInputProps {
   scope: PromoScope;
   /** Order subtotal in cents (used for validation and discount calculation) */
   subtotalCents: number;
+  /** Item quantity (e.g. catering bowls) — drives per-bowl ($/bowl) discounts */
+  quantity?: number;
   /** User ID if authenticated */
   userId?: string;
   /** Guest ID if not authenticated */
@@ -65,6 +67,7 @@ export interface PromoCodeInputProps {
 export function PromoCodeInput({
   scope,
   subtotalCents,
+  quantity = 1,
   userId,
   guestId,
   locationId,
@@ -100,6 +103,7 @@ export function PromoCodeInput({
           userId,
           guestId,
           subtotalCents,
+          quantity,
           locationId,
         }),
       });

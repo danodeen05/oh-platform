@@ -54,6 +54,23 @@ function StatusContent({ locale, eventSlug }: { locale: string; eventSlug: strin
   const [order, setOrder] = useState<OrderData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [arriving, setArriving] = useState(false);
+
+  async function confirmArrival() {
+    if (!qrCode) return;
+    setArriving(true);
+    try {
+      const res = await fetch(`${API_URL}/catering/orders/${encodeURIComponent(qrCode)}/arrive`, { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        setOrder((o) => (o ? { ...o, status: data.status || "QUEUED" } : o));
+      }
+    } catch {
+      /* poll will recover */
+    } finally {
+      setArriving(false);
+    }
+  }
 
   // Commentary
   const [commentary, setCommentary] = useState<OrderCommentary | null>(null);
@@ -167,6 +184,16 @@ function StatusContent({ locale, eventSlug }: { locale: string; eventSlug: strin
   const eventDate = event ? new Date(event.eventDate) : null;
   const isPhaseA = !isActive; // Show countdown/teaser before PREPPING
 
+  // Arrival: the order is "held" (PAID) until the attendee checks in on the day
+  // of the event, which queues it for the kitchen.
+  const isHeld = order.status === "PAID";
+  const isCheckedIn = order.status === "QUEUED";
+  const denver = "America/Denver";
+  const isEventDay =
+    !!eventDate &&
+    eventDate.toLocaleDateString("en-US", { timeZone: denver }) ===
+      new Date().toLocaleDateString("en-US", { timeZone: denver });
+
   return (
     <div
       style={{
@@ -200,6 +227,45 @@ function StatusContent({ locale, eventSlug }: { locale: string; eventSlug: strin
           {firstName ? `Hi, ${firstName}!` : "Your Order"}
         </h1>
       </div>
+
+      {/* Arrival check-in — only on the day of the event, before the order is queued */}
+      {isCheckedIn && (
+        <div style={{
+          width: "100%", maxWidth: "360px", textAlign: "center",
+          background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.4)",
+          borderRadius: "14px", padding: "14px 16px",
+        }}>
+          <p style={{ margin: 0, color: "#22c55e", fontWeight: 700, fontSize: "0.95rem", fontFamily: "'Raleway', sans-serif" }}>
+            ✓ You&apos;re checked in!
+          </p>
+          <p style={{ margin: "4px 0 0", color: "var(--brand-primary)", opacity: 0.7, fontSize: "0.82rem", fontFamily: "'Raleway', sans-serif" }}>
+            Your bowl is in the queue. We&apos;ll start cooking shortly.
+          </p>
+        </div>
+      )}
+      {isHeld && isEventDay && (
+        <button
+          onClick={confirmArrival}
+          disabled={arriving}
+          style={{
+            width: "100%", maxWidth: "360px",
+            padding: "16px",
+            background: "var(--brand-primary)",
+            color: "var(--brand-on-primary)",
+            border: "none", borderRadius: "50px",
+            fontFamily: "'Raleway', sans-serif", fontWeight: 700,
+            fontSize: "1rem", letterSpacing: "0.5px",
+            cursor: arriving ? "default" : "pointer", opacity: arriving ? 0.7 : 1,
+          }}
+        >
+          {arriving ? "Checking you in…" : "I've arrived — start my bowl 🍜"}
+        </button>
+      )}
+      {isHeld && !isEventDay && (
+        <p style={{ margin: 0, fontSize: "0.82rem", color: "var(--brand-primary)", opacity: 0.55, fontFamily: "'Raleway', sans-serif", textAlign: "center", maxWidth: "320px" }}>
+          Your order is set. Come back here on the day of the event to check in and start your bowl.
+        </p>
+      )}
 
       {/* PHASE A: countdown + locked teasers */}
       {isPhaseA && eventDate && (
