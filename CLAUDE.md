@@ -136,13 +136,15 @@ All locations use timezone: `America/Denver`
 ```bash
 # Railway API
 export RAILWAY_TOKEN="<from .env>"
-railway variables set STRIPE_SECRET_KEY="sk_live_51SX7kH0xt8Aa8ToE..." --service "@oh/api"
+railway variables set STRIPE_SECRET_KEY="$STRIPE_LIVE_SECRET_KEY" --service "@oh/api"
+# Never paste the real sk_live_ key here. Keep it in .env (gitignored) or the
+# Stripe dashboard; Stripe auto-revokes live keys committed to the repo.
 
 # Vercel (via API)
 curl -X PATCH "https://api.vercel.com/v9/projects/prj_ekz7Au2qhyHm4F6KnFTRGfukYeD0/env/yW84aS9TuTywKNTZ?teamId=team_lcuKROVnRGMXAYN6Q3x44DKh" \
   -H "Authorization: Bearer $VERCEL_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"value": "pk_live_51SX7kH0xt8Aa8ToEGLB4yNwGXweFhN..."}'
+  -d '{"value": "'"$STRIPE_LIVE_PUBLISHABLE_KEY"'"}'
 ```
 
 ### Enable Time Restrictions (Go Live)

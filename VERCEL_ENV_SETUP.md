@@ -13,7 +13,7 @@ Add these environment variables:
 NEXT_PUBLIC_API_URL=https://ohapi-production.up.railway.app
 
 # Clerk Authentication (if not already set)
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_YWR2YW5jZWQtc3F1aXJyZWwtNTUuY2xlcmsuYWNjb3VudHMuZGV2JA
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=[your-clerk-publishable-key]
 CLERK_SECRET_KEY=[your-clerk-secret-key]
 ```
 
@@ -31,7 +31,7 @@ NEXT_PUBLIC_API_URL=https://ohapi-production.up.railway.app
 DATABASE_URL=[get-from-railway-dashboard]
 
 # Clerk Authentication (if not already set)
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_YWR2YW5jZWQtc3F1aXJyZWwtNTUuY2xlcmsuYWNjb3VudHMuZGV2JA
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=[your-clerk-publishable-key]
 CLERK_SECRET_KEY=[your-clerk-secret-key]
 ```
 
