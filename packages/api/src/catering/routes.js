@@ -1487,6 +1487,23 @@ export async function registerCateringRoutes(app) {
         console.warn("[catering booking owner SMS]", e.message);
       }
 
+      // Confirmation SMS to the event contact with their dashboard link, so they
+      // can share the attendee RSVP link + QR code with their group. Sent once,
+      // here on the first successful payment (the already-paid path returns early).
+      try {
+        const event = booking.event;
+        if (event.contactPhone) {
+          const dashboardUrl = `${WEB_BASE_URL}/en/catering/dashboard/${updatedBooking.bookingToken}`;
+          const first = (event.contactName || "").split(" ")[0];
+          const body =
+            `Hi${first ? " " + first : ""}! Your Oh! Beef Noodle Soup catering for ${event.clientCompany} is booked. 🎉\n\n` +
+            `Open your event dashboard to share the RSVP link and QR code with your group and track who's coming:\n${dashboardUrl}`;
+          await sendSMS({ to: event.contactPhone, body });
+        }
+      } catch (e) {
+        console.warn("[catering booking contact SMS]", e.message);
+      }
+
       return {
         success: true,
         bookingToken: updatedBooking.bookingToken,
