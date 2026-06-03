@@ -1244,7 +1244,8 @@ model PromoCode {
 
 enum PromoDiscountType {
   PERCENTAGE // e.g., 20% off
-  FIXED_AMOUNT // e.g., $10 off
+  FIXED_AMOUNT // e.g., $10 off (flat, off the whole order)
+  FIXED_PER_BOWL // e.g., $5 off each bowl (catering) — discountValue cents * bowls
   FREE_SHIPPING // Waive shipping cost (shop orders only)
 }
 
@@ -1596,6 +1597,11 @@ model CateringEvent {
   contactName   String?
   contactEmail  String?
   contactPhone  String?
+
+  // Where the event is held (validated/geocoded at booking time)
+  eventAddress String?
+  eventLat     Float?
+  eventLng     Float?
 
   // Scheduling
   eventDate DateTime // event start (date + slot time baked in)

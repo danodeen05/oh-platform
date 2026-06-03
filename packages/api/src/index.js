@@ -59,6 +59,7 @@ import {
   sendPassUpdatePush,
   getAPNsEnvironment,
 } from "./wallet/apns-service.js";
+import { computeDiscountCents } from "./promos/discount.js";
 import { registerAutonomousRoutes } from "./autonomous/index.js";
 import { getScheduler } from "./triggers/index.js";
 import { getOrchestrator } from "./autonomous/index.js";
@@ -6276,7 +6277,7 @@ app.get("/users/:id/orders", async (req, reply) => {
 
 // Get orders for kitchen display (filter by location and status)
 app.get("/kitchen/orders", async (req, reply) => {
-  const { locationId, status } = req.query || {};
+  const { locationId, status, source } = req.query || {};
   const tenantSlug = getTenantContext(req);
 
   const tenant = await prisma.tenant.findUnique({
@@ -6291,6 +6292,12 @@ app.get("/kitchen/orders", async (req, reply) => {
 
   if (locationId) {
     where.locationId = locationId;
+  }
+
+  // Kitchen "catering mode" passes source=CATERING to show only catering
+  // attendee orders (across all events when no locationId is set).
+  if (source) {
+    where.orderSource = source;
   }
 
   if (status) {
@@ -6620,7 +6627,7 @@ app.patch("/kitchen/orders/:id/status", async (req, reply) => {
 
 // Get kitchen stats (orders by status)
 app.get("/kitchen/stats", async (req, reply) => {
-  const { locationId } = req.query || {};
+  const { locationId, source } = req.query || {};
   const tenantSlug = getTenantContext(req);
 
   const tenant = await prisma.tenant.findUnique({
@@ -6631,11 +6638,17 @@ app.get("/kitchen/stats", async (req, reply) => {
   const baseWhere = {
     tenantId: tenant.id,
     paymentStatus: "PAID",
-    OR: [
+  };
+
+  if (source) {
+    // Catering mode: count that order source by status (arrival = QUEUED).
+    baseWhere.orderSource = source;
+  } else {
+    baseWhere.OR = [
       { podConfirmedAt: { not: null } }, // Regular orders with confirmed pod arrival
       { orderSource: "EVENT" }, // CNY/Event orders don't require pod confirmation
-    ],
-  };
+    ];
+  }
 
   if (locationId) {
     baseWhere.locationId = locationId;
@@ -12914,9 +12927,16 @@ app.post("/promo-codes", async (req, reply) => {
     }
 
     // Validate discount type
-    if (!["PERCENTAGE", "FIXED_AMOUNT", "FREE_SHIPPING"].includes(discountType)) {
+    if (!["PERCENTAGE", "FIXED_AMOUNT", "FIXED_PER_BOWL", "FREE_SHIPPING"].includes(discountType)) {
       return reply.status(400).send({
-        error: "Invalid discountType. Must be PERCENTAGE, FIXED_AMOUNT, or FREE_SHIPPING",
+        error: "Invalid discountType. Must be PERCENTAGE, FIXED_AMOUNT, FIXED_PER_BOWL, or FREE_SHIPPING",
+      });
+    }
+
+    // Per-bowl discounts only apply to catering bookings.
+    if (discountType === "FIXED_PER_BOWL" && scope !== "CATERING") {
+      return reply.status(400).send({
+        error: "FIXED_PER_BOWL discounts require the CATERING scope",
       });
     }
 
@@ -13034,6 +13054,7 @@ app.post("/promo-codes/validate", async (req, reply) => {
       subtotalCents,
       locationId,
       items = [],
+      quantity = 1,
     } = req.body;
 
     if (!code) {
@@ -13069,7 +13090,7 @@ app.post("/promo-codes/validate", async (req, reply) => {
 
     // Check scope compatibility
     if (promoCode.scope !== "ALL" && promoCode.scope !== scope) {
-      const scopeLabels = { MENU: "dining orders", SHOP: "shop orders", GIFT_CARD: "gift card purchases" };
+      const scopeLabels = { MENU: "dining orders", SHOP: "shop orders", GIFT_CARD: "gift card purchases", CATERING: "catering bookings" };
       return reply.send({
         valid: false,
         error: `This promo code is only valid for ${scopeLabels[promoCode.scope] || promoCode.scope}`,
@@ -13102,25 +13123,16 @@ app.post("/promo-codes/validate", async (req, reply) => {
       }
     }
 
-    // Calculate discount
-    let discountCents = 0;
-
-    if (promoCode.discountType === "PERCENTAGE") {
-      discountCents = Math.round((subtotalCents * promoCode.discountValue) / 100);
-      // Apply cap if set
-      if (promoCode.maxDiscountCents && discountCents > promoCode.maxDiscountCents) {
-        discountCents = promoCode.maxDiscountCents;
-      }
-    } else if (promoCode.discountType === "FIXED_AMOUNT") {
-      discountCents = promoCode.discountValue;
-      // Don't exceed subtotal
-      if (discountCents > subtotalCents) {
-        discountCents = subtotalCents;
-      }
-    } else if (promoCode.discountType === "FREE_SHIPPING") {
-      // Free shipping is handled at checkout, just mark as valid
-      discountCents = 0; // Actual shipping discount applied at checkout
-    }
+    // Calculate discount (shared helper — handles PERCENTAGE / FIXED_AMOUNT /
+    // FIXED_PER_BOWL; FREE_SHIPPING is applied at checkout so resolves to 0).
+    // `quantity` (bowls) drives the per-bowl type.
+    const discountCents = computeDiscountCents({
+      discountType: promoCode.discountType,
+      discountValue: promoCode.discountValue,
+      maxDiscountCents: promoCode.maxDiscountCents,
+      subtotalCents,
+      quantity,
+    });
 
     return reply.send({
       valid: true,

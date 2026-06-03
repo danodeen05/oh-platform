@@ -25,6 +25,7 @@ import {
   summarizeBookingDetail,
   chappyAttendeeGreeting,
 } from "./ai.js";
+import { computeDiscountCents } from "../promos/discount.js";
 
 const prisma = new PrismaClient();
 const stripe = process.env.STRIPE_SECRET_KEY
@@ -319,6 +320,9 @@ export async function registerCateringRoutes(app) {
         minimumBowls,
         notes,
         eventName,
+        eventAddress,
+        eventLat,
+        eventLng,
       } = req.body || {};
 
       if (!clientCompany || !eventDate || !slot) {
@@ -380,6 +384,9 @@ export async function registerCateringRoutes(app) {
           minimumBowls: minimumBowls ?? 10,
           notes: notes || null,
           eventName: eventName || null,
+          eventAddress: eventAddress || null,
+          eventLat: eventLat ?? null,
+          eventLng: eventLng ?? null,
           status: "PLANNING",
         },
       });
@@ -414,6 +421,7 @@ export async function registerCateringRoutes(app) {
     try {
       const allowed = [
         "clientCompany","clientWebsite","contactName","contactEmail","contactPhone",
+        "eventAddress","eventLat","eventLng",
         "eventDate","slot","pricePerBowlCents","minimumBowls","bookedBowls",
         "status","eventName","logoUrl","brandColors","companyDescription","notes",
       ];
@@ -486,6 +494,44 @@ export async function registerCateringRoutes(app) {
       return { success: true, deletedEvent: event.slug, deletedOrders: orderIds.length };
     } catch (err) {
       console.error("[admin catering delete]", err.message);
+      return reply.code(500).send({ error: err.message });
+    }
+  });
+
+  // =========================================================================
+  // ADMIN: Manually text all of an event's RSVPs the order link + arrival invite
+  // POST /admin/catering/events/:id/send-invites
+  // =========================================================================
+  app.post("/admin/catering/events/:id/send-invites", async (req, reply) => {
+    try {
+      const event = await prisma.cateringEvent.findUnique({
+        where: { id: req.params.id },
+        include: { rsvps: true },
+      });
+      if (!event) return reply.code(404).send({ error: "Event not found" });
+
+      const orderUrl = `${WEB_BASE_URL}/catering/e/${event.slug}`;
+      const name = event.eventName || event.clientCompany;
+
+      let sent = 0;
+      let failed = 0;
+      for (const rsvp of event.rsvps) {
+        const first = (rsvp.name || "").split(" ")[0];
+        const body =
+          `Hi${first ? " " + first : ""}! You're invited to ${name} x Oh! Beef Noodle Soup.\n\n` +
+          `Order your bowl, then tap "I've arrived" on the page when you get to the event so we can start cooking:\n${orderUrl}`;
+        try {
+          await sendSMS({ to: rsvp.phone, body });
+          sent++;
+        } catch (e) {
+          failed++;
+          console.warn("[send-invites]", rsvp.phone, e.message);
+        }
+      }
+
+      return { sent, failed, total: event.rsvps.length };
+    } catch (err) {
+      console.error("[send-invites]", err.message);
       return reply.code(500).send({ error: err.message });
     }
   });
@@ -951,6 +997,7 @@ export async function registerCateringRoutes(app) {
           logoUrl: true,
           brandColors: true,
           companyDescription: true,
+          eventAddress: true,
           eventDate: true,
           slot: true,
           status: true,
@@ -1025,6 +1072,9 @@ export async function registerCateringRoutes(app) {
         bowls,
         promoCode: promoCodeInput,
         notes,
+        eventAddress,
+        eventLat,
+        eventLng,
       } = req.body || {};
 
       if (!clientCompany || !eventDate || !slot || !bowls) {
@@ -1085,14 +1135,13 @@ export async function registerCateringRoutes(app) {
             (!promoResult.totalUsageLimit ||
               promoResult._count.usages < promoResult.totalUsageLimit)
           ) {
-            if (promoResult.discountType === "PERCENTAGE") {
-              discountCents = Math.round((subtotalCents * promoResult.discountValue) / 100);
-              if (promoResult.maxDiscountCents && discountCents > promoResult.maxDiscountCents) {
-                discountCents = promoResult.maxDiscountCents;
-              }
-            } else if (promoResult.discountType === "FIXED_AMOUNT") {
-              discountCents = Math.min(promoResult.discountValue, subtotalCents);
-            }
+            discountCents = computeDiscountCents({
+              discountType: promoResult.discountType,
+              discountValue: promoResult.discountValue,
+              maxDiscountCents: promoResult.maxDiscountCents,
+              subtotalCents,
+              quantity: bowls,
+            });
             resolvedPromoCodeId = promoResult.id;
           }
         } catch (e) {
@@ -1110,15 +1159,18 @@ export async function registerCateringRoutes(app) {
       const eventCode = makeEventCode();
       const locationId = `cat-${slug}-${Date.now().toString(36)}`;
 
+      const hasGeo = typeof eventLat === "number" && typeof eventLng === "number";
       await prisma.location.create({
         data: {
           id: locationId,
           tenantId,
           name: `${clientCompany} Event`,
           city: "Salt Lake City",
-          address: "Private Catering Event",
-          lat: 40.7608,
-          lng: -111.891,
+          // Use the validated event address (+ coords) when provided, so the
+          // per-event Location reflects where the event is actually held.
+          address: eventAddress || "Private Catering Event",
+          lat: hasGeo ? eventLat : 40.7608,
+          lng: hasGeo ? eventLng : -111.891,
           taxRate: 0,
           timezone: "America/Denver",
           isClosed: false,
@@ -1136,6 +1188,9 @@ export async function registerCateringRoutes(app) {
           contactName: contactName || null,
           contactEmail: contactEmail || null,
           contactPhone: contactPhone || null,
+          eventAddress: eventAddress || null,
+          eventLat: hasGeo ? eventLat : null,
+          eventLng: hasGeo ? eventLng : null,
           eventDate: new Date(eventDate),
           slot,
           pricePerBowlCents,
@@ -1222,6 +1277,92 @@ export async function registerCateringRoutes(app) {
     }
   });
 
+  // =========================================================================
+  // PUBLIC: Apply/clear a promo code on a pending booking and RE-PRICE the
+  // Stripe PaymentIntent so the amount actually charged matches the discount.
+  // POST /catering/bookings/:id/promo  body: { code: string | null }
+  // =========================================================================
+  app.post("/catering/bookings/:id/promo", async (req, reply) => {
+    try {
+      if (!stripe) return reply.code(500).send({ error: "Stripe not configured" });
+      const rawCode = (req.body?.code || "").trim();
+
+      const booking = await prisma.cateringBooking.findUnique({
+        where: { id: req.params.id },
+        include: { event: { select: { pricePerBowlCents: true } } },
+      });
+      if (!booking) return reply.code(404).send({ error: "Booking not found" });
+      if (booking.paymentStatus === "PAID") {
+        return reply.code(400).send({ error: "This booking is already paid." });
+      }
+
+      const bowls = booking.bowlsBooked;
+      const subtotalCents = bowls * booking.event.pricePerBowlCents;
+
+      let discountCents = 0;
+      let promoCodeId = null;
+      let appliedCode = null;
+
+      if (rawCode) {
+        const promo = await prisma.promoCode.findUnique({
+          where: { code: rawCode.toUpperCase() },
+          include: { _count: { select: { usages: true } } },
+        });
+        const now = new Date();
+        const valid =
+          promo &&
+          promo.isActive &&
+          (promo.scope === "ALL" || promo.scope === "CATERING") &&
+          (!promo.expiresAt || promo.expiresAt > now) &&
+          promo.startsAt <= now &&
+          (!promo.totalUsageLimit || promo._count.usages < promo.totalUsageLimit) &&
+          (!promo.minimumOrderCents || subtotalCents >= promo.minimumOrderCents);
+
+        if (!valid) {
+          return reply.send({ valid: false, error: "That promo code isn't valid for this booking." });
+        }
+
+        discountCents = computeDiscountCents({
+          discountType: promo.discountType,
+          discountValue: promo.discountValue,
+          maxDiscountCents: promo.maxDiscountCents,
+          subtotalCents,
+          quantity: bowls,
+        });
+        promoCodeId = promo.id;
+        appliedCode = promo.code;
+      }
+
+      const chargeCents = Math.max(0, subtotalCents - discountCents);
+      // Stripe can't charge under $0.50; a code that drops below that can't be applied here.
+      if (rawCode && chargeCents < 50) {
+        return reply.send({
+          valid: false,
+          error: "This code would reduce the total below the $0.50 minimum.",
+        });
+      }
+
+      // Re-price the PaymentIntent (allowed while it's unconfirmed) and persist
+      // the new price + promo on the booking.
+      await stripe.paymentIntents.update(booking.stripePaymentIntentId, { amount: chargeCents });
+      await prisma.cateringBooking.update({
+        where: { id: booking.id },
+        data: { priceCents: chargeCents, promoCodeId },
+      });
+
+      return {
+        valid: true,
+        code: appliedCode,
+        discountCents,
+        subtotalCents,
+        chargeCents,
+      };
+    } catch (err) {
+      console.error("[catering booking promo reprice]", err.message);
+      return reply.code(500).send({ error: err.message });
+    }
+  });
+
   app.post("/catering/bookings/:id/confirm", async (req, reply) => {
     try {
       if (!stripe) return reply.code(500).send({ error: "Stripe not configured" });
@@ -1258,7 +1399,7 @@ export async function registerCateringRoutes(app) {
         data: {
           paymentStatus: "PAID",
           paidCents: booking.priceCents,
-          promoCodeId: promoCodeId || booking.promoCodeId,
+          promoCodeId: booking.promoCodeId || promoCodeId,
         },
       });
 
@@ -1271,7 +1412,7 @@ export async function registerCateringRoutes(app) {
       });
 
       // Record promo usage if applicable
-      const promoId = promoCodeId || booking.promoCodeId;
+      const promoId = booking.promoCodeId || promoCodeId;
       if (promoId) {
         try {
           await prisma.promoCodeUsage.create({
@@ -1600,11 +1741,13 @@ export async function registerCateringRoutes(app) {
           guestPhone: normalizedPhone || null,
           guestZodiac: zodiac || null,
           totalCents: 0,
-          status: "QUEUED",
+          // Held off the kitchen until the attendee confirms arrival on the day
+          // of the event. PAID is excluded from the kitchen "active" filter;
+          // POST /catering/orders/:qrCode/arrive flips it to QUEUED.
+          status: "PAID",
           paymentStatus: "PAID",
           orderSource: "CATERING",
           cateringEventId: event.id,
-          queuedAt: new Date(),
           items: { create: orderItems },
         },
         include: {
@@ -1627,6 +1770,57 @@ export async function registerCateringRoutes(app) {
       });
     } catch (err) {
       console.error("[catering order create]", err.message);
+      return reply.code(500).send({ error: err.message });
+    }
+  });
+
+  // Kitchen display: list LIVE catering events as selectable "locations".
+  // Returns location-like rows (id = the event's locationId) so the existing
+  // /kitchen/orders?locationId=... filter works unchanged.
+  app.get("/catering/kitchen-locations", async (req, reply) => {
+    try {
+      const events = await prisma.cateringEvent.findMany({
+        where: { status: "LIVE" },
+        orderBy: { eventDate: "asc" },
+        select: {
+          id: true, slug: true, locationId: true,
+          eventName: true, clientCompany: true, eventDate: true, slot: true,
+        },
+      });
+      return events.map((e) => ({
+        id: e.locationId,
+        eventId: e.id,
+        slug: e.slug,
+        name: e.eventName || e.clientCompany,
+        eventDate: e.eventDate,
+        slot: e.slot,
+      }));
+    } catch (err) {
+      return reply.code(500).send({ error: err.message });
+    }
+  });
+
+  // Attendee confirms arrival at the event → release their held order into the
+  // kitchen queue (PAID → QUEUED). Idempotent: safe to call more than once.
+  app.post("/catering/orders/:qrCode/arrive", async (req, reply) => {
+    try {
+      const order = await prisma.order.findFirst({
+        where: { orderQrCode: req.params.qrCode, orderSource: "CATERING" },
+        select: { id: true, status: true },
+      });
+      if (!order) return reply.code(404).send({ error: "Order not found" });
+
+      if (order.status === "PAID") {
+        await prisma.order.update({
+          where: { id: order.id },
+          data: { status: "QUEUED", queuedAt: new Date() },
+        });
+        return { success: true, status: "QUEUED" };
+      }
+      // Already arrived (or further along) — report current status.
+      return { success: true, status: order.status };
+    } catch (err) {
+      console.error("[catering arrive]", err.message);
       return reply.code(500).send({ error: err.message });
     }
   });
