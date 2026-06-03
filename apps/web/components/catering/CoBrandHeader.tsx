@@ -89,16 +89,21 @@ export default function CoBrandHeader({
           </div>
         )}
 
-        {/* Separator */}
+        {/* Partnership separator — "company × Oh!" */}
         {showOhLogo && (
-          <div
+          <span
+            aria-hidden
             style={{
-              width: "1px",
-              height: "40px",
-              background: "var(--brand-border)",
               flexShrink: 0,
+              color: "var(--brand-primary)",
+              opacity: 0.5,
+              fontSize: "1.6rem",
+              fontWeight: 300,
+              lineHeight: 1,
             }}
-          />
+          >
+            ×
+          </span>
         )}
 
         {/* Oh! logo — white mark on transparent (no white box), gently floating */}

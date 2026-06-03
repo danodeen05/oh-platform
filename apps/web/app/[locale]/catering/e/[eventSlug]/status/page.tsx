@@ -7,6 +7,7 @@ import ThemedBackground from "@/components/catering/ThemedBackground";
 import CoBrandHeader from "@/components/catering/CoBrandHeader";
 import Countdown from "@/components/catering/Countdown";
 import LockedPreviewCard from "@/components/catering/LockedPreviewCard";
+import ChappyStatusCompanion from "./ChappyStatusCompanion";
 import { fetchCateringEvent, type CateringEvent } from "@/lib/catering/api";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -25,11 +26,16 @@ interface Fortune {
   fortune: string;
   luckyNumbers: number[];
   learnChinese: { traditional: string; pinyin: string; english: string } | null;
+  thisDayInHistory?: { year: number; event: string } | null;
 }
 
 interface OrderCommentary {
   commentary: string | null;
   status: string;
+}
+
+interface OrderRoast {
+  roast: string;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; description: string; progress: number }> = {
@@ -41,6 +47,24 @@ const STATUS_CONFIG: Record<string, { label: string; description: string; progre
 };
 
 const ACTIVE_STATUSES = ["PREPPING", "READY", "SERVING", "COMPLETED"];
+
+// The shared /orders/roast endpoint occasionally returns the model's raw
+// ```json {...}``` wrapper; unwrap it so we only ever show the roast text.
+function cleanRoast(raw?: string | null): string {
+  if (!raw) return "";
+  let t = raw.trim();
+  const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fence) t = fence[1].trim();
+  if (t.startsWith("{")) {
+    try {
+      const o = JSON.parse(t);
+      if (typeof o.roast === "string") return o.roast;
+    } catch {
+      /* fall through */
+    }
+  }
+  return t;
+}
 
 interface PageProps {
   params: Promise<{ locale: string; eventSlug: string }>;
@@ -81,6 +105,27 @@ function StatusContent({ locale, eventSlug }: { locale: string; eventSlug: strin
   const [fortune, setFortune] = useState<Fortune | null>(null);
   const [fortuneLoading, setFortuneLoading] = useState(false);
   const [fortuneOpened, setFortuneOpened] = useState(false);
+
+  // Roast
+  const [roast, setRoast] = useState<OrderRoast | null>(null);
+  const [roastLoading, setRoastLoading] = useState(false);
+  const [roastOpened, setRoastOpened] = useState(false);
+
+  async function fetchRoast() {
+    if (!qrCode || roastLoading) return;
+    setRoastLoading(true);
+    try {
+      const res = await fetch(
+        `${API_URL}/orders/roast?orderQrCode=${encodeURIComponent(qrCode)}&locale=en`,
+        { headers: { "x-tenant-slug": "oh" } }
+      );
+      if (res.ok) setRoast(await res.json());
+    } catch {
+      // silently ignore
+    } finally {
+      setRoastLoading(false);
+    }
+  }
 
   const firstName = order?.guestName?.split(" ")[0] || null;
 
@@ -211,7 +256,6 @@ function StatusContent({ locale, eventSlug }: { locale: string; eventSlug: strin
         <CoBrandHeader
           clientLogoUrl={event.logoUrl}
           clientCompany={event.clientCompany}
-          showOhLogo={false}
         />
       )}
 
@@ -227,6 +271,11 @@ function StatusContent({ locale, eventSlug }: { locale: string; eventSlug: strin
           {firstName ? `Hi, ${firstName}!` : "Your Order"}
         </h1>
       </div>
+
+      {/* Chappy: proactive, order-aware companion — only AFTER the attendee has
+          checked in (order no longer held). He shouldn't comment on the order
+          while it's still waiting for arrival. */}
+      {qrCode && !isHeld && <ChappyStatusCompanion qrCode={qrCode} status={order.status} />}
 
       {/* Arrival check-in — only on the day of the event, before the order is queued */}
       {isCheckedIn && (
@@ -419,9 +468,61 @@ function StatusContent({ locale, eventSlug }: { locale: string; eventSlug: strin
                     </p>
                   </div>
                 )}
+                {fortune.thisDayInHistory && (
+                  <div style={{ marginTop: "10px", padding: "8px 12px", background: "var(--brand-border)", borderRadius: "8px", textAlign: "left" }}>
+                    <p style={{ margin: "0 0 2px", fontSize: "0.7rem", color: "var(--brand-primary)", opacity: 0.6, fontFamily: "'Raleway', sans-serif", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                      📜 This day in {fortune.thisDayInHistory.year}
+                    </p>
+                    <p style={{ margin: 0, fontSize: "0.8rem", color: "var(--brand-primary)", fontFamily: "'Raleway', sans-serif", lineHeight: 1.4 }}>
+                      {fortune.thisDayInHistory.event}
+                    </p>
+                  </div>
+                )}
               </div>
             ) : (
               <p style={{ color: "var(--brand-primary)", opacity: 0.5, fontSize: "0.85rem", margin: 0, fontFamily: "'Raleway', sans-serif" }}>Fortune unavailable</p>
+            )}
+          </div>
+
+          {/* Roast My Order */}
+          <div style={{
+            background: "var(--brand-surface)",
+            border: "1px solid var(--brand-border)",
+            borderRadius: "12px",
+            padding: "16px",
+            maxWidth: "360px",
+            width: "100%",
+            textAlign: "center",
+          }}>
+            {!roastOpened ? (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "14px" }}>
+                <span style={{ fontSize: "2rem" }}>🔥</span>
+                <button
+                  onClick={() => { setRoastOpened(true); fetchRoast(); }}
+                  style={{
+                    padding: "10px 22px",
+                    background: "var(--brand-primary)",
+                    color: "var(--brand-on-primary)",
+                    border: "none",
+                    borderRadius: "50px",
+                    fontFamily: "'Raleway', sans-serif",
+                    fontWeight: 700,
+                    fontSize: "0.85rem",
+                    cursor: "pointer",
+                    letterSpacing: "0.5px",
+                  }}
+                >
+                  Roast My Order
+                </button>
+              </div>
+            ) : roastLoading ? (
+              <p style={{ color: "var(--brand-primary)", fontSize: "0.9rem", margin: 0, fontFamily: "'Raleway', sans-serif" }}>Sharpening the wit…</p>
+            ) : roast?.roast ? (
+              <p style={{ fontSize: "0.95rem", color: "var(--brand-primary)", margin: 0, lineHeight: 1.5, fontFamily: "'Raleway', sans-serif", fontStyle: "italic" }}>
+                🔥 {cleanRoast(roast.roast)}
+              </p>
+            ) : (
+              <p style={{ color: "var(--brand-primary)", opacity: 0.5, fontSize: "0.85rem", margin: 0, fontFamily: "'Raleway', sans-serif" }}>Our roast chef is on break.</p>
             )}
           </div>
 
@@ -430,6 +531,39 @@ function StatusContent({ locale, eventSlug }: { locale: string; eventSlug: strin
           </p>
         </>
       )}
+
+      {/* One Red Step Foundation (always visible) */}
+      <a
+        href="https://www.oneredstepatatime.org"
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          width: "100%",
+          maxWidth: "360px",
+          marginTop: "8px",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: "6px",
+          padding: "16px",
+          borderRadius: "16px",
+          background: "var(--brand-surface)",
+          border: "1px solid var(--brand-border)",
+          textDecoration: "none",
+          textAlign: "center",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/redsock-icon.png" alt="One Red Step Foundation" style={{ height: "28px", width: "auto" }} />
+          <span style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--brand-primary)", fontFamily: "'Raleway', sans-serif", letterSpacing: "0.5px" }}>
+            We Give Back
+          </span>
+        </div>
+        <p style={{ margin: 0, fontSize: "0.78rem", color: "var(--brand-primary)", opacity: 0.7, fontFamily: "'Raleway', sans-serif", lineHeight: 1.5 }}>
+          A portion of every Oh! experience supports our 501(c)(3), the One Red Step Foundation, raising mental-health awareness one red step at a time. Tap to learn more.
+        </p>
+      </a>
 
       {/* Survey CTA (always visible) */}
       <Link
@@ -443,7 +577,7 @@ function StatusContent({ locale, eventSlug }: { locale: string; eventSlug: strin
           marginTop: "8px",
         }}
       >
-        Share feedback about your experience with Oh! Beef Noodle Soup
+        💬 Share feedback about your experience with Oh! Beef Noodle Soup
       </Link>
     </div>
   );
