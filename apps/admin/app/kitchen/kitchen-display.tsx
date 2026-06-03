@@ -132,7 +132,7 @@ function getPodCallReasonDisplay(reason: string): { label: string; emoji: string
   }
 }
 
-export default function KitchenDisplay({ locations }: { locations: any[] }) {
+export default function KitchenDisplay({ locations, cateringMode = false }: { locations: any[]; cateringMode?: boolean }) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<string>("all");
   const [podCalls, setPodCalls] = useState<PodCall[]>([]);
@@ -172,6 +172,7 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
       if (selectedLocation !== "all") {
         params.append("locationId", selectedLocation);
       }
+      if (cateringMode) params.append("source", "CATERING");
 
       const response = await fetch(
         `${BASE}/kitchen/orders?${params.toString()}`,
@@ -197,6 +198,7 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
       if (selectedLocation !== "all") {
         params.append("locationId", selectedLocation);
       }
+      if (cateringMode) params.append("source", "CATERING");
 
       const queryString = params.toString();
       const response = await fetch(
@@ -628,16 +630,18 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
             </div>
             <div
               style={{
-                fontSize: order.orderSource === "EVENT" ? "1.45rem" : "1.275rem",
+                fontSize: order.orderSource === "EVENT" || order.orderSource === "CATERING" ? "1.45rem" : "1.275rem",
                 fontWeight: "bold",
-                color: isArriving ? "#f59e0b" : customerIsVIP ? "#dc2626" : order.orderSource === "EVENT" ? "#D7B66E" : "#3b82f6",
+                color: isArriving ? "#f59e0b" : customerIsVIP ? "#dc2626" : order.orderSource === "EVENT" || order.orderSource === "CATERING" ? "#D7B66E" : "#3b82f6",
               }}
             >
               {order.orderSource === "EVENT"
                 ? `${order.guestName || order.guest?.name || "CNY Guest"}${order.guestZodiac ? ` (${order.guestZodiac})` : ""}`
-                : order.seat
-                  ? `Pod ${order.seat.number}`
-                  : "Dine-In"
+                : order.orderSource === "CATERING"
+                  ? "Catering"
+                  : order.seat
+                    ? `Pod ${order.seat.number}`
+                    : "Dine-In"
               }
             </div>
             {order.orderSource !== "EVENT" && getCustomerName(order) && (
@@ -948,7 +952,7 @@ export default function KitchenDisplay({ locations }: { locations: any[] }) {
             fontSize: "1rem",
           }}
         >
-          <option value="all">All Locations</option>
+          <option value="all">{cateringMode ? "All Events" : "All Locations"}</option>
           {locations.map((loc) => (
             <option key={loc.id} value={loc.id}>
               {loc.name}

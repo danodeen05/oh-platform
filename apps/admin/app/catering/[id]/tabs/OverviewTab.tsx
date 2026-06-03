@@ -71,6 +71,19 @@ export default function OverviewTab({ event, onRefresh }: OverviewTabProps) {
               )}
             </div>
           )}
+          {event.eventAddress && (
+            <div style={{ gridColumn: "1 / -1" }}>
+              <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: 2 }}>Event Address</div>
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.eventAddress)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: "#4f46e5", textDecoration: "none" }}
+              >
+                {event.eventAddress}
+              </a>
+            </div>
+          )}
           <div>
             <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: 2 }}>Event Code</div>
             <code

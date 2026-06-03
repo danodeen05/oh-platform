@@ -7,6 +7,7 @@ const BASE = process.env.NEXT_PUBLIC_API_URL || "";
 const DISCOUNT_TYPES = [
   { value: "PERCENTAGE", label: "Percentage Off" },
   { value: "FIXED_AMOUNT", label: "Fixed Amount Off" },
+  { value: "FIXED_PER_BOWL", label: "Per-Bowl Amount Off (catering)" },
   { value: "FREE_SHIPPING", label: "Free Shipping" },
 ];
 
@@ -15,6 +16,7 @@ const SCOPES = [
   { value: "MENU", label: "Menu Orders Only" },
   { value: "SHOP", label: "Shop Orders Only" },
   { value: "GIFT_CARD", label: "Gift Card Purchases Only" },
+  { value: "CATERING", label: "Catering Bookings Only" },
 ];
 
 const CATEGORIES = ["FOOD", "CONDIMENTS", "MERCHANDISE", "APPAREL", "LIMITED_EDITION"];
@@ -237,7 +239,19 @@ function PromoFormModal({
                   </div>
                   <div>
                     <label style={{ display: "block", fontSize: "0.85rem", marginBottom: 4, color: "#374151" }}>Scope</label>
-                    <select value={formData.scope} onChange={(e) => setFormData({ ...formData, scope: e.target.value })} style={{ padding: 8, width: "100%", borderRadius: 4, border: "1px solid #d1d5db" }}>
+                    <select
+                      value={formData.scope}
+                      onChange={(e) => {
+                        const scope = e.target.value;
+                        // Per-bowl discounts only make sense for catering.
+                        const discountType =
+                          scope !== "CATERING" && formData.discountType === "FIXED_PER_BOWL"
+                            ? "PERCENTAGE"
+                            : formData.discountType;
+                        setFormData({ ...formData, scope, discountType });
+                      }}
+                      style={{ padding: 8, width: "100%", borderRadius: 4, border: "1px solid #d1d5db" }}
+                    >
                       {SCOPES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                     </select>
                   </div>
@@ -247,12 +261,12 @@ function PromoFormModal({
                   <div>
                     <label style={{ display: "block", fontSize: "0.85rem", marginBottom: 4, color: "#374151" }}>Discount Type *</label>
                     <select value={formData.discountType} onChange={(e) => setFormData({ ...formData, discountType: e.target.value })} style={{ padding: 8, width: "100%", borderRadius: 4, border: "1px solid #d1d5db" }}>
-                      {DISCOUNT_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                      {DISCOUNT_TYPES.filter((t) => t.value !== "FIXED_PER_BOWL" || formData.scope === "CATERING").map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                     </select>
                   </div>
                   <div>
                     <label style={{ display: "block", fontSize: "0.85rem", marginBottom: 4, color: "#374151" }}>
-                      {formData.discountType === "PERCENTAGE" ? "Percentage (0-100) *" : formData.discountType === "FIXED_AMOUNT" ? "Amount in cents *" : "Value"}
+                      {formData.discountType === "PERCENTAGE" ? "Percentage (0-100) *" : formData.discountType === "FIXED_PER_BOWL" ? "Cents per bowl *" : formData.discountType === "FIXED_AMOUNT" ? "Amount in cents *" : "Value"}
                     </label>
                     <input
                       placeholder={formData.discountType === "PERCENTAGE" ? "e.g., 20" : "e.g., 500"}
@@ -541,6 +555,8 @@ function PromoRow({ promo, onUpdate, onEdit }: { promo: PromoCode; onUpdate: () 
       return `${promo.discountValue}%${promo.maxDiscountCents ? ` (max $${(promo.maxDiscountCents / 100).toFixed(2)})` : ""}`;
     } else if (promo.discountType === "FIXED_AMOUNT") {
       return `$${(promo.discountValue / 100).toFixed(2)}`;
+    } else if (promo.discountType === "FIXED_PER_BOWL") {
+      return `$${(promo.discountValue / 100).toFixed(2)}/bowl`;
     } else {
       return "Free Shipping";
     }
@@ -581,8 +597,8 @@ function PromoRow({ promo, onUpdate, onEdit }: { promo: PromoCode; onUpdate: () 
           padding: "2px 8px",
           borderRadius: 4,
           fontSize: "0.75rem",
-          backgroundColor: promo.discountType === "PERCENTAGE" ? "#dbeafe" : promo.discountType === "FIXED_AMOUNT" ? "#d1fae5" : "#fef3c7",
-          color: promo.discountType === "PERCENTAGE" ? "#1e40af" : promo.discountType === "FIXED_AMOUNT" ? "#065f46" : "#92400e",
+          backgroundColor: promo.discountType === "PERCENTAGE" ? "#dbeafe" : promo.discountType === "FIXED_AMOUNT" ? "#d1fae5" : promo.discountType === "FIXED_PER_BOWL" ? "#ede9fe" : "#fef3c7",
+          color: promo.discountType === "PERCENTAGE" ? "#1e40af" : promo.discountType === "FIXED_AMOUNT" ? "#065f46" : promo.discountType === "FIXED_PER_BOWL" ? "#5b21b6" : "#92400e",
         }}>
           {promo.discountType.replace("_", " ")}
         </span>

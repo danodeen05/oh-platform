@@ -36,6 +36,9 @@ export interface CateringEvent {
   brandColors: string[];
   companyDescription?: string;
   notes?: string;
+  eventAddress?: string | null;
+  eventLat?: number | null;
+  eventLng?: number | null;
   booking?: CateringBooking;
 }
 

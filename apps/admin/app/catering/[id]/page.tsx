@@ -33,6 +33,22 @@ export default function CateringEventDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [invitesSending, setInvitesSending] = useState(false);
+
+  const sendInvites = async () => {
+    if (!window.confirm("Text all RSVPs the order link and arrival invite now?")) return;
+    setInvitesSending(true);
+    try {
+      const res = await fetch(`${BASE}/admin/catering/events/${eventId}/send-invites`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to send");
+      alert(`Invites sent to ${data.sent} of ${data.total} RSVP(s)${data.failed ? ` — ${data.failed} failed` : ""}.`);
+    } catch (e) {
+      alert("Failed to send invites: " + (e as Error).message);
+    } finally {
+      setInvitesSending(false);
+    }
+  };
   const [enrichPending, startEnrichTransition] = useTransition();
 
   const fetchEvent = async () => {
@@ -205,6 +221,24 @@ export default function CateringEventDetailPage() {
             }}
           >
             Edit Event
+          </button>
+          <button
+            onClick={sendInvites}
+            disabled={invitesSending}
+            title="Text all RSVPs the order link + 'I've arrived' invite"
+            style={{
+              padding: "8px 16px",
+              backgroundColor: "#4f46e5",
+              color: "white",
+              border: "none",
+              borderRadius: 6,
+              cursor: invitesSending ? "default" : "pointer",
+              fontWeight: 500,
+              fontSize: "0.85rem",
+              opacity: invitesSending ? 0.6 : 1,
+            }}
+          >
+            {invitesSending ? "Sending…" : "Send Invites to RSVPs"}
           </button>
         </div>
       </div>
