@@ -69,3 +69,10 @@ test-results/
 # Backup files
 *.backup
 *.broken
+
+# Runtime site-config (dine-in toggle persistence)
+.site-config.json
+
+# Prod env backups (created during dev DB isolation)
+.env.prod-bak
+packages/db/.env.prod-bak

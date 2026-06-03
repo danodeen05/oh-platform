@@ -15,11 +15,15 @@ import { PrismaClient } from "@oh/db";
 import Stripe from "stripe";
 import { sendSMS } from "../notifications.js";
 import QRCode from "qrcode";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   enrichFromWebsite,
   generateShoppingList,
   summarizeSurvey,
   summarizeBookingDetail,
+  chappyAttendeeGreeting,
 } from "./ai.js";
 
 const prisma = new PrismaClient();
@@ -29,6 +33,13 @@ const stripe = process.env.STRIPE_SECRET_KEY
 
 // Owner alert phone — read from env, fallback to Dano's number
 const OWNER_ALERT_PHONE = process.env.OWNER_ALERT_PHONE || "+18017393205";
+
+// Public web origin for shareable attendee/event links.
+// Set WEB_BASE_URL per environment (dev API → https://devwebapp.ohbeef.com,
+// prod API → https://www.ohbeef.com). Defaults to prod when unset.
+const WEB_BASE_URL = (
+  process.env.WEB_BASE_URL || "https://www.ohbeef.com"
+).replace(/\/$/, "");
 
 // Cron secret guard
 function requireCronSecret(req, reply) {
@@ -40,19 +51,41 @@ function requireCronSecret(req, reply) {
 }
 
 // ---------------------------------------------------------------------------
-// Runtime site-config flag for dine-in ordering.
+// Site-config flag for dine-in ordering, PERSISTED to a small JSON file so the
+// admin toggle survives API restarts/redeploys (it used to be in-memory only
+// and reverted to the env default on every restart).
 //
-// We cannot add a DB table (schema is frozen) and we need this to survive
-// Railway restarts reliably.  The approach:
-//   - Seed from DISABLE_DINE_IN_ORDERS env var at boot
-//   - Allow runtime override via PATCH /admin/site-config/order-now
-//   - Resets to env-derived value on restart (documented below)
-//
-// If you need persistence across restarts, set DISABLE_DINE_IN_ORDERS in
-// Railway env vars instead of relying on the in-memory runtime override.
+// Precedence at boot: persisted file value > DISABLE_DINE_IN_ORDERS env > ON.
+// The PATCH endpoint updates both the in-memory value and the file.
+// Override the file location with SITE_CONFIG_PATH if the default isn't writable.
 // ---------------------------------------------------------------------------
+const SITE_CONFIG_PATH =
+  process.env.SITE_CONFIG_PATH ||
+  path.join(path.dirname(fileURLToPath(import.meta.url)), "../../.site-config.json");
+
+function readSiteConfig() {
+  try {
+    const cfg = JSON.parse(fs.readFileSync(SITE_CONFIG_PATH, "utf8"));
+    return cfg && typeof cfg === "object" ? cfg : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeSiteConfig(patch) {
+  try {
+    const next = { ...readSiteConfig(), ...patch };
+    fs.writeFileSync(SITE_CONFIG_PATH, JSON.stringify(next, null, 2));
+  } catch (e) {
+    console.warn("[site-config] persist failed:", e.message);
+  }
+}
+
+const _persisted = readSiteConfig();
 let dineInOrdersEnabled =
-  process.env.DISABLE_DINE_IN_ORDERS !== "true";
+  typeof _persisted.dineInOrdersEnabled === "boolean"
+    ? _persisted.dineInOrdersEnabled
+    : process.env.DISABLE_DINE_IN_ORDERS !== "true";
 
 export function isDineInOrdersEnabled() {
   return dineInOrdersEnabled;
@@ -197,6 +230,7 @@ export async function registerCateringRoutes(app) {
       return reply.code(400).send({ error: "enabled (boolean) required" });
     }
     dineInOrdersEnabled = enabled;
+    writeSiteConfig({ dineInOrdersEnabled }); // persist so it survives restarts
     return { enabled: dineInOrdersEnabled };
   });
 
@@ -396,6 +430,62 @@ export async function registerCateringRoutes(app) {
       return event;
     } catch (err) {
       if (err.code === "P2025") return reply.code(404).send({ error: "Event not found" });
+      return reply.code(500).send({ error: err.message });
+    }
+  });
+
+  // =========================================================================
+  // ADMIN: Hard-delete a catering event and ALL related data
+  // DELETE /admin/catering/events/:id
+  // Removes orders/items, RSVPs, survey, charges, booking, the event's
+  // dedicated Location, and the event itself — in one all-or-nothing transaction.
+  // =========================================================================
+  app.delete("/admin/catering/events/:id", async (req, reply) => {
+    try {
+      const id = req.params.id;
+      const event = await prisma.cateringEvent.findUnique({
+        where: { id },
+        select: {
+          id: true,
+          slug: true,
+          locationId: true,
+          booking: { select: { id: true } },
+          orders: { select: { id: true } },
+          survey: { select: { id: true } },
+        },
+      });
+      if (!event) return reply.code(404).send({ error: "Event not found" });
+
+      const orderIds = event.orders.map((o) => o.id);
+      const bookingIds = event.booking ? [event.booking.id] : [];
+      const surveyIds = event.survey ? [event.survey.id] : [];
+      const locationId = event.locationId;
+
+      await prisma.$transaction([
+        // Order children (mostly empty for catering, but delete defensively)
+        prisma.orderItem.deleteMany({ where: { orderId: { in: orderIds } } }),
+        prisma.waitQueue.deleteMany({ where: { orderId: { in: orderIds } } }),
+        prisma.podCall.deleteMany({ where: { orderId: { in: orderIds } } }),
+        prisma.creditEvent.deleteMany({ where: { orderId: { in: orderIds } } }),
+        prisma.order.deleteMany({ where: { cateringEventId: id } }),
+        // Catering children
+        prisma.cateringSurveyResponse.deleteMany({ where: { surveyId: { in: surveyIds } } }),
+        prisma.cateringSurvey.deleteMany({ where: { eventId: id } }),
+        prisma.cateringRSVP.deleteMany({ where: { eventId: id } }),
+        prisma.cateringCharge.deleteMany({ where: { eventId: id } }),
+        prisma.promoCodeUsage.deleteMany({ where: { cateringBookingId: { in: bookingIds } } }),
+        prisma.cateringBooking.deleteMany({ where: { eventId: id } }),
+        // The event, then its dedicated Location (+ any stray location children)
+        prisma.cateringEvent.delete({ where: { id } }),
+        prisma.waitQueue.deleteMany({ where: { locationId } }),
+        prisma.locationStats.deleteMany({ where: { locationId } }),
+        prisma.seat.deleteMany({ where: { locationId } }),
+        prisma.location.delete({ where: { id: locationId } }),
+      ]);
+
+      return { success: true, deletedEvent: event.slug, deletedOrders: orderIds.length };
+    } catch (err) {
+      console.error("[admin catering delete]", err.message);
       return reply.code(500).send({ error: err.message });
     }
   });
@@ -880,6 +970,41 @@ export async function registerCateringRoutes(app) {
   });
 
   // =========================================================================
+  // PUBLIC: Personalized Chappy greeting for an attendee (order page)
+  // GET /catering/events/:slug/greeting?phone=...
+  // =========================================================================
+  app.get("/catering/events/:slug/greeting", async (req, reply) => {
+    try {
+      const phone = String(req.query?.phone || "").replace(/\D/g, "");
+      if (!phone) return reply.code(400).send({ error: "phone required" });
+
+      const event = await prisma.cateringEvent.findUnique({
+        where: { slug: req.params.slug },
+        select: { id: true, eventName: true, clientCompany: true },
+      });
+      if (!event) return reply.code(404).send({ error: "Event not found" });
+
+      const rsvp = await prisma.cateringRSVP.findUnique({
+        where: { eventId_phone: { eventId: event.id, phone } },
+        select: { name: true, zodiac: true, dob: true },
+      });
+      // No RSVP for this guest yet → nothing to personalize.
+      if (!rsvp) return { greeting: null, zodiac: null, name: null };
+
+      const greeting = await chappyAttendeeGreeting({
+        name: rsvp.name,
+        zodiac: rsvp.zodiac,
+        dob: rsvp.dob,
+        eventName: event.eventName || event.clientCompany,
+      });
+      return { greeting, zodiac: rsvp.zodiac, name: rsvp.name };
+    } catch (err) {
+      console.error("[catering greeting]", err.message);
+      return reply.code(500).send({ error: err.message });
+    }
+  });
+
+  // =========================================================================
   // PUBLIC: Bookings
   // POST /catering/bookings
   // POST /catering/bookings/:id/confirm
@@ -1021,6 +1146,33 @@ export async function registerCateringRoutes(app) {
         },
       });
 
+      // Fire-and-forget co-branding enrichment. Kicked off at booking creation so
+      // the company logo is ready by the time the client lands on the dashboard
+      // (the card-entry + payment step gives it plenty of lead time). Writes
+      // suggested fields directly (owner can still override); never downgrades LIVE.
+      if (event.clientWebsite) {
+        (async () => {
+          try {
+            const enriched = await enrichFromWebsite(event.clientWebsite);
+            const data = { enrichmentRaw: enriched };
+            if (enriched.logoUrl) data.logoUrl = enriched.logoUrl;
+            if (enriched.brandColors?.length) data.brandColors = enriched.brandColors;
+            if (enriched.companyDescription) data.companyDescription = enriched.companyDescription;
+            if (!event.eventName && enriched.suggestedEventName) {
+              data.eventName = enriched.suggestedEventName;
+            }
+            // No status guard: these fields are freshly null at creation, and
+            // confirmation may flip the event to LIVE before this finishes.
+            await prisma.cateringEvent.update({
+              where: { id: event.id },
+              data,
+            });
+          } catch (e) {
+            console.warn("[catering booking auto-enrich]", e.message);
+          }
+        })();
+      }
+
       // Create Stripe payment intent
       const paymentIntent = await stripe.paymentIntents.create({
         amount: chargeCents,
@@ -1085,7 +1237,13 @@ export async function registerCateringRoutes(app) {
       });
       if (!booking) return reply.code(404).send({ error: "Booking not found" });
       if (booking.paymentStatus === "PAID") {
-        return reply.send({ success: true, bookingToken: booking.bookingToken, alreadyPaid: true });
+        return reply.send({
+          success: true,
+          bookingToken: booking.bookingToken,
+          eventId: booking.event.id,
+          eventSlug: booking.event.slug,
+          alreadyPaid: true,
+        });
       }
 
       // Verify with Stripe
@@ -1104,9 +1262,12 @@ export async function registerCateringRoutes(app) {
         },
       });
 
+      // Payment succeeded → the event is real, so make it attendee-facing now.
+      // (Auto-enrichment from booking creation has already populated co-branding;
+      // the owner can still refine it later in the admin.)
       await prisma.cateringEvent.update({
         where: { id: booking.event.id },
-        data: { status: "PLANNING" }, // owner still needs to enrich → LIVE
+        data: { status: "LIVE" },
       });
 
       // Record promo usage if applicable
@@ -1154,7 +1315,7 @@ export async function registerCateringRoutes(app) {
         success: true,
         bookingToken: updatedBooking.bookingToken,
         eventId: booking.event.id,
-        slug: booking.event.slug,
+        eventSlug: booking.event.slug,
       };
     } catch (err) {
       console.error("[catering bookings confirm]", err.message);
@@ -1174,7 +1335,8 @@ export async function registerCateringRoutes(app) {
         include: {
           event: {
             include: {
-              rsvps: true,
+              rsvps: { orderBy: { createdAt: "asc" } },
+              orders: { select: { guestPhone: true } },
               _count: { select: { orders: true } },
             },
           },
@@ -1182,7 +1344,22 @@ export async function registerCateringRoutes(app) {
       });
       if (!booking) return reply.code(404).send({ error: "Dashboard not found" });
 
-      const shareUrl = `https://www.ohbeef.com/catering/e/${booking.event.slug}`;
+      // Match each RSVP to whether that guest has placed an order (by phone).
+      const orderedPhones = new Set(
+        (booking.event.orders || [])
+          .map((o) => (o.guestPhone || "").replace(/\D/g, "").slice(-10))
+          .filter(Boolean)
+      );
+      const rsvps = booking.event.rsvps.map((r) => ({
+        id: r.id,
+        name: r.name,
+        phone: r.phone,
+        zodiac: r.zodiac,
+        createdAt: r.createdAt,
+        ordered: orderedPhones.has((r.phone || "").replace(/\D/g, "").slice(-10)),
+      }));
+
+      const shareUrl = `${WEB_BASE_URL}/catering/e/${booking.event.slug}`;
       let qrCode = null;
       try {
         qrCode = await QRCode.toDataURL(shareUrl, {
@@ -1199,7 +1376,7 @@ export async function registerCateringRoutes(app) {
           priceCents: booking.priceCents,
           paymentStatus: booking.paymentStatus,
         },
-        rsvps: booking.event.rsvps,
+        rsvps,
         orderCount: booking.event._count.orders,
         shareUrl,
         shareQrCode: qrCode,
@@ -1569,7 +1746,7 @@ export async function registerCateringRoutes(app) {
 
       const results = [];
       for (const event of events) {
-        const orderUrl = `https://www.ohbeef.com/catering/e/${event.slug}`;
+        const orderUrl = `${WEB_BASE_URL}/catering/e/${event.slug}`;
         for (const rsvp of event.rsvps) {
           if (!rsvp.phone) continue;
           try {
@@ -1622,7 +1799,7 @@ export async function registerCateringRoutes(app) {
 
       const results = [];
       for (const event of events) {
-        const surveyUrl = `https://www.ohbeef.com/catering/e/${event.slug}/survey`;
+        const surveyUrl = `${WEB_BASE_URL}/catering/e/${event.slug}/survey`;
 
         // Get all attendees who placed an order
         const orders = await prisma.order.findMany({

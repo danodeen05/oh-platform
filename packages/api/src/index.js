@@ -102,7 +102,7 @@ const allowedOrigins = [
   'https://www.ohbeef.com',
   'https://admin.ohbeef.com',
   'https://devadmin.ohbeef.com',
-  'https://devweb.ohbeef.com',
+  'https://devwebapp.ohbeef.com',
   'https://devapi.ohbeef.com',
   'https://api.ohbeef.com',
   // Development origins
@@ -613,6 +613,9 @@ app.get("/locations", async (req, reply) => {
     where: {
       tenantId: tenant.id,
       isClosed: false, // Exclude closed/disabled locations
+      // Exclude per-event catering pseudo-locations (each CateringEvent creates
+      // its own Location row). These must never appear in restaurant/live ordering.
+      cateringEvent: { is: null },
     },
     include: {
       stats: true,
@@ -5743,7 +5746,7 @@ app.get("/users/:id/wallet/apple", async (req, reply) => {
   try {
     // Fetch all open locations with seat data for relevantLocations (geofencing)
     const locations = await prisma.location.findMany({
-      where: { isClosed: false },
+      where: { isClosed: false, cateringEvent: { is: null } }, // exclude catering pseudo-locations
       select: {
         lat: true,
         lng: true,
