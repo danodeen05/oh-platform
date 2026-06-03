@@ -26,6 +26,9 @@ model Tenant {
   subscriptionStatus SubscriptionStatus @default(TRIAL)
   subscriptionTier   String             @default("starter")
 
+  // Dine-in ordering toggle (admin). null = catering-only default (dine-in off).
+  dineInOrdersEnabled Boolean?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

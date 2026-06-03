@@ -15,9 +15,6 @@ import { PrismaClient } from "@oh/db";
 import Stripe from "stripe";
 import { sendSMS } from "../notifications.js";
 import QRCode from "qrcode";
-import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 import {
   enrichFromWebsite,
   generateShoppingList,
@@ -54,44 +51,31 @@ function requireCronSecret(req, reply) {
 }
 
 // ---------------------------------------------------------------------------
-// Site-config flag for dine-in ordering, PERSISTED to a small JSON file so the
-// admin toggle survives API restarts/redeploys (it used to be in-memory only
-// and reverted to the env default on every restart).
+// Dine-in ordering toggle — PERSISTED IN THE DATABASE (Tenant.dineInOrdersEnabled)
+// so it survives deploys/restarts reliably (the old file approach reset on every
+// Railway deploy). DEFAULT is catering-only (dine-in OFF) when unset (null).
 //
-// Precedence at boot: persisted file value > DISABLE_DINE_IN_ORDERS env > ON.
-// The PATCH endpoint updates both the in-memory value and the file.
-// Override the file location with SITE_CONFIG_PATH if the default isn't writable.
+// We keep a tiny in-memory cache so isDineInOrdersEnabled() stays synchronous for
+// the /orders gate; it's seeded on boot and refreshed on read/write.
 // ---------------------------------------------------------------------------
-const SITE_CONFIG_PATH =
-  process.env.SITE_CONFIG_PATH ||
-  path.join(path.dirname(fileURLToPath(import.meta.url)), "../../.site-config.json");
+const DINE_IN_TENANT_SLUG = "oh";
+let dineInOrdersCache = false; // default: catering-only
 
-function readSiteConfig() {
+async function loadDineInFlag() {
   try {
-    const cfg = JSON.parse(fs.readFileSync(SITE_CONFIG_PATH, "utf8"));
-    return cfg && typeof cfg === "object" ? cfg : {};
-  } catch {
-    return {};
-  }
-}
-
-function writeSiteConfig(patch) {
-  try {
-    const next = { ...readSiteConfig(), ...patch };
-    fs.writeFileSync(SITE_CONFIG_PATH, JSON.stringify(next, null, 2));
+    const t = await prisma.tenant.findUnique({
+      where: { slug: DINE_IN_TENANT_SLUG },
+      select: { dineInOrdersEnabled: true },
+    });
+    dineInOrdersCache = t?.dineInOrdersEnabled ?? false; // null -> catering-only
   } catch (e) {
-    console.warn("[site-config] persist failed:", e.message);
+    console.warn("[site-config] load failed:", e.message);
   }
+  return dineInOrdersCache;
 }
-
-const _persisted = readSiteConfig();
-let dineInOrdersEnabled =
-  typeof _persisted.dineInOrdersEnabled === "boolean"
-    ? _persisted.dineInOrdersEnabled
-    : process.env.DISABLE_DINE_IN_ORDERS !== "true";
 
 export function isDineInOrdersEnabled() {
-  return dineInOrdersEnabled;
+  return dineInOrdersCache;
 }
 
 // ---------------------------------------------------------------------------
@@ -216,15 +200,17 @@ async function getCateringMenuItems(tenantId) {
 // REGISTER ALL CATERING ROUTES
 // ===========================================================================
 export async function registerCateringRoutes(app) {
+  // Seed the in-memory flag from the DB on boot (default catering-only).
+  await loadDineInFlag();
 
   // =========================================================================
-  // ADMIN: Site config — dine-in ordering toggle
+  // ADMIN: Site config — dine-in ordering toggle (persisted in the DB)
   // /admin/site-config/order-now
   // Note: must be registered before /admin/catering/* to avoid conflicts
   // =========================================================================
 
   app.get("/admin/site-config/order-now", async (req, reply) => {
-    return { enabled: dineInOrdersEnabled };
+    return { enabled: await loadDineInFlag() };
   });
 
   app.patch("/admin/site-config/order-now", async (req, reply) => {
@@ -232,15 +218,18 @@ export async function registerCateringRoutes(app) {
     if (typeof enabled !== "boolean") {
       return reply.code(400).send({ error: "enabled (boolean) required" });
     }
-    dineInOrdersEnabled = enabled;
-    writeSiteConfig({ dineInOrdersEnabled }); // persist so it survives restarts
-    return { enabled: dineInOrdersEnabled };
+    await prisma.tenant.update({
+      where: { slug: DINE_IN_TENANT_SLUG },
+      data: { dineInOrdersEnabled: enabled },
+    });
+    dineInOrdersCache = enabled;
+    return { enabled };
   });
 
   // PUBLIC read of the dine-in toggle so the web home page can show the
-  // "Book Catering" CTA (instead of "Order Now") without a redeploy.
+  // "Book Catering" CTA (instead of "Order Now").
   app.get("/catering/site-config/order-now", async (req, reply) => {
-    return { enabled: dineInOrdersEnabled };
+    return { enabled: await loadDineInFlag() };
   });
 
   // =========================================================================
