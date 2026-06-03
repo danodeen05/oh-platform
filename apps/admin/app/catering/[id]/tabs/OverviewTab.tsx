@@ -6,6 +6,7 @@ const WEB_ORIGIN = process.env.NEXT_PUBLIC_WEB_URL || "https://www.ohbeef.com";
 import StatCard from "../../../analytics/components/StatCard";
 import QRCode from "../../../_components/qr-code";
 import EnrichmentReview from "../../_components/EnrichmentReview";
+import LogoUpload from "../../_components/LogoUpload";
 import type { CateringEvent } from "../../_components/types";
 
 interface OverviewTabProps {
@@ -104,6 +105,11 @@ export default function OverviewTab({ event, onRefresh }: OverviewTabProps) {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Logo upload — replaces the AI-scraped logo */}
+      <div style={{ marginBottom: 20 }}>
+        <LogoUpload eventId={event.id} currentLogoUrl={event.logoUrl} onSaved={onRefresh} />
       </div>
 
       {/* Booking / Payment StatCards */}

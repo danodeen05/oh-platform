@@ -686,7 +686,7 @@ export default function PromosPage() {
 
   const fetchLocations = async () => {
     try {
-      const res = await fetch(`${BASE}/locations`);
+      const res = await fetch(`${BASE}/locations`, { headers: { "x-tenant-slug": "oh" } });
       const data = await res.json();
       setLocations(Array.isArray(data) ? data : []);
     } catch (err) {
