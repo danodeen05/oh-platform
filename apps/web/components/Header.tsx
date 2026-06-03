@@ -143,7 +143,8 @@ export default function Header() {
   // Dropdown menu structure
   const aboutUsItems = [
     { href: `/${locale}/menu`, label: t("menu") },
-    { href: `/${locale}/locations`, label: t("locations") },
+    // Hidden until we reopen physical locations — page/route retained.
+    // { href: `/${locale}/locations`, label: t("locations") },
   ];
 
   const shopItems = [
@@ -254,14 +255,15 @@ export default function Header() {
             onClose={() => setOpenDropdown(null)}
           />
 
-          {/* Member Benefits Dropdown - Shows for all users, "My Account" only for signed-in users */}
+          {/* Member Benefits Dropdown — hidden while the site is catering-focused.
+              Retained (with memberBenefitsItems above) to restore loyalty/referral nav later.
           <NavDropdown
             label={t("memberBenefits")}
             items={memberBenefitsItems}
             isOpen={openDropdown === "memberBenefits"}
             onToggle={() => setOpenDropdown(openDropdown === "memberBenefits" ? null : "memberBenefits")}
             onClose={() => setOpenDropdown(null)}
-          />
+          /> */}
         </div>
 
         {/* Right side: Cart & Auth Button */}
@@ -475,7 +477,8 @@ export default function Header() {
               )}
             </div>
 
-            {/* Member Benefits Section - Shows for all users, "My Account" only for signed-in users */}
+            {/* Member Benefits Section — hidden while the site is catering-focused; retained to restore later. */}
+            {false && (
             <div style={{ borderBottom: "1px solid rgba(124, 122, 103, 0.15)" }}>
               <button
                 onClick={() => setMobileExpandedSection(mobileExpandedSection === "memberBenefits" ? null : "memberBenefits")}
@@ -518,6 +521,7 @@ export default function Header() {
                 </div>
               )}
             </div>
+            )}
 
             {/* Sign In for mobile - only for signed out users */}
             <SignedOut>

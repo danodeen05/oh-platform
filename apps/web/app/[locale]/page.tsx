@@ -1197,7 +1197,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Final CTA Section */}
+      {/* Final CTA Section — hidden while the site is catering-focused; retained to restore later. */}
+      {false && (
       <section
         style={{
           padding: "120px 24px",
@@ -1280,6 +1281,7 @@ export default function HomePage() {
           </Link>
         </div>
       </section>
+      )}
 
       <style jsx>{`
         @keyframes fadeInUp {

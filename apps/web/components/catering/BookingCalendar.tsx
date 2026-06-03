@@ -170,22 +170,30 @@ export default function BookingCalendar({
               }}
             >
               {day}
-              {/* Availability dots */}
+              {/* Availability dots: pastel green (pulsing) = open, deep red = booked, grey = blocked */}
               {!past && daySlots.length > 0 && (
-                <div style={{ display: "flex", justifyContent: "center", gap: "2px", marginTop: "3px" }}>
-                  {daySlots.map(s => (
-                    <div
-                      key={s.slot}
-                      style={{
-                        width: "4px",
-                        height: "4px",
-                        borderRadius: "50%",
-                        background: s.status === "OPEN"
-                          ? isSelected ? "var(--brand-on-primary)" : "var(--brand-primary)"
-                          : "rgba(128,128,128,0.4)",
-                      }}
-                    />
-                  ))}
+                <div style={{ display: "flex", justifyContent: "center", gap: "3px", marginTop: "4px" }}>
+                  {daySlots.map(s => {
+                    const isOpen = s.status === "OPEN";
+                    const isBooked = s.status === "BOOKED";
+                    return (
+                      <div
+                        key={s.slot}
+                        className={isOpen ? "slot-dot-open" : undefined}
+                        title={`${s.slot === "LUNCH" ? "Lunch" : "Dinner"}: ${isOpen ? "Available" : isBooked ? "Booked" : "Unavailable"}`}
+                        style={{
+                          width: "7px",
+                          height: "7px",
+                          borderRadius: "50%",
+                          background: isOpen
+                            ? "#8CC79A"                 // pastel green = available
+                            : isBooked
+                            ? "#A84343"                 // deeper, muted red = booked
+                            : "rgba(128,128,128,0.4)",  // grey = blocked / unavailable
+                        }}
+                      />
+                    );
+                  })}
                 </div>
               )}
             </button>
@@ -199,9 +207,36 @@ export default function BookingCalendar({
         </p>
       )}
 
-      <p style={{ textAlign: "center", marginTop: "12px", color: "var(--brand-primary)", opacity: 0.45, fontSize: "0.72rem", fontFamily: "'Raleway', sans-serif" }}>
-        Dots indicate available slots (Lunch / Dinner)
-      </p>
+      {/* Legend */}
+      <div style={{ display: "flex", justifyContent: "center", gap: "16px", marginTop: "12px", flexWrap: "wrap" }}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", color: "var(--brand-primary)", opacity: 0.6, fontSize: "0.72rem", fontFamily: "'Raleway', sans-serif" }}>
+          <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#8CC79A" }} />
+          Available
+        </span>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", color: "var(--brand-primary)", opacity: 0.6, fontSize: "0.72rem", fontFamily: "'Raleway', sans-serif" }}>
+          <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#A84343" }} />
+          Booked
+        </span>
+        <span style={{ color: "var(--brand-primary)", opacity: 0.45, fontSize: "0.72rem", fontFamily: "'Raleway', sans-serif" }}>
+          (Lunch / Dinner)
+        </span>
+      </div>
+
+      <style jsx>{`
+        @keyframes slotDotPulse {
+          0%, 100% {
+            transform: scale(1);
+            box-shadow: 0 0 0 0 rgba(140, 199, 154, 0.5);
+          }
+          50% {
+            transform: scale(1.3);
+            box-shadow: 0 0 5px 2px rgba(140, 199, 154, 0.55);
+          }
+        }
+        .slot-dot-open {
+          animation: slotDotPulse 1.8s ease-in-out infinite;
+        }
+      `}</style>
     </div>
   );
 }
