@@ -1648,6 +1648,24 @@ enum CateringSlot {
   DINNER
 }
 
+// Admin-managed calendar blocks for catering availability.
+// Two kinds of rule:
+//   - Recurring weekly: weekday set (0=Sun..6=Sat), startDate/endDate null.
+//   - Specific date or range: startDate..endDate inclusive, weekday null.
+// slot null = the whole day is blocked; otherwise only that slot.
+model CateringBlackout {
+  id        String        @id @default(cuid())
+  tenantId  String
+  weekday   Int? // 0=Sunday .. 6=Saturday, for recurring weekly blocks
+  startDate DateTime? // inclusive (date/range blocks)
+  endDate   DateTime? // inclusive
+  slot      CateringSlot? // null = both slots (whole day)
+  reason    String?
+  createdAt DateTime      @default(now())
+
+  @@index([tenantId])
+}
+
 enum CateringEventStatus {
   PLANNING // created, not yet enriched
   ENRICHING // AI enrichment running

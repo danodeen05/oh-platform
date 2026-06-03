@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useState } from "react";
 import { type CateringEvent, type OrderItem } from "@/lib/catering/api";
-import { getMenuItemImage } from "@/lib/menu-images";
+import { getMenuItemImage, isNoNoodlesItem } from "@/lib/menu-images";
 
 const SLIDER_LABELS = ["None", "Light", "Normal", "Extra"] as const;
 type SliderLabel = typeof SLIDER_LABELS[number];
@@ -30,6 +30,7 @@ function MenuCard({
   onSelect: () => void;
 }) {
   const imgSrc = getMenuItemImage(item.name);
+  const noNoodles = isNoNoodlesItem(item.name);
   return (
     <button
       onClick={onSelect}
@@ -51,7 +52,19 @@ function MenuCard({
         textAlign: "left",
       }}
     >
-      {imgSrc && (
+      {noNoodles ? (
+        // Same crossed-out treatment as the regular ordering flow: grayed noodle
+        // image with a red diagonal cross.
+        <div style={{ position: "relative", width: "72px", height: "72px", borderRadius: "10px", overflow: "hidden", flexShrink: 0, background: "#f5f5f5" }}>
+          <Image src="/menu images/Ramen Noodles.png" alt="No Noodles" width={72} height={72} style={{ objectFit: "cover", opacity: 0.4, filter: "grayscale(100%)" }} />
+          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ width: "140%", height: 3, background: "#dc2626", transform: "rotate(-45deg)", boxShadow: "0 1px 3px rgba(0,0,0,0.3)" }} />
+          </div>
+          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ width: "140%", height: 3, background: "#dc2626", transform: "rotate(45deg)", boxShadow: "0 1px 3px rgba(0,0,0,0.3)" }} />
+          </div>
+        </div>
+      ) : imgSrc && (
         <div style={{ width: "72px", height: "72px", borderRadius: "10px", overflow: "hidden", flexShrink: 0, background: "#f5f5f5" }}>
           <Image src={imgSrc} alt={displayName} width={72} height={72} style={{ objectFit: "cover" }} />
         </div>
@@ -105,6 +118,7 @@ export default function OrderWizard({
 
   const getNoodleDisplay = (name: string) => {
     const n = name.toLowerCase();
+    if (n.includes("no noodle")) return { display: "No Noodles", desc: "Just the broth and toppings — skip the noodles" };
     if (n.includes("gluten free")) return { display: "Wide Noodles (Gluten Free)", desc: "Broad, chewy noodles — certified gluten free" };
     if (n.includes("thin") || n.includes("flat")) return { display: "Thin & Flat Noodles", desc: "Silky, delicate ribbon noodles" };
     return { display: "Wide Noodles", desc: "Classic broad, satisfying noodles" };

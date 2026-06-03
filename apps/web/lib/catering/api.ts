@@ -40,7 +40,8 @@ export interface CateringEvent {
 export interface AvailabilitySlot {
   date: string; // YYYY-MM-DD
   slot: "LUNCH" | "DINNER";
-  status: "OPEN" | "BOOKED";
+  // BLOCKED = admin-blocked date/slot; treated as unavailable like BOOKED.
+  status: "OPEN" | "BOOKED" | "BLOCKED";
 }
 
 export interface BookingDraft {

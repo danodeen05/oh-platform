@@ -10,6 +10,7 @@ interface CalendarSlotInfo {
   date: string;
   slot: CateringSlot;
   booked: boolean;
+  blocked?: boolean;
   clientCompany?: string;
   eventId?: string;
 }
@@ -72,6 +73,7 @@ export default function BookingCalendar({ onCreateWithPrefill }: BookingCalendar
               date: d,
               slot: entry.slot,
               booked: entry.status === "BOOKED",
+              blocked: entry.status === "BLOCKED",
               clientCompany: entry.event?.clientCompany,
               eventId: entry.event?.id,
             });
@@ -226,42 +228,42 @@ export default function BookingCalendar({ onCreateWithPrefill }: BookingCalendar
                   </div>
                   {/* Lunch chip */}
                   <div
-                    onClick={() => handleSlotClick(date, lunchInfo, "LUNCH")}
+                    onClick={() => { if (!lunchInfo?.blocked) handleSlotClick(date, lunchInfo, "LUNCH"); }}
                     style={{
                       marginBottom: 2,
                       padding: "2px 4px",
                       borderRadius: 3,
                       fontSize: "0.65rem",
-                      cursor: "pointer",
-                      backgroundColor: lunchInfo?.booked ? "#d1fae5" : "#f3f4f6",
-                      color: lunchInfo?.booked ? "#065f46" : "#9ca3af",
-                      border: lunchInfo?.booked ? "1px solid #10b981" : "1px dashed #d1d5db",
+                      cursor: lunchInfo?.blocked ? "not-allowed" : "pointer",
+                      backgroundColor: lunchInfo?.blocked ? "#fee2e2" : lunchInfo?.booked ? "#d1fae5" : "#f3f4f6",
+                      color: lunchInfo?.blocked ? "#b91c1c" : lunchInfo?.booked ? "#065f46" : "#9ca3af",
+                      border: lunchInfo?.blocked ? "1px solid #fca5a5" : lunchInfo?.booked ? "1px solid #10b981" : "1px dashed #d1d5db",
                       whiteSpace: "nowrap",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                     }}
-                    title={lunchInfo?.booked ? `Lunch: ${lunchInfo.clientCompany}` : "Click to book Lunch"}
+                    title={lunchInfo?.blocked ? "Lunch: blocked" : lunchInfo?.booked ? `Lunch: ${lunchInfo.clientCompany}` : "Click to book Lunch"}
                   >
-                    L {lunchInfo?.booked ? lunchInfo.clientCompany : "+"}
+                    L {lunchInfo?.blocked ? "Blocked" : lunchInfo?.booked ? lunchInfo.clientCompany : "+"}
                   </div>
                   {/* Dinner chip */}
                   <div
-                    onClick={() => handleSlotClick(date, dinnerInfo, "DINNER")}
+                    onClick={() => { if (!dinnerInfo?.blocked) handleSlotClick(date, dinnerInfo, "DINNER"); }}
                     style={{
                       padding: "2px 4px",
                       borderRadius: 3,
                       fontSize: "0.65rem",
-                      cursor: "pointer",
-                      backgroundColor: dinnerInfo?.booked ? "#dbeafe" : "#f3f4f6",
-                      color: dinnerInfo?.booked ? "#1e40af" : "#9ca3af",
-                      border: dinnerInfo?.booked ? "1px solid #3b82f6" : "1px dashed #d1d5db",
+                      cursor: dinnerInfo?.blocked ? "not-allowed" : "pointer",
+                      backgroundColor: dinnerInfo?.blocked ? "#fee2e2" : dinnerInfo?.booked ? "#dbeafe" : "#f3f4f6",
+                      color: dinnerInfo?.blocked ? "#b91c1c" : dinnerInfo?.booked ? "#1e40af" : "#9ca3af",
+                      border: dinnerInfo?.blocked ? "1px solid #fca5a5" : dinnerInfo?.booked ? "1px solid #3b82f6" : "1px dashed #d1d5db",
                       whiteSpace: "nowrap",
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                     }}
-                    title={dinnerInfo?.booked ? `Dinner: ${dinnerInfo.clientCompany}` : "Click to book Dinner"}
+                    title={dinnerInfo?.blocked ? "Dinner: blocked" : dinnerInfo?.booked ? `Dinner: ${dinnerInfo.clientCompany}` : "Click to book Dinner"}
                   >
-                    D {dinnerInfo?.booked ? dinnerInfo.clientCompany : "+"}
+                    D {dinnerInfo?.blocked ? "Blocked" : dinnerInfo?.booked ? dinnerInfo.clientCompany : "+"}
                   </div>
                 </div>
               );

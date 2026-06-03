@@ -176,12 +176,14 @@ async function getCateringMenuItems(tenantId) {
           "Wide Noodles",
           "Wide Noodles (Gluten Free)",
           "Thin/Flat Noodles",
+          "No Noodles",
           "Baby Bok Choy",
           "Sprouts",
         ],
       },
     },
     select: { id: true, name: true, categoryType: true, category: true },
+    orderBy: { displayOrder: "asc" },
   });
 
   // Group by category
@@ -189,11 +191,51 @@ async function getCateringMenuItems(tenantId) {
     ["Classic Beef Noodle Soup", "Classic Beef Noodle Soup (no beef)"].includes(i.name)
   );
   const noodles = items.filter((i) =>
-    ["Wide Noodles", "Wide Noodles (Gluten Free)", "Thin/Flat Noodles"].includes(i.name)
+    ["Wide Noodles", "Wide Noodles (Gluten Free)", "Thin/Flat Noodles", "No Noodles"].includes(i.name)
   );
   const sliders = items.filter((i) => ["Baby Bok Choy", "Sprouts"].includes(i.name));
 
   return { soups, noodles, sliders };
+}
+
+// ---------------------------------------------------------------------------
+// Catering availability blackouts (admin-managed blocked dates/slots)
+// ---------------------------------------------------------------------------
+async function getBlackouts(tenantId) {
+  return prisma.cateringBlackout.findMany({ where: { tenantId } });
+}
+
+/**
+ * Return the blackout rule that blocks a given date string ("YYYY-MM-DD") and
+ * slot ("LUNCH"|"DINNER"), or null. A rule with slot=null blocks the whole day;
+ * a rule with weekday set is a recurring weekly block (0=Sun..6=Sat); a rule
+ * with startDate blocks that date (through endDate, inclusive).
+ */
+function blackoutHit(blackouts, dateStr, slot) {
+  const weekday = new Date(`${dateStr}T00:00:00.000Z`).getUTCDay();
+  return (
+    blackouts.find((b) => {
+      if (b.slot && b.slot !== slot) return false; // slot-scoped rule, different slot
+      if (b.weekday !== null && b.weekday !== undefined) {
+        return b.weekday === weekday;
+      }
+      if (b.startDate) {
+        const start = b.startDate.toISOString().slice(0, 10);
+        const end = (b.endDate || b.startDate).toISOString().slice(0, 10);
+        return dateStr >= start && dateStr <= end;
+      }
+      return false;
+    }) || null
+  );
+}
+
+// Resolve the catering tenant id (defaults to the Oh! tenant).
+async function resolveCateringTenantId(explicitId) {
+  const tenant = explicitId
+    ? await prisma.tenant.findUnique({ where: { id: explicitId } })
+    : (await prisma.tenant.findUnique({ where: { slug: "oh" } })) ||
+      (await prisma.tenant.findFirst());
+  return tenant?.id || null;
 }
 
 // ===========================================================================
@@ -605,8 +647,103 @@ export async function registerCateringRoutes(app) {
         cursor.setUTCDate(cursor.getUTCDate() + 1);
       }
 
+      // Annotate each day with any blackout (so the admin calendar can show it).
+      const blackouts = await getBlackouts(
+        events[0]?.tenantId || (await resolveCateringTenantId())
+      );
+      for (const d of days) {
+        const hit = blackoutHit(blackouts, d.date, d.slot);
+        if (hit && d.status === "OPEN") {
+          d.status = "BLOCKED";
+          d.blackout = { id: hit.id, reason: hit.reason || null };
+        }
+      }
+
       return days;
     } catch (err) {
+      return reply.code(500).send({ error: err.message });
+    }
+  });
+
+  // =========================================================================
+  // ADMIN: Availability blackouts (block dates / ranges / weekdays / slots)
+  // =========================================================================
+
+  // GET /admin/catering/blackouts -> list all blackout rules
+  app.get("/admin/catering/blackouts", async (req, reply) => {
+    try {
+      const tenantId = await resolveCateringTenantId(req.query?.tenantId);
+      if (!tenantId) return reply.code(404).send({ error: "Tenant not found" });
+      const rows = await prisma.cateringBlackout.findMany({
+        where: { tenantId },
+        orderBy: [{ weekday: "asc" }, { startDate: "asc" }, { createdAt: "asc" }],
+      });
+      return rows;
+    } catch (err) {
+      return reply.code(500).send({ error: err.message });
+    }
+  });
+
+  // POST /admin/catering/blackouts
+  // Body (one of):
+  //   { weekday: 0-6, slot?, reason? }                       recurring weekly block
+  //   { startDate: "YYYY-MM-DD", endDate?, slot?, reason? }  date or range block
+  app.post("/admin/catering/blackouts", async (req, reply) => {
+    try {
+      const tenantId = await resolveCateringTenantId(req.body?.tenantId);
+      if (!tenantId) return reply.code(404).send({ error: "Tenant not found" });
+
+      const { weekday, startDate, endDate, slot, reason } = req.body || {};
+      const validSlot = slot === "LUNCH" || slot === "DINNER" ? slot : null;
+
+      const data = {
+        tenantId,
+        slot: validSlot,
+        reason: reason ? String(reason).slice(0, 200) : null,
+      };
+
+      if (weekday !== undefined && weekday !== null && weekday !== "") {
+        const wd = Number(weekday);
+        if (!Number.isInteger(wd) || wd < 0 || wd > 6) {
+          return reply.code(400).send({ error: "weekday must be 0-6" });
+        }
+        data.weekday = wd;
+      } else if (startDate) {
+        // Normalize to UTC midnight so date-only comparisons are stable.
+        const start = new Date(`${String(startDate).slice(0, 10)}T00:00:00.000Z`);
+        const end = endDate
+          ? new Date(`${String(endDate).slice(0, 10)}T00:00:00.000Z`)
+          : start;
+        if (isNaN(start) || isNaN(end)) {
+          return reply.code(400).send({ error: "Invalid date" });
+        }
+        if (end < start) {
+          return reply.code(400).send({ error: "endDate is before startDate" });
+        }
+        data.startDate = start;
+        data.endDate = end;
+      } else {
+        return reply
+          .code(400)
+          .send({ error: "Provide either weekday or startDate" });
+      }
+
+      const row = await prisma.cateringBlackout.create({ data });
+      return reply.code(201).send(row);
+    } catch (err) {
+      return reply.code(500).send({ error: err.message });
+    }
+  });
+
+  // DELETE /admin/catering/blackouts/:id
+  app.delete("/admin/catering/blackouts/:id", async (req, reply) => {
+    try {
+      await prisma.cateringBlackout.delete({ where: { id: req.params.id } });
+      return { success: true };
+    } catch (err) {
+      if (err.code === "P2025") {
+        return reply.code(404).send({ error: "Blackout not found" });
+      }
       return reply.code(500).send({ error: err.message });
     }
   });
@@ -972,17 +1109,20 @@ export async function registerCateringRoutes(app) {
         events.map((e) => `${e.eventDate.toISOString().slice(0, 10)}_${e.slot}`)
       );
 
+      const blackouts = await getBlackouts(await resolveCateringTenantId());
+
       const days = [];
       const cursor = new Date(fromDate);
       cursor.setUTCHours(0, 0, 0, 0);
       while (cursor <= toDate) {
         const dateStr = cursor.toISOString().slice(0, 10);
         for (const slot of ["LUNCH", "DINNER"]) {
-          days.push({
-            date: dateStr,
-            slot,
-            status: booked.has(`${dateStr}_${slot}`) ? "BOOKED" : "OPEN",
-          });
+          const status = booked.has(`${dateStr}_${slot}`)
+            ? "BOOKED"
+            : blackoutHit(blackouts, dateStr, slot)
+            ? "BLOCKED"
+            : "OPEN";
+          days.push({ date: dateStr, slot, status });
         }
         cursor.setUTCDate(cursor.getUTCDate() + 1);
       }
@@ -1125,6 +1265,15 @@ export async function registerCateringRoutes(app) {
       });
       if (existing) {
         return reply.code(409).send({ error: "This date/slot is already booked" });
+      }
+
+      // Reject dates/slots the admin has blocked off (e.g. Sundays, holidays).
+      const blackouts = await getBlackouts(tenantId);
+      const bookingDateStr = new Date(eventDate).toISOString().slice(0, 10);
+      if (blackoutHit(blackouts, bookingDateStr, slot)) {
+        return reply
+          .code(409)
+          .send({ error: "This date is not available. Please choose another." });
       }
 
       // Pricing

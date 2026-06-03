@@ -7,6 +7,7 @@ import EventFormModal from "./_components/EventFormModal";
 import StatusBadge from "./_components/StatusBadge";
 import OrderNowToggle from "./_components/OrderNowToggle";
 import BookingCalendar from "./_components/BookingCalendar";
+import BlackoutManager from "./_components/BlackoutManager";
 import type { CateringEvent, CateringAnalytics, CateringSlot } from "./_components/types";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "";
@@ -20,6 +21,7 @@ export default function CateringPage() {
   const [prefillDate, setPrefillDate] = useState<string | undefined>(undefined);
   const [prefillSlot, setPrefillSlot] = useState<CateringSlot | undefined>(undefined);
   const [showCalendar, setShowCalendar] = useState(false);
+  const [showBlackouts, setShowBlackouts] = useState(false);
 
   const fetchEvents = async () => {
     setLoading(true);
@@ -175,10 +177,27 @@ export default function CateringPage() {
         >
           {showCalendar ? "Hide Calendar" : "Calendar View"}
         </button>
+        <button
+          onClick={() => setShowBlackouts((v) => !v)}
+          style={{
+            padding: "10px 20px",
+            backgroundColor: showBlackouts ? "#e0e7ff" : "white",
+            color: showBlackouts ? "#3730a3" : "#374151",
+            border: "1px solid #d1d5db",
+            borderRadius: 6,
+            cursor: "pointer",
+            fontSize: "0.9rem",
+          }}
+        >
+          {showBlackouts ? "Hide Blocked Dates" : "Block Dates"}
+        </button>
         <span style={{ color: "#6b7280", fontSize: "0.9rem" }}>
           {events.length} event{events.length !== 1 ? "s" : ""}
         </span>
       </div>
+
+      {/* Blocked dates manager */}
+      {showBlackouts && <BlackoutManager />}
 
       {/* Calendar view */}
       {showCalendar && (
