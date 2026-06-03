@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ClerkProvider, SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
 import { AdminNav } from "../components/AdminNav";
+import ApiAuthInit from "../components/ApiAuthInit";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const isDev = process.env.NODE_ENV === 'development';
@@ -16,6 +17,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             minHeight: "100vh",
           }}
         >
+          <ApiAuthInit />
           <nav
             style={{
               background: "white",
