@@ -33,6 +33,7 @@ export default async function EventLayout({ children, params }: EventLayoutProps
       style={{
         ...cssVars,
         minHeight: "100vh",
+        flexShrink: 0,
         background: "var(--brand-bg)",
         fontFamily: "'Raleway', sans-serif",
       }}
