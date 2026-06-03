@@ -251,25 +251,6 @@ export default function HomePage() {
               >
                 Book Catering
               </Link>
-              <div style={{ marginTop: 14 }}>
-                <Link
-                  href={`/${locale}/menu`}
-                  style={{
-                    padding: "12px 32px",
-                    fontSize: "0.9rem",
-                    fontWeight: "500",
-                    background: "transparent",
-                    color: "#ffffff",
-                    border: "2px solid rgba(255,255,255,0.5)",
-                    borderRadius: "50px",
-                    textDecoration: "none",
-                    display: "inline-block",
-                    letterSpacing: "1px",
-                  }}
-                >
-                  {tCommon("viewMenu")}
-                </Link>
-              </div>
             </div>
           ) : availability?.canOrder !== false ? (
             <Link
