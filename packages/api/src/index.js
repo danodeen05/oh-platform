@@ -196,10 +196,20 @@ await registerCateringRoutes(app);
 const PORT = process.env.PORT || process.env.API_PORT || 4000;
 
 // Helper to get tenant from request
+// Infra/host subdomains that are NOT tenant slugs — requests through these
+// (without an explicit x-tenant-slug) should resolve to the default tenant,
+// not a non-existent tenant named "api"/"devapi"/"www" (which 404s).
+const NON_TENANT_SUBDOMAINS = new Set([
+  "api", "devapi", "www", "webapp", "devwebapp", "admin", "devadmin",
+  "localhost", "127", "staging", "oh-api",
+]);
+
 function getTenantContext(req) {
-  const subdomain = req.headers.host?.split(".")[0];
   const headerSlug = req.headers["x-tenant-slug"];
-  return headerSlug || subdomain || "oh";
+  if (headerSlug) return headerSlug;
+  const subdomain = req.headers.host?.split(":")[0]?.split(".")[0]; // strip port, take first label
+  if (subdomain && !NON_TENANT_SUBDOMAINS.has(subdomain)) return subdomain;
+  return "oh";
 }
 
 // Helper to get locale from request
@@ -7509,57 +7519,37 @@ const fallbackChineseWords = [
 ];
 
 // Generate AI-powered Chinese word - always unique, never repeating
-async function generateChineseWord(anthropic) {
+async function generateChineseWord(anthropic, context = null) {
   if (!anthropic) return null;
 
   try {
-    const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
     const uniqueSeed = Date.now(); // Ensures unique word each time
 
-    // Categories to cycle through for variety
-    const categories = [
-      "food and cooking (ingredients, cooking methods, flavors)",
-      "emotions and feelings",
-      "nature and weather",
-      "internet slang and modern expressions",
-      "traditional culture and customs",
-      "travel and places",
-      "relationships and social interactions",
-      "work and business",
-      "health and body",
-      "time and seasons",
-      "animals and creatures",
-      "music, art, and entertainment",
-      "technology and innovation",
-      "sports and hobbies",
-      "philosophy and wisdom",
-    ];
-    const categoryIndex = Math.floor(uniqueSeed / 1000) % categories.length;
-    const focusCategory = categories[categoryIndex];
+    // Keep it BEGINNER-friendly: simple, common, everyday words a guest can
+    // actually use and remember. Optionally lightly themed to a sponsor company.
+    const themeLine = context
+      ? `If a simple, common word fits the theme "${context}", gently prefer it (stay beginner level). Otherwise just pick any easy everyday word.`
+      : `Pick an easy everyday word: a greeting, polite phrase, food word, simple feeling, number, or common object.`;
 
-    const prompt = `You are a Chinese language teacher at a beef noodle soup restaurant. Generate ONE unique Chinese word or phrase.
+    const prompt = `You teach ONE fun, BEGINNER Chinese word to a guest at a beef noodle soup restaurant.
 
-TODAY: ${today}
-FOCUS CATEGORY: ${focusCategory}
-UNIQUE SEED: ${uniqueSeed}
+Keep it EASY — roughly HSK level 1-2, the kind of word a first-time learner would love and could actually say. 1-3 characters only. Nothing technical, obscure, or advanced (no culinary jargon like "master stock").
 
-REQUIREMENTS:
-- Pick a word from the "${focusCategory}" category that you haven't used before
-- Use TRADITIONAL Chinese characters (Taiwan style, NOT simplified)
-- Include proper pinyin with tone marks (ā, á, ǎ, à, ē, é, ě, è, ī, í, ǐ, ì, ō, ó, ǒ, ò, ū, ú, ǔ, ù, ǖ, ǘ, ǚ, ǜ)
-- 1-4 characters only
-- Make it practical and memorable
-- Fun fact should explain usage or cultural context
+${themeLine}
+Vary your choice so it feels fresh (seed: ${uniqueSeed}).
 
-AVOID these common words: 你好, 謝謝, 好吃, 牛肉麵, 加油, 乾杯
+- Traditional Chinese characters (Taiwan style, NOT simplified)
+- Pinyin with proper tone marks (ā á ǎ à, etc.)
+- english: a clear, simple meaning
+- funFact: one short, friendly note on when you'd use it
 
 Return ONLY valid JSON (no markdown):
-{"traditional":"字","pinyin":"zì","english":"English meaning","category":"${focusCategory.split(' ')[0]}","funFact":"Engaging fact about this word"}`;
+{"traditional":"字","pinyin":"zì","english":"simple meaning","funFact":"short friendly note"}`;
 
     const message = await anthropic.messages.create({
       model: "claude-sonnet-4-6",
       max_tokens: 300,
-      temperature: 0.95, // High temperature for variety
+      temperature: 0.9, // Some variety, but stay simple
       messages: [{ role: "user", content: prompt }],
     });
 
@@ -7749,7 +7739,25 @@ Write ONE completely original fortune in ${language.name}. Return ONLY the fortu
     if (!isChineseLocale) {
       // Try AI-generated word first
       if (anthropic) {
-        chineseWord = await generateChineseWord(anthropic);
+        // For a sponsored catering event, lightly theme the (still simple) word
+        // to the company. Otherwise the generator picks a simple everyday word.
+        let chineseContext = null;
+        if (order.cateringEventId) {
+          try {
+            const ev = await prisma.cateringEvent.findUnique({
+              where: { id: order.cateringEventId },
+              select: { clientCompany: true, companyDescription: true },
+            });
+            if (ev) {
+              chineseContext = [ev.clientCompany, (ev.companyDescription || "").slice(0, 160)]
+                .filter(Boolean)
+                .join(" — ");
+            }
+          } catch {
+            /* themed word is best-effort */
+          }
+        }
+        chineseWord = await generateChineseWord(anthropic, chineseContext);
       }
 
       // Fall back to curated list if AI fails

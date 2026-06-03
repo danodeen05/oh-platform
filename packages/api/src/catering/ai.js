@@ -322,6 +322,61 @@ Rules:
 }
 
 /**
+ * A short, status-aware Chappy line for the attendee's order status page —
+ * proactive entertainment while they wait, and a playful "first bite" reaction
+ * once their bowl is served. Knows their name, zodiac, bowl items, and status.
+ *
+ * @param {{ name?: string, zodiac?: string|null, items?: string[], status: string }}
+ * @returns {Promise<string|null>}
+ */
+export async function chappyStatusQuip({ name, zodiac, items = [], status }) {
+  if (!anthropic) return null;
+
+  const firstName = (name || "").trim().split(/\s+/)[0] || "friend";
+  const bowl = items.length ? items.join(", ") : "a beef noodle soup";
+  const served = status === "SERVING" || status === "COMPLETED";
+  const nonce = Math.random().toString(36).slice(2, 8);
+
+  const task = served
+    ? `Their bowl was just served. Ask, with delight, whether their eyes rolled back on the first bite — riff on their specific order (${bowl})${zodiac ? ` and their ${zodiac} zodiac` : ""}.`
+    : status === "READY"
+      ? `Their bowl (${bowl}) is ready and on its way. Build the anticipation with a fun one-liner${zodiac ? ` tied to their ${zodiac} zodiac` : ""}.`
+      : `Their bowl (${bowl}) is being made. Keep them entertained while they wait with a fun, specific one-liner${zodiac ? ` playing on their ${zodiac} zodiac` : ""}.`;
+
+  try {
+    const response = await anthropic.messages.create({
+      model: MODEL,
+      max_tokens: 120,
+      temperature: 1,
+      system: [
+        {
+          type: "text",
+          text: "You are Chappy Chopstix, the playful chopsticks mascot of Oh! Beef Noodle Soup. You delight guests with short, warm, witty one-liners while they track their order.",
+          cache_control: { type: "ephemeral" },
+        },
+      ],
+      messages: [
+        {
+          role: "user",
+          content: `Write Chappy's line for ${firstName}.
+${task}
+
+Rules:
+- 1 to 2 short sentences, about 30 words max.
+- Fun, warm, a little cheeky. At most ONE tasteful emoji.
+- Be specific to their order, never generic. Vary your wording. (variation key: ${nonce})
+- Output ONLY the line. No quotes, no preamble.`,
+        },
+      ],
+    });
+    return stripEmDashes(response.content[0]?.text?.trim()) || null;
+  } catch (err) {
+    console.error("[catering/ai] chappyStatusQuip error:", err.message);
+    return null;
+  }
+}
+
+/**
  * Generate a shopping list for a catering event.
  * @param {{ attendeeCount: number, orderItems: Array<{name: string, quantity: number}>, event: object }}
  * @returns {Array<{ ingredient: string, quantity: number, unit: string }>}

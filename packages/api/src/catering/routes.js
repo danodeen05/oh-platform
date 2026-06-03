@@ -24,8 +24,10 @@ import {
   summarizeSurvey,
   summarizeBookingDetail,
   chappyAttendeeGreeting,
+  chappyStatusQuip,
 } from "./ai.js";
 import { computeDiscountCents } from "../promos/discount.js";
+import { getBrandOverride } from "./brand-overrides.js";
 
 const prisma = new PrismaClient();
 const stripe = process.env.STRIPE_SECRET_KEY
@@ -506,20 +508,44 @@ export async function registerCateringRoutes(app) {
     try {
       const event = await prisma.cateringEvent.findUnique({
         where: { id: req.params.id },
-        include: { rsvps: true },
+        include: {
+          rsvps: true,
+          orders: { select: { guestPhone: true, orderQrCode: true } },
+        },
       });
       if (!event) return reply.code(404).send({ error: "Event not found" });
 
-      const orderUrl = `${WEB_BASE_URL}/catering/e/${event.slug}`;
-      const name = event.eventName || event.clientCompany;
+      const company = event.clientCompany;
+      const eventUrl = `${WEB_BASE_URL}/catering/e/${event.slug}`;
+
+      // Map each attendee's order to their phone so we can link them straight to
+      // their personal order status page (where they confirm arrival + see live
+      // updates), not the RSVP/order page they've already used.
+      const orderByPhone = new Map();
+      for (const o of event.orders) {
+        const p = (o.guestPhone || "").replace(/\D/g, "").slice(-10);
+        if (p && o.orderQrCode) orderByPhone.set(p, o.orderQrCode);
+      }
 
       let sent = 0;
       let failed = 0;
       for (const rsvp of event.rsvps) {
         const first = (rsvp.name || "").split(" ")[0];
-        const body =
-          `Hi${first ? " " + first : ""}! You're invited to ${name} x Oh! Beef Noodle Soup.\n\n` +
-          `Order your bowl, then tap "I've arrived" on the page when you get to the event so we can start cooking:\n${orderUrl}`;
+        const greeting = first ? ` ${first}` : "";
+        const qr = orderByPhone.get((rsvp.phone || "").replace(/\D/g, "").slice(-10));
+
+        let body;
+        if (qr) {
+          const statusUrl = `${WEB_BASE_URL}/en/catering/e/${event.slug}/status?qrCode=${encodeURIComponent(qr)}`;
+          body =
+            `Hi${greeting}! Your Oh! Beef Noodle Soup order for ${company} is confirmed.\n\n` +
+            `When you're at the event and ready for your bowl, open your order page and tap "I've arrived" to start it cooking:\n${statusUrl}`;
+        } else {
+          // RSVP'd but hasn't ordered yet — point them to order first.
+          body =
+            `Hi${greeting}! Don't forget to order your bowl for ${company} with Oh! Beef Noodle Soup:\n${eventUrl}`;
+        }
+
         try {
           await sendSMS({ to: rsvp.phone, body });
           sent++;
@@ -1205,13 +1231,22 @@ export async function registerCateringRoutes(app) {
       // the company logo is ready by the time the client lands on the dashboard
       // (the card-entry + payment step gives it plenty of lead time). Writes
       // suggested fields directly (owner can still override); never downgrades LIVE.
-      if (event.clientWebsite) {
+      // A manual brand override (a logo/colors we corrected for a known client)
+      // takes precedence over the AI scrape, and applies even with no website.
+      const override = getBrandOverride(event.clientCompany);
+      if (override || event.clientWebsite) {
         (async () => {
           try {
-            const enriched = await enrichFromWebsite(event.clientWebsite);
+            const enriched = event.clientWebsite
+              ? await enrichFromWebsite(event.clientWebsite)
+              : { logoUrl: null, brandColors: [], suggestedEventName: null, companyDescription: null };
             const data = { enrichmentRaw: enriched };
-            if (enriched.logoUrl) data.logoUrl = enriched.logoUrl;
-            if (enriched.brandColors?.length) data.brandColors = enriched.brandColors;
+
+            // Logo + colors: the override wins; otherwise fall back to AI.
+            const logoUrl = override?.logoUrl || enriched.logoUrl;
+            const brandColors = (override?.brandColors?.length ? override.brandColors : enriched.brandColors) || [];
+            if (logoUrl) data.logoUrl = logoUrl;
+            if (brandColors.length) data.brandColors = brandColors;
             if (enriched.companyDescription) data.companyDescription = enriched.companyDescription;
             if (!event.eventName && enriched.suggestedEventName) {
               data.eventName = enriched.suggestedEventName;
@@ -1796,6 +1831,35 @@ export async function registerCateringRoutes(app) {
         slot: e.slot,
       }));
     } catch (err) {
+      return reply.code(500).send({ error: err.message });
+    }
+  });
+
+  // Proactive, status-aware Chappy line for the attendee order status page.
+  // GET /catering/orders/:qrCode/chappy-quip
+  app.get("/catering/orders/:qrCode/chappy-quip", async (req, reply) => {
+    try {
+      const order = await prisma.order.findFirst({
+        where: { orderQrCode: req.params.qrCode, orderSource: "CATERING" },
+        select: {
+          status: true,
+          guestName: true,
+          guestZodiac: true,
+          items: { select: { menuItem: { select: { name: true } } } },
+        },
+      });
+      if (!order) return reply.code(404).send({ error: "Order not found" });
+
+      const items = (order.items || []).map((i) => i.menuItem?.name).filter(Boolean);
+      const quip = await chappyStatusQuip({
+        name: order.guestName,
+        zodiac: order.guestZodiac,
+        items,
+        status: order.status,
+      });
+      return { quip, status: order.status };
+    } catch (err) {
+      console.error("[catering chappy-quip]", err.message);
       return reply.code(500).send({ error: err.message });
     }
   });
