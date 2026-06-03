@@ -58,6 +58,31 @@ export default function CateringPage() {
     setModalOpen(true);
   };
 
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const handleDelete = async (event: CateringEvent) => {
+    if (
+      !window.confirm(
+        `Permanently delete "${event.clientCompany}" and ALL related data ` +
+          `(booking, RSVPs, orders, survey)? This cannot be undone.`
+      )
+    ) {
+      return;
+    }
+    setDeletingId(event.id);
+    try {
+      const res = await fetch(`${BASE}/admin/catering/events/${event.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        throw new Error(e.error || `HTTP ${res.status}`);
+      }
+      await Promise.all([fetchEvents(), fetchAnalytics()]);
+    } catch (err) {
+      alert("Failed to delete event: " + (err as Error).message);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const handleCalendarCreate = (date: string, slot: CateringSlot) => {
     setEditingEvent(null);
     setPrefillDate(date);
@@ -278,6 +303,23 @@ export default function CateringPage() {
                       >
                         View
                       </Link>
+                      <button
+                        onClick={() => handleDelete(event)}
+                        disabled={deletingId === event.id}
+                        style={{
+                          padding: "6px 12px",
+                          backgroundColor: "#fef2f2",
+                          color: "#b91c1c",
+                          border: "1px solid #fecaca",
+                          borderRadius: 4,
+                          fontSize: "0.8rem",
+                          fontWeight: 500,
+                          cursor: deletingId === event.id ? "default" : "pointer",
+                          opacity: deletingId === event.id ? 0.6 : 1,
+                        }}
+                      >
+                        {deletingId === event.id ? "Deleting…" : "Delete"}
+                      </button>
                     </td>
                   </tr>
                 ))
