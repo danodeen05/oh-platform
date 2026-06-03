@@ -14,15 +14,20 @@ interface CountdownProps {
  */
 export default function Countdown({ targetDate, label }: CountdownProps) {
   const [parts, setParts] = useState(() => formatCountdown(targetDate));
+  // The live countdown is time-dependent, so the server's value and the client's
+  // first render differ by a second. Render a stable placeholder until mounted to
+  // avoid a hydration mismatch, then swap in the live values.
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     const tick = () => setParts(formatCountdown(targetDate));
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, [targetDate]);
 
-  if (parts.total <= 0) return null;
+  if (mounted && parts.total <= 0) return null;
 
   const units = [
     { value: parts.days, label: "days" },
@@ -70,7 +75,7 @@ export default function Countdown({ targetDate, label }: CountdownProps) {
                 lineHeight: 1,
               }}
             >
-              {String(u.value).padStart(2, "0")}
+              {mounted ? String(u.value).padStart(2, "0") : "--"}
             </div>
             <div
               style={{

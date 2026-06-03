@@ -57,7 +57,7 @@ export default function BookPage({ params }: PageProps) {
     <>
       {/* Use default neutral theme for the booking flow */}
       <div style={{
-        "--brand-primary": "#C7A878",
+        "--brand-primary": "#E0C38C",
         "--brand-secondary": "#8A7055",
         "--brand-bg": "#0D0D0B",
         "--brand-on-primary": "#1A1612",
@@ -77,17 +77,17 @@ export default function BookPage({ params }: PageProps) {
             gap: "32px",
           }}
         >
-          {/* Oh! Logo */}
-          <div style={{ background: "rgba(255,255,255,0.95)", borderRadius: "12px", padding: "10px 18px" }}>
-            <Image src="/Oh_Logo_Large.png" alt="Oh! Beef Noodle Soup" width={120} height={48} style={{ objectFit: "contain" }} />
+          {/* Oh! Logo — white mark on transparent, gently floating */}
+          <div style={{ animation: "ohLogoFloat 3.5s ease-in-out infinite" }}>
+            <Image src="/Oh_Logo_Mark_Light.png" alt="Oh! Beef Noodle Soup" width={96} height={96} priority style={{ objectFit: "contain" }} />
           </div>
 
           <div style={{ textAlign: "center" }}>
             <h1 style={{ margin: 0, fontSize: "clamp(1.5rem, 6vw, 2rem)", fontWeight: 700, color: "var(--brand-primary)", fontFamily: "'Raleway', sans-serif" }}>
               Book Catering
             </h1>
-            <p style={{ margin: "10px 0 0", color: "var(--brand-primary)", opacity: 0.6, fontFamily: "'Raleway', sans-serif", fontSize: "0.9rem", maxWidth: "380px" }}>
-              Authentic Taiwanese beef noodle soup for your event. Minimum 10 bowls — made fresh, served with care.
+            <p style={{ margin: "10px 0 0", color: "var(--brand-primary)", opacity: 0.85, fontFamily: "'Raleway', sans-serif", fontSize: "0.9rem", maxWidth: "380px" }}>
+              Our 30-year family recipe, brought to your event. Rich, aromatic broth simmered for 48 hours, made fresh and served with care. Minimum 10 bowls.
             </p>
           </div>
 

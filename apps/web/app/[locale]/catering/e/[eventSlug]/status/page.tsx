@@ -197,7 +197,7 @@ function StatusContent({ locale, eventSlug }: { locale: string; eventSlug: strin
           color: "var(--brand-primary)",
           fontFamily: "'Raleway', sans-serif",
         }}>
-          {firstName ? `${firstName}` : "Your"}{event ? ` · ${event.eventName}` : " · Order"}
+          {firstName ? `Hi, ${firstName}!` : "Your Order"}
         </h1>
       </div>
 
@@ -207,7 +207,7 @@ function StatusContent({ locale, eventSlug }: { locale: string; eventSlug: strin
           <Countdown targetDate={eventDate} label="Your event is coming up" />
 
           <p style={{ margin: 0, fontSize: "0.85rem", color: "var(--brand-primary)", opacity: 0.55, fontFamily: "'Raleway', sans-serif", textAlign: "center", maxWidth: "300px" }}>
-            Order details, kitchen updates, and your fortune cookie will unlock once your bowl starts cooking.
+            Order details, kitchen updates, and your digital fortune cookie will unlock once you have arrived at the event and your bowl is being prepared.
           </p>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "10px", width: "100%", maxWidth: "360px" }}>
@@ -377,7 +377,7 @@ function StatusContent({ locale, eventSlug }: { locale: string; eventSlug: strin
           marginTop: "8px",
         }}
       >
-        Share feedback about your experience
+        Share feedback about your experience with Oh! Beef Noodle Soup
       </Link>
     </div>
   );

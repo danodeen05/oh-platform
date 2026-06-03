@@ -25,6 +25,7 @@ function DetailsContent({ locale }: { locale: string }) {
   const [contactName, setContactName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [contactPhone, setContactPhone] = useState("");
+  const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -49,6 +50,7 @@ function DetailsContent({ locale }: { locale: string }) {
         eventDate: date,
         slot,
         bowls,
+        notes: notes.trim(),
       });
 
       trackCateringBookingSubmitted(bowls);
@@ -74,9 +76,9 @@ function DetailsContent({ locale }: { locale: string }) {
 
   return (
     <div style={{ position: "relative", zIndex: 1, minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", padding: "40px 24px 80px", gap: "28px" }}>
-      {/* Oh! Logo */}
-      <div style={{ background: "rgba(255,255,255,0.95)", borderRadius: "12px", padding: "10px 18px" }}>
-        <Image src="/Oh_Logo_Large.png" alt="Oh! Beef Noodle Soup" width={120} height={48} style={{ objectFit: "contain" }} />
+      {/* Oh! Logo — white mark on transparent, gently floating */}
+      <div style={{ animation: "ohLogoFloat 3.5s ease-in-out infinite" }}>
+        <Image src="/Oh_Logo_Mark_Light.png" alt="Oh! Beef Noodle Soup" width={96} height={96} priority style={{ objectFit: "contain" }} />
       </div>
 
       <div style={{ textAlign: "center" }}>
@@ -84,7 +86,7 @@ function DetailsContent({ locale }: { locale: string }) {
           Event Details
         </h1>
         {formattedDate && (
-          <p style={{ margin: "8px 0 0", color: "var(--brand-primary)", opacity: 0.55, fontFamily: "'Raleway', sans-serif", fontSize: "0.88rem" }}>
+          <p style={{ margin: "8px 0 0", color: "var(--brand-primary)", opacity: 0.85, fontFamily: "'Raleway', sans-serif", fontSize: "0.88rem" }}>
             {formattedDate} · {slot} · {bowls} bowls
           </p>
         )}
@@ -110,6 +112,19 @@ function DetailsContent({ locale }: { locale: string }) {
         <div>
           <label style={labelStyle}>Contact Phone *</label>
           <input type="tel" value={contactPhone} onChange={e => setContactPhone(formatPhone(e.target.value))} placeholder="(xxx) xxx-xxxx" required style={inputStyle} />
+        </div>
+        <div>
+          <label style={labelStyle}>
+            Additional Details <span style={{ fontWeight: 400, opacity: 0.5, fontSize: "0.78rem" }}>Optional</span>
+          </label>
+          <textarea
+            value={notes}
+            onChange={e => setNotes(e.target.value)}
+            placeholder="Dietary restrictions, allergies, special requests, setup notes, etc."
+            rows={4}
+            maxLength={1000}
+            style={{ ...inputStyle, minHeight: "96px", resize: "vertical", fontFamily: "'Raleway', sans-serif" }}
+          />
         </div>
 
         {error && (
@@ -168,7 +183,7 @@ export default function DetailsPage({ params }: PageProps) {
   const { locale } = use(params);
   return (
     <div style={{
-      "--brand-primary": "#C7A878",
+      "--brand-primary": "#E0C38C",
       "--brand-secondary": "#8A7055",
       "--brand-bg": "#0D0D0B",
       "--brand-on-primary": "#1A1612",

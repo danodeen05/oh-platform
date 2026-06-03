@@ -80,6 +80,24 @@ body {
   }
 }
 
+/* Gently floating logo mark — used across the catering booking flow */
+@keyframes ohLogoFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+/* Chappy mascot bob — small, lively bounce for the attendee greeting */
+@keyframes chappyBob {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-6px) rotate(2deg); }
+}
+
+/* Chappy greeting entrance */
+@keyframes chappyPopIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 /* Button Styles */
 button,
 .button {

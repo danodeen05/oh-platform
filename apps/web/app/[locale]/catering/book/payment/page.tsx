@@ -110,6 +110,7 @@ function PaymentForm({ locale, bookingId, clientSecret, amountCents, bowls, slot
         appliedPromo={appliedPromo}
         placeholder="Promo code (optional)"
         disabled={submitting}
+        variant="brand"
       />
 
       {/* Card element */}
@@ -197,8 +198,8 @@ function PaymentContent({ locale }: { locale: string }) {
 
   return (
     <div style={{ position: "relative", zIndex: 1, minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", padding: "40px 24px 80px", gap: "28px" }}>
-      <div style={{ background: "rgba(255,255,255,0.95)", borderRadius: "12px", padding: "10px 18px" }}>
-        <Image src="/Oh_Logo_Large.png" alt="Oh! Beef Noodle Soup" width={120} height={48} style={{ objectFit: "contain" }} />
+      <div style={{ animation: "ohLogoFloat 3.5s ease-in-out infinite" }}>
+        <Image src="/Oh_Logo_Mark_Light.png" alt="Oh! Beef Noodle Soup" width={96} height={96} priority style={{ objectFit: "contain" }} />
       </div>
 
       <div style={{ textAlign: "center" }}>
@@ -225,7 +226,7 @@ export default function PaymentPage({ params }: PageProps) {
   const { locale } = use(params);
   return (
     <div style={{
-      "--brand-primary": "#C7A878",
+      "--brand-primary": "#E0C38C",
       "--brand-secondary": "#8A7055",
       "--brand-bg": "#0D0D0B",
       "--brand-on-primary": "#1A1612",

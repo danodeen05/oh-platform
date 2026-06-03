@@ -14,6 +14,7 @@ import { getRememberedAttendee } from "@/lib/catering/remember";
 import { trackCateringOrderPlaced } from "@/lib/catering/analytics";
 import ThemedBackground from "@/components/catering/ThemedBackground";
 import CoBrandHeader from "@/components/catering/CoBrandHeader";
+import ChappyGreeting from "./ChappyGreeting";
 import OrderWizard from "@/components/catering/OrderWizard";
 import Link from "next/link";
 
@@ -167,6 +168,9 @@ function OrderContent({ locale, eventSlug }: { locale: string; eventSlug: string
           showOhLogo={false}
         />
       )}
+
+      {/* Chappy's personalized greeting (name + zodiac if shared at RSVP) */}
+      {guestPhone && <ChappyGreeting eventSlug={eventSlug} phone={guestPhone} />}
 
       {/* Existing order state */}
       {existingOrder && (

@@ -101,26 +101,15 @@ export default function CoBrandHeader({
           />
         )}
 
-        {/* Oh! logo */}
+        {/* Oh! logo — white mark on transparent (no white box), gently floating */}
         {showOhLogo && (
-          <div
-            style={{
-              background: "rgba(255,255,255,0.95)",
-              borderRadius: "12px",
-              padding: "10px 18px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              maxHeight: "64px",
-              boxShadow: "0 2px 12px rgba(0,0,0,0.12)",
-            }}
-          >
+          <div style={{ animation: "ohLogoFloat 3.5s ease-in-out infinite", display: "flex", alignItems: "center" }}>
             <Image
-              src="/Oh_Logo_Large.png"
+              src="/Oh_Logo_Mark_Light.png"
               alt="Oh! Beef Noodle Soup"
-              width={100}
-              height={44}
-              style={{ objectFit: "contain", maxHeight: "44px" }}
+              width={64}
+              height={64}
+              style={{ objectFit: "contain" }}
             />
           </div>
         )}

@@ -30,7 +30,10 @@ function ConfirmationContent({ locale, eventSlug }: { locale: string; eventSlug:
       }}
     >
       <div style={{
-        fontSize: "3rem",
+        fontSize: "3.5rem",
+        color: "var(--brand-primary)",
+        fontWeight: 700,
+        lineHeight: 1,
         animation: "bounceIn 0.6s ease",
       }}>
         ✓

@@ -59,7 +59,9 @@ export interface DashboardData {
     id: string;
     name: string;
     phone: string;
+    zodiac: string | null;
     createdAt: string;
+    ordered: boolean;
   }>;
   shareUrl: string;
 }
@@ -113,6 +115,7 @@ export interface CreateBookingPayload {
   eventDate: string;
   slot: "LUNCH" | "DINNER";
   bowls: number;
+  notes?: string;
 }
 
 export async function createBooking(payload: CreateBookingPayload): Promise<BookingDraft> {

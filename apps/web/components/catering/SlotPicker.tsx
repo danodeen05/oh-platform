@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { type AvailabilitySlot } from "@/lib/catering/api";
 import { trackCateringSlotSelected } from "@/lib/catering/analytics";
 
@@ -35,6 +36,29 @@ export default function SlotPicker({
   const priceCents = selectedSlot ? PRICE_CENTS[selectedSlot] : null;
   const subtotalCents = priceCents ? priceCents * bowls : null;
 
+  // Local draft so the user can freely type a quantity (e.g. clear the field,
+  // type "100") without it clamping on every keystroke. Committed/clamped on blur.
+  const [bowlsDraft, setBowlsDraft] = useState(String(bowls));
+  useEffect(() => {
+    setBowlsDraft(String(bowls));
+  }, [bowls]);
+
+  const handleBowlsInput = (raw: string) => {
+    setBowlsDraft(raw);
+    if (raw === "") return;
+    const n = parseInt(raw, 10);
+    if (!Number.isNaN(n)) onBowlsChange(Math.min(MAX_BOWLS, Math.max(0, n)));
+  };
+
+  const commitBowls = () => {
+    const n = parseInt(bowlsDraft, 10);
+    const clamped = Number.isNaN(n)
+      ? MIN_BOWLS
+      : Math.min(MAX_BOWLS, Math.max(MIN_BOWLS, n));
+    onBowlsChange(clamped);
+    setBowlsDraft(String(clamped));
+  };
+
   const handleSlot = (slot: "LUNCH" | "DINNER") => {
     onSlotChange(slot);
     trackCateringSlotSelected(slot, date);
@@ -42,6 +66,10 @@ export default function SlotPicker({
 
   return (
     <div style={{ width: "100%", maxWidth: "420px" }}>
+      <style>{`
+        .bowls-input::-webkit-outer-spin-button,
+        .bowls-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+      `}</style>
       {/* Date display */}
       <p style={{
         margin: "0 0 16px",
@@ -129,16 +157,32 @@ export default function SlotPicker({
           >
             −
           </button>
-          <span style={{
-            fontSize: "1.4rem",
-            fontWeight: 700,
-            color: "var(--brand-primary)",
-            fontFamily: "'Raleway', sans-serif",
-            minWidth: "60px",
-            textAlign: "center",
-          }}>
-            {bowls}
-          </span>
+          <input
+            type="number"
+            inputMode="numeric"
+            min={MIN_BOWLS}
+            max={MAX_BOWLS}
+            value={bowlsDraft}
+            onChange={(e) => handleBowlsInput(e.target.value)}
+            onBlur={commitBowls}
+            onFocus={(e) => e.currentTarget.select()}
+            aria-label="Number of bowls"
+            className="bowls-input"
+            style={{
+              fontSize: "1.4rem",
+              fontWeight: 700,
+              color: "var(--brand-primary)",
+              fontFamily: "'Raleway', sans-serif",
+              width: "80px",
+              textAlign: "center",
+              background: "var(--brand-surface)",
+              border: "1px solid var(--brand-border)",
+              borderRadius: "8px",
+              padding: "6px 4px",
+              outline: "none",
+              MozAppearance: "textfield",
+            }}
+          />
           <button
             onClick={() => onBowlsChange(Math.min(MAX_BOWLS, bowls + 1))}
             style={{

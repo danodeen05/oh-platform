@@ -24,6 +24,17 @@ function ConfirmationContent({ locale }: { locale: string }) {
   const attendeeUrl = origin && eventSlug ? `${origin}/${locale}/catering/e/${eventSlug}` : "";
   const dashboardUrl = origin && bookingToken ? `${origin}/${locale}/catering/dashboard/${bookingToken}` : "";
 
+  const [copied, setCopied] = useState(false);
+  const copyAttendeeUrl = async () => {
+    try {
+      await navigator.clipboard?.writeText(attendeeUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      /* clipboard unavailable — leave button unchanged */
+    }
+  };
+
   return (
     <div style={{
       position: "relative",
@@ -36,16 +47,16 @@ function ConfirmationContent({ locale }: { locale: string }) {
       gap: "28px",
       textAlign: "center",
     }}>
-      <div style={{ background: "rgba(255,255,255,0.95)", borderRadius: "12px", padding: "10px 18px" }}>
-        <Image src="/Oh_Logo_Large.png" alt="Oh! Beef Noodle Soup" width={120} height={48} style={{ objectFit: "contain" }} />
+      <div style={{ animation: "ohLogoFloat 3.5s ease-in-out infinite" }}>
+        <Image src="/Oh_Logo_Mark_Light.png" alt="Oh! Beef Noodle Soup" width={96} height={96} priority style={{ objectFit: "contain" }} />
       </div>
 
       <div>
         <h1 style={{ margin: 0, fontSize: "clamp(1.4rem, 5vw, 1.9rem)", fontWeight: 700, color: "var(--brand-primary)", fontFamily: "'Raleway', sans-serif" }}>
           Booking Confirmed!
         </h1>
-        <p style={{ margin: "10px 0 0", color: "var(--brand-primary)", opacity: 0.6, fontFamily: "'Raleway', sans-serif", fontSize: "0.9rem", maxWidth: "360px" }}>
-          You're all set. Share the attendee link with your guests — they'll RSVP and choose their bowls.
+        <p style={{ margin: "10px 0 0", color: "var(--brand-primary)", opacity: 0.85, fontFamily: "'Raleway', sans-serif", fontSize: "0.9rem", maxWidth: "360px" }}>
+          You're all set. Share the attendee link with your guests so they can RSVP and choose their bowls.
         </p>
       </div>
 
@@ -71,11 +82,11 @@ function ConfirmationContent({ locale }: { locale: string }) {
           </p>
 
           <button
-            onClick={() => navigator.clipboard?.writeText(attendeeUrl)}
+            onClick={copyAttendeeUrl}
             style={{
               padding: "10px 24px",
-              background: "var(--brand-primary)",
-              color: "var(--brand-on-primary)",
+              background: copied ? "#22c55e" : "var(--brand-primary)",
+              color: copied ? "#ffffff" : "var(--brand-on-primary)",
               border: "none",
               borderRadius: "50px",
               fontFamily: "'Raleway', sans-serif",
@@ -83,9 +94,10 @@ function ConfirmationContent({ locale }: { locale: string }) {
               fontSize: "0.85rem",
               cursor: "pointer",
               letterSpacing: "0.5px",
+              transition: "background 0.2s ease",
             }}
           >
-            Copy Link
+            {copied ? "Copied!" : "Copy Link"}
           </button>
         </div>
       )}
@@ -124,7 +136,7 @@ export default function BookingConfirmationPage({ params }: PageProps) {
   const { locale } = use(params);
   return (
     <div style={{
-      "--brand-primary": "#C7A878",
+      "--brand-primary": "#E0C38C",
       "--brand-secondary": "#8A7055",
       "--brand-bg": "#0D0D0B",
       "--brand-on-primary": "#1A1612",

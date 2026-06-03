@@ -19,55 +19,42 @@ export default function LockedPreviewCard({ title, teaser, icon }: LockedPreview
         background: "var(--brand-surface)",
         border: "1px solid var(--brand-border)",
         borderRadius: "16px",
-        padding: "20px",
+        padding: "22px 20px",
         overflow: "hidden",
       }}
     >
-      {/* Blurred placeholder content */}
-      <div style={{ filter: "blur(6px)", userSelect: "none", pointerEvents: "none", opacity: 0.4 }}>
-        <div
-          style={{
-            height: "12px",
-            background: "var(--brand-primary)",
-            borderRadius: "6px",
-            marginBottom: "10px",
-            width: "70%",
-          }}
-        />
-        <div
-          style={{
-            height: "10px",
-            background: "var(--brand-primary)",
-            borderRadius: "6px",
-            marginBottom: "8px",
-            width: "90%",
-          }}
-        />
-        <div
-          style={{
-            height: "10px",
-            background: "var(--brand-primary)",
-            borderRadius: "6px",
-            width: "55%",
-          }}
-        />
-      </div>
-
-      {/* Lock overlay */}
+      {/* Blurred placeholder bars — purely decorative background. Absolutely
+          positioned so the real content below drives the card's height. */}
       <div
+        aria-hidden
         style={{
           position: "absolute",
           inset: 0,
+          padding: "20px",
+          filter: "blur(6px)",
+          userSelect: "none",
+          pointerEvents: "none",
+          opacity: 0.35,
+        }}
+      >
+        <div style={{ height: "12px", background: "var(--brand-primary)", borderRadius: "6px", marginBottom: "10px", width: "70%" }} />
+        <div style={{ height: "10px", background: "var(--brand-primary)", borderRadius: "6px", marginBottom: "8px", width: "90%" }} />
+        <div style={{ height: "10px", background: "var(--brand-primary)", borderRadius: "6px", width: "55%" }} />
+      </div>
+
+      {/* Real content — in normal flow so the card always sizes to fit it */}
+      <div
+        style={{
+          position: "relative",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
           gap: "8px",
-          padding: "16px",
           textAlign: "center",
         }}
       >
-        {icon && <span style={{ fontSize: "1.8rem" }}>{icon}</span>}
+        {icon && <span style={{ fontSize: "1.8rem", lineHeight: 1 }}>{icon}</span>}
         <p
           style={{
             margin: 0,
