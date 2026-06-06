@@ -2079,9 +2079,53 @@ export async function registerCateringRoutes(app) {
   // POST /catering/events/:slug/survey
   // =========================================================================
 
+  // Resolve a survey respondent's name on file from an order QR code or an
+  // RSVP remember-token. Returns { name } (null when the survey link is
+  // anonymous / no match), so the form can show "Submitting as <name>"
+  // instead of an empty name field.
+  app.get("/catering/events/:slug/survey/identity", async (req, reply) => {
+    try {
+      const { qrCode, rsvp } = req.query || {};
+      const event = await prisma.cateringEvent.findUnique({
+        where: { slug: req.params.slug },
+        select: { id: true },
+      });
+      if (!event) return reply.code(404).send({ error: "Event not found" });
+
+      let name = null;
+      if (qrCode) {
+        const order = await prisma.order.findFirst({
+          where: { orderQrCode: String(qrCode), cateringEventId: event.id },
+          select: { guestName: true },
+        });
+        if (order?.guestName) name = order.guestName;
+      }
+      if (!name && rsvp) {
+        const r = await prisma.cateringRSVP.findFirst({
+          where: { rememberToken: String(rsvp), eventId: event.id },
+          select: { name: true },
+        });
+        if (r?.name) name = r.name;
+      }
+
+      return { name: name || null };
+    } catch (err) {
+      console.error("[catering survey identity]", err.message);
+      return reply.code(500).send({ error: err.message });
+    }
+  });
+
   app.post("/catering/events/:slug/survey", async (req, reply) => {
     try {
-      const { qrCode, overallScore, areaScores, comment } = req.body || {};
+      const {
+        qrCode,
+        rsvp,
+        attribute,
+        guestName: submittedName,
+        overallScore,
+        areaScores,
+        comment,
+      } = req.body || {};
 
       if (!overallScore || typeof overallScore !== "number") {
         return reply.code(400).send({ error: "overallScore (number 1-5) required" });
@@ -2099,18 +2143,43 @@ export async function registerCateringRoutes(app) {
         survey = await prisma.cateringSurvey.create({ data: { eventId: event.id } });
       }
 
-      // Look up guest info from QR code if provided
-      let guestName = null;
-      let guestPhone = null;
+      // Figure out who we already know this respondent to be: an order QR code
+      // links to a placed order, an RSVP token links to an RSVP.
+      let onFileName = null;
+      let onFilePhone = null;
       if (qrCode) {
         const order = await prisma.order.findFirst({
           where: { orderQrCode: qrCode, cateringEventId: event.id },
           select: { guestName: true, guestPhone: true },
         });
         if (order) {
-          guestName = order.guestName;
-          guestPhone = order.guestPhone;
+          onFileName = order.guestName;
+          onFilePhone = order.guestPhone;
         }
+      }
+      if (!onFileName && rsvp) {
+        const r = await prisma.cateringRSVP.findFirst({
+          where: { rememberToken: rsvp, eventId: event.id },
+          select: { name: true, phone: true },
+        });
+        if (r) {
+          onFileName = r.name;
+          onFilePhone = r.phone;
+        }
+      }
+
+      // Attribution is opt-in. Known respondents are attributed unless they
+      // explicitly opted out (attribute === false). Anonymous respondents may
+      // volunteer a name via the free-text field.
+      let guestName = null;
+      let guestPhone = null;
+      if (onFileName) {
+        if (attribute !== false) {
+          guestName = onFileName;
+          guestPhone = onFilePhone;
+        }
+      } else if (typeof submittedName === "string" && submittedName.trim()) {
+        guestName = submittedName.trim().slice(0, 80);
       }
 
       const response = await prisma.cateringSurveyResponse.create({
@@ -2217,7 +2286,7 @@ export async function registerCateringRoutes(app) {
         // Get all attendees who placed an order
         const orders = await prisma.order.findMany({
           where: { cateringEventId: event.id, status: { not: "CANCELLED" } },
-          select: { guestName: true, guestPhone: true },
+          select: { guestName: true, guestPhone: true, orderQrCode: true },
         });
 
         // Also include RSVPs who may not have ordered
@@ -2228,23 +2297,30 @@ export async function registerCateringRoutes(app) {
         for (const o of orders) {
           if (o.guestPhone && !phones.has(o.guestPhone)) {
             phones.add(o.guestPhone);
-            targets.push({ name: o.guestName, phone: o.guestPhone });
+            targets.push({ name: o.guestName, phone: o.guestPhone, qrCode: o.orderQrCode });
           }
         }
         for (const r of rsvps) {
           if (r.phone && !phones.has(r.phone)) {
             phones.add(r.phone);
-            targets.push({ name: r.name, phone: r.phone });
+            targets.push({ name: r.name, phone: r.phone, rsvpToken: r.rememberToken });
           }
         }
 
         for (const t of targets) {
+          // Personalize the link so the form can offer to attribute their name
+          // (order QR code, else RSVP token). Anonymous link if we have neither.
+          const link = t.qrCode
+            ? `${surveyUrl}?qrCode=${encodeURIComponent(t.qrCode)}`
+            : t.rsvpToken
+              ? `${surveyUrl}?rsvp=${encodeURIComponent(t.rsvpToken)}`
+              : surveyUrl;
           try {
             const res = await sendSMS({
               to: t.phone,
               body:
                 `Hi${t.name ? " " + t.name.split(" ")[0] : ""}! Thanks for joining ${event.eventName || event.clientCompany} x Oh! Beef Noodle Soup.\n\n` +
-                `We'd love your feedback (takes 1 min):\n${surveyUrl}`,
+                `We'd love your feedback (takes 1 min):\n${link}`,
             });
             results.push({ name: t.name, phone: t.phone, ...res });
           } catch (e) {

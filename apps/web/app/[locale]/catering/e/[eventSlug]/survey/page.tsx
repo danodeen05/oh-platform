@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, FormEvent, Suspense, use } from "react";
+import { useState, useEffect, FormEvent, Suspense, use } from "react";
+import Image from "next/image";
 import { useSearchParams } from "next/navigation";
-import { submitSurvey } from "@/lib/catering/api";
+import { submitSurvey, fetchSurveyIdentity } from "@/lib/catering/api";
 import ThemedBackground from "@/components/catering/ThemedBackground";
 
 interface PageProps {
@@ -44,6 +45,7 @@ function StarRating({ value, onChange }: { value: number; onChange: (n: number) 
 function SurveyContent({ locale, eventSlug }: { locale: string; eventSlug: string }) {
   const searchParams = useSearchParams();
   const qrCode = searchParams.get("qrCode") || undefined;
+  const rsvp = searchParams.get("rsvp") || undefined;
 
   const [overall, setOverall] = useState(0);
   const [areas, setAreas] = useState({ food: 0, speed: 0, experience: 0, recommend: 0 });
@@ -51,6 +53,21 @@ function SurveyContent({ locale, eventSlug }: { locale: string; eventSlug: strin
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  // Respondent attribution. If the link is tied to an order/RSVP we look up the
+  // name on file and let them choose to attach it. Otherwise they can type one.
+  const [knownName, setKnownName] = useState<string | null>(null);
+  const [attribute, setAttribute] = useState(true);
+  const [nameInput, setNameInput] = useState("");
+
+  useEffect(() => {
+    if (!qrCode && !rsvp) return;
+    let active = true;
+    fetchSurveyIdentity(eventSlug, { qrCode, rsvp })
+      .then(({ name }) => { if (active && name) setKnownName(name); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [eventSlug, qrCode, rsvp]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -60,9 +77,15 @@ function SurveyContent({ locale, eventSlug }: { locale: string; eventSlug: strin
     try {
       await submitSurvey(eventSlug, {
         qrCode,
+        rsvp,
         overallScore: overall,
         areaScores: areas,
         comment: comment.trim() || undefined,
+        ...(knownName
+          ? { attribute }
+          : nameInput.trim()
+            ? { guestName: nameInput.trim() }
+            : {}),
       });
       setSubmitted(true);
     } catch (err: unknown) {
@@ -86,7 +109,9 @@ function SurveyContent({ locale, eventSlug }: { locale: string; eventSlug: strin
         gap: "20px",
         textAlign: "center",
       }}>
-        <div style={{ fontSize: "3rem" }}>★</div>
+        <div style={{ animation: "ohLogoFloat 3.5s ease-in-out infinite" }}>
+          <Image src="/Oh_Logo_Mark_Light.png" alt="Oh! Beef Noodle Soup" width={84} height={84} priority style={{ objectFit: "contain" }} />
+        </div>
         <h1 style={{ margin: 0, color: "var(--brand-primary)", fontFamily: "'Raleway', sans-serif", fontSize: "1.6rem", fontWeight: 700 }}>
           Thank You!
         </h1>
@@ -108,6 +133,9 @@ function SurveyContent({ locale, eventSlug }: { locale: string; eventSlug: strin
       padding: "40px 24px 80px",
       gap: "24px",
     }}>
+      <div style={{ animation: "ohLogoFloat 3.5s ease-in-out infinite" }}>
+        <Image src="/Oh_Logo_Mark_Light.png" alt="Oh! Beef Noodle Soup" width={84} height={84} priority style={{ objectFit: "contain" }} />
+      </div>
       <h1 style={{ margin: 0, color: "var(--brand-primary)", fontFamily: "'Raleway', sans-serif", fontSize: "clamp(1.4rem, 6vw, 1.8rem)", fontWeight: 700 }}>
         How was your experience?
       </h1>
@@ -160,6 +188,57 @@ function SurveyContent({ locale, eventSlug }: { locale: string; eventSlug: strin
             {comment.length}/500
           </p>
         </div>
+
+        {/* Attribution */}
+        {knownName ? (
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "10px",
+              cursor: "pointer",
+              fontFamily: "'Raleway', sans-serif",
+              fontSize: "0.85rem",
+              color: "var(--brand-primary)",
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={attribute}
+              onChange={e => setAttribute(e.target.checked)}
+              style={{ width: "16px", height: "16px", accentColor: "var(--brand-primary)", cursor: "pointer" }}
+            />
+            <span>
+              Share my name (<strong>{knownName}</strong>) with this feedback
+            </span>
+          </label>
+        ) : (
+          <div>
+            <label style={labelStyle}>
+              Your Name{" "}
+              <span style={{ fontWeight: 400, opacity: 0.5, fontSize: "0.78rem" }}>Optional</span>
+            </label>
+            <input
+              type="text"
+              value={nameInput}
+              onChange={e => setNameInput(e.target.value)}
+              placeholder="Stay anonymous, or add your name"
+              maxLength={80}
+              style={{
+                width: "100%",
+                padding: "12px 14px",
+                fontSize: "0.9rem",
+                borderRadius: "10px",
+                border: "1.5px solid var(--brand-border)",
+                background: "var(--brand-surface)",
+                color: "var(--brand-primary)",
+                fontFamily: "'Raleway', sans-serif",
+                outline: "none",
+                boxSizing: "border-box",
+              }}
+            />
+          </div>
+        )}
 
         {error && (
           <p style={{ margin: 0, color: "#ef4444", fontSize: "0.85rem", fontFamily: "'Raleway', sans-serif" }}>

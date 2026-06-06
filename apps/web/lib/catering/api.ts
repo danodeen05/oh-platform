@@ -246,6 +246,11 @@ export async function deleteOrder(slug: string, orderId: string): Promise<{ succ
 
 export interface SurveyPayload {
   qrCode?: string;
+  rsvp?: string;
+  // For known respondents: false opts out of attaching their name on file.
+  attribute?: boolean;
+  // For anonymous respondents: a name they volunteered.
+  guestName?: string;
   overallScore: number;
   areaScores: {
     food: number;
@@ -254,6 +259,20 @@ export interface SurveyPayload {
     recommend: number;
   };
   comment?: string;
+}
+
+// Resolve the respondent's name on file from an order QR code or RSVP token,
+// so the survey can show "Submitting as <name>" rather than an empty field.
+export async function fetchSurveyIdentity(
+  slug: string,
+  params: { qrCode?: string; rsvp?: string },
+): Promise<{ name: string | null }> {
+  const qs = new URLSearchParams();
+  if (params.qrCode) qs.set("qrCode", params.qrCode);
+  if (params.rsvp) qs.set("rsvp", params.rsvp);
+  const res = await fetch(`${BASE}/catering/events/${slug}/survey/identity?${qs.toString()}`);
+  if (!res.ok) return { name: null };
+  return res.json();
 }
 
 export async function submitSurvey(slug: string, payload: SurveyPayload): Promise<void> {
