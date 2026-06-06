@@ -1,7 +1,18 @@
 "use client";
 
-// TODO: NEXT_PUBLIC_WEB_URL is not yet defined in Vercel env. Defaulting to https://www.ohbeef.com
-const WEB_ORIGIN = process.env.NEXT_PUBLIC_WEB_URL || "https://www.ohbeef.com";
+// NEXT_PUBLIC_WEB_URL isn't defined in dev, so derive the web origin from the
+// admin host: dev admin -> dev web, prod admin -> prod web. Otherwise share
+// links (attendee/RSVP, dashboard, survey) point at production from dev.
+function getWebOrigin() {
+  if (process.env.NEXT_PUBLIC_WEB_URL) return process.env.NEXT_PUBLIC_WEB_URL;
+  if (typeof window !== "undefined") {
+    const host = window.location.hostname;
+    if (host.includes("devadmin") || host.includes("localhost")) {
+      return "https://devwebapp.ohbeef.com";
+    }
+  }
+  return "https://www.ohbeef.com";
+}
 
 import StatCard from "../../../analytics/components/StatCard";
 import QRCode from "../../../_components/qr-code";
@@ -15,6 +26,7 @@ interface OverviewTabProps {
 }
 
 export default function OverviewTab({ event, onRefresh }: OverviewTabProps) {
+  const WEB_ORIGIN = getWebOrigin();
   const attendeeUrl = `${WEB_ORIGIN}/en/catering/e/${event.slug}`;
   const dashboardUrl = event.booking?.bookingToken
     ? `${WEB_ORIGIN}/en/catering/dashboard/${event.booking.bookingToken}`
