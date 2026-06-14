@@ -175,21 +175,24 @@ export default function BookingCalendar({
                 <div style={{ display: "flex", justifyContent: "center", gap: "3px", marginTop: "4px" }}>
                   {daySlots.map(s => {
                     const isOpen = s.status === "OPEN";
-                    const isBooked = s.status === "BOOKED";
+                    // Booked events, admin-blocked specific dates, and the
+                    // lead-time buffer all read as "taken" -> red. Recurring
+                    // closures (Sundays) stay grey / "not offered".
+                    const isRed = s.status === "BOOKED" || s.status === "BLOCKED_DATE";
                     return (
                       <div
                         key={s.slot}
                         className={isOpen ? "slot-dot-open" : undefined}
-                        title={`${s.slot === "LUNCH" ? "Lunch" : "Dinner"}: ${isOpen ? "Available" : isBooked ? "Booked" : "Unavailable"}`}
+                        title={`${s.slot === "LUNCH" ? "Lunch" : "Dinner"}: ${isOpen ? "Available" : isRed ? "Booked" : "Unavailable"}`}
                         style={{
                           width: "7px",
                           height: "7px",
                           borderRadius: "50%",
                           background: isOpen
                             ? "#8CC79A"                 // pastel green = available
-                            : isBooked
-                            ? "#A84343"                 // deeper, muted red = booked
-                            : "rgba(128,128,128,0.4)",  // grey = blocked / unavailable
+                            : isRed
+                            ? "#A84343"                 // deeper, muted red = booked / blocked date
+                            : "rgba(128,128,128,0.4)",  // grey = recurring closed day (e.g. Sundays)
                         }}
                       />
                     );

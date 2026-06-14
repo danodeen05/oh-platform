@@ -1526,11 +1526,24 @@ export async function registerCateringRoutes(app) {
       while (cursor <= toDate) {
         const dateStr = cursor.toISOString().slice(0, 10);
         for (const slot of ["LUNCH", "DINNER"]) {
-          const status = booked.has(`${dateStr}_${slot}`)
-            ? "BOOKED"
-            : withinLeadTime(dateStr) || blackoutHit(blackouts, dateStr, slot)
-            ? "BLOCKED"
-            : "OPEN";
+          let status;
+          if (booked.has(`${dateStr}_${slot}`)) {
+            status = "BOOKED";
+          } else if (withinLeadTime(dateStr)) {
+            // Near-term lead-time buffer: show red, like booked/taken.
+            status = "BLOCKED_DATE";
+          } else {
+            const hit = blackoutHit(blackouts, dateStr, slot);
+            if (!hit) {
+              status = "OPEN";
+            } else if (hit.weekday !== null && hit.weekday !== undefined) {
+              // Recurring weekly closure (e.g. Sundays) — grey "not offered".
+              status = "BLOCKED";
+            } else {
+              // Specific date/range the admin blocked — red, like booked.
+              status = "BLOCKED_DATE";
+            }
+          }
           days.push({ date: dateStr, slot, status });
         }
         cursor.setUTCDate(cursor.getUTCDate() + 1);

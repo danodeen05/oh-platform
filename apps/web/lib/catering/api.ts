@@ -41,8 +41,10 @@ export interface CateringEvent {
 export interface AvailabilitySlot {
   date: string; // YYYY-MM-DD
   slot: "LUNCH" | "DINNER";
-  // BLOCKED = admin-blocked date/slot; treated as unavailable like BOOKED.
-  status: "OPEN" | "BOOKED" | "BLOCKED";
+  // OPEN = bookable. BOOKED = has an event. BLOCKED_DATE = a specific date the
+  // admin blocked, or inside the lead-time buffer (shown red, like booked).
+  // BLOCKED = a recurring closed day like Sundays (shown grey / "not offered").
+  status: "OPEN" | "BOOKED" | "BLOCKED" | "BLOCKED_DATE";
 }
 
 export interface BookingDraft {
