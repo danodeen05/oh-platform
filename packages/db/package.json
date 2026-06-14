@@ -15,10 +15,10 @@
     "seed:leland-event": "node prisma/seed-leland-event.js"
   },
   "dependencies": {
-    "@prisma/client": "5.19.1"
+    "@prisma/client": "5.19.1",
+    "prisma": "5.19.1"
   },
   "devDependencies": {
-    "prisma": "5.19.1",
     "tsx": "^4.19.2"
   },
   "prisma": {
