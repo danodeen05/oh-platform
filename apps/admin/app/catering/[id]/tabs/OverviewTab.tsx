@@ -110,6 +110,39 @@ export default function OverviewTab({ event, onRefresh }: OverviewTabProps) {
               {event.eventCode}
             </code>
           </div>
+          {event.eventType && (
+            <div>
+              <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: 2 }}>Event Type</div>
+              <div>{event.eventType}</div>
+            </div>
+          )}
+          {event.expectedGuests != null && (
+            <div>
+              <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: 2 }}>Expected Guests</div>
+              <div>{event.expectedGuests}</div>
+            </div>
+          )}
+          {(event.onsiteContactName || event.onsiteContactPhone) && (
+            <div>
+              <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: 2 }}>Day-of On-site Contact</div>
+              {event.onsiteContactName && <div>{event.onsiteContactName}</div>}
+              {event.onsiteContactPhone && (
+                <div style={{ fontSize: "0.8rem", color: "#6b7280" }}>{event.onsiteContactPhone}</div>
+              )}
+            </div>
+          )}
+          {event.dietaryNotes && (
+            <div style={{ gridColumn: "1 / -1" }}>
+              <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: 2 }}>Dietary Needs</div>
+              <div style={{ fontSize: "0.85rem", color: "#374151", whiteSpace: "pre-wrap" }}>{event.dietaryNotes}</div>
+            </div>
+          )}
+          {event.setupNotes && (
+            <div style={{ gridColumn: "1 / -1" }}>
+              <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: 2 }}>Setup &amp; Space Notes</div>
+              <div style={{ fontSize: "0.85rem", color: "#374151", whiteSpace: "pre-wrap" }}>{event.setupNotes}</div>
+            </div>
+          )}
           {event.notes && (
             <div style={{ gridColumn: "1 / -1" }}>
               <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: 2 }}>Notes</div>

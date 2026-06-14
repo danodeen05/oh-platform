@@ -188,7 +188,7 @@ export default function OrderWizard({
                 item={soup}
                 selected={selectedSoupId === soup.id}
                 displayName={display}
-                description={desc}
+                description={soup.description || desc}
                 onSelect={() => setSelectedSoupId(soup.id)}
               />
             );
@@ -229,7 +229,7 @@ export default function OrderWizard({
                 item={noodle}
                 selected={selectedNoodleId === noodle.id}
                 displayName={display}
-                description={desc}
+                description={noodle.description || desc}
                 onSelect={() => setSelectedNoodleId(noodle.id)}
               />
             );
@@ -244,7 +244,7 @@ export default function OrderWizard({
             borderRadius: "12px",
           }}>
             <p style={{ margin: 0, fontSize: "0.8rem", color: "var(--brand-primary)", fontFamily: "'Raleway', sans-serif", lineHeight: 1.5, opacity: 0.8 }}>
-              Cilantro, Green Onions & Chili Oil are available at the event — help yourself!
+              Cilantro, Green Onions, Pickled Mustard Greens & Chili Oil are available at the event. Help yourself!
             </p>
           </div>
 

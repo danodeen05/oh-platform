@@ -29,6 +29,9 @@ interface ApplePayOrder {
   clientSecret: string;
   totalCents: number;
   locationName: string;
+  // Catering bookings confirm via a different endpoint than dine-in orders.
+  kind?: string; // "catering" for catering deposits
+  bookingId?: string;
 }
 
 // Brand colors
@@ -117,7 +120,7 @@ export function ChappyChat({
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
   const userScrolledUpRef = useRef(false);
 
@@ -314,15 +317,23 @@ export function ChappyChat({
 
           event.complete("success");
 
-          // Confirm the order with our API
-          const confirmResponse = await fetch(`${apiUrl}/chappy/confirm-payment`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              orderId: applePayOrder.orderId,
-              paymentIntentId: paymentIntent?.id,
-            }),
-          });
+          // Confirm with our API. Catering deposits confirm via the catering
+          // booking endpoint; dine-in orders via the chappy endpoint.
+          const isCatering = applePayOrder.kind === "catering";
+          const confirmResponse = await fetch(
+            isCatering
+              ? `${apiUrl}/catering/bookings/${applePayOrder.bookingId}/confirm`
+              : `${apiUrl}/chappy/confirm-payment`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(
+                isCatering
+                  ? { paymentIntentId: paymentIntent?.id }
+                  : { orderId: applePayOrder.orderId, paymentIntentId: paymentIntent?.id }
+              ),
+            }
+          );
 
           const confirmData = await confirmResponse.json();
 
@@ -331,7 +342,9 @@ export function ChappyChat({
               ...prev,
               {
                 role: "assistant",
-                content: `Payment successful! ${confirmData.message}\n\nOrder #${confirmData.kitchenOrderNumber}\nTotal: ${confirmData.total}`,
+                content: isCatering
+                  ? `Deposit received - your catering event is locked in. We'll be in touch to finalize the details.`
+                  : `Payment successful! ${confirmData.message}\n\nOrder #${confirmData.kitchenOrderNumber}\nTotal: ${confirmData.total}`,
                 timestamp: new Date().toISOString(),
               },
             ]);
@@ -520,6 +533,8 @@ export function ChappyChat({
             clientSecret: data.applePayOrder.clientSecret,
             totalCents: data.applePayOrder.totalCents,
             locationName: data.applePayOrder.locationName,
+            kind: data.applePayOrder.kind,
+            bookingId: data.applePayOrder.bookingId,
           });
         }
 
@@ -575,6 +590,9 @@ export function ChappyChat({
   const handleAction = useCallback(
     (action: string) => {
       const actionMessages: Record<string, string> = {
+        cater_book: "I'd like to book catering for an event.",
+        cater_info: "What's included with catering, and how much does it cost?",
+        cater_manage: "I need to make changes to an event I already booked.",
         start_order: "I'd like to start an order",
         browse_menu: "Show me the menu",
         browse_mains: "Show me the main dishes",
@@ -599,11 +617,19 @@ export function ChappyChat({
     [sendMessage]
   );
 
-  // Handle keyboard submit
+  // Send the current input and reset the textarea height.
+  const submitInput = () => {
+    sendMessage(inputValue);
+    if (inputRef.current) inputRef.current.style.height = "auto";
+  };
+
+  // Enter inserts a newline so users can list names, emails, and phone numbers
+  // on separate lines in one message (important on mobile, where there's no
+  // Shift+Enter). Send with the button, or Cmd/Ctrl+Enter for keyboard users.
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
-      sendMessage(inputValue);
+      submitInput();
     }
   };
 
@@ -985,23 +1011,33 @@ export function ChappyChat({
                   returnUrl={typeof window !== "undefined" ? window.location.href : ""}
                   showExpressCheckout={true}
                   onSuccess={async (paymentIntentId) => {
-                    // Payment successful - confirm order on backend
+                    // Payment successful - confirm on backend. Catering deposits
+                    // confirm via the catering booking endpoint.
                     try {
-                      const response = await fetch(`${apiUrl}/chappy/confirm-payment`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                          orderId: applePayOrder.orderId,
-                          paymentIntentId,
-                        }),
-                      });
+                      const isCatering = applePayOrder.kind === "catering";
+                      const response = await fetch(
+                        isCatering
+                          ? `${apiUrl}/catering/bookings/${applePayOrder.bookingId}/confirm`
+                          : `${apiUrl}/chappy/confirm-payment`,
+                        {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify(
+                            isCatering
+                              ? { paymentIntentId }
+                              : { orderId: applePayOrder.orderId, paymentIntentId }
+                          ),
+                        }
+                      );
                       const result = await response.json();
 
                       setMessages((prev) => [
                         ...prev,
                         {
                           role: "assistant",
-                          content: result.message || `Order confirmed! Your order number is ${applePayOrder.orderNumber}. Head to ${applePayOrder.locationName} to pick up your food.`,
+                          content: isCatering
+                            ? `Deposit received - your catering event is locked in. We'll be in touch to finalize the details.`
+                            : result.message || `Order confirmed! Your order number is ${applePayOrder.orderNumber}. Head to ${applePayOrder.locationName} to pick up your food.`,
                           timestamp: new Date().toISOString(),
                         },
                       ]);
@@ -1138,16 +1174,22 @@ export function ChappyChat({
             display: "flex",
             gap: 10,
             background: COLORS.gray[100],
-            borderRadius: 28,
+            borderRadius: 24,
             padding: "6px 6px 6px 18px",
-            alignItems: "center",
+            alignItems: "flex-end",
           }}
         >
-          <input
+          <textarea
             ref={inputRef}
-            type="text"
+            rows={1}
             value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
+            onChange={(e) => {
+              setInputValue(e.target.value);
+              // Auto-grow with content, up to ~5 lines.
+              const el = e.target;
+              el.style.height = "auto";
+              el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
+            }}
             onKeyDown={handleKeyDown}
             placeholder={isStreaming ? "Chappy is responding..." : "Message Chappy..."}
             disabled={isLoading || isStreaming}
@@ -1159,10 +1201,15 @@ export function ChappyChat({
               fontSize: "0.95rem",
               outline: "none",
               color: COLORS.gray[700],
+              resize: "none",
+              fontFamily: "inherit",
+              lineHeight: 1.4,
+              maxHeight: 120,
+              overflowY: "auto",
             }}
           />
           <button
-            onClick={() => sendMessage(inputValue)}
+            onClick={submitInput}
             disabled={!inputValue.trim() || isLoading || isStreaming}
             style={{
               width: 44,
@@ -1244,31 +1291,31 @@ function WelcomeScreen({ onAction }: { onAction: (action: string) => void }) {
         Hey! I'm Chappy
       </h3>
       <p style={{ margin: "0 0 20px", fontSize: "0.9rem", color: COLORS.gray[500], lineHeight: 1.5 }}>
-        Your friendly chopsticks assistant! I can help you order delicious beef noodle soup, check your points, or answer any questions.
+        Your catering assistant. I can answer questions, book your event step by step and take the deposit, or pull up an event you already booked to make changes.
       </p>
 
       {/* Quick action cards */}
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         <QuickActionCard
           icon="🍜"
-          title="Start an Order"
-          description="Browse our menu and build your perfect bowl"
-          onClick={() => onAction("start_order")}
+          title="Book an Event"
+          description="Reserve a date and set up your catering"
+          onClick={() => onAction("cater_book")}
           primary
         />
         <div style={{ display: "flex", gap: 10 }}>
           <QuickActionCard
-            icon="📋"
-            title="See Menu"
-            description="View all dishes"
-            onClick={() => onAction("browse_menu")}
+            icon="✨"
+            title="What's Included"
+            description="Pricing & perks"
+            onClick={() => onAction("cater_info")}
             compact
           />
           <QuickActionCard
-            icon="⭐"
-            title="My Points"
-            description="Check balance"
-            onClick={() => onAction("check_points")}
+            icon="📅"
+            title="Manage My Event"
+            description="Update details"
+            onClick={() => onAction("cater_manage")}
             compact
           />
         </div>

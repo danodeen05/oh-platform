@@ -11,6 +11,7 @@ const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 export interface CateringMenuItem {
   id: string;
   name: string;
+  description?: string | null;
 }
 
 export interface CateringMenu {
@@ -96,6 +97,14 @@ export async function fetchCateringEvent(slug: string): Promise<CateringEvent> {
   return res.json();
 }
 
+// Event-independent catering menu (soups/noodles/sliders) for the marketing
+// landing page. Mirrors the allowlist the attendee order wizard uses.
+export async function fetchCateringMenu(): Promise<CateringMenu> {
+  const res = await fetch(`${BASE}/catering/menu`, { cache: "no-store" });
+  if (!res.ok) throw new Error("Failed to load catering menu");
+  return res.json();
+}
+
 export async function fetchCateringAvailability(
   from: string,
   to: string
@@ -121,6 +130,12 @@ export interface CreateBookingPayload {
   eventAddress?: string;
   eventLat?: number;
   eventLng?: number;
+  eventType?: string;
+  expectedGuests?: number;
+  dietaryNotes?: string;
+  setupNotes?: string;
+  onsiteContactName?: string;
+  onsiteContactPhone?: string;
 }
 
 export async function createBooking(payload: CreateBookingPayload): Promise<BookingDraft> {

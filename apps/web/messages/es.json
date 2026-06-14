@@ -66,16 +66,16 @@
   "home": {
     "brandName": "<oh>哦！</oh> <bebas>Oh! Beef Noodle Soup</bebas>",
     "brandNamePlain": "Oh! Beef Noodle Soup",
-    "tagline": "El único restaurante construido a <bold>tu</bold> medida.",
-    "heroDescription": "Nacido de la querida tradición taiwanesa de sopa de fideos con carne y elevado con la atención japonesa al detalle, disfruta nuestra receta familiar de 30 años en tu propia cabina privada.",
+    "tagline": "La experiencia de sopa de fideos con carne, llevada a <bold>tu evento</bold>.",
+    "heroDescription": "Nacida de la querida tradición taiwanesa de sopa de fideos con carne y elevada con la atención japonesa al detalle, llevamos nuestra receta familiar de 30 años a tu evento, preparada al momento y servida con esmero.",
     "opensAt": "Abrimos a las 10am para pedidos",
     "signature": {
       "label": "NUESTRA ESPECIALIDAD",
-      "title": "Sopa de fideos con carne Wagyu A5",
-      "description": "La sedosa carne Wagyu A5 se derrite en nuestro rico y aromático caldo — cocido a fuego lento durante 48 horas usando técnicas transmitidas por tres generaciones. Cada tazón cuenta una historia de paciencia, precisión y pasión.",
+      "title": "Sopa de Fideos con Carne Premium",
+      "description": "La carne premium, tierna y melosa, se funde en nuestro rico y aromático caldo, cocido a fuego lento durante 48 horas con técnicas transmitidas por tres generaciones. Cada tazón cuenta una historia de paciencia, precisión y pasión.",
       "stats": {
         "hours": "HORAS DE COCCIÓN",
-        "grade": "GRADO WAGYU",
+        "grade": "CARNE PREMIUM",
         "years": "AÑOS DE RECETA"
       }
     },
@@ -90,7 +90,7 @@
       },
       "beef": {
         "title": "Carne Premium",
-        "description": "Wagyu A5 y cortes premium seleccionados por su calidad excepcional"
+        "description": "Cortes premium, estofados a fuego lento y seleccionados por su calidad y sabor excepcionales"
       },
       "tech": {
         "title": "Experiencia tecnológica",
@@ -101,20 +101,20 @@
       "label": "LA EXPERIENCIA OH!"
     },
     "pods": {
-      "title": "Cabinas de comedor privadas",
-      "description": "Experimenta una forma de comer como nunca antes. Nuestras cabinas individuales ofrecen un espacio tranquilo y sin distracciones para saborear cada sorbo. Sin mesas abarrotadas, sin ruido — solo tú y tu tazón perfecto de sopa de fideos con carne.",
+      "title": "Una Experiencia para Cada Invitado",
+      "description": "Catering como nunca antes. Cada invitado confirma su asistencia y arma su propio tazón personalizado desde su teléfono, sigue el avance de la cocina en tiempo real y termina con una fortuna digital. Sin filas de bufé, sin suposiciones; solo el tazón perfecto de sopa de fideos con carne para cada quien.",
       "features": {
         "space": {
-          "title": "Tu espacio",
-          "description": "Cabina personal con iluminación ambiental y control de música"
+          "title": "Su Propio Tazón",
+          "description": "Cada invitado personaliza su pedido directamente desde su teléfono"
         },
         "focus": {
-          "title": "Cero distracciones",
-          "description": "Concéntrate en tu comida sin el ajetreo de los restaurantes tradicionales"
+          "title": "Actualizaciones en Vivo",
+          "description": "Los invitados siguen su tazón en tiempo real, desde la cola hasta estar listo"
         },
         "fast": {
-          "title": "Rápido y fresco",
-          "description": "Comida entregada directamente a tu cabina, caliente y lista"
+          "title": "Fresco al Llegar",
+          "description": "Llevamos el caldo de 48 horas a tu evento y servimos cada tazón hecho al momento"
         }
       }
     },
@@ -146,7 +146,7 @@
     "viewFullMenu": "VER MENÚ COMPLETO",
     "cta": {
       "title": "¿Listo para experimentar algo diferente?",
-      "description": "Entra en tu cabina privada, saborea sopa de fideos con carne premium y descubre por qué comer en Oh! es único.",
+      "description": "Lleva la sopa de fideos con carne premium a tu próximo evento y descubre por qué el catering con Oh! es una experiencia inigualable.",
       "button": "COMIENZA TU ORDEN"
     }
   },
@@ -229,8 +229,8 @@
         "description": "Ordena con anticipación, salta la fila y disfruta una experiencia sin problemas"
       },
       "privatePods": {
-        "title": "Pods de Comedor Privado",
-        "description": "Disfruta tu comida en tu propio espacio privado, libre de distracciones"
+        "title": "Arma Tu Propio Tazón",
+        "description": "Cada invitado personaliza su tazón directamente desde su teléfono, preparado al momento"
       },
       "seamlessService": {
         "title": "Servicio Sin Interrupciones",
@@ -279,7 +279,7 @@
     },
     "cityCreek": {
       "tagline": "Centro de Salt Lake City",
-      "description": "Nuestra ubicación principal en el corazón del centro de Salt Lake City, ofreciendo una experiencia gastronómica única con cabinas privadas y pedidos tecnológicos.",
+      "description": "Nuestra cocina insignia en el corazón del centro de Salt Lake City, cuna de nuestra receta familiar de 30 años y sede de nuestro innovador servicio de catering.",
       "mallDescription": "City Creek Center es el principal destino de compras de Utah, con más de 100 tiendas y restaurantes en un impresionante entorno al aire libre con techo de vidrio retráctil.",
       "nearbyLandmarks": ["Temple Square", "Salt Palace Convention Center", "Capitolio de Utah", "Gateway Mall"],
       "parking": "Estacionamiento gratis en la estructura de City Creek con validación"
@@ -314,14 +314,14 @@
     },
     "ohWay": {
       "label": "El estilo Oh!",
-      "title": "Una experiencia gastronómica diferente",
+      "title": "Una Experiencia Diferente",
       "kiosk": {
         "title": "Ordena a tu manera",
-        "description": "Salta la fila con nuestra app móvil o usa nuestros quioscos en la tienda. Tu comida está lista cuando tú lo estés."
+        "description": "Cada invitado arma su propio tazón personalizado directamente desde su teléfono. Su comida estará lista cuando lleguen."
       },
       "pod": {
-        "title": "Cabinas de comedor privadas",
-        "description": "Disfruta tu comida en tu propio espacio privado. Sin mesas abarrotadas, sin ruido — solo tú y tu tazón perfecto."
+        "title": "Hecho Fresco, Servido Fresco",
+        "description": "Llevamos nuestro caldo de 48 horas a tu evento y servimos cada tazón hecho al momento, especialmente para ti."
       },
       "noTips": {
         "title": "Sin propinas necesarias",
@@ -1258,8 +1258,8 @@
     "ourStory": {
       "title": "Nuestra Historia",
       "p1": "Oh! Beef Noodle Soup nació de una receta familiar de 30 años y la visión de reimaginar la experiencia gastronómica. Nuestro fundador creció viendo a su abuela perfeccionar su sopa de fideos con carne, sirviéndola a familiares y amigos que no podían dejar de pedirla.",
-      "p2": "Hoy, llevamos esa misma receta a un público más amplio, combinada con tecnología innovadora y un concepto único de cabinas privadas que devuelve el enfoque a la comida y la experiencia.",
-      "p3": "Nuestra misión es simple: servir el tazón perfecto de sopa de fideos con carne en un ambiente diseñado para el disfrute, no la distracción."
+      "p2": "Hoy llevamos esa misma receta a eventos de todos los tamaños, combinada con tecnología innovadora que permite a cada invitado armar su propio tazón personalizado y seguirlo desde la cocina en tiempo real.",
+      "p3": "Nuestra misión es simple: llevar el tazón perfecto de sopa de fideos con carne a tu reunión, preparado al momento y servido con esmero."
     },
     "keyFacts": {
       "title": "Datos Clave",

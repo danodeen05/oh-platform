@@ -14,13 +14,9 @@ import { formatForWeb } from "./formatters/web.js";
 // Initialize Anthropic client
 const anthropic = new Anthropic();
 
-// Model configuration - Upgraded to Opus 4.7 (April 2026)
-const MODEL = "claude-opus-4-7-20260416";
+// Model configuration - Anthropic's latest, Opus 4.8
+const MODEL = "claude-opus-4-8";
 const MAX_TOKENS = 1024;
-
-// Effort levels for Opus 4.7 adaptive thinking
-// xhigh = extra high reasoning for complex agentic tasks
-const EFFORT_LEVEL = "xhigh";
 
 /**
  * Clean up conversation history to remove orphaned tool_result blocks
@@ -117,7 +113,6 @@ export async function handleChappyConversation({
     model: MODEL,
     max_tokens: MAX_TOKENS,
     thinking: { type: "adaptive" },
-    effort: EFFORT_LEVEL,
     system: systemPrompt,
     tools: CHAPPY_TOOLS,
     messages: history,
@@ -150,7 +145,6 @@ export async function handleChappyConversation({
       model: MODEL,
       max_tokens: MAX_TOKENS,
       thinking: { type: "adaptive" },
-      effort: EFFORT_LEVEL,
       system: systemPrompt,
       tools: CHAPPY_TOOLS,
       messages: history,
@@ -342,7 +336,6 @@ export async function* handleChappyConversationStream({
     model: MODEL,
     max_tokens: MAX_TOKENS,
     thinking: { type: "adaptive" },
-    effort: EFFORT_LEVEL,
     system: systemPrompt,
     tools: CHAPPY_TOOLS,
     messages: history,
@@ -413,6 +406,10 @@ export async function* handleChappyConversationStream({
             clientSecret: content.clientSecret,
             totalCents: content.totalCents,
             locationName: content.locationName,
+            // Catering bookings confirm via a different endpoint; carry the
+            // kind + bookingId so the web chat routes payment confirmation.
+            kind: content.kind,
+            bookingId: content.bookingId,
           };
         }
       } catch (e) {
@@ -439,7 +436,6 @@ export async function* handleChappyConversationStream({
       model: MODEL,
       max_tokens: MAX_TOKENS,
       thinking: { type: "adaptive" },
-      effort: EFFORT_LEVEL,
       system: systemPrompt,
       tools: CHAPPY_TOOLS,
       messages: history,

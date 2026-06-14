@@ -39,6 +39,13 @@ export interface CateringEvent {
   eventAddress?: string | null;
   eventLat?: number | null;
   eventLng?: number | null;
+  // Structured event logistics
+  eventType?: string | null;
+  expectedGuests?: number | null;
+  dietaryNotes?: string | null;
+  setupNotes?: string | null;
+  onsiteContactName?: string | null;
+  onsiteContactPhone?: string | null;
   booking?: CateringBooking;
 }
 

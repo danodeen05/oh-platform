@@ -1628,6 +1628,16 @@ model CateringEvent {
   shoppingList   Json?
   shoppingListAt DateTime?
 
+  // Structured event logistics (captured at booking, editable in admin).
+  // eventType uses app-level options (Corporate / Family Gathering / Wedding /
+  // Birthday / Other) kept as a String so options can change without a migration.
+  eventType          String?
+  expectedGuests     Int? // headcount, distinct from bookedBowls
+  dietaryNotes       String? // vegetarian/vegan/gluten-free/allergy counts and notes
+  setupNotes         String? // indoor/outdoor, tables, power, parking
+  onsiteContactName  String? // day-of contact (may differ from booking contact)
+  onsiteContactPhone String?
+
   notes String?
 
   booking CateringBooking?

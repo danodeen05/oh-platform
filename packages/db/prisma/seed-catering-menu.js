@@ -6,7 +6,7 @@
  *
  * Items:
  *   Soups    (MAIN):    Classic Beef Noodle Soup, Classic Beef Noodle Soup (no beef)
- *   Noodles  (SIDE):    Wide Noodles, Wide Noodles (Gluten Free), Thin/Flat Noodles
+ *   Noodles  (SIDE):    Wide Noodles, Wide Noodles (Gluten Free), Thin/Flat Noodles, No Noodles
  *   Sliders  (SLIDER):  Baby Bok Choy, Sprouts
  *
  * Note: "Classic Beef Noodle Soup (no beef)" must keep that exact substring
@@ -42,7 +42,7 @@ async function main() {
       isVegetarian: false,
       isVegan: false,
       isGlutenFree: false,
-      description: "Signature slow-braised beef brisket in rich bone broth.",
+      description: "Thirty years in the making. Tender beef brisket, slow-braised until it falls apart, ladled into a rich broth we simmer for a full 48 hours with star anise, ginger, and warm spices. Our signature bowl, made fresh at your event.",
     },
     {
       // The exact "(no beef)" substring triggers the kitchen red glow — do not change it
@@ -58,7 +58,7 @@ async function main() {
       isVegetarian: true,
       isVegan: true,
       isGlutenFree: false,
-      description: "Our signature broth bowl without beef — vegan-friendly.",
+      description: "All the warmth and aroma of our signature bowl, prepared without beef. A satisfying, vegan-friendly option so every guest can share in the same comforting bowl.",
     },
 
     // ----- Noodles (SIDE category) -----
@@ -73,7 +73,7 @@ async function main() {
       displayOrder: 10,
       spiceLevel: 0,
       isGlutenFree: false,
-      description: "Classic wide wheat noodles.",
+      description: "Broad, satisfying wheat noodles with a hearty chew. They catch the broth in every fold and are the house favorite for a reason.",
     },
     {
       name: "Wide Noodles (Gluten Free)",
@@ -86,7 +86,7 @@ async function main() {
       displayOrder: 11,
       spiceLevel: 0,
       isGlutenFree: true,
-      description: "Wide rice noodles — certified gluten free.",
+      description: "The same broad, chewy noodle your guests love, made from rice and certified gluten free. No one has to sit this bowl out.",
     },
     {
       name: "Thin/Flat Noodles",
@@ -99,7 +99,20 @@ async function main() {
       displayOrder: 12,
       spiceLevel: 0,
       isGlutenFree: false,
-      description: "Delicate thin flat wheat noodles.",
+      description: "Silky, delicate ribbons that drink up the broth and cook in moments. A lighter, elegant pick for guests who prefer a softer bite.",
+    },
+    {
+      name: "No Noodles",
+      category: "noodles",
+      categoryType: "SIDE",
+      basePriceCents: 0,
+      additionalPriceCents: 0,
+      includedQuantity: 1,
+      selectionMode: "SINGLE",
+      displayOrder: 13,
+      spiceLevel: 0,
+      isGlutenFree: false,
+      description: "Just the good stuff. A full bowl of our signature broth and toppings with the noodles left out, perfect for low-carb guests or anyone who came for the broth.",
     },
 
     // ----- Sliders (SLIDER category) -----
@@ -116,7 +129,7 @@ async function main() {
       isVegetarian: true,
       isVegan: true,
       isGlutenFree: true,
-      description: "Tender baby bok choy, blanched to order.",
+      description: "Tender baby bok choy, blanched to order so it stays crisp and bright green. A fresh, vibrant finish to every bowl.",
     },
     {
       name: "Sprouts",
@@ -131,7 +144,7 @@ async function main() {
       isVegetarian: true,
       isVegan: true,
       isGlutenFree: true,
-      description: "Fresh bean sprouts for crunch.",
+      description: "Fresh bean sprouts added at the last moment for a clean, crisp crunch against the warm broth.",
     },
   ];
 

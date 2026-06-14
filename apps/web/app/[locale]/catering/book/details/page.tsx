@@ -26,6 +26,12 @@ function DetailsContent({ locale }: { locale: string }) {
   const [contactName, setContactName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [contactPhone, setContactPhone] = useState("");
+  const [eventType, setEventType] = useState("");
+  const [expectedGuests, setExpectedGuests] = useState("");
+  const [dietaryNotes, setDietaryNotes] = useState("");
+  const [setupNotes, setSetupNotes] = useState("");
+  const [onsiteContactName, setOnsiteContactName] = useState("");
+  const [onsiteContactPhone, setOnsiteContactPhone] = useState("");
   const [notes, setNotes] = useState("");
   const [eventAddr, setEventAddr] = useState<ValidatedAddress | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -44,6 +50,8 @@ function DetailsContent({ locale }: { locale: string }) {
 
     setIsSubmitting(true);
     try {
+      const guestsNum = parseInt(expectedGuests, 10);
+      const onsitePhoneDigits = onsiteContactPhone.replace(/\D/g, "");
       const result = await createBooking({
         clientCompany: clientCompany.trim(),
         clientWebsite: clientWebsite.trim(),
@@ -57,6 +65,12 @@ function DetailsContent({ locale }: { locale: string }) {
         eventAddress: eventAddr.address,
         eventLat: eventAddr.lat,
         eventLng: eventAddr.lng,
+        eventType: eventType || undefined,
+        expectedGuests: Number.isFinite(guestsNum) && guestsNum > 0 ? guestsNum : undefined,
+        dietaryNotes: dietaryNotes.trim() || undefined,
+        setupNotes: setupNotes.trim() || undefined,
+        onsiteContactName: onsiteContactName.trim() || undefined,
+        onsiteContactPhone: onsitePhoneDigits || undefined,
       });
 
       trackCateringBookingSubmitted(bowls);
@@ -121,6 +135,63 @@ function DetailsContent({ locale }: { locale: string }) {
         </div>
 
         <EventAddressField onChange={setEventAddr} />
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+          <div>
+            <label style={labelStyle}>Event Type <span style={{ fontWeight: 400, opacity: 0.5, fontSize: "0.78rem" }}>Optional</span></label>
+            <select value={eventType} onChange={e => setEventType(e.target.value)} style={{ ...inputStyle, appearance: "none" }}>
+              <option value="">Select one</option>
+              <option value="Corporate">Corporate</option>
+              <option value="Family Gathering">Family Gathering</option>
+              <option value="Wedding">Wedding</option>
+              <option value="Birthday">Birthday</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div>
+            <label style={labelStyle}>Expected Guests <span style={{ fontWeight: 400, opacity: 0.5, fontSize: "0.78rem" }}>Optional</span></label>
+            <input type="number" min={1} value={expectedGuests} onChange={e => setExpectedGuests(e.target.value)} placeholder="e.g. 40" style={inputStyle} />
+          </div>
+        </div>
+
+        <div>
+          <label style={labelStyle}>
+            Dietary Needs <span style={{ fontWeight: 400, opacity: 0.5, fontSize: "0.78rem" }}>Optional</span>
+          </label>
+          <textarea
+            value={dietaryNotes}
+            onChange={e => setDietaryNotes(e.target.value)}
+            placeholder="Vegetarian, vegan, gluten-free counts and any allergies"
+            rows={2}
+            maxLength={500}
+            style={{ ...inputStyle, minHeight: "60px", resize: "vertical", fontFamily: "'Raleway', sans-serif" }}
+          />
+        </div>
+
+        <div>
+          <label style={labelStyle}>
+            Setup &amp; Space Notes <span style={{ fontWeight: 400, opacity: 0.5, fontSize: "0.78rem" }}>Optional</span>
+          </label>
+          <textarea
+            value={setupNotes}
+            onChange={e => setSetupNotes(e.target.value)}
+            placeholder="Indoor or outdoor, tables, power access, parking"
+            rows={2}
+            maxLength={500}
+            style={{ ...inputStyle, minHeight: "60px", resize: "vertical", fontFamily: "'Raleway', sans-serif" }}
+          />
+        </div>
+
+        <div>
+          <label style={labelStyle}>Day-of On-site Contact <span style={{ fontWeight: 400, opacity: 0.5, fontSize: "0.78rem" }}>Optional</span></label>
+          <p style={{ margin: "0 0 8px", fontSize: "0.75rem", color: "var(--brand-primary)", opacity: 0.55, fontFamily: "'Raleway', sans-serif" }}>
+            Leave blank if same as the contact above.
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+            <input type="text" value={onsiteContactName} onChange={e => setOnsiteContactName(e.target.value)} placeholder="Name" style={inputStyle} />
+            <input type="tel" value={onsiteContactPhone} onChange={e => setOnsiteContactPhone(formatPhone(e.target.value))} placeholder="(xxx) xxx-xxxx" style={inputStyle} />
+          </div>
+        </div>
 
         <div>
           <label style={labelStyle}>

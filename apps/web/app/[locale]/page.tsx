@@ -226,7 +226,7 @@ export default function HomePage() {
             // Catering mode: dine-in ordering is off → lead with Book Catering
             <div style={{ textAlign: "center" }}>
               <Link
-                href={`/${locale}/catering/book`}
+                href={`/${locale}/catering`}
                 style={{
                   padding: "20px 64px",
                   fontSize: "1.1rem",
@@ -319,7 +319,7 @@ export default function HomePage() {
                     NEXT_PUBLIC_ORDER_NOW_ENABLED !== "false". */}
                 {process.env.NEXT_PUBLIC_ORDER_NOW_ENABLED !== "false" && (
                   <Link
-                    href={`/${locale}/catering/book`}
+                    href={`/${locale}/catering`}
                     style={{
                       padding: "12px 32px",
                       fontSize: "0.9rem",
@@ -433,8 +433,8 @@ export default function HomePage() {
                 filter: "blur(30px)",
               }} />
               <img
-                src="/menu images/A5 Wagyu Bowl.png"
-                alt="A5 Wagyu Beef Noodle Soup"
+                src="/menu images/Classic Bowl.png"
+                alt="Premium Beef Noodle Soup"
                 style={{
                   width: "100%",
                   height: "auto",
@@ -490,7 +490,7 @@ export default function HomePage() {
                 <div style={{ fontSize: "0.85rem", color: "#7C7A67", letterSpacing: "1px" }}>{t("signature.stats.hours")}</div>
               </div>
               <div>
-                <div style={{ fontSize: "2rem", fontWeight: "300", color: "#C7A878" }}>A5</div>
+                <div style={{ fontSize: "2rem", fontWeight: "300", color: "#C7A878" }}>100%</div>
                 <div style={{ fontSize: "0.85rem", color: "#7C7A67", letterSpacing: "1px" }}>{t("signature.stats.grade")}</div>
               </div>
               <div>
@@ -739,8 +739,8 @@ export default function HomePage() {
             }}
           >
             <img
-              src="/pod.png"
-              alt="Private dining pod at Oh!"
+              src="/Chappy.png"
+              alt="Chappy Chopstix, your guide to the Oh! catering experience"
               style={{
                 width: "100%",
                 height: "auto",

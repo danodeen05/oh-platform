@@ -18,7 +18,9 @@ const STATUSES: CateringEventStatus[] = [
   "COMPLETED",
 ];
 
-type TabKey = "details" | "address" | "pricing" | "branding" | "notes";
+type TabKey = "details" | "address" | "logistics" | "pricing" | "branding" | "notes";
+
+const EVENT_TYPES = ["Corporate", "Family Gathering", "Wedding", "Birthday", "Other"];
 
 interface EventFormModalProps {
   isOpen: boolean;
@@ -49,6 +51,12 @@ interface FormData {
   brandColors: string[];
   companyDescription: string;
   notes: string;
+  eventType: string;
+  expectedGuests: string;
+  dietaryNotes: string;
+  setupNotes: string;
+  onsiteContactName: string;
+  onsiteContactPhone: string;
 }
 
 const emptyForm = (prefillDate?: string, prefillSlot?: CateringSlot): FormData => ({
@@ -71,6 +79,12 @@ const emptyForm = (prefillDate?: string, prefillSlot?: CateringSlot): FormData =
   brandColors: [],
   companyDescription: "",
   notes: "",
+  eventType: "",
+  expectedGuests: "",
+  dietaryNotes: "",
+  setupNotes: "",
+  onsiteContactName: "",
+  onsiteContactPhone: "",
 });
 
 export default function EventFormModal({
@@ -108,6 +122,12 @@ export default function EventFormModal({
         brandColors: editingEvent.brandColors || [],
         companyDescription: editingEvent.companyDescription || "",
         notes: editingEvent.notes || "",
+        eventType: editingEvent.eventType || "",
+        expectedGuests: editingEvent.expectedGuests != null ? String(editingEvent.expectedGuests) : "",
+        dietaryNotes: editingEvent.dietaryNotes || "",
+        setupNotes: editingEvent.setupNotes || "",
+        onsiteContactName: editingEvent.onsiteContactName || "",
+        onsiteContactPhone: editingEvent.onsiteContactPhone || "",
       });
     } else {
       setFormData(emptyForm(prefillDate, prefillSlot));
@@ -173,7 +193,17 @@ export default function EventFormModal({
         brandColors: formData.brandColors.filter(Boolean),
         companyDescription: formData.companyDescription || undefined,
         notes: formData.notes || undefined,
+        eventType: formData.eventType || undefined,
+        dietaryNotes: formData.dietaryNotes || undefined,
+        setupNotes: formData.setupNotes || undefined,
+        onsiteContactName: formData.onsiteContactName || undefined,
+        onsiteContactPhone: formData.onsiteContactPhone || undefined,
       };
+
+      const expectedGuestsNum = parseInt(formData.expectedGuests, 10);
+      body.expectedGuests = Number.isFinite(expectedGuestsNum) && expectedGuestsNum > 0
+        ? expectedGuestsNum
+        : null;
 
       // Status and booked-bowls overrides only apply to existing events.
       if (editingEvent) {
@@ -254,6 +284,7 @@ export default function EventFormModal({
   const tabs: { key: TabKey; label: string }[] = [
     { key: "details", label: "Details" },
     { key: "address", label: "Address" },
+    { key: "logistics", label: "Logistics" },
     { key: "pricing", label: "Pricing" },
     { key: "branding", label: "Branding" },
     { key: "notes", label: "Notes" },
@@ -490,6 +521,99 @@ export default function EventFormModal({
                     </a>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Logistics Tab */}
+            {activeTab === "logistics" && (
+              <div>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: 16,
+                    marginBottom: 16,
+                  }}
+                >
+                  <div>
+                    <label style={labelStyle}>Event Type</label>
+                    <select
+                      value={formData.eventType}
+                      onChange={(e) => field({ eventType: e.target.value })}
+                      style={inputStyle}
+                    >
+                      <option value="">Not set</option>
+                      {EVENT_TYPES.map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Expected Guests</label>
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="e.g. 40"
+                      value={formData.expectedGuests}
+                      onChange={(e) => field({ expectedGuests: e.target.value })}
+                      style={inputStyle}
+                    />
+                    <div style={{ marginTop: 4, fontSize: "0.78rem", color: "#9ca3af" }}>
+                      Headcount estimate, separate from bowls booked.
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: 16 }}>
+                  <label style={labelStyle}>Dietary Needs</label>
+                  <textarea
+                    placeholder="Vegetarian, vegan, gluten-free counts and any allergies..."
+                    value={formData.dietaryNotes}
+                    onChange={(e) => field({ dietaryNotes: e.target.value })}
+                    rows={3}
+                    style={{ ...inputStyle, resize: "vertical" }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: 16 }}>
+                  <label style={labelStyle}>Setup &amp; Space Notes</label>
+                  <textarea
+                    placeholder="Indoor or outdoor, tables, power access, parking..."
+                    value={formData.setupNotes}
+                    onChange={(e) => field({ setupNotes: e.target.value })}
+                    rows={3}
+                    style={{ ...inputStyle, resize: "vertical" }}
+                  />
+                </div>
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: 16,
+                  }}
+                >
+                  <div>
+                    <label style={labelStyle}>Day-of On-site Contact</label>
+                    <input
+                      placeholder="Name"
+                      value={formData.onsiteContactName}
+                      onChange={(e) => field({ onsiteContactName: e.target.value })}
+                      style={inputStyle}
+                    />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>On-site Contact Phone</label>
+                    <input
+                      placeholder="+1 (555) 000-0000"
+                      value={formData.onsiteContactPhone}
+                      onChange={(e) => field({ onsiteContactPhone: e.target.value })}
+                      style={inputStyle}
+                    />
+                  </div>
+                </div>
               </div>
             )}
 

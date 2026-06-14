@@ -52,9 +52,21 @@ export default async function LocaleLayout({ children, params }: Props) {
   const isCNYRoute = pathname.includes("/cny");
   const isCateringRoute = pathname.includes("/catering");
 
-  // For kiosk, CNY, and catering routes, render without the main-site header/footer
-  // so the experience is fully immersive / co-branded to the client.
-  if (isKioskRoute || isCNYRoute || isCateringRoute) {
+  // Catering routes: immersive (no main-site header/footer) but still wrapped in
+  // Providers so Chappy Chopstix is available to answer questions and book events.
+  if (isCateringRoute) {
+    return (
+      <ClerkProvider localization={clerkLocalization}>
+        <NextIntlClientProvider messages={messages}>
+          <Providers>{children}</Providers>
+        </NextIntlClientProvider>
+      </ClerkProvider>
+    );
+  }
+
+  // For kiosk and CNY routes, render fully immersive without Providers/Chappy
+  // (kiosk is an in-store device; CNY is a dedicated event experience).
+  if (isKioskRoute || isCNYRoute) {
     return (
       <ClerkProvider localization={clerkLocalization}>
         <NextIntlClientProvider messages={messages}>

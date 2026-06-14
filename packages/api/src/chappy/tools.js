@@ -4,6 +4,14 @@
  * All tools available to the Claude agent, mapped to existing Oh! APIs.
  */
 
+import {
+  createCateringBookingDraft,
+  getCateringAvailabilityRange,
+  getCateringMenuGrouped,
+  findCateringEventsByPhone,
+  updateCateringEventByPhone,
+} from "../catering/routes.js";
+
 /**
  * Tool definitions for Claude API
  * Each tool needs: name, description (detailed!), input_schema
@@ -694,6 +702,90 @@ The frontend will handle the actual payment and confirm the order.`,
         },
       },
       required: ["locationId"],
+    },
+  },
+
+  // ==========================================
+  // CATERING TOOLS
+  // ==========================================
+  {
+    name: "catering_get_menu",
+    description: `Get the catering menu (the bowls and toppings offered for catered events), grouped into soups, noodles, and toppings, with descriptions. Use this to answer "what's on the catering menu" / "what can guests order at our event" questions. This is the catering offering, which is a curated subset of the dine-in menu.`,
+    input_schema: { type: "object", properties: {} },
+  },
+  {
+    name: "catering_check_availability",
+    description: `Check which catering dates/slots are OPEN over a date range, so you can help a client pick a date before booking. Each day has two slots: LUNCH and DINNER. Returns the OPEN slots (others are booked or blacked out). ALWAYS check availability before creating a booking for a specific date.`,
+    input_schema: {
+      type: "object",
+      properties: {
+        from: { type: "string", description: "Start date YYYY-MM-DD (defaults to today)" },
+        to: { type: "string", description: "End date YYYY-MM-DD (defaults to ~90 days out)" },
+      },
+    },
+  },
+  {
+    name: "catering_create_booking",
+    description: `Create a catering booking and return a payment intent so the client can pay the deposit in-chat (Apple Pay / card). Catering pricing: LUNCH $24.99/bowl, DINNER $29.99/bowl, MINIMUM 10 bowls. The deposit charged equals bowls x per-bowl price (minus any valid promo).
+
+ONLY call this AFTER you have gathered and confirmed with the client: the company or group/event name, a contact name + email + phone, the event date, the slot (LUNCH or DINNER), and the number of bowls (>= 10). Strongly prefer to also collect the event address. Confirm the date is OPEN via catering_check_availability first. ALWAYS state the total and get an explicit "yes" before calling this — it sets up a real charge.
+
+After this returns successfully, the chat will show a payment button automatically; tell the client their booking is reserved and to complete the deposit to lock it in.`,
+    input_schema: {
+      type: "object",
+      properties: {
+        clientCompany: { type: "string", description: "Company, group, or event name (e.g. 'Acme Corp' or 'Smith Family Reunion')" },
+        contactName: { type: "string", description: "Primary contact full name" },
+        contactEmail: { type: "string", description: "Primary contact email" },
+        contactPhone: { type: "string", description: "Primary contact phone" },
+        eventDate: { type: "string", description: "Event date YYYY-MM-DD" },
+        slot: { type: "string", enum: ["LUNCH", "DINNER"], description: "LUNCH or DINNER" },
+        bowls: { type: "number", description: "Number of bowls (minimum 10)" },
+        eventAddress: { type: "string", description: "Full event address (strongly recommended)" },
+        clientWebsite: { type: "string", description: "Company website (optional, used to auto co-brand the event page)" },
+        eventType: { type: "string", description: "One of: Corporate, Family Gathering, Wedding, Birthday, Other" },
+        expectedGuests: { type: "number", description: "Expected headcount (optional, distinct from bowls)" },
+        dietaryNotes: { type: "string", description: "Vegetarian/vegan/gluten-free counts or allergies (optional)" },
+        setupNotes: { type: "string", description: "Indoor/outdoor, tables, power, parking (optional)" },
+        onsiteContactName: { type: "string", description: "Day-of on-site contact name (optional)" },
+        onsiteContactPhone: { type: "string", description: "Day-of on-site contact phone (optional)" },
+        notes: { type: "string", description: "Any other details (optional)" },
+        promoCode: { type: "string", description: "Promo code to apply (optional)" },
+      },
+      required: ["clientCompany", "contactName", "contactEmail", "contactPhone", "eventDate", "slot", "bowls"],
+    },
+  },
+  {
+    name: "catering_find_my_event",
+    description: `Look up a returning client's upcoming catering event(s) by the phone number they booked with. Use this when someone wants to review or change an event they already booked. Ask for their phone number first, then call this. If it returns one event, confirm it's theirs (say the company name + date) before making changes. If it returns multiple, ask which one. If it returns none, the phone didn't match any upcoming event - double-check the number or have them contact hello@ohbeef.com.`,
+    input_schema: {
+      type: "object",
+      properties: {
+        phone: { type: "string", description: "The phone number used when booking" },
+      },
+      required: ["phone"],
+    },
+  },
+  {
+    name: "catering_update_my_event",
+    description: `Update logistics on a client's OWN catering event after you've looked it up with catering_find_my_event. Requires the same phone number (verifies ownership). You can update: contact name/email, event address, event type, expected guest count, dietary needs, setup notes, day-of on-site contact, and general notes. You CANNOT change the date, time slot, bowl count, or cancel here - those affect availability and the deposit, so collect the request and tell the client our team will confirm it (hello@ohbeef.com). Always confirm the change with the client before calling this.`,
+    input_schema: {
+      type: "object",
+      properties: {
+        phone: { type: "string", description: "The phone number used when booking (must match the event)" },
+        eventId: { type: "string", description: "The event id from catering_find_my_event" },
+        contactName: { type: "string" },
+        contactEmail: { type: "string" },
+        eventAddress: { type: "string" },
+        eventType: { type: "string", description: "Corporate, Family Gathering, Wedding, Birthday, Other" },
+        expectedGuests: { type: "number" },
+        dietaryNotes: { type: "string" },
+        setupNotes: { type: "string" },
+        onsiteContactName: { type: "string" },
+        onsiteContactPhone: { type: "string" },
+        notes: { type: "string" },
+      },
+      required: ["phone", "eventId"],
     },
   },
 ];
@@ -2077,6 +2169,71 @@ async function executeToolByName(name, input, context) {
         total: `$${(total / 100).toFixed(2)}`,
         summary: `${itemizedList.length} item${itemizedList.length > 1 ? "s" : ""} - Total: $${(total / 100).toFixed(2)}`,
       };
+    }
+
+    // ==========================================
+    // CATERING TOOLS
+    // ==========================================
+    case "catering_get_menu": {
+      const menu = await getCateringMenuGrouped(tenantId);
+      const fmt = (arr) => arr.map((i) => ({ name: i.name, description: i.description || null }));
+      return {
+        soups: fmt(menu.soups),
+        noodles: fmt(menu.noodles),
+        toppings: fmt(menu.sliders),
+        note: "Cilantro, green onions, and chili oil are always available on the side. Every guest builds their own bowl.",
+      };
+    }
+
+    case "catering_check_availability": {
+      const result = await getCateringAvailabilityRange({ from: input.from, to: input.to, tenantId });
+      if (result.openCount === 0) {
+        return { ...result, message: "No open catering dates in that range. Try a different range." };
+      }
+      return result;
+    }
+
+    case "catering_create_booking": {
+      try {
+        const result = await createCateringBookingDraft({ ...input, tenantId });
+        // Surface as a payment step the web chat already knows how to render.
+        // kind=catering routes the confirm to the catering booking endpoint.
+        return {
+          success: true,
+          requiresApplePay: true,
+          kind: "catering",
+          bookingId: result.bookingId,
+          orderId: result.bookingId, // alias so existing UI plumbing works
+          eventId: result.eventId,
+          slug: result.slug,
+          clientSecret: result.clientSecret,
+          paymentIntentId: result.paymentIntentId,
+          totalCents: result.chargeCents,
+          discountCents: result.discountCents,
+          locationName: "Oh! Catering",
+          message: `Booking reserved for ${input.bowls} bowls on ${input.eventDate} (${input.slot}). Deposit due: $${(result.chargeCents / 100).toFixed(2)}. The payment button is ready below.`,
+        };
+      } catch (err) {
+        return { error: err.message || "Could not create the booking. Please check the details and try again." };
+      }
+    }
+
+    case "catering_find_my_event": {
+      const events = await findCateringEventsByPhone(input.phone);
+      if (events.length === 0) {
+        return { found: false, message: "No upcoming event found for that phone number." };
+      }
+      return { found: true, count: events.length, events };
+    }
+
+    case "catering_update_my_event": {
+      try {
+        const { phone, eventId, ...updates } = input;
+        const result = await updateCateringEventByPhone({ phone, eventId, updates });
+        return result;
+      } catch (err) {
+        return { error: err.message || "Could not update the event." };
+      }
     }
 
     default:

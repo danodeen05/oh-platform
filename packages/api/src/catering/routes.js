@@ -182,7 +182,7 @@ async function getCateringMenuItems(tenantId) {
         ],
       },
     },
-    select: { id: true, name: true, categoryType: true, category: true },
+    select: { id: true, name: true, categoryType: true, category: true, description: true },
     orderBy: { displayOrder: "asc" },
   });
 
@@ -229,6 +229,20 @@ function blackoutHit(blackouts, dateStr, slot) {
   );
 }
 
+// Rolling lead-time buffer: the soonest a client can book is this many days out,
+// so the kitchen always has a few days to plan. Dates within the buffer show as
+// unavailable on the calendar and are rejected at booking. Applies to the public
+// client flow (web calendar + Chappy + public booking); admins can still create
+// near-term events manually via the admin form.
+const CATERING_LEAD_DAYS = 5;
+
+function withinLeadTime(dateStr) {
+  const now = new Date();
+  const earliest = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  earliest.setUTCDate(earliest.getUTCDate() + CATERING_LEAD_DAYS);
+  return new Date(`${dateStr}T00:00:00.000Z`) < earliest;
+}
+
 // Resolve the catering tenant id (defaults to the Oh! tenant).
 async function resolveCateringTenantId(explicitId) {
   const tenant = explicitId
@@ -236,6 +250,387 @@ async function resolveCateringTenantId(explicitId) {
     : (await prisma.tenant.findUnique({ where: { slug: "oh" } })) ||
       (await prisma.tenant.findFirst());
   return tenant?.id || null;
+}
+
+// ===========================================================================
+// Reusable catering services (shared by the HTTP routes AND Chappy's tools)
+// ===========================================================================
+
+/**
+ * Return the catering menu grouped (soups/noodles/sliders) for the default
+ * tenant, including descriptions. Used by the public /catering/menu route and
+ * by Chappy's catering_get_menu tool.
+ */
+export async function getCateringMenuGrouped(explicitTenantId) {
+  const tenantId = await resolveCateringTenantId(explicitTenantId);
+  if (!tenantId) return { soups: [], noodles: [], sliders: [] };
+  return getCateringMenuItems(tenantId);
+}
+
+/**
+ * Compute catering availability across a date range. Returns only OPEN slots
+ * (capped) plus a count, which is the shape most useful to Chappy when helping
+ * a client pick a date. Mirrors the GET /catering/availability logic.
+ */
+export async function getCateringAvailabilityRange({ from, to, tenantId } = {}) {
+  const fromDate = from ? new Date(from) : new Date();
+  const toDate = to ? new Date(to) : new Date(Date.now() + 90 * 86400000);
+
+  const events = await prisma.cateringEvent.findMany({
+    where: { eventDate: { gte: fromDate, lte: toDate }, status: { not: "PLANNING" } },
+    select: { eventDate: true, slot: true },
+  });
+  const booked = new Set(
+    events.map((e) => `${e.eventDate.toISOString().slice(0, 10)}_${e.slot}`)
+  );
+  const blackouts = await getBlackouts(await resolveCateringTenantId(tenantId));
+
+  const open = [];
+  const cursor = new Date(fromDate);
+  cursor.setUTCHours(0, 0, 0, 0);
+  while (cursor <= toDate) {
+    const dateStr = cursor.toISOString().slice(0, 10);
+    for (const slot of ["LUNCH", "DINNER"]) {
+      const isBooked = booked.has(`${dateStr}_${slot}`);
+      const isBlocked = !isBooked && (withinLeadTime(dateStr) || !!blackoutHit(blackouts, dateStr, slot));
+      if (!isBooked && !isBlocked) open.push({ date: dateStr, slot });
+    }
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return {
+    from: fromDate.toISOString().slice(0, 10),
+    to: toDate.toISOString().slice(0, 10),
+    openCount: open.length,
+    open: open.slice(0, 40), // cap to keep tool output compact
+  };
+}
+
+/**
+ * Create a draft catering booking: validates inputs, checks the slot is free
+ * and not blacked out, prices it (with optional promo), creates the Location +
+ * CateringEvent (PLANNING) + Stripe PaymentIntent + draft CateringBooking
+ * (PENDING), and kicks off co-branding enrichment. Returns the same payload the
+ * web booking flow consumes (including clientSecret for in-chat payment).
+ *
+ * Throws Error with a `.statusCode` for validation/conflict errors so callers
+ * (the HTTP route and Chappy's catering_create_booking tool) can surface them.
+ */
+export async function createCateringBookingDraft(input = {}) {
+  if (!stripe) throw Object.assign(new Error("Stripe not configured"), { statusCode: 500 });
+
+  const {
+    clientCompany,
+    clientWebsite,
+    contactName,
+    contactEmail,
+    contactPhone,
+    eventDate,
+    slot,
+    bowls,
+    promoCode: promoCodeInput,
+    notes,
+    eventAddress,
+    eventLat,
+    eventLng,
+    eventType,
+    expectedGuests,
+    dietaryNotes,
+    setupNotes,
+    onsiteContactName,
+    onsiteContactPhone,
+  } = input;
+
+  if (!clientCompany || !eventDate || !slot || !bowls) {
+    throw Object.assign(new Error("clientCompany, eventDate, slot, bowls required"), { statusCode: 400 });
+  }
+  if (!["LUNCH", "DINNER"].includes(slot)) {
+    throw Object.assign(new Error("slot must be LUNCH or DINNER"), { statusCode: 400 });
+  }
+  if (typeof bowls !== "number" || bowls < 1) {
+    throw Object.assign(new Error("bowls must be a positive number"), { statusCode: 400 });
+  }
+
+  // Resolve tenant (single-tenant platform — defaults to the Oh! tenant).
+  const tenant = input.tenantId
+    ? await prisma.tenant.findUnique({ where: { id: input.tenantId } })
+    : (await prisma.tenant.findUnique({ where: { slug: "oh" } })) ||
+      (await prisma.tenant.findFirst());
+  if (!tenant) throw Object.assign(new Error("Tenant not found"), { statusCode: 404 });
+  const tenantId = tenant.id;
+
+  // Slot not already taken
+  const existing = await prisma.cateringEvent.findFirst({
+    where: {
+      eventDate: {
+        gte: new Date(new Date(eventDate).setUTCHours(0, 0, 0, 0)),
+        lt: new Date(new Date(eventDate).setUTCHours(23, 59, 59, 999)),
+      },
+      slot,
+      status: { not: "PLANNING" },
+    },
+  });
+  if (existing) throw Object.assign(new Error("This date/slot is already booked"), { statusCode: 409 });
+
+  // Rolling lead-time buffer (kitchen needs a few days to plan).
+  const bookingDateStr = new Date(eventDate).toISOString().slice(0, 10);
+  if (withinLeadTime(bookingDateStr)) {
+    throw Object.assign(
+      new Error(`Events need at least ${CATERING_LEAD_DAYS} days' notice. Please choose a later date.`),
+      { statusCode: 409 }
+    );
+  }
+
+  // Admin blackouts (Sundays, holidays, etc.)
+  const blackouts = await getBlackouts(tenantId);
+  if (blackoutHit(blackouts, bookingDateStr, slot)) {
+    throw Object.assign(new Error("This date is not available. Please choose another."), { statusCode: 409 });
+  }
+
+  // Pricing
+  const pricePerBowlCents = slot === "LUNCH" ? 2499 : 2999;
+  const subtotalCents = bowls * pricePerBowlCents;
+  let discountCents = 0;
+  let resolvedPromoCodeId = null;
+
+  if (promoCodeInput) {
+    try {
+      const promoResult = await prisma.promoCode.findUnique({
+        where: { code: promoCodeInput.toUpperCase() },
+        include: { _count: { select: { usages: true } } },
+      });
+      if (
+        promoResult &&
+        promoResult.isActive &&
+        (promoResult.scope === "ALL" || promoResult.scope === "CATERING") &&
+        (!promoResult.expiresAt || promoResult.expiresAt > new Date()) &&
+        promoResult.startsAt <= new Date() &&
+        (!promoResult.totalUsageLimit || promoResult._count.usages < promoResult.totalUsageLimit)
+      ) {
+        discountCents = computeDiscountCents({
+          discountType: promoResult.discountType,
+          discountValue: promoResult.discountValue,
+          maxDiscountCents: promoResult.maxDiscountCents,
+          subtotalCents,
+          quantity: bowls,
+        });
+        resolvedPromoCodeId = promoResult.id;
+      }
+    } catch (e) {
+      console.warn("[catering booking promo]", e.message);
+    }
+  }
+
+  const chargeCents = Math.max(0, subtotalCents - discountCents);
+  if (chargeCents < 50) {
+    throw Object.assign(new Error("Booking amount too low after discount"), { statusCode: 400 });
+  }
+
+  // Create draft event + dedicated Location
+  const slug = makeSlug(clientCompany, eventDate);
+  const eventCode = makeEventCode();
+  const locationId = `cat-${slug}-${Date.now().toString(36)}`;
+  const hasGeo = typeof eventLat === "number" && typeof eventLng === "number";
+
+  await prisma.location.create({
+    data: {
+      id: locationId,
+      tenantId,
+      name: `${clientCompany} Event`,
+      city: "Salt Lake City",
+      address: eventAddress || "Private Catering Event",
+      lat: hasGeo ? eventLat : 40.7608,
+      lng: hasGeo ? eventLng : -111.891,
+      taxRate: 0,
+      timezone: "America/Denver",
+      isClosed: false,
+    },
+  });
+
+  const event = await prisma.cateringEvent.create({
+    data: {
+      tenantId,
+      locationId,
+      slug,
+      eventCode,
+      clientCompany,
+      clientWebsite: clientWebsite || null,
+      contactName: contactName || null,
+      contactEmail: contactEmail || null,
+      contactPhone: contactPhone || null,
+      eventAddress: eventAddress || null,
+      eventLat: hasGeo ? eventLat : null,
+      eventLng: hasGeo ? eventLng : null,
+      eventDate: new Date(eventDate),
+      slot,
+      pricePerBowlCents,
+      minimumBowls: 10,
+      bookedBowls: bowls,
+      notes: notes || null,
+      eventType: eventType || null,
+      expectedGuests: typeof expectedGuests === "number" ? expectedGuests : null,
+      dietaryNotes: dietaryNotes || null,
+      setupNotes: setupNotes || null,
+      onsiteContactName: onsiteContactName || null,
+      onsiteContactPhone: onsiteContactPhone || null,
+      status: "PLANNING",
+    },
+  });
+
+  // Fire-and-forget co-branding enrichment (override wins over AI scrape).
+  const override = getBrandOverride(event.clientCompany);
+  if (override || event.clientWebsite) {
+    (async () => {
+      try {
+        const enriched = event.clientWebsite
+          ? await enrichFromWebsite(event.clientWebsite)
+          : { logoUrl: null, brandColors: [], suggestedEventName: null, companyDescription: null };
+        const data = { enrichmentRaw: enriched };
+        const logoUrl = override?.logoUrl || enriched.logoUrl;
+        const brandColors = (override?.brandColors?.length ? override.brandColors : enriched.brandColors) || [];
+        if (logoUrl) data.logoUrl = logoUrl;
+        if (brandColors.length) data.brandColors = brandColors;
+        if (enriched.companyDescription) data.companyDescription = enriched.companyDescription;
+        if (!event.eventName && enriched.suggestedEventName) data.eventName = enriched.suggestedEventName;
+        await prisma.cateringEvent.update({ where: { id: event.id }, data });
+      } catch (e) {
+        console.warn("[catering booking auto-enrich]", e.message);
+      }
+    })();
+  }
+
+  // Stripe payment intent
+  const paymentIntent = await stripe.paymentIntents.create({
+    amount: chargeCents,
+    currency: "usd",
+    metadata: {
+      type: "catering_booking",
+      cateringEventId: event.id,
+      clientCompany,
+      eventDate,
+      slot,
+      bowls: String(bowls),
+    },
+    automatic_payment_methods: { enabled: true },
+  });
+
+  const booking = await prisma.cateringBooking.create({
+    data: {
+      eventId: event.id,
+      bowlsBooked: bowls,
+      priceCents: chargeCents,
+      stripePaymentIntentId: paymentIntent.id,
+      promoCodeId: resolvedPromoCodeId,
+      bookingToken: makeBookingToken(),
+      paymentStatus: "PENDING",
+    },
+  });
+
+  return {
+    bookingId: booking.id,
+    eventId: event.id,
+    slug: event.slug,
+    clientSecret: paymentIntent.client_secret,
+    paymentIntentId: paymentIntent.id,
+    chargeCents,
+    amountCents: chargeCents, // alias the web payment page reads
+    discountCents,
+    subtotalCents,
+    pricePerBowlCents,
+  };
+}
+
+// Normalize a phone to its last 10 digits for matching.
+function phoneKey(phone) {
+  return String(phone || "").replace(/\D/g, "").slice(-10);
+}
+
+/**
+ * Look up a returning client's upcoming catering event(s) by the phone number
+ * they booked with. Light identity check: knowing the booking phone. Returns
+ * safe, client-facing fields only (no Stripe secrets). Used by Chappy's
+ * catering_find_my_event tool so a client can pull up and review their event.
+ */
+export async function findCateringEventsByPhone(phone) {
+  const key = phoneKey(phone);
+  if (key.length < 10) return [];
+  const candidates = await prisma.cateringEvent.findMany({
+    where: {
+      contactPhone: { not: null },
+      eventDate: { gte: new Date(Date.now() - 86400000) }, // upcoming (and today)
+    },
+    orderBy: { eventDate: "asc" },
+    include: { booking: { select: { paymentStatus: true } } },
+    take: 200,
+  });
+  return candidates
+    .filter((e) => phoneKey(e.contactPhone) === key)
+    .map((e) => ({
+      eventId: e.id,
+      slug: e.slug,
+      clientCompany: e.clientCompany,
+      eventDate: e.eventDate.toISOString().slice(0, 10),
+      slot: e.slot,
+      bowls: e.bookedBowls,
+      status: e.status,
+      paymentStatus: e.booking?.paymentStatus || null,
+      contactName: e.contactName,
+      contactEmail: e.contactEmail,
+      eventAddress: e.eventAddress,
+      eventType: e.eventType,
+      expectedGuests: e.expectedGuests,
+      dietaryNotes: e.dietaryNotes,
+      setupNotes: e.setupNotes,
+      onsiteContactName: e.onsiteContactName,
+      onsiteContactPhone: e.onsiteContactPhone,
+      notes: e.notes,
+    }));
+}
+
+// Fields a client may self-edit in chat. Date/slot/bowls and cancellation are
+// intentionally excluded: they affect availability, pricing, and the deposit, so
+// those go through staff.
+const CLIENT_EDITABLE_EVENT_FIELDS = [
+  "contactName",
+  "contactEmail",
+  "eventAddress",
+  "eventType",
+  "expectedGuests",
+  "dietaryNotes",
+  "setupNotes",
+  "onsiteContactName",
+  "onsiteContactPhone",
+  "notes",
+];
+
+/**
+ * Update a client's own catering event's logistics fields, gated by a phone-number
+ * match against the event's booking contact. Throws 403 if the phone doesn't
+ * match. Only CLIENT_EDITABLE_EVENT_FIELDS are accepted.
+ */
+export async function updateCateringEventByPhone({ phone, eventId, updates = {} }) {
+  const key = phoneKey(phone);
+  if (key.length < 10) {
+    throw Object.assign(new Error("A valid phone number is required to verify the event."), { statusCode: 400 });
+  }
+  const event = await prisma.cateringEvent.findUnique({ where: { id: eventId } });
+  if (!event) throw Object.assign(new Error("Event not found"), { statusCode: 404 });
+  if (phoneKey(event.contactPhone) !== key) {
+    throw Object.assign(new Error("That phone number does not match this event."), { statusCode: 403 });
+  }
+
+  const data = {};
+  for (const k of CLIENT_EDITABLE_EVENT_FIELDS) {
+    if (updates[k] !== undefined) data[k] = updates[k];
+  }
+  if (data.expectedGuests !== undefined) {
+    data.expectedGuests = typeof data.expectedGuests === "number" ? data.expectedGuests : null;
+  }
+  if (Object.keys(data).length === 0) {
+    throw Object.assign(new Error("No editable fields were provided."), { statusCode: 400 });
+  }
+
+  await prisma.cateringEvent.update({ where: { id: eventId }, data });
+  return { success: true, eventId, updatedFields: Object.keys(data) };
 }
 
 // ===========================================================================
@@ -356,6 +751,12 @@ export async function registerCateringRoutes(app) {
         eventAddress,
         eventLat,
         eventLng,
+        eventType,
+        expectedGuests,
+        dietaryNotes,
+        setupNotes,
+        onsiteContactName,
+        onsiteContactPhone,
       } = req.body || {};
 
       if (!clientCompany || !eventDate || !slot) {
@@ -420,6 +821,12 @@ export async function registerCateringRoutes(app) {
           eventAddress: eventAddress || null,
           eventLat: eventLat ?? null,
           eventLng: eventLng ?? null,
+          eventType: eventType || null,
+          expectedGuests: typeof expectedGuests === "number" ? expectedGuests : null,
+          dietaryNotes: dietaryNotes || null,
+          setupNotes: setupNotes || null,
+          onsiteContactName: onsiteContactName || null,
+          onsiteContactPhone: onsiteContactPhone || null,
           status: "PLANNING",
         },
       });
@@ -457,6 +864,8 @@ export async function registerCateringRoutes(app) {
         "eventAddress","eventLat","eventLng",
         "eventDate","slot","pricePerBowlCents","minimumBowls","bookedBowls",
         "status","eventName","logoUrl","brandColors","companyDescription","notes",
+        "eventType","expectedGuests","dietaryNotes","setupNotes",
+        "onsiteContactName","onsiteContactPhone",
       ];
       const data = {};
       for (const key of allowed) {
@@ -1119,7 +1528,7 @@ export async function registerCateringRoutes(app) {
         for (const slot of ["LUNCH", "DINNER"]) {
           const status = booked.has(`${dateStr}_${slot}`)
             ? "BOOKED"
-            : blackoutHit(blackouts, dateStr, slot)
+            : withinLeadTime(dateStr) || blackoutHit(blackouts, dateStr, slot)
             ? "BLOCKED"
             : "OPEN";
           days.push({ date: dateStr, slot, status });
@@ -1172,6 +1581,23 @@ export async function registerCateringRoutes(app) {
   });
 
   // =========================================================================
+  // PUBLIC: Catering menu (event-independent)
+  // GET /catering/menu
+  // Powers the "what's on the menu" section of the marketing landing page so
+  // the page always reflects the live catering offering (same allowlist the
+  // attendee order wizard uses).
+  // =========================================================================
+  app.get("/catering/menu", async (req, reply) => {
+    try {
+      const tenantId = await resolveCateringTenantId(req.query?.tenantId);
+      if (!tenantId) return reply.code(404).send({ error: "Tenant not found" });
+      return await getCateringMenuItems(tenantId);
+    } catch (err) {
+      return reply.code(500).send({ error: err.message });
+    }
+  });
+
+  // =========================================================================
   // PUBLIC: Personalized Chappy greeting for an attendee (order page)
   // GET /catering/events/:slug/greeting?phone=...
   // =========================================================================
@@ -1214,235 +1640,11 @@ export async function registerCateringRoutes(app) {
 
   app.post("/catering/bookings", async (req, reply) => {
     try {
-      if (!stripe) return reply.code(500).send({ error: "Stripe not configured" });
-
-      const {
-        clientCompany,
-        clientWebsite,
-        contactName,
-        contactEmail,
-        contactPhone,
-        eventDate,
-        slot,
-        bowls,
-        promoCode: promoCodeInput,
-        notes,
-        eventAddress,
-        eventLat,
-        eventLng,
-      } = req.body || {};
-
-      if (!clientCompany || !eventDate || !slot || !bowls) {
-        return reply.code(400).send({ error: "clientCompany, eventDate, slot, bowls required" });
-      }
-      if (!["LUNCH", "DINNER"].includes(slot)) {
-        return reply.code(400).send({ error: "slot must be LUNCH or DINNER" });
-      }
-      if (typeof bowls !== "number" || bowls < 1) {
-        return reply.code(400).send({ error: "bowls must be a positive number" });
-      }
-
-      // Resolve tenant: explicit tenantId if provided, else default to the Oh! tenant
-      // (single-tenant platform — the public booking form doesn't send tenant ids).
-      let tenantId = req.body?.tenantId;
-      const tenant = tenantId
-        ? await prisma.tenant.findUnique({ where: { id: tenantId } })
-        : (await prisma.tenant.findUnique({ where: { slug: "oh" } })) ||
-          (await prisma.tenant.findFirst());
-      if (!tenant) return reply.code(404).send({ error: "Tenant not found" });
-      tenantId = tenant.id;
-
-      // Check slot isn't already taken
-      const existing = await prisma.cateringEvent.findFirst({
-        where: {
-          eventDate: {
-            gte: new Date(new Date(eventDate).setUTCHours(0, 0, 0, 0)),
-            lt: new Date(new Date(eventDate).setUTCHours(23, 59, 59, 999)),
-          },
-          slot,
-          status: { not: "PLANNING" },
-        },
-      });
-      if (existing) {
-        return reply.code(409).send({ error: "This date/slot is already booked" });
-      }
-
-      // Reject dates/slots the admin has blocked off (e.g. Sundays, holidays).
-      const blackouts = await getBlackouts(tenantId);
-      const bookingDateStr = new Date(eventDate).toISOString().slice(0, 10);
-      if (blackoutHit(blackouts, bookingDateStr, slot)) {
-        return reply
-          .code(409)
-          .send({ error: "This date is not available. Please choose another." });
-      }
-
-      // Pricing
-      const defaultPrice = slot === "LUNCH" ? 2499 : 2999;
-      const pricePerBowlCents = defaultPrice;
-      let subtotalCents = bowls * pricePerBowlCents;
-      let discountCents = 0;
-      let resolvedPromoCodeId = null;
-
-      // Validate promo code if provided
-      if (promoCodeInput) {
-        try {
-          const promoResult = await prisma.promoCode.findUnique({
-            where: { code: promoCodeInput.toUpperCase() },
-            include: { _count: { select: { usages: true } } },
-          });
-          if (
-            promoResult &&
-            promoResult.isActive &&
-            (promoResult.scope === "ALL" || promoResult.scope === "CATERING") &&
-            (!promoResult.expiresAt || promoResult.expiresAt > new Date()) &&
-            promoResult.startsAt <= new Date() &&
-            (!promoResult.totalUsageLimit ||
-              promoResult._count.usages < promoResult.totalUsageLimit)
-          ) {
-            discountCents = computeDiscountCents({
-              discountType: promoResult.discountType,
-              discountValue: promoResult.discountValue,
-              maxDiscountCents: promoResult.maxDiscountCents,
-              subtotalCents,
-              quantity: bowls,
-            });
-            resolvedPromoCodeId = promoResult.id;
-          }
-        } catch (e) {
-          console.warn("[catering booking promo]", e.message);
-        }
-      }
-
-      const chargeCents = Math.max(0, subtotalCents - discountCents);
-      if (chargeCents < 50) {
-        return reply.code(400).send({ error: "Booking amount too low after discount" });
-      }
-
-      // Create draft event + location
-      const slug = makeSlug(clientCompany, eventDate);
-      const eventCode = makeEventCode();
-      const locationId = `cat-${slug}-${Date.now().toString(36)}`;
-
-      const hasGeo = typeof eventLat === "number" && typeof eventLng === "number";
-      await prisma.location.create({
-        data: {
-          id: locationId,
-          tenantId,
-          name: `${clientCompany} Event`,
-          city: "Salt Lake City",
-          // Use the validated event address (+ coords) when provided, so the
-          // per-event Location reflects where the event is actually held.
-          address: eventAddress || "Private Catering Event",
-          lat: hasGeo ? eventLat : 40.7608,
-          lng: hasGeo ? eventLng : -111.891,
-          taxRate: 0,
-          timezone: "America/Denver",
-          isClosed: false,
-        },
-      });
-
-      const event = await prisma.cateringEvent.create({
-        data: {
-          tenantId,
-          locationId,
-          slug,
-          eventCode,
-          clientCompany,
-          clientWebsite: clientWebsite || null,
-          contactName: contactName || null,
-          contactEmail: contactEmail || null,
-          contactPhone: contactPhone || null,
-          eventAddress: eventAddress || null,
-          eventLat: hasGeo ? eventLat : null,
-          eventLng: hasGeo ? eventLng : null,
-          eventDate: new Date(eventDate),
-          slot,
-          pricePerBowlCents,
-          minimumBowls: 10,
-          bookedBowls: bowls,
-          notes: notes || null,
-          status: "PLANNING",
-        },
-      });
-
-      // Fire-and-forget co-branding enrichment. Kicked off at booking creation so
-      // the company logo is ready by the time the client lands on the dashboard
-      // (the card-entry + payment step gives it plenty of lead time). Writes
-      // suggested fields directly (owner can still override); never downgrades LIVE.
-      // A manual brand override (a logo/colors we corrected for a known client)
-      // takes precedence over the AI scrape, and applies even with no website.
-      const override = getBrandOverride(event.clientCompany);
-      if (override || event.clientWebsite) {
-        (async () => {
-          try {
-            const enriched = event.clientWebsite
-              ? await enrichFromWebsite(event.clientWebsite)
-              : { logoUrl: null, brandColors: [], suggestedEventName: null, companyDescription: null };
-            const data = { enrichmentRaw: enriched };
-
-            // Logo + colors: the override wins; otherwise fall back to AI.
-            const logoUrl = override?.logoUrl || enriched.logoUrl;
-            const brandColors = (override?.brandColors?.length ? override.brandColors : enriched.brandColors) || [];
-            if (logoUrl) data.logoUrl = logoUrl;
-            if (brandColors.length) data.brandColors = brandColors;
-            if (enriched.companyDescription) data.companyDescription = enriched.companyDescription;
-            if (!event.eventName && enriched.suggestedEventName) {
-              data.eventName = enriched.suggestedEventName;
-            }
-            // No status guard: these fields are freshly null at creation, and
-            // confirmation may flip the event to LIVE before this finishes.
-            await prisma.cateringEvent.update({
-              where: { id: event.id },
-              data,
-            });
-          } catch (e) {
-            console.warn("[catering booking auto-enrich]", e.message);
-          }
-        })();
-      }
-
-      // Create Stripe payment intent
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: chargeCents,
-        currency: "usd",
-        metadata: {
-          type: "catering_booking",
-          cateringEventId: event.id,
-          clientCompany,
-          eventDate,
-          slot,
-          bowls: String(bowls),
-        },
-        automatic_payment_methods: { enabled: true },
-      });
-
-      // Create draft booking
-      const booking = await prisma.cateringBooking.create({
-        data: {
-          eventId: event.id,
-          bowlsBooked: bowls,
-          priceCents: chargeCents,
-          stripePaymentIntentId: paymentIntent.id,
-          promoCodeId: resolvedPromoCodeId,
-          bookingToken: makeBookingToken(),
-          paymentStatus: "PENDING",
-        },
-      });
-
-      return reply.code(201).send({
-        bookingId: booking.id,
-        eventId: event.id,
-        slug: event.slug,
-        clientSecret: paymentIntent.client_secret,
-        paymentIntentId: paymentIntent.id,
-        chargeCents,
-        amountCents: chargeCents, // alias the web payment page reads
-        discountCents,
-        subtotalCents,
-        pricePerBowlCents,
-      });
+      const result = await createCateringBookingDraft(req.body || {});
+      return reply.code(201).send(result);
     } catch (err) {
       console.error("[catering/bookings create]", err.message);
+      if (err.statusCode) return reply.code(err.statusCode).send({ error: err.message });
       if (err.code === "P2002") {
         return reply.code(409).send({ error: "Slug already taken for this date — try a slightly different company name or date" });
       }

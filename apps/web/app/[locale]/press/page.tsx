@@ -6,7 +6,7 @@ const pressReleases = [
   {
     date: "Coming Soon",
     title: "Oh! Beef Noodle Soup Announces San Francisco Flagship Location",
-    excerpt: "Tech-forward restaurant concept brings private dining pods and 30-year family recipe to SOMA district.",
+    excerpt: "Tech-forward catering concept brings a 30-year family recipe and build-your-own-bowl ordering to events across the region.",
   },
 ];
 
@@ -25,7 +25,7 @@ export default function PressPage() {
     { label: t("keyFacts.headquarters"), value: "San Francisco, CA" },
     { label: t("keyFacts.flagshipOpening"), value: "Spring 2025" },
     { label: t("keyFacts.recipeHeritage"), value: "30+ Years" },
-    { label: t("keyFacts.uniqueFeature"), value: "Private Dining Pods" },
+    { label: t("keyFacts.uniqueFeature"), value: "Build-Your-Own-Bowl Catering" },
     { label: t("keyFacts.techPlatform"), value: "Mobile-First Ordering" },
   ];
 
