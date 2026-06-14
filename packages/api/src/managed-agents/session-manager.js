@@ -19,17 +19,9 @@ const prisma = new PrismaClient();
  */
 const DEFAULT_ENVIRONMENT = {
   name: 'oh-platform-dev',
-  packages: [
-    'nodejs@20',
-    'python@3.12',
-    'git',
-    'pnpm@9',
-  ],
+  // NOTE: `packages` is intentionally omitted — the Managed Agents API rejects it
+  // ("packages: Extra inputs are not permitted").
   network_access: true,
-  mounts: [
-    // Mount the codebase (in production, this would be a git clone)
-    { type: 'git', url: 'https://github.com/your-org/oh-platform.git' },
-  ],
 };
 
 /**
@@ -47,6 +39,15 @@ export class SessionManager {
    * Call this once during application startup
    */
   async initialize() {
+    // The Managed Agents integration is an opt-in beta and is off by default.
+    // When disabled we skip all API calls so boot logs stay clean (it otherwise
+    // logs per-agent verification errors against the beta API every startup).
+    // Set MANAGED_AGENTS_ENABLED=true to turn it on.
+    if (process.env.MANAGED_AGENTS_ENABLED !== 'true') {
+      console.log('[SessionManager] Managed Agents disabled (set MANAGED_AGENTS_ENABLED=true to enable); skipping init.');
+      return;
+    }
+
     console.log('[SessionManager] Initializing Managed Agents...');
 
     // Create or update environment
@@ -69,7 +70,9 @@ export class SessionManager {
     // Create or verify agents exist
     for (const [name, config] of Object.entries(ALL_AGENTS)) {
       try {
-        const agents = await this.client.listAgents({ name });
+        // The list endpoint doesn't accept a `name` query param ("unexpected
+        // query parameter: name"); fetch all and match client-side.
+        const agents = await this.client.listAgents();
         const existing = agents.data?.find(a => a.name === name);
 
         if (!existing) {
