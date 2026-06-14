@@ -14909,3 +14909,5 @@ app.listen({ port: PORT, host: "0.0.0.0" }, async (err) => {
     console.log('ℹ Autonomous scheduler disabled (REDIS_URL not set)');
   }
 });
+
+// build: use NIXPACKS plan (railway.toml) for resilient prisma generate
