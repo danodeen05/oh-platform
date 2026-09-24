@@ -50,9 +50,11 @@ export default async function LocaleLayout({ children, params }: Props) {
   const pathname = headersList.get("x-pathname") || headersList.get("x-invoke-path") || "";
   const isKioskRoute = pathname.includes("/kiosk");
   const isCNYRoute = pathname.includes("/cny");
+  // The interactive business plan has its own shell (see app/[locale]/plan)
+  const isPlanRoute = /\/plan(\/|$)/.test(pathname);
 
-  // For kiosk and CNY routes, render without header/footer
-  if (isKioskRoute || isCNYRoute) {
+  // For kiosk, CNY, and plan routes, render without header/footer
+  if (isKioskRoute || isCNYRoute || isPlanRoute) {
     return (
       <ClerkProvider localization={clerkLocalization}>
         <NextIntlClientProvider messages={messages}>

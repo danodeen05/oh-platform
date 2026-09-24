@@ -1795,3 +1795,87 @@ model CateringSurveyResponse {
 
   @@index([surveyId])
 }
+
+// ==========================================
+// INTERACTIVE BUSINESS PLAN ACCESS
+// ==========================================
+// These models are CORPORATE data (investor / lender / landlord access to the
+// business plan at /plan), intentionally NOT tenant-scoped. They carry no
+// tenantId on purpose: the plan is about the company, not about any tenant's
+// restaurant operations. Do not add tenant scoping here.
+
+enum PlanAudience {
+  INVESTOR
+  LENDER
+  LANDLORD
+  PARTNER
+  ADVISOR
+  INTERNAL
+}
+
+enum PlanScenario {
+  CONSERVATIVE
+  BASE
+  AGGRESSIVE
+}
+
+model PlanAccessCode {
+  id              String       @id @default(cuid())
+  code            String       @unique // Human-readable, e.g. "OH-KESTREL-7742". Looked up normalized (upper-case, trimmed).
+  label           String // "Jim R. - America First CU"
+  audience        PlanAudience
+  defaultScenario PlanScenario @default(BASE)
+  allowedSections String[]     @default([]) // Empty = all sections. Enforced server-side.
+  expiresAt       DateTime?
+  revokedAt       DateTime?
+  maxSessions     Int? // null = unlimited
+  lastViewedAt    DateTime? // Denormalized for the admin table
+  createdAt       DateTime     @default(now())
+  createdByUserId String?
+
+  sessions  PlanViewSession[]
+  questions PlanQuestion[]
+}
+
+model PlanViewSession {
+  id           String         @id @default(cuid())
+  accessCodeId String
+  accessCode   PlanAccessCode @relation(fields: [accessCodeId], references: [id], onDelete: Cascade)
+  startedAt    DateTime       @default(now())
+  lastSeenAt   DateTime       @updatedAt
+  userAgent    String?
+  ipHash       String? // Salted SHA-256; the raw IP is never stored
+  country      String?
+  totalSeconds Int            @default(0)
+
+  sectionViews PlanSectionView[]
+
+  @@index([accessCodeId, startedAt])
+}
+
+model PlanSectionView {
+  id           String          @id @default(cuid())
+  sessionId    String
+  session      PlanViewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sectionKey   String // Matches the SECTIONS registry key in apps/web/lib/plan/sections.ts
+  seconds      Int             @default(0)
+  enteredAt    DateTime        @default(now())
+  interactions Int             @default(0) // Slider moves, toggles, expands
+
+  @@unique([sessionId, sectionKey])
+  @@index([sessionId, sectionKey])
+}
+
+model PlanQuestion {
+  id           String         @id @default(cuid())
+  accessCodeId String
+  accessCode   PlanAccessCode @relation(fields: [accessCodeId], references: [id], onDelete: Cascade)
+  sectionKey   String
+  body         String
+  contactEmail String?
+  answeredAt   DateTime?
+  answerBody   String?
+  createdAt    DateTime       @default(now())
+
+  @@index([accessCodeId, createdAt])
+}

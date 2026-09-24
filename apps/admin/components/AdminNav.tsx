@@ -22,6 +22,7 @@ const navItems: NavItem[] = [
   { href: "/gift-cards", label: "Gift Cards" },
   { href: "/catering", label: "Catering" },
   { href: "/locations", label: "Locations" },
+  { href: "/plan-access", label: "Plan Access", highlight: true },
 ];
 
 export function AdminNav() {

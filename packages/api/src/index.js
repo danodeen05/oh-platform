@@ -64,6 +64,7 @@ import { registerAutonomousRoutes } from "./autonomous/index.js";
 import { getScheduler } from "./triggers/index.js";
 import { getOrchestrator } from "./autonomous/index.js";
 import { registerCateringRoutes, isDineInOrdersEnabled } from "./catering/routes.js";
+import { registerPlanRoutes } from "./plan/routes.js";
 
 const prisma = new PrismaClient();
 const app = Fastify({ logger: true });
@@ -192,6 +193,9 @@ await registerAutonomousRoutes(app);
 
 // Register catering routes
 await registerCateringRoutes(app);
+
+// Register interactive business plan routes (/plan/* BFF + /admin/plan/*)
+await registerPlanRoutes(app);
 
 const PORT = process.env.PORT || process.env.API_PORT || 4000;
 

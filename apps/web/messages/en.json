@@ -281,14 +281,24 @@
       "tagline": "Downtown Salt Lake City",
       "description": "Our flagship location in the heart of downtown Salt Lake City, offering a unique dining experience with private pods and tech-forward ordering.",
       "mallDescription": "City Creek Center is Utah's premier shopping destination, featuring over 100 stores and restaurants in a stunning open-air setting with a retractable glass roof.",
-      "nearbyLandmarks": ["Temple Square", "Salt Palace Convention Center", "Utah State Capitol", "Gateway Mall"],
+      "nearbyLandmarks": [
+        "Temple Square",
+        "Salt Palace Convention Center",
+        "Utah State Capitol",
+        "Gateway Mall"
+      ],
       "parking": "Free parking in City Creek parking structure with validation"
     },
     "universityPlace": {
       "tagline": "Utah Valley",
       "description": "Serving the Utah Valley community with the same exceptional quality and innovative dining experience.",
       "mallDescription": "University Place is Orem's vibrant shopping and entertainment hub, featuring a mix of national retailers and local favorites near Utah Valley University.",
-      "nearbyLandmarks": ["Utah Valley University", "Provo Canyon", "Timpanogos Cave", "BYU Campus"],
+      "nearbyLandmarks": [
+        "Utah Valley University",
+        "Provo Canyon",
+        "Timpanogos Cave",
+        "BYU Campus"
+      ],
       "parking": "Ample free parking available throughout University Place"
     },
     "details": {
@@ -332,7 +342,12 @@
       "title": "Coming Soon",
       "description": "We're expanding! Stay tuned for new locations in these cities.",
       "label": "Coming Soon",
-      "cities": ["San Francisco", "Los Angeles", "Phoenix", "Denver"]
+      "cities": [
+        "San Francisco",
+        "Los Angeles",
+        "Phoenix",
+        "Denver"
+      ]
     },
     "cta": {
       "title": "Ready for the Best Bowl?",
@@ -2152,6 +2167,28 @@
       "autoAssignPod": "Auto-Assign My Pod",
       "restrooms": "Restrooms",
       "store": "Store"
+    }
+  },
+  "plan": {
+    "meta": {
+      "title": "Oh! Beef Noodle Soup Business Plan"
+    },
+    "gate": {
+      "title": "This plan is shared by invitation.",
+      "subtitle": "Enter the access code from your invitation to continue.",
+      "codeLabel": "Access code",
+      "codePlaceholder": "OH-KESTREL-7742",
+      "submit": "Open the plan",
+      "submitting": "Checking",
+      "errorInvalid": "That code did not work. Check it and try again, or ask us for a new one.",
+      "errorRateLimited": "Too many attempts. Please wait fifteen minutes and try again.",
+      "errorNetwork": "We could not reach the server. Please try again in a moment.",
+      "help": "Need a code? Write to dano@ohbeefnoodlesoup.com."
+    },
+    "shell": {
+      "viewingAs": "Viewing as {label}",
+      "signOut": "Close plan",
+      "authenticated": "You are in. The plan shell arrives in the next build phase."
     }
   }
 }

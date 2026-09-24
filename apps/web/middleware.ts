@@ -2,6 +2,7 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import createIntlMiddleware from "next-intl/middleware";
 import { routing } from "./i18n/routing";
 import { NextRequest, NextResponse } from "next/server";
+import { PLAN_COOKIE, verifyPlanToken } from "./lib/plan/session";
 
 const intlMiddleware = createIntlMiddleware(routing);
 
@@ -38,7 +39,14 @@ const isPublicRoute = createRouteMatcher([
   "/:locale/kiosk/(.*)",
   "/:locale/cny",
   "/:locale/cny/(.*)",
+  "/:locale/plan",
+  "/:locale/plan/(.*)",
 ]);
+
+// Interactive business plan: gated by the oh_plan cookie, not by Clerk (spec 4.1).
+// The gate page itself must stay reachable without the cookie.
+const isPlanRoute = createRouteMatcher(["/:locale/plan", "/:locale/plan/(.*)"]);
+const isPlanGateRoute = createRouteMatcher(["/:locale/plan/gate"]);
 
 // Check if this is a kiosk route (excludes kiosk-unauthorized)
 const isKioskRoute = createRouteMatcher(["/:locale/kiosk", "/:locale/kiosk/(.*)"]);
@@ -65,7 +73,7 @@ export default clerkMiddleware(async (auth, request: NextRequest) => {
   }
 
   // Handle CNY subdomain routing
-  if (CNY_HOSTNAMES.some(h => hostname.startsWith(h.split(".")[0]))) {
+  if (CNY_HOSTNAMES.some(h => hostname.startsWith(h.split(".")[0] ?? ""))) {
     const url = request.nextUrl.clone();
 
     // If not already on a CNY path, redirect to CNY
@@ -78,7 +86,7 @@ export default clerkMiddleware(async (auth, request: NextRequest) => {
       // For other paths, prefix with /cny
       const localeMatch = pathname.match(/^\/(en|zh-TW|zh-CN|es)/);
       if (localeMatch) {
-        const locale = localeMatch[1];
+        const locale = localeMatch[1] ?? "en";
         const rest = pathname.slice(locale.length + 1);
         url.pathname = `/${locale}/cny${rest}`;
         return NextResponse.redirect(url);
@@ -91,7 +99,7 @@ export default clerkMiddleware(async (auth, request: NextRequest) => {
   const cateringMatch = pathname.match(/^\/(en|es|zh-CN|zh-TW)?\/?catering(\/|$)/);
   if (cateringMatch) {
     const url = request.nextUrl.clone();
-    url.pathname = `/${cateringMatch[1] || "en"}`;
+    url.pathname = `/${cateringMatch[1] ?? "en"}`;
     url.search = "";
     return NextResponse.redirect(url, 308);
   }
@@ -104,8 +112,28 @@ export default clerkMiddleware(async (auth, request: NextRequest) => {
     await auth.protect();
   }
 
-  // Set x-pathname header for kiosk and CNY detection in layout
-  if (isKioskRoute(request) || isCNYRoute(request)) {
+  // Interactive business plan: require a valid oh_plan session cookie.
+  // Without one, send the visitor to the gate and remember where they were going.
+  // A "?c=CODE" link is carried through so the gate can auto-submit it.
+  if (isPlanRoute(request) && !isPlanGateRoute(request)) {
+    const claims = await verifyPlanToken(request.cookies.get(PLAN_COOKIE)?.value);
+    if (!claims) {
+      const localeMatch = pathname.match(/^\/(en|zh-TW|zh-CN|es)(?=\/|$)/);
+      const locale = localeMatch?.[1] ?? "en";
+      const code = request.nextUrl.searchParams.get("c");
+      const target = request.nextUrl.clone();
+      target.searchParams.delete("c");
+      const gate = request.nextUrl.clone();
+      gate.pathname = `/${locale}/plan/gate`;
+      gate.search = "";
+      gate.searchParams.set("next", target.pathname + target.search);
+      if (code) gate.searchParams.set("c", code);
+      return NextResponse.redirect(gate);
+    }
+  }
+
+  // Set x-pathname header for kiosk, CNY, and plan detection in layout
+  if (isKioskRoute(request) || isCNYRoute(request) || isPlanRoute(request)) {
     response.headers.set("x-pathname", request.nextUrl.pathname);
   }
 
@@ -115,7 +143,7 @@ export default clerkMiddleware(async (auth, request: NextRequest) => {
 export const config = {
   matcher: [
     // Match all paths except static files and most API routes
-    "/((?!_next|api|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest|mp4|webm|ogg|mov)).*)",
+    "/((?!_next|api|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest|mp4|webm|ogg|mov|txt|xml)).*)",
     // Include agents API routes for authentication
     "/api/agents/:path*",
   ],

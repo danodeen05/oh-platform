@@ -1,0 +1,28 @@
+{
+  // Strict TypeScript for the interactive business plan only.
+  // The app-wide tsconfig has strict:false and ~200 pre-existing errors; this
+  // file gates the plan code without touching the rest of the app.
+  //   npx tsc -p apps/web/tsconfig.plan.json --noEmit
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "incremental": false
+  },
+  "include": [
+    "next-env.d.ts",
+    "app/[locale]/plan/**/*.ts",
+    "app/[locale]/plan/**/*.tsx",
+    "app/api/plan/**/*.ts",
+    "app/robots.ts",
+    "components/plan/**/*.ts",
+    "components/plan/**/*.tsx",
+    "lib/plan/**/*.ts",
+    "lib/plan/**/*.tsx",
+    "i18n/request.ts",
+    "middleware.ts"
+  ],
+  "exclude": ["node_modules", "lib/plan/**/__tests__/**"]
+}
