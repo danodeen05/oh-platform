@@ -40,12 +40,6 @@ export interface PromoCodeInputProps {
   placeholder?: string;
   /** Disable the input */
   disabled?: boolean;
-  /**
-   * Visual variant. 'light' (default) suits light backgrounds (menu/shop/gift).
-   * 'brand' matches the catering booking flow's dark theme — cream field, gold
-   * Apply button, readable placeholder — using the --brand-* CSS vars in scope.
-   */
-  variant?: 'light' | 'brand';
 }
 
 /**
@@ -77,9 +71,7 @@ export function PromoCodeInput({
   shippingCents = 0,
   placeholder = 'Enter promo code',
   disabled = false,
-  variant = 'light',
 }: PromoCodeInputProps) {
-  const isBrand = variant === 'brand';
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -214,10 +206,8 @@ export function PromoCodeInput({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled || loading}
-          className={isBrand ? 'promo-input--brand' : undefined}
           style={{
             ...styles.input,
-            ...(isBrand ? styles.inputBrand : {}),
             ...(error ? styles.inputError : {}),
           }}
           aria-label="Promo code"
@@ -229,7 +219,6 @@ export function PromoCodeInput({
           disabled={disabled || loading || !code.trim()}
           style={{
             ...styles.applyButton,
-            ...(isBrand ? styles.applyButtonBrand : {}),
             ...(disabled || loading || !code.trim() ? styles.applyButtonDisabled : {}),
           }}
         >
@@ -271,15 +260,6 @@ const styles: Record<string, React.CSSProperties> = {
   inputError: {
     borderColor: '#ef4444',
   },
-  // Brand variant: matches the catering Card Details field (cream/white, gold border)
-  inputBrand: {
-    padding: '13px 16px',
-    fontSize: '16px',
-    color: '#1A1612',
-    background: 'rgba(255,255,255,0.95)',
-    border: '1.5px solid var(--brand-border)',
-    borderRadius: '10px',
-  },
   applyButton: {
     padding: '12px 20px',
     fontSize: '14px',
@@ -294,13 +274,6 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  // Brand variant: gold button with dark text, matching the page's primary button
-  applyButtonBrand: {
-    backgroundColor: 'var(--brand-primary)',
-    color: 'var(--brand-on-primary)',
-    fontWeight: 700,
-    borderRadius: '10px',
   },
   applyButtonDisabled: {
     opacity: 0.5,
@@ -373,8 +346,6 @@ if (typeof document !== 'undefined') {
       @keyframes spin {
         to { transform: rotate(360deg); }
       }
-      /* Readable placeholder for the brand (dark-theme) variant */
-      .promo-input--brand::placeholder { color: var(--brand-secondary, #8A7055); opacity: 1; }
     `;
     document.head.appendChild(style);
   }
