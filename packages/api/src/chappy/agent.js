@@ -406,10 +406,6 @@ export async function* handleChappyConversationStream({
             clientSecret: content.clientSecret,
             totalCents: content.totalCents,
             locationName: content.locationName,
-            // Catering bookings confirm via a different endpoint; carry the
-            // kind + bookingId so the web chat routes payment confirmation.
-            kind: content.kind,
-            bookingId: content.bookingId,
           };
         }
       } catch (e) {

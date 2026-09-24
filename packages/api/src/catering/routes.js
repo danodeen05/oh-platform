@@ -53,13 +53,14 @@ function requireCronSecret(req, reply) {
 // ---------------------------------------------------------------------------
 // Dine-in ordering toggle — PERSISTED IN THE DATABASE (Tenant.dineInOrdersEnabled)
 // so it survives deploys/restarts reliably (the old file approach reset on every
-// Railway deploy). DEFAULT is catering-only (dine-in OFF) when unset (null).
+// Railway deploy). DEFAULT is dine-in ON when unset (null) or when the boot-time
+// read fails, so a DB hiccup can never silently 403 every order.
 //
 // We keep a tiny in-memory cache so isDineInOrdersEnabled() stays synchronous for
 // the /orders gate; it's seeded on boot and refreshed on read/write.
 // ---------------------------------------------------------------------------
 const DINE_IN_TENANT_SLUG = "oh";
-let dineInOrdersCache = false; // default: catering-only
+let dineInOrdersCache = true; // default: dine-in ON
 
 async function loadDineInFlag() {
   try {
@@ -67,7 +68,7 @@ async function loadDineInFlag() {
       where: { slug: DINE_IN_TENANT_SLUG },
       select: { dineInOrdersEnabled: true },
     });
-    dineInOrdersCache = t?.dineInOrdersEnabled ?? false; // null -> catering-only
+    dineInOrdersCache = t?.dineInOrdersEnabled ?? true; // null -> dine-in ON
   } catch (e) {
     console.warn("[site-config] load failed:", e.message);
   }
@@ -636,9 +637,27 @@ export async function updateCateringEventByPhone({ phone, eventId, updates = {} 
 // ===========================================================================
 // REGISTER ALL CATERING ROUTES
 // ===========================================================================
+// Public (customer-facing) catering endpoints are switched off unless
+// CATERING_PUBLIC_ENABLED=true. Catering is admin-only for now: the admin console
+// still needs the two paths below, and everything under /admin/* is unaffected.
+const CATERING_PUBLIC_ENABLED = process.env.CATERING_PUBLIC_ENABLED === "true";
+const CATERING_PUBLIC_ALLOWLIST = new Set([
+  "/catering/site-config/order-now",
+  "/catering/kitchen-locations",
+]);
+
 export async function registerCateringRoutes(app) {
-  // Seed the in-memory flag from the DB on boot (default catering-only).
+  // Seed the in-memory flag from the DB on boot (default dine-in ON).
   await loadDineInFlag();
+
+  if (!CATERING_PUBLIC_ENABLED) {
+    app.addHook("onRequest", async (req, reply) => {
+      const path = (req.raw.url || "").split("?")[0];
+      if (path.startsWith("/catering/") && !CATERING_PUBLIC_ALLOWLIST.has(path)) {
+        return reply.code(404).send({ error: "Not found" });
+      }
+    });
+  }
 
   // =========================================================================
   // ADMIN: Site config — dine-in ordering toggle (persisted in the DB)

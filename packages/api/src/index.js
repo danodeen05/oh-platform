@@ -3547,8 +3547,8 @@ app.get("/orders/:id", async (req, reply) => {
 
 app.post("/orders", async (req, reply) => {
   // Feature flag: dine-in ordering toggle.
-  // Controlled by DISABLE_DINE_IN_ORDERS env var (boot-time) or
-  // PATCH /admin/site-config/order-now (runtime, resets on restart).
+  // Persisted in Tenant.dineInOrdersEnabled (default ON) and flipped at runtime
+  // via PATCH /admin/site-config/order-now (admin console "Order Now" toggle).
   // Does NOT affect /orders/event or catering attendee orders.
   if (!isDineInOrdersEnabled()) {
     return reply.code(403).send({
