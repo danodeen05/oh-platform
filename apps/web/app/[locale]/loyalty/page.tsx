@@ -191,8 +191,6 @@ export default function LoyaltyPage() {
         >
           {t("description")}
         </p>
-        {/* Start Earning button — hidden while the site is catering-focused; retained to restore later. */}
-        {false && (
         <Link
           href={`/${locale}/order`}
           onClick={() => {
@@ -216,7 +214,6 @@ export default function LoyaltyPage() {
         >
           {tCommon("startEarning")}
         </Link>
-        )}
       </section>
 
       {/* How It Works */}
@@ -929,8 +926,7 @@ export default function LoyaltyPage() {
         </div>
       </section>
 
-      {/* CTA — "Ready to Start Your Journey?" hidden while the site is catering-focused; retained to restore later. */}
-      {false && (
+      {/* CTA */}
       <section
         style={{
           background: "#C7A878",
@@ -982,7 +978,6 @@ export default function LoyaltyPage() {
           {tCommon("orderNow")}
         </Link>
       </section>
-      )}
     </div>
   );
 }
