@@ -109,6 +109,15 @@ npx clerk api ls          # List available API endpoints
 **Time Restrictions:** BYPASSED
 - `DISABLE_TIME_RESTRICTIONS=true` in Railway
 
+**Dine-in ordering flag:** stored in `Tenant.dineInOrdersEnabled` (tenant slug `oh`), default ON.
+- Flip it in Admin → Catering → Order Now toggle (`PATCH /admin/site-config/order-now {"enabled":true}`).
+- Public read: `GET /catering/site-config/order-now`. When false, `POST /orders` returns 403.
+- Dev uses the local Postgres in `.env` (127.0.0.1); the prod URL is in `.env.prod-bak`. Flip prod via the prod admin console.
+
+**Catering:** admin-only since 2026-09-24. Customer pages, nav, and Chappy's catering tools were removed;
+`/catering/*` on the web app redirects home. Public `/catering/*` API routes return 404 unless
+`CATERING_PUBLIC_ENABLED=true` (the two endpoints the admin console needs stay open).
+
 ### To Go Live
 
 1. Remove `DISABLE_TIME_RESTRICTIONS` from Railway
