@@ -46,7 +46,7 @@ export default async function PlanLayout({ children, params }: Props) {
 
       <header className="sticky top-0 z-40 border-b border-oh-stone bg-oh-charcoal/95 backdrop-blur supports-[backdrop-filter]:bg-oh-charcoal/80">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 md:px-8">
-          <a href={sectionHref(locale, { slug: "" })} className="flex items-center gap-3 text-oh-cream">
+          <a href={sectionHref(locale, { slug: "" })} aria-label={t("planTitle")} className="flex items-center gap-3 text-oh-cream">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/plan/mark-light-56.png" alt="" width={28} height={28} className="h-7 w-auto" />
             <span className="hidden font-display text-[1.05rem] tracking-wide sm:inline">{t("planTitle")}</span>
