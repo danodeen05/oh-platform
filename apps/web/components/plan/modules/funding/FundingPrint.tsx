@@ -27,7 +27,7 @@ export async function FundingPrint({ locale }: { locale: string }) {
       <p className="m-0 text-oh-charcoal">{t("partner.subtitle", { implied: fmt.number(own.partnerPctReturnBased, { style: "percent", maximumFractionDigits: 1 }), headline: pct(own.partnerPct), cap: pct(PARTNERSHIP_TERMS.partnerPctCap) })}</p>
       <table className="w-full border-collapse">
         <caption className="mb-2 text-left font-display text-[1.1rem] text-oh-charcoal">{t("partner.grid", { target: `${PARTNERSHIP_TERMS.targetMultiple}x`, exit: `${PARTNERSHIP_TERMS.exitMultiple}x` })}</caption>
-        <thead><tr className="border-b border-oh-charcoal/30"><th className="py-1.5 text-left font-normal text-oh-ash">{t("partner.cols.stake")}</th>{stakes.map((s) => (<th key={s.partnerPct} className="py-1.5 text-right font-normal text-oh-ash">{pct(s.partnerPct)}</th>))}</tr></thead>
+        <thead><tr className="border-b border-oh-charcoal/30"><th className="py-1.5 text-left font-normal text-oh-clay">{t("partner.cols.stake")}</th>{stakes.map((s) => (<th key={s.partnerPct} className="py-1.5 text-right font-normal text-oh-clay">{pct(s.partnerPct)}</th>))}</tr></thead>
         <tbody>
           <tr className="border-b border-oh-charcoal/10"><td className="py-1.5 text-oh-charcoal">{t("partner.gridRows.founderTotal")}</td>{stakes.map((s) => (<td key={s.partnerPct} className={td}>{money(s.founderTotal)}</td>))}</tr>
           <tr className="border-b border-oh-charcoal/10"><td className="py-1.5 text-oh-charcoal">{t("partner.gridRows.partnerMultiple")}</td>{stakes.map((s) => (<td key={s.partnerPct} className={td}>{fmt.number(s.partnerMultipleAtExit, { maximumFractionDigits: 2 })}x</td>))}</tr>

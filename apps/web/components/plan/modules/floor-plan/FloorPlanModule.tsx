@@ -111,7 +111,7 @@ export function FloorPlanModule() {
             <button
               type="button"
               onClick={() => { if (progress >= 1) setProgress(0); setPlaying((p) => !p); }}
-              className="rounded-md bg-oh-ember px-3 py-1.5 text-[0.8rem] font-semibold text-oh-cream hover:bg-oh-clay"
+              className="rounded-md bg-oh-ember-deep px-3 py-1.5 text-[0.8rem] font-semibold text-oh-cream hover:bg-oh-ember"
             >
               {playing ? t("journey.pause") : progress >= 1 ? t("journey.replay") : t("journey.play")}
             </button>
@@ -148,7 +148,7 @@ export function FloorPlanModule() {
               <>
                 <span className="font-display text-[1.1rem] text-oh-cream">{t("pod.title", { number: active.number })}</span>
                 <span className="ml-3 text-oh-mute">{t("pod.detail", { type: t(`pod.${active.type}`), row: active.row, position: active.position, panel: t(`pod.panel.${active.panel}`) })}</span>
-                <span className="ml-3 text-oh-ash">{t("pod.size", { w: POD.w.toFixed(2), d: POD.d.toFixed(1) })}</span>
+                <span className="ml-3 text-oh-mute">{t("pod.size", { w: POD.w.toFixed(2), d: POD.d.toFixed(1) })}</span>
               </>
             ) : currentStep ? (
               <>
@@ -207,7 +207,7 @@ export function FloorPlanModule() {
                 );
               })}
             </ol>
-            <p className="m-0 mt-2 text-[0.72rem] text-oh-ash">{t("journey.note", { real: fmtClock(JOURNEY_REAL_SECONDS), anim: JOURNEY_SECONDS })}</p>
+            <p className="m-0 mt-2 text-[0.72rem] text-oh-mute">{t("journey.note", { real: fmtClock(JOURNEY_REAL_SECONDS), anim: JOURNEY_SECONDS })}</p>
           </div>
         </aside>
       </div>

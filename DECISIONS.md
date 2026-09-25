@@ -64,3 +64,20 @@ Still open: US metro dates and fees (item 22 defaults accepted "for now"); confi
 | Print route | Sibling route group `(print)` with its own layout; light theme on paper; fixed footer repeats per page; TOC has section numbers, not page numbers | Chromium has no `target-counter()`; the Phase 5 droplet PDF script can add page numbers |
 | `print.css` | The one CSS file allowed by spec 7.1 | Paged-media rules cannot be expressed as utilities |
 | Muted text | `oh-mute` #9A9188 for small text; `oh-ash` #8A8178 fails AA on ink | Spec 7.6 |
+
+## Modules and polish (Phases 4 and 5), Sep 2026
+
+| Item | Decision | Why |
+|---|---|---|
+| Model levers | Seven sliders (utilization, bowl price, food cost, rent, pods, kitchen FTE, dwell); "average check" is moved through bowl price and shown as a result | Attach rates are second-order; one price lever reads cleanly |
+| Floor plan geometry | 70 × 50 ft, three rows of 25 pods (2.35 × 4.5 ft, 2.6 ft pitch), two 2.5 to 3 ft delivery corridors, one 3.5 ft guest aisle, 2.5 ft entry strip; zones reproduce the spec's square-footage breakdown exactly | The spec's 1,575 sf dining for 75 pods forces these dimensions; the module says so out loud |
+| Expansion counters | Franchise openings in a plan year are spread evenly across its months; covers scale with revenue | Engine has no month-level franchise data |
+| Market data | TAM $63B (US Asian restaurant sales), SAM $2.4B (nine trade areas), SOM = engine year-3 corporate revenue (~$20M, 0.03% of TAM); Utah trade-area figures are rounded public estimates labeled as such | Spec 6.7: SOM deliberately small and said so |
+| Monte Carlo | 10,000 runs, triangular distributions symmetric on revenue levers and skewed against us on costs, in a Web Worker; reports P10/P50/P90 and probability of missing the 25% public target | Neutral rather than flattering; the worker keeps the UI responsive |
+| Downside scenarios | Six spec-named risks modeled as lever moves (rent +$15, food cost +5 pts, utilization −20%, five pods offline plus maintenance, wage +$3 plus one FTE, ramp −15%) | Each card shows a computed impact, not a paragraph |
+| Team | Founder and financial partner only; the 49/51 LLC members from spec 10 are not rendered; EIN and personal finances never appear | Owner decision 23 |
+| Roadmap status | Articles and EIN marked complete; operating agreement, TAP, licenses, fire marshal, CO pending | Post-formation checklist PDF not in the repo; confirm and flip flags in roadmapData.ts |
+| Accessibility | axe WCAG 2.1 AA clean on every page after: `<html lang>` from middleware, `oh-mute` for small muted text, `oh-ember-light` for small ember text, `oh-ember-deep` (#A94422) for filled buttons (ember itself is 4.0:1 under cream), `oh-olive-light` for olive text, explicit `bg-transparent` on every plan button (the site's global button rule leaves the UA gray otherwise), map SVG is a group not an image | Spec 7.6 |
+| Performance | Plan routes skip ClerkProvider, Google Analytics and the site's five-family Google Fonts stylesheet (Raleway only; CJK via next/font); logo served at 176 px instead of the 487 KB original | Lighthouse mobile went from 41 to 53 with these costs on the page; the marketing homepage scores 32 under the same throttling, so the remaining gap is site-wide |
+| PDF export | `scripts/plan-export-pdf.cjs` (Playwright, droplet-side) prints `/plan/print` for a code; Vercel has no Chromium | Spec 7.5 |
+| Print page numbers | Not in the contents list; browsers lack `target-counter()` | Phase 5 leftover |

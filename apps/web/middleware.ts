@@ -136,6 +136,10 @@ export default clerkMiddleware(async (auth, request: NextRequest) => {
   if (isKioskRoute(request) || isCNYRoute(request) || isPlanRoute(request)) {
     response.headers.set("x-pathname", request.nextUrl.pathname);
   }
+  // Locale for <html lang> in the root layout (WCAG 3.1.1). The rewrite's
+  // path carries the locale even when the visitor typed a bare URL.
+  const localeMatch = pathname.match(/^\/(en|zh-TW|zh-CN|es)(?=\/|$)/);
+  response.headers.set("x-locale", localeMatch?.[1] ?? routing.defaultLocale);
 
   return response;
 });

@@ -10,6 +10,7 @@ import Footer from "@/components/Footer";
 import ActiveOrderBanner from "@/components/ActiveOrderBanner";
 import { Providers } from "@/components/Providers";
 import LanguageTracker from "@/components/LanguageTracker";
+import { LangSync } from "@/components/plan/shell/LangSync";
 
 type Props = {
   children: React.ReactNode;
@@ -53,11 +54,23 @@ export default async function LocaleLayout({ children, params }: Props) {
   // The interactive business plan has its own shell (see app/[locale]/plan)
   const isPlanRoute = /\/plan(\/|$)/.test(pathname);
 
-  // For kiosk, CNY, and plan routes, render without header/footer
-  if (isKioskRoute || isCNYRoute || isPlanRoute) {
+  // The plan is gated by its own cookie and never touches Clerk on the client,
+  // so it skips ClerkProvider and the clerk-js download (spec 7.3 budget).
+  if (isPlanRoute) {
+    return (
+      <NextIntlClientProvider messages={messages}>
+        <LangSync locale={locale} />
+        {children}
+      </NextIntlClientProvider>
+    );
+  }
+
+  // For kiosk and CNY routes, render without header/footer
+  if (isKioskRoute || isCNYRoute) {
     return (
       <ClerkProvider localization={clerkLocalization}>
         <NextIntlClientProvider messages={messages}>
+          <LangSync locale={locale} />
           {children}
         </NextIntlClientProvider>
       </ClerkProvider>
@@ -69,6 +82,7 @@ export default async function LocaleLayout({ children, params }: Props) {
       <NextIntlClientProvider messages={messages}>
         <Providers>
           <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+            <LangSync locale={locale} />
             <LanguageTracker />
             <Header />
             <ActiveOrderBanner />

@@ -16,7 +16,7 @@ export async function SummaryPrint() {
   ];
   return (
     <div className="mt-6 text-[0.9rem] text-oh-charcoal">
-      <table className="w-full border-collapse"><tbody>{rows.map(([k, v, n]) => (<tr key={k} className="border-b border-oh-charcoal/10"><td className="py-2 text-[0.75rem] uppercase tracking-[0.12em] text-oh-ash">{k}</td><td className="py-2 text-right font-display text-[1.2rem] tabular-nums">{v}</td><td className="py-2 pl-4 text-[0.8rem] text-oh-stone">{n}</td></tr>))}</tbody></table>
+      <table className="w-full border-collapse"><tbody>{rows.map(([k, v, n]) => (<tr key={k} className="border-b border-oh-charcoal/10"><td className="py-2 text-[0.75rem] uppercase tracking-[0.12em] text-oh-clay">{k}</td><td className="py-2 text-right font-display text-[1.2rem] tabular-nums">{v}</td><td className="py-2 pl-4 text-[0.8rem] text-oh-stone">{n}</td></tr>))}</tbody></table>
       <p className="m-0 mt-4 leading-relaxed"><span className="font-display text-[1.05rem]">{t("benchmarkClaim")}</span> <span className="text-oh-stone">{t("benchmarkText")}</span></p>
     </div>
   );
@@ -40,8 +40,8 @@ export async function UnitEconomicsPrint() {
   ];
   return (
     <table className="mt-6 w-full border-collapse text-[0.85rem] text-oh-charcoal">
-      <thead><tr className="border-b border-oh-charcoal/30 text-oh-ash"><th className="py-1.5 text-left font-normal">{t("proForma")}</th>{(["conservative", "base", "aggressive"] as const).map((k) => (<th key={k} className="py-1.5 text-right font-normal">{tm(`scenario.${k}`)}</th>))}</tr></thead>
-      <tbody>{lines.map(([label, f]) => (<tr key={label} className="border-b border-oh-charcoal/10"><td className="py-1.5">{label}</td>{units.map((u, i) => (<td key={i} className="py-1.5 text-right tabular-nums">{money(f(u))}</td>))}</tr>))}<tr><td className="py-1.5 text-oh-ash">{tm("results.margin")}</td>{units.map((u, i) => (<td key={i} className="py-1.5 text-right tabular-nums">{pct(u.ebitdaMarginPct)}</td>))}</tr></tbody>
+      <thead><tr className="border-b border-oh-charcoal/30 text-oh-clay"><th className="py-1.5 text-left font-normal">{t("proForma")}</th>{(["conservative", "base", "aggressive"] as const).map((k) => (<th key={k} className="py-1.5 text-right font-normal">{tm(`scenario.${k}`)}</th>))}</tr></thead>
+      <tbody>{lines.map(([label, f]) => (<tr key={label} className="border-b border-oh-charcoal/10"><td className="py-1.5">{label}</td>{units.map((u, i) => (<td key={i} className="py-1.5 text-right tabular-nums">{money(f(u))}</td>))}</tr>))}<tr><td className="py-1.5 text-oh-clay">{tm("results.margin")}</td>{units.map((u, i) => (<td key={i} className="py-1.5 text-right tabular-nums">{pct(u.ebitdaMarginPct)}</td>))}</tr></tbody>
     </table>
   );
 }
@@ -73,7 +73,7 @@ export async function SensitivityPrint() {
     <div className="mt-6 flex flex-col gap-6 text-[0.85rem] text-oh-charcoal">
       <table className="w-full border-collapse">
         <caption className="mb-2 text-left font-display text-[1.1rem]">{t("tornado.title")}</caption>
-        <thead><tr className="border-b border-oh-charcoal/30 text-oh-ash"><th className="py-1.5 text-left font-normal">{t("tornado.lever")}</th><th className="py-1.5 text-right font-normal">{t("tornado.low")}</th><th className="py-1.5 text-right font-normal">{t("tornado.high")}</th><th className="py-1.5 text-right font-normal">{t("tornado.swing")}</th></tr></thead>
+        <thead><tr className="border-b border-oh-charcoal/30 text-oh-clay"><th className="py-1.5 text-left font-normal">{t("tornado.lever")}</th><th className="py-1.5 text-right font-normal">{t("tornado.low")}</th><th className="py-1.5 text-right font-normal">{t("tornado.high")}</th><th className="py-1.5 text-right font-normal">{t("tornado.swing")}</th></tr></thead>
         <tbody>{torn.bars.map((b) => (<tr key={b.key} className="border-b border-oh-charcoal/10"><td className="py-1.5">{tm(`levers.${b.key}`)}</td><td className="py-1.5 text-right tabular-nums">{money(b.atLow)}</td><td className="py-1.5 text-right tabular-nums">{money(b.atHigh)}</td><td className="py-1.5 text-right tabular-nums">{money(b.swing)}</td></tr>))}</tbody>
       </table>
       <div>

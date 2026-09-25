@@ -38,7 +38,7 @@ export default async function PlanLayout({ children, params }: Props) {
   const printHref = `/${locale}/plan/print`;
 
   return (
-    <div className={`${planFontVariables} plan-root flex min-h-screen shrink-0 flex-col bg-oh-charcoal text-oh-cream`}>
+    <div className={`${planFontVariables} ${locale.startsWith("zh") ? "font-cjk" : ""} plan-root flex min-h-screen shrink-0 flex-col bg-oh-charcoal text-oh-cream`}>
       <a href="#plan-content" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-md focus:bg-oh-ember focus:px-3 focus:py-2 focus:text-oh-cream">
         {t("skipToContent")}
       </a>
@@ -48,7 +48,7 @@ export default async function PlanLayout({ children, params }: Props) {
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 md:px-8">
           <a href={sectionHref(locale, { slug: "" })} className="flex items-center gap-3 text-oh-cream">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/Oh_Logo_Mark_Light.png" alt="" width={28} height={28} className="h-7 w-auto" />
+            <img src="/plan/mark-light-56.png" alt="" width={28} height={28} className="h-7 w-auto" />
             <span className="hidden font-display text-[1.05rem] tracking-wide sm:inline">{t("planTitle")}</span>
           </a>
           <div className="flex items-center gap-2 md:gap-3">

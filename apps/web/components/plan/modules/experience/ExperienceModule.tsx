@@ -13,18 +13,19 @@ function Step({ index, keyName }: { index: number; keyName: (typeof STEPS)[numbe
   const ref = useRef<HTMLDivElement>(null);
   // Scroll-linked, not scroll-triggered: opacity and lift follow the viewport position (spec 3.3).
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start 90%", "start 45%"] });
-  const opacity = useTransform(scrollYProgress, [0, 1], [0.25, 1]);
   const y = useTransform(scrollYProgress, [0, 1], [24, 0]);
   const even = index % 2 === 0;
   return (
-    <motion.article ref={ref} style={reduce ? undefined : { opacity, y }} className={["grid items-center gap-6 md:gap-12", even ? "md:grid-cols-[1fr_1.1fr]" : "md:grid-cols-[1.1fr_1fr]"].join(" ")}>
-      <div className={even ? "" : "md:order-2"}>
-        <p className="m-0 mb-2 font-display text-[0.9rem] tabular-nums tracking-[0.2em] text-oh-ember">{String(index + 1).padStart(2, "0")}</p>
+    <article ref={ref} className={["grid items-center gap-6 md:gap-12", even ? "md:grid-cols-[1fr_1.1fr]" : "md:grid-cols-[1.1fr_1fr]"].join(" ")}>
+      <motion.div style={reduce ? undefined : { y }} className={even ? "" : "md:order-2"}>
+        <p className="m-0 mb-2 font-display text-[0.9rem] tabular-nums tracking-[0.2em] text-oh-ember-light">{String(index + 1).padStart(2, "0")}</p>
         <h2 className="m-0 font-display text-[clamp(1.7rem,3.5vw,2.4rem)] leading-[1.05] text-oh-cream">{t(`steps.${keyName}.title`)}</h2>
         <p className="m-0 mt-4 max-w-md text-[1.02rem] leading-relaxed text-oh-mute">{t(`steps.${keyName}.body`)}</p>
-      </div>
-      <PhotoPlaceholder label={t("photoLabel")} needs={t(`steps.${keyName}.photo`)} className={even ? "" : "md:order-1"} />
-    </motion.article>
+      </motion.div>
+      <motion.div style={reduce ? undefined : { y }} className={even ? "" : "md:order-1"}>
+        <PhotoPlaceholder label={t("photoLabel")} needs={t(`steps.${keyName}.photo`)} />
+      </motion.div>
+    </article>
   );
 }
 
@@ -40,7 +41,7 @@ export function ExperienceModule() {
     <div data-plan-module="experience" className="flex flex-col gap-20 md:gap-28">
       <div className="mx-auto max-w-2xl text-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/Oh_Logo_Mark_Light.png" alt="" width={72} height={72} className="mx-auto mb-6 h-16 w-auto opacity-90" />
+        <img src="/plan/mark-light-176.png" alt="" width={72} height={72} className="mx-auto mb-6 h-16 w-auto opacity-90" />
         <p className="m-0 font-display text-[clamp(1.4rem,2.8vw,1.9rem)] leading-snug text-oh-cream">{t("intro")}</p>
       </div>
       {STEPS.map((k, i) => (
@@ -51,7 +52,7 @@ export function ExperienceModule() {
           <p className="m-0 mb-2 text-[0.72rem] uppercase tracking-[0.14em] text-oh-gold">{t("kiosk.eyebrow")}</p>
           <h2 className="m-0 font-display text-[clamp(1.6rem,3vw,2.2rem)] leading-[1.05] text-oh-cream">{t("kiosk.title")}</h2>
           <p className="m-0 mt-4 text-[1rem] leading-relaxed text-oh-mute">{t("kiosk.body")}</p>
-          <a href={`/${locale}/kiosk`} target="_blank" rel="noreferrer" className="mt-4 inline-block text-[0.85rem] text-oh-ember underline-offset-2 hover:underline">{t("kiosk.open")}</a>
+          <a href={`/${locale}/kiosk`} target="_blank" rel="noreferrer" className="mt-4 inline-block text-[0.85rem] text-oh-ember-light underline-offset-2 hover:underline">{t("kiosk.open")}</a>
         </div>
         <div className="mx-auto w-full max-w-[380px]">
           <div className="rounded-[2rem] border-[6px] border-oh-stone bg-oh-ink p-2 shadow-[0_30px_60px_rgba(0,0,0,0.5)]">

@@ -137,7 +137,7 @@ export function ModelModule({ initialScenario, initialOverrides, homeScenario }:
         <button type="button" onClick={reset} className="rounded-md border border-oh-stone bg-transparent px-3 py-1.5 text-[0.8rem] text-oh-mute hover:text-oh-cream focus:outline-none focus-visible:ring-2 focus-visible:ring-oh-ember">
           {t("actions.reset")}
         </button>
-        <button type="button" onClick={() => void share()} className="rounded-md bg-oh-ember px-3 py-1.5 text-[0.8rem] font-semibold text-oh-cream hover:bg-oh-clay focus:outline-none focus-visible:ring-2 focus-visible:ring-oh-cream">
+        <button type="button" onClick={() => void share()} className="rounded-md bg-oh-ember-deep px-3 py-1.5 text-[0.8rem] font-semibold text-oh-cream hover:bg-oh-ember focus:outline-none focus-visible:ring-2 focus-visible:ring-oh-cream">
           {copied ? t("actions.copied") : t("actions.share")}
         </button>
       </div>
@@ -241,7 +241,7 @@ export function ModelModule({ initialScenario, initialOverrides, homeScenario }:
           </div>
         ) : (
           <div className="flex justify-center pb-2">
-            <button type="button" onClick={() => setSheetOpen(true)} className="rounded-full bg-oh-ember px-4 py-2 text-[0.8rem] font-semibold text-oh-cream shadow-lg">
+            <button type="button" onClick={() => setSheetOpen(true)} className="rounded-full bg-oh-ember-deep px-4 py-2 text-[0.8rem] font-semibold text-oh-cream shadow-lg hover:bg-oh-ember">
               {t("actions.adjust")}
             </button>
           </div>

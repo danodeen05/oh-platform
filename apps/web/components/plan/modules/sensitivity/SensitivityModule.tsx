@@ -119,7 +119,7 @@ export function SensitivityModule({ initialScenario }: { initialScenario: Scenar
   const gridMax = Math.max(Math.abs(grid.min), Math.abs(grid.max));
   const cellColor = (v: number): string => {
     if (v < 0) return `rgba(193,80,46,${Math.min(1, 0.25 + (Math.abs(v) / gridMax) * 0.75)})`;
-    return `rgba(107,115,85,${Math.min(1, 0.12 + (v / gridMax) * 0.88)})`;
+    return `rgba(107,115,85,${Math.min(0.82, 0.12 + (v / gridMax) * 0.7)})`;
   };
   const tornadoMax = Math.max(...torn.bars.map((b) => Math.max(Math.abs(b.atLow - torn.base), Math.abs(b.atHigh - torn.base))), 1);
 
@@ -195,7 +195,7 @@ export function SensitivityModule({ initialScenario }: { initialScenario: Scenar
             </tbody>
           </table>
         </div>
-        <p className="m-0 mt-2 text-[0.75rem] text-oh-ash">{t("grid.legend")}</p>
+        <p className="m-0 mt-2 text-[0.75rem] text-oh-mute">{t("grid.legend")}</p>
       </section>
 
       <section>
@@ -224,7 +224,7 @@ export function SensitivityModule({ initialScenario }: { initialScenario: Scenar
         ) : (
           <p className="m-0 text-[0.85rem] text-oh-mute">{mcState === "unavailable" ? t("mc.unavailable") : t("mc.running")}</p>
         )}
-        <p className="m-0 mt-2 text-[0.75rem] text-oh-ash">{t("mc.note")}</p>
+        <p className="m-0 mt-2 text-[0.75rem] text-oh-mute">{t("mc.note")}</p>
       </section>
 
       <section>

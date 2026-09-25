@@ -187,7 +187,7 @@ export function FinancialsModule({ initialScenario }: { initialScenario: Scenari
               ))}
             </tbody>
           </table>
-          <p className="m-0 mt-3 text-[0.75rem] text-oh-ash">{t("platform.note", { pct: fmtPercent(BASE_ASSUMPTIONS.techPlatformPct, locale, 1), license: fmtCurrency(FRANCHISE_TERMS.platformLicenseMonthly, { locale }) })}</p>
+          <p className="m-0 mt-3 text-[0.75rem] text-oh-mute">{t("platform.note", { pct: fmtPercent(BASE_ASSUMPTIONS.techPlatformPct, locale, 1), license: fmtCurrency(FRANCHISE_TERMS.platformLicenseMonthly, { locale }) })}</p>
         </div>
       </section>
     </div>

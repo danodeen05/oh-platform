@@ -89,7 +89,7 @@ export function GateForm({ nextPath, initialCode, labels }: Props) {
         aria-describedby={error ? "plan-code-error" : undefined}
         disabled={busy}
         className={[
-          "w-full rounded-lg border bg-oh-ink px-4 py-3.5 text-center text-[1.1rem] tracking-[0.12em] tabular-nums text-oh-cream placeholder:text-oh-ash focus:border-oh-ember focus:outline-none",
+          "w-full rounded-lg border bg-oh-ink px-4 py-3.5 text-center text-[1.1rem] tracking-[0.12em] tabular-nums text-oh-cream placeholder:text-oh-mute focus:border-oh-ember focus:outline-none",
           error ? "border-oh-ember" : "border-oh-stone",
         ].join(" ")}
       />
@@ -102,9 +102,9 @@ export function GateForm({ nextPath, initialCode, labels }: Props) {
         type="submit"
         disabled={busy || !code.trim()}
         className={[
-          "mt-4 w-full rounded-lg border-0 bg-oh-ember px-4 py-3.5 text-[1rem] font-semibold text-oh-cream focus:outline-none focus-visible:ring-2 focus-visible:ring-oh-cream",
+          "mt-4 w-full rounded-lg border-0 bg-oh-ember-deep px-4 py-3.5 text-[1rem] font-semibold text-oh-cream focus:outline-none focus-visible:ring-2 focus-visible:ring-oh-cream",
           busy ? "cursor-wait" : "cursor-pointer",
-          busy || !code.trim() ? "opacity-60" : "hover:bg-oh-clay",
+          busy || !code.trim() ? "opacity-60" : "hover:bg-oh-ember",
         ].join(" ")}
       >
         {busy ? labels.submitting : labels.submit}

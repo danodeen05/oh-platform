@@ -18,5 +18,5 @@ export default async function PlanPrintLayout({ children, params }: Props) {
   const { locale } = await params;
   const claims = await getPlanSession();
   if (!claims) redirect(`/${locale}/plan/gate?next=/${locale}/plan/print`);
-  return <div className={`${planFontVariables} plan-print min-h-screen shrink-0 bg-oh-paper text-oh-charcoal`}>{children}</div>;
+  return <div className={`${planFontVariables} ${locale.startsWith("zh") ? "font-cjk" : ""} plan-print min-h-screen shrink-0 bg-oh-paper text-oh-charcoal`}>{children}</div>;
 }

@@ -56,7 +56,7 @@ export async function TeamModule() {
             <dt className="text-oh-mute">{t("entity.office")}</dt><dd className="m-0 text-oh-cream">{ENTITY.office}</dd>
             <dt className="text-oh-mute">{t("entity.structure")}</dt><dd className="m-0 text-oh-cream">{t("entity.structureValue")}</dd>
           </dl>
-          <p className="m-0 mt-3 text-[0.72rem] text-oh-ash">{t("entity.note")}</p>
+          <p className="m-0 mt-3 text-[0.72rem] text-oh-mute">{t("entity.note")}</p>
         </div>
       </section>
 
@@ -81,7 +81,7 @@ export async function TeamModule() {
             const key = k === "beforeThree";
             return (
               <li key={k} className={["grid gap-2 border-l-2 py-3 pl-4 md:grid-cols-[10rem_1fr]", key ? "border-oh-ember" : "border-oh-stone"].join(" ")}>
-                <span className={["text-[0.8rem] tabular-nums", key ? "text-oh-ember" : "text-oh-mute"].join(" ")}>{t(`hiring.phases.${k}.when`)}</span>
+                <span className={["text-[0.8rem] tabular-nums", key ? "text-oh-ember-light" : "text-oh-mute"].join(" ")}>{t(`hiring.phases.${k}.when`)}</span>
                 <div>
                   <p className="m-0 font-display text-[1.05rem] text-oh-cream">{t(`hiring.phases.${k}.title`)}</p>
                   <p className="m-0 mt-1 text-[0.82rem] leading-snug text-oh-mute">{t(`hiring.phases.${k}.body`)}</p>

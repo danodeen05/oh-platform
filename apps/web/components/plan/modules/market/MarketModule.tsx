@@ -33,7 +33,7 @@ export function MarketModule() {
           <text x={220} y={330} textAnchor="middle" fill={CHART.gold} fontSize={12} style={{ letterSpacing: "0.14em" }}>{t("tam.sam")}</text>
           <text x={220} y={352} textAnchor="middle" fill={CHART.cream} fontSize={18} fontFamily="var(--font-display)">{money(SAM_USD)}</text>
           <line x1={220} y1={400} x2={300} y2={425} stroke={CHART.ember} strokeWidth={1} />
-          <text x={306} y={429} fill={CHART.ember} fontSize={12} style={{ letterSpacing: "0.14em" }}>{t("tam.som")} {money(som)}</text>
+          <text x={306} y={429} fill="#E07A5A" fontSize={12} style={{ letterSpacing: "0.14em" }}>{t("tam.som")} {money(som)}</text>
         </svg>
         <div>
           <h2 className="m-0 font-display text-[1.6rem] text-oh-cream">{t("tam.title")}</h2>
@@ -50,7 +50,7 @@ export function MarketModule() {
               </div>
             ))}
           </dl>
-          <p className="m-0 mt-3 text-[0.72rem] text-oh-ash">{t("tam.approx")}</p>
+          <p className="m-0 mt-3 text-[0.72rem] text-oh-mute">{t("tam.approx")}</p>
         </div>
       </section>
 
@@ -85,7 +85,7 @@ export function MarketModule() {
             </tbody>
           </table>
         </div>
-        <p className="m-0 mt-2 text-[0.72rem] text-oh-ash">{t("utah.approx")}</p>
+        <p className="m-0 mt-2 text-[0.72rem] text-oh-mute">{t("utah.approx")}</p>
       </section>
 
       <section className="grid items-start gap-8 md:grid-cols-[1fr_1fr]">
@@ -108,7 +108,7 @@ export function MarketModule() {
           <line x1={50} y1={155} x2={410} y2={155} stroke={CHART.stone} strokeDasharray="3 3" />
           <text x={230} y={322} textAnchor="middle" fill={CHART.mute} fontSize={11} style={{ letterSpacing: "0.12em" }}>{t("matrix.x")}</text>
           <text x={18} y={155} textAnchor="middle" fill={CHART.mute} fontSize={11} transform="rotate(-90 18 155)" style={{ letterSpacing: "0.12em" }}>{t("matrix.y")}</text>
-          <text x={400} y={148} textAnchor="end" fill={CHART.ember} fontSize={10} style={{ letterSpacing: "0.12em" }}>{t("matrix.quadrant")}</text>
+          <text x={400} y={148} textAnchor="end" fill="#E07A5A" fontSize={10} style={{ letterSpacing: "0.12em" }}>{t("matrix.quadrant")}</text>
           {COMPETITORS.map((c) => {
             const x = 50 + c.efficiency * 360;
             const y = 300 - c.experience * 290;

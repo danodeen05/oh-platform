@@ -29,7 +29,7 @@ export default async function PlanPrintPage({ params }: { params: Promise<{ loca
 
   return (
     <article className="mx-auto max-w-3xl px-6 py-10 md:px-10">
-      <div className="plan-print-noprint mb-8 flex items-center justify-between gap-4 text-[0.8rem] text-oh-ash">
+      <div className="plan-print-noprint mb-8 flex items-center justify-between gap-4 text-[0.8rem] text-oh-clay">
         <a href={`/${locale}/plan`} className="text-oh-clay underline-offset-2 hover:underline">
           {t("backToPlan")}
         </a>
@@ -39,26 +39,26 @@ export default async function PlanPrintPage({ params }: { params: Promise<{ loca
       <section className="plan-print-cover flex min-h-[80vh] flex-col justify-between">
         <div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/Oh_Logo_Mark_Web.png" alt="Oh!" width={64} height={64} className="mb-10 h-16 w-auto" />
+          <img src="/plan/mark-web-128.png" alt="Oh!" width={64} height={64} className="mb-10 h-16 w-auto" />
           <p className="m-0 mb-4 text-[0.75rem] uppercase tracking-[0.2em] text-oh-clay">{tShell("brand")}</p>
           <h1 className="m-0 font-display text-[3.4rem] font-normal leading-[1.02] text-oh-charcoal">{t("cover.title")}</h1>
           <p className="m-0 mt-5 max-w-xl text-[1.15rem] leading-relaxed text-oh-stone">{t("cover.subtitle")}</p>
         </div>
         <dl className="m-0 grid grid-cols-2 gap-6 border-t border-oh-charcoal/15 pt-6 text-[0.9rem]">
           <div>
-            <dt className="text-[0.7rem] uppercase tracking-[0.14em] text-oh-ash">{t("cover.preparedFor")}</dt>
+            <dt className="text-[0.7rem] uppercase tracking-[0.14em] text-oh-clay">{t("cover.preparedFor")}</dt>
             <dd className="m-0 mt-1 text-oh-charcoal">{claims.lbl}</dd>
           </div>
           <div>
-            <dt className="text-[0.7rem] uppercase tracking-[0.14em] text-oh-ash">{t("cover.generated")}</dt>
+            <dt className="text-[0.7rem] uppercase tracking-[0.14em] text-oh-clay">{t("cover.generated")}</dt>
             <dd className="m-0 mt-1 text-oh-charcoal">{generated}</dd>
           </div>
           <div>
-            <dt className="text-[0.7rem] uppercase tracking-[0.14em] text-oh-ash">{t("cover.baseRevenue")}</dt>
+            <dt className="text-[0.7rem] uppercase tracking-[0.14em] text-oh-clay">{t("cover.baseRevenue")}</dt>
             <dd className="m-0 mt-1 tabular-nums text-oh-charcoal">{fmt.number(unit.location.annualRevenue, { style: "currency", currency: "USD", maximumFractionDigits: 0 })}</dd>
           </div>
           <div>
-            <dt className="text-[0.7rem] uppercase tracking-[0.14em] text-oh-ash">{t("cover.confidential")}</dt>
+            <dt className="text-[0.7rem] uppercase tracking-[0.14em] text-oh-clay">{t("cover.confidential")}</dt>
             <dd className="m-0 mt-1 text-oh-charcoal">{t("cover.confidentialText")}</dd>
           </div>
         </dl>
@@ -87,12 +87,12 @@ export default async function PlanPrintPage({ params }: { params: Promise<{ loca
               return <Module locale={locale} />;
             })()
           ) : (
-            <p className="mt-8 rounded border border-dashed border-oh-ash/50 px-4 py-6 text-center text-[0.85rem] text-oh-ash">{t("placeholder")}</p>
+            <p className="mt-8 rounded border border-dashed border-oh-ash/50 px-4 py-6 text-center text-[0.85rem] text-oh-clay">{t("placeholder")}</p>
           )}
         </section>
       ))}
 
-      <footer className="plan-print-footer text-[0.7rem] text-oh-ash" aria-hidden="true">
+      <footer className="plan-print-footer text-[0.7rem] text-oh-clay" aria-hidden="true">
         {footer}
       </footer>
     </article>

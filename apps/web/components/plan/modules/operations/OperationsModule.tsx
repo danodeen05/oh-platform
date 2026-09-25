@@ -86,7 +86,7 @@ export function OperationsModule() {
         <ol className="m-0 grid list-none gap-3 p-0 sm:grid-cols-4" aria-live="off">
           {STATES.map((s, i) => (
             <li key={s} className={["rounded-lg border p-4 transition-colors", i === active ? "border-oh-ember bg-oh-ink" : "border-oh-stone bg-transparent"].join(" ")}>
-              <p className={["m-0 text-[0.68rem] uppercase tracking-[0.16em]", i === active ? "text-oh-ember" : "text-oh-mute"].join(" ")}>{s}</p>
+              <p className={["m-0 text-[0.68rem] uppercase tracking-[0.16em]", i === active ? "text-oh-ember-light" : "text-oh-mute"].join(" ")}>{s}</p>
               <p className="m-0 mt-1 font-display text-[1.1rem] text-oh-cream">{t(`lifecycle.states.${s}.title`)}</p>
               <p className="m-0 mt-1 text-[0.78rem] leading-snug text-oh-mute">{t(`lifecycle.states.${s}.body`)}</p>
             </li>
@@ -119,7 +119,7 @@ export function OperationsModule() {
                 const [from, to] = COVERAGE[r.key] ?? [0, 0];
                 return (
                   <tr key={r.key} className="border-b border-oh-stone">
-                    <td className="py-1.5 pr-3 text-oh-cream">{t(`labor.roles.${r.key}`)}<span className="ml-2 text-oh-ash">{r.kind === "management" ? t("labor.salaried") : ""}</span></td>
+                    <td className="py-1.5 pr-3 text-oh-cream">{t(`labor.roles.${r.key}`)}<span className="ml-2 text-oh-mute">{r.kind === "management" ? t("labor.salaried") : ""}</span></td>
                     <td className="py-1.5 pr-3 text-right tabular-nums text-oh-cream">{r.count}</td>
                     {HOURS.map((h) => (<td key={h} className="p-0.5"><div className={["h-3 rounded-sm", h + 0.5 > from && h < to ? (r.kind === "management" ? "bg-oh-gold/70" : "bg-oh-ember/80") : "bg-oh-ink"].join(" ")} /></td>))}
                   </tr>
@@ -128,7 +128,7 @@ export function OperationsModule() {
             </tbody>
           </table>
         </div>
-        <p className="m-0 mt-2 text-[0.75rem] text-oh-ash">{t("labor.note")}</p>
+        <p className="m-0 mt-2 text-[0.75rem] text-oh-mute">{t("labor.note")}</p>
       </section>
 
       <BenchmarkCallout eyebrow={t("commissary.eyebrow")} claim={t("commissary.claim")} benchmark={t("commissary.text")} />
@@ -139,7 +139,7 @@ export function OperationsModule() {
         <ol className="m-0 grid list-none gap-3 p-0 md:grid-cols-3">
           {(["planReview", "haccp", "manager", "inspection", "fireMarshal", "occupancy"] as const).map((k, i) => (
             <li key={k} className="rounded-lg border border-oh-stone bg-oh-ink p-4">
-              <p className="m-0 font-display text-[0.9rem] tabular-nums text-oh-ember">{String(i + 1).padStart(2, "0")}</p>
+              <p className="m-0 font-display text-[0.9rem] tabular-nums text-oh-ember-light">{String(i + 1).padStart(2, "0")}</p>
               <p className="m-0 mt-1 font-display text-[1.05rem] text-oh-cream">{t(`safety.steps.${k}.title`)}</p>
               <p className="m-0 mt-1 text-[0.8rem] leading-snug text-oh-mute">{t(`safety.steps.${k}.body`)}</p>
             </li>

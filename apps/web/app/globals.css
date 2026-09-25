@@ -25,7 +25,11 @@
   --color-oh-paper: #FAF7F1;
   --color-oh-ember: #C1502E;
   --color-oh-ember-light: #E07A5A;
+  /* Filled buttons: 4.5:1 against cream text at small sizes; ember itself is 4.0:1. */
+  --color-oh-ember-deep: #A94422;
   --color-oh-olive: #6B7355;
+  /* Olive as small text needs more light than the fill color has. */
+  --color-oh-olive-light: #8F9A75;
   --color-oh-gold: #C9A227;
   --color-oh-clay: #8C5A3C;
 }

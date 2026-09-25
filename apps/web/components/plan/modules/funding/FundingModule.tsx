@@ -97,7 +97,7 @@ export function FundingModule({ initialScenario }: { initialScenario: ScenarioKe
             <div key={r.key} className="rounded-lg border border-oh-stone bg-oh-ink p-5">
               <div className="flex items-baseline justify-between">
                 <h3 className="m-0 font-display text-[1.2rem] text-oh-cream">{t(`rounds.${r.key}.title`)}</h3>
-                <span className="font-display text-[1.4rem] tabular-nums text-oh-ember">{money(r.totalSources)}</span>
+                <span className="font-display text-[1.6rem] tabular-nums text-oh-ember">{money(r.totalSources)}</span>
               </div>
               <p className="m-0 mt-1 text-[0.8rem] text-oh-mute">{t(`rounds.${r.key}.when`)}</p>
               <div className="mt-4 grid grid-cols-2 gap-4 text-[0.8rem]">
@@ -178,7 +178,7 @@ export function FundingModule({ initialScenario }: { initialScenario: ScenarioKe
                     <td className="py-1.5">{t("year", { n: y.year })}</td>
                     <td className="py-1.5 text-right tabular-nums text-oh-mute">{full(y.corporateEbitda)}</td>
                     <td className="py-1.5 text-right tabular-nums">{full(y.distributions)}</td>
-                    <td className="py-1.5 text-right tabular-nums text-oh-olive">{full(y.founderDistribution)}</td>
+                    <td className="py-1.5 text-right tabular-nums text-oh-olive-light">{full(y.founderDistribution)}</td>
                     <td className="py-1.5 text-right tabular-nums">{full(y.partnerDistribution)}</td>
                     <td className="py-1.5 text-right tabular-nums text-oh-mute">{fmtMultiple(y.partnerMultipleToDate, locale, 2)}</td>
                   </tr>
@@ -214,7 +214,7 @@ export function FundingModule({ initialScenario }: { initialScenario: ScenarioKe
                 </tbody>
               </table>
             </div>
-            <p className="m-0 mt-2 text-[0.75rem] text-oh-ash">{t("partner.gridNote")}</p>
+            <p className="m-0 mt-2 text-[0.75rem] text-oh-mute">{t("partner.gridNote")}</p>
           </div>
         </div>
       </section>

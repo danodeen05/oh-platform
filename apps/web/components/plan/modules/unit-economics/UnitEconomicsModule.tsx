@@ -73,7 +73,7 @@ export function UnitEconomicsModule() {
         <p className="m-0 mb-2 text-[0.72rem] uppercase tracking-[0.14em] text-oh-mute">{t("pickMarket")}</p>
         <div className="flex flex-wrap gap-2">
           {PRESETS.map((p) => (
-            <button key={p.key} type="button" onClick={() => pick(p.key)} aria-pressed={p.key === marketKey} className={["rounded-full border px-3 py-1 text-[0.8rem]", p.key === marketKey ? "border-oh-ember bg-oh-ink text-oh-cream" : "border-oh-stone text-oh-mute hover:text-oh-cream"].join(" ")}>
+            <button key={p.key} type="button" onClick={() => pick(p.key)} aria-pressed={p.key === marketKey} className={["rounded-full border px-3 py-1 text-[0.8rem]", p.key === marketKey ? "border-oh-ember bg-oh-ink text-oh-cream" : "border-oh-stone bg-transparent text-oh-mute hover:text-oh-cream"].join(" ")}>
               {tx(`${p.key}.name`)}
             </button>
           ))}
@@ -109,7 +109,7 @@ export function UnitEconomicsModule() {
             ].map(([k, v, accent]) => (
               <div key={k as string} className="rounded-lg border border-oh-stone bg-oh-ink px-4 py-3">
                 <dt className="text-[0.66rem] uppercase tracking-[0.14em] text-oh-mute">{t(`results.${k as string}`)}</dt>
-                <dd className={["m-0 mt-1 font-display text-[1.4rem] leading-none tabular-nums", accent ? "text-oh-ember" : "text-oh-cream"].join(" ")}>{v as string}</dd>
+                <dd className={["m-0 mt-1 font-display text-[1.6rem] leading-none tabular-nums", accent ? "text-oh-ember" : "text-oh-cream"].join(" ")}>{v as string}</dd>
               </div>
             ))}
           </dl>
@@ -140,7 +140,7 @@ export function UnitEconomicsModule() {
               <tr className="font-semibold text-oh-cream"><th scope="row" className="py-2 text-left">{t("capexTotal")}</th><td className="py-2 text-right tabular-nums">{money(unit.capex.total)}</td></tr>
             </tbody>
           </table>
-          <p className="m-0 mt-2 text-[0.75rem] text-oh-ash">{preset.flagship ? t("capexFlagshipNote") : t("capexSubsequentNote", { savings: money(computeCapex(BASE.assumptions).total - computeCapex(BASE.assumptions, SUBSEQUENT_UNIT_OVERRIDES).total) })}</p>
+          <p className="m-0 mt-2 text-[0.75rem] text-oh-mute">{preset.flagship ? t("capexFlagshipNote") : t("capexSubsequentNote", { savings: money(computeCapex(BASE.assumptions).total - computeCapex(BASE.assumptions, SUBSEQUENT_UNIT_OVERRIDES).total) })}</p>
         </div>
       </div>
     </div>

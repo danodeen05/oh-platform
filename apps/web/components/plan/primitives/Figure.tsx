@@ -12,7 +12,7 @@ export function Figure({ children, caption, source }: Props) {
       <div className="rounded-lg border border-oh-stone bg-oh-ink p-4 md:p-6">{children}</div>
       <figcaption className="mt-3 text-[0.82rem] leading-snug text-oh-mute">
         {caption}
-        {source ? <span className="block text-oh-ash">{source}</span> : null}
+        {source ? <span className="block text-oh-mute">{source}</span> : null}
       </figcaption>
     </figure>
   );

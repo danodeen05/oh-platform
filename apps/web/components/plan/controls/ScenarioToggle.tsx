@@ -34,7 +34,7 @@ export function ScenarioToggle({ value, custom, labels, onChange }: Props) {
       <span
         role="radio"
         aria-checked={custom}
-        className={["rounded-md px-3 py-1.5 text-[0.8rem]", custom ? "bg-oh-charcoal text-oh-gold" : "text-oh-stone"].join(" ")}
+        className={["rounded-md px-3 py-1.5 text-[0.8rem]", custom ? "bg-oh-charcoal text-oh-gold" : "text-oh-mute"].join(" ")}
       >
         {labels.custom}
       </span>

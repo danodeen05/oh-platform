@@ -30,10 +30,10 @@ export default async function PlanGatePage({ params, searchParams }: Props) {
   const t = await getTranslations("plan.gate");
 
   return (
-    <main className={`${planFontVariables} flex min-h-screen shrink-0 items-center justify-center bg-oh-charcoal px-4 py-6 text-oh-cream`}>
+    <main className={`${planFontVariables} ${locale.startsWith("zh") ? "font-cjk" : ""} flex min-h-screen shrink-0 items-center justify-center bg-oh-charcoal px-4 py-6 text-oh-cream`}>
       <div className="w-full max-w-[420px] text-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/Oh_Logo_Mark_Light.png" alt="Oh!" width={88} height={88} className="mx-auto mb-8 block h-auto w-[88px]" />
+        <img src="/plan/mark-light-176.png" alt="Oh!" width={88} height={88} fetchPriority="high" className="mx-auto mb-8 block h-auto w-[88px]" />
         <h1 className="m-0 mb-3 font-display text-[clamp(1.8rem,5vw,2.4rem)] font-normal leading-[1.15] text-oh-cream">{t("title")}</h1>
         <p className="m-0 mb-8 text-[0.95rem] text-oh-mute">{t("subtitle")}</p>
         <GateForm
@@ -49,7 +49,7 @@ export default async function PlanGatePage({ params, searchParams }: Props) {
             errorNetwork: t("errorNetwork"),
           }}
         />
-        <p className="m-0 mt-10 text-[0.8rem] text-oh-ash">{t("help")}</p>
+        <p className="m-0 mt-10 text-[0.8rem] text-oh-mute">{t("help")}</p>
       </div>
     </main>
   );

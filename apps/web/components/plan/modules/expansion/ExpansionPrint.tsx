@@ -14,7 +14,7 @@ export async function ExpansionPrint({ locale }: { locale: string }) {
     <div className="mt-6 text-[0.85rem]">
       <table className="w-full border-collapse">
         <thead>
-          <tr className="border-b border-oh-charcoal/30 text-oh-ash">
+          <tr className="border-b border-oh-charcoal/30 text-oh-clay">
             <th className="py-1.5 text-left font-normal">{t("print.location")}</th>
             <th className="py-1.5 text-left font-normal">{t("print.structure")}</th>
             <th className="py-1.5 text-right font-normal">{t("print.opens")}</th>
@@ -46,7 +46,7 @@ export async function ExpansionPrint({ locale }: { locale: string }) {
       </table>
       <table className="mt-6 w-full border-collapse">
         <thead>
-          <tr className="border-b border-oh-charcoal/30 text-oh-ash">
+          <tr className="border-b border-oh-charcoal/30 text-oh-clay">
             <th className="py-1.5 text-left font-normal">{t("print.yearEnd")}</th>
             {yearEnds.map((m) => (
               <th key={m.month} className="py-1.5 text-right font-normal">{t("yearShort", { year: Math.floor(m.month / 12) + 1 })}</th>

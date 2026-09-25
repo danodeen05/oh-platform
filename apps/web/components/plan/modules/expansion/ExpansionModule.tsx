@@ -99,19 +99,19 @@ export function ExpansionModule() {
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <div role="radiogroup" aria-label={t("views.label")} className="inline-flex rounded-lg border border-oh-stone bg-oh-ink p-1">
               {VIEW_ORDER.map((v) => (
-                <button key={v} type="button" role="radio" aria-checked={view === v} onClick={() => { setView(v); setFollowView(false); }} className={["rounded-md px-3 py-1 text-[0.78rem]", view === v ? "bg-oh-charcoal text-oh-cream" : "text-oh-mute hover:text-oh-cream"].join(" ")}>
+                <button key={v} type="button" role="radio" aria-checked={view === v} onClick={() => { setView(v); setFollowView(false); }} className={["rounded-md px-3 py-1 text-[0.78rem]", view === v ? "bg-oh-charcoal text-oh-cream" : "bg-transparent text-oh-mute hover:text-oh-cream"].join(" ")}>
                   {t(`views.${v}`)}
                 </button>
               ))}
             </div>
-            <button type="button" onClick={() => { if (month >= HORIZON - 1) setMonth(0); setPlaying((p) => !p); setFollowView(true); }} className="rounded-md bg-oh-ember px-3 py-1 text-[0.78rem] font-semibold text-oh-cream hover:bg-oh-clay">
+            <button type="button" onClick={() => { if (month >= HORIZON - 1) setMonth(0); setPlaying((p) => !p); setFollowView(true); }} className="rounded-md bg-oh-ember-deep px-3 py-1 text-[0.78rem] font-semibold text-oh-cream hover:bg-oh-ember">
               {playing ? t("pause") : month >= HORIZON - 1 ? t("replay") : t("play")}
             </button>
             <span className="font-display tabular-nums text-[1.05rem] text-oh-gold">{yearOf(month)}</span>
           </div>
 
           <div className="sticky top-[7.5rem] z-10 overflow-hidden rounded-lg border border-oh-stone bg-oh-charcoal lg:static">
-            <svg viewBox={`0 0 ${MAP_W} ${MAP_H}`} className="block h-auto w-full" role="img" aria-label={t("mapAria", { view: t(`views.${view}`), month: yearOf(month) })}>
+            <svg viewBox={`0 0 ${MAP_W} ${MAP_H}`} className="block h-auto w-full" role="group" aria-label={t("mapAria", { view: t(`views.${view}`), month: yearOf(month) })}>
               <rect width={MAP_W} height={MAP_H} fill="#1C1B19" />
               {geo ? (
                 <g>
@@ -160,7 +160,7 @@ export function ExpansionModule() {
               <span className="tabular-nums">{yearOf(month)}</span>
             </label>
             <input id="plan-month" type="range" min={0} max={HORIZON - 1} step={1} value={month} aria-valuetext={yearOf(month)} onChange={(e) => { setMonth(Number(e.target.value)); setPlaying(false); setFollowView(true); }} className="h-6 w-full cursor-pointer appearance-none border-0 bg-transparent p-0 focus:outline-none [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-oh-cream [&::-moz-range-track]:h-1 [&::-moz-range-track]:rounded-full [&::-moz-range-track]:bg-oh-stone [&::-webkit-slider-runnable-track]:h-1 [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:bg-oh-stone [&::-webkit-slider-thumb]:-mt-1.5 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-oh-cream" />
-            <div className="flex justify-between text-[0.68rem] tabular-nums text-oh-ash">
+            <div className="flex justify-between text-[0.68rem] tabular-nums text-oh-mute">
               {[1, 2, 3, 4, 5, 6].map((y) => (
                 <span key={y}>{t("yearShort", { year: y })}</span>
               ))}
@@ -209,7 +209,7 @@ export function ExpansionModule() {
                 ))}
               </dl>
               <p className="m-0 mt-4 text-[0.85rem] leading-relaxed text-oh-mute">{tm(`${selectedPin.key}.notes`)}</p>
-              <p className="m-0 mt-3 text-[0.68rem] text-oh-ash">{t("card.approx")}</p>
+              <p className="m-0 mt-3 text-[0.68rem] text-oh-mute">{t("card.approx")}</p>
             </>
           ) : (
             <p className="m-0 text-[0.85rem] text-oh-mute">{t("card.hint")}</p>

@@ -31,7 +31,7 @@ export function RoadmapModule() {
     <div data-plan-module="roadmap">
       <div className="mb-4 flex flex-wrap items-center gap-2">
         {(["all", ...WORKSTREAMS] as const).map((w) => (
-          <button key={w} type="button" aria-pressed={filter === w} onClick={() => setFilter(w)} className={["inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[0.78rem]", filter === w ? "border-oh-cream text-oh-cream" : "border-oh-stone text-oh-mute hover:text-oh-cream"].join(" ")}>
+          <button key={w} type="button" aria-pressed={filter === w} onClick={() => setFilter(w)} className={["bg-transparent inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[0.78rem]", filter === w ? "border-oh-cream text-oh-cream" : "border-oh-stone text-oh-mute hover:text-oh-cream"].join(" ")}>
             {w !== "all" ? <span className="inline-block h-2 w-2 rounded-full" style={{ background: COLORS[w] }} /> : null}
             {t(`workstreams.${w}`)}
           </button>
@@ -66,7 +66,7 @@ export function RoadmapModule() {
           })}
         </svg>
       </div>
-      <p className="m-0 mt-3 text-[0.75rem] text-oh-ash">{t("note")}</p>
+      <p className="m-0 mt-3 text-[0.75rem] text-oh-mute">{t("note")}</p>
     </div>
   );
 }

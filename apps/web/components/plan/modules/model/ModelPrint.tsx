@@ -27,9 +27,9 @@ export async function ModelPrint({ locale }: { locale: string }) {
     <table className="mt-6 w-full border-collapse text-[0.85rem]">
       <thead>
         <tr className="border-b border-oh-charcoal/30">
-          <th className="py-2 text-left font-normal text-oh-ash">{t("print.line")}</th>
+          <th className="py-2 text-left font-normal text-oh-clay">{t("print.line")}</th>
           {units.map(({ key }) => (
-            <th key={key} className="py-2 text-right font-normal text-oh-ash">
+            <th key={key} className="py-2 text-right font-normal text-oh-clay">
               {t(`scenario.${key}`)}
             </th>
           ))}

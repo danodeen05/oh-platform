@@ -31,15 +31,15 @@ export async function MarketPrint() {
     <div className="mt-6 flex flex-col gap-6 text-[0.85rem] text-oh-charcoal">
       <table className="w-full border-collapse"><tbody>
         {[["tam", TAM_USD, t("tam.tamDef")], ["sam", SAM_USD, t("tam.samDef")], ["som", som, t("tam.somDef")]].map(([k, v, d]) => (
-          <tr key={k as string} className="border-b border-oh-charcoal/10"><td className="py-1.5 uppercase tracking-[0.12em] text-oh-ash">{t(`tam.${k as string}`)}</td><td className="py-1.5 text-right tabular-nums font-semibold">{compact(v as number)}</td><td className="py-1.5 pl-4 text-oh-stone">{d as string}</td></tr>
+          <tr key={k as string} className="border-b border-oh-charcoal/10"><td className="py-1.5 uppercase tracking-[0.12em] text-oh-clay">{t(`tam.${k as string}`)}</td><td className="py-1.5 text-right tabular-nums font-semibold">{compact(v as number)}</td><td className="py-1.5 pl-4 text-oh-stone">{d as string}</td></tr>
         ))}
       </tbody></table>
       <p className="m-0 leading-relaxed">{t("som.claim", { share: fmt.number(som / TAM_USD, { style: "percent", maximumFractionDigits: 2 }) })} {t("som.text")}</p>
       <table className="w-full border-collapse">
-        <thead><tr className="border-b border-oh-charcoal/30 text-oh-ash"><th className="py-1.5 text-left font-normal">{t("utah.cols.market")}</th><th className="py-1.5 text-right font-normal">{t("utah.cols.population")}</th><th className="py-1.5 text-right font-normal">{t("utah.cols.growth")}</th><th className="py-1.5 text-right font-normal">{t("utah.cols.income")}</th><th className="py-1.5 text-right font-normal">{t("utah.cols.daytime")}</th><th className="py-1.5 text-right font-normal">{t("utah.cols.asian")}</th></tr></thead>
+        <thead><tr className="border-b border-oh-charcoal/30 text-oh-clay"><th className="py-1.5 text-left font-normal">{t("utah.cols.market")}</th><th className="py-1.5 text-right font-normal">{t("utah.cols.population")}</th><th className="py-1.5 text-right font-normal">{t("utah.cols.growth")}</th><th className="py-1.5 text-right font-normal">{t("utah.cols.income")}</th><th className="py-1.5 text-right font-normal">{t("utah.cols.daytime")}</th><th className="py-1.5 text-right font-normal">{t("utah.cols.asian")}</th></tr></thead>
         <tbody>{UTAH_ROWS.map((r) => (<tr key={r.key} className="border-b border-oh-charcoal/10"><td className="py-1.5">{tm(`${r.key}.name`)}</td><td className="py-1.5 text-right tabular-nums">{fmt.number(r.population)}</td><td className="py-1.5 text-right tabular-nums">{fmt.number(r.growth5y, { style: "percent" })}</td><td className="py-1.5 text-right tabular-nums">{fmt.number(r.householdIncome, { style: "currency", currency: "USD", maximumFractionDigits: 0 })}</td><td className="py-1.5 text-right tabular-nums">{fmt.number(r.daytimeWorkers)}</td><td className="py-1.5 text-right tabular-nums">{compact(r.asianDiningSpend)}</td></tr>))}</tbody>
       </table>
-      <p className="m-0 text-[0.75rem] text-oh-ash">{t("utah.approx")}</p>
+      <p className="m-0 text-[0.75rem] text-oh-clay">{t("utah.approx")}</p>
     </div>
   );
 }
@@ -65,8 +65,8 @@ export async function TeamPrint() {
   const pct = (v: number) => new Intl.NumberFormat(locale, { style: "percent", maximumFractionDigits: 0 }).format(v);
   return (
     <div className="mt-6 flex flex-col gap-4 text-[0.85rem] text-oh-charcoal">
-      <div><p className="m-0 text-[0.7rem] uppercase tracking-[0.14em] text-oh-ash">{t("founder.role", { pct: pct(own.founderPct) })}</p><p className="m-0 font-display text-[1.3rem]">{t("founder.name")}</p><p className="m-0 mt-1 leading-relaxed text-oh-stone">{t("founder.bio")}</p></div>
-      <div><p className="m-0 text-[0.7rem] uppercase tracking-[0.14em] text-oh-ash">{t("partner.role", { pct: pct(own.partnerPct) })}</p><p className="m-0 leading-relaxed text-oh-stone">{t("partner.body", { capital: new Intl.NumberFormat(locale, { style: "currency", currency: "USD", notation: "compact", maximumFractionDigits: 1 }).format(PARTNERSHIP_TERMS.partnerCapital), cap: pct(PARTNERSHIP_TERMS.partnerPctCap) })}</p></div>
+      <div><p className="m-0 text-[0.7rem] uppercase tracking-[0.14em] text-oh-clay">{t("founder.role", { pct: pct(own.founderPct) })}</p><p className="m-0 font-display text-[1.3rem]">{t("founder.name")}</p><p className="m-0 mt-1 leading-relaxed text-oh-stone">{t("founder.bio")}</p></div>
+      <div><p className="m-0 text-[0.7rem] uppercase tracking-[0.14em] text-oh-clay">{t("partner.role", { pct: pct(own.partnerPct) })}</p><p className="m-0 leading-relaxed text-oh-stone">{t("partner.body", { capital: new Intl.NumberFormat(locale, { style: "currency", currency: "USD", notation: "compact", maximumFractionDigits: 1 }).format(PARTNERSHIP_TERMS.partnerCapital), cap: pct(PARTNERSHIP_TERMS.partnerPctCap) })}</p></div>
       <p className="m-0 text-oh-stone">Oh! Beef Noodle Soup, LLC. {t("entity.number")} 14642519-0160. {t("entity.structureValue")}. {t("entity.note")}</p>
       <ul className="m-0 list-disc pl-5">{(["operator", "culinary", "franchise"] as const).map((k) => (<li key={k}>{t(`advisory.seats.${k}.title`)}: <span className="text-oh-stone">{t(`advisory.seats.${k}.why`)}</span></li>))}</ul>
     </div>
@@ -82,8 +82,8 @@ export async function RoadmapPrint() {
     <div className="mt-6 text-[0.85rem] text-oh-charcoal">
       <p className="m-0 mb-3 text-oh-stone">{t("t0")}</p>
       <table className="w-full border-collapse">
-        <thead><tr className="border-b border-oh-charcoal/30 text-oh-ash"><th className="py-1.5 text-left font-normal">{t("workstreams.all")}</th><th className="py-1.5 text-left font-normal"></th><th className="py-1.5 text-right font-normal">{t("t0Label")}</th></tr></thead>
-        <tbody>{[...ROADMAP].sort((a, b) => a.start - b.start).map((it) => (<tr key={it.key} className="border-b border-oh-charcoal/10"><td className="py-1">{it.done ? "✓ " : ""}{label(it.key, it.location)}</td><td className="py-1 text-oh-ash">{t(`workstreams.${it.workstream}`)}</td><td className="py-1 text-right tabular-nums">{it.milestone ? fmtM(it.start) : `${fmtM(it.start)} → ${fmtM(it.end)}`}</td></tr>))}</tbody>
+        <thead><tr className="border-b border-oh-charcoal/30 text-oh-clay"><th className="py-1.5 text-left font-normal">{t("workstreams.all")}</th><th className="py-1.5 text-left font-normal"></th><th className="py-1.5 text-right font-normal">{t("t0Label")}</th></tr></thead>
+        <tbody>{[...ROADMAP].sort((a, b) => a.start - b.start).map((it) => (<tr key={it.key} className="border-b border-oh-charcoal/10"><td className="py-1">{it.done ? "✓ " : ""}{label(it.key, it.location)}</td><td className="py-1 text-oh-clay">{t(`workstreams.${it.workstream}`)}</td><td className="py-1 text-right tabular-nums">{it.milestone ? fmtM(it.start) : `${fmtM(it.start)} → ${fmtM(it.end)}`}</td></tr>))}</tbody>
       </table>
     </div>
   );
