@@ -2203,7 +2203,10 @@
         "PARTNER": "Partner",
         "ADVISOR": "Advisor",
         "INTERNAL": "Internal"
-      }
+      },
+      "notFoundTitle": "That page is not part of your plan.",
+      "notFoundBody": "The link may be out of date, or this section is not included in your invitation. Everything you have access to is in the navigation above.",
+      "backToSummary": "Back to the summary"
     },
     "sections": {
       "summary": {

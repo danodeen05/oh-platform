@@ -19,9 +19,10 @@ interface Props {
 }
 
 /**
- * Section navigation. Desktop: a horizontally scrolling row under the top
- * bar. Phones: a fixed bottom bar with icons and short labels, thumb-reachable
- * (spec 3.3 and 7.1). Both render from the same list; CSS decides.
+ * Section navigation. Desktop: a wrapping row under the top bar so all
+ * thirteen sections stay visible. Phones: a fixed bottom bar that scrolls
+ * sideways, with icons and short labels, thumb-reachable (spec 3.3 and 7.1).
+ * Both render from the same list; CSS decides.
  */
 export function PlanNav({ locale, sections, labels }: Props) {
   const pathname = usePathname();
@@ -29,7 +30,7 @@ export function PlanNav({ locale, sections, labels }: Props) {
 
   return (
     <nav aria-label={labels.sections} className="plan-nav">
-      <ul className="m-0 flex list-none gap-1 overflow-x-auto p-0 md:gap-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <ul className="m-0 flex list-none gap-1 overflow-x-auto p-0 md:flex-wrap md:gap-x-1 md:gap-y-1 md:overflow-visible [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {sections.map((s) => {
           const active = s.key === current;
           return (

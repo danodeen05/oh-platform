@@ -202,7 +202,7 @@ describe("/plan/auth", () => {
     }
   });
 
-  test("6th attempt from the same ipHash within 15 minutes is rate limited", async () => {
+  test("6th attempt after 5 failures from the same ipHash within 15 minutes is rate limited", async () => {
     for (let i = 0; i < 5; i += 1) {
       const r = await app.inject(auth({ code: "OH-NOPE-0000", ipHash: "same" }));
       assert.equal(r.statusCode, 401);
@@ -212,6 +212,20 @@ describe("/plan/auth", () => {
     assert.equal(sixth.json().error, "rate_limited");
     const other = await app.inject(auth({ code: "OH-KESTREL-7742", ipHash: "different" }));
     assert.equal(other.statusCode, 200);
+  });
+
+  test("successful logins never count toward the limit and a success clears earlier failures", async () => {
+    for (let i = 0; i < 8; i += 1) {
+      const r = await app.inject(auth({ code: "OH-KESTREL-7742", ipHash: "office" }));
+      assert.equal(r.statusCode, 200, `login ${i + 1} from a shared IP`);
+    }
+    for (let i = 0; i < 4; i += 1) await app.inject(auth({ code: "OH-NOPE-0000", ipHash: "retry" }));
+    const ok = await app.inject(auth({ code: "OH-KESTREL-7742", ipHash: "retry" }));
+    assert.equal(ok.statusCode, 200);
+    for (let i = 0; i < 4; i += 1) {
+      const r = await app.inject(auth({ code: "OH-NOPE-0000", ipHash: "retry" }));
+      assert.equal(r.statusCode, 401, "counter was reset by the success");
+    }
   });
 });
 

@@ -10,7 +10,7 @@
  *   - Wrong, revoked, expired, and over-limit codes all return the same 401 body.
  *   - Raw access codes are never logged. Raw IPs never reach this service; the
  *     web BFF sends a salted hash.
- *   - /plan/auth is rate limited per ipHash: 5 attempts per 15 minutes.
+ *   - /plan/auth is rate limited per ipHash: 5 FAILED attempts per 15 minutes; successes do not count.
  *
  * Deps (prisma, sendSms) are injectable so the routes can be tested with
  * fastify.inject() and a stub, without a database.
@@ -76,40 +76,63 @@ export async function registerPlanRoutes(app, deps = {}) {
   // BFF routes
   // ------------------------------------------------------------------
 
+  // Failed-attempt limiter for /plan/auth: 5 failures per ipHash per 15
+  // minutes. Successful logins do not count, so an office or a family behind
+  // one IP can each open their invitation without locking the others out.
+  // In-memory, like the plugin store it replaces (the API runs one replica).
+  const FAIL_MAX = 5;
+  const FAIL_WINDOW_MS = 15 * 60 * 1000;
+  const failures = new Map();
+  const failKey = (req) => {
+    const h = req.headers["x-plan-ip-hash"];
+    return typeof h === "string" && h ? `plan:${h}` : `plan-ip:${req.ip}`;
+  };
+  const isLocked = (key, t) => {
+    const entry = failures.get(key);
+    if (!entry) return false;
+    if (entry.resetAt <= t) {
+      failures.delete(key);
+      return false;
+    }
+    return entry.count >= FAIL_MAX;
+  };
+  const recordFailure = (key, t) => {
+    if (failures.size > 10_000) {
+      for (const [k, e] of failures) if (e.resetAt <= t) failures.delete(k);
+    }
+    const entry = failures.get(key);
+    if (!entry || entry.resetAt <= t) failures.set(key, { count: 1, resetAt: t + FAIL_WINDOW_MS });
+    else entry.count += 1;
+  };
+
   app.post(
     "/plan/auth",
-    {
-      onRequest: requirePlanApiKey,
-      config: {
-        rateLimit: {
-          max: 5,
-          timeWindow: "15 minutes",
-          // Runs in the onRequest phase, before the body is parsed, so the
-          // web BFF sends the salted IP hash as a header, not in the body.
-          keyGenerator: (req) => {
-            const h = req.headers["x-plan-ip-hash"];
-            return typeof h === "string" && h ? `plan:${h}` : `plan-ip:${req.ip}`;
-          },
-          errorResponseBuilder: () => ({ error: "rate_limited", statusCode: 429 }),
-        },
-      },
-    },
+    { onRequest: requirePlanApiKey },
     async (req, reply) => {
+      const t = now().getTime();
+      const key = failKey(req);
+      if (isLocked(key, t)) return reply.code(429).send({ error: "rate_limited", statusCode: 429 });
+      const fail = () => {
+        recordFailure(key, t);
+        return reply.code(401).send(INVALID);
+      };
+
       const body = req.body || {};
       const ipHashHeader = req.headers["x-plan-ip-hash"];
       const ipHash = typeof ipHashHeader === "string" ? ipHashHeader.slice(0, 128) : null;
       const code = normalizeCode(body.code);
-      if (!code) return reply.code(401).send(INVALID);
+      if (!code) return fail();
 
       const record = await prisma.planAccessCode.findUnique({
         where: { code },
         include: { _count: { select: { sessions: true } } },
       });
 
-      if (!isActive(record, now())) return reply.code(401).send(INVALID);
+      if (!isActive(record, now())) return fail();
       if (record.maxSessions !== null && record.maxSessions !== undefined && record._count.sessions >= record.maxSessions) {
-        return reply.code(401).send(INVALID);
+        return fail();
       }
+      failures.delete(key);
 
       const session = await prisma.planViewSession.create({
         data: {

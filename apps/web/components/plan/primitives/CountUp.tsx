@@ -35,16 +35,22 @@ function format(v: number, p: Props): string {
   }
 }
 
+/** Figures already animated in this page session; re-entering a section does not replay them (spec 3.3). */
+const seen = new Set<string>();
+
 /**
- * Counts from zero to `value` once, on first mount, then tracks later value
- * changes instantly (spec 3.3: count up on first view only). Reduced motion
- * renders the final figure immediately. Tabular numerals stop the jitter.
+ * Counts from zero to `value` once, on first view, then tracks later value
+ * changes instantly. A figure seen earlier in the session (same kind and
+ * value) renders final immediately, as does reduced motion. Tabular numerals
+ * stop the jitter.
  */
 export function CountUp(props: Props) {
   const { value, duration = 900 } = props;
   const reduce = useReducedMotion();
-  const [shown, setShown] = useState<number>(reduce ? value : 0);
-  const done = useRef(reduce === true);
+  const key = `${props.kind}:${value}`;
+  const skip = reduce === true || seen.has(key);
+  const [shown, setShown] = useState<number>(skip ? value : 0);
+  const done = useRef(skip);
 
   useEffect(() => {
     if (done.current) {
@@ -58,11 +64,14 @@ export function CountUp(props: Props) {
       const eased = 1 - Math.pow(1 - t, 3);
       setShown(value * eased);
       if (t < 1) frame = requestAnimationFrame(step);
-      else done.current = true;
+      else {
+        done.current = true;
+        seen.add(key);
+      }
     };
     frame = requestAnimationFrame(step);
     return () => cancelAnimationFrame(frame);
-  }, [value, duration]);
+  }, [value, duration, key]);
 
   return (
     <span className={["tabular-nums", props.className ?? ""].join(" ")} aria-label={format(value, props)}>

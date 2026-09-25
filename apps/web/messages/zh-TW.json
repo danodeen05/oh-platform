@@ -2101,7 +2101,10 @@
         "PARTNER": "合作夥伴",
         "ADVISOR": "顧問",
         "INTERNAL": "內部"
-      }
+      },
+      "notFoundTitle": "此頁面不在您的計畫範圍內。",
+      "notFoundBody": "連結可能已過期，或您的邀請未包含此章節。您可閱讀的所有內容都列在上方導覽中。",
+      "backToSummary": "返回摘要"
     },
     "sections": {
       "summary": {
