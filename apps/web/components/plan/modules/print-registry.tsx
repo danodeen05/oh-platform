@@ -1,6 +1,8 @@
 import type { ComponentType } from "react";
 import type { SectionKey } from "@/lib/plan/sections";
 import { ModelPrint } from "./model/ModelPrint";
+import { FloorPlanPrint } from "./floor-plan/FloorPlanPrint";
+import { ExpansionPrint } from "./expansion/ExpansionPrint";
 
 /**
  * Print variants by section. Only the print route imports this, so the
@@ -9,4 +11,6 @@ import { ModelPrint } from "./model/ModelPrint";
  */
 export const PRINT_MODULES: Partial<Record<SectionKey, ComponentType<{ locale: string }>>> = {
   model: ModelPrint,
+  "floor-plan": FloorPlanPrint,
+  expansion: ExpansionPrint,
 };

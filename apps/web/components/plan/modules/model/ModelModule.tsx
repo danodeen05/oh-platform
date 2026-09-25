@@ -230,7 +230,7 @@ export function ModelModule({ initialScenario, initialOverrides, homeScenario }:
       {/* Phone: assumptions live in a bottom sheet above the section nav; results stay on top. */}
       <div className="fixed inset-x-0 bottom-[calc(3.6rem+env(safe-area-inset-bottom))] z-30 md:hidden">
         {sheetOpen ? (
-          <div className="max-h-[60vh] overflow-y-auto border-t border-oh-stone bg-oh-charcoal/98 px-4 pb-4 pt-3 shadow-[0_-12px_30px_rgba(0,0,0,0.5)] backdrop-blur">
+          <div className="max-h-[52vh] overflow-y-auto border-t border-oh-stone bg-oh-charcoal/98 px-4 pb-4 pt-3 shadow-[0_-12px_30px_rgba(0,0,0,0.5)] backdrop-blur">
             <div className="mb-2 flex items-center justify-between">
               <h2 className="m-0 text-[0.72rem] uppercase tracking-[0.14em] text-oh-mute">{t("leversTitle")}</h2>
               <button type="button" onClick={() => setSheetOpen(false)} className="rounded-md border border-oh-stone bg-transparent px-2 py-1 text-[0.75rem] text-oh-mute">

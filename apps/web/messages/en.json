@@ -2389,6 +2389,184 @@
         "coversPerDay": "Covers a day",
         "grossProfit": "Gross profit"
       }
+    },
+    "floorPlan": {
+      "zones": {
+        "entry": "Entry",
+        "dining": "Dining: 75 pods in three rows",
+        "kitchen": "Kitchen",
+        "boh": "Back of house and storage",
+        "restrooms": "Restrooms",
+        "kiosk": "Kiosks",
+        "corridor": "Sliding-panel delivery corridor",
+        "aisle": "Guest aisle",
+        "pass": "The pass"
+      },
+      "layers": {
+        "title": "Layers",
+        "pods": "Pods",
+        "corridors": "Corridors and aisles",
+        "kitchen": "Kitchen",
+        "boh": "Back of house",
+        "restrooms": "Restrooms",
+        "entry": "Entry and kiosks"
+      },
+      "zoom": {
+        "in": "Zoom in",
+        "out": "Zoom out",
+        "reset": "Reset",
+        "hint": "Hover or tap a pod. Ctrl + scroll zooms; drag to pan when zoomed."
+      },
+      "pod": {
+        "single": "Single",
+        "duo": "Convertible duo",
+        "title": "Pod {number}",
+        "detail": "{type}. Row {row}, position {position}. Panel opens to the {panel} corridor.",
+        "size": "{w} × {d} ft",
+        "hint": "Hover or tap any pod for its number, type and position. Gold edges mark convertible duos.",
+        "aria": "Pod {number}, {type}, row {row}, position {position}",
+        "panel": {
+          "north": "north",
+          "south": "south"
+        }
+      },
+      "areas": {
+        "title": "Square footage",
+        "dining": "Dining",
+        "kitchen": "Kitchen",
+        "boh": "BOH and storage",
+        "circulation": "Restrooms and circulation",
+        "total": "Total",
+        "sqft": "{value} sf"
+      },
+      "journey": {
+        "title": "One order, start to finish",
+        "play": "Play the order journey",
+        "pause": "Pause",
+        "replay": "Replay",
+        "note": "Real elapsed time {real}, shown in {anim} seconds.",
+        "steps": {
+          "order": "Order placed at the kiosk. No line, no host.",
+          "assigned": "Pod 38 assigned. The guest walks the aisle to it.",
+          "seated": "Seated, panel closed. The room is quiet.",
+          "fired": "Kitchen fires: broth to temperature, shank sliced to order.",
+          "assembled": "Bowl assembled at the pass, add-ons color-coded.",
+          "corridor": "Runner enters the delivery corridor behind the pods.",
+          "delivered": "Sliding panel opens, bowl arrives, panel closes. Nobody spoke."
+        }
+      },
+      "honesty": {
+        "eyebrow": "Saying it out loud",
+        "claim": "{pods} pods in {sqft} square feet is tight: about {perPod} square feet of dining per pod, circulation included.",
+        "text": "Each pod is {w} by {d} feet, the size of a first-class airline seat. It works because nobody pulls out a chair, no server walks a tray between tables, and every delivery happens from a corridor the guest never sees. The tightest number in the plan is the clearest proof of the format."
+      }
+    },
+    "expansion": {
+      "views": {
+        "label": "Map view",
+        "utah": "Utah",
+        "us": "United States",
+        "world": "World"
+      },
+      "play": "Play the timeline",
+      "pause": "Pause",
+      "replay": "Replay",
+      "month": "Year {year}, month {month}",
+      "yearShort": "Y{year}",
+      "scrubber": "Drag through the months",
+      "loadingMap": "Loading map",
+      "mapAria": "{view} map at {month}",
+      "counters": {
+        "locations": "Locations open",
+        "split": "{corporate} corporate, {franchise} franchise",
+        "runRate": "System revenue run-rate",
+        "pods": "Pods in service",
+        "covers": "Covers served to date"
+      },
+      "structure": {
+        "corporate": "Corporate",
+        "franchise": "Area-development franchise",
+        "jv": "Joint venture",
+        "master-franchise": "Master franchise",
+        "sub-franchise": "Sub-franchise"
+      },
+      "opens": "Opens {when}. {count} unit(s) in the plan.",
+      "card": {
+        "population": "Population",
+        "tradeArea": "Trade area",
+        "daytime": "Daytime density",
+        "auv": "Target AUV",
+        "approx": "Population and density figures are rounded public estimates. AUV is computed by the engine.",
+        "hint": "Select a pin for the market card."
+      },
+      "print": {
+        "location": "Location",
+        "structure": "Structure",
+        "opens": "Opens",
+        "yearEnd": "At year end"
+      },
+      "markets": {
+        "lehi": {
+          "name": "Lehi (Traverse Mountain)",
+          "notes": "Flagship. Daytime tech-corridor density, Silicon Slopes lunch traffic, I-15 visibility, home market, founder proximity."
+        },
+        "slc": {
+          "name": "Downtown SLC (City Creek)",
+          "notes": "Highest-visibility urban validation. Convention, tourist and office traffic. The location that makes national real estate conversations possible."
+        },
+        "south-jordan": {
+          "name": "South Jordan (Daybreak)",
+          "notes": "Fastest household formation in the state, a new entertainment anchor, weak incumbent Asian dining."
+        },
+        "provo": {
+          "name": "Provo (University Place)",
+          "notes": "40,000-plus students, very high beef noodle soup affinity among international students, proven high-velocity food-court adjacency."
+        },
+        "st-george": {
+          "name": "St. George",
+          "notes": "Tests the concept outside the Wasatch Front. Tourism-driven, Vegas-adjacent, validates transferability before national capital."
+        },
+        "nyc": {
+          "name": "New York City",
+          "notes": "Flagship-equivalent brand statement and the highest AUV potential in the system. Area-development franchise with a local operating partner."
+        },
+        "la": {
+          "name": "Los Angeles",
+          "notes": "Largest Taiwanese-American population in the country. Home-market authenticity credibility for the brand."
+        },
+        "las-vegas": {
+          "name": "Las Vegas",
+          "notes": "24-hour dayparts, tourist volume, operational proximity to Utah."
+        },
+        "seattle": {
+          "name": "Seattle",
+          "notes": "Tech-forward audience, strong Asian dining market, Pacific Northwest brand halo."
+        },
+        "taipei": {
+          "name": "Taipei",
+          "notes": "The homeland test. Winning here is the single most powerful brand asset available, and the highest-difficulty market."
+        },
+        "tokyo": {
+          "name": "Tokyo",
+          "notes": "Ichiran's home. The pod concept reads as native, not novel. Operationally the most compatible market on earth."
+        },
+        "london": {
+          "name": "London",
+          "notes": "English-language operations, mature Asian casual-dining market, gateway to Europe."
+        },
+        "paris": {
+          "name": "Paris",
+          "notes": "Sub-franchise under the London agreement. Regulatory and labor complexity argues against a standalone entity."
+        },
+        "singapore": {
+          "name": "Singapore",
+          "notes": "Highest per-capita dining spend in Asia, exceptional operator pool, regional headquarters candidate."
+        },
+        "melbourne": {
+          "name": "Melbourne",
+          "notes": "Strong Asian dining culture, counter-seasonal to the Northern Hemisphere."
+        }
+      }
     }
   }
 }

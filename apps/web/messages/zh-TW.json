@@ -2287,6 +2287,184 @@
         "coversPerDay": "每日客數",
         "grossProfit": "毛利"
       }
+    },
+    "floorPlan": {
+      "zones": {
+        "entry": "入口",
+        "dining": "用餐區：三排共 75 個座艙",
+        "kitchen": "廚房",
+        "boh": "後場與儲藏",
+        "restrooms": "洗手間",
+        "kiosk": "點餐機",
+        "corridor": "推拉門送餐走道",
+        "aisle": "顧客通道",
+        "pass": "出餐口"
+      },
+      "layers": {
+        "title": "圖層",
+        "pods": "座艙",
+        "corridors": "走道與通道",
+        "kitchen": "廚房",
+        "boh": "後場",
+        "restrooms": "洗手間",
+        "entry": "入口與點餐機"
+      },
+      "zoom": {
+        "in": "放大",
+        "out": "縮小",
+        "reset": "重設",
+        "hint": "將滑鼠移到或點擊任一座艙。Ctrl + 捲動可縮放；放大後可拖曳平移。"
+      },
+      "pod": {
+        "single": "單人",
+        "duo": "可合併雙人",
+        "title": "座艙 {number}",
+        "detail": "{type}。第 {row} 排，第 {position} 位。推拉門面向{panel}側走道。",
+        "size": "{w} × {d} 英尺",
+        "hint": "將滑鼠移到或點擊任一座艙，查看編號、類型與位置。金色邊框為可合併雙人艙。",
+        "aria": "座艙 {number}，{type}，第 {row} 排第 {position} 位",
+        "panel": {
+          "north": "北",
+          "south": "南"
+        }
+      },
+      "areas": {
+        "title": "面積配置",
+        "dining": "用餐區",
+        "kitchen": "廚房",
+        "boh": "後場與儲藏",
+        "circulation": "洗手間與動線",
+        "total": "合計",
+        "sqft": "{value} 平方英尺"
+      },
+      "journey": {
+        "title": "一份訂單，從頭到尾",
+        "play": "播放點餐旅程",
+        "pause": "暫停",
+        "replay": "重播",
+        "note": "實際耗時 {real}，以 {anim} 秒呈現。",
+        "steps": {
+          "order": "在點餐機下單。沒有排隊，沒有帶位。",
+          "assigned": "指派座艙 38。顧客沿通道走到座位。",
+          "seated": "入座，關上推拉門。整個空間安靜無聲。",
+          "fired": "廚房開火：湯頭加熱到溫度，金錢腱現切。",
+          "assembled": "在出餐口組裝成碗，加料以顏色標示。",
+          "corridor": "送餐員進入座艙後方的送餐走道。",
+          "delivered": "推拉門打開，麵碗送達，門再關上。全程無人交談。"
+        }
+      },
+      "honesty": {
+        "eyebrow": "坦白說",
+        "claim": "{sqft} 平方英尺內放進 {pods} 個座艙很緊湊：含動線後每個座艙約 {perPod} 平方英尺的用餐空間。",
+        "text": "每個座艙 {w} × {d} 英尺，約等於一個頭等艙座位。它之所以可行，是因為沒有人需要拉開椅子，沒有服務生端著托盤在桌間穿梭，所有送餐都從顧客看不見的走道完成。計畫裡最緊的數字，正是這個模式最清楚的證明。"
+      }
+    },
+    "expansion": {
+      "views": {
+        "label": "地圖範圍",
+        "utah": "猶他",
+        "us": "美國",
+        "world": "全球"
+      },
+      "play": "播放時間軸",
+      "pause": "暫停",
+      "replay": "重播",
+      "month": "第 {year} 年第 {month} 月",
+      "yearShort": "第{year}年",
+      "scrubber": "拖曳瀏覽各月份",
+      "loadingMap": "載入地圖中",
+      "mapAria": "{view}地圖，{month}",
+      "counters": {
+        "locations": "營運中門市",
+        "split": "{corporate} 間直營，{franchise} 間加盟",
+        "runRate": "系統年化營收",
+        "pods": "服務中座艙",
+        "covers": "累計服務客數"
+      },
+      "structure": {
+        "corporate": "直營",
+        "franchise": "區域開發加盟",
+        "jv": "合資",
+        "master-franchise": "總代理加盟",
+        "sub-franchise": "次級加盟"
+      },
+      "opens": "{when}開幕。計畫中共 {count} 間。",
+      "card": {
+        "population": "人口",
+        "tradeArea": "商圈人口",
+        "daytime": "日間人流",
+        "auv": "目標單店年營收",
+        "approx": "人口與人流為四捨五入的公開估計值。單店年營收由財務引擎計算。",
+        "hint": "點選地圖上的據點以查看市場資料。"
+      },
+      "print": {
+        "location": "據點",
+        "structure": "型態",
+        "opens": "開幕",
+        "yearEnd": "年末"
+      },
+      "markets": {
+        "lehi": {
+          "name": "Lehi（Traverse Mountain）",
+          "notes": "旗艦店。科技走廊日間人口密集、Silicon Slopes 午餐客流、I-15 能見度、母市場、創辦人就近。"
+        },
+        "slc": {
+          "name": "鹽湖城市中心（City Creek）",
+          "notes": "能見度最高的都會驗證點。會展、觀光與辦公客流。讓全國性不動產談判成為可能的據點。"
+        },
+        "south-jordan": {
+          "name": "South Jordan（Daybreak）",
+          "notes": "全州家庭成長最快的區域、新的娛樂地標、既有亞洲餐飲薄弱。"
+        },
+        "provo": {
+          "name": "Provo（University Place）",
+          "notes": "四萬多名學生，國際學生對牛肉麵的高度喜好，已驗證的高流量美食街鄰近效應。"
+        },
+        "st-george": {
+          "name": "St. George",
+          "notes": "在 Wasatch Front 之外測試概念。觀光導向、鄰近拉斯維加斯，在引進全國性資本前驗證可複製性。"
+        },
+        "nyc": {
+          "name": "紐約",
+          "notes": "等同旗艦的品牌宣示，系統中單店營收潛力最高。與在地營運夥伴以區域開發加盟進入。"
+        },
+        "la": {
+          "name": "洛杉磯",
+          "notes": "全美最大的台裔人口。為品牌帶來母市場的道地可信度。"
+        },
+        "las-vegas": {
+          "name": "拉斯維加斯",
+          "notes": "24 小時營業時段、觀光客量、與猶他營運鄰近。"
+        },
+        "seattle": {
+          "name": "西雅圖",
+          "notes": "科技導向的客群、成熟的亞洲餐飲市場、太平洋西北的品牌光環。"
+        },
+        "taipei": {
+          "name": "台北",
+          "notes": "回到發源地的考驗。在此勝出是最有力的品牌資產，也是難度最高的市場。"
+        },
+        "tokyo": {
+          "name": "東京",
+          "notes": "一蘭的故鄉。座艙概念在此是原生而非新奇。營運上全球最相容的市場。"
+        },
+        "london": {
+          "name": "倫敦",
+          "notes": "英語營運環境、成熟的亞洲休閒餐飲市場、通往歐洲的門戶。"
+        },
+        "paris": {
+          "name": "巴黎",
+          "notes": "隸屬倫敦協議下的次級加盟。法規與勞動複雜度不利於獨立設點。"
+        },
+        "singapore": {
+          "name": "新加坡",
+          "notes": "亞洲人均外食支出最高、營運人才充沛、區域總部候選地。"
+        },
+        "melbourne": {
+          "name": "墨爾本",
+          "notes": "亞洲餐飲文化深厚，與北半球季節互補。"
+        }
+      }
     }
   }
 }

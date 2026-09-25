@@ -1,14 +1,12 @@
-import { getTranslations } from "next-intl/server";
 import { requireSection } from "@/lib/plan/session.server";
 import { SectionFrame } from "@/components/plan/shell/SectionFrame";
-import { Placeholder } from "@/components/plan/shell/Placeholder";
+import { FloorPlanModule } from "@/components/plan/modules/floor-plan/FloorPlanModule";
 
-export default async function Page() {
+export default async function FloorPlanPage() {
   await requireSection("floor-plan");
-  const t = await getTranslations("plan.shell");
   return (
     <SectionFrame sectionKey="floor-plan">
-      <Placeholder text={t("placeholder")} />
+      <FloorPlanModule />
     </SectionFrame>
   );
 }
