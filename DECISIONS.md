@@ -49,7 +49,9 @@ Owner decisions taken 2026-09-25 (supersede items 2, 4, 8, 11, 12, 13, 14 above)
 | 22 | Corporate vs franchise | Only the five Utah locations are corporate. From the sixth location on, everything is franchised: US metros (NYC, LA, Las Vegas, Seattle) as area-development franchises from year 4 with a $100K development fee and AUV indexes 1.3 to 1.5 ($5.5M to $6.3M); international master franchises and JVs per spec 5.9 | Portfolio has 5 locations; platform has 12 franchise units in Y4, 39 in Y5 (44 system), license ARR $950K in Y5 |
 | 23 | Owners | Two-owner model: founder plus the financial partner, at the derived split. The 49/51 LLC structure from spec 10 is not rendered | Team and Governance shows founder + partner |
 
-Still open: US metro dates and fees (item 22 defaults accepted "for now"); confirm the target multiple and exit multiple with the partner before the Funding module ships.
+| 24 | Ownership ceiling and exit option | Partner ownership is capped at 49% (`partnerPctCap`); the founder keeps control in every scenario. The return math now counts yearly distributions (50% of corporate EBITDA) plus the exit, and rounds UP to 5% so the target is met, not just missed. `computeOwnershipImpact` shows the founder's distributions, exit proceeds and total for any split, target (3x or 5x) and exit multiple, plus `buyoutAtTarget`: the price to buy the partner out once they have their target, the owner's "option to get out" | Base: 43% by the math, 45% headline, partner 3.1x. Conservative caps at 49% (partner ~2.0x). Aggressive 30%. At 49%/3x the founder's five-year total is ~$37M and the buyout at target is ~$26M, cheaper than the partner's market stake |
+
+Still open: US metro dates and fees (item 22 defaults accepted "for now"); confirm the 3x target, 5x exit multiple and 50% distribution rate with the partner before the Funding module ships.
 
 ## Plan shell (Phase 3), Sep 2026
 

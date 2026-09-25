@@ -233,17 +233,18 @@ describe("single financial partner (owner decision 2026-09-25)", () => {
   it("raises $10.7M in total: $3.2M round 1 and $7.5M round 2", () => {
     expect(own("base").totalCapital).toBe(10_700_000);
   });
-  it("implies a 50/50 split at base case for a 3x return on a 5x exit", () => {
+  it("implies 45% partner at base case for a 3x return (distributions plus a 5x exit)", () => {
     const o = own("base");
-    expect(o.partnerPctReturnBased).toBeCloseTo(0.5125, 3);
-    expect(o.partnerPct).toBe(0.5);
-    expect(o.founderPct).toBe(0.5);
-    expect(o.founderVsBenchmark).toBe("above");
-    expect(o.partnerMultipleAtHeadline).toBeCloseTo(2.93, 2);
+    expect(o.partnerPctReturnBased).toBeCloseTo(0.4297, 3);
+    expect(o.partnerPct).toBe(0.45);
+    expect(o.founderPct).toBeCloseTo(0.55, 9);
+    expect(o.cappedByOwner).toBe(false);
+    expect(o.partnerMultipleAtHeadline).toBeCloseTo(3.14, 2);
     expect(Math.round(o.exitEbitda)).toBe(12_292_545);
   });
-  it("moves to 85% partner at conservative and 35% at aggressive", () => {
-    expect(own("conservative").partnerPct).toBe(0.85);
-    expect(own("aggressive").partnerPct).toBe(0.35);
+  it("never exceeds the owner's 49% ceiling: conservative is capped, aggressive needs 30%", () => {
+    expect(own("conservative").partnerPct).toBe(0.49);
+    expect(own("conservative").cappedByOwner).toBe(true);
+    expect(own("aggressive").partnerPct).toBe(0.3);
   });
 });

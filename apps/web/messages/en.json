@@ -2289,7 +2289,7 @@
       "capital": "Capital to five locations",
       "capitalNote": "Two equity rounds from one financial partner plus the founder's contribution. No debt.",
       "partner": "Implied partner ownership",
-      "partnerNote": "Derived from a 3x return on a 5x EBITDA exit in year 5. The funding page lets you change every input.",
+      "partnerNote": "Derived from a 3x partner return on yearly distributions plus a 5x EBITDA exit in year 5, and never above 49%. The funding page lets you change every input.",
       "payback": "Payback from opening, years",
       "paybackNote": "Flagship, base case, unlevered, through the ramp"
     },

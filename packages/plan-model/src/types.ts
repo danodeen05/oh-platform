@@ -368,6 +368,10 @@ export interface PartnershipTerms {
   franchiseMarginPct: number;
   /** Typical operator stake when a partner funds all capital. */
   sweatEquityBenchmark: { min: number; max: number };
+  /** Owner's hard ceiling on partner ownership, e.g. 0.49. The headline never exceeds it. */
+  partnerPctCap: number;
+  /** Share of corporate EBITDA paid out to owners each year after reinvestment, tax and reserves. */
+  distributionPct: number;
 }
 
 export interface OwnershipModel {
@@ -379,18 +383,62 @@ export interface OwnershipModel {
   platformGrossProfit: number;
   franchiseContribution: number;
   exitValue: number;
+  /** Sum of yearly owner distributions through the exit year. */
+  totalDistributions: number;
   /** partnerCapital × targetMultiple. */
   requiredExitValue: number;
   /** requiredExitValue ÷ exitValue, clamped to 0..1. What the return math alone implies. */
   partnerPctReturnBased: number;
-  /** Return-based figure rounded to the nearest 5%. The headline. */
+  /** Return-based figure rounded up to 5%, then capped at partnerPctCap. The headline. */
   partnerPct: number;
+  /** True when the cap, not the return math, set the headline. */
+  cappedByOwner: boolean;
   founderPct: number;
   /** Where the founder's residual sits against the sweat-equity benchmark. */
   founderVsBenchmark: "below" | "within" | "above";
-  /** Partner's money-on-money multiple at the exit given partnerPct. */
+  /** Partner's money-on-money multiple at the exit given partnerPct (distributions plus exit proceeds). */
   partnerMultipleAtHeadline: number;
   owners: readonly Owner[];
+}
+
+/** What a given split means for each side, year by year and at the exit. */
+export interface OwnershipImpactYear {
+  year: number;
+  corporateEbitda: number;
+  distributions: number;
+  founderDistribution: number;
+  partnerDistribution: number;
+  cumulativePartnerReturn: number;
+  /** cumulativePartnerReturn ÷ partner capital. */
+  partnerMultipleToDate: number;
+}
+
+export interface OwnershipImpact {
+  partnerPct: number;
+  founderPct: number;
+  targetMultiple: number;
+  exitMultiple: number;
+  years: readonly OwnershipImpactYear[];
+  exitValue: number;
+  founderExitProceeds: number;
+  partnerExitProceeds: number;
+  founderCumulativeDistributions: number;
+  partnerCumulativeDistributions: number;
+  /** Distributions plus exit proceeds. */
+  founderTotal: number;
+  partnerTotal: number;
+  partnerMultipleAtExit: number;
+  /** First plan year in which distributions alone reach the target, or null within the horizon. */
+  targetYearFromDistributions: number | null;
+  /**
+   * The "option to get out": what the founder pays at the exit year to buy the
+   * partner's stake such that the partner's total (distributions received plus
+   * the payment) equals targetMultiple × capital. Zero when distributions
+   * already cleared the target.
+   */
+  buyoutAtTarget: number;
+  /** buyoutAtTarget as a multiple of the partner's exit-value share; below 1 means the buyout is cheaper than the market stake. */
+  buyoutVsMarket: number;
 }
 
 export interface DilutionModel {

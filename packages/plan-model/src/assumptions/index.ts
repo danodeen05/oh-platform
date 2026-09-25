@@ -141,6 +141,11 @@ export const ROUND_TWO: RoundAssumptions = Object.freeze({
  *    EBITDA after franchise support costs.
  *  - sweatEquityBenchmark 25% to 40%: what an operator who brings the
  *    concept and runs it typically keeps when a partner funds all capital.
+ *  - partnerPctCap 0.49: the owner will not give up control (owner decision
+ *    2026-09-25). The headline is min(return-based, cap); the gap is closed
+ *    by the buyout option in computeOwnershipImpact.
+ *  - distributionPct 0.5: half of corporate EBITDA is paid out each year;
+ *    the rest covers tax, reinvestment and reserves.
  */
 export const PARTNERSHIP_TERMS: PartnershipTerms = Object.freeze({
   founderKey: "founder",
@@ -152,6 +157,8 @@ export const PARTNERSHIP_TERMS: PartnershipTerms = Object.freeze({
   exitMultiple: 5.0,
   franchiseMarginPct: 0.6,
   sweatEquityBenchmark: Object.freeze({ min: 0.25, max: 0.4 }),
+  partnerPctCap: 0.49,
+  distributionPct: 0.5,
 });
 
 /** Fixed illustrative rates, units per USD (spec 7.4). Update the date when you update the rates. */
