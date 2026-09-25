@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
 
 interface Labels {
   codeLabel: string;
@@ -22,7 +21,6 @@ interface Props {
 type Status = "idle" | "submitting" | "invalid" | "rate_limited" | "network";
 
 export function GateForm({ nextPath, initialCode, labels }: Props) {
-  const router = useRouter();
   const [code, setCode] = useState(initialCode);
   const [status, setStatus] = useState<Status>("idle");
   const autoSubmitted = useRef(false);
@@ -38,8 +36,11 @@ export function GateForm({ nextPath, initialCode, labels }: Props) {
         body: JSON.stringify({ code: trimmed }),
       });
       if (res.ok) {
-        router.replace(nextPath);
-        router.refresh();
+        // Full navigation on purpose: the HttpOnly cookie was just set and the
+        // whole gated shell must render fresh on the server. A client
+        // transition here can stall behind a pending compile or a stale
+        // router cache, which reads as a stuck "Checking" button.
+        window.location.assign(nextPath);
         return;
       }
       setStatus(res.status === 429 ? "rate_limited" : "invalid");

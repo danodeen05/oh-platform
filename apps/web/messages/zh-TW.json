@@ -2211,6 +2211,82 @@
       "toc": "目錄",
       "placeholder": "章節內容將於下一版推出。所有數字皆於列印時由財務引擎計算。",
       "footer": "Oh! 牛肉麵商業計畫。編製對象：{label}。產生日期：{date}。機密文件。"
+    },
+    "model": {
+      "hint": "調整任一變數，所有數字即時重算。",
+      "leversTitle": "假設條件",
+      "minutes": "{value} 分鐘",
+      "scenario": {
+        "conservative": "保守",
+        "base": "基準",
+        "aggressive": "積極",
+        "custom": "自訂"
+      },
+      "levers": {
+        "utilizationRate": "座艙使用率",
+        "avgBowlPrice": "每碗價格",
+        "foodCostPct": "食材成本率",
+        "rentPerSqFtAnnual": "每平方英尺年租金",
+        "pods": "座艙數",
+        "kitchenFTE": "廚房人力（全職）",
+        "avgDwellMinutes": "平均用餐時間"
+      },
+      "results": {
+        "revenue": "年營收",
+        "ebitda": "EBITDA",
+        "margin": "EBITDA 利潤率",
+        "payback": "回本年數",
+        "breakEven": "每日損益兩平客數",
+        "ofCovers": "每日服務 {covers} 位",
+        "revPerSqFt": "每平方英尺營收",
+        "avgCheck": "平均客單價",
+        "coversPerDay": "每日客數"
+      },
+      "publicTarget": "我們對外公開的目標為 EBITDA {target}。此情境的結果為 {margin}。",
+      "waterfall": {
+        "title": "從營收到 EBITDA",
+        "revenue": "營收",
+        "cogs": "食材與包材",
+        "labor": "人力",
+        "occupancy": "租金",
+        "otherOpex": "其他營運費用",
+        "ebitda": "EBITDA"
+      },
+      "table": {
+        "show": "顯示數據表",
+        "hide": "顯示圖表"
+      },
+      "compare": {
+        "title": "與傳統全服務餐廳的比較",
+        "subtitle": "佔營收比例。人力這一項就是整個論點。",
+        "traditional": "傳統",
+        "oh": "Oh!",
+        "rows": {
+          "foodCost": "食材成本",
+          "labor": "人力",
+          "occupancy": "租金",
+          "otherOpex": "其他費用",
+          "ebitda": "EBITDA"
+        }
+      },
+      "benchmark": {
+        "eyebrow": "坦白說",
+        "claim": "此情境每平方英尺營收為 {value}。",
+        "text": "美國快休閒餐飲中位數約為每平方英尺 450 至 600 美元。前 10% 的營運者可超過 1,000 美元，Chick-fil-A 則在 1,500 美元以上。把使用率往下拉，看看數字落在哪裡。"
+      },
+      "actions": {
+        "reset": "恢復預設",
+        "share": "分享我的情境",
+        "copied": "已複製連結",
+        "copyManually": "請複製此連結",
+        "adjust": "調整假設",
+        "close": "完成"
+      },
+      "print": {
+        "line": "項目",
+        "coversPerDay": "每日客數",
+        "grossProfit": "毛利"
+      }
     }
   }
 }

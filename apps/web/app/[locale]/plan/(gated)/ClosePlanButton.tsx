@@ -1,13 +1,10 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-
 export function ClosePlanButton({ label, locale }: { label: string; locale: string }) {
-  const router = useRouter();
   async function close(): Promise<void> {
     await fetch("/api/plan/auth", { method: "DELETE" });
-    router.replace(`/${locale}/plan/gate`);
-    router.refresh();
+    // Full navigation: the cookie is gone and nothing client-side should survive it.
+    window.location.assign(`/${locale}/plan/gate`);
   }
   return (
     <button

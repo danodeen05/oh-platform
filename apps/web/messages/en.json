@@ -2313,6 +2313,82 @@
       "toc": "Contents",
       "placeholder": "Section content follows in the next release. Figures are computed from the financial engine at print time.",
       "footer": "Oh! Beef Noodle Soup business plan. Prepared for {label}. Generated {date}. Confidential."
+    },
+    "model": {
+      "hint": "Move a lever and everything recalculates.",
+      "leversTitle": "Assumptions",
+      "minutes": "{value} min",
+      "scenario": {
+        "conservative": "Conservative",
+        "base": "Base",
+        "aggressive": "Aggressive",
+        "custom": "Custom"
+      },
+      "levers": {
+        "utilizationRate": "Pod utilization",
+        "avgBowlPrice": "Bowl price",
+        "foodCostPct": "Food cost",
+        "rentPerSqFtAnnual": "Rent per sq ft, yearly",
+        "pods": "Pods",
+        "kitchenFTE": "Kitchen staff (FTE)",
+        "avgDwellMinutes": "Average dwell time"
+      },
+      "results": {
+        "revenue": "Annual revenue",
+        "ebitda": "EBITDA",
+        "margin": "EBITDA margin",
+        "payback": "Payback, years",
+        "breakEven": "Break-even covers a day",
+        "ofCovers": "of {covers} served",
+        "revPerSqFt": "Revenue per sq ft",
+        "avgCheck": "Average check",
+        "coversPerDay": "Covers a day"
+      },
+      "publicTarget": "Our stated public target is {target} EBITDA. This scenario produces {margin}.",
+      "waterfall": {
+        "title": "From revenue to EBITDA",
+        "revenue": "Revenue",
+        "cogs": "Food and packaging",
+        "labor": "Labor",
+        "occupancy": "Occupancy",
+        "otherOpex": "Other operating",
+        "ebitda": "EBITDA"
+      },
+      "table": {
+        "show": "Show data table",
+        "hide": "Show chart"
+      },
+      "compare": {
+        "title": "Against a traditional full-service restaurant",
+        "subtitle": "Share of revenue. The labor line is the whole argument.",
+        "traditional": "Traditional",
+        "oh": "Oh!",
+        "rows": {
+          "foodCost": "Food cost",
+          "labor": "Labor",
+          "occupancy": "Occupancy",
+          "otherOpex": "Other opex",
+          "ebitda": "EBITDA"
+        }
+      },
+      "benchmark": {
+        "eyebrow": "Saying it out loud",
+        "claim": "This scenario runs {value} per square foot.",
+        "text": "US fast-casual median is roughly $450 to $600 per square foot. Top-decile operators clear $1,000; Chick-fil-A runs above $1,500. Pull the utilization lever down and watch where the line lands."
+      },
+      "actions": {
+        "reset": "Reset to default",
+        "share": "Share my scenario",
+        "copied": "Link copied",
+        "copyManually": "Copy this link",
+        "adjust": "Adjust assumptions",
+        "close": "Done"
+      },
+      "print": {
+        "line": "Line",
+        "coversPerDay": "Covers a day",
+        "grossProfit": "Gross profit"
+      }
     }
   }
 }

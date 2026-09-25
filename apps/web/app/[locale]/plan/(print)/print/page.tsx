@@ -4,6 +4,7 @@ import { getPlanSession } from "@/lib/plan/session.server";
 import { visibleSections } from "@/lib/plan/sections";
 import { redirect } from "next/navigation";
 import { PrintButton } from "./PrintButton";
+import { PRINT_MODULES } from "@/components/plan/modules/print-registry";
 import "../../print.css";
 
 /**
@@ -80,7 +81,14 @@ export default async function PlanPrintPage({ params }: { params: Promise<{ loca
           <p className="m-0 mb-2 font-display text-[0.9rem] tabular-nums tracking-[0.2em] text-oh-clay">{String(s.order).padStart(2, "0")}</p>
           <h2 className="m-0 font-display text-[2.4rem] font-normal leading-[1.05] text-oh-charcoal">{ts(`${s.titleKey}.title`)}</h2>
           <p className="m-0 mt-3 text-[1.05rem] leading-relaxed text-oh-stone">{ts(`${s.titleKey}.subtitle`, values)}</p>
-          <p className="mt-8 rounded border border-dashed border-oh-ash/50 px-4 py-6 text-center text-[0.85rem] text-oh-ash">{t("placeholder")}</p>
+          {PRINT_MODULES[s.key] ? (
+            (() => {
+              const Module = PRINT_MODULES[s.key] as NonNullable<(typeof PRINT_MODULES)[typeof s.key]>;
+              return <Module locale={locale} />;
+            })()
+          ) : (
+            <p className="mt-8 rounded border border-dashed border-oh-ash/50 px-4 py-6 text-center text-[0.85rem] text-oh-ash">{t("placeholder")}</p>
+          )}
         </section>
       ))}
 

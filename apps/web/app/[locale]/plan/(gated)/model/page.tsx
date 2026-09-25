@@ -1,14 +1,20 @@
-import { getTranslations } from "next-intl/server";
+import { decodeScenario, isScenarioKey, type ScenarioKey } from "@oh/plan-model";
 import { requireSection } from "@/lib/plan/session.server";
 import { SectionFrame } from "@/components/plan/shell/SectionFrame";
-import { Placeholder } from "@/components/plan/shell/Placeholder";
+import { ModelModule } from "@/components/plan/modules/model/ModelModule";
 
-export default async function Page() {
-  await requireSection("model");
-  const t = await getTranslations("plan.shell");
+type Props = { searchParams: Promise<{ s?: string }> };
+
+/** The Model. `?s=` carries a shared scenario; otherwise the code's default scenario opens. */
+export default async function ModelPage({ searchParams }: Props) {
+  const claims = await requireSection("model");
+  const { s } = await searchParams;
+  const home = claims.scn.toLowerCase();
+  const homeScenario: ScenarioKey = isScenarioKey(home) ? home : "base";
+  const shared = decodeScenario(s);
   return (
     <SectionFrame sectionKey="model">
-      <Placeholder text={t("placeholder")} />
+      <ModelModule initialScenario={shared?.base ?? homeScenario} initialOverrides={shared?.overrides ?? {}} homeScenario={homeScenario} />
     </SectionFrame>
   );
 }
