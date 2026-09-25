@@ -2279,12 +2279,16 @@
       "revPerSqFtNote": "US fast-casual median is roughly $450 to $600",
       "ebitdaTarget": "EBITDA target",
       "ebitdaTargetNote": "Public target. The model page shows the full margin.",
-      "dscr": "Debt service coverage",
-      "dscrNote": "Base case against the SBA 7(a) loan. Lenders want 1.25x.",
       "benchmarkEyebrow": "Saying it out loud",
       "benchmarkClaim": "Our base case sits at $1,200 per square foot. That is elite.",
       "benchmarkText": "US fast-casual median runs $450 to $600 per square foot. Top-decile operators clear $1,000. Chick-fil-A runs above $1,500. High-throughput, small-footprint, high-check formats get there, and the levers on the model page show exactly which assumptions carry it.",
-      "placeholder": "The narrative summary arrives with the module build. Everything above is computed live from the financial engine."
+      "placeholder": "The narrative summary arrives with the module build. Everything above is computed live from the financial engine.",
+      "capital": "Capital to five locations",
+      "capitalNote": "Two equity rounds from one financial partner plus the founder's contribution. No debt.",
+      "partner": "Implied partner ownership",
+      "partnerNote": "Derived from a 3x return on a 5x EBITDA exit in year 5. The funding page lets you change every input.",
+      "payback": "Payback from opening, years",
+      "paybackNote": "Flagship, base case, unlevered, through the ramp"
     },
     "primitives": {
       "showTable": "Show data table",

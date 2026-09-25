@@ -1,18 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { BASE, BASE_ASSUMPTIONS, DEFAULT_LOAN, computeUnit } from "../index";
+import { BASE, BASE_ASSUMPTIONS, NO_DEBT, SBA_REFERENCE_LOAN, computeUnit } from "../index";
 
 describe("computeUnit", () => {
   it("bundles the flagship story by default", () => {
-    const u = computeUnit(BASE, { loan: DEFAULT_LOAN });
+    const u = computeUnit(BASE, { loan: SBA_REFERENCE_LOAN });
     expect(u.scenario).toBe("base");
     expect(u.flagship).toBe(true);
     expect(u.capex.total).toBe(1_710_000);
-    expect(u.dscr).toBeCloseTo(6.476, 2);
+    expect(u.dscr).toBeCloseTo(6.248, 2);
     expect(u.ramp.months).toHaveLength(120);
     expect(u.ramp.payback.fromOpening).not.toBeNull();
   });
   it("uses subsequent-unit capex and a custom horizon", () => {
-    const u = computeUnit(BASE, { loan: DEFAULT_LOAN, flagship: false, months: 24 });
+    const u = computeUnit(BASE, { loan: NO_DEBT, flagship: false, months: 24 });
+    expect(u.dscr).toBeNull();
     expect(u.capex.total).toBe(1_411_000);
     expect(u.ramp.months).toHaveLength(24);
   });

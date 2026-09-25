@@ -50,9 +50,10 @@ export const BASE_ASSUMPTIONS: LocationAssumptions = Object.freeze({
   avgKitchenWage: 24.0,
   avgManagerSalary: 72_000,
   payrollBurdenPct: 0.18,
-  // 1,850 reproduces spec 5.5 ($537K labor, 12.8%). The CPA convention is
-  // 2,080, which gives $582K (13.9%) and drops EBITDA to 29.7%.
-  annualHoursPerFTE: 1850,
+  // Owner decision 2026-09-25: the CPA convention, 2,080. Labor is $582,259
+  // (13.9%) and base EBITDA 29.7%. 1,850 would reproduce the spec 5.5 table
+  // ($537K, 12.8%, 30.8%) but is not a defensible staffing assumption.
+  annualHoursPerFTE: 2080,
   rentPerSqFtAnnual: 34.0,
   nnnPerSqFtAnnual: 9.0,
   utilitiesPct: 0.03,

@@ -19,22 +19,22 @@ describe("location helpers", () => {
     expect(variableCostPct(BASE_ASSUMPTIONS)).toBeCloseTo(0.517, 9);
   });
   it("labor is hourly kitchen plus salaried management, burdened", () => {
-    expect(computeLabor(BASE_ASSUMPTIONS)).toBeCloseTo(536_664, 6);
-    expect(computeLabor({ ...BASE_ASSUMPTIONS, annualHoursPerFTE: 2080 })).toBeCloseTo(582_259.2, 6);
+    expect(computeLabor(BASE_ASSUMPTIONS)).toBeCloseTo(582_259.2, 6);
+    expect(computeLabor({ ...BASE_ASSUMPTIONS, annualHoursPerFTE: 1850 })).toBeCloseTo(536_664, 6);
   });
   it("occupancy is all-in rent per square foot", () => {
     expect(computeOccupancy(BASE_ASSUMPTIONS)).toBe(150_500);
-    expect(fixedCosts(BASE_ASSUMPTIONS)).toBeCloseTo(735_164, 6);
+    expect(fixedCosts(BASE_ASSUMPTIONS)).toBeCloseTo(780_759.2, 6);
   });
 });
 
 describe("computeLocation", () => {
   const m = computeLocation(BASE_ASSUMPTIONS);
   it("break-even is fixed costs over contribution margin", () => {
-    expect(m.fixedCosts).toBeCloseTo(735_164, 6);
+    expect(m.fixedCosts).toBeCloseTo(780_759.2, 6);
     expect(m.variableCostPct).toBeCloseTo(0.517, 9);
-    expect(m.breakEvenRevenue).toBeCloseTo(735_164 / 0.483, 3);
-    expect(m.breakEvenCoversPerDay).toBeCloseTo(735_164 / 0.483 / (26.3 * 355), 6);
+    expect(m.breakEvenRevenue).toBeCloseTo(780_759.2 / 0.483, 3);
+    expect(m.breakEvenCoversPerDay).toBeCloseTo(780_759.2 / 0.483 / (26.3 * 355), 6);
   });
   it("cost lines reconcile to the totals", () => {
     expect(m.lines).toHaveLength(13);
@@ -57,7 +57,7 @@ describe("computeLocation", () => {
     expect(dark.grossMarginPct).toBe(0);
     expect(dark.laborPct).toBe(0);
     expect(dark.ebitdaMarginPct).toBe(0);
-    expect(dark.ebitda).toBeCloseTo(-735_164, 6);
+    expect(dark.ebitda).toBeCloseTo(-780_759.2, 6);
     expect(dark.lines.find((l) => l.key === "labor")?.pct).toBe(0);
   });
   it("is deterministic", () => {
@@ -72,7 +72,7 @@ describe("compareToTraditional", () => {
     expect(rows[0]?.traditional).toBe(TRADITIONAL_RESTAURANT.foodCostPct);
     expect(rows[0]?.oh).toBeCloseTo(0.3, 9);
     // Other opex = every opex line except labor and occupancy, plus packaging.
-    expect(rows[3]?.oh).toBeCloseTo((1_541_837.6 - 536_664 - 150_500 + 105_035.625) / 4_201_425, 6);
+    expect(rows[3]?.oh).toBeCloseTo((1_587_432.8 - 582_259.2 - 150_500 + 105_035.625) / 4_201_425, 6);
   });
   it("returns zeros for a dark location", () => {
     const rows = compareToTraditional(computeLocation({ ...BASE_ASSUMPTIONS, utilizationRate: 0 }));

@@ -7,7 +7,7 @@ import {
   FRANCHISE_MARKETS,
   FX_RATES,
   OPENING_SCHEDULE,
-  OWNERS,
+  PARTNERSHIP_TERMS,
   RAMP_CURVE,
   ROUND_ONE,
   ROUND_TWO,
@@ -57,20 +57,24 @@ describe("reference data", () => {
     expect([...offsets].sort((a, b) => a - b)).toEqual(offsets);
     expect(OPENING_SCHEDULE.filter((o) => o.flagship)).toHaveLength(1);
     expect(OPENING_SCHEDULE[0]?.openMonth).toBe(0);
-    expect(OPENING_SCHEDULE.slice(0, 5).map((o) => o.openMonth)).toEqual([0, 4, 7, 10, 13]);
+    expect(OPENING_SCHEDULE.map((o) => o.openMonth)).toEqual([0, 16, 19, 22, 25]);
+    expect(OPENING_SCHEDULE.every((o) => o.structure === "corporate")).toBe(true);
   });
   it("both rounds balance", () => {
     expect(computeCapitalStack(ROUND_ONE).totalSources).toBe(3_200_000);
     expect(computeCapitalStack(ROUND_ONE).unallocated).toBe(0);
-    expect(computeCapitalStack(ROUND_TWO).totalSources).toBe(10_000_000);
+    expect(computeCapitalStack(ROUND_TWO).totalSources).toBe(7_500_000);
     expect(computeCapitalStack(ROUND_TWO).unallocated).toBe(0);
   });
-  it("owners sum to 100%", () => {
-    expect(OWNERS.reduce((s, o) => s + o.pct, 0)).toBeCloseTo(1, 9);
+  it("partner capital equals the equity in both rounds", () => {
+    const partner = [...ROUND_ONE.sources, ...ROUND_TWO.sources].filter((s) => s.key === "partnerEquity").reduce((s, x) => s + x.amount, 0);
+    expect(PARTNERSHIP_TERMS.partnerCapital).toBe(partner);
+    expect(PARTNERSHIP_TERMS.founderCapital).toBe(200_000);
   });
-  it("territory fees sit in the spec's range and Paris is a sub-franchise", () => {
+  it("territory fees sit in the spec's range, US metros carry a development fee, Paris is a sub-franchise", () => {
     for (const m of FRANCHISE_MARKETS) {
       if (m.structure === "sub-franchise") expect(m.territoryFee).toBe(0);
+      else if (m.structure === "franchise") expect(m.territoryFee).toBe(100_000);
       else {
         expect(m.territoryFee).toBeGreaterThanOrEqual(250_000);
         expect(m.territoryFee).toBeLessThanOrEqual(750_000);

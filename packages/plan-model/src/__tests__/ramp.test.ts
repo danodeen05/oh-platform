@@ -27,7 +27,7 @@ describe("computeRamp", () => {
     const month5 = r.months[4];
     const month2 = r.months[1];
     expect(month5?.ebitda).toBeLessThan(month2?.ebitda ?? 0);
-    expect(month5?.ebitda).toBeCloseTo((4_201_425 / 12) * 0.8 * 0.483 - 735_164 / 12, 6);
+    expect(month5?.ebitda).toBeCloseTo((4_201_425 / 12) * 0.8 * 0.483 - 780_759.2 / 12, 6);
   });
   it("without capex or debt, payback is undefined and cash flow is unlevered", () => {
     const r = computeRamp(BASE_ASSUMPTIONS, { months: 12 });
@@ -37,7 +37,7 @@ describe("computeRamp", () => {
   });
   it("computes both payback definitions", () => {
     const r = computeRamp(BASE_ASSUMPTIONS, { capex: 1_710_000, annualDebtService: 199_836.9035 });
-    expect(r.payback.fromStabilization).toBeCloseTo(1_710_000 / (1_294_124.275 - 199_836.9035), 6);
+    expect(r.payback.fromStabilization).toBeCloseTo(1_710_000 / (1_248_529.075 - 199_836.9035), 6);
     const fo = r.payback.fromOpening ?? 0;
     expect(fo).toBeGreaterThan(1.5);
     expect(fo).toBeLessThan(1.7);

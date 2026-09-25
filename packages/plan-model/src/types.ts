@@ -218,7 +218,7 @@ export interface UnitModel {
   ramp: RampModel;
 }
 
-export type LocationStructure = "corporate" | "jv" | "master-franchise" | "sub-franchise";
+export type LocationStructure = "corporate" | "franchise" | "jv" | "master-franchise" | "sub-franchise";
 
 export interface OpeningPlan {
   key: string;
@@ -275,7 +275,7 @@ export interface FranchiseMarket {
   key: string;
   name: string;
   structure: LocationStructure;
-  /** One-time master franchise territory fee, booked in `territoryYear`. */
+  /** One-time territory or area-development fee, booked in `territoryYear`. */
   territoryFee: number;
   territoryYear: number;
   /** New franchise units opened in each plan year. */
@@ -349,6 +349,48 @@ export interface CapitalStackModel {
 export interface Owner {
   key: string;
   pct: number;
+}
+
+export interface PartnershipTerms {
+  founderKey: string;
+  partnerKey: string;
+  /** Founder cash in. Concept, platform and operating role are the rest of the founder's contribution. */
+  founderCapital: number;
+  /** Total partner equity across all rounds. */
+  partnerCapital: number;
+  /** Return the partner underwrites to, e.g. 3.0 for 3x. */
+  targetMultiple: number;
+  /** Plan year of the assumed exit or valuation event. */
+  exitYear: number;
+  /** Enterprise value as a multiple of exit-year EBITDA. */
+  exitMultiple: number;
+  /** Share of royalties and unit fees that reaches EBITDA. */
+  franchiseMarginPct: number;
+  /** Typical operator stake when a partner funds all capital. */
+  sweatEquityBenchmark: { min: number; max: number };
+}
+
+export interface OwnershipModel {
+  terms: PartnershipTerms;
+  totalCapital: number;
+  /** Exit-year corporate EBITDA plus platform gross profit plus the franchise contribution. */
+  exitEbitda: number;
+  corporateEbitda: number;
+  platformGrossProfit: number;
+  franchiseContribution: number;
+  exitValue: number;
+  /** partnerCapital × targetMultiple. */
+  requiredExitValue: number;
+  /** requiredExitValue ÷ exitValue, clamped to 0..1. What the return math alone implies. */
+  partnerPctReturnBased: number;
+  /** Return-based figure rounded to the nearest 5%. The headline. */
+  partnerPct: number;
+  founderPct: number;
+  /** Where the founder's residual sits against the sweat-equity benchmark. */
+  founderVsBenchmark: "below" | "within" | "above";
+  /** Partner's money-on-money multiple at the exit given partnerPct. */
+  partnerMultipleAtHeadline: number;
+  owners: readonly Owner[];
 }
 
 export interface DilutionModel {

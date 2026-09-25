@@ -10,3 +10,4 @@ export * from "./format";
 export * from "./levers";
 export * from "./share";
 export * from "./unit";
+export * from "./partnership";

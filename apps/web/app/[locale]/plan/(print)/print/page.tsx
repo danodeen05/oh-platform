@@ -1,5 +1,5 @@
 import { getFormatter, getTranslations } from "next-intl/server";
-import { BASE, BASE_ASSUMPTIONS, DEFAULT_LOAN, computeUnit } from "@oh/plan-model";
+import { BASE, BASE_ASSUMPTIONS, NO_DEBT, computeUnit } from "@oh/plan-model";
 import { getPlanSession } from "@/lib/plan/session.server";
 import { visibleSections } from "@/lib/plan/sections";
 import { redirect } from "next/navigation";
@@ -22,7 +22,7 @@ export default async function PlanPrintPage({ params }: { params: Promise<{ loca
   const fmt = await getFormatter();
   const sections = visibleSections(claims);
   const generated = fmt.dateTime(new Date(), { year: "numeric", month: "long", day: "numeric" });
-  const unit = computeUnit(BASE, { loan: DEFAULT_LOAN });
+  const unit = computeUnit(BASE, { loan: NO_DEBT });
   const values = { pods: BASE_ASSUMPTIONS.pods, sqft: BASE_ASSUMPTIONS.squareFeet.toLocaleString(locale) };
   const footer = t("footer", { label: claims.lbl, date: generated });
 

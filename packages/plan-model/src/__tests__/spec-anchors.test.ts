@@ -8,8 +8,11 @@ import {
   BASE,
   BASE_ASSUMPTIONS,
   CONSERVATIVE,
-  DEFAULT_LOAN,
+  FRANCHISE_MARKETS,
   FRANCHISE_TERMS,
+  NO_DEBT,
+  PARTNERSHIP_TERMS,
+  SBA_REFERENCE_LOAN,
   OPENING_SCHEDULE,
   SCENARIOS,
   SUBSEQUENT_UNIT_OVERRIDES,
@@ -18,6 +21,7 @@ import {
   computeDebtService,
   computeDscr,
   computeLocation,
+  computeOwnership,
   computePortfolio,
   computeRamp,
   computeUnit,
@@ -49,12 +53,12 @@ describe("spec 5.4 revenue table", () => {
   }
 });
 
-describe("spec 5.5 cost structure, base case at the $4.2M basis", () => {
+describe("spec 5.5 cost structure, base case at the $4.2M basis (2,080 hours per FTE)", () => {
   const m = computeLocation(BASE_ASSUMPTIONS);
   const pct: Record<CostLineKey, number> = {
     foodCost: 0.3,
     packaging: 0.025,
-    labor: 0.128,
+    labor: 0.139, // spec prints 12.8% at 1,850 hours; owner chose the 2,080-hour CPA convention
     occupancy: 0.036,
     utilities: 0.03,
     paymentProcessing: 0.027,
@@ -66,12 +70,12 @@ describe("spec 5.5 cost structure, base case at the $4.2M basis", () => {
     ga: 0.025,
     contingency: 0.02,
   };
-  // Table amounts. Labor prints as $537,000 in the spec, which is $536,664
-  // rounded to the nearest thousand; the engine value is the exact one.
+  // Table amounts. Labor is the one line that departs from the spec: the spec
+  // prints $537,000 (1,850 hours); at 2,080 hours it is $582,259.20.
   const amount: Record<CostLineKey, number> = {
     foodCost: 1_260_000,
     packaging: 105_000,
-    labor: 536_664,
+    labor: 582_259.2,
     occupancy: 150_500,
     utilities: 126_000,
     paymentProcessing: 113_400,
@@ -106,22 +110,22 @@ describe("spec 5.5 cost structure, base case at the $4.2M basis", () => {
 
   it("total opex and EBITDA follow from the exact labor line", () => {
     const opexAtBasis = m.lines.filter((l) => l.group === "opex").reduce((s, l) => s + (l.fixed ? l.amount : l.pct * BASIS), 0);
-    expect(opexAtBasis).toBeCloseTo(1_541_564, 0); // spec prints 1,541,900 with rounded labor
-    expect(2_835_000 - opexAtBasis).toBeCloseTo(1_293_436, 0); // spec prints 1,293,100
-    expect(m.totalOpexPct).toBeCloseTo(0.367, 3);
-    expect(m.ebitdaMarginPct).toBeCloseTo(0.308, 3);
+    expect(opexAtBasis).toBeCloseTo(1_587_159.2, 0); // spec prints 1,541,900 at 1,850 hours
+    expect(2_835_000 - opexAtBasis).toBeCloseTo(1_247_840.8, 0); // spec prints 1,293,100
+    expect(m.totalOpexPct).toBeCloseTo(0.378, 3);
+    expect(m.ebitdaMarginPct).toBeCloseTo(0.297, 3);
   });
 
   it("golden: exact-revenue EBITDA (pins the day count and hours)", () => {
     expect(m.annualRevenue).toBeCloseTo(4_201_425, 6);
-    expect(m.ebitda).toBeCloseTo(1_294_124.275, 3);
+    expect(m.ebitda).toBeCloseTo(1_248_529.075, 3);
   });
 
   it("traditional comparison keeps the spec's benchmark column", () => {
     const rows = compareToTraditional(m);
     expect(rows.map((r) => r.traditional)).toEqual([0.3, 0.3, 0.08, 0.2, 0.12]);
-    expect(rows.find((r) => r.key === "labor")?.oh).toBeCloseTo(0.128, 3);
-    expect(rows.find((r) => r.key === "ebitda")?.oh).toBeCloseTo(0.308, 3);
+    expect(rows.find((r) => r.key === "labor")?.oh).toBeCloseTo(0.139, 3);
+    expect(rows.find((r) => r.key === "ebitda")?.oh).toBeCloseTo(0.297, 3);
   });
 });
 
@@ -149,11 +153,16 @@ describe("spec 5.6 capital per location", () => {
     expect(by.buildoutPerSqFt).toBe(612_500);
     expect(by.tenantImprovementAllowancePerSqFt).toBe(-192_500);
   });
-  it("payback from stabilization is ~1.6 years at base", () => {
-    const u = computeUnit(BASE, { loan: DEFAULT_LOAN });
-    expect(u.ramp.payback.fromStabilization).toBeCloseTo(1.5627, 3);
-    // From opening through the ramp (levered). The spec's "~2.3" does not reproduce; see DECISIONS.md.
-    expect(u.ramp.payback.fromOpening).toBeCloseTo(1.6037, 3);
+  it("unlevered payback is ~1.4 years at base (no debt in the base case)", () => {
+    const u = computeUnit(BASE, { loan: NO_DEBT });
+    expect(u.dscr).toBeNull();
+    expect(u.ramp.payback.fromStabilization).toBeCloseTo(1_710_000 / 1_248_529.075, 6);
+    // From opening through the ramp. The spec's "~2.3" does not reproduce; see DECISIONS.md.
+    expect(u.ramp.payback.fromOpening).toBeCloseTo(1.4232, 3);
+  });
+  it("with the SBA reference loan, levered payback is ~1.6 years", () => {
+    const u = computeUnit(BASE, { loan: SBA_REFERENCE_LOAN });
+    expect(u.ramp.payback.fromStabilization).toBeCloseTo(1_710_000 / (1_248_529.075 - 199_836.9035), 4);
   });
 });
 
@@ -171,43 +180,70 @@ describe("spec 5.7 ramp", () => {
   });
 });
 
-describe("spec 5.8 portfolio rollup with the spec's offsets", () => {
+describe("spec 5.8 portfolio rollup, five corporate units at T0+0/16/19/22/25", () => {
   const p = computePortfolio(OPENING_SCHEDULE, BASE, { years: 5 });
-  it("opens four units in year 1 and the fifth in year 2", () => {
-    expect(p.years.map((y) => y.locationsOpenAtEnd)).toEqual([4, 5, 5, 9, 9]);
-    expect(p.years[0]?.openings).toEqual(["lehi", "slc", "south-jordan", "provo"]);
-    expect(p.years[1]?.openings).toEqual(["st-george"]);
-    expect(p.years[0]?.capexDeployed).toBe(1_710_000 + 3 * 1_411_000);
+  it("opens the flagship in year 1, three units in year 2 and the fifth in year 3", () => {
+    expect(p.locations).toHaveLength(5);
+    expect(p.years.map((y) => y.locationsOpenAtEnd)).toEqual([1, 4, 5, 5, 5]);
+    expect(p.years[0]?.openings).toEqual(["lehi"]);
+    expect(p.years[1]?.openings).toEqual(["slc", "south-jordan", "provo"]);
+    expect(p.years[2]?.openings).toEqual(["st-george"]);
+    expect(p.years[1]?.capexDeployed).toBe(3 * 1_411_000);
+    expect(p.years[4]?.cumulativeCapex).toBe(1_710_000 + 4 * 1_411_000);
   });
-  it("corporate revenue is ~$9.3M / $20.2M / $22.2M (engine wins over the spec's 3.9 / 9.4 / 20.1; see DECISIONS.md)", () => {
-    expect(Math.round(p.years[0]?.revenue ?? 0)).toBe(9_337_667);
-    expect(Math.round(p.years[1]?.revenue ?? 0)).toBe(20_187_847);
-    expect(Math.round(p.years[2]?.revenue ?? 0)).toBe(22_173_020);
+  it("reproduces the spec table: ~$3.9M / $9.4M / $20.1M reads as $4.0M / $9.7M / $20.2M", () => {
+    expect(Math.round(p.years[0]?.revenue ?? 0)).toBe(4_008_860);
+    expect(Math.round(p.years[1]?.revenue ?? 0)).toBe(9_729_800);
+    expect(Math.round(p.years[2]?.revenue ?? 0)).toBe(20_240_365);
   });
-  it("US metros land in the spec's $5.5M to $6.5M AUV range", () => {
-    for (const loc of p.locations.filter((l) => l.openMonth >= 36)) {
-      expect(loc.steadyRevenue).toBeGreaterThanOrEqual(5_500_000);
-      expect(loc.steadyRevenue).toBeLessThanOrEqual(6_500_000);
+  it("US metros are franchise units in the spec's $5.5M to $6.5M AUV range", () => {
+    const base = computeLocation(BASE_ASSUMPTIONS).annualRevenue;
+    const metros = FRANCHISE_MARKETS.filter((m) => m.structure === "franchise");
+    expect(metros.map((m) => m.key)).toEqual(["nyc", "la", "las-vegas", "seattle"]);
+    for (const m of metros) {
+      expect(base * m.auvIndex).toBeGreaterThanOrEqual(5_400_000);
+      expect(base * m.auvIndex).toBeLessThanOrEqual(6_500_000);
+      expect(m.territoryYear).toBe(4);
     }
-    expect(p.years[3]?.revenue).toBeGreaterThan(30_000_000);
-    expect(p.years[3]?.revenue).toBeLessThan(40_000_000);
   });
 });
 
-describe("spec 5.10 and 5.11 platform and capital stack", () => {
+describe("spec 5.10 and 5.11 platform and capital", () => {
   it("platform license at 40 locations is $864K ARR", () => {
     expect(FRANCHISE_TERMS.platformLicenseMonthly * 12 * 40).toBe(864_000);
   });
-  it("SBA $1.5M over 10 years at 6% is ~$200K a year", () => {
-    const d = computeDebtService(DEFAULT_LOAN);
+  it("the SBA reference loan ($1.5M, 10 years, 6%) is ~$200K a year, kept as a lender lever", () => {
+    const d = computeDebtService(SBA_REFERENCE_LOAN);
     expect(Math.round(d.annualDebtService)).toBe(199_837);
+    expect(NO_DEBT.principal).toBe(0);
   });
-  it("DSCR clears 1.25x with room: ~6.5x base, ~3.1x conservative", () => {
-    const ads = computeDebtService(DEFAULT_LOAN).annualDebtService;
-    expect(computeDscr(computeLocation(BASE_ASSUMPTIONS).ebitda, ads)).toBeCloseTo(6.476, 2);
-    expect(computeDscr(computeLocation(CONSERVATIVE.assumptions).ebitda, ads)).toBeCloseTo(3.145, 2);
+  it("if a lender is ever in the room, DSCR clears 1.25x: ~6.2x base, ~2.9x conservative", () => {
+    const ads = computeDebtService(SBA_REFERENCE_LOAN).annualDebtService;
+    expect(computeDscr(computeLocation(BASE_ASSUMPTIONS).ebitda, ads)).toBeCloseTo(6.248, 2);
+    expect(computeDscr(computeLocation(CONSERVATIVE.assumptions).ebitda, ads)).toBeCloseTo(2.917, 2);
   });
-  it("conservative EBITDA is ~$628K (spec prose says ~$610K; engine wins)", () => {
-    expect(computeLocation(CONSERVATIVE.assumptions).ebitda).toBeCloseTo(628_497.145, 2);
+  it("conservative EBITDA is ~$583K at 2,080 hours (spec prose says ~$610K)", () => {
+    expect(computeLocation(CONSERVATIVE.assumptions).ebitda).toBeCloseTo(582_901.945, 2);
+  });
+});
+
+describe("single financial partner (owner decision 2026-09-25)", () => {
+  const own = (key: ScenarioKey) =>
+    computeOwnership({ scenario: SCENARIOS[key], terms: PARTNERSHIP_TERMS, schedule: OPENING_SCHEDULE, markets: FRANCHISE_MARKETS, franchiseTerms: FRANCHISE_TERMS });
+  it("raises $10.7M in total: $3.2M round 1 and $7.5M round 2", () => {
+    expect(own("base").totalCapital).toBe(10_700_000);
+  });
+  it("implies a 50/50 split at base case for a 3x return on a 5x exit", () => {
+    const o = own("base");
+    expect(o.partnerPctReturnBased).toBeCloseTo(0.5125, 3);
+    expect(o.partnerPct).toBe(0.5);
+    expect(o.founderPct).toBe(0.5);
+    expect(o.founderVsBenchmark).toBe("above");
+    expect(o.partnerMultipleAtHeadline).toBeCloseTo(2.93, 2);
+    expect(Math.round(o.exitEbitda)).toBe(12_292_545);
+  });
+  it("moves to 85% partner at conservative and 35% at aggressive", () => {
+    expect(own("conservative").partnerPct).toBe(0.85);
+    expect(own("aggressive").partnerPct).toBe(0.35);
   });
 });

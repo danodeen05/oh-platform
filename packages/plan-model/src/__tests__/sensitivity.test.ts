@@ -58,7 +58,7 @@ describe("heatGrid", () => {
   });
   it("defaults to EBITDA", () => {
     const g = heatGrid(BASE_ASSUMPTIONS, { key: "pods", values: [75] }, { key: "pods", values: [75] });
-    expect(g.cells[0]?.[0]).toBeCloseTo(1_294_124.275, 3);
+    expect(g.cells[0]?.[0]).toBeCloseTo(1_248_529.075, 3);
   });
 });
 

@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useReducedMotion } from "framer-motion";
-import { fmtCompact, fmtCurrency, fmtInteger, fmtMultiple, fmtPercent, type Currency } from "@oh/plan-model";
+import { fmtCompact, fmtCurrency, fmtInteger, fmtMultiple, fmtPercent, fmtYears, type Currency } from "@oh/plan-model";
 
-export type CountUpKind = "currency" | "compact" | "percent" | "integer" | "multiple";
+export type CountUpKind = "currency" | "compact" | "percent" | "integer" | "multiple" | "years";
 
 interface Props {
   value: number;
@@ -30,6 +30,8 @@ function format(v: number, p: Props): string {
       return fmtMultiple(v, locale, p.fractionDigits ?? 1);
     case "integer":
       return fmtInteger(v, locale);
+    case "years":
+      return fmtYears(v, locale, p.fractionDigits ?? 1);
   }
 }
 

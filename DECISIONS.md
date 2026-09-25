@@ -37,8 +37,19 @@ taken with a stated default; flip the constant and the tests say what moved.
 | 15 | FX | Fixed illustrative rates dated 2026-09-01 | Spec 7.4: no live FX |
 | 16 | Monte Carlo | Pure seeded function; UI runs it in a Web Worker | 5,000 runs ≈ 28 ms on the droplet; unit recalculation ≈ 0.05 ms |
 
-Open items for the owner before this goes to a lender: items 2, 4, 8, 11, 12; and the
-operative Operating Agreement (two-member 49/51 vs single-member) per spec 10.
+Owner decisions taken 2026-09-25 (supersede items 2, 4, 8, 11, 12, 13, 14 above):
+
+| # | Item | Decision | Effect |
+|---|---|---|---|
+| 17 | Labor hours | `annualHoursPerFTE` = 2,080 (CPA convention) | Labor $582,259 (13.9%), base EBITDA $1,248,529 (29.7%), conservative EBITDA $583K. Public target stays 25% |
+| 18 | Opening dates | Locations 2 to 5 at T0+16/19/22/25 | Reproduces the spec 5.8 table: corporate revenue Y1 $4.0M, Y2 $9.7M, Y3 $20.2M. Section 2's "within 12 months" is superseded |
+| 19 | No SBA loan | Base case carries no debt (`NO_DEBT`); `SBA_REFERENCE_LOAN` remains a lever for any lender conversation | DSCR is null in the base case; unlevered payback 1.37 yrs from stabilization, 1.42 yrs from opening |
+| 20 | Single financial partner | Two equity rounds: $3.2M pre-opening ($3.0M partner + $200K founder) and $7.5M at about T0+12 for units 2 to 5, corporate infrastructure and reserve. Total $10.7M | `PARTNERSHIP_TERMS` and `computeOwnership` in `packages/plan-model/src/partnership.ts` |
+| 21 | Partner ownership method | Derived, never asserted: partner % = (partner capital × target multiple) ÷ (exit-year EBITDA × exit multiple), rounded to 5%. Defaults: 3.0x over 5 years (≈25% IRR), 5.0x EBITDA exit (middle of the 4x to 6x small multi-unit range), 60% of royalties and unit fees reaching EBITDA. Checked against the 25% to 40% operator sweat-equity benchmark | Base case 51% → headline 50/50 (partner 2.9x at headline). Conservative 85% partner, aggressive 35%. Founder residual sits above the benchmark at base |
+| 22 | Corporate vs franchise | Only the five Utah locations are corporate. From the sixth location on, everything is franchised: US metros (NYC, LA, Las Vegas, Seattle) as area-development franchises from year 4 with a $100K development fee and AUV indexes 1.3 to 1.5 ($5.5M to $6.3M); international master franchises and JVs per spec 5.9 | Portfolio has 5 locations; platform has 12 franchise units in Y4, 39 in Y5 (44 system), license ARR $950K in Y5 |
+| 23 | Owners | Two-owner model: founder plus the financial partner, at the derived split. The 49/51 LLC structure from spec 10 is not rendered | Team and Governance shows founder + partner |
+
+Still open: US metro dates and fees (item 22 defaults accepted "for now"); confirm the target multiple and exit multiple with the partner before the Funding module ships.
 
 ## Plan shell (Phase 3), Sep 2026
 

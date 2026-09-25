@@ -1,9 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   BASE_ASSUMPTIONS,
-  DEFAULT_LOAN,
-  OWNERS,
   ROUND_ONE,
+  SBA_REFERENCE_LOAN,
   computeCapex,
   computeCapitalStack,
   computeDebtService,
@@ -27,7 +26,7 @@ describe("computeCapex", () => {
 
 describe("computeDebtService", () => {
   it("amortizes monthly", () => {
-    const d = computeDebtService(DEFAULT_LOAN);
+    const d = computeDebtService(SBA_REFERENCE_LOAN);
     expect(d.monthlyPayment).toBeCloseTo(16_653.075, 2);
     expect(d.annualDebtService).toBeCloseTo(d.monthlyPayment * 12, 9);
     expect(d.totalPaid).toBeCloseTo(d.monthlyPayment * 120, 9);
@@ -69,6 +68,10 @@ describe("computeCapitalStack", () => {
 });
 
 describe("computeDilution", () => {
+  const OWNERS = [
+    { key: "dano", pct: 0.49 },
+    { key: "kristy", pct: 0.51 },
+  ];
   it("dilutes existing owners pro rata", () => {
     const d = computeDilution(8_000_000, 1_500_000, OWNERS);
     expect(d.postMoneyValuation).toBe(9_500_000);
