@@ -2267,7 +2267,7 @@
       "funding": {
         "short": "Funding",
         "title": "Funding and Use of Funds",
-        "subtitle": "Two rounds, one SBA loan, and a valuation you set yourself."
+        "subtitle": "Two equity rounds from one partner, and an ownership split you set yourself."
       },
       "roadmap": {
         "short": "Roadmap",
@@ -2331,7 +2331,8 @@
         "rentPerSqFtAnnual": "Rent per sq ft, yearly",
         "pods": "Pods",
         "kitchenFTE": "Kitchen staff (FTE)",
-        "avgDwellMinutes": "Average dwell time"
+        "avgDwellMinutes": "Average dwell time",
+        "payrollBurdenPct": "Payroll burden"
       },
       "results": {
         "revenue": "Annual revenue",
@@ -2567,6 +2568,255 @@
           "notes": "Strong Asian dining culture, counter-seasonal to the Northern Hemisphere."
         }
       }
+    },
+    "financials": {
+      "hint": "Every table below recomputes for the chosen scenario.",
+      "year": "Year {n}",
+      "yearShort": "Y{n}",
+      "portfolio": {
+        "title": "Five corporate locations, five years",
+        "subtitle": "Corporate revenue and EBITDA by plan year, counted from the day the flagship opens. Capex is booked in the opening month.",
+        "yearCol": "Year",
+        "locations": "Open at year end",
+        "revenue": "Revenue",
+        "ebitda": "EBITDA",
+        "margin": "Margin",
+        "capex": "Capex deployed"
+      },
+      "ramp": {
+        "title": "The flagship ramp, trough included",
+        "subtitle": "Monthly revenue for the first 24 months. The opening spike, the month four to six trough and the recovery. Every operator recognizes this shape; a clean upward line is the tell of an amateur pro forma.",
+        "month": "Month {n}",
+        "trough": "The trough, on purpose",
+        "note": "Year 1 {y1}, year 2 {y2}. The curve holds its month-18 level after that."
+      },
+      "capex": {
+        "title": "Capital per location",
+        "subtitle": "Flagship carries the prototype design and first fabrication run; locations two to five benefit from the learning curve.",
+        "line": "Line",
+        "flagship": "Flagship",
+        "subsequent": "Locations 2 to 5",
+        "total": "Net capex",
+        "lines": {
+          "podUnitCost": "Pods",
+          "kitchenEquipment": "Kitchen equipment",
+          "buildoutPerSqFt": "Buildout",
+          "tenantImprovementAllowancePerSqFt": "Less TI allowance",
+          "techHardware": "Tech and kiosk hardware",
+          "designArchPermits": "Design, architecture, permits",
+          "ffeSignage": "FF&E and signage",
+          "preOpening": "Pre-opening"
+        }
+      },
+      "platform": {
+        "title": "Oh! OS as a second business unit",
+        "subtitle": "License revenue and franchise economics from year 4. Company revenue excludes the internal transfer and the marketing fund; system-wide sales include franchisee gross sales and are never labeled as ours.",
+        "line": "Line",
+        "note": "Corporate units transfer {pct} of revenue internally; franchisees pay the {license} monthly license. ARR counts every location.",
+        "lines": {
+          "systemLocations": "System locations",
+          "licenseARR": "Platform license ARR",
+          "royalties": "Royalties (5%)",
+          "unitFees": "Unit franchise fees",
+          "territoryFees": "Territory and development fees",
+          "platformGrossProfit": "Platform gross profit",
+          "companyRevenue": "Company revenue",
+          "systemWideSales": "System-wide sales"
+        }
+      }
+    },
+    "funding": {
+      "hint": "Founder-side numbers in green. Nothing here is asserted; move the levers.",
+      "year": "Year {n}",
+      "rounds": {
+        "title": "Two rounds, one partner",
+        "subtitle": "Equity only. No debt in the base case.",
+        "sources": "Sources",
+        "uses": "Uses",
+        "round1": {
+          "title": "Round 1",
+          "when": "Pre-opening: flagship, platform, corporate."
+        },
+        "round2": {
+          "title": "Round 2",
+          "when": "About month 12, on a year of flagship data, ahead of the second opening."
+        },
+        "keys": {
+          "partnerEquity": "Partner equity",
+          "founderContribution": "Founder contribution",
+          "flagshipCapex": "Flagship capex",
+          "platformDevelopment": "Oh! OS platform build",
+          "corporateAndWorkingCapital": "Corporate and working capital",
+          "unitCapex": "Four units at $1.41M",
+          "corporateInfrastructure": "Corporate infrastructure",
+          "workingCapitalReserve": "Working capital reserve"
+        },
+        "tranche": "Tranching proposal: round 2 is committed at signing but funds on the flagship's twelfth month of operating data, with the second location's lease as the trigger."
+      },
+      "partner": {
+        "title": "Partner ownership: derived, not asserted",
+        "subtitle": "The return math implies {implied} for a partner who needs a {headline}-rounded stake; the founder's ceiling is {cap}. Set your own terms and read the impact on each side.",
+        "levers": {
+          "partnerPct": "Partner ownership",
+          "target": "Partner's target return",
+          "exit": "Exit multiple of EBITDA",
+          "distribution": "Share of EBITDA distributed yearly"
+        },
+        "yearly": "Year by year",
+        "grid": "Across stakes at {target} and {exit}",
+        "gridNote": "Red multiples fall short of the partner's target at that stake; the buyout row is what closes the gap.",
+        "results": {
+          "founderTotal": "Founder total, five years",
+          "founderTotalSub": "{dist} in distributions plus {exit} at exit",
+          "partnerMultiple": "Partner multiple at exit",
+          "partnerMultipleSub": "Target {target}. Total to partner {total}",
+          "buyout": "Buyout at target",
+          "buyoutSub": "{ratio} of the partner's market stake. The option to end the partnership once they have their return.",
+          "buyoutFree": "Distributions alone deliver the target; no buyout payment needed.",
+          "targetYear": "Target reached by distributions",
+          "targetYearSub": "Without any exit or buyout",
+          "beyond": "Beyond year 5"
+        },
+        "cols": {
+          "year": "Year",
+          "ebitda": "Corporate EBITDA",
+          "distributions": "Distributed",
+          "founder": "Founder",
+          "partner": "Partner",
+          "multiple": "Partner multiple to date",
+          "stake": "Partner stake"
+        },
+        "gridRows": {
+          "founderTotal": "Founder total",
+          "founderExit": "Founder at exit",
+          "partnerMultiple": "Partner multiple",
+          "buyout": "Buyout at target"
+        }
+      },
+      "exit": {
+        "title": "Restaurant multiple or platform multiple",
+        "subtitle": "The same company valued two ways at the exit year. The platform line and franchise fees are what argue for the higher one.",
+        "restaurant": "Restaurant multiple, {mult} EBITDA",
+        "hybrid": "Hybrid platform multiple, {mult} EBITDA",
+        "founderShare": "Founder share",
+        "partnerMultiple": "Partner multiple",
+        "note": "The difference is {delta}. Every franchise unit opened on someone else's capital pushes the valuation toward the right-hand number."
+      },
+      "lender": {
+        "eyebrow": "If a lender ever enters",
+        "claim": "The plan carries no debt, and it could.",
+        "text": "Against a reference SBA 7(a) loan of {debt} over ten years, base-case debt service coverage would be {dscr}. Lenders want 1.25x. Conservative still clears it."
+      }
+    },
+    "sensitivity": {
+      "hint": "Scenario EBITDA {ebitda}; payback {payback} years. The charts below stress it.",
+      "tornado": {
+        "title": "What moves EBITDA most",
+        "subtitle": "Each lever swung both ways from its preset, others held. Base {base}.",
+        "aria": "Tornado chart of EBITDA sensitivity by lever",
+        "lever": "Lever",
+        "low": "Downside",
+        "high": "Upside",
+        "swing": "Swing"
+      },
+      "grid": {
+        "title": "Utilization × bowl price",
+        "subtitle": "Steady-state EBITDA. Gold outlines trace the break-even contour; the outlined cell is the current preset.",
+        "priceAxis": "Bowl price",
+        "legend": "Green is positive EBITDA, red is a loss. The break-even line sits far below the base case, which is the point."
+      },
+      "mc": {
+        "title": "Monte Carlo",
+        "subtitle": "{runs} runs over five levers (utilization, bowl price, food cost, rent, kitchen staff) with triangular distributions, in a background worker.",
+        "p10": "10th percentile",
+        "p50": "Median",
+        "p90": "90th percentile",
+        "belowTarget": "Below the 25% target",
+        "belowTargetSub": "Runs with EBITDA under {value}",
+        "runsLabel": "runs",
+        "running": "Running the simulation",
+        "unavailable": "The simulation needs a browser with Web Worker support.",
+        "note": "Steady-state single-unit EBITDA, which is what year three looks like once the ramp is done."
+      },
+      "downsides": {
+        "title": "Named downsides, with what we do about them",
+        "subtitle": "Each one is a lever move in the engine, not a paragraph. EBITDA impact at steady state.",
+        "impact": "Margin after: {margin}. Year-one EBITDA impact {y1}.",
+        "mitigation": "Mitigation.",
+        "items": {
+          "slowRamp": {
+            "title": "Slow ramp",
+            "mitigation": "Pre-opening kiosk demo and referral credits seeded in the corridor; a 15% weaker first year is inside the round-1 working capital reserve."
+          },
+          "rentInflation": {
+            "title": "Rent inflation, +$15 per sq ft",
+            "mitigation": "Ten-year terms with two options, TI allowance as a lever in every negotiation, and 3,500 sf footprints that keep occupancy under 5% of revenue even at the higher rent."
+          },
+          "beefSpike": {
+            "title": "Beef commodity spike, +5 points food cost",
+            "mitigation": "Shank is the cheapest premium cut on the animal; forward contracts through the commissary, and menu pricing is flexible by design (first free, extras priced)."
+          },
+          "copycat": {
+            "title": "A well-capitalized copycat, −20% utilization",
+            "mitigation": "Oh! OS is the moat: pod orchestration, kiosk, kitchen display and delivery flow are ours. A copycat rents a room; it does not get the operating system."
+          },
+          "podReliability": {
+            "title": "Pod hardware reliability",
+            "mitigation": "Five pods offline and higher maintenance modeled here. Spares at the commissary, a service SLA in the fabrication contract, and convertible duos that keep capacity when a partition fails."
+          },
+          "laborShock": {
+            "title": "Utah labor or permitting shock",
+            "mitigation": "Wages up $3 and one extra FTE modeled. No front of house means the exposure is nine people, not thirty. Permitting runs through the Utah County Health Department pathway already mapped in the roadmap."
+          }
+        },
+        "impactY1": "Year-one EBITDA impact shown; steady state is unchanged once the ramp completes. Margin after: {margin}."
+      }
+    },
+    "unitEconomics": {
+      "pickMarket": "Pick a market",
+      "structureCorporate": "Corporate location.",
+      "structureFranchise": "Franchise market; development fee {fee}.",
+      "tradeArea": "Trade area about {value} people.",
+      "yourSpace": "Your space",
+      "sqft": "{value} sf",
+      "resetMarket": "Reset to market preset",
+      "levers": {
+        "nnn": "NNN per sq ft, yearly",
+        "squareFeet": "Square feet",
+        "ti": "TI allowance per sq ft",
+        "wage": "Kitchen wage"
+      },
+      "results": {
+        "revenue": "Annual revenue",
+        "ebitda": "EBITDA",
+        "capex": "Net capex",
+        "payback": "Payback, years"
+      },
+      "occupancyNote": "Occupancy is {pct} of revenue at {perSqFt} per square foot and {covers} covers a day.",
+      "proForma": "Steady-state pro forma",
+      "lines": {
+        "revenue": "Revenue",
+        "cogs": "Food and packaging",
+        "grossProfit": "Gross profit",
+        "labor": "Labor and burden",
+        "occupancy": "Occupancy (rent + NNN)",
+        "otherOpex": "Other operating",
+        "ebitda": "EBITDA"
+      },
+      "capexTitle": "Capital to open",
+      "capexTotal": "Net capex",
+      "capexLines": {
+        "podUnitCost": "Pods",
+        "kitchenEquipment": "Kitchen equipment",
+        "buildoutPerSqFt": "Buildout",
+        "tenantImprovementAllowancePerSqFt": "Less TI allowance",
+        "techHardware": "Tech and kiosk hardware",
+        "designArchPermits": "Design, architecture, permits",
+        "ffeSignage": "FF&E and signage",
+        "preOpening": "Pre-opening"
+      },
+      "capexFlagshipNote": "Flagship pricing: prototype design and first fabrication run included.",
+      "capexSubsequentNote": "Locations after the first save {savings} on pods, buildout, design and pre-opening."
     }
   }
 }

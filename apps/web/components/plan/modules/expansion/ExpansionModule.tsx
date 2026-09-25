@@ -137,7 +137,7 @@ export function ExpansionModule() {
                             {open.length}
                           </text>
                         ) : null}
-                        {(view !== "world" || sel || isOpen) && (
+                        {(p.view === view || sel) && (
                           <text x={open.length > 1 ? 20 : 10} y={-8} fill={isOpen ? "#F2EDE4" : "#9A9188"} fontSize={10}>
                             {tm(`${p.key}.name`)}
                           </text>

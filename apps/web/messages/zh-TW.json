@@ -2165,7 +2165,7 @@
       "funding": {
         "short": "募資",
         "title": "募資與資金用途",
-        "subtitle": "兩輪募資、一筆 SBA 貸款，以及由您自行設定的估值。"
+        "subtitle": "來自單一合夥人的兩輪股權募資，以及由您自行設定的持股比例。"
       },
       "roadmap": {
         "short": "時程",
@@ -2229,7 +2229,8 @@
         "rentPerSqFtAnnual": "每平方英尺年租金",
         "pods": "座艙數",
         "kitchenFTE": "廚房人力（全職）",
-        "avgDwellMinutes": "平均用餐時間"
+        "avgDwellMinutes": "平均用餐時間",
+        "payrollBurdenPct": "薪資附加成本率"
       },
       "results": {
         "revenue": "年營收",
@@ -2465,6 +2466,255 @@
           "notes": "亞洲餐飲文化深厚，與北半球季節互補。"
         }
       }
+    },
+    "financials": {
+      "hint": "以下所有表格都會依所選情境重新計算。",
+      "year": "第 {n} 年",
+      "yearShort": "第{n}年",
+      "portfolio": {
+        "title": "五間直營門市，五年",
+        "subtitle": "以旗艦店開幕日起算的各年度直營營收與 EBITDA。資本支出於開幕當月入帳。",
+        "yearCol": "年度",
+        "locations": "年末營運門市",
+        "revenue": "營收",
+        "ebitda": "EBITDA",
+        "margin": "利潤率",
+        "capex": "投入資本"
+      },
+      "ramp": {
+        "title": "旗艦店爬坡曲線，含低谷",
+        "subtitle": "前 24 個月的月營收。開幕高峰、第四至六個月的低谷與回升。每位餐飲業者都認得這個形狀；一條平滑向上的線正是外行財測的破綻。",
+        "month": "第 {n} 個月",
+        "trough": "刻意呈現的低谷",
+        "note": "第一年 {y1}，第二年 {y2}。此後曲線維持第 18 個月的水準。"
+      },
+      "capex": {
+        "title": "每間門市的資本支出",
+        "subtitle": "旗艦店承擔原型設計與首批製造；第二至五間門市受益於學習曲線。",
+        "line": "項目",
+        "flagship": "旗艦店",
+        "subsequent": "第 2 至 5 間",
+        "total": "淨資本支出",
+        "lines": {
+          "podUnitCost": "座艙",
+          "kitchenEquipment": "廚房設備",
+          "buildoutPerSqFt": "裝修工程",
+          "tenantImprovementAllowancePerSqFt": "減：房東裝修補助",
+          "techHardware": "科技與點餐機硬體",
+          "designArchPermits": "設計、建築、許可",
+          "ffeSignage": "家具設備與招牌",
+          "preOpening": "開幕前費用"
+        }
+      },
+      "platform": {
+        "title": "Oh! OS 作為第二事業體",
+        "subtitle": "第四年起的授權收入與加盟經濟。公司營收不含內部移轉與行銷基金；系統總銷售額包含加盟商的總營收，絕不標示為我們的收入。",
+        "line": "項目",
+        "note": "直營門市內部移轉營收的 {pct}；加盟商每月支付 {license} 授權費。ARR 計入所有據點。",
+        "lines": {
+          "systemLocations": "系統據點數",
+          "licenseARR": "平台授權年化收入",
+          "royalties": "權利金（5%）",
+          "unitFees": "單店加盟金",
+          "territoryFees": "區域與開發費",
+          "platformGrossProfit": "平台毛利",
+          "companyRevenue": "公司營收",
+          "systemWideSales": "系統總銷售額"
+        }
+      }
+    },
+    "funding": {
+      "hint": "創辦人方的數字以綠色顯示。這裡沒有任何預設結論；請調整參數。",
+      "year": "第 {n} 年",
+      "rounds": {
+        "title": "兩輪募資，一位合夥人",
+        "subtitle": "純股權。基準情境無負債。",
+        "sources": "資金來源",
+        "uses": "資金用途",
+        "round1": {
+          "title": "第一輪",
+          "when": "開幕前：旗艦店、平台、公司。"
+        },
+        "round2": {
+          "title": "第二輪",
+          "when": "約第 12 個月，憑一年的旗艦店數據，在第二間門市開幕前。"
+        },
+        "keys": {
+          "partnerEquity": "合夥人股權",
+          "founderContribution": "創辦人出資",
+          "flagshipCapex": "旗艦店資本支出",
+          "platformDevelopment": "Oh! OS 平台開發",
+          "corporateAndWorkingCapital": "公司營運與營運資金",
+          "unitCapex": "四間門市，每間 141 萬美元",
+          "corporateInfrastructure": "公司基礎建設",
+          "workingCapitalReserve": "營運資金儲備"
+        },
+        "tranche": "分段撥款提案：第二輪於簽約時承諾，於旗艦店第十二個月的營運數據到位、並以第二間門市租約為觸發條件後撥款。"
+      },
+      "partner": {
+        "title": "合夥人持股：推算而非宣稱",
+        "subtitle": "回報計算顯示合夥人需要約 {implied}（取整為 {headline}）；創辦人的上限為 {cap}。請自行設定條件並查看雙方的影響。",
+        "levers": {
+          "partnerPct": "合夥人持股",
+          "target": "合夥人目標回報",
+          "exit": "出場 EBITDA 倍數",
+          "distribution": "每年分配的 EBITDA 比例"
+        },
+        "yearly": "逐年",
+        "grid": "不同持股在 {target} 與 {exit} 下的比較",
+        "gridNote": "紅色倍數表示該持股下未達合夥人目標；買回列即為補足差距的方式。",
+        "results": {
+          "founderTotal": "創辦人五年合計",
+          "founderTotalSub": "分配 {dist} 加出場 {exit}",
+          "partnerMultiple": "合夥人出場倍數",
+          "partnerMultipleSub": "目標 {target}。合夥人合計 {total}",
+          "buyout": "達標時買回價",
+          "buyoutSub": "為合夥人市價持股的 {ratio}。這是在合夥人取得回報後結束合夥的選項。",
+          "buyoutFree": "分配即可達標；無需買回款。",
+          "targetYear": "僅靠分配達標的年度",
+          "targetYearSub": "不含任何出場或買回",
+          "beyond": "第 5 年之後"
+        },
+        "cols": {
+          "year": "年度",
+          "ebitda": "直營 EBITDA",
+          "distributions": "分配",
+          "founder": "創辦人",
+          "partner": "合夥人",
+          "multiple": "合夥人累計倍數",
+          "stake": "合夥人持股"
+        },
+        "gridRows": {
+          "founderTotal": "創辦人合計",
+          "founderExit": "創辦人出場所得",
+          "partnerMultiple": "合夥人倍數",
+          "buyout": "達標時買回價"
+        }
+      },
+      "exit": {
+        "title": "餐飲倍數或平台倍數",
+        "subtitle": "同一家公司在出場年以兩種方式估值。平台收入與加盟費正是主張較高倍數的依據。",
+        "restaurant": "餐飲倍數，{mult} EBITDA",
+        "hybrid": "混合平台倍數，{mult} EBITDA",
+        "founderShare": "創辦人份額",
+        "partnerMultiple": "合夥人倍數",
+        "note": "差距為 {delta}。每一間以他人資本開設的加盟門市，都把估值往右邊的數字推。"
+      },
+      "lender": {
+        "eyebrow": "若有貸款機構加入",
+        "claim": "本計畫不帶負債，但有能力承擔。",
+        "text": "以十年期 {debt} 的 SBA 7(a) 參考貸款計算，基準情境的償債覆蓋率為 {dscr}。貸款機構要求 1.25 倍。保守情境同樣過關。"
+      }
+    },
+    "sensitivity": {
+      "hint": "此情境 EBITDA {ebitda}；回本 {payback} 年。以下圖表對其進行壓力測試。",
+      "tornado": {
+        "title": "什麼最影響 EBITDA",
+        "subtitle": "每個變數從預設值向兩側擺動，其餘固定。基準 {base}。",
+        "aria": "各變數對 EBITDA 敏感度的龍捲風圖",
+        "lever": "變數",
+        "low": "下行",
+        "high": "上行",
+        "swing": "幅度"
+      },
+      "grid": {
+        "title": "使用率 × 每碗價格",
+        "subtitle": "穩定狀態 EBITDA。金色外框描出損益兩平線；框線格為目前預設值。",
+        "priceAxis": "每碗價格",
+        "legend": "綠色為正 EBITDA，紅色為虧損。損益兩平線遠低於基準情境，這正是重點。"
+      },
+      "mc": {
+        "title": "蒙地卡羅模擬",
+        "subtitle": "對五個變數（使用率、每碗價格、食材成本、租金、廚房人力）以三角分佈進行 {runs} 次模擬，於背景執行。",
+        "p10": "第 10 百分位",
+        "p50": "中位數",
+        "p90": "第 90 百分位",
+        "belowTarget": "低於 25% 目標",
+        "belowTargetSub": "EBITDA 低於 {value} 的模擬次數比例",
+        "runsLabel": "次",
+        "running": "模擬執行中",
+        "unavailable": "模擬需要支援 Web Worker 的瀏覽器。",
+        "note": "穩定狀態的單店 EBITDA，即爬坡結束後第三年的樣貌。"
+      },
+      "downsides": {
+        "title": "具名的下行風險，以及我們的對策",
+        "subtitle": "每一項都是引擎中的變數調整，而非一段文字。影響以穩定狀態 EBITDA 計。",
+        "impact": "調整後利潤率：{margin}。第一年 EBITDA 影響 {y1}。",
+        "mitigation": "對策。",
+        "items": {
+          "slowRamp": {
+            "title": "爬坡緩慢",
+            "mitigation": "開幕前的點餐機體驗與在科技走廊預先發放的推薦點數；第一年弱 15% 仍在第一輪營運資金儲備範圍內。"
+          },
+          "rentInflation": {
+            "title": "租金上漲，每平方英尺 +15 美元",
+            "mitigation": "十年租約附兩次續約選擇權，每次談判都以裝修補助為籌碼，3,500 平方英尺的面積讓租金即使上漲仍低於營收 5%。"
+          },
+          "beefSpike": {
+            "title": "牛肉價格飆升，食材成本 +5 個百分點",
+            "mitigation": "金錢腱是牛身上最便宜的高級部位；透過中央廚房簽訂遠期合約，菜單定價本身具彈性（首份免費、加料計價）。"
+          },
+          "copycat": {
+            "title": "資本雄厚的模仿者，使用率 −20%",
+            "mitigation": "Oh! OS 是護城河：座艙調度、點餐機、廚房顯示與送餐流程都是我們的。模仿者租得到空間，租不到作業系統。"
+          },
+          "podReliability": {
+            "title": "座艙硬體可靠度",
+            "mitigation": "此處模擬五個座艙離線與較高維護費。中央廚房備有備品、製造合約含服務等級協議，可合併雙人艙在隔板故障時維持座位數。"
+          },
+          "laborShock": {
+            "title": "猶他勞動力或許可衝擊",
+            "mitigation": "模擬時薪 +3 美元與多一位全職人力。沒有外場意味著曝險是九個人，不是三十個。許可流程走已在時程中規劃的猶他郡衛生局路徑。"
+          }
+        },
+        "impactY1": "顯示第一年 EBITDA 影響；爬坡完成後穩定狀態不變。調整後利潤率：{margin}。"
+      }
+    },
+    "unitEconomics": {
+      "pickMarket": "選擇市場",
+      "structureCorporate": "直營門市。",
+      "structureFranchise": "加盟市場；開發費 {fee}。",
+      "tradeArea": "商圈人口約 {value} 人。",
+      "yourSpace": "您的空間",
+      "sqft": "{value} 平方英尺",
+      "resetMarket": "恢復市場預設值",
+      "levers": {
+        "nnn": "每平方英尺年 NNN 費用",
+        "squareFeet": "平方英尺",
+        "ti": "每平方英尺裝修補助",
+        "wage": "廚房時薪"
+      },
+      "results": {
+        "revenue": "年營收",
+        "ebitda": "EBITDA",
+        "capex": "淨資本支出",
+        "payback": "回本年數"
+      },
+      "occupancyNote": "租金佔營收 {pct}，每平方英尺營收 {perSqFt}，每日 {covers} 位客人。",
+      "proForma": "穩定狀態損益預估",
+      "lines": {
+        "revenue": "營收",
+        "cogs": "食材與包材",
+        "grossProfit": "毛利",
+        "labor": "人力與附加成本",
+        "occupancy": "租金（含 NNN）",
+        "otherOpex": "其他營運費用",
+        "ebitda": "EBITDA"
+      },
+      "capexTitle": "開店資本",
+      "capexTotal": "淨資本支出",
+      "capexLines": {
+        "podUnitCost": "座艙",
+        "kitchenEquipment": "廚房設備",
+        "buildoutPerSqFt": "裝修工程",
+        "tenantImprovementAllowancePerSqFt": "減：房東裝修補助",
+        "techHardware": "科技與點餐機硬體",
+        "designArchPermits": "設計、建築、許可",
+        "ffeSignage": "家具設備與招牌",
+        "preOpening": "開幕前費用"
+      },
+      "capexFlagshipNote": "旗艦店定價：含原型設計與首批製造。",
+      "capexSubsequentNote": "第一間之後的門市在座艙、裝修、設計與開幕前費用上節省 {savings}。"
     }
   }
 }

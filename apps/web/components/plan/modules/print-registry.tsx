@@ -3,6 +3,8 @@ import type { SectionKey } from "@/lib/plan/sections";
 import { ModelPrint } from "./model/ModelPrint";
 import { FloorPlanPrint } from "./floor-plan/FloorPlanPrint";
 import { ExpansionPrint } from "./expansion/ExpansionPrint";
+import { FinancialsPrint } from "./financials/FinancialsPrint";
+import { FundingPrint } from "./funding/FundingPrint";
 
 /**
  * Print variants by section. Only the print route imports this, so the
@@ -13,4 +15,6 @@ export const PRINT_MODULES: Partial<Record<SectionKey, ComponentType<{ locale: s
   model: ModelPrint,
   "floor-plan": FloorPlanPrint,
   expansion: ExpansionPrint,
+  financials: FinancialsPrint,
+  funding: FundingPrint,
 };

@@ -1,14 +1,15 @@
-import { getTranslations } from "next-intl/server";
+import { isScenarioKey, type ScenarioKey } from "@oh/plan-model";
 import { requireSection } from "@/lib/plan/session.server";
 import { SectionFrame } from "@/components/plan/shell/SectionFrame";
-import { Placeholder } from "@/components/plan/shell/Placeholder";
+import { FundingModule } from "@/components/plan/modules/funding/FundingModule";
 
 export default async function Page() {
-  await requireSection("funding");
-  const t = await getTranslations("plan.shell");
+  const claims = await requireSection("funding");
+  const home = claims.scn.toLowerCase();
+  const scenario: ScenarioKey = isScenarioKey(home) ? home : "base";
   return (
     <SectionFrame sectionKey="funding">
-      <Placeholder text={t("placeholder")} />
+      <FundingModule initialScenario={scenario} />
     </SectionFrame>
   );
 }

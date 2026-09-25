@@ -1,14 +1,15 @@
-import { getTranslations } from "next-intl/server";
+import { isScenarioKey, type ScenarioKey } from "@oh/plan-model";
 import { requireSection } from "@/lib/plan/session.server";
 import { SectionFrame } from "@/components/plan/shell/SectionFrame";
-import { Placeholder } from "@/components/plan/shell/Placeholder";
+import { SensitivityModule } from "@/components/plan/modules/sensitivity/SensitivityModule";
 
 export default async function Page() {
-  await requireSection("sensitivity");
-  const t = await getTranslations("plan.shell");
+  const claims = await requireSection("sensitivity");
+  const home = claims.scn.toLowerCase();
+  const scenario: ScenarioKey = isScenarioKey(home) ? home : "base";
   return (
     <SectionFrame sectionKey="sensitivity">
-      <Placeholder text={t("placeholder")} />
+      <SensitivityModule initialScenario={scenario} />
     </SectionFrame>
   );
 }
