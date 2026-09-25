@@ -2817,6 +2817,369 @@
       },
       "capexFlagshipNote": "Flagship pricing: prototype design and first fabrication run included.",
       "capexSubsequentNote": "Locations after the first save {savings} on pods, buildout, design and pre-opening."
+    },
+    "experience": {
+      "intro": "One guest. One bowl. No line, no host, no server, no check, no tip. Here is the whole visit, in order.",
+      "photoLabel": "Photo to come",
+      "steps": {
+        "arrive": {
+          "title": "You walk in and nobody greets you.",
+          "body": "That is the design. The room is quiet, the light is low, and the calligraphic mark on the far wall is the only thing asking for your attention. Three kiosks stand between you and seventy-five pods.",
+          "photo": "Entry at dusk, empty kiosks lit, the mark on the far wall"
+        },
+        "order": {
+          "title": "You order in about forty seconds.",
+          "body": "Beef noodle soup is the menu. You choose your broth depth, your noodle, your add-ons, and whether tonight is a shank night. Every first add-on is free; extras are priced. The kiosk already knows your name if you have been here before.",
+          "photo": "Hands on the kiosk, add-on grid visible, shank highlighted"
+        },
+        "walk": {
+          "title": "A pod number, and you go find it.",
+          "body": "Pod 38. You walk the aisle past a row of closed panels and the low murmur of other people eating alone, together. Nobody is carrying a tray. Nobody is waiting to be seated.",
+          "photo": "The guest aisle looking down a row of numbered pods"
+        },
+        "settle": {
+          "title": "You sit, and the room disappears.",
+          "body": "Two and a third feet wide, four and a half deep. A hook for your bag, a shelf for your phone, water within reach. The panel in front of you is closed. You can hear the kitchen, faintly, on the other side.",
+          "photo": "Inside a pod from the guest's seat, panel closed"
+        },
+        "panel": {
+          "title": "The panel slides open.",
+          "body": "Seven minutes from the moment you paid, a bowl arrives through the wall. Broth first, then shank sliced to order, then the panel slides shut. You never see a hand.",
+          "photo": "The sliding panel mid-open, steam, the bowl arriving"
+        },
+        "taste": {
+          "title": "First spoon.",
+          "body": "Two-phase broth: a long bone simmer, then a finish built for flavor. Shank braised at a low temperature and cooled overnight in its own broth before slicing. This is a premium fusion interpretation, and it does not pretend to be a grandmother's recipe.",
+          "photo": "Macro of the bowl: shank slices fanned, broth surface, noodles"
+        },
+        "leave": {
+          "title": "You finish, and you leave.",
+          "body": "No check. No tipping, because the people who made your bowl are salaried. Referral credits land on the first and the sixteenth if you brought someone. The pod resets behind you in under six minutes.",
+          "photo": "Guest leaving through the entry, pod panel closing behind"
+        }
+      },
+      "kiosk": {
+        "eyebrow": "Try it",
+        "title": "The kiosk is real. Order something.",
+        "body": "This is the live ordering flow from ohbeef.com, the same software that runs the room. Tap through a bowl; nothing is charged from this frame.",
+        "open": "Open the kiosk in a new tab"
+      }
+    },
+    "market": {
+      "tam": {
+        "title": "How big, honestly",
+        "aria": "Nested circles: total market {tam}, serviceable {sam}, obtainable {som}",
+        "tam": "TAM",
+        "sam": "SAM",
+        "som": "SOM",
+        "tamDef": "US Asian restaurant industry sales",
+        "samDef": "Asian fast-casual spend across our nine target trade areas",
+        "somDef": "Five corporate units at steady state, from the engine (year 3 corporate revenue)",
+        "approx": "TAM and SAM are rounded public estimates for orientation. SOM is computed."
+      },
+      "som": {
+        "eyebrow": "On purpose",
+        "claim": "Our obtainable market is {share} of the total. We chose that.",
+        "text": "A plan that claims 5% of a national market has to explain how. A plan that claims five buildings in one state only has to open them. Every number in this plan flows from five units doing what one unit already models; the franchise upside is real, and it is not what the round is underwritten on."
+      },
+      "utah": {
+        "title": "The Utah trade areas",
+        "subtitle": "Where the first five open, and why each one.",
+        "cols": {
+          "market": "Market",
+          "population": "Population",
+          "growth": "5-yr growth",
+          "income": "Household income",
+          "daytime": "Daytime workers",
+          "asian": "Asian dining spend"
+        },
+        "approx": "Rounded public estimates: Census, Utah Gov. Office of Planning and Budget, EDCUtah, and industry spend ratios. Refresh before a lender meeting."
+      },
+      "matrix": {
+        "title": "Where we sit",
+        "subtitle": "Experience quality against operational efficiency. The upper right is empty because it is hard to be in.",
+        "aria": "Competitive matrix scatter with Oh! in the upper right",
+        "x": "Operational efficiency",
+        "y": "Experience quality",
+        "quadrant": "The empty quadrant",
+        "players": {
+          "fullServiceAsian": "Full-service Asian restaurants",
+          "nationalChineseFastFood": "National Chinese fast food",
+          "noodleChain": "Fast-casual noodle chains",
+          "ramenShop": "Independent ramen shops",
+          "ichiran": "Ichiran (pod format, Japan)",
+          "oh": "Oh!"
+        }
+      },
+      "tailwinds": {
+        "title": "Four things moving in our direction",
+        "items": {
+          "asianFastCasual": {
+            "title": "Asian fast-casual is the fastest-growing segment",
+            "body": "The category keeps taking share from both full-service and burger fast food, and beef noodle soup is under-represented in it relative to ramen and pho."
+          },
+          "soloDining": {
+            "title": "Solo dining is normal now",
+            "body": "Counter seats and one-person tables are the fastest-growing reservation type. The pod is the honest version of that: privacy by design, not an apology."
+          },
+          "laborCost": {
+            "title": "Labor cost pressure is pushing every operator toward automation",
+            "body": "We did not bolt a kiosk onto a dining room. We removed the dining room. Labor at 13.9% of revenue is the result, and it is the line every restaurant operator will ask about first."
+          },
+          "utahGrowth": {
+            "title": "Utah is the growth story lenders already know",
+            "body": "Fastest household formation in the country, a technology corridor with daytime density, and a proven record of concepts scaling out of the state."
+          }
+        }
+      },
+      "references": "Reference concepts: Ichiran proved the pod format at scale. Crumbl proved a Utah-founded concept can go national at speed, and every local lender and investor knows that story."
+    },
+    "operations": {
+      "platform": {
+        "title": "The platform, in plain words",
+        "body": "Oh! OS is the software that runs the room: what the guest touches, what the kitchen sees, and what the owner reads. Three front doors, one API, one database, and two trusted services for money and identity.",
+        "aria": "Block diagram of the platform",
+        "nodes": {
+          "web": {
+            "name": "ohbeef.com",
+            "role": "Ordering, loyalty, referral, this plan"
+          },
+          "kiosk": {
+            "name": "Kiosk",
+            "role": "In-store ordering and pod assignment"
+          },
+          "admin": {
+            "name": "Admin console",
+            "role": "Menu, orders, analytics, access codes"
+          },
+          "api": {
+            "name": "Oh! OS API",
+            "role": "Orders, pods, kitchen display, pricing, promos"
+          },
+          "db": {
+            "name": "Database",
+            "role": "Every order, pod state and guest"
+          },
+          "stripe": {
+            "name": "Stripe",
+            "role": "Payments, terminals, gift cards"
+          },
+          "clerk": {
+            "name": "Clerk",
+            "role": "Identity for staff and members"
+          }
+        }
+      },
+      "lifecycle": {
+        "title": "The pod lifecycle",
+        "subtitle": "Every pod is one of four things. The kitchen display and the kiosk read the same state.",
+        "states": {
+          "AVAILABLE": {
+            "title": "Open",
+            "body": "Clean, reset, ready to be assigned."
+          },
+          "RESERVED": {
+            "title": "Assigned",
+            "body": "A guest has paid and is walking to it."
+          },
+          "OCCUPIED": {
+            "title": "Occupied",
+            "body": "Panel closed; the bowl is coming or being eaten."
+          },
+          "CLEANING": {
+            "title": "Resetting",
+            "body": "Six minutes to wipe, restock, and turn."
+          }
+        }
+      },
+      "kds": {
+        "label": "Screenshot to come",
+        "needs": "Kitchen display in service: a live ticket rail with add-ons color-coded",
+        "title": "The kitchen sees the whole room",
+        "body": "Tickets arrive the second a guest pays, with the pod number and every add-on color-coded so a runner never reads a label. The display also shows where every pod is in its cycle, so the kitchen paces itself to the room instead of to a host stand."
+      },
+      "labor": {
+        "title": "Exactly who works here",
+        "subtitle": "{kitchen} kitchen and {mgmt} management, no front of house. Hourly at {wage}, management at {salary}, {burden}% burden. Kitchen payroll {kitchenAnnual}, management {mgmtAnnual}, before burden.",
+        "role": "Role",
+        "count": "FTE",
+        "salaried": "salaried",
+        "note": "Coverage across a service day (hours shown in 24-hour time). Broth starts at six; the last runner leaves after the last panel closes.",
+        "roles": {
+          "brothLead": "Broth and braise lead",
+          "slicer": "Slicer",
+          "noodle": "Noodle station",
+          "assembly": "Assembly",
+          "runner": "Corridor runner",
+          "gm": "General manager",
+          "agm": "Assistant manager"
+        }
+      },
+      "commissary": {
+        "eyebrow": "The biggest operational risk, head-on",
+        "claim": "Five kitchens, one broth. Consistency is the whole brand.",
+        "text": "The flagship kitchen is built as the commissary from day one: a twelve-gallon steam-jacketed kettle line already production-tested, cook-chill for the long bone phase, and the flavor finish done on site in each unit. Utah units within sixty miles get the base broth by refrigerated van; St. George runs its own kettle under the same recipe control. Every batch is logged against the recipe so a drift shows up in data before a guest tastes it."
+      },
+      "safety": {
+        "title": "Food safety and the permitting path",
+        "subtitle": "Utah County Health Department, in the order it actually happens.",
+        "steps": {
+          "planReview": {
+            "title": "Plan review",
+            "body": "Kitchen layout, finishes, and equipment schedule submitted before buildout."
+          },
+          "haccp": {
+            "title": "HACCP plan",
+            "body": "Critical control points for the broth (cook, cool, hold) and the shank (braise, chill, slice)."
+          },
+          "manager": {
+            "title": "Certified food safety manager",
+            "body": "GM and assistant certified before opening; every cook holds a food handler permit."
+          },
+          "inspection": {
+            "title": "Pre-opening inspection",
+            "body": "Health inspection once the kitchen is installed and cold."
+          },
+          "fireMarshal": {
+            "title": "Fire marshal",
+            "body": "Hood suppression, egress with seventy-five pods, and the corridor plan."
+          },
+          "occupancy": {
+            "title": "Certificate of occupancy",
+            "body": "The last signature before the first bowl."
+          }
+        }
+      }
+    },
+    "team": {
+      "photoLabel": "Photo to come",
+      "founder": {
+        "role": "Founder and operator, {pct}",
+        "name": "Dano Didericksen",
+        "photo": "Founder portrait, natural light, in the kitchen or at the pass",
+        "bio": "Twenty-five years leading global technology and commerce, most recently as Senior Director of Commerce and Global eCommerce at doTERRA, where he scaled commerce through hypergrowth from $750M to more than $2.5B across fifty-plus international markets.",
+        "facts": {
+          "commerce": "Scaled commerce $750M to $2.5B+",
+          "scale": "50+ international markets",
+          "markets": "Lived in Taiwan, Russia and Japan",
+          "languages": "Bilingual English and Mandarin"
+        },
+        "thesis": "The international expansion thesis is not aspirational for this founder. It is a resume."
+      },
+      "partner": {
+        "role": "Financial partner, {pct}",
+        "title": "One partner, one seat",
+        "body": "A single financial partner funds both rounds, {capital} in total, for a stake derived from the return they need and never above {cap}. The Funding page shows the math and the option to buy the stake back once the target is met."
+      },
+      "entity": {
+        "title": "The entity",
+        "number": "Utah entity",
+        "filed": "Articles filed",
+        "effective": "Effective",
+        "office": "Principal office",
+        "structure": "Structure",
+        "structureValue": "Member-managed LLC, two members",
+        "note": "EIN on file. Personal financial details are provided to lenders directly on request and never appear in this plan."
+      },
+      "advisory": {
+        "title": "Advisory seats we are filling",
+        "subtitle": "Three gaps we know about, named so a reader can help close them.",
+        "seats": {
+          "operator": {
+            "title": "Multi-unit restaurant operator",
+            "why": "Someone who has opened five in three years and knows which month it hurts."
+          },
+          "culinary": {
+            "title": "Culinary director",
+            "why": "Broth consistency across five kitchens is a chef's problem before it is a software problem."
+          },
+          "franchise": {
+            "title": "Franchise development counsel",
+            "why": "The FDD and the first master franchise agreement are due before unit six."
+          }
+        }
+      },
+      "hiring": {
+        "title": "Hiring by phase",
+        "subtitle": "Small on purpose. The key hire is flagged.",
+        "phases": {
+          "preOpening": {
+            "when": "T0 minus 3 months",
+            "title": "Flagship crew",
+            "body": "General manager, assistant manager, broth lead, slicer, noodle station, two assembly, two runners. Nine people."
+          },
+          "flagship": {
+            "when": "T0 to T0 + 9",
+            "title": "Run it, learn it",
+            "body": "No corporate hires. The founder is in the building. Every process gets written down."
+          },
+          "beforeThree": {
+            "when": "Before location three",
+            "title": "Director of Operations",
+            "body": "The key hire. Owns openings two through five, training, and the commissary. Hired at about month ten, before the second lease is signed."
+          },
+          "fiveUnits": {
+            "when": "Locations two to five",
+            "title": "Unit crews and a commissary lead",
+            "body": "Nine per unit, hired sixty days ahead, trained at the flagship. A commissary lead when the second unit opens."
+          },
+          "franchise": {
+            "when": "Year 3",
+            "title": "Franchise development",
+            "body": "Franchise director, training manager, and the counsel seat above. The team that opens units on other people's capital."
+          }
+        }
+      }
+    },
+    "roadmap": {
+      "workstreams": {
+        "all": "All",
+        "realEstate": "Real estate",
+        "buildout": "Buildout",
+        "legal": "Legal and permits",
+        "technology": "Technology",
+        "capital": "Capital",
+        "hiring": "Hiring"
+      },
+      "done": "{done} of {total} complete",
+      "t0": "Months are counted from T0, the day the flagship opens, so this chart never goes stale. Checked items are complete.",
+      "t0Label": "T0 flagship opens",
+      "yearLabel": "Year {n}",
+      "aria": "Gantt chart of the plan by workstream",
+      "note": "Post-formation checklist status as of this build: Articles and EIN complete; operating agreement, TAP registration, business license, food service license, fire marshal and certificate of occupancy pending.",
+      "items": {
+        "articles": "Articles of Organization filed",
+        "ein": "EIN obtained",
+        "operatingAgreement": "Operating agreement signed",
+        "tap": "Utah TAP registration",
+        "round1": "Round 1 closes",
+        "flagshipLease": "Flagship lease (Lehi)",
+        "design": "Prototype design and architecture",
+        "podFabrication": "Pod fabrication, first run",
+        "flagshipBuildout": "Flagship buildout",
+        "planReview": "Health plan review",
+        "businessLicense": "Lehi business license",
+        "foodServiceLicense": "Food service license",
+        "fireMarshal": "Fire marshal",
+        "certificateOfOccupancy": "Certificate of occupancy",
+        "ohOsV1": "Oh! OS v1: kiosk, pods, kitchen display",
+        "kdsPodOrchestration": "Pod orchestration and delivery flow",
+        "coreHires": "Flagship crew hired",
+        "training": "Training and dry runs",
+        "flagshipOpen": "Flagship opens",
+        "round2": "Round 2 funds",
+        "directorOps": "Director of Operations hired",
+        "commissary": "Commissary line and cook-chill",
+        "opening-lease": "Lease: {location}",
+        "opening-buildout": "Buildout: {location}",
+        "opening-open": "Opens: {location}",
+        "ohOsV2": "Oh! OS v2: multi-unit, commissary, analytics",
+        "franchiseCounsel": "Franchise counsel engaged",
+        "fdd": "FDD and master franchise agreement",
+        "franchiseLicensing": "Oh! OS licensing for franchisees",
+        "franchiseTeam": "Franchise development team",
+        "firstFranchise": "First franchise units open"
+      }
     }
   }
 }

@@ -5,6 +5,8 @@ import { FloorPlanPrint } from "./floor-plan/FloorPlanPrint";
 import { ExpansionPrint } from "./expansion/ExpansionPrint";
 import { FinancialsPrint } from "./financials/FinancialsPrint";
 import { FundingPrint } from "./funding/FundingPrint";
+import { ExperiencePrint, MarketPrint, OperationsPrint, RoadmapPrint, TeamPrint } from "./narrative-print";
+import { SensitivityPrint, SummaryPrint, UnitEconomicsPrint } from "./summary-print";
 
 /**
  * Print variants by section. Only the print route imports this, so the
@@ -12,9 +14,17 @@ import { FundingPrint } from "./funding/FundingPrint";
  * lib/plan/sections.ts on why the registry itself is metadata-only).
  */
 export const PRINT_MODULES: Partial<Record<SectionKey, ComponentType<{ locale: string }>>> = {
+  summary: SummaryPrint,
+  "unit-economics": UnitEconomicsPrint,
+  sensitivity: SensitivityPrint,
   model: ModelPrint,
   "floor-plan": FloorPlanPrint,
   expansion: ExpansionPrint,
   financials: FinancialsPrint,
   funding: FundingPrint,
+  experience: ExperiencePrint,
+  market: MarketPrint,
+  operations: OperationsPrint,
+  team: TeamPrint,
+  roadmap: RoadmapPrint,
 };
