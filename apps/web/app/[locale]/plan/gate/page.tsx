@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { GateForm } from "./GateForm";
+import { planFontVariables } from "@/lib/plan/fonts";
 
 /**
  * Plan gate. Reachable without a session; everything else under /plan is
- * redirected here by middleware. Styling is inline for Phase 1 and moves to
- * the Tailwind plan tokens in Phase 3 together with the shell.
+ * redirected here by middleware.
  */
 
 export const metadata: Metadata = {
@@ -30,39 +30,12 @@ export default async function PlanGatePage({ params, searchParams }: Props) {
   const t = await getTranslations("plan.gate");
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        flexShrink: 0,
-        background: "#1C1B19",
-        color: "#F2EDE4",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "24px 16px",
-      }}
-    >
-      <div style={{ width: "100%", maxWidth: 420, textAlign: "center" }}>
+    <main className={`${planFontVariables} flex min-h-screen shrink-0 items-center justify-center bg-oh-charcoal px-4 py-6 text-oh-cream`}>
+      <div className="w-full max-w-[420px] text-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/Oh_Logo_Mark_Light.png"
-          alt="Oh!"
-          width={88}
-          height={88}
-          style={{ width: 88, height: "auto", margin: "0 auto 32px", display: "block" }}
-        />
-        <h1
-          style={{
-            fontFamily: "var(--font-heading)",
-            fontWeight: 500,
-            fontSize: "clamp(1.6rem, 5vw, 2.1rem)",
-            lineHeight: 1.2,
-            margin: "0 0 12px",
-          }}
-        >
-          {t("title")}
-        </h1>
-        <p style={{ color: "#9A9188", margin: "0 0 32px", fontSize: "0.95rem" }}>{t("subtitle")}</p>
+        <img src="/Oh_Logo_Mark_Light.png" alt="Oh!" width={88} height={88} className="mx-auto mb-8 block h-auto w-[88px]" />
+        <h1 className="m-0 mb-3 font-display text-[clamp(1.8rem,5vw,2.4rem)] font-normal leading-[1.15] text-oh-cream">{t("title")}</h1>
+        <p className="m-0 mb-8 text-[0.95rem] text-oh-mute">{t("subtitle")}</p>
         <GateForm
           nextPath={safeNext(locale, next)}
           initialCode={c ?? ""}
@@ -76,7 +49,7 @@ export default async function PlanGatePage({ params, searchParams }: Props) {
             errorNetwork: t("errorNetwork"),
           }}
         />
-        <p style={{ color: "#8A8178", marginTop: 40, fontSize: "0.8rem" }}>{t("help")}</p>
+        <p className="m-0 mt-10 text-[0.8rem] text-oh-ash">{t("help")}</p>
       </div>
     </main>
   );

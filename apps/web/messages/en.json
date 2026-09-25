@@ -2186,9 +2186,126 @@
       "help": "Need a code? Write to dano@ohbeefnoodlesoup.com."
     },
     "shell": {
+      "brand": "Oh! Beef Noodle Soup",
+      "planTitle": "Business Plan",
       "viewingAs": "Viewing as {label}",
       "signOut": "Close plan",
-      "authenticated": "You are in. The plan shell arrives in the next build phase."
+      "skipToContent": "Skip to content",
+      "sections": "Plan sections",
+      "progress": "Reading progress",
+      "language": "Language",
+      "print": "Print version",
+      "placeholder": "This section is being built. The figures behind it already live in the model and will appear here in the next release.",
+      "audience": {
+        "INVESTOR": "Investor",
+        "LENDER": "Lender",
+        "LANDLORD": "Landlord",
+        "PARTNER": "Partner",
+        "ADVISOR": "Advisor",
+        "INTERNAL": "Internal"
+      }
+    },
+    "sections": {
+      "summary": {
+        "short": "Summary",
+        "title": "Executive Summary",
+        "subtitle": "A restaurant that runs like software, and a plan you can pull apart yourself."
+      },
+      "model": {
+        "short": "The Model",
+        "title": "The Model",
+        "subtitle": "Move the levers. Every figure in this plan recalculates from them."
+      },
+      "experience": {
+        "short": "Experience",
+        "title": "The Experience",
+        "subtitle": "{pods} pods, no front of house, and a bowl built around the cut."
+      },
+      "market": {
+        "short": "Market",
+        "title": "Market",
+        "subtitle": "Utah first, then the corridors where beef noodle soup already has a following."
+      },
+      "floor-plan": {
+        "short": "Floor Plan",
+        "title": "The Floor Plan",
+        "subtitle": "{sqft} square feet, {pods} pods, one kitchen, no dining room to staff."
+      },
+      "operations": {
+        "short": "Operations",
+        "title": "Operations and Technology",
+        "subtitle": "Oh! OS runs the room so the kitchen can run the food."
+      },
+      "expansion": {
+        "short": "Expansion",
+        "title": "The Expansion Engine",
+        "subtitle": "Five Utah locations in the first year, four US metros next, then the world by franchise."
+      },
+      "unit-economics": {
+        "short": "Unit Economics",
+        "title": "Unit Economics",
+        "subtitle": "What one location earns, and why labor is the whole argument."
+      },
+      "financials": {
+        "short": "Financials",
+        "title": "Financials",
+        "subtitle": "Portfolio P&L, capital per location, and the coverage a lender needs to see."
+      },
+      "sensitivity": {
+        "short": "Sensitivity",
+        "title": "Sensitivity and Risk",
+        "subtitle": "Where the plan bends, and how far it goes before it breaks."
+      },
+      "team": {
+        "short": "Team",
+        "title": "Team and Governance",
+        "subtitle": "Who runs it, how decisions get made, and what is still to be resolved."
+      },
+      "funding": {
+        "short": "Funding",
+        "title": "Funding and Use of Funds",
+        "subtitle": "Two rounds, one SBA loan, and a valuation you set yourself."
+      },
+      "roadmap": {
+        "short": "Roadmap",
+        "title": "Roadmap and Milestones",
+        "subtitle": "From lease to the fifth opening, dated from the day the flagship opens."
+      }
+    },
+    "summary": {
+      "revenue": "Base-case revenue per location",
+      "revenueNote": "Steady state, 75 pods, 30% utilization",
+      "revPerSqFt": "Revenue per square foot",
+      "revPerSqFtNote": "US fast-casual median is roughly $450 to $600",
+      "ebitdaTarget": "EBITDA target",
+      "ebitdaTargetNote": "Public target. The model page shows the full margin.",
+      "dscr": "Debt service coverage",
+      "dscrNote": "Base case against the SBA 7(a) loan. Lenders want 1.25x.",
+      "benchmarkEyebrow": "Saying it out loud",
+      "benchmarkClaim": "Our base case sits at $1,200 per square foot. That is elite.",
+      "benchmarkText": "US fast-casual median runs $450 to $600 per square foot. Top-decile operators clear $1,000. Chick-fil-A runs above $1,500. High-throughput, small-footprint, high-check formats get there, and the levers on the model page show exactly which assumptions carry it.",
+      "placeholder": "The narrative summary arrives with the module build. Everything above is computed live from the financial engine."
+    },
+    "primitives": {
+      "showTable": "Show data table",
+      "showChart": "Show chart",
+      "photo": "Photo to come"
+    },
+    "print": {
+      "backToPlan": "Back to the interactive plan",
+      "printButton": "Print or save as PDF",
+      "cover": {
+        "title": "Business Plan",
+        "subtitle": "Zero front-of-house dining, built as an operating system. The restaurants are the proof and the first customer.",
+        "preparedFor": "Prepared for",
+        "generated": "Generated",
+        "baseRevenue": "Base-case revenue per location",
+        "confidential": "Distribution",
+        "confidentialText": "Confidential. Shared by invitation only."
+      },
+      "toc": "Contents",
+      "placeholder": "Section content follows in the next release. Figures are computed from the financial engine at print time.",
+      "footer": "Oh! Beef Noodle Soup business plan. Prepared for {label}. Generated {date}. Confidential."
     }
   }
 }

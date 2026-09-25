@@ -7,9 +7,9 @@
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
-import { PLAN_COOKIE, canViewSection, verifyPlanToken, type PlanClaims } from "./session";
+import { PLAN_COOKIE, verifyPlanToken, type PlanClaims } from "./session";
 import { planApi } from "./api";
-import type { SectionKey } from "./sections";
+import { isSectionVisible, type SectionKey } from "./sections";
 
 /**
  * Memoized per request: layout and pages share one verification.
@@ -28,11 +28,12 @@ export const getPlanSession = cache(async (): Promise<PlanClaims | null> => {
 });
 
 /**
- * Enforces the section allowlist server-side (spec 7.7). A code that is not
+ * Enforces section visibility server-side (spec 7.7): the code's explicit
+ * allowlist, else the section's audience defaults. A code that is not
  * allowed to see a section gets a 404, not a hidden nav item.
  */
 export async function requireSection(key: SectionKey): Promise<PlanClaims> {
   const claims = await getPlanSession();
-  if (!claims || !canViewSection(claims, key)) notFound();
+  if (!claims || !isSectionVisible(claims, key)) notFound();
   return claims;
 }

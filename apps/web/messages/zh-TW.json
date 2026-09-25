@@ -281,14 +281,24 @@
       "tagline": "鹽湖城市中心",
       "description": "我們位於鹽湖城市中心的旗艦店，提供獨特的用餐體驗，配備私人包廂和科技化點餐。",
       "mallDescription": "City Creek Center是猶他州首屈一指的購物目的地，擁有超過100家商店和餐廳，在令人驚嘆的露天環境中配備可伸縮的玻璃屋頂。",
-      "nearbyLandmarks": ["聖殿廣場", "鹽宮會議中心", "猶他州議會大廈", "Gateway購物中心"],
+      "nearbyLandmarks": [
+        "聖殿廣場",
+        "鹽宮會議中心",
+        "猶他州議會大廈",
+        "Gateway購物中心"
+      ],
       "parking": "在City Creek停車場免費停車，需驗證"
     },
     "universityPlace": {
       "tagline": "猶他谷",
       "description": "為猶他谷社區提供同樣卓越的品質和創新的用餐體驗。",
       "mallDescription": "University Place是奧勒姆充滿活力的購物和娛樂中心，匯集全國連鎖店和當地最愛，靠近猶他谷大學。",
-      "nearbyLandmarks": ["猶他谷大學", "普若佛峽谷", "天波諾高斯洞穴", "楊百翰大學"],
+      "nearbyLandmarks": [
+        "猶他谷大學",
+        "普若佛峽谷",
+        "天波諾高斯洞穴",
+        "楊百翰大學"
+      ],
       "parking": "University Place全區提供充足免費停車位"
     },
     "details": {
@@ -332,7 +342,12 @@
       "title": "即將開幕",
       "description": "我們正在擴展！敬請期待這些城市的新門市。",
       "label": "即將開幕",
-      "cities": ["舊金山", "洛杉磯", "鳳凰城", "丹佛"]
+      "cities": [
+        "舊金山",
+        "洛杉磯",
+        "鳳凰城",
+        "丹佛"
+      ]
     },
     "cta": {
       "title": "準備好品嚐最棒的一碗麵了嗎？",
@@ -2050,6 +2065,145 @@
       "alreadyHaveAccount": "我已有帳戶",
       "privacyNote": "建立帳戶即表示您同意我們的隱私政策和條款",
       "orderLinked": "訂單已連結！您獲得了 {points} 點數！"
+    }
+  },
+  "plan": {
+    "meta": {
+      "title": "Oh! 牛肉麵 商業計畫"
+    },
+    "gate": {
+      "title": "本計畫僅限受邀者閱讀。",
+      "subtitle": "請輸入邀請函中的存取碼以繼續。",
+      "codeLabel": "存取碼",
+      "codePlaceholder": "OH-KESTREL-7742",
+      "submit": "開啟計畫",
+      "submitting": "驗證中",
+      "errorInvalid": "此存取碼無效。請確認後再試一次，或向我們索取新的存取碼。",
+      "errorRateLimited": "嘗試次數過多。請等候十五分鐘後再試。",
+      "errorNetwork": "目前無法連線至伺服器。請稍後再試。",
+      "help": "需要存取碼？請寫信至 dano@ohbeefnoodlesoup.com。"
+    },
+    "shell": {
+      "brand": "Oh! 牛肉麵",
+      "planTitle": "商業計畫",
+      "viewingAs": "以「{label}」身分閱讀",
+      "signOut": "關閉計畫",
+      "skipToContent": "跳至內容",
+      "sections": "計畫章節",
+      "progress": "閱讀進度",
+      "language": "語言",
+      "print": "列印版",
+      "placeholder": "本章節正在建置中。背後的數字已存在於財務模型中，將於下一版在此呈現。",
+      "audience": {
+        "INVESTOR": "投資人",
+        "LENDER": "貸款機構",
+        "LANDLORD": "房東",
+        "PARTNER": "合作夥伴",
+        "ADVISOR": "顧問",
+        "INTERNAL": "內部"
+      }
+    },
+    "sections": {
+      "summary": {
+        "short": "摘要",
+        "title": "執行摘要",
+        "subtitle": "一間像軟體一樣運作的餐廳，以及一份您可以親手拆解的計畫。"
+      },
+      "model": {
+        "short": "財務模型",
+        "title": "財務模型",
+        "subtitle": "調整每一個變數。本計畫中的所有數字都會隨之重新計算。"
+      },
+      "experience": {
+        "short": "體驗",
+        "title": "用餐體驗",
+        "subtitle": "{pods} 個座艙，沒有外場，以及一碗圍繞著金錢腱設計的牛肉麵。"
+      },
+      "market": {
+        "short": "市場",
+        "title": "市場分析",
+        "subtitle": "先立足猶他，再前往牛肉麵早已擁有擁護者的城市走廊。"
+      },
+      "floor-plan": {
+        "short": "平面配置",
+        "title": "平面配置",
+        "subtitle": "{sqft} 平方英尺、{pods} 個座艙、一個廚房，沒有需要人力的用餐區。"
+      },
+      "operations": {
+        "short": "營運",
+        "title": "營運與技術",
+        "subtitle": "Oh! OS 管理座艙區，讓廚房專心做好料理。"
+      },
+      "expansion": {
+        "short": "擴張",
+        "title": "擴張引擎",
+        "subtitle": "第一年在猶他開設五間門市，接著四座美國大城，再以加盟走向世界。"
+      },
+      "unit-economics": {
+        "short": "單店經濟",
+        "title": "單店經濟模型",
+        "subtitle": "一間門市的收益結構，以及為何人力成本是整個論點的核心。"
+      },
+      "financials": {
+        "short": "財務",
+        "title": "財務報表",
+        "subtitle": "組合損益、每間門市的資本支出，以及貸款機構需要看到的償債覆蓋率。"
+      },
+      "sensitivity": {
+        "short": "敏感度",
+        "title": "敏感度與風險",
+        "subtitle": "計畫在哪裡會受壓，以及能承受多少壓力。"
+      },
+      "team": {
+        "short": "團隊",
+        "title": "團隊與治理",
+        "subtitle": "由誰經營、如何決策，以及尚待釐清的事項。"
+      },
+      "funding": {
+        "short": "募資",
+        "title": "募資與資金用途",
+        "subtitle": "兩輪募資、一筆 SBA 貸款，以及由您自行設定的估值。"
+      },
+      "roadmap": {
+        "short": "時程",
+        "title": "時程與里程碑",
+        "subtitle": "從簽約到第五間門市開幕，全部以旗艦店開幕日為基準。"
+      }
+    },
+    "summary": {
+      "revenue": "基準情境單店年營收",
+      "revenueNote": "穩定狀態，75 個座艙，30% 使用率",
+      "revPerSqFt": "每平方英尺營收",
+      "revPerSqFtNote": "美國快休閒餐飲中位數約為 450 至 600 美元",
+      "ebitdaTarget": "EBITDA 目標",
+      "ebitdaTargetNote": "對外公開目標。完整利潤率請見財務模型頁。",
+      "dscr": "償債覆蓋率",
+      "dscrNote": "基準情境對 SBA 7(a) 貸款。貸款機構要求 1.25 倍。",
+      "benchmarkEyebrow": "坦白說",
+      "benchmarkClaim": "我們的基準情境為每平方英尺 1,200 美元。這是頂尖水準。",
+      "benchmarkText": "美國快休閒餐飲中位數為每平方英尺 450 至 600 美元。前 10% 的營運者可超過 1,000 美元，Chick-fil-A 則在 1,500 美元以上。高翻桌率、小面積、高客單價的模式能做到這一點，而財務模型頁上的變數會清楚顯示是哪些假設在支撐它。",
+      "placeholder": "敘述性摘要將隨模組建置一併推出。以上所有數字皆由財務引擎即時計算。"
+    },
+    "primitives": {
+      "showTable": "顯示數據表",
+      "showChart": "顯示圖表",
+      "photo": "照片待補"
+    },
+    "print": {
+      "backToPlan": "返回互動式計畫",
+      "printButton": "列印或儲存為 PDF",
+      "cover": {
+        "title": "商業計畫",
+        "subtitle": "零外場的用餐模式，以作業系統的方式打造。餐廳既是證明，也是第一位客戶。",
+        "preparedFor": "編製對象",
+        "generated": "產生日期",
+        "baseRevenue": "基準情境單店年營收",
+        "confidential": "發布範圍",
+        "confidentialText": "機密文件。僅限受邀者閱讀。"
+      },
+      "toc": "目錄",
+      "placeholder": "章節內容將於下一版推出。所有數字皆於列印時由財務引擎計算。",
+      "footer": "Oh! 牛肉麵商業計畫。編製對象：{label}。產生日期：{date}。機密文件。"
     }
   }
 }
