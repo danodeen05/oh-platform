@@ -65,6 +65,7 @@ import { getScheduler } from "./triggers/index.js";
 import { getOrchestrator } from "./autonomous/index.js";
 import { registerCateringRoutes, isDineInOrdersEnabled } from "./catering/routes.js";
 import { registerPlanRoutes } from "./plan/routes.js";
+import { createAdminAuth } from "./auth/admin.js";
 
 const prisma = new PrismaClient();
 const app = Fastify({ logger: true });
@@ -152,34 +153,10 @@ await app.register(rateLimit, {
   allowList: (req) => req.url === '/health'
 });
 
-// Admin authentication middleware
-const ADMIN_API_KEY = process.env.ADMIN_API_KEY;
-
-const requireAdminAuth = async (req, reply) => {
-  // Check for admin API key in header
-  const apiKey = req.headers['x-admin-api-key'];
-  const authHeader = req.headers.authorization;
-
-  // In development, allow requests without auth if ADMIN_API_KEY not set
-  if (process.env.NODE_ENV !== 'production' && !ADMIN_API_KEY) {
-    return; // Allow in development
-  }
-
-  // Check API key
-  if (ADMIN_API_KEY && apiKey === ADMIN_API_KEY) {
-    return; // Valid API key
-  }
-
-  // Check Bearer token (for Clerk-authenticated requests from admin dashboard)
-  if (authHeader?.startsWith('Bearer ')) {
-    // In production, verify the token with Clerk
-    // For now, we accept any Bearer token as the admin dashboard handles auth
-    return;
-  }
-
-  // No valid authentication
-  return reply.code(401).send({ error: 'Unauthorized - Admin authentication required' });
-};
+// Admin authentication middleware: see src/auth/admin.js. Clerk session
+// tokens are verified server-side and checked against the ADMIN_EMAILS
+// allowlist; x-admin-api-key remains for server-to-server callers.
+const { requireAdminAuth } = createAdminAuth({ log: (...args) => app.log.warn({ args }, "admin auth") });
 
 // Apply admin auth to all /admin/* routes
 app.addHook('onRequest', async (req, reply) => {
