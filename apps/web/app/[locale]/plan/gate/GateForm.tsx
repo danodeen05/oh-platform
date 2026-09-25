@@ -68,9 +68,10 @@ export function GateForm({ nextPath, initialCode, labels }: Props) {
     : status === "network" ? labels.errorNetwork
     : null;
 
+  const busy = status === "submitting";
   return (
     <form onSubmit={onSubmit} noValidate>
-      <label htmlFor="plan-code" style={{ display: "block", textAlign: "left", fontSize: "0.8rem", letterSpacing: "0.08em", textTransform: "uppercase", color: "#9A9188", marginBottom: 8 }}>
+      <label htmlFor="plan-code" className="mb-2 block text-left text-[0.8rem] uppercase tracking-[0.08em] text-oh-mute">
         {labels.codeLabel}
       </label>
       <input
@@ -85,44 +86,27 @@ export function GateForm({ nextPath, initialCode, labels }: Props) {
         inputMode="text"
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? "plan-code-error" : undefined}
-        disabled={status === "submitting"}
-        style={{
-          width: "100%",
-          padding: "14px 16px",
-          fontSize: "1.1rem",
-          letterSpacing: "0.12em",
-          fontVariantNumeric: "tabular-nums",
-          textAlign: "center",
-          background: "#2A2724",
-          color: "#F2EDE4",
-          border: `1px solid ${error ? "#C1502E" : "#3A3632"}`,
-          borderRadius: 8,
-          outline: "none",
-        }}
+        disabled={busy}
+        className={[
+          "w-full rounded-lg border bg-oh-ink px-4 py-3.5 text-center text-[1.1rem] tracking-[0.12em] tabular-nums text-oh-cream placeholder:text-oh-ash focus:border-oh-ember focus:outline-none",
+          error ? "border-oh-ember" : "border-oh-stone",
+        ].join(" ")}
       />
       {error && (
-        <p id="plan-code-error" role="alert" style={{ color: "#E07A5A", fontSize: "0.85rem", marginTop: 10, textAlign: "left" }}>
+        <p id="plan-code-error" role="alert" className="m-0 mt-2.5 text-left text-[0.85rem] text-oh-ember-light">
           {error}
         </p>
       )}
       <button
         type="submit"
-        disabled={status === "submitting" || !code.trim()}
-        style={{
-          width: "100%",
-          marginTop: 16,
-          padding: "14px 16px",
-          fontSize: "1rem",
-          fontWeight: 600,
-          background: "#C1502E",
-          color: "#F2EDE4",
-          border: "none",
-          borderRadius: 8,
-          cursor: status === "submitting" ? "wait" : "pointer",
-          opacity: status === "submitting" || !code.trim() ? 0.6 : 1,
-        }}
+        disabled={busy || !code.trim()}
+        className={[
+          "mt-4 w-full rounded-lg border-0 bg-oh-ember px-4 py-3.5 text-[1rem] font-semibold text-oh-cream focus:outline-none focus-visible:ring-2 focus-visible:ring-oh-cream",
+          busy ? "cursor-wait" : "cursor-pointer",
+          busy || !code.trim() ? "opacity-60" : "hover:bg-oh-clay",
+        ].join(" ")}
       >
-        {status === "submitting" ? labels.submitting : labels.submit}
+        {busy ? labels.submitting : labels.submit}
       </button>
     </form>
   );

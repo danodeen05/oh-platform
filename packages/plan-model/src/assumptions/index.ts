@@ -36,7 +36,7 @@ export function isScenarioKey(value: string): value is ScenarioKey {
  * DECISIONS.md. Overrides are chosen so NYC and LA land near the spec's
  * $6.5M and the metros as a group sit in the $5.5M to $6.5M range.
  */
-export const OPENING_SCHEDULE: readonly OpeningPlan[] = Object.freeze([
+const openingSchedule: OpeningPlan[] = [
   { key: "lehi", name: "Lehi (Traverse Mountain)", region: "utah", openMonth: 0, flagship: true, structure: "corporate" },
   { key: "slc", name: "Downtown SLC (City Creek)", region: "utah", openMonth: 4, flagship: false, structure: "corporate" },
   { key: "south-jordan", name: "South Jordan (Daybreak)", region: "utah", openMonth: 7, flagship: false, structure: "corporate" },
@@ -78,7 +78,8 @@ export const OPENING_SCHEDULE: readonly OpeningPlan[] = Object.freeze([
     structure: "corporate",
     overrides: { utilizationRate: 0.36, avgBowlPrice: 22.0, rentPerSqFtAnnual: 65, nnnPerSqFtAnnual: 16, avgKitchenWage: 26 },
   },
-]);
+];
+export const OPENING_SCHEDULE: readonly OpeningPlan[] = Object.freeze(openingSchedule);
 
 /** Spec 5.9 franchise economics. */
 export const FRANCHISE_TERMS: FranchiseTerms = Object.freeze({
@@ -95,14 +96,18 @@ export const FRANCHISE_TERMS: FranchiseTerms = Object.freeze({
  * territories, 31 franchise units by year 5) and are flagged in DECISIONS.md.
  * Paris is a sub-franchise under London, so it carries no territory fee.
  */
-export const FRANCHISE_MARKETS: readonly FranchiseMarket[] = Object.freeze([
+const franchiseMarkets: FranchiseMarket[] = [
   { key: "taipei", name: "Taipei", structure: "master-franchise", territoryFee: 500_000, territoryYear: 4, unitsByYear: { 4: 3, 5: 5, 6: 6 }, auvIndex: 0.85 },
   { key: "tokyo", name: "Tokyo", structure: "jv", territoryFee: 750_000, territoryYear: 4, unitsByYear: { 4: 2, 5: 5, 6: 6 }, auvIndex: 1.05 },
   { key: "london", name: "London", structure: "master-franchise", territoryFee: 500_000, territoryYear: 4, unitsByYear: { 4: 2, 5: 4, 6: 5 }, auvIndex: 1.1 },
   { key: "paris", name: "Paris", structure: "sub-franchise", territoryFee: 0, territoryYear: 5, unitsByYear: { 5: 2, 6: 3 }, auvIndex: 1.0 },
   { key: "singapore", name: "Singapore", structure: "master-franchise", territoryFee: 350_000, territoryYear: 4, unitsByYear: { 4: 1, 5: 3, 6: 3 }, auvIndex: 1.15 },
   { key: "melbourne", name: "Melbourne", structure: "master-franchise", territoryFee: 250_000, territoryYear: 5, unitsByYear: { 5: 4, 6: 4 }, auvIndex: 0.95 },
-]);
+];
+// Typed through a mutable local first: Object.freeze on a literal loses the
+// contextual type, and a consumer without exactOptionalPropertyTypes then
+// infers `4?: undefined` on the unitsByYear records.
+export const FRANCHISE_MARKETS: readonly FranchiseMarket[] = Object.freeze(franchiseMarkets);
 
 /** Spec 5.11: SBA 7(a), 10 years. 6.0% reproduces the spec's ~$200K; real 7(a) pricing is Prime + 2.75 to 3.0%. */
 export const DEFAULT_LOAN: LoanAssumptions = Object.freeze({

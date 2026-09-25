@@ -1,3 +1,42 @@
+/*
+ * Tailwind v4, plan-scoped by convention.
+ *
+ * Only the theme variables and utilities are imported. Preflight is left out
+ * on purpose so nothing outside app/[locale]/plan changes: utilities apply
+ * only where a class is used. Utilities are imported unlayered because the
+ * element rules below (button, input, a, h1..h6, p) are unlayered too, and a
+ * layered utility would lose to them regardless of specificity.
+ */
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css";
+@source "../app";
+@source "../components";
+@source "../lib";
+
+/* Brand palette for the plan (spec 3.1). */
+@theme {
+  --color-oh-charcoal: #1C1B19;
+  --color-oh-ink: #2A2724;
+  --color-oh-stone: #3A3632;
+  --color-oh-ash: #8A8178;
+  /* Muted text that still clears WCAG AA on ink and charcoal; ash does not on ink. */
+  --color-oh-mute: #9A9188;
+  --color-oh-cream: #F2EDE4;
+  --color-oh-paper: #FAF7F1;
+  --color-oh-ember: #C1502E;
+  --color-oh-ember-light: #E07A5A;
+  --color-oh-olive: #6B7355;
+  --color-oh-gold: #C9A227;
+  --color-oh-clay: #8C5A3C;
+}
+
+/* Fonts come from next/font in lib/plan/fonts.ts; inline so the variable resolves on the element. */
+@theme inline {
+  --font-display: var(--font-instrument-serif), Georgia, "Times New Roman", serif;
+  --font-body: var(--font-primary);
+  --font-cjk: var(--font-noto-tc), var(--font-noto-sc), var(--font-primary);
+}
+
 /* Design System - Oh Beef Noodle Soup */
 :root {
   /* Color Palette */

@@ -1,0 +1,68 @@
+/*
+ * The one CSS file the plan is allowed (spec 7.1, 7.5). Paged-media rules
+ * (@page, break-before, a repeating footer) cannot be expressed as Tailwind
+ * utilities, and SBA loan officers will print this, so the printed artifact
+ * gets real page rules instead of a screen layout squeezed onto paper.
+ *
+ * Page numbers in the contents list need target-counter(), which no
+ * shipping browser supports; the droplet-side PDF script (Phase 5) can add them.
+ */
+
+@page {
+  size: letter;
+  margin: 0.75in 0.75in 1in;
+}
+
+.plan-print-footer {
+  display: none;
+}
+
+@media print {
+  html,
+  body {
+    background: #faf7f1 !important;
+    height: auto !important;
+    display: block !important;
+  }
+
+  .plan-print {
+    min-height: auto;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .plan-print-noprint {
+    display: none !important;
+  }
+
+  .plan-print-cover {
+    min-height: auto;
+    height: 8.5in;
+    break-after: page;
+  }
+
+  .plan-print-section {
+    break-before: page;
+    break-inside: auto;
+  }
+
+  .plan-print-section h2,
+  .plan-print-section h3 {
+    break-after: avoid;
+  }
+
+  /* Chromium repeats fixed elements on every printed page. */
+  .plan-print-footer {
+    display: block;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding-top: 0.15in;
+    border-top: 1px solid rgba(28, 27, 25, 0.15);
+  }
+
+  a[href]::after {
+    content: none !important;
+  }
+}

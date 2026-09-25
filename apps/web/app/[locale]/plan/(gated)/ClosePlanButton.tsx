@@ -13,7 +13,7 @@ export function ClosePlanButton({ label, locale }: { label: string; locale: stri
     <button
       type="button"
       onClick={() => void close()}
-      style={{ background: "transparent", color: "#F2EDE4", border: "1px solid #3A3632", borderRadius: 6, padding: "6px 12px", cursor: "pointer", fontSize: "0.8rem" }}
+      className="rounded-md border border-oh-stone bg-transparent px-3 py-1 text-[0.75rem] text-oh-cream hover:border-oh-mute focus:outline-none focus-visible:ring-2 focus-visible:ring-oh-ember"
     >
       {label}
     </button>

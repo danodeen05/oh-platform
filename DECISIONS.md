@@ -39,3 +39,15 @@ taken with a stated default; flip the constant and the tests say what moved.
 
 Open items for the owner before this goes to a lender: items 2, 4, 8, 11, 12; and the
 operative Operating Agreement (two-member 49/51 vs single-member) per spec 10.
+
+## Plan shell (Phase 3), Sep 2026
+
+| Item | Decision | Why |
+|---|---|---|
+| Tailwind v4 | Theme + utilities only, no preflight; utilities imported unlayered | The site's element rules (button, input, a, h1..h6, p) are unlayered, and a layered utility would lose to them regardless of specificity. Marketing pages verified byte-identical apart from the `next-size-adjust` meta that next/font adds |
+| Fonts | Instrument Serif + Noto Sans TC/SC via next/font inside the plan layouts; body stays Raleway | Spec 3.2; keeps the marketing site's Google Fonts link untouched |
+| Section visibility | A code's explicit allowlist wins; otherwise audience defaults (landlords do not see model, financials, sensitivity, funding) | Admin can always widen a specific code; defaults keep the capital stack away from landlords |
+| Analytics | One visible section per second (largest viewport share) earns dwell; interactions attributed by nearest `data-section`; flush every 15 s and on hide/unload via sendBeacon | Prevents double counting when two sections are on screen |
+| Print route | Sibling route group `(print)` with its own layout; light theme on paper; fixed footer repeats per page; TOC has section numbers, not page numbers | Chromium has no `target-counter()`; the Phase 5 droplet PDF script can add page numbers |
+| `print.css` | The one CSS file allowed by spec 7.1 | Paged-media rules cannot be expressed as utilities |
+| Muted text | `oh-mute` #9A9188 for small text; `oh-ash` #8A8178 fails AA on ink | Spec 7.6 |
