@@ -114,13 +114,17 @@ export default clerkMiddleware(async (auth, request: NextRequest) => {
 
   // Interactive business plan: require a valid oh_plan session cookie.
   // Without one, send the visitor to the gate and remember where they were going.
-  // A "?c=CODE" link is carried through so the gate can auto-submit it.
+  // A "?c=CODE" invitation link always goes through the gate, even when a cookie
+  // is present: the gate auto-submits the code and replaces the old session.
+  // Otherwise a stale cookie (revoked code, wiped session) would let the request
+  // through here, the layout's live check would bounce it to the gate, and the
+  // code would be lost on the way. It also lets one browser switch codes.
   if (isPlanRoute(request) && !isPlanGateRoute(request)) {
-    const claims = await verifyPlanToken(request.cookies.get(PLAN_COOKIE)?.value);
+    const code = request.nextUrl.searchParams.get("c");
+    const claims = code ? null : await verifyPlanToken(request.cookies.get(PLAN_COOKIE)?.value);
     if (!claims) {
       const localeMatch = pathname.match(/^\/(en|zh-TW|zh-CN|es)(?=\/|$)/);
       const locale = localeMatch?.[1] ?? "en";
-      const code = request.nextUrl.searchParams.get("c");
       const target = request.nextUrl.clone();
       target.searchParams.delete("c");
       const gate = request.nextUrl.clone();
