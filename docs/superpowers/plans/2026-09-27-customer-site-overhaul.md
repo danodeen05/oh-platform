@@ -574,6 +574,29 @@ export function notifyCase(deps, supportCase, { urgent }) {}   // SMS when urgen
 - [ ] **Step 4:** Run the tests. Expected: PASS.
 - [ ] **Step 5:** Commit with `feat(support): cases, goodwill caps, full-refund-only staff actions`.
 
+### Task A9b: Owner-only full refunds and refund edge cases (added during execution)
+
+This runs after the rebase onto the admin-console release (origin/main adc654a). It brings in `requireRole` from `createAdminAuth()` (`packages/api/src/auth/admin.js`) and `registerAdminAuthHooks` (`packages/api/src/auth/admin-hook.js`).
+
+**Files:**
+- Modify: `packages/api/src/support/routes.js`, `packages/api/src/support/refund.js`, `packages/api/src/orders/service.js`, `packages/api/src/index.js` (the wiring only)
+- Test: `packages/api/src/support/__tests__/*`
+
+**Items:**
+1. The resolve route's injectable `requireOwner` (marked `TODO(roles)`) becomes `requireRole("owner")` from `createAdminAuth()` in `index.js`. `resolvedBy` records the verified admin identity (email or user id) that `requireAdminAuth`/`requireRole` attach to the request; read `admin.js` for the property name. `x-admin-api-key` service callers record `"service"`.
+   - Test: a manager-role admin gets 403 on `full_refund`, and 200 on `credit` and `decline`. An owner gets 200 on `full_refund`.
+   - `/admin/support/*` keeps the STAFF default from `adminPathRoles`.
+2. Wording, to follow the owner's rule: A6's partial-prior-refund SupportCase text in `orders/service.js` (it currently says "refund it manually") must say that the payment was already partly refunded outside the app, that it must NOT be refunded again in Stripe, and that staff should give store credit or escalate to the owner. Test: the summary doesn't contain "manually".
+3. The final case update in `refund.js` becomes conditional on this actor's claim: `resolvedAt` equals its lease timestamp, or the pending marker is its own. A slower second actor must not overwrite `resolutionDetail`, and must not write `amountCents` onto a second case when another case already refunded the order; it records `resolution: INFO` with the note "order already refunded by case <id>". Test.
+4. `cancelActiveOrder` drops its stale-status early return and relies on its conditional `updateMany` (an order that moves PAID to QUEUED during the Stripe call still gets cancelled). Test.
+5. A case whose order was already refunded by another case can be closed: `full_refund` returns `ALREADY_REFUNDED`, and a stale pending marker on it no longer blocks `decline`/INFO closing. Add a resolve action `"close"` (reason required, `resolution: INFO`, no money), allowed for STAFF. Test.
+6. A meal-gift `NOT_RESTORED` outcome is surfaced in `warnings[]` like the gift card. Test.
+
+- [ ] **Step 1:** Write the failing tests for items 1-6. Run them. Expected: FAIL.
+- [ ] **Step 2:** Implement.
+- [ ] **Step 3:** Run `pnpm --filter @oh/api test` (route classification included) and `node --check packages/api/src/index.js`. Expected: PASS.
+- [ ] **Step 4:** Commit with `fix(support): owner-only full refunds via requireRole; refund edge cases`.
+
 ### Task A10: Customer identity (`auth/customer.js`)
 
 **Files:**
