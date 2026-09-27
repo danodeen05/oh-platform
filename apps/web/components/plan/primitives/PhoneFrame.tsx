@@ -1,6 +1,7 @@
 "use client";
 
-import { forwardRef, useEffect, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useRef, useState } from "react";
+import { FrameLoader, useIframeLoaded } from "./FrameLoader";
 
 /** The page inside renders at a real phone's CSS size and is scaled to fit the frame. */
 const SCREEN_W = 390;
@@ -24,6 +25,15 @@ interface Props {
 export const PhoneFrame = forwardRef<HTMLIFrameElement, Props>(function PhoneFrame({ src, title, className = "w-[320px]" }, ref) {
   const screenRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0);
+  const { loaded, onLoad, check } = useIframeLoaded(src);
+  const iframeRef = useCallback(
+    (el: HTMLIFrameElement | null) => {
+      check(el);
+      if (typeof ref === "function") ref(el);
+      else if (ref) ref.current = el;
+    },
+    [ref, check],
+  );
 
   useEffect(() => {
     const el = screenRef.current;
@@ -44,14 +54,16 @@ export const PhoneFrame = forwardRef<HTMLIFrameElement, Props>(function PhoneFra
         <div ref={screenRef} className="relative overflow-hidden rounded-[2rem] bg-[#E5E5E5] ring-1 ring-oh-stone/70" style={{ aspectRatio: `${SCREEN_W} / ${SCREEN_H}` }}>
           {scale > 0 ? (
             <iframe
-              ref={ref}
+              ref={iframeRef}
               src={src}
               title={title}
               loading="lazy"
+              onLoad={onLoad}
               className="absolute left-0 top-0 border-0"
               style={{ width: SCREEN_W, height: SCREEN_H, transform: `scale(${scale})`, transformOrigin: "0 0" }}
             />
           ) : null}
+          <FrameLoader done={loaded} className="w-[34%] max-w-[110px]" />
           {/* the island, over the status bar area */}
           <span aria-hidden="true" className="pointer-events-none absolute left-1/2 top-[8px] h-[18px] w-[30%] -translate-x-1/2 rounded-full bg-oh-charcoal" />
           <div aria-hidden="true" className="pointer-events-none absolute inset-0 rounded-[2rem] bg-[linear-gradient(180deg,rgba(242,237,228,0.05)_0%,rgba(242,237,228,0)_16%)]" />
