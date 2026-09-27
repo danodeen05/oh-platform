@@ -76,6 +76,28 @@ describe("requireAdminAuth in production", () => {
     await broken.auth.requireAdminAuth(req({ authorization: "Bearer good" }), r2);
     assert.equal(r2.statusCode, 401);
   });
+  test("a failed user lookup is not cached; the next call retries", async () => {
+    let attempts = 0;
+    const flaky = build({ getUser: async () => {
+      attempts += 1;
+      if (attempts === 1) throw new Error("clerk blip");
+      return { primaryEmailAddressId: "e1", emailAddresses: [{ id: "e1", emailAddress: "s@x.com" }], publicMetadata: { adminRole: "station" } };
+    } });
+    const r1 = replyStub();
+    await flaky.auth.requireAdminAuth(req({ authorization: "Bearer good" }), r1);
+    assert.equal(r1.statusCode, 401);
+    const r2 = replyStub();
+    const q = req({ authorization: "Bearer good" });
+    await flaky.auth.requireAdminAuth(q, r2);
+    assert.equal(r2.statusCode, 200);
+    assert.equal(q.adminRole, "station");
+    assert.equal(attempts, 2, "getUser is called again after a failure");
+  });
+  test("a genuine no-role result is still cached", async () => {
+    const { auth, calls } = build();
+    for (let i = 0; i < 2; i += 1) await auth.requireAdminAuth(req({ authorization: "Bearer stranger" }), replyStub());
+    assert.equal(calls.getUser, 1);
+  });
   test("accepts a token from the development instance when CLERK_SECRET_KEY_DEV is set", async () => {
     const { auth, calls } = build({}, { ...prodEnv, CLERK_SECRET_KEY_DEV: "sk_dev_y" });
     const reply = replyStub();

@@ -90,7 +90,10 @@ export function createAdminAuth(options = {}) {
       const primary = (user.emailAddresses || []).find((e) => e.id === user.primaryEmailAddressId)?.emailAddress;
       role = roleFor({ email: primary, metadata: user.publicMetadata, adminEmails });
     } catch (err) {
+      // Fail closed for this request, but don't cache: a Clerk blip must not
+      // lock station tablets out for the whole cache window.
       log("admin user lookup failed", err?.message);
+      return null;
     }
     if (cache.size > 1000) cache.clear();
     cache.set(cacheKey, { role, exp: now() + CACHE_MS });

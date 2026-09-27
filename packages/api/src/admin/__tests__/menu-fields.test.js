@@ -39,3 +39,19 @@ test("menu patch: tenantId is create-only and is rejected, never written", () =>
   assert.ok(out.error);
   assert.equal(out.data, undefined);
 });
+
+test("menu patch: money, counts and ordering must be non-negative whole numbers", () => {
+  for (const k of ["basePriceCents", "additionalPriceCents", "includedQuantity", "displayOrder", "spiceLevel"]) {
+    for (const bad of [-1, 1.5, "100", null, NaN]) {
+      const out = menuPatchData({ [k]: bad });
+      assert.match(out.error || "", new RegExp(`^${k} must be a whole number of 0 or more$`), `${k}=${String(bad)}`);
+    }
+    assert.deepEqual(menuPatchData({ [k]: 0 }), { data: { [k]: 0 } });
+  }
+  assert.match(menuPatchData({ priceCents: -5 }).error, /basePriceCents/);
+});
+
+test("menu patch: name must be a non-empty string when sent", () => {
+  for (const bad of ["", "   ", 5, null]) assert.equal(menuPatchData({ name: bad }).error, "name must be a non-empty string");
+  assert.deepEqual(menuPatchData({ name: "Bok choy" }), { data: { name: "Bok choy" } });
+});

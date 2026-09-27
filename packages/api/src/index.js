@@ -247,7 +247,7 @@ if (process.env.CLERK_SECRET_KEY) {
     clerk: createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY }),
     adminEmails: parseAdminEmails(process.env.ADMIN_EMAILS),
     forgetRole: forgetAdminRole,
-    adminUrl: process.env.ADMIN_URL || "https://admin-oh-beef-noodle-soup.vercel.app",
+    adminUrl: process.env.ADMIN_URL || "https://admin.ohbeef.com",
   });
 }
 
