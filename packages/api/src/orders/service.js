@@ -597,7 +597,29 @@ export async function verifiedIntent(stripe, paymentIntentId, { amount, matchesM
     if (ours && pi.status === "succeeded") Object.defineProperty(err, "chargedIntent", { value: pi });
     throw err;
   }
+  // Stripe keeps status "succeeded" after a refund. A refunded PaymentIntent
+  // (for instance one refunded after a failed settle) must never pay for anything.
+  if (await intentHasRefund(stripe, pi)) {
+    throw new OrderError("PAYMENT_REFUNDED", 409, "This payment was refunded. Please pay again.");
+  }
   return pi;
+}
+
+/**
+ * True when the PaymentIntent has any refund: from an expanded latest_charge
+ * (refunded / amount_refunded) when present, else stripe.refunds.list. If
+ * Stripe can't answer, the payment is treated as unverified (402), never as
+ * unrefunded.
+ */
+export async function intentHasRefund(stripe, pi) {
+  const charge = pi.latest_charge && typeof pi.latest_charge === "object" ? pi.latest_charge : null;
+  if (charge && (charge.refunded || (charge.amount_refunded || 0) > 0)) return true;
+  try {
+    const list = await stripe.refunds.list({ payment_intent: pi.id, limit: 1 });
+    return Boolean(list?.data?.length);
+  } catch {
+    throw new OrderError("PAYMENT_NOT_VERIFIED", 402, "Payment could not be verified.");
+  }
 }
 
 /**
@@ -631,17 +653,62 @@ export async function refundUnappliedPayment(prisma, stripe, { pi, orderId, user
   return { refunded, refundId, alreadyRefunded: false };
 }
 
-/** Adds the refund outcome to a settle-time OrderError after a verified charge. */
 /**
  * Any failure after a PaymentIntent was verified as succeeded (a refusal like
  * CREDIT_SHORT, or an unexpected database error) must not keep the money:
  * refund in full, file the case, and hand the ORIGINAL error back so the
  * caller still answers 409 or 5xx. The outcome rides on err.extra for an
  * OrderError, and on err.refunded / err.refundId otherwise.
+ *
+ * Before refunding, the order(s) are re-read: when every one is PAID with
+ * this PaymentIntent, a concurrent settle (webhook vs return page) applied
+ * the charge and this caller merely lost the race, so nothing is refunded
+ * and err.appliedElsewhere is set. When the re-read itself fails, nothing is
+ * refunded either (refunding an applied charge is the worse error): a
+ * NEEDS_REVIEW support case is filed instead.
  */
-async function refundOnFailure(prisma, stripe, err, { pi, orderId, userId }) {
+async function refundOnFailure(prisma, stripe, err, { pi, orderId, orderIds = null, userId }) {
   if (!pi || !err) return err;
+  const ids = orderIds || (orderId ? [orderId] : []);
   const code = err instanceof OrderError ? err.code : `SETTLE_FAILED: ${err.code || err.name || "Error"}`;
+  const mark = (fields) => {
+    if (err instanceof OrderError) err.extra = { ...err.extra, ...fields };
+    else {
+      try {
+        Object.assign(err, fields);
+      } catch {
+        // a frozen error object
+      }
+    }
+  };
+
+  if (ids.length) {
+    let rows;
+    try {
+      rows = [];
+      for (const id of ids) rows.push(await prisma.order.findUnique({ where: { id } }));
+    } catch (readErr) {
+      const summary = `NEEDS_REVIEW: payment ${pi.id} for order ${ids.join(",")} may or may not be applied (${code}); the order could not be re-read (${readErr?.message || readErr}). Not refunded. Check the order and refund in Stripe if it is unpaid.`;
+      try {
+        await prisma.supportCase.create({ data: { type: "ORDER_ISSUE", orderId: ids.join(","), userId, summary, amountCents: pi.amount ?? null } });
+      } catch (caseErr) {
+        console.error(`[orders] could not file NEEDS_REVIEW case for ${pi.id}:`, caseErr?.message || caseErr);
+      }
+      console.error(`[orders] ${summary}`);
+      mark({ refunded: false, needsReview: true });
+      return err;
+    }
+    if (rows.every((o) => o && o.paymentStatus === "PAID" && o.stripePaymentId === pi.id)) {
+      mark({ refunded: false });
+      try {
+        Object.defineProperty(err, "appliedElsewhere", { value: true });
+      } catch {
+        // frozen
+      }
+      return err;
+    }
+  }
+
   let r;
   try {
     r = await refundUnappliedPayment(prisma, stripe, { pi, orderId, userId, code });
@@ -859,7 +926,10 @@ export async function markPaid(prisma, stripe, { orderId, paymentIntentId = null
   try {
     result = await prisma.$transaction((tx) => settleInTx(tx, orderId, { expectedAmountDueCents: order.amountDueCents, paymentIntentId: pi?.id || null, card, now }));
   } catch (err) {
-    throw await refundOnFailure(prisma, stripe, mapTxError(err), { pi, orderId, userId: order.userId });
+    const failed = await refundOnFailure(prisma, stripe, mapTxError(err), { pi, orderId, userId: order.userId });
+    // A concurrent confirmation applied this very charge: this caller just lost the race.
+    if (failed.appliedElsewhere) return { alreadyPaid: true, order: await prisma.order.findUnique({ where: { id: orderId } }) };
+    throw failed;
   }
   if (result.alreadyPaid) return { alreadyPaid: true, order: await prisma.order.findUnique({ where: { id: orderId } }) };
 
@@ -898,7 +968,7 @@ export async function markPaidBatch(prisma, stripe, { orderIds, paymentIntentId 
         matchesMetadata: (md) => typeof md.orderIds === "string" && md.orderIds.split(",").map((s) => s.trim()).filter(Boolean).sort().join(",") === want,
       });
     } catch (err) {
-      if (err.chargedIntent) throw await refundOnFailure(prisma, stripe, err, { pi: err.chargedIntent, orderId: ids.join(","), userId: null });
+      if (err.chargedIntent) throw await refundOnFailure(prisma, stripe, err, { pi: err.chargedIntent, orderId: ids.join(","), orderIds: ids, userId: null });
       throw err;
     }
   }
@@ -915,7 +985,13 @@ export async function markPaidBatch(prisma, stripe, { orderIds, paymentIntentId 
       return out;
     });
   } catch (err) {
-    throw await refundOnFailure(prisma, stripe, mapTxError(err), { pi, orderId: ids.join(","), userId: null });
+    const failed = await refundOnFailure(prisma, stripe, mapTxError(err), { pi, orderId: ids.join(","), orderIds: ids, userId: null });
+    if (failed.appliedElsewhere) {
+      const fresh = [];
+      for (const id of ids) fresh.push(await prisma.order.findUnique({ where: { id } }));
+      return { alreadyPaid: true, orders: fresh };
+    }
+    throw failed;
   }
 
   const paid = [];

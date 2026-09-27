@@ -68,7 +68,7 @@ import { registerCateringRoutes, isDineInOrdersEnabled } from "./catering/routes
 import { registerPlanRoutes } from "./plan/routes.js";
 import { registerMembershipRoutes } from "./membership/routes.js";
 import { registerOrderRoutes } from "./orders/routes.js";
-import { configureOrderService, markPaid, quoteOrder, confirmOrderPayment, OrderError } from "./orders/service.js";
+import { configureOrderService, markPaid, quoteOrder, confirmOrderPayment, intentHasRefund, OrderError } from "./orders/service.js";
 import { createGiftCard, createMealGift, acceptMealGift, finishMealGiftAcceptance } from "./orders/tenders.js";
 import { grantCredit } from "./membership/credits.js";
 import { taxCents, spendBaseCents } from "./orders/pricing.js";
@@ -4492,6 +4492,15 @@ app.post("/payments/confirm", async (req, reply) => {
     if (paymentIntent.metadata?.orderId !== order.id || paymentIntent.amount !== order.totalCents) {
       return reply.status(402).send({ error: "PAYMENT_NOT_VERIFIED", message: "Payment could not be verified." });
     }
+    // A refunded PaymentIntent keeps status "succeeded"; it never pays (Task A6).
+    try {
+      if (await intentHasRefund(stripe, paymentIntent)) {
+        return reply.status(409).send({ error: "PAYMENT_REFUNDED", message: "This payment was refunded. Please pay again." });
+      }
+    } catch (err) {
+      if (err instanceof OrderError) return reply.status(err.status).send({ error: err.code, message: err.message });
+      throw err;
+    }
 
     // Determine if this is an ASAP order (arrival within 20 minutes)
     const now = new Date();
@@ -4567,6 +4576,10 @@ app.post("/payments/confirm", async (req, reply) => {
     };
   } catch (error) {
     console.error("Error confirming payment:", error);
+    // A failure after a verified charge was refunded (orders/service.js): say so.
+    if (error && error.refunded !== undefined) {
+      return reply.status(500).send({ error: "PAYMENT_NOT_APPLIED", code: "PAYMENT_NOT_APPLIED", refunded: error.refunded });
+    }
     return reply.status(500).send({ error: error.message });
   }
 });
@@ -14234,6 +14247,9 @@ app.post("/chappy/confirm-payment", async (req, reply) => {
     });
   } catch (error) {
     console.error("[Chappy Confirm Payment Error]", error);
+    if (error && error.refunded !== undefined) {
+      return reply.status(500).send({ error: "PAYMENT_NOT_APPLIED", code: "PAYMENT_NOT_APPLIED", refunded: error.refunded });
+    }
     return reply.status(500).send({ error: "Failed to confirm payment" });
   }
 });

@@ -154,3 +154,22 @@ describe("fix round 2: races", () => {
     assert.equal((await prisma.creditEvent.findMany()).length, 0);
   });
 });
+
+describe("fix round 3: a refunded PaymentIntent funds nothing", () => {
+  test("gift card purchase with a refunded (still 'succeeded') PaymentIntent: 409 PAYMENT_REFUNDED, no card, no second refund", async () => {
+    const prisma = seed();
+    const stripe = fakeStripe({ pi_card: { status: "succeeded", amount: 2500, metadata: { type: "gift_card", amountCents: "2500" } } });
+    stripe.issuedRefunds.push({ id: "re_prev", payment_intent: "pi_card" });
+    await assert.rejects(createGiftCard(prisma, stripe, { amountCents: 2500, stripePaymentId: "pi_card", generateCode }), (e) => e.code === "PAYMENT_REFUNDED" && e.status === 409);
+    assert.equal((await prisma.giftCard.findMany()).length, 0);
+    assert.equal(stripe.refundCalls.length, 0);
+  });
+
+  test("meal gift funding with a refunded PaymentIntent: 409 PAYMENT_REFUNDED, no gift", async () => {
+    const prisma = seed();
+    const stripe = fakeStripe({ pi_gift: { status: "succeeded", amount: 2000, metadata: { type: "meal_gift", giverId: "u2", locationId: "L1" } } });
+    stripe.issuedRefunds.push({ id: "re_prev", payment_intent: "pi_gift" });
+    await assert.rejects(createMealGift(prisma, stripe, { giverId: "u2", locationId: "L1", amountCents: 2000, paymentIntentId: "pi_gift", expiresAt: EXPIRES, now: NOW }), (e) => e.code === "PAYMENT_REFUNDED");
+    assert.equal((await prisma.mealGift.findMany()).length, 0);
+  });
+});

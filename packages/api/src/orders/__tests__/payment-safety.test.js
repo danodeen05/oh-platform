@@ -123,7 +123,7 @@ describe("Important 2: a verified charge that can't be applied is refunded", () 
     assert.match(cases[0].summary, /CREDIT_SHORT/);
     assert.match(cases[0].summary, /re_test_1/);
     const second = await markPaid(prisma, stripe, { orderId: order.id, paymentIntentId: "pi_ok", now: later }, fakeEffects().effects).catch((e) => e);
-    assert.equal(second.code, "CREDIT_SHORT");
+    assert.equal(second.code, "PAYMENT_REFUNDED", "a refunded PaymentIntent is refused at verification");
     assert.equal(stripe.refundCalls.length, 1, "no second refund");
     assert.equal((await prisma.supportCase.findMany({ where: { orderId: order.id } })).length, 1);
   });
@@ -258,5 +258,138 @@ describe("fix round 2: any failure after a verified charge refunds it", () => {
     assert.equal(err.refunded, true);
     assert.equal(stripe.refundCalls.length, 1);
     assert.equal("amount" in stripe.refundCalls[0][0], false);
+  });
+});
+
+/** Replace prisma.$transaction for ONE call with `impl`, then restore the real one. */
+function failTransactionOnce(prisma, impl) {
+  const real = prisma.$transaction;
+  prisma.$transaction = async (...args) => {
+    prisma.$transaction = real;
+    return impl(...args);
+  };
+}
+const p2028 = () => Object.assign(new Error("Transaction API error: Unable to start a transaction in the given time."), { code: "P2028" });
+
+describe("fix round 3: a refunded PaymentIntent never pays", () => {
+  test("repro: P2028 -> refund -> retry is 409 PAYMENT_REFUNDED and the order stays unpaid", async () => {
+    const prisma = seed();
+    const { order } = await placeOrder(prisma);
+    const stripe = fakeStripe({ pi_ok: { status: "succeeded", amount: 1924, metadata: { orderId: order.id } } });
+    failTransactionOnce(prisma, async () => {
+      throw p2028();
+    });
+    const first = await markPaid(prisma, stripe, { orderId: order.id, paymentIntentId: "pi_ok", now: NOW }, fakeEffects().effects).catch((e) => e);
+    assert.equal(first.code, "P2028");
+    assert.equal(first.refunded, true);
+    assert.equal(stripe.refundCalls.length, 1);
+
+    // Stripe still says "succeeded" for the refunded PaymentIntent.
+    const retry = await markPaid(prisma, stripe, { orderId: order.id, paymentIntentId: "pi_ok", now: NOW }, fakeEffects().effects).catch((e) => e);
+    assert.equal(retry.code, "PAYMENT_REFUNDED");
+    assert.equal(retry.status, 409);
+    const row = await prisma.order.findUnique({ where: { id: order.id } });
+    assert.equal(row.paymentStatus, "PENDING");
+    assert.equal(row.status, "PENDING_PAYMENT");
+    assert.equal(stripe.refundCalls.length, 1);
+  });
+
+  test("an expanded latest_charge with amount_refunded is refused too", async () => {
+    const prisma = seed();
+    const { order } = await placeOrder(prisma);
+    const stripe = fakeStripe({ pi_ok: { status: "succeeded", amount: 1924, metadata: { orderId: order.id }, latest_charge: { id: "ch_1", refunded: false, amount_refunded: 100 } } });
+    await assert.rejects(markPaid(prisma, stripe, { orderId: order.id, paymentIntentId: "pi_ok", now: NOW }, fakeEffects().effects), (e) => e.code === "PAYMENT_REFUNDED");
+    assert.equal((await prisma.order.findUnique({ where: { id: order.id } })).paymentStatus, "PENDING");
+  });
+
+  test("kiosk batch: P2028 -> refund -> retry is 409 PAYMENT_REFUNDED", async () => {
+    const prisma = seed();
+    const a = (await placeOrder(prisma, { userId: null })).order;
+    const stripe = fakeStripe({ pi_t: { status: "succeeded", amount: 1924, metadata: { orderIds: a.id } } });
+    failTransactionOnce(prisma, async () => {
+      throw p2028();
+    });
+    const first = await markPaidBatch(prisma, stripe, { orderIds: [a.id], paymentIntentId: "pi_t", locationId: "L1", now: NOW }, fakeEffects().effects).catch((e) => e);
+    assert.equal(first.refunded, true);
+    await assert.rejects(markPaidBatch(prisma, stripe, { orderIds: [a.id], paymentIntentId: "pi_t", locationId: "L1", now: NOW }, fakeEffects().effects), (e) => e.code === "PAYMENT_REFUNDED");
+    assert.equal((await prisma.order.findUnique({ where: { id: a.id } })).paymentStatus, "PENDING");
+  });
+
+  test("legacy confirm (/chappy/confirm-payment) refuses a refunded PaymentIntent", async () => {
+    const prisma = seed({ orders: [{ id: "legacy", totalCents: 1500, paymentStatus: "PENDING", status: "PENDING_PAYMENT", amountDueCents: null }] });
+    const stripe = fakeStripe({ pi_legacy: { status: "succeeded", amount: 1500, metadata: { orderId: "legacy" } } });
+    stripe.issuedRefunds.push({ id: "re_old", payment_intent: "pi_legacy" });
+    await assert.rejects(confirmOrderPayment(prisma, stripe, { orderId: "legacy", paymentIntentId: "pi_legacy", now: NOW }, fakeEffects().effects), (e) => e.code === "PAYMENT_REFUNDED");
+    assert.equal((await prisma.order.findUnique({ where: { id: "legacy" } })).paymentStatus, "PENDING");
+  });
+});
+
+describe("fix round 3: never refund a charge a concurrent settle applied", () => {
+  test("the winner applied this PaymentIntent and the loser threw P2028: no refund, no case, the loser gets alreadyPaid", async () => {
+    const prisma = seed();
+    const { order } = await placeOrder(prisma);
+    const stripe = fakeStripe({ pi_ok: { status: "succeeded", amount: 1924, metadata: { orderId: order.id } } });
+    failTransactionOnce(prisma, async () => {
+      // The webhook's settle committed while this request waited on the row lock.
+      await prisma.order.update({ where: { id: order.id }, data: { paymentStatus: "PAID", status: "QUEUED", stripePaymentId: "pi_ok" } });
+      throw p2028();
+    });
+    const res = await markPaid(prisma, stripe, { orderId: order.id, paymentIntentId: "pi_ok", now: NOW }, fakeEffects().effects);
+    assert.equal(res.alreadyPaid, true);
+    assert.equal(res.order.paymentStatus, "PAID");
+    assert.equal(stripe.refundCalls.length, 0);
+    assert.equal((await prisma.supportCase.findMany()).length, 0);
+  });
+
+  test("kiosk batch: every order PAID with this PaymentIntent means no refund", async () => {
+    const prisma = seed();
+    const a = (await placeOrder(prisma, { userId: null })).order;
+    const b = (await placeOrder(prisma, { userId: null })).order;
+    const stripe = fakeStripe({ pi_t: { status: "succeeded", amount: 3848, metadata: { orderIds: `${a.id},${b.id}` } } });
+    failTransactionOnce(prisma, async () => {
+      for (const id of [a.id, b.id]) await prisma.order.update({ where: { id }, data: { paymentStatus: "PAID", stripePaymentId: "pi_t" } });
+      throw p2028();
+    });
+    const res = await markPaidBatch(prisma, stripe, { orderIds: [a.id, b.id], paymentIntentId: "pi_t", locationId: "L1", now: NOW }, fakeEffects().effects);
+    assert.equal(res.alreadyPaid, true);
+    assert.equal(stripe.refundCalls.length, 0);
+  });
+
+  test("paid by a DIFFERENT PaymentIntent is not 'applied elsewhere': this charge is refunded", async () => {
+    const prisma = seed();
+    const { order } = await placeOrder(prisma);
+    const stripe = fakeStripe({ pi_ok: { status: "succeeded", amount: 1924, metadata: { orderId: order.id } } });
+    failTransactionOnce(prisma, async () => {
+      await prisma.order.update({ where: { id: order.id }, data: { paymentStatus: "PAID", stripePaymentId: "pi_other" } });
+      throw p2028();
+    });
+    const err = await markPaid(prisma, stripe, { orderId: order.id, paymentIntentId: "pi_ok", now: NOW }, fakeEffects().effects).catch((e) => e);
+    assert.equal(err.code, "P2028");
+    assert.equal(err.refunded, true);
+    assert.equal(stripe.refundCalls.length, 1);
+  });
+
+  test("when the re-read fails: no refund, one NEEDS_REVIEW case, the original error re-thrown", async () => {
+    const prisma = seed();
+    const { order } = await placeOrder(prisma);
+    const stripe = fakeStripe({ pi_ok: { status: "succeeded", amount: 1924, metadata: { orderId: order.id } } });
+    const realFind = prisma.order.findUnique;
+    const dbError = p2028();
+    failTransactionOnce(prisma, async () => {
+      prisma.order.findUnique = async () => {
+        throw new Error("Can't reach database server");
+      };
+      throw dbError;
+    });
+    const err = await markPaid(prisma, stripe, { orderId: order.id, paymentIntentId: "pi_ok", now: NOW }, fakeEffects().effects).catch((e) => e);
+    prisma.order.findUnique = realFind;
+    assert.equal(err, dbError);
+    assert.equal(err.refunded, false);
+    assert.equal(err.needsReview, true);
+    assert.equal(stripe.refundCalls.length, 0);
+    const cases = await prisma.supportCase.findMany();
+    assert.equal(cases.length, 1);
+    assert.match(cases[0].summary, /^NEEDS_REVIEW/);
+    assert.equal(cases[0].type, "ORDER_ISSUE");
   });
 });
