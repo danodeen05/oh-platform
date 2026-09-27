@@ -26,6 +26,7 @@ function daysInMonth(year: number, month: number): string[] {
 
 const chipBase = "flex min-h-11 w-full items-center justify-center rounded-lg border px-1 text-[11px] font-semibold leading-tight";
 
+/** The compact chip used inside a month-grid day cell (lg and up: plenty of cells, little room each). */
 function SlotChip({ info, onOpen }: { info: CalendarSlotInfo | undefined; onOpen: () => void }) {
   if (info?.blocked) {
     return <span className={`${chipBase} cursor-not-allowed border-oh-ember/30 bg-oh-ember/10 text-oh-ember-deep`} title="Blocked">Blocked</span>;
@@ -45,6 +46,43 @@ function SlotChip({ info, onOpen }: { info: CalendarSlotInfo | undefined; onOpen
     </button>
   );
 }
+
+const rowChipBase = "flex min-h-11 flex-1 items-center gap-1.5 rounded-lg border px-3 text-sm font-semibold";
+
+/** The full-size (>=44x44) chip used in the phone week/day list, one Lunch and one Dinner per row. */
+function SlotRow({ info, label, onOpen }: { info: CalendarSlotInfo | undefined; label: string; onOpen: () => void }) {
+  if (info?.blocked) {
+    return (
+      <span className={`${rowChipBase} cursor-not-allowed justify-center border-oh-ember/30 bg-oh-ember/10 text-oh-ember-deep`}>
+        {label} blocked
+      </span>
+    );
+  }
+  if (info?.booked) {
+    const tone = info.slot === "LUNCH" ? "border-oh-olive/40 bg-oh-olive/15 text-oh-olive" : "border-oh-ink/30 bg-oh-ink/10 text-oh-ink";
+    return (
+      <button type="button" onClick={onOpen} className={`${rowChipBase} justify-start truncate ${tone} hover:opacity-80`}>
+        <span className="shrink-0 text-xs uppercase tracking-wide opacity-70">{label}</span>
+        <span className="truncate">{info.clientCompany}</span>
+      </button>
+    );
+  }
+  return (
+    <button type="button" onClick={onOpen} aria-label={`Book ${label.toLowerCase()}`}
+      className={`${rowChipBase} justify-center gap-2 border-dashed border-oh-stone/25 text-oh-stone/50 hover:border-oh-stone/45 hover:text-oh-stone`}>
+      {label} <span aria-hidden="true">+</span>
+    </button>
+  );
+}
+
+const Legend = () => (
+  <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs text-oh-stone/70">
+    <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm border border-oh-olive/40 bg-oh-olive/15" />Lunch booked</span>
+    <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm border border-oh-ink/30 bg-oh-ink/10" />Dinner booked</span>
+    <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm border border-oh-ember/30 bg-oh-ember/10" />Blocked</span>
+    <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm border border-dashed border-oh-stone/25" />Available, tap to create</span>
+  </div>
+);
 
 export function BookingCalendar({ year, month, onMonthChange, onCreateWithPrefill }: {
   year: number; month: number; onMonthChange: (year: number, month: number) => void;
@@ -99,32 +137,55 @@ export function BookingCalendar({ year, month, onMonthChange, onCreateWithPrefil
           <Skeleton className="h-64" />
         ) : (
           <>
-            <div className="grid grid-cols-7 gap-1">
-              {DAYS.map((d) => <div key={d} className="pb-1 text-center text-xs font-semibold text-oh-stone/60">{d}</div>)}
-              {Array.from({ length: firstDow }, (_, i) => <div key={`b${i}`} />)}
-              {days.map((date) => {
+            {/* Phone and tablet: a week/day list, each row with two full-size (>=44x44) Lunch/Dinner chips. */}
+            <div className="space-y-2 lg:hidden">
+              {days.map((date, i) => {
                 const slots = res.data![date] || [];
                 const lunch = slots.find((s) => s.slot === "LUNCH");
                 const dinner = slots.find((s) => s.slot === "DINNER");
                 const dayNum = Number(date.slice(8));
                 const isToday = date === today;
+                const dow = (firstDow + i) % 7;
                 return (
-                  <div key={date} className={`min-h-[74px] rounded-lg border p-1 ${isToday ? "border-oh-ember-deep bg-oh-ember/5" : "border-oh-stone/10"}`}>
-                    <div className={`mb-1 text-center text-xs tabular-nums ${isToday ? "font-bold text-oh-ember-deep" : "text-oh-stone/70"}`}>{dayNum}</div>
-                    <div className="space-y-1">
-                      <SlotChip info={lunch} onOpen={() => openSlot(date, lunch, "LUNCH")} />
-                      <SlotChip info={dinner} onOpen={() => openSlot(date, dinner, "DINNER")} />
+                  <div key={date} className={`flex items-center gap-2 rounded-lg border p-2 ${isToday ? "border-oh-ember-deep bg-oh-ember/5" : "border-oh-stone/10"}`}>
+                    <div className={`w-11 shrink-0 text-center ${isToday ? "text-oh-ember-deep" : "text-oh-stone/70"}`}>
+                      <div className="text-[10px] font-semibold uppercase tracking-wide">{DAYS[dow]}</div>
+                      <div className={`text-lg leading-none tabular-nums ${isToday ? "font-bold" : ""}`}>{dayNum}</div>
+                    </div>
+                    <div className="flex flex-1 gap-2">
+                      <SlotRow info={lunch} label="Lunch" onOpen={() => openSlot(date, lunch, "LUNCH")} />
+                      <SlotRow info={dinner} label="Dinner" onOpen={() => openSlot(date, dinner, "DINNER")} />
                     </div>
                   </div>
                 );
               })}
             </div>
-            <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs text-oh-stone/70">
-              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm border border-oh-olive/40 bg-oh-olive/15" />Lunch booked</span>
-              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm border border-oh-ink/30 bg-oh-ink/10" />Dinner booked</span>
-              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm border border-oh-ember/30 bg-oh-ember/10" />Blocked</span>
-              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm border border-dashed border-oh-stone/25" />Available, tap to create</span>
+
+            {/* lg and up: the 7-column month grid. */}
+            <div className="hidden lg:block">
+              <div className="grid grid-cols-7 gap-1">
+                {DAYS.map((d) => <div key={d} className="pb-1 text-center text-xs font-semibold text-oh-stone/60">{d}</div>)}
+                {Array.from({ length: firstDow }, (_, i) => <div key={`b${i}`} />)}
+                {days.map((date) => {
+                  const slots = res.data![date] || [];
+                  const lunch = slots.find((s) => s.slot === "LUNCH");
+                  const dinner = slots.find((s) => s.slot === "DINNER");
+                  const dayNum = Number(date.slice(8));
+                  const isToday = date === today;
+                  return (
+                    <div key={date} className={`min-h-[74px] rounded-lg border p-1 ${isToday ? "border-oh-ember-deep bg-oh-ember/5" : "border-oh-stone/10"}`}>
+                      <div className={`mb-1 text-center text-xs tabular-nums ${isToday ? "font-bold text-oh-ember-deep" : "text-oh-stone/70"}`}>{dayNum}</div>
+                      <div className="space-y-1">
+                        <SlotChip info={lunch} onOpen={() => openSlot(date, lunch, "LUNCH")} />
+                        <SlotChip info={dinner} onOpen={() => openSlot(date, dinner, "DINNER")} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
+
+            <Legend />
           </>
         )}
       </div>

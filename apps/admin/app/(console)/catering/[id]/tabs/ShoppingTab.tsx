@@ -15,7 +15,7 @@ const errorText = (e: unknown) => (e instanceof ApiError || e instanceof Error ?
 export default function ShoppingTab({ eventId }: { eventId: string }) {
   const { show } = useToast();
   const res = useResource(`catering-shopping:${eventId}`, async (signal) => {
-    const data = await api<{ shoppingList: ShoppingListItem[] }>(`/admin/catering/events/${eventId}/shopping-list`, { signal }).catch(() => null);
+    const data = await api<{ shoppingList: ShoppingListItem[] }>(`/admin/catering/events/${eventId}/shopping-list`, { signal });
     return Array.isArray(data?.shoppingList) ? data.shoppingList : [];
   });
   const [generating, setGenerating] = useState(false);

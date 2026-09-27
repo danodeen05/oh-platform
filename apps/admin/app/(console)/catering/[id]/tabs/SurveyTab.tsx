@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/Card";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { SkeletonList } from "@/components/ui/Skeleton";
 import { StatTile } from "@/components/ui/StatTile";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { areaTone, surveyTone, type SurveyStats } from "@/lib/catering";
 import { shortDate } from "@/lib/format";
 import { useResource } from "@/lib/use-resource";
@@ -11,7 +11,15 @@ import { useResource } from "@/lib/use-resource";
 const TONE_BAR = { good: "bg-oh-olive", pending: "bg-oh-gold", alert: "bg-oh-ember" } as const;
 
 export default function SurveyTab({ eventId }: { eventId: string }) {
-  const res = useResource(`catering-survey:${eventId}`, (signal) => api<SurveyStats | null>(`/admin/catering/events/${eventId}/survey`, { signal }).catch(() => null));
+  const res = useResource(`catering-survey:${eventId}`, async (signal) => {
+    try {
+      return await api<SurveyStats>(`/admin/catering/events/${eventId}/survey`, { signal });
+    } catch (e) {
+      // No survey started yet is a genuinely empty state, not a failure to report.
+      if (e instanceof ApiError && e.status === 404) return null;
+      throw e;
+    }
+  });
 
   if (res.error) return <ErrorCard message="Couldn't load the survey." onRetry={res.reload} />;
   if (res.loading) return <SkeletonList rows={3} />;
