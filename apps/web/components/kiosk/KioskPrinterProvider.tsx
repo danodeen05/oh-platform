@@ -46,6 +46,13 @@ export function KioskPrinterProvider({
 
   // Connect to printer
   const connect = useCallback(async () => {
+    // The business plan embeds the kiosk as a demo in an iframe. There is no
+    // receipt printer there, so skip the connection instead of logging a
+    // timeout. The real kiosk always runs as the top-level page.
+    if (typeof window !== 'undefined' && window.self !== window.top) {
+      setError('Printer disabled in the embedded demo');
+      return false;
+    }
     const config = getDefaultPrinterConfig();
     if (!config) {
       const errorMsg = 'Printer not configured. Set NEXT_PUBLIC_KIOSK_PRINTER_IP in environment.';

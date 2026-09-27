@@ -72,13 +72,32 @@ html.kiosk-mode::after {
 
 /* Base kiosk container - responsive dimensions */
 .kiosk-container {
-  width: 100vw;
-  height: 100vh;
+  width: calc(var(--kvw, 1vw) * 100);
+  height: calc(var(--kvh, 1vh) * 100);
   max-width: 1920px;
   max-height: 1080px;
   overflow: hidden;
   position: relative;
   background: #FFFFFF;
+}
+
+/* Presentation ("fit") mode: the full 1366 x 1024 design on a fixed stage that the
+   layout scales to the window as one piece. Used by the business plan's kiosk demo
+   (?fit=1, or inside an iframe). Real kiosks never enter it. */
+html.kiosk-fit {
+  --kiosk-scale: 1.5;
+  /* Viewport units inside the kiosk resolve against the stage, not the real window. */
+  --kvh: 10.24px;
+  --kvw: 13.66px;
+}
+html.kiosk-fit body {
+  background: #FAF9F6;
+}
+html.kiosk-fit .kiosk-container {
+  width: 1366px;
+  height: 1024px;
+  max-width: none;
+  max-height: none;
 }
 
 /* Full-screen kiosk mode */
@@ -521,11 +540,11 @@ html.kiosk-mode::after {
     opacity: 0.6;
   }
   50% {
-    transform: translateY(-40vh) translateX(20px) scale(1.2);
+    transform: translateY(calc(var(--kvh, 1vh) * -40)) translateX(20px) scale(1.2);
     opacity: 0.4;
   }
   100% {
-    transform: translateY(-80vh) translateX(-10px) scale(1.8);
+    transform: translateY(calc(var(--kvh, 1vh) * -80)) translateX(-10px) scale(1.8);
     opacity: 0;
   }
 }

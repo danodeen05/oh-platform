@@ -31,9 +31,11 @@ export function ScenarioToggle({ value, custom, labels, onChange }: Props) {
           </button>
         );
       })}
+      {/* Not a choice you can make: it reports that a lever left its preset, so it is a status, not a radio. */}
       <span
-        role="radio"
-        aria-checked={custom}
+        role="status"
+        aria-live="polite"
+        aria-hidden={!custom}
         className={["rounded-md px-3 py-1.5 text-[0.8rem]", custom ? "bg-oh-charcoal text-oh-gold" : "text-oh-mute"].join(" ")}
       >
         {labels.custom}

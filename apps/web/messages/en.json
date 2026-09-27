@@ -67,16 +67,17 @@
     "brandName": "<oh>哦！</oh> <bebas>Oh! Beef Noodle Soup</bebas>",
     "brandNamePlain": "Oh! Beef Noodle Soup",
     "tagline": "The only restaurant built around <bold>you</bold>.",
-    "heroDescription": "Born from Taiwan's beloved beef noodle tradition and elevated with Japanese attention to detail, enjoy our 30-year family recipe in your own private pod.",
+    "heroDescription": "Born from Taiwan's beloved beef noodle tradition and elevated with a premium fusion interpretation, enjoy your bowl in your own private pod.",
     "opensAt": "Opens at 10am for ordering",
     "signature": {
       "label": "OUR SIGNATURE",
-      "title": "A5 Wagyu Beef Noodle Soup",
-      "description": "Silky A5 Wagyu beef melts into our rich, aromatic broth — simmered for 48 hours using techniques passed down through three generations. Each bowl tells a story of patience, precision, and passion.",
+      "title": "American Wagyu Beef Noodle Soup",
+      "description": "American Wagyu and USDA Prime beef, smoked low and slow, over a two-phase bone broth: a long simmer, then a finish built for flavor. Served in your own private pod, with no tipping, ever.",
       "stats": {
-        "hours": "HOURS SIMMERED",
-        "grade": "WAGYU GRADE",
-        "years": "YEAR RECIPE"
+        "pods": "PRIVATE PODS",
+        "grade": "BEEF GRADE",
+        "gradeValue": "American Wagyu",
+        "tips": "TIPPING"
       }
     },
     "difference": {
@@ -85,12 +86,12 @@
     },
     "features": {
       "recipe": {
-        "title": "30-Year Recipe",
-        "description": "Perfected beef noodle soup, passed down through generations"
+        "title": "Two-Phase Broth",
+        "description": "A long bone simmer, then a finish built for flavor"
       },
       "beef": {
         "title": "Premium Beef",
-        "description": "A5 Wagyu and premium cuts sourced for exceptional quality"
+        "description": "American Wagyu and USDA Prime, smoked low and slow, as brisket slices or beef rib chunks"
       },
       "tech": {
         "title": "Tech-First Experience",
@@ -102,7 +103,7 @@
     },
     "pods": {
       "title": "Private Dining Pods",
-      "description": "Experience dining like never before. Our individual pods offer a peaceful, distraction-free space to savor every slurp. No crowded tables, no noise — just you and your perfect bowl of beef noodle soup.",
+      "description": "Experience dining like never before. Our individual pods offer a peaceful, distraction-free space to savor every slurp. No crowded tables, no noise. Just you and your perfect bowl of beef noodle soup.",
       "features": {
         "space": {
           "title": "Your Space",
@@ -120,7 +121,7 @@
     },
     "noTipping": {
       "title": "No Tipping. Ever.",
-      "description": "At Oh!, the price you see is the price you pay. We believe our team deserves fair, stable wages — not unpredictable tips. That's why we pay our kitchen and cleaning staff competitive salaries with benefits.",
+      "description": "At Oh!, the price you see is the price you pay. We believe our team deserves fair, stable wages, not unpredictable tips. That's why we pay our kitchen and cleaning staff competitive salaries with benefits.",
       "benefits": {
         "wages": "Fair wages for all",
         "math": "No awkward math",
@@ -154,9 +155,7 @@
     "copyright": "© {year} Oh! Beef Noodle Soup. All rights reserved.",
     "links": {
       "accessibility": "Accessibility",
-      "careers": "Careers",
       "contact": "Contact",
-      "press": "Press",
       "privacy": "Privacy Policy"
     },
     "foundation": {
@@ -197,7 +196,7 @@
     "sections": {
       "soup": {
         "subtitle": "Start with our signature broth",
-        "description": "Rich, slow-simmered beef bone broth perfected over 30 years"
+        "description": "Rich, two-phase beef bone broth: a long simmer, then a finish built for flavor"
       },
       "noodles": {
         "subtitle": "Choose your noodles",
@@ -218,7 +217,7 @@
     },
     "hero": {
       "title": "Our Menu",
-      "description": "Build your perfect bowl with our premium ingredients and 30-year recipe",
+      "description": "Build your perfect bowl with premium American beef and our two-phase broth",
       "orderNow": "Order Now"
     },
     "difference": {
@@ -396,8 +395,8 @@
           "cashback": "3% cashback on orders",
           "topPrioritySeating": "Top priority seating",
           "freePremiumBowl": "Free premium bowl on tier upgrade",
-          "merchDrops": "Exclusive merchandise drops",
-          "premiumAddons": "Complimentary premium add-ons",
+          "merchDrops": "First access to member-priced merchandise drops",
+          "premiumAddons": "One complimentary premium add-on each quarter",
           "vipGift": "Annual VIP Gift & Recognition",
           "wallOfFame": "Picture & Signed Order on Oh! Wall of Fame"
         }
@@ -841,8 +840,8 @@
         "freeBowl": "Free bowl on tier upgrade",
         "topPrioritySeating": "Top priority seating",
         "freePremiumBowl": "Free premium bowl on tier upgrade",
-        "merchDrops": "Exclusive merchandise drops",
-        "premiumAddons": "Complimentary premium add-ons",
+        "merchDrops": "First access to member-priced merchandise drops",
+        "premiumAddons": "One complimentary premium add-on each quarter",
         "vipGift": "Annual VIP Gift & Recognition",
         "wallOfFame": "Picture & Signed Order on Oh! Wall of Fame"
       }
@@ -856,8 +855,8 @@
       "prioritySeating": "Priority seating",
       "memberEvents": "Exclusive member events",
       "freeBowlUpgrade": "Free bowl on tier upgrade",
-      "merchandiseDrops": "Exclusive merchandise drops",
-      "premiumAddons": "Complimentary premium add-ons",
+      "merchandiseDrops": "First access to member-priced merchandise drops",
+      "premiumAddons": "One complimentary premium add-on each quarter",
       "vipGift": "Annual VIP Gift & Recognition"
     },
     "badges": {
@@ -1173,12 +1172,12 @@
     },
     "step3": {
       "title": "Earn Instantly",
-      "description": "You get $5 credit instantly, they get $5 off. No limits on referrals."
+      "description": "You get $5 credit the moment their first order completes; they get $5 off that order. Credits expire after 90 days."
     },
     "goodToKnow": "Good to Know",
     "rules": {
       "minimumOrder": "Referral bonus applies to first orders of $20 or more",
-      "disbursement": "Credits are added to your account instantly when your friend completes their order",
+      "disbursement": "Credits are added to your account instantly when your friend completes their first order, and expire 90 days after they land",
       "maxPerOrder": "Maximum of $5 credit can be applied per order"
     },
     "dashboard": {
@@ -1206,70 +1205,6 @@
       }
     }
   },
-  "careers": {
-    "title": "Join Our Team",
-    "description": "Help us reimagine the dining experience. We're building something special and looking for passionate people to join us on this journey.",
-    "viewPositions": "VIEW OPEN POSITIONS",
-    "values": {
-      "title": "Our Values",
-      "description": "These principles guide everything we do, from how we make our soup to how we treat each other.",
-      "excellence": {
-        "title": "Excellence in Craft",
-        "description": "We obsess over the details. Every bowl, every experience, every interaction matters."
-      },
-      "innovation": {
-        "title": "Innovation First",
-        "description": "We're building the future of dining. Technology and tradition working in harmony."
-      },
-      "team": {
-        "title": "Team Over Ego",
-        "description": "We succeed together. Collaboration, respect, and support are at our core."
-      },
-      "growth": {
-        "title": "Growth Mindset",
-        "description": "We invest in our people. Learn, grow, and advance your career with us."
-      }
-    },
-    "openPositions": "Open Positions",
-    "positions": {
-      "noFit": "Don't see a position that fits?",
-      "alwaysLooking": "We're always looking for talented people.",
-      "sendResume": "Send us your resume"
-    },
-    "benefits": {
-      "title": "Why Work With Us",
-      "pay": {
-        "title": "Competitive Pay",
-        "description": "Above-market wages plus performance bonuses"
-      },
-      "health": {
-        "title": "Health Benefits",
-        "description": "Medical, dental, and vision coverage"
-      },
-      "meals": {
-        "title": "Free Meals",
-        "description": "Daily meals during shifts plus family discount"
-      },
-      "careerGrowth": {
-        "title": "Career Growth",
-        "description": "Clear advancement paths and mentorship"
-      },
-      "learning": {
-        "title": "Learning Budget",
-        "description": "Annual stipend for professional development"
-      },
-      "events": {
-        "title": "Team Events",
-        "description": "Regular team outings and celebrations"
-      }
-    },
-    "cta": {
-      "title": "Ready to Make Your Mark?",
-      "description": "Join us in creating the future of dining.",
-      "button": "VIEW OPEN POSITIONS"
-    },
-    "applyNow": "APPLY NOW"
-  },
   "contact": {
     "title": "Contact Us",
     "description": "We'd love to hear from you",
@@ -1287,8 +1222,7 @@
         "order": "Order Issue",
         "feedback": "Feedback",
         "corporate": "Corporate / Group Events",
-        "press": "Press Inquiry",
-        "careers": "Career Opportunity"
+        "press": "Press Inquiry"
       },
       "message": "Your Message",
       "success": "Thank you! We'll get back to you within 24-48 hours."
@@ -1298,11 +1232,6 @@
       "email": {
         "title": "Email",
         "value": "hello@ohbeefnoodlesoup.com"
-      },
-      "location": {
-        "title": "Visit Us",
-        "opening": "Opening Spring 2025",
-        "city": "San Francisco, CA"
       },
       "responseTime": {
         "title": "Response Time",
@@ -1316,55 +1245,6 @@
     "faq": {
       "title": "Looking for Quick Answers?",
       "description": "Check out our frequently asked questions for instant help."
-    }
-  },
-  "press": {
-    "title": "Press",
-    "description": "Oh! in the news",
-    "mediaKit": "Media Kit",
-    "pressInquiries": "Press Inquiries",
-    "mediaContact": {
-      "title": "Media Contact",
-      "description": "For press inquiries, interviews, and media requests, please contact our communications team.",
-      "responseTime": "We typically respond within 24-48 hours."
-    },
-    "ourStory": {
-      "title": "Our Story",
-      "p1": "Oh! Beef Noodle Soup was born from a 30-year family recipe and a vision to reimagine the dining experience. Our founder grew up watching their grandmother perfect her beef noodle soup, serving it to family and friends who couldn't get enough.",
-      "p2": "Today, we're bringing that same recipe to a wider audience, combined with innovative technology and a unique private dining pod concept that puts the focus back on the food and the experience.",
-      "p3": "Our mission is simple: serve the perfect bowl of beef noodle soup in an environment designed for enjoyment, not distraction."
-    },
-    "keyFacts": {
-      "title": "Key Facts",
-      "founded": "Founded",
-      "headquarters": "Headquarters",
-      "flagshipOpening": "Flagship Opening",
-      "recipeHeritage": "Recipe Heritage",
-      "uniqueFeature": "Unique Feature",
-      "techPlatform": "Tech Platform"
-    },
-    "pressReleases": {
-      "title": "Press Releases"
-    },
-    "brandAssets": {
-      "title": "Brand Assets",
-      "logoPackage": {
-        "name": "Logo Package",
-        "description": "Primary and secondary logos in various formats"
-      },
-      "brandGuidelines": {
-        "name": "Brand Guidelines",
-        "description": "Colors, typography, and usage rules"
-      },
-      "productPhotography": {
-        "name": "Product Photography",
-        "description": "High-resolution images of our signature dishes"
-      },
-      "locationPhotos": {
-        "name": "Location Photos",
-        "description": "Interior and exterior shots of our locations"
-      },
-      "requestAccess": "To request access to our brand assets, contact"
     }
   },
   "privacy": {
@@ -2187,7 +2067,7 @@
     },
     "shell": {
       "brand": "Oh! Beef Noodle Soup",
-      "planTitle": "Business Plan",
+      "planTitle": "Oh! Beef Noodle Soup Business Plan",
       "viewingAs": "Viewing as {label}",
       "signOut": "Close plan",
       "skipToContent": "Skip to content",
@@ -2206,7 +2086,38 @@
       },
       "notFoundTitle": "That page is not part of your plan.",
       "notFoundBody": "The link may be out of date, or this section is not included in your invitation. Everything you have access to is in the navigation above.",
-      "backToSummary": "Back to the summary"
+      "backToSummary": "Back to the summary",
+      "footer": {
+        "previous": "Previous",
+        "next": "Next",
+        "readingTime": "{minutes, plural, one {# min read} other {# min read}}",
+        "sectionOf": "Section {n} of {total}"
+      },
+      "askChappy": "Ask Chappy about this section",
+      "palette": {
+        "open": "Contents",
+        "placeholder": "Jump to a section",
+        "noResults": "No section matches.",
+        "hint": "Type to filter. Enter to open. Alt + arrow keys step between sections."
+      },
+      "version": {
+        "built": "Built {date}",
+        "whatChanged": "What changed",
+        "confidential": "Confidential. Prepared for the named recipient only.",
+        "label": "Version"
+      },
+      "scenario": {
+        "group": "Scenario",
+        "conservative": "Conservative",
+        "base": "Base",
+        "aggressive": "Aggressive",
+        "reset": "Back to your default"
+      },
+      "why": {
+        "open": "Why this number",
+        "register": "In the register:"
+      },
+      "sources": "Sources"
     },
     "sections": {
       "summary": {
@@ -2232,7 +2143,7 @@
       "floor-plan": {
         "short": "Floor Plan",
         "title": "The Floor Plan",
-        "subtitle": "{sqft} square feet, {pods} pods, one kitchen, no dining room to staff."
+        "subtitle": "{sqft} square feet, {pods} pods, and two territories that meet only at the hatch."
       },
       "operations": {
         "short": "Operations",
@@ -2242,7 +2153,7 @@
       "expansion": {
         "short": "Expansion",
         "title": "The Expansion Engine",
-        "subtitle": "Five Utah locations in the first year, four US metros next, then the world by franchise."
+        "subtitle": "Five corporate Utah locations first, then franchise markets in phases: two US metros, then the coasts and Taipei, then the world."
       },
       "unit-economics": {
         "short": "Unit Economics",
@@ -2252,7 +2163,7 @@
       "financials": {
         "short": "Financials",
         "title": "Financials",
-        "subtitle": "Portfolio P&L, capital per location, and the coverage a lender needs to see."
+        "subtitle": "Four-wall P&L, corporate overhead, consolidated cash, and capital per location."
       },
       "sensitivity": {
         "short": "Sensitivity",
@@ -2273,25 +2184,96 @@
         "short": "Roadmap",
         "title": "Roadmap and Milestones",
         "subtitle": "From lease to the fifth opening, dated from the day the flagship opens."
+      },
+      "integrity": {
+        "short": "Integrity",
+        "title": "Model Integrity",
+        "subtitle": "Every assumption sourced and dated, every identity checked, every change logged."
       }
     },
     "summary": {
-      "revenue": "Base-case revenue per location",
-      "revenueNote": "Steady state, 75 pods, 30% utilization",
+      "revenue": "Revenue per location, {scenario} case",
+      "revenueNote": "Steady state, closed Sundays",
       "revPerSqFt": "Revenue per square foot",
       "revPerSqFtNote": "US fast-casual median is roughly $450 to $600",
       "ebitdaTarget": "EBITDA target",
-      "ebitdaTargetNote": "Public target. The model page shows the full margin.",
+      "ebitdaTargetNote": "Public four-wall target. The stretch at maturity and the full margin by scenario are on the Model page.",
       "benchmarkEyebrow": "Saying it out loud",
-      "benchmarkClaim": "Our base case sits at $1,200 per square foot. That is elite.",
-      "benchmarkText": "US fast-casual median runs $450 to $600 per square foot. Top-decile operators clear $1,000. Chick-fil-A runs above $1,500. High-throughput, small-footprint, high-check formats get there, and the levers on the model page show exactly which assumptions carry it.",
-      "placeholder": "The narrative summary arrives with the module build. Everything above is computed live from the financial engine.",
+      "benchmarkClaim": "Our base case lands just under the top-decile line for revenue per square foot.",
+      "benchmarkText": "US fast-casual median runs $450 to $600 per square foot; Chipotle-class units $800 to $1,000; the top decile clears $1,000 (industry surveys and public filings, 2025). The figure above is the engine’s, and the Model page shows which levers carry it and what the benchmark scorecard says about it.",
       "capital": "Capital to five locations",
       "capitalNote": "Two equity rounds from one financial partner plus the founder's contribution. No debt.",
       "partner": "Implied partner ownership",
-      "partnerNote": "Derived from a 3x partner return on yearly distributions plus a 5x EBITDA exit in year 5, and never above 49%. The funding page lets you change every input.",
+      "partnerNote": "Derived from the partner’s target return on post-tax distributions plus an exit on consolidated, recurring EBITDA, and never above the founder’s ceiling. When the ceiling binds, the Funding page says so and states the partner’s actual multiple.",
       "payback": "Payback from opening, years",
-      "paybackNote": "Flagship, base case, unlevered, through the ramp"
+      "paybackNote": "Flagship, unlevered, through the ramp",
+      "heroAlt": "A bowl of beef noodle soup: smoked brisket slices, dark broth, noodles, bok choy and a wedge of orange, with wooden chopsticks and a spoon.",
+      "heroCaption": "Everything in this plan is in service of this bowl.",
+      "narrative": {
+        "eyebrow": "Executive summary, {scenario} case",
+        "title": "A fast-casual unit with no front of house, priced and costed for diligence",
+        "scenario": {
+          "conservative": "conservative",
+          "base": "base",
+          "aggressive": "aggressive"
+        },
+        "lead": {
+          "thesis": "The idea.",
+          "unit": "The unit.",
+          "growth": "Growth.",
+          "ask": "The ask.",
+          "risks": "What could go wrong.",
+          "purpose": "Why it matters."
+        },
+        "body": {
+          "thesis": "Oh! serves premium American beef noodle soup in {pods} private dining pods inside {sqft} square feet. Guests order at a kiosk, the kitchen delivers through a hatch in each pod, and no host, server, or tip ever enters the room. That one design choice moves labor and seating economics away from casual dining and toward the best of fast casual.",
+          "unit": "Open {days} days a year and serving about {covers} guests a day at a {check} average check, the unit produces {revenue} in revenue. Food runs {food} with American Wagyu and USDA Prime costed bowl by bowl, labor {labor}, and four-wall EBITDA {ebitda}. We ask investors to hold us to {target}, with {stretch} as the stretch at maturity. Break-even is about {breakEven} guests a day, and a {capex} build pays back in {payback} from opening.",
+          "growth": "By year five the plan runs {corporate} company restaurants and {franchise} franchised ones, on a phased franchise schedule that respects the time a franchise disclosure document takes to become effective. Company revenue reaches {y5Revenue}. Corporate overhead of {overhead} sits inside that figure, leaving consolidated EBITDA of {consolidated}.",
+          "ask": "The plan raises {capital} in two rounds with no debt. {cashLine} A financial partner takes preferred equity with a {pref} preferred return and a {liq} liquidation preference, and the common stake is derived from the return math and capped at {partner}. At that cap the partner's multiple is {multiple5} at a year-five exit and {multiple7} at a year-seven exit on the hybrid multiple. We state this plainly instead of asserting a split.",
+          "risks": "The downside case is shown in full, including a conservative scenario that runs out of cash without further capital. Pods, the kitchen display, and a no-floor-staff service model are new to Utah inspectors and to guests. The Sensitivity section names each risk, and the Model integrity section lists every assumption with its source, date, and confidence.",
+          "purpose": "Every company restaurant gives {givingPct} of its revenue to ONE RED STEP AT A TIME, a Utah mental health nonprofit. That is about {givingPerUnit} a year from one restaurant and {givingFiveYear} over the first five years. The pledge is a cost line in every scenario, so every margin in this plan already includes it."
+        },
+        "map": {
+          "title": "Diligence map",
+          "intro": "The questions a diligence team usually asks, the section that answers each one, and the register rows behind the answer. Every figure on this page links back to one of them.",
+          "headers": {
+            "question": "Question",
+            "where": "Answered in",
+            "evidence": "Register rows"
+          },
+          "inSection": "Shown in the section",
+          "rows": {
+            "demand": "Will enough guests come, and how often is a pod full?",
+            "check": "Is the average check derivable from the menu?",
+            "beef": "What does premium American beef really cost per bowl?",
+            "labor": "Can about {fte} salaried people really run a {pods}-pod room every day?",
+            "members": "What does the member program cost, and who pays for it?",
+            "overhead": "What does the company above the restaurants cost?",
+            "cash": "When is cash lowest, and is it ever negative?",
+            "downside": "What happens if we are wrong?",
+            "franchise": "Is the franchise pace achievable, and what does it earn?",
+            "ownership": "How was the partner's stake set, and what does it return?",
+            "sources": "Where does every number come from?",
+            "giving": "What does Oh! give, and to whom?"
+          }
+        },
+        "cash": {
+          "positive": "The lowest cash balance is {amount}, so the plan never needs a third round.",
+          "negative": "In this case cash runs short by {amount}, so it would need more capital before year five."
+        }
+      },
+      "why": {
+        "revenue": "Guests a day times the average check times {days} operating days. Guests a day come from {pods} pods, the dwell time, and the utilization rate; the check is built from the menu prices and attach rates.",
+        "revPerSqFt": "Annual revenue divided by {sqft} square feet.",
+        "ebitdaTarget": "The figure we ask investors to hold us to, not the model's output. This case models {margin} four-wall EBITDA.",
+        "capital": "Two equity rounds plus the founder's contribution, sized to open five company restaurants and fund corporate overhead, with no debt.",
+        "partner": "The stake the partner's target return implies, rounded up to the nearest 5% and capped at the founder's ceiling of {cap}.",
+        "payback": "Years from opening until cumulative free cash flow, after the pre-opening burn, repays the {capex} build."
+      },
+      "vision": {
+        "eyebrow": "Our vision",
+        "text": "A world where a great bowl of beef noodle soup comes with room to breathe: premium food, a space of your own, and every visit helping someone take one more step toward better mental health."
+      }
     },
     "primitives": {
       "showTable": "Show data table",
@@ -2306,9 +2288,9 @@
         "subtitle": "Zero front-of-house dining, built as an operating system. The restaurants are the proof and the first customer.",
         "preparedFor": "Prepared for",
         "generated": "Generated",
-        "baseRevenue": "Base-case revenue per location",
         "confidential": "Distribution",
-        "confidentialText": "Confidential. Shared by invitation only."
+        "confidentialText": "Confidential. Shared by invitation only.",
+        "revenue": "Unit revenue, {scenario} case"
       },
       "toc": "Contents",
       "placeholder": "Section content follows in the next release. Figures are computed from the financial engine at print time.",
@@ -2332,7 +2314,9 @@
         "pods": "Pods",
         "kitchenFTE": "Kitchen staff (FTE)",
         "avgDwellMinutes": "Average dwell time",
-        "payrollBurdenPct": "Payroll burden"
+        "payrollBurdenPct": "Payroll burden",
+        "memberProgramPct": "Member program (share of revenue)",
+        "communityGivingPct": "Community giving (share of revenue)"
       },
       "results": {
         "revenue": "Annual revenue",
@@ -2345,7 +2329,7 @@
         "avgCheck": "Average check",
         "coversPerDay": "Covers a day"
       },
-      "publicTarget": "Our stated public target is {target} EBITDA. This scenario produces {margin}.",
+      "publicTarget": "Our stated public target is {target} four-wall EBITDA, with {stretch} at maturity as the stretch. This scenario produces {margin}.",
       "waterfall": {
         "title": "From revenue to EBITDA",
         "revenue": "Revenue",
@@ -2353,7 +2337,9 @@
         "labor": "Labor",
         "occupancy": "Occupancy",
         "otherOpex": "Other operating",
-        "ebitda": "EBITDA"
+        "ebitda": "EBITDA",
+        "program": "Member program, discounts and comps",
+        "giving": "Community giving"
       },
       "table": {
         "show": "Show data table",
@@ -2375,7 +2361,7 @@
       "benchmark": {
         "eyebrow": "Saying it out loud",
         "claim": "This scenario runs {value} per square foot.",
-        "text": "US fast-casual median is roughly $450 to $600 per square foot. Top-decile operators clear $1,000; Chick-fil-A runs above $1,500. Pull the utilization lever down and watch where the line lands."
+        "text": "US fast-casual median is roughly $450 to $600 per square foot; Chipotle-class units run $800 to $1,000; the top decile clears $1,000 and Chick-fil-A runs above $1,500. Pull the utilization lever down and watch where the line lands."
       },
       "actions": {
         "reset": "Reset to default",
@@ -2389,77 +2375,223 @@
         "line": "Line",
         "coversPerDay": "Covers a day",
         "grossProfit": "Gross profit"
+      },
+      "lines": {
+        "communityGiving": "Community giving pledge"
       }
     },
     "floorPlan": {
       "zones": {
-        "entry": "Entry",
-        "dining": "Dining: 75 pods in three rows",
+        "title": "Flagship floor plan, 70 by 50 feet, comb service layout",
         "kitchen": "Kitchen",
-        "boh": "Back of house and storage",
-        "restrooms": "Restrooms",
+        "dish": "Dish return",
+        "boh": "Storage and office",
+        "restroomHall": "Restrooms",
+        "restroomMen": "Men",
+        "restroomWomen": "Women",
+        "store": "Product store",
+        "lobby": "Entry lobby",
         "kiosk": "Kiosks",
-        "corridor": "Sliding-panel delivery corridor",
+        "corridor": "Staff corridor",
         "aisle": "Guest aisle",
-        "pass": "The pass"
+        "crossAisle": "Guest cross-aisle",
+        "pass": "The pass",
+        "entry": "Entry",
+        "exit": "Exit",
+        "staffDoor": "Staff door",
+        "receiving": "Receiving",
+        "ft": "ft"
       },
       "layers": {
         "title": "Layers",
         "pods": "Pods",
-        "corridors": "Corridors and aisles",
+        "corridors": "Staff corridors",
+        "aisles": "Guest aisles",
         "kitchen": "Kitchen",
-        "boh": "Back of house",
+        "boh": "Dish and back of house",
         "restrooms": "Restrooms",
-        "entry": "Entry and kiosks"
+        "entry": "Lobby and kiosks",
+        "store": "Store",
+        "flow": "Flow arrows",
+        "dimensions": "Dimensions"
+      },
+      "modes": {
+        "label": "View",
+        "blueprint": "Blueprint",
+        "territory": "Territory",
+        "iso": "3D",
+        "isoLoad": "Load the 3D view",
+        "isoLoading": "Rendering the 3D view",
+        "isoUnavailable": "3D needs WebGL, which this browser does not offer. The blueprint and the table carry the same geometry."
+      },
+      "legend": {
+        "staff": "Staff space",
+        "guest": "Guest space",
+        "hatch": "Hatch",
+        "staffSqft": "Staff space, {value} sf: kitchen, dish return, back of house, three corridors.",
+        "guestSqft": "Guest space, {value} sf: lobby, aisles, {pods} pods, restrooms, store.",
+        "touch": "The two territories touch at {hatches} hatches and nowhere else."
       },
       "zoom": {
         "in": "Zoom in",
         "out": "Zoom out",
-        "reset": "Reset",
-        "hint": "Hover or tap a pod. Ctrl + scroll zooms; drag to pan when zoomed."
+        "reset": "Reset view",
+        "hint": "Scroll with Ctrl to zoom, drag to pan."
+      },
+      "readout": {
+        "default": "One order, two paths, one hatch. Press play, or hover a pod.",
+        "pod": "Pod {number}. Finger {finger}, {side} row, position {position}. Seat opens to guest aisle {aisle}. Hatch opens to staff corridor {corridor}.",
+        "podType": "{type}, {w} by {d} ft.",
+        "podDuo": "Pairs with pod {number} when the partition comes out.",
+        "corridor": "Staff corridor {n}. {pods} hatches, {w} ft wide, kitchen at the far end. No guest enters.",
+        "aisle": "Guest aisle {n}. {pods} pods, {w} ft wide. No staff enters.",
+        "crossAisle": "Guest cross-aisle, {w} ft wide. It joins every aisle to the lobby and the store.",
+        "kitchen": "Kitchen, {value} sf across the rear wall. Broth, noodles, plating, and the pass feeding three corridors.",
+        "dish": "Dish return, {value} sf. Bowls come back the way they went out, by corridor.",
+        "boh": "Storage and office, {value} sf. Receiving door on the rear wall.",
+        "lobby": "Entry lobby, {value} sf. Three kiosks, no counter.",
+        "restrooms": "Restrooms, off the last guest aisle. Men and women.",
+        "store": "Product store, {value} sf. On the exit path, self-checkout.",
+        "pinned": "Pinned. Press Escape or click again to release.",
+        "step": "{actor}, {time}. {text}"
       },
       "pod": {
         "single": "Single",
         "duo": "Convertible duo",
-        "title": "Pod {number}",
-        "detail": "{type}. Row {row}, position {position}. Panel opens to the {panel} corridor.",
-        "size": "{w} × {d} ft",
-        "hint": "Hover or tap any pod for its number, type and position. Gold edges mark convertible duos.",
-        "aria": "Pod {number}, {type}, row {row}, position {position}",
-        "panel": {
-          "north": "north",
-          "south": "south"
-        }
+        "side": {
+          "west": "west",
+          "east": "east"
+        },
+        "aria": "Pod {number}, {type}, finger {finger}, {side} row, position {position}",
+        "prev": "Previous pod",
+        "next": "Next pod",
+        "stepper": "Step through pods"
       },
       "areas": {
         "title": "Square footage",
-        "dining": "Dining",
+        "pods": "Pods",
+        "staffCorridors": "Staff corridors",
+        "guestAisles": "Guest aisles and cross-aisle",
+        "lobby": "Entry lobby",
+        "store": "Product store",
+        "restrooms": "Restrooms",
         "kitchen": "Kitchen",
-        "boh": "BOH and storage",
-        "circulation": "Restrooms and circulation",
+        "dish": "Dish return",
+        "boh": "Storage and office",
+        "staffTotal": "Staff space",
+        "guestTotal": "Guest space",
         "total": "Total",
-        "sqft": "{value} sf"
+        "sqft": "{value} sf",
+        "landlordLine": "One {w} by {d} foot box. Kitchen on the rear wall, lobby, store and restrooms in a column on the right, and nothing between them that is not a pod, a corridor or an aisle."
+      },
+      "facts": {
+        "title": "Shell at a glance",
+        "footprint": "Footprint",
+        "footprintValue": "{w} × {d} ft",
+        "area": "Area",
+        "areaValue": "{sqft} sf",
+        "front": "Front wall",
+        "frontValue": "{w} ft",
+        "doors": "Doors",
+        "doorsValue": "{count}: entry, exit, staff, receiving",
+        "kitchen": "Kitchen",
+        "kitchenValue": "Rear wall, {depth} ft deep",
+        "widths": "Clear widths",
+        "widthsValue": "Corridors {corridor} ft, aisles {aisle} ft, cross-aisle {cross} ft",
+        "fixtures": "Fixtures",
+        "fixturesValue": "{pods} pods, {kiosks} kiosks, {restrooms} restrooms",
+        "note": "Read from the concept geometry. Ceiling height, utilities, hood routing and glazing follow the site."
+      },
+      "explainer": {
+        "title": "How service works",
+        "lede": "No host, no server, no counter. Three moves, all of them behind the wall.",
+        "kitchen": {
+          "title": "The kitchen fires",
+          "body": "Every order lands on the kitchen display with a pod number. Broth, noodles, plating, in that order, on one wall."
+        },
+        "corridor": {
+          "title": "The corridor carries it",
+          "body": "Three staff corridors run forward from the kitchen like fingers. Pods line both sides, hatches facing in. A runner walks a corridor, not a dining room."
+        },
+        "hatch": {
+          "title": "The hatch hands it over",
+          "body": "A sliding panel at the back of every pod. It opens to the corridor, the bowl goes through, it closes. The guest sees a bowl, not a hand."
+        }
       },
       "journey": {
-        "title": "One order, start to finish",
+        "title": "One order, two paths",
         "play": "Play the order journey",
         "pause": "Pause",
         "replay": "Replay",
-        "note": "Real elapsed time {real}, shown in {anim} seconds.",
+        "note": "Real elapsed time {real}, shown in {anim} seconds. Kitchen time is compressed.",
+        "after": "Afterwards",
+        "actors": {
+          "guest": "Guest",
+          "kitchen": "Kitchen",
+          "both": "Both"
+        },
         "steps": {
-          "order": "Order placed at the kiosk. No line, no host.",
-          "assigned": "Pod 38 assigned. The guest walks the aisle to it.",
-          "seated": "Seated, panel closed. The room is quiet.",
-          "fired": "Kitchen fires: broth to temperature, shank sliced to order.",
-          "assembled": "Bowl assembled at the pass, add-ons color-coded.",
-          "corridor": "Runner enters the delivery corridor behind the pods.",
-          "delivered": "Sliding panel opens, bowl arrives, panel closes. Nobody spoke."
+          "paid": "Paid at a lobby kiosk. About forty seconds on the screen, so the line keeps moving. No host.",
+          "ticket": "Ticket on the kitchen display: pod {pod}, corridor 2, west side.",
+          "assigned": "Pod {pod} assigned. The screen shows the way.",
+          "broth": "Broth station. A portion comes to temperature.",
+          "walk": "Across the cross-aisle, up guest aisle 2. Every door on the way is a pod. Not one is a kitchen.",
+          "seated": "Seated, facing the aisle. The hatch behind is closed. The room is quiet.",
+          "noodles": "Noodle station. Cooked to order, never held.",
+          "plating": "Plating. Smoked brisket sliced or rib chunks portioned to order, add-ons color coded to the ticket.",
+          "corridor": "A runner lifts the bowl and turns into staff corridor 2. Nobody in this corridor is a guest.",
+          "hatch": "Hatch {pod}. Open, bowl in, shut.",
+          "delivered": "Same pod, opposite sides. The guest never saw the corridor. The runner never stepped into an aisle. They did not share a square foot.",
+          "finish": "Finished. Out by the aisle, past the store, through the exit. No check, no tip.",
+          "cleared": "The runner clears by the corridor to the dish return. Same minute, different territory.",
+          "exit": "Out the exit. The two paths never crossed.",
+          "reset": "Pod {pod} wiped and reset. Six minutes, and the next number is on a screen."
         }
+      },
+      "iso": {
+        "aria": "Isometric model of the flagship. Kitchen block across the rear wall, three staff corridors running forward with pods on both sides, guest aisles between them, and a column on the right with restrooms, the product store and the entry lobby. Staff space is painted ember, guest space gold. Same geometry as the blueprint; use the blueprint or the table for pod details.",
+        "controls": "Drag to turn the model. Use the buttons to frame it.",
+        "poster": "Rendering the 3D view",
+        "reset": "Reset view",
+        "presets": {
+          "label": "Frame",
+          "overview": "Overview",
+          "kitchen": "Kitchen",
+          "finger": "Finger",
+          "lobby": "Lobby"
+        },
+        "focus": {
+          "label": "Show",
+          "all": "All",
+          "guest": "Guest space",
+          "staff": "Staff space"
+        }
+      },
+      "table": {
+        "show": "Table view",
+        "hide": "Plan view",
+        "caption": "All {pods} pods by finger and side.",
+        "pod": "Pod",
+        "finger": "Finger",
+        "side": "Side",
+        "position": "Position",
+        "aisle": "Guest aisle",
+        "corridor": "Staff corridor",
+        "type": "Type"
+      },
+      "blueprint": {
+        "title": "Where the layout started",
+        "lede": "The concept sketch that set the rule: kitchen across the rear, staff corridors as fingers, pods on both sides with hatches facing in, guests only in the aisles. The plan above is the scaled version. It moves the lobby, restrooms and store into a column on the right so each fits at true size, and closes every corridor at the front.",
+        "alt": "Concept sketch of the comb layout: kitchen across the rear, three staff corridors with pods on both sides, guest aisles between them, entry lobby with kiosks at the front left, restrooms in the middle, product store and exit at the front right.",
+        "caption": "Concept sketch, not to scale. Blue arrows trace the guest path from entry to exit; orange arrows trace the staff loop from the kitchen to the hatches and back. The two paths never touch.",
+        "open": "View larger",
+        "close": "Close",
+        "fullSize": "Open full size in a new tab"
       },
       "honesty": {
         "eyebrow": "Saying it out loud",
-        "claim": "{pods} pods in {sqft} square feet is tight: about {perPod} square feet of dining per pod, circulation included.",
-        "text": "Each pod is {w} by {d} feet, the size of a first-class airline seat. It works because nobody pulls out a chair, no server walks a tray between tables, and every delivery happens from a corridor the guest never sees. The tightest number in the plan is the clearest proof of the format."
+        "claim": "{pods} pods in {sqft} square feet is tight: about {perPod} square feet per pod once you count the corridor behind it and the aisle in front.",
+        "text": "Each pod is {w} by {d} feet, the size of a first-class airline seat. Behind it, a {corridor} foot staff corridor shared with the row across. In front, a {aisle} foot guest aisle shared the same way. Nobody pulls out a chair, no server threads a tray between tables, and the only thing that crosses from one side to the other is a bowl through a wall. The tightest number in the plan is the clearest proof of the format."
       }
     },
     "expansion": {
@@ -2498,7 +2630,8 @@
         "daytime": "Daytime density",
         "auv": "Target AUV",
         "approx": "Population and density figures are rounded public estimates. AUV is computed by the engine.",
-        "hint": "Select a pin for the market card."
+        "hint": "Select a pin for the market card.",
+        "beefSpec": "Premium beef to a grade-equivalent spec sourced in-market, halal-certified where required."
       },
       "print": {
         "location": "Location",
@@ -2537,7 +2670,7 @@
         },
         "las-vegas": {
           "name": "Las Vegas",
-          "notes": "24-hour dayparts, tourist volume, operational proximity to Utah."
+          "notes": "Late-night daypart, tourist volume, operational proximity to Utah."
         },
         "seattle": {
           "name": "Seattle",
@@ -2549,7 +2682,7 @@
         },
         "tokyo": {
           "name": "Tokyo",
-          "notes": "Ichiran's home. The pod concept reads as native, not novel. Operationally the most compatible market on earth."
+          "notes": "Ichiran’s home. The pod concept reads as native, not novel. A master franchise, not a joint venture: no brand capital goes in."
         },
         "london": {
           "name": "London",
@@ -2566,6 +2699,70 @@
         "melbourne": {
           "name": "Melbourne",
           "notes": "Strong Asian dining culture, counter-seasonal to the Northern Hemisphere."
+        },
+        "hong-kong": {
+          "name": "Hong Kong",
+          "notes": "Dense, vertical and beef-noodle literate. Small footprints and high rents are exactly where the pod format wins."
+        },
+        "shanghai": {
+          "name": "Shanghai",
+          "notes": "The entry point to mainland China under a master franchisee that owns licensing and supply. One unit first; the mainland scales only after it works."
+        },
+        "kuala-lumpur": {
+          "name": "Kuala Lumpur",
+          "notes": "A large Chinese-Malaysian dining culture and English-language operations. A regional training kitchen for Southeast Asia."
+        },
+        "bangkok": {
+          "name": "Bangkok",
+          "notes": "One of the world's great noodle cities, mall-driven dining, and a tourist base that already knows the format."
+        },
+        "toronto": {
+          "name": "Toronto",
+          "notes": "Canada's largest Asian dining market and the closest operating culture to the US. First Canadian unit."
+        },
+        "vancouver": {
+          "name": "Vancouver",
+          "notes": "The strongest Taiwanese and Cantonese community in North America outside California. Second Canadian unit."
+        },
+        "beijing": {
+          "name": "Beijing",
+          "notes": "Second mainland unit under the Shanghai master franchise, opened only on Shanghai’s numbers."
+        },
+        "chengdu": {
+          "name": "Chengdu",
+          "notes": "Third mainland unit under the Shanghai master franchise. Proves the concept in a spice-first inland market with a lower cost base."
+        },
+        "jakarta": {
+          "name": "Jakarta",
+          "notes": "The largest city in Southeast Asia. Mall-anchored, dine-in, and priced for volume."
+        },
+        "manila": {
+          "name": "Manila",
+          "notes": "English-speaking, mall-centric and young. The pod format reads as premium here."
+        },
+        "dubai": {
+          "name": "Dubai",
+          "notes": "The Gulf's dining showcase: high spend, a global expat base, and mall landlords that court new formats."
+        },
+        "mexico-city": {
+          "name": "Mexico City",
+          "notes": "Latin America's first unit. A huge, food-serious city with a growing Asian dining scene."
+        },
+        "geneva": {
+          "name": "Geneva",
+          "notes": "Sub-franchise under the London agreement. Small, wealthy and international; a single well-placed unit."
+        },
+        "barcelona": {
+          "name": "Barcelona",
+          "notes": "Sub-franchise under the London agreement. Tourism volume and a young dining culture that adopts formats fast."
+        },
+        "rome": {
+          "name": "Rome",
+          "notes": "Sub-franchise under the London agreement. The noodle-and-broth idea needs no translation here."
+        },
+        "sao-paulo": {
+          "name": "São Paulo",
+          "notes": "The largest Japanese diaspora outside Japan and South America's biggest restaurant market."
         }
       }
     },
@@ -2575,7 +2772,7 @@
       "yearShort": "Y{n}",
       "portfolio": {
         "title": "Five corporate locations, five years",
-        "subtitle": "Corporate revenue and EBITDA by plan year, counted from the day the flagship opens. Capex is booked in the opening month.",
+        "subtitle": "Four-wall corporate revenue and EBITDA by plan year, before overhead and pre-opening, counted from the day the flagship opens. Capex is booked in the opening month.",
         "yearCol": "Year",
         "locations": "Open at year end",
         "revenue": "Revenue",
@@ -2605,24 +2802,55 @@
           "techHardware": "Tech and kiosk hardware",
           "designArchPermits": "Design, architecture, permits",
           "ffeSignage": "FF&E and signage",
-          "preOpening": "Pre-opening"
-        }
+          "preOpening": "Pre-opening",
+          "launchMarketing": "Launch marketing"
+        },
+        "note": "Pre-opening is expensed over the {months} months before each opening in the company table; it is shown here because it is cash the round has to fund."
       },
       "platform": {
         "title": "Oh! OS as a second business unit",
-        "subtitle": "License revenue and franchise economics from year 4. Company revenue excludes the internal transfer and the marketing fund; system-wide sales include franchisee gross sales and are never labeled as ours.",
+        "subtitle": "License revenue and franchise economics from year 4, after what a master keeps, what selling and supporting a market costs, and the FX haircut. Company revenue excludes the internal transfer and the marketing fund; system-wide sales include franchisee gross sales and are never labeled as ours.",
         "line": "Line",
-        "note": "Corporate units transfer {pct} of revenue internally; franchisees pay the {license} monthly license. ARR counts every location.",
+        "note": "Corporate units transfer {pct} of revenue internally; franchisees pay a {royalty} royalty and the {license} monthly license. Masters keep half the royalty and fees, sub-franchises pass a quarter to the brand, and non-USD royalties take an FX haircut. ARR counts every location.",
         "lines": {
           "systemLocations": "System locations",
           "licenseARR": "Platform license ARR",
-          "royalties": "Royalties (5%)",
-          "unitFees": "Unit franchise fees",
+          "grossRoyalties": "Royalties paid by franchisees",
+          "royalties": "Brand royalties received",
+          "unitFees": "Unit fees received",
           "territoryFees": "Territory and development fees",
+          "franchiseSupportCost": "Franchise sales, entry and support cost",
+          "franchiseContribution": "Franchise contribution",
           "platformGrossProfit": "Platform gross profit",
           "companyRevenue": "Company revenue",
           "systemWideSales": "System-wide sales"
         }
+      },
+      "company": {
+        "title": "The whole company",
+        "subtitle": "Corporate units, the head office, franchise contribution and Oh! OS gross profit on one page, then tax distributions, capex, the two rounds and the cash balance. This is the table a partner underwrites.",
+        "line": "Line",
+        "lines": {
+          "corporateRevenue": "Corporate revenue",
+          "unitEbitda": "Four-wall EBITDA",
+          "preOpeningExpense": "Pre-opening expense",
+          "corporateOverhead": "Corporate overhead",
+          "franchiseContribution": "Franchise contribution",
+          "platformGrossProfit": "Oh! OS gross profit",
+          "consolidatedEbitda": "Consolidated EBITDA",
+          "taxDistributions": "Tax distributions",
+          "maintenanceCapex": "Maintenance capex",
+          "growthCapex": "Growth capex",
+          "investments": "Platform and corporate investments",
+          "freeCashFlow": "Free cash flow",
+          "equityRaised": "Equity raised",
+          "cumulativeCash": "Cumulative cash"
+        },
+        "note": "Year-five corporate overhead {overhead}. Consolidated EBITDA {consolidated}; recurring EBITDA, the figure an acquirer capitalizes, {recurring}.",
+        "runwayTitle": "Cash runway",
+        "runwaySubtitle": "Cumulative cash at each year end, seeded by the two rounds. Free cash flow in green.",
+        "runwayNote": "The low point is {low} at the end of year {year}. The rounds are sized so it stays above zero.",
+        "runwayShort": "The balance falls to {low} at the end of year {year}. This scenario needs more capital or a slower schedule; the base case does not."
       }
     },
     "funding": {
@@ -2660,13 +2888,13 @@
           "partnerPct": "Partner ownership",
           "target": "Partner's target return",
           "exit": "Exit multiple of EBITDA",
-          "distribution": "Share of EBITDA distributed yearly"
+          "distribution": "Share of post-tax free cash flow distributed yearly"
         },
         "yearly": "Year by year",
         "grid": "Across stakes at {target} and {exit}",
         "gridNote": "Red multiples fall short of the partner's target at that stake; the buyout row is what closes the gap.",
         "results": {
-          "founderTotal": "Founder total, five years",
+          "founderTotal": "Founder total through year {n}",
           "founderTotalSub": "{dist} in distributions plus {exit} at exit",
           "partnerMultiple": "Partner multiple at exit",
           "partnerMultipleSub": "Target {target}. Total to partner {total}",
@@ -2675,37 +2903,78 @@
           "buyoutFree": "Distributions alone deliver the target; no buyout payment needed.",
           "targetYear": "Target reached by distributions",
           "targetYearSub": "Without any exit or buyout",
-          "beyond": "Beyond year 5"
+          "beyond": "Beyond year {n}"
         },
         "cols": {
           "year": "Year",
-          "ebitda": "Corporate EBITDA",
+          "ebitda": "Four-wall EBITDA",
           "distributions": "Distributed",
           "founder": "Founder",
           "partner": "Partner",
           "multiple": "Partner multiple to date",
-          "stake": "Partner stake"
+          "stake": "Partner stake",
+          "consolidated": "Consolidated EBITDA",
+          "distributable": "Distributable cash"
         },
         "gridRows": {
           "founderTotal": "Founder total",
           "founderExit": "Founder at exit",
           "partnerMultiple": "Partner multiple",
           "buyout": "Buyout at target"
-        }
+        },
+        "capBindsEyebrow": "The ceiling binds",
+        "capClearEyebrow": "Inside the ceiling",
+        "capBinds": "The return math alone would give the partner {implied} of the company for a {target} return. The founder’s ceiling is {cap}, so the ceiling sets the headline, not the math. At {cap} the partner’s money-on-money multiple at the year-{year} exit is {multiple} on common, or {preferred} under the preferred construct, on exit EBITDA of {ebitda} at {exitMult} ({exitValue}).",
+        "capClear": "The return math implies {implied}, rounded to {headline}, inside the founder’s ceiling of {cap}. At that stake the partner’s multiple at the year-{year} exit is {multiple} on common, {preferred} under the preferred construct, on exit EBITDA of {ebitda} at {exitMult} ({exitValue}).",
+        "capBindsAll": "At this exit, even the whole company would not return {target} to the partner: the return math asks for more than 100%. The founder’s ceiling is {cap}, so the ceiling sets the headline. At {cap} the partner’s money-on-money multiple at the year-{year} exit is {multiple} on common, or {preferred} under the preferred construct, on exit EBITDA of {ebitda} at {exitMult} ({exitValue})."
       },
       "exit": {
         "title": "Restaurant multiple or platform multiple",
-        "subtitle": "The same company valued two ways at the exit year. The platform line and franchise fees are what argue for the higher one.",
+        "subtitle": "The same company valued two ways at the year-{year} exit. Recurring franchise profit and the platform line are what argue for the higher one.",
         "restaurant": "Restaurant multiple, {mult} EBITDA",
         "hybrid": "Hybrid platform multiple, {mult} EBITDA",
         "founderShare": "Founder share",
         "partnerMultiple": "Partner multiple",
-        "note": "The difference is {delta}. Every franchise unit opened on someone else's capital pushes the valuation toward the right-hand number."
+        "eligible": "Recurring franchise profit is {share} of exit EBITDA, above the {min} the hybrid multiple needs. The difference is {delta}; every franchise unit opened on someone else’s capital pushes the valuation toward the right-hand number.",
+        "notEligible": "Recurring franchise profit is {share} of exit EBITDA in year {year}, below the {min} the hybrid multiple needs, so both cards use the restaurant multiple. The year-7 case is where the franchise schedule qualifies.",
+        "eligibleOver": "Recurring franchise profit is {share} of exit EBITDA, more than all of it, because the corporate units net below zero after the head office. That clears the {min} the hybrid multiple needs. The difference is {delta}; every franchise unit opened on someone else’s capital pushes the valuation toward the right-hand number."
       },
       "lender": {
         "eyebrow": "If a lender ever enters",
         "claim": "The plan carries no debt, and it could.",
-        "text": "Against a reference SBA 7(a) loan of {debt} over ten years, base-case debt service coverage would be {dscr}. Lenders want 1.25x. Conservative still clears it."
+        "text": "Against a reference SBA 7(a) loan of {debt} over ten years, base-case debt service coverage would be {dscr}. Lenders want 1.25x. The conservative case would be {conservative}, which is why the plan carries no debt."
+      },
+      "exitYear": {
+        "label": "Exit year",
+        "hybridToggle": "Apply the {mult} hybrid multiple when recurring franchise profit is at least {min} of exit EBITDA"
+      },
+      "preferred": {
+        "title": "The preferred construct",
+        "subtitle": "{pref} preferred return and a {liq} liquidation preference ahead of common, with the partner’s common stake capped at {cap}. Same cash flows, same year-{year} exit: the partner is paid first and the common stake is derived from what is left.",
+        "rows": {
+          "accruedPreference": "Preferred return accrued through the exit",
+          "preferencePaidFromDistributions": "Paid from yearly distributions",
+          "preferencePaidAtExit": "Unpaid preference settled at exit",
+          "liquidationPaid": "Liquidation preference returned at exit",
+          "residualExitValue": "Exit value left for common",
+          "commonDistributions": "Distributions left for common"
+        },
+        "cards": {
+          "partnerCommonPct": "Partner common stake",
+          "partnerMultiple": "Partner multiple, preferred",
+          "founderTotal": "Founder total, preferred",
+          "versusCommon": "Partner multiple, plain common"
+        },
+        "commonCapped": "The residual implies {implied}; the ceiling caps it.",
+        "commonClear": "Derived from the residual: {implied} before rounding.",
+        "partnerMultipleSub": "Preference plus the common share of the residual: {total}",
+        "founderTotalSub": "{pct} of the residual and of common distributions",
+        "versusCommonSub": "The same partner at the {headline} headline with no preference, for comparison",
+        "note": "The preferred construct is what we propose to a growth-equity partner: it protects their capital in the years the consolidated line is thin and leaves the founder control of the common."
+      },
+      "print": {
+        "y5": "Year 5 exit, {mult} restaurant multiple",
+        "y7": "Year 7 exit, {mult} hybrid multiple when it qualifies"
       }
     },
     "sensitivity": {
@@ -2727,49 +2996,162 @@
       },
       "mc": {
         "title": "Monte Carlo",
-        "subtitle": "{runs} runs over five levers (utilization, bowl price, food cost, rent, kitchen staff) with triangular distributions, in a background worker.",
+        "subtitle": "{runs} runs over six levers (utilization, bowl price, food cost, rent, kitchen staff, member program) with triangular distributions, in a background worker.",
         "p10": "10th percentile",
         "p50": "Median",
         "p90": "90th percentile",
-        "belowTarget": "Below the 25% target",
+        "belowTarget": "Below the {target} target",
         "belowTargetSub": "Runs with EBITDA under {value}",
         "runsLabel": "runs",
         "running": "Running the simulation",
         "unavailable": "The simulation needs a browser with Web Worker support.",
-        "note": "Steady-state single-unit EBITDA, which is what year three looks like once the ramp is done."
+        "note": "Steady-state single-unit EBITDA, which is what year three looks like once the ramp is done. The line is the {target} public target; {stretch} is the stretch at maturity."
       },
       "downsides": {
         "title": "Named downsides, with what we do about them",
-        "subtitle": "Each one is a lever move in the engine, not a paragraph. EBITDA impact at steady state.",
+        "subtitle": "Each one is a lever move in the engine, not a paragraph. Steady-state EBITDA impact unless the card says otherwise: two are read in year one, one as payback, one on the consolidated year-five result.",
         "impact": "Margin after: {margin}. Year-one EBITDA impact {y1}.",
         "mitigation": "Mitigation.",
         "items": {
           "slowRamp": {
             "title": "Slow ramp",
-            "mitigation": "Pre-opening kiosk demo and referral credits seeded in the corridor; a 15% weaker first year is inside the round-1 working capital reserve."
+            "mitigation": "Pre-opening kiosk demo and referral credits seeded in the corridor from the {launch} launch budget; a 15% weaker first year is inside the round-1 working capital reserve."
+          },
+          "openingDelay": {
+            "title": "Opening slips a quarter",
+            "mitigation": "Three dead months in front of the same curve, with the pre-opening payroll already running. The lease carries a rent abatement through the certificate of occupancy, and the flagship crew is hired against the inspection date, not the target date."
           },
           "rentInflation": {
             "title": "Rent inflation, +$15 per sq ft",
-            "mitigation": "Ten-year terms with two options, TI allowance as a lever in every negotiation, and 3,500 sf footprints that keep occupancy under 5% of revenue even at the higher rent."
+            "mitigation": "Ten-year terms with two options, TI allowance as a lever in every negotiation, and 3,500 sf footprints that keep occupancy a small share of revenue even at the higher rent."
           },
           "beefSpike": {
             "title": "Beef commodity spike, +5 points food cost",
-            "mitigation": "Shank is the cheapest premium cut on the animal; forward contracts through the commissary, and menu pricing is flexible by design (first free, extras priced)."
+            "mitigation": "Two grades on the menu, American Wagyu and USDA Prime, give the kitchen a lever when one of them moves; forward contracts through the commissary; and the give-aways are tier perks priced at cost, not blanket freebies, so a price move can be passed through without touching the program."
+          },
+          "priceResistance": {
+            "title": "Price resistance, $2 off and 10% fewer covers",
+            "mitigation": "The menu reset is the base case and the conservative case keeps today’s prices, so this is already the gap between them. The no-tip, all-in price is the argument; the kiosk lets us test price by daypart without reprinting anything."
           },
           "copycat": {
             "title": "A well-capitalized copycat, −20% utilization",
             "mitigation": "Oh! OS is the moat: pod orchestration, kiosk, kitchen display and delivery flow are ours. A copycat rents a room; it does not get the operating system."
           },
+          "memberProgramOverrun": {
+            "title": "Member program overrun, +1.5 points and +$20K swag",
+            "mitigation": "The program is budgeted at {program} of revenue plus {swag} fixed, with ten paid referrals per member per month, a ninety-day expiry and perks priced at cost. Overrun is visible in the admin console weekly, and every perk has an off switch."
+          },
+          "commissaryFailure": {
+            "title": "Commissary fails: broth drifts, +2 points food cost, 10% fewer covers",
+            "mitigation": "Every batch is logged against the recipe so a drift shows up before a guest tastes it; each unit keeps a finishing kettle and a week of frozen base; St. George already runs its own kettle under the same recipe control."
+          },
           "podReliability": {
             "title": "Pod hardware reliability",
             "mitigation": "Five pods offline and higher maintenance modeled here. Spares at the commissary, a service SLA in the fabrication contract, and convertible duos that keep capacity when a partition fails."
           },
+          "accessibilityRedesign": {
+            "title": "Accessibility redesign, three pods lost",
+            "mitigation": "Four accessible pods and a wider aisle are in the drawings today; this case assumes the plan review takes three more seats and adds buildout. The comb layout gives the seats back from the product store wall before it touches the kitchen."
+          },
           "laborShock": {
             "title": "Utah labor or permitting shock",
-            "mitigation": "Wages up $3 and one extra FTE modeled. No front of house means the exposure is nine people, not thirty. Permitting runs through the Utah County Health Department pathway already mapped in the roadmap."
+            "mitigation": "Wages up $3 and one extra FTE modeled. No front of house means the exposure is {people} people on a {hours}-hour day, not a dining room of servers. Permitting runs through the Utah County Health Department pathway already mapped in the roadmap."
+          },
+          "capexOverrun": {
+            "title": "Build runs 15% over on pods, buildout and kitchen",
+            "mitigation": "Fixed-price pod fabrication after the prototype run, a TI allowance negotiated as a lever, and a contingency inside the round-1 working capital line. Read as payback, because that is what an overrun actually costs."
+          },
+          "franchiseAttrition": {
+            "title": "A phase-one market stalls and royalties collect at 85%",
+            "mitigation": "Seattle stops after its first unit and royalties are collected at 85% across the system. Area-development agreements carry development schedules with a cure period, royalties are drawn by ACH on gross sales reported through Oh! OS, and the brand keeps the territory if the schedule is missed."
           }
         },
-        "impactY1": "Year-one EBITDA impact shown; steady state is unchanged once the ramp completes. Margin after: {margin}."
+        "impactY1": "Year-one EBITDA impact shown; steady state is unchanged once the ramp completes. Margin after: {margin}.",
+        "paybackDelta": "+{years} years to payback",
+        "impactPayback": "Flagship payback from opening moves by this much. Steady-state EBITDA impact {steady}.",
+        "impactCompany": "Year-five consolidated EBITDA impact, after overhead, franchise support and platform profit."
+      },
+      "register": {
+        "title": "Disclosed, not modeled",
+        "subtitle": "Risks a diligence reader will ask about that no lever captures. Each is stated with what we do about it; none is priced into the base case.",
+        "items": {
+          "fireCodeAda": {
+            "title": "Fire code and ADA for pods",
+            "body": "Seventy-five enclosed seats, egress through a corridor, and four accessible pods are drawn in; the fire marshal and the plan review decide the final count. The accessibility downside above prices three lost seats."
+          },
+          "foodCode": {
+            "title": "Utah food code with no floor staff",
+            "body": "Service through a hatch with no server is reviewed under the Utah County Health Department pathway in the roadmap; a certified manager is on every shift and every runner holds a food handler permit."
+          },
+          "techOutage": {
+            "title": "Kiosk, pod and kitchen-display outage",
+            "body": "Oh! OS runs on managed infrastructure with a paper fallback drilled at the flagship; a cellular backup carries payments and the kitchen display. A multi-hour outage on a peak day is a lost day, not a lost month."
+          },
+          "beefSupply": {
+            "title": "Beef supply concentration",
+            "body": "American Wagyu comes from a short list of ranches and USDA Prime brisket from a handful of packers. Two suppliers per grade, forward contracts through the commissary, and supplier quotes are an open item in the integrity section."
+          },
+          "reviewBacklash": {
+            "title": "Review backlash and the launch concierge",
+            "body": "A no-greeting room can read as cold in the first reviews. A floor concierge staffs the first ninety days at the flagship from the launch budget, and every review is answered by name."
+          },
+          "cannibalization": {
+            "title": "Cannibalization between Utah units",
+            "body": "Lehi, South Jordan and Provo sit within a forty-minute drive of each other. Trade areas are drawn at fifteen minutes; the engine does not net any overlap, so the Utah portfolio is modeled as five independent units."
+          },
+          "keyPerson": {
+            "title": "Key person",
+            "body": "The founder is the concept, the platform and the operator today. Key-person insurance is in overhead, the Director of Operations is hired before the second lease, and every process is written down in year one."
+          },
+          "ip": {
+            "title": "IP and the assignment of Oh! OS",
+            "body": "The platform, the mark and the recipes are assigned to the LLC in the operating agreement; that agreement is still to be resolved and is listed as an open item. Franchisees license the software, they never own it."
+          },
+          "dataPrivacy": {
+            "title": "Data privacy",
+            "body": "Member data sits under the Utah Consumer Privacy Act today; London and Paris bring GDPR, mainland China brings PIPL with local hosting. Each international agreement carries its own data addendum and the cost is in the entry line for that structure."
+          },
+          "pci": {
+            "title": "PCI scope",
+            "body": "Card data never touches Oh! OS: Stripe Terminal with point-to-point encryption at the kiosk and Stripe-hosted fields online. Scope is the SAQ a merchant of this size files, not a full assessment."
+          },
+          "fx": {
+            "title": "Currency",
+            "body": "International royalties are earned in local currency and take a fixed haircut in the engine for conversion, withholding and timing. Rates are illustrative and dated; nothing is hedged."
+          },
+          "exitMultiple": {
+            "title": "Exit multiple",
+            "body": "The restaurant multiple sits inside the small multi-unit range and the hybrid multiple only applies once recurring franchise profit is a real share of EBITDA. Neither is a promise; the Funding page lets a reader set their own."
+          },
+          "sundayClosure": {
+            "title": "Closed Sundays",
+            "body": "A stated value, not a cost line. The engine runs on the operating days that result and every daily figure is scaled to them; the revenue given up is visible in the change log."
+          },
+          "deliveryExcluded": {
+            "title": "Delivery excluded",
+            "body": "No third-party delivery is in the base case: the bowl is built for the pod, and the margin on a delivered bowl would not survive the commission. It stays an upside, not an assumption."
+          },
+          "seasonality": {
+            "title": "Seasonality and dayparts",
+            "body": "The engine runs a flat utilization over the year. Utah has a January trough and a summer tourism lift that offset in the annual figure; a weak lunch daypart in a suburban unit is the single biggest local risk to it."
+          },
+          "giftCardLiability": {
+            "title": "Gift-card and credit liability",
+            "body": "Gift cards, member credits and referral credits are liabilities until redeemed. Breakage is not counted as revenue in the engine; unredeemed balances sit on the balance sheet and expire under the ninety-day rule where the law allows it."
+          },
+          "cateringExcluded": {
+            "title": "Catering excluded from the base case",
+            "body": "The catering channel was withdrawn from the customer site in September 2026 and remains an admin-only tool. Nothing from it is in the numbers; if it returns, it returns as its own line."
+          },
+          "investorReporting": {
+            "title": "Investor reporting cadence",
+            "body": "Monthly flash from Oh! OS by the tenth, a quarterly package with the consolidated table on the Financials page, and an audited year from year two. The overhead line already carries the audit."
+          },
+          "relatedParty": {
+            "title": "Related party: the foundation",
+            "body": "Oh! gives a fixed share of revenue to ONE RED STEP AT A TIME. Its founder is the owner's best friend, and the owner is its volunteer CTO with no compensation of any kind. No Oh! money flows to the owner through the foundation, and the pledge is fixed by a written agreement that investors can review."
+          }
+        }
       }
     },
     "unitEconomics": {
@@ -2801,7 +3183,10 @@
         "labor": "Labor and burden",
         "occupancy": "Occupancy (rent + NNN)",
         "otherOpex": "Other operating",
-        "ebitda": "EBITDA"
+        "ebitda": "EBITDA",
+        "memberProgram": "Member program",
+        "discountsComps": "Discounts and comps",
+        "communityGiving": "Community giving"
       },
       "capexTitle": "Capital to open",
       "capexTotal": "Net capex",
@@ -2813,13 +3198,25 @@
         "techHardware": "Tech and kiosk hardware",
         "designArchPermits": "Design, architecture, permits",
         "ffeSignage": "FF&E and signage",
-        "preOpening": "Pre-opening"
+        "preOpening": "Pre-opening",
+        "launchMarketing": "Launch marketing"
       },
       "capexFlagshipNote": "Flagship pricing: prototype design and first fabrication run included.",
-      "capexSubsequentNote": "Locations after the first save {savings} on pods, buildout, design and pre-opening."
+      "capexSubsequentNote": "Locations after the first save {savings} on pods, buildout, design and pre-opening.",
+      "product": {
+        "title": "The product, and what goes home with it",
+        "caption": "The bowl, the empty bowl with the mark, the chopsticks and the spoon are all for sale on the way out. The engine assumes {pct} of guests buy something at {spend} on average.",
+        "alts": {
+          "bowlCubed": "Bowl with smoked beef rib chunks, bok choy and orange",
+          "bowlCubed2": "Bowl with smoked beef rib chunks, scallions and cilantro on the side",
+          "bowlEmpty": "Empty stoneware bowl with the mark pressed into the base",
+          "chopsticks": "Dark wooden chopsticks on linen",
+          "bowlWood": "Stoneware bowl, chopsticks and spoon on a wooden table"
+        }
+      }
     },
     "experience": {
-      "intro": "One guest. One bowl. No line, no host, no server, no check, no tip. Here is the whole visit, in order.",
+      "intro": "Everyone in your party gets a pod, and every pod gets its own bowl. No host, no server, no check, no tip. Here is the whole visit, in order.",
       "photoLabel": "Photo to come",
       "steps": {
         "arrive": {
@@ -2829,12 +3226,12 @@
         },
         "order": {
           "title": "You order in about forty seconds.",
-          "body": "Beef noodle soup is the menu. You choose your broth depth, your noodle, your add-ons, and whether tonight is a shank night. Every first add-on is free; extras are priced. The kiosk already knows your name if you have been here before.",
-          "photo": "Hands on the kiosk, add-on grid visible, shank highlighted"
+          "body": "Beef noodle soup is the menu. You choose your broth depth, your noodle, your add-ons, and your beef: smoked brisket slices or smoked beef rib chunks, in American Wagyu or USDA Prime. Add-ons are priced; members earn cashback and tier perks on every bowl. The kiosk already knows your name if you have been here before.",
+          "photo": "Hands on the kiosk, add-on grid visible, the beef choice highlighted"
         },
         "walk": {
           "title": "A pod number, and you go find it.",
-          "body": "Pod 38. You walk the aisle past a row of closed panels and the low murmur of other people eating alone, together. Nobody is carrying a tray. Nobody is waiting to be seated.",
+          "body": "Pod 38. You walk the aisle past a row of closed panels and the low murmur of a full room, every party in its own pods, side by side. Nobody is carrying a tray. Nobody is waiting to be seated.",
           "photo": "The guest aisle looking down a row of numbered pods"
         },
         "settle": {
@@ -2844,17 +3241,17 @@
         },
         "panel": {
           "title": "The panel slides open.",
-          "body": "Seven minutes from the moment you paid, a bowl arrives through the wall. Broth first, then shank sliced to order, then the panel slides shut. You never see a hand.",
+          "body": "Seven minutes from the moment you paid, a bowl arrives through the wall. Broth first, then the smoked brisket or beef rib you chose, then the panel slides shut. You never see a hand.",
           "photo": "The sliding panel mid-open, steam, the bowl arriving"
         },
         "taste": {
           "title": "First spoon.",
-          "body": "Two-phase broth: a long bone simmer, then a finish built for flavor. Shank braised at a low temperature and cooled overnight in its own broth before slicing. This is a premium fusion interpretation, and it does not pretend to be a grandmother's recipe.",
-          "photo": "Macro of the bowl: shank slices fanned, broth surface, noodles"
+          "body": "Two-phase broth: a long bone simmer, then a finish built for flavor. Premium American beef, American Wagyu or Prime and nothing below it, smoked low and slow, then sliced as brisket or portioned as rib chunks. This is a premium fusion interpretation, and it does not pretend to be a grandmother's recipe.",
+          "photo": "Macro of the bowl: smoked brisket slices fanned, broth surface, noodles"
         },
         "leave": {
           "title": "You finish, and you leave.",
-          "body": "No check. No tipping, because the people who made your bowl are salaried. Referral credits land on the first and the sixteenth if you brought someone. The pod resets behind you in under six minutes.",
+          "body": "No check. No tipping, because the people who made your bowl are salaried. If you brought someone, the referral credit lands the moment their first order completes. The pod resets behind you in under six minutes.",
           "photo": "Guest leaving through the entry, pod panel closing behind"
         }
       },
@@ -2863,7 +3260,8 @@
         "title": "The kiosk is real. Order something.",
         "body": "This is the live ordering flow from ohbeef.com, the same software that runs the room. Tap through a bowl; nothing is charged from this frame.",
         "open": "Open the kiosk in a new tab"
-      }
+      },
+      "photoNote": "Concept render"
     },
     "market": {
       "tam": {
@@ -2924,7 +3322,7 @@
           },
           "laborCost": {
             "title": "Labor cost pressure is pushing every operator toward automation",
-            "body": "We did not bolt a kiosk onto a dining room. We removed the dining room. Labor at 13.9% of revenue is the result, and it is the line every restaurant operator will ask about first."
+            "body": "We did not bolt a kiosk onto a dining room. We removed the dining room. Labor at {labor} of revenue, with {people} people running {pods} seats, is the result, and it is the line every restaurant operator will ask about first."
           },
           "utahGrowth": {
             "title": "Utah is the growth story lenders already know",
@@ -2932,7 +3330,12 @@
           }
         }
       },
-      "references": "Reference concepts: Ichiran proved the pod format at scale. Crumbl proved a Utah-founded concept can go national at speed, and every local lender and investor knows that story."
+      "references": "Reference concepts: Ichiran proved the pod format at scale. Crumbl proved a Utah-founded concept can go national at speed, and every local lender and investor knows that story.",
+      "product": {
+        "title": "The product",
+        "alt": "Close-up of smoked brisket slices over broth and noodles.",
+        "caption": "Premium American beef, smoked, over a two-phase broth. The market question is not whether people want this bowl. It is how many trade areas can support seventy-five pods of it."
+      }
     },
     "operations": {
       "platform": {
@@ -2996,24 +3399,27 @@
         "label": "Screenshot to come",
         "needs": "Kitchen display in service: a live ticket rail with add-ons color-coded",
         "title": "The kitchen sees the whole room",
-        "body": "Tickets arrive the second a guest pays, with the pod number and every add-on color-coded so a runner never reads a label. The display also shows where every pod is in its cycle, so the kitchen paces itself to the room instead of to a host stand."
+        "body": "Tickets arrive the second a guest pays, with the pod number and every add-on color-coded so a runner never reads a label. The display also shows where every pod is in its cycle, so the kitchen paces itself to the room instead of to a host stand.",
+        "caption": "The kitchen display between services. A live ticket rail with color-coded add-ons is the next capture."
       },
       "labor": {
         "title": "Exactly who works here",
-        "subtitle": "{kitchen} kitchen and {mgmt} management, no front of house. Hourly at {wage}, management at {salary}, {burden}% burden. Kitchen payroll {kitchenAnnual}, management {mgmtAnnual}, before burden.",
+        "subtitle": "{heads} people on the daily schedule, {hours} paid hours a day over {days} operating days and a {coverage}% coverage uplift for time off and training: {kitchen} kitchen FTE plus {mgmt} salaried managers, no front of house. Hourly at {wage}, management at {salary}, {burden}% burden. Kitchen payroll {kitchenAnnual}, management {mgmtAnnual}, before burden.",
         "role": "Role",
         "count": "FTE",
         "salaried": "salaried",
-        "note": "Coverage across a service day (hours shown in 24-hour time). Broth starts at six; the last runner leaves after the last panel closes.",
+        "note": "Coverage across a service day (24-hour clock). Broth starts at six; the close shift leaves after the last panel shuts. Cross-training saves {crossTraining} hours a day, already netted from the {hours}.",
         "roles": {
-          "brothLead": "Broth and braise lead",
-          "slicer": "Slicer",
-          "noodle": "Noodle station",
+          "broth": "Broth and protein lead",
+          "noodle": "Noodle and assembly lead",
           "assembly": "Assembly",
-          "runner": "Corridor runner",
+          "runner": "Pod runner",
+          "peak": "Peak runner",
+          "close": "Close and dish",
           "gm": "General manager",
           "agm": "Assistant manager"
-        }
+        },
+        "hoursEach": "Hours each"
       },
       "commissary": {
         "eyebrow": "The biggest operational risk, head-on",
@@ -3030,7 +3436,7 @@
           },
           "haccp": {
             "title": "HACCP plan",
-            "body": "Critical control points for the broth (cook, cool, hold) and the shank (braise, chill, slice)."
+            "body": "Critical control points for the broth (cook, cool, hold) and the beef (smoke, chill, slice)."
           },
           "manager": {
             "title": "Certified food safety manager",
@@ -3049,6 +3455,45 @@
             "body": "The last signature before the first bowl."
           }
         }
+      },
+      "program": {
+        "eyebrow": "Members",
+        "title": "Members: a program with a budget",
+        "body": "Cashback, referral credits, challenges, tier perks and the swag closet are one cost line in the engine: {pct} of revenue plus {swag} a year fixed, {budget} at base-case revenue ({allIn} all-in). Every perk is a COGS-priced item with a validity window, so the program can be generous without being open-ended.",
+        "items": {
+          "cashback": {
+            "title": "Cashback by tier",
+            "body": "1%, 2% and 3% at Chopstick, Noodle Master and Beef Boss, with both an order count and a referral count required to move up."
+          },
+          "referral": {
+            "title": "Referrals, instant and capped",
+            "body": "$5 to the referrer the moment the friend’s first order completes, $5 to the new member on that first order, ten paid referrals per member per thirty days, and credits expire after ninety days."
+          },
+          "challenges": {
+            "title": "Challenges on a budget",
+            "body": "Bonus credits for streaks and firsts, capped per unit per year inside the program line."
+          },
+          "perks": {
+            "title": "Perks priced at COGS",
+            "body": "A free bowl on a tier upgrade, one complimentary premium add-on each quarter at Beef Boss, early access to new items. Each is a menu item at cost with a window, never a standing discount."
+          },
+          "swag": {
+            "title": "Swag, gifts and the Wall of Fame",
+            "body": "The {swag} fixed budget covers merchandise drops at member pricing, the annual VIP gift, member events and the Wall of Fame."
+          },
+          "comps": {
+            "title": "Discounts and comps, separately",
+            "body": "Remakes, goodwill and manager comps are their own line at {comps} of revenue, so the program budget cannot hide them."
+          }
+        },
+        "launch": "Each opening also carries a {launch} launch budget inside its capex, and the {marketing} marketing line pools one point of unit revenue into a brand fund run centrally, the same fund franchisees pay into."
+      },
+      "giving": {
+        "eyebrow": "Giving",
+        "title": "A pledge with a budget",
+        "body": "Every company restaurant gives {pct} of revenue to {name}, the mental health foundation. In the base case that is {budget} a year per restaurant, about {monthly} a month, carried as its own operating expense line so it is never a promise without a budget.",
+        "cadence": "The plan budgets it monthly from actual sales. Payment cadence and reporting will be set in a written agreement with the foundation.",
+        "link": "Visit the foundation's site"
       }
     },
     "team": {
@@ -3064,7 +3509,8 @@
           "markets": "Lived in Taiwan, Russia and Japan",
           "languages": "Bilingual English and Mandarin"
         },
-        "thesis": "The international expansion thesis is not aspirational for this founder. It is a resume."
+        "thesis": "The international expansion thesis is not aspirational for this founder. It is a resume.",
+        "alt": "Dano Didericksen, founder and operator"
       },
       "partner": {
         "role": "Financial partner, {pct}",
@@ -3078,8 +3524,8 @@
         "effective": "Effective",
         "office": "Principal office",
         "structure": "Structure",
-        "structureValue": "Member-managed LLC, two members",
-        "note": "EIN on file. Personal financial details are provided to lenders directly on request and never appear in this plan."
+        "structureValue": "Member-managed LLC; operating agreement to be resolved",
+        "note": "EIN on file. The operating agreement is still to be resolved and must be amended to admit the partner before round 1 closes. Personal financial details are provided to lenders directly on request and never appear in this plan."
       },
       "advisory": {
         "title": "Advisory seats we are filling",
@@ -3106,7 +3552,7 @@
           "preOpening": {
             "when": "T0 minus 3 months",
             "title": "Flagship crew",
-            "body": "General manager, assistant manager, broth lead, slicer, noodle station, two assembly, two runners. Nine people."
+            "body": "General manager, assistant manager, broth and protein lead, noodle and assembly lead, two assembly, two pod runners, two peak runners and a closer: {people} on the schedule, {fte} FTE with coverage."
           },
           "flagship": {
             "when": "T0 to T0 + 9",
@@ -3121,7 +3567,7 @@
           "fiveUnits": {
             "when": "Locations two to five",
             "title": "Unit crews and a commissary lead",
-            "body": "Nine per unit, hired sixty days ahead, trained at the flagship. A commissary lead when the second unit opens."
+            "body": "{people} per unit, hired sixty days ahead, trained at the flagship. A commissary lead when the second unit opens."
           },
           "franchise": {
             "when": "Year 3",
@@ -3129,6 +3575,17 @@
             "body": "Franchise director, training manager, and the counsel seat above. The team that opens units on other people's capital."
           }
         }
+      },
+      "community": {
+        "eyebrow": "Community partner",
+        "body": "Oh! gives {pct} of revenue from every company restaurant to this Utah mental health nonprofit, and invites guests to support it during every visit.",
+        "disclosureTitle": "Related-party disclosure",
+        "disclosure": {
+          "friend": "The foundation's founder is the owner's best friend and partner in the cause.",
+          "cto": "The owner serves as the foundation's volunteer CTO and receives no compensation of any kind from it.",
+          "agreement": "The giving terms will be set in a written agreement, and no Oh! money reaches the owner through the foundation."
+        },
+        "link": "Visit the foundation"
       }
     },
     "roadmap": {
@@ -3175,10 +3632,617 @@
         "opening-open": "Opens: {location}",
         "ohOsV2": "Oh! OS v2: multi-unit, commissary, analytics",
         "franchiseCounsel": "Franchise counsel engaged",
-        "fdd": "FDD and master franchise agreement",
+        "fdd": "FDD drafted",
         "franchiseLicensing": "Oh! OS licensing for franchisees",
         "franchiseTeam": "Franchise development team",
-        "firstFranchise": "First franchise units open"
+        "firstFranchise": "First franchise units open",
+        "memberPerks": "Member perks build: first-order credit, referral caps, 90-day expiry",
+        "fddEffective": "FDD effective, registration states filed",
+        "firstAreaDevelopers": "First area developers signed"
+      }
+    },
+    "photos": {
+      "concept": "Concept render",
+      "conceptLong": "Concept renders of the flagship, made before it is built. Real photographs replace them as the build progresses."
+    },
+    "integrity": {
+      "cert": {
+        "eyebrow": "Certification",
+        "title": "Model version {version}",
+        "built": "Build",
+        "builtDev": "Development build",
+        "testsRun": "Suite last run",
+        "tests": "Tests",
+        "testsValue": "{tests} tests in {files} suites, {failed} failing",
+        "coverage": "Coverage",
+        "coverageValue": "{lines}% lines, {branches}% branches",
+        "invariants": "Live checks",
+        "invariantsValue": "{total} run, {failing} failing",
+        "reviewedBy": "Reviewed by",
+        "noReview": "No outside review recorded yet",
+        "certifies": {
+          "title": "What this certifies",
+          "items": {
+            "0": "Every figure on every page recalculates from the {rows} registered assumptions; nothing is typed into the copy.",
+            "1": "Each assumption carries a source, a date and a confidence, and the register shows which ones changed and why.",
+            "2": "{checks} identities run against the live presets on every visit, and the engine's {tests} tests pass at full coverage.",
+            "3": "The headline numbers on this page equal the snapshot recorded for this version; a test fails if they drift."
+          }
+        },
+        "excludes": {
+          "title": "What it does not certify",
+          "items": {
+            "0": "No accountant, lender or counsel has audited the model yet; the sign-off block below stays empty until one does.",
+            "1": "Benchmarks are public ranges, not paid data, and are refreshed by hand before a lender meeting.",
+            "2": "{open} inputs still wait on an outside party: supplier quotes, a lease, permits, insurance, the franchise disclosure.",
+            "3": "A consistent model is not a forecast. The Sensitivity section shows how far the base case can move."
+          }
+        }
+      },
+      "register": {
+        "title": "Assumptions register",
+        "subtitle": "{rows} values, each with where it came from, when it was set and how sure we are. Search, filter, or follow a link from anywhere in the plan.",
+        "search": "Search",
+        "searchPlaceholder": "Name, key or source",
+        "filters": {
+          "group": "Group",
+          "source": "Source",
+          "confidence": "Confidence",
+          "changed": "Changed on",
+          "any": "Any",
+          "varies": "Varies by scenario",
+          "levers": "Levers only"
+        },
+        "count": "{shown} of {total} shown ({all} in the full register)",
+        "clear": "Clear filters",
+        "noRows": "No assumption matches these filters.",
+        "cols": {
+          "assumption": "Assumption",
+          "value": "Base value",
+          "source": "Source",
+          "asOf": "As of",
+          "confidence": "Confidence",
+          "notes": "Notes"
+        },
+        "varies": "Varies by scenario",
+        "lever": "Lever",
+        "onModel": "Slider on the Model page",
+        "leverRange": "range {min} to {max}",
+        "changedIn": "Changed {date}",
+        "awaiting": "Awaiting: {item}",
+        "units": {
+          "hours": "hr",
+          "days": "days",
+          "minutes": "min",
+          "months": "mo",
+          "years": "yr",
+          "oz": "oz",
+          "perYear": "/ yr",
+          "perMonth": "/ mo",
+          "perHour": "/ hr",
+          "perSqFt": "/ sf",
+          "perLb": "/ lb",
+          "yes": "Yes",
+          "no": "No"
+        },
+        "groups": {
+          "physical": "Physical",
+          "throughput": "Throughput",
+          "revenue": "Revenue",
+          "menu": "Menu and protein",
+          "cogs": "Cost of goods",
+          "labor": "Labor",
+          "occupancy": "Occupancy",
+          "otherOpex": "Other operating",
+          "escalation": "Escalation",
+          "ramp": "Ramp",
+          "capexFlagship": "Capex, flagship",
+          "capexSubsequent": "Capex, later units",
+          "schedule": "Opening schedule",
+          "franchise": "Franchise terms",
+          "structures": "Deal structures",
+          "franchiseMarkets": "Franchise markets",
+          "overhead": "Corporate overhead",
+          "partnership": "Partnership",
+          "rounds": "Equity rounds",
+          "loan": "Reference loan",
+          "fx": "Exchange rates"
+        },
+        "sources": {
+          "spec": "Spec",
+          "owner-decision": "Owner decision",
+          "public-benchmark": "Public benchmark",
+          "engine-assumption": "Engine assumption",
+          "supplier-quote": "Supplier quote"
+        },
+        "confidence": {
+          "high": "High",
+          "medium": "Medium",
+          "low": "Low"
+        }
+      },
+      "scorecard": {
+        "title": "Benchmark scorecard",
+        "subtitle": "Every headline ratio against the public band the engine scores it with. Too good is flagged as loudly as too weak.",
+        "to": "to",
+        "watchLow": "watch below",
+        "watchHigh": "watch above",
+        "count": {
+          "pass": "{n} pass",
+          "watch": "{n} watch",
+          "fail": "{n} fail",
+          "pending": "{n} pending"
+        },
+        "cols": {
+          "metric": "Metric",
+          "value": "Base case",
+          "band": "Pass band",
+          "status": "Status",
+          "source": "Public range"
+        },
+        "status": {
+          "pass": "Pass",
+          "watch": "Watch",
+          "fail": "Fail",
+          "pending": "Pending"
+        },
+        "disclaimer": "Benchmarks are public ranges for fast-casual and franchisor operators, not paid data. Refresh them before a lender meeting."
+      },
+      "checks": {
+        "title": "Automated checks",
+        "subtitle": "The engine's test suite as committed at this version, plus the identities that run again on every visit against the presets this page reads.",
+        "suites": "Test suites, version {version}",
+        "cols": {
+          "area": "Area",
+          "suites": "Suites",
+          "tests": "Tests",
+          "passed": "Passed"
+        },
+        "areas": {
+          "unit": "Unit economics",
+          "corporate": "Corporate and partnership",
+          "integrity": "Integrity and anchors",
+          "tooling": "Formatting and sharing"
+        },
+        "total": "Total",
+        "coverage": "Coverage: {lines}% lines, {functions}% functions, {branches}% branches.",
+        "live": "Live checks ({n})",
+        "allPass": "All checks pass on this visit.",
+        "someFail": "{n} checks fail on this visit.",
+        "pass": "pass",
+        "fail": "fail"
+      },
+      "changelog": {
+        "title": "Change log",
+        "subtitle": "Every preset and formula change from version {from} to {to}: what moved, why, and who decided.",
+        "years": "{n} yr",
+        "cards": {
+          "ebitdaMargin": "Four-wall EBITDA margin",
+          "paybackFromOpening": "Flagship payback from opening",
+          "partnerPct": "Headline partner stake",
+          "totalCapital": "Capital raised"
+        },
+        "beforeAfter": "{before} to {after}",
+        "cols": {
+          "date": "Date",
+          "finding": "Finding",
+          "key": "Key",
+          "before": "Before",
+          "after": "After",
+          "reason": "Reason",
+          "decidedBy": "Decided by",
+          "ref": "Recorded in"
+        },
+        "decidedBy": {
+          "owner": "Owner",
+          "review": "Review",
+          "engine": "Engine"
+        },
+        "steps": {
+          "title": "What each version moved",
+          "to": "to",
+          "cols": {
+            "version": "Version"
+          }
+        },
+        "versions": {
+          "v2026_09_25": "Spec presets with the owner decisions of September 25",
+          "v2026_09_26": "Re-baseline after the diligence review",
+          "v2026_09_27": "Community giving pledge to ONE RED STEP AT A TIME"
+        }
+      },
+      "openItems": {
+        "title": "Open items",
+        "subtitle": "{open} of {total} items still wait on an outside party. Each names the register rows it would confirm.",
+        "owner": "Owner",
+        "validates": "Would validate",
+        "status": {
+          "not-started": "Not started",
+          "requested": "Requested",
+          "in-progress": "In progress",
+          "received": "Received",
+          "validated": "Validated"
+        },
+        "owners": {
+          "founder": "Founder",
+          "partner": "Partner",
+          "cpa": "CPA",
+          "counsel": "Counsel",
+          "architect": "Architect",
+          "supplier": "Supplier",
+          "engineering": "Engineering"
+        },
+        "items": {
+          "beefQuotes": {
+            "title": "Beef supplier quotes",
+            "body": "Written quotes for USDA Prime and American Wagyu, raw cost per pound with yield, from two suppliers. Replaces the public price ranges behind food cost."
+          },
+          "produceQuotes": {
+            "title": "Produce and dry goods quotes",
+            "body": "Noodles, greens, aromatics and packaging at case prices, to confirm the base bowl cost before protein."
+          },
+          "leaseLoi": {
+            "title": "Flagship lease letter of intent",
+            "body": "Rent, NNN, tenant improvement allowance and escalation on a real space. The occupancy line is a market estimate until then."
+          },
+          "permits": {
+            "title": "Design and permit estimate",
+            "body": "Architect's fee and the permit calendar for the pod layout, which also sets the pre-opening months."
+          },
+          "podFabricationQuote": {
+            "title": "Pod fabrication quote",
+            "body": "A shop quote for the pod, the hatch and the finish package, for the flagship and for later units at volume."
+          },
+          "commissaryThroughput": {
+            "title": "Commissary throughput test",
+            "body": "Kettle batch size and hold times against the dwell and turnover the throughput assumptions need."
+          },
+          "wageSurvey": {
+            "title": "Wage survey",
+            "body": "Utah County kitchen wages, manager salaries and the benefits load behind the payroll burden."
+          },
+          "insuranceQuotes": {
+            "title": "Insurance quotes",
+            "body": "General liability, property and workers' compensation on the pod format."
+          },
+          "fdd": {
+            "title": "Franchise disclosure document",
+            "body": "Counsel's draft with the unit fee, royalty and marketing fund as they will be filed."
+          },
+          "operatingAgreement": {
+            "title": "Operating agreement",
+            "body": "The partner's cap, the founder's contribution and the preference stack, as counsel will draft them."
+          },
+          "cpaReview": {
+            "title": "CPA review",
+            "body": "Tax distribution rate, the pass-through treatment and the distribution policy."
+          },
+          "memberProgramBuild": {
+            "title": "Member program build",
+            "body": "Engineering estimate for the referral, tier and perk mechanics so the program cost is a spec, not a placeholder."
+          },
+          "givingAgreement": {
+            "title": "Written giving agreement",
+            "body": "Amount, payment cadence, reporting and independent approval of the pledge to ONE RED STEP AT A TIME, signed before the flagship opens."
+          },
+          "franchisePledge": {
+            "title": "Franchise pledge invitation",
+            "body": "Franchise agreements invite partners to join the pledge. It is an invitation, not a requirement, and it adds no cost or revenue to Oh!."
+          }
+        }
+      },
+      "signoff": {
+        "title": "Reviewer sign-off",
+        "subtitle": "When an outside reviewer signs a scope, the review is recorded here with the groups it covered, the date and the statement, and the certificate above names them.",
+        "empty": "No outside review has been recorded yet.",
+        "roles": {
+          "cpa": "CPA",
+          "fractional-cfo": "Fractional CFO",
+          "counsel": "Counsel",
+          "advisor": "Advisor"
+        },
+        "status": {
+          "planned": "Planned",
+          "in-progress": "In progress",
+          "signed": "Signed"
+        },
+        "scopeAll": "All groups",
+        "request": {
+          "cta": "Request the diligence package",
+          "body": "Please send the diligence package: the assumptions register, the benchmark scorecard, the automated checks, the change log and the engine's test suite.",
+          "note": "The register, scorecard, checks, change log and the engine's test suite, as files."
+        }
+      },
+      "print": {
+        "changes": "{n} changes are itemized on the interactive page.",
+        "register": "{shown} of {total} rows printed; the dynamic groups print as counts:"
+      }
+    },
+    "edge": {
+      "title": "Where Oh! is different",
+      "labels": {
+        "oh": "Oh!",
+        "benchmark": "Benchmark"
+      },
+      "summary": {
+        "points": {
+          "0": {
+            "text": "No host, no servers, no tipping. Labor runs at {figure} of sales where a full-service room runs {band}."
+          },
+          "1": {
+            "text": "An occupancy load of {figure}: a compact footprint in second-generation space, with no square footage given over to a waiter's path."
+          },
+          "2": {
+            "text": "{figure} of revenue per square foot against the fast-casual median of {band}."
+          },
+          "3": {
+            "text": "Every number on every page traces to one of {rows} registered assumptions and {checks} live checks. The Integrity section lets you pull any of them apart."
+          }
+        }
+      },
+      "model": {
+        "points": {
+          "0": {
+            "text": "One set of {levers} levers drives the whole business. Move one and every page recalculates; nothing is typed in."
+          },
+          "1": {
+            "text": "The bars below put a traditional room beside Oh!: labor at {figure} of sales instead of {band}."
+          },
+          "2": {
+            "text": "A {figure} four-wall margin against a typical fast-casual {band}, with the full cost stack on the page rather than in a footnote."
+          }
+        }
+      },
+      "experience": {
+        "points": {
+          "0": {
+            "text": "No host, no server, no check, no tip. That is a {figure} labor line, where full service runs {band}."
+          },
+          "1": {
+            "text": "From the kiosk to the bowl at the hatch in about {figure}, timed on the floor plan's own journey."
+          },
+          "2": {
+            "text": "Every party gets its own pods among the {pods} in the room, so it seats one guest as gracefully as six."
+          },
+          "3": {
+            "text": "Every visit gives back: {pct}% of revenue goes to ONE RED STEP AT A TIME, a mental health nonprofit."
+          }
+        }
+      },
+      "market": {
+        "points": {
+          "0": {
+            "text": "The menu price is the whole price: a {figure} check with no tip line, where a full-service check adds {tipLow} to {tipHigh}% on top."
+          },
+          "1": {
+            "text": "Solo and small-party dining keeps growing, and a pod seats it without the awkwardness of a table for one."
+          },
+          "2": {
+            "text": "Beef noodle soup has a following on every continent and no national brand. The category is open."
+          }
+        }
+      },
+      "floor-plan": {
+        "points": {
+          "0": {
+            "text": "{pods} pods in {sqft} square feet, a footprint a second-generation space or a mall in-line can hold."
+          },
+          "1": {
+            "text": "Two territories that never touch: guests move through aisles, staff move through corridors, and the two meet only at the hatch."
+          },
+          "2": {
+            "text": "One kitchen serves every seat, and each pod earns about {figure} a year against a counter-service seat at {band}."
+          }
+        }
+      },
+      "operations": {
+        "points": {
+          "0": {
+            "text": "About {fte} salaried people run a {pods}-seat room. Labor sits at {figure} of sales, where full service runs {band}."
+          },
+          "1": {
+            "text": "The kitchen display sees every one of the {pods} pods: order, timer, add-ons and delivery in one view."
+          },
+          "2": {
+            "text": "Broth comes from a commissary kettle, so consistency is a recipe, not a shift. Food cost holds at {figure}, inside the premium-protein band of {band}."
+          },
+          "3": {
+            "text": "Color-coded add-on tickets: the kitchen builds the bowl the guest designed, with no server relaying it."
+          }
+        }
+      },
+      "expansion": {
+        "points": {
+          "0": {
+            "text": "The unit is a kit. Pods, hatch, kiosks and kitchen display ship as a package, at {figure} of capex per pod against a counter-service seat under {band}."
+          },
+          "1": {
+            "text": "Later units cost {figure} against {flagship} for the flagship, and fit smaller footprints."
+          },
+          "2": {
+            "text": "Partners run the same software as corporate: a {figure} royalty inside the fast-casual band of {band}, plus a {license} a month platform license."
+          }
+        }
+      },
+      "unit-economics": {
+        "points": {
+          "0": {
+            "text": "Prime cost of {figure} with American Wagyu on the menu and a salaried kitchen, inside the industry band of {band}."
+          },
+          "1": {
+            "text": "Occupancy at {figure} of sales against the {band} a full-service room carries."
+          },
+          "2": {
+            "text": "{figure} of capex per pod, under the {band} counter-service line, because the pod is furniture, not construction."
+          }
+        }
+      },
+      "financials": {
+        "points": {
+          "0": {
+            "text": "A {figure} four-wall margin against a typical fast-casual {band}, after every cost layer a lender asks about."
+          },
+          "1": {
+            "text": "A recurring platform line: Oh! OS licenses reach {figure} of annual recurring revenue by year five."
+          },
+          "2": {
+            "text": "Asset-light growth: {units} franchise units by year seven on the phased schedule, at a {figure} franchise segment margin inside the {band} franchisor band."
+          }
+        }
+      },
+      "sensitivity": {
+        "points": {
+          "0": {
+            "text": "Every one of the {levers} model levers has public bounds, and the page adds a Monte Carlo pass and named downsides with their cost, not a single best case."
+          },
+          "1": {
+            "text": "The plan shows its own trough: months four to six at {figure} of steady state, on purpose."
+          },
+          "2": {
+            "text": "Each downside is on the page with the number it costs, so a reader never has to guess what we did not model."
+          }
+        }
+      },
+      "team": {
+        "points": {
+          "0": {
+            "text": "The founder scaled commerce from $750M to $2.5B across fifty markets before writing a restaurant plan."
+          },
+          "1": {
+            "text": "Bilingual leadership and a Taiwanese recipe: the international thesis is on the resume, not only in the pitch."
+          },
+          "2": {
+            "text": "Advisory seats are named by the gap they close: operator, culinary, franchise."
+          }
+        }
+      },
+      "funding": {
+        "points": {
+          "0": {
+            "text": "No debt: {figure} of loans in the base case. Two equity rounds from one partner fund the flagship and the first five units."
+          },
+          "1": {
+            "text": "The partner's stake is derived from the cash flows, never asserted, and capped at {cap}% so the founder keeps control in every case. Today the cap binds at {figure}."
+          },
+          "2": {
+            "text": "The construct is stated plainly: a {figure} preferred return with a {pref}x liquidation preference before common shares anything."
+          }
+        }
+      },
+      "roadmap": {
+        "points": {
+          "0": {
+            "text": "The kiosk and the kitchen display are live in Oh!'s restaurants today, not on a slide."
+          },
+          "1": {
+            "text": "The commissary kettle has been tested and the pod has been prototyped; the roadmap starts from hardware, not renderings."
+          },
+          "2": {
+            "text": "Every milestone hangs off the flagship opening, so the plan never goes stale."
+          }
+        }
+      },
+      "integrity": {
+        "points": {
+          "0": {
+            "text": "{figure} registered assumptions, each with a source, a date and a confidence, and {changes} logged changes explaining every move."
+          },
+          "1": {
+            "text": "{figure} identities run against the live presets on every visit, on top of the engine's full test suite."
+          },
+          "2": {
+            "text": "A public benchmark scorecard: {figure} of {total} rows pass, {watch} are on watch and {fail} fails. All shown, none hidden."
+          }
+        }
+      }
+    },
+    "chappy": {
+      "launcher": "Ask Chappy",
+      "title": "Chappy Chopstix",
+      "subtitle": "Knows this plan better than you do",
+      "greeting": "I'm Chappy. I've read every page of this plan, footnotes included, which is more than most people can say. Ask me anything about it. If the plan can't answer you, I'll pass it to the owner.",
+      "suggestionsLabel": "People like you usually ask",
+      "placeholder": "Ask about the plan",
+      "send": "Send",
+      "close": "Close Chappy",
+      "thinking": "Chappy is thinking",
+      "error": "That didn't go through. Try again in a moment.",
+      "busy": "I'm swamped. Give me a minute and try again.",
+      "tooMany": "You've asked me plenty today. Try again tomorrow, or ask me to pass the rest to the owner.",
+      "expired": "Your invitation has ended. Ask the owner for a new link.",
+      "escalated": "Passed to the owner",
+      "limit": "Keep it under 1,500 characters. I'm chopsticks, not a lawyer.",
+      "suggestions": {
+        "INVESTOR": [
+          "What's the ask, and what do I get for it?",
+          "What does the partner return look like at year 5 versus year 7?",
+          "What happens if guests per day come in 20% light?",
+          "What's the biggest risk in this plan?"
+        ],
+        "LENDER": [
+          "Why is there no debt in the plan?",
+          "What is the lowest cash balance, and when?",
+          "What does the conservative case look like?",
+          "How long does the flagship take to pay back?"
+        ],
+        "LANDLORD": [
+          "How much space do you need, and what shape?",
+          "What rent does the plan underwrite per square foot?",
+          "What are the hours and expected foot traffic?",
+          "What does the build-out involve, and how long does it take?"
+        ],
+        "PARTNER": [
+          "How is the partner's ownership calculated?",
+          "How do the preferred return and liquidation preference work?",
+          "When could the founder buy the stake back?",
+          "What happens to my return in the conservative case?"
+        ],
+        "ADVISOR": [
+          "Which assumptions are least certain?",
+          "How do the unit economics compare to fast-casual benchmarks?",
+          "Which checks or scorecard rows are not passing?",
+          "What changed in the latest re-baseline?"
+        ],
+        "INTERNAL": [
+          "What does a day in the kitchen look like?",
+          "How does a guest go from kiosk to pod?",
+          "When do the next locations open?",
+          "How many people work a shift, and in what roles?"
+        ]
+      }
+    },
+    "foundation": {
+      "eyebrow": "Giving back",
+      "identity": "501(c)(3) non-profit organization, EIN {ein}. Donations are tax-deductible.",
+      "mission": "To foster open, supportive conversations about mental health by uniting communities, breaking down stigma, and promoting education and empathy: one person, one story at a time.",
+      "missionSource": "The foundation's mission",
+      "pledge": {
+        "pct": "of revenue from every company restaurant, in every scenario",
+        "perUnit": "a year from one restaurant at steady state",
+        "fiveYear": "over the first five years, across {units} company restaurants",
+        "note": "The pledge sits in operating expenses, so the margins in this plan already include it. Franchise units carry no pledge cost to Oh!. Guest donations go straight to the foundation and are never counted as Oh! revenue."
+      },
+      "guests": {
+        "title": "Where guests meet it",
+        "items": {
+          "status": "On the order status screen, once a guest confirms their pod: a short mental health fact and a link to support the cause.",
+          "home": "On the homepage, in the Give Back block beside the no-tipping promise.",
+          "footer": "In the footer of every page on the site."
+        }
+      },
+      "fit": {
+        "title": "Why it fits",
+        "body": "Oh! is built around room to breathe: a pod of your own, nobody hovering, no pressure to rush. A foundation that opens honest conversations about mental health is a natural partner for that promise, and its red socks give guests and staff an easy, visible way to join in."
+      },
+      "contact": {
+        "title": "Contact the foundation",
+        "website": "Website",
+        "donate": "Donate",
+        "donateCta": "Give online",
+        "store": "Store",
+        "storeCta": "Red socks and merchandise",
+        "mail": "Mail",
+        "social": "Social"
       }
     }
   }

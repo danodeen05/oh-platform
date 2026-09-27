@@ -89,6 +89,30 @@ export default function PlanCodeDetailPage({ params }: { params: Promise<{ codeI
               <div style={{ color: "#6b7280", marginTop: 4 }}>
                 {s.sectionViews.map((v) => `${v.sectionKey} ${formatMinutes(v.seconds)}`).join(" · ") || "no sections recorded"}
               </div>
+              {(s.visitSummaries ?? []).filter((v) => v.error !== "skipped_short").map((v) => (
+                <div key={v.id} style={{ marginTop: 8, background: "#faf6ef", borderLeft: "3px solid #C1502E", padding: "6px 10px" }}>
+                  <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>
+                    Chappy&apos;s take · {formatDate(v.visitEnd)} · {formatMinutes(v.seconds)}
+                    {v.chatCount ? ` · ${v.chatCount} question${v.chatCount === 1 ? "" : "s"}` : ""}
+                    {v.emailedAt ? " · emailed" : v.error ? ` · not emailed (${v.error})` : ""}
+                  </div>
+                  {v.verdict ? <div style={{ fontWeight: 600, marginTop: 2 }}>{v.verdict}</div> : null}
+                  {v.take ? <div style={{ marginTop: 2 }}>{v.take}</div> : null}
+                </div>
+              ))}
+              {s.chatMessages && s.chatMessages.length > 0 ? (
+                <details style={{ marginTop: 8 }}>
+                  <summary style={{ cursor: "pointer", color: "#5A5847" }}>Chat with Chappy ({s.chatMessages.filter((m) => m.role === "user").length} questions)</summary>
+                  <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 6 }}>
+                    {s.chatMessages.map((m) => (
+                      <div key={m.id} style={{ alignSelf: m.role === "user" ? "flex-end" : "flex-start", maxWidth: "90%", background: m.role === "user" ? "#5A5847" : "#f3f4f6", color: m.role === "user" ? "white" : "#111827", borderRadius: 8, padding: "6px 10px", whiteSpace: "pre-wrap" }}>
+                        {m.content}
+                        {m.escalated ? <div style={{ fontSize: "0.7rem", marginTop: 4, color: "#C1502E" }}>Escalated to you</div> : null}
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              ) : null}
             </div>
           ))}
         </section>

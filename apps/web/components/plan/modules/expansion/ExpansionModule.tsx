@@ -120,7 +120,22 @@ export function ExpansionModule() {
                   ))}
                   <path d={geo.borders} fill="none" stroke="#3A3632" strokeWidth={0.8} />
                   {geo.outline ? <path d={geo.outline} fill="none" stroke="#8A8178" strokeWidth={1.2} /> : null}
-                  {pins.map((p) => {
+                  {(() => {
+                    // Label placement: the selected pin always, then pins in longitude order
+                    // that do not collide with a label already placed. Keeps 20-plus world pins readable.
+                    const placed: [number, number][] = [];
+                    const labeled = new Set<string>();
+                    const ordered = [...pins].sort((a, b) => (a.key === selected ? -1 : b.key === selected ? 1 : a.lonLat[0] - b.lonLat[0]));
+                    for (const p of ordered) {
+                      const xy = geo.projection(p.lonLat);
+                      if (!xy) continue;
+                      const clash = placed.some(([x, y]) => Math.abs(x - xy[0]) < 78 && Math.abs(y - xy[1]) < 16);
+                      if (p.key === selected || !clash) {
+                        labeled.add(p.key);
+                        placed.push([xy[0], xy[1]]);
+                      }
+                    }
+                    return pins.map((p) => {
                     const xy = geo.projection(p.lonLat);
                     if (!xy) return null;
                     const open = openByMarket.get(p.key) ?? [];
@@ -137,14 +152,16 @@ export function ExpansionModule() {
                             {open.length}
                           </text>
                         ) : null}
-                        {(p.view === view || sel) && (
+                        <title>{tm(`${p.key}.name`)}</title>
+                        {(p.view === view || sel) && labeled.has(p.key) && (
                           <text x={open.length > 1 ? 20 : 10} y={-8} fill={isOpen ? "#F2EDE4" : "#9A9188"} fontSize={10}>
                             {tm(`${p.key}.name`)}
                           </text>
                         )}
                       </g>
                     );
-                  })}
+                  });
+                  })()}
                 </g>
               ) : (
                 <text x={MAP_W / 2} y={MAP_H / 2} textAnchor="middle" fill="#9A9188" fontSize={13}>
@@ -161,7 +178,7 @@ export function ExpansionModule() {
             </label>
             <input id="plan-month" type="range" min={0} max={HORIZON - 1} step={1} value={month} aria-valuetext={yearOf(month)} onChange={(e) => { setMonth(Number(e.target.value)); setPlaying(false); setFollowView(true); }} className="h-6 w-full cursor-pointer appearance-none border-0 bg-transparent p-0 focus:outline-none [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-oh-cream [&::-moz-range-track]:h-1 [&::-moz-range-track]:rounded-full [&::-moz-range-track]:bg-oh-stone [&::-webkit-slider-runnable-track]:h-1 [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:bg-oh-stone [&::-webkit-slider-thumb]:-mt-1.5 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-oh-cream" />
             <div className="flex justify-between text-[0.68rem] tabular-nums text-oh-mute">
-              {[1, 2, 3, 4, 5, 6].map((y) => (
+              {Array.from({ length: HORIZON / 12 }, (_, i) => i + 1).map((y) => (
                 <span key={y}>{t("yearShort", { year: y })}</span>
               ))}
             </div>
@@ -209,6 +226,7 @@ export function ExpansionModule() {
                 ))}
               </dl>
               <p className="m-0 mt-4 text-[0.85rem] leading-relaxed text-oh-mute">{tm(`${selectedPin.key}.notes`)}</p>
+              {selectedPin.beefSpec ? <p className="m-0 mt-2 text-[0.8rem] leading-relaxed text-oh-gold">{t("card.beefSpec")}</p> : null}
               <p className="m-0 mt-3 text-[0.68rem] text-oh-mute">{t("card.approx")}</p>
             </>
           ) : (

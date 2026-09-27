@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { QRCodeSVG } from "qrcode.react";
 import { pdf } from "@react-pdf/renderer";
-import { VirtualKeyboard, PrintableReceipt, generateQRDataUrl, LanguageSelector, useKioskScale, useKioskPrinter } from "@/components/kiosk";
+import { VirtualKeyboard, PrintableReceipt, generateQRDataUrl, LanguageSelector, useKioskScale, useKioskPrinter, useKioskNarrow } from "@/components/kiosk";
 import { PaymentScreen } from "@/components/kiosk/PaymentScreen";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -76,9 +76,12 @@ const sliderThumbStyles = `
 `;
 
 // Brand component for consistent branding across all kiosk screens
-function KioskBrand({ size = "normal" }: { size?: "small" | "normal" | "large" | "xlarge" | "xxlarge" }) {
+function KioskBrand({ size: requested = "normal" }: { size?: "small" | "normal" | "large" | "xlarge" | "xxlarge" }) {
   const tHome = useTranslations("home");
   const { s: scale } = useKioskScale();
+  // On screens narrower than 1600 the two largest sizes reach the centered titles.
+  const narrow = useKioskNarrow();
+  const size = narrow && (requested === "xlarge" || requested === "xxlarge") ? "large" : requested;
   // Base sizes for 720p, scale up for 1080p
   const sizes = {
     small: { logo: scale(22), chinese: `${0.8 * (scale(10) / 10)}rem`, english: `${0.45 * (scale(10) / 10)}rem`, gap: scale(3) },
@@ -204,6 +207,10 @@ function DietaryBadges({
 const MENU_IMAGES: Record<string, string> = {
   // Bowls - English
   "A5 Wagyu Beef Noodle Soup": "/menu images/A5 Wagyu Bowl.png",
+  "American Wagyu Beef Noodle Soup": "/menu images/A5 Wagyu Bowl.png",
+  "美國和牛牛肉麵": "/menu images/A5 Wagyu Bowl.png",
+  "美国和牛牛肉面": "/menu images/A5 Wagyu Bowl.png",
+  "Sopa de Fideos con Res Wagyu Americana": "/menu images/A5 Wagyu Bowl.png",
   "Classic Beef Noodle Soup": "/menu images/Classic Bowl.png",
   "Classic Beef Noodle Soup (no beef)": "/menu images/Classic Bowl No Beef.png",
   // Bowls - Chinese Traditional (zh-TW)
@@ -1219,7 +1226,7 @@ function NameEntryView({
           src="/Oh_Logo_Mark_Web.png"
           alt=""
           style={{
-            height: "90vh",
+            height: "calc(var(--kvh, 1vh) * 90)",
             width: "auto",
             objectFit: "contain",
           }}
@@ -1470,8 +1477,8 @@ function MenuView({
   return (
     <main
       style={{
-        height: "100vh",
-        maxHeight: "100vh",
+        height: "calc(var(--kvh, 1vh) * 100)",
+        maxHeight: "calc(var(--kvh, 1vh) * 100)",
         overflow: "hidden",
         background: COLORS.surface,
         color: COLORS.text,
@@ -1496,7 +1503,7 @@ function MenuView({
           src="/Oh_Logo_Mark_Web.png"
           alt=""
           style={{
-            height: "90vh",
+            height: "calc(var(--kvh, 1vh) * 90)",
             width: "auto",
             objectFit: "contain",
           }}
@@ -3969,8 +3976,8 @@ function ReviewView({
   return (
     <main
       style={{
-        height: "100vh",
-        maxHeight: "100vh",
+        height: "calc(var(--kvh, 1vh) * 100)",
+        maxHeight: "calc(var(--kvh, 1vh) * 100)",
         background: COLORS.surface,
         color: COLORS.text,
         display: "flex",
@@ -3995,7 +4002,7 @@ function ReviewView({
           src="/Oh_Logo_Mark_Web.png"
           alt=""
           style={{
-            height: "90vh",
+            height: "calc(var(--kvh, 1vh) * 90)",
             width: "auto",
             objectFit: "contain",
           }}
@@ -4492,8 +4499,8 @@ function PodSelectionView({
   return (
     <main
       style={{
-        height: "100vh",
-        maxHeight: "100vh",
+        height: "calc(var(--kvh, 1vh) * 100)",
+        maxHeight: "calc(var(--kvh, 1vh) * 100)",
         background: COLORS.surface,
         color: COLORS.text,
         display: "flex",
@@ -4518,7 +4525,7 @@ function PodSelectionView({
           src="/Oh_Logo_Mark_Web.png"
           alt=""
           style={{
-            height: "90vh",
+            height: "calc(var(--kvh, 1vh) * 90)",
             width: "auto",
             objectFit: "contain",
           }}
@@ -5262,7 +5269,7 @@ function PassView({
   return (
     <main
       style={{
-        minHeight: "100vh",
+        minHeight: "calc(var(--kvh, 1vh) * 100)",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -5291,7 +5298,7 @@ function PassView({
           src="/Oh_Logo_Mark_Web.png"
           alt=""
           style={{
-            height: "90vh",
+            height: "calc(var(--kvh, 1vh) * 90)",
             width: "auto",
             objectFit: "contain",
           }}
@@ -5422,7 +5429,7 @@ function PaymentView({
   return (
     <main
       style={{
-        minHeight: "100vh",
+        minHeight: "calc(var(--kvh, 1vh) * 100)",
         display: "flex",
         flexDirection: "column",
         background: COLORS.surface,
@@ -5447,7 +5454,7 @@ function PaymentView({
           src="/Oh_Logo_Mark_Web.png"
           alt=""
           style={{
-            height: "90vh",
+            height: "calc(var(--kvh, 1vh) * 90)",
             width: "auto",
             objectFit: "contain",
           }}
@@ -5848,7 +5855,7 @@ function CompleteView({
   return (
     <main
       style={{
-        minHeight: "100vh",
+        minHeight: "calc(var(--kvh, 1vh) * 100)",
         display: "flex",
         flexDirection: "column",
         background: COLORS.surface,
@@ -5873,7 +5880,7 @@ function CompleteView({
           src="/Oh_Logo_Mark_Web.png"
           alt=""
           style={{
-            height: "90vh",
+            height: "calc(var(--kvh, 1vh) * 90)",
             width: "auto",
             objectFit: "contain",
           }}

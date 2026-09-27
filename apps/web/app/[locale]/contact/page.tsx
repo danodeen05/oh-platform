@@ -129,7 +129,6 @@ export default function ContactPage() {
                   <option value="feedback">{t("form.subjects.feedback")}</option>
                   <option value="corporate">{t("form.subjects.corporate")}</option>
                   <option value="press">{t("form.subjects.press")}</option>
-                  <option value="careers">{t("form.subjects.careers")}</option>
                 </select>
               </div>
 
@@ -199,24 +198,6 @@ export default function ContactPage() {
                 </p>
               </div>
 
-              <div
-                style={{
-                  background: "white",
-                  padding: "24px",
-                  borderRadius: "12px",
-                  marginBottom: "16px",
-                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.05)",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "12px" }}>
-                  <span style={{ fontSize: "1.5rem" }}>📍</span>
-                  <h3 style={{ fontSize: "1rem", fontWeight: "600", color: "#222222", margin: 0 }}>{t("other.location.title")}</h3>
-                </div>
-                <p style={{ color: "#666", margin: 0, lineHeight: "1.6" }}>
-                  {t("other.location.opening")}<br />
-                  {t("other.location.city")}
-                </p>
-              </div>
 
               <div
                 style={{

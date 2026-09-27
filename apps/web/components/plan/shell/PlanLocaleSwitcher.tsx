@@ -17,6 +17,8 @@ export function PlanLocaleSwitcher({ locale, label }: { locale: string; label: s
         aria-label={label}
         value={locale}
         onChange={(e) => {
+          // For Chappy's visit summary: a reader who switches language is telling us something.
+          navigator.sendBeacon?.("/api/plan/event", JSON.stringify({ type: "locale", value: e.target.value }));
           const qs = search.toString();
           router.push(swapLocale(pathname, e.target.value) + (qs ? `?${qs}` : ""));
         }}

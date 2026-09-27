@@ -93,12 +93,12 @@ async function main() {
 
     // Upgrades
     {
-      name: "A5 Wagyu Upgrade",
+      name: "American Wagyu Upgrade",
       basePriceCents: 1200,
       additionalPriceCents: 1200,
       includedQuantity: 0,
       category: "upgrade",
-      description: "Premium A5 Wagyu beef"
+      description: "Premium American Wagyu beef"
     },
     {
       name: "Braised Tendon",

@@ -2,6 +2,8 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import createIntlMiddleware from "next-intl/middleware";
 import { routing } from "./i18n/routing";
 import { NextRequest, NextResponse } from "next/server";
+import type { NextFetchEvent } from "next/server";
+import { expireForeignHandshakeCookies, withoutForeignHandshakeCookies } from "./lib/clerk-foreign-cookies";
 import { PLAN_COOKIE, verifyPlanToken } from "./lib/plan/session";
 
 const intlMiddleware = createIntlMiddleware(routing);
@@ -28,9 +30,7 @@ const isPublicRoute = createRouteMatcher([
   "/:locale/loyalty(.*)",
   "/:locale/gift-cards(.*)",
   "/:locale/store(.*)",
-  "/:locale/careers(.*)",
   "/:locale/contact(.*)",
-  "/:locale/press(.*)",
   "/:locale/privacy(.*)",
   "/:locale/accessibility(.*)",
   "/:locale/tenants(.*)",
@@ -57,7 +57,7 @@ const isCNYRoute = createRouteMatcher(["/:locale/cny", "/:locale/cny/(.*)"]);
 // Check if this is an API route
 const isApiRoute = createRouteMatcher(["/api(.*)"]);
 
-export default clerkMiddleware(async (auth, request: NextRequest) => {
+const withClerk = clerkMiddleware(async (auth, request: NextRequest) => {
   const hostname = request.headers.get("host") || "";
   const pathname = request.nextUrl.pathname;
 
@@ -147,6 +147,15 @@ export default clerkMiddleware(async (auth, request: NextRequest) => {
 
   return response;
 });
+
+// On a test Clerk key, prod's ".ohbeef.com" handshake cookies would make
+// clerkMiddleware throw before our handler runs. See lib/clerk-foreign-cookies.ts.
+export default async function middleware(request: NextRequest, event: NextFetchEvent) {
+  const cleaned = withoutForeignHandshakeCookies(request);
+  const response = await withClerk(cleaned ?? request, event);
+  if (cleaned && response) expireForeignHandshakeCookies(response, request);
+  return response;
+}
 
 export const config = {
   matcher: [

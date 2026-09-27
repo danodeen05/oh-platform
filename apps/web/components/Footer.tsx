@@ -58,9 +58,7 @@ export default function Footer() {
 
   const footerLinks = [
     { href: `/${locale}/accessibility`, labelKey: "links.accessibility" },
-    { href: `/${locale}/careers`, labelKey: "links.careers" },
     { href: `/${locale}/contact`, labelKey: "links.contact" },
-    { href: `/${locale}/press`, labelKey: "links.press" },
     { href: `/${locale}/privacy`, labelKey: "links.privacy" },
   ];
 

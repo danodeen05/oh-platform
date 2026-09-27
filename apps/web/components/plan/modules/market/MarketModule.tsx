@@ -2,8 +2,9 @@
 
 import { useMemo } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { BASE, OPENING_SCHEDULE, computePortfolio, fmtCompact, fmtCurrency, fmtInteger, fmtPercent } from "@oh/plan-model";
+import { BASE, OPENING_SCHEDULE, computeLocation, computePortfolio, fmtCompact, fmtCurrency, fmtInteger, fmtPercent } from "@oh/plan-model";
 import { BenchmarkCallout } from "@/components/plan/primitives/BenchmarkCallout";
+import { PlanPhoto } from "@/components/plan/primitives/PlanPhoto";
 import { CHART } from "@/components/plan/charts/theme";
 import { COMPETITORS, SAM_USD, TAM_USD, UTAH_ROWS } from "./marketData";
 
@@ -15,8 +16,12 @@ import { COMPETITORS, SAM_USD, TAM_USD, UTAH_ROWS } from "./marketData";
 export function MarketModule() {
   const t = useTranslations("plan.market");
   const tm = useTranslations("plan.expansion.markets");
+  const tp = useTranslations("plan.photos");
   const locale = useLocale();
   const som = useMemo(() => computePortfolio(OPENING_SCHEDULE, BASE, { years: 3 }).years[2]?.revenue ?? 0, []);
+  const base = useMemo(() => computeLocation(BASE.assumptions), []);
+  // Figures the tailwind copy interpolates, so no share of revenue is ever typed into a message.
+  const tailwindValues = { labor: fmtPercent(base.laborPct, locale, 1), people: Math.round(BASE.assumptions.kitchenFTE + BASE.assumptions.managerFTE), pods: BASE.assumptions.pods };
   const money = (v: number) => fmtCompact(v, { locale });
   const r = (v: number) => Math.sqrt(v / TAM_USD) * 200;
   const somShare = som / TAM_USD;
@@ -55,6 +60,14 @@ export function MarketModule() {
       </section>
 
       <BenchmarkCallout eyebrow={t("som.eyebrow")} claim={t("som.claim", { share: fmtPercent(somShare, locale, 2) })} benchmark={t("som.text")} />
+
+      <section className="grid items-center gap-8 md:grid-cols-[minmax(220px,340px)_1fr]">
+        <PlanPhoto src="/plan/market-beef.webp" alt={t("product.alt")} width={1024} height={1024} note={tp("concept")} />
+        <div>
+          <h2 className="m-0 font-display text-[1.5rem] text-oh-cream">{t("product.title")}</h2>
+          <p className="m-0 mt-3 max-w-md text-[0.95rem] leading-relaxed text-oh-mute">{t("product.caption")}</p>
+        </div>
+      </section>
 
       <section>
         <h2 className="m-0 mb-1 font-display text-[1.5rem] text-oh-cream">{t("utah.title")}</h2>
@@ -128,7 +141,7 @@ export function MarketModule() {
           {(["asianFastCasual", "soloDining", "laborCost", "utahGrowth"] as const).map((k) => (
             <div key={k} className="rounded-lg border border-oh-stone bg-oh-ink p-4">
               <h3 className="m-0 font-display text-[1.1rem] text-oh-cream">{t(`tailwinds.items.${k}.title`)}</h3>
-              <p className="m-0 mt-2 text-[0.85rem] leading-relaxed text-oh-mute">{t(`tailwinds.items.${k}.body`)}</p>
+              <p className="m-0 mt-2 text-[0.85rem] leading-relaxed text-oh-mute">{t(`tailwinds.items.${k}.body`, tailwindValues)}</p>
             </div>
           ))}
         </div>

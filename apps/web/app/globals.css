@@ -231,3 +231,16 @@ html[lang="zh-CN"] {
   --font-primary: 'LXGW WenKai TC', 'Raleway', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-heading: 'LXGW WenKai TC', 'Noto Serif TC', serif;
 }
+
+/* Business plan nav: the current section breathes a soft ember ring. */
+@keyframes plan-nav-breathe {
+  0%, 100% { box-shadow: 0 0 0 1.5px rgba(224, 122, 90, 0.55), 0 0 0 0 rgba(193, 80, 46, 0); }
+  50% { box-shadow: 0 0 0 1.5px rgba(224, 122, 90, 0.9), 0 0 0 6px rgba(193, 80, 46, 0.1); }
+}
+.plan-nav-current {
+  box-shadow: 0 0 0 1.5px rgba(224, 122, 90, 0.7);
+  animation: plan-nav-breathe 2.8s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .plan-nav-current { animation: none; }
+}

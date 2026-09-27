@@ -69,7 +69,7 @@ async function main() {
       { tenantId: ohTenant.id, name: "Classic Beef Noodles", priceCents: 1499 },
       { tenantId: ohTenant.id, name: "Spicy Beef Noodles", priceCents: 1599 },
       { tenantId: ohTenant.id, name: "Dry Noodles", priceCents: 1399 },
-      { tenantId: ohTenant.id, name: "A5 Wagyu Upgrade", priceCents: 1200 },
+      { tenantId: ohTenant.id, name: "American Wagyu Upgrade", priceCents: 1200 },
       { tenantId: ohTenant.id, name: "Braised Tendon", priceCents: 399 },
       { tenantId: ohTenant.id, name: "Marinated Egg", priceCents: 199 },
       { tenantId: ohTenant.id, name: "Extra Noodles", priceCents: 299 },

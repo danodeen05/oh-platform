@@ -1,10 +1,14 @@
 import { getFormatter, getTranslations } from "next-intl/server";
-import { BASE, BASE_ASSUMPTIONS, NO_DEBT, computeUnit } from "@oh/plan-model";
+import { BASE_ASSUMPTIONS, NO_DEBT, SCENARIOS, computeUnit } from "@oh/plan-model";
+import { getPlanScenario } from "@/lib/plan/scenario.server";
 import { getPlanSession } from "@/lib/plan/session.server";
 import { visibleSections } from "@/lib/plan/sections";
 import { redirect } from "next/navigation";
 import { PrintButton } from "./PrintButton";
 import { PRINT_MODULES } from "@/components/plan/modules/print-registry";
+import { VisionStatement } from "@/components/plan/modules/summary/VisionStatement";
+import { PLAN_VERSION_LABEL } from "@/lib/plan/version";
+import { PLAN_BUILD } from "@/lib/plan/build";
 import "../../print.css";
 
 /**
@@ -23,9 +27,12 @@ export default async function PlanPrintPage({ params }: { params: Promise<{ loca
   const fmt = await getFormatter();
   const sections = visibleSections(claims);
   const generated = fmt.dateTime(new Date(), { year: "numeric", month: "long", day: "numeric" });
-  const unit = computeUnit(BASE, { loan: NO_DEBT });
+  const scenario = await getPlanScenario();
+  const unit = computeUnit(SCENARIOS[scenario], { loan: NO_DEBT });
   const values = { pods: BASE_ASSUMPTIONS.pods, sqft: BASE_ASSUMPTIONS.squareFeet.toLocaleString(locale) };
   const footer = t("footer", { label: claims.lbl, date: generated });
+  const builtAt = PLAN_BUILD.builtAt ? new Date(PLAN_BUILD.builtAt) : null;
+  const builtLabel = builtAt && !Number.isNaN(builtAt.getTime()) ? fmt.dateTime(builtAt, { year: "numeric", month: "long", day: "numeric", timeZone: "America/Denver" }) : null;
 
   return (
     <article className="mx-auto max-w-3xl px-6 py-10 md:px-10">
@@ -43,6 +50,7 @@ export default async function PlanPrintPage({ params }: { params: Promise<{ loca
           <p className="m-0 mb-4 text-[0.75rem] uppercase tracking-[0.2em] text-oh-clay">{tShell("brand")}</p>
           <h1 className="m-0 font-display text-[3.4rem] font-normal leading-[1.02] text-oh-charcoal">{t("cover.title")}</h1>
           <p className="m-0 mt-5 max-w-xl text-[1.15rem] leading-relaxed text-oh-stone">{t("cover.subtitle")}</p>
+          <VisionStatement tone="light" className="mt-10" id="plan-vision-cover" />
         </div>
         <dl className="m-0 grid grid-cols-2 gap-6 border-t border-oh-charcoal/15 pt-6 text-[0.9rem]">
           <div>
@@ -54,12 +62,19 @@ export default async function PlanPrintPage({ params }: { params: Promise<{ loca
             <dd className="m-0 mt-1 text-oh-charcoal">{generated}</dd>
           </div>
           <div>
-            <dt className="text-[0.7rem] uppercase tracking-[0.14em] text-oh-clay">{t("cover.baseRevenue")}</dt>
+            <dt className="text-[0.7rem] uppercase tracking-[0.14em] text-oh-clay">{t("cover.revenue", { scenario: tShell(`scenario.${scenario}`) })}</dt>
             <dd className="m-0 mt-1 tabular-nums text-oh-charcoal">{fmt.number(unit.location.annualRevenue, { style: "currency", currency: "USD", maximumFractionDigits: 0 })}</dd>
           </div>
           <div>
             <dt className="text-[0.7rem] uppercase tracking-[0.14em] text-oh-clay">{t("cover.confidential")}</dt>
             <dd className="m-0 mt-1 text-oh-charcoal">{t("cover.confidentialText")}</dd>
+          </div>
+          <div>
+            <dt className="text-[0.7rem] uppercase tracking-[0.14em] text-oh-clay">{tShell("version.label")}</dt>
+            <dd className="m-0 mt-1 text-oh-charcoal" data-plan-version="">
+              {PLAN_VERSION_LABEL}
+              {builtLabel ? <span className="text-oh-stone">{` · ${tShell("version.built", { date: builtLabel })}`}</span> : null}
+            </dd>
           </div>
         </dl>
       </section>
@@ -84,7 +99,7 @@ export default async function PlanPrintPage({ params }: { params: Promise<{ loca
           {PRINT_MODULES[s.key] ? (
             (() => {
               const Module = PRINT_MODULES[s.key] as NonNullable<(typeof PRINT_MODULES)[typeof s.key]>;
-              return <Module locale={locale} />;
+              return <Module locale={locale} scenario={scenario} />;
             })()
           ) : (
             <p className="mt-8 rounded border border-dashed border-oh-ash/50 px-4 py-6 text-center text-[0.85rem] text-oh-clay">{t("placeholder")}</p>

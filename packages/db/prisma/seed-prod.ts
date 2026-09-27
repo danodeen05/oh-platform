@@ -165,7 +165,7 @@ async function seedCoreData() {
 
   const menuItems = [
     // MAIN DISHES (main01)
-    { id: 'cmip6jbzc00082nnn1di1ka94', name: 'A5 Wagyu Beef Noodle Soup', nameZhTW: 'A5和牛牛肉麵', nameZhCN: 'A5和牛牛肉面', nameEs: 'Sopa de Fideos con Res Wagyu A5', basePriceCents: 2399, category: 'main01', categoryType: 'MAIN', selectionMode: 'SINGLE', displayOrder: 1, isGlutenFree: false, spiceLevel: 1 },
+    { id: 'cmip6jbzc00082nnn1di1ka94', name: 'American Wagyu Beef Noodle Soup', nameZhTW: '美國和牛牛肉麵', nameZhCN: '美国和牛牛肉面', nameEs: 'Sopa de Fideos con Res Wagyu Americana', basePriceCents: 2399, category: 'main01', categoryType: 'MAIN', selectionMode: 'SINGLE', displayOrder: 1, isGlutenFree: false, spiceLevel: 1 },
     { id: 'cmip6jbza00062nnnskz6ntt8', name: 'Classic Beef Noodle Soup', nameZhTW: '經典牛肉麵', nameZhCN: '经典牛肉面', nameEs: 'Sopa de Fideos con Res Clásica', basePriceCents: 1599, category: 'main01', categoryType: 'MAIN', selectionMode: 'SINGLE', displayOrder: 1, isGlutenFree: false, spiceLevel: 1 },
     { id: 'cmip6jbzc000a2nnnewnr00lb', name: 'Classic Beef Noodle Soup (no beef)', nameZhTW: '經典牛肉麵（無牛肉）', nameZhCN: '经典牛肉面（无牛肉）', nameEs: 'Sopa de Fideos Clásica (sin carne)', basePriceCents: 1099, category: 'main01', categoryType: 'MAIN', selectionMode: 'SINGLE', displayOrder: 1, isVegetarian: false, isGlutenFree: false, spiceLevel: 0 },
 

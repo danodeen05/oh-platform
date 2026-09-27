@@ -16,7 +16,7 @@ export default function PrinterTestPage() {
 
   return (
     <div style={{
-      minHeight: '100vh',
+      minHeight: 'calc(var(--kvh, 1vh) * 100)',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',

@@ -6,9 +6,35 @@ import { isSectionKey } from "@/lib/plan/sections";
 const FLUSH_MS = 15_000;
 const TICK_MS = 1_000;
 
+const TARGET_MAX_LEN = 40;
+const TARGETS_PER_FLUSH = 20;
+
 interface Bucket {
   seconds: number;
   interactions: number;
+  targets: Map<string, number>;
+}
+
+/**
+ * A short human label for the control a reader touched, so the owner's
+ * summary can say "moved the rent slider" instead of "12 interactions".
+ * An explicit data-plan-track wins, then aria-label, the associated
+ * <label>, and finally the control's own text.
+ */
+export function targetLabel(target: Element | null): string | null {
+  const el = target?.closest<HTMLElement>("[data-plan-track], button, a, input, select, textarea, [role=slider], [role=tab], [role=switch], summary, label");
+  if (!el) return null;
+  const tracked = el.closest<HTMLElement>("[data-plan-track]")?.dataset.planTrack;
+  let text = tracked || el.getAttribute("aria-label") || "";
+  if (!text && "labels" in el) {
+    const labels = (el as HTMLInputElement).labels;
+    if (labels && labels[0]) text = labels[0].textContent ?? "";
+  }
+  if (!text && el.id) text = document.querySelector(`label[for="${CSS.escape(el.id)}"]`)?.textContent ?? "";
+  if (!text && el.getAttribute("aria-labelledby")) text = document.getElementById(el.getAttribute("aria-labelledby")!)?.textContent ?? "";
+  if (!text && !(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)) text = el.textContent ?? "";
+  const clean = text.replace(/\s+/g, " ").trim().slice(0, TARGET_MAX_LEN);
+  return clean || null;
 }
 
 /**
@@ -16,7 +42,8 @@ interface Bucket {
  *
  * Every second, one visible `[data-section]` (the one covering the most of
  * the viewport) earns a second, so totals never double count. Pointer and
- * key events are credited to the section they happened in. Buckets flush
+ * key events are credited to the section they happened in, along with a
+ * short label of the control touched (see targetLabel). Buckets flush
  * to /api/plan/heartbeat every 15 s and when the tab hides or unloads, via
  * sendBeacon so the last flush survives navigation. The session id comes
  * from the cookie server-side; nothing identifying is sent from here.
@@ -29,7 +56,7 @@ export function AnalyticsBeacon() {
     const bucket = (key: string): Bucket => {
       let b = buckets.get(key);
       if (!b) {
-        b = { seconds: 0, interactions: 0 };
+        b = { seconds: 0, interactions: 0, targets: new Map() };
         buckets.set(key, b);
       }
       return b;
@@ -70,8 +97,18 @@ export function AnalyticsBeacon() {
 
     const onInteract = (ev: Event): void => {
       const target = ev.target as Element | null;
+      // Shell chrome (header, palette, ask dialog, bottom bar) is not reading the plan.
+      if (target?.closest("[data-plan-shell]")) return;
       const key = target?.closest<HTMLElement>("[data-section]")?.dataset.section;
-      if (key && isSectionKey(key)) bucket(key).interactions += 1;
+      if (!key || !isSectionKey(key)) return;
+      const b = bucket(key);
+      b.interactions += 1;
+      // Key presses inside a field are typing, not a new control; count the field once per flush.
+      const label = targetLabel(target);
+      if (label && (b.targets.has(label) || b.targets.size < TARGETS_PER_FLUSH)) {
+        if ((ev.type === "keydown" || ev.type === "input") && b.targets.has(label)) return;
+        b.targets.set(label, (b.targets.get(label) ?? 0) + 1);
+      }
     };
     document.addEventListener("pointerdown", onInteract, { passive: true });
     document.addEventListener("keydown", onInteract, { passive: true });
@@ -80,9 +117,11 @@ export function AnalyticsBeacon() {
     const flush = (): void => {
       for (const [sectionKey, b] of buckets) {
         if (b.seconds === 0 && b.interactions === 0) continue;
-        const body = JSON.stringify({ sectionKey, seconds: Math.round(b.seconds), interactions: b.interactions });
+        const targets = b.targets.size ? Object.fromEntries(b.targets) : undefined;
+        const body = JSON.stringify({ sectionKey, seconds: Math.round(b.seconds), interactions: b.interactions, targets });
         b.seconds = 0;
         b.interactions = 0;
+        b.targets.clear();
         if (!navigator.sendBeacon?.("/api/plan/heartbeat", body)) {
           void fetch("/api/plan/heartbeat", { method: "POST", body, keepalive: true, headers: { "Content-Type": "text/plain" } });
         }

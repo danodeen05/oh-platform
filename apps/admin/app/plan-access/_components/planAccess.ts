@@ -11,7 +11,7 @@ export const SCENARIOS = ["CONSERVATIVE", "BASE", "AGGRESSIVE"] as const;
  */
 export const SECTION_KEYS = [
   "summary", "model", "experience", "market", "floor-plan", "operations", "expansion",
-  "unit-economics", "financials", "sensitivity", "team", "funding", "roadmap",
+  "unit-economics", "financials", "sensitivity", "team", "funding", "roadmap", "integrity",
 ] as const;
 
 export type Audience = (typeof AUDIENCES)[number];
@@ -43,6 +43,28 @@ export interface SectionView {
   enteredAt: string;
 }
 
+export interface ChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  sectionKey: string | null;
+  escalated: boolean;
+  createdAt: string;
+}
+
+/** One finished visit, written up by Chappy (error "skipped_short" = a bounce, not emailed). */
+export interface VisitSummary {
+  id: string;
+  visitStart: string;
+  visitEnd: string;
+  seconds: number;
+  chatCount: number;
+  verdict: string | null;
+  take: string | null;
+  emailedAt: string | null;
+  error: string | null;
+}
+
 export interface Session {
   id: string;
   startedAt: string;
@@ -51,6 +73,8 @@ export interface Session {
   country: string | null;
   totalSeconds: number;
   sectionViews: SectionView[];
+  chatMessages?: ChatMessage[];
+  visitSummaries?: VisitSummary[];
 }
 
 export interface Question {

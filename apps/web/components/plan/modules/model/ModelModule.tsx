@@ -3,7 +3,9 @@
 import { useCallback, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import {
+  MATURITY_EBITDA_TARGET,
   NO_DEBT,
+  PUBLIC_EBITDA_TARGET,
   SCENARIOS,
   compareToTraditional,
   computeUnit,
@@ -31,8 +33,6 @@ interface Props {
   /** The code's default scenario; "Reset" returns here. */
   homeScenario: ScenarioKey;
 }
-
-const PUBLIC_EBITDA_TARGET = 0.25;
 
 /**
  * The Model (spec 6.1). Every figure on screen is recomputed from the
@@ -97,13 +97,17 @@ export function ModelModule({ initialScenario, initialOverrides, homeScenario }:
     }
   };
 
-  const otherOpex = loc.totalOpex - loc.labor - loc.occupancy;
+  const otherOpex = loc.totalOpex - loc.labor - loc.occupancy - loc.communityGiving;
   const steps: WaterfallStep[] = [
     { key: "revenue", label: t("waterfall.revenue"), amount: loc.annualRevenue, kind: "total" },
     { key: "cogs", label: t("waterfall.cogs"), amount: -(loc.foodCost + loc.packaging), kind: "cost" },
+    // 2026-09-26: the member program and discounts sit above gross profit, so they get their own bar.
+    { key: "program", label: t("waterfall.program"), amount: -(loc.memberProgram + loc.discountsComps), kind: "cost" },
     { key: "labor", label: t("waterfall.labor"), amount: -loc.labor, kind: "cost" },
     { key: "occupancy", label: t("waterfall.occupancy"), amount: -loc.occupancy, kind: "cost" },
     { key: "other", label: t("waterfall.otherOpex"), amount: -otherOpex, kind: "cost" },
+    // 2026-09-27 owner decision: the 1% pledge gets its own bar.
+    { key: "giving", label: t("waterfall.giving"), amount: -loc.communityGiving, kind: "cost" },
     { key: "ebitda", label: t("waterfall.ebitda"), amount: loc.ebitda, kind: "result" },
   ];
   const comparison = compareToTraditional(loc);
@@ -156,7 +160,7 @@ export function ModelModule({ initialScenario, initialOverrides, homeScenario }:
         <p className="m-0 text-[0.8rem] text-oh-mute">{t("hint")}</p>
       </div>
 
-      <div className="grid gap-8 md:grid-cols-[minmax(260px,320px)_1fr]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-8 md:grid-cols-[minmax(260px,320px)_minmax(0,1fr)]">
         <aside className="hidden self-start md:sticky md:top-32 md:block">
           <h2 className="m-0 mb-2 text-[0.72rem] uppercase tracking-[0.14em] text-oh-mute">{t("leversTitle")}</h2>
           {controls}
@@ -173,7 +177,7 @@ export function ModelModule({ initialScenario, initialOverrides, homeScenario }:
             ))}
           </dl>
           <p className="m-0 mt-3 text-[0.8rem] text-oh-mute">
-            {t("publicTarget", { target: fmtPercent(PUBLIC_EBITDA_TARGET, locale, 0), margin: fmtPercent(loc.ebitdaMarginPct, locale, 1) })}
+            {t("publicTarget", { target: fmtPercent(PUBLIC_EBITDA_TARGET, locale, 0), stretch: fmtPercent(MATURITY_EBITDA_TARGET, locale, 0), margin: fmtPercent(loc.ebitdaMarginPct, locale, 1) })}
           </p>
 
           <section className="mt-10">

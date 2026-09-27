@@ -3,9 +3,14 @@
 import { useRef } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
-import { PhotoPlaceholder } from "@/components/plan/primitives/PhotoPlaceholder";
+import { PlanPhoto } from "@/components/plan/primitives/PlanPhoto";
+import { KioskFrame } from "./KioskFrame";
 
+/** The live kiosk opens on City Creek Mall so the demo skips the location picker. */
+const KIOSK_DEMO_LOCATION_ID = "cmip6jbz700022nnnxxpmm5hf";
 const STEPS = ["arrive", "order", "walk", "settle", "panel", "taste", "leave"] as const;
+/** Rendered sizes of /plan/experience-<step>.webp; taste is the square bowl shot. */
+const PHOTO_SIZE: Record<(typeof STEPS)[number], [number, number]> = { arrive: [1200, 900], order: [1200, 900], walk: [1200, 900], settle: [1200, 900], panel: [1200, 900], taste: [1200, 1200], leave: [1200, 900] };
 
 function Step({ index, keyName }: { index: number; keyName: (typeof STEPS)[number] }) {
   const t = useTranslations("plan.experience");
@@ -23,7 +28,7 @@ function Step({ index, keyName }: { index: number; keyName: (typeof STEPS)[numbe
         <p className="m-0 mt-4 max-w-md text-[1.02rem] leading-relaxed text-oh-mute">{t(`steps.${keyName}.body`)}</p>
       </motion.div>
       <motion.div style={reduce ? undefined : { y }} className={even ? "" : "md:order-1"}>
-        <PhotoPlaceholder label={t("photoLabel")} needs={t(`steps.${keyName}.photo`)} />
+        <PlanPhoto src={`/plan/experience-${keyName}.webp`} alt={t(`steps.${keyName}.photo`)} width={PHOTO_SIZE[keyName][0]} height={PHOTO_SIZE[keyName][1]} note={t("photoNote")} priority={index === 0} />
       </motion.div>
     </article>
   );
@@ -47,20 +52,14 @@ export function ExperienceModule() {
       {STEPS.map((k, i) => (
         <Step key={k} index={i} keyName={k} />
       ))}
-      <section className="grid items-start gap-8 md:grid-cols-[1fr_1fr]">
-        <div>
+      <section className="flex flex-col gap-8">
+        <div className="max-w-2xl">
           <p className="m-0 mb-2 text-[0.72rem] uppercase tracking-[0.14em] text-oh-gold">{t("kiosk.eyebrow")}</p>
           <h2 className="m-0 font-display text-[clamp(1.6rem,3vw,2.2rem)] leading-[1.05] text-oh-cream">{t("kiosk.title")}</h2>
           <p className="m-0 mt-4 text-[1rem] leading-relaxed text-oh-mute">{t("kiosk.body")}</p>
-          <a href={`/${locale}/kiosk`} target="_blank" rel="noreferrer" className="mt-4 inline-block text-[0.85rem] text-oh-ember-light underline-offset-2 hover:underline">{t("kiosk.open")}</a>
+          <a href={`/${locale}/kiosk?locationId=${KIOSK_DEMO_LOCATION_ID}&fit=1`} target="_blank" rel="noreferrer" className="mt-4 inline-block text-[0.85rem] text-oh-ember-light underline-offset-2 hover:underline">{t("kiosk.open")}</a>
         </div>
-        <div className="mx-auto w-full max-w-[380px]">
-          <div className="rounded-[2rem] border-[6px] border-oh-stone bg-oh-ink p-2 shadow-[0_30px_60px_rgba(0,0,0,0.5)]">
-            <div className="overflow-hidden rounded-[1.4rem] bg-oh-charcoal" style={{ aspectRatio: "9 / 16" }}>
-              <iframe src={`/${locale}/kiosk`} title={t("kiosk.title")} loading="lazy" className="h-full w-full border-0" />
-            </div>
-          </div>
-        </div>
+        <KioskFrame src={`/${locale}/kiosk?locationId=${KIOSK_DEMO_LOCATION_ID}&fit=1`} title={t("kiosk.title")} />
       </section>
     </div>
   );

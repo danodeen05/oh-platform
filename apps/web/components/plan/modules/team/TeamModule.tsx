@@ -1,6 +1,7 @@
 import { getLocale, getTranslations } from "next-intl/server";
-import { BASE, FRANCHISE_MARKETS, FRANCHISE_TERMS, OPENING_SCHEDULE, PARTNERSHIP_TERMS, computeOwnership, fmtCompact, fmtPercent } from "@oh/plan-model";
-import { PhotoPlaceholder } from "@/components/plan/primitives/PhotoPlaceholder";
+import { BASE, COVERAGE_SCHEDULE, FRANCHISE_MARKETS, FRANCHISE_TERMS, OPENING_SCHEDULE, PARTNERSHIP_TERMS, computeOwnership, fmtCompact, fmtPercent } from "@oh/plan-model";
+import { PlanPhoto } from "@/components/plan/primitives/PlanPhoto";
+import { FOUNDATION } from "@/components/plan/modules/foundation/contact";
 
 const ENTITY = {
   name: "Oh! Beef Noodle Soup, LLC",
@@ -22,11 +23,14 @@ export async function TeamModule() {
   const own = computeOwnership({ scenario: BASE, terms: PARTNERSHIP_TERMS, schedule: OPENING_SCHEDULE, markets: FRANCHISE_MARKETS, franchiseTerms: FRANCHISE_TERMS });
   const filed = new Intl.DateTimeFormat(locale, { dateStyle: "long" }).format(new Date(`${ENTITY.filed}T12:00:00Z`));
   const effective = new Intl.DateTimeFormat(locale, { dateStyle: "long" }).format(new Date(`${ENTITY.effective}T12:00:00Z`));
+  // The roster comes from the coverage schedule in labor.ts (heads on the schedule) plus management; the FTE is the engine's.
+  const heads = COVERAGE_SCHEDULE.shifts.reduce((n, s) => n + s.count, 0) + BASE.assumptions.managerFTE;
+  const hiringValues = { people: heads, fte: (BASE.assumptions.kitchenFTE + BASE.assumptions.managerFTE).toFixed(1) };
 
   return (
     <div data-plan-module="team" className="flex flex-col gap-14">
-      <section className="grid gap-6 md:grid-cols-[minmax(220px,300px)_1fr]">
-        <PhotoPlaceholder label={t("photoLabel")} needs={t("founder.photo")} className="aspect-[4/5]" />
+      <section className="grid grid-cols-[minmax(0,1fr)] gap-6 md:grid-cols-[minmax(220px,300px)_minmax(0,1fr)]">
+        <PlanPhoto src="/plan/team-founder.webp" alt={t("founder.alt")} width={760} height={950} priority />
         <div>
           <p className="m-0 text-[0.72rem] uppercase tracking-[0.14em] text-oh-gold">{t("founder.role", { pct: fmtPercent(own.founderPct, locale, 0) })}</p>
           <h2 className="m-0 mt-1 font-display text-[2rem] leading-tight text-oh-cream">{t("founder.name")}</h2>
@@ -60,6 +64,28 @@ export async function TeamModule() {
         </div>
       </section>
 
+      {/* Community partner (owner decision 2026-09-27): named, and disclosed as a related party in plain words. */}
+      <section data-plan-community="" className="grid gap-5 rounded-lg border border-oh-stone bg-oh-ink p-5 md:grid-cols-[auto_minmax(0,1fr)] md:p-6">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={FOUNDATION.logo.src} alt={FOUNDATION.logo.alt} width={FOUNDATION.logo.width} height={FOUNDATION.logo.height} className="h-20 w-20 rounded-md bg-white object-contain p-1.5" />
+        <div className="min-w-0">
+          <p className="m-0 text-[0.72rem] uppercase tracking-[0.14em] text-oh-gold">{t("community.eyebrow")}</p>
+          <h2 className="m-0 mt-1 font-display text-[1.5rem] text-oh-cream">{FOUNDATION.name}</h2>
+          <p className="m-0 mt-3 text-[0.9rem] leading-relaxed text-oh-mute">{t("community.body", { pct: fmtPercent(BASE.assumptions.communityGivingPct, locale, 0) })}</p>
+          <div className="mt-4 rounded-md border-l-2 border-oh-ember bg-oh-charcoal px-4 py-3">
+            <p className="m-0 text-[0.68rem] uppercase tracking-[0.14em] text-oh-ember-light">{t("community.disclosureTitle")}</p>
+            <ul className="m-0 mt-2 flex list-none flex-col gap-1.5 p-0 text-[0.85rem] leading-snug text-oh-cream">
+              {(["friend", "cto", "agreement"] as const).map((k) => (
+                <li key={k}>{t(`community.disclosure.${k}`)}</li>
+              ))}
+            </ul>
+          </div>
+          <a href={FOUNDATION.website} target="_blank" rel="noopener noreferrer" className="mt-3 inline-block text-[0.85rem] text-oh-ember-light underline-offset-2 hover:underline">
+            {t("community.link")}
+          </a>
+        </div>
+      </section>
+
       <section>
         <h2 className="m-0 mb-1 font-display text-[1.5rem] text-oh-cream">{t("advisory.title")}</h2>
         <p className="m-0 mb-4 text-[0.85rem] text-oh-mute">{t("advisory.subtitle")}</p>
@@ -84,7 +110,7 @@ export async function TeamModule() {
                 <span className={["text-[0.8rem] tabular-nums", key ? "text-oh-ember-light" : "text-oh-mute"].join(" ")}>{t(`hiring.phases.${k}.when`)}</span>
                 <div>
                   <p className="m-0 font-display text-[1.05rem] text-oh-cream">{t(`hiring.phases.${k}.title`)}</p>
-                  <p className="m-0 mt-1 text-[0.82rem] leading-snug text-oh-mute">{t(`hiring.phases.${k}.body`)}</p>
+                  <p className="m-0 mt-1 text-[0.82rem] leading-snug text-oh-mute">{t(`hiring.phases.${k}.body`, hiringValues)}</p>
                 </div>
               </li>
             );

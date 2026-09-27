@@ -67,16 +67,17 @@
     "brandName": "<oh>哦！</oh>牛肉麵",
     "brandNamePlain": "哦！牛肉麵",
     "tagline": "唯一一家專為<bold>您</bold>打造的餐廳。",
-    "heroDescription": "源自台灣深受喜愛的牛肉麵傳統，融合日本精緻工藝，在您專屬的私人包廂中享用我們30年的家傳秘方。",
+    "heroDescription": "源自台灣深受喜愛的牛肉麵傳統，以頂級融合手法昇華，在您專屬的私人包廂中享用這一碗。",
     "opensAt": "上午10點開始接受預訂",
     "signature": {
       "label": "我們的招牌",
-      "title": "A5和牛牛肉麵",
-      "description": "絲滑的A5和牛融入我們香醇的濃郁湯底——使用三代相傳的技藝，慢火熬煮48小時。每一碗都訴說著耐心、精準與熱情的故事。",
+      "title": "美國和牛牛肉麵",
+      "description": "美國和牛與 USDA Prime 牛肉，低溫慢燻，配上兩段式牛骨高湯：先長時間熬煮，再為風味收尾。在您專屬的私人包廂享用，永遠不收小費。",
       "stats": {
-        "hours": "小時熬製",
-        "grade": "和牛等級",
-        "years": "年秘方"
+        "pods": "私人包廂",
+        "grade": "牛肉等級",
+        "gradeValue": "美國和牛",
+        "tips": "小費"
       }
     },
     "difference": {
@@ -85,12 +86,12 @@
     },
     "features": {
       "recipe": {
-        "title": "30年傳承配方",
-        "description": "代代相傳、精心熬製的牛肉麵"
+        "title": "兩段式高湯",
+        "description": "先長時間熬骨，再為風味收尾"
       },
       "beef": {
         "title": "頂級牛肉",
-        "description": "嚴選A5和牛及優質牛肉，品質卓越"
+        "description": "美國和牛與 USDA Prime，低溫慢燻，可選牛胸肉切片或牛肋肉塊"
       },
       "tech": {
         "title": "科技化體驗",
@@ -102,7 +103,7 @@
     },
     "pods": {
       "title": "私人用餐包廂",
-      "description": "體驗前所未有的用餐方式。我們的獨立包廂提供寧靜、無干擾的空間，讓您細細品嚐每一口。沒有擁擠的餐桌，沒有噪音——只有您和完美的一碗牛肉麵。",
+      "description": "體驗前所未有的用餐方式。我們的獨立包廂提供寧靜、無干擾的空間，讓您細細品嚐每一口。沒有擁擠的餐桌，沒有噪音，只有您和完美的一碗牛肉麵。",
       "features": {
         "space": {
           "title": "專屬空間",
@@ -120,7 +121,7 @@
     },
     "noTipping": {
       "title": "永不收小費",
-      "description": "在哦!，您看到的價格就是您支付的價格。我們相信團隊成員值得穩定、公平的薪資——而非不可預測的小費。因此，我們為廚房和清潔人員提供具競爭力的薪資和福利。",
+      "description": "在哦!，您看到的價格就是您支付的價格。我們相信團隊成員值得穩定、公平的薪資，而非不可預測的小費。因此，我們為廚房和清潔人員提供具競爭力的薪資和福利。",
       "benefits": {
         "wages": "公平薪資",
         "math": "無需計算小費",
@@ -154,9 +155,7 @@
     "copyright": "© {year} 哦！牛肉麵。保留所有權利。",
     "links": {
       "accessibility": "無障礙服務",
-      "careers": "職業機會",
       "contact": "聯絡我們",
-      "press": "媒體專區",
       "privacy": "隱私政策"
     },
     "foundation": {
@@ -197,7 +196,7 @@
     "sections": {
       "soup": {
         "subtitle": "從我們的招牌湯底開始",
-        "description": "30年精心熬製的濃郁牛骨湯"
+        "description": "濃郁的兩段式牛骨高湯：先長時間熬煮，再為風味收尾"
       },
       "noodles": {
         "subtitle": "選擇您的麵條",
@@ -218,7 +217,7 @@
     },
     "hero": {
       "title": "我們的菜單",
-      "description": "用我們的頂級食材和30年傳承配方，打造您完美的一碗",
+      "description": "用頂級美國牛肉與我們的兩段式高湯，打造您完美的一碗",
       "orderNow": "立即訂購"
     },
     "difference": {
@@ -396,8 +395,8 @@
           "cashback": "訂單3%回饋",
           "topPrioritySeating": "最高優先入座",
           "freePremiumBowl": "升級送免費頂級招牌麵",
-          "merchDrops": "限定周邊商品",
-          "premiumAddons": "免費頂級加購",
+          "merchDrops": "會員價周邊商品搶先購",
+          "premiumAddons": "每季一份免費頂級加料",
           "vipGift": "年度VIP禮物與表彰",
           "wallOfFame": "照片及簽名訂單上Oh!名人牆"
         }
@@ -828,8 +827,8 @@
         "freeBowl": "升級送免費招牌麵",
         "topPrioritySeating": "最高優先入座",
         "freePremiumBowl": "升級送免費高級麵",
-        "merchDrops": "限量周邊商品",
-        "premiumAddons": "免費頂級配料",
+        "merchDrops": "會員價周邊商品搶先購",
+        "premiumAddons": "每季一份免費頂級加料",
         "vipGift": "年度 VIP 禮物與表彰",
         "wallOfFame": "照片和簽名訂單上 Oh! 名人牆"
       }
@@ -843,8 +842,8 @@
       "prioritySeating": "優先入座",
       "memberEvents": "專屬會員活動",
       "freeBowlUpgrade": "升級送免費招牌麵",
-      "merchandiseDrops": "限量周邊商品",
-      "premiumAddons": "免費頂級配料",
+      "merchandiseDrops": "會員價周邊商品搶先購",
+      "premiumAddons": "每季一份免費頂級加料",
       "vipGift": "年度 VIP 禮物與表彰"
     },
     "badges": {
@@ -1115,12 +1114,12 @@
     },
     "step3": {
       "title": "即刻賺取",
-      "description": "您即刻獲得$5點數，他們獲得$5折扣。推薦人數沒有上限。"
+      "description": "對方首筆訂單完成的當下，您獲得 5 美元點數；對方該筆訂單折抵 5 美元。點數 90 天後到期。"
     },
     "goodToKnow": "須知事項",
     "rules": {
       "minimumOrder": "推薦獎勵適用於首筆$20或以上的訂單",
-      "disbursement": "當好友完成訂單後，點數即刻加入您的帳戶",
+      "disbursement": "朋友完成首筆訂單時，點數立即加入您的帳戶，入帳後 90 天到期",
       "maxPerOrder": "每筆訂單最多可使用$5點數"
     },
     "dashboard": {
@@ -1148,70 +1147,6 @@
       }
     }
   },
-  "careers": {
-    "title": "加入我們的團隊",
-    "description": "幫助我們重新定義餐飲體驗。我們正在創造特別的事物，尋找充滿熱情的人一同加入這段旅程。",
-    "viewPositions": "查看開放職缺",
-    "values": {
-      "title": "我們的價值觀",
-      "description": "這些原則指導我們所做的一切，從製作湯麵到彼此對待的方式。",
-      "excellence": {
-        "title": "精益求精",
-        "description": "我們專注細節。每一碗麵、每一次體驗、每一次互動都很重要。"
-      },
-      "innovation": {
-        "title": "創新優先",
-        "description": "我們正在建設餐飲的未來。科技與傳統和諧共存。"
-      },
-      "team": {
-        "title": "團隊為重",
-        "description": "我們共同成功。協作、尊重和支持是我們的核心。"
-      },
-      "growth": {
-        "title": "成長心態",
-        "description": "我們投資於員工。與我們一起學習、成長、推進您的職業生涯。"
-      }
-    },
-    "openPositions": "開放職缺",
-    "positions": {
-      "noFit": "沒看到合適的職位？",
-      "alwaysLooking": "我們隨時在尋找優秀人才。",
-      "sendResume": "發送您的履歷"
-    },
-    "benefits": {
-      "title": "為什麼加入我們",
-      "pay": {
-        "title": "具競爭力的薪資",
-        "description": "高於市場的薪資加績效獎金"
-      },
-      "health": {
-        "title": "健康福利",
-        "description": "醫療、牙科和視力保險"
-      },
-      "meals": {
-        "title": "免費餐點",
-        "description": "輪班期間每日用餐加家庭折扣"
-      },
-      "careerGrowth": {
-        "title": "職業發展",
-        "description": "清晰的晉升路徑和導師制度"
-      },
-      "learning": {
-        "title": "學習預算",
-        "description": "年度專業發展補貼"
-      },
-      "events": {
-        "title": "團隊活動",
-        "description": "定期團隊出遊和慶祝活動"
-      }
-    },
-    "cta": {
-      "title": "準備好創造影響了嗎？",
-      "description": "加入我們，一起創造餐飲的未來。",
-      "button": "查看開放職缺"
-    },
-    "applyNow": "立即申請"
-  },
   "contact": {
     "title": "聯絡我們",
     "description": "我們很樂意聽取您的意見",
@@ -1229,8 +1164,7 @@
         "order": "訂單問題",
         "feedback": "意見回饋",
         "corporate": "企業 / 團體活動",
-        "press": "媒體諮詢",
-        "careers": "職業機會"
+        "press": "媒體諮詢"
       },
       "message": "您的訊息",
       "success": "謝謝！我們會在24-48小時內回覆您。"
@@ -1240,11 +1174,6 @@
       "email": {
         "title": "電子郵件",
         "value": "hello@ohbeefnoodlesoup.com"
-      },
-      "location": {
-        "title": "拜訪我們",
-        "opening": "2025年春季開幕",
-        "city": "舊金山，加州"
       },
       "responseTime": {
         "title": "回覆時間",
@@ -1258,55 +1187,6 @@
     "faq": {
       "title": "尋找快速解答？",
       "description": "查看我們的常見問題以獲得即時幫助。"
-    }
-  },
-  "press": {
-    "title": "媒體專區",
-    "description": "哦！新聞報導",
-    "mediaKit": "媒體資料包",
-    "pressInquiries": "媒體諮詢",
-    "mediaContact": {
-      "title": "媒體聯繫",
-      "description": "如有媒體諮詢、採訪和媒體請求，請聯繫我們的公關團隊。",
-      "responseTime": "我們通常在24-48小時內回覆。"
-    },
-    "ourStory": {
-      "title": "我們的故事",
-      "p1": "哦！牛肉麵源自30年的家傳配方和重新定義餐飲體驗的願景。我們的創辦人從小看著祖母完善她的牛肉麵配方，為家人和朋友提供令人難以忘懷的美味。",
-      "p2": "如今，我們將同樣的配方帶給更廣大的觀眾，結合創新科技和獨特的私人用餐包廂概念，讓焦點回歸到美食和體驗本身。",
-      "p3": "我們的使命很簡單：在一個專為享受而非分心設計的環境中，提供完美的一碗牛肉麵。"
-    },
-    "keyFacts": {
-      "title": "重要資訊",
-      "founded": "成立時間",
-      "headquarters": "總部",
-      "flagshipOpening": "旗艦店開幕",
-      "recipeHeritage": "配方傳承",
-      "uniqueFeature": "獨特特色",
-      "techPlatform": "科技平台"
-    },
-    "pressReleases": {
-      "title": "新聞稿"
-    },
-    "brandAssets": {
-      "title": "品牌資產",
-      "logoPackage": {
-        "name": "標誌套件",
-        "description": "各種格式的主要和次要標誌"
-      },
-      "brandGuidelines": {
-        "name": "品牌指南",
-        "description": "色彩、字體和使用規範"
-      },
-      "productPhotography": {
-        "name": "產品攝影",
-        "description": "我們招牌菜品的高解析度圖片"
-      },
-      "locationPhotos": {
-        "name": "門市照片",
-        "description": "我們門市的室內外照片"
-      },
-      "requestAccess": "如需取得品牌資產，請聯繫"
     }
   },
   "privacy": {
@@ -2085,7 +1965,7 @@
     },
     "shell": {
       "brand": "Oh! 牛肉麵",
-      "planTitle": "商業計畫",
+      "planTitle": "Oh! Beef Noodle Soup 商業計畫",
       "viewingAs": "以「{label}」身分閱讀",
       "signOut": "關閉計畫",
       "skipToContent": "跳至內容",
@@ -2104,7 +1984,38 @@
       },
       "notFoundTitle": "此頁面不在您的計畫範圍內。",
       "notFoundBody": "連結可能已過期，或您的邀請未包含此章節。您可閱讀的所有內容都列在上方導覽中。",
-      "backToSummary": "返回摘要"
+      "backToSummary": "返回摘要",
+      "footer": {
+        "previous": "上一節",
+        "next": "下一節",
+        "readingTime": "閱讀約 {minutes} 分鐘",
+        "sectionOf": "第 {n} 節，共 {total} 節"
+      },
+      "askChappy": "問 Chappy 這一節的問題",
+      "palette": {
+        "open": "目錄",
+        "placeholder": "跳到某一節",
+        "noResults": "沒有符合的章節。",
+        "hint": "輸入以篩選，按 Enter 開啟，Alt 加方向鍵切換章節。"
+      },
+      "version": {
+        "built": "建置於 {date}",
+        "whatChanged": "變更內容",
+        "confidential": "機密。僅供指定收件人閱覽。",
+        "label": "版本"
+      },
+      "scenario": {
+        "group": "情境",
+        "conservative": "保守",
+        "base": "基準",
+        "aggressive": "積極",
+        "reset": "回到預設情境"
+      },
+      "why": {
+        "open": "這個數字怎麼來的",
+        "register": "假設登錄："
+      },
+      "sources": "資料來源"
     },
     "sections": {
       "summary": {
@@ -2130,7 +2041,7 @@
       "floor-plan": {
         "short": "平面配置",
         "title": "平面配置",
-        "subtitle": "{sqft} 平方英尺、{pods} 個座艙、一個廚房，沒有需要人力的用餐區。"
+        "subtitle": "{sqft} 平方英尺、{pods} 個座艙，兩個領域只在送餐口相接。"
       },
       "operations": {
         "short": "營運",
@@ -2140,7 +2051,7 @@
       "expansion": {
         "short": "擴張",
         "title": "擴張引擎",
-        "subtitle": "第一年在猶他開設五間門市，接著四座美國大城，再以加盟走向世界。"
+        "subtitle": "先開五間猶他直營店，再分階段進入加盟市場：兩座美國城市，接著東西岸與台北，然後走向世界。"
       },
       "unit-economics": {
         "short": "單店經濟",
@@ -2150,7 +2061,7 @@
       "financials": {
         "short": "財務",
         "title": "財務報表",
-        "subtitle": "組合損益、每間門市的資本支出，以及貸款機構需要看到的償債覆蓋率。"
+        "subtitle": "四牆損益、總部費用、合併現金，以及每間門市的資本支出。"
       },
       "sensitivity": {
         "short": "敏感度",
@@ -2171,25 +2082,96 @@
         "short": "時程",
         "title": "時程與里程碑",
         "subtitle": "從簽約到第五間門市開幕，全部以旗艦店開幕日為基準。"
+      },
+      "integrity": {
+        "short": "誠信",
+        "title": "模型誠信",
+        "subtitle": "每項假設皆有來源與日期，每個恆等式皆經檢查，每次變更皆有紀錄。"
       }
     },
     "summary": {
-      "revenue": "基準情境單店年營收",
-      "revenueNote": "穩定狀態，75 個座艙，30% 使用率",
+      "revenue": "單店年營收（{scenario}情境）",
+      "revenueNote": "穩定狀態，週日公休",
       "revPerSqFt": "每平方英尺營收",
       "revPerSqFtNote": "美國快休閒餐飲中位數約為 450 至 600 美元",
       "ebitdaTarget": "EBITDA 目標",
-      "ebitdaTargetNote": "對外公開目標。完整利潤率請見財務模型頁。",
+      "ebitdaTargetNote": "對外公開的四牆 EBITDA 目標。成熟期的進階目標與各情境的完整利潤率請見財務模型頁。",
       "benchmarkEyebrow": "坦白說",
-      "benchmarkClaim": "我們的基準情境為每平方英尺 1,200 美元。這是頂尖水準。",
-      "benchmarkText": "美國快休閒餐飲中位數為每平方英尺 450 至 600 美元。前 10% 的營運者可超過 1,000 美元，Chick-fil-A 則在 1,500 美元以上。高翻桌率、小面積、高客單價的模式能做到這一點，而財務模型頁上的變數會清楚顯示是哪些假設在支撐它。",
-      "placeholder": "敘述性摘要將隨模組建置一併推出。以上所有數字皆由財務引擎即時計算。",
+      "benchmarkClaim": "我們的基準情境每平方英尺營收落在前 10% 門檻的正下方。",
+      "benchmarkText": "美國快休閒餐飲中位數為每平方英尺 450 至 600 美元；Chipotle 等級的門市為 800 至 1,000 美元；前 10% 的營運者超過 1,000 美元（產業調查與公開財報，2025）。上方的數字由財務引擎計算，財務模型頁會顯示是哪些變數在支撐它，以及基準計分卡怎麼評它。",
       "capital": "五間門市所需資本",
       "capitalNote": "由單一財務合夥人分兩輪注資，加上創辦人出資。無負債。",
       "partner": "推算合夥人持股比例",
-      "partnerNote": "以合夥人 3 倍回報推算（每年分配加第五年 5 倍 EBITDA 出場），且不超過 49%。募資頁可調整所有參數。",
+      "partnerNote": "以合夥人的目標回報，用稅後分配加上以合併、經常性 EBITDA 計算的出場推算，且永遠不超過創辦人的上限。當上限生效時，募資頁會明說，並列出合夥人實際的回報倍數。",
       "payback": "開幕起回本年數",
-      "paybackNote": "旗艦店，基準情境，無槓桿，含開幕爬坡期"
+      "paybackNote": "旗艦店，無槓桿，含開幕爬坡期",
+      "heroAlt": "一碗牛肉麵：煙燻牛胸肉片、深色高湯、麵條、青江菜和一片柳橙，配木筷與湯匙。",
+      "heroCaption": "這份計畫的一切，都是為了這一碗。",
+      "narrative": {
+        "eyebrow": "執行摘要：{scenario}情境",
+        "title": "沒有外場的快速休閒餐廳，售價與成本皆經得起盡職調查",
+        "scenario": {
+          "conservative": "保守",
+          "base": "基準",
+          "aggressive": "積極"
+        },
+        "lead": {
+          "thesis": "構想。",
+          "unit": "單店。",
+          "growth": "成長。",
+          "ask": "募資需求。",
+          "risks": "可能出錯之處。",
+          "purpose": "為什麼重要。"
+        },
+        "body": {
+          "thesis": "Oh! 在 {sqft} 平方英尺的空間內，以 {pods} 個私人用餐包廂供應頂級美國牛肉麵。客人在自助點餐機點餐，廚房經由每個包廂的傳菜口送餐，用餐區內沒有帶位、服務生，也沒有小費。這一個設計決定，讓人力與座位的經濟效益從休閒餐飲移向最優秀的快速休閒餐飲。",
+          "unit": "單店每年營業 {days} 天，每天約服務 {covers} 位客人，平均客單價 {check}，年營收 {revenue}。以美國和牛與 USDA Prime 逐碗計算，食材成本占 {food}，人力成本占 {labor}，四牆 EBITDA 為 {ebitda}。請投資人以 {target} 檢驗我們，成熟期的延伸目標為 {stretch}。損益兩平約為每天 {breakEven} 位客人，{capex} 的建置成本自開幕起 {payback} 回收。",
+          "growth": "到第五年，計畫共有 {corporate} 家直營店與 {franchise} 家加盟店，加盟時程分階段推進，並考量加盟揭露文件生效所需的時間。公司營收達到 {y5Revenue}，其中已包含 {overhead} 的總部營運成本，合併 EBITDA 為 {consolidated}。",
+          "ask": "計畫分兩輪募集 {capital}，不舉債，{cashLine}財務合夥人取得特別股，享有 {pref} 優先報酬與 {liq} 清算優先權；普通股持股由報酬計算推導，上限為 {partner}。在此上限下，合夥人於第五年出場的倍數為 {multiple5}，第七年以混合倍數出場為 {multiple7}。我們直接說明這一點，而不是主張一個分配比例。",
+          "risks": "下行情境完整呈現，包括在沒有額外資本時現金用盡的保守情境。包廂、廚房顯示系統與無外場人員的服務模式，對猶他州的檢查員與客人都是新事物。敏感度分析一節逐項列出各項風險，模型完整性一節則列出每一項假設的來源、日期與可信度。",
+          "purpose": "每家直營店都將營收的 {givingPct} 捐給猶他州的心理健康非營利組織 ONE RED STEP AT A TIME。每家店每年約 {givingPerUnit}，前五年合計 {givingFiveYear}。這項承諾在每個情境中都是一條成本項目，因此本計畫的所有利潤率都已將它計入。"
+        },
+        "map": {
+          "title": "盡職調查地圖",
+          "intro": "盡職調查團隊常問的問題、回答每個問題的章節，以及答案背後的假設登錄項目。本頁的每個數字都連回其中一項。",
+          "headers": {
+            "question": "問題",
+            "where": "回答章節",
+            "evidence": "假設登錄項目"
+          },
+          "inSection": "見該章節",
+          "rows": {
+            "demand": "會有足夠的客人嗎？包廂多常滿座？",
+            "check": "平均客單價能從菜單推導出來嗎？",
+            "beef": "頂級美國牛肉每碗的實際成本是多少？",
+            "labor": "約 {fte} 位受薪員工真的能每天經營 {pods} 個包廂的餐廳嗎？",
+            "members": "會員計畫要花多少錢？由誰負擔？",
+            "overhead": "餐廳之上的公司營運成本是多少？",
+            "cash": "現金何時最低？會不會變成負數？",
+            "downside": "如果我們錯了會怎樣？",
+            "franchise": "加盟速度可行嗎？能賺多少？",
+            "ownership": "合夥人持股如何決定？報酬是多少？",
+            "sources": "每個數字從哪裡來？",
+            "giving": "Oh! 捐出什麼？捐給誰？"
+          }
+        },
+        "cash": {
+          "positive": "現金餘額最低為 {amount}，計畫不需要第三輪募資。",
+          "negative": "在此情境下現金缺口為 {amount}，第五年前需要額外資本。"
+        }
+      },
+      "why": {
+        "revenue": "每日客數乘以平均客單價，再乘以 {days} 個營業日。每日客數來自 {pods} 個包廂、用餐時間與使用率；客單價由菜單售價與加點率推導。",
+        "revPerSqFt": "年營收除以 {sqft} 平方英尺。",
+        "ebitdaTarget": "這是我們請投資人檢驗的目標，而非模型的產出。此情境的四牆 EBITDA 為 {margin}。",
+        "capital": "兩輪股權募資加上創辦人出資，足以開設五家直營店並支應總部營運成本，不舉債。",
+        "partner": "由合夥人的目標報酬推導的持股，進位至最接近的 5%，上限為創辦人設定的 {cap}。",
+        "payback": "自開幕起，扣除開幕前支出後的累計自由現金流償還 {capex} 建置成本所需的年數。"
+      },
+      "vision": {
+        "eyebrow": "我們的願景",
+        "text": "我們期望的世界：一碗好的牛肉麵，也帶來喘口氣的空間。頂級的食材、屬於自己的空間，而每一次光臨，都幫助一個人朝更好的心理健康再邁出一步。"
+      }
     },
     "primitives": {
       "showTable": "顯示數據表",
@@ -2204,9 +2186,9 @@
         "subtitle": "零外場的用餐模式，以作業系統的方式打造。餐廳既是證明，也是第一位客戶。",
         "preparedFor": "編製對象",
         "generated": "產生日期",
-        "baseRevenue": "基準情境單店年營收",
         "confidential": "發布範圍",
-        "confidentialText": "機密文件。僅限受邀者閱讀。"
+        "confidentialText": "機密文件。僅限受邀者閱讀。",
+        "revenue": "單店營收（{scenario}情境）"
       },
       "toc": "目錄",
       "placeholder": "章節內容將於下一版推出。所有數字皆於列印時由財務引擎計算。",
@@ -2230,7 +2212,9 @@
         "pods": "座艙數",
         "kitchenFTE": "廚房人力（全職）",
         "avgDwellMinutes": "平均用餐時間",
-        "payrollBurdenPct": "薪資附加成本率"
+        "payrollBurdenPct": "薪資附加成本率",
+        "memberProgramPct": "會員方案（占營收比例）",
+        "communityGivingPct": "社區捐贈（占營收比例）"
       },
       "results": {
         "revenue": "年營收",
@@ -2243,7 +2227,7 @@
         "avgCheck": "平均客單價",
         "coversPerDay": "每日客數"
       },
-      "publicTarget": "我們對外公開的目標為 EBITDA {target}。此情境的結果為 {margin}。",
+      "publicTarget": "我們對外公開的目標為四牆 EBITDA {target}，成熟期的進階目標為 {stretch}。此情境的結果為 {margin}。",
       "waterfall": {
         "title": "從營收到 EBITDA",
         "revenue": "營收",
@@ -2251,7 +2235,9 @@
         "labor": "人力",
         "occupancy": "租金",
         "otherOpex": "其他營運費用",
-        "ebitda": "EBITDA"
+        "ebitda": "EBITDA",
+        "program": "會員方案、折扣與招待",
+        "giving": "社區捐贈"
       },
       "table": {
         "show": "顯示數據表",
@@ -2273,7 +2259,7 @@
       "benchmark": {
         "eyebrow": "坦白說",
         "claim": "此情境每平方英尺營收為 {value}。",
-        "text": "美國快休閒餐飲中位數約為每平方英尺 450 至 600 美元。前 10% 的營運者可超過 1,000 美元，Chick-fil-A 則在 1,500 美元以上。把使用率往下拉，看看數字落在哪裡。"
+        "text": "美國快休閒餐飲中位數約為每平方英尺 450 至 600 美元；Chipotle 等級的門市為 800 至 1,000 美元；前 10% 超過 1,000 美元，Chick-fil-A 則在 1,500 美元以上。把使用率往下拉，看看數字落在哪裡。"
       },
       "actions": {
         "reset": "恢復預設",
@@ -2287,77 +2273,223 @@
         "line": "項目",
         "coversPerDay": "每日客數",
         "grossProfit": "毛利"
+      },
+      "lines": {
+        "communityGiving": "社區捐贈承諾"
       }
     },
     "floorPlan": {
       "zones": {
-        "entry": "入口",
-        "dining": "用餐區：三排共 75 個座艙",
+        "title": "旗艦店平面圖，70 × 50 英尺，梳狀送餐格局",
         "kitchen": "廚房",
-        "boh": "後場與儲藏",
-        "restrooms": "洗手間",
+        "dish": "回收區",
+        "boh": "倉儲與辦公室",
+        "restroomHall": "洗手間",
+        "restroomMen": "男",
+        "restroomWomen": "女",
+        "store": "商品店",
+        "lobby": "入口大廳",
         "kiosk": "點餐機",
-        "corridor": "推拉門送餐走道",
+        "corridor": "員工走道",
         "aisle": "顧客通道",
-        "pass": "出餐口"
+        "crossAisle": "顧客橫向通道",
+        "pass": "出餐台",
+        "entry": "入口",
+        "exit": "出口",
+        "staffDoor": "員工門",
+        "receiving": "進貨門",
+        "ft": "英尺"
       },
       "layers": {
         "title": "圖層",
         "pods": "座艙",
-        "corridors": "走道與通道",
+        "corridors": "員工走道",
+        "aisles": "顧客通道",
         "kitchen": "廚房",
-        "boh": "後場",
+        "boh": "回收與後場",
         "restrooms": "洗手間",
-        "entry": "入口與點餐機"
+        "entry": "大廳與點餐機",
+        "store": "商品店",
+        "flow": "動線箭頭",
+        "dimensions": "尺寸標註"
+      },
+      "modes": {
+        "label": "檢視",
+        "blueprint": "藍圖",
+        "territory": "領域",
+        "iso": "3D",
+        "isoLoad": "載入 3D 檢視",
+        "isoLoading": "正在繪製 3D 檢視",
+        "isoUnavailable": "3D 需要 WebGL，這個瀏覽器不支援。藍圖與表格使用相同的幾何資料。"
+      },
+      "legend": {
+        "staff": "員工空間",
+        "guest": "顧客空間",
+        "hatch": "送餐口",
+        "staffSqft": "員工空間 {value} 平方英尺：廚房、回收區、後場、三條走道。",
+        "guestSqft": "顧客空間 {value} 平方英尺：大廳、通道、{pods} 個座艙、洗手間、商品店。",
+        "touch": "兩個領域只在 {hatches} 個送餐口相接，別無他處。"
       },
       "zoom": {
         "in": "放大",
         "out": "縮小",
-        "reset": "重設",
-        "hint": "將滑鼠移到或點擊任一座艙。Ctrl + 捲動可縮放；放大後可拖曳平移。"
+        "reset": "重設檢視",
+        "hint": "Ctrl + 捲動可縮放，拖曳可平移。"
+      },
+      "readout": {
+        "default": "一張訂單，兩條路徑，一個送餐口。按下播放，或將滑鼠移到任一座艙。",
+        "pod": "座艙 {number}。第 {finger} 排梳齒，{side}側，第 {position} 位。座位朝向顧客通道 {aisle}，送餐口朝向員工走道 {corridor}。",
+        "podType": "{type}，{w} × {d} 英尺。",
+        "podDuo": "拆下隔板後可與座艙 {number} 合併。",
+        "corridor": "員工走道 {n}。{pods} 個送餐口，寬 {w} 英尺，盡頭是廚房。顧客不會進入。",
+        "aisle": "顧客通道 {n}。{pods} 個座艙，寬 {w} 英尺。員工不會進入。",
+        "crossAisle": "顧客橫向通道，寬 {w} 英尺。連接每條通道、大廳與商品店。",
+        "kitchen": "廚房，{value} 平方英尺，橫跨後牆。高湯、麵條、擺盤，出餐台通往三條走道。",
+        "dish": "回收區，{value} 平方英尺。碗沿原路由走道送回。",
+        "boh": "倉儲與辦公室，{value} 平方英尺。進貨門在後牆。",
+        "lobby": "入口大廳，{value} 平方英尺。三台點餐機，沒有櫃台。",
+        "restrooms": "洗手間，位於最後一條顧客通道旁。男女分開。",
+        "store": "商品店，{value} 平方英尺。在出口動線上，自助結帳。",
+        "pinned": "已固定。按 Escape 或再點一次即可取消。",
+        "step": "{actor}，{time}。{text}"
       },
       "pod": {
         "single": "單人",
         "duo": "可合併雙人",
-        "title": "座艙 {number}",
-        "detail": "{type}。第 {row} 排，第 {position} 位。推拉門面向{panel}側走道。",
-        "size": "{w} × {d} 英尺",
-        "hint": "將滑鼠移到或點擊任一座艙，查看編號、類型與位置。金色邊框為可合併雙人艙。",
-        "aria": "座艙 {number}，{type}，第 {row} 排第 {position} 位",
-        "panel": {
-          "north": "北",
-          "south": "南"
-        }
+        "side": {
+          "west": "西",
+          "east": "東"
+        },
+        "aria": "座艙 {number}，{type}，第 {finger} 排梳齒，{side}側，第 {position} 位",
+        "prev": "上一個座艙",
+        "next": "下一個座艙",
+        "stepper": "逐一瀏覽座艙"
       },
       "areas": {
-        "title": "面積配置",
-        "dining": "用餐區",
+        "title": "面積",
+        "pods": "座艙",
+        "staffCorridors": "員工走道",
+        "guestAisles": "顧客通道與橫向通道",
+        "lobby": "入口大廳",
+        "store": "商品店",
+        "restrooms": "洗手間",
         "kitchen": "廚房",
-        "boh": "後場與儲藏",
-        "circulation": "洗手間與動線",
+        "dish": "回收區",
+        "boh": "倉儲與辦公室",
+        "staffTotal": "員工空間",
+        "guestTotal": "顧客空間",
         "total": "合計",
-        "sqft": "{value} 平方英尺"
+        "sqft": "{value} 平方英尺",
+        "landlordLine": "一個 {w} × {d} 英尺的方盒。廚房在後牆，大廳、商品店與洗手間集中在右側一列，其餘全是座艙、走道與通道。"
+      },
+      "facts": {
+        "title": "空間概覽",
+        "footprint": "佔地",
+        "footprintValue": "{w} × {d} 英尺",
+        "area": "面積",
+        "areaValue": "{sqft} 平方英尺",
+        "front": "臨街面",
+        "frontValue": "{w} 英尺",
+        "doors": "門",
+        "doorsValue": "{count} 道：入口、出口、員工門、進貨門",
+        "kitchen": "廚房",
+        "kitchenValue": "後牆，深 {depth} 英尺",
+        "widths": "淨寬",
+        "widthsValue": "走道 {corridor} 英尺，通道 {aisle} 英尺，橫向通道 {cross} 英尺",
+        "fixtures": "設備",
+        "fixturesValue": "{pods} 個座艙、{kiosks} 台點餐機、{restrooms} 間洗手間",
+        "note": "依概念幾何計算。樓高、水電、抽油煙管線與玻璃立面依實際場地而定。"
+      },
+      "explainer": {
+        "title": "送餐怎麼運作",
+        "lede": "沒有接待、沒有服務生、沒有櫃台。三個動作，全部在牆的另一側完成。",
+        "kitchen": {
+          "title": "廚房開火",
+          "body": "每張訂單連同座艙號碼出現在廚房顯示器上。高湯、麵條、擺盤，依序在同一面牆完成。"
+        },
+        "corridor": {
+          "title": "走道送達",
+          "body": "三條員工走道從廚房向前延伸如梳齒。座艙排在兩側，送餐口朝內。送餐員走的是走道，不是用餐區。"
+        },
+        "hatch": {
+          "title": "送餐口交付",
+          "body": "每個座艙背後都有一片滑動板。它朝走道打開，碗遞進去，再關上。顧客看到的是一碗麵，不是一隻手。"
+        }
       },
       "journey": {
-        "title": "一份訂單，從頭到尾",
-        "play": "播放點餐旅程",
+        "title": "一張訂單，兩條路徑",
+        "play": "播放訂單旅程",
         "pause": "暫停",
         "replay": "重播",
-        "note": "實際耗時 {real}，以 {anim} 秒呈現。",
+        "note": "實際經過 {real}，以 {anim} 秒呈現。廚房時間已壓縮。",
+        "after": "之後",
+        "actors": {
+          "guest": "顧客",
+          "kitchen": "廚房",
+          "both": "雙方"
+        },
         "steps": {
-          "order": "在點餐機下單。沒有排隊，沒有帶位。",
-          "assigned": "指派座艙 38。顧客沿通道走到座位。",
-          "seated": "入座，關上推拉門。整個空間安靜無聲。",
-          "fired": "廚房開火：湯頭加熱到溫度，金錢腱現切。",
-          "assembled": "在出餐口組裝成碗，加料以顏色標示。",
-          "corridor": "送餐員進入座艙後方的送餐走道。",
-          "delivered": "推拉門打開，麵碗送達，門再關上。全程無人交談。"
+          "paid": "在大廳點餐機付款。畫面上約四十秒，隊伍因此不停前進。沒有接待。",
+          "ticket": "廚房顯示器出現訂單：座艙 {pod}，走道 2，西側。",
+          "assigned": "分配到座艙 {pod}。畫面指出路線。",
+          "broth": "高湯站。一份高湯加熱到位。",
+          "walk": "穿過橫向通道，走上顧客通道 2。沿途每一扇門都是座艙，沒有一扇是廚房。",
+          "seated": "就座，面向通道。背後的送餐口關著。房間很安靜。",
+          "noodles": "麵條站。現點現煮，絕不久放。",
+          "plating": "擺盤。煙燻牛胸肉現切、牛肋肉塊現分，配料依訂單顏色標記。",
+          "corridor": "送餐員端起碗，轉進員工走道 2。這條走道上沒有任何顧客。",
+          "hatch": "送餐口 {pod}。打開，碗放入，關上。",
+          "delivered": "同一個座艙，相對的兩側。顧客沒看見走道，送餐員沒踏進通道。他們沒有共用任何一平方英尺。",
+          "finish": "用餐完畢。沿通道出去，經過商品店，走出出口。不用結帳，不用給小費。",
+          "cleared": "送餐員經走道把碗送回回收區。同一分鐘，不同領域。",
+          "exit": "走出出口。兩條路徑從未交會。",
+          "reset": "座艙 {pod} 清潔並重設。六分鐘後，下一個號碼已在畫面上。"
         }
+      },
+      "iso": {
+        "aria": "旗艦店等角立體模型。廚房橫跨後牆，三條員工走道向前延伸，兩側排滿座艙，中間是顧客通道，右側一列是洗手間、商品店與入口大廳。員工空間以赭紅標示，顧客空間以金色標示。幾何與藍圖相同；座艙細節請使用藍圖或表格。",
+        "controls": "拖曳可旋轉模型。使用按鈕選擇取景。",
+        "poster": "正在繪製 3D 檢視",
+        "reset": "重設檢視",
+        "presets": {
+          "label": "取景",
+          "overview": "全景",
+          "kitchen": "廚房",
+          "finger": "梳齒",
+          "lobby": "大廳"
+        },
+        "focus": {
+          "label": "顯示",
+          "all": "全部",
+          "guest": "顧客空間",
+          "staff": "員工空間"
+        }
+      },
+      "table": {
+        "show": "表格檢視",
+        "hide": "平面檢視",
+        "caption": "全部 {pods} 個座艙，依梳齒與側別排列。",
+        "pod": "座艙",
+        "finger": "梳齒",
+        "side": "側",
+        "position": "位置",
+        "aisle": "顧客通道",
+        "corridor": "員工走道",
+        "type": "類型"
+      },
+      "blueprint": {
+        "title": "格局的起點",
+        "lede": "定下規則的概念草圖：廚房橫跨後方，員工走道如梳齒，座艙排在兩側且送餐口朝內，顧客只走通道。上方的平面圖是按比例的版本，把大廳、洗手間與商品店移到右側一列以符合真實尺寸，並把每條走道的前端封閉。",
+        "alt": "梳狀格局概念草圖：廚房位於後方，三條員工走道兩側排滿座艙，中間是顧客通道，左前方是自助點餐機的入口大廳，中間是洗手間，右前方是商品店與出口。",
+        "caption": "概念草圖，非按比例。藍色箭頭是顧客從入口到出口的路徑；橘色箭頭是員工從廚房到送餐口再回廚房的循環。兩條路徑永不交會。",
+        "open": "放大檢視",
+        "close": "關閉",
+        "fullSize": "在新分頁開啟原尺寸"
       },
       "honesty": {
         "eyebrow": "坦白說",
-        "claim": "{sqft} 平方英尺內放進 {pods} 個座艙很緊湊：含動線後每個座艙約 {perPod} 平方英尺的用餐空間。",
-        "text": "每個座艙 {w} × {d} 英尺，約等於一個頭等艙座位。它之所以可行，是因為沒有人需要拉開椅子，沒有服務生端著托盤在桌間穿梭，所有送餐都從顧客看不見的走道完成。計畫裡最緊的數字，正是這個模式最清楚的證明。"
+        "claim": "{sqft} 平方英尺內放進 {pods} 個座艙很緊湊：算上背後的走道與前方的通道，每個座艙約 {perPod} 平方英尺。",
+        "text": "每個座艙 {w} × {d} 英尺，約等於一個頭等艙座位。背後是一條 {corridor} 英尺寬、與對排共用的員工走道；前方是一條 {aisle} 英尺寬、同樣共用的顧客通道。沒有人需要拉開椅子，沒有服務生端著托盤在桌間穿梭，唯一穿越兩側的，是一碗麵穿過一道牆。計畫裡最緊的數字，正是這個模式最清楚的證明。"
       }
     },
     "expansion": {
@@ -2396,7 +2528,8 @@
         "daytime": "日間人流",
         "auv": "目標單店年營收",
         "approx": "人口與人流為四捨五入的公開估計值。單店年營收由財務引擎計算。",
-        "hint": "點選地圖上的據點以查看市場資料。"
+        "hint": "點選地圖上的據點以查看市場資料。",
+        "beefSpec": "在地採購符合同等級規格的頂級牛肉，必要時取得清真認證。"
       },
       "print": {
         "location": "據點",
@@ -2435,7 +2568,7 @@
         },
         "las-vegas": {
           "name": "拉斯維加斯",
-          "notes": "24 小時營業時段、觀光客量、與猶他營運鄰近。"
+          "notes": "深夜時段、觀光客量、與猶他營運鄰近。"
         },
         "seattle": {
           "name": "西雅圖",
@@ -2447,7 +2580,7 @@
         },
         "tokyo": {
           "name": "東京",
-          "notes": "一蘭的故鄉。座艙概念在此是原生而非新奇。營運上全球最相容的市場。"
+          "notes": "一蘭的故鄉。座艙概念在此是本土而非新奇。採總代理而非合資：品牌不投入資本。"
         },
         "london": {
           "name": "倫敦",
@@ -2464,6 +2597,70 @@
         "melbourne": {
           "name": "墨爾本",
           "notes": "亞洲餐飲文化深厚，與北半球季節互補。"
+        },
+        "hong-kong": {
+          "name": "香港",
+          "notes": "密度高、垂直發展，對牛肉麵再熟悉不過。小坪數與高租金，正是座艙模式最占優勢的地方。"
+        },
+        "shanghai": {
+          "name": "上海",
+          "notes": "進入中國大陸的門戶，由掌握授權與供應鏈的總代理經營。先開一家，做對了大陸才擴大。"
+        },
+        "kuala-lumpur": {
+          "name": "吉隆坡",
+          "notes": "龐大的華人餐飲文化與英語營運環境。東南亞的區域訓練廚房。"
+        },
+        "bangkok": {
+          "name": "曼谷",
+          "notes": "世界級的麵食城市，商場主導的餐飲，以及早已熟悉這種形式的觀光客群。"
+        },
+        "toronto": {
+          "name": "多倫多",
+          "notes": "加拿大最大的亞洲餐飲市場，營運文化最接近美國。加拿大第一家店。"
+        },
+        "vancouver": {
+          "name": "溫哥華",
+          "notes": "加州以外北美最強的台灣與廣東社群。加拿大第二家店。"
+        },
+        "beijing": {
+          "name": "北京",
+          "notes": "上海總代理下的第二家大陸店，只在上海數字驗證後才開。"
+        },
+        "chengdu": {
+          "name": "成都",
+          "notes": "上海總代理下的第三家大陸店。在以辣為先、成本較低的內陸市場驗證概念。"
+        },
+        "jakarta": {
+          "name": "雅加達",
+          "notes": "東南亞最大的城市。以商場為據點、內用為主、以量取勝的定價。"
+        },
+        "manila": {
+          "name": "馬尼拉",
+          "notes": "英語通行、以商場為中心、人口年輕。座艙模式在這裡讀作高端。"
+        },
+        "dubai": {
+          "name": "杜拜",
+          "notes": "海灣地區的餐飲櫥窗：高消費、全球外派人口，以及積極招攬新形式的商場房東。"
+        },
+        "mexico-city": {
+          "name": "墨西哥城",
+          "notes": "拉丁美洲第一家店。一座對飲食極為認真的巨型城市，亞洲餐飲正在成長。"
+        },
+        "geneva": {
+          "name": "日內瓦",
+          "notes": "倫敦協議下的次級加盟。小而富裕、國際化；一家位置精準的店。"
+        },
+        "barcelona": {
+          "name": "巴塞隆納",
+          "notes": "倫敦協議下的次級加盟。觀光量大，年輕的餐飲文化接受新形式很快。"
+        },
+        "rome": {
+          "name": "羅馬",
+          "notes": "倫敦協議下的次級加盟。麵與湯的概念在這裡不需要翻譯。"
+        },
+        "sao-paulo": {
+          "name": "聖保羅",
+          "notes": "日本以外最大的日裔社群，也是南美最大的餐廳市場。"
         }
       }
     },
@@ -2473,7 +2670,7 @@
       "yearShort": "第{n}年",
       "portfolio": {
         "title": "五間直營門市，五年",
-        "subtitle": "以旗艦店開幕日起算的各年度直營營收與 EBITDA。資本支出於開幕當月入帳。",
+        "subtitle": "自旗艦店開幕日起算，各計畫年度的四牆直營營收與 EBITDA，未計總部費用與開幕前費用。資本支出於開幕當月入帳。",
         "yearCol": "年度",
         "locations": "年末營運門市",
         "revenue": "營收",
@@ -2503,24 +2700,55 @@
           "techHardware": "科技與點餐機硬體",
           "designArchPermits": "設計、建築、許可",
           "ffeSignage": "家具設備與招牌",
-          "preOpening": "開幕前費用"
-        }
+          "preOpening": "開幕前費用",
+          "launchMarketing": "開幕行銷"
+        },
+        "note": "開幕前費用在整間公司的表中於每次開幕前 {months} 個月內費用化；此處列出是因為它是募資必須支應的現金。"
       },
       "platform": {
         "title": "Oh! OS 作為第二事業體",
-        "subtitle": "第四年起的授權收入與加盟經濟。公司營收不含內部移轉與行銷基金；系統總銷售額包含加盟商的總營收，絕不標示為我們的收入。",
+        "subtitle": "第 4 年起的授權收入與加盟經濟，已扣除總代理保留的部分、開發與支援市場的成本，以及匯率折減。公司營收不含內部轉撥與行銷基金；系統總銷售額含加盟者總銷售額，永遠不標示為我們的營收。",
         "line": "項目",
-        "note": "直營門市內部移轉營收的 {pct}；加盟商每月支付 {license} 授權費。ARR 計入所有據點。",
+        "note": "直營門市內部轉撥營收的 {pct}；加盟者支付 {royalty} 權利金與每月 {license} 的授權費。總代理保留一半的權利金與費用，次級加盟只有四分之一到品牌，非美元權利金會有匯率折減。年化收入計入每一間據點。",
         "lines": {
           "systemLocations": "系統據點數",
           "licenseARR": "平台授權年化收入",
-          "royalties": "權利金（5%）",
-          "unitFees": "單店加盟金",
+          "grossRoyalties": "加盟者支付的權利金",
+          "royalties": "品牌實收權利金",
+          "unitFees": "實收單店加盟金",
           "territoryFees": "區域與開發費",
+          "franchiseSupportCost": "加盟開發、進入與支援成本",
+          "franchiseContribution": "加盟貢獻",
           "platformGrossProfit": "平台毛利",
           "companyRevenue": "公司營收",
           "systemWideSales": "系統總銷售額"
         }
+      },
+      "company": {
+        "title": "整間公司",
+        "subtitle": "直營門市、總部、加盟貢獻與 Oh! OS 毛利放在同一頁，接著是稅務分配、資本支出、兩輪募資與現金餘額。這是合夥人真正審核的那張表。",
+        "line": "項目",
+        "lines": {
+          "corporateRevenue": "直營營收",
+          "unitEbitda": "四牆 EBITDA",
+          "preOpeningExpense": "開幕前費用",
+          "corporateOverhead": "總部費用",
+          "franchiseContribution": "加盟貢獻",
+          "platformGrossProfit": "Oh! OS 毛利",
+          "consolidatedEbitda": "合併 EBITDA",
+          "taxDistributions": "稅務分配",
+          "maintenanceCapex": "維護性資本支出",
+          "growthCapex": "成長性資本支出",
+          "investments": "平台與總部投資",
+          "freeCashFlow": "自由現金流",
+          "equityRaised": "股權募資",
+          "cumulativeCash": "累計現金"
+        },
+        "note": "第五年總部費用 {overhead}。合併 EBITDA {consolidated}；經常性 EBITDA（收購方資本化的數字）{recurring}。",
+        "runwayTitle": "現金跑道",
+        "runwaySubtitle": "各年底的累計現金，由兩輪募資注入。綠線為自由現金流。",
+        "runwayNote": "最低點為第 {year} 年底的 {low}。募資規模使其維持在零以上。",
+        "runwayShort": "餘額在第 {year} 年底降至 {low}。此情境需要更多資本或更慢的展店節奏；基準情境不需要。"
       }
     },
     "funding": {
@@ -2558,13 +2786,13 @@
           "partnerPct": "合夥人持股",
           "target": "合夥人目標回報",
           "exit": "出場 EBITDA 倍數",
-          "distribution": "每年分配的 EBITDA 比例"
+          "distribution": "每年分配的稅後自由現金流比例"
         },
         "yearly": "逐年",
         "grid": "不同持股在 {target} 與 {exit} 下的比較",
         "gridNote": "紅色倍數表示該持股下未達合夥人目標；買回列即為補足差距的方式。",
         "results": {
-          "founderTotal": "創辦人五年合計",
+          "founderTotal": "創辦人至第 {n} 年的總計",
           "founderTotalSub": "分配 {dist} 加出場 {exit}",
           "partnerMultiple": "合夥人出場倍數",
           "partnerMultipleSub": "目標 {target}。合夥人合計 {total}",
@@ -2573,37 +2801,78 @@
           "buyoutFree": "分配即可達標；無需買回款。",
           "targetYear": "僅靠分配達標的年度",
           "targetYearSub": "不含任何出場或買回",
-          "beyond": "第 5 年之後"
+          "beyond": "第 {n} 年之後"
         },
         "cols": {
           "year": "年度",
-          "ebitda": "直營 EBITDA",
+          "ebitda": "四牆 EBITDA",
           "distributions": "分配",
           "founder": "創辦人",
           "partner": "合夥人",
           "multiple": "合夥人累計倍數",
-          "stake": "合夥人持股"
+          "stake": "合夥人持股",
+          "consolidated": "合併 EBITDA",
+          "distributable": "可分配現金"
         },
         "gridRows": {
           "founderTotal": "創辦人合計",
           "founderExit": "創辦人出場所得",
           "partnerMultiple": "合夥人倍數",
           "buyout": "達標時買回價"
-        }
+        },
+        "capBindsEyebrow": "上限生效",
+        "capClearEyebrow": "在上限之內",
+        "capBinds": "單看回報計算，{target} 的回報會給合夥人 {implied} 的股權。創辦人的上限是 {cap}，所以決定標題數字的是上限，不是計算。在 {cap} 的持股下，合夥人第 {year} 年出場的資金回報倍數為普通股 {multiple}，優先股架構下為 {preferred}，以出場 EBITDA {ebitda} 乘以 {exitMult}（{exitValue}）計算。",
+        "capClear": "回報計算推算為 {implied}，四捨五入為 {headline}，在創辦人 {cap} 的上限之內。在此持股下，合夥人第 {year} 年出場的倍數為普通股 {multiple}，優先股架構下為 {preferred}，以出場 EBITDA {ebitda} 乘以 {exitMult}（{exitValue}）計算。",
+        "capBindsAll": "在這個出場條件下，即使整間公司都給合夥人，也達不到 {target} 的回報：回報計算要求超過 100%。創辦人的上限是 {cap}，所以決定標題數字的是上限。在 {cap} 的持股下，合夥人第 {year} 年出場的資金回報倍數為普通股 {multiple}，優先股架構下為 {preferred}，以出場 EBITDA {ebitda} 乘以 {exitMult}（{exitValue}）計算。"
       },
       "exit": {
         "title": "餐飲倍數或平台倍數",
-        "subtitle": "同一家公司在出場年以兩種方式估值。平台收入與加盟費正是主張較高倍數的依據。",
+        "subtitle": "同一家公司在第 {year} 年出場時以兩種方式估值。經常性加盟利潤與平台收入正是主張較高倍數的依據。",
         "restaurant": "餐飲倍數，{mult} EBITDA",
         "hybrid": "混合平台倍數，{mult} EBITDA",
         "founderShare": "創辦人份額",
         "partnerMultiple": "合夥人倍數",
-        "note": "差距為 {delta}。每一間以他人資本開設的加盟門市，都把估值往右邊的數字推。"
+        "eligible": "經常性加盟利潤占出場 EBITDA 的 {share}，高於混合倍數所需的 {min}。差距為 {delta}；每一間以他人資本開設的加盟門市，都把估值往右邊的數字推。",
+        "notEligible": "第 {year} 年經常性加盟利潤占出場 EBITDA 的 {share}，低於混合倍數所需的 {min}，因此兩張卡片都採用餐飲倍數。第 7 年的情境才是加盟時程達標的時候。",
+        "eligibleOver": "經常性加盟利潤占出場 EBITDA 的 {share}，超過全部，因為直營門市扣除總部費用後為負。這高於混合倍數所需的 {min}。差距為 {delta}；每一間以他人資本開設的加盟門市，都把估值往右邊的數字推。"
       },
       "lender": {
         "eyebrow": "若有貸款機構加入",
         "claim": "本計畫不帶負債，但有能力承擔。",
-        "text": "以十年期 {debt} 的 SBA 7(a) 參考貸款計算，基準情境的償債覆蓋率為 {dscr}。貸款機構要求 1.25 倍。保守情境同樣過關。"
+        "text": "以十年期 {debt} 的 SBA 7(a) 參考貸款計算，基準情境的償債覆蓋率為 {dscr}。貸款機構要求 1.25 倍。保守情境為 {conservative}，這正是本計畫不舉債的原因。"
+      },
+      "exitYear": {
+        "label": "出場年份",
+        "hybridToggle": "當經常性加盟利潤達出場 EBITDA 的 {min} 以上時，套用 {mult} 混合倍數"
+      },
+      "preferred": {
+        "title": "優先股架構",
+        "subtitle": "{pref} 優先回報加上 {liq} 清算優先權，優先於普通股，合夥人的普通股持股上限為 {cap}。同樣的現金流、同樣的第 {year} 年出場：合夥人先拿回，普通股持股由剩餘部分推算。",
+        "rows": {
+          "accruedPreference": "至出場累計的優先回報",
+          "preferencePaidFromDistributions": "由每年分配支付",
+          "preferencePaidAtExit": "出場時結清的未付優先回報",
+          "liquidationPaid": "出場時返還的清算優先權",
+          "residualExitValue": "留給普通股的出場價值",
+          "commonDistributions": "留給普通股的分配"
+        },
+        "cards": {
+          "partnerCommonPct": "合夥人普通股持股",
+          "partnerMultiple": "合夥人倍數，優先股",
+          "founderTotal": "創辦人總計，優先股",
+          "versusCommon": "合夥人倍數，純普通股"
+        },
+        "commonCapped": "剩餘部分推算為 {implied}；上限將其封頂。",
+        "commonClear": "由剩餘部分推算：四捨五入前為 {implied}。",
+        "partnerMultipleSub": "優先回報加上普通股分得的剩餘：{total}",
+        "founderTotalSub": "剩餘部分與普通股分配的 {pct}",
+        "versusCommonSub": "同一位合夥人在 {headline} 標題持股、無優先權的情況，供比較",
+        "note": "優先股架構是我們向成長型股權合夥人提出的方案：在合併數字薄弱的年份保護其資本，並讓創辦人保有普通股的控制權。"
+      },
+      "print": {
+        "y5": "第 5 年出場，{mult} 餐飲倍數",
+        "y7": "第 7 年出場，達標時採 {mult} 混合倍數"
       }
     },
     "sensitivity": {
@@ -2625,49 +2894,162 @@
       },
       "mc": {
         "title": "蒙地卡羅模擬",
-        "subtitle": "對五個變數（使用率、每碗價格、食材成本、租金、廚房人力）以三角分佈進行 {runs} 次模擬，於背景執行。",
+        "subtitle": "以三角分布對六個變數（使用率、碗價、食材成本、租金、廚房人力、會員方案）進行 {runs} 次模擬，在背景執行緒中運算。",
         "p10": "第 10 百分位",
         "p50": "中位數",
         "p90": "第 90 百分位",
-        "belowTarget": "低於 25% 目標",
+        "belowTarget": "低於 {target} 目標",
         "belowTargetSub": "EBITDA 低於 {value} 的模擬次數比例",
         "runsLabel": "次",
         "running": "模擬執行中",
         "unavailable": "模擬需要支援 Web Worker 的瀏覽器。",
-        "note": "穩定狀態的單店 EBITDA，即爬坡結束後第三年的樣貌。"
+        "note": "穩定狀態下的單店 EBITDA，也就是爬坡完成後第三年的樣子。標線為 {target} 的公開目標；{stretch} 為成熟期的進階目標。"
       },
       "downsides": {
         "title": "具名的下行風險，以及我們的對策",
-        "subtitle": "每一項都是引擎中的變數調整，而非一段文字。影響以穩定狀態 EBITDA 計。",
+        "subtitle": "每一項都是引擎裡的變數調整，不是一段文字。除非卡片另有說明，顯示的是穩定狀態的 EBITDA 影響：兩項以第一年計，一項以回收期計，一項以第五年合併結果計。",
         "impact": "調整後利潤率：{margin}。第一年 EBITDA 影響 {y1}。",
         "mitigation": "對策。",
         "items": {
           "slowRamp": {
             "title": "爬坡緩慢",
-            "mitigation": "開幕前的點餐機體驗與在科技走廊預先發放的推薦點數；第一年弱 15% 仍在第一輪營運資金儲備範圍內。"
+            "mitigation": "開幕前以點餐機示範與推薦點數在商圈預熱，經費來自 {launch} 的開幕行銷預算；第一年弱 15% 仍在第一輪的營運資金準備金之內。"
+          },
+          "openingDelay": {
+            "title": "開幕延後一季",
+            "mitigation": "同一條曲線前面多了三個空白月，而開幕前薪資已經在跑。租約載明取得使用執照前免租，旗艦店團隊依驗收日期而非目標日期招募。"
           },
           "rentInflation": {
             "title": "租金上漲，每平方英尺 +15 美元",
-            "mitigation": "十年租約附兩次續約選擇權，每次談判都以裝修補助為籌碼，3,500 平方英尺的面積讓租金即使上漲仍低於營收 5%。"
+            "mitigation": "十年租約附兩次續約選擇權，每次談判都把房東裝修補助當作籌碼，3,500 平方英尺的坪數讓租金即使上漲也只占營收一小部分。"
           },
           "beefSpike": {
             "title": "牛肉價格飆升，食材成本 +5 個百分點",
-            "mitigation": "金錢腱是牛身上最便宜的高級部位；透過中央廚房簽訂遠期合約，菜單定價本身具彈性（首份免費、加料計價）。"
+            "mitigation": "菜單有美國和牛與 USDA Prime 兩個等級，其中一個價格波動時廚房有調整空間；透過中央廚房簽訂遠期合約；贈品是以成本計價的等級福利而非全面免費，因此價格波動可以轉嫁而不動到方案本身。"
+          },
+          "priceResistance": {
+            "title": "價格阻力，降價 2 美元且來客少 10%",
+            "mitigation": "菜單調價是基準情境，保守情境維持今日價格，所以這正是兩者之間的差距。免小費、一價全包是我們的論點；點餐機讓我們可以按時段測試價格而不用重印任何東西。"
           },
           "copycat": {
-            "title": "資本雄厚的模仿者，使用率 −20%",
-            "mitigation": "Oh! OS 是護城河：座艙調度、點餐機、廚房顯示與送餐流程都是我們的。模仿者租得到空間，租不到作業系統。"
+            "title": "資金雄厚的模仿者，使用率 −20%",
+            "mitigation": "Oh! OS 是護城河：座艙調度、點餐機、廚房顯示與送餐流程都是我們的。模仿者租得到房間，拿不到作業系統。"
+          },
+          "memberProgramOverrun": {
+            "title": "會員方案超支，+1.5 個百分點與贈品 +20,000 美元",
+            "mitigation": "方案預算為營收的 {program} 加上固定 {swag}，每位會員每月最多十筆付費推薦、九十天到期、福利以成本計價。超支在管理後台每週可見，每項福利都有關閉開關。"
+          },
+          "commissaryFailure": {
+            "title": "中央廚房失靈：湯頭走味、食材成本 +2 個百分點、來客少 10%",
+            "mitigation": "每一批湯都對照配方記錄，偏移在客人嚐到之前就會在數據裡出現；每間門市保留一座收尾鍋與一週的冷凍湯底；聖喬治店本來就在同一套配方管控下自行熬煮。"
           },
           "podReliability": {
             "title": "座艙硬體可靠度",
-            "mitigation": "此處模擬五個座艙離線與較高維護費。中央廚房備有備品、製造合約含服務等級協議，可合併雙人艙在隔板故障時維持座位數。"
+            "mitigation": "此處模擬五個座艙停用與較高的維修費。中央廚房備有備品、製造合約載明服務水準協議，可合併的雙人艙在隔板故障時仍能保留座位數。"
+          },
+          "accessibilityRedesign": {
+            "title": "無障礙重新設計，少三個座艙",
+            "mitigation": "圖面上已有四個無障礙座艙與較寬的走道；此情境假設圖審再拿走三個座位並增加裝修。梳狀排列會先從商品區那面牆補回座位，才會動到廚房。"
           },
           "laborShock": {
-            "title": "猶他勞動力或許可衝擊",
-            "mitigation": "模擬時薪 +3 美元與多一位全職人力。沒有外場意味著曝險是九個人，不是三十個。許可流程走已在時程中規劃的猶他郡衛生局路徑。"
+            "title": "猶他人力或許可衝擊",
+            "mitigation": "模擬時薪 +3 美元與多一位全職人員。沒有外場，曝險就是 {hours} 小時營業日裡的 {people} 個人，而不是一整個服務生團隊。許可依路線圖中已規劃好的猶他郡衛生局流程辦理。"
+          },
+          "capexOverrun": {
+            "title": "座艙、裝修與廚房造價超支 15%",
+            "mitigation": "原型批次之後座艙以固定價格製造，房東裝修補助作為談判籌碼，第一輪營運資金裡預留應急金。以回收期呈現，因為超支真正的代價就是這個。"
+          },
+          "franchiseAttrition": {
+            "title": "第一階段某市場停滯，權利金收取率 85%",
+            "mitigation": "西雅圖在第一家店之後停止展店，全系統權利金以 85% 收取。區域開發合約載明開店時程與補正期，權利金依 Oh! OS 回報的總銷售額以 ACH 自動扣款，錯過時程則品牌收回區域。"
           }
         },
-        "impactY1": "顯示第一年 EBITDA 影響；爬坡完成後穩定狀態不變。調整後利潤率：{margin}。"
+        "impactY1": "顯示第一年 EBITDA 影響；爬坡完成後穩定狀態不變。調整後利潤率：{margin}。",
+        "paybackDelta": "回收期 +{years} 年",
+        "impactPayback": "旗艦店自開幕起的回收期延長此數。穩定狀態 EBITDA 影響 {steady}。",
+        "impactCompany": "第五年合併 EBITDA 影響，已計入總部費用、加盟支援與平台利潤。"
+      },
+      "register": {
+        "title": "揭露但未建模",
+        "subtitle": "盡職調查會問到、但沒有任何變數能捕捉的風險。每一項都說明我們的因應方式；沒有任何一項計入基準情境。",
+        "items": {
+          "fireCodeAda": {
+            "title": "座艙的消防法規與 ADA",
+            "body": "七十五個封閉座位、經走道疏散、四個無障礙座艙已畫入圖面；最終數量由消防官與圖審決定。上方的無障礙情境已為少三個座位定價。"
+          },
+          "foodCode": {
+            "title": "沒有外場人員的猶他食品法規",
+            "body": "經送餐口且無服務生的服務方式，依路線圖中猶他郡衛生局的流程審查；每班都有持證經理，每位送餐員都持有食品從業人員許可。"
+          },
+          "techOutage": {
+            "title": "點餐機、座艙與廚房顯示中斷",
+            "body": "Oh! OS 跑在託管的基礎設施上，旗艦店會演練紙本備援；行動網路備援承接付款與廚房顯示。尖峰日數小時的中斷是損失一天，不是一個月。"
+          },
+          "beefSupply": {
+            "title": "牛肉供應集中",
+            "body": "美國和牛來自少數牧場，USDA Prime 牛胸肉來自少數幾家加工廠。每個等級兩家供應商、經中央廚房簽訂遠期合約；供應商報價是模型誠信頁的待辦事項。"
+          },
+          "reviewBacklash": {
+            "title": "負評反彈與開幕禮賓",
+            "body": "沒有人迎賓的空間在最初的評論裡可能顯得冷淡。旗艦店前九十天由開幕預算配置一位現場禮賓，每一則評論都具名回覆。"
+          },
+          "cannibalization": {
+            "title": "猶他門市之間的互相分食",
+            "body": "Lehi、South Jordan 與 Provo 彼此車程在四十分鐘內。商圈以十五分鐘車程劃定；引擎並未扣除任何重疊，猶他的五間門市是以獨立單位建模。"
+          },
+          "keyPerson": {
+            "title": "關鍵人物",
+            "body": "今天創辦人同時是概念、平台與營運者。關鍵人物保險已列入總部費用，營運總監在簽第二份租約前到職，第一年把每個流程都寫下來。"
+          },
+          "ip": {
+            "title": "智慧財產與 Oh! OS 的讓與",
+            "body": "平台、商標與配方在營運協議中讓與有限責任公司；該協議尚待定案，列為待辦事項。加盟者取得軟體授權，永遠不擁有它。"
+          },
+          "dataPrivacy": {
+            "title": "資料隱私",
+            "body": "會員資料目前受猶他消費者隱私法規範；倫敦與巴黎帶來 GDPR，中國大陸帶來 PIPL 與在地託管。每份國際協議都有自己的資料附錄，成本已列在該架構的進入費用中。"
+          },
+          "pci": {
+            "title": "PCI 範圍",
+            "body": "卡片資料從不經過 Oh! OS：點餐機使用具點對點加密的 Stripe Terminal，線上使用 Stripe 託管欄位。範圍是這種規模商家提交的 SAQ，而非完整評鑑。"
+          },
+          "fx": {
+            "title": "匯率",
+            "body": "國際權利金以當地貨幣賺取，引擎對換匯、扣繳與時間差採固定折減。匯率為示意且有標註日期；沒有任何避險。"
+          },
+          "exitMultiple": {
+            "title": "出場倍數",
+            "body": "餐飲倍數落在小型多店營運者的區間內，混合倍數只有在經常性加盟利潤占 EBITDA 一定比例後才適用。兩者都不是承諾；募資頁讓讀者自行設定。"
+          },
+          "sundayClosure": {
+            "title": "週日公休",
+            "body": "這是明示的價值觀，不是成本項目。引擎以實際營業天數運算，每個日均數字都按此換算；放棄的營收在變更紀錄中可見。"
+          },
+          "deliveryExcluded": {
+            "title": "不含外送",
+            "body": "基準情境沒有第三方外送：這碗麵是為座艙設計的，外送的利潤撐不過平台抽成。它是上檔空間，不是假設。"
+          },
+          "seasonality": {
+            "title": "季節性與時段",
+            "body": "引擎全年採用固定使用率。猶他一月的低谷與夏季觀光的拉升在年度數字中互相抵銷；郊區門市午餐時段疲弱是最大的單一在地風險。"
+          },
+          "giftCardLiability": {
+            "title": "禮品卡與點數負債",
+            "body": "禮品卡、會員點數與推薦點數在兌換前都是負債。引擎不把未兌換餘額算作營收；未兌換餘額留在資產負債表上，並在法律允許的範圍內依九十天規則到期。"
+          },
+          "cateringExcluded": {
+            "title": "基準情境不含外燴",
+            "body": "外燴頻道已於 2026 年 9 月自客戶網站撤下，僅保留為管理工具。數字中不含任何外燴；若回歸，將以獨立項目呈現。"
+          },
+          "investorReporting": {
+            "title": "投資人報告節奏",
+            "body": "每月十日前由 Oh! OS 產出月報，每季提供含財務頁合併表的季報，第二年起提供經審計的年度報表。總部費用已包含審計。"
+          },
+          "relatedParty": {
+            "title": "關係人：基金會",
+            "body": "Oh! 將固定比例的營收捐給 ONE RED STEP AT A TIME。其創辦人是業主最好的朋友，業主則擔任其志工技術長，不領取任何形式的報酬。Oh! 的資金不會透過基金會流向業主，捐贈比例由投資人可審閱的書面協議訂定。"
+          }
+        }
       }
     },
     "unitEconomics": {
@@ -2699,7 +3081,10 @@
         "labor": "人力與附加成本",
         "occupancy": "租金（含 NNN）",
         "otherOpex": "其他營運費用",
-        "ebitda": "EBITDA"
+        "ebitda": "EBITDA",
+        "memberProgram": "會員方案",
+        "discountsComps": "折扣與招待",
+        "communityGiving": "社區捐贈"
       },
       "capexTitle": "開店資本",
       "capexTotal": "淨資本支出",
@@ -2711,13 +3096,25 @@
         "techHardware": "科技與點餐機硬體",
         "designArchPermits": "設計、建築、許可",
         "ffeSignage": "家具設備與招牌",
-        "preOpening": "開幕前費用"
+        "preOpening": "開幕前費用",
+        "launchMarketing": "開幕行銷"
       },
       "capexFlagshipNote": "旗艦店定價：含原型設計與首批製造。",
-      "capexSubsequentNote": "第一間之後的門市在座艙、裝修、設計與開幕前費用上節省 {savings}。"
+      "capexSubsequentNote": "第一間之後的門市在座艙、裝修、設計與開幕前費用上節省 {savings}。",
+      "product": {
+        "title": "產品，以及能帶回家的東西",
+        "caption": "這碗麵、印有標記的空碗、筷子與湯匙，離場時都買得到。模型假設 {pct} 的顧客會消費，平均 {spend}。",
+        "alts": {
+          "bowlCubed": "煙燻牛肋肉塊配青江菜與柳橙的湯碗",
+          "bowlCubed2": "煙燻牛肋肉塊湯碗，旁邊是蔥花與香菜",
+          "bowlEmpty": "碗底壓印標記的陶碗",
+          "chopsticks": "亞麻布上的深色木筷",
+          "bowlWood": "木桌上的陶碗、筷子與湯匙"
+        }
+      }
     },
     "experience": {
-      "intro": "一位顧客，一碗麵。不排隊、無帶位、無服務生、不結帳、不給小費。以下是完整的一次到訪，依序呈現。",
+      "intro": "一行人每人一個座艙，每個座艙一碗麵。無帶位、無服務生、不結帳、不給小費。以下是完整的一次到訪，依序呈現。",
       "photoLabel": "照片待補",
       "steps": {
         "arrive": {
@@ -2727,12 +3124,12 @@
         },
         "order": {
           "title": "大約四十秒完成點餐。",
-          "body": "菜單就是牛肉麵。您選擇湯頭濃度、麵條、加料，以及今晚是否要來一份金錢腱。每項加料的第一份免費，額外的計價。若您來過，點餐機已經認得您。",
-          "photo": "手在點餐機上，加料格子清楚可見，金錢腱被強調"
+          "body": "菜單就是牛肉麵。您選擇湯頭濃度、麵條、加料，以及您的牛肉：煙燻牛胸肉切片或煙燻牛肋肉塊，美國和牛或 USDA Prime 等級。加料計價；會員每一碗都賺取現金回饋與等級福利。若您來過，點餐機已經認得您。",
+          "photo": "手在點餐機上，加料格子清楚可見，牛肉選項被強調"
         },
         "walk": {
           "title": "一個座艙號碼，您自己走過去。",
-          "body": "座艙 38。您沿著通道走過一排關上的推拉門，聽見其他人各自用餐卻同在一室的低語。沒有人端著托盤，沒有人等著帶位。",
+          "body": "座艙 38。您沿著通道走過一排關上的推拉門，聽見滿室低語，每組客人各有座艙、比鄰而坐。沒有人端著托盤，沒有人等著帶位。",
           "photo": "從顧客通道望向一排編號座艙"
         },
         "settle": {
@@ -2742,17 +3139,17 @@
         },
         "panel": {
           "title": "推拉門滑開。",
-          "body": "從付款那一刻起七分鐘，一碗麵穿牆而來。先是湯，再是現切的金錢腱，然後門滑上。您始終沒看見一隻手。",
+          "body": "從付款那一刻起七分鐘，一碗麵穿牆而來。先是湯，再是您選的煙燻牛胸肉或牛肋肉，然後門滑上。您始終沒看見一隻手。",
           "photo": "推拉門半開，蒸氣，麵碗送達"
         },
         "taste": {
           "title": "第一口。",
-          "body": "兩階段湯頭：長時間熬煮的骨湯，再以風味收尾。金錢腱以低溫燉煮，在湯中冷卻一夜後再切片。這是高級的融合詮釋，不假裝是阿嬤的食譜。",
-          "photo": "麵碗特寫：扇形排列的金錢腱片、湯面、麵條"
+          "body": "兩階段湯頭：長時間熬煮的骨湯，再以風味收尾。頂級美國牛肉，只用美國和牛或 Prime 等級，低溫慢燻，再切成牛胸肉片或分成牛肋肉塊。這是高級的融合詮釋，不假裝是阿嬤的食譜。",
+          "photo": "麵碗特寫：扇形排列的煙燻牛胸肉片、湯面、麵條"
         },
         "leave": {
           "title": "吃完，您就離開。",
-          "body": "不用結帳。不用給小費，因為做這碗麵的人領的是薪水。若您帶了朋友，推薦點數會在每月一日與十六日入帳。座艙在您身後六分鐘內重置完成。",
+          "body": "不用結帳。不用給小費，因為做這碗麵的人領的是薪水。若您帶了朋友，推薦點數在對方首筆訂單完成的當下入帳。座艙在您身後六分鐘內重置完成。",
           "photo": "顧客從入口離開，身後座艙門正在關上"
         }
       },
@@ -2761,7 +3158,8 @@
         "title": "點餐機是真的。點些東西看看。",
         "body": "這是 ohbeef.com 上實際運作的點餐流程，也是管理整個空間的同一套軟體。點一碗麵試試；在此框內不會產生任何費用。",
         "open": "在新分頁開啟點餐機"
-      }
+      },
+      "photoNote": "概念示意圖"
     },
     "market": {
       "tam": {
@@ -2822,7 +3220,7 @@
           },
           "laborCost": {
             "title": "人力成本壓力正把每位業者推向自動化",
-            "body": "我們不是在用餐區加了一台點餐機。我們拿掉了用餐區。人力佔營收 13.9% 就是結果，也是每位餐飲業者第一個會問的數字。"
+            "body": "我們不是把點餐機裝進餐廳，而是把用餐區拿掉了。結果是人力占營收 {labor}，{people} 個人經營 {pods} 個座位，這也是每位餐飲業者第一個會問的數字。"
           },
           "utahGrowth": {
             "title": "猶他是貸款機構早已熟知的成長故事",
@@ -2830,7 +3228,12 @@
           }
         }
       },
-      "references": "參考概念：一蘭證明了座艙模式可以規模化。Crumbl 證明了猶他發源的概念能快速走向全國，而每一位本地貸款機構與投資人都知道這個故事。"
+      "references": "參考概念：一蘭證明了座艙模式可以規模化。Crumbl 證明了猶他發源的概念能快速走向全國，而每一位本地貸款機構與投資人都知道這個故事。",
+      "product": {
+        "title": "產品",
+        "alt": "煙燻牛胸肉切片鋪在高湯與麵條上的特寫。",
+        "caption": "頂級美國牛肉，煙燻，配兩段式高湯。市場的問題不是大家想不想吃這碗麵，而是有多少商圈撐得起七十五個座艙。"
+      }
     },
     "operations": {
       "platform": {
@@ -2894,24 +3297,27 @@
         "label": "截圖待補",
         "needs": "營運中的廚房顯示：即時票單列，加料以顏色標示",
         "title": "廚房看得見整個空間",
-        "body": "顧客付款的那一秒票單就到，附座艙號碼與以顏色標示的每項加料，送餐員從不需要讀標籤。顯示器也呈現每個座艙所處的階段，讓廚房依現場節奏而非依帶位台調整步調。"
+        "body": "顧客付款的那一秒票單就到，附座艙號碼與以顏色標示的每項加料，送餐員從不需要讀標籤。顯示器也呈現每個座艙所處的階段，讓廚房依現場節奏而非依帶位台調整步調。",
+        "caption": "營業時段之間的廚房顯示器。下一步是擷取帶有顏色標記配料的即時訂單畫面。"
       },
       "labor": {
         "title": "這裡到底有哪些人",
-        "subtitle": "{kitchen} 位廚房人員與 {mgmt} 位管理人員，沒有外場。時薪 {wage}，管理職年薪 {salary}，附加成本 {burden}%。廚房薪資 {kitchenAnnual}，管理 {mgmtAnnual}，未含附加成本。",
+        "subtitle": "每日排班 {heads} 人，每天 {hours} 個付薪工時，全年 {days} 個營業日，另加 {coverage}% 的休假與訓練覆蓋係數：{kitchen} 位廚房全職人力加 {mgmt} 位月薪管理人員，沒有外場。時薪 {wage}，管理職年薪 {salary}，附加成本 {burden}%。廚房薪資 {kitchenAnnual}，管理 {mgmtAnnual}，未含附加成本。",
         "role": "職位",
         "count": "全職人數",
         "salaried": "月薪",
-        "note": "一個營業日的排班覆蓋（24 小時制）。湯頭六點開始；最後一位送餐員在最後一道門關上後離開。",
+        "note": "一個營業日的排班覆蓋（24 小時制）。湯頭六點開始；收班在最後一道門關上後離開。交叉訓練每天省下 {crossTraining} 小時，已自 {hours} 小時中扣除。",
         "roles": {
-          "brothLead": "湯頭與燉煮主廚",
-          "slicer": "切肉師",
-          "noodle": "麵條站",
+          "broth": "湯頭與肉品主廚",
+          "noodle": "麵條與組裝主廚",
           "assembly": "組裝",
-          "runner": "走道送餐員",
+          "runner": "座艙送餐員",
+          "peak": "尖峰送餐員",
+          "close": "收班與洗滌",
           "gm": "店經理",
           "agm": "副店經理"
-        }
+        },
+        "hoursEach": "每人工時"
       },
       "commissary": {
         "eyebrow": "正面迎擊最大的營運風險",
@@ -2928,7 +3334,7 @@
           },
           "haccp": {
             "title": "HACCP 計畫",
-            "body": "湯頭（烹煮、冷卻、保溫）與金錢腱（燉煮、冷藏、切片）的關鍵管制點。"
+            "body": "湯頭（烹煮、冷卻、保溫）與牛肉（煙燻、冷藏、切片）的關鍵管制點。"
           },
           "manager": {
             "title": "認證食安經理",
@@ -2947,6 +3353,45 @@
             "body": "第一碗麵之前的最後一個簽名。"
           }
         }
+      },
+      "program": {
+        "eyebrow": "會員",
+        "title": "會員：有預算的方案",
+        "body": "現金回饋、推薦點數、挑戰、等級福利與周邊商品在引擎裡是同一條成本線：營收的 {pct} 加上每年固定 {swag}，以基準營收計為 {budget}（合計 {allIn}）。每項福利都是以成本計價、有效期限的品項，因此方案可以慷慨而不失控。",
+        "items": {
+          "cashback": {
+            "title": "依等級的現金回饋",
+            "body": "Chopstick、Noodle Master 與 Beef Boss 分別為 1%、2% 與 3%，升級同時需要訂單數與推薦數。"
+          },
+          "referral": {
+            "title": "推薦：即時且有上限",
+            "body": "朋友首筆訂單完成的當下推薦人獲得 5 美元，新會員在該筆訂單獲得 5 美元，每位會員每三十天最多十筆付費推薦，點數九十天到期。"
+          },
+          "challenges": {
+            "title": "有預算的挑戰",
+            "body": "連續消費與首次成就的加碼點數，在方案線內以每店每年設上限。"
+          },
+          "perks": {
+            "title": "以成本計價的福利",
+            "body": "升級送一碗、Beef Boss 每季一份免費頂級加料、新品搶先體驗。每項都是有期限、以成本計的菜單品項，絕不是常態折扣。"
+          },
+          "swag": {
+            "title": "周邊、禮物與名人牆",
+            "body": "{swag} 的固定預算涵蓋會員價的周邊商品、年度 VIP 禮物、會員活動與 Oh! 名人牆。"
+          },
+          "comps": {
+            "title": "折扣與招待，另計",
+            "body": "重做、善意補償與經理招待是獨立的一條線，占營收 {comps}，方案預算藏不住它們。"
+          }
+        },
+        "launch": "每次開幕的資本支出裡另有 {launch} 的開幕行銷預算，{marketing} 的行銷費用中有一個百分點匯入由總部統籌的品牌基金，加盟者也繳入同一個基金。"
+      },
+      "giving": {
+        "eyebrow": "捐贈",
+        "title": "有預算的承諾",
+        "body": "每家直營店將營收的 {pct} 捐給心理健康基金會 {name}。在基準情境下，每家店每年 {budget}，約每月 {monthly}，列為獨立的營業費用項目，讓這項承諾永遠有預算支撐。",
+        "cadence": "計畫依實際銷售逐月編列預算。付款頻率與報告方式將在與基金會的書面協議中訂定。",
+        "link": "前往基金會網站"
       }
     },
     "team": {
@@ -2962,7 +3407,8 @@
           "markets": "曾居住於台灣、俄羅斯與日本",
           "languages": "中英雙語"
         },
-        "thesis": "國際擴張的論點對這位創辦人而言不是願景，而是履歷。"
+        "thesis": "國際擴張的論點對這位創辦人而言不是願景，而是履歷。",
+        "alt": "創辦人暨經營者 Dano Didericksen"
       },
       "partner": {
         "role": "財務合夥人，{pct}",
@@ -2976,8 +3422,8 @@
         "effective": "生效日",
         "office": "主要辦公室",
         "structure": "架構",
-        "structureValue": "成員管理的有限責任公司，兩位成員",
-        "note": "EIN 已備案。個人財務資料依貸款機構要求直接提供，不會出現在本計畫中。"
+        "structureValue": "成員管理的有限責任公司；營運協議待定案",
+        "note": "EIN 已備案。營運協議尚待定案，且必須在第一輪募資完成前修訂以納入合夥人。個人財務資料依貸款機構要求直接提供，不會出現在本計畫中。"
       },
       "advisory": {
         "title": "正在補齊的顧問席位",
@@ -3004,7 +3450,7 @@
           "preOpening": {
             "when": "T0 前 3 個月",
             "title": "旗艦店團隊",
-            "body": "店經理、副店經理、湯頭主廚、切肉師、麵條站、兩位組裝、兩位送餐員。九個人。"
+            "body": "店經理、副店經理、湯頭與肉品主廚、麵條與組裝主廚、兩位組裝、兩位座艙送餐員、兩位尖峰送餐員與一位收班：排班 {people} 人，含覆蓋係數為 {fte} 位全職人力。"
           },
           "flagship": {
             "when": "T0 至 T0 + 9",
@@ -3019,7 +3465,7 @@
           "fiveUnits": {
             "when": "第二至第五間門市",
             "title": "各店團隊與中央廚房主管",
-            "body": "每店九人，提前六十天招募，在旗艦店受訓。第二間門市開幕時增設中央廚房主管。"
+            "body": "每間門市 {people} 人，提前六十天招募，在旗艦店受訓。第二間門市開幕時增設中央廚房主管。"
           },
           "franchise": {
             "when": "第三年",
@@ -3027,6 +3473,17 @@
             "body": "加盟總監、訓練經理，以及上述顧問席位。這是用他人資本開店的團隊。"
           }
         }
+      },
+      "community": {
+        "eyebrow": "社區夥伴",
+        "body": "Oh! 將每家直營店營收的 {pct} 捐給這個猶他州的心理健康非營利組織，並在每次用餐時邀請客人一起支持。",
+        "disclosureTitle": "關係人揭露",
+        "disclosure": {
+          "friend": "基金會的創辦人是業主最好的朋友，也是這項公益的夥伴。",
+          "cto": "業主擔任基金會的志工技術長，不從基金會領取任何形式的報酬。",
+          "agreement": "捐贈條件將以書面協議訂定，Oh! 的資金不會透過基金會流向業主。"
+        },
+        "link": "前往基金會"
       }
     },
     "roadmap": {
@@ -3073,10 +3530,617 @@
         "opening-open": "開幕：{location}",
         "ohOsV2": "Oh! OS v2：多店、中央廚房、分析",
         "franchiseCounsel": "聘任加盟法律顧問",
-        "fdd": "FDD 與總代理加盟協議",
+        "fdd": "FDD 起草",
         "franchiseLicensing": "Oh! OS 加盟授權",
         "franchiseTeam": "加盟發展團隊",
-        "firstFranchise": "首批加盟門市開幕"
+        "firstFranchise": "首批加盟門市開幕",
+        "memberPerks": "會員福利建置：首單點數、推薦上限、90 天到期",
+        "fddEffective": "FDD 生效，登記州完成申報",
+        "firstAreaDevelopers": "首批區域開發商簽約"
+      }
+    },
+    "photos": {
+      "concept": "概念示意圖",
+      "conceptLong": "旗艦店建成前的概念示意圖。隨著工程推進，將以實景照片取代。"
+    },
+    "integrity": {
+      "cert": {
+        "eyebrow": "認證",
+        "title": "模型版本 {version}",
+        "built": "建置",
+        "builtDev": "開發版建置",
+        "testsRun": "測試最後執行",
+        "tests": "測試",
+        "testsValue": "{files} 個測試套件共 {tests} 項測試，{failed} 項失敗",
+        "coverage": "覆蓋率",
+        "coverageValue": "行 {lines}%，分支 {branches}%",
+        "invariants": "即時檢查",
+        "invariantsValue": "執行 {total} 項，{failing} 項失敗",
+        "reviewedBy": "審閱者",
+        "noReview": "尚未登錄外部審閱",
+        "certifies": {
+          "title": "本頁證明什麼",
+          "items": {
+            "0": "每一頁的每個數字都由 {rows} 項登錄假設重新計算；文案中沒有任何手動輸入的數字。",
+            "1": "每項假設都有來源、日期與信心程度，登錄表會顯示哪些變更過以及原因。",
+            "2": "每次瀏覽都會對即時預設值執行 {checks} 項恆等式檢查，引擎的 {tests} 項測試在完整覆蓋率下全數通過。",
+            "3": "本頁的重點數字等於此版本記錄的快照；若有偏離，測試會失敗。"
+          }
+        },
+        "excludes": {
+          "title": "本頁不證明什麼",
+          "items": {
+            "0": "尚無會計師、貸款方或律師審核此模型；下方的簽核區在有人審核前保持空白。",
+            "1": "基準為公開區間而非付費資料，並在與貸款方會面前以人工更新。",
+            "2": "仍有 {open} 項輸入等待外部確認：供應商報價、租約、許可、保險、加盟揭露文件。",
+            "3": "模型一致不等於預測準確。「敏感度分析」章節顯示基準情境可能偏移多少。"
+          }
+        }
+      },
+      "register": {
+        "title": "假設登錄表",
+        "subtitle": "{rows} 個數值，每一個都標明來源、設定時間與信心程度。可搜尋、篩選，或從計畫任何地方的連結直達。",
+        "search": "搜尋",
+        "searchPlaceholder": "名稱、鍵值或來源",
+        "filters": {
+          "group": "群組",
+          "source": "來源",
+          "confidence": "信心程度",
+          "changed": "變更日期",
+          "any": "全部",
+          "varies": "依情境變動",
+          "levers": "僅顯示變數"
+        },
+        "count": "顯示 {shown} / {total} 項（完整登錄表共 {all} 項）",
+        "clear": "清除篩選",
+        "noRows": "沒有符合篩選條件的假設。",
+        "cols": {
+          "assumption": "假設",
+          "value": "基準值",
+          "source": "來源",
+          "asOf": "截至",
+          "confidence": "信心程度",
+          "notes": "備註"
+        },
+        "varies": "依情境變動",
+        "lever": "變數",
+        "onModel": "財務模型頁上的滑桿",
+        "leverRange": "範圍 {min} 至 {max}",
+        "changedIn": "變更於 {date}",
+        "awaiting": "待確認：{item}",
+        "units": {
+          "hours": "小時",
+          "days": "天",
+          "minutes": "分鐘",
+          "months": "個月",
+          "years": "年",
+          "oz": "盎司",
+          "perYear": "/ 年",
+          "perMonth": "/ 月",
+          "perHour": "/ 小時",
+          "perSqFt": "/ 平方英尺",
+          "perLb": "/ 磅",
+          "yes": "是",
+          "no": "否"
+        },
+        "groups": {
+          "physical": "實體空間",
+          "throughput": "翻桌與產能",
+          "revenue": "營收",
+          "menu": "菜單與蛋白質",
+          "cogs": "食材成本",
+          "labor": "人力",
+          "occupancy": "租金與物業",
+          "otherOpex": "其他營運費用",
+          "escalation": "逐年調漲",
+          "ramp": "爬坡期",
+          "capexFlagship": "資本支出（旗艦店）",
+          "capexSubsequent": "資本支出（後續門市）",
+          "schedule": "開店時程",
+          "franchise": "加盟條款",
+          "structures": "合作架構",
+          "franchiseMarkets": "加盟市場",
+          "overhead": "總部管理費用",
+          "partnership": "合夥條款",
+          "rounds": "股權募資輪次",
+          "loan": "參考貸款",
+          "fx": "匯率"
+        },
+        "sources": {
+          "spec": "規格書",
+          "owner-decision": "創辦人決定",
+          "public-benchmark": "公開基準",
+          "engine-assumption": "引擎假設",
+          "supplier-quote": "供應商報價"
+        },
+        "confidence": {
+          "high": "高",
+          "medium": "中",
+          "low": "低"
+        }
+      },
+      "scorecard": {
+        "title": "基準計分卡",
+        "subtitle": "每項重點比率都對照引擎評分所用的公開區間。好得過頭和差得太多一樣會被標記。",
+        "to": "至",
+        "watchLow": "低於此觀察",
+        "watchHigh": "高於此觀察",
+        "count": {
+          "pass": "{n} 項通過",
+          "watch": "{n} 項觀察",
+          "fail": "{n} 項未達標",
+          "pending": "{n} 項待定"
+        },
+        "cols": {
+          "metric": "指標",
+          "value": "基準情境",
+          "band": "通過區間",
+          "status": "狀態",
+          "source": "公開區間"
+        },
+        "status": {
+          "pass": "通過",
+          "watch": "觀察",
+          "fail": "未達標",
+          "pending": "待定"
+        },
+        "disclaimer": "基準為快休閒餐飲與加盟總部的公開區間，並非付費資料。與貸款方會面前請先更新。"
+      },
+      "checks": {
+        "title": "自動化檢查",
+        "subtitle": "此版本提交時引擎的測試結果，加上每次瀏覽都會針對本頁讀取的預設值重新執行的恆等式檢查。",
+        "suites": "測試套件，版本 {version}",
+        "cols": {
+          "area": "範圍",
+          "suites": "套件",
+          "tests": "測試",
+          "passed": "通過"
+        },
+        "areas": {
+          "unit": "單店經濟",
+          "corporate": "總部與合夥",
+          "integrity": "誠信與規格錨點",
+          "tooling": "格式與分享"
+        },
+        "total": "合計",
+        "coverage": "覆蓋率：行 {lines}%，函式 {functions}%，分支 {branches}%。",
+        "live": "即時檢查（{n} 項）",
+        "allPass": "本次瀏覽所有檢查皆通過。",
+        "someFail": "本次瀏覽有 {n} 項檢查失敗。",
+        "pass": "通過",
+        "fail": "失敗"
+      },
+      "changelog": {
+        "title": "變更紀錄",
+        "subtitle": "從版本 {from} 到 {to} 的每一項預設值與公式變更：改了什麼、為什麼、由誰決定。",
+        "years": "{n} 年",
+        "cards": {
+          "ebitdaMargin": "四牆 EBITDA 利潤率",
+          "paybackFromOpening": "旗艦店自開幕起回收期",
+          "partnerPct": "合夥人主要持股",
+          "totalCapital": "募資總額"
+        },
+        "beforeAfter": "{before} 至 {after}",
+        "cols": {
+          "date": "日期",
+          "finding": "發現",
+          "key": "鍵值",
+          "before": "變更前",
+          "after": "變更後",
+          "reason": "原因",
+          "decidedBy": "決定者",
+          "ref": "記錄於"
+        },
+        "decidedBy": {
+          "owner": "創辦人",
+          "review": "審閱",
+          "engine": "引擎"
+        },
+        "steps": {
+          "title": "各版本的變動",
+          "to": "至",
+          "cols": {
+            "version": "版本"
+          }
+        },
+        "versions": {
+          "v2026_09_25": "規格預設值與 9 月 25 日的業主決策",
+          "v2026_09_26": "盡職調查審查後的重新基準",
+          "v2026_09_27": "對 ONE RED STEP AT A TIME 的社區捐贈承諾"
+        }
+      },
+      "openItems": {
+        "title": "待辦事項",
+        "subtitle": "{total} 項中有 {open} 項仍在等待外部確認。每一項都列出它將確認的登錄列。",
+        "owner": "負責人",
+        "validates": "將確認",
+        "status": {
+          "not-started": "尚未開始",
+          "requested": "已提出",
+          "in-progress": "進行中",
+          "received": "已收到",
+          "validated": "已確認"
+        },
+        "owners": {
+          "founder": "創辦人",
+          "partner": "合夥人",
+          "cpa": "會計師",
+          "counsel": "律師",
+          "architect": "建築師",
+          "supplier": "供應商",
+          "engineering": "工程團隊"
+        },
+        "items": {
+          "beefQuotes": {
+            "title": "牛肉供應商報價",
+            "body": "向兩家供應商取得 USDA Prime 與美國和牛的書面報價（每磅生肉成本與出成率），取代目前食材成本背後的公開價格區間。"
+          },
+          "produceQuotes": {
+            "title": "蔬果與乾貨報價",
+            "body": "麵條、青菜、辛香料與包材的整箱價格，用以確認蛋白質以外的基礎湯碗成本。"
+          },
+          "leaseLoi": {
+            "title": "旗艦店租約意向書",
+            "body": "真實店面的租金、NNN 費用、裝修補貼與逐年調漲。在此之前，租金項目仍是市場估計。"
+          },
+          "permits": {
+            "title": "設計與許可估算",
+            "body": "座艙配置的建築師費用與許可時程，同時決定開業前的月數。"
+          },
+          "podFabricationQuote": {
+            "title": "座艙製作報價",
+            "body": "座艙、出餐口與表面材料的工廠報價，分別針對旗艦店與量產後的後續門市。"
+          },
+          "commissaryThroughput": {
+            "title": "中央廚房產能測試",
+            "body": "湯鍋每批產量與保溫時間，對照翻桌率假設所需的用餐時間與清潔時間。"
+          },
+          "wageSurvey": {
+            "title": "薪資調查",
+            "body": "猶他郡廚房時薪、店長年薪與人事負擔背後的福利成本。"
+          },
+          "insuranceQuotes": {
+            "title": "保險報價",
+            "body": "座艙形式的公共責任險、財產險與勞工賠償保險。"
+          },
+          "fdd": {
+            "title": "加盟揭露文件",
+            "body": "律師草擬的加盟揭露文件，內含將正式申報的單店加盟金、權利金與行銷基金。"
+          },
+          "operatingAgreement": {
+            "title": "營運協議",
+            "body": "合夥人持股上限、創辦人出資與優先權結構，依律師草稿為準。"
+          },
+          "cpaReview": {
+            "title": "會計師審閱",
+            "body": "稅務分配率、穿透課稅處理與分配政策。"
+          },
+          "memberProgramBuild": {
+            "title": "會員計畫開發",
+            "body": "推薦、等級與福利機制的工程估算，讓會員計畫成本成為規格而非暫定值。"
+          },
+          "givingAgreement": {
+            "title": "書面捐贈協議",
+            "body": "對 ONE RED STEP AT A TIME 捐贈承諾的金額、付款頻率、報告方式與獨立核准，於旗艦店開幕前簽署。"
+          },
+          "franchisePledge": {
+            "title": "邀請加盟夥伴加入承諾",
+            "body": "加盟合約將邀請夥伴加入這項承諾。這是邀請而非要求，不會為 Oh! 增加任何成本或營收。"
+          }
+        }
+      },
+      "signoff": {
+        "title": "審閱者簽核",
+        "subtitle": "外部審閱者簽署審閱範圍後，會在此記錄涵蓋的群組、日期與聲明，上方的認證區也會列出其姓名。",
+        "empty": "尚未登錄任何外部審閱。",
+        "roles": {
+          "cpa": "會計師",
+          "fractional-cfo": "兼職財務長",
+          "counsel": "律師",
+          "advisor": "顧問"
+        },
+        "status": {
+          "planned": "規劃中",
+          "in-progress": "進行中",
+          "signed": "已簽署"
+        },
+        "scopeAll": "全部群組",
+        "request": {
+          "cta": "索取盡職調查資料包",
+          "body": "請寄送盡職調查資料包：假設登錄表、基準計分卡、自動化檢查、變更紀錄與引擎測試套件。",
+          "note": "登錄表、計分卡、檢查、變更紀錄與引擎測試套件，以檔案形式提供。"
+        }
+      },
+      "print": {
+        "changes": "{n} 項變更在互動版頁面逐條列出。",
+        "register": "列印 {shown} / {total} 列；動態群組僅列出數量："
+      }
+    },
+    "edge": {
+      "title": "Oh! 的不同之處",
+      "labels": {
+        "oh": "Oh!",
+        "benchmark": "基準"
+      },
+      "summary": {
+        "points": {
+          "0": {
+            "text": "沒有帶位、沒有服務生、沒有小費。人力成本佔營收 {figure}，而全服務餐廳為 {band}。"
+          },
+          "1": {
+            "text": "租金負擔僅 {figure}：緊湊的店面、二手商業空間，沒有任何坪數浪費在服務生的動線上。"
+          },
+          "2": {
+            "text": "每平方英尺營收 {figure}，對比快休閒餐飲中位數 {band}。"
+          },
+          "3": {
+            "text": "每一頁的每個數字都可追溯到 {rows} 項登錄假設與 {checks} 項即時檢查。「模型誠信」章節讓您逐一拆解。"
+          }
+        }
+      },
+      "model": {
+        "points": {
+          "0": {
+            "text": "一組 {levers} 個變數驅動整個事業。移動任何一個，每一頁都會重新計算；沒有任何數字是手動輸入的。"
+          },
+          "1": {
+            "text": "下方的長條圖把傳統餐廳與 Oh! 並列：人力成本佔營收 {figure}，而非 {band}。"
+          },
+          "2": {
+            "text": "四牆 EBITDA 利潤率 {figure}，對比一般快休閒餐飲 {band}，完整成本結構就在頁面上，而不是藏在註腳裡。"
+          }
+        }
+      },
+      "experience": {
+        "points": {
+          "0": {
+            "text": "沒有帶位、沒有服務生、沒有帳單、沒有小費。人力成本因此只有 {figure}，而全服務餐廳為 {band}。"
+          },
+          "1": {
+            "text": "從點餐機到出餐口的湯碗約 {figure}，依平面圖的實際動線計時。"
+          },
+          "2": {
+            "text": "{pods} 個座艙中，每組客人都有自己的座艙，一個人用餐和六個人一樣自在。"
+          },
+          "3": {
+            "text": "每一次光臨都在回饋：營收的 {pct}% 捐給心理健康非營利組織 ONE RED STEP AT A TIME。"
+          }
+        }
+      },
+      "market": {
+        "points": {
+          "0": {
+            "text": "菜單價格就是全部價格：平均客單 {figure}，沒有小費欄，而全服務餐廳的帳單還要再加 {tipLow} 至 {tipHigh}%。"
+          },
+          "1": {
+            "text": "獨自與小團體用餐持續成長，座艙讓一個人用餐不再尷尬。"
+          },
+          "2": {
+            "text": "牛肉麵在每個大洲都有擁護者，卻沒有全國性品牌。這個品類是開放的。"
+          }
+        }
+      },
+      "floor-plan": {
+        "points": {
+          "0": {
+            "text": "{sqft} 平方英尺容納 {pods} 個座艙，二手商業空間或購物中心的店中店都能容納。"
+          },
+          "1": {
+            "text": "兩個永不交會的區域：客人走通道，員工走廊道，兩者只在出餐口相遇。"
+          },
+          "2": {
+            "text": "一個廚房服務每個座位，每個座艙每年約產生 {figure} 營收，對比櫃檯式餐飲每座位 {band}。"
+          }
+        }
+      },
+      "operations": {
+        "points": {
+          "0": {
+            "text": "約 {fte} 位正職人員經營 {pods} 個座位的餐廳。人力成本佔營收 {figure}，而全服務餐廳為 {band}。"
+          },
+          "1": {
+            "text": "廚房顯示系統看得到全部 {pods} 個座艙：訂單、計時、加料與送餐，一個畫面完成。"
+          },
+          "2": {
+            "text": "湯底來自中央廚房的湯鍋，一致性靠的是配方而不是班表。食材成本維持在 {figure}，落在高級蛋白質餐飲的 {band} 區間內。"
+          },
+          "3": {
+            "text": "加料單以顏色區分：廚房直接依客人設計的湯碗製作，不需服務生轉達。"
+          }
+        }
+      },
+      "expansion": {
+        "points": {
+          "0": {
+            "text": "單店就是一套套件。座艙、出餐口、點餐機與廚房顯示系統整套出貨，每座艙資本支出 {figure}，低於櫃檯式餐飲每座位 {band} 的水準。"
+          },
+          "1": {
+            "text": "後續門市成本 {figure}，對比旗艦店 {flagship}，而且能容納更小的店面。"
+          },
+          "2": {
+            "text": "加盟夥伴使用與直營店相同的軟體：權利金 {figure}，落在快休閒餐飲 {band} 區間內，另加每月 {license} 的平台授權費。"
+          }
+        }
+      },
+      "unit-economics": {
+        "points": {
+          "0": {
+            "text": "菜單有美國和牛、廚房是正職團隊，主要成本仍為 {figure}，落在業界 {band} 區間內。"
+          },
+          "1": {
+            "text": "租金佔營收 {figure}，對比全服務餐廳承擔的 {band}。"
+          },
+          "2": {
+            "text": "每座艙資本支出 {figure}，低於櫃檯式餐飲 {band} 的水準，因為座艙是家具，不是工程。"
+          }
+        }
+      },
+      "financials": {
+        "points": {
+          "0": {
+            "text": "四牆 EBITDA 利潤率 {figure}，對比一般快休閒餐飲 {band}，且已計入貸款方會問到的每一層成本。"
+          },
+          "1": {
+            "text": "經常性平台收入：Oh! OS 授權費在第五年達到 {figure} 的年度經常性營收。"
+          },
+          "2": {
+            "text": "輕資產成長：依分階段時程，第七年達到 {units} 家加盟店，加盟部門利潤率 {figure}，落在加盟總部 {band} 區間內。"
+          }
+        }
+      },
+      "sensitivity": {
+        "points": {
+          "0": {
+            "text": "全部 {levers} 個模型變數都有公開的上下限，頁面另有蒙地卡羅模擬與明列成本的下行情境，而不是單一最佳情況。"
+          },
+          "1": {
+            "text": "本計畫刻意呈現自己的低谷：第四至第六個月為穩定狀態的 {figure}。"
+          },
+          "2": {
+            "text": "每個下行情境都與其代價一起列在頁面上，讀者不必猜我們遺漏了什麼。"
+          }
+        }
+      },
+      "team": {
+        "points": {
+          "0": {
+            "text": "創辦人曾在五十個市場將電商規模從 7.5 億美元擴大到 25 億美元，之後才寫下這份餐廳計畫。"
+          },
+          "1": {
+            "text": "雙語領導團隊與台灣配方：國際化論點寫在履歷上，不只在提案裡。"
+          },
+          "2": {
+            "text": "顧問席位依其填補的缺口命名：營運、料理、加盟。"
+          }
+        }
+      },
+      "funding": {
+        "points": {
+          "0": {
+            "text": "無負債：基準情境貸款為 {figure}。由單一合夥人分兩輪注資，支應旗艦店與前五家門市。"
+          },
+          "1": {
+            "text": "合夥人持股由現金流推算而非主張，並設 {cap}% 上限，讓創辦人在任何情況下保有控制權。目前上限生效，持股為 {figure}。"
+          },
+          "2": {
+            "text": "架構清楚陳述：{figure} 優先報酬，加上 {pref} 倍清算優先權，之後普通股才參與分配。"
+          }
+        }
+      },
+      "roadmap": {
+        "points": {
+          "0": {
+            "text": "點餐機與廚房顯示系統今天已在 Oh! 的餐廳運作，不是簡報上的構想。"
+          },
+          "1": {
+            "text": "中央廚房湯鍋已測試，座艙已有原型；路線圖從硬體出發，而不是效果圖。"
+          },
+          "2": {
+            "text": "每個里程碑都以旗艦店開幕為基準，計畫永遠不會過時。"
+          }
+        }
+      },
+      "integrity": {
+        "points": {
+          "0": {
+            "text": "{figure} 項登錄假設，每一項都有來源、日期與信心程度，另有 {changes} 筆變更紀錄說明每一次調整。"
+          },
+          "1": {
+            "text": "每次瀏覽都會對即時預設值執行 {figure} 項恆等式檢查，再加上引擎的完整測試。"
+          },
+          "2": {
+            "text": "公開基準計分卡：{total} 項中 {figure} 項通過、{watch} 項觀察、{fail} 項未達標。全部呈現，沒有隱藏。"
+          }
+        }
+      }
+    },
+    "chappy": {
+      "launcher": "問 Chappy",
+      "title": "Chappy Chopstix",
+      "subtitle": "比你更懂這份計畫",
+      "greeting": "我是 Chappy。這份計畫每一頁我都讀過，連註腳都沒放過，這點沒幾個人做得到。儘管問。計畫裡找不到答案的，我會轉給老闆。",
+      "suggestionsLabel": "跟你一樣的人通常會問",
+      "placeholder": "詢問這份計畫",
+      "send": "送出",
+      "close": "關閉 Chappy",
+      "thinking": "Chappy 思考中",
+      "error": "沒有送出，請稍後再試。",
+      "busy": "我忙不過來了，給我一分鐘再試。",
+      "tooMany": "你今天問得夠多了。明天再來，或讓我把剩下的轉給老闆。",
+      "expired": "你的邀請已結束，請向老闆索取新連結。",
+      "escalated": "已轉給老闆",
+      "limit": "請控制在 1,500 字以內。我是筷子，不是律師。",
+      "suggestions": {
+        "INVESTOR": [
+          "你們要募多少，我能得到什麼？",
+          "合夥人在第 5 年和第 7 年的報酬各是多少？",
+          "如果每日客數少 20% 會怎樣？",
+          "這份計畫最大的風險是什麼？"
+        ],
+        "LENDER": [
+          "為什麼計畫裡沒有負債？",
+          "最低現金餘額是多少，出現在什麼時候？",
+          "保守情境長什麼樣子？",
+          "旗艦店多久能回本？"
+        ],
+        "LANDLORD": [
+          "你們需要多大的空間，什麼形狀？",
+          "計畫每平方英尺能負擔多少租金？",
+          "營業時間和預期來客量是多少？",
+          "裝修工程包含什麼，要多久？"
+        ],
+        "PARTNER": [
+          "合夥人的持股是怎麼算的？",
+          "優先報酬和清算優先權怎麼運作？",
+          "創辦人什麼時候可以買回股份？",
+          "保守情境下我的報酬會怎樣？"
+        ],
+        "ADVISOR": [
+          "哪些假設最不確定？",
+          "單店經濟和快速休閒餐飲的基準相比如何？",
+          "哪些檢查或評分項目沒有通過？",
+          "最近一次重新校準改了什麼？"
+        ],
+        "INTERNAL": [
+          "廚房裡的一天是什麼樣子？",
+          "客人從點餐機到包廂的流程是什麼？",
+          "下一批門市什麼時候開？",
+          "每一班有多少人，負責哪些職位？"
+        ]
+      }
+    },
+    "foundation": {
+      "eyebrow": "回饋社會",
+      "identity": "501(c)(3) 非營利組織，EIN {ein}。捐款可抵稅。",
+      "mission": "透過凝聚社群、打破污名、推廣教育與同理心，促進開放且互相支持的心理健康對話：一個人、一個故事，一步一步來。",
+      "missionSource": "基金會的使命",
+      "pledge": {
+        "pct": "每家直營店的營收，在每個情境中皆然",
+        "perUnit": "單店穩定營運後每年的捐贈",
+        "fiveYear": "前五年，{units} 家直營店合計",
+        "note": "這項承諾列在營業費用中，因此本計畫的利潤率已將它計入。加盟店不會為 Oh! 帶來任何承諾成本。客人的捐款直接交給基金會，從不計入 Oh! 的營收。"
+      },
+      "guests": {
+        "title": "客人在哪裡看見它",
+        "items": {
+          "status": "在訂單狀態頁，客人確認座艙之後：一則簡短的心理健康小知識，以及支持這項公益的連結。",
+          "home": "在首頁，位於不收小費承諾旁的「回饋社會」區塊。",
+          "footer": "在網站每一頁的頁尾。"
+        }
+      },
+      "fit": {
+        "title": "為什麼契合",
+        "body": "Oh! 的核心是讓人喘口氣：屬於自己的座艙，沒有人在旁邊盯著，也不必趕時間。一個推動坦誠談論心理健康的基金會，正是這項承諾最自然的夥伴，而紅襪子讓客人和員工能輕鬆、看得見地參與其中。"
+      },
+      "contact": {
+        "title": "聯絡基金會",
+        "website": "網站",
+        "donate": "捐款",
+        "donateCta": "線上捐款",
+        "store": "商店",
+        "storeCta": "紅襪子與周邊商品",
+        "mail": "郵寄地址",
+        "social": "社群媒體"
       }
     }
   }

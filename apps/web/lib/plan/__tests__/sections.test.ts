@@ -8,6 +8,16 @@ describe("section registry", () => {
     expect(SECTIONS.map((s) => s.order)).toEqual(SECTIONS.map((_, i) => i + 1));
     expect(new Set(SECTIONS.map((s) => s.slug)).size).toBe(SECTIONS.length);
   });
+  it("has fourteen sections with Model integrity last, for every audience", () => {
+    expect(SECTIONS).toHaveLength(14);
+    const last = SECTIONS[SECTIONS.length - 1];
+    expect(last?.key).toBe("integrity");
+    expect(last?.order).toBe(14);
+    expect(last?.icon).toBe("seal");
+    expect(last?.slug).toBe("integrity");
+    expect(sectionFromPath("/en/plan/integrity")).toBe("integrity");
+    expect(isSectionVisible({ sec: [], aud: "LANDLORD" }, "integrity")).toBe(true);
+  });
   it("builds hrefs and maps paths back", () => {
     expect(sectionHref("en", getSection("summary"))).toBe("/en/plan");
     expect(sectionHref("zh-TW", getSection("floor-plan"))).toBe("/zh-TW/plan/floor-plan");

@@ -39,7 +39,25 @@ if (!code) {
   await page.evaluate(() => document.fonts.ready);
   await page.waitForTimeout(1500);
   await page.emulateMedia({ media: "print" });
-  await page.pdf({ path: out, format: "Letter", printBackground: true, preferCSSPageSize: true });
+  // Page numbers: Chromium draws the running footer itself, so the CSS
+  // footer (which cannot count pages) is hidden and its text reused here.
+  const footerText = await page.$eval(".plan-print-footer", (el) => el.textContent.trim()).catch(() => "");
+  await page.addStyleTag({ content: ".plan-print-footer{display:none!important}" });
+  const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  const footerTemplate = `<div style="width:100%;margin:0 0.6in;font-family:Helvetica,Arial,sans-serif;font-size:7.5pt;color:#8A7F72;display:flex;justify-content:space-between;align-items:baseline;">
+    <span>${esc(footerText)}</span>
+    <span><span class="pageNumber"></span> / <span class="totalPages"></span></span>
+  </div>`;
+  await page.pdf({
+    path: out,
+    format: "Letter",
+    printBackground: true,
+    preferCSSPageSize: true,
+    displayHeaderFooter: true,
+    headerTemplate: "<span></span>",
+    footerTemplate,
+    margin: { top: "0.6in", right: "0.6in", bottom: "0.75in", left: "0.6in" },
+  });
   const sections = await page.$$eval("[data-section]", (els) => els.length);
   await browser.close();
   console.log(`Wrote ${out} (${sections} sections)`);

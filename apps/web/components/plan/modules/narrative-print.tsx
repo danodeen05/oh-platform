@@ -1,11 +1,13 @@
 import { getFormatter, getLocale, getTranslations } from "next-intl/server";
-import { BASE, BASE_ASSUMPTIONS, FRANCHISE_MARKETS, FRANCHISE_TERMS, OPENING_SCHEDULE, PARTNERSHIP_TERMS, computeOwnership, computePortfolio } from "@oh/plan-model";
+import { BASE, COVERAGE_SCHEDULE, FRANCHISE_MARKETS, FRANCHISE_TERMS, OPENING_SCHEDULE, PARTNERSHIP_TERMS, SCENARIOS, computeCapex, computeLocation, computeOwnership, computePortfolio, coverageHoursPerDay, type ScenarioKey } from "@oh/plan-model";
 import { SAM_USD, TAM_USD, UTAH_ROWS } from "./market/marketData";
 import { ROADMAP } from "./roadmap/roadmapData";
+import { FoundationPanel } from "./foundation/FoundationPanel";
+import { FOUNDATION, displayUrl } from "./foundation/contact";
 
 /** Print variants for the narrative sections: the copy, flat, on paper. */
 
-export async function ExperiencePrint() {
+export async function ExperiencePrint({ locale = "en", scenario = "base" }: { locale?: string; scenario?: ScenarioKey } = {}) {
   const t = await getTranslations("plan.experience");
   const steps = ["arrive", "order", "walk", "settle", "panel", "taste", "leave"] as const;
   return (
@@ -17,6 +19,9 @@ export async function ExperiencePrint() {
           <p className="m-0 mt-1 leading-relaxed text-oh-stone">{t(`steps.${s}.body`)}</p>
         </div>
       ))}
+      <div className="mt-4">
+        <FoundationPanel locale={locale} scenario={scenario} tone="light" />
+      </div>
     </div>
   );
 }
@@ -44,14 +49,23 @@ export async function MarketPrint() {
   );
 }
 
-export async function OperationsPrint() {
+export async function OperationsPrint({ scenario = "base" }: { locale?: string; scenario?: ScenarioKey } = {}) {
   const t = await getTranslations("plan.operations");
-  const a = BASE_ASSUMPTIONS;
+  const a = SCENARIOS[scenario].assumptions;
   const fmt = await getFormatter();
+  const usd = (v: number, d = 0) => fmt.number(v, { style: "currency", currency: "USD", maximumFractionDigits: d, minimumFractionDigits: d });
+  const pct = (v: number, d = 1) => fmt.number(v, { style: "percent", maximumFractionDigits: d });
+  const hours = coverageHoursPerDay(COVERAGE_SCHEDULE);
+  const loc = computeLocation(a);
+  const launch = computeCapex(a).lines.find((l) => l.key === "launchMarketing")?.amount ?? 0;
+  const givingValues = { pct: pct(a.communityGivingPct, 0), budget: usd(loc.communityGiving), monthly: usd(loc.communityGiving / 12), name: FOUNDATION.name };
+  const programValues = { budget: usd(loc.memberProgram), pct: pct(a.memberProgramPct), allIn: pct(loc.memberProgram / loc.annualRevenue), swag: usd(a.memberSwagAnnual), launch: usd(launch), marketing: pct(a.marketingPct, 0), comps: pct(a.discountsCompsPct) };
   return (
     <div className="mt-6 flex flex-col gap-5 text-[0.85rem] text-oh-charcoal">
       <p className="m-0 leading-relaxed text-oh-stone">{t("platform.body")}</p>
-      <p className="m-0 leading-relaxed">{t("labor.subtitle", { kitchen: a.kitchenFTE, mgmt: a.managerFTE, wage: fmt.number(a.avgKitchenWage, { style: "currency", currency: "USD" }), salary: fmt.number(a.avgManagerSalary, { style: "currency", currency: "USD", maximumFractionDigits: 0 }), kitchenAnnual: fmt.number(a.kitchenFTE * a.avgKitchenWage * a.annualHoursPerFTE, { style: "currency", currency: "USD", maximumFractionDigits: 0 }), mgmtAnnual: fmt.number(a.managerFTE * a.avgManagerSalary, { style: "currency", currency: "USD", maximumFractionDigits: 0 }), burden: Math.round(a.payrollBurdenPct * 100) })}</p>
+      <p className="m-0 leading-relaxed">{t("labor.subtitle", { heads: COVERAGE_SCHEDULE.shifts.reduce((n, sh) => n + sh.count, 0), hours: Math.round(hours), days: a.operatingDaysPerYear, coverage: Math.round(a.coverageFactorPct * 100), kitchen: a.kitchenFTE.toFixed(1), mgmt: a.managerFTE, wage: usd(a.avgKitchenWage, 2), salary: usd(a.avgManagerSalary), kitchenAnnual: usd(a.kitchenFTE * a.avgKitchenWage * a.annualHoursPerFTE), mgmtAnnual: usd(a.managerFTE * a.avgManagerSalary), burden: Math.round(a.payrollBurdenPct * 100) })}</p>
+      <div><p className="m-0 font-display text-[1.05rem]">{t("program.title")}</p><p className="m-0 mt-1 leading-relaxed text-oh-stone">{t("program.body", programValues)}</p><ul className="m-0 mt-1 list-disc pl-5">{(["cashback", "referral", "challenges", "perks", "swag", "comps"] as const).map((k) => (<li key={k} className="py-0.5"><span className="font-semibold">{t(`program.items.${k}.title`)}.</span> <span className="text-oh-stone">{t(`program.items.${k}.body`, programValues)}</span></li>))}</ul><p className="m-0 mt-1 leading-relaxed text-oh-stone">{t("program.launch", programValues)}</p></div>
+      <div><p className="m-0 font-display text-[1.05rem]">{t("giving.title")}</p><p className="m-0 mt-1 leading-relaxed text-oh-stone">{t("giving.body", givingValues)} {t("giving.cadence", givingValues)}</p><p className="m-0 mt-1 text-oh-stone">{displayUrl(FOUNDATION.website)}</p></div>
       <div><p className="m-0 font-display text-[1.05rem]">{t("commissary.claim")}</p><p className="m-0 mt-1 leading-relaxed text-oh-stone">{t("commissary.text")}</p></div>
       <ol className="m-0 list-decimal pl-5">{(["planReview", "haccp", "manager", "inspection", "fireMarshal", "occupancy"] as const).map((k) => (<li key={k} className="py-0.5"><span className="font-semibold">{t(`safety.steps.${k}.title`)}.</span> <span className="text-oh-stone">{t(`safety.steps.${k}.body`)}</span></li>))}</ol>
     </div>
@@ -69,6 +83,7 @@ export async function TeamPrint() {
       <div><p className="m-0 text-[0.7rem] uppercase tracking-[0.14em] text-oh-clay">{t("partner.role", { pct: pct(own.partnerPct) })}</p><p className="m-0 leading-relaxed text-oh-stone">{t("partner.body", { capital: new Intl.NumberFormat(locale, { style: "currency", currency: "USD", notation: "compact", maximumFractionDigits: 1 }).format(PARTNERSHIP_TERMS.partnerCapital), cap: pct(PARTNERSHIP_TERMS.partnerPctCap) })}</p></div>
       <p className="m-0 text-oh-stone">Oh! Beef Noodle Soup, LLC. {t("entity.number")} 14642519-0160. {t("entity.structureValue")}. {t("entity.note")}</p>
       <ul className="m-0 list-disc pl-5">{(["operator", "culinary", "franchise"] as const).map((k) => (<li key={k}>{t(`advisory.seats.${k}.title`)}: <span className="text-oh-stone">{t(`advisory.seats.${k}.why`)}</span></li>))}</ul>
+      <div><p className="m-0 text-[0.7rem] uppercase tracking-[0.14em] text-oh-clay">{t("community.eyebrow")}</p><p className="m-0 font-display text-[1.1rem]">{FOUNDATION.name}</p><p className="m-0 mt-1 leading-relaxed text-oh-stone">{t("community.body", { pct: pct(BASE.assumptions.communityGivingPct) })}</p><p className="m-0 mt-2 text-[0.7rem] uppercase tracking-[0.14em] text-oh-clay">{t("community.disclosureTitle")}</p><ul className="m-0 list-disc pl-5">{(["friend", "cto", "agreement"] as const).map((k) => (<li key={k}>{t(`community.disclosure.${k}`)}</li>))}</ul><p className="m-0 mt-1 text-oh-stone">{displayUrl(FOUNDATION.website)}</p></div>
     </div>
   );
 }

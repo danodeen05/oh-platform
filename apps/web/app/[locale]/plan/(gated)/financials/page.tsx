@@ -1,15 +1,16 @@
-import { isScenarioKey, type ScenarioKey } from "@oh/plan-model";
 import { requireSection } from "@/lib/plan/session.server";
+import { getPlanScenario } from "@/lib/plan/scenario.server";
 import { SectionFrame } from "@/components/plan/shell/SectionFrame";
+import { SectionEdge } from "@/components/plan/modules/integrity/SectionEdge";
 import { FinancialsModule } from "@/components/plan/modules/financials/FinancialsModule";
 
 export default async function Page() {
-  const claims = await requireSection("financials");
-  const home = claims.scn.toLowerCase();
-  const scenario: ScenarioKey = isScenarioKey(home) ? home : "base";
+  await requireSection("financials");
+  const scenario = await getPlanScenario();
   return (
     <SectionFrame sectionKey="financials">
-      <FinancialsModule initialScenario={scenario} />
+      <SectionEdge sectionKey="financials" scenario={scenario} />
+      <FinancialsModule key={scenario} initialScenario={scenario} />
     </SectionFrame>
   );
 }

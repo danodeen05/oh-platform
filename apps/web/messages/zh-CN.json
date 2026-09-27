@@ -67,16 +67,17 @@
     "brandName": "<oh>哦！</oh>牛肉面",
     "brandNamePlain": "哦！牛肉面",
     "tagline": "唯一一家专为<bold>您</bold>打造的餐厅。",
-    "heroDescription": "源自台湾深受喜爱的牛肉面传统，融合日本精致工艺，在您专属的私人包厢中享用我们30年的家传秘方。",
+    "heroDescription": "源自台湾深受喜爱的牛肉面传统，以顶级融合手法升华，在您专属的私人包厢中享用这一碗。",
     "opensAt": "上午10点开始接受预订",
     "signature": {
       "label": "我们的招牌",
-      "title": "A5和牛牛肉面",
-      "description": "丝滑的A5和牛融入我们香醇的浓郁汤底——使用三代相传的技艺，慢火熬煮48小时。每一碗都诉说着耐心、精准与热情的故事。",
+      "title": "美国和牛牛肉面",
+      "description": "美国和牛与 USDA Prime 牛肉，低温慢熏，配上两段式牛骨高汤：先长时间熬煮，再为风味收尾。在您专属的私人包厢享用，永远不收小费。",
       "stats": {
-        "hours": "小时熬制",
-        "grade": "和牛等级",
-        "years": "年秘方"
+        "pods": "私人包厢",
+        "grade": "牛肉等级",
+        "gradeValue": "美国和牛",
+        "tips": "小费"
       }
     },
     "difference": {
@@ -85,12 +86,12 @@
     },
     "features": {
       "recipe": {
-        "title": "30年传承配方",
-        "description": "代代相传、精心熬制的牛肉面"
+        "title": "两段式高汤",
+        "description": "先长时间熬骨，再为风味收尾"
       },
       "beef": {
         "title": "顶级牛肉",
-        "description": "严选A5和牛及优质牛肉，品质卓越"
+        "description": "美国和牛与 USDA Prime，低温慢熏，可选牛胸肉切片或牛肋肉块"
       },
       "tech": {
         "title": "科技化体验",
@@ -102,7 +103,7 @@
     },
     "pods": {
       "title": "私人用餐包厢",
-      "description": "体验前所未有的用餐方式。我们的独立包厢提供宁静、无干扰的空间，让您细细品尝每一口。没有拥挤的餐桌，没有噪音——只有您和完美的一碗牛肉面。",
+      "description": "体验前所未有的用餐方式。我们的独立包厢提供宁静、无干扰的空间，让您细细品尝每一口。没有拥挤的餐桌，没有噪音，只有您和完美的一碗牛肉面。",
       "features": {
         "space": {
           "title": "专属空间",
@@ -120,7 +121,7 @@
     },
     "noTipping": {
       "title": "永不收小费",
-      "description": "在哦!，您看到的价格就是您支付的价格。我们相信团队成员值得稳定、公平的薪资——而非不可预测的小费。因此，我们为厨房和清洁人员提供具竞争力的薪资和福利。",
+      "description": "在哦!，您看到的价格就是您支付的价格。我们相信团队成员值得稳定、公平的薪资，而非不可预测的小费。因此，我们为厨房和清洁人员提供具竞争力的薪资和福利。",
       "benefits": {
         "wages": "公平薪资",
         "math": "无需计算小费",
@@ -154,9 +155,7 @@
     "copyright": "© {year} 哦！牛肉面。保留所有权利。",
     "links": {
       "accessibility": "无障碍服务",
-      "careers": "职业机会",
       "contact": "联系我们",
-      "press": "媒体专区",
       "privacy": "隐私政策"
     },
     "foundation": {
@@ -197,7 +196,7 @@
     "sections": {
       "soup": {
         "subtitle": "从我们的招牌汤底开始",
-        "description": "30年精心熬制的浓郁牛骨汤"
+        "description": "浓郁的两段式牛骨高汤：先长时间熬煮，再为风味收尾"
       },
       "noodles": {
         "subtitle": "选择您的面条",
@@ -218,7 +217,7 @@
     },
     "hero": {
       "title": "我们的菜单",
-      "description": "用我们的顶级食材和30年传承配方，打造您完美的一碗",
+      "description": "用顶级美国牛肉与我们的两段式高汤，打造您完美的一碗",
       "orderNow": "立即订购"
     },
     "difference": {
@@ -281,14 +280,24 @@
       "tagline": "盐湖城市中心",
       "description": "我们位于盐湖城市中心的旗舰店，提供独特的用餐体验，配备私人包厢和科技化点餐。",
       "mallDescription": "City Creek Center是犹他州首屈一指的购物目的地，拥有超过100家商店和餐厅，在令人惊叹的露天环境中配备可伸缩的玻璃屋顶。",
-      "nearbyLandmarks": ["圣殿广场", "盐宫会议中心", "犹他州议会大厦", "Gateway购物中心"],
+      "nearbyLandmarks": [
+        "圣殿广场",
+        "盐宫会议中心",
+        "犹他州议会大厦",
+        "Gateway购物中心"
+      ],
       "parking": "在City Creek停车场免费停车，需验证"
     },
     "universityPlace": {
       "tagline": "犹他谷",
       "description": "为犹他谷社区提供同样卓越的品质和创新的用餐体验。",
       "mallDescription": "University Place是奥勒姆充满活力的购物和娱乐中心，汇集全国连锁店和当地最爱，靠近犹他谷大学。",
-      "nearbyLandmarks": ["犹他谷大学", "普若佛峡谷", "天波诺高斯洞穴", "杨百翰大学"],
+      "nearbyLandmarks": [
+        "犹他谷大学",
+        "普若佛峡谷",
+        "天波诺高斯洞穴",
+        "杨百翰大学"
+      ],
       "parking": "University Place全区提供充足免费停车位"
     },
     "details": {
@@ -332,7 +341,12 @@
       "title": "即将开业",
       "description": "我们正在扩展！敬请期待这些城市的新门店。",
       "label": "即将开业",
-      "cities": ["旧金山", "洛杉矶", "凤凰城", "丹佛"]
+      "cities": [
+        "旧金山",
+        "洛杉矶",
+        "凤凰城",
+        "丹佛"
+      ]
     },
     "cta": {
       "title": "准备好品尝最棒的一碗面了吗？",
@@ -381,8 +395,8 @@
           "cashback": "订单3%返现",
           "topPrioritySeating": "最高优先入座",
           "freePremiumBowl": "升级送免费顶级招牌面",
-          "merchDrops": "限定周边商品",
-          "premiumAddons": "免费顶级加购",
+          "merchDrops": "会员价周边商品抢先购",
+          "premiumAddons": "每季一份免费顶级加料",
           "vipGift": "年度VIP礼物与表彰",
           "wallOfFame": "照片及签名订单上Oh!名人墙"
         }
@@ -813,8 +827,8 @@
         "freeBowl": "升级送免费招牌面",
         "topPrioritySeating": "最高优先入座",
         "freePremiumBowl": "升级送免费高级面",
-        "merchDrops": "限量周边商品",
-        "premiumAddons": "免费顶级配料",
+        "merchDrops": "会员价周边商品抢先购",
+        "premiumAddons": "每季一份免费顶级加料",
         "vipGift": "年度 VIP 礼物与表彰",
         "wallOfFame": "照片和签名订单上 Oh! 名人墙"
       }
@@ -828,8 +842,8 @@
       "prioritySeating": "优先入座",
       "memberEvents": "专属会员活动",
       "freeBowlUpgrade": "升级送免费招牌面",
-      "merchandiseDrops": "限量周边商品",
-      "premiumAddons": "免费顶级配料",
+      "merchandiseDrops": "会员价周边商品抢先购",
+      "premiumAddons": "每季一份免费顶级加料",
       "vipGift": "年度 VIP 礼物与表彰"
     },
     "badges": {
@@ -1100,12 +1114,12 @@
     },
     "step3": {
       "title": "即刻赚取",
-      "description": "您即刻获得$5积分，他们获得$5折扣。推荐人数没有上限。"
+      "description": "对方首笔订单完成的当下，您获得 5 美元积分；对方该笔订单抵扣 5 美元。积分 90 天后到期。"
     },
     "goodToKnow": "须知事项",
     "rules": {
       "minimumOrder": "推荐奖励适用于首笔$20或以上的订单",
-      "disbursement": "当好友完成订单后，积分即刻加入您的账户",
+      "disbursement": "朋友完成首笔订单时，积分立即加入您的账户，入账后 90 天到期",
       "maxPerOrder": "每笔订单最多可使用$5积分"
     },
     "dashboard": {
@@ -1133,70 +1147,6 @@
       }
     }
   },
-  "careers": {
-    "title": "加入我们的团队",
-    "description": "帮助我们重新定义餐饮体验。我们正在创造特别的事物，寻找充满热情的人一同加入这段旅程。",
-    "viewPositions": "查看开放职位",
-    "values": {
-      "title": "我们的价值观",
-      "description": "这些原则指导我们所做的一切，从制作汤面到彼此对待的方式。",
-      "excellence": {
-        "title": "精益求精",
-        "description": "我们专注细节。每一碗面、每一次体验、每一次互动都很重要。"
-      },
-      "innovation": {
-        "title": "创新优先",
-        "description": "我们正在建设餐饮的未来。科技与传统和谐共存。"
-      },
-      "team": {
-        "title": "团队为重",
-        "description": "我们共同成功。协作、尊重和支持是我们的核心。"
-      },
-      "growth": {
-        "title": "成长心态",
-        "description": "我们投资于员工。与我们一起学习、成长、推进您的职业生涯。"
-      }
-    },
-    "openPositions": "开放职位",
-    "positions": {
-      "noFit": "没看到合适的职位？",
-      "alwaysLooking": "我们随时在寻找优秀人才。",
-      "sendResume": "发送您的简历"
-    },
-    "benefits": {
-      "title": "为什么加入我们",
-      "pay": {
-        "title": "具竞争力的薪资",
-        "description": "高于市场的薪资加绩效奖金"
-      },
-      "health": {
-        "title": "健康福利",
-        "description": "医疗、牙科和视力保险"
-      },
-      "meals": {
-        "title": "免费餐点",
-        "description": "轮班期间每日用餐加家庭折扣"
-      },
-      "careerGrowth": {
-        "title": "职业发展",
-        "description": "清晰的晋升路径和导师制度"
-      },
-      "learning": {
-        "title": "学习预算",
-        "description": "年度专业发展补贴"
-      },
-      "events": {
-        "title": "团队活动",
-        "description": "定期团队出游和庆祝活动"
-      }
-    },
-    "cta": {
-      "title": "准备好创造影响了吗？",
-      "description": "加入我们，一起创造餐饮的未来。",
-      "button": "查看开放职位"
-    },
-    "applyNow": "立即申请"
-  },
   "contact": {
     "title": "联系我们",
     "description": "我们很乐意听取您的意见",
@@ -1214,8 +1164,7 @@
         "order": "订单问题",
         "feedback": "意见反馈",
         "corporate": "企业 / 团体活动",
-        "press": "媒体咨询",
-        "careers": "职业机会"
+        "press": "媒体咨询"
       },
       "message": "您的消息",
       "success": "谢谢！我们会在24-48小时内回复您。"
@@ -1225,11 +1174,6 @@
       "email": {
         "title": "电子邮件",
         "value": "hello@ohbeefnoodlesoup.com"
-      },
-      "location": {
-        "title": "拜访我们",
-        "opening": "2025年春季开业",
-        "city": "旧金山，加州"
       },
       "responseTime": {
         "title": "回复时间",
@@ -1243,55 +1187,6 @@
     "faq": {
       "title": "寻找快速解答？",
       "description": "查看我们的常见问题以获得即时帮助。"
-    }
-  },
-  "press": {
-    "title": "媒体专区",
-    "description": "哦！新闻报道",
-    "mediaKit": "媒体资料包",
-    "pressInquiries": "媒体咨询",
-    "mediaContact": {
-      "title": "媒体联系",
-      "description": "如有媒体咨询、采访和媒体请求，请联系我们的公关团队。",
-      "responseTime": "我们通常在24-48小时内回复。"
-    },
-    "ourStory": {
-      "title": "我们的故事",
-      "p1": "哦！牛肉面源自30年的家传配方和重新定义餐饮体验的愿景。我们的创始人从小看着祖母完善她的牛肉面配方，为家人和朋友提供令人难以忘怀的美味。",
-      "p2": "如今，我们将同样的配方带给更广大的观众，结合创新科技和独特的私人用餐包厢概念，让焦点回归到美食和体验本身。",
-      "p3": "我们的使命很简单：在一个专为享受而非分心设计的环境中，提供完美的一碗牛肉面。"
-    },
-    "keyFacts": {
-      "title": "重要信息",
-      "founded": "成立时间",
-      "headquarters": "总部",
-      "flagshipOpening": "旗舰店开业",
-      "recipeHeritage": "配方传承",
-      "uniqueFeature": "独特特色",
-      "techPlatform": "科技平台"
-    },
-    "pressReleases": {
-      "title": "新闻稿"
-    },
-    "brandAssets": {
-      "title": "品牌资产",
-      "logoPackage": {
-        "name": "标志套件",
-        "description": "各种格式的主要和次要标志"
-      },
-      "brandGuidelines": {
-        "name": "品牌指南",
-        "description": "色彩、字体和使用规范"
-      },
-      "productPhotography": {
-        "name": "产品摄影",
-        "description": "我们招牌菜品的高分辨率图片"
-      },
-      "locationPhotos": {
-        "name": "门店照片",
-        "description": "我们门店的室内外照片"
-      },
-      "requestAccess": "如需获取品牌资产，请联系"
     }
   },
   "privacy": {
@@ -2050,6 +1945,66 @@
       "alreadyHaveAccount": "我已有账户",
       "privacyNote": "创建账户即表示您同意我们的隐私政策和条款",
       "orderLinked": "订单已关联！您获得了 {points} 积分！"
+    }
+  },
+  "plan": {
+    "shell": {
+      "askChappy": "问 Chappy 这一节的问题"
+    },
+    "chappy": {
+      "launcher": "问 Chappy",
+      "title": "Chappy Chopstix",
+      "subtitle": "比你更懂这份计划",
+      "greeting": "我是 Chappy。这份计划每一页我都读过，连脚注都没放过，这点没几个人做得到。尽管问。计划里找不到答案的，我会转给老板。",
+      "suggestionsLabel": "和你一样的人通常会问",
+      "placeholder": "询问这份计划",
+      "send": "发送",
+      "close": "关闭 Chappy",
+      "thinking": "Chappy 思考中",
+      "error": "没有发送成功，请稍后再试。",
+      "busy": "我忙不过来了，给我一分钟再试。",
+      "tooMany": "你今天问得够多了。明天再来，或者让我把剩下的转给老板。",
+      "expired": "你的邀请已结束，请向老板索取新链接。",
+      "escalated": "已转给老板",
+      "limit": "请控制在 1,500 字以内。我是筷子，不是律师。",
+      "suggestions": {
+        "INVESTOR": [
+          "你们要融多少，我能得到什么？",
+          "合伙人在第 5 年和第 7 年的回报分别是多少？",
+          "如果每日客数少 20% 会怎样？",
+          "这份计划最大的风险是什么？"
+        ],
+        "LENDER": [
+          "为什么计划里没有负债？",
+          "最低现金余额是多少，出现在什么时候？",
+          "保守情景是什么样子？",
+          "旗舰店多久能回本？"
+        ],
+        "LANDLORD": [
+          "你们需要多大的空间，什么形状？",
+          "计划每平方英尺能承担多少租金？",
+          "营业时间和预期客流量是多少？",
+          "装修工程包括什么，要多久？"
+        ],
+        "PARTNER": [
+          "合伙人的持股是怎么算的？",
+          "优先回报和清算优先权怎么运作？",
+          "创始人什么时候可以回购股份？",
+          "保守情景下我的回报会怎样？"
+        ],
+        "ADVISOR": [
+          "哪些假设最不确定？",
+          "单店经济和快休闲餐饮的基准相比如何？",
+          "哪些检查或评分项没有通过？",
+          "最近一次重新校准改了什么？"
+        ],
+        "INTERNAL": [
+          "厨房里的一天是什么样子？",
+          "客人从点餐机到包间的流程是什么？",
+          "下一批门店什么时候开？",
+          "每一班有多少人，负责哪些岗位？"
+        ]
+      }
     }
   }
 }

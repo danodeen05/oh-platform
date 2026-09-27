@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, ReactNode, Suspense } from "react";
+import { useState, useEffect, useLayoutEffect, ReactNode, Suspense } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import "./kiosk.css";
@@ -32,7 +32,7 @@ function DeviceAuthRedirectInner({ children }: { children: ReactNode }) {
     return (
       <div
         style={{
-          minHeight: "100vh",
+          minHeight: "calc(var(--kvh, 1vh) * 100)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -78,6 +78,33 @@ export default function KioskLayout({ children }: { children: ReactNode }) {
   const [pinError, setPinError] = useState(false);
   const [tapCount, setTapCount] = useState(0);
   const [lastTap, setLastTap] = useState(0);
+
+  // Presentation ("fit") mode: render the full 1366 x 1024 design and scale it to
+  // the window as one piece, so a demo in a laptop window or an iframe keeps the
+  // kiosk's real proportions instead of re-flowing. On with ?fit=1 (remembered for
+  // the tab so the order flow keeps it) or whenever the kiosk is embedded.
+  const [fit, setFit] = useState(false);
+  const [fitScale, setFitScale] = useState(1);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const asked = params.get("fit") === "1";
+    if (asked) sessionStorage.setItem("kioskFit", "1");
+    const embedded = window.self !== window.top;
+    setFit(asked || embedded || sessionStorage.getItem("kioskFit") === "1");
+  }, []);
+  useLayoutEffect(() => {
+    if (!fit) return;
+    document.documentElement.classList.add("kiosk-fit");
+    window.dispatchEvent(new Event("kiosk-fit"));
+    const update = () => setFitScale(Math.min(1, window.innerWidth / 1366, window.innerHeight / 1024));
+    update();
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("resize", update);
+      document.documentElement.classList.remove("kiosk-fit");
+      window.dispatchEvent(new Event("kiosk-fit"));
+    };
+  }, [fit]);
 
   // Add kiosk-mode class to html element for CSS lockdown styles
   useEffect(() => {
@@ -150,6 +177,8 @@ export default function KioskLayout({ children }: { children: ReactNode }) {
     <KioskDeviceProvider>
       <KioskPrinterProvider autoConnect>
       <DeviceAuthRedirect>
+        <div style={fit ? { position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", background: "#FAF9F6" } : undefined}>
+        <div style={fit ? { width: 1366, height: 1024, flex: "none", transform: `scale(${fitScale})`, transformOrigin: "center center" } : undefined}>
         <div className="kiosk-container kiosk-no-select" style={{ position: "relative" }}>
           {/* Idle Timer - auto-return to attract screen after 45s inactivity, reset to English */}
           <IdleTimer timeout={45000} redirectPath="/en/kiosk" showWarning />
@@ -291,6 +320,8 @@ export default function KioskLayout({ children }: { children: ReactNode }) {
           </div>
         </div>
       )}
+        </div>
+        </div>
         </div>
       </DeviceAuthRedirect>
       </KioskPrinterProvider>

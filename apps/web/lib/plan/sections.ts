@@ -26,6 +26,7 @@ export const SECTION_KEYS = [
   "team",
   "funding",
   "roadmap",
+  "integrity",
 ] as const;
 
 export type SectionKey = (typeof SECTION_KEYS)[number];
@@ -47,7 +48,8 @@ export type SectionIcon =
   | "tornado"
   | "people"
   | "coins"
-  | "flag";
+  | "flag"
+  | "seal";
 
 export interface PlanSection {
   key: SectionKey;
@@ -80,6 +82,7 @@ export const SECTIONS: readonly PlanSection[] = [
   { key: "team", order: 11, titleKey: "team", icon: "people", audiences: ALL, slug: "team" },
   { key: "funding", order: 12, titleKey: "funding", icon: "coins", audiences: NO_LANDLORD, slug: "funding" },
   { key: "roadmap", order: 13, titleKey: "roadmap", icon: "flag", audiences: ALL, slug: "roadmap" },
+  { key: "integrity", order: 14, titleKey: "integrity", icon: "seal", audiences: ALL, slug: "integrity" },
 ];
 
 export function getSection(key: SectionKey): PlanSection {

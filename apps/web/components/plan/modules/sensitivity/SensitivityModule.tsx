@@ -4,74 +4,44 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Bar, BarChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
+  MATURITY_EBITDA_TARGET,
   NO_DEBT,
+  PUBLIC_EBITDA_TARGET,
   SCENARIOS,
   computeLocation,
-  computeRamp,
   computeUnit,
   fmtCompact,
   fmtCurrency,
   fmtPercent,
+  fmtYears,
   heatGrid,
   tornado,
-  withLever,
-  type LeverKey,
-  type LocationAssumptions,
   type ScenarioKey,
-  type TriangularDist,
 } from "@oh/plan-model";
 import { ScenarioToggle } from "@/components/plan/controls/ScenarioToggle";
 import { DataTableToggle } from "@/components/plan/primitives/DataTableToggle";
 import { CHART } from "@/components/plan/charts/theme";
 import type { McResponse } from "./mc.worker";
+import { RISK_REGISTER, computeDownsides, monteCarloDists, tornadoRanges } from "./downsides";
 
 const MC_RUNS = 10_000;
-
-function ranges(a: LocationAssumptions) {
-  return [
-    { key: "utilizationRate" as LeverKey, low: a.utilizationRate * 0.8, high: a.utilizationRate * 1.2 },
-    { key: "avgBowlPrice" as LeverKey, low: a.avgBowlPrice - 2, high: a.avgBowlPrice + 2 },
-    { key: "foodCostPct" as LeverKey, low: a.foodCostPct + 0.03, high: a.foodCostPct - 0.03 },
-    { key: "rentPerSqFtAnnual" as LeverKey, low: a.rentPerSqFtAnnual + 10, high: a.rentPerSqFtAnnual - 10 },
-    { key: "kitchenFTE" as LeverKey, low: a.kitchenFTE + 2, high: a.kitchenFTE - 2 },
-    { key: "avgDwellMinutes" as LeverKey, low: a.avgDwellMinutes + 5, high: a.avgDwellMinutes - 5 },
-    { key: "pods" as LeverKey, low: a.pods - 10, high: a.pods + 10 },
-    { key: "payrollBurdenPct" as LeverKey, low: a.payrollBurdenPct + 0.04, high: a.payrollBurdenPct - 0.04 },
-  ];
-}
-function dists(a: LocationAssumptions): TriangularDist[] {
-  return [
-    // Symmetric on the two revenue levers, skewed against us on costs: neutral, not flattering.
-    { key: "utilizationRate", min: a.utilizationRate * 0.75, mode: a.utilizationRate, max: a.utilizationRate * 1.25 },
-    { key: "avgBowlPrice", min: a.avgBowlPrice - 2, mode: a.avgBowlPrice, max: a.avgBowlPrice + 2 },
-    { key: "foodCostPct", min: a.foodCostPct - 0.02, mode: a.foodCostPct, max: a.foodCostPct + 0.04 },
-    { key: "rentPerSqFtAnnual", min: a.rentPerSqFtAnnual - 4, mode: a.rentPerSqFtAnnual, max: a.rentPerSqFtAnnual + 10 },
-    { key: "kitchenFTE", min: a.kitchenFTE - 1, mode: a.kitchenFTE, max: a.kitchenFTE + 2 },
-  ];
-}
-
-const DOWNSIDES = [
-  { key: "slowRamp", apply: (a: LocationAssumptions) => ({ ...a, rampCurve: a.rampCurve.map((x) => x * 0.85), rampPlateau: a.rampPlateau * 0.95 }), headline: "y1" as const },
-  { key: "rentInflation", apply: (a: LocationAssumptions) => withLever(a, "rentPerSqFtAnnual", a.rentPerSqFtAnnual + 15) },
-  { key: "beefSpike", apply: (a: LocationAssumptions) => withLever(a, "foodCostPct", a.foodCostPct + 0.05) },
-  { key: "copycat", apply: (a: LocationAssumptions) => withLever(a, "utilizationRate", a.utilizationRate * 0.8) },
-  { key: "podReliability", apply: (a: LocationAssumptions) => withLever(withLever(a, "repairsMaintPct", a.repairsMaintPct + 0.015), "pods", a.pods - 5) },
-  { key: "laborShock", apply: (a: LocationAssumptions) => withLever(withLever(a, "avgKitchenWage", a.avgKitchenWage + 3), "kitchenFTE", a.kitchenFTE + 1) },
-] as const;
 
 /**
  * Sensitivity and Risk (spec 6.5): tornado, utilization × price heat grid
  * with the break-even contour, a 10,000-run Monte Carlo in a Web Worker,
- * and six named downside scenarios with their EBITDA impact and mitigation.
+ * the named downsides from ./downsides.ts (shared with the print route)
+ * with their EBITDA impact and mitigation, and the register of risks that
+ * are disclosed rather than modeled.
  */
 export function SensitivityModule({ initialScenario }: { initialScenario: ScenarioKey }) {
   const t = useTranslations("plan.sensitivity");
   const tm = useTranslations("plan.model");
   const locale = useLocale();
   const [key, setKey] = useState<ScenarioKey>(initialScenario);
-  const a = SCENARIOS[key].assumptions;
+  const scenario = SCENARIOS[key];
+  const a = scenario.assumptions;
   const base = useMemo(() => computeLocation(a), [a]);
-  const torn = useMemo(() => tornado(a, ranges(a)), [a]);
+  const torn = useMemo(() => tornado(a, tornadoRanges(a)), [a]);
   const utilValues = [0.1, 0.14, 0.18, 0.22, 0.26, 0.3, 0.34, 0.38, 0.42];
   const priceValues = [14, 15.5, 17, 18.5, 20, 21.5, 23, 24.5, 26];
   const grid = useMemo(() => heatGrid(a, { key: "utilizationRate", values: utilValues }, { key: "avgBowlPrice", values: priceValues }), [a]);
@@ -95,26 +65,39 @@ export function SensitivityModule({ initialScenario }: { initialScenario: Scenar
       setMcState("done");
     };
     worker.onerror = () => setMcState("unavailable");
-    worker.postMessage({ assumptions: a, dists: dists(a), runs: MC_RUNS, seed: 20260925, threshold: base.annualRevenue * 0.25 });
+    worker.postMessage({ assumptions: a, dists: monteCarloDists(a), runs: MC_RUNS, seed: 20260925, threshold: base.annualRevenue * PUBLIC_EBITDA_TARGET });
     return () => worker.terminate();
   }, [a, base.annualRevenue]);
 
   const money = (v: number) => fmtCompact(v, { locale });
   const full = (v: number) => fmtCurrency(v, { locale });
-  const downsides = useMemo(
-    () =>
-      DOWNSIDES.map((d) => {
-        const stressed = d.apply(a);
-        const loc = computeLocation(stressed);
-        const y1 = computeRamp(stressed, { months: 12 }).years[0]?.ebitda ?? 0;
-        const y1Base = computeRamp(a, { months: 12 }).years[0]?.ebitda ?? 0;
-        const steadyDelta = loc.ebitda - base.ebitda;
-        const y1Delta = y1 - y1Base;
-        return { key: d.key, ebitdaDelta: steadyDelta, marginAfter: loc.ebitdaMarginPct, y1Delta, headline: "headline" in d && d.headline === "y1" ? y1Delta : steadyDelta, headlineIsY1: "headline" in d && d.headline === "y1" };
-      }),
-    [a, base.ebitda],
-  );
-  const payback = computeUnit(SCENARIOS[key], { loan: NO_DEBT }).ramp.payback.fromOpening;
+  const downsides = useMemo(() => computeDownsides(scenario), [scenario]);
+  const payback = computeUnit(scenario, { loan: NO_DEBT }).ramp.payback.fromOpening;
+  const target = fmtPercent(PUBLIC_EBITDA_TARGET, locale, 0);
+  const stretch = fmtPercent(MATURITY_EBITDA_TARGET, locale, 0);
+  // Values the mitigation copy interpolates so no figure is typed into a message.
+  const mitigationValues = {
+    people: Math.round(a.kitchenFTE + a.managerFTE),
+    hours: Math.round(a.kitchenHoursPerDay),
+    program: fmtPercent(a.memberProgramPct, locale, 1),
+    swag: fmtCurrency(a.memberSwagAnnual, { locale }),
+    launch: fmtCurrency(a.launchMarketing, { locale }),
+    days: a.operatingDaysPerYear,
+    pods: a.pods,
+  };
+  const headlineValue = (d: (typeof downsides)[number]): string => (d.headline === "payback" ? t("downsides.paybackDelta", { years: Number.isNaN(d.value) ? "n/a" : fmtYears(d.value, locale) }) : money(d.value));
+  const headlineNote = (d: (typeof downsides)[number]): string => {
+    switch (d.headline) {
+      case "y1":
+        return t("downsides.impactY1", { margin: fmtPercent(d.marginAfter, locale, 1) });
+      case "payback":
+        return t("downsides.impactPayback", { steady: money(d.steadyDelta) });
+      case "company":
+        return t("downsides.impactCompany");
+      default:
+        return t("downsides.impact", { margin: fmtPercent(d.marginAfter, locale, 1), y1: money(d.y1Delta) });
+    }
+  };
 
   const gridMax = Math.max(Math.abs(grid.min), Math.abs(grid.max));
   const cellColor = (v: number): string => {
@@ -207,7 +190,7 @@ export function SensitivityModule({ initialScenario }: { initialScenario: Scenar
               {[["p10", mc.p10], ["p50", mc.p50], ["p90", mc.p90]].map(([k, v]) => (
                 <div key={k as string} className="rounded-lg border border-oh-stone bg-oh-ink px-4 py-3"><p className="m-0 text-[0.66rem] uppercase tracking-[0.14em] text-oh-mute">{t(`mc.${k as string}`)}</p><p className="m-0 mt-1 font-display text-[1.5rem] leading-none tabular-nums text-oh-cream">{money(v as number)}</p></div>
               ))}
-              <div className="rounded-lg border border-oh-stone bg-oh-ink px-4 py-3"><p className="m-0 text-[0.66rem] uppercase tracking-[0.14em] text-oh-mute">{t("mc.belowTarget")}</p><p className="m-0 mt-1 font-display text-[1.5rem] leading-none tabular-nums text-oh-cream">{fmtPercent(mc.probabilityBelow, locale, 1)}</p><p className="m-0 mt-1 text-[0.7rem] text-oh-mute">{t("mc.belowTargetSub", { value: money(mc.threshold) })}</p></div>
+              <div className="rounded-lg border border-oh-stone bg-oh-ink px-4 py-3"><p className="m-0 text-[0.66rem] uppercase tracking-[0.14em] text-oh-mute">{t("mc.belowTarget", { target })}</p><p className="m-0 mt-1 font-display text-[1.5rem] leading-none tabular-nums text-oh-cream">{fmtPercent(mc.probabilityBelow, locale, 1)}</p><p className="m-0 mt-1 text-[0.7rem] text-oh-mute">{t("mc.belowTargetSub", { value: money(mc.threshold) })}</p></div>
             </div>
             <div className="mt-4" style={{ width: "100%", height: 220 }}>
               <ResponsiveContainer>
@@ -224,7 +207,7 @@ export function SensitivityModule({ initialScenario }: { initialScenario: Scenar
         ) : (
           <p className="m-0 text-[0.85rem] text-oh-mute">{mcState === "unavailable" ? t("mc.unavailable") : t("mc.running")}</p>
         )}
-        <p className="m-0 mt-2 text-[0.75rem] text-oh-mute">{t("mc.note")}</p>
+        <p className="m-0 mt-2 text-[0.75rem] text-oh-mute">{t("mc.note", { target, stretch })}</p>
       </section>
 
       <section>
@@ -235,13 +218,26 @@ export function SensitivityModule({ initialScenario }: { initialScenario: Scenar
             <div key={d.key} className="rounded-lg border border-oh-stone bg-oh-ink p-4">
               <div className="flex items-baseline justify-between gap-3">
                 <h3 className="m-0 font-display text-[1.1rem] text-oh-cream">{t(`downsides.items.${d.key}.title`)}</h3>
-                <span className="shrink-0 font-display tabular-nums text-[1.1rem] text-oh-ember-light">{money(d.headline)}</span>
+                <span className="shrink-0 font-display tabular-nums text-[1.1rem] text-oh-ember-light">{headlineValue(d)}</span>
               </div>
-              <p className="m-0 mt-1 text-[0.72rem] text-oh-mute">{d.headlineIsY1 ? t("downsides.impactY1", { margin: fmtPercent(d.marginAfter, locale, 1) }) : t("downsides.impact", { margin: fmtPercent(d.marginAfter, locale, 1), y1: money(d.y1Delta) })}</p>
-              <p className="m-0 mt-3 text-[0.82rem] leading-relaxed text-oh-mute"><span className="text-oh-gold">{t("downsides.mitigation")} </span>{t(`downsides.items.${d.key}.mitigation`)}</p>
+              <p className="m-0 mt-1 text-[0.72rem] text-oh-mute">{headlineNote(d)}</p>
+              <p className="m-0 mt-3 text-[0.82rem] leading-relaxed text-oh-mute"><span className="text-oh-gold">{t("downsides.mitigation")} </span>{t(`downsides.items.${d.key}.mitigation`, mitigationValues)}</p>
             </div>
           ))}
         </div>
+      </section>
+
+      <section>
+        <h2 className="m-0 mb-1 font-display text-[1.5rem] text-oh-cream">{t("register.title")}</h2>
+        <p className="m-0 mb-4 text-[0.85rem] text-oh-mute">{t("register.subtitle")}</p>
+        <dl className="m-0 grid gap-x-8 gap-y-3 md:grid-cols-2">
+          {RISK_REGISTER.map((k) => (
+            <div key={k} className="border-b border-oh-stone pb-3">
+              <dt className="font-display text-[1rem] text-oh-cream">{t(`register.items.${k}.title`)}</dt>
+              <dd className="m-0 mt-1 text-[0.8rem] leading-relaxed text-oh-mute">{t(`register.items.${k}.body`)}</dd>
+            </div>
+          ))}
+        </dl>
       </section>
     </div>
   );

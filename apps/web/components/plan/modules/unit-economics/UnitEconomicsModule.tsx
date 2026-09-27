@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { BASE, FRANCHISE_MARKETS, NO_DEBT, SUBSEQUENT_UNIT_OVERRIDES, computeCapex, computeUnit, fmtCompact, fmtCurrency, fmtInteger, fmtPercent, fmtYears, type LocationAssumptions } from "@oh/plan-model";
 import { AssumptionSlider } from "@/components/plan/controls/AssumptionSlider";
+import { PlanPhoto } from "@/components/plan/primitives/PlanPhoto";
 import { MARKET_PINS } from "@/components/plan/modules/expansion/markets";
 
 interface MarketPreset {
@@ -38,6 +39,7 @@ export function UnitEconomicsModule() {
   const t = useTranslations("plan.unitEconomics");
   const tm = useTranslations("plan.model");
   const tx = useTranslations("plan.expansion.markets");
+  const tp = useTranslations("plan.photos");
   const locale = useLocale();
   const [marketKey, setMarketKey] = useState("lehi");
   const preset = PRESETS.find((p) => p.key === marketKey) ?? (PRESETS[0] as MarketPreset);
@@ -60,10 +62,15 @@ export function UnitEconomicsModule() {
   const lines: { key: string; value: number; pct?: number; strong?: boolean }[] = [
     { key: "revenue", value: loc.annualRevenue, strong: true },
     { key: "cogs", value: -(loc.foodCost + loc.packaging), pct: (loc.foodCost + loc.packaging) / loc.annualRevenue },
+    // 2026-09-26: the member program (cashback, referrals, perks at COGS, swag) and discounts and comps are their own lines above gross profit.
+    { key: "memberProgram", value: -loc.memberProgram, pct: loc.memberProgram / loc.annualRevenue },
+    { key: "discountsComps", value: -loc.discountsComps, pct: loc.discountsComps / loc.annualRevenue },
     { key: "grossProfit", value: loc.grossProfit, pct: loc.grossMarginPct, strong: true },
     { key: "labor", value: -loc.labor, pct: loc.laborPct },
     { key: "occupancy", value: -loc.occupancy, pct: loc.occupancy / loc.annualRevenue },
-    { key: "otherOpex", value: -(loc.totalOpex - loc.labor - loc.occupancy), pct: (loc.totalOpex - loc.labor - loc.occupancy) / loc.annualRevenue },
+    { key: "otherOpex", value: -(loc.totalOpex - loc.labor - loc.occupancy - loc.communityGiving), pct: (loc.totalOpex - loc.labor - loc.occupancy - loc.communityGiving) / loc.annualRevenue },
+    // 2026-09-27 owner decision: the 1% pledge to ONE RED STEP AT A TIME, shown on its own so it is never buried in other opex.
+    { key: "communityGiving", value: -loc.communityGiving, pct: loc.communityGiving / loc.annualRevenue },
     { key: "ebitda", value: loc.ebitda, pct: loc.ebitdaMarginPct, strong: true },
   ];
 
@@ -85,7 +92,7 @@ export function UnitEconomicsModule() {
         </p>
       </div>
 
-      <div className="grid gap-8 md:grid-cols-[minmax(260px,320px)_1fr]">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-8 md:grid-cols-[minmax(260px,320px)_minmax(0,1fr)]">
         <aside className="self-start rounded-lg border border-oh-stone bg-oh-ink p-4 md:sticky md:top-32">
           <h2 className="m-0 mb-1 text-[0.72rem] uppercase tracking-[0.14em] text-oh-mute">{t("yourSpace")}</h2>
           <AssumptionSlider lever="rentPerSqFtAnnual" label={tm("levers.rentPerSqFtAnnual")} value={assumptions.rentPerSqFtAnnual} baseline={preset.rent} display={money(assumptions.rentPerSqFtAnnual)} onChange={set("rentPerSqFtAnnual")} min={15} max={150} step={1} />
@@ -143,6 +150,27 @@ export function UnitEconomicsModule() {
           <p className="m-0 mt-2 text-[0.75rem] text-oh-mute">{preset.flagship ? t("capexFlagshipNote") : t("capexSubsequentNote", { savings: money(computeCapex(BASE.assumptions).total - computeCapex(BASE.assumptions, SUBSEQUENT_UNIT_OVERRIDES).total) })}</p>
         </div>
       </div>
+
+      <section className="mt-12">
+        <h2 className="m-0 mb-1 font-display text-[1.3rem] text-oh-cream">{t("product.title")}</h2>
+        <p className="m-0 mb-4 max-w-2xl text-[0.9rem] leading-relaxed text-oh-mute">
+          {t("product.caption", { pct: fmtPercent(assumptions.retailAttachRate, locale, 1), spend: fmtCurrency(assumptions.avgRetailSpend, { locale, fractionDigits: 0 }) })}
+        </p>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
+          {(
+            [
+              ["product-bowl-cubed", "bowlCubed"],
+              ["product-bowl-cubed-2", "bowlCubed2"],
+              ["product-bowl-empty", "bowlEmpty"],
+              ["product-chopsticks", "chopsticks"],
+              ["product-bowl-wood", "bowlWood"],
+            ] as const
+          ).map(([file, key]) => (
+            <PlanPhoto key={file} src={`/plan/${file}.webp`} alt={t(`product.alts.${key}`)} width={800} height={800} />
+          ))}
+        </div>
+        <p className="m-0 mt-2 text-[0.62rem] uppercase tracking-[0.14em] text-oh-mute/80">{tp("concept")}</p>
+      </section>
     </div>
   );
 }

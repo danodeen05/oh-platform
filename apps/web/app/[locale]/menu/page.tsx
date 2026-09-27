@@ -174,7 +174,7 @@ function mapStepsToDisplaySections(steps: MenuStep[], t: (key: string) => string
           const englishName = item.nameEn || item.name;
 
           // Add tags based on item characteristics
-          if (englishName.includes("A5 Wagyu")) tags.push(t("tags.premium"));
+          if (englishName.includes("Wagyu")) tags.push(t("tags.premium"));
           if (englishName.includes("Classic") && item.category === "main01") tags.push(t("tags.signature"));
           if (item.basePriceCents === 0 && item.categoryType !== "MAIN") tags.push(t("tags.included"));
           if (item.description?.toLowerCase().includes("unlimited")) tags.push(t("tags.unlimitedRefills"));

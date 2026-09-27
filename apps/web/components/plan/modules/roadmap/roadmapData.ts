@@ -40,6 +40,8 @@ export const ROADMAP: readonly RoadmapItem[] = [
   { key: "certificateOfOccupancy", workstream: "legal", start: -0.5, end: -0.5, milestone: true },
   { key: "ohOsV1", workstream: "technology", start: -9, end: 0 },
   { key: "kdsPodOrchestration", workstream: "technology", start: -6, end: -1 },
+  // 2026-09-26 (finding C2): the member program as designed needs app work before it can be promised.
+  { key: "memberPerks", workstream: "technology", start: -2, end: 4 },
   { key: "coreHires", workstream: "hiring", start: -3, end: 0 },
   { key: "training", workstream: "hiring", start: -1.5, end: 0 },
   { key: "flagshipOpen", workstream: "realEstate", start: 0, end: 0, milestone: true, location: "lehi" },
@@ -52,11 +54,15 @@ export const ROADMAP: readonly RoadmapItem[] = [
     { key: `${o.key}-open`, workstream: "realEstate", start: o.openMonth, end: o.openMonth, milestone: true, location: o.key },
   ]),
   { key: "ohOsV2", workstream: "technology", start: 6, end: 18 },
-  { key: "franchiseCounsel", workstream: "legal", start: 24, end: 30 },
-  { key: "fdd", workstream: "legal", start: 30, end: 36 },
-  { key: "franchiseLicensing", workstream: "technology", start: 28, end: 36 },
-  { key: "franchiseTeam", workstream: "hiring", start: 30, end: 36 },
-  { key: "firstFranchise", workstream: "realEstate", start: 36, end: 36, milestone: true },
+  // Franchise path (owner decision 2026-09-26, finding F1): counsel at month 12, the FDD drafted months 12 to 18,
+  // effective around month 24 with the registration states, first area developers in year 3, first units open in year 4.
+  { key: "franchiseCounsel", workstream: "legal", start: 12, end: 14 },
+  { key: "fdd", workstream: "legal", start: 12, end: 18 },
+  { key: "fddEffective", workstream: "legal", start: 24, end: 24, milestone: true },
+  { key: "franchiseTeam", workstream: "hiring", start: 24, end: 30 },
+  { key: "franchiseLicensing", workstream: "technology", start: 24, end: 34 },
+  { key: "firstAreaDevelopers", workstream: "capital", start: 30, end: 30, milestone: true },
+  { key: "firstFranchise", workstream: "realEstate", start: 42, end: 42, milestone: true },
 ];
 
 export const ROADMAP_START = -12;

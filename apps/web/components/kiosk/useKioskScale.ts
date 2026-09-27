@@ -26,6 +26,12 @@ export function useKioskScale() {
 
   useEffect(() => {
     const updateScale = () => {
+      // Presentation ("fit") mode: the layout renders the full 1080p design on a
+      // fixed stage and scales the stage, so element sizing stays at MAX_SCALE.
+      if (document.documentElement.classList.contains("kiosk-fit")) {
+        setScale(MAX_SCALE);
+        return;
+      }
       const newScale = window.innerHeight / BASE_HEIGHT;
       // Clamp between 1 (720p) and MAX_SCALE (1080p)
       setScale(Math.max(1, Math.min(newScale, MAX_SCALE)));
@@ -33,7 +39,11 @@ export function useKioskScale() {
 
     updateScale();
     window.addEventListener("resize", updateScale);
-    return () => window.removeEventListener("resize", updateScale);
+    window.addEventListener("kiosk-fit", updateScale);
+    return () => {
+      window.removeEventListener("resize", updateScale);
+      window.removeEventListener("kiosk-fit", updateScale);
+    };
   }, []);
 
   return {
@@ -61,3 +71,27 @@ export function useKioskScale() {
  * ```
  */
 export const KIOSK_SCALE_CSS_VAR = "--kiosk-scale";
+
+/**
+ * True on screens narrower than 1600 px (an iPad Pro is 1366 wide at the same
+ * 1080p height scale). The two largest brand sizes were drawn for 1920 and
+ * reach the centered titles below that width, so callers step them down.
+ * In presentation ("fit") mode the stage is always 1366 wide.
+ */
+export function useKioskNarrow(): boolean {
+  const [narrow, setNarrow] = useState(false);
+  useEffect(() => {
+    const update = () => {
+      const width = document.documentElement.classList.contains("kiosk-fit") ? 1366 : window.innerWidth;
+      setNarrow(width < 1600);
+    };
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("kiosk-fit", update);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("kiosk-fit", update);
+    };
+  }, []);
+  return narrow;
+}

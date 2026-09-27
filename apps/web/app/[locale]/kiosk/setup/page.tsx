@@ -181,7 +181,7 @@ function KioskSetupContent() {
   return (
     <main
       style={{
-        minHeight: "100vh",
+        minHeight: "calc(var(--kvh, 1vh) * 100)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -509,7 +509,7 @@ export default function KioskSetupPage() {
       fallback={
         <main
           style={{
-            minHeight: "100vh",
+            minHeight: "calc(var(--kvh, 1vh) * 100)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",

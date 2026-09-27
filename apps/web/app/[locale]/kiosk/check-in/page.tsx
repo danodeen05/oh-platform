@@ -455,10 +455,10 @@ export default function CheckInPage() {
   };
 
   return (
-    <main style={{ height: "100vh", maxHeight: "100vh", background: COLORS.surface, color: COLORS.text, display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
+    <main style={{ height: "calc(var(--kvh, 1vh) * 100)", maxHeight: "calc(var(--kvh, 1vh) * 100)", background: COLORS.surface, color: COLORS.text, display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
       {/* Decorative Oh! mark on right side - 30% cut off */}
       <div style={{ position: "absolute", top: "50%", right: "-15%", transform: "translateY(-50%)", opacity: 0.08, pointerEvents: "none", zIndex: 0 }}>
-        <img src="/Oh_Logo_Mark_Web.png" alt="" style={{ height: "90vh", width: "auto", objectFit: "contain" }} />
+        <img src="/Oh_Logo_Mark_Web.png" alt="" style={{ height: "calc(var(--kvh, 1vh) * 90)", width: "auto", objectFit: "contain" }} />
       </div>
 
       {/* Large Brand Header - top left */}

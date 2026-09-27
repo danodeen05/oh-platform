@@ -1,5 +1,5 @@
 /**
- * POST /api/plan/heartbeat  { sectionKey, seconds, interactions }
+ * POST /api/plan/heartbeat  { sectionKey, seconds, interactions, targets? }
  * Sent by the analytics beacon (navigator.sendBeacon, so the body arrives as
  * text). The session id comes from the verified cookie, never from the client.
  */
@@ -16,6 +16,17 @@ interface HeartbeatBody {
   sectionKey: string;
   seconds: number;
   interactions: number;
+  targets?: Record<string, number>;
+}
+
+/** `{label: count}`; labels come from the page's own controls, trimmed again by the API. */
+function parseTargets(v: unknown): Record<string, number> | undefined {
+  if (!v || typeof v !== "object" || Array.isArray(v)) return undefined;
+  const out: Record<string, number> = {};
+  for (const [k, n] of Object.entries(v as Record<string, unknown>).slice(0, 20)) {
+    if (typeof n === "number" && n > 0 && k.trim()) out[k.slice(0, 40)] = Math.floor(n);
+  }
+  return Object.keys(out).length ? out : undefined;
 }
 
 function parseBody(raw: string): HeartbeatBody | null {
@@ -26,6 +37,7 @@ function parseBody(raw: string): HeartbeatBody | null {
       sectionKey: v.sectionKey,
       seconds: typeof v.seconds === "number" ? v.seconds : 0,
       interactions: typeof v.interactions === "number" ? v.interactions : 0,
+      targets: parseTargets(v.targets),
     };
   } catch {
     return null;

@@ -360,7 +360,7 @@ export default function HomePage() {
               }} />
               <img
                 src="/menu images/A5 Wagyu Bowl.png"
-                alt="A5 Wagyu Beef Noodle Soup"
+                alt="American Wagyu Beef Noodle Soup"
                 style={{
                   width: "100%",
                   height: "auto",
@@ -412,16 +412,16 @@ export default function HomePage() {
               flexWrap: "wrap",
             }}>
               <div>
-                <div style={{ fontSize: "2rem", fontWeight: "300", color: "#C7A878" }}>48+</div>
-                <div style={{ fontSize: "0.85rem", color: "#7C7A67", letterSpacing: "1px" }}>{t("signature.stats.hours")}</div>
+                <div style={{ fontSize: "2rem", fontWeight: "300", color: "#C7A878" }}>75</div>
+                <div style={{ fontSize: "0.85rem", color: "#7C7A67", letterSpacing: "1px" }}>{t("signature.stats.pods")}</div>
               </div>
               <div>
-                <div style={{ fontSize: "2rem", fontWeight: "300", color: "#C7A878" }}>A5</div>
+                <div style={{ fontSize: "2rem", fontWeight: "300", color: "#C7A878" }}>{t("signature.stats.gradeValue")}</div>
                 <div style={{ fontSize: "0.85rem", color: "#7C7A67", letterSpacing: "1px" }}>{t("signature.stats.grade")}</div>
               </div>
               <div>
-                <div style={{ fontSize: "2rem", fontWeight: "300", color: "#C7A878" }}>30</div>
-                <div style={{ fontSize: "0.85rem", color: "#7C7A67", letterSpacing: "1px" }}>{t("signature.stats.years")}</div>
+                <div style={{ fontSize: "2rem", fontWeight: "300", color: "#C7A878" }}>0</div>
+                <div style={{ fontSize: "0.85rem", color: "#7C7A67", letterSpacing: "1px" }}>{t("signature.stats.tips")}</div>
               </div>
             </div>
           </div>

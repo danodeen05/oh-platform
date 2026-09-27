@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
-import { QRScanner, parseKioskQR, LanguageSelector, AnimatedOrderQR, useKioskMode, useKioskScale } from "@/components/kiosk";
+import { QRScanner, parseKioskQR, LanguageSelector, AnimatedOrderQR, useKioskMode, useKioskScale, useKioskNarrow } from "@/components/kiosk";
 
 // Welcome messages in different languages for cycling animation
 const WELCOME_MESSAGES = [
@@ -36,9 +36,12 @@ const COLORS = {
 };
 
 // Brand component for consistent branding across kiosk screens
-function KioskBrand({ size = "normal" }: { size?: "small" | "normal" | "large" | "xlarge" }) {
+function KioskBrand({ size: requested = "normal" }: { size?: "small" | "normal" | "large" | "xlarge" }) {
   const tHome = useTranslations("home");
   const { s: scale } = useKioskScale();
+  // On screens narrower than 1600 the largest size reaches the centered titles.
+  const narrow = useKioskNarrow();
+  const size = narrow && requested === "xlarge" ? "large" : requested;
   // Base sizes for 720p, scales up for 1080p
   const sizes = {
     small: { logo: scale(22), chinese: `${0.8 * (scale(10) / 10)}rem`, english: `${0.45 * (scale(10) / 10)}rem`, gap: scale(3) },
@@ -415,7 +418,7 @@ export default function KioskWelcome({ location }: { location: Location }) {
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "flex-end",
-            minHeight: "100vh",
+            minHeight: "calc(var(--kvh, 1vh) * 100)",
             paddingBottom: 1,
             width: "100%",
           }}
@@ -630,7 +633,7 @@ export default function KioskWelcome({ location }: { location: Location }) {
             src="/Oh_Logo_Mark_Web.png"
             alt=""
             style={{
-              height: "90vh",
+              height: "calc(var(--kvh, 1vh) * 90)",
               width: "auto",
               objectFit: "contain",
             }}
@@ -890,7 +893,7 @@ function QRScanView({ location, onBack }: { location: Location; onBack: () => vo
           src="/Oh_Logo_Mark_Web.png"
           alt=""
           style={{
-            height: "90vh",
+            height: "calc(var(--kvh, 1vh) * 90)",
             width: "auto",
             objectFit: "contain",
           }}

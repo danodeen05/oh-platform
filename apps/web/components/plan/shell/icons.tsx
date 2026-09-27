@@ -18,6 +18,7 @@ const PATHS: Record<SectionIcon, string> = {
   people: "M9 11a3 3 0 100-6 3 3 0 000 6zM16 12a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM3 20a6 6 0 0112 0M14 20a4.5 4.5 0 017 0",
   coins: "M12 12a7 3 0 1014 0 7 3 0 10-14 0zM5 12v4c0 1.7 3.1 3 7 3s7-1.3 7-3v-4M5 8v4",
   flag: "M6 21V4M6 4h11l-2 4 2 4H6",
+  seal: "M12 3a7 7 0 100 14 7 7 0 000-14zM9.3 10.2l1.9 1.9 3.6-3.8M8.8 16.4L7.5 21l4.5-2 4.5 2-1.3-4.6",
 };
 
 export function SectionGlyph({ icon, className }: { icon: SectionIcon; className?: string }) {

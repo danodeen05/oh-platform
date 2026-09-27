@@ -67,16 +67,17 @@
     "brandName": "<oh>哦！</oh> <bebas>Oh! Beef Noodle Soup</bebas>",
     "brandNamePlain": "Oh! Beef Noodle Soup",
     "tagline": "El único restaurante construido a <bold>tu</bold> medida.",
-    "heroDescription": "Nacido de la querida tradición taiwanesa de sopa de fideos con carne y elevado con la atención japonesa al detalle, disfruta nuestra receta familiar de 30 años en tu propia cabina privada.",
+    "heroDescription": "Nacido de la querida tradición taiwanesa de sopa de fideos con carne y elevado con una interpretación de fusión premium, disfruta tu tazón en tu propia cabina privada.",
     "opensAt": "Abrimos a las 10am para pedidos",
     "signature": {
       "label": "NUESTRA ESPECIALIDAD",
-      "title": "Sopa de fideos con carne Wagyu A5",
-      "description": "La sedosa carne Wagyu A5 se derrite en nuestro rico y aromático caldo — cocido a fuego lento durante 48 horas usando técnicas transmitidas por tres generaciones. Cada tazón cuenta una historia de paciencia, precisión y pasión.",
+      "title": "Sopa de Fideos con Res Wagyu Americana",
+      "description": "Res Wagyu americana y USDA Prime, ahumada lenta y suavemente, sobre un caldo de hueso en dos fases: una cocción larga y luego un acabado pensado para el sabor. Servida en tu propia cabina privada y sin propinas, nunca.",
       "stats": {
-        "hours": "HORAS DE COCCIÓN",
-        "grade": "GRADO WAGYU",
-        "years": "AÑOS DE RECETA"
+        "pods": "CABINAS PRIVADAS",
+        "grade": "GRADO DE RES",
+        "gradeValue": "Wagyu americana",
+        "tips": "PROPINAS"
       }
     },
     "difference": {
@@ -85,12 +86,12 @@
     },
     "features": {
       "recipe": {
-        "title": "Receta de 30 años",
-        "description": "Sopa de fideos con carne perfeccionada, transmitida por generaciones"
+        "title": "Caldo en dos fases",
+        "description": "Una cocción larga de hueso y luego un acabado pensado para el sabor"
       },
       "beef": {
         "title": "Carne Premium",
-        "description": "Wagyu A5 y cortes premium seleccionados por su calidad excepcional"
+        "description": "Wagyu americana y USDA Prime, ahumadas lentamente, en láminas de brisket o trozos de costilla de res"
       },
       "tech": {
         "title": "Experiencia tecnológica",
@@ -102,7 +103,7 @@
     },
     "pods": {
       "title": "Cabinas de comedor privadas",
-      "description": "Experimenta una forma de comer como nunca antes. Nuestras cabinas individuales ofrecen un espacio tranquilo y sin distracciones para saborear cada sorbo. Sin mesas abarrotadas, sin ruido — solo tú y tu tazón perfecto de sopa de fideos con carne.",
+      "description": "Experimenta una forma de comer como nunca antes. Nuestras cabinas individuales ofrecen un espacio tranquilo y sin distracciones para saborear cada sorbo. Sin mesas abarrotadas, sin ruido. Solo tú y tu tazón perfecto de sopa de fideos con carne.",
       "features": {
         "space": {
           "title": "Tu espacio",
@@ -154,9 +155,7 @@
     "copyright": "© {year} Oh! Beef Noodle Soup. Todos los derechos reservados.",
     "links": {
       "accessibility": "Accesibilidad",
-      "careers": "Empleo",
       "contact": "Contacto",
-      "press": "Prensa",
       "privacy": "Política de privacidad"
     },
     "foundation": {
@@ -197,7 +196,7 @@
     "sections": {
       "soup": {
         "subtitle": "Comienza con nuestro caldo especial",
-        "description": "Caldo de hueso de res perfeccionado durante 30 años"
+        "description": "Rico caldo de hueso de res en dos fases: una cocción larga y luego un acabado pensado para el sabor"
       },
       "noodles": {
         "subtitle": "Elige tus fideos",
@@ -218,7 +217,7 @@
     },
     "hero": {
       "title": "Nuestro Menú",
-      "description": "Crea tu tazón perfecto con nuestros ingredientes premium y receta de 30 años",
+      "description": "Crea tu tazón perfecto con res americana premium y nuestro caldo en dos fases",
       "orderNow": "Ordenar Ahora"
     },
     "difference": {
@@ -281,14 +280,24 @@
       "tagline": "Centro de Salt Lake City",
       "description": "Nuestra ubicación principal en el corazón del centro de Salt Lake City, ofreciendo una experiencia gastronómica única con cabinas privadas y pedidos tecnológicos.",
       "mallDescription": "City Creek Center es el principal destino de compras de Utah, con más de 100 tiendas y restaurantes en un impresionante entorno al aire libre con techo de vidrio retráctil.",
-      "nearbyLandmarks": ["Temple Square", "Salt Palace Convention Center", "Capitolio de Utah", "Gateway Mall"],
+      "nearbyLandmarks": [
+        "Temple Square",
+        "Salt Palace Convention Center",
+        "Capitolio de Utah",
+        "Gateway Mall"
+      ],
       "parking": "Estacionamiento gratis en la estructura de City Creek con validación"
     },
     "universityPlace": {
       "tagline": "Valle de Utah",
       "description": "Sirviendo a la comunidad del Valle de Utah con la misma calidad excepcional y experiencia gastronómica innovadora.",
       "mallDescription": "University Place es el vibrante centro de compras y entretenimiento de Orem, con una mezcla de tiendas nacionales y favoritos locales cerca de Utah Valley University.",
-      "nearbyLandmarks": ["Utah Valley University", "Provo Canyon", "Cueva Timpanogos", "Campus de BYU"],
+      "nearbyLandmarks": [
+        "Utah Valley University",
+        "Provo Canyon",
+        "Cueva Timpanogos",
+        "Campus de BYU"
+      ],
       "parking": "Amplio estacionamiento gratuito disponible en todo University Place"
     },
     "details": {
@@ -332,7 +341,12 @@
       "title": "Próximamente",
       "description": "¡Nos estamos expandiendo! Mantente atento a nuevas ubicaciones en estas ciudades.",
       "label": "Próximamente",
-      "cities": ["San Francisco", "Los Ángeles", "Phoenix", "Denver"]
+      "cities": [
+        "San Francisco",
+        "Los Ángeles",
+        "Phoenix",
+        "Denver"
+      ]
     },
     "cta": {
       "title": "¿Listo para el mejor tazón?",
@@ -381,8 +395,8 @@
           "cashback": "3% de devolución en pedidos",
           "topPrioritySeating": "Asiento con máxima prioridad",
           "freePremiumBowl": "Bowl premium gratis al subir de nivel",
-          "merchDrops": "Lanzamientos exclusivos de mercancía",
-          "premiumAddons": "Extras premium de cortesía",
+          "merchDrops": "Acceso anticipado a lanzamientos de mercancía a precio de miembro",
+          "premiumAddons": "Un complemento premium de cortesía cada trimestre",
           "vipGift": "Regalo y reconocimiento VIP anual",
           "wallOfFame": "Foto y pedido firmado en el Muro de la Fama Oh!"
         }
@@ -813,8 +827,8 @@
         "freeBowl": "Tazón gratis al subir de nivel",
         "topPrioritySeating": "Máxima prioridad de asiento",
         "freePremiumBowl": "Tazón premium gratis al subir de nivel",
-        "merchDrops": "Mercancía exclusiva",
-        "premiumAddons": "Complementos premium de cortesía",
+        "merchDrops": "Acceso anticipado a lanzamientos de mercancía a precio de miembro",
+        "premiumAddons": "Un complemento premium de cortesía cada trimestre",
         "vipGift": "Regalo anual VIP y reconocimiento",
         "wallOfFame": "Foto y pedido firmado en el Muro de la Fama de Oh!"
       }
@@ -828,8 +842,8 @@
       "prioritySeating": "Asiento prioritario",
       "memberEvents": "Eventos exclusivos para miembros",
       "freeBowlUpgrade": "Tazón gratis al subir de nivel",
-      "merchandiseDrops": "Mercancía exclusiva",
-      "premiumAddons": "Complementos premium de cortesía",
+      "merchandiseDrops": "Acceso anticipado a lanzamientos de mercancía a precio de miembro",
+      "premiumAddons": "Un complemento premium de cortesía cada trimestre",
       "vipGift": "Regalo anual VIP y reconocimiento"
     },
     "badges": {
@@ -1100,12 +1114,12 @@
     },
     "step3": {
       "title": "Gana al instante",
-      "description": "Tú recibes $5 de crédito al instante, ellos $5 de descuento. Sin límites de referidos."
+      "description": "Recibes $5 de crédito en cuanto se completa su primer pedido; ellos obtienen $5 de descuento en ese pedido. Los créditos vencen a los 90 días."
     },
     "goodToKnow": "Bueno saber",
     "rules": {
       "minimumOrder": "El bono de referido aplica a primeros pedidos de $20 o más",
-      "disbursement": "Los créditos se agregan a tu cuenta al instante cuando tu amigo completa su pedido",
+      "disbursement": "Los créditos se agregan a tu cuenta al instante cuando tu amigo completa su primer pedido y vencen 90 días después",
       "maxPerOrder": "Máximo de $5 de crédito puede aplicarse por pedido"
     },
     "dashboard": {
@@ -1133,70 +1147,6 @@
       }
     }
   },
-  "careers": {
-    "title": "Únete a nuestro equipo",
-    "description": "Ayúdanos a reimaginar la experiencia gastronómica. Estamos construyendo algo especial y buscamos personas apasionadas.",
-    "viewPositions": "VER POSICIONES ABIERTAS",
-    "values": {
-      "title": "Nuestros valores",
-      "description": "Estos principios guían todo lo que hacemos, desde cómo preparamos nuestra sopa hasta cómo nos tratamos entre nosotros.",
-      "excellence": {
-        "title": "Excelencia en el oficio",
-        "description": "Nos obsesionamos con los detalles. Cada tazón, cada experiencia, cada interacción importa."
-      },
-      "innovation": {
-        "title": "Innovación primero",
-        "description": "Estamos construyendo el futuro de la gastronomía. Tecnología y tradición en armonía."
-      },
-      "team": {
-        "title": "Equipo sobre ego",
-        "description": "Triunfamos juntos. Colaboración, respeto y apoyo están en nuestro núcleo."
-      },
-      "growth": {
-        "title": "Mentalidad de crecimiento",
-        "description": "Invertimos en nuestra gente. Aprende, crece y avanza tu carrera con nosotros."
-      }
-    },
-    "openPositions": "Posiciones abiertas",
-    "positions": {
-      "noFit": "¿No ves una posición que te convenga?",
-      "alwaysLooking": "Siempre buscamos personas talentosas.",
-      "sendResume": "Envíanos tu currículum"
-    },
-    "benefits": {
-      "title": "Por qué trabajar con nosotros",
-      "pay": {
-        "title": "Pago competitivo",
-        "description": "Salarios por encima del mercado más bonificaciones por desempeño"
-      },
-      "health": {
-        "title": "Beneficios de salud",
-        "description": "Cobertura médica, dental y de visión"
-      },
-      "meals": {
-        "title": "Comidas gratis",
-        "description": "Comidas diarias durante turnos más descuento familiar"
-      },
-      "careerGrowth": {
-        "title": "Crecimiento profesional",
-        "description": "Caminos claros de avance y mentoría"
-      },
-      "learning": {
-        "title": "Presupuesto de aprendizaje",
-        "description": "Estipendio anual para desarrollo profesional"
-      },
-      "events": {
-        "title": "Eventos de equipo",
-        "description": "Salidas regulares del equipo y celebraciones"
-      }
-    },
-    "cta": {
-      "title": "¿Listo para dejar tu huella?",
-      "description": "Únete a nosotros para crear el futuro de la gastronomía.",
-      "button": "VER POSICIONES ABIERTAS"
-    },
-    "applyNow": "APLICAR AHORA"
-  },
   "contact": {
     "title": "Contáctanos",
     "description": "Nos encantaría saber de ti",
@@ -1214,8 +1164,7 @@
         "order": "Problema con pedido",
         "feedback": "Comentarios",
         "corporate": "Corporativo / Eventos de grupo",
-        "press": "Consulta de prensa",
-        "careers": "Oportunidad laboral"
+        "press": "Consulta de prensa"
       },
       "message": "Tu mensaje",
       "success": "¡Gracias! Te responderemos en 24-48 horas."
@@ -1225,11 +1174,6 @@
       "email": {
         "title": "Correo electrónico",
         "value": "hello@ohbeefnoodlesoup.com"
-      },
-      "location": {
-        "title": "Visítanos",
-        "opening": "Apertura primavera 2025",
-        "city": "San Francisco, CA"
       },
       "responseTime": {
         "title": "Tiempo de respuesta",
@@ -1243,55 +1187,6 @@
     "faq": {
       "title": "¿Buscas respuestas rápidas?",
       "description": "Consulta nuestras preguntas frecuentes para ayuda instantánea."
-    }
-  },
-  "press": {
-    "title": "Prensa",
-    "description": "Oh! en las noticias",
-    "mediaKit": "Kit de medios",
-    "pressInquiries": "Consultas de prensa",
-    "mediaContact": {
-      "title": "Contacto de Medios",
-      "description": "Para consultas de prensa, entrevistas y solicitudes de medios, comuníquese con nuestro equipo de comunicaciones.",
-      "responseTime": "Normalmente respondemos en 24-48 horas."
-    },
-    "ourStory": {
-      "title": "Nuestra Historia",
-      "p1": "Oh! Beef Noodle Soup nació de una receta familiar de 30 años y la visión de reimaginar la experiencia gastronómica. Nuestro fundador creció viendo a su abuela perfeccionar su sopa de fideos con carne, sirviéndola a familiares y amigos que no podían dejar de pedirla.",
-      "p2": "Hoy, llevamos esa misma receta a un público más amplio, combinada con tecnología innovadora y un concepto único de cabinas privadas que devuelve el enfoque a la comida y la experiencia.",
-      "p3": "Nuestra misión es simple: servir el tazón perfecto de sopa de fideos con carne en un ambiente diseñado para el disfrute, no la distracción."
-    },
-    "keyFacts": {
-      "title": "Datos Clave",
-      "founded": "Fundada",
-      "headquarters": "Sede",
-      "flagshipOpening": "Apertura Insignia",
-      "recipeHeritage": "Herencia de Receta",
-      "uniqueFeature": "Característica Única",
-      "techPlatform": "Plataforma Tecnológica"
-    },
-    "pressReleases": {
-      "title": "Comunicados de Prensa"
-    },
-    "brandAssets": {
-      "title": "Activos de Marca",
-      "logoPackage": {
-        "name": "Paquete de Logotipos",
-        "description": "Logotipos primarios y secundarios en varios formatos"
-      },
-      "brandGuidelines": {
-        "name": "Guías de Marca",
-        "description": "Colores, tipografía y reglas de uso"
-      },
-      "productPhotography": {
-        "name": "Fotografía de Productos",
-        "description": "Imágenes de alta resolución de nuestros platos insignia"
-      },
-      "locationPhotos": {
-        "name": "Fotos de Ubicaciones",
-        "description": "Tomas interiores y exteriores de nuestras ubicaciones"
-      },
-      "requestAccess": "Para solicitar acceso a nuestros activos de marca, contacte"
     }
   },
   "privacy": {
@@ -2050,6 +1945,66 @@
       "alreadyHaveAccount": "Ya tengo una cuenta",
       "privacyNote": "Al crear una cuenta, aceptas nuestra Política de Privacidad y Términos",
       "orderLinked": "¡Pedido vinculado! Ganaste {points} puntos."
+    }
+  },
+  "plan": {
+    "shell": {
+      "askChappy": "Pregúntale a Chappy sobre esta sección"
+    },
+    "chappy": {
+      "launcher": "Pregúntale a Chappy",
+      "title": "Chappy Chopstix",
+      "subtitle": "Conoce este plan mejor que tú",
+      "greeting": "Soy Chappy. Me leí cada página de este plan, notas al pie incluidas, cosa que poca gente puede decir. Pregúntame lo que quieras. Si el plan no tiene la respuesta, se la paso al dueño.",
+      "suggestionsLabel": "La gente como tú suele preguntar",
+      "placeholder": "Pregunta sobre el plan",
+      "send": "Enviar",
+      "close": "Cerrar Chappy",
+      "thinking": "Chappy está pensando",
+      "error": "No se envió. Inténtalo de nuevo en un momento.",
+      "busy": "Estoy saturado. Dame un minuto y vuelve a intentarlo.",
+      "tooMany": "Ya me preguntaste bastante hoy. Vuelve mañana, o pídeme que le pase el resto al dueño.",
+      "expired": "Tu invitación terminó. Pídele al dueño un enlace nuevo.",
+      "escalated": "Enviado al dueño",
+      "limit": "Menos de 1.500 caracteres, por favor. Soy palillos, no abogado.",
+      "suggestions": {
+        "INVESTOR": [
+          "¿Cuánto piden y qué obtengo a cambio?",
+          "¿Cómo se ve el retorno del socio en el año 5 frente al año 7?",
+          "¿Qué pasa si los comensales por día llegan un 20% por debajo?",
+          "¿Cuál es el mayor riesgo de este plan?"
+        ],
+        "LENDER": [
+          "¿Por qué el plan no tiene deuda?",
+          "¿Cuál es el saldo de caja más bajo y cuándo ocurre?",
+          "¿Cómo se ve el escenario conservador?",
+          "¿Cuánto tarda en recuperarse la inversión del local insignia?"
+        ],
+        "LANDLORD": [
+          "¿Cuánto espacio necesitan y con qué forma?",
+          "¿Qué renta por pie cuadrado contempla el plan?",
+          "¿Cuál es el horario y el tráfico esperado?",
+          "¿Qué implica la obra y cuánto tarda?"
+        ],
+        "PARTNER": [
+          "¿Cómo se calcula la participación del socio?",
+          "¿Cómo funcionan el retorno preferente y la preferencia de liquidación?",
+          "¿Cuándo podría el fundador recomprar la participación?",
+          "¿Qué pasa con mi retorno en el escenario conservador?"
+        ],
+        "ADVISOR": [
+          "¿Qué supuestos son los menos seguros?",
+          "¿Cómo se comparan los números por unidad con los referentes de comida rápida informal?",
+          "¿Qué controles o filas del tablero no están aprobados?",
+          "¿Qué cambió en la última revisión del modelo?"
+        ],
+        "INTERNAL": [
+          "¿Cómo es un día en la cocina?",
+          "¿Cómo pasa un cliente del quiosco al pod?",
+          "¿Cuándo abren los próximos locales?",
+          "¿Cuántas personas trabajan por turno y en qué puestos?"
+        ]
+      }
     }
   }
 }

@@ -3,23 +3,24 @@
 import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useReducedMotion } from "framer-motion";
-import { BASE_ASSUMPTIONS, fmtCurrency, fmtInteger } from "@oh/plan-model";
-import { PhotoPlaceholder } from "@/components/plan/primitives/PhotoPlaceholder";
+import { BASE_ASSUMPTIONS, COVERAGE_SCHEDULE, computeCapex, computeLocation, coverageHoursPerDay, fmtCurrency, fmtInteger, fmtPercent } from "@oh/plan-model";
+import { PlanPhoto } from "@/components/plan/primitives/PlanPhoto";
 import { BenchmarkCallout } from "@/components/plan/primitives/BenchmarkCallout";
 import { CHART } from "@/components/plan/charts/theme";
+import { FOUNDATION } from "@/components/plan/modules/foundation/contact";
 
 const STATES = ["AVAILABLE", "RESERVED", "OCCUPIED", "CLEANING"] as const;
-const ROLES = [
-  { key: "brothLead", count: 1, kind: "kitchen" as const, hours: "6:00 to 15:00" },
-  { key: "slicer", count: 1, kind: "kitchen" as const, hours: "9:00 to 18:00" },
-  { key: "noodle", count: 1, kind: "kitchen" as const, hours: "10:00 to 21:00" },
-  { key: "assembly", count: 2, kind: "kitchen" as const, hours: "10:30 to 21:30" },
-  { key: "runner", count: 2, kind: "kitchen" as const, hours: "10:30 to 21:30" },
-  { key: "gm", count: 1, kind: "management" as const, hours: "salaried" },
-  { key: "agm", count: 1, kind: "management" as const, hours: "salaried" },
-];
+/**
+ * The day, hour by hour. Head counts and paid hours come from the engine's
+ * coverage schedule (labor.ts); only the clock-in times live here, so the
+ * roster on this page and the FTE in the labor line can never disagree.
+ */
+const SHIFT_START: Record<string, number> = { broth: 6, noodle: 10, assembly: 10.5, runner: 10.5, peak: 11.5, close: 18 };
+const MANAGEMENT = [
+  { key: "gm", from: 8, to: 18 },
+  { key: "agm", from: 12, to: 22 },
+] as const;
 const HOURS = Array.from({ length: 16 }, (_, i) => 6 + i);
-const COVERAGE: Record<string, [number, number]> = { brothLead: [6, 15], slicer: [9, 18], noodle: [10, 21], assembly: [10.5, 21.5], runner: [10.5, 21.5], gm: [8, 18], agm: [12, 22] };
 
 const NODES = [
   { key: "web", x: 20, y: 20, w: 150, h: 46 },
@@ -49,6 +50,28 @@ export function OperationsModule() {
   const a = BASE_ASSUMPTIONS;
   const kitchenAnnual = a.kitchenFTE * a.avgKitchenWage * a.annualHoursPerFTE;
   const mgmtAnnual = a.managerFTE * a.avgManagerSalary;
+  const hoursPerDay = coverageHoursPerDay(COVERAGE_SCHEDULE);
+  const heads = COVERAGE_SCHEDULE.shifts.reduce((n, sh) => n + sh.count, 0);
+  const loc = computeLocation(a);
+  // Owner decision 2026-09-26 (finding C2): the member program is a budget line, not a promise.
+  const programBudget = loc.memberProgram;
+  const launch = computeCapex(a).lines.find((l) => l.key === "launchMarketing")?.amount ?? 0;
+  const programValues = {
+    budget: fmtCurrency(programBudget, { locale }),
+    pct: fmtPercent(a.memberProgramPct, locale, 1),
+    allIn: fmtPercent(loc.memberProgram / loc.annualRevenue, locale, 1),
+    swag: fmtCurrency(a.memberSwagAnnual, { locale }),
+    launch: fmtCurrency(launch, { locale }),
+    marketing: fmtPercent(a.marketingPct, locale, 0),
+    comps: fmtPercent(a.discountsCompsPct, locale, 1),
+  };
+  // Owner decision 2026-09-27: 1% of revenue to ONE RED STEP AT A TIME, an opex line in every scenario.
+  const givingValues = {
+    pct: fmtPercent(a.communityGivingPct, locale, 0),
+    budget: fmtCurrency(loc.communityGiving, { locale }),
+    monthly: fmtCurrency(loc.communityGiving / 12, { locale }),
+    name: FOUNDATION.name,
+  };
 
   return (
     <div data-plan-module="operations" className="flex flex-col gap-14">
@@ -95,7 +118,7 @@ export function OperationsModule() {
       </section>
 
       <section className="grid items-start gap-8 md:grid-cols-[1fr_1fr]">
-        <PhotoPlaceholder label={t("kds.label")} needs={t("kds.needs")} />
+        <PlanPhoto src="/plan/operations-kds.webp" alt={t("kds.needs")} width={1600} height={932} caption={t("kds.caption")} />
         <div>
           <h2 className="m-0 mb-1 font-display text-[1.5rem] text-oh-cream">{t("kds.title")}</h2>
           <p className="m-0 text-[0.9rem] leading-relaxed text-oh-mute">{t("kds.body")}</p>
@@ -104,31 +127,71 @@ export function OperationsModule() {
 
       <section>
         <h2 className="m-0 mb-1 font-display text-[1.5rem] text-oh-cream">{t("labor.title")}</h2>
-        <p className="m-0 mb-4 text-[0.85rem] text-oh-mute">{t("labor.subtitle", { kitchen: a.kitchenFTE, mgmt: a.managerFTE, wage: fmtCurrency(a.avgKitchenWage, { locale, fractionDigits: 2 }), salary: fmtCurrency(a.avgManagerSalary, { locale }), kitchenAnnual: fmtCurrency(kitchenAnnual, { locale }), mgmtAnnual: fmtCurrency(mgmtAnnual, { locale }), burden: fmtInteger(a.payrollBurdenPct * 100, locale) })}</p>
+        <p className="m-0 mb-4 text-[0.85rem] text-oh-mute">{t("labor.subtitle", { heads, hours: fmtInteger(hoursPerDay, locale), days: fmtInteger(a.operatingDaysPerYear, locale), kitchen: a.kitchenFTE.toFixed(1), mgmt: a.managerFTE, wage: fmtCurrency(a.avgKitchenWage, { locale, fractionDigits: 2 }), salary: fmtCurrency(a.avgManagerSalary, { locale }), kitchenAnnual: fmtCurrency(kitchenAnnual, { locale }), mgmtAnnual: fmtCurrency(mgmtAnnual, { locale }), burden: fmtInteger(a.payrollBurdenPct * 100, locale), coverage: fmtInteger(a.coverageFactorPct * 100, locale) })}</p>
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-[0.8rem]">
             <thead>
               <tr className="border-b border-oh-stone text-oh-mute">
                 <th className="py-2 pr-3 text-left font-normal">{t("labor.role")}</th>
                 <th className="py-2 pr-3 text-right font-normal">{t("labor.count")}</th>
+                <th className="py-2 pr-3 text-right font-normal">{t("labor.hoursEach")}</th>
                 {HOURS.map((h) => (<th key={h} className="px-0 py-2 text-center font-normal tabular-nums text-[0.65rem]">{h}</th>))}
               </tr>
             </thead>
             <tbody>
-              {ROLES.map((r) => {
-                const [from, to] = COVERAGE[r.key] ?? [0, 0];
+              {COVERAGE_SCHEDULE.shifts.map((sh) => {
+                const from = SHIFT_START[sh.key] ?? 0;
+                const to = from + sh.hours;
                 return (
-                  <tr key={r.key} className="border-b border-oh-stone">
-                    <td className="py-1.5 pr-3 text-oh-cream">{t(`labor.roles.${r.key}`)}<span className="ml-2 text-oh-mute">{r.kind === "management" ? t("labor.salaried") : ""}</span></td>
-                    <td className="py-1.5 pr-3 text-right tabular-nums text-oh-cream">{r.count}</td>
-                    {HOURS.map((h) => (<td key={h} className="p-0.5"><div className={["h-3 rounded-sm", h + 0.5 > from && h < to ? (r.kind === "management" ? "bg-oh-gold/70" : "bg-oh-ember/80") : "bg-oh-ink"].join(" ")} /></td>))}
+                  <tr key={sh.key} className="border-b border-oh-stone">
+                    <td className="py-1.5 pr-3 text-oh-cream">{t(`labor.roles.${sh.key}`)}</td>
+                    <td className="py-1.5 pr-3 text-right tabular-nums text-oh-cream">{sh.count}</td>
+                    <td className="py-1.5 pr-3 text-right tabular-nums text-oh-mute">{sh.hours}</td>
+                    {HOURS.map((h) => (<td key={h} className="p-0.5"><div className={["h-3 rounded-sm", h + 0.5 > from && h < to ? "bg-oh-ember/80" : "bg-oh-ink"].join(" ")} /></td>))}
                   </tr>
                 );
               })}
+              {MANAGEMENT.map((m) => (
+                <tr key={m.key} className="border-b border-oh-stone">
+                  <td className="py-1.5 pr-3 text-oh-cream">{t(`labor.roles.${m.key}`)}<span className="ml-2 text-oh-mute">{t("labor.salaried")}</span></td>
+                  <td className="py-1.5 pr-3 text-right tabular-nums text-oh-cream">1</td>
+                  <td className="py-1.5 pr-3 text-right tabular-nums text-oh-mute"></td>
+                  {HOURS.map((h) => (<td key={h} className="p-0.5"><div className={["h-3 rounded-sm", h + 0.5 > m.from && h < m.to ? "bg-oh-gold/70" : "bg-oh-ink"].join(" ")} /></td>))}
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
-        <p className="m-0 mt-2 text-[0.75rem] text-oh-mute">{t("labor.note")}</p>
+        <p className="m-0 mt-2 text-[0.75rem] text-oh-mute">{t("labor.note", { crossTraining: COVERAGE_SCHEDULE.crossTrainingHours, hours: fmtInteger(hoursPerDay, locale) })}</p>
+      </section>
+
+      <section className="rounded-lg border border-oh-stone bg-oh-ink p-5 md:p-6">
+        <p className="m-0 text-[0.72rem] uppercase tracking-[0.14em] text-oh-gold">{t("program.eyebrow")}</p>
+        <h2 className="m-0 mt-1 font-display text-[1.5rem] text-oh-cream">{t("program.title")}</h2>
+        <p className="m-0 mt-3 max-w-3xl text-[0.92rem] leading-relaxed text-oh-mute">{t("program.body", programValues)}</p>
+        <ul className="m-0 mt-4 grid list-none gap-3 p-0 md:grid-cols-2">
+          {(["cashback", "referral", "challenges", "perks", "swag", "comps"] as const).map((k) => (
+            <li key={k} className="border-l-2 border-oh-stone pl-3">
+              <p className="m-0 font-display text-[1rem] text-oh-cream">{t(`program.items.${k}.title`)}</p>
+              <p className="m-0 mt-1 text-[0.8rem] leading-snug text-oh-mute">{t(`program.items.${k}.body`, programValues)}</p>
+            </li>
+          ))}
+        </ul>
+        <p className="m-0 mt-4 text-[0.8rem] leading-relaxed text-oh-mute">{t("program.launch", programValues)}</p>
+      </section>
+
+      <section data-plan-giving="" className="grid gap-5 rounded-lg border border-oh-stone bg-oh-ink p-5 md:grid-cols-[auto_minmax(0,1fr)] md:p-6">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={FOUNDATION.logo.src} alt={FOUNDATION.logo.alt} width={FOUNDATION.logo.width} height={FOUNDATION.logo.height} className="h-16 w-16 rounded-md bg-white object-contain p-1" />
+        <div className="min-w-0">
+          <p className="m-0 text-[0.72rem] uppercase tracking-[0.14em] text-oh-gold">{t("giving.eyebrow")}</p>
+          <h2 className="m-0 mt-1 font-display text-[1.5rem] text-oh-cream">{t("giving.title")}</h2>
+          <p className="m-0 mt-3 max-w-3xl text-[0.92rem] leading-relaxed text-oh-mute">{t("giving.body", givingValues)}</p>
+          <p className="m-0 mt-2 max-w-3xl text-[0.8rem] leading-relaxed text-oh-mute">{t("giving.cadence", givingValues)}</p>
+          <a href={FOUNDATION.website} target="_blank" rel="noopener noreferrer" className="mt-3 inline-block text-[0.85rem] text-oh-ember-light underline-offset-2 hover:underline">
+            {t("giving.link")}
+          </a>
+        </div>
       </section>
 
       <BenchmarkCallout eyebrow={t("commissary.eyebrow")} claim={t("commissary.claim")} benchmark={t("commissary.text")} />
