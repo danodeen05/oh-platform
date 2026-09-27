@@ -804,6 +804,7 @@
     "addToAppleWallet": "Agregar a Apple Wallet",
     "addToGoogleWallet": "Agregar a Google Wallet",
     "walletComingSoon": "¡Integración completa de cartera próximamente! Modo de vista previa disponible.",
+    "walletUnavailable": "Los pases de Wallet no están disponibles en este momento. Inténtalo más tarde.",
     "tiers": {
       "chopstick": "Palillos",
       "noodleMaster": "Maestro de Fideos",

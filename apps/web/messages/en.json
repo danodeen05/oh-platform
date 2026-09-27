@@ -817,6 +817,7 @@
     "addToAppleWallet": "Add to Apple Wallet",
     "addToGoogleWallet": "Add to Google Wallet",
     "walletComingSoon": "Full wallet integration coming soon! Preview mode available.",
+    "walletUnavailable": "Wallet passes are unavailable right now. Please try again later.",
     "tiers": {
       "chopstick": "Chopstick",
       "noodleMaster": "Noodle Master",

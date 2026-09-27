@@ -69,7 +69,7 @@ import { registerPlanRoutes } from "./plan/routes.js";
 import { withStatusDemo, registerStatusDemoGuard } from "./demo/status-demo.js";
 import { createAdminAuth } from "./auth/admin.js";
 import { registerConsoleGuard, registerAdminPathGuard } from "./auth/console-guard.js";
-import { createCustomerAuth, registerCustomerIdentity } from "./auth/customer.js";
+import { createCustomerAuth, registerCustomerIdentity, orderOwnerId, chappyCreditsToDeduct, resolveChappyWebIdentity } from "./auth/customer.js";
 
 // DEMO- order codes resolve to a synthetic order (see demo/status-demo.js):
 // the plan's live status-page demo reads real routes without touching the DB.
@@ -183,6 +183,7 @@ registerAdminPathGuard(app, { requireAdminAuth });
 // user; this must stay above the route declarations (it uses onRoute).
 const customerAuth = createCustomerAuth({ prisma: basePrisma, log: (...args) => app.log.warn({ args }, "customer auth") });
 registerCustomerIdentity(app, customerAuth);
+for (const warning of customerAuth.warnings) console.warn(`WARNING (customer auth): ${warning}`);
 
 // Register autonomous agent routes
 await registerAutonomousRoutes(app);
@@ -2283,7 +2284,9 @@ app.post("/orders/confirm-pod", async (req, reply) => {
 // POST /pods/confirm-arrival - Customer scans pod QR code to confirm arrival
 // This is the endpoint called when a customer scans the QR code on their pod table
 app.post("/pods/confirm-arrival", async (req, reply) => {
-  const { podQrCode, userId } = req.body || {};
+  const { podQrCode } = req.body || {};
+  // Prefer the verified caller's order; a body userId is ignored.
+  const userId = orderOwnerId(await customerAuth.resolve(req));
 
   if (!podQrCode) {
     return reply.code(400).send({ error: "podQrCode required" });
@@ -3532,8 +3535,11 @@ app.post("/orders", async (req, reply) => {
     });
   }
 
-  const { locationId, tenantId, items, seatId, estimatedArrival, podSelectionMethod, userId, guestId, guestName, isKioskOrder, dualPartnerSeatId, isDualPod } =
+  const { locationId, tenantId, items, seatId, estimatedArrival, podSelectionMethod, guestId, guestName, isKioskOrder, dualPartnerSeatId, isDualPod } =
     req.body || {};
+  // The order belongs to the verified caller only; a body userId is ignored
+  // (anonymous, guest and kiosk orders get null). See auth/customer.js.
+  const userId = orderOwnerId(await customerAuth.resolve(req));
 
   if (!locationId || !tenantId || !items || !items.length) {
     return reply
@@ -4546,23 +4552,11 @@ app.patch("/orders/:id", async (req, reply) => {
 // The email must be the caller's verified Clerk primary email (auth/customer.js).
 // Trusted server-to-server callers (x-admin-api-key) may still upsert by email or phone.
 app.post("/users", async (req, reply) => {
-  const body = req.body || {};
-  const { name, referredByCode } = body;
-  let { email, phone } = body;
-
-  if (!customerAuth.isServiceCall(req)) {
-    const who = await customerAuth.resolve(req);
-    if (who.kind !== "user") {
-      return reply.code(401).send({ error: "Sign in required" });
-    }
-    if (typeof email !== "string" || email.trim().toLowerCase() !== who.email) {
-      return reply.code(403).send({ error: "Email must match your signed-in account" });
-    }
-    // Look up by the verified email only: matching on a client-sent phone
-    // would hand back someone else's row. Phone changes use PATCH /users/:id/phone.
-    email = email.trim();
-    phone = undefined;
-  }
+  const { name, referredByCode } = req.body || {};
+  // Verified email only; a client phone is never used to find a row (auth/customer.js signupFields).
+  const allowed = await customerAuth.signupFields(req, reply);
+  if (!allowed) return reply;
+  const { email, phone } = allowed;
 
   console.log("POST /users - Received:", { email, phone, name, referredByCode });
 
@@ -14556,25 +14550,20 @@ app.post("/chappy/sms", async (req, reply) => {
 });
 
 /**
- * Who a web Chappy request is for. A member comes only from the verified
- * session (auth/customer.js) or a signed stream ticket; a client-sent userId
- * is ignored. Guests keep their client guestId/sessionId until Task B1 moves
- * them to signed guest tokens, but a claimed id that is a member's id is
- * refused, since conversations are keyed by it.
+ * Who a web Chappy request is for (decision logic: resolveChappyWebIdentity in
+ * auth/customer.js). identifier is null for an unidentified request; routes
+ * answer 401 rather than falling back to a shared conversation key.
  */
 async function chappyWebIdentity(req, { guestId, sessionId, verifiedUserId = null }) {
-  let userId = verifiedUserId;
-  if (!userId) {
-    const who = await customerAuth.resolve(req);
-    if (who.kind === "user" && who.userId) userId = who.userId;
-  }
-  if (userId) return { userId, guestId: null, identifier: userId };
-  const claimed = guestId || sessionId || null;
-  if (claimed && (await basePrisma.user.findUnique({ where: { id: claimed }, select: { id: true } }))) {
-    return { userId: null, guestId: null, identifier: null };
-  }
-  return { userId: null, guestId: guestId || null, identifier: claimed };
+  return resolveChappyWebIdentity({
+    who: await customerAuth.resolve(req),
+    ticketUserId: verifiedUserId,
+    guestId,
+    sessionId,
+    isMemberId: async (id) => Boolean(await basePrisma.user.findUnique({ where: { id }, select: { id: true } })),
+  });
 }
+const CHAPPY_UNIDENTIFIED = { error: "Sign in, or start a guest chat session, to talk to Chappy" };
 
 // Short-lived ticket so EventSource (which cannot send headers) can stream as the signed-in member.
 app.post("/chappy/stream-ticket", async (req, reply) => {
@@ -14597,12 +14586,12 @@ app.post("/chappy/chat", async (req, reply) => {
       return reply.status(400).send({ error: "Message is required" });
     }
 
-    const { userId, guestId, identifier: resolvedIdentifier } = await chappyWebIdentity(req, req.body);
+    const { userId, guestId, identifier } = await chappyWebIdentity(req, req.body);
+    if (!identifier) return reply.status(401).send(CHAPPY_UNIDENTIFIED);
 
     // Get user context if logged in
     let user = null;
     let guest = null;
-    let identifier = resolvedIdentifier || "anonymous";
 
     if (userId) {
       user = await prisma.user.findUnique({
@@ -14612,7 +14601,6 @@ app.post("/chappy/chat", async (req, reply) => {
       guest = await prisma.guest.findUnique({
         where: { id: guestId },
       });
-      identifier = guestId;
     }
 
     // Get tenant
@@ -14677,12 +14665,13 @@ app.get("/chappy/chat/stream", async (req, reply) => {
 
     // Members stream with a signed ticket from POST /chappy/stream-ticket (EventSource has no headers).
     const ticketUserId = uid && customerAuth.verifyLink("chappy-stream", uid, exp, sig) ? uid : null;
-    const { userId, guestId, identifier: resolvedIdentifier } = await chappyWebIdentity(req, { ...req.query, verifiedUserId: ticketUserId });
+    const { userId, guestId, identifier } = await chappyWebIdentity(req, { ...req.query, verifiedUserId: ticketUserId });
+    // No shared fallback conversation: an unidentified stream is refused before any SSE headers.
+    if (!identifier) return reply.status(401).send(CHAPPY_UNIDENTIFIED);
 
     // Get user context if logged in
     let user = null;
     let guest = null;
-    let identifier = resolvedIdentifier || "anonymous";
 
     if (userId) {
       user = await prisma.user.findUnique({
@@ -14766,7 +14755,7 @@ app.get("/chappy/history", async (req, reply) => {
     const { identifier } = await chappyWebIdentity(req, req.query);
 
     if (!identifier) {
-      return reply.status(400).send({ error: "Identifier required" });
+      return reply.status(401).send(CHAPPY_UNIDENTIFIED);
     }
 
     const conversation = await prisma.chappyConversation.findFirst({
@@ -14811,7 +14800,7 @@ app.post("/chappy/reset", async (req, reply) => {
     const { identifier } = await chappyWebIdentity(req, body);
 
     if (!identifier) {
-      return reply.status(400).send({ error: "Identifier required" });
+      return reply.status(401).send(CHAPPY_UNIDENTIFIED);
     }
 
     await resetConversation(basePrisma, identifier, channel);
@@ -14895,15 +14884,13 @@ app.post("/chappy/confirm-payment", async (req, reply) => {
       },
     });
 
-    // Apply credits if user had any applied
-    if (order.userId && order.user?.creditsCents > 0) {
-      const creditsApplied = Math.min(500, order.user.creditsCents);
-      if (creditsApplied > 0) {
-        await prisma.user.update({
-          where: { id: order.userId },
-          data: { creditsCents: { decrement: creditsApplied } },
-        });
-      }
+    // Apply credits only for the verified caller's own order (auth/customer.js).
+    const creditsApplied = chappyCreditsToDeduct(await customerAuth.resolve(req), order);
+    if (creditsApplied > 0) {
+      await prisma.user.update({
+        where: { id: order.userId },
+        data: { creditsCents: { decrement: creditsApplied } },
+      });
     }
 
     // Mark seat as occupied if one was selected

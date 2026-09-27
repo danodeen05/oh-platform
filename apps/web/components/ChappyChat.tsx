@@ -318,7 +318,7 @@ export function ChappyChat({
           event.complete("success");
 
           // Confirm with our API
-          const confirmResponse = await fetch(`${apiUrl}/chappy/confirm-payment`, {
+          const confirmResponse = await api(`${apiUrl}/chappy/confirm-payment`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ orderId: applePayOrder.orderId, paymentIntentId: paymentIntent?.id }),
@@ -434,17 +434,32 @@ export function ChappyChat({
       });
       if (userId) {
         // EventSource cannot send headers: exchange the session for a short-lived signed ticket.
+        // Without a ticket we do not stream at all (never as an unidentified or shared session).
+        let ticket: { uid?: string; exp?: string; sig?: string } | null = null;
         try {
           const ticketRes = await api(`${apiUrl}/chappy/stream-ticket`, { method: "POST" });
-          if (ticketRes.ok) {
-            const ticket = await ticketRes.json();
-            params.set("uid", ticket.uid);
-            params.set("exp", ticket.exp);
-            params.set("sig", ticket.sig);
-          }
+          if (ticketRes.ok) ticket = await ticketRes.json();
         } catch {
-          /* stream anonymously rather than fail */
+          ticket = null;
         }
+        if (!ticket?.uid || !ticket.exp || !ticket.sig) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "assistant",
+              content: "Oops! Something went wrong. Please try again. - Chappy",
+              timestamp: new Date().toISOString(),
+            },
+          ]);
+          setIsStreaming(false);
+          setStreamingText("");
+          setStreamingStatus(null);
+          setIsLoading(false);
+          return;
+        }
+        params.set("uid", ticket.uid);
+        params.set("exp", ticket.exp);
+        params.set("sig", ticket.sig);
       } else if (guestId) params.set("guestId", guestId);
       else params.set("sessionId", effectiveSessionId);
       if (locationId) params.set("locationId", locationId);
@@ -1005,7 +1020,7 @@ export function ChappyChat({
                   onSuccess={async (paymentIntentId) => {
                     // Payment successful - confirm on backend
                     try {
-                      const response = await fetch(`${apiUrl}/chappy/confirm-payment`, {
+                      const response = await api(`${apiUrl}/chappy/confirm-payment`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ orderId: applePayOrder.orderId, paymentIntentId }),

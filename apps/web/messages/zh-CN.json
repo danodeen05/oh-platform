@@ -804,6 +804,7 @@
     "addToAppleWallet": "添加到 Apple 钱包",
     "addToGoogleWallet": "添加到 Google 钱包",
     "walletComingSoon": "完整钱包功能即将上线！预览模式已可用。",
+    "walletUnavailable": "电子钱包卡券暂时不可用，请稍后再试。",
     "tiers": {
       "chopstick": "筷子会员",
       "noodleMaster": "面条大师",

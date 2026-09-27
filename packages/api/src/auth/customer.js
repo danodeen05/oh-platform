@@ -7,8 +7,8 @@
  * can check:
  *
  *  - Authorization: Bearer <Clerk session JWT>, verified against the Clerk
- *    instance that owns CLERK_SECRET_KEY (or CLERK_SECRET_KEY_DEV), exactly as
- *    auth/admin.js does. Site users link to Clerk by EMAIL (the DB User has no
+ *    instance that owns CLERK_SECRET_KEY (plus CLERK_SECRET_KEY_DEV, but only
+ *    outside production), like auth/admin.js. Site users link to Clerk by EMAIL (the DB User has no
  *    Clerk id), so the resolver is: verified JWT -> Clerk user's verified
  *    primary email -> prisma.user by email. Both lookups are cached 5 minutes.
  *  - A guest token "g1.<random>.<hmac>" (HMAC-SHA256 with CHAPPY_GUEST_SECRET,
@@ -54,9 +54,20 @@ function bearerOf(req) {
 
 export function createCustomerAuth(options = {}) {
   const env = options.env || process.env;
-  const secretKeys = [env.CLERK_SECRET_KEY, env.CLERK_SECRET_KEY_DEV].filter((k) => typeof k === "string" && k.length > 0);
+  const isProduction = env.NODE_ENV === "production";
+  // Identity is by email, so a token from the development Clerk instance (where
+  // anyone can register any address) must never map to a production member.
+  const secretKeys = [env.CLERK_SECRET_KEY, isProduction ? null : env.CLERK_SECRET_KEY_DEV].filter((k) => typeof k === "string" && k.length > 0);
   const apiKey = env.ADMIN_API_KEY || "";
   const guestSecret = env.CHAPPY_GUEST_SECRET || "";
+  /** Misconfigurations the server should announce at startup. */
+  const warnings = [];
+  if (isProduction && !guestSecret) {
+    warnings.push("CHAPPY_GUEST_SECRET is not set: guest tokens, wallet pass links and Chappy stream tickets are disabled.");
+  }
+  if (isProduction && env.CLERK_SECRET_KEY_DEV) {
+    warnings.push("CLERK_SECRET_KEY_DEV is set but ignored for customer identity in production.");
+  }
   // Signed links use a key derived from the guest secret so the two token kinds can never be swapped.
   const linkKey = guestSecret ? hmac(guestSecret, "oh-signed-link-key-v1") : "";
   const now = options.now || (() => Date.now());
@@ -94,7 +105,7 @@ export function createCustomerAuth(options = {}) {
       const user = await getUser(sub, secretKey);
       const primary = (user.emailAddresses || []).find((e) => e.id === user.primaryEmailAddressId);
       const status = primary?.verification?.status;
-      if (primary && typeof primary.emailAddress === "string" && (status === undefined || status === "verified")) {
+      if (primary && typeof primary.emailAddress === "string" && status === "verified") {
         email = primary.emailAddress.trim().toLowerCase();
       }
     } catch (err) {
@@ -235,7 +246,65 @@ export function createCustomerAuth(options = {}) {
     await resolve(req);
   }
 
-  return { resolve, issueGuestToken, verifyGuestToken, requireUser, requireSelf, requireEmail, signLink, verifyLink, isServiceCall, resolveCustomer };
+  /**
+   * POST /users gate. Returns the { email, phone } the upsert may use, or null
+   * after sending 401/403. Customers may only upsert their own verified email
+   * and never look up by a client phone; trusted services keep email/phone.
+   */
+  async function signupFields(req, reply) {
+    const body = req.body || {};
+    if (isServiceCall(req)) return { email: body.email, phone: body.phone };
+    const who = await resolve(req);
+    if (who.kind !== "user") {
+      reply.code(401).send({ error: "Sign in required" });
+      return null;
+    }
+    if (typeof body.email !== "string" || body.email.trim().toLowerCase() !== who.email) {
+      reply.code(403).send({ error: "Email must match your signed-in account" });
+      return null;
+    }
+    return { email: body.email.trim(), phone: undefined };
+  }
+
+  return { resolve, issueGuestToken, verifyGuestToken, requireUser, requireSelf, requireEmail, signLink, verifyLink, isServiceCall, resolveCustomer, signupFields, warnings };
+}
+
+/**
+ * The member an order may be attributed to: only a verified signed-in caller.
+ * Anonymous callers, guests and kiosk devices get null whatever the body says.
+ */
+export function orderOwnerId(who) {
+  return who && who.kind === "user" && who.userId ? who.userId : null;
+}
+
+/**
+ * Credits Chappy's payment confirmation may deduct: only the verified caller's
+ * own credits, only on that caller's own order, at most maxCents.
+ */
+export function chappyCreditsToDeduct(who, order, maxCents = 500) {
+  const me = orderOwnerId(who);
+  if (!me || !order || order.userId !== me) return 0;
+  const balance = order.user?.creditsCents || 0;
+  return balance > 0 ? Math.min(maxCents, balance) : 0;
+}
+
+/** Conversation keys no client may claim (the pre-2026-09-27 shared fallback). */
+const RESERVED_CHAPPY_IDS = new Set(["anonymous"]);
+
+/**
+ * Who a web Chappy request is for. A member comes only from the verified
+ * session or a verified stream ticket (ticketUserId); a client userId is never
+ * consulted. A guest keeps its client guestId/sessionId unless that id is a
+ * member's id or a reserved shared key. Returns identifier null when the
+ * request cannot be identified: callers must refuse it (no shared fallback).
+ */
+export async function resolveChappyWebIdentity({ who, ticketUserId = null, guestId, sessionId, isMemberId }) {
+  const userId = ticketUserId || orderOwnerId(who);
+  if (userId) return { userId, guestId: null, identifier: userId };
+  const claimed = (typeof guestId === "string" && guestId) || (typeof sessionId === "string" && sessionId) || null;
+  if (!claimed || RESERVED_CHAPPY_IDS.has(claimed.toLowerCase())) return { userId: null, guestId: null, identifier: null };
+  if (await isMemberId(claimed)) return { userId: null, guestId: null, identifier: null };
+  return { userId: null, guestId: typeof guestId === "string" && guestId ? guestId : null, identifier: claimed };
 }
 
 const USER_ID_ROUTE = /^\/users\/:(id|userId)(\/|$)/;

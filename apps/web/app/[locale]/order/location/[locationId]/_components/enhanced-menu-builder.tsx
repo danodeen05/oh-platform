@@ -857,7 +857,7 @@ export default function EnhancedMenuBuilder({
         }
       }
 
-      const response = await fetch(`${BASE}/orders`, {
+      const response = await api(`${BASE}/orders`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(orderPayload),

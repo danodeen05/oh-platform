@@ -2,7 +2,7 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import Fastify from "fastify";
-import { createCustomerAuth, registerCustomerIdentity, GUEST_TOKEN_TTL_MS } from "../customer.js";
+import { createCustomerAuth, registerCustomerIdentity, GUEST_TOKEN_TTL_MS, orderOwnerId, chappyCreditsToDeduct, resolveChappyWebIdentity } from "../customer.js";
 
 const ENV = { CLERK_SECRET_KEY: "sk_test_x", CLERK_SECRET_KEY_DEV: "sk_dev_y", CHAPPY_GUEST_SECRET: "guest-secret-for-tests", ADMIN_API_KEY: "key-123" };
 
@@ -11,6 +11,7 @@ const CLERK_USERS = {
   user_other: { primaryEmailAddressId: "e2", emailAddresses: [{ id: "e2", emailAddress: "other@x.com", verification: { status: "verified" } }] },
   user_new: { primaryEmailAddressId: "e3", emailAddresses: [{ id: "e3", emailAddress: "new@x.com", verification: { status: "verified" } }] },
   user_unverified: { primaryEmailAddressId: "e4", emailAddresses: [{ id: "e4", emailAddress: "me@x.com", verification: { status: "unverified" } }] },
+  user_noverification: { primaryEmailAddressId: "e5", emailAddresses: [{ id: "e5", emailAddress: "me@x.com" }] },
 };
 const DB_USERS = { "me@x.com": "db_me", "other@x.com": "db_other" };
 
@@ -85,6 +86,25 @@ describe("resolve", () => {
   test("an unverified primary email is not trusted", async () => {
     const { auth } = build();
     assert.deepEqual(await auth.resolve(bearer("clerk:user_unverified")), { kind: "anonymous" });
+  });
+
+  test("a primary email without a verification status is not trusted", async () => {
+    const { auth } = build();
+    assert.deepEqual(await auth.resolve(bearer("clerk:user_noverification")), { kind: "anonymous" });
+  });
+
+  test("in production a token verified by the development key is rejected", async () => {
+    const { auth, calls } = build({ env: { ...ENV, NODE_ENV: "production" } });
+    assert.deepEqual(await auth.resolve(bearer("devclerk:user_other")), { kind: "anonymous" });
+    assert.equal(calls.verify, 1, "only the production key was tried");
+    assert.equal((await auth.resolve(bearer("clerk:user_me"))).userId, "db_me");
+    assert.ok(auth.warnings.some((w) => w.includes("CLERK_SECRET_KEY_DEV")));
+  });
+
+  test("production without CHAPPY_GUEST_SECRET announces a startup warning", () => {
+    const { auth } = build({ env: { CLERK_SECRET_KEY: "sk_test_x", NODE_ENV: "production" } });
+    assert.ok(auth.warnings.some((w) => w.includes("CHAPPY_GUEST_SECRET")));
+    assert.deepEqual(build().auth.warnings, []);
   });
 
   test("resolution is memoised per request", async () => {
@@ -256,5 +276,125 @@ describe("registerCustomerIdentity on a Fastify app", () => {
     const { app } = await appWith();
     const res = await app.inject({ method: "GET", url: "/users/referral/abc" });
     assert.equal(res.statusCode, 200);
+  });
+});
+
+describe("POST /users gate (signupFields, used by the real handler)", () => {
+  test("anonymous 401, another email 403, own email passes and a client phone is dropped", async () => {
+    const { auth } = build();
+    let reply = replyStub();
+    assert.equal(await auth.signupFields({ headers: {}, body: { email: "me@x.com" } }, reply), null);
+    assert.equal(reply.statusCode, 401);
+    reply = replyStub();
+    assert.equal(await auth.signupFields({ ...bearer("clerk:user_me"), body: { email: "other@x.com" } }, reply), null);
+    assert.equal(reply.statusCode, 403);
+    reply = replyStub();
+    assert.equal(await auth.signupFields({ ...bearer("clerk:user_me"), body: { phone: "+18015550100" } }, reply), null);
+    assert.equal(reply.statusCode, 403);
+    reply = replyStub();
+    assert.deepEqual(await auth.signupFields({ ...bearer("clerk:user_me"), body: { email: " ME@x.com ", phone: "+18015550100" } }, reply), { email: "ME@x.com", phone: undefined });
+    assert.equal(reply.sent, false);
+  });
+  test("a new Clerk user without a row can sign up; a trusted service keeps email and phone", async () => {
+    const { auth } = build();
+    assert.deepEqual(await auth.signupFields({ ...bearer("clerk:user_new"), body: { email: "new@x.com" } }, replyStub()), { email: "new@x.com", phone: undefined });
+    assert.deepEqual(await auth.signupFields({ headers: { "x-admin-api-key": "key-123" }, body: { phone: "+18015550100" } }, replyStub()), { email: undefined, phone: "+18015550100" });
+  });
+});
+
+describe("order ownership and Chappy credits", () => {
+  test("orderOwnerId: only a verified member with a row owns an order", () => {
+    assert.equal(orderOwnerId({ kind: "user", userId: "db_me", email: "me@x.com" }), "db_me");
+    assert.equal(orderOwnerId({ kind: "user", userId: null, email: "new@x.com" }), null);
+    assert.equal(orderOwnerId({ kind: "guest", guestKey: "k" }), null);
+    assert.equal(orderOwnerId({ kind: "anonymous" }), null);
+    assert.equal(orderOwnerId({ kind: "service" }), null);
+  });
+  test("chappyCreditsToDeduct: only the verified caller's own order, capped at $5", () => {
+    const me = { kind: "user", userId: "db_me", email: "me@x.com" };
+    assert.equal(chappyCreditsToDeduct(me, { userId: "db_me", user: { creditsCents: 1200 } }), 500);
+    assert.equal(chappyCreditsToDeduct(me, { userId: "db_me", user: { creditsCents: 300 } }), 300);
+    assert.equal(chappyCreditsToDeduct(me, { userId: "db_victim", user: { creditsCents: 1200 } }), 0);
+    assert.equal(chappyCreditsToDeduct({ kind: "anonymous" }, { userId: "db_victim", user: { creditsCents: 1200 } }), 0);
+    assert.equal(chappyCreditsToDeduct(me, { userId: "db_me", user: { creditsCents: 0 } }), 0);
+  });
+});
+
+describe("resolveChappyWebIdentity", () => {
+  const isMemberId = async (id) => id === "db_me" || id === "db_other";
+  test("a member comes from the ticket or the session", async () => {
+    assert.deepEqual(await resolveChappyWebIdentity({ who: { kind: "anonymous" }, ticketUserId: "db_me", sessionId: "s1", isMemberId }), { userId: "db_me", guestId: null, identifier: "db_me" });
+    assert.deepEqual(await resolveChappyWebIdentity({ who: { kind: "user", userId: "db_me", email: "me@x.com" }, guestId: "g1", isMemberId }), { userId: "db_me", guestId: null, identifier: "db_me" });
+  });
+  test("unidentified requests get no identifier: no shared fallback, no reserved key, no member id", async () => {
+    const anon = { kind: "anonymous" };
+    for (const input of [{}, { sessionId: "anonymous" }, { sessionId: "ANONYMOUS" }, { guestId: "db_other" }, { sessionId: "db_me" }, { guestId: "", sessionId: "" }]) {
+      assert.deepEqual(await resolveChappyWebIdentity({ who: anon, isMemberId, ...input }), { userId: null, guestId: null, identifier: null }, JSON.stringify(input));
+    }
+  });
+  test("guests keep their own guest or session id", async () => {
+    assert.deepEqual(await resolveChappyWebIdentity({ who: { kind: "anonymous" }, guestId: "guest_1", isMemberId }), { userId: null, guestId: "guest_1", identifier: "guest_1" });
+    assert.deepEqual(await resolveChappyWebIdentity({ who: { kind: "anonymous" }, sessionId: "chappy-1-abc", isMemberId }), { userId: null, guestId: null, identifier: "chappy-1-abc" });
+  });
+});
+
+describe("integration: identity wiring as index.js uses it (Fastify inject)", () => {
+  // These routes call the same exported decision functions the real handlers
+  // call, with registerCustomerIdentity installed exactly as in index.js.
+  async function app() {
+    const { auth } = build();
+    const f = Fastify();
+    registerCustomerIdentity(f, auth);
+    f.post("/users", async (req, reply) => {
+      const allowed = await auth.signupFields(req, reply);
+      if (!allowed) return reply;
+      return allowed;
+    });
+    f.post("/orders", async (req) => {
+      const { guestId } = req.body || {};
+      return { userId: orderOwnerId(await auth.resolve(req)), guestId: guestId || null };
+    });
+    f.post("/chappy/stream-ticket", async (req, reply) => {
+      const who = await auth.requireUser(req, reply);
+      if (!who) return reply;
+      return { uid: who.userId, ...auth.signLink("chappy-stream", who.userId, 120000) };
+    });
+    f.get("/chappy/chat/stream", async (req, reply) => {
+      const { uid, exp, sig } = req.query;
+      const ticketUserId = uid && auth.verifyLink("chappy-stream", uid, exp, sig) ? uid : null;
+      const id = await resolveChappyWebIdentity({ who: await auth.resolve(req), ticketUserId, ...req.query, isMemberId: async (x) => x.startsWith("db_") });
+      if (!id.identifier) return reply.status(401).send({ error: "unidentified" });
+      return id;
+    });
+    await f.ready();
+    return f;
+  }
+
+  test("POST /users: the email must match the verified email", async () => {
+    const f = await app();
+    assert.equal((await f.inject({ method: "POST", url: "/users", payload: { email: "me@x.com" } })).statusCode, 401);
+    assert.equal((await f.inject({ method: "POST", url: "/users", headers: { authorization: "Bearer clerk:user_me" }, payload: { email: "other@x.com" } })).statusCode, 403);
+    assert.equal((await f.inject({ method: "POST", url: "/users", headers: { authorization: "Bearer clerk:user_me" }, payload: { email: "me@x.com" } })).statusCode, 200);
+  });
+
+  test("POST /orders: a forged userId is ignored; anonymous and guests get null", async () => {
+    const f = await app();
+    const member = await f.inject({ method: "POST", url: "/orders", headers: { authorization: "Bearer clerk:user_me" }, payload: { userId: "db_other" } });
+    assert.equal(member.json().userId, "db_me");
+    const anon = await f.inject({ method: "POST", url: "/orders", payload: { userId: "db_other", guestId: "guest_1" } });
+    assert.deepEqual(anon.json(), { userId: null, guestId: "guest_1" });
+  });
+
+  test("Chappy stream: a member ticket works; a missing or invalid ticket gives no stream and no shared identity", async () => {
+    const f = await app();
+    const ticket = (await f.inject({ method: "POST", url: "/chappy/stream-ticket", headers: { authorization: "Bearer clerk:user_me" } })).json();
+    const ok = await f.inject({ method: "GET", url: `/chappy/chat/stream?message=hi&uid=${ticket.uid}&exp=${ticket.exp}&sig=${encodeURIComponent(ticket.sig)}` });
+    assert.equal(ok.json().identifier, "db_me");
+    const forgedUid = await f.inject({ method: "GET", url: `/chappy/chat/stream?message=hi&uid=db_other&exp=${ticket.exp}&sig=${encodeURIComponent(ticket.sig)}` });
+    assert.equal(forgedUid.statusCode, 401);
+    assert.equal((await f.inject({ method: "GET", url: "/chappy/chat/stream?message=hi" })).statusCode, 401);
+    assert.equal((await f.inject({ method: "GET", url: "/chappy/chat/stream?message=hi&userId=db_me" })).statusCode, 401);
+    assert.equal((await f.inject({ method: "GET", url: "/chappy/chat/stream?message=hi&sessionId=anonymous" })).statusCode, 401);
+    assert.equal((await f.inject({ method: "POST", url: "/chappy/stream-ticket" })).statusCode, 401);
   });
 });

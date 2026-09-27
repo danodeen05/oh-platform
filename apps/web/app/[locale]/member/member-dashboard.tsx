@@ -383,13 +383,15 @@ export default function MemberDashboard() {
     try {
       const response = await api(`${BASE}/users/${userId}/wallet`);
       const data = response.ok ? await response.json() : null;
-      const path = data?.walletLinks?.[kind];
-      if (!path) throw new Error("no wallet link");
+      const path: string | undefined = data?.walletLinks?.[kind];
+      // An unsigned link means the server has no CHAPPY_GUEST_SECRET: the download would 401.
+      if (!path || !path.includes("sig=")) throw new Error("no signed wallet link");
       if (tab) tab.location.href = `${BASE}${path}`;
       else window.location.href = `${BASE}${path}`;
     } catch (error) {
       tab?.close();
       console.error("Failed to open wallet pass:", error);
+      toast.error(t("walletUnavailable"));
     }
   }
 
