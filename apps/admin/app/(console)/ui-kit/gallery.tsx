@@ -1,9 +1,19 @@
 "use client";
 import { useState, type ReactNode } from "react";
 import {
-  Badge, Button, Card, EmptyState, ErrorCard, Icon, ICON_NAMES, IconButton, LinkButton, ListRow, PageHeader,
-  Skeleton, SkeletonList, StatTile,
+  Badge, Button, Card, ConfirmProvider, DataList, EmptyState, ErrorCard, Field, FilterChips, Icon, ICON_NAMES, IconButton,
+  LinkButton, ListRow, MoneyInput, NumberInput, PageHeader, SearchField, SegmentedControl, Select, Sheet, Skeleton,
+  SkeletonList, StatTile, TextArea, TextInput, Toggle, ToastProvider, useConfirm, useToast, type Column,
 } from "@/components/ui";
+
+type Item = { id: string; name: string; station: string; price: number; soldOut: boolean };
+const ITEMS: Item[] = [
+  { id: "a", name: "Oh! Beef Noodle Soup", station: "Soup", price: 1695, soldOut: false },
+  { id: "b", name: "Spicy Braised Short Rib Bowl", station: "Soup", price: 1895, soldOut: true },
+  { id: "c", name: "Scallion Pancake", station: "Sides", price: 650, soldOut: false },
+  { id: "d", name: "Smashed Cucumber", station: "Sides", price: 550, soldOut: false },
+];
+const money = (c: number) => `$${(c / 100).toFixed(2)}`;
 
 function Section({ id, title, note, children }: { id: string; title: string; note?: string; children: ReactNode }) {
   return (
@@ -19,6 +29,44 @@ function Section({ id, title, note, children }: { id: string; title: string; not
 }
 
 export function Gallery() {
+  return (
+    <ToastProvider>
+      <ConfirmProvider>
+        <Kit />
+      </ConfirmProvider>
+    </ToastProvider>
+  );
+}
+
+function Kit() {
+  const toast = useToast();
+  const ask = useConfirm();
+  const [period, setPeriod] = useState("today");
+  const [tab, setTab] = useState("details");
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState("all");
+  const [cents, setCents] = useState<number | null>(1695);
+  const [orderNow, setOrderNow] = useState(true);
+  const [items, setItems] = useState(ITEMS);
+  const [sheet, setSheet] = useState<"full" | "auto" | null>(null);
+  const [lastConfirm, setLastConfirm] = useState<string | null>(null);
+
+  const setSoldOut = (id: string, soldOut: boolean) => setItems((xs) => xs.map((x) => (x.id === id ? { ...x, soldOut } : x)));
+  const toggleSoldOut = (it: Item) => {
+    setSoldOut(it.id, !it.soldOut);
+    toast.show({ message: `${it.name} is ${it.soldOut ? "back on" : "sold out"}.`, tone: "good", action: { label: "Undo", onClick: () => setSoldOut(it.id, it.soldOut) } });
+  };
+  const shown = items
+    .filter((x) => filter === "all" || (filter === "out" ? x.soldOut : !x.soldOut))
+    .filter((x) => x.name.toLowerCase().includes(query.trim().toLowerCase()));
+  const columns: Column<Item>[] = [
+    { key: "name", label: "Item", render: (r) => <span className="font-semibold">{r.name}</span> },
+    { key: "station", label: "Station", render: (r) => <span className="text-oh-stone/75">{r.station}</span> },
+    { key: "status", label: "Status", render: (r) => <Badge tone={r.soldOut ? "alert" : "good"}>{r.soldOut ? "Sold out" : "Available"}</Badge> },
+    { key: "price", label: "Price", align: "right", render: (r) => money(r.price) },
+    { key: "on", label: "On menu", align: "right", render: (r) => <Toggle checked={!r.soldOut} onChange={() => toggleSoldOut(r)} label={`${r.name} available`} hideLabel /> },
+  ];
+
   const [retries, setRetries] = useState(0);
   const [tapped, setTapped] = useState<string | null>(null);
 
@@ -130,6 +178,88 @@ export function Gallery() {
           </Section>
         </div>
 
+        <Section id="forms" title="Form fields" note="44px controls, 16px text so iOS never zooms.">
+          <Card>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <Field label="Code" hint="Guests type this at checkout.">
+                <TextInput placeholder="NOODLES10" autoCapitalize="characters" />
+              </Field>
+              <Field label="Price" hint={cents === null ? "Enter an amount." : `Saved as ${cents} cents.`}>
+                <MoneyInput cents={cents} onCents={setCents} />
+              </Field>
+              <Field label="Uses per guest">
+                <NumberInput defaultValue="1" />
+              </Field>
+              <Field label="Location">
+                <Select defaultValue="soho">
+                  <option value="all">All locations</option>
+                  <option value="soho">SoHo</option>
+                  <option value="city-creek">City Creek</option>
+                  <option value="university">University Place</option>
+                </Select>
+              </Field>
+              <Field label="Email" error="That email is missing an @.">
+                <TextInput type="email" defaultValue="maya.example.com" aria-invalid="true" />
+              </Field>
+              <Field label="Note for the kitchen" className="lg:row-span-2">
+                <TextArea placeholder="Optional" />
+              </Field>
+              <div className="flex flex-col gap-1">
+                <Toggle checked={orderNow} onChange={setOrderNow} label="Order Now" />
+                <Toggle checked={false} onChange={() => {}} label="Catering (locked)" disabled />
+              </div>
+            </div>
+          </Card>
+        </Section>
+
+        <div className="grid gap-9 lg:grid-cols-2 lg:gap-6">
+          <Section id="segmented" title="Segmented control">
+            <div className="space-y-3">
+              <SegmentedControl label="Period" value={period} onChange={setPeriod}
+                options={[{ value: "today", label: "Today" }, { value: "week", label: "Week" }, { value: "month", label: "Month" }]} />
+              <SegmentedControl label="Sections" scroll value={tab} onChange={setTab}
+                options={[
+                  { value: "details", label: "Details" }, { value: "guests", label: "Guests" }, { value: "menu", label: "Menu" },
+                  { value: "payments", label: "Payments" }, { value: "messages", label: "Messages" }, { value: "history", label: "History" },
+                ]} />
+            </div>
+          </Section>
+
+          <Section id="overlays" title="Sheet, confirm and toast" note="Drag a sheet's header down to close it on a phone.">
+            <div className="flex flex-wrap gap-2">
+              <Button icon="edit" onClick={() => setSheet("full")}>Edit item</Button>
+              <Button icon="filter" onClick={() => setSheet("auto")}>Filters</Button>
+              <Button variant="danger" icon="trash" onClick={async () => {
+                const ok = await ask({ title: "Delete this promo?", body: "Guests who have not used NOODLES10 lose it. This cannot be undone.", confirmLabel: "Delete promo", tone: "danger" });
+                setLastConfirm(ok ? "Deleted." : "Kept.");
+                if (ok) toast.show({ message: "Promo deleted.", tone: "alert" });
+              }}>Delete promo</Button>
+              <Button onClick={() => toast.show({ message: "Saved." , tone: "good" })}>Toast</Button>
+              <Button onClick={() => toast.show({ message: "Could not reach the kitchen. Check the tablet.", tone: "alert" })}>Error toast</Button>
+            </div>
+            {lastConfirm && <p className="mt-2 text-sm text-oh-stone/70">Confirm answered: {lastConfirm}</p>}
+          </Section>
+        </div>
+
+        <Section id="datalist" title="Search, filters and data list" note="Cards on a phone, a table from 1024px.">
+          <div className="space-y-3">
+            <SearchField value={query} onChange={setQuery} placeholder="Search the menu" />
+            <FilterChips label="Filter" value={filter} onChange={setFilter}
+              options={[
+                { value: "all", label: "All", count: items.length },
+                { value: "on", label: "Available", count: items.filter((x) => !x.soldOut).length },
+                { value: "out", label: "Sold out", count: items.filter((x) => x.soldOut).length },
+              ]} />
+            <DataList rows={shown} rowKey={(r) => r.id} columns={columns}
+              renderCard={(r) => (
+                <ListRow title={r.name} meta={`${r.station}, ${money(r.price)}`}
+                  trailing={<Toggle checked={!r.soldOut} onChange={() => toggleSoldOut(r)} label={`${r.name} available`} hideLabel />} />
+              )}
+              empty={<Card padded={false}><EmptyState icon="search" title="Nothing matches" body="Try a shorter search or another filter."
+                action={<Button onClick={() => { setQuery(""); setFilter("all"); }}>Clear filters</Button>} /></Card>} />
+          </div>
+        </Section>
+
         <Section id="icons" title="Icons" note="24px grid, 1.5px stroke, drawn in-house.">
           <div className="grid grid-cols-4 gap-2 lg:grid-cols-9">
             {ICON_NAMES.map((n) => (
@@ -141,6 +271,24 @@ export function Gallery() {
           </div>
         </Section>
       </main>
+      <Sheet open={sheet === "full"} onClose={() => setSheet(null)} title="Oh! Beef Noodle Soup"
+        footer={<div className="flex gap-2"><Button className="flex-1" onClick={() => setSheet(null)}>Cancel</Button>
+          <Button className="flex-1" variant="primary" onClick={() => { setSheet(null); toast.show({ message: "Item saved.", tone: "good" }); }}>Save</Button></div>}>
+        <div className="space-y-4">
+          <Field label="Name"><TextInput defaultValue="Oh! Beef Noodle Soup" /></Field>
+          <Field label="Price"><MoneyInput cents={1695} onCents={() => {}} /></Field>
+          <Field label="Description"><TextArea defaultValue="Eight-hour beef broth, hand-pulled noodles, braised shank, pickled mustard greens." /></Field>
+          <Toggle checked={orderNow} onChange={setOrderNow} label="Available today" />
+          <p className="pt-2 text-sm text-oh-stone/70">The body scrolls on its own while the header and footer stay put.</p>
+        </div>
+      </Sheet>
+      <Sheet open={sheet === "auto"} onClose={() => setSheet(null)} title="Filters" size="auto"
+        footer={<Button variant="primary" className="w-full" onClick={() => setSheet(null)}>Show results</Button>}>
+        <div className="space-y-4">
+          <Field label="Location"><Select defaultValue="all"><option value="all">All locations</option><option>SoHo</option></Select></Field>
+          <FilterChips value={filter} onChange={setFilter} options={[{ value: "all", label: "All" }, { value: "on", label: "Available" }, { value: "out", label: "Sold out" }]} />
+        </div>
+      </Sheet>
     </div>
   );
 }
