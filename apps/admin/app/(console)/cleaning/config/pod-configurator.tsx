@@ -1,496 +1,143 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { useConfirm } from "@/components/ui/Confirm";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorCard } from "@/components/ui/ErrorCard";
+import { SkeletonList } from "@/components/ui/Skeleton";
+import { StatTile } from "@/components/ui/StatTile";
+import { useToast } from "@/components/ui/Toast";
+import { api, ApiError } from "@/lib/api";
+import {
+  canLinkDual, dualPodCount, partnerNumber, selectionLabel, singlePodCount, sortByNumber, toggleSelection, type Seat,
+} from "@/lib/seats";
+import { useResource } from "@/lib/use-resource";
 
-const BASE = process.env.NEXT_PUBLIC_API_URL || "";
+const errorText = (e: unknown) => (e instanceof ApiError || e instanceof Error ? e.message : "Something went wrong.");
 
-type Pod = {
-  id: string;
-  number: string;
-  qrCode: string;
-  status: "AVAILABLE" | "OCCUPIED" | "RESERVED" | "CLEANING";
-  locationId: string;
-  row: number;
-  col: number;
-  side: string;
-  podType: "SINGLE" | "DUAL";
-  dualPartnerId: string | null;
-  dualPartner?: Pod | null;
-};
+export function PodConfigurator({ locationId }: { locationId: string }) {
+  const { show } = useToast();
+  const ask = useConfirm();
+  const res = useResource(`seats:${locationId}`, (signal) => api<Seat[]>(`/locations/${locationId}/seats`, { signal }));
+  const [selected, setSelected] = useState<string[]>([]);
+  const [linking, setLinking] = useState(false);
+  const [unlinkingId, setUnlinkingId] = useState<string | null>(null);
 
-type Location = {
-  id: string;
-  name: string;
-};
+  useEffect(() => { setSelected([]); }, [locationId]);
 
-export default function PodConfigurator({ locations }: { locations: Location[] }) {
-  const [selectedLocation, setSelectedLocation] = useState<string>(locations[0]?.id || "");
-  const [pods, setPods] = useState<Pod[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [selectedPods, setSelectedPods] = useState<string[]>([]);
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const seats = res.data;
 
-  async function loadPods() {
-    if (!selectedLocation) return;
+  function tap(seat: Seat) {
+    if (seat.podType === "DUAL") return;
+    setSelected((sel) => toggleSelection(sel, seat.id));
+  }
 
+  async function linkDual() {
+    if (!seats) return;
+    const check = canLinkDual(seats, selected);
+    if (check.ok === false) { show({ message: check.reason, tone: "alert" }); return; }
+    setLinking(true);
     try {
-      setLoading(true);
-      const response = await fetch(`${BASE}/locations/${selectedLocation}/seats`, {
-        headers: { "x-tenant-slug": "oh" },
-      });
-      const data = await response.json();
-      setPods(data);
-    } catch (error) {
-      console.error("Failed to load pods:", error);
+      await api("/seats/link-dual", { method: "POST", body: { seatId1: selected[0], seatId2: selected[1] } });
+      setSelected([]);
+      res.reload();
+      show({ message: "Pods linked as a dual pod.", tone: "good" });
+    } catch (e) {
+      show({ message: errorText(e), tone: "alert" });
     } finally {
-      setLoading(false);
+      setLinking(false);
     }
   }
 
-  useEffect(() => {
-    loadPods();
-    setSelectedPods([]);
-  }, [selectedLocation]);
-
-  function togglePodSelection(podId: string) {
-    setSelectedPods((prev) => {
-      if (prev.includes(podId)) {
-        return prev.filter((id) => id !== podId);
-      }
-      // Only allow selecting 2 pods for dual linking
-      if (prev.length >= 2) {
-        return [prev[1], podId]; // Replace oldest selection
-      }
-      return [...prev, podId];
-    });
-  }
-
-  async function linkAsDualPod() {
-    if (selectedPods.length !== 2) {
-      setMessage({ type: "error", text: "Please select exactly 2 pods to link as a dual pod" });
-      return;
-    }
-
-    const [pod1Id, pod2Id] = selectedPods;
-    const pod1 = pods.find((p) => p.id === pod1Id);
-    const pod2 = pods.find((p) => p.id === pod2Id);
-
-    if (!pod1 || !pod2) return;
-
-    // Check if either pod is already linked
-    if (pod1.dualPartnerId || pod2.dualPartnerId) {
-      setMessage({ type: "error", text: "One or both pods are already linked. Unlink them first." });
-      return;
-    }
-
+  async function unlinkDual(seat: Seat) {
+    const ok = await ask({ title: `Unlink pod ${seat.number}?`, body: "This pod and its partner go back to seating single diners.", confirmLabel: "Unlink", tone: "danger" });
+    if (!ok) return;
+    setUnlinkingId(seat.id);
     try {
-      setSaving(true);
-      const response = await fetch(`${BASE}/seats/link-dual`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-tenant-slug": "oh",
-        },
-        body: JSON.stringify({ seatId1: pod1Id, seatId2: pod2Id }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to link pods");
-      }
-
-      setMessage({ type: "success", text: `Pods ${pod1.number} and ${pod2.number} are now linked as a dual pod` });
-      setSelectedPods([]);
-      loadPods();
-    } catch (error) {
-      setMessage({ type: "error", text: error instanceof Error ? error.message : "Failed to link pods" });
+      await api("/seats/unlink-dual", { method: "POST", body: { seatId: seat.id } });
+      res.reload();
+      show({ message: `Pod ${seat.number} unlinked.`, tone: "info" });
+    } catch (e) {
+      show({ message: errorText(e), tone: "alert" });
     } finally {
-      setSaving(false);
+      setUnlinkingId(null);
     }
   }
 
-  async function unlinkDualPod(podId: string) {
-    const pod = pods.find((p) => p.id === podId);
-    if (!pod?.dualPartnerId) return;
+  if (res.error && !seats) return <ErrorCard message="Couldn't load pods." onRetry={res.reload} />;
+  if (!seats) return <SkeletonList rows={4} />;
 
-    try {
-      setSaving(true);
-      const response = await fetch(`${BASE}/seats/unlink-dual`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-tenant-slug": "oh",
-        },
-        body: JSON.stringify({ seatId: podId }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to unlink pods");
-      }
-
-      setMessage({ type: "success", text: "Dual pod unlinked successfully" });
-      setSelectedPods([]);
-      loadPods();
-    } catch (error) {
-      setMessage({ type: "error", text: error instanceof Error ? error.message : "Failed to unlink pods" });
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  // Group pods by row/side for visual layout
-  const podsByPosition = pods.reduce(
-    (acc, pod) => {
-      const key = `${pod.side}-${pod.row}`;
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(pod);
-      return acc;
-    },
-    {} as Record<string, Pod[]>
-  );
-
-  // Sort pods within each position by column
-  Object.values(podsByPosition).forEach((group) => {
-    group.sort((a, b) => a.col - b.col);
-  });
-
-  const dualPods = pods.filter((p) => p.podType === "DUAL");
-  const singlePods = pods.filter((p) => p.podType === "SINGLE" && !p.dualPartnerId);
+  const sorted = sortByNumber(seats);
+  const label = selectionLabel(seats, selected);
+  const linkCheck = canLinkDual(seats, selected);
 
   return (
-    <div style={{ padding: 24 }}>
-      {/* Message Banner */}
-      {message && (
-        <div
-          style={{
-            padding: "12px 16px",
-            marginBottom: 16,
-            borderRadius: 8,
-            background: message.type === "success" ? "#dcfce7" : "#fee2e2",
-            color: message.type === "success" ? "#166534" : "#991b1b",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <span>{message.text}</span>
-          <button
-            onClick={() => setMessage(null)}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              fontSize: "1.25rem",
-              color: "inherit",
-            }}
-          >
-            x
-          </button>
-        </div>
-      )}
-
-      {/* Location Selector */}
-      <div
-        style={{
-          background: "white",
-          padding: 16,
-          borderRadius: 12,
-          marginBottom: 24,
-          boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-        }}
-      >
-        <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
-          <label style={{ color: "#6b7280", fontSize: "0.9rem" }}>Location:</label>
-          <select
-            value={selectedLocation}
-            onChange={(e) => setSelectedLocation(e.target.value)}
-            style={{
-              padding: "8px 16px",
-              background: "white",
-              color: "#111827",
-              border: "1px solid #d1d5db",
-              borderRadius: 8,
-              fontSize: "1rem",
-            }}
-          >
-            {locations.map((loc) => (
-              <option key={loc.id} value={loc.id}>
-                {loc.name}
-              </option>
-            ))}
-          </select>
-
-          <div style={{ marginLeft: "auto", display: "flex", gap: 12 }}>
-            <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#0891b2" }}>
-                {dualPods.length / 2}
-              </div>
-              <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>Dual Pods</div>
-            </div>
-            <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: "1.5rem", fontWeight: "bold", color: "#6b7280" }}>
-                {singlePods.length}
-              </div>
-              <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>Single Pods</div>
-            </div>
-          </div>
-        </div>
+    <div className="space-y-5 pb-24 lg:pb-6">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatTile label="Dual pods" value={dualPodCount(seats)} />
+        <StatTile label="Single pods" value={singlePodCount(seats)} />
       </div>
 
-      {/* Action Panel */}
-      <div
-        style={{
-          background: "white",
-          padding: 16,
-          borderRadius: 12,
-          marginBottom: 24,
-          boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-        }}
-      >
-        <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
-          <div style={{ color: "#6b7280", fontSize: "0.9rem" }}>
-            <strong>Selected:</strong> {selectedPods.length} pod{selectedPods.length !== 1 ? "s" : ""}
-            {selectedPods.length === 2 && (
-              <span style={{ marginLeft: 8 }}>
-                (Pods {pods.find((p) => p.id === selectedPods[0])?.number} &{" "}
-                {pods.find((p) => p.id === selectedPods[1])?.number})
-              </span>
-            )}
-          </div>
-
-          <button
-            onClick={linkAsDualPod}
-            disabled={selectedPods.length !== 2 || saving}
-            style={{
-              padding: "10px 20px",
-              background: selectedPods.length === 2 ? "#0891b2" : "#e5e7eb",
-              color: selectedPods.length === 2 ? "white" : "#9ca3af",
-              border: "none",
-              borderRadius: 8,
-              fontWeight: "600",
-              cursor: selectedPods.length === 2 ? "pointer" : "not-allowed",
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-            }}
-          >
-            Link as Dual Pod
-          </button>
-
-          <button
-            onClick={() => setSelectedPods([])}
-            disabled={selectedPods.length === 0}
-            style={{
-              padding: "10px 20px",
-              background: "#f3f4f6",
-              color: selectedPods.length > 0 ? "#374151" : "#9ca3af",
-              border: "none",
-              borderRadius: 8,
-              fontWeight: "500",
-              cursor: selectedPods.length > 0 ? "pointer" : "not-allowed",
-            }}
-          >
-            Clear Selection
-          </button>
-        </div>
-
-        <p style={{ marginTop: 12, fontSize: "0.85rem", color: "#6b7280" }}>
-          Click on two adjacent single pods to select them, then click "Link as Dual Pod" to create a dual pod.
-          Dual pods can only be assigned to groups of exactly 2 people.
-        </p>
-      </div>
-
-      {/* Pods Grid */}
-      {loading ? (
-        <div style={{ textAlign: "center", padding: 48, color: "#9ca3af" }}>Loading pods...</div>
-      ) : pods.length === 0 ? (
-        <div style={{ textAlign: "center", padding: 48, color: "#9ca3af" }}>
-          No pods configured for this location
-        </div>
+      {sorted.length === 0 ? (
+        <EmptyState icon="seat" title="No pods configured" body="This location has no pods yet." />
       ) : (
-        <div
-          style={{
-            background: "white",
-            padding: 24,
-            borderRadius: 12,
-            boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-          }}
-        >
-          <h3 style={{ margin: "0 0 16px 0", color: "#374151" }}>Seating Layout</h3>
+        <div className="grid grid-cols-4 gap-2.5 lg:grid-cols-8">
+          {sorted.map((seat) => {
+            const isDual = seat.podType === "DUAL";
+            const isSelected = selected.includes(seat.id);
+            const partner = isDual ? partnerNumber(seats, seat) : null;
+            const tileCls = `relative flex min-h-[76px] flex-col items-center justify-center gap-0.5 rounded-xl border-2 p-2 text-center transition-colors ${
+              isSelected ? "border-oh-ember-deep bg-oh-ember/10" : isDual ? "border-oh-olive/60 bg-oh-olive/10" : "border-oh-stone/20 bg-oh-cream hover:border-oh-stone/40"
+            }`;
+            const badge = isDual && (
+              <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-oh-olive text-xs font-bold text-oh-cream">2</span>
+            );
+            const numberEl = <span className="font-display text-xl leading-none text-oh-charcoal tabular-nums">{seat.number}</span>;
+            const typeEl = <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-oh-stone/70">{isDual ? `Dual with ${partner ?? "?"}` : "Single"}</span>;
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
-              gap: 12,
-            }}
-          >
-            {pods
-              .sort((a, b) => {
-                // Sort by number
-                return parseInt(a.number) - parseInt(b.number);
-              })
-              .map((pod) => {
-                const isSelected = selectedPods.includes(pod.id);
-                const isDual = pod.podType === "DUAL";
-                const partnerPod = isDual ? pods.find((p) => p.id === pod.dualPartnerId) : null;
-
-                return (
-                  <div
-                    key={pod.id}
-                    onClick={() => {
-                      if (!isDual) {
-                        togglePodSelection(pod.id);
-                      }
-                    }}
-                    style={{
-                      padding: 16,
-                      borderRadius: 12,
-                      border: isSelected
-                        ? "3px solid #3b82f6"
-                        : isDual
-                          ? "3px solid #22d3ee"
-                          : "2px solid #e5e7eb",
-                      background: isSelected
-                        ? "#eff6ff"
-                        : isDual
-                          ? "#ecfeff"
-                          : "white",
-                      cursor: isDual ? "default" : "pointer",
-                      transition: "all 0.2s",
-                      position: "relative",
-                    }}
-                  >
-                    {/* Dual Badge */}
-                    {isDual && (
-                      <div
-                        style={{
-                          position: "absolute",
-                          top: -8,
-                          right: -8,
-                          background: "#0891b2",
-                          color: "white",
-                          borderRadius: "50%",
-                          width: 24,
-                          height: 24,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: "0.7rem",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        2
-                      </div>
-                    )}
-
-                    {/* Pod Number */}
-                    <div
-                      style={{
-                        fontSize: "1.5rem",
-                        fontWeight: "bold",
-                        textAlign: "center",
-                        color: isDual ? "#0891b2" : "#374151",
-                      }}
-                    >
-                      {pod.number}
-                    </div>
-
-                    {/* Pod Type Label */}
-                    <div
-                      style={{
-                        fontSize: "0.7rem",
-                        textAlign: "center",
-                        color: "#6b7280",
-                        marginTop: 4,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.5px",
-                      }}
-                    >
-                      {isDual ? `Dual w/ ${partnerPod?.number || "?"}` : "Single"}
-                    </div>
-
-                    {/* Unlink Button for Dual Pods */}
-                    {isDual && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          unlinkDualPod(pod.id);
-                        }}
-                        disabled={saving}
-                        style={{
-                          marginTop: 8,
-                          width: "100%",
-                          padding: "6px 8px",
-                          background: "#fef2f2",
-                          color: "#dc2626",
-                          border: "1px solid #fecaca",
-                          borderRadius: 6,
-                          fontSize: "0.7rem",
-                          cursor: "pointer",
-                          fontWeight: "500",
-                        }}
-                      >
-                        Unlink
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-          </div>
+            // A dual pod's tile isn't tappable to select (only its own Unlink button is),
+            // so it renders as a div with a real nested button instead of a button-in-button.
+            if (isDual) {
+              return (
+                <div key={seat.id} className={tileCls}>
+                  {badge}
+                  {numberEl}
+                  {typeEl}
+                  <button type="button" onClick={() => unlinkDual(seat)} disabled={unlinkingId === seat.id} aria-label={`Unlink pod ${seat.number}`}
+                    className="mt-1 inline-flex min-h-6 items-center rounded-full px-2 text-[11px] font-semibold text-oh-ember-deep hover:bg-oh-ember/10 disabled:opacity-60">
+                    {unlinkingId === seat.id ? "..." : "Unlink"}
+                  </button>
+                </div>
+              );
+            }
+            return (
+              <button key={seat.id} type="button" onClick={() => tap(seat)} className={`${tileCls} cursor-pointer`}>
+                {numberEl}
+                {typeEl}
+              </button>
+            );
+          })}
         </div>
       )}
 
-      {/* Legend */}
-      <div
-        style={{
-          marginTop: 24,
-          padding: 16,
-          background: "#f9fafb",
-          borderRadius: 8,
-          display: "flex",
-          gap: 24,
-          flexWrap: "wrap",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div
-            style={{
-              width: 20,
-              height: 20,
-              borderRadius: 4,
-              border: "2px solid #e5e7eb",
-              background: "white",
-            }}
-          />
-          <span style={{ fontSize: "0.85rem", color: "#6b7280" }}>Single Pod</span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div
-            style={{
-              width: 20,
-              height: 20,
-              borderRadius: 4,
-              border: "3px solid #22d3ee",
-              background: "#ecfeff",
-            }}
-          />
-          <span style={{ fontSize: "0.85rem", color: "#6b7280" }}>Dual Pod</span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div
-            style={{
-              width: 20,
-              height: 20,
-              borderRadius: 4,
-              border: "3px solid #3b82f6",
-              background: "#eff6ff",
-            }}
-          />
-          <span style={{ fontSize: "0.85rem", color: "#6b7280" }}>Selected</span>
-        </div>
+      <div className="flex flex-wrap gap-2 text-sm text-oh-stone/70">
+        <Badge tone="neutral">Single pod</Badge>
+        <Badge tone="good">Dual pod</Badge>
+        <Badge tone="alert">Selected</Badge>
       </div>
+
+      {selected.length > 0 && (
+        <div className="fixed inset-x-0 bottom-[calc(76px+env(safe-area-inset-bottom))] z-40 px-4 lg:sticky lg:bottom-4 lg:inset-x-auto lg:px-0">
+          <div className="mx-auto flex max-w-xl flex-col gap-2.5 rounded-card bg-oh-charcoal px-4 py-3 text-oh-cream shadow-[0_8px_30px_rgb(28_27_25/0.3)] sm:flex-row sm:items-center">
+            <span className="min-w-0 flex-1 text-[15px] font-medium">{label}</span>
+            <div className="flex gap-2">
+              <Button variant="ghost" className="flex-1 text-oh-cream hover:bg-oh-cream/10 sm:flex-none" onClick={() => setSelected([])}>Clear</Button>
+              <Button variant="primary" icon="check" className="flex-1 sm:flex-none" disabled={!linkCheck.ok || linking} loading={linking} onClick={linkDual}>Link as dual pod</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

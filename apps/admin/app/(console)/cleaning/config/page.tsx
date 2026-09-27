@@ -1,50 +1,30 @@
-import PodConfigurator from "./pod-configurator";
+"use client";
+import { useLocationFilter } from "@/components/providers/LocationProvider";
+import { Card } from "@/components/ui/Card";
+import { Field, Select } from "@/components/ui/Field";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { PodConfigurator } from "./pod-configurator";
 
-async function getLocations() {
-  const base = process.env.NEXT_PUBLIC_API_URL!;
-  const res = await fetch(`${base}/locations`, {
-    cache: "no-store",
-    headers: { "x-tenant-slug": "oh" },
-  });
+const BACK = { href: "/cleaning", label: "Cleaning display" };
 
-  if (!res.ok) return [];
-  return res.json();
-}
-
-export default async function PodConfigPage() {
-  const locations = await getLocations();
+export default function SeatsPage() {
+  const { locationId, locations, setLocationId } = useLocationFilter();
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f9fafb" }}>
-      <div
-        style={{
-          background: "white",
-          padding: "16px 24px",
-          borderBottom: "1px solid #e5e7eb",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <h1 style={{ margin: 0, fontSize: "1.5rem", fontWeight: "bold", color: "#111827" }}>
-          Pod Configuration
-        </h1>
-        <a
-          href="/pods"
-          style={{
-            padding: "8px 16px",
-            background: "#f3f4f6",
-            color: "#374151",
-            borderRadius: 8,
-            textDecoration: "none",
-            fontSize: "0.875rem",
-          }}
-        >
-          Back to Cleaning View
-        </a>
-      </div>
-
-      <PodConfigurator locations={locations} />
-    </div>
+    <>
+      <PageHeader title="Seats" back={BACK} />
+      {locationId === "all" ? (
+        <Card>
+          <Field label="Location" hint="Choose a location to configure its seating pods.">
+            <Select value="" onChange={(e) => setLocationId(e.target.value)}>
+              <option value="" disabled>Select location...</option>
+              {locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+            </Select>
+          </Field>
+        </Card>
+      ) : (
+        <PodConfigurator locationId={locationId} />
+      )}
+    </>
   );
 }
