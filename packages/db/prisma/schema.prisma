@@ -96,6 +96,13 @@ model Location {
   // Wallet notification settings
   notificationRadiusMiles Float @default(0.062) // ~100 meters - Apple's actual notification trigger radius
 
+  // Comb seating layout (site overhaul)
+  layoutKey    String? // e.g. "city-creek", "university-place" - selects the shared buildLayout geometry
+  layoutMirror Boolean @default(false) // mirror the comb layout horizontally
+  podCount     Int? // total comb pods at this location
+  slug         String? @unique // URL-friendly identifier for customer-facing routes
+  i18n         Json? // per-locale copy overrides for this location
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -178,6 +185,9 @@ model MenuItem {
 
   isAvailable Boolean @default(true)
 
+  // Early access window (site overhaul): item is visible early to eligible tiers before this date
+  releaseAt DateTime?
+
   // Enhanced menu organization
   categoryType  CategoryType? // Type of category (MAIN, SLIDER, ADDON, etc.)
   selectionMode SelectionMode @default(MULTIPLE) // How users select this item
@@ -228,9 +238,16 @@ model Seat {
 
   // Position in the seating layout (for visual map)
   // U-shape: left side (entrance), bottom, right side (exit)
-  row  Int    @default(0) // 0=left, 1=bottom, 2=right
-  col  Int    @default(0) // Position within the row
-  side String @default("left") // "left", "bottom", "right" for U-shape
+  row  Int    @default(0) // 0=left, 1=bottom, 2=right (legacy U-shape; kept as defaults, not written for comb seats)
+  col  Int    @default(0) // Position within the row (legacy U-shape; kept as defaults, not written for comb seats)
+  side String @default("left") // "left", "bottom", "right" for U-shape (legacy; kept as defaults, not written for comb seats)
+
+  // Comb layout geometry (site overhaul)
+  finger    Int? // finger index (0=A, 1=B, 2=C, ...)
+  rowSide   String? // which side of the finger the pod sits on
+  position  Int? // 2-digit kitchen position within the finger
+  label     String? // display label, e.g. "B-07"
+  retiredAt DateTime? // set when a pod is removed from a rebuilt layout
 
   // Dual Pod configuration (two adjacent pods that can be booked together)
   podType       PodType @default(SINGLE)
@@ -245,6 +262,7 @@ model Seat {
   podCalls PodCall[]
 
   @@unique([locationId, number]) // Ensure unique pod numbers per location
+  @@index([locationId, retiredAt])
 }
 
 enum PodType {
@@ -540,6 +558,11 @@ model User {
   arrivalAccuracy     Float? // 0-1 score of on-time arrivals
   onTimeArrivals      Int    @default(0)
 
+  // Customer identity / i18n (site overhaul)
+  locale             String? // preferred locale, e.g. "en", "zh-TW", "zh-CN", "es"
+  welcomeSeenAt      DateTime? // when the welcome moment was shown
+  lastTierCelebrated MembershipTier? // last tier for which the upgrade moment was shown
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -548,6 +571,8 @@ model User {
   pendingCredits PendingCredit[]
   badges         UserBadge[]
   challenges     UserChallenge[]
+  creditLots     CreditLot[]
+  rewards        Reward[]
 
   // Group Orders
   groupOrdersAsHost GroupOrder[] @relation("GroupOrderHost")
@@ -648,6 +673,10 @@ enum CreditEventType {
   ADMIN_ADJUSTMENT
   CHALLENGE_REWARD // Reward for completing challenges
   GIFT_EXCESS // Excess from meal gift when order < gift amount
+  GOODWILL // Goodwill credit grant (support resolution)
+  WELCOME // Welcome credit grant
+  REWARD_REDEEMED // A Reward row was redeemed
+  REFUND_RESTORE // Credit restored after a refund
 }
 
 // ==========================================
@@ -680,6 +709,110 @@ enum PendingCreditType {
 }
 
 // ==========================================
+// CREDIT LOTS (site overhaul credit ledger)
+// ==========================================
+
+enum CreditLotSource {
+  CASHBACK
+  REFERRAL
+  WELCOME
+  GOODWILL
+  CHALLENGE
+  ADMIN
+  LEGACY
+}
+
+model CreditLot {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  source         CreditLotSource
+  amountCents    Int
+  remainingCents Int
+  expiresAt      DateTime
+  orderId        String?
+  note           String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, expiresAt])
+}
+
+// ==========================================
+// REWARDS (site overhaul: free bowl, premium add-on)
+// ==========================================
+
+enum RewardType {
+  FREE_BOWL
+  PREMIUM_ADDON
+}
+
+model Reward {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  type            RewardType
+  issuedFor       String
+  windowEndsAt    DateTime
+  redeemedOrderId String?
+  redeemedAt      DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, type, issuedFor])
+}
+
+// ==========================================
+// SUPPORT CASES (site overhaul)
+// ==========================================
+
+enum SupportCaseType {
+  POD_ISSUE
+  ORDER_ISSUE
+  REFUND_REQUEST
+  GENERAL
+  CONTACT
+}
+
+enum SupportCaseStatus {
+  OPEN
+  RESOLVED
+  DECLINED
+}
+
+enum SupportResolution {
+  GOODWILL_CREDIT
+  STAFF_CREDIT
+  FULL_REFUND
+  DECLINED
+  INFO
+}
+
+model SupportCase {
+  id      String  @id @default(cuid())
+  userId  String?
+  orderId String?
+  type    SupportCaseType
+
+  status     SupportCaseStatus @default(OPEN)
+  summary    String
+  transcript Json?
+  contact    Json?
+  locale     String?
+
+  resolution  SupportResolution?
+  amountCents Int?
+  resolvedBy  String?
+  resolvedAt  DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([status, createdAt])
+}
+
+// ==========================================
 // GAMIFICATION
 // ==========================================
 
@@ -688,7 +821,9 @@ model Badge {
   slug        String        @unique
   name        String
   description String
-  iconEmoji   String
+  iconEmoji   String? // kept nullable for rollback; unused, replaced by iconKey (in-house SVG)
+  iconKey     String? // in-house SVG icon key
+  i18n        Json? // per-locale name/description overrides
   category    BadgeCategory
   isActive    Boolean       @default(true)
 
@@ -724,6 +859,8 @@ model Challenge {
   description String
   rewardCents Int
   iconEmoji   String
+  iconKey     String? // in-house SVG icon key
+  i18n        Json? // per-locale name/description overrides
 
   requirements Json
 
