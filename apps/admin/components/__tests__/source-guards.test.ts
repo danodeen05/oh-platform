@@ -11,7 +11,6 @@ function files(dir: string): string[] {
 }
 // Paths not yet rebuilt; each rebuild task deletes its entries. Task 29 asserts this is empty.
 export const LEGACY: string[] = [
-  "app/(console)/page.tsx",
   "app/(console)/_components",
   "app/(console)/analytics",
   "app/(console)/catering",

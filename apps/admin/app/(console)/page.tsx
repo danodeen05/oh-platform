@@ -1,124 +1,44 @@
-import Link from "next/link";
+"use client";
+import { useLocationFilter } from "@/components/providers/LocationProvider";
+import { useRole } from "@/components/providers/RoleProvider";
+import { OrderNowSwitch } from "@/components/shell/OrderNowSwitch";
+import { AttentionList } from "@/components/today/AttentionList";
+import { PulseTiles } from "@/components/today/PulseTiles";
+import { QuickActions } from "@/components/today/QuickActions";
+import { ErrorCard } from "@/components/ui/ErrorCard";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { SkeletonList } from "@/components/ui/Skeleton";
+import { api } from "@/lib/api";
+import { attentionRows, denverDayLabel, type TodayPayload } from "@/lib/today";
+import { useResource } from "@/lib/use-resource";
 
-export default function HomePage() {
+export default function TodayPage() {
+  const role = useRole();
+  const { locationId, locations } = useLocationFilter();
+  const today = useResource(`today:${locationId}`,
+    (signal) => api<TodayPayload>("/admin/today", { signal, query: { locationId } }), { refreshMs: 60_000 });
+
+  const place = locationId === "all" ? "All locations" : locations.find((l) => l.id === locationId)?.name;
+  const day = denverDayLabel(today.data?.date ?? new Date().toISOString());
+  const failed = today.error && !today.data;
+
   return (
-    <main style={{ padding: "48px", maxWidth: "1200px", margin: "0 auto" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "8px" }}>
-        <img
-          src="/Oh_Logo_Mark_Web.png"
-          alt="Oh!"
-          style={{ height: "56px", width: "auto" }}
-        />
-        <h1 style={{ fontSize: "2.5rem", margin: 0 }}>
-          Admin Portal
-        </h1>
+    <>
+      <PageHeader title="Today" subtitle={place ? `${day} · ${place}` : day} />
+      <div className="space-y-4 lg:space-y-6">
+        {failed
+          ? <ErrorCard message="Couldn't load today's numbers." onRetry={today.reload} />
+          : <PulseTiles today={today.data} />}
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start lg:gap-6">
+          <div className="lg:col-start-2 lg:row-start-1"><OrderNowSwitch variant="card" /></div>
+          <div className="lg:col-start-1 lg:row-span-2 lg:row-start-1">
+            {today.data
+              ? <AttentionList rows={attentionRows(today.data, role)} />
+              : !failed && <SkeletonList rows={3} />}
+          </div>
+          <div className="lg:col-start-2 lg:row-start-2"><QuickActions /></div>
+        </div>
       </div>
-      <p style={{ color: "#666", marginBottom: "48px", fontSize: "1.1rem" }}>
-        Manage your restaurant operations
-      </p>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-          gap: "24px",
-        }}
-      >
-        <Link
-          href="/kitchen"
-          style={{
-            padding: "32px",
-            background: "white",
-            border: "2px solid #e5e7eb",
-            borderRadius: "12px",
-            textDecoration: "none",
-            color: "inherit",
-            transition: "all 0.2s",
-          }}
-        >
-          <div style={{ fontSize: "2.5rem", marginBottom: "16px" }}>👨‍🍳</div>
-          <h2 style={{ fontSize: "1.5rem", marginBottom: "8px" }}>Kitchen Display</h2>
-          <p style={{ color: "#666", fontSize: "0.95rem" }}>
-            View and manage incoming orders
-          </p>
-        </Link>
-
-        <Link
-          href="/cleaning"
-          style={{
-            padding: "32px",
-            background: "white",
-            border: "2px solid #e5e7eb",
-            borderRadius: "12px",
-            textDecoration: "none",
-            color: "inherit",
-            transition: "all 0.2s",
-          }}
-        >
-          <div style={{ fontSize: "2.5rem", marginBottom: "16px" }}>🧹</div>
-          <h2 style={{ fontSize: "1.5rem", marginBottom: "8px" }}>Cleaning</h2>
-          <p style={{ color: "#666", fontSize: "0.95rem" }}>
-            Track pod cleaning and customer service
-          </p>
-        </Link>
-
-        <Link
-          href="/locations"
-          style={{
-            padding: "32px",
-            background: "white",
-            border: "2px solid #e5e7eb",
-            borderRadius: "12px",
-            textDecoration: "none",
-            color: "inherit",
-            transition: "all 0.2s",
-          }}
-        >
-          <div style={{ fontSize: "2.5rem", marginBottom: "16px" }}>📍</div>
-          <h2 style={{ fontSize: "1.5rem", marginBottom: "8px" }}>Locations</h2>
-          <p style={{ color: "#666", fontSize: "0.95rem" }}>
-            Manage restaurant locations
-          </p>
-        </Link>
-
-        <Link
-          href="/menu"
-          style={{
-            padding: "32px",
-            background: "white",
-            border: "2px solid #e5e7eb",
-            borderRadius: "12px",
-            textDecoration: "none",
-            color: "inherit",
-            transition: "all 0.2s",
-          }}
-        >
-          <div style={{ fontSize: "2.5rem", marginBottom: "16px" }}>🍜</div>
-          <h2 style={{ fontSize: "1.5rem", marginBottom: "8px" }}>Menu Management</h2>
-          <p style={{ color: "#666", fontSize: "0.95rem" }}>
-            Add, edit, and manage menu items
-          </p>
-        </Link>
-
-        <Link
-          href="/analytics"
-          style={{
-            padding: "32px",
-            background: "linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)",
-            border: "2px solid #1e40af",
-            borderRadius: "12px",
-            textDecoration: "none",
-            color: "white",
-            transition: "all 0.2s",
-          }}
-        >
-          <div style={{ fontSize: "2.5rem", marginBottom: "16px" }}>📊</div>
-          <h2 style={{ fontSize: "1.5rem", marginBottom: "8px" }}>Analytics Dashboard</h2>
-          <p style={{ opacity: 0.9, fontSize: "0.95rem" }}>
-            Revenue, operations, customers, and menu insights
-          </p>
-        </Link>
-      </div>
-    </main>
+    </>
   );
 }
