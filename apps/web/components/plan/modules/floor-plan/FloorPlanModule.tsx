@@ -9,6 +9,8 @@ import { DataTableToggle } from "@/components/plan/primitives/DataTableToggle";
 import { Lightbox } from "@/components/plan/primitives/Lightbox";
 import { FloorPlanSvg, type HoverTarget, type LabelKey } from "./FloorPlanSvg";
 import { JourneyTimeline } from "./JourneyTimeline";
+import { PhoneFrame } from "@/components/plan/primitives/PhoneFrame";
+import { statusDemoSrc } from "@/lib/plan/statusDemo";
 import { PodTable } from "./PodTable";
 import { ServiceExplainer } from "./ServiceExplainer";
 import { ShellFacts } from "./ShellFacts";
@@ -36,6 +38,7 @@ import {
   ZONES,
   journeyClock,
   journeyMarkers,
+  statusStageAt,
   type Actor,
   type AreaKey,
   type JourneyStep,
@@ -131,6 +134,23 @@ export function FloorPlanModule() {
   }, [playing, reduce]);
 
   const markers = useMemo(() => journeyMarkers(progress), [progress]);
+
+  // The guest's phone: the real status page (demo order) follows the journey.
+  const phoneRef = useRef<HTMLIFrameElement>(null);
+  const phoneStage = statusStageAt(progress);
+  const phoneStageRef = useRef(phoneStage);
+  phoneStageRef.current = phoneStage;
+  useEffect(() => {
+    phoneRef.current?.contentWindow?.postMessage({ type: "oh-status-demo", stage: phoneStage }, window.location.origin);
+  }, [phoneStage]);
+  useEffect(() => {
+    const onReady = (e: MessageEvent) => {
+      if (e.origin !== window.location.origin || (e.data as { type?: string } | null)?.type !== "oh-status-demo-ready") return;
+      phoneRef.current?.contentWindow?.postMessage({ type: "oh-status-demo", stage: phoneStageRef.current }, window.location.origin);
+    };
+    window.addEventListener("message", onReady);
+    return () => window.removeEventListener("message", onReady);
+  }, []);
   const currentStep: JourneyStep | null = progress > 0 ? [...ANIMATED_STEPS].reverse().find((s) => (s.at as number) <= progress) ?? null : null;
   const clock = journeyClock(progress);
   const showJourney = progress > 0;
@@ -466,6 +486,15 @@ export function FloorPlanModule() {
         </div>
 
         <aside className="flex flex-col gap-4 lg:gap-6">
+          {/* The guest's phone sits first, beside the plan, so it plays in view with the journey. */}
+          <div className="flex items-start gap-3 rounded-lg border border-oh-stone bg-oh-ink/50 p-3">
+            <PhoneFrame ref={phoneRef} src={statusDemoSrc(locale, { sync: true, stage: "PAID" })} title={t("journey.phone.title")} className="w-[140px] shrink-0" />
+            <div className="min-w-0 pt-1">
+              <p className="m-0 text-[0.66rem] uppercase tracking-[0.14em] text-oh-gold">{t("journey.phone.title")}</p>
+              <p className="m-0 mt-1 text-[0.75rem] leading-snug text-oh-mute">{t("journey.phone.note")}</p>
+              <p className="m-0 mt-2 text-[0.75rem] leading-snug text-oh-cream" aria-live="off">{t(`journey.phone.stages.${phoneStage}`)}</p>
+            </div>
+          </div>
           {mode === "territory"
             ? asideSection("floor-plan-legend", t("modes.territory"), <TerritoryLegend labels={legendLabels} detail={legendDetail} />)
             : asideSection(
@@ -525,14 +554,17 @@ export function FloorPlanModule() {
           {asideSection(
             "floor-plan-journey",
             t("journey.title"),
-            <JourneyTimeline
-              progress={progress}
-              actorLabel={actorLabel}
-              stepText={stepText}
-              fmtClock={fmtClock}
-              after={t("journey.after")}
-              note={t("journey.note", { real: fmtClock(JOURNEY_REAL_SECONDS), anim: JOURNEY_SECONDS })}
-            />,
+            <div>
+              <JourneyTimeline
+                progress={progress}
+                actorLabel={actorLabel}
+                stepText={stepText}
+                fmtClock={fmtClock}
+                after={t("journey.after")}
+                note={t("journey.note", { real: fmtClock(JOURNEY_REAL_SECONDS), anim: JOURNEY_SECONDS })}
+                phoneLabel={t("journey.phone.badge")}
+              />
+            </div>,
             true,
           )}
         </aside>

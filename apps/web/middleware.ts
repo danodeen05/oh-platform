@@ -136,6 +136,11 @@ const withClerk = clerkMiddleware(async (auth, request: NextRequest) => {
     }
   }
 
+  // An order status page embedded in the plan's phone frame renders without site chrome.
+  if (/^\/(en|zh-TW|zh-CN|es)\/order\/status$/.test(pathname) && request.nextUrl.searchParams.get("embed") === "1") {
+    response.headers.set("x-embed", "1");
+  }
+
   // Set x-pathname header for kiosk, CNY, and plan detection in layout
   if (isKioskRoute(request) || isCNYRoute(request) || isPlanRoute(request)) {
     response.headers.set("x-pathname", request.nextUrl.pathname);

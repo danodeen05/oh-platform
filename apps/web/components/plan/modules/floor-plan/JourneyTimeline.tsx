@@ -7,6 +7,8 @@ interface Props {
   fmtClock: (seconds: number) => string;
   after: string;
   note: string;
+  /** Badge for moments on the guest's live status page. */
+  phoneLabel: string;
 }
 
 const badge: Record<Actor, string> = {
@@ -25,7 +27,7 @@ const rail: Record<Actor, string> = {
  * actor's color on the left rail; the current one is brightest. Steps with no
  * animation anchor sit under an "Afterwards" divider.
  */
-export function JourneyTimeline({ progress, actorLabel, stepText, fmtClock, after, note }: Props) {
+export function JourneyTimeline({ progress, actorLabel, stepText, fmtClock, after, note, phoneLabel }: Props) {
   const reachedIndex = progress > 0 ? ANIMATED_STEPS.reduce((acc, s, i) => ((s.at as number) <= progress ? i : acc), -1) : -1;
   const later = JOURNEY_STEPS.filter((s) => s.at === null);
 
@@ -42,6 +44,7 @@ export function JourneyTimeline({ progress, actorLabel, stepText, fmtClock, afte
       <span className="font-display tabular-nums text-[0.9rem] text-oh-cream">{fmtClock(s.realSeconds)}</span>
       <span>
         <span className={`mr-2 inline-block rounded-sm border px-1 py-px text-[0.6rem] uppercase tracking-[0.12em] ${state === "pending" ? "border-oh-stone text-oh-mute" : badge[s.actor]}`}>{actorLabel(s.actor)}</span>
+        {s.phone ? <span className={`mr-2 inline-block rounded-sm px-1 py-px text-[0.6rem] uppercase tracking-[0.12em] ${state === "pending" ? "bg-oh-stone/60 text-oh-mute" : "bg-oh-gold/20 text-oh-gold"}`}>{phoneLabel}</span> : null}
         {stepText(s.key)}
       </span>
     </li>

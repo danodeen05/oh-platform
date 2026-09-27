@@ -84,10 +84,25 @@ export async function sendSMS({ to, body }) {
 /**
  * Send order confirmation notification (SMS only)
  */
-export async function sendOrderConfirmation(order, user) {
-  const results = { email: null, sms: null };
+/** Public link to the live order status page (sent in the guest's texts). */
+export function orderStatusUrl(order, locale = "en", env = process.env) {
+  if (!order?.orderQrCode) return null;
+  const base = (env.WEB_APP_URL || "https://www.ohbeef.com").replace(/\/+$/, "");
+  return `${base}/${locale}/order/status?orderQrCode=${encodeURIComponent(order.orderQrCode)}`;
+}
+
+/** The order confirmation text: number, total, and the live status link. */
+export function orderConfirmationText(order, env = process.env) {
   const orderNumber = order.kitchenOrderNumber || order.orderNumber.slice(-6);
   const totalFormatted = `$${(order.totalCents / 100).toFixed(2)}`;
+  const link = orderStatusUrl(order, order.locale || "en", env);
+  return link
+    ? `Oh! Order #${orderNumber} confirmed. Total: ${totalFormatted}. Follow it live, crack your fortune cookie and order more to your pod: ${link}`
+    : `Oh! Order #${orderNumber} confirmed. Total: ${totalFormatted}. Show this text at check-in.`;
+}
+
+export async function sendOrderConfirmation(order, user) {
+  const results = { email: null, sms: null };
 
   // Email notification disabled - Resend removed
   results.email = { success: false, reason: "email_disabled" };
@@ -97,7 +112,7 @@ export async function sendOrderConfirmation(order, user) {
   if (phone && canSendSMS(user, order.guest)) {
     results.sms = await sendSMS({
       to: phone,
-      body: `Oh! Order #${orderNumber} confirmed! Total: ${totalFormatted}. ${order.orderQrCode ? `Check in at kiosk with code: ${order.orderQrCode.slice(-8)}` : 'Show this text at check-in.'}`,
+      body: orderConfirmationText(order),
     });
   } else if (phone && !canSendSMS(user, order.guest)) {
     console.log(`[SMS] Skipping order confirmation - no SMS opt-in for phone ${phone.slice(-4)}`);
@@ -121,7 +136,7 @@ export async function sendPodReadyNotification(order, user, podNumber) {
   if (user?.phone && canSendSMS(user, null)) {
     results.sms = await sendSMS({
       to: user.phone,
-      body: `Oh! Your Pod #${podNumber} is ready! Order #${orderNumber}. Head to your pod to enjoy your meal!`,
+      body: `Oh! Your Pod #${podNumber} is ready. Order #${orderNumber}. Head to your pod to enjoy your meal.${orderStatusUrl(order) ? ` Live status: ${orderStatusUrl(order)}` : ""}`,
     });
   } else if (user?.phone && !canSendSMS(user, null)) {
     console.log(`[SMS] Skipping pod ready - no SMS opt-in for phone ${user.phone.slice(-4)}`);

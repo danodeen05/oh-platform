@@ -65,6 +65,21 @@ export default async function LocaleLayout({ children, params }: Props) {
     );
   }
 
+  // An embedded order status page (the business plan's phone demo): the page
+  // alone, no header, footer or chat widget. Middleware sets x-embed.
+  if (headersList.get("x-embed") === "1") {
+    return (
+      <ClerkProvider localization={clerkLocalization}>
+        <NextIntlClientProvider messages={messages}>
+          <Providers chappy={false}>
+            <LangSync locale={locale} />
+            {children}
+          </Providers>
+        </NextIntlClientProvider>
+      </ClerkProvider>
+    );
+  }
+
   // For kiosk and CNY routes, render without header/footer
   if (isKioskRoute || isCNYRoute) {
     return (

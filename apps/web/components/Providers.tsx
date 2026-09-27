@@ -10,12 +10,12 @@ const ChappyChatWrapper = dynamic(
   { ssr: false }
 );
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({ children, chappy = true }: { children: React.ReactNode; chappy?: boolean }) {
   return (
     <CartProvider>
       <ToastProvider>
         {children}
-        <ChappyChatWrapper />
+        {chappy ? <ChappyChatWrapper /> : null}
       </ToastProvider>
     </CartProvider>
   );

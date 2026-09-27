@@ -1537,6 +1537,9 @@
       "alreadyHaveAccount": "I Already Have an Account",
       "privacyNote": "By creating an account, you agree to our Privacy Policy & Terms",
       "orderLinked": "Order linked! You earned {points} points!"
+    },
+    "demo": {
+      "banner": "Live demo · not a real order"
     }
   },
   "features": {
@@ -2545,7 +2548,26 @@
           "finish": "Finished. Out by the aisle, past the store, through the exit. No check, no tip.",
           "cleared": "The runner clears by the corridor to the dish return. Same minute, different territory.",
           "exit": "Out the exit. The two paths never crossed.",
-          "reset": "Pod {pod} wiped and reset. Six minutes, and the next number is on a screen."
+          "reset": "Pod {pod} wiped and reset. Six minutes, and the next number is on a screen.",
+          "texted": "The kiosk texts a live status link. The order is on the guest's phone before the walk begins.",
+          "checkin": "One tap on the phone: I'm at my pod. The kitchen knows the guest is seated.",
+          "feed": "The Live Kitchen Feed narrates the broth and noodles on the guest's phone, by name.",
+          "fortune": "A fortune cookie cracked while the noodles cook. The wait is shorter because it is full.",
+          "addon": "Extra noodles ordered from the phone. The kitchen sends them through the same hatch; nobody flags down a server.",
+          "done": "I'm done eating, tapped on the phone. The pod starts its reset before the guest reaches the aisle."
+        },
+        "phone": {
+          "title": "The guest's phone",
+          "note": "The real status page, running a demo order in step with the journey. Nothing reaches a real kitchen.",
+          "badge": "Phone",
+          "stages": {
+            "PAID": "Paid. The link is on the phone.",
+            "QUEUED": "Checked in at the pod.",
+            "PREPPING": "Preparing, narrated live.",
+            "READY": "Ready. The runner has it.",
+            "SERVING": "Served. Order more any time.",
+            "COMPLETED": "Done eating. Pod resetting."
+          }
         }
       },
       "iso": {
@@ -3226,32 +3248,65 @@
         },
         "order": {
           "title": "You order in about forty seconds.",
-          "body": "Beef noodle soup is the menu. You choose your broth depth, your noodle, your add-ons, and your beef: smoked brisket slices or smoked beef rib chunks, in American Wagyu or USDA Prime. Add-ons are priced; members earn cashback and tier perks on every bowl. The kiosk already knows your name if you have been here before.",
+          "body": "Beef noodle soup is the menu. You choose your broth depth, your noodle, your add-ons, and your beef: smoked brisket slices or smoked beef rib chunks, in American Wagyu or USDA Prime. Add-ons are priced; members earn cashback and tier perks on every bowl. The kiosk already knows your name if you have been here before, and the moment you pay it texts you a live link to your order.",
           "photo": "Hands on the kiosk, add-on grid visible, the beef choice highlighted"
         },
         "walk": {
           "title": "A pod number, and you go find it.",
-          "body": "Pod 38. You walk the aisle past a row of closed panels and the low murmur of a full room, every party in its own pods, side by side. Nobody is carrying a tray. Nobody is waiting to be seated.",
+          "body": "Pod 32. You walk the aisle past a row of closed panels and the low murmur of a full room, every party in its own pods, side by side. Nobody is carrying a tray. Nobody is waiting to be seated.",
           "photo": "The guest aisle looking down a row of numbered pods"
         },
         "settle": {
           "title": "You sit, and the room disappears.",
-          "body": "Two and a third feet wide, four and a half deep. A hook for your bag, a shelf for your phone, water within reach. The panel in front of you is closed. You can hear the kitchen, faintly, on the other side.",
+          "body": "Two and a third feet wide, four and a half deep. A hook for your bag, a shelf for your phone, water within reach. The panel in front of you is closed. One tap on your phone tells the kitchen you are in, and you can hear it, faintly, on the other side.",
           "photo": "Inside a pod from the guest's seat, panel closed"
+        },
+        "status": {
+          "title": "Your phone runs the show.",
+          "body": "The link opens a live page for your order, and it is written for you. While you wait, the Live Kitchen Feed narrates your bowl by name as it moves through the kitchen. Need anything? Tap it, and it comes through the same panel. No server required.",
+          "photo": "The live order status page on a phone: Pod 32, the Live Kitchen Feed narrating the order, and the digital fortune cookie.",
+          "hint": "This is the real status page, running a demo order. Tap anything; nothing reaches a real kitchen.",
+          "open": "Open the status page in a new tab",
+          "features": [
+            {
+              "title": "Live Kitchen Feed",
+              "body": "AI narrates your order at every stage, by name, from the broth to the hatch."
+            },
+            {
+              "title": "A digital fortune cookie",
+              "body": "A fortune written for you, lucky numbers, this day in history and a word of Chinese."
+            },
+            {
+              "title": "Order more to your pod",
+              "body": "Refills, extra vegetables, a side or dessert, delivered through the hatch."
+            },
+            {
+              "title": "Call staff",
+              "body": "One tap reaches the floor team. Nobody flags anyone down."
+            },
+            {
+              "title": "Roast My Order",
+              "body": "Your choices, roasted. Your ingredients, given absurd life stories."
+            },
+            {
+              "title": "One Red Step",
+              "body": "A mental health fact and a way to give, right where you already skipped the tip."
+            }
+          ]
         },
         "panel": {
           "title": "The panel slides open.",
-          "body": "Seven minutes from the moment you paid, a bowl arrives through the wall. Broth first, then the smoked brisket or beef rib you chose, then the panel slides shut. You never see a hand.",
+          "body": "Seven minutes from the moment you paid, a bowl arrives through the wall. Your phone saw it coming. Broth first, then the smoked brisket or beef rib you chose, then the panel slides shut. You never see a hand.",
           "photo": "The sliding panel mid-open, steam, the bowl arriving"
         },
         "taste": {
           "title": "First spoon.",
-          "body": "Two-phase broth: a long bone simmer, then a finish built for flavor. Premium American beef, American Wagyu or Prime and nothing below it, smoked low and slow, then sliced as brisket or portioned as rib chunks. This is a premium fusion interpretation, and it does not pretend to be a grandmother's recipe.",
+          "body": "Two-phase broth: a long bone simmer, then a finish built for flavor. Premium American beef, American Wagyu or Prime and nothing below it, smoked low and slow, then sliced as brisket or portioned as rib chunks. This is a premium fusion interpretation, and it does not pretend to be a grandmother's recipe. Want more? Extra noodles, a refill or a side are a tap away, and they come through the same panel.",
           "photo": "Macro of the bowl: smoked brisket slices fanned, broth surface, noodles"
         },
         "leave": {
           "title": "You finish, and you leave.",
-          "body": "No check. No tipping, because the people who made your bowl are salaried. If you brought someone, the referral credit lands the moment their first order completes. The pod resets behind you in under six minutes.",
+          "body": "One tap on your phone says you are done. No check. No tipping, because the people who made your bowl are salaried. If you are not a member yet, the page banks this order's points the moment you sign up, and if you brought someone, the referral credit lands when their first order completes. The pod resets behind you in under six minutes.",
           "photo": "Guest leaving through the entry, pod panel closing behind"
         }
       },
@@ -3340,7 +3395,7 @@
     "operations": {
       "platform": {
         "title": "The platform, in plain words",
-        "body": "Oh! OS is the software that runs the room: what the guest touches, what the kitchen sees, and what the owner reads. Three front doors, one API, one database, and two trusted services for money and identity.",
+        "body": "Oh! OS is the software that runs the room: what the guest touches, what the kitchen sees, and what the owner reads. Four front doors, one API, one database, and two trusted services for money and identity.",
         "aria": "Block diagram of the platform",
         "nodes": {
           "web": {
@@ -3350,6 +3405,10 @@
           "kiosk": {
             "name": "Kiosk",
             "role": "In-store ordering and pod assignment"
+          },
+          "status": {
+            "name": "Order status",
+            "role": "The guest's live page: AI kitchen feed, fortune cookie, order more to the pod"
           },
           "admin": {
             "name": "Admin console",
@@ -3371,6 +3430,10 @@
             "name": "Clerk",
             "role": "Identity for staff and members"
           }
+        },
+        "guestPhone": {
+          "title": "The guest's phone does a server's job",
+          "body": "The kiosk texts every guest a live link to their order. From the pod, one tap confirms they are seated, calls the floor team, or orders a refill, extra vegetables, a side or dessert, and each request lands on the kitchen display as its own ticket and comes back through the same hatch. Tapping \"I'm done eating\" starts the pod reset. The page also keeps the wait short and memorable: an AI kitchen feed that narrates the guest's own bowl by name, a digital fortune cookie, a roast of their order, and the One Red Step giving link. Nobody has to walk the aisles taking requests."
         }
       },
       "lifecycle": {

@@ -65,9 +65,12 @@ import { getScheduler } from "./triggers/index.js";
 import { getOrchestrator } from "./autonomous/index.js";
 import { registerCateringRoutes, isDineInOrdersEnabled } from "./catering/routes.js";
 import { registerPlanRoutes } from "./plan/routes.js";
+import { withStatusDemo, registerStatusDemoGuard } from "./demo/status-demo.js";
 import { createAdminAuth } from "./auth/admin.js";
 
-const prisma = new PrismaClient();
+// DEMO- order codes resolve to a synthetic order (see demo/status-demo.js):
+// the plan's live status-page demo reads real routes without touching the DB.
+const { prisma, source: statusDemoSource } = withStatusDemo(new PrismaClient());
 const app = Fastify({ logger: true });
 
 // Initialize Anthropic client (uses ANTHROPIC_API_KEY env var automatically)
@@ -157,6 +160,9 @@ await app.register(rateLimit, {
 // tokens are verified server-side and checked against the ADMIN_EMAILS
 // allowlist; x-admin-api-key remains for server-to-server callers.
 const { requireAdminAuth } = createAdminAuth({ log: (...args) => app.log.warn({ args }, "admin auth") });
+
+// Demo orders never write: call staff, add-ons, refills and "done eating" are simulated.
+registerStatusDemoGuard(app, { source: statusDemoSource });
 
 // Apply admin auth to all /admin/* routes
 app.addHook('onRequest', async (req, reply) => {
