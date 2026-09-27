@@ -149,6 +149,37 @@ export function PlanChappy({ locale, suggestions, labels }: Props) {
 
   useEffect(() => () => abortRef.current?.abort(), []);
 
+  // iOS Safari keeps fixed elements sized to the layout viewport when the
+  // keyboard opens, so the panel would slide under it or push its header (and
+  // the close button) off the top. While the keyboard is up, pin the panel to
+  // the visual viewport instead.
+  const [keyboard, setKeyboard] = useState<{ top: number; bottom: number } | null>(null);
+  useEffect(() => {
+    const vv = typeof window !== "undefined" ? window.visualViewport : null;
+    if (!open || !vv) {
+      setKeyboard(null);
+      return;
+    }
+    const update = () => {
+      const covered = window.innerHeight - vv.height - vv.offsetTop;
+      setKeyboard(covered > 120 ? { top: Math.max(8, vv.offsetTop + 8), bottom: covered + 8 } : null);
+    };
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
+  }, [open]);
+
+  const grow = (el: HTMLTextAreaElement | null) => {
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
+  };
+  useEffect(() => grow(inputRef.current), [input]);
+
   const send = async (text: string) => {
     const message = text.trim().slice(0, MAX_CHARS);
     if (!message || streaming) return;
@@ -222,15 +253,23 @@ export function PlanChappy({ locale, suggestions, labels }: Props) {
 
   const empty = messages.length === 0;
 
+  const canSend = !streaming && input.trim().length > 0;
+
   return (
     <div data-plan-shell="" className="print:hidden">
       <style>{MOTION}</style>
+
+      {/* Launcher. Closed: the chip with Chappy's face (right margin on large screens, above the
+          phone nav on small ones). Open: a round close button under the panel, the same pattern as
+          the site's ordering Chappy, so there is always a visible way out. Hidden while the phone
+          keyboard is up; the panel header keeps its own close button in view then. */}
       {!open ? (
         <button
           ref={launcherRef}
           type="button"
           onClick={() => show()}
           aria-label={labels.launcher}
+          aria-expanded={false}
           title={labels.launcher}
           className="plan-chappy-launcher group fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-4 z-50 flex items-center gap-2 rounded-full border border-oh-stone bg-oh-ink/95 p-1.5 pr-4 text-oh-cream shadow-xl shadow-black/40 backdrop-blur hover:border-oh-ember focus:outline-none focus-visible:ring-2 focus-visible:ring-oh-ember md:bottom-6 lg:right-[max(1rem,calc((100vw-64rem)/4-4rem))] lg:flex-col lg:gap-1 lg:rounded-2xl lg:p-2 lg:pr-2"
         >
@@ -238,10 +277,30 @@ export function PlanChappy({ locale, suggestions, labels }: Props) {
           <img src="/plan/chappy-192.webp" alt="" width={56} height={56} className="plan-chappy-face h-11 w-11 rounded-full border-2 border-oh-cream/30 bg-oh-cream/10 lg:h-14 lg:w-14" />
           <span className="text-[0.8rem] font-medium leading-tight lg:max-w-[6.5rem] lg:text-center lg:text-[0.72rem] lg:text-oh-mute lg:group-hover:text-oh-cream">{labels.launcher}</span>
         </button>
-      ) : null}
+      ) : keyboard ? null : (
+        <button
+          ref={launcherRef}
+          type="button"
+          onClick={hide}
+          aria-label={labels.close}
+          aria-expanded={true}
+          aria-controls="plan-chappy-panel"
+          title={labels.close}
+          className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom))] right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full border-2 border-oh-cream/20 p-0 text-oh-cream shadow-xl shadow-black/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-oh-cream md:bottom-6 md:right-6"
+          style={{ background: "linear-gradient(145deg, var(--color-oh-ember), var(--color-oh-ember-deep))" }}
+        >
+          <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+      )}
+
+      {/* Phones only: dim the page behind the card so the chat reads as its own layer; a tap outside closes it. */}
+      {open ? <div aria-hidden="true" onClick={hide} className="fixed inset-0 z-40 bg-black/55 backdrop-blur-[2px] sm:hidden" /> : null}
 
       {open ? (
         <section
+          id="plan-chappy-panel"
           role="dialog"
           aria-modal="false"
           aria-labelledby="plan-chappy-title"
@@ -251,30 +310,39 @@ export function PlanChappy({ locale, suggestions, labels }: Props) {
               hide();
             }
           }}
-          className="plan-chappy-panel fixed inset-x-0 bottom-0 top-16 z-50 flex flex-col overflow-hidden border-t border-oh-stone bg-oh-charcoal text-oh-cream shadow-2xl shadow-black/60 sm:inset-auto sm:bottom-6 sm:right-6 sm:top-auto sm:h-[min(36rem,calc(100vh-7rem))] sm:w-[24rem] sm:rounded-2xl sm:border"
+          style={keyboard ? { top: keyboard.top, bottom: keyboard.bottom, left: 8, right: 8, height: "auto", width: "auto" } : undefined}
+          className={[
+            "plan-chappy-panel fixed z-50 flex flex-col overflow-hidden rounded-[20px] border border-oh-stone bg-oh-charcoal text-oh-cream shadow-2xl shadow-black/60",
+            // Phones: a floating card between the plan header and the round close button.
+            "inset-x-3 top-[4.75rem] bottom-[calc(8.75rem+env(safe-area-inset-bottom))]",
+            // Small tablets (phone nav still showing): a 24rem card above the close button.
+            "sm:left-auto sm:right-6 sm:top-auto sm:h-[min(35rem,calc(100dvh-14rem))] sm:w-[24rem]",
+            // md and up (no phone nav): the site Chappy's geometry.
+            "md:bottom-[6.25rem] md:h-[min(35rem,calc(100dvh-9.5rem))] md:w-[25rem]",
+          ].join(" ")}
         >
-          <header className="flex items-center gap-3 border-b border-oh-stone bg-oh-ink px-4 py-3">
+          <header className="flex items-center gap-3 border-b border-oh-stone px-4 py-3" style={{ background: "linear-gradient(135deg, var(--color-oh-ink), var(--color-oh-charcoal))" }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/plan/chappy-96.webp" alt="" width={40} height={40} className="h-10 w-10 rounded-full bg-oh-cream/10" />
+            <img src="/plan/chappy-96.webp" alt="" width={44} height={44} className="h-11 w-11 shrink-0 rounded-full border-2 border-oh-cream/20 bg-oh-cream/10" />
             <div className="min-w-0 flex-1">
-              <h2 id="plan-chappy-title" className="m-0 font-display text-[1.1rem] leading-tight text-oh-cream">
+              <h2 id="plan-chappy-title" className="m-0 font-display text-[1.15rem] leading-tight text-oh-cream">
                 {labels.title}
               </h2>
-              <p className="m-0 truncate text-[0.72rem] text-oh-mute">{labels.subtitle}</p>
+              <p className="m-0 truncate text-[0.74rem] text-oh-mute">{labels.subtitle}</p>
             </div>
             <button
               type="button"
               onClick={hide}
               aria-label={labels.close}
-              className="rounded-md border-0 bg-transparent p-1.5 text-oh-mute hover:bg-oh-charcoal hover:text-oh-cream focus:outline-none focus-visible:ring-2 focus-visible:ring-oh-ember"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-oh-stone bg-oh-charcoal p-0 text-oh-cream hover:border-oh-ember hover:bg-oh-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-oh-ember"
             >
-              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round">
                 <path d="M6 6l12 12M18 6L6 18" />
               </svg>
             </button>
           </header>
 
-          <div ref={logRef} role="log" aria-live="polite" aria-busy={streaming} className="flex-1 space-y-3 overflow-y-auto px-4 py-4 text-[0.88rem] leading-relaxed">
+          <div ref={logRef} role="log" aria-live="polite" aria-busy={streaming} className="flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-4 text-[0.9rem] leading-relaxed">
             {empty ? (
               <div>
                 <p className="m-0 mb-4 text-oh-cream/90">{labels.greeting}</p>
@@ -285,7 +353,7 @@ export function PlanChappy({ locale, suggestions, labels }: Props) {
                       <button
                         type="button"
                         onClick={() => void send(s)}
-                        className="w-full rounded-lg border border-oh-stone bg-oh-ink/60 px-3 py-2 text-left text-[0.83rem] text-oh-cream hover:border-oh-ember hover:bg-oh-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-oh-ember"
+                        className="w-full rounded-2xl border border-oh-stone bg-oh-ink/60 px-4 py-2.5 text-left text-[0.86rem] text-oh-cream hover:border-oh-ember hover:bg-oh-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-oh-ember"
                       >
                         {s}
                       </button>
@@ -296,11 +364,11 @@ export function PlanChappy({ locale, suggestions, labels }: Props) {
             ) : (
               messages.map((m, i) =>
                 m.role === "user" ? (
-                  <div key={i} className="ml-8 rounded-2xl rounded-br-sm bg-oh-ember-deep px-3 py-2 text-oh-cream">
+                  <div key={i} className="ml-10 rounded-[18px] rounded-br-md px-4 py-2.5 text-oh-cream" style={{ background: "linear-gradient(135deg, var(--color-oh-ember), var(--color-oh-ember-deep))" }}>
                     {m.content}
                   </div>
                 ) : m.content ? (
-                  <div key={i} className={["plan-chappy-reply mr-4 rounded-2xl rounded-bl-sm px-3 py-2", m.error ? "border border-oh-ember/40 bg-oh-ink text-oh-mute" : "bg-oh-ink text-oh-cream/95"].join(" ")}>
+                  <div key={i} className={["plan-chappy-reply mr-6 rounded-[18px] rounded-bl-md px-4 py-2.5", m.error ? "border border-oh-ember/40 bg-oh-ink text-oh-mute" : "border border-oh-stone/60 bg-oh-ink text-oh-cream/95"].join(" ")}>
                     <ChappyMarkdown text={m.content} />
                     {m.escalated ? <p className="m-0 mt-2 text-[0.72rem] uppercase tracking-[0.12em] text-oh-ember-light">{labels.escalated}</p> : null}
                   </div>
@@ -324,36 +392,52 @@ export function PlanChappy({ locale, suggestions, labels }: Props) {
               e.preventDefault();
               void send(input);
             }}
-            className="flex items-end gap-2 border-t border-oh-stone bg-oh-ink px-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+            className="border-t border-oh-stone bg-oh-ink px-3 py-3"
           >
-            <label htmlFor="plan-chappy-input" className="sr-only">
-              {labels.placeholder}
-            </label>
-            <textarea
-              ref={inputRef}
-              id="plan-chappy-input"
-              rows={1}
-              value={input}
-              maxLength={MAX_CHARS}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
-                  e.preventDefault();
-                  void send(input);
-                }
-              }}
-              placeholder={labels.placeholder}
-              className="max-h-32 min-h-[2.5rem] flex-1 resize-none rounded-lg border border-oh-stone bg-oh-charcoal px-3 py-2 text-[0.88rem] text-oh-cream placeholder:text-oh-mute focus:border-oh-ember focus:outline-none"
-            />
-            <button
-              type="submit"
-              disabled={streaming || !input.trim()}
-              className="h-10 shrink-0 rounded-lg bg-oh-ember-deep px-4 text-[0.82rem] font-semibold text-oh-cream hover:bg-oh-ember focus:outline-none focus-visible:ring-2 focus-visible:ring-oh-cream disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {labels.send}
-            </button>
+            {/* One pill, like the site Chappy: a borderless text box and a round send button inside.
+                The site's global form rules (globals.css) paint textareas white, most of all on
+                :focus, so every surface here is set explicitly, including the focus state. 16px text
+                keeps iOS Safari from zooming the page when the box is tapped. */}
+            <div className="flex items-end gap-2 rounded-[24px] border border-oh-stone bg-oh-charcoal py-1.5 pl-4 pr-1.5 focus-within:border-oh-ember">
+              <label htmlFor="plan-chappy-input" className="sr-only">
+                {labels.placeholder}
+              </label>
+              <textarea
+                ref={inputRef}
+                id="plan-chappy-input"
+                rows={1}
+                value={input}
+                maxLength={MAX_CHARS}
+                enterKeyHint="send"
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+                    e.preventDefault();
+                    void send(input);
+                  }
+                }}
+                placeholder={streaming ? labels.thinking : labels.placeholder}
+                className="m-0 max-h-[120px] min-h-0 flex-1 resize-none appearance-none overflow-y-auto rounded-none border-0 bg-transparent p-0 py-2.5 font-[inherit] text-[16px] leading-snug text-oh-cream caret-oh-ember shadow-none outline-none placeholder:text-oh-mute focus:border-0 focus:bg-transparent focus:text-oh-cream focus:shadow-none focus:outline-none"
+              />
+              <button
+                type="submit"
+                disabled={!canSend}
+                aria-label={labels.send}
+                title={labels.send}
+                className={[
+                  "flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-0 p-0 transition-transform duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-oh-cream",
+                  canSend ? "scale-100 cursor-pointer text-oh-cream" : "scale-95 cursor-not-allowed bg-oh-stone text-oh-cream/70",
+                ].join(" ")}
+                style={canSend ? { background: "linear-gradient(135deg, var(--color-oh-ember), var(--color-oh-ember-deep))" } : undefined}
+              >
+                <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13" />
+                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                </svg>
+              </button>
+            </div>
+            {input.length > MAX_CHARS - 100 ? <p className="m-0 px-2 pt-2 text-[0.7rem] text-oh-mute">{labels.limit}</p> : null}
           </form>
-          {input.length > MAX_CHARS - 100 ? <p className="m-0 bg-oh-ink px-4 pb-2 text-[0.7rem] text-oh-mute">{labels.limit}</p> : null}
         </section>
       ) : null}
     </div>
