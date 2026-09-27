@@ -26,6 +26,7 @@ const GRANT_EVENT_TYPE = {
   LEGACY: "ADMIN_ADJUSTMENT",
   CHALLENGE: "CHALLENGE_REWARD",
   MEAL_GIFT: "GIFT_EXCESS",
+  GIFT_CARD: "ADMIN_ADJUSTMENT", // no dedicated event type; the lot's source says it was a gift card
 };
 
 function addDays(date, days) {

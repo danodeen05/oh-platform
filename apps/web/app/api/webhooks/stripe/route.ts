@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { confirmPayment, groupConfirmPayment } from '@/lib/site/orders';
+import { confirmFromWebhook } from '@/lib/site/orders';
+
+/** A confirm call that failed in a way a redelivery can fix (network, API 5xx). */
+class RetryableWebhookError extends Error {}
 
 function getStripe() {
   if (!process.env.STRIPE_SECRET_KEY) {
@@ -72,6 +75,11 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ received: true });
   } catch (error) {
+    if (error instanceof RetryableWebhookError) {
+      // A payment may be charged but not yet recorded: make Stripe retry.
+      console.error('Stripe webhook: retryable confirm failure:', error.message);
+      return NextResponse.json({ received: false, error: 'Confirm failed, retry' }, { status: 503 });
+    }
     console.error('Stripe webhook handler error:', error);
     // Return 200 to acknowledge receipt (Stripe will retry on 4xx/5xx)
     // Log the error but don't fail the webhook
@@ -86,35 +94,16 @@ async function handlePaymentSucceeded(paymentIntent: Stripe.PaymentIntent) {
   const metadata = paymentIntent.metadata;
   console.log(`Payment succeeded: ${paymentIntent.id}`, metadata);
 
-  // Host pays for the group (Task A7): one PaymentIntent for several orders.
-  // The API re-verifies it (status, amount, metadata.orderIds, group) and
-  // settles every order once; idempotent with the host's return page. The
-  // route takes the host's session or a trusted service call, so without
-  // ADMIN_API_KEY here the host's page is what confirms.
-  if (metadata.kind === 'group' && metadata.groupCode) {
-    const serviceKey = process.env.ADMIN_API_KEY;
-    if (!serviceKey) {
-      console.log(`Group payment ${paymentIntent.id}: no ADMIN_API_KEY, left to the host's confirmation`);
-      return;
-    }
-    const res = await groupConfirmPayment(metadata.groupCode, paymentIntent.id, {
-      baseUrl: API_BASE_URL,
-      headers: { 'x-admin-api-key': serviceKey },
-    });
-    if (!res.ok) console.error(`Failed to confirm group ${metadata.groupCode}:`, res.status, res.error.code);
-    return;
-  }
-
-  // Handle food order payment
-  if (metadata.orderId && metadata.source !== 'shop' && metadata.source !== 'gift_card') {
-    // The API re-retrieves the PaymentIntent and checks status, amount and
-    // metadata.orderId itself; this call is idempotent with the return page.
-    const res = await confirmPayment(metadata.orderId, paymentIntent.id, { baseUrl: API_BASE_URL });
-    if (!res.ok) {
-      console.error(`Failed to confirm order ${metadata.orderId}:`, res.status, res.error.code, res.error.refunded ? '(refunded)' : '');
-    } else {
-      console.log(`Order ${metadata.orderId} marked as PAID via webhook`);
-    }
+  // Food orders and host-paid groups (Task A7): the API re-retrieves the
+  // PaymentIntent, checks status, amount and metadata itself, and settles
+  // once (idempotent with the return page). A retryable failure (network, API
+  // 5xx) throws so Stripe delivers the event again; a verified refusal or
+  // "already paid" is final.
+  const result = await confirmFromWebhook(paymentIntent, { baseUrl: API_BASE_URL, serviceKey: process.env.ADMIN_API_KEY || null });
+  if (result.handled) {
+    if (result.ok) console.log(`${result.handled} payment ${paymentIntent.id} confirmed via webhook`);
+    else console.error(`Failed to confirm ${result.handled} payment ${paymentIntent.id}:`, result.status, result.code);
+    if (result.retry) throw new RetryableWebhookError(`${result.handled} confirm failed with ${result.status}`);
   }
 
   // Shop orders: no shop PaymentIntent carries metadata.shopOrderId, so the

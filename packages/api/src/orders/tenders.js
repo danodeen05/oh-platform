@@ -15,7 +15,7 @@
  * amount) is refunded in full with a support case.
  */
 import { OrderError, verifiedIntent, refundUnappliedPayment } from "./service.js";
-import { grantCredit } from "../membership/credits.js";
+import { grantCredit, grantCreditInTx } from "../membership/credits.js";
 
 export const MEAL_GIFT_GIVER_REWARD_CENTS = 500;
 export const MEAL_GIFT_CHALLENGE_SLUG = "meal-for-stranger";
@@ -150,7 +150,7 @@ export async function createMealGift(prisma, stripe, { giverId, locationId, amou
  * entry, the recipient's GIFT_EXCESS credit (the gift's value beyond what the
  * order used) and the giver's Meal for a Stranger reward. Callers must have
  * WON the gift's conditional PENDING -> ACCEPTED claim first (markPaid's
- * settle, or acceptMealGift), so this runs once per gift. The giver reward is
+ * settle), so this runs once per gift. The giver reward is
  * additionally claimed once per giver through UserChallenge.rewardClaimed.
  */
 export async function finishMealGiftAcceptance(prisma, { mealGift, recipientUserId, appliedCents, messageFromRecipient = null, now = new Date() }, { refreshWalletPass = () => {} } = {}) {
@@ -213,93 +213,18 @@ export async function finishMealGiftAcceptance(prisma, { mealGift, recipientUser
   return { excessCents: recipientUserId ? excessAmount : 0, giverRewarded: rewardGiver };
 }
 
-/**
- * POST /meal-gifts/:id/accept (legacy; checkout consumes gifts at PAID).
- * The verified caller accepts a funded gift onto their own order. The
- * PENDING -> ACCEPTED claim is a conditional updateMany: of two concurrent
- * accepts exactly one wins and pays out; the other is 409.
- */
-export async function acceptMealGift(prisma, { mealGiftId, recipientUserId, orderId, messageFromRecipient = null, now = new Date() }, deps = {}) {
-  if (!recipientUserId) throw new OrderError("SIGN_IN_REQUIRED", 401, "Sign in required");
-  if (!orderId) throw new OrderError("ORDER_REQUIRED", 400, "orderId required");
-  const order = await prisma.order.findUnique({ where: { id: orderId } });
-  if (!order || order.userId !== recipientUserId) throw new OrderError("FORBIDDEN", 403, "Forbidden");
-  const gift = await prisma.mealGift.findUnique({ where: { id: mealGiftId } });
-  if (!gift) throw new OrderError("MEAL_GIFT_NOT_FOUND", 404, "Meal gift not found");
-  // Task A7: only an order still being paid for, at the gift's location (a
-  // gift with no location works anywhere), and not one whose quote already
-  // carries a meal gift (checkout spends that one at PAID).
-  if (order.paymentStatus === "PAID" || order.status === "CANCELLED") throw new OrderError("ORDER_NOT_PAYABLE", 409, "That order is already paid or cancelled.");
-  if (gift.locationId && order.locationId !== gift.locationId) throw new OrderError("MEAL_GIFT_WRONG_LOCATION", 409, "That meal gift is for another location.");
-  if (order.mealGiftId) throw new OrderError("MEAL_GIFT_UNAVAILABLE", 409, "That order already uses a meal gift.");
-
-  let claim;
-  try {
-    claim = await prisma.mealGift.updateMany({
-      where: { id: mealGiftId, status: "PENDING", paidAt: { not: null }, expiresAt: { gt: now } },
-      data: { status: "ACCEPTED", acceptedById: recipientUserId, orderId, acceptedAt: now },
-    });
-  } catch (err) {
-    if (isUniqueViolation(err)) throw new OrderError("MEAL_GIFT_UNAVAILABLE", 409, "That order already used a meal gift.");
-    throw err;
-  }
-  if (claim.count !== 1) throw new OrderError("MEAL_GIFT_UNAVAILABLE", 409, "That meal gift is no longer available.");
-
-  const payout = await finishMealGiftAcceptance(
-    prisma,
-    { mealGift: gift, recipientUserId, appliedCents: Math.min(gift.amountCents, order.totalCents || 0), messageFromRecipient, now },
-    deps,
-  );
-  return { gift: await prisma.mealGift.findUnique({ where: { id: mealGiftId } }), ...payout };
-}
 
 // ---------------------------------------------------------------------------
-// Legacy gift-card routes (Task A7): /gift-cards/:id/apply and /redeem
+// /gift-cards/:id/redeem (OWNER console route; Task A7)
 // ---------------------------------------------------------------------------
-
-/**
- * POST /gift-cards/:id/apply. Checkout no longer calls it (markPaid spends a
- * gift card at PAID from the order's quote), but it stays callable, so it
- * must not let anyone drain a card:
- *  - caller { userId } must be the verified owner of the order, or
- *    { kioskLocationId } a kiosk device at the order's location;
- *  - the order must be unpaid and not cancelled;
- *  - at most what the order still owes is taken, through a conditional
- *    debit (updateMany ... balanceCents >= amount, count === 1).
- */
-export async function applyGiftCardToOrder(prisma, { giftCardId, orderId, amountCents, caller = {} }) {
-  const amount = Number(amountCents);
-  if (!Number.isInteger(amount) || amount <= 0) throw new OrderError("AMOUNT_REQUIRED", 400, "Amount required");
-  if (!orderId || typeof orderId !== "string") throw new OrderError("ORDER_REQUIRED", 400, "orderId required");
-  if (!caller.userId && !caller.kioskLocationId) throw new OrderError("SIGN_IN_REQUIRED", 401, "Sign in required");
-
-  const order = await prisma.order.findUnique({ where: { id: orderId } });
-  if (!order) throw new OrderError("ORDER_NOT_FOUND", 404, "Order not found");
-  const allowed = caller.userId ? Boolean(order.userId) && order.userId === caller.userId : order.locationId === caller.kioskLocationId;
-  if (!allowed) throw new OrderError("FORBIDDEN", 403, "Forbidden");
-  if (order.paymentStatus === "PAID" || order.status === "CANCELLED") throw new OrderError("ORDER_NOT_PAYABLE", 409, "That order is already paid or cancelled.");
-
-  const card = await prisma.giftCard.findUnique({ where: { id: giftCardId } });
-  if (!card) throw new OrderError("GIFT_CARD_NOT_FOUND", 404, "Gift card not found");
-  if (card.status !== "ACTIVE" || card.balanceCents <= 0) throw new OrderError("GIFT_CARD_UNAVAILABLE", 400, "Gift card is not available");
-
-  const owed = order.amountDueCents ?? order.totalCents ?? 0;
-  const take = Math.min(amount, card.balanceCents, Math.max(0, owed));
-  if (take <= 0) throw new OrderError("NOTHING_DUE", 409, "Nothing is owed on that order.");
-
-  const debit = await prisma.giftCard.updateMany({
-    where: { id: giftCardId, status: "ACTIVE", balanceCents: { gte: take } },
-    data: { balanceCents: { decrement: take } },
-  });
-  if (debit.count !== 1) throw new OrderError("GIFT_CARD_SHORT", 409, "The gift card balance changed.");
-  await prisma.giftCard.updateMany({ where: { id: giftCardId, status: "ACTIVE", balanceCents: 0 }, data: { status: "EXHAUSTED" } });
-  const after = await prisma.giftCard.findUnique({ where: { id: giftCardId } });
-  return { applied: take, remainingBalance: after.balanceCents };
-}
+// The legacy POST /gift-cards/:id/apply and POST /meal-gifts/:id/accept were
+// deleted in A7 fix round 1: apply drained a card without lowering what the
+// order owed, and accept turned pool value into credit. Checkout spends gift
+// cards and meal gifts from the order's quote at PAID (service.js settleInTx).
 
 /**
  * POST /gift-cards/:id/redeem: moves a card's whole balance to the verified
- * caller's account. The claim (ACTIVE, balance as read -> REDEEMED, 0) is
+ * caller's account as a GIFT_CARD credit lot (grantCreditInTx). The claim (ACTIVE, balance as read -> REDEEMED, 0) is
  * conditional, so two concurrent redeems (or a redeem and an apply) credit
  * the balance once.
  */
@@ -318,15 +243,14 @@ export async function redeemGiftCard(prisma, { giftCardId, userId, now = new Dat
         data: { status: "REDEEMED", redeemedById: userId, redeemedAt: now, balanceCents: 0 },
       });
       if (claimed.count !== 1) throw CONFLICT;
-      await tx.user.update({ where: { id: userId }, data: { creditsCents: { increment: giftCard.balanceCents } } });
-      await tx.creditEvent.create({
-        data: {
-          userId,
-          type: "ADMIN_ADJUSTMENT", // existing type, as before
-          amountCents: giftCard.balanceCents,
-          description: `Gift card ${giftCard.code} redeemed to account balance`,
-          metadata: { giftCardId: giftCard.id, giftCardCode: giftCard.code },
-        },
+      // Through the ledger (fix round 1): a GIFT_CARD lot, the cached balance
+      // and the event move together, so checkout can spend it.
+      await grantCreditInTx(tx, {
+        userId,
+        source: "GIFT_CARD",
+        amountCents: giftCard.balanceCents,
+        note: `Gift card ${giftCard.code} redeemed to account balance (${giftCard.id})`,
+        now,
       });
       return tx.giftCard.findUnique({ where: { id: giftCardId } });
     });

@@ -1,6 +1,10 @@
 -- CreateEnum
 CREATE TYPE "CreditLotSource" AS ENUM ('CASHBACK', 'REFERRAL', 'WELCOME', 'GOODWILL', 'CHALLENGE', 'ADMIN', 'LEGACY', 'MEAL_GIFT');
 
+-- AlterEnum (Task A7 fix round 1): a redeemed gift card becomes a credit lot.
+-- ADD VALUE is fine in the same migration as long as nothing here uses it.
+ALTER TYPE "CreditLotSource" ADD VALUE 'GIFT_CARD';
+
 -- CreateEnum
 CREATE TYPE "RewardType" AS ENUM ('FREE_BOWL', 'PREMIUM_ADDON');
 
@@ -68,6 +72,12 @@ CREATE UNIQUE INDEX "MealGift_stripePaymentIntentId_key" ON "MealGift"("stripePa
 
 -- CreateIndex (Task A6: one purchase PaymentIntent buys one gift card; NULLs allowed)
 CREATE UNIQUE INDEX "GiftCard_stripePaymentId_key" ON "GiftCard"("stripePaymentId");
+
+-- AlterTable (Task A7 fix round 1): the host's single group PaymentIntent
+ALTER TABLE "GroupOrder" ADD COLUMN     "paymentIntentId" TEXT;
+
+-- CreateIndex
+CREATE UNIQUE INDEX "GroupOrder_paymentIntentId_key" ON "GroupOrder"("paymentIntentId");
 
 -- AlterTable
 ALTER TABLE "Seat" ADD COLUMN     "finger" INTEGER,

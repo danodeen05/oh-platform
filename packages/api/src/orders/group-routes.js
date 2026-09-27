@@ -10,8 +10,9 @@
  *   POST   /group-orders/:code/transfer-host       host: hand the host role to a member
  *   POST   /group-orders/:code/complete            host: every order paid -> pods + kitchen
  *   POST   /group-orders/:code/payment-intent      host (signed in): ONE PaymentIntent for the group
- *   POST   /group-orders/:code/confirm-payment     host (or the Stripe webhook as a trusted
- *                                                  service): verified group settle
+ *   POST   /group-orders/:code/confirm-payment     verified group settle: any caller with a
+ *                                                  PaymentIntent (Stripe verifies it); the
+ *                                                  host for a zero balance
  *
  * Identity. The acting member is never a client-sent id:
  *  - a member is the verified Clerk session (customerAuth, orderOwnerId);
@@ -310,6 +311,8 @@ export async function registerGroupOrderRoutes(app, {
     const found = await hostGroup(req, reply);
     if (!found) return reply;
     const { group } = found;
+    // The host is paying: the payer must not change under a live PaymentIntent.
+    if (group.status === "PAYING") return reply.code(409).send({ error: "GROUP_PAYING", message: "The host is paying for this group." });
     const { newHostUserId, newHostGuestId } = req.body || {};
     if (!newHostUserId && !newHostGuestId) return reply.code(400).send({ error: "Either newHostUserId or newHostGuestId required" });
     const orders = await prisma.order.findMany({ where: { groupOrderId: group.id } });
@@ -367,7 +370,8 @@ export async function registerGroupOrderRoutes(app, {
     if (!group) return reply.code(404).send({ error: "Group not found" });
     if (!group.hostUserId || group.hostUserId !== who.userId) return reply.code(403).send({ error: "Only the group's host can pay for the group" });
     try {
-      return await createGroupPaymentIntent(prisma, stripe, { groupOrderId: group.id, now: now() });
+      // Reuses, settles or replaces the group's stored PaymentIntent; never makes a second live one.
+      return await createGroupPaymentIntent(prisma, stripe, { groupOrderId: group.id, now: now() }, effects);
     } catch (err) {
       return sendOrderError(reply, err);
     }
@@ -375,15 +379,19 @@ export async function registerGroupOrderRoutes(app, {
 
   app.post("/group-orders/:code/confirm-payment", async (req, reply) => {
     const group = await findGroup(req.params.code);
-    // The Stripe webhook confirms as a trusted service; everyone else must be the signed-in host.
-    if (!(customerAuth.isServiceCall && customerAuth.isServiceCall(req))) {
-      const who = await customerAuth.requireUser(req, reply);
-      if (!who) return reply;
-      if (!group) return reply.code(404).send({ error: "Group not found" });
-      if (!group.hostUserId || group.hostUserId !== who.userId) return reply.code(403).send({ error: "Only the group's host can pay for the group" });
-    }
     if (!group) return reply.code(404).send({ error: "Group not found" });
     const { paymentIntentId = null } = req.body || {};
+    // With a PaymentIntent this is safe for any caller, like
+    // /orders/:id/confirm-payment: nothing is paid unless Stripe says this
+    // group's own PaymentIntent took exactly the sum of the orders it lists.
+    // That lets the Stripe webhook (and the host's revisit) recover a charge
+    // whose confirmation never arrived. A zero-balance confirm (no
+    // PaymentIntent) spends only savings, so it needs the signed-in host.
+    if (!paymentIntentId && !(customerAuth.isServiceCall && customerAuth.isServiceCall(req))) {
+      const who = await customerAuth.requireUser(req, reply);
+      if (!who) return reply;
+      if (!group.hostUserId || group.hostUserId !== who.userId) return reply.code(403).send({ error: "Only the group's host can pay for the group" });
+    }
     try {
       const result = await markGroupPaid(prisma, stripe, { groupOrderId: group.id, paymentIntentId, now: now() }, effects);
       return { alreadyPaid: result.alreadyPaid, orders: (result.orders || []).map(publicOrder), group: await fullGroup(group.id) };

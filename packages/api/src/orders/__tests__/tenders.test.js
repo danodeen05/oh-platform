@@ -1,7 +1,9 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { seed, fakeStripe, fakeEffects, NOW, HOUR_MS, CLASSIC_BOWL } from "./fixtures.js";
-import { createGiftCard, createMealGift, acceptMealGift, applyGiftCardToOrder, redeemGiftCard } from "../tenders.js";
+import { readFileSync } from "node:fs";
+import { createGiftCard, createMealGift, finishMealGiftAcceptance, redeemGiftCard } from "../tenders.js";
+import { availableCredit } from "../../membership/credits.js";
 import { quoteOrder, createOrder, markPaid } from "../service.js";
 
 let n = 0;
@@ -106,53 +108,21 @@ describe("fix round 2: races", () => {
     assert.equal((await prisma.giftCard.findMany({ where: { stripePaymentId: "pi_card" } })).length, 1);
   });
 
-  function acceptFixture({ challenge = true } = {}) {
-    return seed({
-      mealGifts: [{ id: "mg1", giverId: "u2", locationId: "L1", amountCents: 3000, status: "PENDING", expiresAt: new Date(NOW.getTime() + 6 * HOUR_MS), createdAt: NOW, paidAt: NOW, stripePaymentIntentId: "pi_gift" }],
-      orders: [
-        // Task A7: the legacy accept only takes the caller's own UNPAID order.
-        { id: "o-r1", userId: "u1", locationId: "L1", tenantId: "t1", totalCents: 1924, amountDueCents: 1924, paymentStatus: "PENDING", status: "PENDING_PAYMENT" },
-        { id: "o-r2", userId: "u1", locationId: "L1", tenantId: "t1", totalCents: 1924, amountDueCents: 1924, paymentStatus: "PENDING", status: "PENDING_PAYMENT" },
-      ],
-      challenges: challenge ? [{ id: "ch1", slug: "meal-for-stranger" }] : [],
-    });
-  }
-
-  for (const challenge of [true, false]) {
-    test(`two concurrent accepts of one gift pay out once (challenge row ${challenge ? "present" : "absent"})`, async () => {
-      const prisma = acceptFixture({ challenge });
-      const accept = (orderId) => acceptMealGift(prisma, { mealGiftId: "mg1", recipientUserId: "u1", orderId, now: NOW });
-      const results = await Promise.allSettled([accept("o-r1"), accept("o-r2")]);
-      assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
-      const lost = results.find((r) => r.status === "rejected");
-      assert.equal(lost.reason.status, 409);
-      const excess = await prisma.creditEvent.findMany({ where: { type: "GIFT_EXCESS" } });
-      assert.equal(excess.length, 1, "one GIFT_EXCESS grant");
-      assert.equal(excess[0].amountCents, 3000 - 1924);
-      assert.equal((await prisma.creditLot.findMany({ where: { userId: "u1", source: "MEAL_GIFT" } })).length, 1);
-      assert.equal((await prisma.creditEvent.findMany({ where: { type: "CHALLENGE_REWARD", userId: "u2" } })).length, 1, "one giver reward");
-    });
-  }
-
+  // (A7 fix round 1) POST /meal-gifts/:id/accept is gone; checkout's settle
+  // wins the gift claim and then runs finishMealGiftAcceptance. The giver
+  // reward is still once per giver across gifts.
   test("the giver reward is once per giver even across two gifts (UserChallenge claim)", async () => {
-    const prisma = acceptFixture();
-    await prisma.mealGift.create({ data: { id: "mg2", giverId: "u2", locationId: "L1", amountCents: 2000, status: "PENDING", expiresAt: new Date(NOW.getTime() + 6 * HOUR_MS), paidAt: NOW, stripePaymentIntentId: "pi_gift2" } });
+    const prisma = seed({ challenges: [{ id: "ch1", slug: "meal-for-stranger" }] });
+    const gift = (id, amountCents) => ({ id, giverId: "u2", locationId: "L1", amountCents, status: "ACCEPTED", paidAt: NOW });
     await Promise.all([
-      acceptMealGift(prisma, { mealGiftId: "mg1", recipientUserId: "u1", orderId: "o-r1", now: NOW }),
-      acceptMealGift(prisma, { mealGiftId: "mg2", recipientUserId: "u1", orderId: "o-r2", now: NOW }),
+      finishMealGiftAcceptance(prisma, { mealGift: gift("mg1", 3000), recipientUserId: "u1", appliedCents: 1924, now: NOW }),
+      finishMealGiftAcceptance(prisma, { mealGift: gift("mg2", 2000), recipientUserId: "u1", appliedCents: 1924, now: NOW }),
     ]);
     assert.equal((await prisma.creditEvent.findMany({ where: { type: "CHALLENGE_REWARD", userId: "u2" } })).length, 1);
     const uc = await prisma.userChallenge.findMany({ where: { userId: "u2", challengeId: "ch1" } });
     assert.equal(uc.length, 1);
     assert.equal(uc[0].rewardClaimed, true);
-  });
-
-  test("accept is the caller's own order and a funded gift only", async () => {
-    const prisma = acceptFixture();
-    await assert.rejects(acceptMealGift(prisma, { mealGiftId: "mg1", recipientUserId: "u2", orderId: "o-r1", now: NOW }), (e) => e.status === 403);
-    await prisma.mealGift.update({ where: { id: "mg1" }, data: { paidAt: null } });
-    await assert.rejects(acceptMealGift(prisma, { mealGiftId: "mg1", recipientUserId: "u1", orderId: "o-r1", now: NOW }), (e) => e.status === 409);
-    assert.equal((await prisma.creditEvent.findMany()).length, 0);
+    assert.equal((await prisma.creditEvent.findMany({ where: { type: "GIFT_EXCESS" } })).map((e) => e.amountCents).sort((a, b) => a - b).join(","), "76,1076");
   });
 });
 
@@ -175,112 +145,12 @@ describe("fix round 3: a refunded PaymentIntent funds nothing", () => {
   });
 });
 
-describe("Task A7: legacy /meal-gifts/:id/accept", () => {
-  function fixture({ order = {}, gift = {} } = {}) {
-    return seed({
-      locations: [
-        { id: "L1", tenantId: "t1", name: "City Creek Mall", taxRate: 0.1, timezone: "America/Denver", isClosed: false },
-        { id: "L2", tenantId: "t1", name: "University Place", taxRate: 0.1, timezone: "America/Denver", isClosed: false },
-      ],
-      mealGifts: [{ id: "mg1", giverId: "u2", locationId: "L1", amountCents: 3000, status: "PENDING", expiresAt: new Date(NOW.getTime() + 6 * HOUR_MS), createdAt: NOW, paidAt: NOW, stripePaymentIntentId: "pi_gift", ...gift }],
-      orders: [{ id: "o1", userId: "u1", locationId: "L1", tenantId: "t1", totalCents: 1924, amountDueCents: 1924, paymentStatus: "PENDING", status: "PENDING_PAYMENT", ...order }],
-    });
-  }
-  const accept = (prisma) => acceptMealGift(prisma, { mealGiftId: "mg1", recipientUserId: "u1", orderId: "o1", now: NOW });
-
-  test("a paid order is 409 and nothing is claimed or granted", async () => {
-    const prisma = fixture({ order: { paymentStatus: "PAID", status: "QUEUED" } });
-    await assert.rejects(accept(prisma), (e) => e.status === 409 && e.code === "ORDER_NOT_PAYABLE");
-    assert.equal((await prisma.mealGift.findUnique({ where: { id: "mg1" } })).status, "PENDING");
-    assert.equal((await prisma.creditEvent.findMany()).length, 0);
-  });
-
-  test("a cancelled order is 409", async () => {
-    await assert.rejects(accept(fixture({ order: { status: "CANCELLED" } })), (e) => e.status === 409);
-  });
-
-  test("an order at another location than the gift's is 409", async () => {
-    const prisma = fixture({ order: { locationId: "L2" } });
-    await assert.rejects(accept(prisma), (e) => e.status === 409 && e.code === "MEAL_GIFT_WRONG_LOCATION");
-    assert.equal((await prisma.mealGift.findUnique({ where: { id: "mg1" } })).status, "PENDING");
-  });
-
-  test("a gift with no location may be used at any location", async () => {
-    const prisma = fixture({ order: { locationId: "L2" }, gift: { locationId: null } });
-    const res = await accept(prisma);
-    assert.equal(res.gift.status, "ACCEPTED");
-  });
-
-  test("an order whose quote already carries a meal gift is 409 (checkout spends that one at PAID)", async () => {
-    await assert.rejects(accept(fixture({ order: { mealGiftId: "mg-other", mealGiftAppliedCents: 1924 } })), (e) => e.status === 409);
-  });
-
-  test("the caller's own unpaid order at the gift's location is accepted once", async () => {
-    const prisma = fixture();
-    const res = await accept(prisma);
-    assert.equal(res.gift.status, "ACCEPTED");
-    assert.equal(res.gift.orderId, "o1");
-    await assert.rejects(accept(prisma), (e) => e.status === 409);
-  });
-});
-
-describe("Task A7: /gift-cards/:id/apply", () => {
-  function fixture({ order = {}, card = {} } = {}) {
-    return seed({
-      giftCards: [{ id: "gc1", code: "GIFT-0001", amountCents: 5000, balanceCents: 5000, status: "ACTIVE", ...card }],
-      orders: [{ id: "o1", userId: "u1", locationId: "L1", tenantId: "t1", totalCents: 1924, amountDueCents: 1924, paymentStatus: "PENDING", status: "PENDING_PAYMENT", ...order }],
-    });
-  }
-  const balance = async (prisma) => (await prisma.giftCard.findUnique({ where: { id: "gc1" } })).balanceCents;
-
-  test("no verified caller is 401; someone else's order is 403; the card is untouched", async () => {
-    const prisma = fixture();
-    await assert.rejects(applyGiftCardToOrder(prisma, { giftCardId: "gc1", orderId: "o1", amountCents: 1000, caller: {} }), (e) => e.status === 401);
-    await assert.rejects(applyGiftCardToOrder(prisma, { giftCardId: "gc1", orderId: "o1", amountCents: 1000, caller: { userId: "u2" } }), (e) => e.status === 403);
-    await assert.rejects(applyGiftCardToOrder(prisma, { giftCardId: "gc1", orderId: "o1", amountCents: 1000, caller: { kioskLocationId: "L2" } }), (e) => e.status === 403);
-    await assert.rejects(applyGiftCardToOrder(prisma, { giftCardId: "gc1", orderId: undefined, amountCents: 1000, caller: { userId: "u1" } }), (e) => e.status === 400);
-    assert.equal(await balance(prisma), 5000);
-  });
-
-  test("a guest order (no owner) can't be used by any member to drain a card", async () => {
-    const prisma = fixture({ order: { userId: null, guestId: "guest1" } });
-    await assert.rejects(applyGiftCardToOrder(prisma, { giftCardId: "gc1", orderId: "o1", amountCents: 1000, caller: { userId: "u1" } }), (e) => e.status === 403);
-    assert.equal(await balance(prisma), 5000);
-  });
-
-  test("a paid or cancelled order is 409", async () => {
-    await assert.rejects(applyGiftCardToOrder(fixture({ order: { paymentStatus: "PAID" } }), { giftCardId: "gc1", orderId: "o1", amountCents: 1000, caller: { userId: "u1" } }), (e) => e.status === 409);
-    await assert.rejects(applyGiftCardToOrder(fixture({ order: { status: "CANCELLED" } }), { giftCardId: "gc1", orderId: "o1", amountCents: 1000, caller: { userId: "u1" } }), (e) => e.status === 409);
-  });
-
-  test("the owner applies at most what the order owes; the kiosk at its own location may apply", async () => {
-    const prisma = fixture();
-    const res = await applyGiftCardToOrder(prisma, { giftCardId: "gc1", orderId: "o1", amountCents: 999999, caller: { userId: "u1" } });
-    assert.deepEqual(res, { applied: 1924, remainingBalance: 5000 - 1924 });
-    assert.equal(await balance(prisma), 5000 - 1924);
-    const kiosk = fixture({ order: { userId: null } });
-    const k = await applyGiftCardToOrder(kiosk, { giftCardId: "gc1", orderId: "o1", amountCents: 500, caller: { kioskLocationId: "L1" } });
-    assert.equal(k.applied, 500);
-  });
-
-  test("concurrent applies never take the balance below zero (conditional debit)", async () => {
-    const prisma = fixture({ card: { balanceCents: 1500 } });
-    const results = await Promise.allSettled([
-      applyGiftCardToOrder(prisma, { giftCardId: "gc1", orderId: "o1", amountCents: 1000, caller: { userId: "u1" } }),
-      applyGiftCardToOrder(prisma, { giftCardId: "gc1", orderId: "o1", amountCents: 1000, caller: { userId: "u1" } }),
-    ]);
-    assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
-    assert.equal(results.find((r) => r.status === "rejected").reason.status, 409);
-    assert.equal(await balance(prisma), 500);
-  });
-
-  test("an exhausted card is not available", async () => {
-    const prisma = fixture({ card: { balanceCents: 1000 } });
-    await applyGiftCardToOrder(prisma, { giftCardId: "gc1", orderId: "o1", amountCents: 1000, caller: { userId: "u1" } });
-    const row = await prisma.giftCard.findUnique({ where: { id: "gc1" } });
-    assert.equal(row.balanceCents, 0);
-    assert.equal(row.status, "EXHAUSTED");
-    await assert.rejects(applyGiftCardToOrder(prisma, { giftCardId: "gc1", orderId: "o1", amountCents: 100, caller: { userId: "u1" } }), (e) => e.status === 400);
+describe("A7 fix round 1: the legacy apply and accept routes are gone", () => {
+  test("index.js declares neither POST /gift-cards/:id/apply nor POST /meal-gifts/:id/accept (so both are 404)", () => {
+    const src = readFileSync(new URL("../../index.js", import.meta.url), "utf8");
+    assert.doesNotMatch(src, /app\.post\(\s*["'`]\/gift-cards\/:id\/apply["'`]/);
+    assert.doesNotMatch(src, /app\.post\(\s*["'`]\/meal-gifts\/:id\/accept["'`]/);
+    assert.match(src, /app\.post\(\s*"\/gift-cards\/:id\/redeem"/, "redeem stays");
   });
 });
 
@@ -304,6 +174,28 @@ describe("Task A7: /gift-cards/:id/redeem", () => {
     const credited = await prisma.user.findUnique({ where: { id: row.redeemedById } });
     assert.equal(credited.creditsCents, 2500);
     assert.equal((await prisma.creditEvent.findMany()).length, 1);
+  });
+
+  test("fix round 1: a redeem is a GIFT_CARD credit lot; availableCredit equals the cached balance and checkout can spend it", async () => {
+    const prisma = seed({ giftCards: [{ ...card }] });
+    await redeemGiftCard(prisma, { giftCardId: "gc1", userId: "u1", now: NOW });
+    const lots = await prisma.creditLot.findMany({ where: { userId: "u1" } });
+    assert.equal(lots.length, 1);
+    assert.equal(lots[0].source, "GIFT_CARD");
+    assert.equal(lots[0].remainingCents, 2500);
+    const user = await prisma.user.findUnique({ where: { id: "u1" } });
+    assert.equal(await availableCredit(prisma, "u1", NOW), user.creditsCents);
+    assert.equal(user.creditsCents, 2500);
+
+    // Spendable at checkout: the quote takes credits (capped at $5) and PAID spends the lot.
+    const quote = await quoteOrder(prisma, { locationId: "L1", items: CLASSIC_BOWL, userId: "u1", useCreditsCents: 500, now: NOW });
+    assert.equal(quote.discounts.creditsCents, 500);
+    const order = await createOrder(prisma, { quote, locationId: "L1", tenantId: "t1", userId: "u1", now: NOW, isDineInOrdersEnabled: () => true });
+    const stripe = fakeStripe({ pi_rest: { status: "succeeded", amount: order.amountDueCents, metadata: { orderId: order.id } } });
+    await markPaid(prisma, stripe, { orderId: order.id, paymentIntentId: "pi_rest", now: NOW }, fakeEffects().effects);
+    assert.equal((await prisma.order.findUnique({ where: { id: order.id } })).paymentStatus, "PAID");
+    assert.equal(await availableCredit(prisma, "u1", NOW), 2000);
+    assert.equal((await prisma.user.findUnique({ where: { id: "u1" } })).creditsCents, 2000);
   });
 
   test("an inactive or empty card is 400", async () => {

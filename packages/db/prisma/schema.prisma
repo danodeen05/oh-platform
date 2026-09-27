@@ -508,6 +508,7 @@ model GroupOrder {
 
   status        GroupOrderStatus    @default(GATHERING)
   paymentMethod GroupPaymentMethod?
+  paymentIntentId String?            @unique // the host's single group PaymentIntent (Task A7)
 
   estimatedArrival DateTime? // When group plans to arrive
   expiresAt        DateTime // Auto-cancel time (30 min from creation)
@@ -740,6 +741,7 @@ enum CreditLotSource {
   ADMIN
   LEGACY
   MEAL_GIFT // meal gift excess or an expired funded gift returned to its giver
+  GIFT_CARD // a gift card balance redeemed to the member's account
 }
 
 model CreditLot {

@@ -134,7 +134,6 @@ export const PUBLIC_ROUTES = Object.freeze([
   // Meal gifts
   p("POST", "/meal-gifts", "customer"),
   p("GET", "/meal-gifts/next/:locationId", "customer"),
-  p("POST", "/meal-gifts/:id/accept", "customer"),
   p("POST", "/meal-gifts/:id/pay-forward", "customer"),
   p("GET", "/meal-gifts/:id", "customer"),
   p("GET", "/users/:userId/meal-gifts", "customer"),
@@ -145,7 +144,6 @@ export const PUBLIC_ROUTES = Object.freeze([
   // Gift cards and shop
   p("POST", "/gift-cards", "customer"),
   p("GET", "/gift-cards/code/:code", "customer"),
-  p("POST", "/gift-cards/:id/apply", "customer"),
   p("POST", "/gift-cards/:id/confirm-payment", "webhook"),
   p("GET", "/shop/products", "customer"),
   p("GET", "/shop/products/:slug", "public-read"),

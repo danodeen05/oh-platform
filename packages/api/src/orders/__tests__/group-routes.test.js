@@ -270,8 +270,9 @@ describe("host pays for the group", () => {
     // Not yet charged: 402, nothing paid.
     assert.equal((await app.inject({ method: "POST", url: "/group-orders/ABC234/confirm-payment", headers: user("u1"), payload: { paymentIntentId: body.paymentIntentId } })).statusCode, 402);
     stripe.intents[body.paymentIntentId].status = "succeeded";
-    // A member can't confirm the host's payment.
-    assert.equal((await app.inject({ method: "POST", url: "/group-orders/ABC234/confirm-payment", headers: user("u2"), payload: { paymentIntentId: body.paymentIntentId } })).statusCode, 403);
+    // Without a PaymentIntent (zero-balance confirm) only the host may confirm.
+    assert.equal((await app.inject({ method: "POST", url: "/group-orders/ABC234/confirm-payment", headers: user("u2"), payload: {} })).statusCode, 403);
+    assert.equal((await app.inject({ method: "POST", url: "/group-orders/ABC234/confirm-payment", payload: {} })).statusCode, 401);
     const ok = await app.inject({ method: "POST", url: "/group-orders/ABC234/confirm-payment", headers: user("u1"), payload: { paymentIntentId: body.paymentIntentId } });
     assert.equal(ok.statusCode, 200);
     assert.equal(ok.json().alreadyPaid, false);
@@ -279,8 +280,8 @@ describe("host pays for the group", () => {
     assert.equal((await prisma.groupOrder.findUnique({ where: { id: "g1" } })).status, "PAID");
     assert.equal(calls.sendOrderConfirmation, 2);
 
-    // The Stripe webhook (trusted service call) confirming too is idempotent.
-    const hook = await app.inject({ method: "POST", url: "/group-orders/ABC234/confirm-payment", headers: { "x-admin-api-key": "svc" }, payload: { paymentIntentId: body.paymentIntentId } });
+    // The Stripe webhook (no session, no service key) confirming too is idempotent.
+    const hook = await app.inject({ method: "POST", url: "/group-orders/ABC234/confirm-payment", payload: { paymentIntentId: body.paymentIntentId } });
     assert.equal(hook.statusCode, 200);
     assert.equal(hook.json().alreadyPaid, true);
     assert.equal(calls.sendOrderConfirmation, 2);
@@ -292,5 +293,35 @@ describe("host pays for the group", () => {
     assert.equal((await app.inject({ method: "POST", url: "/group-orders/ABC234/confirm-payment", headers: user("u1"), payload: { paymentIntentId: "pi_kiosk" } })).statusCode, 402);
     assert.equal((await app.inject({ method: "PATCH", url: "/group-orders/ABC234", headers: user("u1"), payload: { status: "PAID" } })).statusCode, 400);
     assert.equal((await prisma.order.findUnique({ where: { id: a.id } })).paymentStatus, "PENDING");
+  });
+
+  test("fix round 1: the webhook alone recovers a charge the page never confirmed (no service key)", async () => {
+    const { app, prisma, stripe, a, b } = await groupWithOrders();
+    const pi = (await app.inject({ method: "POST", url: "/group-orders/ABC234/payment-intent", headers: user("u1") })).json();
+    stripe.intents[pi.paymentIntentId].status = "succeeded";
+    const hook = await app.inject({ method: "POST", url: "/group-orders/ABC234/confirm-payment", payload: { paymentIntentId: pi.paymentIntentId } });
+    assert.equal(hook.statusCode, 200);
+    for (const o of [a, b]) assert.equal((await prisma.order.findUnique({ where: { id: o.id } })).paymentStatus, "PAID");
+  });
+
+  test("fix round 1: the host's revisit after an unconfirmed charge settles it; no second PaymentIntent", async () => {
+    const { app, prisma, stripe, a, b } = await groupWithOrders();
+    const first = (await app.inject({ method: "POST", url: "/group-orders/ABC234/payment-intent", headers: user("u1") })).json();
+    stripe.intents[first.paymentIntentId].status = "succeeded";
+    const again = await app.inject({ method: "POST", url: "/group-orders/ABC234/payment-intent", headers: user("u1") });
+    assert.equal(again.statusCode, 200);
+    assert.equal(again.json().alreadyPaid, true);
+    assert.equal(stripe.created.length, 1);
+    for (const o of [a, b]) assert.equal((await prisma.order.findUnique({ where: { id: o.id } })).paymentStatus, "PAID");
+  });
+
+  test("fix round 1: transfer-host while the host is paying is 409", async () => {
+    const { app, prisma } = await groupWithOrders();
+    await app.inject({ method: "POST", url: "/group-orders/ABC234/payment-intent", headers: user("u1") });
+    assert.equal((await prisma.groupOrder.findUnique({ where: { id: "g1" } })).status, "PAYING");
+    const res = await app.inject({ method: "POST", url: "/group-orders/ABC234/transfer-host", headers: user("u1"), payload: { newHostGuestId: "guest2" } });
+    assert.equal(res.statusCode, 409);
+    assert.equal(res.json().error, "GROUP_PAYING");
+    assert.equal((await prisma.groupOrder.findUnique({ where: { id: "g1" } })).hostUserId, "u1");
   });
 });

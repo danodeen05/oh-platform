@@ -127,9 +127,15 @@ export default function GroupPaymentForm({
         setError(messageFor(res.error, res.status));
         return;
       }
+      // A revisit after the host already paid: the API settled that payment; never charge again.
+      if (res.data.alreadyPaid) {
+        setProcessing(true);
+        await finish(res.data.orderIds?.length || 1);
+        return;
+      }
       setIntent({ clientSecret: res.data.clientSecret, amountCents: res.data.amountCents, orderCount: res.data.orderIds?.length || 1 });
     })();
-  }, [isLoaded, isSignedIn, returnedIntent, returnedStatus, groupCode, api, confirm, messageFor, t]);
+  }, [isLoaded, isSignedIn, returnedIntent, returnedStatus, groupCode, api, confirm, finish, messageFor, t]);
 
   const returnUrl =
     typeof window !== "undefined"

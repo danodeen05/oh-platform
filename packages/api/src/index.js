@@ -70,7 +70,7 @@ import { registerMembershipRoutes } from "./membership/routes.js";
 import { registerOrderRoutes } from "./orders/routes.js";
 import { registerGroupOrderRoutes } from "./orders/group-routes.js";
 import { configureOrderService, markPaid, confirmOrderPayment, intentHasRefund, OrderError } from "./orders/service.js";
-import { createGiftCard, createMealGift, acceptMealGift, finishMealGiftAcceptance, applyGiftCardToOrder, redeemGiftCard } from "./orders/tenders.js";
+import { createGiftCard, createMealGift, finishMealGiftAcceptance, redeemGiftCard } from "./orders/tenders.js";
 import { grantCredit } from "./membership/credits.js";
 import { taxCents, spendBaseCents } from "./orders/pricing.js";
 import { PROGRAM, tierRule } from "./membership/program.js";
@@ -10215,34 +10215,8 @@ app.get("/meal-gifts/next/:locationId", async (req, reply) => {
   return mealGift;
 });
 
-// POST /meal-gifts/:id/accept - Accept a meal gift and apply to order
-app.post("/meal-gifts/:id/accept", async (req, reply) => {
-  const { id } = req.params;
-  const { orderId, messageFromRecipient } = req.body || {};
-
-  // Task A6: the recipient is the verified caller, on their own order, and
-  // the excess is measured against that order's real total. The gift is
-  // claimed with a conditional PENDING -> ACCEPTED update first, so two
-  // concurrent accepts pay out once (orders/tenders.js acceptMealGift).
-  // (Checkout consumes a meal gift server-side at PAID; this route is legacy.)
-  const who = await customerAuth.requireUser(req, reply);
-  if (!who) return reply;
-  if (req.body?.recipientId && req.body.recipientId !== who.userId) {
-    return reply.code(403).send({ error: "Forbidden" });
-  }
-
-  try {
-    const result = await acceptMealGift(
-      prisma,
-      { mealGiftId: id, recipientUserId: who.userId, orderId, messageFromRecipient, now: new Date() },
-      { refreshWalletPass: refreshUserWalletPass },
-    );
-    return result.gift;
-  } catch (err) {
-    if (err instanceof OrderError) return reply.code(err.status).send({ error: err.message, code: err.code });
-    throw err;
-  }
-});
+// POST /meal-gifts/:id/accept was removed in Task A7 fix round 1: checkout
+// consumes a meal gift from the order's quote at PAID (orders/service.js).
 
 // POST /meal-gifts/:id/pay-forward - Pay forward a meal gift to next person
 app.post("/meal-gifts/:id/pay-forward", async (req, reply) => {
@@ -11086,28 +11060,9 @@ app.post("/gift-cards/:id/redeem", async (req, reply) => {
   }
 });
 
-// Apply gift card to an unpaid order (legacy; checkout spends gift cards at PAID).
-// Task A7: only the verified owner of that order, or a kiosk device at the
-// order's location; at most what the order owes; conditional debit.
-app.post("/gift-cards/:id/apply", async (req, reply) => {
-  const { amountCents, orderId } = req.body || {};
-  const caller = {};
-  const auth = req.headers.authorization;
-  if (typeof auth === "string" && auth.startsWith("Bearer kiosk_")) {
-    const device = await kioskAuth.deviceFor(req);
-    if (!device) return reply.status(401).send({ error: "Kiosk device not authorized" });
-    caller.kioskLocationId = device.locationId;
-  } else {
-    caller.userId = orderOwnerId(await customerAuth.resolve(req));
-  }
-  try {
-    return await applyGiftCardToOrder(prisma, { giftCardId: req.params.id, orderId, amountCents, caller });
-  } catch (err) {
-    if (err instanceof OrderError) return reply.status(err.status).send({ error: err.message, code: err.code });
-    console.error("Error applying gift card:", err);
-    return reply.status(500).send({ error: "Failed to apply gift card" });
-  }
-});
+// POST /gift-cards/:id/apply was removed in Task A7 fix round 1: it drained a
+// card without lowering what the order owed. Checkout spends gift cards from
+// the order's quote at PAID (orders/service.js).
 
 // Confirm gift card payment (called by webhook)
 app.post("/gift-cards/:id/confirm-payment", async (req, reply) => {

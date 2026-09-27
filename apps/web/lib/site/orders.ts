@@ -105,7 +105,12 @@ export type PaymentIntentResult = {
   };
 };
 
-export type BatchPaymentIntent = { paymentIntentId: string | null; clientSecret: string | null; amountCents: number; orderIds?: string[]; status?: string };
+/**
+ * For a group, `alreadyPaid` means the group's stored PaymentIntent had already
+ * succeeded (the host paid, then the page died) and the API settled it now:
+ * nothing more to pay. `reused` means the same open PaymentIntent came back.
+ */
+export type BatchPaymentIntent = { paymentIntentId: string | null; clientSecret: string | null; amountCents: number; orderIds?: string[]; status?: string; alreadyPaid?: boolean; reused?: boolean };
 export type BatchConfirmation = { alreadyPaid: boolean; orders: Order[]; group?: unknown };
 
 const UPPER_SNAKE = /^[A-Z][A-Z0-9_]+$/;
@@ -178,6 +183,44 @@ export function groupPaymentIntent(groupCode: string, opts?: CallOptions) {
 /** Group host (or the webhook as a trusted service): verified settle of every order the PaymentIntent lists. */
 export function groupConfirmPayment(groupCode: string, paymentIntentId?: string | null, opts?: CallOptions) {
   return call<BatchConfirmation>(`/group-orders/${enc(groupCode)}/confirm-payment`, "POST", { paymentIntentId: paymentIntentId || undefined }, opts);
+}
+
+/**
+ * A confirm call that may succeed if repeated: a network failure or a 5xx
+ * from the API. The Stripe webhook answers 5xx for these so Stripe retries.
+ * "Already paid" (200) and verified refusals (4xx) are final, and so is a
+ * charge the API already refunded.
+ */
+export function isRetryableFailure(res: { ok: boolean; status: number; error?: OrderApiError | null }): boolean {
+  if (res.ok) return false;
+  if (res.error?.refunded === true) return false;
+  return res.status === 0 || res.status >= 500;
+}
+
+/**
+ * What the Stripe webhook does with a succeeded PaymentIntent for a food
+ * order or a host-paid group: ask the API to verify and settle it.
+ * `retry: true` means the webhook must answer 5xx so Stripe delivers again.
+ * The group confirm needs no key: it is verified against Stripe; a service
+ * key, when configured, is sent anyway.
+ */
+export async function confirmFromWebhook(
+  paymentIntent: { id: string; metadata?: Record<string, string> | null },
+  opts: CallOptions & { serviceKey?: string | null } = {},
+): Promise<{ handled: "group" | "order" | null; ok: boolean; retry: boolean; status: number; code: string | null }> {
+  const md = paymentIntent.metadata || {};
+  const call = { ...opts, headers: opts.serviceKey ? { ...(opts.headers as Record<string, string>), "x-admin-api-key": opts.serviceKey } : opts.headers };
+  let handled: "group" | "order" | null = null;
+  let res: OrderApiResult<unknown> | null = null;
+  if (md.kind === "group" && md.groupCode) {
+    handled = "group";
+    res = await groupConfirmPayment(md.groupCode, paymentIntent.id, call);
+  } else if (md.orderId && md.source !== "shop" && md.source !== "gift_card") {
+    handled = "order";
+    res = await confirmPayment(md.orderId, paymentIntent.id, call);
+  }
+  if (!res) return { handled, ok: true, retry: false, status: 0, code: null };
+  return { handled, ok: res.ok, retry: isRetryableFailure(res), status: res.status, code: res.error?.code ?? null };
 }
 
 /**

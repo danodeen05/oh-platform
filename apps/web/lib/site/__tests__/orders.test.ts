@@ -10,6 +10,8 @@ import {
   paymentIntentIdFromClientSecret,
   toOrderApiError,
   groupIdentityHeaders,
+  isRetryableFailure,
+  confirmFromWebhook,
   type Fetcher,
 } from "../orders";
 
@@ -92,6 +94,37 @@ describe("lib/site/orders", () => {
     expect(groupIdentityHeaders({ sessionToken: "tok" })).toEqual({ "x-guest-session": "tok" });
     expect(groupIdentityHeaders(null)).toEqual({});
     expect(groupIdentityHeaders({ sessionToken: null })).toEqual({});
+  });
+
+  test("isRetryableFailure: network errors and API 5xx retry; already-paid, refusals and refunded charges don't", () => {
+    const err = { code: null, message: null };
+    expect(isRetryableFailure({ ok: false, status: 0, error: { code: "NETWORK_ERROR", message: null } })).toBe(true);
+    expect(isRetryableFailure({ ok: false, status: 502, error: err })).toBe(true);
+    expect(isRetryableFailure({ ok: false, status: 500, error: { ...err, refunded: true } })).toBe(false);
+    expect(isRetryableFailure({ ok: false, status: 402, error: err })).toBe(false);
+    expect(isRetryableFailure({ ok: false, status: 409, error: err })).toBe(false);
+    expect(isRetryableFailure({ ok: true, status: 200, error: err })).toBe(false);
+  });
+
+  test("confirmFromWebhook: group PaymentIntents go to the group confirm (no key needed), orders to the order confirm", async () => {
+    const { calls, fetcher } = fakeFetch(200, { alreadyPaid: true });
+    const g = await confirmFromWebhook({ id: "pi_g", metadata: { kind: "group", groupCode: "ABC234", orderIds: "a,b" } }, { fetcher, baseUrl: "http://api" });
+    expect(g).toMatchObject({ handled: "group", ok: true, retry: false });
+    expect(calls[0].url).toBe("http://api/group-orders/ABC234/confirm-payment");
+    expect(new Headers(calls[0].init.headers).has("x-admin-api-key")).toBe(false);
+    const o = await confirmFromWebhook({ id: "pi_o", metadata: { orderId: "o1" } }, { fetcher, baseUrl: "http://api", serviceKey: "k" });
+    expect(o).toMatchObject({ handled: "order", ok: true, retry: false });
+    expect(calls[1].url).toBe("http://api/orders/o1/confirm-payment");
+    expect(await confirmFromWebhook({ id: "pi_x", metadata: { source: "gift_card", giftCardId: "gc" } }, { fetcher })).toMatchObject({ handled: null, retry: false });
+  });
+
+  test("confirmFromWebhook asks Stripe to retry on a network error or an API 5xx, not on a refusal", async () => {
+    const down = await confirmFromWebhook({ id: "pi", metadata: { orderId: "o1" } }, { fetcher: async () => { throw new Error("ECONNREFUSED"); } });
+    expect(down.retry).toBe(true);
+    const five = await confirmFromWebhook({ id: "pi", metadata: { kind: "group", groupCode: "G" } }, { fetcher: fakeFetch(503, { error: "x" }).fetcher });
+    expect(five.retry).toBe(true);
+    const refused = await confirmFromWebhook({ id: "pi", metadata: { orderId: "o1" } }, { fetcher: fakeFetch(402, { error: "PAYMENT_NOT_VERIFIED" }).fetcher });
+    expect(refused).toMatchObject({ ok: false, retry: false, code: "PAYMENT_NOT_VERIFIED" });
   });
 
   test("paymentIntentIdFromClientSecret", () => {

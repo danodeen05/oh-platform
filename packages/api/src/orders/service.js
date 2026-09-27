@@ -1098,18 +1098,51 @@ function parseOrderIds(value) {
   return typeof value === "string" ? [...new Set(value.split(",").map((s) => s.trim()).filter(Boolean))] : [];
 }
 
+const OPEN_INTENT_STATUSES = new Set(["requires_payment_method", "requires_confirmation", "requires_action"]);
+
 /**
  * The host's single PaymentIntent for the whole group: the amount is the sum
  * of the unpaid member orders' amountDueCents (never a client amount), with
- * metadata { kind: "group", groupOrderId, orderIds }. The group moves to
- * PAYING (HOST_PAYS_ALL), which stops new members and new orders while the
- * host pays. Zero due: no PaymentIntent (clientSecret null).
+ * metadata { kind: "group", groupOrderId, orderIds }. Its id is kept on
+ * GroupOrder.paymentIntentId, so a group has at most ONE live PaymentIntent:
+ *  - the stored one SUCCEEDED (the host paid, then the page died before it
+ *    confirmed): it is settled now through markGroupPaid, and no second
+ *    PaymentIntent is ever made (returns alreadyPaid);
+ *  - the stored one is still open and matches the current orders and sum:
+ *    it is reused (same client secret);
+ *  - the stored one is open but the group changed: it is cancelled and a new
+ *    one is created (a cancel that fails because it just succeeded settles
+ *    it instead);
+ *  - a refunded or cancelled one is dead: a new one is created.
+ * The group moves to PAYING (HOST_PAYS_ALL) only in the same conditional
+ * write that stores a newly created PaymentIntent, after the Stripe minimum
+ * check, so a failure anywhere before leaves the group as it was. A
+ * concurrent call that stored its PaymentIntent first wins; the loser
+ * cancels its own. Zero due: no PaymentIntent (clientSecret null).
  * The caller (group routes) has already checked it is the verified host.
  */
-export async function createGroupPaymentIntent(prisma, stripe, { groupOrderId, now = new Date() }) {
+export async function createGroupPaymentIntent(prisma, stripe, { groupOrderId, now = new Date() }, effects = config.effects) {
   const group = await prisma.groupOrder.findUnique({ where: { id: groupOrderId } });
   if (!group) throw new OrderError("GROUP_NOT_FOUND", 404, "Group not found");
+  if (group.status === "PAID") return { alreadyPaid: true, paymentIntentId: group.paymentIntentId || null, clientSecret: null, amountCents: 0, orderIds: [] };
   if (!GROUP_PAYABLE_STATUSES.includes(group.status)) throw new OrderError("GROUP_NOT_PAYABLE", 409, "This group can't be paid now.");
+
+  // The group's existing PaymentIntent decides first.
+  let existing = null;
+  if (group.paymentIntentId) {
+    if (!stripe) throw new OrderError("PAYMENTS_UNAVAILABLE", 503, "Payments are not configured.");
+    try {
+      existing = await stripe.paymentIntents.retrieve(group.paymentIntentId);
+    } catch {
+      throw new OrderError("PAYMENT_NOT_VERIFIED", 502, "The group payment could not be checked. Try again.");
+    }
+    if (existing.status === "succeeded" && !(await intentHasRefund(stripe, existing))) {
+      const settled = await markGroupPaid(prisma, stripe, { groupOrderId, paymentIntentId: existing.id, now }, effects);
+      return { alreadyPaid: true, settled: !settled.alreadyPaid, paymentIntentId: existing.id, clientSecret: null, amountCents: existing.amount, orderIds: parseOrderIds(existing.metadata?.orderIds) };
+    }
+    if (existing.status === "processing") throw new OrderError("PAYMENT_PROCESSING", 409, "The group payment is still processing.");
+    if (!OPEN_INTENT_STATUSES.has(existing.status)) existing = null; // canceled, or refunded: dead
+  }
 
   const orders = await unpaidGroupOrders(prisma, groupOrderId);
   if (orders.length === 0) throw new OrderError("NOTHING_TO_PAY", 409, "Every order in this group is already paid.");
@@ -1122,14 +1155,39 @@ export async function createGroupPaymentIntent(prisma, stripe, { groupOrderId, n
   }
   const orderIds = orders.map((o) => o.id);
 
-  await prisma.groupOrder.updateMany({
-    where: { id: groupOrderId, status: { in: GROUP_PAYABLE_STATUSES } },
-    data: { status: "PAYING", paymentMethod: "HOST_PAYS_ALL", closedAt: group.closedAt || now },
-  });
+  // Reuse the open PaymentIntent when it still covers exactly these orders.
+  if (existing) {
+    const sameOrders = parseOrderIds(existing.metadata?.orderIds).sort().join(",") === [...orderIds].sort().join(",");
+    if (sameOrders && existing.amount === sum) {
+      return { paymentIntentId: existing.id, clientSecret: existing.client_secret, amountCents: sum, orderIds, reused: true };
+    }
+  }
 
-  if (sum === 0) return { paymentIntentId: null, clientSecret: null, amountCents: 0, orderIds };
-  if (!stripe) throw new OrderError("PAYMENTS_UNAVAILABLE", 503, "Payments are not configured.");
-  if (sum < STRIPE_MIN_CHARGE_CENTS) throw new OrderError("AMOUNT_BELOW_MINIMUM", 400, "Card payments must be at least $0.50.", { amountDueCents: sum });
+  if (sum > 0) {
+    if (!stripe) throw new OrderError("PAYMENTS_UNAVAILABLE", 503, "Payments are not configured.");
+    if (sum < STRIPE_MIN_CHARGE_CENTS) throw new OrderError("AMOUNT_BELOW_MINIMUM", 400, "Card payments must be at least $0.50.", { amountDueCents: sum });
+  }
+
+  // The group changed: the old PaymentIntent must never be payable again.
+  if (existing) {
+    try {
+      await stripe.paymentIntents.cancel(existing.id);
+    } catch {
+      const now2 = await stripe.paymentIntents.retrieve(existing.id).catch(() => null);
+      if (now2?.status === "succeeded") {
+        // It was paid while we were replacing it: settle it (markGroupPaid refunds if it no longer fits).
+        const settled = await markGroupPaid(prisma, stripe, { groupOrderId, paymentIntentId: now2.id, now }, effects);
+        return { alreadyPaid: true, settled: !settled.alreadyPaid, paymentIntentId: now2.id, clientSecret: null, amountCents: now2.amount, orderIds: parseOrderIds(now2.metadata?.orderIds) };
+      }
+      if (now2?.status !== "canceled") throw new OrderError("GROUP_CHANGED", 409, "The group payment changed. Try again.");
+    }
+  }
+
+  if (sum === 0) {
+    // Nothing to charge: no PaymentIntent; the host confirms the zero balance.
+    await prisma.groupOrder.updateMany({ where: { id: groupOrderId, paymentIntentId: group.paymentIntentId ?? null }, data: { paymentIntentId: null, paymentMethod: "HOST_PAYS_ALL" } });
+    return { paymentIntentId: null, clientSecret: null, amountCents: 0, orderIds };
+  }
 
   const paymentIntent = await stripe.paymentIntents.create({
     amount: sum,
@@ -1137,6 +1195,22 @@ export async function createGroupPaymentIntent(prisma, stripe, { groupOrderId, n
     automatic_payment_methods: { enabled: true },
     metadata: { kind: "group", groupOrderId, groupCode: group.code || "", orderIds: orderIds.join(",") },
   });
+
+  // Store it and flip to PAYING in one conditional write: only if nobody
+  // stored another PaymentIntent meanwhile and the group is still payable.
+  const stored = await prisma.groupOrder.updateMany({
+    where: { id: groupOrderId, paymentIntentId: group.paymentIntentId ?? null, status: { in: GROUP_PAYABLE_STATUSES } },
+    data: { paymentIntentId: paymentIntent.id, status: "PAYING", paymentMethod: "HOST_PAYS_ALL", closedAt: group.closedAt || now },
+  });
+  if (stored.count !== 1) {
+    await stripe.paymentIntents.cancel(paymentIntent.id).catch((err) => console.error(`[orders] could not cancel losing group PaymentIntent ${paymentIntent.id}:`, err?.message || err));
+    const winner = await prisma.groupOrder.findUnique({ where: { id: groupOrderId } });
+    if (winner?.paymentIntentId && winner.paymentIntentId !== group.paymentIntentId) {
+      const pi = await stripe.paymentIntents.retrieve(winner.paymentIntentId);
+      if (OPEN_INTENT_STATUSES.has(pi.status)) return { paymentIntentId: pi.id, clientSecret: pi.client_secret, amountCents: pi.amount, orderIds: parseOrderIds(pi.metadata?.orderIds), reused: true };
+    }
+    throw new OrderError("GROUP_CHANGED", 409, "The group payment changed. Try again.");
+  }
   return { paymentIntentId: paymentIntent.id, clientSecret: paymentIntent.client_secret, amountCents: sum, orderIds };
 }
 

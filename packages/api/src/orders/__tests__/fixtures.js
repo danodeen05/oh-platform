@@ -44,13 +44,15 @@ export function seed(extra = {}) {
 }
 
 /** A Stripe double: `intents` is a live map the test can fill after it knows an order id. */
-export function fakeStripe(intents = {}, { onRetrieve = null } = {}) {
+export function fakeStripe(intents = {}, { onRetrieve = null, failCreate = false } = {}) {
   const created = [];
+  const cancelled = []; // every paymentIntents.cancel call
   const issuedRefunds = []; // refunds Stripe "has"
   const refundCalls = []; // every refunds.create call: [params, options]
   return {
     intents,
     created,
+    cancelled,
     issuedRefunds,
     refundCalls,
     refunds: {
@@ -77,10 +79,23 @@ export function fakeStripe(intents = {}, { onRetrieve = null } = {}) {
         return result;
       },
       async create(params) {
+        if (failCreate) throw new Error("stripe create failed");
         const id = `pi_test_${created.length + 1}`;
         created.push(params);
-        intents[id] = { status: "requires_payment_method", ...params };
+        intents[id] = { status: "requires_payment_method", client_secret: `${id}_secret_abc`, ...params };
         return { id, client_secret: `${id}_secret_abc`, ...params };
+      },
+      async cancel(id) {
+        cancelled.push(id);
+        const pi = intents[id];
+        if (!pi) throw new Error(`No such payment_intent: '${id}'`);
+        if (pi.status === "succeeded" || pi.status === "processing") {
+          const err = new Error(`You cannot cancel this PaymentIntent because it has a status of ${pi.status}.`);
+          err.code = "payment_intent_unexpected_state";
+          throw err;
+        }
+        pi.status = "canceled";
+        return { id, ...pi };
       },
     },
     paymentMethods: {

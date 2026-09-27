@@ -15,11 +15,11 @@ async function memberOrder(prisma, { userId = null, guestId = null, groupOrderId
   return createOrder(prisma, { quote, locationId: "L1", userId, guestId, now: NOW, isDineInOrdersEnabled: () => true, group: groupOrderId ? { groupOrderId, isGroupHost: userId === "u1" } : null });
 }
 
-async function setup({ stripeIntents = {}, onRetrieve = null } = {}) {
+async function setup({ stripeIntents = {}, onRetrieve = null, failCreate = false } = {}) {
   const prisma = seed({ groupOrders: [{ ...GROUP }, { ...GROUP, id: "g2", code: "XYZ789", hostUserId: "u2" }], guests: [{ id: "guest1", name: "Pat", sessionToken: "gs_1", expiresAt: new Date(NOW.getTime() + 3600000) }] });
   const host = await memberOrder(prisma, { userId: "u1" });
   const member = await memberOrder(prisma, { guestId: "guest1", items: [{ menuItemId: "wagyu", quantity: 1 }] });
-  const stripe = fakeStripe(stripeIntents, { onRetrieve });
+  const stripe = fakeStripe(stripeIntents, { onRetrieve, failCreate });
   return { prisma, stripe, host, member };
 }
 
@@ -235,6 +235,134 @@ describe("markGroupPaid", () => {
     assert.equal(res.alreadyPaid, false);
     assert.equal((await prisma.order.findUnique({ where: { id: o.id } })).paymentStatus, "PAID");
     assert.equal((await prisma.giftCard.findUnique({ where: { id: "gc1" } })).balanceCents, 5000 - 1924);
+  });
+});
+
+describe("fix round 1: one live group PaymentIntent, persisted", () => {
+  const groupRow = (prisma) => prisma.groupOrder.findUnique({ where: { id: "g1" } });
+
+  test("the PaymentIntent id is stored on the group with the PAYING flip", async () => {
+    const { prisma, stripe } = await setup();
+    const res = await createGroupPaymentIntent(prisma, stripe, { groupOrderId: "g1", now: NOW });
+    const g = await groupRow(prisma);
+    assert.equal(g.paymentIntentId, res.paymentIntentId);
+    assert.equal(g.status, "PAYING");
+  });
+
+  test("a revisit after a succeeded-but-unconfirmed PaymentIntent settles the original; no second PaymentIntent", async () => {
+    const intents = {};
+    const { prisma, stripe, host, member } = await setup({ stripeIntents: intents });
+    const first = await createGroupPaymentIntent(prisma, stripe, { groupOrderId: "g1", now: NOW });
+    intents[first.paymentIntentId].status = "succeeded"; // the host paid, then the page died
+    const { calls, effects } = fakeEffects();
+    const again = await createGroupPaymentIntent(prisma, stripe, { groupOrderId: "g1", now: NOW }, effects);
+    assert.equal(again.alreadyPaid, true);
+    assert.equal(again.clientSecret, null);
+    assert.equal(again.paymentIntentId, first.paymentIntentId);
+    assert.equal(stripe.created.length, 1, "no second PaymentIntent");
+    for (const o of [host, member]) {
+      const row = await prisma.order.findUnique({ where: { id: o.id } });
+      assert.equal(row.paymentStatus, "PAID");
+      assert.equal(row.stripePaymentId, first.paymentIntentId);
+    }
+    assert.equal(calls.sendOrderConfirmation, 2);
+    assert.equal((await groupRow(prisma)).status, "PAID");
+    // A third visit: the group is paid; still nothing new.
+    const third = await createGroupPaymentIntent(prisma, stripe, { groupOrderId: "g1", now: NOW }, effects);
+    assert.equal(third.alreadyPaid, true);
+    assert.equal(stripe.created.length, 1);
+    assert.equal(stripe.refundCalls.length, 0);
+  });
+
+  test("an open PaymentIntent is reused (same id and client secret)", async () => {
+    const { prisma, stripe } = await setup();
+    const a = await createGroupPaymentIntent(prisma, stripe, { groupOrderId: "g1", now: NOW });
+    const b = await createGroupPaymentIntent(prisma, stripe, { groupOrderId: "g1", now: NOW });
+    assert.equal(b.paymentIntentId, a.paymentIntentId);
+    assert.equal(b.clientSecret, a.clientSecret);
+    assert.equal(b.reused, true);
+    assert.equal(stripe.created.length, 1);
+    assert.equal(stripe.cancelled.length, 0);
+  });
+
+  test("a changed sum cancels the old PaymentIntent and creates one new one", async () => {
+    const intents = {};
+    const { prisma, stripe, member } = await setup({ stripeIntents: intents });
+    const a = await createGroupPaymentIntent(prisma, stripe, { groupOrderId: "g1", now: NOW });
+    // The member pays their own share meanwhile: the host now owes less.
+    intents.pi_own = { status: "succeeded", amount: member.amountDueCents, metadata: { orderId: member.id } };
+    await markPaid(prisma, stripe, { orderId: member.id, paymentIntentId: "pi_own", now: NOW }, fakeEffects().effects);
+    const b = await createGroupPaymentIntent(prisma, stripe, { groupOrderId: "g1", now: NOW });
+    assert.notEqual(b.paymentIntentId, a.paymentIntentId);
+    assert.equal(b.amountCents, 1924);
+    assert.deepEqual(stripe.cancelled, [a.paymentIntentId]);
+    assert.equal(intents[a.paymentIntentId].status, "canceled");
+    assert.equal(stripe.created.length, 2);
+    assert.equal((await groupRow(prisma)).paymentIntentId, b.paymentIntentId);
+  });
+
+  test("the old PaymentIntent succeeded just as it was being replaced: it is settled (refunded if it no longer fits), not doubled", async () => {
+    const intents = {};
+    const { prisma, stripe, member } = await setup({ stripeIntents: intents });
+    const a = await createGroupPaymentIntent(prisma, stripe, { groupOrderId: "g1", now: NOW });
+    intents.pi_own = { status: "succeeded", amount: member.amountDueCents, metadata: { orderId: member.id } };
+    await markPaid(prisma, stripe, { orderId: member.id, paymentIntentId: "pi_own", now: NOW }, fakeEffects().effects);
+    // The host's card goes through between our retrieve and our cancel.
+    const realRetrieve = stripe.paymentIntents.retrieve;
+    let n = 0;
+    stripe.paymentIntents.retrieve = async (id) => {
+      const r = await realRetrieve(id);
+      if (id === a.paymentIntentId && ++n === 1) intents[id].status = "succeeded";
+      return r;
+    };
+    const err = await createGroupPaymentIntent(prisma, stripe, { groupOrderId: "g1", now: NOW }).catch((e) => e);
+    assert.equal(err.code, "GROUP_CHANGED", "the member's order was already paid: the host's charge can't apply");
+    assert.equal(err.extra.refunded, true);
+    assert.deepEqual(stripe.refundCalls.map((c) => c[0]), [{ payment_intent: a.paymentIntentId }]);
+    assert.equal(stripe.created.length, 1, "no second PaymentIntent");
+  });
+
+  test("a failure before creation leaves the group as it was (minimum, Stripe error)", async () => {
+    const small = await setup({ failCreate: true });
+    await assert.rejects(createGroupPaymentIntent(small.prisma, small.stripe, { groupOrderId: "g1", now: NOW }), /stripe create failed/);
+    let g = await groupRow(small.prisma);
+    assert.equal(g.status, "CLOSED");
+    assert.equal(g.paymentIntentId ?? null, null);
+    assert.equal(g.paymentMethod ?? null, null);
+
+    const { prisma, stripe, host, member } = await setup();
+    await prisma.order.update({ where: { id: host.id }, data: { amountDueCents: 20 } });
+    await prisma.order.update({ where: { id: member.id }, data: { amountDueCents: 20 } });
+    await assert.rejects(createGroupPaymentIntent(prisma, stripe, { groupOrderId: "g1", now: NOW }), (e) => e.code === "AMOUNT_BELOW_MINIMUM");
+    g = await groupRow(prisma);
+    assert.equal(g.status, "CLOSED");
+    assert.equal(g.paymentIntentId ?? null, null);
+    assert.equal(stripe.created.length, 0);
+  });
+
+  test("two concurrent starts leave exactly one live PaymentIntent", async () => {
+    const intents = {};
+    const { prisma, stripe } = await setup({ stripeIntents: intents });
+    const [a, b] = await Promise.all([
+      createGroupPaymentIntent(prisma, stripe, { groupOrderId: "g1", now: NOW }),
+      createGroupPaymentIntent(prisma, stripe, { groupOrderId: "g1", now: NOW }),
+    ]);
+    assert.equal(a.paymentIntentId, b.paymentIntentId, "both callers get the stored one");
+    const live = Object.entries(intents).filter(([, pi]) => pi.status !== "canceled").map(([id]) => id);
+    assert.deepEqual(live, [a.paymentIntentId]);
+    assert.equal((await groupRow(prisma)).paymentIntentId, a.paymentIntentId);
+  });
+
+  test("a stored PaymentIntent that was refunded is dead: a new one is created", async () => {
+    const intents = {};
+    const { prisma, stripe } = await setup({ stripeIntents: intents });
+    const a = await createGroupPaymentIntent(prisma, stripe, { groupOrderId: "g1", now: NOW });
+    intents[a.paymentIntentId].status = "succeeded";
+    stripe.issuedRefunds.push({ id: "re_old", payment_intent: a.paymentIntentId });
+    const b = await createGroupPaymentIntent(prisma, stripe, { groupOrderId: "g1", now: NOW });
+    assert.notEqual(b.paymentIntentId, a.paymentIntentId);
+    assert.ok(b.clientSecret);
+    assert.equal((await groupRow(prisma)).paymentIntentId, b.paymentIntentId);
   });
 });
 
