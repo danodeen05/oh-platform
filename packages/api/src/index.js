@@ -312,9 +312,10 @@ await registerGroupOrderRoutes(app, {
 });
 // Support cases (Task A9): public create (contact form, Chappy), staff list and
 // resolve (store credit, full-order card refund, decline). /admin/support/* is
-// behind the admin path hook above. Notifications honor SUPPORT_NOTIFY.
-// TODO(roles): pass requireOwner: requireRole("owner") once admin-overhaul merges.
-await registerSupportRoutes(app, { prisma: basePrisma, stripe, customerAuth, requireAdminAuth, sendSMS, sendGraphMail });
+// behind the admin path hook above, at the STAFF default (adminPathRoles); a
+// full_refund additionally requires the owner role (Task A9b).
+// Notifications honor SUPPORT_NOTIFY.
+await registerSupportRoutes(app, { prisma: basePrisma, stripe, customerAuth, requireAdminAuth, requireOwner: requireRole("owner"), sendSMS, sendGraphMail });
 
 const PORT = process.env.PORT || process.env.API_PORT || 4000;
 

@@ -4,19 +4,23 @@
  *   POST /support/cases                     Public (contact form, Chappy). The customer
  *                                           comes from customerAuth.resolve, never the body.
  *   GET  /admin/support/cases?status=       Staff: newest first.
- *   POST /admin/support/cases/:id/resolve   Staff: {action: "credit" | "full_refund" | "decline"}
+ *   POST /admin/support/cases/:id/resolve   Staff: {action: "credit" | "full_refund" | "decline" | "close"}
  *
  * Money rules (owner's): staff give store credit (ADMIN lot, 1..50000 cents,
  * no goodwill caps) or refund the ENTIRE order to the card (support/refund.js,
  * no amount field ever; a body with amountCents is 400
  * PARTIAL_REFUND_NOT_ALLOWED). Chappy's capped goodwill is support/caps.js.
+ * "close" moves no money (resolution INFO, a reason required): it closes a
+ * case that has nothing left to do, e.g. one whose order another case already
+ * refunded (Task A9b).
  *
- * /admin/* is guarded by the app-wide admin path hook in index.js; when
- * `requireAdminAuth` is passed it also runs as a route preHandler.
+ * /admin/* is guarded by the app-wide admin path hook in index.js at the
+ * STAFF default (adminPathRoles); full_refund additionally requires the
+ * owner role (requireOwner, wired to requireRole("owner") in index.js).
  */
 import crypto from "node:crypto";
 import { grantCreditInTx } from "../membership/credits.js";
-import { fullRefundCase, SupportError } from "./refund.js";
+import { fullRefundCase, SupportError, REFUND_LEASE_MS } from "./refund.js";
 
 export const SUPPORT_CASE_TYPES = Object.freeze(["POD_ISSUE", "ORDER_ISSUE", "REFUND_REQUEST", "GENERAL", "CONTACT"]);
 export const SUPPORT_CASE_STATUSES = Object.freeze(["OPEN", "RESOLVED", "DECLINED"]);
@@ -254,13 +258,15 @@ export async function registerSupportRoutes(app, deps) {
   const ipOf = deps.clientIpOf || clientIpOf;
   const ipSalt = deps.ipSalt || env.CHAPPY_GUEST_SECRET || crypto.randomBytes(16).toString("hex");
   const adminPre = deps.requireAdminAuth ? { preHandler: deps.requireAdminAuth } : {};
-  // TODO(roles): after the rebase onto admin-overhaul, the controller wires
-  // this to requireRole("owner") from createAdminAuth(). Until then a full
-  // refund needs only the existing /admin check (already passed by the hook).
+  // Owner-only for a full card refund (Task A9b): requireRole("owner") from
+  // createAdminAuth(), wired in index.js. Falls open only when nothing is
+  // injected (e.g. a test that doesn't care about role checks).
   const requireOwner = deps.requireOwner || (async () => {});
-  // Who resolved it. requireAdminAuth does not expose the staff identity yet;
-  // the roles merge should attach it to req and this default will pick it up.
-  const resolvedByOf = deps.resolvedByOf || ((req) => req.adminUser?.email || req.adminUser?.id || (req.headers["x-admin-api-key"] ? "api-key" : "admin"));
+  // Who resolved it: the verified admin identity requireAdminAuth/requireRole
+  // attach to the request (see auth/admin.js: req.adminUserId, a Clerk user
+  // id; there is no email on req). x-admin-api-key service callers record
+  // "service", and the pre-roles dev-bypass path (neither set) records "admin".
+  const resolvedByOf = deps.resolvedByOf || ((req) => req.adminUserId || (req.headers["x-admin-api-key"] ? "service" : "admin"));
 
   app.post("/support/cases", async (req, reply) => {
     const body = req.body;
@@ -303,8 +309,8 @@ export async function registerSupportRoutes(app, deps) {
   app.post("/admin/support/cases/:id/resolve", adminPre, async (req, reply) => {
     const body = req.body && typeof req.body === "object" && !Array.isArray(req.body) ? req.body : {};
     const { action } = body;
-    if (!["credit", "full_refund", "decline"].includes(action)) {
-      return reply.code(400).send({ error: 'action must be "credit", "full_refund" or "decline"', code: "INVALID_ACTION" });
+    if (!["credit", "full_refund", "decline", "close"].includes(action)) {
+      return reply.code(400).send({ error: 'action must be "credit", "full_refund", "decline" or "close"', code: "INVALID_ACTION" });
     }
     const reason = typeof body.reason === "string" && body.reason.trim() ? body.reason.trim().slice(0, REASON_MAX) : null;
 
@@ -313,7 +319,7 @@ export async function registerSupportRoutes(app, deps) {
       if (Object.prototype.hasOwnProperty.call(body, "amountCents") || Object.prototype.hasOwnProperty.call(body, "amount")) {
         return reply.code(400).send({ error: "Card refunds are for the full order only. Use store credit for a partial amount.", code: "PARTIAL_REFUND_NOT_ALLOWED" });
       }
-      await requireOwner(req, reply); // TODO(roles): requireRole("owner")
+      await requireOwner(req, reply);
       if (reply.sent) return reply;
     }
     if (action === "credit") {
@@ -322,25 +328,35 @@ export async function registerSupportRoutes(app, deps) {
         return reply.code(400).send({ error: `amountCents must be a whole number from 1 to ${STAFF_CREDIT_MAX_CENTS}.`, code: "INVALID_AMOUNT" });
       }
     }
-    if (action === "decline" && !reason) {
-      return reply.code(400).send({ error: "A reason is required to decline.", code: "REASON_REQUIRED" });
+    if ((action === "decline" || action === "close") && !reason) {
+      return reply.code(400).send({ error: `A reason is required to ${action}.`, code: "REASON_REQUIRED" });
     }
 
     const id = req.params.id;
     const REFUND_IN_PROGRESS = { status: 409, body: { error: "A card refund for this case is in progress. Retry the full refund, or wait.", code: "REFUND_IN_PROGRESS" } };
     const resolvedBy = resolvedByOf(req);
     const t = now();
+    // A fresh full_refund pending claim blocks every other action (only a
+    // full_refund retry may touch the case). A STALE one (the claimant
+    // crashed or gave up, older than the lease) no longer blocks decline or
+    // close: staff can still close the case out (Task A9b item 5).
+    const staleFullRefundClaim = (sc) =>
+      sc.resolution === "FULL_REFUND" && (!sc.resolvedAt || t.getTime() - new Date(sc.resolvedAt).getTime() >= REFUND_LEASE_MS);
     const result = await withCaseLock(id, async () => {
       const supportCase = await prisma.supportCase.findUnique({ where: { id } });
       if (!supportCase) return { status: 404, body: { error: "Case not found", code: "NOT_FOUND" } };
       if (supportCase.status !== "OPEN") return { status: 200, body: { ok: true, alreadyResolved: true, case: supportCase } };
-      // A card refund is under way (or crashed mid-way): only a full_refund retry may touch the case.
-      if (supportCase.resolution && action !== "full_refund") return REFUND_IN_PROGRESS;
+      if (supportCase.resolution && action !== "full_refund" && !((action === "decline" || action === "close") && staleFullRefundClaim(supportCase))) {
+        return REFUND_IN_PROGRESS;
+      }
 
-      if (action === "decline") {
+      if (action === "decline" || action === "close") {
         const claim = await prisma.supportCase.updateMany({
-          where: { id, status: "OPEN", resolution: null },
-          data: { status: "DECLINED", resolution: "DECLINED", resolvedBy, resolvedAt: t, resolutionNote: reason },
+          where: { id, status: "OPEN", OR: [{ resolution: null }, { resolution: "FULL_REFUND", resolvedAt: { lt: new Date(t.getTime() - REFUND_LEASE_MS) } }] },
+          data:
+            action === "decline"
+              ? { status: "DECLINED", resolution: "DECLINED", resolvedBy, resolvedAt: t, resolutionNote: reason }
+              : { status: "RESOLVED", resolution: "INFO", resolvedBy, resolvedAt: t, resolutionNote: reason },
         });
         const after = await prisma.supportCase.findUnique({ where: { id } });
         if (claim.count !== 1 && after?.status === "OPEN") return REFUND_IN_PROGRESS;

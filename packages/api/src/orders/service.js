@@ -692,17 +692,25 @@ export async function refundFullPayment(stripe, pi, { idempotencyKey = null } = 
 export async function refundUnappliedPayment(prisma, stripe, { pi, orderId, userId = null, code }) {
   let refundId = null;
   let refunded = false;
+  let partialElsewhere = null;
   try {
     const r = await refundFullPayment(stripe, pi);
     if (r.alreadyRefunded) return { refunded: true, refundId: r.refundId, alreadyRefunded: true };
     refundId = r.refundId;
     refunded = true;
   } catch (err) {
+    if (err instanceof PartialRefundError) partialElsewhere = err;
     console.error(`[orders] refund FAILED for ${pi.id} (order ${orderId}):`, err?.message || err);
   }
+  // A partial-prior-refund is not a generic failure: the card must NOT be
+  // touched again in Stripe (a second refund would be a partial one, the
+  // owner's rule forbids it), so staff are told to give store credit or
+  // escalate instead of being pointed at a manual card refund.
   const summary = refunded
     ? `Payment ${pi.id} for order ${orderId} could not be applied (${code}); refunded in full, refund ${refundId}.`
-    : `Payment ${pi.id} for order ${orderId} could not be applied (${code}); REFUND FAILED, refund it manually.`;
+    : partialElsewhere
+      ? `Payment ${pi.id} for order ${orderId} could not be applied (${code}); it was already partly refunded outside the app (${partialElsewhere.refundedCents} of ${partialElsewhere.amountCents} cents). Do not refund it again in Stripe. Give the customer store credit, or escalate to the owner.`
+      : `Payment ${pi.id} for order ${orderId} could not be applied (${code}); the refund attempt failed. Give the customer store credit, or escalate to the owner.`;
   try {
     await prisma.supportCase.create({ data: { type: "ORDER_ISSUE", orderId, userId, summary, amountCents: pi.amount ?? null } });
   } catch (err) {

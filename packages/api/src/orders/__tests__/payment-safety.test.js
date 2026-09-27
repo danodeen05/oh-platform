@@ -5,7 +5,7 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { seed, fakeStripe, fakeEffects, NOW, HOUR_MS, CLASSIC_BOWL } from "./fixtures.js";
-import { quoteOrder, createOrder, markPaid, markPaidBatch, requoteOrder, confirmOrderPayment } from "../service.js";
+import { quoteOrder, createOrder, markPaid, markPaidBatch, requoteOrder, confirmOrderPayment, refundUnappliedPayment } from "../service.js";
 
 async function placeOrder(prisma, { userId = "u1", items = CLASSIC_BOWL, now = NOW, ...savings } = {}) {
   const quote = await quoteOrder(prisma, { locationId: "L1", items, userId, now, ...savings });
@@ -126,6 +126,25 @@ describe("Important 2: a verified charge that can't be applied is refunded", () 
     assert.equal(second.code, "PAYMENT_REFUNDED", "a refunded PaymentIntent is refused at verification");
     assert.equal(stripe.refundCalls.length, 1, "no second refund");
     assert.equal((await prisma.supportCase.findMany({ where: { orderId: order.id } })).length, 1);
+  });
+
+  test("A9b item 2: a payment already partly refunded outside the app is never called a 'manual' refund; staff are told to give credit or escalate", async () => {
+    const prisma = seed();
+    const stripe = fakeStripe({ pi_ok: { status: "succeeded", amount: 1624 } });
+    // The Stripe dashboard already issued a partial refund on this PaymentIntent.
+    stripe.issuedRefunds.push({ id: "re_dash", payment_intent: "pi_ok", status: "succeeded", amount: 300 });
+    const result = await refundUnappliedPayment(prisma, stripe, { pi: { id: "pi_ok", amount: 1624 }, orderId: "o1", userId: "u1", code: "CREDIT_SHORT" });
+    assert.equal(result.refunded, false);
+    // No second (topping-up) refund was attempted: still just the dashboard's one.
+    assert.equal(stripe.refundCalls.length, 0);
+    const cases = await prisma.supportCase.findMany({ where: { orderId: "o1" } });
+    assert.equal(cases.length, 1);
+    const summary = cases[0].summary;
+    assert.doesNotMatch(summary, /manually/i);
+    assert.match(summary, /already.*partly refunded outside the app/i);
+    assert.match(summary, /do not refund it again in stripe/i);
+    assert.match(summary, /store credit/i);
+    assert.match(summary, /escalate to the owner/i);
   });
 
   test("a second, different charge for an already-paid order is refunded; the one that paid never is", async () => {
