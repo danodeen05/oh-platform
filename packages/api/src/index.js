@@ -65,6 +65,7 @@ import { getScheduler } from "./triggers/index.js";
 import { getOrchestrator } from "./autonomous/index.js";
 import { registerCateringRoutes, isDineInOrdersEnabled } from "./catering/routes.js";
 import { registerPlanRoutes } from "./plan/routes.js";
+import { registerAdminConsoleRoutes } from "./admin/console-routes.js";
 import { withStatusDemo, registerStatusDemoGuard } from "./demo/status-demo.js";
 import { createAdminAuth } from "./auth/admin.js";
 import { registerAdminAuthHooks } from "./auth/admin-hook.js";
@@ -179,6 +180,12 @@ await registerCateringRoutes(app);
 
 // Register interactive business plan routes (/plan/* BFF + /admin/plan/*)
 await registerPlanRoutes(app);
+
+// Admin console today pulse and dine-in order lookup (see src/admin/console-routes.js)
+await registerAdminConsoleRoutes(app, {
+  prisma,
+  resolveTenant: (req) => prisma.tenant.findUnique({ where: { slug: getTenantContext(req) }, select: { id: true } }),
+});
 
 const PORT = process.env.PORT || process.env.API_PORT || 4000;
 
