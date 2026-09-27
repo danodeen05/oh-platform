@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { getPlanSession } from "@/lib/plan/session.server";
+import { getPlanAccess } from "@/lib/plan/session.server";
 import { isSectionKey, sectionHref, visibleSections } from "@/lib/plan/sections";
 import { PLAN_VERSION_LABEL } from "@/lib/plan/version";
 import { PLAN_BUILD } from "@/lib/plan/build";
@@ -39,7 +39,9 @@ type Props = {
 
 export default async function PlanLayout({ children, params }: Props) {
   const { locale } = await params;
-  const claims = await getPlanSession();
+  const access = await getPlanAccess();
+  if (access.state === "nda") redirect(`/${locale}/plan/nda`);
+  const claims = access.state === "ok" ? access.claims : null;
   if (!claims) redirect(`/${locale}/plan/gate?next=/${locale}/plan`);
   const t = await getTranslations("plan.shell");
   const ts = await getTranslations("plan.sections");

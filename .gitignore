@@ -57,6 +57,9 @@ PRODUCTION_CREDENTIALS.md
 *.png
 !apps/web/public/*.png
 !apps/web/public/**/*.png
+# Runtime assets (email images, NDA PDF logo), not screenshots
+!packages/api/src/plan/assets/*.png
+!apps/web/lib/plan/nda/assets/*.png
 playwright-report/
 test-results/
 .playwright-mcp/

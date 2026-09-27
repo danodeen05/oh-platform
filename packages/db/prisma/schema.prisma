@@ -1832,10 +1832,12 @@ model PlanAccessCode {
   lastViewedAt    DateTime? // Denormalized for the admin table
   createdAt       DateTime     @default(now())
   createdByUserId String?
+  ndaRequired     Boolean      @default(false) // Recipient must sign the NDA before any plan content. Admin modal defaults new codes to true.
 
   sessions     PlanViewSession[]
   questions    PlanQuestion[]
   chatMessages PlanChatMessage[]
+  ndas         PlanNda[]
 }
 
 model PlanViewSession {
@@ -1921,4 +1923,63 @@ model PlanVisitSummary {
   createdAt  DateTime        @default(now())
 
   @@index([sessionId, visitEnd])
+}
+
+enum PlanNdaStatus {
+  DRAFT
+  SIGNED
+  VOIDED
+}
+
+// The plan NDA a code's recipient signs before seeing any content. One live
+// (DRAFT or SIGNED) row per code; voided rows are kept for the record.
+// Every *Enc column is AES-256-GCM under PLAN_PII_KEY (packages/api/src/plan/pii.js).
+model PlanNda {
+  id                 String         @id @default(cuid())
+  accessCodeId       String
+  accessCode         PlanAccessCode @relation(fields: [accessCodeId], references: [id], onDelete: Cascade)
+  status             PlanNdaStatus  @default(DRAFT)
+  version            String? // NDA_VERSION of the text that was signed
+  legalNameEnc       String?
+  emailEnc           String?
+  phoneEnc           String? // E.164
+  addressEnc         String? // JSON {line1, line2, city, region, postalCode, country}
+  companyEnc         String?
+  titleEnc           String?
+  otpHash            String? // HMAC of "<ndaId>:<code>"
+  otpExpiresAt       DateTime?
+  otpAttempts        Int            @default(0)
+  otpSentAt          DateTime?
+  otpSendCount       Int            @default(0)
+  phoneVerifiedAt    DateTime?
+  signatureKind      String? // "typed" | "drawn"
+  signatureEnc       String? // PNG data URL
+  consentAt          DateTime?
+  signedAt           DateTime?
+  signerIpEnc        String? // Raw IP, kept (encrypted) only for the signature audit trail
+  signerUserAgent    String?
+  documentSha256     String?
+  pdfEnc             Bytes?
+  pdfSha256          String?
+  countersignerName  String?
+  countersignerTitle String?
+  emailedAt          DateTime?
+  textedAt           DateTime?
+  ownerNotifiedAt    DateTime?
+  deliveryError      String?
+  voidedAt           DateTime?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  @@index([accessCodeId, status])
+}
+
+// The owner's adopted countersignature, applied to every NDA at signing. Singleton row "default".
+model PlanNdaCountersigner {
+  id        String   @id @default("default")
+  name      String
+  title     String
+  signature String // PNG data URL
+  adoptedAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

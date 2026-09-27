@@ -48,6 +48,11 @@ export function summarySender(env = process.env) {
   return env.PLAN_SUMMARY_FROM || "chappy@ohbeefnoodlesoup.com";
 }
 
+/** From address for NDA copies (a shared mailbox the Graph app can send as). */
+export function ndaSender(env = process.env) {
+  return env.PLAN_NDA_FROM || "service@ohbeefnoodlesoup.com";
+}
+
 export function adminCodeUrl(codeId, env = process.env) {
   const base = (env.ADMIN_APP_URL || "https://admin-oh-beef-noodle-soup.vercel.app").replace(/\/+$/, "");
   return `${base}/plan-access/${encodeURIComponent(codeId)}`;

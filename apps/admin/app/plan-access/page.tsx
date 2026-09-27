@@ -3,11 +3,18 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { IssueCodeModal } from "./_components/IssueCodeModal";
+import { CountersignatureCard } from "./_components/CountersignatureCard";
 import { API_BASE, formatDate, formatMinutes, inviteLink, statusColors, type CodeRow } from "./_components/planAccess";
 
 function StatusBadge({ status }: { status: CodeRow["status"] }) {
   const c = statusColors[status];
   return <span style={{ padding: "2px 8px", borderRadius: 4, fontSize: "0.75rem", fontWeight: 500, backgroundColor: c.bg, color: c.text }}>{status}</span>;
+}
+
+function NdaBadge({ code }: { code: CodeRow }) {
+  if (code.ndaStatus === "SIGNED") return <span style={{ padding: "2px 8px", borderRadius: 4, fontSize: "0.75rem", fontWeight: 500, backgroundColor: "#dcfce7", color: "#166534" }}>Signed {formatDate(code.ndaSignedAt).replace(/,.*$/, "")}</span>;
+  if (code.ndaStatus === "PENDING") return <span style={{ padding: "2px 8px", borderRadius: 4, fontSize: "0.75rem", fontWeight: 500, backgroundColor: "#fef3c7", color: "#92400e" }}>Awaiting</span>;
+  return <span style={{ color: "#9ca3af", fontSize: "0.8rem" }}>Not required</span>;
 }
 
 export default function PlanAccessPage() {
@@ -67,6 +74,7 @@ export default function PlanAccessPage() {
         <div style={{ background: "#ecfdf5", border: "1px solid #a7f3d0", borderRadius: 8, padding: 16, marginBottom: 20 }}>
           <div style={{ fontWeight: 600, marginBottom: 6 }}>Code issued for {justIssued.label}</div>
           <div style={{ fontFamily: "ui-monospace, monospace", fontSize: "1.2rem", letterSpacing: "0.08em", marginBottom: 8 }}>{justIssued.code}</div>
+          <div style={{ fontSize: "0.85rem", color: "#065f46", marginBottom: 8 }}>{justIssued.ndaRequired ? "NDA required: they sign it before seeing the plan." : "No NDA: the link opens the plan directly."}</div>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
             <code style={{ fontSize: "0.85rem", background: "white", padding: "4px 8px", borderRadius: 4 }}>{inviteLink(justIssued.code)}</code>
             <button onClick={() => copyLink(justIssued)} style={{ padding: "6px 10px", border: "1px solid #d1d5db", background: "white", borderRadius: 6, cursor: "pointer", fontSize: "0.85rem" }}>
@@ -76,20 +84,22 @@ export default function PlanAccessPage() {
         </div>
       )}
 
+      <CountersignatureCard />
+
       {error && <p style={{ color: "#991b1b" }}>Error: {error}</p>}
 
       <div style={{ background: "white", borderRadius: 8, border: "1px solid #e5e7eb", overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem" }}>
           <thead>
             <tr style={{ borderBottom: "1px solid #e5e7eb", textAlign: "left", color: "#6b7280", fontSize: "0.75rem", textTransform: "uppercase" }}>
-              {["Label", "Audience", "Scenario", "Created", "Last viewed", "Sessions", "Time", "Questions", "Status", ""].map((h) => (
+              {["Label", "Audience", "Scenario", "Created", "Last viewed", "Sessions", "Time", "Questions", "NDA", "Status", ""].map((h) => (
                 <th key={h} style={{ padding: 12, fontWeight: 600 }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {loading && <tr><td colSpan={10} style={{ padding: 24, textAlign: "center", color: "#6b7280" }}>Loading...</td></tr>}
-            {!loading && codes.length === 0 && <tr><td colSpan={10} style={{ padding: 24, textAlign: "center", color: "#6b7280" }}>No codes yet. Issue the first one.</td></tr>}
+            {loading && <tr><td colSpan={11} style={{ padding: 24, textAlign: "center", color: "#6b7280" }}>Loading...</td></tr>}
+            {!loading && codes.length === 0 && <tr><td colSpan={11} style={{ padding: 24, textAlign: "center", color: "#6b7280" }}>No codes yet. Issue the first one.</td></tr>}
             {codes.map((c) => (
               <tr key={c.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
                 <td style={{ padding: 12 }}>
@@ -103,6 +113,7 @@ export default function PlanAccessPage() {
                 <td style={{ padding: 12 }}>{c.sessionCount}{c.maxSessions ? ` / ${c.maxSessions}` : ""}</td>
                 <td style={{ padding: 12 }}>{formatMinutes(c.totalSeconds)}</td>
                 <td style={{ padding: 12 }}>{c.questionCount}</td>
+                <td style={{ padding: 12, whiteSpace: "nowrap" }}><NdaBadge code={c} /></td>
                 <td style={{ padding: 12 }}><StatusBadge status={c.status} /></td>
                 <td style={{ padding: 12, whiteSpace: "nowrap" }}>
                   <button onClick={() => copyLink(c)} disabled={c.status !== "ACTIVE"} style={{ padding: "4px 10px", border: "1px solid #d1d5db", background: "white", borderRadius: 6, cursor: "pointer", fontSize: "0.8rem", marginRight: 6 }}>

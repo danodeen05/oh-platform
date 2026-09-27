@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { getPlanSession } from "@/lib/plan/session.server";
+import { getPlanAccess } from "@/lib/plan/session.server";
 import { planFontVariables } from "@/lib/plan/fonts";
 
 /**
@@ -16,7 +16,9 @@ type Props = { children: React.ReactNode; params: Promise<{ locale: string }> };
 
 export default async function PlanPrintLayout({ children, params }: Props) {
   const { locale } = await params;
-  const claims = await getPlanSession();
+  const access = await getPlanAccess();
+  if (access.state === "nda") redirect(`/${locale}/plan/nda`);
+  const claims = access.state === "ok" ? access.claims : null;
   if (!claims) redirect(`/${locale}/plan/gate?next=/${locale}/plan/print`);
   return <div className={`${planFontVariables} ${locale.startsWith("zh") ? "font-cjk" : ""} plan-print min-h-screen shrink-0 bg-oh-paper text-oh-charcoal`}>{children}</div>;
 }

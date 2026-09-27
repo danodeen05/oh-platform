@@ -10,6 +10,14 @@ import { notFound } from "next/navigation";
 import { PLAN_COOKIE, verifyPlanToken, type PlanClaims } from "./session";
 import { planApi } from "./api";
 import { isSectionVisible, type SectionKey } from "./sections";
+import { accessState, type PlanAccessState, type PlanStatus } from "./access";
+
+export interface PlanAccess {
+  claims: PlanClaims | null;
+  state: PlanAccessState;
+  /** The viewer's email is on file from their signed NDA. */
+  contactOnFile: boolean;
+}
 
 /**
  * Memoized per request: layout and pages share one verification.
@@ -19,12 +27,23 @@ import { isSectionVisible, type SectionKey } from "./sections";
  * not when the 14-day cookie runs out. Middleware runs on the edge and cannot
  * reach the database, which is why the live check lives here.
  */
-export const getPlanSession = cache(async (): Promise<PlanClaims | null> => {
+export const getPlanAccess = cache(async (): Promise<PlanAccess> => {
   const store = await cookies();
   const claims = await verifyPlanToken(store.get(PLAN_COOKIE)?.value);
-  if (!claims) return null;
-  const status = await planApi<{ active: boolean }>(`/plan/sessions/${encodeURIComponent(claims.sid)}/status`, {});
-  return status.ok && status.data?.active ? claims : null;
+  if (!claims) return { claims: null, state: "none", contactOnFile: false };
+  const status = await planApi<PlanStatus>(`/plan/sessions/${encodeURIComponent(claims.sid)}/status`, {});
+  const state = accessState(status.ok, status.data);
+  return { claims: state === "none" ? null : claims, state, contactOnFile: Boolean(status.data?.contactOnFile) };
+});
+
+/**
+ * Claims only when the viewer may read plan content: a pending NDA counts as
+ * no session here, so every page, print view and BFF route stays closed until
+ * it is signed. Layouts use getPlanAccess to send those viewers to the NDA.
+ */
+export const getPlanSession = cache(async (): Promise<PlanClaims | null> => {
+  const access = await getPlanAccess();
+  return access.state === "ok" ? access.claims : null;
 });
 
 /**
