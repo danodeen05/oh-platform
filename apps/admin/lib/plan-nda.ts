@@ -1,22 +1,9 @@
 /** Plan NDA admin types and helpers (API: packages/api/src/plan/nda-admin.js). */
+import { API_BASE, api } from "./api";
 
-import { API_BASE } from "./planAccess";
+export interface Countersigner { name: string; title: string; signature: string; adoptedAt?: string }
 
-export interface Countersigner {
-  name: string;
-  title: string;
-  signature: string;
-  adoptedAt?: string;
-}
-
-export interface NdaAddress {
-  line1: string;
-  line2?: string;
-  city: string;
-  region: string;
-  postalCode: string;
-  country?: string;
-}
+export interface NdaAddress { line1: string; line2?: string; city: string; region: string; postalCode: string; country?: string }
 
 export interface NdaAdminDetail {
   ndaRequired: boolean;
@@ -25,32 +12,17 @@ export interface NdaAdminDetail {
     status: "DRAFT" | "SIGNED" | "VOIDED";
     details: { legalName: string; email: string; phone: string; address: NdaAddress; company: string; title: string } | null;
     audit: {
-      version: string | null;
-      startedAt: string;
-      phoneVerifiedAt: string | null;
-      consentAt: string | null;
-      signedAt: string | null;
-      ip: string | null;
-      userAgent: string | null;
-      signatureKind: string | null;
-      documentSha256: string | null;
-      pdfSha256: string | null;
-      countersignerName: string | null;
-      countersignerTitle: string | null;
-      emailedAt: string | null;
-      textedAt: string | null;
-      ownerNotifiedAt: string | null;
-      deliveryError: string | null;
-      otpSendCount: number;
+      version: string | null; startedAt: string; phoneVerifiedAt: string | null; consentAt: string | null; signedAt: string | null;
+      ip: string | null; userAgent: string | null; signatureKind: string | null; documentSha256: string | null; pdfSha256: string | null;
+      countersignerName: string | null; countersignerTitle: string | null; emailedAt: string | null; textedAt: string | null;
+      ownerNotifiedAt: string | null; deliveryError: string | null; otpSendCount: number;
     };
   } | null;
   history: { id: string; status: string; createdAt: string; signedAt: string | null; voidedAt: string | null }[];
 }
 
 export async function fetchCountersigner(): Promise<Countersigner | null> {
-  const res = await fetch(`${API_BASE}/admin/plan/nda/countersigner`);
-  if (!res.ok) throw new Error(`API ${res.status}`);
-  return ((await res.json()) as { countersigner: Countersigner | null }).countersigner;
+  return (await api<{ countersigner: Countersigner | null }>("/admin/plan/nda/countersigner")).countersigner;
 }
 
 /** Fetch with the admin token (fetch is wrapped by ApiAuthInit) and save the PDF. */

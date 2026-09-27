@@ -4,6 +4,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Allura } from "next/font/google";
+import { TextInput } from "@/components/ui/Field";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
 
 const script = Allura({ weight: "400", subsets: ["latin"], display: "swap" });
 const INK = "#1C1B19";
@@ -28,8 +30,10 @@ async function typedPng(text: string): Promise<string | null> {
   return c.toDataURL("image/png");
 }
 
+type Mode = "typed" | "drawn";
+
 export function SignatureCapture({ defaultName, onChange }: { defaultName: string; onChange: (png: string | null) => void }) {
-  const [mode, setMode] = useState<"typed" | "drawn">("typed");
+  const [mode, setMode] = useState<Mode>("typed");
   const [text, setText] = useState(defaultName);
   const ref = useRef<HTMLCanvasElement | null>(null);
   const last = useRef<{ x: number; y: number } | null>(null);
@@ -85,20 +89,15 @@ export function SignatureCapture({ defaultName, onChange }: { defaultName: strin
     onChange(out.toDataURL("image/png"));
   };
 
-  const tab = (m: "typed" | "drawn", label: string) => (
-    <button type="button" onClick={() => setMode(m)} style={{ padding: "4px 12px", borderRadius: 999, border: "1px solid #d1d5db", background: mode === m ? "#1C1B19" : "white", color: mode === m ? "white" : "#374151", cursor: "pointer", fontSize: "0.8rem" }}>
-      {label}
-    </button>
-  );
-
   return (
     <div>
-      <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>{tab("typed", "Type")}{tab("drawn", "Draw")}</div>
+      <SegmentedControl<Mode> className="mb-3" label="Signature input"
+        options={[{ value: "typed", label: "Type" }, { value: "drawn", label: "Draw" }]} value={mode} onChange={setMode} />
       {mode === "typed" ? (
         <div>
-          <input value={text} onChange={(e) => setText(e.target.value)} style={{ width: "100%", padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 6, fontSize: "0.9rem" }} />
-          <div style={{ marginTop: 8, height: 70, borderBottom: "2px solid #C1502E", display: "flex", alignItems: "flex-end", padding: "0 8px 2px", background: "#FAF7F1" }}>
-            <span className={script.className} style={{ fontSize: "2.6rem", lineHeight: 1, color: INK }}>{text || " "}</span>
+          <TextInput value={text} onChange={(e) => setText(e.target.value)} />
+          <div className="mt-2 flex h-[70px] items-end border-b-2 border-oh-ember bg-oh-paper px-2 pb-0.5">
+            <span className={`${script.className} text-[2.6rem] leading-none text-oh-charcoal`}>{text || " "}</span>
           </div>
         </div>
       ) : (
@@ -115,9 +114,8 @@ export function SignatureCapture({ defaultName, onChange }: { defaultName: strin
             }}
             onPointerUp={finish}
             onPointerLeave={() => { if (last.current) finish(); }}
-            style={{ width: "100%", height: 130, border: "1px solid #d1d5db", borderRadius: 6, background: "#FAF7F1", touchAction: "none", display: "block" }}
-          />
-          <button type="button" onClick={reset} style={{ marginTop: 6, background: "none", border: "none", color: "#A94422", cursor: "pointer", fontSize: "0.8rem", padding: 0 }}>Clear</button>
+            className="block h-[130px] w-full touch-none rounded-lg border border-oh-stone/25 bg-oh-paper" />
+          <button type="button" onClick={reset} className="mt-2 min-h-11 px-0 text-sm font-semibold text-oh-ember-deep">Clear</button>
         </div>
       )}
     </div>

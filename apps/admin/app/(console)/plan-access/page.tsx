@@ -1,142 +1,154 @@
 "use client";
-
-import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { IssueCodeModal } from "./_components/IssueCodeModal";
+import { useState } from "react";
 import { CountersignatureCard } from "./_components/CountersignatureCard";
-import { API_BASE, formatDate, formatMinutes, inviteLink, statusColors, type CodeRow } from "./_components/planAccess";
+import { IssueCodeSheet } from "./_components/IssueCodeSheet";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { useConfirm } from "@/components/ui/Confirm";
+import { DataList, type Column } from "@/components/ui/DataList";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorCard } from "@/components/ui/ErrorCard";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { SkeletonList } from "@/components/ui/Skeleton";
+import { useToast } from "@/components/ui/Toast";
+import { api, ApiError } from "@/lib/api";
+import { canCopyLink, formatDate, formatMinutes, ndaBadge, sessionsSummary, statusTone, type CodeRow } from "@/lib/plan-access";
+import { planInviteUrl } from "@/lib/urls";
+import { useResource } from "@/lib/use-resource";
 
-function StatusBadge({ status }: { status: CodeRow["status"] }) {
-  const c = statusColors[status];
-  return <span style={{ padding: "2px 8px", borderRadius: 4, fontSize: "0.75rem", fontWeight: 500, backgroundColor: c.bg, color: c.text }}>{status}</span>;
-}
+const errorText = (e: unknown) => (e instanceof ApiError || e instanceof Error ? e.message : "Something went wrong.");
 
-function NdaBadge({ code }: { code: CodeRow }) {
-  if (code.ndaStatus === "SIGNED") return <span style={{ padding: "2px 8px", borderRadius: 4, fontSize: "0.75rem", fontWeight: 500, backgroundColor: "#dcfce7", color: "#166534" }}>Signed {formatDate(code.ndaSignedAt).replace(/,.*$/, "")}</span>;
-  if (code.ndaStatus === "PENDING") return <span style={{ padding: "2px 8px", borderRadius: 4, fontSize: "0.75rem", fontWeight: 500, backgroundColor: "#fef3c7", color: "#92400e" }}>Awaiting</span>;
-  return <span style={{ color: "#9ca3af", fontSize: "0.8rem" }}>Not required</span>;
+/** Copies the invite link; falls back to selecting the text in a read-only input if the clipboard API fails. */
+function CopyLink({ code }: { code: CodeRow }) {
+  const [state, setState] = useState<"idle" | "copied" | "fallback">("idle");
+  if (!canCopyLink(code)) return null;
+  const url = planInviteUrl(code.code);
+  if (state === "fallback") {
+    return (
+      <input readOnly value={url} aria-label={`Invite link for ${code.label}`}
+        ref={(el) => el?.select()} onBlur={() => setState("idle")}
+        className="min-h-11 w-full max-w-[220px] rounded-lg border border-oh-stone/25 bg-oh-paper px-2 text-sm text-oh-charcoal" />
+    );
+  }
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(url);
+      setState("copied");
+      setTimeout(() => setState((s) => (s === "copied" ? "idle" : s)), 1500);
+    } catch {
+      setState("fallback");
+    }
+  }
+  return <Button size="sm" onClick={copy}>{state === "copied" ? "Copied" : "Copy link"}</Button>;
 }
 
 export default function PlanAccessPage() {
-  const [codes, setCodes] = useState<CodeRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [showIssue, setShowIssue] = useState(false);
-  const [copied, setCopied] = useState<string | null>(null);
+  const { show } = useToast();
+  const ask = useConfirm();
+  const res = useResource("plan-codes", (signal) => api<{ codes: CodeRow[] }>("/admin/plan/codes", { signal }));
+  const codes = res.data?.codes;
+
+  const [issueOpen, setIssueOpen] = useState(false);
   const [justIssued, setJustIssued] = useState<CodeRow | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`${API_BASE}/admin/plan/codes`);
-      if (!res.ok) throw new Error(`API ${res.status}`);
-      const data = await res.json();
-      setCodes(data.codes);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { void load(); }, [load]);
-
-  async function copyLink(code: CodeRow) {
-    try {
-      await navigator.clipboard.writeText(inviteLink(code.code));
-      setCopied(code.id);
-      setTimeout(() => setCopied(null), 1500);
-    } catch {
-      window.prompt("Copy this link", inviteLink(code.code));
-    }
-  }
-
   async function revoke(code: CodeRow) {
-    if (!window.confirm(`Revoke access for "${code.label}"? Their link stops working immediately.`)) return;
-    const res = await fetch(`${API_BASE}/admin/plan/codes/${code.id}/revoke`, { method: "PATCH" });
-    if (res.ok) void load();
+    const ok = await ask({ title: `Revoke access for "${code.label}"?`, body: "Their link stops working immediately.", confirmLabel: "Revoke", tone: "danger" });
+    if (!ok) return;
+    try {
+      await api(`/admin/plan/codes/${code.id}/revoke`, { method: "PATCH" });
+      res.reload();
+      show({ message: `${code.label} revoked.`, tone: "info" });
+    } catch (e) {
+      show({ message: errorText(e), tone: "alert" });
+    }
   }
+
+  const COLUMNS: Column<CodeRow>[] = [
+    { key: "label", label: "Label", render: (c) => (
+      <>
+        <Link href={`/plan-access/${c.id}`} className="font-semibold text-oh-charcoal underline-offset-4 hover:underline">{c.label}</Link>
+        <span className="block font-mono text-sm text-oh-stone/60">{c.code}</span>
+      </>
+    ) },
+    { key: "audience", label: "Audience", render: (c) => `${c.audience} / ${c.defaultScenario}` },
+    { key: "created", label: "Created", render: (c) => formatDate(c.createdAt) },
+    { key: "viewed", label: "Last viewed", render: (c) => formatDate(c.lastViewedAt) },
+    { key: "sessions", label: "Sessions", render: (c) => <span className="tabular-nums">{sessionsSummary(c)}</span> },
+    { key: "time", label: "Time", render: (c) => <span className="tabular-nums">{formatMinutes(c.totalSeconds)}</span> },
+    { key: "questions", label: "Questions", render: (c) => <span className="tabular-nums">{c.questionCount}</span> },
+    { key: "nda", label: "NDA", render: (c) => { const n = ndaBadge(c); return <Badge tone={n.tone}>{n.label}</Badge>; } },
+    { key: "status", label: "Status", render: (c) => <Badge tone={statusTone(c.status)}>{c.status}</Badge> },
+    { key: "actions", label: "Actions", render: (c) => (
+      <span className="flex flex-wrap items-center gap-2">
+        <CopyLink code={c} />
+        {c.status === "ACTIVE" && <Button size="sm" variant="danger" onClick={() => revoke(c)}>Revoke</Button>}
+      </span>
+    ) },
+  ];
 
   return (
-    <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: "1.5rem" }}>Plan Access</h1>
-          <p style={{ margin: "4px 0 0", color: "#6b7280", fontSize: "0.9rem" }}>Per-recipient codes for the interactive business plan, with view analytics.</p>
-        </div>
-        <button onClick={() => setShowIssue(true)} style={{ padding: "10px 16px", background: "#5A5847", color: "white", border: "none", borderRadius: 6, fontWeight: 500, cursor: "pointer" }}>
-          Issue code
-        </button>
+    <>
+      <PageHeader title="Plan access"
+        subtitle="Per-recipient codes for the interactive business plan, with view analytics."
+        actions={<Button variant="primary" icon="plus" onClick={() => setIssueOpen(true)}>Issue code</Button>} />
+
+      <div className="space-y-5">
+        {justIssued && (
+          <Card title={`Code issued for ${justIssued.label}`}>
+            <p className="font-mono text-[1.1rem] tracking-[0.08em] text-oh-charcoal">{justIssued.code}</p>
+            <p className="mt-1.5 text-sm text-oh-stone/70">{justIssued.ndaRequired ? "NDA required: they sign it before seeing the plan." : "No NDA: the link opens the plan directly."}</p>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <code className="min-w-0 flex-1 truncate rounded-lg bg-oh-linen px-3 py-2 text-sm text-oh-charcoal">{planInviteUrl(justIssued.code)}</code>
+              <CopyLink code={justIssued} />
+            </div>
+          </Card>
+        )}
+
+        <CountersignatureCard />
+
+        {res.error && !codes ? (
+          <ErrorCard message="Couldn't load plan access codes." onRetry={res.reload} />
+        ) : !codes ? (
+          <SkeletonList rows={4} />
+        ) : (
+          <DataList rows={codes} rowKey={(c) => c.id} columns={COLUMNS}
+            empty={<EmptyState icon="key" title="No codes yet" body="Issue the first one." action={<Button variant="primary" icon="plus" onClick={() => setIssueOpen(true)}>Issue code</Button>} />}
+            renderCard={(c) => {
+              const n = ndaBadge(c);
+              return (
+                <div className="space-y-2 px-4 py-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <span>
+                      <Link href={`/plan-access/${c.id}`} className="font-semibold text-oh-charcoal underline-offset-4 hover:underline">{c.label}</Link>
+                      <span className="block font-mono text-sm text-oh-stone/60">{c.code}</span>
+                    </span>
+                    <span className="flex shrink-0 flex-col items-end gap-1">
+                      <Badge tone={statusTone(c.status)}>{c.status}</Badge>
+                      <Badge tone={n.tone}>{n.label}</Badge>
+                    </span>
+                  </div>
+                  <p className="text-sm text-oh-stone/70">{c.audience} / {c.defaultScenario} - created {formatDate(c.createdAt)}</p>
+                  <p className="flex flex-wrap gap-x-3 text-sm tabular-nums text-oh-stone/70">
+                    <span>{sessionsSummary(c)} sessions</span>
+                    <span>{formatMinutes(c.totalSeconds)}</span>
+                    <span>{c.questionCount} questions</span>
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <CopyLink code={c} />
+                    {c.status === "ACTIVE" && <Button size="sm" variant="danger" onClick={() => revoke(c)}>Revoke</Button>}
+                  </div>
+                </div>
+              );
+            }} />
+        )}
       </div>
 
-      {justIssued && (
-        <div style={{ background: "#ecfdf5", border: "1px solid #a7f3d0", borderRadius: 8, padding: 16, marginBottom: 20 }}>
-          <div style={{ fontWeight: 600, marginBottom: 6 }}>Code issued for {justIssued.label}</div>
-          <div style={{ fontFamily: "ui-monospace, monospace", fontSize: "1.2rem", letterSpacing: "0.08em", marginBottom: 8 }}>{justIssued.code}</div>
-          <div style={{ fontSize: "0.85rem", color: "#065f46", marginBottom: 8 }}>{justIssued.ndaRequired ? "NDA required: they sign it before seeing the plan." : "No NDA: the link opens the plan directly."}</div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-            <code style={{ fontSize: "0.85rem", background: "white", padding: "4px 8px", borderRadius: 4 }}>{inviteLink(justIssued.code)}</code>
-            <button onClick={() => copyLink(justIssued)} style={{ padding: "6px 10px", border: "1px solid #d1d5db", background: "white", borderRadius: 6, cursor: "pointer", fontSize: "0.85rem" }}>
-              {copied === justIssued.id ? "Copied" : "Copy link"}
-            </button>
-          </div>
-        </div>
+      {issueOpen && (
+        <IssueCodeSheet open onClose={() => setIssueOpen(false)}
+          onCreated={(code) => { setIssueOpen(false); setJustIssued(code); res.reload(); }} />
       )}
-
-      <CountersignatureCard />
-
-      {error && <p style={{ color: "#991b1b" }}>Error: {error}</p>}
-
-      <div style={{ background: "white", borderRadius: 8, border: "1px solid #e5e7eb", overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem" }}>
-          <thead>
-            <tr style={{ borderBottom: "1px solid #e5e7eb", textAlign: "left", color: "#6b7280", fontSize: "0.75rem", textTransform: "uppercase" }}>
-              {["Label", "Audience", "Scenario", "Created", "Last viewed", "Sessions", "Time", "Questions", "NDA", "Status", ""].map((h) => (
-                <th key={h} style={{ padding: 12, fontWeight: 600 }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {loading && <tr><td colSpan={11} style={{ padding: 24, textAlign: "center", color: "#6b7280" }}>Loading...</td></tr>}
-            {!loading && codes.length === 0 && <tr><td colSpan={11} style={{ padding: 24, textAlign: "center", color: "#6b7280" }}>No codes yet. Issue the first one.</td></tr>}
-            {codes.map((c) => (
-              <tr key={c.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
-                <td style={{ padding: 12 }}>
-                  <Link href={`/plan-access/${c.id}`} style={{ fontWeight: 500, color: "#111827", textDecoration: "none" }}>{c.label}</Link>
-                  <div style={{ fontFamily: "ui-monospace, monospace", fontSize: "0.75rem", color: "#6b7280" }}>{c.code}</div>
-                </td>
-                <td style={{ padding: 12 }}>{c.audience}</td>
-                <td style={{ padding: 12 }}>{c.defaultScenario}</td>
-                <td style={{ padding: 12, whiteSpace: "nowrap" }}>{formatDate(c.createdAt)}</td>
-                <td style={{ padding: 12, whiteSpace: "nowrap" }}>{formatDate(c.lastViewedAt)}</td>
-                <td style={{ padding: 12 }}>{c.sessionCount}{c.maxSessions ? ` / ${c.maxSessions}` : ""}</td>
-                <td style={{ padding: 12 }}>{formatMinutes(c.totalSeconds)}</td>
-                <td style={{ padding: 12 }}>{c.questionCount}</td>
-                <td style={{ padding: 12, whiteSpace: "nowrap" }}><NdaBadge code={c} /></td>
-                <td style={{ padding: 12 }}><StatusBadge status={c.status} /></td>
-                <td style={{ padding: 12, whiteSpace: "nowrap" }}>
-                  <button onClick={() => copyLink(c)} disabled={c.status !== "ACTIVE"} style={{ padding: "4px 10px", border: "1px solid #d1d5db", background: "white", borderRadius: 6, cursor: "pointer", fontSize: "0.8rem", marginRight: 6 }}>
-                    {copied === c.id ? "Copied" : "Copy link"}
-                  </button>
-                  {c.status === "ACTIVE" && (
-                    <button onClick={() => revoke(c)} style={{ padding: "4px 10px", border: "1px solid #fecaca", background: "#fef2f2", color: "#991b1b", borderRadius: 6, cursor: "pointer", fontSize: "0.8rem" }}>
-                      Revoke
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {showIssue && (
-        <IssueCodeModal
-          onClose={() => setShowIssue(false)}
-          onCreated={(code) => { setShowIssue(false); setJustIssued(code); void load(); }}
-        />
-      )}
-    </div>
+    </>
   );
 }

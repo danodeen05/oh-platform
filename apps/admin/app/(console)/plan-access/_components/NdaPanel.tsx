@@ -2,128 +2,120 @@
 
 /** NDA status, signer details, audit trail and actions for one plan code. */
 
-import { useCallback, useEffect, useState } from "react";
-import { API_BASE, formatDate } from "./planAccess";
-import { addressLine, downloadNdaPdf, type NdaAdminDetail } from "./nda";
+import { useState } from "react";
+import { Badge, type BadgeTone } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { useConfirm } from "@/components/ui/Confirm";
+import { Toggle } from "@/components/ui/Field";
+import { SkeletonList } from "@/components/ui/Skeleton";
+import { ErrorCard } from "@/components/ui/ErrorCard";
+import { api, ApiError } from "@/lib/api";
+import { formatDate } from "@/lib/plan-access";
+import { addressLine, downloadNdaPdf, type NdaAdminDetail } from "@/lib/plan-nda";
+import { useResource } from "@/lib/use-resource";
 
-const pill = (bg: string, color: string): React.CSSProperties => ({ padding: "2px 8px", borderRadius: 4, fontSize: "0.75rem", fontWeight: 500, background: bg, color });
-const btn: React.CSSProperties = { padding: "6px 10px", border: "1px solid #d1d5db", background: "white", borderRadius: 6, cursor: "pointer", fontSize: "0.8rem" };
+const errorText = (e: unknown) => (e instanceof ApiError || e instanceof Error ? e.message : "Something went wrong.");
+
+function Row({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="flex items-start justify-between gap-4 border-b border-oh-stone/10 py-1.5 text-[15px] last:border-0">
+      <span className="shrink-0 text-oh-stone/70">{label}</span>
+      <span className={`text-right text-oh-charcoal ${mono ? "break-all font-mono text-xs" : ""}`}>{value}</span>
+    </div>
+  );
+}
 
 export function NdaPanel({ codeId }: { codeId: string }) {
-  const [data, setData] = useState<NdaAdminDetail | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [note, setNote] = useState<string | null>(null);
+  const ask = useConfirm();
+  const res = useResource(`plan-nda:${codeId}`, (signal) => api<NdaAdminDetail>(`/admin/plan/codes/${codeId}/nda`, { signal }));
   const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    try {
-      const res = await fetch(`${API_BASE}/admin/plan/codes/${codeId}/nda`);
-      if (!res.ok) throw new Error(`API ${res.status}`);
-      setData(await res.json());
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load");
-    }
-  }, [codeId]);
-  useEffect(() => { void load(); }, [load]);
+  if (res.error && !res.data) return <ErrorCard message="Couldn't load the NDA." onRetry={res.reload} />;
+  if (!res.data) return <SkeletonList rows={2} />;
 
-  async function act(label: string, fn: () => Promise<Response | void>) {
+  const data = res.data;
+  const cur = data.current;
+  const d = cur?.details;
+  const a = cur?.audit;
+  const tone: BadgeTone = cur?.status === "SIGNED" ? "good" : data.ndaRequired ? "pending" : "neutral";
+  const statusText = cur?.status === "SIGNED" ? `Signed ${formatDate(a?.signedAt ?? null)}` : data.ndaRequired ? (d ? "In progress" : "Awaiting signature") : "Not required";
+
+  async function act(successNote: string, fn: () => Promise<void>) {
     setBusy(true);
     setNote(null);
     try {
-      const res = await fn();
-      if (res && !res.ok) throw new Error(`API ${res.status}`);
-      setNote(label);
-      await load();
-    } catch (err) {
-      setNote(err instanceof Error ? err.message : "Failed");
+      await fn();
+      setNote(successNote);
+      res.reload();
+    } catch (e) {
+      setNote(errorText(e));
     } finally {
       setBusy(false);
     }
   }
 
-  const post = (path: string) => fetch(`${API_BASE}${path}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+  const download = () => act("Downloaded.", () => downloadNdaPdf(cur!.id));
+  const resend = () => act("Copy resent by email and text.", () => api(`/admin/plan/ndas/${cur!.id}/resend`, { method: "POST", body: {} }));
 
-  if (error) return <section style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 8, padding: 16, marginBottom: 20 }}><p style={{ color: "#991b1b", margin: 0 }}>NDA: {error}</p></section>;
-  if (!data) return null;
-  const cur = data.current;
-  const d = cur?.details;
-  const a = cur?.audit;
-  const status = cur?.status === "SIGNED" ? pill("#dcfce7", "#166534") : data.ndaRequired ? pill("#fef3c7", "#92400e") : pill("#f3f4f6", "#374151");
-  const statusText = cur?.status === "SIGNED" ? `Signed ${formatDate(a?.signedAt ?? null)}` : data.ndaRequired ? (d ? "In progress" : "Awaiting signature") : "Not required";
-  const row = (k: string, v: React.ReactNode) => (
-    <tr><td style={{ padding: "4px 12px 4px 0", color: "#6b7280", whiteSpace: "nowrap", verticalAlign: "top" }}>{k}</td><td style={{ padding: "4px 0", wordBreak: "break-word" }}>{v}</td></tr>
-  );
+  async function voidNda() {
+    const ok = await ask({ title: "Void this NDA?", body: "If the code still requires an NDA, the recipient must sign again before seeing the plan.", confirmLabel: "Void", tone: "danger" });
+    if (!ok) return;
+    await act("Voided.", () => api(`/admin/plan/ndas/${cur!.id}/void`, { method: "POST", body: {} }));
+  }
+
+  function toggleRequired(required: boolean) {
+    void act(required ? "NDA now required." : "NDA no longer required.", () => api(`/admin/plan/codes/${codeId}/nda`, { method: "PATCH", body: { required } }));
+  }
 
   return (
-    <section style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 8, padding: 16, marginBottom: 20 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-        <h2 style={{ margin: 0, fontSize: "1rem" }}>NDA <span style={status}>{statusText}</span></h2>
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+    <Card
+      title={<span className="flex flex-wrap items-center gap-2">NDA <Badge tone={tone}>{statusText}</Badge></span>}
+      action={
+        <div className="flex flex-wrap items-center gap-2">
           {cur?.status === "SIGNED" && (
             <>
-              <button style={btn} disabled={busy} onClick={() => void act("Downloaded", () => downloadNdaPdf(cur.id))}>Download PDF</button>
-              <button style={btn} disabled={busy} onClick={() => void act("Copy resent by email and text", () => post(`/admin/plan/ndas/${cur.id}/resend`))}>Resend copy</button>
-              <button
-                style={{ ...btn, borderColor: "#fecaca", color: "#991b1b", background: "#fef2f2" }}
-                disabled={busy}
-                onClick={() => { if (window.confirm("Void this NDA? If the code still requires an NDA, the recipient must sign again before seeing the plan.")) void act("Voided", () => post(`/admin/plan/ndas/${cur.id}/void`)); }}
-              >
-                Void
-              </button>
+              <Button size="sm" disabled={busy} onClick={download}>Download PDF</Button>
+              <Button size="sm" disabled={busy} onClick={resend}>Resend</Button>
+              <Button size="sm" variant="danger" disabled={busy} onClick={voidNda}>Void</Button>
             </>
           )}
-          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "0.85rem", marginLeft: 6 }}>
-            <input
-              type="checkbox"
-              checked={data.ndaRequired}
-              disabled={busy}
-              onChange={(e) => {
-                const required = e.target.checked;
-                void act(required ? "NDA now required" : "NDA no longer required", () =>
-                  fetch(`${API_BASE}/admin/plan/codes/${codeId}/nda`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ required }) }),
-                );
-              }}
-            />
-            Require NDA
-          </label>
+          <Toggle checked={data.ndaRequired} disabled={busy} onChange={toggleRequired} label="Require NDA" />
         </div>
-      </div>
-      {note && <p style={{ margin: "8px 0 0", fontSize: "0.8rem", color: "#374151" }}>{note}</p>}
-      {a?.deliveryError && <p style={{ margin: "8px 0 0", fontSize: "0.8rem", color: "#991b1b" }}>Delivery problem: {a.deliveryError}</p>}
+      }>
+      {note && <p className="mb-3 text-sm text-oh-stone">{note}</p>}
+      {a?.deliveryError && <p className="mb-3 text-sm font-medium text-oh-ember-deep">Delivery problem: {a.deliveryError}</p>}
       {d && a ? (
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 20, marginTop: 12 }}>
-          <table style={{ fontSize: "0.85rem", borderCollapse: "collapse" }}>
-            <tbody>
-              {row("Legal name", d.legalName)}
-              {row("Email", d.email)}
-              {row("Mobile", `${d.phone}${a.phoneVerifiedAt ? " (verified)" : " (not verified)"}`)}
-              {row("Address", addressLine(d.address))}
-              {d.company ? row("On behalf of", `${d.company}${d.title ? `, ${d.title}` : ""}`) : null}
-              {row("Countersigned by", a.countersignerName ? `${a.countersignerName}, ${a.countersignerTitle}` : "Not yet")}
-            </tbody>
-          </table>
-          <table style={{ fontSize: "0.85rem", borderCollapse: "collapse" }}>
-            <tbody>
-              {row("Started", formatDate(a.startedAt))}
-              {row("Phone verified", formatDate(a.phoneVerifiedAt))}
-              {row("Signed", formatDate(a.signedAt))}
-              {row("Emailed / texted", `${a.emailedAt ? formatDate(a.emailedAt) : "no"} / ${a.textedAt ? formatDate(a.textedAt) : "no"}`)}
-              {row("IP / browser", <span style={{ color: "#6b7280" }}>{a.ip ?? "n/a"} · {a.userAgent ?? "n/a"}</span>)}
-              {row("Version / type", `${a.version ?? "n/a"} · ${a.signatureKind ?? "n/a"}`)}
-              {row("Document SHA-256", <code style={{ fontSize: "0.72rem" }}>{a.documentSha256 ?? "n/a"}</code>)}
-            </tbody>
-          </table>
+        <div className="grid gap-x-8 sm:grid-cols-2">
+          <div>
+            <Row label="Legal name" value={d.legalName} />
+            <Row label="Email" value={d.email} />
+            <Row label="Mobile" value={`${d.phone}${a.phoneVerifiedAt ? " (verified)" : " (not verified)"}`} />
+            <Row label="Address" value={addressLine(d.address)} />
+            {d.company && <Row label="On behalf of" value={`${d.company}${d.title ? `, ${d.title}` : ""}`} />}
+            <Row label="Countersigned by" value={a.countersignerName ? `${a.countersignerName}, ${a.countersignerTitle}` : "Not yet"} />
+          </div>
+          <div>
+            <Row label="Started" value={formatDate(a.startedAt)} />
+            <Row label="Phone verified" value={formatDate(a.phoneVerifiedAt)} />
+            <Row label="Signed" value={formatDate(a.signedAt)} />
+            <Row label="Emailed / texted" value={`${a.emailedAt ? formatDate(a.emailedAt) : "no"} / ${a.textedAt ? formatDate(a.textedAt) : "no"}`} />
+            <Row label="IP / browser" value={`${a.ip ?? "n/a"} · ${a.userAgent ?? "n/a"}`} />
+            <Row label="Version / type" value={`${a.version ?? "n/a"} · ${a.signatureKind ?? "n/a"}`} />
+            <Row label="Document SHA-256" value={a.documentSha256 ?? "n/a"} mono />
+          </div>
         </div>
       ) : (
-        <p style={{ color: "#6b7280", fontSize: "0.85rem", margin: "10px 0 0" }}>
-          {data.ndaRequired ? "The recipient has not started the NDA yet. They will see it first when they open their link." : "This code opens the plan without an NDA."}
+        <p className="text-[15px] text-oh-stone/70">
+          {data.ndaRequired ? "The recipient hasn't started the NDA yet. They will see it first when they open their link." : "This code opens the plan without an NDA."}
         </p>
       )}
       {data.history.length > 1 && (
-        <p style={{ color: "#6b7280", fontSize: "0.75rem", margin: "10px 0 0" }}>
+        <p className="mt-3 text-sm text-oh-stone/60">
           History: {data.history.map((h) => `${h.status.toLowerCase()} ${formatDate(h.signedAt ?? h.voidedAt ?? h.createdAt)}`).join(" · ")}
         </p>
       )}
-    </section>
+    </Card>
   );
 }

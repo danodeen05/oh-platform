@@ -1,153 +1,179 @@
 "use client";
-
-import { use, useCallback, useEffect, useState } from "react";
-import Link from "next/link";
+import { use, useState } from "react";
 import { NdaPanel } from "../_components/NdaPanel";
-import { API_BASE, formatDate, formatMinutes, inviteLink, statusColors, type CodeDetail, type HeatRow } from "../_components/planAccess";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { ErrorCard } from "@/components/ui/ErrorCard";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Skeleton, SkeletonList } from "@/components/ui/Skeleton";
+import { TextArea } from "@/components/ui/Field";
+import { useToast } from "@/components/ui/Toast";
+import { api, ApiError } from "@/lib/api";
+import { formatDate, formatMinutes, statusTone, type CodeDetail, type HeatRow } from "@/lib/plan-access";
+import { planInviteUrl } from "@/lib/urls";
+import { useResource } from "@/lib/use-resource";
+
+const BACK = { href: "/plan-access", label: "Plan access" };
+const errorText = (e: unknown) => (e instanceof ApiError || e instanceof Error ? e.message : "Something went wrong.");
+
+function SessionCard({ session }: { session: CodeDetail["sessions"][number] }) {
+  const [open, setOpen] = useState(false);
+  const summaries = (session.visitSummaries ?? []).filter((v) => v.error !== "skipped_short");
+  return (
+    <li className="py-2.5">
+      <button type="button" onClick={() => setOpen((v) => !v)} className="flex min-h-11 w-full items-center justify-between gap-3 text-left">
+        <span className="text-[15px] font-medium text-oh-charcoal">{formatDate(session.startedAt)}</span>
+        <span className="text-sm tabular-nums text-oh-stone/70">{formatMinutes(session.totalSeconds)}{session.country ? ` · ${session.country}` : ""}</span>
+      </button>
+      {open && (
+        <div className="mt-2 space-y-3 pl-0.5 text-sm">
+          {session.userAgent && <p className="truncate text-oh-stone/60">{session.userAgent}</p>}
+          <p className="text-oh-stone/70">{session.sectionViews.map((v) => `${v.sectionKey} ${formatMinutes(v.seconds)}`).join(" · ") || "No sections recorded."}</p>
+          {summaries.map((v) => (
+            <div key={v.id} className="rounded-lg border-l-4 border-oh-ember bg-oh-linen/60 px-3 py-2">
+              <p className="text-xs text-oh-stone/60">
+                Chappy&apos;s take · {formatDate(v.visitEnd)} · {formatMinutes(v.seconds)}
+                {v.chatCount ? ` · ${v.chatCount} question${v.chatCount === 1 ? "" : "s"}` : ""}
+                {v.emailedAt ? " · emailed" : v.error ? ` · not emailed (${v.error})` : ""}
+              </p>
+              {v.verdict && <p className="mt-1 font-semibold text-oh-charcoal">{v.verdict}</p>}
+              {v.take && <p className="mt-1 text-oh-stone">{v.take}</p>}
+            </div>
+          ))}
+          {session.chatMessages && session.chatMessages.length > 0 && (
+            <details>
+              <summary className="cursor-pointer font-semibold text-oh-ember-deep">
+                Chat with Chappy ({session.chatMessages.filter((m) => m.role === "user").length} questions)
+              </summary>
+              <div className="mt-2 flex flex-col gap-1.5">
+                {session.chatMessages.map((m) => (
+                  <div key={m.id} className={`max-w-[90%] whitespace-pre-wrap rounded-lg px-3 py-1.5 ${m.role === "user" ? "self-end bg-oh-charcoal text-oh-cream" : "self-start bg-oh-linen text-oh-charcoal"}`}>
+                    {m.content}
+                    {m.escalated && <span className="mt-1 block text-xs text-oh-ember">Escalated to you</span>}
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
+        </div>
+      )}
+    </li>
+  );
+}
+
+function QuestionRow({ question, onAnswered }: { question: CodeDetail["questions"][number]; onAnswered: () => void }) {
+  const { show } = useToast();
+  const [answer, setAnswer] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    const body = answer.trim();
+    if (!body) return;
+    setSaving(true);
+    try {
+      await api(`/admin/plan/questions/${question.id}/answer`, { method: "PATCH", body: { answerBody: body } });
+      onAnswered();
+    } catch (e) {
+      show({ message: errorText(e), tone: "alert" });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="border-t border-oh-stone/10 py-3 first:border-0">
+      <p className="text-xs text-oh-stone/60">{formatDate(question.createdAt)} · {question.sectionKey}{question.contactEmail ? ` · ${question.contactEmail}` : ""}</p>
+      <p className="mt-1.5 whitespace-pre-wrap text-[15px] text-oh-charcoal">{question.body}</p>
+      {question.answeredAt ? (
+        <div className="mt-2 rounded-lg border-l-4 border-oh-olive bg-oh-linen/50 px-3 py-2 text-[15px]">
+          <p className="text-xs text-oh-stone/60">Answered {formatDate(question.answeredAt)}</p>
+          <p className="mt-1 whitespace-pre-wrap text-oh-charcoal">{question.answerBody}</p>
+        </div>
+      ) : (
+        <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-start">
+          <TextArea rows={2} value={answer} onChange={(e) => setAnswer(e.target.value)} placeholder="Record your answer (sent to them separately)" className="flex-1" />
+          <Button variant="primary" onClick={save} loading={saving} disabled={saving || !answer.trim()}>Save</Button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function PlanCodeDetailPage({ params }: { params: Promise<{ codeId: string }> }) {
   const { codeId } = use(params);
-  const [code, setCode] = useState<CodeDetail | null>(null);
-  const [heat, setHeat] = useState<HeatRow[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const res = useResource(`plan-code:${codeId}`, (signal) => api<{ code: CodeDetail; heat: HeatRow[] }>(`/admin/plan/codes/${codeId}`, { signal }));
+  const code = res.data?.code;
+  const heat = res.data?.heat ?? [];
 
-  const load = useCallback(async () => {
-    try {
-      const res = await fetch(`${API_BASE}/admin/plan/codes/${codeId}`);
-      if (!res.ok) throw new Error(`API ${res.status}`);
-      const data = await res.json();
-      setCode(data.code);
-      setHeat(data.heat);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load");
-    }
-  }, [codeId]);
-
-  useEffect(() => { void load(); }, [load]);
-
-  async function answer(questionId: string) {
-    const body = answers[questionId]?.trim();
-    if (!body) return;
-    const res = await fetch(`${API_BASE}/admin/plan/questions/${questionId}/answer`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ answerBody: body }),
-    });
-    if (res.ok) void load();
+  if (!code) {
+    return (
+      <>
+        <PageHeader title="Plan code" back={BACK} />
+        {res.error
+          ? <ErrorCard message="Couldn't load this code." onRetry={res.reload} />
+          : <div className="space-y-4"><Skeleton className="h-24 rounded-card" /><SkeletonList rows={3} /></div>}
+      </>
+    );
   }
 
-  if (error) return <p style={{ color: "#991b1b" }}>Error: {error}</p>;
-  if (!code) return <p style={{ color: "#6b7280" }}>Loading...</p>;
-
   const maxSeconds = Math.max(1, ...heat.map((h) => h.seconds));
-  const status = statusColors[code.status];
 
   return (
-    <div>
-      <Link href="/plan-access" style={{ color: "#6b7280", fontSize: "0.85rem", textDecoration: "none" }}>&larr; Plan Access</Link>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", margin: "8px 0 20px", gap: 16, flexWrap: "wrap" }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: "1.5rem" }}>{code.label}</h1>
-          <div style={{ color: "#6b7280", fontSize: "0.9rem", marginTop: 4 }}>
-            <span style={{ fontFamily: "ui-monospace, monospace" }}>{code.code}</span> · {code.audience} · default {code.defaultScenario} ·{" "}
-            <span style={{ padding: "2px 8px", borderRadius: 4, fontSize: "0.75rem", fontWeight: 500, backgroundColor: status.bg, color: status.text }}>{code.status}</span>
-          </div>
-          <div style={{ color: "#6b7280", fontSize: "0.85rem", marginTop: 4 }}>
-            Sections: {code.allowedSections.length ? code.allowedSections.join(", ") : "all"} · Expires: {formatDate(code.expiresAt)} · Max sessions: {code.maxSessions ?? "unlimited"}
-          </div>
-        </div>
-        <code style={{ fontSize: "0.8rem", background: "white", border: "1px solid #e5e7eb", padding: "6px 10px", borderRadius: 6 }}>{inviteLink(code.code)}</code>
+    <>
+      <PageHeader title={code.label} back={BACK}
+        subtitle={<>
+          <span className="font-mono">{code.code}</span> · {code.audience} · default {code.defaultScenario} · sections {code.allowedSections.length ? code.allowedSections.join(", ") : "all"} · expires {formatDate(code.expiresAt)} · max sessions {code.maxSessions ?? "unlimited"}
+        </>}
+        actions={<Badge tone={statusTone(code.status)}>{code.status}</Badge>} />
+
+      <div className="mb-5">
+        <code className="block truncate rounded-lg border border-oh-stone/15 bg-oh-cream px-3 py-2 text-sm text-oh-charcoal">{planInviteUrl(code.code)}</code>
       </div>
 
-      <NdaPanel codeId={codeId} />
+      <div className="space-y-5">
+        <NdaPanel codeId={codeId} />
 
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 20, alignItems: "start" }}>
-        <section style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 8, padding: 16 }}>
-          <h2 style={{ margin: "0 0 12px", fontSize: "1rem" }}>Time per section</h2>
-          {heat.length === 0 && <p style={{ color: "#6b7280", fontSize: "0.9rem" }}>No views yet.</p>}
-          {heat.map((h) => (
-            <div key={h.sectionKey} style={{ marginBottom: 10 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem", marginBottom: 3 }}>
-                <span>{h.sectionKey}</span>
-                <span style={{ color: "#6b7280" }}>{formatMinutes(h.seconds)} · {h.interactions} interactions</span>
-              </div>
-              <div style={{ height: 8, background: "#f3f4f6", borderRadius: 4 }}>
-                <div style={{ width: `${Math.round((h.seconds / maxSeconds) * 100)}%`, height: "100%", background: "#C1502E", borderRadius: 4 }} />
-              </div>
-            </div>
-          ))}
-        </section>
-
-        <section style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 8, padding: 16 }}>
-          <h2 style={{ margin: "0 0 12px", fontSize: "1rem" }}>Sessions ({code.sessions.length})</h2>
-          {code.sessions.length === 0 && <p style={{ color: "#6b7280", fontSize: "0.9rem" }}>Not opened yet.</p>}
-          {code.sessions.map((s) => (
-            <div key={s.id} style={{ borderTop: "1px solid #f3f4f6", padding: "10px 0", fontSize: "0.85rem" }}>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span>{formatDate(s.startedAt)}</span>
-                <span style={{ color: "#6b7280" }}>{formatMinutes(s.totalSeconds)}{s.country ? ` · ${s.country}` : ""}</span>
-              </div>
-              <div style={{ color: "#9ca3af", fontSize: "0.75rem", marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.userAgent}</div>
-              <div style={{ color: "#6b7280", marginTop: 4 }}>
-                {s.sectionViews.map((v) => `${v.sectionKey} ${formatMinutes(v.seconds)}`).join(" · ") || "no sections recorded"}
-              </div>
-              {(s.visitSummaries ?? []).filter((v) => v.error !== "skipped_short").map((v) => (
-                <div key={v.id} style={{ marginTop: 8, background: "#faf6ef", borderLeft: "3px solid #C1502E", padding: "6px 10px" }}>
-                  <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>
-                    Chappy&apos;s take · {formatDate(v.visitEnd)} · {formatMinutes(v.seconds)}
-                    {v.chatCount ? ` · ${v.chatCount} question${v.chatCount === 1 ? "" : "s"}` : ""}
-                    {v.emailedAt ? " · emailed" : v.error ? ` · not emailed (${v.error})` : ""}
-                  </div>
-                  {v.verdict ? <div style={{ fontWeight: 600, marginTop: 2 }}>{v.verdict}</div> : null}
-                  {v.take ? <div style={{ marginTop: 2 }}>{v.take}</div> : null}
-                </div>
-              ))}
-              {s.chatMessages && s.chatMessages.length > 0 ? (
-                <details style={{ marginTop: 8 }}>
-                  <summary style={{ cursor: "pointer", color: "#5A5847" }}>Chat with Chappy ({s.chatMessages.filter((m) => m.role === "user").length} questions)</summary>
-                  <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 6 }}>
-                    {s.chatMessages.map((m) => (
-                      <div key={m.id} style={{ alignSelf: m.role === "user" ? "flex-end" : "flex-start", maxWidth: "90%", background: m.role === "user" ? "#5A5847" : "#f3f4f6", color: m.role === "user" ? "white" : "#111827", borderRadius: 8, padding: "6px 10px", whiteSpace: "pre-wrap" }}>
-                        {m.content}
-                        {m.escalated ? <div style={{ fontSize: "0.7rem", marginTop: 4, color: "#C1502E" }}>Escalated to you</div> : null}
-                      </div>
-                    ))}
-                  </div>
-                </details>
-              ) : null}
-            </div>
-          ))}
-        </section>
-      </div>
-
-      <section style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 8, padding: 16, marginTop: 20 }}>
-        <h2 style={{ margin: "0 0 12px", fontSize: "1rem" }}>Questions ({code.questions.length})</h2>
-        {code.questions.length === 0 && <p style={{ color: "#6b7280", fontSize: "0.9rem" }}>None submitted.</p>}
-        {code.questions.map((q) => (
-          <div key={q.id} style={{ borderTop: "1px solid #f3f4f6", padding: "12px 0" }}>
-            <div style={{ fontSize: "0.8rem", color: "#6b7280" }}>{formatDate(q.createdAt)} · {q.sectionKey}{q.contactEmail ? ` · ${q.contactEmail}` : ""}</div>
-            <p style={{ margin: "6px 0", whiteSpace: "pre-wrap" }}>{q.body}</p>
-            {q.answeredAt ? (
-              <div style={{ background: "#f9fafb", borderLeft: "3px solid #5A5847", padding: "8px 12px", fontSize: "0.9rem" }}>
-                <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>Answered {formatDate(q.answeredAt)}</div>
-                <div style={{ whiteSpace: "pre-wrap" }}>{q.answerBody}</div>
-              </div>
+        <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
+          <Card title="Time per section">
+            {heat.length === 0 ? (
+              <p className="text-[15px] text-oh-stone/70">No views yet.</p>
             ) : (
-              <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
-                <textarea
-                  value={answers[q.id] ?? ""}
-                  onChange={(e) => setAnswers((prev) => ({ ...prev, [q.id]: e.target.value }))}
-                  placeholder="Record your answer (sent to them separately)"
-                  rows={2}
-                  style={{ flex: 1, padding: 8, border: "1px solid #d1d5db", borderRadius: 6, fontSize: "0.9rem" }}
-                />
-                <button onClick={() => answer(q.id)} style={{ padding: "8px 12px", background: "#5A5847", color: "white", border: "none", borderRadius: 6, cursor: "pointer" }}>Save</button>
+              <div className="space-y-3">
+                {heat.map((h) => (
+                  <div key={h.sectionKey}>
+                    <div className="mb-1 flex justify-between text-sm">
+                      <span className="text-oh-charcoal">{h.sectionKey}</span>
+                      <span className="tabular-nums text-oh-stone/70">{formatMinutes(h.seconds)} · {h.interactions} interactions</span>
+                    </div>
+                    <div className="h-2 w-full rounded-full bg-oh-stone/15">
+                      <div className="h-full rounded-full bg-oh-ember" style={{ width: `${Math.round((h.seconds / maxSeconds) * 100)}%` }} /> {/* style-ok: progress width */}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
-          </div>
-        ))}
-      </section>
-    </div>
+          </Card>
+
+          <Card title={`Sessions (${code.sessions.length})`} padded={false}>
+            {code.sessions.length === 0 ? (
+              <p className="px-4 py-4 text-[15px] text-oh-stone/70">Not opened yet.</p>
+            ) : (
+              <ul className="divide-y divide-oh-stone/10 px-4">
+                {code.sessions.map((s) => <SessionCard key={s.id} session={s} />)}
+              </ul>
+            )}
+          </Card>
+        </div>
+
+        <Card title={`Questions (${code.questions.length})`}>
+          {code.questions.length === 0 ? (
+            <p className="text-[15px] text-oh-stone/70">None submitted.</p>
+          ) : (
+            code.questions.map((q) => <QuestionRow key={q.id} question={q} onAnswered={res.reload} />)
+          )}
+        </Card>
+      </div>
+    </>
   );
 }

@@ -6,9 +6,14 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { API_BASE } from "./planAccess";
-import { fetchCountersigner, type Countersigner } from "./nda";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Field, TextInput } from "@/components/ui/Field";
+import { api, ApiError } from "@/lib/api";
+import { fetchCountersigner, type Countersigner } from "@/lib/plan-nda";
 import { SignatureCapture } from "./SignatureCapture";
+
+const errorText = (e: unknown) => (e instanceof ApiError || e instanceof Error ? e.message : "Something went wrong.");
 
 export function CountersignatureCard({ onLoaded }: { onLoaded?: (cs: Countersigner | null) => void }) {
   const [cs, setCs] = useState<Countersigner | null>(null);
@@ -29,7 +34,7 @@ export function CountersignatureCard({ onLoaded }: { onLoaded?: (cs: Countersign
       onLoadedRef.current?.(c);
       if (c) { setName(c.name); setTitle(c.title); }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load");
+      setError(errorText(err));
     } finally {
       setLoaded(true);
     }
@@ -43,72 +48,60 @@ export function CountersignatureCard({ onLoaded }: { onLoaded?: (cs: Countersign
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/admin/plan/nda/countersigner`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, title, signature: png }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Could not save");
+      await api("/admin/plan/nda/countersigner", { method: "PUT", body: { name, title, signature: png } });
       setEditing(false);
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not save");
+      setError(errorText(err));
     } finally {
       setSaving(false);
     }
   }
 
   if (!loaded) return null;
-  const input: React.CSSProperties = { width: "100%", padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 6, fontSize: "0.9rem" };
 
   return (
-    <section style={{ background: cs ? "white" : "#fffbeb", border: `1px solid ${cs ? "#e5e7eb" : "#fcd34d"}`, borderRadius: 8, padding: 16, marginBottom: 20 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
-        <div style={{ minWidth: 0 }}>
-          <h2 style={{ margin: 0, fontSize: "1rem" }}>NDA countersignature</h2>
-          <p style={{ margin: "4px 0 0", color: "#6b7280", fontSize: "0.85rem", maxWidth: 620 }}>
-            {cs
-              ? "Applied automatically when a recipient signs, so every NDA is fully executed on the spot."
-              : "Not adopted yet. Codes that require an NDA cannot be signed until you adopt your countersignature here."}
-            {" "}The NDA text should be reviewed by a Utah attorney before you rely on it.
-          </p>
-        </div>
-        {cs && !editing ? (
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={cs.signature} alt="Adopted signature" style={{ maxHeight: 44, maxWidth: 180, objectFit: "contain" }} />
-            <div style={{ fontSize: "0.85rem" }}>
-              <div style={{ fontWeight: 600 }}>{cs.name}</div>
-              <div style={{ color: "#6b7280" }}>{cs.title}</div>
-            </div>
-            <button onClick={() => setEditing(true)} style={{ padding: "6px 10px", border: "1px solid #d1d5db", background: "white", borderRadius: 6, cursor: "pointer", fontSize: "0.8rem" }}>Change</button>
+    <Card title="NDA countersignature"
+      action={cs && !editing ? <Button size="sm" onClick={() => setEditing(true)}>Change</Button> : !editing ? <Button variant="primary" size="sm" onClick={() => setEditing(true)}>Adopt signature</Button> : null}>
+      <p className="text-[15px] leading-relaxed text-oh-stone/80">
+        {cs
+          ? "Applied automatically when a recipient signs, so every NDA is fully executed on the spot."
+          : "Not adopted yet. Codes that require an NDA cannot be signed until you adopt your countersignature here."}
+        {" "}The NDA text should be reviewed by a Utah attorney before you rely on it.
+      </p>
+
+      {cs && !editing && (
+        <div className="mt-4 flex flex-wrap items-center gap-4">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={cs.signature} alt="Adopted signature" className="max-h-11 max-w-[180px] object-contain" />
+          <div className="text-[15px]">
+            <p className="font-semibold text-oh-charcoal">{cs.name}</p>
+            <p className="text-oh-stone/70">{cs.title}</p>
           </div>
-        ) : !editing ? (
-          <button onClick={() => setEditing(true)} style={{ padding: "8px 14px", background: "#5A5847", color: "white", border: "none", borderRadius: 6, cursor: "pointer" }}>Adopt signature</button>
-        ) : null}
-      </div>
+        </div>
+      )}
+
       {editing && (
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1.3fr)", gap: 16, marginTop: 14 }}>
-          <div>
-            <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, marginBottom: 4 }}>Full legal name</label>
-            <input style={input} value={name} onChange={(e) => setName(e.target.value)} />
-            <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, margin: "10px 0 4px" }}>Title</label>
-            <input style={input} value={title} onChange={(e) => setTitle(e.target.value)} />
-            <p style={{ color: "#6b7280", fontSize: "0.75rem", marginTop: 10 }}>Signing as Oh! Beef Noodle Soup, LLC.</p>
+        <div className="mt-4 grid gap-6 lg:grid-cols-2">
+          <div className="space-y-4">
+            <Field label="Full legal name">
+              <TextInput value={name} onChange={(e) => setName(e.target.value)} />
+            </Field>
+            <Field label="Title">
+              <TextInput value={title} onChange={(e) => setTitle(e.target.value)} />
+            </Field>
+            <p className="text-sm text-oh-stone/70">Signing as Oh! Beef Noodle Soup, LLC.</p>
           </div>
           <div>
             <SignatureCapture defaultName={name} onChange={onSig} />
-            {error && <p style={{ color: "#991b1b", fontSize: "0.85rem" }}>{error}</p>}
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 10 }}>
-              <button onClick={() => setEditing(false)} style={{ padding: "8px 14px", background: "white", border: "1px solid #d1d5db", borderRadius: 6, cursor: "pointer" }}>Cancel</button>
-              <button onClick={() => void save()} disabled={saving || !png || name.trim().length < 3 || !title.trim()} style={{ padding: "8px 14px", background: "#5A5847", color: "white", border: "none", borderRadius: 6, cursor: "pointer", opacity: saving || !png ? 0.6 : 1 }}>
-                {saving ? "Saving..." : "Adopt signature"}
-              </button>
+            {error && <p role="alert" className="mt-2 text-sm font-medium text-oh-ember-deep">{error}</p>}
+            <div className="mt-3 flex justify-end gap-2">
+              <Button onClick={() => setEditing(false)}>Cancel</Button>
+              <Button variant="primary" onClick={save} loading={saving} disabled={saving || !png || name.trim().length < 3 || !title.trim()}>Adopt signature</Button>
             </div>
           </div>
         </div>
       )}
-    </section>
+    </Card>
   );
 }

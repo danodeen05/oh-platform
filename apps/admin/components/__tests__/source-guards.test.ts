@@ -12,7 +12,6 @@ function files(dir: string): string[] {
 // Paths not yet rebuilt; each rebuild task deletes its entries. Task 29 asserts this is empty.
 export const LEGACY: string[] = [
   "app/(console)/analytics",
-  "app/(console)/plan-access",
 ];
 const all = DIRS.flatMap(files).filter((f) => !LEGACY.some((l) => path.relative(root, f).startsWith(l)));
 const offendingLines = (bad: (line: string) => boolean) =>
