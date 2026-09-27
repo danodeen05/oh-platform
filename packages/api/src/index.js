@@ -61,11 +61,19 @@ import {
   getAPNsEnvironment,
 } from "./wallet/apns-service.js";
 import { computeDiscountCents } from "./promos/discount.js";
+import { buildUsageDateFilter, summarizePromoAnalytics } from "./promos/analytics.js";
 import { registerAutonomousRoutes } from "./autonomous/index.js";
 import { getScheduler } from "./triggers/index.js";
 import { getOrchestrator } from "./autonomous/index.js";
 import { registerCateringRoutes, isDineInOrdersEnabled } from "./catering/routes.js";
 import { registerPlanRoutes } from "./plan/routes.js";
+import { registerAdminConsoleRoutes } from "./admin/console-routes.js";
+import { menuPatchData } from "./admin/menu-fields.js";
+import { withStatusDemo, registerStatusDemoGuard } from "./demo/status-demo.js";
+import { createClerkClient } from "@clerk/backend";
+import { createAdminAuth, parseAdminEmails } from "./auth/admin.js";
+import { registerAdminAuthHooks } from "./auth/admin-hook.js";
+import { registerTeamRoutes } from "./admin/team-routes.js";
 import { registerMembershipRoutes } from "./membership/routes.js";
 import { registerOrderRoutes } from "./orders/routes.js";
 import { registerGroupOrderRoutes } from "./orders/group-routes.js";
@@ -76,9 +84,6 @@ import { grantCredit } from "./membership/credits.js";
 import { taxCents, spendBaseCents } from "./orders/pricing.js";
 import { PROGRAM, tierRule } from "./membership/program.js";
 import { onOrderCompleted, applyReferralSignup, visibleMenuItems, firstUnreleasedItem, profileForUser } from "./membership/engine.js";
-import { withStatusDemo, registerStatusDemoGuard } from "./demo/status-demo.js";
-import { createAdminAuth } from "./auth/admin.js";
-import { registerConsoleGuard, registerAdminPathGuard } from "./auth/console-guard.js";
 import { createCustomerAuth, registerCustomerIdentity, orderOwnerId, chappyCreditsToDeduct, resolveChappyWebIdentity } from "./auth/customer.js";
 import { createKioskAuth } from "./auth/kiosk.js";
 import { publicReferral, shopCreditSpender, registerAdminOnlyRoutes } from "./auth/hardening.js";
@@ -131,6 +136,7 @@ const allowedOrigins = [
   ...(process.env.NODE_ENV !== 'production' ? [
     'http://localhost:3000',
     'http://localhost:3001',
+    'http://localhost:3011',
     'http://localhost:4000',
     'http://127.0.0.1:3000',
     'http://127.0.0.1:3001',
@@ -176,12 +182,14 @@ await app.register(rateLimit, {
 });
 
 // Admin authentication middleware: see src/auth/admin.js. Clerk session
-// tokens are verified server-side and checked against the ADMIN_EMAILS
-// allowlist; x-admin-api-key remains for server-to-server callers.
-const { requireAdminAuth } = createAdminAuth({ log: (...args) => app.log.warn({ args }, "admin auth") });
+// tokens are verified server-side and set req.adminRole (owner, manager or
+// station); an allowlisted email (ADMIN_EMAILS) is always owner.
+// x-admin-api-key remains for server-to-server callers (owner).
+const { requireAdminAuth, requireRole, forget: forgetAdminRole } = createAdminAuth({ log: (...args) => app.log.warn({ args }, "admin auth") });
 
-// Console-only routes outside /admin (see auth/console-guard.js). Must run before routes are declared.
-registerConsoleGuard(app, { requireAdminAuth });
+// All admin auth wiring: /admin/* role checks and the console-only routes
+// outside /admin (see auth/admin-hook.js). Must run before routes are declared.
+registerAdminAuthHooks(app, { requireAdminAuth, requireRole });
 
 // Operator routes outside /admin/* (wallet diagnostics, kiosk device admin):
 // see ADMIN_ONLY_ROUTES in src/auth/hardening.js. Uses onRoute, so it must
@@ -197,9 +205,6 @@ const kioskAuth = createKioskAuth({
 
 // Demo orders never write: call staff, add-ons, refills and "done eating" are simulated.
 registerStatusDemoGuard(app, { source: statusDemoSource });
-
-// Apply admin auth to all /admin/* routes
-registerAdminPathGuard(app, { requireAdminAuth });
 
 // Customer identity: see src/auth/customer.js. Member-scoped routes read the
 // caller from a verified Clerk session (or a signed guest token), never from a
@@ -229,6 +234,22 @@ await registerCateringRoutes(app);
 
 // Register interactive business plan routes (/plan/* BFF + /admin/plan/*)
 await registerPlanRoutes(app);
+
+// Admin console today pulse and dine-in order lookup (see src/admin/console-routes.js)
+await registerAdminConsoleRoutes(app, {
+  prisma,
+  resolveTenant: (req) => prisma.tenant.findUnique({ where: { slug: getTenantContext(req) }, select: { id: true } }),
+});
+
+// Owner team management via Clerk roles (see src/admin/team-routes.js)
+if (process.env.CLERK_SECRET_KEY) {
+  await registerTeamRoutes(app, {
+    clerk: createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY }),
+    adminEmails: parseAdminEmails(process.env.ADMIN_EMAILS),
+    forgetRole: forgetAdminRole,
+    adminUrl: process.env.ADMIN_URL || "https://admin.ohbeef.com",
+  });
+}
 
 // Register membership engine routes (GET /membership/program, GET /users/:id/rewards)
 await registerMembershipRoutes(app, { prisma });
@@ -1450,6 +1471,7 @@ app.post("/menu", async (req, reply) => {
     additionalPriceCents,
     includedQuantity,
     sliderConfig,
+    isAvailable,
     tenantId
   } = req.body || {};
 
@@ -1471,6 +1493,7 @@ app.post("/menu", async (req, reply) => {
       additionalPriceCents: additionalPriceCents || 0,
       includedQuantity: includedQuantity || 0,
       sliderConfig: sliderConfig || null,
+      isAvailable: typeof isAvailable === "boolean" ? isAvailable : true,
       tenantId
     },
   });
@@ -1480,37 +1503,14 @@ app.post("/menu", async (req, reply) => {
 
 app.patch("/menu/:id", async (req, reply) => {
   const { id } = req.params;
-  const {
-    name,
-    category,
-    description,
-    basePriceCents,
-    additionalPriceCents,
-    includedQuantity,
-    priceCents // legacy support
-  } = req.body || {};
-
-  const data = {};
-  if (name !== undefined) data.name = name;
-  if (category !== undefined) data.category = category;
-  if (description !== undefined) data.description = description;
-  if (additionalPriceCents !== undefined) data.additionalPriceCents = additionalPriceCents;
-  if (includedQuantity !== undefined) data.includedQuantity = includedQuantity;
-
-  // Support both priceCents (legacy) and basePriceCents (new schema)
-  if (basePriceCents !== undefined) data.basePriceCents = basePriceCents;
-  else if (priceCents !== undefined) data.basePriceCents = priceCents;
-
-  if (!Object.keys(data).length) {
-    return reply.code(400).send({ error: "At least one field required" });
+  const { data, error } = menuPatchData(req.body);
+  if (error) return reply.code(400).send({ error });
+  try {
+    return await prisma.menuItem.update({ where: { id }, data });
+  } catch (err) {
+    if (err.code === "P2025") return reply.code(404).send({ error: "Menu item not found" });
+    throw err;
   }
-
-  const item = await prisma.menuItem.update({
-    where: { id },
-    data,
-  });
-
-  return item;
 });
 
 app.delete("/menu/:id", async (req, reply) => {
@@ -12689,13 +12689,7 @@ app.patch("/admin/promo-codes/:id", async (req, reply) => {
 app.get("/admin/promo-codes/analytics", async (req, reply) => {
   try {
     const { startDate, endDate } = req.query;
-
-    const dateFilter = {};
-    if (startDate || endDate) {
-      dateFilter.usedAt = {};
-      if (startDate) dateFilter.usedAt.gte = new Date(startDate);
-      if (endDate) dateFilter.usedAt.lte = new Date(endDate);
-    }
+    const dateFilter = buildUsageDateFilter(startDate, endDate);
 
     // Get all promo codes with usage stats
     const promoCodes = await prisma.promoCode.findMany({
@@ -12707,44 +12701,14 @@ app.get("/admin/promo-codes/analytics", async (req, reply) => {
           where: dateFilter,
           select: {
             discountCents: true,
-            usedAt: true,
+            createdAt: true,
           },
         },
       },
       orderBy: { currentUsageCount: "desc" },
     });
 
-    // Calculate analytics per code
-    const analytics = promoCodes.map((code) => {
-      const totalDiscountCents = code.usages.reduce((sum, u) => sum + u.discountCents, 0);
-      return {
-        id: code.id,
-        code: code.code,
-        discountType: code.discountType,
-        discountValue: code.discountValue,
-        scope: code.scope,
-        isActive: code.isActive,
-        totalUsages: code.currentUsageCount,
-        usagesInPeriod: code.usages.length,
-        totalDiscountGivenCents: totalDiscountCents,
-        usageLimit: code.totalUsageLimit,
-        expiresAt: code.expiresAt,
-      };
-    });
-
-    // Overall stats
-    const totalUsages = analytics.reduce((sum, a) => sum + a.usagesInPeriod, 0);
-    const totalDiscountCents = analytics.reduce((sum, a) => sum + a.totalDiscountGivenCents, 0);
-
-    return reply.send({
-      promoCodes: analytics,
-      summary: {
-        totalCodes: promoCodes.length,
-        activeCodes: promoCodes.filter((c) => c.isActive).length,
-        totalUsagesInPeriod: totalUsages,
-        totalDiscountGivenCents: totalDiscountCents,
-      },
-    });
+    return reply.send(summarizePromoAnalytics(promoCodes));
   } catch (error) {
     console.error("Error fetching promo code analytics:", error);
     return reply.status(500).send({ error: error.message });

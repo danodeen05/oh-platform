@@ -1,0 +1,60 @@
+/*
+ * Tailwind v4 for the admin console. Mirrors apps/web/app/globals.css: theme
+ * plus unlayered utilities, no preflight, so the Kitchen and Cleaning displays
+ * (inline styles) render exactly as before. Palette values must match the web
+ * app; lib/__tests__/tokens.test.ts enforces it.
+ */
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css";
+@source "../app";
+@source "../components";
+@source "../lib";
+
+@theme {
+  --color-oh-charcoal: #1C1B19;
+  --color-oh-ink: #2A2724;
+  --color-oh-stone: #3A3632;
+  --color-oh-ash: #8A8178;
+  --color-oh-mute: #9A9188;
+  --color-oh-cream: #F2EDE4;
+  --color-oh-paper: #FAF7F1;
+  --color-oh-linen: #EDE6DA;
+  --color-oh-ember: #C1502E;
+  --color-oh-ember-light: #E07A5A;
+  --color-oh-ember-deep: #A94422;
+  --color-oh-olive: #6B7355;
+  --color-oh-olive-light: #8F9A75;
+  --color-oh-gold: #C9A227;
+  --color-oh-clay: #8C5A3C;
+  --radius-card: 14px;
+  --shadow-card: 0 1px 2px rgb(28 27 25 / 0.06), 0 4px 16px rgb(28 27 25 / 0.05);
+}
+
+@theme inline {
+  --font-display: var(--font-instrument-serif), Georgia, "Times New Roman", serif;
+  --font-body: var(--font-raleway), system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/* Console-only base: scoped to .oh-console so display routes keep browser defaults.
+ * It lives in a cascade layer so every (unlayered) utility wins over it, including
+ * Tailwind's zero-specificity :where() utilities such as divide-* and space-*,
+ * while it still beats the browser's own button and input styles. */
+@layer oh-base {
+  .oh-console { font-family: var(--font-body); color: var(--color-oh-charcoal); background: var(--color-oh-paper); -webkit-tap-highlight-color: transparent; -webkit-font-smoothing: antialiased; }
+  .oh-console *, .oh-console *::before, .oh-console *::after { box-sizing: border-box; border: 0 solid; }
+  .oh-console :where(h1, h2, h3, h4, p, ul, ol, figure) { margin: 0; padding: 0; }
+  .oh-console :where(ul, ol) { list-style: none; }
+  .oh-console :where(button, input, select, textarea) { font: inherit; color: inherit; letter-spacing: inherit; background: transparent; padding: 0; border-radius: 0; }
+  .oh-console :where(button) { cursor: pointer; }
+  .oh-console :where(input, select, textarea) { font-size: max(16px, 1em); }
+  .oh-console :where(a) { color: inherit; text-decoration: none; }
+  .oh-console :where(table) { border-collapse: collapse; }
+  .oh-console :focus-visible { outline: 2px solid var(--color-oh-gold); outline-offset: 2px; }
+}
+
+@keyframes oh-fade { from { opacity: 0 } to { opacity: 1 } }
+@keyframes oh-sheet-up { from { transform: translateY(100%) } to { transform: none } }
+@keyframes oh-sheet-left { from { transform: translateX(100%) } to { transform: none } }
+@keyframes oh-toast-in { from { transform: translateY(12px); opacity: 0 } to { transform: none; opacity: 1 } }
+@keyframes oh-pulse { 50% { opacity: .45 } }
+@media (prefers-reduced-motion: reduce) { .oh-console * { animation: none !important; transition: none !important; } }

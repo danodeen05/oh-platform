@@ -1,6 +1,6 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { createAdminAuth, parseAdminEmails, DEFAULT_ADMIN_EMAILS } from "../admin.js";
+import { createAdminAuth, parseAdminEmails, DEFAULT_ADMIN_EMAILS, roleFor, ADMIN_ROLES } from "../admin.js";
 
 function replyStub() {
   const r = { statusCode: 200, body: null };
@@ -21,11 +21,15 @@ function build(overrides = {}, env = prodEnv) {
       if (token === "dev-good" && secretKey === "sk_dev_y") return { sub: "user_admin" };
       if (token === "stranger" && secretKey === "sk_test_x") return { sub: "user_other" };
       if (token === "nosub" && secretKey === "sk_test_x") return {};
+      if (token === "manager" && secretKey === "sk_test_x") return { sub: "mgr" };
+      if (token === "station" && secretKey === "sk_test_x") return { sub: "stn" };
       throw new Error("bad signature");
     },
     getUser: async (id) => {
       calls.getUser += 1;
       if (id === "user_admin") return { primaryEmailAddressId: "e1", emailAddresses: [{ id: "e1", emailAddress: "DanoDeen@gmail.com" }, { id: "e2", emailAddress: "other@x.com" }] };
+      if (id === "mgr") return { primaryEmailAddressId: "e1", emailAddresses: [{ id: "e1", emailAddress: "m@x.com" }], publicMetadata: { adminRole: "manager" } };
+      if (id === "stn") return { primaryEmailAddressId: "e1", emailAddresses: [{ id: "e1", emailAddress: "s@x.com" }], publicMetadata: { adminRole: "station" } };
       return { primaryEmailAddressId: "e9", emailAddresses: [{ id: "e9", emailAddress: "someone@else.com" }] };
     },
     ...overrides,
@@ -72,6 +76,28 @@ describe("requireAdminAuth in production", () => {
     await broken.auth.requireAdminAuth(req({ authorization: "Bearer good" }), r2);
     assert.equal(r2.statusCode, 401);
   });
+  test("a failed user lookup is not cached; the next call retries", async () => {
+    let attempts = 0;
+    const flaky = build({ getUser: async () => {
+      attempts += 1;
+      if (attempts === 1) throw new Error("clerk blip");
+      return { primaryEmailAddressId: "e1", emailAddresses: [{ id: "e1", emailAddress: "s@x.com" }], publicMetadata: { adminRole: "station" } };
+    } });
+    const r1 = replyStub();
+    await flaky.auth.requireAdminAuth(req({ authorization: "Bearer good" }), r1);
+    assert.equal(r1.statusCode, 401);
+    const r2 = replyStub();
+    const q = req({ authorization: "Bearer good" });
+    await flaky.auth.requireAdminAuth(q, r2);
+    assert.equal(r2.statusCode, 200);
+    assert.equal(q.adminRole, "station");
+    assert.equal(attempts, 2, "getUser is called again after a failure");
+  });
+  test("a genuine no-role result is still cached", async () => {
+    const { auth, calls } = build();
+    for (let i = 0; i < 2; i += 1) await auth.requireAdminAuth(req({ authorization: "Bearer stranger" }), replyStub());
+    assert.equal(calls.getUser, 1);
+  });
   test("accepts a token from the development instance when CLERK_SECRET_KEY_DEV is set", async () => {
     const { auth, calls } = build({}, { ...prodEnv, CLERK_SECRET_KEY_DEV: "sk_dev_y" });
     const reply = replyStub();
@@ -101,5 +127,68 @@ describe("requireAdminAuth in development", () => {
     const r2 = replyStub();
     await keyed.auth.requireAdminAuth(req({ authorization: "Bearer admin-dashboard" }), r2);
     assert.equal(r2.statusCode, 401);
+  });
+});
+
+describe("roleFor", () => {
+  const adminEmails = ["owner@x.com"];
+  test("allowlisted email is owner regardless of metadata", () => {
+    assert.equal(roleFor({ email: "Owner@x.com", metadata: { adminRole: "station" }, adminEmails }), "owner");
+  });
+  test("metadata role is used for everyone else", () => {
+    assert.equal(roleFor({ email: "m@x.com", metadata: { adminRole: "manager" }, adminEmails }), "manager");
+    assert.equal(roleFor({ email: "s@x.com", metadata: { adminRole: "station" }, adminEmails }), "station");
+  });
+  test("unknown or missing role is null", () => {
+    assert.equal(roleFor({ email: "z@x.com", metadata: { adminRole: "god" }, adminEmails }), null);
+    assert.equal(roleFor({ email: "z@x.com", metadata: undefined, adminEmails }), null);
+  });
+  test("ADMIN_ROLES is the closed set", () => assert.deepEqual([...ADMIN_ROLES], ["owner", "manager", "station"]));
+});
+
+describe("roles on requireAdminAuth (production)", () => {
+  test("sets req.adminRole from the bearer", async () => {
+    const { auth } = build();
+    const r = req({ authorization: "Bearer manager" });
+    const reply = replyStub();
+    await auth.requireAdminAuth(r, reply);
+    assert.equal(reply.statusCode, 200);
+    assert.equal(r.adminRole, "manager");
+  });
+  test("api key is owner", async () => {
+    const { auth } = build();
+    const r = req({ "x-admin-api-key": "key-123" });
+    await auth.requireAdminAuth(r, replyStub());
+    assert.equal(r.adminRole, "owner");
+  });
+  test("requireRole rejects other roles with 403", async () => {
+    const { auth } = build();
+    const r = req({ authorization: "Bearer station" });
+    await auth.requireAdminAuth(r, replyStub());
+    const reply = replyStub();
+    await auth.requireRole("owner", "manager")(r, reply);
+    assert.equal(reply.statusCode, 403);
+  });
+  test("forget drops the cached role so a change applies on the next call", async () => {
+    const { auth, calls } = build();
+    await auth.resolveBearer("manager");
+    await auth.resolveBearer("manager");
+    const before = calls.getUser;
+    auth.forget("mgr");
+    await auth.resolveBearer("manager");
+    assert.equal(calls.getUser, before + 1);
+  });
+});
+
+describe("dev bypass", () => {
+  test("uses DEV_ADMIN_ROLE when valid, owner otherwise", async () => {
+    const dev = createAdminAuth({ env: { NODE_ENV: "development", DEV_ADMIN_ROLE: "manager" } });
+    const r = req({});
+    await dev.requireAdminAuth(r, replyStub());
+    assert.equal(r.adminRole, "manager");
+    const dev2 = createAdminAuth({ env: { NODE_ENV: "development", DEV_ADMIN_ROLE: "nope" } });
+    const r2 = req({});
+    await dev2.requireAdminAuth(r2, replyStub());
+    assert.equal(r2.adminRole, "owner");
   });
 });
