@@ -79,7 +79,7 @@ export default function GiftCardsPage() {
   return (
     <>
       <PageHeader title="Gift cards"
-        subtitle={role === "owner" ? <Link href="/gift-cards/config" className="font-semibold text-oh-ember-deep hover:underline">Gift card setup</Link> : undefined} />
+        subtitle={role === "owner" ? <Link href="/gift-cards/config" className="inline-flex min-h-11 items-center font-semibold text-oh-ember-deep hover:underline">Gift card setup</Link> : undefined} />
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <StatTile label="Sold" value={statsRes.data ? statsRes.data.totalCards : "…"} />

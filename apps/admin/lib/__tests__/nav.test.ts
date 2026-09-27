@@ -30,4 +30,8 @@ describe("activeHref", () => {
     expect(activeHref("/orders/o1", hrefs)).toBe("/orders");
     expect(activeHref("/menu", hrefs)).toBeNull();
   });
+  test("shop orders belong to the Orders section", () => {
+    expect(activeHref("/shop-orders", hrefs)).toBe("/orders");
+    expect(activeHref("/shop-orders/s1", hrefs)).toBe("/orders");
+  });
 });

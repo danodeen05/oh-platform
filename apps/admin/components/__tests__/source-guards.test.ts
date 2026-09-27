@@ -44,6 +44,7 @@ describe("dialog matcher", () => {
 });
 
 describe("console source guards", () => {
+  test("LEGACY is empty", () => expect(LEGACY).toEqual([]));
   test("no inline styles except marked dynamic values", () => {
     expect(offenders(/style=\{\{/, /style-ok:/).filter((o) => !o.startsWith("components/ApiAuthInit"))).toEqual([]);
   });

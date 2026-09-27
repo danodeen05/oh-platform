@@ -42,7 +42,12 @@ export function navFor(role: AdminRole) {
   };
 }
 
-export function activeHref(pathname: string, hrefs: string[]): string | null {
+/** Pages reached through another section's tabs: Shop orders is the Shop tab of Orders. */
+const SECTION_ALIASES: Record<string, string> = { "/shop-orders": "/orders" };
+
+export function activeHref(rawPathname: string, hrefs: string[]): string | null {
+  const alias = Object.keys(SECTION_ALIASES).find((a) => rawPathname === a || rawPathname.startsWith(a + "/"));
+  const pathname = alias ? SECTION_ALIASES[alias] : rawPathname;
   const hits = hrefs.filter((h) => (h === "/" ? pathname === "/" : pathname === h || pathname.startsWith(h + "/")));
   return hits.sort((a, b) => b.length - a.length)[0] ?? null;
 }

@@ -113,7 +113,7 @@ export default function CateringPage() {
                 <div className="space-y-2.5 px-4 py-3">
                   <div className="flex items-start justify-between gap-2">
                     <span>
-                      <Link href={`/catering/${e.id}`} className="block font-semibold text-oh-charcoal underline-offset-4 hover:underline">{e.clientCompany}</Link>
+                      <Link href={`/catering/${e.id}`} className="flex min-h-11 min-w-11 items-center font-semibold text-oh-charcoal underline-offset-4 hover:underline">{e.clientCompany}</Link>
                       {e.contactName && <span className="block text-sm text-oh-stone/60">{e.contactName}</span>}
                     </span>
                     <StatusBadge status={e.status} />

@@ -125,7 +125,7 @@ export default function PlanAccessPage() {
                 <div className="space-y-2 px-4 py-3">
                   <div className="flex items-start justify-between gap-2">
                     <span>
-                      <Link href={`/plan-access/${c.id}`} className="font-semibold text-oh-charcoal underline-offset-4 hover:underline">{c.label}</Link>
+                      <Link href={`/plan-access/${c.id}`} className="flex min-h-11 min-w-11 items-center font-semibold text-oh-charcoal underline-offset-4 hover:underline">{c.label}</Link>
                       <span className="block font-mono text-sm text-oh-stone/60">{c.code}</span>
                     </span>
                     <span className="flex shrink-0 flex-col items-end gap-1">
