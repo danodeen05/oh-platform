@@ -1,0 +1,193 @@
+/**
+ * API routes that intentionally carry no admin auth, with the reason.
+ * The classification test requires every route outside /admin and /plan to be
+ * listed here or in console-guard.js CONSOLE_ROUTES.
+ */
+const p = (method, url, why) => Object.freeze({ method, url, why });
+
+export const PUBLIC_ROUTES = Object.freeze([
+  // Health check (infra/monitoring)
+  p("GET", "/health", "public-read"),
+
+  // Basic public reads (tenant/location/menu context, needed before a session exists)
+  p("GET", "/tenants", "customer"),
+  p("GET", "/locations", "customer"),
+  p("GET", "/locations/:id/availability", "customer"),
+  p("GET", "/locations/:id/seats", "customer"),
+  p("GET", "/menu", "public-read"),
+  p("GET", "/menu/steps", "customer"),
+  p("GET", "/seats/:qrCode", "public-read"),
+
+  // Kiosk
+  p("POST", "/kiosk/auth", "kiosk"),
+  p("POST", "/kiosk/heartbeat", "kiosk"),
+  p("GET", "/orders/by-member", "kiosk"),
+  p("GET", "/orders/lookup", "kiosk"),
+
+  // Customer ordering flow
+  p("POST", "/orders/check-in", "customer"),
+  p("GET", "/orders/status", "customer"),
+  p("POST", "/orders/link-to-account", "customer"),
+  p("POST", "/orders/confirm-pod", "customer"),
+  p("POST", "/pods/confirm-arrival", "customer"),
+  p("GET", "/pods/info", "customer"),
+  p("POST", "/orders/:id/call-staff", "customer"),
+  p("GET", "/orders/:id/available-addons", "customer"),
+  p("POST", "/orders/:id/refill", "customer"),
+  p("POST", "/orders/:id/extra-vegetables", "customer"),
+  p("POST", "/orders/:id/dessert-ready", "customer"),
+  p("POST", "/orders/:id/addons", "customer"),
+  p("GET", "/orders/:id", "customer"),
+  p("POST", "/orders", "customer"),
+  p("GET", "/orders/event/check", "customer"),
+  p("POST", "/orders/event", "customer"),
+  p("GET", "/orders/zodiac-insights", "customer"),
+  p("PATCH", "/orders/:id", "customer"),
+  p("GET", "/orders/fortune", "customer"),
+  p("GET", "/orders/roast", "customer"),
+  p("GET", "/orders/commentary", "customer"),
+  p("GET", "/orders/:id/backstory", "customer"),
+  p("GET", "/orders/mental-health-fact", "customer"),
+  p("POST", "/orders/:id/apply-credits", "customer"),
+  p("PATCH", "/kitchen/orders/:id/status", "customer"),
+
+  // Cron
+  p("GET", "/cny/rsvps", "cron"),
+  p("POST", "/cron/cny-sms-reminder", "cron"),
+  p("POST", "/cron/cny-sms-order-link", "cron"),
+  p("POST", "/cron/cny-sms-test", "cron"),
+  p("POST", "/cron/disburse-credits", "cron"),
+  p("POST", "/cron/wallet-streak-notifications", "cron"),
+  p("POST", "/cron/wallet-challenge-notifications", "cron"),
+  p("POST", "/cron/wallet-credits-reminder", "cron"),
+  p("POST", "/cron/wallet-tier-progress", "cron"),
+  p("POST", "/cron/wallet-pod-availability", "cron"),
+  p("POST", "/cron/catering-sms-dayof", "cron"),
+  p("POST", "/cron/catering-sms-survey", "cron"),
+  p("POST", "/cron/catering-weekly-digest", "cron"),
+
+  // Users, guests, credits
+  p("POST", "/users", "customer"),
+  p("GET", "/users/by-email/:email", "customer"),
+  p("GET", "/users/referral/:code", "public-read"),
+  p("POST", "/create-payment-intent", "customer"),
+  p("POST", "/guests", "customer"),
+  p("GET", "/guests/session/:token", "customer"),
+  p("PATCH", "/guests/:id", "customer"),
+  p("POST", "/guests/session/refresh", "customer"),
+  p("GET", "/users/:id/credits", "customer"),
+  p("POST", "/users/:id/deduct-credits", "customer"),
+  p("GET", "/users/:id/profile", "customer"),
+  p("PATCH", "/users/:id/phone", "customer"),
+  p("GET", "/users/:id/orders", "customer"),
+  p("GET", "/users/by-email/:email/order-patterns", "customer"),
+  p("POST", "/users/:id/stripe-customer", "customer"),
+  p("GET", "/users/:id/payment-methods", "customer"),
+  p("POST", "/users/:id/payment-methods", "customer"),
+  p("DELETE", "/users/:id/payment-methods/:methodId", "customer"),
+
+  // Badges and challenges
+  p("GET", "/badges", "customer"),
+  p("GET", "/challenges", "customer"),
+  p("GET", "/users/:id/challenges", "customer"),
+  p("GET", "/challenges/:idOrSlug", "public-read"),
+  p("POST", "/users/:userId/challenges/:challengeId/enroll", "customer"),
+  p("POST", "/users/:userId/challenges/:challengeId/claim", "customer"),
+  p("GET", "/users/:id/badge-progress", "customer"),
+  p("GET", "/users/:id/pending-credits", "customer"),
+
+  // Wallet passes (customer-facing status/actions) and Wallet v1 (pass-token auth)
+  p("GET", "/wallet/status", "customer"),
+  p("GET", "/users/:id/wallet/apple", "customer"),
+  p("GET", "/users/:id/wallet/google", "customer"),
+  p("GET", "/users/:id/wallet", "customer"),
+  p("POST", "/wallet/v1/devices/:deviceLibraryId/registrations/:passTypeId/:serialNumber", "wallet"),
+  p("DELETE", "/wallet/v1/devices/:deviceLibraryId/registrations/:passTypeId/:serialNumber", "wallet"),
+  p("GET", "/wallet/v1/devices/:deviceLibraryId/registrations/:passTypeId", "wallet"),
+  p("GET", "/wallet/v1/passes/:passTypeId/:serialNumber", "wallet"),
+  p("POST", "/wallet/v1/log", "wallet"),
+
+  // Group orders
+  p("POST", "/group-orders", "customer"),
+  p("GET", "/group-orders/:code", "customer"),
+  p("POST", "/group-orders/:code/join", "customer"),
+  p("PATCH", "/group-orders/:code", "customer"),
+  p("POST", "/group-orders/:code/orders", "customer"),
+  p("DELETE", "/group-orders/:code/orders/:orderId", "customer"),
+  p("POST", "/group-orders/:code/transfer-host", "customer"),
+  p("POST", "/group-orders/:code/complete", "customer"),
+
+  // Meal gifts
+  p("POST", "/meal-gifts", "customer"),
+  p("GET", "/meal-gifts/next/:locationId", "customer"),
+  p("POST", "/meal-gifts/:id/accept", "customer"),
+  p("POST", "/meal-gifts/:id/pay-forward", "customer"),
+  p("GET", "/meal-gifts/:id", "customer"),
+  p("GET", "/users/:userId/meal-gifts", "customer"),
+
+  // Analytics (customer-side event logging)
+  p("POST", "/analytics/language", "customer"),
+
+  // Gift cards and shop
+  p("POST", "/gift-cards", "customer"),
+  p("GET", "/gift-cards/code/:code", "customer"),
+  p("POST", "/gift-cards/:id/apply", "customer"),
+  p("POST", "/gift-cards/:id/confirm-payment", "webhook"),
+  p("GET", "/shop/products", "customer"),
+  p("GET", "/shop/products/:slug", "public-read"),
+  p("GET", "/shop/products/qr/:qrCode", "customer"),
+  p("POST", "/shop/orders", "customer"),
+  p("PATCH", "/shop/orders/:id", "webhook"),
+  p("POST", "/promo-codes/validate", "customer"),
+  p("GET", "/gift-card-config", "customer"),
+
+  // Party invitations
+  p("GET", "/party-invitations/:code", "customer"),
+  p("POST", "/party-invitations/:code/rsvp", "customer"),
+
+  // Chappy
+  p("POST", "/chappy/sms", "webhook"),
+  p("POST", "/chappy/chat", "customer"),
+  p("GET", "/chappy/chat/stream", "customer"),
+  p("GET", "/chappy/history", "customer"),
+  p("POST", "/chappy/reset", "customer"),
+  p("POST", "/chappy/confirm-payment", "customer"),
+
+  // Catering: public catering/* (404s unless CATERING_PUBLIC_ENABLED, except the two admin-console reads)
+  p("GET", "/catering/site-config/order-now", "catering-public"),
+  p("GET", "/catering/availability", "catering-public"),
+  p("GET", "/catering/events/:slug", "catering-public"),
+  p("GET", "/catering/menu", "catering-public"),
+  p("GET", "/catering/events/:slug/greeting", "catering-public"),
+  p("POST", "/catering/bookings", "catering-public"),
+  p("POST", "/catering/bookings/:id/promo", "catering-public"),
+  p("POST", "/catering/bookings/:id/confirm", "catering-public"),
+  p("GET", "/catering/dashboard/:bookingToken", "catering-public"),
+  p("POST", "/catering/events/:slug/rsvp", "catering-public"),
+  p("GET", "/catering/events/:slug/order/check", "catering-public"),
+  p("POST", "/catering/events/:slug/order", "catering-public"),
+  p("GET", "/catering/kitchen-locations", "catering-public"),
+  p("GET", "/catering/orders/:qrCode/chappy-quip", "catering-public"),
+  p("POST", "/catering/orders/:qrCode/arrive", "catering-public"),
+  p("DELETE", "/catering/events/:slug/order/:orderId", "catering-public"),
+  p("GET", "/catering/events/:slug/survey/identity", "catering-public"),
+  p("POST", "/catering/events/:slug/survey", "catering-public"),
+
+  // Agents: only the routes the web proxy (apps/web/app/api/agents/*/route.ts) actually
+  // calls stay public. Everything else in autonomous/routes.js moved to CONSOLE_ROUTES
+  // (OWNER) because it had no caller anywhere in apps/ and autonomous/routes.js applies
+  // no auth of its own.
+  // TODO(security): web proxy has Clerk auth but API does not; needs a shared secret
+  p("POST", "/agents/ideas", "agents"),
+  p("GET", "/agents/runs", "agents"),
+  p("GET", "/agents/runs/:id", "agents"),
+  p("POST", "/agents/approvals/:id", "agents"),
+  p("POST", "/agents/questions/:id", "agents"),
+
+  // Webhooks
+  p("POST", "/webhooks/github", "webhook"),
+  p("POST", "/webhooks/stripe", "webhook"),
+  p("POST", "/webhooks/monitoring", "webhook"),
+  p("POST", "/webhooks/trigger", "webhook"),
+  p("GET", "/webhooks/status", "webhook"),
+]);
