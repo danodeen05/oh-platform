@@ -2,45 +2,24 @@ import { clerkMiddleware, createRouteMatcher, clerkClient } from '@clerk/nextjs/
 import { NextResponse } from 'next/server'
 import type { NextFetchEvent, NextRequest } from 'next/server'
 import { expireForeignHandshakeCookies, withoutForeignHandshakeCookies } from './lib/clerk-foreign-cookies'
-
-// Allowed admin email addresses
-const ALLOWED_ADMINS = [
-  'danodeen@me.com',
-  'danodeen@gmail.com',
-]
+import { decide, type AdminRole } from './lib/access'
+import { devRole, requestHeadersWithRole, resolveRole } from './lib/roles'
 
 const isPublicRoute = createRouteMatcher(['/sign-in(.*)', '/sign-up(.*)', '/unauthorized(.*)'])
 
 const withClerk = clerkMiddleware(async (auth, request) => {
-  // Skip auth entirely in development
+  let role: AdminRole | null = null
   if (process.env.NODE_ENV === 'development') {
-    return NextResponse.next()
+    role = devRole()
+  } else if (!isPublicRoute(request)) {
+    const { userId } = await auth.protect()
+    const user = await (await clerkClient()).users.getUser(userId)
+    const email = user.emailAddresses.find((e) => e.id === user.primaryEmailAddressId)?.emailAddress
+    role = resolveRole(email, user.publicMetadata as Record<string, unknown>)
   }
-
-  // Allow public routes (sign-in, unauthorized page)
-  if (isPublicRoute(request)) {
-    return NextResponse.next()
-  }
-
-  // Require authentication
-  const { userId } = await auth.protect()
-
-  // Fetch user details to get email (works with SSO/social login)
-  const client = await clerkClient()
-  const user = await client.users.getUser(userId)
-
-  // Get primary email address
-  const primaryEmail = user.emailAddresses.find(
-    (email) => email.id === user.primaryEmailAddressId
-  )?.emailAddress
-
-  if (!primaryEmail || !ALLOWED_ADMINS.includes(primaryEmail.toLowerCase())) {
-    // Redirect unauthorized users
-    const url = new URL('/unauthorized', request.url)
-    return NextResponse.redirect(url)
-  }
-
-  return NextResponse.next()
+  const decision = decide(role, request.nextUrl.pathname)
+  if (decision.kind === 'redirect') return NextResponse.redirect(new URL(decision.to, request.url))
+  return NextResponse.next({ request: { headers: requestHeadersWithRole(request.headers, role) } })
 })
 
 // On a test Clerk key, prod's ".ohbeef.com" handshake cookies would make
