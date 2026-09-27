@@ -4,15 +4,53 @@ import { useRef } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import { PlanPhoto } from "@/components/plan/primitives/PlanPhoto";
+import { PhoneFrame } from "@/components/plan/primitives/PhoneFrame";
+import { statusDemoSrc } from "@/lib/plan/statusDemo";
 import { KioskFrame } from "./KioskFrame";
 
 /** The live kiosk opens on City Creek Mall so the demo skips the location picker. */
 const KIOSK_DEMO_LOCATION_ID = "cmip6jbz700022nnnxxpmm5hf";
-const STEPS = ["arrive", "order", "walk", "settle", "panel", "taste", "leave"] as const;
-/** Rendered sizes of /plan/experience-<step>.webp; taste is the square bowl shot. */
-const PHOTO_SIZE: Record<(typeof STEPS)[number], [number, number]> = { arrive: [1200, 900], order: [1200, 900], walk: [1200, 900], settle: [1200, 900], panel: [1200, 900], taste: [1200, 1200], leave: [1200, 900] };
+const STEPS = ["arrive", "order", "walk", "settle", "status", "panel", "taste", "leave"] as const;
+type StepKey = (typeof STEPS)[number];
+/** Rendered sizes of /plan/experience-<step>.webp; taste is the square bowl shot. "status" shows the live phone instead. */
+const PHOTO_SIZE: Record<Exclude<StepKey, "status">, [number, number]> = { arrive: [1200, 900], order: [1200, 900], walk: [1200, 900], settle: [1200, 900], panel: [1200, 900], taste: [1200, 1200], leave: [1200, 900] };
 
-function Step({ index, keyName }: { index: number; keyName: (typeof STEPS)[number] }) {
+interface Feature {
+  title: string;
+  body: string;
+}
+
+/** Step 05: the order status page, live in a phone, with what it does for the guest. */
+function StatusMedia() {
+  const t = useTranslations("plan.experience.steps.status");
+  const locale = useLocale();
+  return (
+    <div className="flex flex-col items-center gap-3">
+      <PhoneFrame src={statusDemoSrc(locale)} title={t("photo")} className="w-[300px] sm:w-[330px]" />
+      <p className="m-0 max-w-[330px] text-center text-[0.78rem] leading-snug text-oh-mute">{t("hint")}</p>
+      <a href={statusDemoSrc(locale, { embed: false })} target="_blank" rel="noreferrer" className="text-[0.8rem] text-oh-ember-light underline-offset-2 hover:underline">
+        {t("open")}
+      </a>
+    </div>
+  );
+}
+
+function StatusFeatures() {
+  const t = useTranslations("plan.experience.steps.status");
+  const features = t.raw("features") as Feature[];
+  return (
+    <ul className="m-0 mt-6 grid list-none gap-x-6 gap-y-4 p-0 sm:grid-cols-2">
+      {features.map((f) => (
+        <li key={f.title} className="border-l-2 border-oh-gold/70 pl-3">
+          <p className="m-0 text-[0.92rem] font-semibold text-oh-cream">{f.title}</p>
+          <p className="m-0 mt-0.5 text-[0.85rem] leading-snug text-oh-mute">{f.body}</p>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function Step({ index, keyName }: { index: number; keyName: StepKey }) {
   const t = useTranslations("plan.experience");
   const reduce = useReducedMotion();
   const ref = useRef<HTMLDivElement>(null);
@@ -26,9 +64,14 @@ function Step({ index, keyName }: { index: number; keyName: (typeof STEPS)[numbe
         <p className="m-0 mb-2 font-display text-[0.9rem] tabular-nums tracking-[0.2em] text-oh-ember-light">{String(index + 1).padStart(2, "0")}</p>
         <h2 className="m-0 font-display text-[clamp(1.7rem,3.5vw,2.4rem)] leading-[1.05] text-oh-cream">{t(`steps.${keyName}.title`)}</h2>
         <p className="m-0 mt-4 max-w-md text-[1.02rem] leading-relaxed text-oh-mute">{t(`steps.${keyName}.body`)}</p>
+        {keyName === "status" ? <StatusFeatures /> : null}
       </motion.div>
       <motion.div style={reduce ? undefined : { y }} className={even ? "" : "md:order-1"}>
-        <PlanPhoto src={`/plan/experience-${keyName}.webp`} alt={t(`steps.${keyName}.photo`)} width={PHOTO_SIZE[keyName][0]} height={PHOTO_SIZE[keyName][1]} note={t("photoNote")} priority={index === 0} />
+        {keyName === "status" ? (
+          <StatusMedia />
+        ) : (
+          <PlanPhoto src={`/plan/experience-${keyName}.webp`} alt={t(`steps.${keyName}.photo`)} width={PHOTO_SIZE[keyName][0]} height={PHOTO_SIZE[keyName][1]} note={t("photoNote")} priority={index === 0} />
+        )}
       </motion.div>
     </article>
   );

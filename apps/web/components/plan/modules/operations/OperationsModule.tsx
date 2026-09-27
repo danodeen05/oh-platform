@@ -23,9 +23,10 @@ const MANAGEMENT = [
 const HOURS = Array.from({ length: 16 }, (_, i) => 6 + i);
 
 const NODES = [
-  { key: "web", x: 20, y: 20, w: 150, h: 46 },
-  { key: "kiosk", x: 190, y: 20, w: 150, h: 46 },
-  { key: "admin", x: 360, y: 20, w: 150, h: 46 },
+  { key: "web", x: 10, y: 20, w: 118, h: 46 },
+  { key: "kiosk", x: 138, y: 20, w: 118, h: 46 },
+  { key: "status", x: 266, y: 20, w: 118, h: 46 },
+  { key: "admin", x: 394, y: 20, w: 126, h: 46 },
   { key: "api", x: 130, y: 120, w: 270, h: 52 },
   { key: "db", x: 20, y: 220, w: 170, h: 46 },
   { key: "stripe", x: 210, y: 220, w: 130, h: 46 },
@@ -87,9 +88,13 @@ export function OperationsModule() {
               </li>
             ))}
           </ul>
+          <div className="mt-5 rounded-lg border border-oh-gold/40 bg-oh-ink/60 p-4">
+            <p className="m-0 font-display text-[1.1rem] text-oh-cream">{t("platform.guestPhone.title")}</p>
+            <p className="m-0 mt-1 text-[0.85rem] leading-relaxed text-oh-mute">{t("platform.guestPhone.body")}</p>
+          </div>
         </div>
         <svg viewBox="0 0 530 290" className="block h-auto w-full" role="img" aria-label={t("platform.aria")}>
-          {[["web", "api"], ["kiosk", "api"], ["admin", "api"], ["api", "db"], ["api", "stripe"], ["api", "clerk"]].map(([from, to]) => {
+          {[["web", "api"], ["kiosk", "api"], ["status", "api"], ["admin", "api"], ["api", "db"], ["api", "stripe"], ["api", "clerk"]].map(([from, to]) => {
             const f = NODES.find((n) => n.key === from) as (typeof NODES)[number];
             const g = NODES.find((n) => n.key === to) as (typeof NODES)[number];
             return <line key={`${from}-${to}`} x1={f.x + f.w / 2} y1={f.y + f.h} x2={g.x + g.w / 2} y2={g.y} stroke={CHART.stone} strokeWidth={1.5} />;

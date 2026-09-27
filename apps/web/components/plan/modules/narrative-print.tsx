@@ -9,7 +9,7 @@ import { FOUNDATION, displayUrl } from "./foundation/contact";
 
 export async function ExperiencePrint({ locale = "en", scenario = "base" }: { locale?: string; scenario?: ScenarioKey } = {}) {
   const t = await getTranslations("plan.experience");
-  const steps = ["arrive", "order", "walk", "settle", "panel", "taste", "leave"] as const;
+  const steps = ["arrive", "order", "walk", "settle", "status", "panel", "taste", "leave"] as const;
   return (
     <div className="mt-6 flex flex-col gap-4 text-[0.9rem] text-oh-charcoal">
       <p className="m-0 font-display text-[1.15rem] leading-snug">{t("intro")}</p>
@@ -17,6 +17,15 @@ export async function ExperiencePrint({ locale = "en", scenario = "base" }: { lo
         <div key={s}>
           <p className="m-0 font-display text-[1.05rem]">{String(i + 1).padStart(2, "0")} {t(`steps.${s}.title`)}</p>
           <p className="m-0 mt-1 leading-relaxed text-oh-stone">{t(`steps.${s}.body`)}</p>
+          {s === "status" ? (
+            <ul className="m-0 mt-2 grid list-none grid-cols-2 gap-x-4 gap-y-1 p-0 text-[0.82rem]">
+              {(t.raw("steps.status.features") as { title: string; body: string }[]).map((f) => (
+                <li key={f.title}>
+                  <span className="font-semibold">{f.title}.</span> <span className="text-oh-stone">{f.body}</span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </div>
       ))}
       <div className="mt-4">
@@ -63,6 +72,7 @@ export async function OperationsPrint({ scenario = "base" }: { locale?: string; 
   return (
     <div className="mt-6 flex flex-col gap-5 text-[0.85rem] text-oh-charcoal">
       <p className="m-0 leading-relaxed text-oh-stone">{t("platform.body")}</p>
+      <div><p className="m-0 font-display text-[1.05rem]">{t("platform.guestPhone.title")}</p><p className="m-0 mt-1 leading-relaxed text-oh-stone">{t("platform.guestPhone.body")}</p></div>
       <p className="m-0 leading-relaxed">{t("labor.subtitle", { heads: COVERAGE_SCHEDULE.shifts.reduce((n, sh) => n + sh.count, 0), hours: Math.round(hours), days: a.operatingDaysPerYear, coverage: Math.round(a.coverageFactorPct * 100), kitchen: a.kitchenFTE.toFixed(1), mgmt: a.managerFTE, wage: usd(a.avgKitchenWage, 2), salary: usd(a.avgManagerSalary), kitchenAnnual: usd(a.kitchenFTE * a.avgKitchenWage * a.annualHoursPerFTE), mgmtAnnual: usd(a.managerFTE * a.avgManagerSalary), burden: Math.round(a.payrollBurdenPct * 100) })}</p>
       <div><p className="m-0 font-display text-[1.05rem]">{t("program.title")}</p><p className="m-0 mt-1 leading-relaxed text-oh-stone">{t("program.body", programValues)}</p><ul className="m-0 mt-1 list-disc pl-5">{(["cashback", "referral", "challenges", "perks", "swag", "comps"] as const).map((k) => (<li key={k} className="py-0.5"><span className="font-semibold">{t(`program.items.${k}.title`)}.</span> <span className="text-oh-stone">{t(`program.items.${k}.body`, programValues)}</span></li>))}</ul><p className="m-0 mt-1 leading-relaxed text-oh-stone">{t("program.launch", programValues)}</p></div>
       <div><p className="m-0 font-display text-[1.05rem]">{t("giving.title")}</p><p className="m-0 mt-1 leading-relaxed text-oh-stone">{t("giving.body", givingValues)} {t("giving.cadence", givingValues)}</p><p className="m-0 mt-1 text-oh-stone">{displayUrl(FOUNDATION.website)}</p></div>

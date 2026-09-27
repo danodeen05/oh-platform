@@ -376,12 +376,16 @@ export function territory(p: Point): Territory | null {
 
 export type Actor = "guest" | "kitchen" | "both";
 export interface JourneyStep {
-  key: "paid" | "ticket" | "assigned" | "broth" | "walk" | "seated" | "noodles" | "plating" | "corridor" | "hatch" | "delivered" | "finish" | "cleared" | "exit" | "reset";
+  key:
+    | "paid" | "texted" | "ticket" | "assigned" | "broth" | "walk" | "seated" | "checkin" | "feed" | "noodles" | "fortune"
+    | "plating" | "corridor" | "hatch" | "delivered" | "addon" | "finish" | "done" | "cleared" | "exit" | "reset";
   actor: Actor;
   /** Real elapsed seconds from payment. */
   realSeconds: number;
   /** Progress 0..1 through the animation, or null for steps listed but not animated. */
   at: number | null;
+  /** A moment on the guest's live order status page (their phone). */
+  phone?: true;
 }
 export const JOURNEY_SECONDS = 45;
 const DWELL = BASE_ASSUMPTIONS.avgDwellMinutes * 60;
@@ -389,21 +393,41 @@ const TURNOVER = BASE_ASSUMPTIONS.turnoverMinutes * 60;
 const SEATED_AT = 60;
 export const JOURNEY_STEPS: readonly JourneyStep[] = [
   { key: "paid", actor: "guest", realSeconds: 0, at: 0 },
+  { key: "texted", actor: "guest", realSeconds: 0, at: 0, phone: true },
   { key: "ticket", actor: "kitchen", realSeconds: 0, at: 0 },
   { key: "assigned", actor: "guest", realSeconds: 5, at: 0.04 },
   { key: "broth", actor: "kitchen", realSeconds: 10, at: 0.06 },
   { key: "walk", actor: "guest", realSeconds: 10, at: 0.08 },
   { key: "seated", actor: "guest", realSeconds: SEATED_AT, at: 0.2 },
+  { key: "checkin", actor: "guest", realSeconds: SEATED_AT, at: 0.2, phone: true },
+  { key: "feed", actor: "guest", realSeconds: 150, at: 0.32, phone: true },
   { key: "noodles", actor: "kitchen", realSeconds: 210, at: 0.42 },
+  { key: "fortune", actor: "guest", realSeconds: 240, at: 0.47, phone: true },
   { key: "plating", actor: "kitchen", realSeconds: 330, at: 0.56 },
   { key: "corridor", actor: "kitchen", realSeconds: 375, at: 0.64 },
   { key: "hatch", actor: "kitchen", realSeconds: 410, at: 0.72 },
   { key: "delivered", actor: "both", realSeconds: 420, at: 0.76 },
+  // Halfway through the meal: an add-on ordered from the phone comes through the hatch.
+  { key: "addon", actor: "both", realSeconds: Math.round((420 + SEATED_AT + DWELL) / 2 / 60) * 60, at: 0.8, phone: true },
   { key: "finish", actor: "guest", realSeconds: SEATED_AT + DWELL, at: 0.84 },
+  { key: "done", actor: "guest", realSeconds: SEATED_AT + DWELL, at: 0.84, phone: true },
   { key: "cleared", actor: "kitchen", realSeconds: SEATED_AT + DWELL, at: 0.84 },
   { key: "exit", actor: "guest", realSeconds: SEATED_AT + DWELL + 60, at: 1 },
   { key: "reset", actor: "kitchen", realSeconds: SEATED_AT + DWELL + TURNOVER, at: null },
 ];
+
+/** Order status page stages, as the guest's phone shows them during the journey. */
+export const PHONE_STAGES = ["PAID", "QUEUED", "PREPPING", "READY", "SERVING", "COMPLETED"] as const;
+export type PhoneStage = (typeof PHONE_STAGES)[number];
+/** The stage on the guest's phone at a journey progress: checked in when seated, ready while the runner carries it, done when they tap "I'm done eating". */
+export function statusStageAt(progress: number): PhoneStage {
+  if (progress < 0.2) return "PAID";
+  if (progress < 0.24) return "QUEUED";
+  if (progress < 0.64) return "PREPPING";
+  if (progress < 0.76) return "READY";
+  if (progress < 0.84) return "SERVING";
+  return "COMPLETED";
+}
 export const ANIMATED_STEPS: readonly JourneyStep[] = JOURNEY_STEPS.filter((s) => s.at !== null);
 export const JOURNEY_REAL_SECONDS = (ANIMATED_STEPS[ANIMATED_STEPS.length - 1] as JourneyStep).realSeconds;
 

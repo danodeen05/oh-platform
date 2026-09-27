@@ -1448,6 +1448,9 @@
       "skipTip": "不用给小费，改为做点好事。",
       "supportCause": "支持公益",
       "foundation": "One Red Step at a Time 基金会 • 501(c)(3)"
+    },
+    "demo": {
+      "banner": "实时演示 · 非真实订单"
     }
   },
   "features": {

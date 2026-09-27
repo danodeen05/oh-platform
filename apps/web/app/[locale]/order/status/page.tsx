@@ -8,6 +8,12 @@ import { ConfirmDialog } from "@/components/ui/Dialog";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
+// Demo order stages and how long each plays when the demo runs by itself.
+const DEMO_STAGES = ["PAID", "QUEUED", "PREPPING", "READY", "SERVING", "COMPLETED"] as const;
+type DemoStage = (typeof DEMO_STAGES)[number];
+const DEMO_NEXT: Record<DemoStage, DemoStage | null> = { PAID: "QUEUED", QUEUED: "PREPPING", PREPPING: "READY", READY: "SERVING", SERVING: null, COMPLETED: "PAID" };
+const DEMO_DWELL_MS: Record<DemoStage, number> = { PAID: 9000, QUEUED: 8000, PREPPING: 30000, READY: 9000, SERVING: 0, COMPLETED: 15000 };
+
 interface OrderStatus {
   order: {
     id: string;
@@ -347,7 +353,19 @@ function StatusContent() {
   const tOrder = useTranslations("order");
   const toast = useToast();
   const { user, isLoaded: isUserLoaded } = useUser();
-  const orderQrCode = searchParams.get("orderQrCode");
+  // DEMO- codes are the synthetic demo order (packages/api/src/demo/status-demo.js).
+  // In demo mode the stage is pinned in the code ("DEMO-PLAN.PREPPING") and
+  // either plays by itself or, with ?demoSync=parent, follows postMessages from
+  // the page embedding it (the business plan's floor plan).
+  const rawOrderQrCode = searchParams.get("orderQrCode");
+  const isDemo = Boolean(rawOrderQrCode?.startsWith("DEMO-"));
+  const demoFollowsParent = isDemo && searchParams.get("demoSync") === "parent";
+  const embedded = searchParams.get("embed") === "1";
+  const [demoStage, setDemoStage] = useState<DemoStage>(() => {
+    const s = searchParams.get("demoStage");
+    return (DEMO_STAGES as readonly string[]).includes(s || "") ? (s as DemoStage) : "PAID";
+  });
+  const orderQrCode = isDemo && rawOrderQrCode ? `${rawOrderQrCode.split(".")[0]}.${demoStage}` : rawOrderQrCode;
 
   const [status, setStatus] = useState<OrderStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -423,7 +441,8 @@ function StatusContent() {
         }
 
         // Clear active order from localStorage when completed
-        if (data.order?.status === "COMPLETED") {
+        // (never for the demo: it shares the site's storage with a guest's real order)
+        if (data.order?.status === "COMPLETED" && !isDemo) {
           localStorage.removeItem("activeOrderQrCode");
         }
       } else {
@@ -815,6 +834,30 @@ function StatusContent() {
     fetchStatus();
   }, [orderQrCode]);
 
+  // Demo: play the stages by itself (unless the embedding page drives them).
+  useEffect(() => {
+    if (!isDemo || demoFollowsParent) return;
+    const next = DEMO_NEXT[demoStage];
+    if (!next) return;
+    const t = setTimeout(() => setDemoStage(next), DEMO_DWELL_MS[demoStage]);
+    return () => clearTimeout(t);
+  }, [isDemo, demoFollowsParent, demoStage]);
+
+  // Demo: follow the embedding page ({ type: "oh-status-demo", stage }).
+  useEffect(() => {
+    if (!demoFollowsParent) return;
+    function onMessage(e: MessageEvent) {
+      if (e.origin !== window.location.origin) return;
+      const data = e.data as { type?: string; stage?: string } | null;
+      if (data?.type === "oh-status-demo" && (DEMO_STAGES as readonly string[]).includes(data.stage || "")) {
+        setDemoStage(data.stage as DemoStage);
+      }
+    }
+    window.addEventListener("message", onMessage);
+    window.parent?.postMessage({ type: "oh-status-demo-ready" }, window.location.origin);
+    return () => window.removeEventListener("message", onMessage);
+  }, [demoFollowsParent]);
+
   // Check for pending order link after sign-in
   useEffect(() => {
     async function linkPendingOrder() {
@@ -863,7 +906,7 @@ function StatusContent() {
 
     const interval = setInterval(() => {
       fetchStatus();
-    }, 10000);
+    }, isDemo ? 4000 : 10000);
 
     return () => clearInterval(interval);
   }, [orderQrCode]);
@@ -1003,7 +1046,7 @@ function StatusContent() {
       style={{
         minHeight: "100vh",
         background: "#E5E5E5",
-        padding: 24,
+        padding: embedded ? 12 : 24,
         paddingTop: 40,
       }}
     >
@@ -1013,6 +1056,24 @@ function StatusContent() {
           margin: "0 auto",
         }}
       >
+        {isDemo && (
+          <div
+            role="note"
+            style={{
+              margin: "0 auto 12px",
+              padding: "6px 12px",
+              borderRadius: 999,
+              background: "#2a2924",
+              color: "#E0C38C",
+              fontSize: "0.72rem",
+              letterSpacing: "0.08em",
+              textAlign: "center",
+              textTransform: "uppercase",
+            }}
+          >
+            {t("demo.banner")}
+          </div>
+        )}
         {/* Header */}
         <div
           style={{
@@ -1185,9 +1246,11 @@ function StatusContent() {
                   </div>
                   <button
                     onClick={() =>
-                      router.push(
-                        `/order/scan?orderQrCode=${encodeURIComponent(order.orderQrCode)}`
-                      )
+                      isDemo
+                        ? setDemoStage("QUEUED")
+                        : router.push(
+                            `/order/scan?orderQrCode=${encodeURIComponent(order.orderQrCode)}`
+                          )
                     }
                     style={{
                       marginTop: 12,
@@ -2257,6 +2320,7 @@ function StatusContent() {
                     body: JSON.stringify({ status: "COMPLETED" }),
                   });
                   setConfirmDoneOpen(false);
+                  if (isDemo) setDemoStage("COMPLETED");
                   fetchStatus(); // Refresh status immediately
                 } catch (error) {
                   console.error("Failed to mark as done:", error);
