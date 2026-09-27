@@ -151,6 +151,42 @@ test("expiringSoon returns lots within the warning window, ordered soonest first
   assert.equal(soonLots[0].id, soon.id);
 });
 
+test("grantCredit rejects non-positive or non-integer amounts and writes nothing", async () => {
+  const prisma = makeMemoryPrisma({ users: [{ id: "u1", creditsCents: 0 }] });
+  const now = new Date("2026-10-01T12:00:00-06:00");
+
+  for (const bad of [-100, 0, 12.5]) {
+    await assert.rejects(
+      () => grantCredit(prisma, { userId: "u1", source: "CASHBACK", amountCents: bad, now }),
+      RangeError,
+    );
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: "u1" } });
+  assert.equal(user.creditsCents, 0);
+  assert.equal((await prisma.creditLot.findMany({ where: { userId: "u1" } })).length, 0);
+  assert.equal((await prisma.creditEvent.findMany({ where: { userId: "u1" } })).length, 0);
+});
+
+test("spendCredit rejects non-positive or non-integer amounts and writes nothing", async () => {
+  const prisma = makeMemoryPrisma({ users: [{ id: "u1", creditsCents: 0 }] });
+  const now = new Date("2026-10-01T12:00:00-06:00");
+  await grantCredit(prisma, { userId: "u1", source: "CASHBACK", amountCents: 100, now });
+
+  for (const bad of [-100, 0, 12.5]) {
+    await assert.rejects(
+      () => spendCredit(prisma, { userId: "u1", amountCents: bad, orderId: "o1", now }),
+      RangeError,
+    );
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: "u1" } });
+  assert.equal(user.creditsCents, 100);
+  const lots = await prisma.creditLot.findMany({ where: { userId: "u1" } });
+  assert.equal(lots[0].remainingCents, 100);
+  assert.equal((await prisma.creditEvent.findMany({ where: { userId: "u1", type: "CREDIT_APPLIED" } })).length, 0);
+});
+
 test("convertLegacyBalances creates one LEGACY lot per user with a positive balance and no lots, and is idempotent", async () => {
   const prisma = makeMemoryPrisma({
     users: [

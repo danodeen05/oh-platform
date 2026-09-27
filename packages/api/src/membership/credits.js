@@ -31,12 +31,20 @@ function addDays(date, days) {
   return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
 }
 
+/** Guards every ledger-moving amount: must be a positive integer number of cents. */
+function assertPositiveAmount(amountCents) {
+  if (!Number.isInteger(amountCents) || amountCents <= 0) {
+    throw new RangeError(`amountCents must be a positive integer, got ${amountCents}`);
+  }
+}
+
 /**
  * Creates a CreditLot expiring `PROGRAM.creditExpiryDays` from `now`,
  * increments the cached `User.creditsCents`, and logs a CreditEvent.
  * Returns the created lot.
  */
 export async function grantCredit(prisma, { userId, source, amountCents, orderId = null, note = null, now = new Date() }) {
+  assertPositiveAmount(amountCents);
   return prisma.$transaction(async (tx) => {
     const lot = await tx.creditLot.create({
       data: {
@@ -79,6 +87,7 @@ export async function availableCredit(prisma, userId, now = new Date()) {
  * CreditShortError and nothing is written.
  */
 export async function spendCredit(prisma, { userId, amountCents, orderId, now = new Date() }) {
+  assertPositiveAmount(amountCents);
   return prisma.$transaction(async (tx) => {
     const lots = await tx.creditLot.findMany({
       where: { userId, remainingCents: { gt: 0 }, expiresAt: { gt: now } },
