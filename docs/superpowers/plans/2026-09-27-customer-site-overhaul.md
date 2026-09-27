@@ -620,6 +620,7 @@ Task A10 found more routes that act on a client-supplied user id. They are the s
 | `POST /gift-cards/:id/redeem` | The redeemer is the verified caller. Keep the existing code and balance checks. |
 | `GET /users/referral/:code` | Returns only public-safe fields (the referrer's first name, the code, validity). Never the email, id or phone. |
 | `/wallet/test-push/:userId`, `/wallet/debug` | Admin only (`requireAdminAuth`), or 404 when `NODE_ENV === "production"` (pick whichever the routes' purpose fits, and document the choice). |
+| `POST /group-orders/:code/orders` | The member's `userId` comes from the verified caller, and guests get null (same rule as `POST /orders` after A10). |
 | Kiosk `GET /orders/by-member`, unfiltered `GET /orders` | Require kiosk device auth or admin auth. Find the existing kiosk device mechanism (`KioskDevice` model, the `apps/web/app/[locale]/kiosk` flows) and reuse it. Anonymous callers get 401. |
 
 - [ ] **Step 1:** Write failing tests for each row: another user's id in the body is ignored or refused, the referral lookup response has no `email` key, the wallet debug route is 401 or 404 anonymously, and anonymous `GET /orders` is 401.
