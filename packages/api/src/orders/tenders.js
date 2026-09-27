@@ -226,6 +226,12 @@ export async function acceptMealGift(prisma, { mealGiftId, recipientUserId, orde
   if (!order || order.userId !== recipientUserId) throw new OrderError("FORBIDDEN", 403, "Forbidden");
   const gift = await prisma.mealGift.findUnique({ where: { id: mealGiftId } });
   if (!gift) throw new OrderError("MEAL_GIFT_NOT_FOUND", 404, "Meal gift not found");
+  // Task A7: only an order still being paid for, at the gift's location (a
+  // gift with no location works anywhere), and not one whose quote already
+  // carries a meal gift (checkout spends that one at PAID).
+  if (order.paymentStatus === "PAID" || order.status === "CANCELLED") throw new OrderError("ORDER_NOT_PAYABLE", 409, "That order is already paid or cancelled.");
+  if (gift.locationId && order.locationId !== gift.locationId) throw new OrderError("MEAL_GIFT_WRONG_LOCATION", 409, "That meal gift is for another location.");
+  if (order.mealGiftId) throw new OrderError("MEAL_GIFT_UNAVAILABLE", 409, "That order already uses a meal gift.");
 
   let claim;
   try {
@@ -245,4 +251,88 @@ export async function acceptMealGift(prisma, { mealGiftId, recipientUserId, orde
     deps,
   );
   return { gift: await prisma.mealGift.findUnique({ where: { id: mealGiftId } }), ...payout };
+}
+
+// ---------------------------------------------------------------------------
+// Legacy gift-card routes (Task A7): /gift-cards/:id/apply and /redeem
+// ---------------------------------------------------------------------------
+
+/**
+ * POST /gift-cards/:id/apply. Checkout no longer calls it (markPaid spends a
+ * gift card at PAID from the order's quote), but it stays callable, so it
+ * must not let anyone drain a card:
+ *  - caller { userId } must be the verified owner of the order, or
+ *    { kioskLocationId } a kiosk device at the order's location;
+ *  - the order must be unpaid and not cancelled;
+ *  - at most what the order still owes is taken, through a conditional
+ *    debit (updateMany ... balanceCents >= amount, count === 1).
+ */
+export async function applyGiftCardToOrder(prisma, { giftCardId, orderId, amountCents, caller = {} }) {
+  const amount = Number(amountCents);
+  if (!Number.isInteger(amount) || amount <= 0) throw new OrderError("AMOUNT_REQUIRED", 400, "Amount required");
+  if (!orderId || typeof orderId !== "string") throw new OrderError("ORDER_REQUIRED", 400, "orderId required");
+  if (!caller.userId && !caller.kioskLocationId) throw new OrderError("SIGN_IN_REQUIRED", 401, "Sign in required");
+
+  const order = await prisma.order.findUnique({ where: { id: orderId } });
+  if (!order) throw new OrderError("ORDER_NOT_FOUND", 404, "Order not found");
+  const allowed = caller.userId ? Boolean(order.userId) && order.userId === caller.userId : order.locationId === caller.kioskLocationId;
+  if (!allowed) throw new OrderError("FORBIDDEN", 403, "Forbidden");
+  if (order.paymentStatus === "PAID" || order.status === "CANCELLED") throw new OrderError("ORDER_NOT_PAYABLE", 409, "That order is already paid or cancelled.");
+
+  const card = await prisma.giftCard.findUnique({ where: { id: giftCardId } });
+  if (!card) throw new OrderError("GIFT_CARD_NOT_FOUND", 404, "Gift card not found");
+  if (card.status !== "ACTIVE" || card.balanceCents <= 0) throw new OrderError("GIFT_CARD_UNAVAILABLE", 400, "Gift card is not available");
+
+  const owed = order.amountDueCents ?? order.totalCents ?? 0;
+  const take = Math.min(amount, card.balanceCents, Math.max(0, owed));
+  if (take <= 0) throw new OrderError("NOTHING_DUE", 409, "Nothing is owed on that order.");
+
+  const debit = await prisma.giftCard.updateMany({
+    where: { id: giftCardId, status: "ACTIVE", balanceCents: { gte: take } },
+    data: { balanceCents: { decrement: take } },
+  });
+  if (debit.count !== 1) throw new OrderError("GIFT_CARD_SHORT", 409, "The gift card balance changed.");
+  await prisma.giftCard.updateMany({ where: { id: giftCardId, status: "ACTIVE", balanceCents: 0 }, data: { status: "EXHAUSTED" } });
+  const after = await prisma.giftCard.findUnique({ where: { id: giftCardId } });
+  return { applied: take, remainingBalance: after.balanceCents };
+}
+
+/**
+ * POST /gift-cards/:id/redeem: moves a card's whole balance to the verified
+ * caller's account. The claim (ACTIVE, balance as read -> REDEEMED, 0) is
+ * conditional, so two concurrent redeems (or a redeem and an apply) credit
+ * the balance once.
+ */
+export async function redeemGiftCard(prisma, { giftCardId, userId, now = new Date() }) {
+  if (!userId) throw new OrderError("SIGN_IN_REQUIRED", 401, "Sign in required");
+  const giftCard = await prisma.giftCard.findUnique({ where: { id: giftCardId } });
+  if (!giftCard) throw new OrderError("GIFT_CARD_NOT_FOUND", 404, "Gift card not found");
+  if (giftCard.status !== "ACTIVE" || giftCard.balanceCents <= 0) throw new OrderError("GIFT_CARD_UNAVAILABLE", 400, "Gift card is not available for redemption");
+
+  const CONFLICT = Symbol("conflict");
+  let updated;
+  try {
+    updated = await prisma.$transaction(async (tx) => {
+      const claimed = await tx.giftCard.updateMany({
+        where: { id: giftCardId, status: "ACTIVE", balanceCents: giftCard.balanceCents },
+        data: { status: "REDEEMED", redeemedById: userId, redeemedAt: now, balanceCents: 0 },
+      });
+      if (claimed.count !== 1) throw CONFLICT;
+      await tx.user.update({ where: { id: userId }, data: { creditsCents: { increment: giftCard.balanceCents } } });
+      await tx.creditEvent.create({
+        data: {
+          userId,
+          type: "ADMIN_ADJUSTMENT", // existing type, as before
+          amountCents: giftCard.balanceCents,
+          description: `Gift card ${giftCard.code} redeemed to account balance`,
+          metadata: { giftCardId: giftCard.id, giftCardCode: giftCard.code },
+        },
+      });
+      return tx.giftCard.findUnique({ where: { id: giftCardId } });
+    });
+  } catch (err) {
+    if (err === CONFLICT) throw new OrderError("GIFT_CARD_UNAVAILABLE", 409, "Gift card is not available for redemption");
+    throw err;
+  }
+  return { success: true, creditsAdded: giftCard.balanceCents, giftCard: updated };
 }

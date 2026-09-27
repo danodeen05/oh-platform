@@ -127,6 +127,9 @@ export const PUBLIC_ROUTES = Object.freeze([
   p("DELETE", "/group-orders/:code/orders/:orderId", "customer"),
   p("POST", "/group-orders/:code/transfer-host", "customer"),
   p("POST", "/group-orders/:code/complete", "customer"),
+  // Host pays for the group (Task A7): verified host; confirm also takes the Stripe webhook as a trusted service call
+  p("POST", "/group-orders/:code/payment-intent", "customer"),
+  p("POST", "/group-orders/:code/confirm-payment", "customer"),
 
   // Meal gifts
   p("POST", "/meal-gifts", "customer"),

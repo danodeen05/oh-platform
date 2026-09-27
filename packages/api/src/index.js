@@ -68,8 +68,9 @@ import { registerCateringRoutes, isDineInOrdersEnabled } from "./catering/routes
 import { registerPlanRoutes } from "./plan/routes.js";
 import { registerMembershipRoutes } from "./membership/routes.js";
 import { registerOrderRoutes } from "./orders/routes.js";
-import { configureOrderService, markPaid, quoteOrder, confirmOrderPayment, intentHasRefund, OrderError } from "./orders/service.js";
-import { createGiftCard, createMealGift, acceptMealGift, finishMealGiftAcceptance } from "./orders/tenders.js";
+import { registerGroupOrderRoutes } from "./orders/group-routes.js";
+import { configureOrderService, markPaid, confirmOrderPayment, intentHasRefund, OrderError } from "./orders/service.js";
+import { createGiftCard, createMealGift, acceptMealGift, finishMealGiftAcceptance, applyGiftCardToOrder, redeemGiftCard } from "./orders/tenders.js";
 import { grantCredit } from "./membership/credits.js";
 import { taxCents, spendBaseCents } from "./orders/pricing.js";
 import { PROGRAM, tierRule } from "./membership/program.js";
@@ -79,7 +80,7 @@ import { createAdminAuth } from "./auth/admin.js";
 import { registerConsoleGuard, registerAdminPathGuard } from "./auth/console-guard.js";
 import { createCustomerAuth, registerCustomerIdentity, orderOwnerId, chappyCreditsToDeduct, resolveChappyWebIdentity } from "./auth/customer.js";
 import { createKioskAuth } from "./auth/kiosk.js";
-import { publicReferral, shopCreditSpender, groupOrderMember, registerAdminOnlyRoutes } from "./auth/hardening.js";
+import { publicReferral, shopCreditSpender, registerAdminOnlyRoutes } from "./auth/hardening.js";
 
 // DEMO- order codes resolve to a synthetic order (see demo/status-demo.js):
 // the plan's live status-page demo reads real routes without touching the DB.
@@ -273,6 +274,14 @@ await registerOrderRoutes(app, {
   isDineInOrdersEnabled,
   effects: orderEffects,
   onOrderCompleted,
+});
+// Group orders (Task A7): verified members, server-priced orders, host pays via one verified PaymentIntent.
+await registerGroupOrderRoutes(app, {
+  prisma,
+  stripe,
+  customerAuth,
+  isDineInOrdersEnabled,
+  effects: orderEffects,
 });
 
 const PORT = process.env.PORT || process.env.API_PORT || 4000;
@@ -10104,543 +10113,6 @@ app.get("/analytics/ga4/hourly", async (req, reply) => {
   }
 });
 
-// ====================
-// GROUP ORDERS
-// ====================
-
-// Helper to generate 6-character group code
-function generateGroupCode() {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // No I, O, 0, 1 to avoid confusion
-  let code = "";
-  for (let i = 0; i < 6; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return code;
-}
-
-// POST /group-orders - Create a new group order (host initiates)
-app.post("/group-orders", async (req, reply) => {
-  const { locationId, tenantId, hostUserId, hostGuestId, estimatedArrival } = req.body || {};
-
-  if (!locationId || !tenantId) {
-    return reply.code(400).send({ error: "locationId and tenantId required" });
-  }
-
-  if (!hostUserId && !hostGuestId) {
-    return reply.code(400).send({ error: "Either hostUserId or hostGuestId required" });
-  }
-
-  // Generate unique code (retry if collision)
-  let code;
-  let attempts = 0;
-  while (!code && attempts < 10) {
-    const candidate = generateGroupCode();
-    const existing = await prisma.groupOrder.findUnique({ where: { code: candidate } });
-    if (!existing) code = candidate;
-    attempts++;
-  }
-
-  if (!code) {
-    return reply.code(500).send({ error: "Failed to generate unique group code" });
-  }
-
-  // Set expiry to 30 minutes from now
-  const expiresAt = new Date();
-  expiresAt.setMinutes(expiresAt.getMinutes() + 30);
-
-  const groupOrder = await prisma.groupOrder.create({
-    data: {
-      code,
-      locationId,
-      tenantId,
-      hostUserId: hostUserId || null,
-      hostGuestId: hostGuestId || null,
-      estimatedArrival: estimatedArrival ? new Date(estimatedArrival) : null,
-      expiresAt,
-      status: "GATHERING",
-    },
-    include: {
-      location: true,
-      hostUser: true,
-      hostGuest: true,
-      orders: {
-        include: {
-          items: { include: { menuItem: true } },
-          user: true,
-          guest: true,
-        },
-      },
-    },
-  });
-
-  return groupOrder;
-});
-
-// GET /group-orders/:code - Get group order by code (for joining)
-app.get("/group-orders/:code", async (req, reply) => {
-  const { code } = req.params;
-
-  const groupOrder = await prisma.groupOrder.findUnique({
-    where: { code: code.toUpperCase() },
-    include: {
-      location: true,
-      hostUser: true,
-      hostGuest: true,
-      orders: {
-        include: {
-          items: { include: { menuItem: true } },
-          user: true,
-          guest: true,
-          seat: true,
-        },
-      },
-      memberUsers: true,
-      memberGuests: true,
-    },
-  });
-
-  if (!groupOrder) {
-    return reply.code(404).send({ error: "Group not found" });
-  }
-
-  // Check if expired
-  if (new Date() > groupOrder.expiresAt && groupOrder.status === "GATHERING") {
-    // Auto-cancel expired groups
-    await prisma.groupOrder.update({
-      where: { id: groupOrder.id },
-      data: { status: "CANCELLED" },
-    });
-    return reply.code(410).send({ error: "Group order has expired" });
-  }
-
-  return groupOrder;
-});
-
-// POST /group-orders/:code/join - Join a group order
-app.post("/group-orders/:code/join", async (req, reply) => {
-  const { code } = req.params;
-  const { userId, guestId } = req.body || {};
-
-  if (!userId && !guestId) {
-    return reply.code(400).send({ error: "Either userId or guestId required" });
-  }
-
-  const groupOrder = await prisma.groupOrder.findUnique({
-    where: { code: code.toUpperCase() },
-    include: {
-      orders: true,
-      memberUsers: true,
-      memberGuests: true,
-    },
-  });
-
-  if (!groupOrder) {
-    return reply.code(404).send({ error: "Group not found" });
-  }
-
-  // Check if can still join
-  if (groupOrder.status !== "GATHERING") {
-    return reply.code(400).send({ error: "Group is no longer accepting new members" });
-  }
-
-  if (new Date() > groupOrder.expiresAt) {
-    return reply.code(410).send({ error: "Group order has expired" });
-  }
-
-  // Check max group size (8 people)
-  const memberCount = groupOrder.orders.length + 1; // +1 for host
-  if (memberCount >= 8) {
-    return reply.code(400).send({ error: "Group is full (max 8 people)" });
-  }
-
-  // Add member to group
-  const updateData = {};
-  if (userId) {
-    // Check if already a member
-    const alreadyMember = groupOrder.memberUsers.some(u => u.id === userId);
-    if (!alreadyMember) {
-      updateData.memberUsers = { connect: { id: userId } };
-    }
-  } else if (guestId) {
-    const alreadyMember = groupOrder.memberGuests.some(g => g.id === guestId);
-    if (!alreadyMember) {
-      updateData.memberGuests = { connect: { id: guestId } };
-    }
-  }
-
-  const updated = await prisma.groupOrder.update({
-    where: { id: groupOrder.id },
-    data: updateData,
-    include: {
-      location: true,
-      hostUser: true,
-      hostGuest: true,
-      orders: {
-        include: {
-          items: { include: { menuItem: true } },
-          user: true,
-          guest: true,
-        },
-      },
-      memberUsers: true,
-      memberGuests: true,
-    },
-  });
-
-  return updated;
-});
-
-// PATCH /group-orders/:code - Update group order (host controls)
-app.patch("/group-orders/:code", async (req, reply) => {
-  const { code } = req.params;
-  const { status, paymentMethod, closedAt } = req.body || {};
-
-  const groupOrder = await prisma.groupOrder.findUnique({
-    where: { code: code.toUpperCase() },
-  });
-
-  if (!groupOrder) {
-    return reply.code(404).send({ error: "Group not found" });
-  }
-
-  const data = {};
-
-  // Close group (stop accepting new members)
-  if (status === "CLOSED" && groupOrder.status === "GATHERING") {
-    data.status = "CLOSED";
-    data.closedAt = new Date();
-  }
-
-  // Set payment method
-  if (paymentMethod && ["HOST_PAYS_ALL", "PAY_YOUR_OWN"].includes(paymentMethod)) {
-    data.paymentMethod = paymentMethod;
-  }
-
-  // Mark as paying
-  if (status === "PAYING" && (groupOrder.status === "CLOSED" || groupOrder.status === "GATHERING")) {
-    data.status = "PAYING";
-    if (!groupOrder.closedAt) {
-      data.closedAt = new Date();
-    }
-  }
-
-  // Mark as paid
-  if (status === "PAID") {
-    data.status = "PAID";
-    data.finalizedAt = new Date();
-  }
-
-  // Mark as partially paid
-  if (status === "PARTIALLY_PAID") {
-    data.status = "PARTIALLY_PAID";
-  }
-
-  // Cancel group
-  if (status === "CANCELLED") {
-    data.status = "CANCELLED";
-  }
-
-  const updated = await prisma.groupOrder.update({
-    where: { id: groupOrder.id },
-    data,
-    include: {
-      location: true,
-      hostUser: true,
-      hostGuest: true,
-      orders: {
-        include: {
-          items: { include: { menuItem: true } },
-          user: true,
-          guest: true,
-        },
-      },
-      memberUsers: true,
-      memberGuests: true,
-    },
-  });
-
-  return updated;
-});
-
-// POST /group-orders/:code/orders - Add an order to a group
-app.post("/group-orders/:code/orders", async (req, reply) => {
-  const { code } = req.params;
-  const { items } = req.body || {};
-
-  if (!items || !items.length) {
-    return reply.code(400).send({ error: "items required" });
-  }
-
-  // The member is the verified caller (a body userId is ignored); guests get
-  // userId null and keep their guest-checkout guestId. See auth/hardening.js.
-  const member = groupOrderMember(await customerAuth.resolve(req), req.body || {});
-  if (member.status) {
-    return reply.code(member.status).send({ error: member.error });
-  }
-  const { userId, guestId } = member;
-
-  const groupOrder = await prisma.groupOrder.findUnique({
-    where: { code: code.toUpperCase() },
-    include: { orders: true },
-  });
-
-  if (!groupOrder) {
-    return reply.code(404).send({ error: "Group not found" });
-  }
-
-  if (groupOrder.status !== "GATHERING" && groupOrder.status !== "CLOSED") {
-    return reply.code(400).send({ error: "Cannot add orders to this group" });
-  }
-
-  // Server quote (Task A6, orders/service.js): tenant-scoped, available and
-  // released items only; tax at the location's rate. Members pay their own
-  // order through POST /orders/:id/payment-intent and /confirm-payment.
-  let groupQuote;
-  try {
-    groupQuote = await quoteOrder(prisma, { locationId: groupOrder.locationId, items, userId: userId || null, now: new Date() });
-  } catch (err) {
-    if (err instanceof OrderError) return reply.code(err.status).send({ error: err.code, message: err.message, ...err.extra });
-    throw err;
-  }
-  const orderItems = groupQuote.lines;
-  const totalCents = groupQuote.totalCents;
-
-  // Generate order numbers
-  const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
-  const orderQrCode = `ORDER-${groupOrder.locationId.slice(-8)}-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
-
-  // Check if this is the host's order - ensure boolean (not null/undefined)
-  const isHost = Boolean((userId && userId === groupOrder.hostUserId) || (guestId && guestId === groupOrder.hostGuestId));
-
-  const order = await prisma.order.create({
-    data: {
-      orderNumber,
-      orderQrCode,
-      tenant: { connect: { id: groupOrder.tenantId } },
-      location: { connect: { id: groupOrder.locationId } },
-      subtotalCents: groupQuote.subtotalCents,
-      taxCents: groupQuote.taxCents,
-      totalCents,
-      amountDueCents: groupQuote.amountDueCents,
-      ...(userId ? { user: { connect: { id: userId } } } : {}),
-      ...(guestId ? { guest: { connect: { id: guestId } } } : {}),
-      groupOrder: { connect: { id: groupOrder.id } },
-      isGroupHost: isHost,
-      estimatedArrival: groupOrder.estimatedArrival,
-      items: {
-        create: orderItems,
-      },
-    },
-    include: {
-      items: { include: { menuItem: true } },
-      user: true,
-      guest: true,
-    },
-  });
-
-  return order;
-});
-
-// DELETE /group-orders/:code/orders/:orderId - Remove an order from a group
-app.delete("/group-orders/:code/orders/:orderId", async (req, reply) => {
-  const { code, orderId } = req.params;
-
-  const groupOrder = await prisma.groupOrder.findUnique({
-    where: { code: code.toUpperCase() },
-  });
-
-  if (!groupOrder) {
-    return reply.code(404).send({ error: "Group not found" });
-  }
-
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
-  });
-
-  if (!order) {
-    return reply.code(404).send({ error: "Order not found" });
-  }
-
-  if (order.groupOrderId !== groupOrder.id) {
-    return reply.code(400).send({ error: "Order does not belong to this group" });
-  }
-
-  // Can only delete if not yet paid
-  if (order.paymentStatus === "PAID") {
-    return reply.code(400).send({ error: "Cannot delete paid orders" });
-  }
-
-  // Delete order items first, then the order
-  await prisma.orderItem.deleteMany({ where: { orderId } });
-  await prisma.order.delete({ where: { id: orderId } });
-
-  return { success: true };
-});
-
-// POST /group-orders/:code/transfer-host - Transfer host role to another member
-app.post("/group-orders/:code/transfer-host", async (req, reply) => {
-  const { code } = req.params;
-  const { newHostUserId, newHostGuestId } = req.body || {};
-
-  if (!newHostUserId && !newHostGuestId) {
-    return reply.code(400).send({ error: "Either newHostUserId or newHostGuestId required" });
-  }
-
-  const groupOrder = await prisma.groupOrder.findUnique({
-    where: { code: code.toUpperCase() },
-    include: { orders: true },
-  });
-
-  if (!groupOrder) {
-    return reply.code(404).send({ error: "Group not found" });
-  }
-
-  // Verify new host has an order in the group
-  const newHostOrder = groupOrder.orders.find(o =>
-    (newHostUserId && o.userId === newHostUserId) ||
-    (newHostGuestId && o.guestId === newHostGuestId)
-  );
-
-  if (!newHostOrder) {
-    return reply.code(400).send({ error: "New host must have an order in the group" });
-  }
-
-  // Update host
-  const updated = await prisma.groupOrder.update({
-    where: { id: groupOrder.id },
-    data: {
-      hostUserId: newHostUserId || null,
-      hostGuestId: newHostGuestId || null,
-    },
-    include: {
-      location: true,
-      hostUser: true,
-      hostGuest: true,
-      orders: {
-        include: {
-          items: { include: { menuItem: true } },
-          user: true,
-          guest: true,
-        },
-      },
-    },
-  });
-
-  // Update isGroupHost flag on orders
-  await prisma.order.updateMany({
-    where: { groupOrderId: groupOrder.id },
-    data: { isGroupHost: false },
-  });
-  await prisma.order.update({
-    where: { id: newHostOrder.id },
-    data: { isGroupHost: true },
-  });
-
-  return updated;
-});
-
-// POST /group-orders/:code/complete - Complete group order and notify kitchen/cleaning
-app.post("/group-orders/:code/complete", async (req, reply) => {
-  const { code } = req.params;
-  const { seatIds, seatingOption } = req.body || {};
-
-  const groupOrder = await prisma.groupOrder.findUnique({
-    where: { code: code.toUpperCase() },
-    include: {
-      orders: {
-        include: {
-          items: { include: { menuItem: true } },
-          user: true,
-          guest: true,
-        },
-      },
-      location: true,
-    },
-  });
-
-  if (!groupOrder) {
-    return reply.code(404).send({ error: "Group not found" });
-  }
-
-  // If group is already PAID and all orders are QUEUED, return success (idempotent)
-  if (groupOrder.status === "PAID") {
-    const allQueued = groupOrder.orders.every(o => o.status === "QUEUED");
-    if (allQueued) {
-      console.log(`[Group Order Already Complete] Code: ${groupOrder.code} - returning existing data`);
-      return groupOrder;
-    }
-  }
-
-  // Verify all orders are paid (check paymentStatus, not status - status changes to QUEUED when paid)
-  const allPaid = groupOrder.orders.every(o => o.paymentStatus === "PAID");
-  if (!allPaid) {
-    return reply.code(400).send({ error: "Not all orders are paid" });
-  }
-
-  // Update group status to PAID
-  const updatedGroup = await prisma.groupOrder.update({
-    where: { id: groupOrder.id },
-    data: { status: "PAID" },
-    include: {
-      orders: {
-        include: {
-          items: { include: { menuItem: true } },
-          user: true,
-          guest: true,
-        },
-      },
-      location: true,
-    },
-  });
-
-  const now = new Date();
-
-  // If seat IDs provided, reserve them and assign to orders
-  if (seatIds && seatIds.length > 0) {
-    for (let i = 0; i < seatIds.length && i < groupOrder.orders.length; i++) {
-      const seatId = seatIds[i];
-      const order = groupOrder.orders[i];
-
-      // Reserve the seat
-      await prisma.seat.update({
-        where: { id: seatId },
-        data: {
-          status: "RESERVED",
-          reservedUntil: new Date(Date.now() + 30 * 60 * 1000), // 30 min reservation
-        },
-      });
-
-      // Assign seat to order and queue it for kitchen
-      await prisma.order.update({
-        where: { id: order.id },
-        data: {
-          seatId: seatId,
-          podSelectionMethod: "GROUP_HOST_SELECTED",
-          status: "QUEUED",
-          queuedAt: now,
-          paidAt: order.paidAt || now,
-        },
-      });
-    }
-  } else {
-    // No seats provided - still queue orders for kitchen
-    for (const order of groupOrder.orders) {
-      await prisma.order.update({
-        where: { id: order.id },
-        data: {
-          status: "QUEUED",
-          queuedAt: now,
-          paidAt: order.paidAt || now,
-        },
-      });
-    }
-  }
-
-  console.log(`[Group Order Completed] Code: ${groupOrder.code}, Orders: ${groupOrder.orders.length}, Seating Option: ${seatingOption}, Kitchen notified`);
-
-  return updatedGroup;
-});
-
 
 // =================
 // MEAL FOR A STRANGER
@@ -11600,113 +11072,40 @@ app.get("/gift-cards/code/:code", async (req, reply) => {
 
 // Redeem gift card to user balance (adds full balance to user credits)
 app.post("/gift-cards/:id/redeem", async (req, reply) => {
+  // The redeemer is the verified caller; a body userId is ignored. The claim
+  // is conditional (orders/tenders.js redeemGiftCard), so a concurrent redeem
+  // or apply cannot credit the same balance twice.
+  const who = await customerAuth.requireUser(req, reply);
+  if (!who) return reply;
   try {
-    const { id } = req.params;
-
-    // The redeemer is the verified caller; a body userId is ignored.
-    const who = await customerAuth.requireUser(req, reply);
-    if (!who) return reply;
-    const userId = who.userId;
-
-    const giftCard = await prisma.giftCard.findUnique({ where: { id } });
-    if (!giftCard) {
-      return reply.status(404).send({ error: "Gift card not found" });
-    }
-
-    if (giftCard.status !== "ACTIVE" || giftCard.balanceCents <= 0) {
-      return reply.status(400).send({ error: "Gift card is not available for redemption" });
-    }
-
-    // Claim the card, credit the redeemer and record it atomically. The claim
-    // only matches the card as read above, so a concurrent redeem (or apply)
-    // cannot credit the same balance twice.
-    const CONFLICT = Symbol("conflict");
-    let updated;
-    try {
-      updated = await basePrisma.$transaction(async (tx) => {
-        const claimed = await tx.giftCard.updateMany({
-          where: { id, status: "ACTIVE", balanceCents: giftCard.balanceCents },
-          data: {
-            status: "REDEEMED",
-            redeemedById: userId,
-            redeemedAt: new Date(),
-            balanceCents: 0,
-          },
-        });
-        if (claimed.count !== 1) throw CONFLICT;
-
-        // Add to user credits (NO LIMIT for gift cards/shop)
-        await tx.user.update({
-          where: { id: userId },
-          data: { creditsCents: { increment: giftCard.balanceCents } },
-        });
-
-        // Record credit event
-        await tx.creditEvent.create({
-          data: {
-            userId,
-            type: "ADMIN_ADJUSTMENT", // Using existing type for now
-            amountCents: giftCard.balanceCents,
-            description: `Gift card ${giftCard.code} redeemed to account balance`,
-            metadata: { giftCardId: giftCard.id, giftCardCode: giftCard.code },
-          },
-        });
-
-        return tx.giftCard.findUnique({ where: { id } });
-      });
-    } catch (err) {
-      if (err === CONFLICT) return reply.status(409).send({ error: "Gift card is not available for redemption" });
-      throw err;
-    }
-
-    return reply.send({
-      success: true,
-      creditsAdded: giftCard.balanceCents,
-      giftCard: updated,
-    });
-  } catch (error) {
-    console.error("Error redeeming gift card:", error);
-    return reply.status(500).send({ error: error.message });
+    return await redeemGiftCard(basePrisma, { giftCardId: req.params.id, userId: who.userId, now: new Date() });
+  } catch (err) {
+    if (err instanceof OrderError) return reply.status(err.status).send({ error: err.message, code: err.code });
+    console.error("Error redeeming gift card:", err);
+    return reply.status(500).send({ error: "Failed to redeem gift card" });
   }
 });
 
-// Apply gift card at checkout (partial use allowed)
+// Apply gift card to an unpaid order (legacy; checkout spends gift cards at PAID).
+// Task A7: only the verified owner of that order, or a kiosk device at the
+// order's location; at most what the order owes; conditional debit.
 app.post("/gift-cards/:id/apply", async (req, reply) => {
+  const { amountCents, orderId } = req.body || {};
+  const caller = {};
+  const auth = req.headers.authorization;
+  if (typeof auth === "string" && auth.startsWith("Bearer kiosk_")) {
+    const device = await kioskAuth.deviceFor(req);
+    if (!device) return reply.status(401).send({ error: "Kiosk device not authorized" });
+    caller.kioskLocationId = device.locationId;
+  } else {
+    caller.userId = orderOwnerId(await customerAuth.resolve(req));
+  }
   try {
-    const { id } = req.params;
-    const { amountCents } = req.body;
-
-    if (!amountCents || amountCents <= 0) {
-      return reply.status(400).send({ error: "Amount required" });
-    }
-
-    const giftCard = await prisma.giftCard.findUnique({ where: { id } });
-    if (!giftCard) {
-      return reply.status(404).send({ error: "Gift card not found" });
-    }
-
-    if (giftCard.status !== "ACTIVE" || giftCard.balanceCents <= 0) {
-      return reply.status(400).send({ error: "Gift card is not available" });
-    }
-
-    const amountToApply = Math.min(amountCents, giftCard.balanceCents);
-    const newBalance = giftCard.balanceCents - amountToApply;
-
-    await prisma.giftCard.update({
-      where: { id },
-      data: {
-        balanceCents: newBalance,
-        status: newBalance === 0 ? "EXHAUSTED" : "ACTIVE",
-      },
-    });
-
-    return reply.send({
-      applied: amountToApply,
-      remainingBalance: newBalance,
-    });
-  } catch (error) {
-    console.error("Error applying gift card:", error);
-    return reply.status(500).send({ error: error.message });
+    return await applyGiftCardToOrder(prisma, { giftCardId: req.params.id, orderId, amountCents, caller });
+  } catch (err) {
+    if (err instanceof OrderError) return reply.status(err.status).send({ error: err.message, code: err.code });
+    console.error("Error applying gift card:", err);
+    return reply.status(500).send({ error: "Failed to apply gift card" });
   }
 });
 
@@ -12069,16 +11468,21 @@ app.get("/shop/orders/:id", async (req, reply) => {
   }
 });
 
-// Update shop order (payment status, fulfillment, tracking)
+// Update shop order (fulfillment, tracking)
 app.patch("/shop/orders/:id", async (req, reply) => {
   try {
     const { id } = req.params;
-    const updates = req.body;
+    const updates = req.body || {};
+
+    // Task A7: payment status is never client input. (Its only caller, the
+    // Stripe webhook's metadata.shopOrderId branch, never fired: no shop
+    // PaymentIntent carries that key.) Verified shop payment is Task D10.
+    if (updates.paymentStatus !== undefined || updates.stripePaymentId !== undefined) {
+      return reply.status(400).send({ error: "unknown field: paymentStatus, stripePaymentId" });
+    }
 
     // Allowed updates
     const allowedFields = [
-      "paymentStatus",
-      "stripePaymentId",
       "fulfillmentStatus",
       "trackingNumber",
       "trackingUrl",

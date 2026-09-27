@@ -9,7 +9,9 @@
  * Supported per delegate: create, findUnique, findFirst, findMany
  * (where: equals / gt / gte / lt / lte / in / not, orderBy, take),
  * update (plain assignment plus {increment}/{decrement}/{set}), updateMany
- * (returns {count}), createMany (returns {count}), aggregate ({_sum}), count.
+ * (returns {count}), createMany (returns {count}), aggregate ({_sum}), count,
+ * delete, deleteMany. A relation `{ connect: { id } }` in update data is
+ * kept as an array of ids on the row (for implicit many-to-many lists).
  * `include` and `select` are ignored (whole rows come back).
  *
  * Plus `$transaction(fn)`: runs `fn(tx)` against a cloned snapshot of the
@@ -23,6 +25,8 @@ const COLLECTIONS = [
   // Order service (Task A6)
   "orderItem", "location", "tenant", "guest", "promoCode", "promoCodeUsage", "giftCard", "mealGift", "mealGiftChain",
   "challenge", "userChallenge",
+  // Group orders (Task A7)
+  "groupOrder",
 ];
 
 /**
@@ -105,6 +109,11 @@ function applyData(rec, data) {
       if ("increment" in val) { rec[key] = (rec[key] || 0) + val.increment; continue; }
       if ("decrement" in val) { rec[key] = (rec[key] || 0) - val.decrement; continue; }
       if ("set" in val) { rec[key] = val.set; continue; }
+      if ("connect" in val) {
+        const ids = (Array.isArray(val.connect) ? val.connect : [val.connect]).map((c) => c.id);
+        rec[key] = [...new Set([...(Array.isArray(rec[key]) ? rec[key] : []), ...ids])];
+        continue;
+      }
     }
     rec[key] = val;
   }
@@ -160,6 +169,17 @@ function makeDelegate(store, prefix, nextId) {
     async updateMany({ where, data } = {}) {
       const rows = [...store.values()].filter((r) => matchWhere(r, where));
       for (const rec of rows) applyData(rec, data);
+      return { count: rows.length };
+    },
+    async delete({ where } = {}) {
+      const rec = where && where.id !== undefined ? store.get(where.id) : [...store.values()].find((r) => matchWhere(r, where));
+      if (!rec) throw new Error(`prisma-memory: ${prefix} record not found for delete`);
+      store.delete(rec.id);
+      return { ...rec };
+    },
+    async deleteMany({ where } = {}) {
+      const rows = [...store.values()].filter((r) => matchWhere(r, where));
+      for (const rec of rows) store.delete(rec.id);
       return { count: rows.length };
     },
     async aggregate({ where, _sum } = {}) {
@@ -266,6 +286,7 @@ export function makeMemoryPrisma(seed = {}) {
     mealGiftChains: "mealGiftChain",
     challenges: "challenge",
     userChallenges: "userChallenge",
+    groupOrders: "groupOrder",
   };
   for (const [seedKey, collection] of Object.entries(seedMap)) {
     for (const rec of seed[seedKey] || []) {

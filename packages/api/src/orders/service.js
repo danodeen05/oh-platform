@@ -356,6 +356,8 @@ function randomTag(n) {
  * ordering hours and the arrival time (America/Denver via the location's
  * timezone), and claims a pod when one is requested.
  *
+ * group: { groupOrderId, isGroupHost } for a group member's order (Task A7).
+ *
  * seatRequest: null (no pod yet; assigned at check-in), {label}, {seatId}
  * (legacy web/kiosk callers), or {best: true}. An explicit pod that is taken
  * is PodUnavailableError; {best:true} with nothing free creates the order
@@ -372,6 +374,7 @@ export async function createOrder(prisma, {
   seatRequest = null,
   partySize = 1,
   source = "WEB",
+  group = null,
   now = new Date(),
   isDineInOrdersEnabled = config.isDineInOrdersEnabled,
 }) {
@@ -450,6 +453,8 @@ export async function createOrder(prisma, {
         podReservationExpiry: pod ? new Date(now.getTime() + POD_HOLD_MS) : null,
         isDualPod: Boolean(pod?.partner),
         dualPartnerSeatId: pod?.partner ? pod.partner.id : null,
+        // A group member's order (Task A7): same quote, tied to the group.
+        ...(group?.groupOrderId ? { groupOrderId: group.groupOrderId, isGroupHost: Boolean(group.isGroupHost) } : {}),
       },
     });
     await tx.orderItem.createMany({ data: quote.lines.map((l) => ({ orderId: created.id, menuItemId: l.menuItemId, quantity: l.quantity, priceCents: l.priceCents, selectedValue: l.selectedValue ?? null })) });
@@ -972,6 +977,21 @@ export async function markPaidBatch(prisma, stripe, { orderIds, paymentIntentId 
       throw err;
     }
   }
+  return settleBatch(prisma, stripe, { ids, orders, pi, now, strict: false }, effects);
+}
+
+/**
+ * The shared tail of a multi-order payment (kiosk batch, group host-pays):
+ * settle every order in ONE transaction, each claim pinned to that order's
+ * verified amount due; refund the charge in full if the settle fails; run
+ * the PAID effects for each order this call actually paid.
+ *
+ * strict: every order must be settled by THIS payment. An order found PAID
+ * by any other payment rolls the whole settle back (409 GROUP_CHANGED) and
+ * the charge is refunded, so a payer is never charged for an order someone
+ * else paid. The kiosk path keeps its original lenient behavior.
+ */
+async function settleBatch(prisma, stripe, { ids, orders, pi, now, strict }, effects) {
   const card = pi ? await cardDetails(stripe, pi) : {};
 
   let settled;
@@ -980,7 +1000,14 @@ export async function markPaidBatch(prisma, stripe, { orderIds, paymentIntentId 
       const out = [];
       for (const o of orders) {
         // Each claim is pinned to that order's verified amount due.
-        out.push(await settleInTx(tx, o.id, { expectedAmountDueCents: o.amountDueCents, paymentIntentId: pi?.id || null, card, now }));
+        const r = await settleInTx(tx, o.id, { expectedAmountDueCents: o.amountDueCents, paymentIntentId: pi?.id || null, card, now });
+        if (strict && r.alreadyPaid) {
+          const current = await tx.order.findUnique({ where: { id: o.id } });
+          if (!pi || current?.stripePaymentId !== pi.id) {
+            throw new OrderError("GROUP_CHANGED", 409, "Part of this group was already paid. Review the group and pay again.", { orderId: o.id });
+          }
+        }
+        out.push(r);
       }
       return out;
     });
@@ -1052,4 +1079,149 @@ export async function createKioskPaymentIntent(prisma, stripe, { orderIds, locat
     metadata: { orderIds: ids.join(","), locationId, source: "kiosk" },
   });
   return { paymentIntentId: paymentIntent.id, clientSecret: paymentIntent.client_secret, amountCents: sum, status: paymentIntent.status };
+}
+
+// ---------------------------------------------------------------------------
+// Group orders: host pays for everyone (Task A7)
+// ---------------------------------------------------------------------------
+
+export const MAX_GROUP_ORDERS = 10;
+const GROUP_PAYABLE_STATUSES = ["GATHERING", "CLOSED", "PAYING", "PARTIALLY_PAID"];
+
+/** The group's orders the host would pay: unpaid, not cancelled, in id order. */
+async function unpaidGroupOrders(prisma, groupOrderId) {
+  const rows = await prisma.order.findMany({ where: { groupOrderId, paymentStatus: { not: "PAID" } } });
+  return rows.filter((o) => o.status !== "CANCELLED").sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+}
+
+function parseOrderIds(value) {
+  return typeof value === "string" ? [...new Set(value.split(",").map((s) => s.trim()).filter(Boolean))] : [];
+}
+
+/**
+ * The host's single PaymentIntent for the whole group: the amount is the sum
+ * of the unpaid member orders' amountDueCents (never a client amount), with
+ * metadata { kind: "group", groupOrderId, orderIds }. The group moves to
+ * PAYING (HOST_PAYS_ALL), which stops new members and new orders while the
+ * host pays. Zero due: no PaymentIntent (clientSecret null).
+ * The caller (group routes) has already checked it is the verified host.
+ */
+export async function createGroupPaymentIntent(prisma, stripe, { groupOrderId, now = new Date() }) {
+  const group = await prisma.groupOrder.findUnique({ where: { id: groupOrderId } });
+  if (!group) throw new OrderError("GROUP_NOT_FOUND", 404, "Group not found");
+  if (!GROUP_PAYABLE_STATUSES.includes(group.status)) throw new OrderError("GROUP_NOT_PAYABLE", 409, "This group can't be paid now.");
+
+  const orders = await unpaidGroupOrders(prisma, groupOrderId);
+  if (orders.length === 0) throw new OrderError("NOTHING_TO_PAY", 409, "Every order in this group is already paid.");
+  if (orders.length > MAX_GROUP_ORDERS) throw new OrderError("ORDERS_REQUIRED", 400, `At most ${MAX_GROUP_ORDERS} orders per group payment.`);
+  let sum = 0;
+  for (const o of orders) {
+    const order = loadPayableOrder(o);
+    await assertSavingsStillAvailable(prisma, order, now);
+    sum += order.amountDueCents;
+  }
+  const orderIds = orders.map((o) => o.id);
+
+  await prisma.groupOrder.updateMany({
+    where: { id: groupOrderId, status: { in: GROUP_PAYABLE_STATUSES } },
+    data: { status: "PAYING", paymentMethod: "HOST_PAYS_ALL", closedAt: group.closedAt || now },
+  });
+
+  if (sum === 0) return { paymentIntentId: null, clientSecret: null, amountCents: 0, orderIds };
+  if (!stripe) throw new OrderError("PAYMENTS_UNAVAILABLE", 503, "Payments are not configured.");
+  if (sum < STRIPE_MIN_CHARGE_CENTS) throw new OrderError("AMOUNT_BELOW_MINIMUM", 400, "Card payments must be at least $0.50.", { amountDueCents: sum });
+
+  const paymentIntent = await stripe.paymentIntents.create({
+    amount: sum,
+    currency: "usd",
+    automatic_payment_methods: { enabled: true },
+    metadata: { kind: "group", groupOrderId, groupCode: group.code || "", orderIds: orderIds.join(",") },
+  });
+  return { paymentIntentId: paymentIntent.id, clientSecret: paymentIntent.client_secret, amountCents: sum, orderIds };
+}
+
+/** Marks the group PAID once every non-cancelled order in it is PAID. */
+async function finalizeGroupIfPaid(prisma, groupOrderId, now) {
+  const rows = await prisma.order.findMany({ where: { groupOrderId } });
+  const live = rows.filter((o) => o.status !== "CANCELLED");
+  if (live.length > 0 && live.every((o) => o.paymentStatus === "PAID")) {
+    await prisma.groupOrder.updateMany({ where: { id: groupOrderId, status: { not: "PAID" } }, data: { status: "PAID", finalizedAt: now } });
+  }
+  return prisma.groupOrder.findUnique({ where: { id: groupOrderId } });
+}
+
+/**
+ * Host pays for the group, verified like the kiosk batch (markPaidBatch) but
+ * bound to the group instead of a device's location:
+ *  - the PaymentIntent must be `succeeded`, carry metadata.kind "group" and
+ *    this groupOrderId, and be for exactly the sum of the amountDueCents of
+ *    the orders it lists in metadata.orderIds;
+ *  - every listed order must belong to this group and be unpaid;
+ *  - all of them settle in ONE transaction (strict: an order someone else
+ *    paid meanwhile rolls it back), and a charge that can't be applied is
+ *    refunded in full with a support case.
+ * No PaymentIntent is needed only when the unpaid orders owe nothing.
+ * A repeat (webhook + return page) is idempotent.
+ */
+export async function markGroupPaid(prisma, stripe, { groupOrderId, paymentIntentId = null, now = new Date() }, effects = config.effects) {
+  const group = await prisma.groupOrder.findUnique({ where: { id: groupOrderId } });
+  if (!group) throw new OrderError("GROUP_NOT_FOUND", 404, "Group not found");
+
+  if (!paymentIntentId) {
+    const orders = await unpaidGroupOrders(prisma, groupOrderId);
+    if (orders.length === 0) return { alreadyPaid: true, orders: [], group: await finalizeGroupIfPaid(prisma, groupOrderId, now) };
+    for (const o of orders) loadPayableOrder(o);
+    if (orders.reduce((s, o) => s + o.amountDueCents, 0) > 0) throw new OrderError("PAYMENT_REQUIRED", 402, "Payment required.");
+    const ids = orders.map((o) => o.id);
+    const result = await settleBatch(prisma, stripe, { ids, orders, pi: null, now, strict: true }, effects);
+    return { ...result, group: await finalizeGroupIfPaid(prisma, groupOrderId, now) };
+  }
+
+  if (!stripe) throw new OrderError("PAYMENTS_UNAVAILABLE", 503, "Payments are not configured.");
+  let pi0;
+  try {
+    pi0 = await stripe.paymentIntents.retrieve(paymentIntentId);
+  } catch {
+    throw new OrderError("PAYMENT_NOT_VERIFIED", 402, "Payment could not be verified.");
+  }
+  const md = pi0?.metadata || {};
+  if (md.kind !== "group" || md.groupOrderId !== groupOrderId) throw new OrderError("PAYMENT_NOT_VERIFIED", 402, "Payment could not be verified.");
+  const ids = parseOrderIds(md.orderIds);
+  // Our own group PaymentIntent took money: any refusal from here refunds it in full.
+  const charged = pi0.status === "succeeded" ? pi0 : null;
+  const refuse = async (err) => (charged ? refundOnFailure(prisma, stripe, err, { pi: charged, orderId: ids.join(","), orderIds: ids, userId: null }) : err);
+
+  if (ids.length === 0 || ids.length > MAX_GROUP_ORDERS) throw await refuse(new OrderError("PAYMENT_NOT_VERIFIED", 402, "Payment could not be verified."));
+  if (group.status === "CANCELLED") throw await refuse(new OrderError("GROUP_NOT_PAYABLE", 409, "This group was cancelled."));
+  const orders = [];
+  for (const id of ids) orders.push(await prisma.order.findUnique({ where: { id } }));
+
+  // Already settled by this very payment (the other confirmation won).
+  if (orders.every((o) => o && o.paymentStatus === "PAID" && o.stripePaymentId === paymentIntentId)) {
+    return { alreadyPaid: true, orders, group: await finalizeGroupIfPaid(prisma, groupOrderId, now) };
+  }
+  for (const o of orders) {
+    if (!o || o.groupOrderId !== groupOrderId || o.status === "CANCELLED" || o.amountDueCents === null || o.amountDueCents === undefined) {
+      throw await refuse(new OrderError("GROUP_CHANGED", 409, "This group changed after payment started. Review the group and pay again.", { orderId: o?.id || null }));
+    }
+    if (o.paymentStatus === "PAID" && o.stripePaymentId !== paymentIntentId) {
+      throw await refuse(new OrderError("GROUP_CHANGED", 409, "Part of this group was already paid. Review the group and pay again.", { orderId: o.id }));
+    }
+  }
+
+  const sum = orders.reduce((s, o) => s + o.amountDueCents, 0);
+  const want = [...ids].sort().join(",");
+  let pi;
+  try {
+    pi = await verifiedIntent(stripe, paymentIntentId, {
+      amount: sum,
+      matchesMetadata: (m) => m.kind === "group" && m.groupOrderId === groupOrderId && parseOrderIds(m.orderIds).sort().join(",") === want,
+    });
+  } catch (err) {
+    if (err.chargedIntent) throw await refundOnFailure(prisma, stripe, err, { pi: err.chargedIntent, orderId: ids.join(","), orderIds: ids, userId: null });
+    throw err;
+  }
+
+  const result = await settleBatch(prisma, stripe, { ids, orders, pi, now, strict: true }, effects);
+  return { ...result, group: await finalizeGroupIfPaid(prisma, groupOrderId, now) };
 }
