@@ -366,6 +366,41 @@ describe("fix round 1: one live group PaymentIntent, persisted", () => {
   });
 });
 
+describe("fix round 2 minors", () => {
+  const groupRow = (prisma) => prisma.groupOrder.findUnique({ where: { id: "g1" } });
+
+  test("(c) a new sum under the $0.50 minimum cancels the old open PaymentIntent before refusing, and the group leaves PAYING", async () => {
+    const intents = {};
+    const { prisma, stripe, host, member } = await setup({ stripeIntents: intents });
+    const a = await createGroupPaymentIntent(prisma, stripe, { groupOrderId: "g1", now: NOW });
+    await prisma.order.update({ where: { id: host.id }, data: { amountDueCents: 20 } });
+    await prisma.order.update({ where: { id: member.id }, data: { amountDueCents: 20 } });
+    await assert.rejects(createGroupPaymentIntent(prisma, stripe, { groupOrderId: "g1", now: NOW }), (e) => e.code === "AMOUNT_BELOW_MINIMUM");
+    assert.deepEqual(stripe.cancelled, [a.paymentIntentId]);
+    assert.equal(intents[a.paymentIntentId].status, "canceled");
+    assert.equal(stripe.created.length, 1, "no new PaymentIntent");
+    const g = await groupRow(prisma);
+    assert.equal(g.status, "CLOSED");
+    assert.equal(g.paymentIntentId ?? null, null);
+  });
+
+  test("(a) the race loser whose Stripe read of the winner fails gets the intended 409, not a crash", async () => {
+    const intents = {};
+    const { prisma, stripe } = await setup({ stripeIntents: intents });
+    // Another start stores its PaymentIntent between our read of the group and our conditional write.
+    const realCreate = stripe.paymentIntents.create;
+    stripe.paymentIntents.create = async (params) => {
+      const mine = await realCreate(params);
+      await prisma.groupOrder.update({ where: { id: "g1" }, data: { paymentIntentId: "pi_winner", status: "PAYING" } });
+      return mine;
+    };
+    const err = await createGroupPaymentIntent(prisma, stripe, { groupOrderId: "g1", now: NOW }).catch((e) => e);
+    assert.equal(err.code, "GROUP_CHANGED", "pi_winner doesn't exist in Stripe: retrieve throws, still a 409");
+    assert.equal(err.status, 409);
+    assert.deepEqual(stripe.cancelled, ["pi_test_1"], "the loser cancelled its own PaymentIntent");
+  });
+});
+
 describe("createOrder for a group", () => {
   test("writes groupOrderId and isGroupHost with the server quote", async () => {
     const { host, member } = await setup();

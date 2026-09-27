@@ -15,7 +15,7 @@
  * amount) is refunded in full with a support case.
  */
 import { OrderError, verifiedIntent, refundUnappliedPayment } from "./service.js";
-import { grantCredit, grantCreditInTx } from "../membership/credits.js";
+import { grantCredit } from "../membership/credits.js";
 
 export const MEAL_GIFT_GIVER_REWARD_CENTS = 500;
 export const MEAL_GIFT_CHALLENGE_SLUG = "meal-for-stranger";
@@ -213,50 +213,8 @@ export async function finishMealGiftAcceptance(prisma, { mealGift, recipientUser
   return { excessCents: recipientUserId ? excessAmount : 0, giverRewarded: rewardGiver };
 }
 
-
-// ---------------------------------------------------------------------------
-// /gift-cards/:id/redeem (OWNER console route; Task A7)
-// ---------------------------------------------------------------------------
-// The legacy POST /gift-cards/:id/apply and POST /meal-gifts/:id/accept were
-// deleted in A7 fix round 1: apply drained a card without lowering what the
-// order owed, and accept turned pool value into credit. Checkout spends gift
-// cards and meal gifts from the order's quote at PAID (service.js settleInTx).
-
-/**
- * POST /gift-cards/:id/redeem: moves a card's whole balance to the verified
- * caller's account as a GIFT_CARD credit lot (grantCreditInTx). The claim (ACTIVE, balance as read -> REDEEMED, 0) is
- * conditional, so two concurrent redeems (or a redeem and an apply) credit
- * the balance once.
- */
-export async function redeemGiftCard(prisma, { giftCardId, userId, now = new Date() }) {
-  if (!userId) throw new OrderError("SIGN_IN_REQUIRED", 401, "Sign in required");
-  const giftCard = await prisma.giftCard.findUnique({ where: { id: giftCardId } });
-  if (!giftCard) throw new OrderError("GIFT_CARD_NOT_FOUND", 404, "Gift card not found");
-  if (giftCard.status !== "ACTIVE" || giftCard.balanceCents <= 0) throw new OrderError("GIFT_CARD_UNAVAILABLE", 400, "Gift card is not available for redemption");
-
-  const CONFLICT = Symbol("conflict");
-  let updated;
-  try {
-    updated = await prisma.$transaction(async (tx) => {
-      const claimed = await tx.giftCard.updateMany({
-        where: { id: giftCardId, status: "ACTIVE", balanceCents: giftCard.balanceCents },
-        data: { status: "REDEEMED", redeemedById: userId, redeemedAt: now, balanceCents: 0 },
-      });
-      if (claimed.count !== 1) throw CONFLICT;
-      // Through the ledger (fix round 1): a GIFT_CARD lot, the cached balance
-      // and the event move together, so checkout can spend it.
-      await grantCreditInTx(tx, {
-        userId,
-        source: "GIFT_CARD",
-        amountCents: giftCard.balanceCents,
-        note: `Gift card ${giftCard.code} redeemed to account balance (${giftCard.id})`,
-        now,
-      });
-      return tx.giftCard.findUnique({ where: { id: giftCardId } });
-    });
-  } catch (err) {
-    if (err === CONFLICT) throw new OrderError("GIFT_CARD_UNAVAILABLE", 409, "Gift card is not available for redemption");
-    throw err;
-  }
-  return { success: true, creditsAdded: giftCard.balanceCents, giftCard: updated };
-}
+// POST /gift-cards/:id/apply (A7 fix round 1), POST /meal-gifts/:id/accept
+// (fix round 1) and POST /gift-cards/:id/redeem (fix round 2) were deleted.
+// Checkout spends gift cards and meal gifts from the order's quote at PAID
+// (service.js settleInTx). A gift card's value is never converted into
+// expiring credit: card value may not expire within 5 years (CARD Act).

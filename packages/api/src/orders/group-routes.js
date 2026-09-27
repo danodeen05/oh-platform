@@ -241,6 +241,12 @@ export async function registerGroupOrderRoutes(app, {
       const paid = await prisma.order.count({ where: { groupOrderId: group.id, paymentStatus: "PAID" } });
       if (paid > 0 || group.status === "PAID") return reply.code(409).send({ error: "GROUP_HAS_PAID_ORDERS", message: "A group with paid orders can't be cancelled." });
       data.status = "CANCELLED";
+      // Best effort: the host's open group PaymentIntent must not stay payable.
+      // If it already succeeded the cancel fails; markGroupPaid then refuses
+      // the cancelled group and refunds that charge in full.
+      if (group.paymentIntentId && stripe?.paymentIntents?.cancel) {
+        await stripe.paymentIntents.cancel(group.paymentIntentId).catch((err) => console.error(`[group-orders] could not cancel ${group.paymentIntentId}:`, err?.message || err));
+      }
     }
     if (paymentMethod !== undefined) {
       if (!["HOST_PAYS_ALL", "PAY_YOUR_OWN"].includes(paymentMethod)) return reply.code(400).send({ error: "Unknown paymentMethod" });

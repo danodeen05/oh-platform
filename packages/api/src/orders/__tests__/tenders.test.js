@@ -1,9 +1,7 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { seed, fakeStripe, fakeEffects, NOW, HOUR_MS, CLASSIC_BOWL } from "./fixtures.js";
-import { readFileSync } from "node:fs";
-import { createGiftCard, createMealGift, finishMealGiftAcceptance, redeemGiftCard } from "../tenders.js";
-import { availableCredit } from "../../membership/credits.js";
+import { createGiftCard, createMealGift, finishMealGiftAcceptance } from "../tenders.js";
 import { quoteOrder, createOrder, markPaid } from "../service.js";
 
 let n = 0;
@@ -142,65 +140,5 @@ describe("fix round 3: a refunded PaymentIntent funds nothing", () => {
     stripe.issuedRefunds.push({ id: "re_prev", payment_intent: "pi_gift" });
     await assert.rejects(createMealGift(prisma, stripe, { giverId: "u2", locationId: "L1", amountCents: 2000, paymentIntentId: "pi_gift", expiresAt: EXPIRES, now: NOW }), (e) => e.code === "PAYMENT_REFUNDED");
     assert.equal((await prisma.mealGift.findMany()).length, 0);
-  });
-});
-
-describe("A7 fix round 1: the legacy apply and accept routes are gone", () => {
-  test("index.js declares neither POST /gift-cards/:id/apply nor POST /meal-gifts/:id/accept (so both are 404)", () => {
-    const src = readFileSync(new URL("../../index.js", import.meta.url), "utf8");
-    assert.doesNotMatch(src, /app\.post\(\s*["'`]\/gift-cards\/:id\/apply["'`]/);
-    assert.doesNotMatch(src, /app\.post\(\s*["'`]\/meal-gifts\/:id\/accept["'`]/);
-    assert.match(src, /app\.post\(\s*"\/gift-cards\/:id\/redeem"/, "redeem stays");
-  });
-});
-
-describe("Task A7: /gift-cards/:id/redeem", () => {
-  const card = { id: "gc1", code: "GIFT-0001", amountCents: 2500, balanceCents: 2500, status: "ACTIVE" };
-
-  test("only a verified caller; the balance goes to that caller once", async () => {
-    const prisma = seed({ giftCards: [{ ...card }] });
-    await assert.rejects(redeemGiftCard(prisma, { giftCardId: "gc1", userId: null, now: NOW }), (e) => e.status === 401);
-    const results = await Promise.allSettled([
-      redeemGiftCard(prisma, { giftCardId: "gc1", userId: "u1", now: NOW }),
-      redeemGiftCard(prisma, { giftCardId: "gc1", userId: "u2", now: NOW }),
-    ]);
-    assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
-    assert.equal(results.find((r) => r.status === "rejected").reason.status, 409);
-    const row = await prisma.giftCard.findUnique({ where: { id: "gc1" } });
-    assert.equal(row.status, "REDEEMED");
-    assert.equal(row.balanceCents, 0);
-    const winner = results.find((r) => r.status === "fulfilled").value;
-    assert.equal(winner.creditsAdded, 2500);
-    const credited = await prisma.user.findUnique({ where: { id: row.redeemedById } });
-    assert.equal(credited.creditsCents, 2500);
-    assert.equal((await prisma.creditEvent.findMany()).length, 1);
-  });
-
-  test("fix round 1: a redeem is a GIFT_CARD credit lot; availableCredit equals the cached balance and checkout can spend it", async () => {
-    const prisma = seed({ giftCards: [{ ...card }] });
-    await redeemGiftCard(prisma, { giftCardId: "gc1", userId: "u1", now: NOW });
-    const lots = await prisma.creditLot.findMany({ where: { userId: "u1" } });
-    assert.equal(lots.length, 1);
-    assert.equal(lots[0].source, "GIFT_CARD");
-    assert.equal(lots[0].remainingCents, 2500);
-    const user = await prisma.user.findUnique({ where: { id: "u1" } });
-    assert.equal(await availableCredit(prisma, "u1", NOW), user.creditsCents);
-    assert.equal(user.creditsCents, 2500);
-
-    // Spendable at checkout: the quote takes credits (capped at $5) and PAID spends the lot.
-    const quote = await quoteOrder(prisma, { locationId: "L1", items: CLASSIC_BOWL, userId: "u1", useCreditsCents: 500, now: NOW });
-    assert.equal(quote.discounts.creditsCents, 500);
-    const order = await createOrder(prisma, { quote, locationId: "L1", tenantId: "t1", userId: "u1", now: NOW, isDineInOrdersEnabled: () => true });
-    const stripe = fakeStripe({ pi_rest: { status: "succeeded", amount: order.amountDueCents, metadata: { orderId: order.id } } });
-    await markPaid(prisma, stripe, { orderId: order.id, paymentIntentId: "pi_rest", now: NOW }, fakeEffects().effects);
-    assert.equal((await prisma.order.findUnique({ where: { id: order.id } })).paymentStatus, "PAID");
-    assert.equal(await availableCredit(prisma, "u1", NOW), 2000);
-    assert.equal((await prisma.user.findUnique({ where: { id: "u1" } })).creditsCents, 2000);
-  });
-
-  test("an inactive or empty card is 400", async () => {
-    const prisma = seed({ giftCards: [{ ...card, status: "EXHAUSTED", balanceCents: 0 }] });
-    await assert.rejects(redeemGiftCard(prisma, { giftCardId: "gc1", userId: "u1", now: NOW }), (e) => e.status === 400);
-    await assert.rejects(redeemGiftCard(prisma, { giftCardId: "nope", userId: "u1", now: NOW }), (e) => e.status === 404);
   });
 });

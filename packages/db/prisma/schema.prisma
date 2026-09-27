@@ -741,7 +741,6 @@ enum CreditLotSource {
   ADMIN
   LEGACY
   MEAL_GIFT // meal gift excess or an expired funded gift returned to its giver
-  GIFT_CARD // a gift card balance redeemed to the member's account
 }
 
 model CreditLot {

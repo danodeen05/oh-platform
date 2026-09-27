@@ -93,7 +93,9 @@ function matchField(val, cond) {
 
 function matchWhere(rec, where) {
   if (!where) return true;
-  return Object.entries(where).every(([key, cond]) => matchField(rec[key], cond));
+  return Object.entries(where).every(([key, cond]) =>
+    key === "OR" && Array.isArray(cond) ? cond.some((w) => matchWhere(rec, w)) : matchField(rec[key], cond),
+  );
 }
 
 function applyOrder(rows, orderBy) {

@@ -324,4 +324,27 @@ describe("host pays for the group", () => {
     assert.equal(res.json().error, "GROUP_PAYING");
     assert.equal((await prisma.groupOrder.findUnique({ where: { id: "g1" } })).hostUserId, "u1");
   });
+
+  test("fix round 2 (b): cancelling a PAYING group cancels its stored open PaymentIntent", async () => {
+    const { app, prisma, stripe } = await groupWithOrders();
+    const pi = (await app.inject({ method: "POST", url: "/group-orders/ABC234/payment-intent", headers: user("u1") })).json();
+    const res = await app.inject({ method: "PATCH", url: "/group-orders/ABC234", headers: user("u1"), payload: { status: "CANCELLED" } });
+    assert.equal(res.statusCode, 200);
+    assert.deepEqual(stripe.cancelled, [pi.paymentIntentId]);
+    assert.equal(stripe.intents[pi.paymentIntentId].status, "canceled");
+    assert.equal((await prisma.groupOrder.findUnique({ where: { id: "g1" } })).status, "CANCELLED");
+  });
+
+  test("fix round 2 (b): a cancel whose PaymentIntent already succeeded still cancels the group; a later confirm refunds in full", async () => {
+    const { app, prisma, stripe, a } = await groupWithOrders();
+    const pi = (await app.inject({ method: "POST", url: "/group-orders/ABC234/payment-intent", headers: user("u1") })).json();
+    stripe.intents[pi.paymentIntentId].status = "succeeded";
+    const res = await app.inject({ method: "PATCH", url: "/group-orders/ABC234", headers: user("u1"), payload: { status: "CANCELLED" } });
+    assert.equal(res.statusCode, 200, "the failed Stripe cancel doesn't fail the group cancel");
+    const hook = await app.inject({ method: "POST", url: "/group-orders/ABC234/confirm-payment", payload: { paymentIntentId: pi.paymentIntentId } });
+    assert.equal(hook.statusCode, 409);
+    assert.equal(hook.json().refunded, true);
+    assert.deepEqual(stripe.refundCalls.map((c) => c[0]), [{ payment_intent: pi.paymentIntentId }]);
+    assert.equal((await prisma.order.findUnique({ where: { id: a.id } })).paymentStatus, "PENDING");
+  });
 });

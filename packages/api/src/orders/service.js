@@ -1163,10 +1163,7 @@ export async function createGroupPaymentIntent(prisma, stripe, { groupOrderId, n
     }
   }
 
-  if (sum > 0) {
-    if (!stripe) throw new OrderError("PAYMENTS_UNAVAILABLE", 503, "Payments are not configured.");
-    if (sum < STRIPE_MIN_CHARGE_CENTS) throw new OrderError("AMOUNT_BELOW_MINIMUM", 400, "Card payments must be at least $0.50.", { amountDueCents: sum });
-  }
+  if (sum > 0 && !stripe) throw new OrderError("PAYMENTS_UNAVAILABLE", 503, "Payments are not configured.");
 
   // The group changed: the old PaymentIntent must never be payable again.
   if (existing) {
@@ -1181,6 +1178,15 @@ export async function createGroupPaymentIntent(prisma, stripe, { groupOrderId, n
       }
       if (now2?.status !== "canceled") throw new OrderError("GROUP_CHANGED", 409, "The group payment changed. Try again.");
     }
+  }
+
+  // Under Stripe's minimum (fix round 2): the old PaymentIntent was cancelled
+  // above, so undo the PAYING it stood for and refuse. No new PaymentIntent.
+  if (sum > 0 && sum < STRIPE_MIN_CHARGE_CENTS) {
+    if (existing) {
+      await prisma.groupOrder.updateMany({ where: { id: groupOrderId, paymentIntentId: existing.id, status: "PAYING" }, data: { paymentIntentId: null, status: "CLOSED" } });
+    }
+    throw new OrderError("AMOUNT_BELOW_MINIMUM", 400, "Card payments must be at least $0.50.", { amountDueCents: sum });
   }
 
   if (sum === 0) {
@@ -1206,8 +1212,9 @@ export async function createGroupPaymentIntent(prisma, stripe, { groupOrderId, n
     await stripe.paymentIntents.cancel(paymentIntent.id).catch((err) => console.error(`[orders] could not cancel losing group PaymentIntent ${paymentIntent.id}:`, err?.message || err));
     const winner = await prisma.groupOrder.findUnique({ where: { id: groupOrderId } });
     if (winner?.paymentIntentId && winner.paymentIntentId !== group.paymentIntentId) {
-      const pi = await stripe.paymentIntents.retrieve(winner.paymentIntentId);
-      if (OPEN_INTENT_STATUSES.has(pi.status)) return { paymentIntentId: pi.id, clientSecret: pi.client_secret, amountCents: pi.amount, orderIds: parseOrderIds(pi.metadata?.orderIds), reused: true };
+      // Best effort: if Stripe can't be read, fall through to the intended 409.
+      const pi = await stripe.paymentIntents.retrieve(winner.paymentIntentId).catch(() => null);
+      if (pi && OPEN_INTENT_STATUSES.has(pi.status)) return { paymentIntentId: pi.id, clientSecret: pi.client_secret, amountCents: pi.amount, orderIds: parseOrderIds(pi.metadata?.orderIds), reused: true };
     }
     throw new OrderError("GROUP_CHANGED", 409, "The group payment changed. Try again.");
   }

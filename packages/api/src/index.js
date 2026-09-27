@@ -69,8 +69,9 @@ import { registerPlanRoutes } from "./plan/routes.js";
 import { registerMembershipRoutes } from "./membership/routes.js";
 import { registerOrderRoutes } from "./orders/routes.js";
 import { registerGroupOrderRoutes } from "./orders/group-routes.js";
+import { registerGiftCardRoutes } from "./orders/gift-card-routes.js";
 import { configureOrderService, markPaid, confirmOrderPayment, intentHasRefund, OrderError } from "./orders/service.js";
-import { createGiftCard, createMealGift, finishMealGiftAcceptance, redeemGiftCard } from "./orders/tenders.js";
+import { createMealGift, finishMealGiftAcceptance } from "./orders/tenders.js";
 import { grantCredit } from "./membership/credits.js";
 import { taxCents, spendBaseCents } from "./orders/pricing.js";
 import { PROGRAM, tierRule } from "./membership/program.js";
@@ -275,6 +276,8 @@ await registerOrderRoutes(app, {
   effects: orderEffects,
   onOrderCompleted,
 });
+// Gift cards (Task A7): purchase, lookup, webhook confirm. No apply, no redeem.
+await registerGiftCardRoutes(app, { prisma, stripe, customerAuth, sendGiftCardEmail });
 // Group orders (Task A7): verified members, server-priced orders, host pays via one verified PaymentIntent.
 await registerGroupOrderRoutes(app, {
   prisma,
@@ -10913,182 +10916,10 @@ app.delete("/users/:id/payment-methods/:methodId", async (req, reply) => {
 // GIFT CARDS
 // ====================
 
-// Generate secure gift card code (XXXX-XXXX-XXXX-XXXX)
-function generateGiftCardCode() {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // No I, O, 0, 1 for clarity
-  let code = "";
-  for (let i = 0; i < 16; i++) {
-    if (i > 0 && i % 4 === 0) code += "-";
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return code;
-}
-
-// Purchase a gift card
-app.post("/gift-cards", async (req, reply) => {
-  try {
-    const {
-      amountCents,
-      designId,
-      recipientEmail,
-      recipientName,
-      personalMessage,
-      stripePaymentId,
-    } = req.body || {};
-
-    // Task A6: a gift card is a tender, so it must be funded. A customer card
-    // needs its purchase PaymentIntent verified here (succeeded, exactly
-    // amountCents, metadata {type:"gift_card", amountCents}, unused). Trusted
-    // server-to-server callers (x-admin-api-key) may issue without one.
-    const trusted = customerAuth.isServiceCall(req);
-    const who = await customerAuth.resolve(req);
-    let giftCard;
-    try {
-      giftCard = await createGiftCard(prisma, stripe, {
-        amountCents,
-        designId,
-        recipientEmail,
-        recipientName,
-        personalMessage,
-        purchaserId: trusted ? req.body?.purchaserId || null : orderOwnerId(who),
-        stripePaymentId: stripePaymentId || null,
-        trusted,
-        generateCode: generateGiftCardCode,
-      });
-    } catch (err) {
-      if (err instanceof OrderError) return reply.status(err.status).send({ error: err.message, code: err.code, ...err.extra });
-      throw err;
-    }
-
-    // Send email delivery if recipient email provided
-    if (recipientEmail) {
-      try {
-        await sendGiftCardEmail(giftCard);
-        await prisma.giftCard.update({
-          where: { id: giftCard.id },
-          data: { deliveredAt: new Date() },
-        });
-      } catch (emailErr) {
-        console.error("Failed to send gift card email:", emailErr);
-        // Don't fail the purchase if email fails
-      }
-    }
-
-    return reply.send(giftCard);
-  } catch (error) {
-    console.error("Error creating gift card:", error);
-    return reply.status(500).send({ error: error.message });
-  }
-});
-
-// Get gift card by ID
-app.get("/gift-cards/:id", async (req, reply) => {
-  try {
-    const { id } = req.params;
-
-    const giftCard = await prisma.giftCard.findUnique({
-      where: { id },
-      include: {
-        purchaser: { select: { id: true, name: true } },
-        redeemedBy: { select: { id: true, name: true } },
-      },
-    });
-
-    if (!giftCard) {
-      return reply.status(404).send({ error: "Gift card not found" });
-    }
-
-    return reply.send(giftCard);
-  } catch (error) {
-    console.error("Error fetching gift card:", error);
-    return reply.status(500).send({ error: error.message });
-  }
-});
-
-// Lookup gift card by code (for redemption)
-app.get("/gift-cards/code/:code", async (req, reply) => {
-  try {
-    const { code } = req.params;
-    // Normalize code (remove dashes, uppercase)
-    const normalizedCode = code.toUpperCase().replace(/[^A-Z0-9]/g, "");
-
-    // Build code with dashes for lookup
-    const formattedCode = normalizedCode.length === 16
-      ? `${normalizedCode.slice(0, 4)}-${normalizedCode.slice(4, 8)}-${normalizedCode.slice(8, 12)}-${normalizedCode.slice(12, 16)}`
-      : code.toUpperCase();
-
-    const giftCard = await prisma.giftCard.findFirst({
-      where: {
-        OR: [
-          { code: formattedCode },
-          { code: code.toUpperCase() },
-        ],
-        status: "ACTIVE",
-        balanceCents: { gt: 0 },
-      },
-    });
-
-    if (!giftCard) {
-      return reply.status(404).send({ error: "Gift card not found or has no balance" });
-    }
-
-    // Return limited info for security
-    return reply.send({
-      id: giftCard.id,
-      balanceCents: giftCard.balanceCents,
-      designId: giftCard.designId,
-    });
-  } catch (error) {
-    console.error("Error looking up gift card:", error);
-    return reply.status(500).send({ error: error.message });
-  }
-});
-
-// Redeem gift card to user balance (adds full balance to user credits)
-app.post("/gift-cards/:id/redeem", async (req, reply) => {
-  // The redeemer is the verified caller; a body userId is ignored. The claim
-  // is conditional (orders/tenders.js redeemGiftCard), so a concurrent redeem
-  // or apply cannot credit the same balance twice.
-  const who = await customerAuth.requireUser(req, reply);
-  if (!who) return reply;
-  try {
-    return await redeemGiftCard(basePrisma, { giftCardId: req.params.id, userId: who.userId, now: new Date() });
-  } catch (err) {
-    if (err instanceof OrderError) return reply.status(err.status).send({ error: err.message, code: err.code });
-    console.error("Error redeeming gift card:", err);
-    return reply.status(500).send({ error: "Failed to redeem gift card" });
-  }
-});
-
-// POST /gift-cards/:id/apply was removed in Task A7 fix round 1: it drained a
-// card without lowering what the order owed. Checkout spends gift cards from
-// the order's quote at PAID (orders/service.js).
-
-// Confirm gift card payment (called by webhook)
-app.post("/gift-cards/:id/confirm-payment", async (req, reply) => {
-  try {
-    const { id } = req.params;
-    const { stripePaymentId } = req.body || {};
-
-    const card = await prisma.giftCard.findUnique({ where: { id } });
-    if (!card) return reply.status(404).send({ error: "Gift card not found" });
-    // Task A6: record only a succeeded PaymentIntent for this card's amount that names this card.
-    const pi = stripe && stripePaymentId ? await stripe.paymentIntents.retrieve(stripePaymentId).catch(() => null) : null;
-    if (!pi || pi.status !== "succeeded" || pi.amount !== card.amountCents || pi.metadata?.giftCardId !== id) {
-      return reply.status(402).send({ error: "PAYMENT_NOT_VERIFIED" });
-    }
-
-    await prisma.giftCard.update({
-      where: { id },
-      data: { stripePaymentId },
-    });
-
-    return reply.send({ success: true });
-  } catch (error) {
-    console.error("Error confirming gift card payment:", error);
-    return reply.status(500).send({ error: error.message });
-  }
-});
+// Gift card routes live in orders/gift-card-routes.js (registered with the
+// order routes). POST /gift-cards/:id/apply (fix round 1) and
+// POST /gift-cards/:id/redeem (fix round 2: card value may not become
+// expiring credit) are gone; cards are spent only as checkout tender.
 
 // ====================
 // SHOP PRODUCTS
