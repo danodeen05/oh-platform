@@ -67,7 +67,7 @@ import { registerCateringRoutes, isDineInOrdersEnabled } from "./catering/routes
 import { registerPlanRoutes } from "./plan/routes.js";
 import { withStatusDemo, registerStatusDemoGuard } from "./demo/status-demo.js";
 import { createAdminAuth } from "./auth/admin.js";
-import { registerConsoleGuard } from "./auth/console-guard.js";
+import { registerAdminAuthHooks } from "./auth/admin-hook.js";
 
 // DEMO- order codes resolve to a synthetic order (see demo/status-demo.js):
 // the plan's live status-page demo reads real routes without touching the DB.
@@ -159,22 +159,17 @@ await app.register(rateLimit, {
 });
 
 // Admin authentication middleware: see src/auth/admin.js. Clerk session
-// tokens are verified server-side and checked against the ADMIN_EMAILS
-// allowlist; x-admin-api-key remains for server-to-server callers.
-const { requireAdminAuth } = createAdminAuth({ log: (...args) => app.log.warn({ args }, "admin auth") });
+// tokens are verified server-side and set req.adminRole (owner, manager or
+// station); an allowlisted email (ADMIN_EMAILS) is always owner.
+// x-admin-api-key remains for server-to-server callers (owner).
+const { requireAdminAuth, requireRole, forget: forgetAdminRole } = createAdminAuth({ log: (...args) => app.log.warn({ args }, "admin auth") });
 
-// Console-only routes outside /admin (see auth/console-guard.js). Must run before routes are declared.
-registerConsoleGuard(app, { requireAdminAuth });
+// All admin auth wiring: /admin/* role checks and the console-only routes
+// outside /admin (see auth/admin-hook.js). Must run before routes are declared.
+registerAdminAuthHooks(app, { requireAdminAuth, requireRole });
 
 // Demo orders never write: call staff, add-ons, refills and "done eating" are simulated.
 registerStatusDemoGuard(app, { source: statusDemoSource });
-
-// Apply admin auth to all /admin/* routes
-app.addHook('onRequest', async (req, reply) => {
-  if (req.url.startsWith('/admin')) {
-    await requireAdminAuth(req, reply);
-  }
-});
 
 // Register autonomous agent routes
 await registerAutonomousRoutes(app);
