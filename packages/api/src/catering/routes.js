@@ -25,6 +25,7 @@ import {
 } from "./ai.js";
 import { computeDiscountCents } from "../promos/discount.js";
 import { getBrandOverride } from "./brand-overrides.js";
+import { requestPath } from "../auth/console-guard.js";
 
 const prisma = new PrismaClient();
 const stripe = process.env.STRIPE_SECRET_KEY
@@ -652,7 +653,7 @@ export async function registerCateringRoutes(app) {
 
   if (!CATERING_PUBLIC_ENABLED) {
     app.addHook("onRequest", async (req, reply) => {
-      const path = (req.raw.url || "").split("?")[0];
+      const path = requestPath(req);
       if (path.startsWith("/catering/") && !CATERING_PUBLIC_ALLOWLIST.has(path)) {
         return reply.code(404).send({ error: "Not found" });
       }

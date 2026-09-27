@@ -67,7 +67,7 @@ import { registerCateringRoutes, isDineInOrdersEnabled } from "./catering/routes
 import { registerPlanRoutes } from "./plan/routes.js";
 import { withStatusDemo, registerStatusDemoGuard } from "./demo/status-demo.js";
 import { createAdminAuth } from "./auth/admin.js";
-import { registerConsoleGuard } from "./auth/console-guard.js";
+import { registerConsoleGuard, registerAdminPathGuard } from "./auth/console-guard.js";
 
 // DEMO- order codes resolve to a synthetic order (see demo/status-demo.js):
 // the plan's live status-page demo reads real routes without touching the DB.
@@ -170,11 +170,7 @@ registerConsoleGuard(app, { requireAdminAuth });
 registerStatusDemoGuard(app, { source: statusDemoSource });
 
 // Apply admin auth to all /admin/* routes
-app.addHook('onRequest', async (req, reply) => {
-  if (req.url.startsWith('/admin')) {
-    await requireAdminAuth(req, reply);
-  }
-});
+registerAdminPathGuard(app, { requireAdminAuth });
 
 // Register autonomous agent routes
 await registerAutonomousRoutes(app);
