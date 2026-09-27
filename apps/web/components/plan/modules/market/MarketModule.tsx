@@ -128,12 +128,14 @@ export function MarketModule() {
             return (
               <g key={c.key}>
                 <circle cx={x} cy={y} r={c.oh ? 9 : 6} fill={c.oh ? CHART.ember : CHART.ash} stroke={c.oh ? CHART.cream : "none"} strokeWidth={1.5} />
-                <text x={x} y={y - (c.oh ? 14 : 11)} textAnchor="middle" fill={c.oh ? CHART.cream : CHART.mute} fontSize={10}>{t(`matrix.players.${c.key}`)}</text>
+                <text x={x} y={y - (c.oh ? 14 : 11) + (c.labelDy ?? 0)} textAnchor="middle" fill={c.oh ? CHART.cream : CHART.mute} fontSize={10}>{t(`matrix.players.${c.key}`)}</text>
               </g>
             );
           })}
         </svg>
       </section>
+
+      <BenchmarkCallout eyebrow={t("dtf.eyebrow")} claim={t("dtf.claim")} benchmark={t("dtf.text", tailwindValues)} />
 
       <section>
         <h2 className="m-0 mb-4 font-display text-[1.5rem] text-oh-cream">{t("tailwinds.title")}</h2>

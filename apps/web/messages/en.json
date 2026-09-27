@@ -3390,8 +3390,14 @@
           "noodleChain": "Fast-casual noodle chains",
           "ramenShop": "Independent ramen shops",
           "ichiran": "Ichiran (pod format, Japan)",
+          "dinTaiFung": "Din Tai Fung (Taiwan, full service)",
           "oh": "Oh!"
         }
+      },
+      "dtf": {
+        "eyebrow": "The Taiwanese proof",
+        "claim": "America already lines up for Taiwanese food made with precision.",
+        "text": "Din Tai Fung averages $27.4 million per US restaurant, the highest of any chain in the country and nearly twice the next (Technomic, via Restaurant Business, 2025). Braised beef noodle soup, a Taiwanese icon, is on its menu. It earns that with 300 to 400 people and about 10,000 square feet a room, roughly one worker per seat. We serve the same national dish from {pods} pods with {people} people. There is no Din Tai Fung in Utah."
       },
       "tailwinds": {
         "title": "Four things moving in our direction",
@@ -3414,7 +3420,7 @@
           }
         }
       },
-      "references": "Reference concepts: Ichiran proved the pod format at scale. Crumbl proved a Utah-founded concept can go national at speed, and every local lender and investor knows that story.",
+      "references": "Reference concepts: Ichiran proved the pod format at scale. Din Tai Fung proved Taiwanese food earns the highest unit volumes in America. Crumbl proved a Utah-founded concept can go national at speed, and every local lender and investor knows that story.",
       "product": {
         "title": "The product",
         "alt": "Close-up of smoked brisket slices over broth and noodles.",
