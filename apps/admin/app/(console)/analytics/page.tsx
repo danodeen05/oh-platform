@@ -1,16 +1,21 @@
 "use client";
-
-import { useState, useEffect } from "react";
 import Link from "next/link";
-import StatCard from "./components/StatCard";
-import PeriodSelector from "./components/PeriodSelector";
-import SimpleBarChart from "./components/SimpleBarChart";
-
-const BASE = process.env.NEXT_PUBLIC_API_URL || "";
+import { useState } from "react";
+import { useRole } from "@/components/providers/RoleProvider";
+import { Card } from "@/components/ui/Card";
+import { ErrorCard } from "@/components/ui/ErrorCard";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { SkeletonList } from "@/components/ui/Skeleton";
+import { StatTile, type StatTone } from "@/components/ui/StatTile";
+import { Icon } from "@/components/ui/icons";
+import { API_BASE, api } from "@/lib/api";
+import { reportsFor, type Period, type Report } from "@/lib/analytics";
+import { type TodayPayload } from "@/lib/today";
+import { useResource } from "@/lib/use-resource";
+import { PeriodSelector } from "./components/PeriodSelector";
+import { SimpleBarChart, type BarPoint } from "./components/SimpleBarChart";
 
 type OverviewData = {
-  period: string;
-  dateRange: { start: string; end: string };
   metrics: {
     totalRevenue: { value: number; formatted: string; change: string };
     totalOrders: { value: number; change: string };
@@ -20,644 +25,177 @@ type OverviewData = {
 };
 
 type RealtimeData = {
-  today: {
-    orders: number;
-    revenue: number;
-    revenueFormatted: string;
-    completed: number;
-  };
-  live: {
-    activeOrders: number;
-    queueLength: number;
-  };
+  today: { orders: number; revenue: number; revenueFormatted: string; completed: number };
+  live: { activeOrders: number; queueLength: number };
 };
 
-type RevenueData = {
-  timeline: Array<{
-    date: string;
-    revenue: number;
-    revenueFormatted: string;
-    orders: number;
-  }>;
-};
+type RevenueData = { timeline: Array<{ date: string; revenue: number; revenueFormatted: string; orders: number }> };
 
-type OrderSourceData = {
-  period: string;
-  summary: {
-    totalOrders: number;
-    totalRevenue: number;
-    totalRevenueFormatted: string;
-  };
-  bySource: {
-    [key: string]: {
-      orders: number;
-      revenue: number;
-      revenueFormatted: string;
-      averageOrderValue: number;
-      aovFormatted: string;
-      orderPercentage: number;
-      revenuePercentage: number;
-    };
-  };
-};
+type SourceStats = { orders: number; revenue: number; revenueFormatted: string; aovFormatted: string; orderPercentage: number };
+type OrderSourceData = { bySource: Partial<Record<"WEB" | "KIOSK" | "MOBILE" | "STAFF", SourceStats>> };
 
-export default function AnalyticsPage() {
-  const [period, setPeriod] = useState("week");
-  const [overview, setOverview] = useState<OverviewData | null>(null);
-  const [realtime, setRealtime] = useState<RealtimeData | null>(null);
-  const [revenue, setRevenue] = useState<RevenueData | null>(null);
-  const [orderSources, setOrderSources] = useState<OrderSourceData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+const SOURCES: { key: "WEB" | "KIOSK" | "MOBILE" | "STAFF"; label: string }[] = [
+  { key: "WEB", label: "Web app" },
+  { key: "KIOSK", label: "Kiosk" },
+  { key: "MOBILE", label: "Mobile app" },
+  { key: "STAFF", label: "Staff entry" },
+];
 
-  async function loadData() {
-    setError(null);
-    try {
-      if (!BASE) {
-        throw new Error("API URL not configured. Set NEXT_PUBLIC_API_URL environment variable.");
-      }
-      const headers = { "x-tenant-slug": "oh" };
-      const [overviewRes, realtimeRes, revenueRes, orderSourcesRes] = await Promise.all([
-        fetch(`${BASE}/analytics/overview?period=${period}`, { headers }),
-        fetch(`${BASE}/analytics/realtime`, { headers }),
-        fetch(`${BASE}/analytics/revenue?period=${period}&groupBy=day`, { headers }),
-        fetch(`${BASE}/analytics/order-sources?period=${period}`, { headers }),
-      ]);
+function changeHint(change: string): { label: string; tone: StatTone } {
+  const n = parseFloat(change);
+  if (!Number.isFinite(n) || n === 0) return { label: "No change vs previous period", tone: "neutral" };
+  return { label: `${n > 0 ? "+" : ""}${n.toFixed(1)}% vs previous period`, tone: n > 0 ? "good" : "alert" };
+}
 
-      if (!overviewRes.ok || !realtimeRes.ok || !revenueRes.ok || !orderSourcesRes.ok) {
-        throw new Error(`API returned error: ${overviewRes.status} ${realtimeRes.status} ${revenueRes.status} ${orderSourcesRes.status}`);
-      }
+function chartFromTimeline(timeline: RevenueData["timeline"]): BarPoint[] {
+  return timeline.map((t) => ({ label: t.date.split("-").slice(1).join("/"), value: t.revenue / 100, formatted: t.revenueFormatted }));
+}
 
-      const [overviewData, realtimeData, revenueData, orderSourcesData] = await Promise.all([
-        overviewRes.json(),
-        realtimeRes.json(),
-        revenueRes.json(),
-        orderSourcesRes.json(),
-      ]);
+export default function AnalyticsHubPage() {
+  const role = useRole();
+  const isOwner = role === "owner";
+  const [period, setPeriod] = useState<Period>("week");
 
-      setOverview(overviewData);
-      setRealtime(realtimeData);
-      setRevenue(revenueData);
-      setOrderSources(orderSourcesData);
-      setLoading(false);
-    } catch (err) {
-      console.error("Failed to load analytics:", err);
-      setError(err instanceof Error ? err.message : "Failed to load analytics");
-      setLoading(false);
+  const overviewRes = useResource(isOwner ? `hub:overview:${period}` : null, (signal) => api<OverviewData>("/analytics/overview", { signal, query: { period } }));
+  const revenueRes = useResource(isOwner ? `hub:revenue:${period}` : null, (signal) => api<RevenueData>("/analytics/revenue", { signal, query: { period, groupBy: "day" } }));
+  const sourcesRes = useResource(isOwner ? `hub:sources:${period}` : null, (signal) => api<OrderSourceData>("/analytics/order-sources", { signal, query: { period } }));
+  const realtimeRes = useResource(isOwner ? "hub:realtime" : null, (signal) => api<RealtimeData>("/analytics/realtime", { signal }), { refreshMs: 30_000 });
+  const todayRes = useResource(!isOwner ? "hub:today" : null, (signal) => api<TodayPayload>("/admin/today", { signal }));
+
+  const reports = reportsFor(role);
+  const dev = process.env.NODE_ENV !== "production";
+
+  const failed = isOwner
+    ? (overviewRes.error && !overviewRes.data) || (revenueRes.error && !revenueRes.data) || (sourcesRes.error && !sourcesRes.data)
+    : todayRes.error && !todayRes.data;
+  const loading = isOwner ? !overviewRes.data && !failed : !todayRes.data && !failed;
+
+  function retry() {
+    if (isOwner) {
+      overviewRes.reload();
+      revenueRes.reload();
+      sourcesRes.reload();
+    } else {
+      todayRes.reload();
     }
   }
 
-  useEffect(() => {
-    loadData();
-  }, [period]);
-
-  // Refresh realtime data every 30 seconds
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      try {
-        const res = await fetch(`${BASE}/analytics/realtime`, {
-          headers: { "x-tenant-slug": "oh" },
-        });
-        setRealtime(await res.json());
-      } catch (error) {
-        console.error("Failed to refresh realtime:", error);
-      }
-    }, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
-  if (loading) {
-    return (
-      <div style={{ padding: "48px", textAlign: "center", color: "#6b7280" }}>
-        Loading analytics...
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div style={{ maxWidth: "600px", margin: "48px auto", textAlign: "center" }}>
-        <div
-          style={{
-            background: "#fef2f2",
-            border: "1px solid #fecaca",
-            borderRadius: "12px",
-            padding: "32px",
-          }}
-        >
-          <div style={{ fontSize: "2rem", marginBottom: "16px" }}>!</div>
-          <h2 style={{ fontSize: "1.25rem", fontWeight: 600, marginBottom: "12px", color: "#374151" }}>
-            Unable to Load Analytics
-          </h2>
-          <p style={{ color: "#6b7280", marginBottom: "16px" }}>
-            Could not connect to the API server. Please check your configuration.
-          </p>
-          <div
-            style={{
-              background: "#fee2e2",
-              borderRadius: "8px",
-              padding: "12px",
-              fontSize: "0.875rem",
-              color: "#991b1b",
-              fontFamily: "monospace",
-              marginBottom: "16px",
-            }}
-          >
-            {error}
-          </div>
-          <div style={{ fontSize: "0.75rem", color: "#9ca3af" }}>
-            API URL: {BASE || "(not set)"}
-          </div>
-          <div style={{ marginTop: "24px" }}>
-            <Link
-              href="/"
-              style={{
-                display: "inline-block",
-                padding: "10px 20px",
-                background: "#374151",
-                color: "white",
-                borderRadius: "8px",
-                textDecoration: "none",
-                fontSize: "0.875rem",
-              }}
-            >
-              Back to Admin
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const chartData = revenue?.timeline?.map((t) => ({
-    label: t.date.split("-").slice(1).join("/"),
-    value: t.revenue / 100,
-    formatted: t.revenueFormatted,
-  })) || [];
-
   return (
-    <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
-      {/* Header */}
-      <div style={{ marginBottom: "32px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
-          <div>
-            <h1 style={{ fontSize: "1.875rem", fontWeight: 700, marginBottom: "8px" }}>
-              Analytics Dashboard
-            </h1>
-            <p style={{ color: "#6b7280" }}>
-              Track your restaurant performance and make data-driven decisions
-            </p>
+    <>
+      <PageHeader title="Analytics" subtitle={isOwner ? "Revenue, orders and the reports behind them." : "Today's pulse, and the reports you can open."} />
+      <div className="space-y-5 lg:space-y-6">
+        {isOwner && <PeriodSelector value={period} onChange={setPeriod} />}
+        {failed ? (
+          <ErrorCard message={`Couldn't load analytics.${dev ? ` API: ${API_BASE || "not set"}` : ""}`} onRetry={retry} />
+        ) : loading ? (
+          <SkeletonList rows={4} />
+        ) : isOwner ? (
+          <>
+            <LiveStrip data={realtimeRes.data} />
+            <OverviewTiles data={overviewRes.data} />
+            {revenueRes.data && <SimpleBarChart title="Revenue over time" data={chartFromTimeline(revenueRes.data.timeline)} />}
+            {sourcesRes.data && <OrderSources data={sourcesRes.data} />}
+          </>
+        ) : (
+          <ManagerPulse data={todayRes.data} />
+        )}
+
+        <section className="space-y-2.5">
+          <h2 className="px-1 text-xs font-semibold uppercase tracking-[0.08em] text-oh-stone/70">Reports</h2>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {reports.map((r) => <ReportCard key={r.href} report={r} />)}
           </div>
-          <Link
-            href="/"
-            style={{
-              padding: "8px 16px",
-              background: "#f3f4f6",
-              borderRadius: "8px",
-              textDecoration: "none",
-              color: "#374151",
-              fontSize: "0.875rem",
-            }}
-          >
-            Back to Admin
-          </Link>
-        </div>
-        <PeriodSelector value={period} onChange={setPeriod} />
+        </section>
       </div>
+    </>
+  );
+}
 
-      {/* Live Stats Banner */}
-      {realtime && (
-        <div
-          style={{
-            background: "linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)",
-            borderRadius: "16px",
-            padding: "24px",
-            marginBottom: "32px",
-            color: "white",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px" }}>
-            <span
-              style={{
-                width: "8px",
-                height: "8px",
-                background: "#4ade80",
-                borderRadius: "50%",
-                animation: "pulse 2s infinite",
-              }}
-            />
-            <span style={{ fontSize: "0.875rem", fontWeight: 500 }}>LIVE</span>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "24px" }}>
-            <div>
-              <div style={{ fontSize: "0.75rem", opacity: 0.8, marginBottom: "4px" }}>Today&apos;s Revenue</div>
-              <div style={{ fontSize: "1.5rem", fontWeight: 700 }}>{realtime.today.revenueFormatted}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: "0.75rem", opacity: 0.8, marginBottom: "4px" }}>Orders Today</div>
-              <div style={{ fontSize: "1.5rem", fontWeight: 700 }}>{realtime.today.orders}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: "0.75rem", opacity: 0.8, marginBottom: "4px" }}>Active Orders</div>
-              <div style={{ fontSize: "1.5rem", fontWeight: 700 }}>{realtime.live.activeOrders}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: "0.75rem", opacity: 0.8, marginBottom: "4px" }}>Queue Length</div>
-              <div style={{ fontSize: "1.5rem", fontWeight: 700 }}>{realtime.live.queueLength}</div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* KPI Cards */}
-      {overview && (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: "20px",
-            marginBottom: "32px",
-          }}
-        >
-          <StatCard
-            title="Total Revenue"
-            value={overview.metrics.totalRevenue.formatted}
-            change={overview.metrics.totalRevenue.change}
-            subtitle="vs previous period"
-            icon="$"
-            color="green"
-          />
-          <StatCard
-            title="Total Orders"
-            value={overview.metrics.totalOrders.value}
-            change={overview.metrics.totalOrders.change}
-            subtitle="vs previous period"
-            icon="#"
-            color="blue"
-          />
-          <StatCard
-            title="Average Order Value"
-            value={overview.metrics.averageOrderValue.formatted}
-            change={overview.metrics.averageOrderValue.change}
-            subtitle="vs previous period"
-            color="yellow"
-          />
-          <StatCard
-            title="Unique Customers"
-            value={overview.metrics.uniqueCustomers.value}
-            change={overview.metrics.uniqueCustomers.change}
-            subtitle="vs previous period"
-            color="default"
-          />
-        </div>
-      )}
-
-      {/* Revenue Chart */}
-      {chartData.length > 0 && (
-        <div style={{ marginBottom: "32px" }}>
-          <SimpleBarChart data={chartData} title="Revenue Over Time" color="#10b981" height={180} />
-        </div>
-      )}
-
-      {/* Order Sources Breakdown */}
-      {orderSources && (
-        <div
-          style={{
-            background: "white",
-            border: "2px solid #e5e7eb",
-            borderRadius: "16px",
-            padding: "24px",
-            marginBottom: "32px",
-          }}
-        >
-          <h2 style={{ fontSize: "1.25rem", fontWeight: 600, marginBottom: "20px" }}>
-            Orders by Source
-          </h2>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-              gap: "16px",
-            }}
-          >
-            {/* Web Orders */}
-            <div
-              style={{
-                background: "#f0f9ff",
-                border: "2px solid #3b82f6",
-                borderRadius: "12px",
-                padding: "20px",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-                <span style={{ fontSize: "1.5rem" }}>🌐</span>
-                <span style={{ fontWeight: 600, color: "#1e40af" }}>Web App</span>
-              </div>
-              <div style={{ fontSize: "2rem", fontWeight: 700, color: "#1e40af", marginBottom: "4px" }}>
-                {orderSources.bySource.WEB?.orders || 0}
-              </div>
-              <div style={{ fontSize: "0.875rem", color: "#3b82f6", marginBottom: "8px" }}>
-                {orderSources.bySource.WEB?.orderPercentage || 0}% of orders
-              </div>
-              <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
-                Revenue: {orderSources.bySource.WEB?.revenueFormatted || "$0.00"}
-              </div>
-              <div style={{ fontSize: "0.75rem", color: "#9ca3af" }}>
-                Avg: {orderSources.bySource.WEB?.aovFormatted || "$0.00"}
-              </div>
-            </div>
-
-            {/* Kiosk Orders */}
-            <div
-              style={{
-                background: "#fef3c7",
-                border: "2px solid #f59e0b",
-                borderRadius: "12px",
-                padding: "20px",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-                <span style={{ fontSize: "1.5rem" }}>🖥️</span>
-                <span style={{ fontWeight: 600, color: "#b45309" }}>Kiosk</span>
-              </div>
-              <div style={{ fontSize: "2rem", fontWeight: 700, color: "#b45309", marginBottom: "4px" }}>
-                {orderSources.bySource.KIOSK?.orders || 0}
-              </div>
-              <div style={{ fontSize: "0.875rem", color: "#f59e0b", marginBottom: "8px" }}>
-                {orderSources.bySource.KIOSK?.orderPercentage || 0}% of orders
-              </div>
-              <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
-                Revenue: {orderSources.bySource.KIOSK?.revenueFormatted || "$0.00"}
-              </div>
-              <div style={{ fontSize: "0.75rem", color: "#9ca3af" }}>
-                Avg: {orderSources.bySource.KIOSK?.aovFormatted || "$0.00"}
-              </div>
-            </div>
-
-            {/* Mobile Orders (future) */}
-            <div
-              style={{
-                background: "#f0fdf4",
-                border: "2px solid #22c55e",
-                borderRadius: "12px",
-                padding: "20px",
-                opacity: (orderSources.bySource.MOBILE?.orders || 0) === 0 ? 0.5 : 1,
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-                <span style={{ fontSize: "1.5rem" }}>📱</span>
-                <span style={{ fontWeight: 600, color: "#166534" }}>Mobile App</span>
-              </div>
-              <div style={{ fontSize: "2rem", fontWeight: 700, color: "#166534", marginBottom: "4px" }}>
-                {orderSources.bySource.MOBILE?.orders || 0}
-              </div>
-              <div style={{ fontSize: "0.875rem", color: "#22c55e", marginBottom: "8px" }}>
-                {orderSources.bySource.MOBILE?.orderPercentage || 0}% of orders
-              </div>
-              <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
-                Revenue: {orderSources.bySource.MOBILE?.revenueFormatted || "$0.00"}
-              </div>
-              <div style={{ fontSize: "0.75rem", color: "#9ca3af" }}>
-                {(orderSources.bySource.MOBILE?.orders || 0) === 0 ? "Coming soon" : `Avg: ${orderSources.bySource.MOBILE?.aovFormatted || "$0.00"}`}
-              </div>
-            </div>
-
-            {/* Staff Orders */}
-            <div
-              style={{
-                background: "#faf5ff",
-                border: "2px solid #a855f7",
-                borderRadius: "12px",
-                padding: "20px",
-                opacity: (orderSources.bySource.STAFF?.orders || 0) === 0 ? 0.5 : 1,
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-                <span style={{ fontSize: "1.5rem" }}>👤</span>
-                <span style={{ fontWeight: 600, color: "#7e22ce" }}>Staff Entry</span>
-              </div>
-              <div style={{ fontSize: "2rem", fontWeight: 700, color: "#7e22ce", marginBottom: "4px" }}>
-                {orderSources.bySource.STAFF?.orders || 0}
-              </div>
-              <div style={{ fontSize: "0.875rem", color: "#a855f7", marginBottom: "8px" }}>
-                {orderSources.bySource.STAFF?.orderPercentage || 0}% of orders
-              </div>
-              <div style={{ fontSize: "0.875rem", color: "#6b7280" }}>
-                Revenue: {orderSources.bySource.STAFF?.revenueFormatted || "$0.00"}
-              </div>
-              <div style={{ fontSize: "0.75rem", color: "#9ca3af" }}>
-                Avg: {orderSources.bySource.STAFF?.aovFormatted || "$0.00"}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Quick Links to Detailed Reports */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-          gap: "20px",
-        }}
-      >
-        <Link
-          href="/analytics/traffic"
-          style={{
-            padding: "24px",
-            background: "linear-gradient(135deg, #059669 0%, #10b981 100%)",
-            border: "2px solid #10b981",
-            borderRadius: "12px",
-            textDecoration: "none",
-            color: "white",
-            transition: "all 0.2s",
-          }}
-        >
-          <div style={{ fontSize: "1.5rem", marginBottom: "12px" }}>📊</div>
-          <h3 style={{ fontSize: "1.125rem", fontWeight: 600, marginBottom: "8px" }}>Website Traffic</h3>
-          <p style={{ fontSize: "0.875rem", opacity: 0.9 }}>
-            GA4-powered traffic analytics, page views, sources, and devices
-          </p>
-        </Link>
-
-        <Link
-          href="/analytics/funnel"
-          style={{
-            padding: "24px",
-            background: "linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%)",
-            border: "2px solid #8b5cf6",
-            borderRadius: "12px",
-            textDecoration: "none",
-            color: "white",
-            transition: "all 0.2s",
-          }}
-        >
-          <div style={{ fontSize: "1.5rem", marginBottom: "12px" }}>🎯</div>
-          <h3 style={{ fontSize: "1.125rem", fontWeight: 600, marginBottom: "8px" }}>Conversion Funnel</h3>
-          <p style={{ fontSize: "0.875rem", opacity: 0.9 }}>
-            Order funnel with drop-off rates and conversion tracking
-          </p>
-        </Link>
-
-        <Link
-          href="/analytics/revenue"
-          style={{
-            padding: "24px",
-            background: "white",
-            border: "2px solid #e5e7eb",
-            borderRadius: "12px",
-            textDecoration: "none",
-            color: "inherit",
-            transition: "all 0.2s",
-          }}
-        >
-          <div style={{ fontSize: "1.5rem", marginBottom: "12px" }}>$</div>
-          <h3 style={{ fontSize: "1.125rem", fontWeight: 600, marginBottom: "8px" }}>Revenue Analytics</h3>
-          <p style={{ color: "#6b7280", fontSize: "0.875rem" }}>
-            Detailed revenue breakdowns, trends, and location comparisons
-          </p>
-        </Link>
-
-        <Link
-          href="/analytics/operations"
-          style={{
-            padding: "24px",
-            background: "white",
-            border: "2px solid #e5e7eb",
-            borderRadius: "12px",
-            textDecoration: "none",
-            color: "inherit",
-            transition: "all 0.2s",
-          }}
-        >
-          <div style={{ fontSize: "1.5rem", marginBottom: "12px" }}>*</div>
-          <h3 style={{ fontSize: "1.125rem", fontWeight: 600, marginBottom: "8px" }}>Operations</h3>
-          <p style={{ color: "#6b7280", fontSize: "0.875rem" }}>
-            Prep times, wait times, peak hours, and efficiency metrics
-          </p>
-        </Link>
-
-        <Link
-          href="/analytics/customers"
-          style={{
-            padding: "24px",
-            background: "white",
-            border: "2px solid #e5e7eb",
-            borderRadius: "12px",
-            textDecoration: "none",
-            color: "inherit",
-            transition: "all 0.2s",
-          }}
-        >
-          <div style={{ fontSize: "1.5rem", marginBottom: "12px" }}>@</div>
-          <h3 style={{ fontSize: "1.125rem", fontWeight: 600, marginBottom: "8px" }}>Customer Insights</h3>
-          <p style={{ color: "#6b7280", fontSize: "0.875rem" }}>
-            New vs returning, loyalty tiers, and customer lifetime value
-          </p>
-        </Link>
-
-        <Link
-          href="/analytics/menu"
-          style={{
-            padding: "24px",
-            background: "white",
-            border: "2px solid #e5e7eb",
-            borderRadius: "12px",
-            textDecoration: "none",
-            color: "inherit",
-            transition: "all 0.2s",
-          }}
-        >
-          <div style={{ fontSize: "1.5rem", marginBottom: "12px" }}>#</div>
-          <h3 style={{ fontSize: "1.125rem", fontWeight: 600, marginBottom: "8px" }}>Menu Performance</h3>
-          <p style={{ color: "#6b7280", fontSize: "0.875rem" }}>
-            Top sellers, category breakdown, and item-level analytics
-          </p>
-        </Link>
-
-        <Link
-          href="/analytics/upselling"
-          style={{
-            padding: "24px",
-            background: "white",
-            border: "2px solid #e5e7eb",
-            borderRadius: "12px",
-            textDecoration: "none",
-            color: "inherit",
-            transition: "all 0.2s",
-          }}
-        >
-          <div style={{ fontSize: "1.5rem", marginBottom: "12px" }}>+</div>
-          <h3 style={{ fontSize: "1.125rem", fontWeight: 600, marginBottom: "8px" }}>Upselling & Add-Ons</h3>
-          <p style={{ color: "#6b7280", fontSize: "0.875rem" }}>
-            Add-on revenue, item popularity, and conversion rates
-          </p>
-        </Link>
-
-        <Link
-          href="/analytics/languages"
-          style={{
-            padding: "24px",
-            background: "white",
-            border: "2px solid #e5e7eb",
-            borderRadius: "12px",
-            textDecoration: "none",
-            color: "inherit",
-            transition: "all 0.2s",
-          }}
-        >
-          <div style={{ fontSize: "1.5rem", marginBottom: "12px" }}>A</div>
-          <h3 style={{ fontSize: "1.125rem", fontWeight: 600, marginBottom: "8px" }}>Language Analytics</h3>
-          <p style={{ color: "#6b7280", fontSize: "0.875rem" }}>
-            Browser languages, localization opportunities, and visitor demographics
-          </p>
-        </Link>
-
-        <Link
-          href="/analytics/challenges"
-          style={{
-            padding: "24px",
-            background: "white",
-            border: "2px solid #e5e7eb",
-            borderRadius: "12px",
-            textDecoration: "none",
-            color: "inherit",
-            transition: "all 0.2s",
-          }}
-        >
-          <div style={{ fontSize: "1.5rem", marginBottom: "12px" }}>🏆</div>
-          <h3 style={{ fontSize: "1.125rem", fontWeight: 600, marginBottom: "8px" }}>Challenges Analytics</h3>
-          <p style={{ color: "#6b7280", fontSize: "0.875rem" }}>
-            Track challenge engagement, completion rates, and reward distribution
-          </p>
-        </Link>
-
-        <Link
-          href="/analytics/badges"
-          style={{
-            padding: "24px",
-            background: "white",
-            border: "2px solid #e5e7eb",
-            borderRadius: "12px",
-            textDecoration: "none",
-            color: "inherit",
-            transition: "all 0.2s",
-          }}
-        >
-          <div style={{ fontSize: "1.5rem", marginBottom: "12px" }}>🎖️</div>
-          <h3 style={{ fontSize: "1.125rem", fontWeight: 600, marginBottom: "8px" }}>Badges Analytics</h3>
-          <p style={{ color: "#6b7280", fontSize: "0.875rem" }}>
-            Badge distribution, engagement, and gamification effectiveness
-          </p>
-        </Link>
+function LiveStrip({ data }: { data: RealtimeData | null }) {
+  return (
+    <section className="rounded-card border border-oh-stone/15 bg-oh-charcoal p-4 text-oh-cream shadow-card">
+      <div className="mb-3 flex items-center gap-2">
+        <span className="h-2 w-2 rounded-full bg-oh-olive-light motion-safe:animate-pulse" aria-hidden="true" />
+        <span className="text-xs font-semibold uppercase tracking-[0.08em] text-oh-cream/80">Live</span>
       </div>
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div>
+          <div className="text-xs text-oh-cream/60">Today&apos;s revenue</div>
+          <div className="font-display text-2xl tabular-nums">{data?.today.revenueFormatted ?? "-"}</div>
+        </div>
+        <div>
+          <div className="text-xs text-oh-cream/60">Orders today</div>
+          <div className="font-display text-2xl tabular-nums">{data?.today.orders ?? "-"}</div>
+        </div>
+        <div>
+          <div className="text-xs text-oh-cream/60">Active orders</div>
+          <div className="font-display text-2xl tabular-nums">{data?.live.activeOrders ?? "-"}</div>
+        </div>
+        <div>
+          <div className="text-xs text-oh-cream/60">Queue length</div>
+          <div className="font-display text-2xl tabular-nums">{data?.live.queueLength ?? "-"}</div>
+        </div>
+      </div>
+    </section>
+  );
+}
 
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
-        }
-      `}</style>
+function OverviewTiles({ data }: { data: OverviewData | null }) {
+  if (!data) return null;
+  const { totalRevenue, totalOrders, averageOrderValue, uniqueCustomers } = data.metrics;
+  return (
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <StatTile label="Total revenue" value={totalRevenue.formatted} hint={changeHint(totalRevenue.change).label} tone={changeHint(totalRevenue.change).tone} />
+      <StatTile label="Total orders" value={totalOrders.value} hint={changeHint(totalOrders.change).label} tone={changeHint(totalOrders.change).tone} />
+      <StatTile label="Average order" value={averageOrderValue.formatted} hint={changeHint(averageOrderValue.change).label} tone={changeHint(averageOrderValue.change).tone} />
+      <StatTile label="Unique customers" value={uniqueCustomers.value} hint={changeHint(uniqueCustomers.change).label} tone={changeHint(uniqueCustomers.change).tone} />
     </div>
+  );
+}
+
+function OrderSources({ data }: { data: OrderSourceData }) {
+  return (
+    <Card title="Orders by source">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {SOURCES.map((s) => {
+          const stats = data.bySource[s.key];
+          const comingSoon = s.key === "MOBILE" && (!stats || stats.orders === 0);
+          return (
+            <div key={s.key} className={`rounded-xl border border-oh-stone/15 bg-oh-paper p-3 ${comingSoon ? "opacity-60" : ""}`}>
+              <div className="text-xs font-semibold uppercase tracking-[0.08em] text-oh-stone/70">{s.label}</div>
+              <div className="mt-1.5 font-display text-2xl tabular-nums text-oh-charcoal">{stats?.orders ?? 0}</div>
+              <div className="text-sm text-oh-stone/70">{comingSoon ? "Coming soon" : `${stats?.orderPercentage ?? 0}% of orders`}</div>
+              {!comingSoon && <div className="mt-1 text-xs tabular-nums text-oh-stone/60">{stats?.revenueFormatted ?? "$0.00"} &middot; avg {stats?.aovFormatted ?? "$0.00"}</div>}
+            </div>
+          );
+        })}
+      </div>
+    </Card>
+  );
+}
+
+function ManagerPulse({ data }: { data: TodayPayload | null }) {
+  if (!data) return <SkeletonList rows={1} />;
+  return (
+    <div className="grid grid-cols-3 gap-3">
+      <StatTile label="Orders today" value={data.ordersToday} />
+      <StatTile label="In the dining room" value={data.activeDiners} />
+      <StatTile label="Pod calls" value={data.openPodCalls} tone={data.openPodCalls > 0 ? "alert" : "neutral"} href="/kitchen" />
+    </div>
+  );
+}
+
+function ReportCard({ report }: { report: Report }) {
+  return (
+    <Link href={report.href}
+      className="flex items-start gap-3 rounded-card border border-oh-stone/15 bg-oh-cream p-4 shadow-card transition-colors hover:border-oh-stone/30 hover:bg-oh-linen/50">
+      <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-oh-linen text-oh-ember-deep" aria-hidden="true">
+        <Icon name={report.icon} size={20} />
+      </span>
+      <span className="min-w-0">
+        <span className="block font-display text-[1.25rem] leading-tight text-oh-charcoal">{report.title}</span>
+        <span className="mt-1 block text-sm text-oh-stone/70">{report.blurb}</span>
+      </span>
+    </Link>
   );
 }
