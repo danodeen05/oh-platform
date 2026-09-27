@@ -1,4 +1,5 @@
 import type { BadgeTone } from "../components/ui/Badge";
+import { money } from "./format";
 
 export const CARD_STATUSES = ["ACTIVE", "REDEEMED", "EXHAUSTED", "EXPIRED", "CANCELLED"] as const;
 
@@ -49,6 +50,22 @@ export function adjustmentCents(dollars: string): number | null {
   if (!t) return null;
   const n = Number(t.replace(/[$,\s]/g, ""));
   return Number.isFinite(n) ? Math.round(n * 100) : null;
+}
+
+/** Most that can be added: the API caps the balance at the card's original amount. */
+export function maxAddCents(c: { amountCents: number; balanceCents: number }): number {
+  return Math.max(0, c.amountCents - c.balanceCents);
+}
+
+export function adjustmentCapText(c: { amountCents: number; balanceCents: number }): string {
+  return `Balance can't exceed the original ${money(c.amountCents)}; max you can add is ${money(maxAddCents(c))}.`;
+}
+
+/** Inline error for the Amount field, or undefined when the adjustment is allowed. */
+export function adjustmentError(c: { amountCents: number; balanceCents: number }, cents: number | null): string | undefined {
+  if (cents === null || cents === 0) return "Enter a non-zero amount.";
+  if (cents > maxAddCents(c)) return adjustmentCapText(c);
+  return undefined;
 }
 
 export function adjustmentPrompt(code: string, cents: number): string {

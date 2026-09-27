@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import {
-  adjustmentCents, adjustmentPrompt, isExpired, pageSummary, percentUsed, purchaserName, recipientName,
+  adjustmentCapText, adjustmentCents, adjustmentError, adjustmentPrompt, maxAddCents, isExpired, pageSummary, percentUsed, purchaserName, recipientName,
   remainingPercent, slugifyDesignId, statusTone, validateCustomRange, validateDenomination,
 } from "../gift-cards";
 
@@ -66,4 +66,16 @@ test("validateCustomRange: min >= 0, max > min", () => {
 test("slugifyDesignId lowercases and turns spaces into dashes", () => {
   expect(slugifyDesignId("Festive Winter")).toBe("festive-winter");
   expect(slugifyDesignId("  Gold!! ")).toBe("gold");
+});
+
+test("adding balance is capped at the original amount", () => {
+  const card = { amountCents: 5000, balanceCents: 3000 };
+  expect(maxAddCents(card)).toBe(2000);
+  expect(maxAddCents({ amountCents: 5000, balanceCents: 5000 })).toBe(0);
+  expect(adjustmentCapText(card)).toBe("Balance can't exceed the original $50.00; max you can add is $20.00.");
+  expect(adjustmentError(card, 2000)).toBeUndefined();
+  expect(adjustmentError(card, 2001)).toBe(adjustmentCapText(card));
+  expect(adjustmentError(card, -3000)).toBeUndefined();
+  expect(adjustmentError(card, 0)).toBe("Enter a non-zero amount.");
+  expect(adjustmentError(card, null)).toBe("Enter a non-zero amount.");
 });

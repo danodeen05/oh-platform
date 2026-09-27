@@ -85,7 +85,7 @@ export function validatePromo(f: PromoForm): Partial<Record<keyof PromoForm, str
     const raw = (f.discountValue ?? "").trim();
     const n = Number(raw);
     if (!raw || !Number.isFinite(n) || n <= 0) errors.discountValue = "Enter a value greater than 0.";
-    else if (f.discountType === "PERCENTAGE" && n > 100) errors.discountValue = "A percentage can't be more than 100.";
+    else if (f.discountType === "PERCENTAGE" && (!Number.isInteger(n) || n < 1 || n > 100)) errors.discountValue = "Use a whole percentage from 1 to 100.";
   }
 
   const wholePositive = (s: string | undefined) => {

@@ -92,3 +92,20 @@ export function denverDayRange(now = new Date()): { startDate: string; endDate: 
   const startMs = Date.UTC(y, m - 1, d, 0, 0, 0) - offsetMin * 60_000;
   return { startDate: new Date(startMs).toISOString(), endDate: new Date(startMs + 24 * 3600 * 1000).toISOString() };
 }
+
+export type FulfillmentFields = { fulfillmentStatus: string; trackingCarrier: string; trackingNumber: string; trackingUrl: string; adminNotes: string };
+
+/**
+ * PATCH body for the fulfillment sheet. fulfillmentStatus is sent only when it
+ * changed: the API stamps shippedAt/deliveredAt whenever it sees SHIPPED or
+ * COMPLETED, so re-saving notes on a shipped order must not resend it.
+ */
+export function fulfillmentPatchBody(currentStatus: string, form: FulfillmentFields) {
+  return {
+    ...(form.fulfillmentStatus !== currentStatus ? { fulfillmentStatus: form.fulfillmentStatus } : {}),
+    trackingCarrier: form.trackingCarrier || null,
+    trackingNumber: form.trackingNumber || null,
+    trackingUrl: form.trackingUrl || null,
+    adminNotes: form.adminNotes || null,
+  };
+}

@@ -1,6 +1,6 @@
-import { expect, test } from "vitest";
+import { describe, expect, test } from "vitest";
 import {
-  canMarkShipped, customerEmail, customerName, denverDayRange, fulfillmentLabel, fulfillmentTone, isShipped,
+  canMarkShipped, customerEmail, customerName, fulfillmentPatchBody, denverDayRange, fulfillmentLabel, fulfillmentTone, isShipped,
   itemCount, itemsSummary, pageSummary, paymentLabel, paymentTone, typeLabel,
 } from "../shop-orders";
 
@@ -74,4 +74,16 @@ test("denverDayRange: a 24h span, DST-aware (winter -7, summer -6)", () => {
   // 11:30pm Denver local still resolves to that same Denver calendar day.
   const lateNight = denverDayRange(new Date("2026-07-16T05:30:00Z")); // 11:30pm MDT on the 15th
   expect(lateNight.startDate).toBe("2026-07-15T06:00:00.000Z");
+});
+
+describe("fulfillmentPatchBody", () => {
+  const form = { fulfillmentStatus: "SHIPPED", trackingCarrier: "USPS", trackingNumber: "9400", trackingUrl: "", adminNotes: "left at door" };
+  test("omits an unchanged status so shippedAt isn't reset", () => {
+    const body = fulfillmentPatchBody("SHIPPED", form);
+    expect(body).not.toHaveProperty("fulfillmentStatus");
+    expect(body).toEqual({ trackingCarrier: "USPS", trackingNumber: "9400", trackingUrl: null, adminNotes: "left at door" });
+  });
+  test("sends the status when it changed", () => {
+    expect(fulfillmentPatchBody("PROCESSING", form).fulfillmentStatus).toBe("SHIPPED");
+  });
 });

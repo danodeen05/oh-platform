@@ -14,7 +14,7 @@ import { useToast } from "@/components/ui/Toast";
 import { api, ApiError } from "@/lib/api";
 import { denverDateTime, money, shortDate } from "@/lib/format";
 import {
-  adjustmentCents, adjustmentPrompt, percentUsed, purchaserName, recipientName, statusTone,
+  adjustmentCapText, adjustmentCents, adjustmentError, adjustmentPrompt, percentUsed, purchaserName, recipientName, statusTone,
   CARD_STATUSES, type GiftCardDetail,
 } from "@/lib/gift-cards";
 import { useResource } from "@/lib/use-resource";
@@ -33,7 +33,7 @@ function AdjustBalanceSheet({ card, onClose, onSaved }: { card: GiftCardDetail; 
   async function save() {
     const cents = adjustmentCents(amount);
     const errs: { amount?: string; reason?: string } = {};
-    if (cents === null || cents === 0) errs.amount = "Enter a non-zero amount.";
+    errs.amount = adjustmentError(card, cents);
     if (!reason.trim()) errs.reason = "A reason is required.";
     setErrors(errs);
     if (errs.amount || errs.reason || cents === null) return;
@@ -56,7 +56,7 @@ function AdjustBalanceSheet({ card, onClose, onSaved }: { card: GiftCardDetail; 
   return (
     <Sheet open onClose={onClose} title="Adjust balance" size="auto" footer={<Button variant="primary" className="w-full" onClick={save} loading={saving}>Apply adjustment</Button>}>
       <form className="space-y-5" onSubmit={(e) => { e.preventDefault(); save(); }} noValidate>
-        <Field label="Amount" hint="In dollars; use a minus sign to remove balance" error={errors.amount}>
+        <Field label="Amount" hint={`In dollars; use a minus sign to remove balance. ${adjustmentCapText(card)}`} error={errors.amount}>
           <TextInput inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="5.00 or -5.00" aria-invalid={Boolean(errors.amount)} />
         </Field>
         <Field label="Reason" error={errors.reason}>

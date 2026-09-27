@@ -13,8 +13,8 @@ import { useToast } from "@/components/ui/Toast";
 import { api, ApiError } from "@/lib/api";
 import { denverDateTime, money } from "@/lib/format";
 import {
-  canMarkShipped, customerEmail, customerName, fulfillmentLabel, fulfillmentTone, isShipped, paymentLabel, paymentTone,
-  typeLabel, CARRIERS, FULFILLMENT_STATUSES, type ShopOrderDetail,
+  canMarkShipped, customerEmail, fulfillmentPatchBody, customerName, fulfillmentLabel, fulfillmentTone, isShipped, paymentLabel, paymentTone,
+  typeLabel, CARRIERS, FULFILLMENT_STATUSES, type FulfillmentFields, type ShopOrderDetail,
 } from "@/lib/shop-orders";
 import { useResource } from "@/lib/use-resource";
 
@@ -29,7 +29,7 @@ function Line({ label, value, strong, muted }: { label: string; value: string; s
   );
 }
 
-type FulfillmentForm = { fulfillmentStatus: string; trackingCarrier: string; trackingNumber: string; trackingUrl: string; adminNotes: string };
+type FulfillmentForm = FulfillmentFields;
 
 function FulfillmentSheet({ order, presetShipped, onClose, onSaved }: { order: ShopOrderDetail; presetShipped: boolean; onClose: () => void; onSaved: (marked: boolean) => void }) {
   const { show } = useToast();
@@ -53,13 +53,7 @@ function FulfillmentSheet({ order, presetShipped, onClose, onSaved }: { order: S
       // parent reloads the full record instead of trusting this, so those cards don't vanish.
       await api(`/admin/shop/orders/${order.id}`, {
         method: "PATCH",
-        body: {
-          fulfillmentStatus: form.fulfillmentStatus,
-          trackingCarrier: form.trackingCarrier || null,
-          trackingNumber: form.trackingNumber || null,
-          trackingUrl: form.trackingUrl || null,
-          adminNotes: form.adminNotes || null,
-        },
+        body: fulfillmentPatchBody(order.fulfillmentStatus, form),
       });
       onSaved(wasUnshipped && form.fulfillmentStatus === "SHIPPED");
     } catch (e) {

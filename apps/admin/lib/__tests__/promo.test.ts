@@ -87,3 +87,9 @@ test("expiresAt round-trips through formFromPromo -> promoBody in a non-UTC TZ",
     process.env.TZ = prevTz;
   }
 });
+test("percentage must be a whole number from 1 to 100", () => {
+  for (const bad of ["12.5", "0.4", "101", "0"]) expect(validatePromo({ ...f, discountValue: bad }).discountValue, bad).toBeTruthy();
+  expect(validatePromo({ ...f, discountValue: "12.5" }).discountValue).toBe("Use a whole percentage from 1 to 100.");
+  for (const good of ["1", "15", "100"]) expect(validatePromo({ ...f, discountValue: good }).discountValue, good).toBeUndefined();
+  expect(validatePromo({ ...f, discountType: "FIXED_AMOUNT", discountValue: "12.5" }).discountValue).toBeUndefined();
+});
