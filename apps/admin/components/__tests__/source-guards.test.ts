@@ -18,7 +18,6 @@ export const LEGACY: string[] = [
   "app/(console)/gift-cards",
   "app/(console)/kiosks",
   "app/(console)/locations",
-  "app/(console)/menu",
   "app/(console)/plan-access",
   "app/(console)/products",
   "app/(console)/promos",

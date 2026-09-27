@@ -55,6 +55,18 @@ export async function registerAdminConsoleRoutes(app, { prisma, resolveTenant, n
     return body;
   });
 
+  // Every item, sold out or not, with its stored (English) fields. The public
+  // GET /menu hides sold-out items, so the console can't use it to turn one back on.
+  app.get("/admin/menu", async (req, reply) => {
+    const tenant = await tenantOr404(req, reply);
+    if (!tenant) return reply;
+    const items = await prisma.menuItem.findMany({
+      where: { tenantId: tenant.id },
+      orderBy: [{ categoryType: "asc" }, { displayOrder: "asc" }, { name: "asc" }],
+    });
+    return { items };
+  });
+
   app.get("/admin/orders", async (req, reply) => {
     const tenant = await tenantOr404(req, reply);
     if (!tenant) return reply;

@@ -66,6 +66,7 @@ import { getOrchestrator } from "./autonomous/index.js";
 import { registerCateringRoutes, isDineInOrdersEnabled } from "./catering/routes.js";
 import { registerPlanRoutes } from "./plan/routes.js";
 import { registerAdminConsoleRoutes } from "./admin/console-routes.js";
+import { menuPatchData } from "./admin/menu-fields.js";
 import { withStatusDemo, registerStatusDemoGuard } from "./demo/status-demo.js";
 import { createClerkClient } from "@clerk/backend";
 import { createAdminAuth, parseAdminEmails } from "./auth/admin.js";
@@ -1351,6 +1352,7 @@ app.post("/menu", async (req, reply) => {
     additionalPriceCents,
     includedQuantity,
     sliderConfig,
+    isAvailable,
     tenantId
   } = req.body || {};
 
@@ -1372,6 +1374,7 @@ app.post("/menu", async (req, reply) => {
       additionalPriceCents: additionalPriceCents || 0,
       includedQuantity: includedQuantity || 0,
       sliderConfig: sliderConfig || null,
+      isAvailable: typeof isAvailable === "boolean" ? isAvailable : true,
       tenantId
     },
   });
@@ -1381,37 +1384,14 @@ app.post("/menu", async (req, reply) => {
 
 app.patch("/menu/:id", async (req, reply) => {
   const { id } = req.params;
-  const {
-    name,
-    category,
-    description,
-    basePriceCents,
-    additionalPriceCents,
-    includedQuantity,
-    priceCents // legacy support
-  } = req.body || {};
-
-  const data = {};
-  if (name !== undefined) data.name = name;
-  if (category !== undefined) data.category = category;
-  if (description !== undefined) data.description = description;
-  if (additionalPriceCents !== undefined) data.additionalPriceCents = additionalPriceCents;
-  if (includedQuantity !== undefined) data.includedQuantity = includedQuantity;
-
-  // Support both priceCents (legacy) and basePriceCents (new schema)
-  if (basePriceCents !== undefined) data.basePriceCents = basePriceCents;
-  else if (priceCents !== undefined) data.basePriceCents = priceCents;
-
-  if (!Object.keys(data).length) {
-    return reply.code(400).send({ error: "At least one field required" });
+  const { data, error } = menuPatchData(req.body);
+  if (error) return reply.code(400).send({ error });
+  try {
+    return await prisma.menuItem.update({ where: { id }, data });
+  } catch (err) {
+    if (err.code === "P2025") return reply.code(404).send({ error: "Menu item not found" });
+    throw err;
   }
-
-  const item = await prisma.menuItem.update({
-    where: { id },
-    data,
-  });
-
-  return item;
 });
 
 app.delete("/menu/:id", async (req, reply) => {

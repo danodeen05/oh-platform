@@ -88,3 +88,13 @@ test("order detail: 404 when missing", async () => {
   const { app } = await build("manager");
   assert.equal((await app.inject({ url: "/admin/orders/nope" })).statusCode, 404);
 });
+
+test("menu: the console list includes sold-out items, raw names, no localisation", async () => {
+  const prisma = prismaStub();
+  prisma.menuItem = { findMany: async (args) => { (prisma.calls["menuItem.findMany"] ||= []).push(args); return [{ id: "m1", name: "Bok choy", isAvailable: false }]; } };
+  const { app } = await build("manager", prisma);
+  const body = (await app.inject({ url: "/admin/menu" })).json();
+  assert.deepEqual(body, { items: [{ id: "m1", name: "Bok choy", isAvailable: false }] });
+  const where = prisma.calls["menuItem.findMany"][0].where;
+  assert.deepEqual(where, { tenantId: "t1" });
+});
