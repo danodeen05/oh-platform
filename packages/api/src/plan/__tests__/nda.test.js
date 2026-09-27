@@ -196,3 +196,20 @@ describe("NDA routes", () => {
     assert.equal((await u.post("")).statusCode, 503);
   });
 });
+
+describe("NDA routes with undecryptable data", () => {
+  test("a row sealed under another key sends the signer back to details instead of failing", async () => {
+    const t = await setup();
+    await t.post("/details", DETAILS);
+    const other = createPii(crypto.randomBytes(32));
+    const row = t.prisma._ndas[0];
+    row.legalNameEnc = other.seal("X");
+    row.phoneEnc = other.seal("+18015550000");
+    const s = await t.post("");
+    assert.equal(s.statusCode, 200);
+    assert.equal(s.json().step, "details");
+    assert.equal((await t.post("/code")).statusCode, 409);
+    assert.equal(t.sms.length, 0);
+    assert.equal((await t.post("/details", DETAILS)).json().step, "verify");
+  });
+});

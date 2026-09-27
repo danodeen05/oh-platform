@@ -73,15 +73,24 @@ export function ndaFilename(legalName, signedAt) {
   return `Oh-Beef-NDA-${name}-${day}.pdf`;
 }
 
-/** Decrypted signer details, or null when none were entered. */
+/**
+ * Decrypted signer details, or null when none were entered or they cannot be
+ * decrypted (wrong key, corrupted row). Null sends the signer back to the
+ * details step instead of failing the request.
+ */
 export function openDetails(pii, nda) {
   if (!nda?.legalNameEnc) return null;
-  return {
-    legalName: pii.open(nda.legalNameEnc),
-    email: pii.open(nda.emailEnc),
-    phone: pii.open(nda.phoneEnc),
-    address: JSON.parse(pii.open(nda.addressEnc) || "{}"),
-    company: pii.open(nda.companyEnc) || "",
-    title: pii.open(nda.titleEnc) || "",
-  };
+  try {
+    const address = JSON.parse(pii.open(nda.addressEnc) || "{}");
+    return {
+      legalName: pii.open(nda.legalNameEnc),
+      email: pii.open(nda.emailEnc),
+      phone: pii.open(nda.phoneEnc),
+      address: address && typeof address === "object" ? address : {},
+      company: pii.open(nda.companyEnc) || "",
+      title: pii.open(nda.titleEnc) || "",
+    };
+  } catch {
+    return null;
+  }
 }

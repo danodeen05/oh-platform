@@ -35,9 +35,9 @@ export function currentNda(prisma, accessCodeId) {
   return prisma.planNda.findFirst({ where: { accessCodeId, status: { in: LIVE } }, orderBy: { createdAt: "desc" } });
 }
 
-function stepOf(nda) {
-  if (!nda?.legalNameEnc) return "details";
-  if (nda.status === "SIGNED") return "done";
+function stepOf(nda, details) {
+  if (nda?.status === "SIGNED") return "done";
+  if (!details) return "details";
   if (!nda.phoneVerifiedAt) return "verify";
   return "sign";
 }
@@ -77,7 +77,7 @@ export async function registerPlanNdaRoutes(app, ctx) {
     const cs = await prisma.planNdaCountersigner.findUnique({ where: { id: "default" } });
     return {
       required: Boolean(code.ndaRequired),
-      step: stepOf(nda),
+      step: stepOf(nda, details),
       ndaId: nda?.id || null,
       details,
       phoneMasked: details ? maskPhone(details.phone) : null,
@@ -131,7 +131,8 @@ export async function registerPlanNdaRoutes(app, ctx) {
     const row = await load(req.params.sid, reply);
     if (!row) return reply;
     const { nda } = row;
-    if (!nda?.phoneEnc || nda.status !== "DRAFT") return reply.code(409).send({ error: "not_ready" });
+    const phone = nda?.status === "DRAFT" ? openDetails(pii, nda)?.phone : null;
+    if (!nda || !phone) return reply.code(409).send({ error: "not_ready" });
     if (nda.phoneVerifiedAt) return reply.send({ ok: true, verified: true });
     const t = now().getTime();
     if (nda.otpSentAt && t - nda.otpSentAt.getTime() < OTP_COOLDOWN_MS) {
@@ -144,7 +145,6 @@ export async function registerPlanNdaRoutes(app, ctx) {
       where: { id: nda.id },
       data: { otpHash: pii.hmac(`${nda.id}:${code}`), otpExpiresAt: new Date(t + OTP_TTL_MS), otpAttempts: 0, otpSentAt: new Date(t), otpSendCount: { increment: 1 } },
     });
-    const phone = pii.open(nda.phoneEnc);
     let sent;
     try {
       sent = await sendSms({ to: phone, body: otpText(code) });
@@ -189,7 +189,7 @@ export async function registerPlanNdaRoutes(app, ctx) {
     if (!row) return reply;
     const { nda } = row;
     if (nda?.status === "SIGNED") return reply.send({ ok: true, already: true });
-    if (!nda || stepOf(nda) !== "sign") return reply.code(409).send({ error: "not_ready" });
+    if (!nda || stepOf(nda, openDetails(pii, nda)) !== "sign") return reply.code(409).send({ error: "not_ready" });
     const cs = await prisma.planNdaCountersigner.findUnique({ where: { id: "default" } });
     if (!cs) return reply.code(503).send({ error: "no_countersigner" });
 
@@ -238,10 +238,15 @@ export async function registerPlanNdaRoutes(app, ctx) {
     if (!row) return reply;
     const { nda } = row;
     if (!nda || nda.status !== "SIGNED" || !nda.pdfEnc) return reply.code(404).send({ error: "not_found" });
-    return reply.send({
-      pdf: pii.openBytes(nda.pdfEnc).toString("base64"),
-      filename: ndaFilename(pii.open(nda.legalNameEnc), nda.signedAt),
-    });
+    try {
+      return reply.send({
+        pdf: pii.openBytes(nda.pdfEnc).toString("base64"),
+        filename: ndaFilename(openDetails(pii, nda)?.legalName, nda.signedAt),
+      });
+    } catch (err) {
+      app.log.error({ err }, "[plan] NDA PDF could not be decrypted");
+      return reply.code(500).send({ error: "unavailable" });
+    }
   });
 
   await registerPlanNdaAdminRoutes(app, { prisma, pii, now, sendSms, sendMail: ctx.sendMail, log: app.log });

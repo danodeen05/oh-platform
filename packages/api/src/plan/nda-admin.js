@@ -81,12 +81,18 @@ export async function registerPlanNdaAdminRoutes(app, { prisma, pii, now, sendSm
     if (need(reply)) return reply;
     const nda = await prisma.planNda.findUnique({ where: { id: req.params.ndaId } });
     if (!nda || !nda.pdfEnc) return reply.code(404).send({ error: "not found" });
-    const filename = ndaFilename(pii.open(nda.legalNameEnc), nda.signedAt);
+    let pdf;
+    try {
+      pdf = pii.openBytes(nda.pdfEnc);
+    } catch {
+      return reply.code(500).send({ error: "The PDF could not be decrypted (check PLAN_PII_KEY)" });
+    }
+    const filename = ndaFilename(openDetails(pii, nda)?.legalName, nda.signedAt);
     return reply
       .header("Content-Type", "application/pdf")
       .header("Content-Disposition", `attachment; filename="${filename}"`)
       .header("Cache-Control", "no-store")
-      .send(pii.openBytes(nda.pdfEnc));
+      .send(pdf);
   });
 
   app.post("/admin/plan/ndas/:ndaId/resend", async (req, reply) => {

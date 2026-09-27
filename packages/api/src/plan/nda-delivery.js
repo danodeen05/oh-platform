@@ -32,6 +32,10 @@ export async function deliverNda(ndaId, deps) {
   if (!nda || nda.status !== "SIGNED" || !nda.pdfEnc) return { skipped: true };
 
   const d = openDetails(pii, nda);
+  if (!d) {
+    await prisma.planNda.update({ where: { id: nda.id }, data: { deliveryError: "signer details could not be decrypted" } });
+    return { email: false, text: false, owner: false };
+  }
   const filename = ndaFilename(d.legalName, nda.signedAt);
   const pdf = { name: filename, contentType: "application/pdf", contentBytes: pii.openBytes(nda.pdfEnc).toString("base64") };
   const chappy = assetBase64("chappy-160.png");
