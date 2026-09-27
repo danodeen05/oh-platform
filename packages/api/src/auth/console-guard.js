@@ -36,6 +36,7 @@ export const CONSOLE_ROUTES = Object.freeze([
   r("GET", "/promo-codes", STAFF),
   r("GET", "/promo-codes/:id", STAFF),
   r("POST", "/promo-codes", STAFF),
+  r("PATCH", "/promo-codes/:id", OWNER), // no caller in apps/; distinct from the guarded /admin/promo-codes/:id the admin UI actually uses
   r("DELETE", "/promo-codes/:id", STAFF),
   r("POST", "/promo-codes/:id/apply", OWNER),
   // Seats and pods
