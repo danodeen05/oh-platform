@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { extractSeatsArray, seatDisplayNumber } from "../../lib/seats/adapt-seats";
+import { extractSeatsArray, seatDisplayNumber } from "@/lib/seats/adapt-seats";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "";
 
