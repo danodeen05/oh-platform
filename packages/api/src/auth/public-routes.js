@@ -85,6 +85,9 @@ export const PUBLIC_ROUTES = Object.freeze([
   p("GET", "/users/:id/payment-methods", "customer"),
   p("POST", "/users/:id/payment-methods", "customer"),
   p("DELETE", "/users/:id/payment-methods/:methodId", "customer"),
+  // Verified-identity helpers (auth/customer.js): the caller's own row, and a short-lived Chappy stream ticket.
+  p("GET", "/users/me", "customer"),
+  p("POST", "/chappy/stream-ticket", "customer"),
 
   // Badges and challenges
   p("GET", "/badges", "customer"),
