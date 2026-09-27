@@ -961,6 +961,41 @@ describe("POST /admin/support/cases/:id/resolve", () => {
       assert.equal(closeRes.statusCode, 200, closeRes.body);
       assert.equal((await prisma.supportCase.findUnique({ where: { id: "c2" } })).resolution, "INFO");
     });
+
+    // ----------------------------------------------------- fix round 1
+    test("fix round 1: a stale FULL_REFUND marker still blocks credit (only decline/close may take it over)", async () => {
+      const prisma = refundFixture();
+      const staleAt = new Date(NOW.getTime() - REFUND_LEASE_MS - 1000);
+      await prisma.supportCase.update({ where: { id: "c1" }, data: { resolution: "FULL_REFUND", resolvedAt: staleAt, resolutionDetail: { refundPending: true, leaseAt: staleAt.toISOString() } } });
+      const { app } = await buildApp({ prisma });
+      const res = await resolve(app, "c1", { action: "credit", amountCents: 100 });
+      assert.equal(res.json().code, "REFUND_IN_PROGRESS");
+      const c = await prisma.supportCase.findUnique({ where: { id: "c1" } });
+      assert.deepEqual([c.status, c.resolution], ["OPEN", "FULL_REFUND"], "credit never takes over a stale marker, even a very stale one");
+    });
+
+    test("fix round 1: decline/close taking over a stale marker clears the pending-refund fields but keeps other resolutionDetail keys", async () => {
+      const staleAt = new Date(NOW.getTime() - REFUND_LEASE_MS - 1000);
+      const staleDetail = { refundPending: true, leaseAt: staleAt.toISOString(), lastRefundAttempt: { at: staleAt.toISOString(), by: "crashed-staff", error: "REFUND_FAILED" } };
+
+      const declinePrisma = refundFixture();
+      await declinePrisma.supportCase.update({ where: { id: "c1" }, data: { resolution: "FULL_REFUND", resolvedAt: staleAt, resolutionDetail: { ...staleDetail } } });
+      const { app: declineApp } = await buildApp({ prisma: declinePrisma });
+      assert.equal((await resolve(declineApp, "c1", { action: "decline", reason: "stale, declining" })).statusCode, 200);
+      const declined = await declinePrisma.supportCase.findUnique({ where: { id: "c1" } });
+      assert.equal(declined.resolutionDetail.refundPending, undefined);
+      assert.equal(declined.resolutionDetail.leaseAt, undefined);
+      assert.deepEqual(declined.resolutionDetail.lastRefundAttempt, staleDetail.lastRefundAttempt, "other keys survive");
+
+      const closePrisma = refundFixture();
+      await closePrisma.supportCase.update({ where: { id: "c1" }, data: { resolution: "FULL_REFUND", resolvedAt: staleAt, resolutionDetail: { ...staleDetail } } });
+      const { app: closeApp } = await buildApp({ prisma: closePrisma });
+      assert.equal((await resolve(closeApp, "c1", { action: "close", reason: "stale, closing" })).statusCode, 200);
+      const closed = await closePrisma.supportCase.findUnique({ where: { id: "c1" } });
+      assert.equal(closed.resolutionDetail.refundPending, undefined);
+      assert.equal(closed.resolutionDetail.leaseAt, undefined);
+      assert.deepEqual(closed.resolutionDetail.lastRefundAttempt, staleDetail.lastRefundAttempt, "other keys survive");
+    });
   });
 
   test("A9b item 6: a meal gift that cannot be restored surfaces MEAL_GIFT_NOT_RESTORED in warnings, like the gift card", async () => {
@@ -970,5 +1005,17 @@ describe("POST /admin/support/cases/:id/resolve", () => {
     assert.ok(res.json().warnings.includes("MEAL_GIFT_NOT_RESTORED"), JSON.stringify(res.json().warnings));
     const c = await prisma.supportCase.findUnique({ where: { id: "c1" } });
     assert.ok(c.resolutionDetail.warnings.includes("MEAL_GIFT_NOT_RESTORED"));
+  });
+
+  test("fix round 1: an expired or excess-paid meal gift also warns, each with its own variant", async () => {
+    const expired = await buildApp({ prisma: refundFixture({ mealGift: { expiresAt: new Date(NOW.getTime() - HOUR) } }) });
+    const expiredRes = await resolve(expired.app, "c1", { action: "full_refund" });
+    assert.equal(expiredRes.statusCode, 200, expiredRes.body);
+    assert.deepEqual(expiredRes.json().warnings, ["MEAL_GIFT_NOT_RESTORED:EXPIRED"]);
+
+    const excess = await buildApp({ prisma: refundFixture({ mealGift: { amountCents: 900 } }) }); // > mealGiftAppliedCents (500)
+    const excessRes = await resolve(excess.app, "c1", { action: "full_refund" });
+    assert.equal(excessRes.statusCode, 200, excessRes.body);
+    assert.deepEqual(excessRes.json().warnings, ["MEAL_GIFT_NOT_RESTORED:EXCESS_PAID"]);
   });
 });

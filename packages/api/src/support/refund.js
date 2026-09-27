@@ -170,6 +170,17 @@ async function reverseOrderLots(tx, order, source, description) {
   return reversed;
 }
 
+// restoreTenders' meal-gift outcomes that mean "did not go back to PENDING",
+// each with its own staff-readable warning suffix ("" for the plain, no
+// further detail case). Any future outcome that merely contains
+// "NOT_RESTORED" still warns, with no suffix, so a forgotten mapping entry
+// fails safe (a warning, not silence).
+const MEAL_GIFT_NOT_RESTORED_SUFFIXES = {
+  NOT_RESTORED: "",
+  EXPIRED_NOT_RESTORED: ":EXPIRED",
+  EXCESS_PAID_NOT_RESTORED: ":EXCESS_PAID",
+};
+
 /** Restores that did not happen and staff should know about. */
 function warningsFor(restores) {
   const warnings = [];
@@ -177,7 +188,10 @@ function warningsFor(restores) {
     warnings.push(`GIFT_CARD_NOT_RESTORED:${restores.giftCard.slice("NOT_RESTORED:".length)}`);
   }
   if (restores.reward === "NOT_RESTORED") warnings.push("REWARD_NOT_RESTORED");
-  if (restores.mealGift === "NOT_RESTORED") warnings.push("MEAL_GIFT_NOT_RESTORED");
+  if (typeof restores.mealGift === "string" && restores.mealGift.includes("NOT_RESTORED")) {
+    const suffix = MEAL_GIFT_NOT_RESTORED_SUFFIXES[restores.mealGift] ?? "";
+    warnings.push(`MEAL_GIFT_NOT_RESTORED${suffix}`);
+  }
   if (restores.order === "NOT_CANCELLED") warnings.push("ORDER_NOT_CANCELLED");
   return warnings;
 }

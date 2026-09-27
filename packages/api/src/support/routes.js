@@ -351,12 +351,22 @@ export async function registerSupportRoutes(app, deps) {
       }
 
       if (action === "decline" || action === "close") {
+        // Taking over a stale FULL_REFUND marker: drop the now-meaningless
+        // pending-refund fields (refundPending, leaseAt) from
+        // resolutionDetail, keeping any other keys (e.g. lastRefundAttempt).
+        const takingOverStaleClaim = staleFullRefundClaim(supportCase);
+        const clearedDetail =
+          takingOverStaleClaim && supportCase.resolutionDetail && typeof supportCase.resolutionDetail === "object"
+            ? Object.fromEntries(Object.entries(supportCase.resolutionDetail).filter(([k]) => k !== "refundPending" && k !== "leaseAt"))
+            : null;
         const claim = await prisma.supportCase.updateMany({
           where: { id, status: "OPEN", OR: [{ resolution: null }, { resolution: "FULL_REFUND", resolvedAt: { lt: new Date(t.getTime() - REFUND_LEASE_MS) } }] },
-          data:
-            action === "decline"
+          data: {
+            ...(action === "decline"
               ? { status: "DECLINED", resolution: "DECLINED", resolvedBy, resolvedAt: t, resolutionNote: reason }
-              : { status: "RESOLVED", resolution: "INFO", resolvedBy, resolvedAt: t, resolutionNote: reason },
+              : { status: "RESOLVED", resolution: "INFO", resolvedBy, resolvedAt: t, resolutionNote: reason }),
+            ...(clearedDetail !== null ? { resolutionDetail: clearedDetail } : {}),
+          },
         });
         const after = await prisma.supportCase.findUnique({ where: { id } });
         if (claim.count !== 1 && after?.status === "OPEN") return REFUND_IN_PROGRESS;
