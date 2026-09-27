@@ -1,510 +1,233 @@
 "use client";
-
-import { useState, useEffect, useTransition } from "react";
-import { useParams } from "next/navigation";
 import Link from "next/link";
+import { use, useState } from "react";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { useConfirm } from "@/components/ui/Confirm";
+import { ErrorCard } from "@/components/ui/ErrorCard";
+import { Field, Select, TextArea, TextInput } from "@/components/ui/Field";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Sheet } from "@/components/ui/Sheet";
+import { Skeleton, SkeletonList } from "@/components/ui/Skeleton";
+import { useToast } from "@/components/ui/Toast";
+import { api, ApiError } from "@/lib/api";
+import { denverDateTime, money, shortDate } from "@/lib/format";
+import {
+  adjustmentCents, adjustmentPrompt, percentUsed, purchaserName, recipientName, statusTone,
+  CARD_STATUSES, type GiftCardDetail,
+} from "@/lib/gift-cards";
+import { useResource } from "@/lib/use-resource";
 
-const BASE = process.env.NEXT_PUBLIC_API_URL || "";
+const BACK = { href: "/gift-cards", label: "Gift cards" };
+const errorText = (e: unknown) => (e instanceof ApiError || e instanceof Error ? e.message : "Something went wrong.");
 
-const CARD_STATUSES = ["ACTIVE", "REDEEMED", "EXHAUSTED", "EXPIRED", "CANCELLED"];
+function AdjustBalanceSheet({ card, onClose, onSaved }: { card: GiftCardDetail; onClose: () => void; onSaved: (c: GiftCardDetail) => void }) {
+  const { show } = useToast();
+  const ask = useConfirm();
+  const [amount, setAmount] = useState("");
+  const [reason, setReason] = useState("");
+  const [errors, setErrors] = useState<{ amount?: string; reason?: string }>({});
+  const [saving, setSaving] = useState(false);
 
-interface ShopOrderUsage {
-  id: string;
-  orderNumber: string;
-  giftCardApplied: number;
-  createdAt: string;
-}
+  async function save() {
+    const cents = adjustmentCents(amount);
+    const errs: { amount?: string; reason?: string } = {};
+    if (cents === null || cents === 0) errs.amount = "Enter a non-zero amount.";
+    if (!reason.trim()) errs.reason = "A reason is required.";
+    setErrors(errs);
+    if (errs.amount || errs.reason || cents === null) return;
 
-interface GiftCard {
-  id: string;
-  code: string;
-  amountCents: number;
-  balanceCents: number;
-  status: string;
-  purchaser?: { id: string; email: string; name?: string };
-  recipientEmail?: string;
-  recipientName?: string;
-  personalMessage?: string;
-  stripePaymentId?: string;
-  designId?: string;
-  purchasedAt: string;
-  expiresAt?: string;
-  adminNotes?: string;
-  shopOrders: ShopOrderUsage[];
-}
+    const ok = await ask({ title: adjustmentPrompt(card.code, cents), confirmLabel: cents >= 0 ? "Add balance" : "Remove balance", tone: cents < 0 ? "danger" : "primary" });
+    if (!ok) return;
 
-function StatusBadge({ status }: { status: string }) {
-  const colors: Record<string, { bg: string; text: string }> = {
-    ACTIVE: { bg: "#d1fae5", text: "#065f46" },
-    REDEEMED: { bg: "#e0e7ff", text: "#3730a3" },
-    EXHAUSTED: { bg: "#f3f4f6", text: "#374151" },
-    EXPIRED: { bg: "#fef3c7", text: "#92400e" },
-    CANCELLED: { bg: "#fee2e2", text: "#991b1b" },
-  };
-  const color = colors[status] || { bg: "#f3f4f6", text: "#374151" };
+    setSaving(true);
+    try {
+      const saved = await api<GiftCardDetail>(`/admin/gift-cards/${card.id}`, { method: "PATCH", body: { balanceAdjustment: cents, adjustmentReason: reason.trim() } });
+      onSaved(saved);
+    } catch (e) {
+      show({ message: `Couldn't adjust balance. ${errorText(e)}`, tone: "alert" });
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
-    <span style={{
-      padding: "4px 12px",
-      borderRadius: 4,
-      fontSize: "0.85rem",
-      fontWeight: 500,
-      backgroundColor: color.bg,
-      color: color.text,
-    }}>
-      {status}
-    </span>
+    <Sheet open onClose={onClose} title="Adjust balance" size="auto" footer={<Button variant="primary" className="w-full" onClick={save} loading={saving}>Apply adjustment</Button>}>
+      <form className="space-y-5" onSubmit={(e) => { e.preventDefault(); save(); }} noValidate>
+        <Field label="Amount" hint="In dollars; use a minus sign to remove balance" error={errors.amount}>
+          <TextInput inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="5.00 or -5.00" aria-invalid={Boolean(errors.amount)} />
+        </Field>
+        <Field label="Reason" error={errors.reason}>
+          <TextInput value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Customer service credit" aria-invalid={Boolean(errors.reason)} />
+        </Field>
+        <button type="submit" hidden aria-hidden="true" tabIndex={-1} />
+      </form>
+    </Sheet>
   );
 }
 
-export default function GiftCardDetailPage() {
-  const params = useParams();
-  const cardId = params.id as string;
-
-  const [card, setCard] = useState<GiftCard | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-
-  // Editable fields
+export default function GiftCardDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const { show } = useToast();
+  const ask = useConfirm();
+  const res = useResource(`gift-card:${id}`, (signal) => api<GiftCardDetail>(`/admin/gift-cards/${encodeURIComponent(id)}`, { signal }));
+  const [card, setCard] = useState<GiftCardDetail | null>(null);
   const [status, setStatus] = useState("");
-  const [adminNotes, setAdminNotes] = useState("");
-
-  // Balance adjustment
-  const [showBalanceAdjust, setShowBalanceAdjust] = useState(false);
-  const [adjustAmount, setAdjustAmount] = useState("");
-  const [adjustReason, setAdjustReason] = useState("");
-
-  const fetchCard = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`${BASE}/admin/gift-cards/${cardId}`);
-      if (!res.ok) {
-        throw new Error("Gift card not found");
-      }
-      const data = await res.json();
-      setCard(data);
-      setStatus(data.status);
-      setAdminNotes(data.adminNotes || "");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load gift card");
-    }
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    if (cardId) {
-      fetchCard();
-    }
-  }, [cardId]);
-
-  const handleSave = () => {
-    startTransition(async () => {
-      try {
-        const res = await fetch(`${BASE}/admin/gift-cards/${cardId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            status,
-            adminNotes: adminNotes || null,
-          }),
-        });
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || "Failed to update");
-        }
-        fetchCard();
-        alert("Gift card updated successfully");
-      } catch (err) {
-        alert(err instanceof Error ? err.message : "Failed to update");
-      }
-    });
-  };
-
-  const handleBalanceAdjust = () => {
-    const adjustCents = parseInt(adjustAmount, 10);
-    if (isNaN(adjustCents)) {
-      alert("Invalid amount");
-      return;
-    }
-    if (!adjustReason.trim()) {
-      alert("Please provide a reason for the adjustment");
-      return;
-    }
-
-    startTransition(async () => {
-      try {
-        const res = await fetch(`${BASE}/admin/gift-cards/${cardId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            balanceAdjustment: adjustCents,
-            adjustmentReason: adjustReason,
-          }),
-        });
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || "Failed to adjust balance");
-        }
-        setShowBalanceAdjust(false);
-        setAdjustAmount("");
-        setAdjustReason("");
-        fetchCard();
-        alert("Balance adjusted successfully");
-      } catch (err) {
-        alert(err instanceof Error ? err.message : "Failed to adjust balance");
-      }
-    });
-  };
-
-  const handleDeactivate = () => {
-    if (!confirm("Are you sure you want to deactivate this gift card? This will prevent it from being used.")) {
-      return;
-    }
-    startTransition(async () => {
-      try {
-        const res = await fetch(`${BASE}/admin/gift-cards/${cardId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: "CANCELLED" }),
-        });
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || "Failed to deactivate");
-        }
-        fetchCard();
-        alert("Gift card deactivated");
-      } catch (err) {
-        alert(err instanceof Error ? err.message : "Failed to deactivate");
-      }
-    });
-  };
-
-  const handleReactivate = () => {
-    startTransition(async () => {
-      try {
-        const res = await fetch(`${BASE}/admin/gift-cards/${cardId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: "ACTIVE" }),
-        });
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || "Failed to reactivate");
-        }
-        fetchCard();
-        alert("Gift card reactivated");
-      } catch (err) {
-        alert(err instanceof Error ? err.message : "Failed to reactivate");
-      }
-    });
-  };
-
-  if (loading) {
-    return <main style={{ padding: 24 }}><p>Loading...</p></main>;
+  const [notes, setNotes] = useState("");
+  const [seededId, setSeededId] = useState<string | null>(null);
+  if (res.data && seededId !== res.data.id) {
+    setCard(res.data);
+    setStatus(res.data.status);
+    setNotes(res.data.adminNotes ?? "");
+    setSeededId(res.data.id);
   }
 
-  if (error || !card) {
+  const [adjustOpen, setAdjustOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  if (!card) {
     return (
-      <main style={{ padding: 24 }}>
-        <p style={{ color: "#991b1b" }}>{error || "Gift card not found"}</p>
-        <Link href="/gift-cards" style={{ color: "#4f46e5" }}>Back to Gift Cards</Link>
-      </main>
+      <>
+        <PageHeader title="Gift card" back={BACK} />
+        {res.error
+          ? <ErrorCard message={res.error === "Gift card not found" ? "This gift card doesn't exist." : "Couldn't load this gift card."} onRetry={res.error === "Gift card not found" ? undefined : res.reload} />
+          : <div className="space-y-4"><Skeleton className="h-32 rounded-card" /><SkeletonList rows={3} /></div>}
+      </>
     );
   }
 
-  const usedAmount = card.amountCents - card.balanceCents;
-  const percentUsed = card.amountCents > 0 ? (usedAmount / card.amountCents) * 100 : 0;
+  const usedCents = card.amountCents - card.balanceCents;
+
+  async function save() {
+    setSaving(true);
+    try {
+      const saved = await api<GiftCardDetail>(`/admin/gift-cards/${card!.id}`, { method: "PATCH", body: { status, adminNotes: notes || null } });
+      setCard(saved);
+      show({ message: "Gift card updated.", tone: "good" });
+    } catch (e) {
+      show({ message: errorText(e), tone: "alert" });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function deactivate() {
+    const ok = await ask({ title: `Deactivate ${card!.code}?`, body: "This prevents it from being used. You can reactivate it later.", confirmLabel: "Deactivate", tone: "danger" });
+    if (!ok) return;
+    try {
+      const saved = await api<GiftCardDetail>(`/admin/gift-cards/${card!.id}`, { method: "PATCH", body: { status: "CANCELLED" } });
+      setCard(saved); setStatus(saved.status);
+      show({ message: "Gift card deactivated.", tone: "info" });
+    } catch (e) {
+      show({ message: errorText(e), tone: "alert" });
+    }
+  }
+
+  async function reactivate() {
+    const ok = await ask({ title: `Reactivate ${card!.code}?`, confirmLabel: "Reactivate" });
+    if (!ok) return;
+    try {
+      const saved = await api<GiftCardDetail>(`/admin/gift-cards/${card!.id}`, { method: "PATCH", body: { status: "ACTIVE" } });
+      setCard(saved); setStatus(saved.status);
+      show({ message: "Gift card reactivated.", tone: "good" });
+    } catch (e) {
+      show({ message: errorText(e), tone: "alert" });
+    }
+  }
 
   return (
-    <main style={{ padding: 24, maxWidth: 1200 }}>
-      {/* Header */}
-      <div style={{ marginBottom: 24 }}>
-        <Link href="/gift-cards" style={{ color: "#6b7280", textDecoration: "none", fontSize: "0.9rem" }}>
-          ← Back to Gift Cards
-        </Link>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
-          <div>
-            <h2 style={{ margin: 0, fontFamily: "monospace" }}>{card.code}</h2>
-            <p style={{ color: "#6b7280", margin: "4px 0 0" }}>
-              Purchased {new Date(card.purchasedAt).toLocaleString()}
-            </p>
-          </div>
-          <StatusBadge status={card.status} />
-        </div>
-      </div>
+    <>
+      <PageHeader title={card.code} back={BACK} subtitle={`Purchased ${denverDateTime(card.purchasedAt)}`}
+        actions={<Badge tone={statusTone(card.status)}>{card.status}</Badge>} />
 
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 24 }}>
-        {/* Left Column */}
-        <div>
-          {/* Balance Overview */}
-          <div style={{ backgroundColor: "#f9fafb", borderRadius: 8, padding: 16, marginBottom: 16, border: "1px solid #e5e7eb" }}>
-            <h3 style={{ marginTop: 0 }}>Balance</h3>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 16 }}>
-              <div>
-                <div style={{ fontSize: "0.8rem", color: "#6b7280" }}>Original Amount</div>
-                <div style={{ fontSize: "1.5rem", fontWeight: 600 }}>${(card.amountCents / 100).toFixed(2)}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: "0.8rem", color: "#6b7280" }}>Amount Used</div>
-                <div style={{ fontSize: "1.5rem", fontWeight: 600, color: "#6b7280" }}>${(usedAmount / 100).toFixed(2)}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: "0.8rem", color: "#6b7280" }}>Remaining Balance</div>
-                <div style={{ fontSize: "1.5rem", fontWeight: 600, color: "#059669" }}>${(card.balanceCents / 100).toFixed(2)}</div>
-              </div>
+      <div className="grid gap-4 lg:grid-cols-2 lg:items-start lg:gap-6">
+        <div className="space-y-4 lg:space-y-6">
+          <Card title="Balance" action={<Button variant="secondary" size="sm" onClick={() => setAdjustOpen(true)}>Adjust balance</Button>}>
+            <div className="grid grid-cols-3 gap-3">
+              <div><p className="text-xs text-oh-stone/70">Original</p><p className="font-display text-[1.5rem] text-oh-charcoal">{money(card.amountCents)}</p></div>
+              <div><p className="text-xs text-oh-stone/70">Used</p><p className="font-display text-[1.5rem] text-oh-stone">{money(usedCents)}</p></div>
+              <div><p className="text-xs text-oh-stone/70">Remaining</p><p className="font-display text-[1.5rem] text-oh-olive">{money(card.balanceCents)}</p></div>
             </div>
-            <div style={{ width: "100%", height: 8, backgroundColor: "#e5e7eb", borderRadius: 4 }}>
-              <div style={{ width: `${100 - percentUsed}%`, height: "100%", backgroundColor: "#10b981", borderRadius: 4 }} />
+            <div className="mt-4 h-2 w-full rounded-full bg-oh-stone/15">
+              <div className="h-full rounded-full bg-oh-olive" style={{ width: `${100 - percentUsed(card.amountCents, card.balanceCents)}%` }} /> {/* style-ok: progress width */}
             </div>
-            <div style={{ fontSize: "0.8rem", color: "#6b7280", marginTop: 4 }}>
-              {percentUsed.toFixed(1)}% used
-            </div>
+            <p className="mt-1.5 text-sm text-oh-stone/70">{percentUsed(card.amountCents, card.balanceCents).toFixed(1)}% used</p>
+          </Card>
 
-            {/* Balance Adjustment */}
-            {!showBalanceAdjust ? (
-              <button
-                onClick={() => setShowBalanceAdjust(true)}
-                style={{
-                  marginTop: 16,
-                  padding: "8px 16px",
-                  backgroundColor: "#4f46e5",
-                  color: "white",
-                  border: "none",
-                  borderRadius: 4,
-                  cursor: "pointer",
-                }}
-              >
-                Adjust Balance
-              </button>
-            ) : (
-              <div style={{ marginTop: 16, padding: 16, backgroundColor: "#fff", borderRadius: 8, border: "1px solid #e5e7eb" }}>
-                <h4 style={{ marginTop: 0 }}>Balance Adjustment</h4>
-                <div style={{ marginBottom: 12 }}>
-                  <label style={{ display: "block", fontSize: "0.85rem", marginBottom: 4 }}>Amount (in cents, use negative to reduce)</label>
-                  <input
-                    type="number"
-                    value={adjustAmount}
-                    onChange={(e) => setAdjustAmount(e.target.value)}
-                    placeholder="e.g., 500 to add $5, -500 to remove $5"
-                    style={{ width: "100%", padding: 8, borderRadius: 4, border: "1px solid #d1d5db", boxSizing: "border-box" }}
-                  />
-                </div>
-                <div style={{ marginBottom: 12 }}>
-                  <label style={{ display: "block", fontSize: "0.85rem", marginBottom: 4 }}>Reason (required)</label>
-                  <input
-                    type="text"
-                    value={adjustReason}
-                    onChange={(e) => setAdjustReason(e.target.value)}
-                    placeholder="e.g., Customer service credit, error correction"
-                    style={{ width: "100%", padding: 8, borderRadius: 4, border: "1px solid #d1d5db", boxSizing: "border-box" }}
-                  />
-                </div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button
-                    onClick={handleBalanceAdjust}
-                    disabled={pending}
-                    style={{ padding: "8px 16px", backgroundColor: "#059669", color: "white", border: "none", borderRadius: 4, cursor: "pointer" }}
-                  >
-                    {pending ? "Adjusting..." : "Apply Adjustment"}
-                  </button>
-                  <button
-                    onClick={() => { setShowBalanceAdjust(false); setAdjustAmount(""); setAdjustReason(""); }}
-                    style={{ padding: "8px 16px", border: "1px solid #d1d5db", borderRadius: 4, cursor: "pointer" }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Usage History */}
-          <div style={{ backgroundColor: "#f9fafb", borderRadius: 8, padding: 16, marginBottom: 16, border: "1px solid #e5e7eb" }}>
-            <h3 style={{ marginTop: 0 }}>Usage History</h3>
+          <Card title="Usage history" padded={false}>
             {card.shopOrders.length === 0 ? (
-              <p style={{ color: "#6b7280" }}>This gift card has not been used yet.</p>
-            ) : (
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
-                    <th style={{ textAlign: "left", padding: 8 }}>Order</th>
-                    <th style={{ textAlign: "right", padding: 8 }}>Amount</th>
-                    <th style={{ textAlign: "right", padding: 8 }}>Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {card.shopOrders.map((order) => (
-                    <tr key={order.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
-                      <td style={{ padding: 8 }}>
-                        <Link href={`/shop-orders/${order.id}`} style={{ color: "#4f46e5", textDecoration: "none" }}>
-                          {order.orderNumber}
-                        </Link>
-                      </td>
-                      <td style={{ textAlign: "right", padding: 8, color: "#991b1b" }}>
-                        -${(order.giftCardApplied / 100).toFixed(2)}
-                      </td>
-                      <td style={{ textAlign: "right", padding: 8, color: "#6b7280", fontSize: "0.85rem" }}>
-                        {new Date(order.createdAt).toLocaleDateString()}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
+              <p className="px-4 py-4 text-[15px] text-oh-stone/70">This gift card hasn&apos;t been used yet.</p>
+            ) : card.shopOrders.map((o) => (
+              <Link key={o.id} href={`/shop-orders/${o.id}`} className="flex min-h-12 items-center justify-between gap-3 px-4 py-2.5 transition-colors hover:bg-oh-linen/60">
+                <span className="font-semibold text-oh-charcoal underline-offset-4 hover:underline">#{o.orderNumber}</span>
+                <span className="flex items-center gap-3 text-sm">
+                  <span className="tabular-nums text-oh-ember-deep">−{money(o.giftCardApplied)}</span>
+                  <span className="tabular-nums text-oh-stone/60">{shortDate(o.createdAt)}</span>
+                </span>
+              </Link>
+            ))}
+          </Card>
 
-          {/* Admin Controls */}
-          <div style={{ backgroundColor: "#f9fafb", borderRadius: 8, padding: 16, border: "1px solid #e5e7eb" }}>
-            <h3 style={{ marginTop: 0 }}>Admin Controls</h3>
-
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: "block", fontSize: "0.85rem", color: "#374151", marginBottom: 4 }}>Status</label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-                style={{ width: "100%", maxWidth: 200, padding: 8, borderRadius: 4, border: "1px solid #d1d5db" }}
-              >
-                {CARD_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
+          <Card title="Admin controls">
+            <div className="space-y-4">
+              <Field label="Status">
+                <Select value={status} onChange={(e) => setStatus(e.target.value)}>
+                  {CARD_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                </Select>
+              </Field>
+              <Field label="Admin notes" hint="Internal, not shown to the customer">
+                <TextArea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Internal notes" />
+              </Field>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="primary" onClick={save} loading={saving}>Save</Button>
+                {card.status === "ACTIVE" && <Button variant="danger" onClick={deactivate}>Deactivate</Button>}
+                {card.status === "CANCELLED" && <Button variant="secondary" onClick={reactivate}>Reactivate</Button>}
+              </div>
             </div>
-
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: "block", fontSize: "0.85rem", color: "#374151", marginBottom: 4 }}>Admin Notes</label>
-              <textarea
-                value={adminNotes}
-                onChange={(e) => setAdminNotes(e.target.value)}
-                placeholder="Internal notes..."
-                rows={3}
-                style={{ width: "100%", padding: 8, borderRadius: 4, border: "1px solid #d1d5db", boxSizing: "border-box", resize: "vertical" }}
-              />
-            </div>
-
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button
-                onClick={handleSave}
-                disabled={pending}
-                style={{
-                  padding: "10px 20px",
-                  backgroundColor: "#4f46e5",
-                  color: "white",
-                  border: "none",
-                  borderRadius: 4,
-                  cursor: pending ? "not-allowed" : "pointer",
-                  opacity: pending ? 0.7 : 1,
-                }}
-              >
-                {pending ? "Saving..." : "Save Changes"}
-              </button>
-
-              {card.status === "ACTIVE" && (
-                <button
-                  onClick={handleDeactivate}
-                  disabled={pending}
-                  style={{
-                    padding: "10px 20px",
-                    backgroundColor: "#dc2626",
-                    color: "white",
-                    border: "none",
-                    borderRadius: 4,
-                    cursor: pending ? "not-allowed" : "pointer",
-                  }}
-                >
-                  Deactivate Card
-                </button>
-              )}
-
-              {card.status === "CANCELLED" && (
-                <button
-                  onClick={handleReactivate}
-                  disabled={pending}
-                  style={{
-                    padding: "10px 20px",
-                    backgroundColor: "#059669",
-                    color: "white",
-                    border: "none",
-                    borderRadius: 4,
-                    cursor: pending ? "not-allowed" : "pointer",
-                  }}
-                >
-                  Reactivate Card
-                </button>
-              )}
-            </div>
-          </div>
+          </Card>
         </div>
 
-        {/* Right Column */}
-        <div>
-          {/* Purchaser Info */}
-          <div style={{ backgroundColor: "#f9fafb", borderRadius: 8, padding: 16, marginBottom: 16, border: "1px solid #e5e7eb" }}>
-            <h3 style={{ marginTop: 0 }}>Purchaser</h3>
-            <div style={{ marginBottom: 8 }}>
-              <div style={{ fontWeight: 500 }}>{card.purchaser?.name || "Unknown"}</div>
-              <div style={{ fontSize: "0.9rem", color: "#6b7280" }}>{card.purchaser?.email || "Guest"}</div>
-              {card.purchaser?.id && (
-                <div style={{ fontSize: "0.75rem", color: "#9ca3af", fontFamily: "monospace", marginTop: 4 }}>
-                  ID: {card.purchaser.id}
-                </div>
-              )}
-            </div>
-          </div>
+        <div className="space-y-4 lg:space-y-6">
+          <Card title="Purchaser">
+            <p className="text-[17px] font-semibold text-oh-charcoal">{purchaserName(card)}</p>
+            {card.purchaser?.email && <p className="mt-0.5 text-sm text-oh-stone/70">{card.purchaser.email}</p>}
+          </Card>
 
-          {/* Recipient Info */}
-          <div style={{ backgroundColor: "#f9fafb", borderRadius: 8, padding: 16, marginBottom: 16, border: "1px solid #e5e7eb" }}>
-            <h3 style={{ marginTop: 0 }}>Recipient</h3>
+          <Card title="Recipient">
             {card.recipientEmail ? (
               <>
-                <div style={{ marginBottom: 8 }}>
-                  <div style={{ fontWeight: 500 }}>{card.recipientName || "Unknown"}</div>
-                  <div style={{ fontSize: "0.9rem", color: "#6b7280" }}>{card.recipientEmail}</div>
-                </div>
+                <p className="text-[17px] font-semibold text-oh-charcoal">{recipientName(card)}</p>
+                <p className="mt-0.5 text-sm text-oh-stone/70">{card.recipientEmail}</p>
                 {card.personalMessage && (
-                  <div style={{ marginTop: 12, padding: 12, backgroundColor: "#fff", borderRadius: 4, border: "1px solid #e5e7eb" }}>
-                    <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: 4 }}>Message:</div>
-                    <div style={{ fontSize: "0.9rem", fontStyle: "italic" }}>&ldquo;{card.personalMessage}&rdquo;</div>
-                  </div>
+                  <p className="mt-3 rounded-lg border border-oh-stone/15 bg-oh-linen/50 p-3 text-[15px] italic text-oh-stone">&ldquo;{card.personalMessage}&rdquo;</p>
                 )}
               </>
             ) : (
-              <p style={{ color: "#6b7280", margin: 0 }}>Purchased for self</p>
+              <p className="text-[15px] text-oh-stone">Purchased for self.</p>
             )}
-          </div>
+          </Card>
 
-          {/* Payment Info */}
-          <div style={{ backgroundColor: "#f9fafb", borderRadius: 8, padding: 16, marginBottom: 16, border: "1px solid #e5e7eb" }}>
-            <h3 style={{ marginTop: 0 }}>Payment</h3>
-            {card.stripePaymentId ? (
-              <div>
-                <div style={{ fontSize: "0.8rem", color: "#6b7280" }}>Stripe Payment ID:</div>
-                <div style={{ fontFamily: "monospace", fontSize: "0.75rem", wordBreak: "break-all" }}>{card.stripePaymentId}</div>
-              </div>
-            ) : (
-              <p style={{ color: "#6b7280", margin: 0 }}>No payment info available</p>
-            )}
-          </div>
+          <Card title="Payment">
+            {card.stripePaymentId
+              ? <p className="break-all font-mono text-xs text-oh-stone/60">{card.stripePaymentId}</p>
+              : <p className="text-[15px] text-oh-stone/70">No payment info available.</p>}
+          </Card>
 
-          {/* Card Details */}
-          <div style={{ backgroundColor: "#f9fafb", borderRadius: 8, padding: 16, border: "1px solid #e5e7eb" }}>
-            <h3 style={{ marginTop: 0 }}>Details</h3>
-            <div style={{ fontSize: "0.9rem" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                <span style={{ color: "#6b7280" }}>Design:</span>
-                <span>{card.designId || "Default"}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8 }}>
-                <span style={{ color: "#6b7280" }}>Purchased:</span>
-                <span>{new Date(card.purchasedAt).toLocaleDateString()}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ color: "#6b7280" }}>Expires:</span>
-                <span>{card.expiresAt ? new Date(card.expiresAt).toLocaleDateString() : "Never"}</span>
-              </div>
+          <Card title="Details">
+            <div className="space-y-2 text-[15px]">
+              <div className="flex justify-between"><span className="text-oh-stone/70">Design</span><span className="text-oh-charcoal">{card.designId || "Default"}</span></div>
+              <div className="flex justify-between"><span className="text-oh-stone/70">Purchased</span><span className="tabular-nums text-oh-charcoal">{shortDate(card.purchasedAt)}</span></div>
+              <div className="flex justify-between"><span className="text-oh-stone/70">Expires</span><span className="tabular-nums text-oh-charcoal">{card.expiresAt ? shortDate(card.expiresAt) : "Never"}</span></div>
             </div>
-          </div>
+          </Card>
         </div>
       </div>
-    </main>
+
+      {adjustOpen && (
+        <AdjustBalanceSheet card={card} onClose={() => setAdjustOpen(false)}
+          onSaved={(saved) => { setCard(saved); setStatus(saved.status); setAdjustOpen(false); show({ message: "Balance adjusted.", tone: "good" }); }} />
+      )}
+    </>
   );
 }
