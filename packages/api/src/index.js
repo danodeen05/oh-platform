@@ -69,7 +69,7 @@ import { registerPlanRoutes } from "./plan/routes.js";
 import { registerMembershipRoutes } from "./membership/routes.js";
 import { registerOrderRoutes } from "./orders/routes.js";
 import { configureOrderService, markPaid, quoteOrder, confirmOrderPayment, OrderError } from "./orders/service.js";
-import { createGiftCard, createMealGift } from "./orders/tenders.js";
+import { createGiftCard, createMealGift, acceptMealGift, finishMealGiftAcceptance } from "./orders/tenders.js";
 import { grantCredit } from "./membership/credits.js";
 import { taxCents, spendBaseCents } from "./orders/pricing.js";
 import { PROGRAM, tierRule } from "./membership/program.js";
@@ -259,7 +259,8 @@ const orderEffects = {
   },
   async mealGiftAccepted({ mealGiftId, order, appliedCents }) {
     const mealGift = await prisma.mealGift.findUnique({ where: { id: mealGiftId } });
-    if (mealGift) await finishMealGiftAcceptance({ mealGift, recipientUserId: order.userId || null, appliedCents });
+    // markPaid already won the gift's conditional claim inside its settle transaction.
+    if (mealGift) await finishMealGiftAcceptance(prisma, { mealGift, recipientUserId: order.userId || null, appliedCents }, { refreshWalletPass: refreshUserWalletPass });
   },
   onOrderCompleted,
 };
@@ -4479,7 +4480,7 @@ app.post("/payments/confirm", async (req, reply) => {
           locationName: order.location?.name || null,
         };
       } catch (err) {
-        if (err instanceof OrderError) return reply.status(err.status).send({ error: err.code, message: err.message });
+        if (err instanceof OrderError) return reply.status(err.status).send({ error: err.code, message: err.message, ...err.extra });
         throw err;
       }
     }
@@ -10735,159 +10736,28 @@ app.post("/meal-gifts/:id/accept", async (req, reply) => {
   const { orderId, messageFromRecipient } = req.body || {};
 
   // Task A6: the recipient is the verified caller, on their own order, and
-  // the excess is measured against that order's real total. (Checkout now
-  // consumes a meal gift server-side at PAID; this route is legacy.)
+  // the excess is measured against that order's real total. The gift is
+  // claimed with a conditional PENDING -> ACCEPTED update first, so two
+  // concurrent accepts pay out once (orders/tenders.js acceptMealGift).
+  // (Checkout consumes a meal gift server-side at PAID; this route is legacy.)
   const who = await customerAuth.requireUser(req, reply);
   if (!who) return reply;
   if (req.body?.recipientId && req.body.recipientId !== who.userId) {
     return reply.code(403).send({ error: "Forbidden" });
   }
-  const recipientId = who.userId;
 
-  if (!orderId) {
-    return reply.code(400).send({ error: "orderId required" });
+  try {
+    const result = await acceptMealGift(
+      prisma,
+      { mealGiftId: id, recipientUserId: who.userId, orderId, messageFromRecipient, now: new Date() },
+      { refreshWalletPass: refreshUserWalletPass },
+    );
+    return result.gift;
+  } catch (err) {
+    if (err instanceof OrderError) return reply.code(err.status).send({ error: err.message, code: err.code });
+    throw err;
   }
-  const recipientOrder = await prisma.order.findUnique({ where: { id: orderId } });
-  if (!recipientOrder || recipientOrder.userId !== recipientId) {
-    return reply.code(403).send({ error: "Forbidden" });
-  }
-  const orderTotalCents = recipientOrder.totalCents;
-
-  const mealGift = await prisma.mealGift.findUnique({
-    where: { id },
-    include: { giver: true, chain: true },
-  });
-
-  if (!mealGift) {
-    return reply.code(404).send({ error: "Meal gift not found" });
-  }
-
-  if (mealGift.status !== "PENDING" || !mealGift.paidAt) {
-    return reply.code(400).send({ error: "Meal gift is not available" });
-  }
-
-  if (new Date() > mealGift.expiresAt) {
-    return reply.code(400).send({ error: "Meal gift has expired" });
-  }
-
-  const orderTotal = orderTotalCents || 0;
-
-  // Update meal gift to ACCEPTED status
-  const updatedGift = await prisma.mealGift.update({
-    where: { id },
-    data: {
-      status: "ACCEPTED",
-      acceptedById: recipientId,
-      orderId,
-      acceptedAt: new Date(),
-    },
-  });
-
-  const recipientUser = await prisma.user.findUnique({ where: { id: recipientId }, select: { id: true } });
-  await finishMealGiftAcceptance({
-    mealGift,
-    recipientUserId: recipientUser ? recipientId : null,
-    appliedCents: Math.min(mealGift.amountCents, orderTotal),
-    messageFromRecipient,
-  });
-
-  return updatedGift;
 });
-
-/**
- * Everything that follows a meal gift being accepted onto an order: the chain
- * entry, the recipient's GIFT_EXCESS credit (gift value beyond what the order
- * used) and the giver's one-time Meal for a Stranger reward. Shared by
- * POST /meal-gifts/:id/accept and the order service's markPaid (a meal gift
- * applied as a tender is consumed at PAID, orders/service.js).
- */
-async function finishMealGiftAcceptance({ mealGift, recipientUserId, appliedCents, messageFromRecipient = null }) {
-  const id = mealGift.id;
-  const giftAmount = mealGift.amountCents;
-  const excessAmount = Math.max(0, giftAmount - (appliedCents || 0));
-
-  // Add chain entry for ACCEPTED action (the chain's recipient is a member)
-  if (recipientUserId) {
-    await prisma.mealGiftChain.create({
-      data: {
-        mealGiftId: id,
-        recipientId: recipientUserId,
-        action: "ACCEPTED",
-        messageFromRecipient: messageFromRecipient || null,
-      },
-    });
-  }
-
-  // Credit excess gift amount to the recipient (members only), as before
-  if (excessAmount > 0 && recipientUserId) {
-    // Through the credit ledger (a CreditLot that expires like any credit).
-    await grantCredit(prisma, {
-      userId: recipientUserId,
-      source: "MEAL_GIFT",
-      eventType: "GIFT_EXCESS",
-      amountCents: excessAmount,
-      note: `Meal gift excess credited (Gift: $${(giftAmount / 100).toFixed(2)}, Order: $${((appliedCents || 0) / 100).toFixed(2)})`,
-    });
-
-    // Refresh recipient's wallet pass to show updated credit balance
-    refreshUserWalletPass(recipientUserId).catch(console.error);
-  }
-
-  // Check if giver has already completed this challenge (only reward once)
-  const challenge = await prisma.challenge.findUnique({
-    where: { slug: "meal-for-stranger" },
-  });
-
-  let alreadyRewarded = false;
-  if (challenge) {
-    const existingChallenge = await prisma.userChallenge.findUnique({
-      where: {
-        userId_challengeId: {
-          userId: mealGift.giverId,
-          challengeId: challenge.id,
-        },
-      },
-    });
-    alreadyRewarded = existingChallenge?.rewardClaimed === true;
-  }
-
-  // Only give $5 reward if not already claimed
-  if (!alreadyRewarded) {
-    // $5 reward through the credit ledger
-    await grantCredit(prisma, {
-      userId: mealGift.giverId,
-      source: "CHALLENGE",
-      amountCents: 500,
-      note: "Meal for a Stranger challenge completed",
-    });
-
-    // Refresh giver's wallet pass to show updated credit balance
-    refreshUserWalletPass(mealGift.giverId).catch(console.error);
-
-    // Mark challenge as completed for giver
-    if (challenge) {
-      await prisma.userChallenge.upsert({
-        where: {
-          userId_challengeId: {
-            userId: mealGift.giverId,
-            challengeId: challenge.id,
-          },
-        },
-        update: {
-          completedAt: new Date(),
-          rewardClaimed: true,
-        },
-        create: {
-          userId: mealGift.giverId,
-          challengeId: challenge.id,
-          progress: JSON.stringify({ accepted: true }),
-          completedAt: new Date(),
-          rewardClaimed: true,
-        },
-      });
-    }
-  }
-}
 
 // POST /meal-gifts/:id/pay-forward - Pay forward a meal gift to next person
 app.post("/meal-gifts/:id/pay-forward", async (req, reply) => {

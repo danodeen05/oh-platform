@@ -1138,7 +1138,7 @@ model GiftCard {
   personalMessage String?
 
   // Payment tracking
-  stripePaymentId String?
+  stripePaymentId String? @unique // one purchase PaymentIntent buys one card (Task A6)
 
   // Promo code applied during purchase
   promoCodeId        String?

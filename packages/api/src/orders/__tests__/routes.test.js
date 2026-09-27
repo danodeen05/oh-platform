@@ -229,3 +229,26 @@ describe("plan status demo", () => {
     assert.equal(res.json().demo, true);
   });
 });
+
+describe("refund outcome reaches the caller", () => {
+  test("confirm-payment: an unexpected settle failure after a verified charge is a 500 that says refunded", async () => {
+    const { app, prisma, stripe } = await buildApp({ stripe: fakeStripe({ pi_1: { status: "succeeded", amount: 1999, metadata: { orderId: "o1" } } }) });
+    prisma.$transaction = async () => {
+      throw new Error("db down");
+    };
+    const res = await app.inject({ method: "POST", url: "/orders/o1/confirm-payment", payload: { paymentIntentId: "pi_1" } });
+    assert.equal(res.statusCode, 500);
+    assert.deepEqual(res.json(), { error: "PAYMENT_NOT_APPLIED", message: "Payment could not be applied.", refunded: true });
+    assert.equal(stripe.refundCalls.length, 1);
+  });
+
+  test("kiosk confirm passes refunded through on a 409", async () => {
+    const orders = [{ id: "k1", locationId: "L1", tenantId: "t1", totalCents: 1000, amountDueCents: 1000, creditsAppliedCents: 500, userId: null, paymentStatus: "PENDING", status: "PENDING_PAYMENT" }];
+    const stripe = fakeStripe({ pi_t: { status: "succeeded", amount: 1000, metadata: { orderIds: "k1" } } });
+    const { app } = await buildApp({ stripe, orders });
+    const res = await app.inject({ method: "POST", url: "/kiosk/orders/confirm-payment", headers: KIOSK, payload: { paymentIntentId: "pi_t", orderIds: ["k1"] } });
+    assert.equal(res.statusCode, 409);
+    assert.equal(res.json().error, "CREDIT_SHORT");
+    assert.equal(res.json().refunded, true);
+  });
+});

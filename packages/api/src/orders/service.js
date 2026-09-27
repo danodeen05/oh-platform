@@ -632,10 +632,33 @@ export async function refundUnappliedPayment(prisma, stripe, { pi, orderId, user
 }
 
 /** Adds the refund outcome to a settle-time OrderError after a verified charge. */
+/**
+ * Any failure after a PaymentIntent was verified as succeeded (a refusal like
+ * CREDIT_SHORT, or an unexpected database error) must not keep the money:
+ * refund in full, file the case, and hand the ORIGINAL error back so the
+ * caller still answers 409 or 5xx. The outcome rides on err.extra for an
+ * OrderError, and on err.refunded / err.refundId otherwise.
+ */
 async function refundOnFailure(prisma, stripe, err, { pi, orderId, userId }) {
-  if (!(err instanceof OrderError) || !pi) return err;
-  const r = await refundUnappliedPayment(prisma, stripe, { pi, orderId, userId, code: err.code });
-  err.extra = { ...err.extra, refunded: r.refunded, ...(r.refundId ? { refundId: r.refundId } : {}) };
+  if (!pi || !err) return err;
+  const code = err instanceof OrderError ? err.code : `SETTLE_FAILED: ${err.code || err.name || "Error"}`;
+  let r;
+  try {
+    r = await refundUnappliedPayment(prisma, stripe, { pi, orderId, userId, code });
+  } catch (refundErr) {
+    console.error(`[orders] refund handling failed for ${pi.id}:`, refundErr?.message || refundErr);
+    return err;
+  }
+  if (err instanceof OrderError) {
+    err.extra = { ...err.extra, refunded: r.refunded, ...(r.refundId ? { refundId: r.refundId } : {}) };
+  } else {
+    try {
+      err.refunded = r.refunded;
+      if (r.refundId) err.refundId = r.refundId;
+    } catch {
+      // a frozen error object: the refund and case happened regardless
+    }
+  }
   return err;
 }
 

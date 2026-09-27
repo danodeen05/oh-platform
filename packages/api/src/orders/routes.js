@@ -54,7 +54,15 @@ const PATCHABLE = new Set([
 const SAVINGS_KEYS = ["useCreditsCents", "promoCode", "giftCardCode", "mealGiftId", "rewardId"];
 
 function sendOrderError(reply, err) {
-  if (!(err instanceof OrderError)) throw err;
+  if (!(err instanceof OrderError)) {
+    // An unexpected failure after a verified charge was refunded (service.js
+    // refundOnFailure): still a 500, but tell the client its card is whole.
+    if (err && err.refunded !== undefined) {
+      console.error("[orders] settle failed after a verified charge:", err?.message || err);
+      return reply.code(500).send({ error: "PAYMENT_NOT_APPLIED", message: "Payment could not be applied.", refunded: err.refunded });
+    }
+    throw err;
+  }
   if (err.code === "DINE_IN_DISABLED") return reply.code(403).send({ error: DINE_IN_DISABLED_MESSAGE, code: err.code });
   return reply.code(err.status).send({ error: err.code, message: err.message, ...err.extra });
 }

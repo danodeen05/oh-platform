@@ -66,6 +66,9 @@ ADD COLUMN     "paidAt" TIMESTAMP(3);
 -- CreateIndex
 CREATE UNIQUE INDEX "MealGift_stripePaymentIntentId_key" ON "MealGift"("stripePaymentIntentId");
 
+-- CreateIndex (Task A6: one purchase PaymentIntent buys one gift card; NULLs allowed)
+CREATE UNIQUE INDEX "GiftCard_stripePaymentId_key" ON "GiftCard"("stripePaymentId");
+
 -- AlterTable
 ALTER TABLE "Seat" ADD COLUMN     "finger" INTEGER,
 ADD COLUMN     "label" TEXT,

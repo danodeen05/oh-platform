@@ -22,6 +22,7 @@ const COLLECTIONS = [
   "creditLot", "creditEvent", "user", "reward", "order", "seat", "supportCase", "userBadge", "badge", "menuItem",
   // Order service (Task A6)
   "orderItem", "location", "tenant", "guest", "promoCode", "promoCodeUsage", "giftCard", "mealGift", "mealGiftChain",
+  "challenge", "userChallenge",
 ];
 
 /**
@@ -29,9 +30,13 @@ const COLLECTIONS = [
  * actually relies on being enforced (e.g. to exercise a real P2002 conflict
  * path). `create()` checks these and throws a Prisma-shaped error
  * (`err.code === "P2002"`) on a clash, same as a real unique-index violation.
+ * As in Postgres, a row with a NULL in any indexed column never clashes.
  */
 const UNIQUE_INDEXES = {
   reward: [["userId", "type", "issuedFor"]],
+  giftCard: [["code"], ["stripePaymentId"]],
+  mealGift: [["stripePaymentIntentId"], ["orderId"]],
+  userChallenge: [["userId", "challengeId"]],
 };
 
 function toTime(v) {
@@ -111,6 +116,7 @@ function makeDelegate(store, prefix, nextId) {
       const rec = { createdAt: new Date(), ...data };
       if (rec.id === undefined) rec.id = nextId(prefix);
       for (const fields of UNIQUE_INDEXES[prefix] || []) {
+        if (fields.some((f) => rec[f] === null || rec[f] === undefined)) continue;
         const clash = [...store.values()].some((r) => fields.every((f) => valEquals(r[f], rec[f])));
         if (clash) {
           const err = new Error(`prisma-memory: unique constraint failed on ${prefix}(${fields.join(", ")})`);
@@ -207,13 +213,22 @@ function buildClient(db, nextId, mutex) {
   }
   client.$transaction = (fn) =>
     mutex(async () => {
+      const base = cloneDb(db);
       const snapshot = cloneDb(db);
       const tx = buildClient(snapshot, nextId, mutex);
       // No try/catch: if fn throws, we simply never commit, which is the rollback.
       const result = await fn(tx);
+      // Commit only what this transaction changed (like row-level writes in
+      // Postgres), so a non-transactional write that landed while it ran is
+      // not clobbered by the stale snapshot.
+      const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
       for (const key of Object.keys(db)) {
-        db[key].clear();
-        for (const [id, rec] of snapshot[key]) db[key].set(id, rec);
+        for (const [id, rec] of snapshot[key]) {
+          if (!base[key].has(id) || !same(base[key].get(id), rec)) db[key].set(id, rec);
+        }
+        for (const id of base[key].keys()) {
+          if (!snapshot[key].has(id)) db[key].delete(id);
+        }
       }
       return result;
     });
@@ -249,6 +264,8 @@ export function makeMemoryPrisma(seed = {}) {
     giftCards: "giftCard",
     mealGifts: "mealGift",
     mealGiftChains: "mealGiftChain",
+    challenges: "challenge",
+    userChallenges: "userChallenge",
   };
   for (const [seedKey, collection] of Object.entries(seedMap)) {
     for (const rec of seed[seedKey] || []) {

@@ -15,6 +15,10 @@
  * amount) is refunded in full with a support case.
  */
 import { OrderError, verifiedIntent, refundUnappliedPayment } from "./service.js";
+import { grantCredit } from "../membership/credits.js";
+
+export const MEAL_GIFT_GIVER_REWARD_CENTS = 500;
+export const MEAL_GIFT_CHALLENGE_SLUG = "meal-for-stranger";
 
 export const GIFT_CARD_MIN_CENTS = 1000;
 export const GIFT_CARD_MAX_CENTS = 50000;
@@ -75,8 +79,9 @@ export async function createGiftCard(prisma, stripe, {
   }
   if (!code) throw new OrderError("CODE_GENERATION_FAILED", 500, "Failed to generate unique code");
 
-  return prisma.giftCard.create({
-    data: {
+  try {
+    return await prisma.giftCard.create({
+      data: {
       code,
       amountCents,
       balanceCents: amountCents,
@@ -85,10 +90,18 @@ export async function createGiftCard(prisma, stripe, {
       recipientEmail: recipientEmail || null,
       recipientName: recipientName || null,
       personalMessage: personalMessage || null,
-      stripePaymentId: trusted ? stripePaymentId || null : stripePaymentId,
-      status: "ACTIVE",
-    },
-  });
+        stripePaymentId: trusted ? stripePaymentId || null : stripePaymentId,
+        status: "ACTIVE",
+      },
+    });
+  } catch (err) {
+    // GiftCard.stripePaymentId is unique: a concurrent create with the same
+    // PaymentIntent loses here even though both passed the findFirst check.
+    if (isUniqueViolation(err) && stripePaymentId && (err.meta?.target || []).toString().includes("stripePaymentId")) {
+      throw new OrderError("PAYMENT_ALREADY_USED", 409, "That payment already bought a gift card.");
+    }
+    throw err;
+  }
 }
 
 /**
@@ -130,4 +143,106 @@ export async function createMealGift(prisma, stripe, { giverId, locationId, amou
     if (isUniqueViolation(err)) throw new OrderError("PAYMENT_ALREADY_USED", 409, "That payment already funded a meal gift.");
     throw err;
   }
+}
+
+/**
+ * Everything that follows a meal gift being accepted onto an order: the chain
+ * entry, the recipient's GIFT_EXCESS credit (the gift's value beyond what the
+ * order used) and the giver's Meal for a Stranger reward. Callers must have
+ * WON the gift's conditional PENDING -> ACCEPTED claim first (markPaid's
+ * settle, or acceptMealGift), so this runs once per gift. The giver reward is
+ * additionally claimed once per giver through UserChallenge.rewardClaimed.
+ */
+export async function finishMealGiftAcceptance(prisma, { mealGift, recipientUserId, appliedCents, messageFromRecipient = null, now = new Date() }, { refreshWalletPass = () => {} } = {}) {
+  const giftAmount = mealGift.amountCents;
+  const excessAmount = Math.max(0, giftAmount - (appliedCents || 0));
+  const refresh = (userId) => {
+    try {
+      Promise.resolve(refreshWalletPass(userId)).catch(() => {});
+    } catch {
+      // wallet refresh is best effort
+    }
+  };
+
+  if (recipientUserId) {
+    await prisma.mealGiftChain.create({
+      data: { mealGiftId: mealGift.id, recipientId: recipientUserId, action: "ACCEPTED", messageFromRecipient: messageFromRecipient || null },
+    });
+  }
+
+  if (excessAmount > 0 && recipientUserId) {
+    await grantCredit(prisma, {
+      userId: recipientUserId,
+      source: "MEAL_GIFT",
+      eventType: "GIFT_EXCESS",
+      amountCents: excessAmount,
+      note: `Meal gift excess credited (Gift: $${(giftAmount / 100).toFixed(2)}, Order: $${((appliedCents || 0) / 100).toFixed(2)})`,
+      now,
+    });
+    refresh(recipientUserId);
+  }
+
+  // Giver reward, once per giver: claim UserChallenge.rewardClaimed
+  // (false -> true) with a conditional update; only the winner grants.
+  const challenge = await prisma.challenge.findUnique({ where: { slug: MEAL_GIFT_CHALLENGE_SLUG } });
+  let rewardGiver = !challenge; // no challenge configured: once per gift (the gift claim guarantees it)
+  if (challenge) {
+    try {
+      await prisma.userChallenge.create({
+        data: { userId: mealGift.giverId, challengeId: challenge.id, progress: JSON.stringify({ accepted: true }), rewardClaimed: false },
+      });
+    } catch (err) {
+      if (!isUniqueViolation(err)) throw err; // the row already exists: fine
+    }
+    const claim = await prisma.userChallenge.updateMany({
+      where: { userId: mealGift.giverId, challengeId: challenge.id, rewardClaimed: false },
+      data: { rewardClaimed: true, completedAt: now },
+    });
+    rewardGiver = claim.count === 1;
+  }
+  if (rewardGiver) {
+    await grantCredit(prisma, {
+      userId: mealGift.giverId,
+      source: "CHALLENGE",
+      amountCents: MEAL_GIFT_GIVER_REWARD_CENTS,
+      note: "Meal for a Stranger challenge completed",
+      now,
+    });
+    refresh(mealGift.giverId);
+  }
+  return { excessCents: recipientUserId ? excessAmount : 0, giverRewarded: rewardGiver };
+}
+
+/**
+ * POST /meal-gifts/:id/accept (legacy; checkout consumes gifts at PAID).
+ * The verified caller accepts a funded gift onto their own order. The
+ * PENDING -> ACCEPTED claim is a conditional updateMany: of two concurrent
+ * accepts exactly one wins and pays out; the other is 409.
+ */
+export async function acceptMealGift(prisma, { mealGiftId, recipientUserId, orderId, messageFromRecipient = null, now = new Date() }, deps = {}) {
+  if (!recipientUserId) throw new OrderError("SIGN_IN_REQUIRED", 401, "Sign in required");
+  if (!orderId) throw new OrderError("ORDER_REQUIRED", 400, "orderId required");
+  const order = await prisma.order.findUnique({ where: { id: orderId } });
+  if (!order || order.userId !== recipientUserId) throw new OrderError("FORBIDDEN", 403, "Forbidden");
+  const gift = await prisma.mealGift.findUnique({ where: { id: mealGiftId } });
+  if (!gift) throw new OrderError("MEAL_GIFT_NOT_FOUND", 404, "Meal gift not found");
+
+  let claim;
+  try {
+    claim = await prisma.mealGift.updateMany({
+      where: { id: mealGiftId, status: "PENDING", paidAt: { not: null }, expiresAt: { gt: now } },
+      data: { status: "ACCEPTED", acceptedById: recipientUserId, orderId, acceptedAt: now },
+    });
+  } catch (err) {
+    if (isUniqueViolation(err)) throw new OrderError("MEAL_GIFT_UNAVAILABLE", 409, "That order already used a meal gift.");
+    throw err;
+  }
+  if (claim.count !== 1) throw new OrderError("MEAL_GIFT_UNAVAILABLE", 409, "That meal gift is no longer available.");
+
+  const payout = await finishMealGiftAcceptance(
+    prisma,
+    { mealGift: gift, recipientUserId, appliedCents: Math.min(gift.amountCents, order.totalCents || 0), messageFromRecipient, now },
+    deps,
+  );
+  return { gift: await prisma.mealGift.findUnique({ where: { id: mealGiftId } }), ...payout };
 }
