@@ -6,6 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useLocale } from "next-intl";
 import { useUser, SignInButton } from "@clerk/nextjs";
+import { useSiteApi } from "@/lib/site/api";
 import { useGuest } from "@/contexts/guest-context";
 import { StripeProvider, PaymentForm, type SavedPaymentMethod } from "@/components/payments";
 
@@ -38,6 +39,7 @@ export default function InStoreItemPage({ params }: Props) {
   const router = useRouter();
   const locale = useLocale();
   const { user, isLoaded: clerkLoaded } = useUser();
+  const api = useSiteApi();
   const { guestId, isGuest, startGuestSession } = useGuest();
 
   // Product state
@@ -93,7 +95,7 @@ export default function InStoreItemPage({ params }: Props) {
     const fetchUserData = async () => {
       try {
         // Create or get user in our system
-        const userRes = await fetch(`${API_URL}/users`, {
+        const userRes = await api(`${API_URL}/users`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -115,7 +117,7 @@ export default function InStoreItemPage({ params }: Props) {
           totalCredits: userData.creditsCents || 0,
         });
 
-        const customerRes = await fetch(`${API_URL}/users/${userData.id}/stripe-customer`, {
+        const customerRes = await api(`${API_URL}/users/${userData.id}/stripe-customer`, {
           method: "POST",
         });
         if (customerRes.ok) {
@@ -123,7 +125,7 @@ export default function InStoreItemPage({ params }: Props) {
           setStripeCustomerId(customerData.customerId);
         }
 
-        const methodsRes = await fetch(`${API_URL}/users/${userData.id}/payment-methods`);
+        const methodsRes = await api(`${API_URL}/users/${userData.id}/payment-methods`);
         if (methodsRes.ok) {
           const methods = await methodsRes.json();
           setSavedPaymentMethods(methods);

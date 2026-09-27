@@ -31,25 +31,28 @@ import { readFileSync, existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
+import { tierRule } from '../membership/program.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Tier configuration - using olive tones matching website
+// Tier configuration - using olive tones matching website. Cashback percent
+// comes from the membership engine's PROGRAM config (packages/api/src/membership/program.js),
+// not hard-coded, so a config change doesn't drift from what the pass shows.
 const TIER_CONFIG = {
   CHOPSTICK: {
     name: 'Chopstick',
-    cashback: '1%',
+    get cashback() { return `${tierRule('CHOPSTICK').cashbackPct}%`; },
     color: 'rgb(124, 122, 103)', // Subtle olive (#7C7A67)
   },
   NOODLE_MASTER: {
     name: 'Noodle Master',
-    cashback: '2%',
+    get cashback() { return `${tierRule('NOODLE_MASTER').cashbackPct}%`; },
     color: 'rgb(100, 98, 82)', // Darker olive
   },
   BEEF_BOSS: {
     name: 'Beef Boss',
-    cashback: '3%',
+    get cashback() { return `${tierRule('BEEF_BOSS').cashbackPct}%`; },
     color: 'rgb(75, 73, 60)', // Darkest olive
   },
 };

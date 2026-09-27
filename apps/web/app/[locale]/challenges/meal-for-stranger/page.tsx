@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
+import { useSiteApi } from "@/lib/site/api";
 import { useTranslations } from "next-intl";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
@@ -18,6 +19,9 @@ type Location = {
   address: string;
 };
 
+
+// Meal gifts are funded only by a verified card payment for their full amount (Task A6).
+const MEAL_GIFT_CREDITS_ENABLED = false;
 function PaymentForm({
   selectedLocationId,
   giftAmount,
@@ -35,6 +39,7 @@ function PaymentForm({
 }) {
   const router = useRouter();
   const { user } = useUser();
+  const api = useSiteApi();
   const t = useTranslations("mealGift");
   const toast = useToast();
   const stripe = useStripe();
@@ -68,7 +73,7 @@ function PaymentForm({
 
     try {
       // Get/create user in database
-      const userResponse = await fetch(`${API_URL}/users`, {
+      const userResponse = await api(`${API_URL}/users`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -147,14 +152,15 @@ function PaymentForm({
       }
 
       // Create meal gift
-      const mealGiftResponse = await fetch(`${API_URL}/meal-gifts`, {
+      // The API takes the giver from the verified session and creates the
+      // gift only after it verifies this PaymentIntent (Task A6).
+      const mealGiftResponse = await api(`${API_URL}/meal-gifts`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "x-tenant-slug": "oh",
         },
         body: JSON.stringify({
-          giverId,
           locationId: selectedLocationId,
           amountCents: giftAmount,
           messageFromGiver: message || null,
@@ -171,7 +177,7 @@ function PaymentForm({
 
       // Deduct credits if used
       if (creditsToUse > 0) {
-        await fetch(`${API_URL}/users/${giverId}/deduct-credits`, {
+        await api(`${API_URL}/users/${giverId}/deduct-credits`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -284,6 +290,7 @@ function PaymentForm({
 
 export default function MealForStrangerPage() {
   const { user, isLoaded: userLoaded } = useUser();
+  const api = useSiteApi();
   const t = useTranslations("mealGift");
 
   const [locations, setLocations] = useState<Location[]>([]);
@@ -316,7 +323,7 @@ export default function MealForStrangerPage() {
 
       try {
         // First, try to get/create user in our system (like payment form does)
-        const userResponse = await fetch(`${API_URL}/users`, {
+        const userResponse = await api(`${API_URL}/users`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -333,7 +340,7 @@ export default function MealForStrangerPage() {
           localStorage.setItem("userId", userData.id);
 
           // Now fetch the full profile to get credit balance
-          const profileResponse = await fetch(`${API_URL}/users/${userData.id}/profile`, {
+          const profileResponse = await api(`${API_URL}/users/${userData.id}/profile`, {
             headers: { "x-tenant-slug": "oh" },
           });
 
@@ -343,7 +350,7 @@ export default function MealForStrangerPage() {
           }
 
           // Check if user has already completed this challenge
-          const challengesResponse = await fetch(`${API_URL}/users/${userData.id}/challenges`, {
+          const challengesResponse = await api(`${API_URL}/users/${userData.id}/challenges`, {
             headers: { "x-tenant-slug": "oh" },
           });
 
@@ -467,8 +474,9 @@ export default function MealForStrangerPage() {
         </div>
       </div>
 
-      {/* Credit Balance & Application */}
-      {userProfile && (
+      {/* Credit Balance & Application: off until the API can spend credits for
+          a meal gift (Task A6 funds a gift only by a verified card payment). */}
+      {MEAL_GIFT_CREDITS_ENABLED && userProfile && (
         <div style={{ background: "#f0f9ff", padding: 16, borderRadius: 8, marginBottom: 24, border: "1px solid #bae6fd" }}>
           <div style={{ marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ fontWeight: "600" }}>{t("form.availableCredits")}:</span>
@@ -495,7 +503,7 @@ export default function MealForStrangerPage() {
           giftAmount={giftAmount}
           message={message}
           userProfile={userProfile}
-          applyCredits={applyCredits}
+          applyCredits={MEAL_GIFT_CREDITS_ENABLED && applyCredits}
           challengeAlreadyCompleted={challengeAlreadyCompleted}
         />
       </Elements>

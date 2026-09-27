@@ -22,7 +22,7 @@ function shellMatrix(p: Pod, out: Matrix4): Matrix4 {
   return out.makeTranslation(p.x + p.w / 2, HEIGHTS.podPartition / 2, p.y + p.h / 2);
 }
 function hatchMatrix(p: Pod, slide: number, out: Matrix4): Matrix4 {
-  const x = p.hatch === "east" ? p.x + p.w + 0.03 : p.x - 0.03;
+  const x = p.side === "west" ? p.x + p.w + 0.03 : p.x - 0.03;
   const o = new Object3D();
   o.position.set(x, HATCH_Y, p.y + p.h / 2 + slide);
   o.rotation.y = Math.PI / 2;
@@ -30,7 +30,7 @@ function hatchMatrix(p: Pod, slide: number, out: Matrix4): Matrix4 {
   return out.copy(o.matrix);
 }
 function seatMatrix(p: Pod, out: Matrix4): Matrix4 {
-  const x = p.facing === "west" ? p.x + 0.03 : p.x + p.w - 0.03;
+  const x = p.side === "west" ? p.x + 0.03 : p.x + p.w - 0.03;
   const o = new Object3D();
   o.position.set(x, HEIGHTS.podPartition * 0.42, p.y + p.h / 2);
   o.rotation.y = Math.PI / 2;

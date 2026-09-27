@@ -27,7 +27,7 @@ const nextConfig = {
   },
   // The business plan engine is consumed from TypeScript source (spec 5.1: one
   // package, no build step, every figure traceable to it).
-  transpilePackages: ['@oh/plan-model'],
+  transpilePackages: ['@oh/plan-model', '@oh/floor-plan'],
   // The plan NDA's executed PDF is rendered server-side with @react-pdf/renderer,
   // which reads its fonts and logo from lib/plan/nda/assets at runtime.
   serverExternalPackages: ['@react-pdf/renderer'],

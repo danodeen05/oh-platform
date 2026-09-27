@@ -6,7 +6,7 @@ export { PrintableReceipt, generateQRDataUrl } from './PrintableReceipt';
 export type { PrintableReceiptProps } from './PrintableReceipt';
 export { LanguageSelector } from './LanguageSelector';
 export { default as AnimatedOrderQR } from './AnimatedOrderQR';
-export { KioskDeviceProvider, useKioskDevice, useHasDeviceAuth } from './KioskDeviceProvider';
+export { KioskDeviceProvider, useKioskDevice, useHasDeviceAuth, kioskAuthHeaders } from './KioskDeviceProvider';
 export { useKioskMode, useKioskModePreference } from './useKioskMode';
 export { useKioskScale, KIOSK_SCALE_CSS_VAR, useKioskNarrow } from './useKioskScale';
 export { KioskLockdown } from './KioskLockdown';

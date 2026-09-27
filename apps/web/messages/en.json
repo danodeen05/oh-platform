@@ -817,6 +817,7 @@
     "addToAppleWallet": "Add to Apple Wallet",
     "addToGoogleWallet": "Add to Google Wallet",
     "walletComingSoon": "Full wallet integration coming soon! Preview mode available.",
+    "walletUnavailable": "Wallet passes are unavailable right now. Please try again later.",
     "tiers": {
       "chopstick": "Chopstick",
       "noodleMaster": "Noodle Master",
@@ -1629,7 +1630,18 @@
     "enterYourName": "Please enter your name",
     "wantToEarnRewards": "Want to earn rewards and track your orders?",
     "signInInstead": "Sign In Instead",
-    "waitLoadingAccount": "Please wait while we load your account..."
+    "waitLoadingAccount": "Please wait while we load your account...",
+    "errorCodes": {
+      "CREDIT_SHORT": "Your credit balance changed. Check your total and try again.",
+      "GIFT_CARD_SHORT": "Your gift card balance changed. Check your total and try again.",
+      "MEAL_GIFT_UNAVAILABLE": "That meal gift is no longer available.",
+      "REWARD_UNAVAILABLE": "That reward can no longer be used.",
+      "PAYMENT_NOT_VERIFIED": "We couldn't confirm your payment yet. If you were charged, show this screen to our staff.",
+      "ORDER_FAILED": "We couldn't complete your order. Please try again.",
+      "QUOTE_CHANGED": "Your order total changed. Check it and try again.",
+      "REFUNDED": "We couldn't apply your payment, so your card was refunded in full. Please try again.",
+      "GROUP_CHANGED": "Part of this group was already paid or changed. Check the group and try again."
+    }
   },
   "groupOrder": {
     "notFound": "Group Not Found",
@@ -1643,7 +1655,23 @@
     "groupOrders": "Group Orders",
     "checkInAll": "Check In All Orders (Simulate Kiosk)",
     "checkingIn": "Checking in...",
-    "simulateCheckIn": "Simulate Check-in"
+    "simulateCheckIn": "Simulate Check-in",
+    "hostPay": {
+      "signInTitle": "Sign in to pay for the group",
+      "signInBody": "The host signs in to pay for everyone.",
+      "signIn": "Sign in",
+      "loading": "Preparing the payment...",
+      "processing": "Confirming the payment...",
+      "amountDue": "Group total: {amount}",
+      "confirmFree": "Confirm group order",
+      "returnToGroup": "Return to group",
+      "notHost": "Only the group's host can pay for everyone.",
+      "nothingToPay": "Every order in this group is already paid.",
+      "groupChanged": "The group changed while you were paying. Review the group and pay again.",
+      "notVerified": "We couldn't confirm your payment yet. If you were charged, show this screen to our staff.",
+      "refunded": "We couldn't apply your payment, so your card was refunded in full. Please try again.",
+      "failed": "We couldn't complete the group payment. Please try again."
+    }
   },
   "social": {
     "instagram": "Instagram",
@@ -1969,7 +1997,8 @@
       "noActiveOrdersForMember": "Hi {name}! We couldn't find any active orders for you at this location.",
       "memberNotFound": "Member not found. Please try scanning again.",
       "tryAgain": "Try Again",
-      "scanDifferentCode": "Scan Different Code"
+      "scanDifferentCode": "Scan Different Code",
+      "deviceNotAuthorized": "This kiosk is not set up for member check-in. Please ask a team member for help."
     },
     "loading": "Loading your order...",
     "orderFlow": {

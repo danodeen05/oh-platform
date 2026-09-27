@@ -1,147 +1,161 @@
 "use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useUser, SignInButton } from "@clerk/nextjs";
+import { useTranslations } from "next-intl";
+import { useSiteApi } from "@/lib/site/api";
+import { groupPaymentIntent, groupConfirmPayment, type OrderApiError } from "@/lib/site/orders";
+import { StripeProvider, PaymentForm } from "@/components/payments";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
+/**
+ * Host pays for the whole group (Task A7).
+ *
+ * The API creates ONE PaymentIntent for the sum of the group's unpaid orders
+ * (their server-quoted amountDueCents) and, after Stripe takes the card,
+ * verifies it and marks every order PAID in one step. The page never sends
+ * an amount or a payment status. Only the signed-in host can do this.
+ */
 export default function GroupPaymentForm({
   groupCode,
-  totalCents,
-  orderIds,
   seatingOption,
   locationId,
   hostOrderId,
   hostOrderNumber,
 }: {
   groupCode: string;
-  totalCents: number;
-  orderIds: string[];
   seatingOption: number | null;
   locationId: string;
   hostOrderId: string;
   hostOrderNumber: string;
 }) {
   const router = useRouter();
-  const { user, isLoaded, isSignedIn } = useUser();
+  const searchParams = useSearchParams();
+  const api = useSiteApi();
+  const { isLoaded, isSignedIn } = useUser();
+  const t = useTranslations("groupOrder.hostPay");
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState("");
+  const [intent, setIntent] = useState<{ clientSecret: string | null; amountCents: number; orderCount: number } | null>(null);
+  const started = useRef(false);
 
-  async function handleGroupPayment() {
-    setProcessing(true);
-    setError("");
+  const messageFor = useCallback(
+    (err: OrderApiError, status: number) => {
+      if (err.refunded) return t("refunded");
+      if (status === 403) return t("notHost");
+      switch (err.code) {
+        case "NOTHING_TO_PAY":
+          return t("nothingToPay");
+        case "GROUP_CHANGED":
+        case "QUOTE_CHANGED":
+        case "CREDIT_SHORT":
+        case "GIFT_CARD_SHORT":
+        case "MEAL_GIFT_UNAVAILABLE":
+        case "REWARD_UNAVAILABLE":
+          return t("groupChanged");
+        case "PAYMENT_NOT_VERIFIED":
+        case "PAYMENT_REQUIRED":
+          return t("notVerified");
+        default:
+          return t("failed");
+      }
+    },
+    [t],
+  );
 
-    try {
-      // Mark all orders as paid
-      for (const orderId of orderIds) {
-        const response = await fetch(`${BASE}/orders/${orderId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            paymentStatus: "PAID",
-          }),
+  /** Pods for everyone, then the kitchen (host-only on the API). Payment is already recorded. */
+  const finish = useCallback(
+    async (orderCount: number) => {
+      const option = seatingOption || 1;
+      let seatIds: string[] = [];
+      try {
+        const seatsRes = await fetch(`${BASE}/locations/${locationId}/seats`, { headers: { "x-tenant-slug": "oh" } });
+        if (seatsRes.ok) {
+          const seats = await seatsRes.json();
+          const free = seats.filter((s: { status: string }) => s.status === "AVAILABLE");
+          if (free.length >= orderCount) {
+            const start = option === 1 ? 0 : option === 2 ? Math.floor(free.length / 3) : Math.floor((free.length * 2) / 3);
+            seatIds = free.slice(start, start + orderCount).map((s: { id: string }) => s.id);
+          }
+        }
+        await api(`${BASE}/group-orders/${encodeURIComponent(groupCode)}/complete`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-tenant-slug": "oh" },
+          body: JSON.stringify({ seatIds, seatingOption: option }),
         });
-
-        if (!response.ok) {
-          throw new Error(`Failed to process order ${orderId}`);
-        }
+      } catch (e) {
+        console.error("Group seating after payment failed:", e);
       }
-
-      // Update group status to PAID
-      await fetch(`${BASE}/group-orders/${groupCode}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "x-tenant-slug": "oh",
-        },
-        body: JSON.stringify({ status: "PAID" }),
-      });
-
-      // Complete the group order with seating assignment
-      // Always try to assign seats (for ASAP arrivals, seatingOption defaults to 1)
-      const effectiveSeatingOption = seatingOption || 1;
-
-      // Fetch available seats to assign based on seating option
-      const seatsRes = await fetch(`${BASE}/locations/${locationId}/seats`, {
-        headers: { "x-tenant-slug": "oh" },
-      });
-
-      let assignedSeatIds: string[] = [];
-      if (seatsRes.ok) {
-        const seats = await seatsRes.json();
-        const availableSeats = seats.filter((s: any) => s.status === "AVAILABLE");
-        const seatsNeeded = orderIds.length;
-
-        // Assign seats based on seating option
-        if (availableSeats.length >= seatsNeeded) {
-          const startIndex = effectiveSeatingOption === 1 ? 0 :
-                            effectiveSeatingOption === 2 ? Math.floor(availableSeats.length / 3) :
-                            Math.floor(availableSeats.length * 2 / 3);
-          assignedSeatIds = availableSeats.slice(startIndex, startIndex + seatsNeeded).map((s: any) => s.id);
-        }
-      }
-
-      // Call complete endpoint to assign pods and notify kitchen
-      await fetch(`${BASE}/group-orders/${groupCode}/complete`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-tenant-slug": "oh",
-        },
-        body: JSON.stringify({
-          seatIds: assignedSeatIds,
-          seatingOption: effectiveSeatingOption,
-        }),
-      });
-
-      // Redirect to confirmation with host's order details
       router.push(
-        `/order/confirmation?orderId=${hostOrderId}&orderNumber=${hostOrderNumber}&groupCode=${groupCode}&orderCount=${orderIds.length}&total=${totalCents}&paid=true`
+        `/order/confirmation?orderId=${hostOrderId}&orderNumber=${hostOrderNumber}&groupCode=${groupCode}&orderCount=${orderCount}&paid=true`,
       );
-    } catch (err: any) {
-      setError(err.message || "Payment failed");
-      setProcessing(false);
+    },
+    [api, groupCode, hostOrderId, hostOrderNumber, locationId, router, seatingOption],
+  );
+
+  const confirm = useCallback(
+    async (paymentIntentId: string | null) => {
+      setProcessing(true);
+      setError("");
+      const res = await groupConfirmPayment(groupCode, paymentIntentId, { fetcher: api, baseUrl: BASE });
+      if (!res.ok) {
+        setError(messageFor(res.error, res.status));
+        setProcessing(false);
+        return;
+      }
+      await finish(res.data.orders?.length || intent?.orderCount || 1);
+    },
+    [api, finish, groupCode, intent?.orderCount, messageFor],
+  );
+
+  // Coming back from a 3D Secure redirect: confirm that PaymentIntent, don't start a new one.
+  const returnedIntent = searchParams.get("payment_intent");
+  const returnedStatus = searchParams.get("redirect_status");
+
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn || started.current) return;
+    started.current = true;
+    if (returnedIntent) {
+      if (returnedStatus === "succeeded" || returnedStatus === "processing") confirm(returnedIntent);
+      else setError(t("failed"));
+      return;
     }
-  }
+    (async () => {
+      const res = await groupPaymentIntent(groupCode, { fetcher: api, baseUrl: BASE });
+      if (!res.ok) {
+        setError(messageFor(res.error, res.status));
+        return;
+      }
+      // A revisit after the host already paid: the API settled that payment; never charge again.
+      if (res.data.alreadyPaid) {
+        setProcessing(true);
+        await finish(res.data.orderIds?.length || 1);
+        return;
+      }
+      setIntent({ clientSecret: res.data.clientSecret, amountCents: res.data.amountCents, orderCount: res.data.orderIds?.length || 1 });
+    })();
+  }, [isLoaded, isSignedIn, returnedIntent, returnedStatus, groupCode, api, confirm, finish, messageFor, t]);
+
+  const returnUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}${window.location.pathname}?groupCode=${encodeURIComponent(groupCode)}${seatingOption ? `&seatingOption=${seatingOption}` : ""}`
+      : "";
 
   if (!isLoaded) {
-    return (
-      <div style={{ textAlign: "center", padding: "40px 0" }}>
-        <div style={{ fontSize: "1.5rem", marginBottom: 16 }}>Loading...</div>
-      </div>
-    );
+    return <p style={{ textAlign: "center", padding: "40px 0", color: "#666" }}>{t("loading")}</p>;
   }
 
   if (!isSignedIn) {
     return (
-      <div
-        style={{
-          background: "rgba(124, 122, 103, 0.1)",
-          border: "2px solid #7C7A67",
-          borderRadius: 12,
-          padding: 32,
-          textAlign: "center",
-        }}
-      >
-        <div style={{ fontSize: "2.5rem", marginBottom: 16 }}>*</div>
-        <h3 style={{ marginBottom: 12 }}>Sign in to pay for the group</h3>
-        <p style={{ color: "#666", marginBottom: 24 }}>
-          As the host, you'll need to sign in to complete the group payment.
-        </p>
+      <div style={{ background: "rgba(124, 122, 103, 0.1)", border: "2px solid #7C7A67", borderRadius: 12, padding: 32, textAlign: "center" }}>
+        <h3 style={{ marginBottom: 12 }}>{t("signInTitle")}</h3>
+        <p style={{ color: "#666", marginBottom: 24 }}>{t("signInBody")}</p>
         <SignInButton mode="modal">
           <button
-            style={{
-              padding: "16px 32px",
-              background: "#7C7A67",
-              color: "white",
-              border: "none",
-              borderRadius: 12,
-              fontSize: "1.1rem",
-              fontWeight: "bold",
-              cursor: "pointer",
-            }}
+            style={{ minHeight: 44, padding: "16px 32px", background: "#7C7A67", color: "white", border: "none", borderRadius: 12, fontSize: "1.1rem", fontWeight: "bold", cursor: "pointer" }}
           >
-            Sign In / Sign Up
+            {t("signIn")}
           </button>
         </SignInButton>
       </div>
@@ -150,109 +164,49 @@ export default function GroupPaymentForm({
 
   return (
     <div>
-      {/* Payment Method */}
-      <div style={{ marginBottom: 24 }}>
-        <h3 style={{ marginBottom: 16 }}>Payment Method</h3>
-        <div
-          style={{
-            border: "2px solid #7C7A67",
-            borderRadius: 12,
-            padding: 20,
-            background: "rgba(124, 122, 103, 0.1)",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-            <div
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 8,
-                background: "white",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "1.5rem",
-              }}
-            >
-              *
-            </div>
-            <div>
-              <div style={{ fontWeight: "bold" }}>Test Payment</div>
-              <div style={{ fontSize: "0.85rem", color: "#666" }}>Demo mode - no real charge</div>
-            </div>
-          </div>
-          <div
-            style={{
-              background: "#fef3c7",
-              border: "1px solid #fbbf24",
-              borderRadius: 8,
-              padding: 12,
-              fontSize: "0.85rem",
-              color: "#92400e",
-            }}
-          >
-            This is a demo payment. Real Stripe integration coming soon!
-          </div>
-        </div>
-      </div>
-
       {error && (
-        <div
-          style={{
-            background: "#fee2e2",
-            border: "1px solid #ef4444",
-            borderRadius: 8,
-            padding: 12,
-            marginBottom: 16,
-            color: "#991b1b",
-          }}
-        >
+        <div role="alert" style={{ background: "#fee2e2", border: "1px solid #ef4444", borderRadius: 8, padding: 12, marginBottom: 16, color: "#991b1b" }}>
           {error}
         </div>
       )}
 
-      <button
-        onClick={handleGroupPayment}
-        disabled={processing}
-        style={{
-          width: "100%",
-          padding: 16,
-          background: processing ? "#d1d5db" : "#7C7A67",
-          color: "white",
-          border: "none",
-          borderRadius: 12,
-          fontSize: "1.1rem",
-          fontWeight: "bold",
-          cursor: processing ? "not-allowed" : "pointer",
-          transition: "all 0.2s",
-        }}
-      >
-        {processing
-          ? "Processing Group Payment..."
-          : `Pay for Group ($${(totalCents / 100).toFixed(2)})`}
-      </button>
+      {processing && <p style={{ textAlign: "center", color: "#666" }}>{t("processing")}</p>}
 
-      <p
-        style={{
-          textAlign: "center",
-          fontSize: "0.75rem",
-          color: "#9ca3af",
-          marginTop: 16,
-        }}
-      >
-        Secure checkout powered by Stripe
-      </p>
+      {!processing && !error && !intent && <p style={{ textAlign: "center", color: "#666" }}>{t("loading")}</p>}
+
+      {!processing && intent && intent.amountCents > 0 && intent.clientSecret && (
+        <div data-testid="group-payment-form">
+          <p style={{ fontWeight: 600, marginBottom: 12 }}>{t("amountDue", { amount: `$${(intent.amountCents / 100).toFixed(2)}` })}</p>
+          <StripeProvider key={intent.clientSecret} clientSecret={intent.clientSecret}>
+            <PaymentForm
+              amountCents={intent.amountCents}
+              onSuccess={(id) => confirm(id)}
+              onError={(message) => {
+                setError(message);
+                setProcessing(false);
+              }}
+              onProcessingChange={setProcessing}
+              showExpressCheckout={true}
+              showSaveCard={false}
+              returnUrl={returnUrl}
+              disabled={processing}
+            />
+          </StripeProvider>
+        </div>
+      )}
+
+      {!processing && intent && intent.amountCents === 0 && (
+        <button
+          onClick={() => confirm(null)}
+          style={{ width: "100%", minHeight: 44, padding: 16, background: "#7C7A67", color: "white", border: "none", borderRadius: 12, fontSize: "1.1rem", fontWeight: "bold", cursor: "pointer" }}
+        >
+          {t("confirmFree")}
+        </button>
+      )}
 
       <div style={{ marginTop: 24, textAlign: "center" }}>
-        <a
-          href={`/group/${groupCode}`}
-          style={{
-            color: "#7C7A67",
-            textDecoration: "none",
-            fontSize: "0.9rem",
-          }}
-        >
-          Return to Group
+        <a href={`/group/${groupCode}`} style={{ color: "#7C7A67", textDecoration: "none", fontSize: "0.9rem" }}>
+          {t("returnToGroup")}
         </a>
       </div>
     </div>

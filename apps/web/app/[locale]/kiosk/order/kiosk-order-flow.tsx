@@ -7,6 +7,8 @@ import { pdf } from "@react-pdf/renderer";
 import { VirtualKeyboard, PrintableReceipt, generateQRDataUrl, LanguageSelector, useKioskScale, useKioskPrinter, useKioskNarrow, useKioskDemo } from "@/components/kiosk";
 import { PaymentScreen } from "@/components/kiosk/PaymentScreen";
 import { STATUS_DEMO_CODE } from "@/lib/plan/statusDemo";
+import { kioskAuthHeaders } from "@/components/kiosk/KioskDeviceProvider";
+import { create as createOrder, kioskConfirmPayment } from "@/lib/site/orders";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -804,28 +806,30 @@ export default function KioskOrderFlow({
     });
 
     try {
-      const response = demo ? null : await fetch(`${BASE}/orders`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          locationId: location.id,
-          tenantId: location.tenantId,
-          items,
-          estimatedArrival: new Date().toISOString(),
-          fulfillmentType: "WALK_IN",
-          guestName: currentGuest.guestName,
-          isKioskOrder: true,
-        }),
-      });
+      // Kiosk device auth: the API pins the order to this device's location.
+      const created = demo
+        ? null
+        : await createOrder(
+            {
+              locationId: location.id,
+              tenantId: location.tenantId,
+              items,
+              estimatedArrival: new Date().toISOString(),
+              fulfillmentType: "WALK_IN",
+              guestName: currentGuest.guestName,
+              isKioskOrder: true,
+            },
+            { baseUrl: BASE, headers: kioskAuthHeaders() },
+          );
 
-      if (response && !response.ok) {
+      if (created && !created.ok) {
         throw new Error("Failed to create order");
       }
 
       // Demo: a stand-in order that never touches the API. Its QR code opens the
       // plan's synthetic status page, so scanning it on a phone still works.
-      const order = response
-        ? await response.json()
+      const order: any = created
+        ? created.data
         : {
             id: `demo-kiosk-${currentGuest.guestNumber}`,
             orderNumber: `DEMO-${currentGuest.guestNumber}`,
@@ -834,10 +838,10 @@ export default function KioskOrderFlow({
             totalCents: demoSubtotalCents(menuSteps, currentGuest),
           };
 
-      // Calculate tax from the order subtotal
-      const subtotalCents = order.totalCents; // Backend returns pre-tax total
-      const taxCents = Math.round(subtotalCents * location.taxRate);
-      const totalWithTaxCents = subtotalCents + taxCents;
+      // The server prices the order (subtotal, tax, amount due).
+      const subtotalCents = order.subtotalCents ?? order.totalCents;
+      const taxCents = order.subtotalCents != null ? order.taxCents : Math.round(subtotalCents * location.taxRate);
+      const totalWithTaxCents = order.amountDueCents ?? subtotalCents + taxCents;
 
       // Update guest with order info - use kitchenOrderNumber from API
       updateCurrentGuest({
@@ -879,6 +883,29 @@ export default function KioskOrderFlow({
     setView("processing-payment");
   }
 
+  // Pod choice for one guest's order (PATCH takes pod fields, never payment fields).
+  async function assignPod(orderId: string, guestState: { selectedPodId?: string | null; podAutoAssigned?: boolean }) {
+    if (!guestState.selectedPodId) return;
+    await fetch(`${BASE}/orders/${orderId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        seatId: guestState.selectedPodId,
+        podSelectionMethod: guestState.podAutoAssigned ? "AUTO_ASSIGNED" : "CUSTOMER_SELECTED",
+        podAssignedAt: new Date().toISOString(),
+        // Note: podConfirmedAt is NOT set here - customer must confirm at pod via QR scan
+        podReservationExpiry: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+      }),
+    });
+  }
+
+  // The API verifies the Terminal PaymentIntent (succeeded, amount = these
+  // orders' sum, metadata.orderIds) and marks them PAID (Task A6).
+  async function confirmKioskPayment(orderIds: string[], paymentIntentId: string) {
+    const res = await kioskConfirmPayment(orderIds, paymentIntentId || null, { baseUrl: BASE, headers: kioskAuthHeaders() });
+    if (!res.ok) throw new Error("Failed to confirm payment");
+  }
+
   // Called when Stripe Terminal payment succeeds
   async function onPaymentSuccess(paymentIntentId: string) {
     if (demo) {
@@ -897,26 +924,9 @@ export default function KioskOrderFlow({
     try {
       if (paymentType === "separate") {
         // Pay only current guest's order and assign pod
-        const updates: any = {
-          paymentStatus: "PAID",
-          orderSource: "KIOSK",
-          stripePaymentIntentId: paymentIntentId,
-        };
-        if (currentGuest.selectedPodId) {
-          updates.seatId = currentGuest.selectedPodId;
-          updates.podSelectionMethod = currentGuest.podAutoAssigned ? "AUTO_ASSIGNED" : "CUSTOMER_SELECTED";
-          updates.podAssignedAt = new Date().toISOString();
-          // Note: podConfirmedAt is NOT set here - customer must confirm at pod via QR scan
-          updates.podReservationExpiry = new Date(Date.now() + 15 * 60 * 1000).toISOString();
-        }
-
-        const response = await fetch(`${BASE}/orders/${currentGuest.orderId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(updates),
-        });
-
-        if (!response.ok) throw new Error("Failed to update order");
+        if (!currentGuest.orderId) throw new Error("Missing order");
+        await assignPod(currentGuest.orderId, currentGuest);
+        await confirmKioskPayment([currentGuest.orderId], paymentIntentId);
 
         updateCurrentGuest({ paid: true });
 
@@ -927,29 +937,12 @@ export default function KioskOrderFlow({
           setView("complete");
         }
       } else {
-        // Single check - pay all orders and assign pods
+        // Single check - one payment covers every guest's order
+        const orderIds = guestOrders.map((g) => g.orderId).filter((id): id is string => Boolean(id));
         for (const guest of guestOrders) {
-          if (guest.orderId) {
-            const updates: any = {
-              paymentStatus: "PAID",
-              orderSource: "KIOSK",
-              stripePaymentIntentId: paymentIntentId,
-            };
-            if (guest.selectedPodId) {
-              updates.seatId = guest.selectedPodId;
-              updates.podSelectionMethod = guest.podAutoAssigned ? "AUTO_ASSIGNED" : "CUSTOMER_SELECTED";
-              updates.podAssignedAt = new Date().toISOString();
-              // Note: podConfirmedAt is NOT set here - customer must confirm at pod via QR scan
-              updates.podReservationExpiry = new Date(Date.now() + 15 * 60 * 1000).toISOString();
-            }
-
-            await fetch(`${BASE}/orders/${guest.orderId}`, {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(updates),
-            });
-          }
+          if (guest.orderId) await assignPod(guest.orderId, guest);
         }
+        await confirmKioskPayment(orderIds, paymentIntentId);
 
         // Mark all as paid
         setGuestOrders((prev) => prev.map((g) => ({ ...g, paid: true })));
@@ -1190,6 +1183,13 @@ export default function KioskOrderFlow({
     return (
       <PaymentScreen
         orderId={paymentOrderId}
+        orderIds={
+          paymentType === "single"
+            ? guestOrders.map((g) => g.orderId).filter((id): id is string => Boolean(id))
+            : currentGuest.orderId
+              ? [currentGuest.orderId]
+              : []
+        }
         amountCents={paymentTotalCents}
         locationId={location.id}
         demo={demo}

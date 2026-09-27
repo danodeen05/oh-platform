@@ -2,6 +2,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
+import { useSiteApi } from "@/lib/site/api";
+import { groupIdentityHeaders } from "@/lib/site/orders";
 import { useTranslations } from "next-intl";
 import { API_URL } from "@/lib/api";
 import { useGuest } from "@/contexts/guest-context";
@@ -53,6 +55,7 @@ export default function LocationSelector({
 }) {
   const router = useRouter();
   const { user, isLoaded: userLoaded } = useUser();
+  const api = useSiteApi();
   const { guest, isGuest } = useGuest();
   const t = useTranslations("order");
   const toast = useToast();
@@ -116,7 +119,7 @@ export default function LocationSelector({
 
         // If user is signed in with Clerk, get/create their database user ID
         if (user?.primaryEmailAddress?.emailAddress) {
-          const userResponse = await fetch(`${API_URL}/users`, {
+          const userResponse = await api(`${API_URL}/users`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -146,18 +149,16 @@ export default function LocationSelector({
           return;
         }
 
-        const response = await fetch(`${API_URL}/group-orders`, {
+        // The host is the verified caller (Clerk session, or the guest's
+        // session token); the API ignores host ids in the body.
+        const response = await api(`${API_URL}/group-orders`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             "x-tenant-slug": "oh",
+            ...groupIdentityHeaders(hostUserId ? null : guest),
           },
-          body: JSON.stringify({
-            locationId: location.id,
-            tenantId: location.tenantId,
-            hostUserId,
-            hostGuestId,
-          }),
+          body: JSON.stringify({ locationId: location.id }),
         });
 
         if (!response.ok) {

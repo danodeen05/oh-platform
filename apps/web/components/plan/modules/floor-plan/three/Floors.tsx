@@ -25,7 +25,7 @@ const ROOMS: readonly Room[] = [
   ...STAFF_CORRIDORS.map((c): Room => ({ key: c.key, x: c.x, y: c.y, w: c.w, h: c.h, territory: "staff", layer: "corridors", color: P.floor.staff })),
   ...GUEST_AISLES.map((a): Room => ({ key: a.key, x: a.x, y: a.y, w: a.w, h: a.h, territory: "guest", layer: "aisles", color: P.floor.guest })),
   { key: "cross", ...CROSS_AISLE, territory: "guest", layer: "aisles", color: P.floor.guest },
-  ...ROWS.map((r): Room => ({ key: r.key, x: r.x, y: r.y, w: r.w, h: r.h, territory: "guest", layer: "pods", color: P.floor.guest })),
+  ...ROWS.map((r): Room => ({ key: `row-${r.key}`, x: r.x, y: r.y, w: r.w, h: r.h, territory: "guest", layer: "pods", color: P.floor.guest })),
 ];
 
 interface Props {

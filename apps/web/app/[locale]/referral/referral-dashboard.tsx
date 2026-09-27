@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { useToast } from "@/components/ui/Toast";
 import { event } from "@/lib/analytics";
+import { useSiteApi, useMemberId } from "@/lib/site/api";
 import { QRCodeSVG } from "qrcode.react";
 import Image from "next/image";
 
@@ -35,6 +36,8 @@ export default function ReferralDashboard() {
   const t = useTranslations("referral.dashboard");
   const tCommon = useTranslations("common");
   const toast = useToast();
+  const api = useSiteApi();
+  const member = useMemberId();
   const [email, setEmail] = useState("");
   const [user, setUser] = useState<any>(null);
   const [credits, setCredits] = useState<any>(null);
@@ -49,11 +52,17 @@ export default function ReferralDashboard() {
     }
 
     setLoading(true);
-    const response = await fetch(`${BASE}/users`, {
+    const response = await api(`${BASE}/users`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email }),
     });
+    if (!response.ok) {
+      // POST /users only accepts the signed-in account's own email.
+      toast.warning(tCommon("enterEmail"));
+      setLoading(false);
+      return;
+    }
     const userData = await response.json();
     setUser(userData);
     localStorage.setItem("userId", userData.id);
@@ -63,14 +72,14 @@ export default function ReferralDashboard() {
   }
 
   async function loadCredits(userId: string) {
-    const response = await fetch(`${BASE}/users/${userId}/credits`);
+    const response = await api(`${BASE}/users/${userId}/credits`);
     const data = await response.json();
     setCredits(data);
   }
 
   async function loadPendingCredits(userId: string) {
     try {
-      const response = await fetch(`${BASE}/users/${userId}/pending-credits`);
+      const response = await api(`${BASE}/users/${userId}/pending-credits`);
       const data = await response.json();
       setPendingCredits(data);
     } catch (err) {
@@ -79,9 +88,10 @@ export default function ReferralDashboard() {
   }
 
   useEffect(() => {
-    const savedUserId = localStorage.getItem("userId");
+    if (!member.ready) return;
+    const savedUserId = member.userId;
     if (savedUserId) {
-      fetch(`${BASE}/users/${savedUserId}/credits`)
+      api(`${BASE}/users/${savedUserId}/credits`)
         .then((r) => r.json())
         .then((data) => {
           setCredits(data);
@@ -90,7 +100,8 @@ export default function ReferralDashboard() {
       // Also load pending credits
       loadPendingCredits(savedUserId);
     }
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [member.ready, member.userId]);
 
   if (!user) {
     return (

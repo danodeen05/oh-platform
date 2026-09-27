@@ -23,6 +23,8 @@ export const PUBLIC_ROUTES = Object.freeze([
   p("POST", "/kiosk/heartbeat", "kiosk"),
   p("GET", "/orders/by-member", "kiosk"),
   p("GET", "/orders/lookup", "kiosk"),
+  p("POST", "/kiosk/orders/payment-intent", "kiosk"),
+  p("POST", "/kiosk/orders/confirm-payment", "kiosk"),
 
   // Customer ordering flow
   p("POST", "/orders/check-in", "customer"),
@@ -39,6 +41,9 @@ export const PUBLIC_ROUTES = Object.freeze([
   p("POST", "/orders/:id/addons", "customer"),
   p("GET", "/orders/:id", "customer"),
   p("POST", "/orders", "customer"),
+  p("POST", "/orders/quote", "customer"),
+  p("POST", "/orders/:id/payment-intent", "customer"),
+  p("POST", "/orders/:id/confirm-payment", "customer"),
   p("GET", "/orders/event/check", "customer"),
   p("POST", "/orders/event", "customer"),
   p("GET", "/orders/zodiac-insights", "customer"),
@@ -56,7 +61,6 @@ export const PUBLIC_ROUTES = Object.freeze([
   p("POST", "/cron/cny-sms-reminder", "cron"),
   p("POST", "/cron/cny-sms-order-link", "cron"),
   p("POST", "/cron/cny-sms-test", "cron"),
-  p("POST", "/cron/disburse-credits", "cron"),
   p("POST", "/cron/wallet-streak-notifications", "cron"),
   p("POST", "/cron/wallet-challenge-notifications", "cron"),
   p("POST", "/cron/wallet-credits-reminder", "cron"),
@@ -85,6 +89,9 @@ export const PUBLIC_ROUTES = Object.freeze([
   p("GET", "/users/:id/payment-methods", "customer"),
   p("POST", "/users/:id/payment-methods", "customer"),
   p("DELETE", "/users/:id/payment-methods/:methodId", "customer"),
+  // Verified-identity helpers (auth/customer.js): the caller's own row, and a short-lived Chappy stream ticket.
+  p("GET", "/users/me", "customer"),
+  p("POST", "/chappy/stream-ticket", "customer"),
 
   // Badges and challenges
   p("GET", "/badges", "customer"),
@@ -95,6 +102,10 @@ export const PUBLIC_ROUTES = Object.freeze([
   p("POST", "/users/:userId/challenges/:challengeId/claim", "customer"),
   p("GET", "/users/:id/badge-progress", "customer"),
   p("GET", "/users/:id/pending-credits", "customer"),
+  p("GET", "/users/:id/rewards", "customer"),
+
+  // Membership engine (packages/api/src/membership/routes.js)
+  p("GET", "/membership/program", "public-read"),
 
   // Wallet passes (customer-facing status/actions) and Wallet v1 (pass-token auth)
   p("GET", "/wallet/status", "customer"),
@@ -116,11 +127,13 @@ export const PUBLIC_ROUTES = Object.freeze([
   p("DELETE", "/group-orders/:code/orders/:orderId", "customer"),
   p("POST", "/group-orders/:code/transfer-host", "customer"),
   p("POST", "/group-orders/:code/complete", "customer"),
+  // Host pays for the group (Task A7): verified host; confirm also takes the Stripe webhook as a trusted service call
+  p("POST", "/group-orders/:code/payment-intent", "customer"),
+  p("POST", "/group-orders/:code/confirm-payment", "customer"),
 
   // Meal gifts
   p("POST", "/meal-gifts", "customer"),
   p("GET", "/meal-gifts/next/:locationId", "customer"),
-  p("POST", "/meal-gifts/:id/accept", "customer"),
   p("POST", "/meal-gifts/:id/pay-forward", "customer"),
   p("GET", "/meal-gifts/:id", "customer"),
   p("GET", "/users/:userId/meal-gifts", "customer"),
@@ -131,7 +144,6 @@ export const PUBLIC_ROUTES = Object.freeze([
   // Gift cards and shop
   p("POST", "/gift-cards", "customer"),
   p("GET", "/gift-cards/code/:code", "customer"),
-  p("POST", "/gift-cards/:id/apply", "customer"),
   p("POST", "/gift-cards/:id/confirm-payment", "webhook"),
   p("GET", "/shop/products", "customer"),
   p("GET", "/shop/products/:slug", "public-read"),

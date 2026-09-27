@@ -3,6 +3,7 @@
  *
  * All tools available to the Claude agent, mapped to existing Oh! APIs.
  */
+import { tierRule } from "../membership/program.js";
 
 /**
  * Tool definitions for Claude API
@@ -2085,19 +2086,18 @@ async function executeToolByName(name, input, context) {
 }
 
 /**
- * Helper: Get tier benefits text
+ * Helper: Get tier benefits text. Cashback percent comes from the
+ * membership engine's PROGRAM config, not a hard-coded threshold
+ * (packages/api/src/membership/program.js).
  */
 function getTierBenefits(tier) {
-  switch (tier) {
-    case "CHOPSTICK":
-      return "1% cashback on orders";
-    case "NOODLE_MASTER":
-      return "2% cashback on orders";
-    case "BEEF_BOSS":
-      return "3% cashback + VIP perks";
-    default:
-      return "1% cashback on orders";
+  let pct = 1;
+  try {
+    pct = tierRule(tier || "CHOPSTICK").cashbackPct;
+  } catch {
+    // Unknown tier: fall back to the CHOPSTICK rate rather than throw from a text helper.
   }
+  return tier === "BEEF_BOSS" ? `${pct}% cashback + VIP perks` : `${pct}% cashback on orders`;
 }
 
 /**

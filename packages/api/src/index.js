@@ -66,9 +66,22 @@ import { getScheduler } from "./triggers/index.js";
 import { getOrchestrator } from "./autonomous/index.js";
 import { registerCateringRoutes, isDineInOrdersEnabled } from "./catering/routes.js";
 import { registerPlanRoutes } from "./plan/routes.js";
+import { registerMembershipRoutes } from "./membership/routes.js";
+import { registerOrderRoutes } from "./orders/routes.js";
+import { registerGroupOrderRoutes } from "./orders/group-routes.js";
+import { registerGiftCardRoutes } from "./orders/gift-card-routes.js";
+import { configureOrderService, markPaid, confirmOrderPayment, intentHasRefund, OrderError } from "./orders/service.js";
+import { createMealGift, finishMealGiftAcceptance } from "./orders/tenders.js";
+import { grantCredit } from "./membership/credits.js";
+import { taxCents, spendBaseCents } from "./orders/pricing.js";
+import { PROGRAM, tierRule } from "./membership/program.js";
+import { onOrderCompleted, applyReferralSignup, visibleMenuItems, firstUnreleasedItem, profileForUser } from "./membership/engine.js";
 import { withStatusDemo, registerStatusDemoGuard } from "./demo/status-demo.js";
 import { createAdminAuth } from "./auth/admin.js";
 import { registerConsoleGuard, registerAdminPathGuard } from "./auth/console-guard.js";
+import { createCustomerAuth, registerCustomerIdentity, orderOwnerId, chappyCreditsToDeduct, resolveChappyWebIdentity } from "./auth/customer.js";
+import { createKioskAuth } from "./auth/kiosk.js";
+import { publicReferral, shopCreditSpender, registerAdminOnlyRoutes } from "./auth/hardening.js";
 
 // DEMO- order codes resolve to a synthetic order (see demo/status-demo.js):
 // the plan's live status-page demo reads real routes without touching the DB.
@@ -120,7 +133,10 @@ const allowedOrigins = [
     'http://localhost:3001',
     'http://localhost:4000',
     'http://127.0.0.1:3000',
-    'http://127.0.0.1:3001'
+    'http://127.0.0.1:3001',
+    // site-overhaul worktree dev servers (web 3100, admin 3101)
+    'http://localhost:3100',
+    'http://localhost:3101'
   ] : [])
 ];
 
@@ -167,11 +183,43 @@ const { requireAdminAuth } = createAdminAuth({ log: (...args) => app.log.warn({ 
 // Console-only routes outside /admin (see auth/console-guard.js). Must run before routes are declared.
 registerConsoleGuard(app, { requireAdminAuth });
 
+// Operator routes outside /admin/* (wallet diagnostics, kiosk device admin):
+// see ADMIN_ONLY_ROUTES in src/auth/hardening.js. Uses onRoute, so it must
+// stay above the route declarations.
+registerAdminOnlyRoutes(app, requireAdminAuth);
+
+// Kiosk device auth (src/auth/kiosk.js): staff-only order lists accept an
+// active KioskDevice key (Bearer kiosk_...) or admin auth.
+const kioskAuth = createKioskAuth({
+  findDeviceByKey: (apiKey) => basePrisma.kioskDevice.findUnique({ where: { apiKey }, include: { location: true } }),
+  requireAdminAuth,
+});
+
 // Demo orders never write: call staff, add-ons, refills and "done eating" are simulated.
 registerStatusDemoGuard(app, { source: statusDemoSource });
 
 // Apply admin auth to all /admin/* routes
 registerAdminPathGuard(app, { requireAdminAuth });
+
+// Customer identity: see src/auth/customer.js. Member-scoped routes read the
+// caller from a verified Clerk session (or a signed guest token), never from a
+// client-sent userId. Every /users/:id/* route requires the caller to be that
+// user; this must stay above the route declarations (it uses onRoute).
+const customerAuth = createCustomerAuth({ prisma: basePrisma, log: (...args) => app.log.warn({ args }, "customer auth") });
+registerCustomerIdentity(app, customerAuth);
+for (const warning of customerAuth.warnings) console.warn(`WARNING (customer auth): ${warning}`);
+
+/**
+ * The verified caller's membership tier for early-access checks
+ * (membership/engine.js earlyAccessVisible), or null for a guest/anonymous
+ * caller or one with no database row yet.
+ */
+async function resolveCallerMembershipTier(req) {
+  const who = await customerAuth.resolve(req);
+  if (who.kind !== "user" || !who.userId) return null;
+  const caller = await prisma.user.findUnique({ where: { id: who.userId }, select: { membershipTier: true } });
+  return caller?.membershipTier || null;
+}
 
 // Register autonomous agent routes
 await registerAutonomousRoutes(app);
@@ -181,6 +229,63 @@ await registerCateringRoutes(app);
 
 // Register interactive business plan routes (/plan/* BFF + /admin/plan/*)
 await registerPlanRoutes(app);
+
+// Register membership engine routes (GET /membership/program, GET /users/:id/rewards)
+await registerMembershipRoutes(app, { prisma });
+
+// Shared order service (orders/service.js, Task A6): pricing, creation and
+// server-verified payment for dine-in orders. The PAID side effects that used
+// to live in PATCH /orders/:id run from markPaid through these hooks.
+const notifyMode = () => (process.env.SUPPORT_NOTIFY || "live").toLowerCase();
+const orderEffects = {
+  // Honors SUPPORT_NOTIFY (off | log | live) so dev and tests never text anyone.
+  async sendOrderConfirmation(order) {
+    const mode = notifyMode();
+    if (mode === "off") return;
+    const full = await prisma.order.findUnique({ where: { id: order.id }, include: { items: { include: { menuItem: true } }, seat: true, location: true, user: true, guest: true } });
+    if (!full || !(full.user || full.guest)) return;
+    if (mode === "log") {
+      console.log(`[orders] SUPPORT_NOTIFY=log: would send order confirmation for ${full.orderNumber}`);
+      return;
+    }
+    await sendOrderConfirmation(full, full.user);
+  },
+  async afterPaid(order) {
+    if (!order.userId) return;
+    await checkAndAwardBadges(order.userId);
+    sendOrderCompletedNotification(order.userId, order.id).catch((err) => console.error("Failed to send wallet order notification:", err));
+    checkAndSendTierProgressNotification(order.userId).catch((err) => console.error("Failed to send wallet tier progress notification:", err));
+    const items = await prisma.orderItem.findMany({ where: { orderId: order.id }, include: { menuItem: true } });
+    await updateChallengeProgress(order.userId, { totalCents: spendBaseCents(order), items });
+    if (order.creditsAppliedCents > 0) refreshUserWalletPass(order.userId).catch(console.error);
+  },
+  async mealGiftAccepted({ mealGiftId, order, appliedCents }) {
+    const mealGift = await prisma.mealGift.findUnique({ where: { id: mealGiftId } });
+    // markPaid already won the gift's conditional claim inside its settle transaction.
+    if (mealGift) await finishMealGiftAcceptance(prisma, { mealGift, recipientUserId: order.userId || null, appliedCents }, { refreshWalletPass: refreshUserWalletPass });
+  },
+  onOrderCompleted,
+};
+configureOrderService({ isDineInOrdersEnabled, effects: orderEffects });
+await registerOrderRoutes(app, {
+  prisma,
+  stripe,
+  customerAuth,
+  kioskAuth,
+  isDineInOrdersEnabled,
+  effects: orderEffects,
+  onOrderCompleted,
+});
+// Gift cards (Task A7): purchase, lookup, webhook confirm. No apply, no redeem.
+await registerGiftCardRoutes(app, { prisma, stripe, customerAuth, sendGiftCardEmail });
+// Group orders (Task A7): verified members, server-priced orders, host pays via one verified PaymentIntent.
+await registerGroupOrderRoutes(app, {
+  prisma,
+  stripe,
+  customerAuth,
+  isDineInOrdersEnabled,
+  effects: orderEffects,
+});
 
 const PORT = process.env.PORT || process.env.API_PORT || 4000;
 
@@ -1200,8 +1305,13 @@ app.get("/menu", async (req, reply) => {
     ]
   });
 
+  // Early access (membership/engine.js): don't list an item before its
+  // releaseAt unless the caller's tier earns it early - same rule as /menu/steps.
+  const callerTier = await resolveCallerMembershipTier(req);
+  const visibleItems = visibleMenuItems(items, callerTier, new Date());
+
   // Localize all items
-  return items.map(item => localizeMenuItem(item, locale));
+  return visibleItems.map(item => localizeMenuItem(item, locale));
 });
 
 // GET /menu/steps - Returns structured menu for multi-step order builder
@@ -1225,8 +1335,15 @@ app.get("/menu/steps", async (req, reply) => {
     ]
   });
 
+  // Early access (membership/engine.js): items whose releaseAt hasn't passed
+  // are only visible to a tier whose earlyAccessDays window reaches it. A
+  // guest or anonymous caller (no verified session) gets tier null, so they
+  // only ever see items that have already released.
+  const callerTier = await resolveCallerMembershipTier(req);
+  const visibleItems = visibleMenuItems(items, callerTier, new Date());
+
   // Localize all items
-  const localizedItems = items.map(item => localizeMenuItem(item, locale));
+  const localizedItems = visibleItems.map(item => localizeMenuItem(item, locale));
 
   // Group items by category for easier frontend rendering
   const main01 = localizedItems.filter(i => i.category === 'main01');
@@ -1851,9 +1968,13 @@ app.post("/orders/check-in", async (req, reply) => {
 });
 
 // GET /orders/by-member - Look up member's active orders for kiosk check-in
-// Supports lookup by user ID or referral code
+// Supports lookup by user ID or referral code. Staff only: an active kiosk
+// device key (pinned to its own location) or admin auth; see auth/kiosk.js.
 app.get("/orders/by-member", async (req, reply) => {
-  const { memberId, locationId } = req.query || {};
+  const staff = await kioskAuth.requireKioskOrAdmin(req, reply);
+  if (!staff) return reply;
+  const { memberId } = req.query || {};
+  const locationId = kioskAuth.scopedLocationId(staff, req.query?.locationId);
 
   if (!memberId) {
     return reply.code(400).send({ error: "memberId required" });
@@ -2164,22 +2285,24 @@ app.get("/orders/status", async (req, reply) => {
   return response;
 });
 
-// POST /orders/link-to-account - Link a guest order to a user account
+// POST /orders/link-to-account - Link a guest order to the signed-in caller's account.
+// Identity comes from the verified session (auth/customer.js); a body userId is ignored.
+// Before 2026-09-27 this looked users up by a clerkId column the schema does not
+// have and incremented nonexistent loyalty fields, so it always failed.
 app.post("/orders/link-to-account", async (req, reply) => {
-  const { orderQrCode, userId } = req.body || {};
+  const { orderQrCode } = req.body || {};
 
   if (!orderQrCode) {
     return reply.code(400).send({ error: "orderQrCode required" });
   }
 
-  if (!userId) {
-    return reply.code(400).send({ error: "userId required" });
-  }
+  const who = await customerAuth.requireUser(req, reply);
+  if (!who) return reply;
 
   // Find the order
   const order = await prisma.order.findUnique({
     where: { orderQrCode },
-    include: { user: true, items: true },
+    select: { id: true, userId: true, totalCents: true },
   });
 
   if (!order) {
@@ -2189,55 +2312,26 @@ app.post("/orders/link-to-account", async (req, reply) => {
   // Check if order is already linked to an account
   if (order.userId) {
     // If already linked to this user, that's fine
-    if (order.userId === userId) {
+    if (order.userId === who.userId) {
       return { success: true, message: "Order already linked to your account" };
     }
     // If linked to a different user, reject
     return reply.code(400).send({ error: "Order is already linked to another account" });
   }
 
-  // Find or create the user record (userId is the Clerk ID)
-  let user = await prisma.user.findUnique({
-    where: { clerkId: userId },
+  // Link only while still unlinked, so two racing requests cannot both claim it.
+  const linked = await prisma.order.updateMany({
+    where: { id: order.id, userId: null },
+    data: { userId: who.userId },
   });
-
-  if (!user) {
-    // Create user record if it doesn't exist
-    user = await prisma.user.create({
-      data: {
-        clerkId: userId,
-        tenantId: order.tenantId,
-        totalSpentCents: 0,
-        visitCount: 0,
-        loyaltyPointsBalance: 0,
-      },
-    });
+  if (linked.count === 0) {
+    return reply.code(400).send({ error: "Order is already linked to another account" });
   }
-
-  // Calculate points to award (1 point per dollar spent)
-  const pointsToAward = Math.floor(order.totalCents / 100);
-
-  // Link the order to the user and award points
-  const [updatedOrder, updatedUser] = await prisma.$transaction([
-    prisma.order.update({
-      where: { id: order.id },
-      data: { userId: user.id },
-    }),
-    prisma.user.update({
-      where: { id: user.id },
-      data: {
-        loyaltyPointsBalance: { increment: pointsToAward },
-        totalSpentCents: { increment: order.totalCents },
-        visitCount: { increment: 1 },
-      },
-    }),
-  ]);
 
   return {
     success: true,
     message: "Order linked successfully",
-    pointsAwarded: pointsToAward,
-    newPointsBalance: updatedUser.loyaltyPointsBalance,
+    pointsAwarded: Math.floor(order.totalCents / 100),
   };
 });
 
@@ -2299,7 +2393,9 @@ app.post("/orders/confirm-pod", async (req, reply) => {
 // POST /pods/confirm-arrival - Customer scans pod QR code to confirm arrival
 // This is the endpoint called when a customer scans the QR code on their pod table
 app.post("/pods/confirm-arrival", async (req, reply) => {
-  const { podQrCode, userId } = req.body || {};
+  const { podQrCode } = req.body || {};
+  // Prefer the verified caller's order; a body userId is ignored.
+  const userId = orderOwnerId(await customerAuth.resolve(req));
 
   if (!podQrCode) {
     return reply.code(400).send({ error: "podQrCode required" });
@@ -2694,6 +2790,8 @@ app.post("/seats/:id/force-clean", async (req, reply) => {
     });
     completedOrderIds.push(order.id);
     console.log(`Force-completed order ${order.kitchenOrderNumber || order.orderNumber} on pod ${seat.number}`);
+    // Membership payouts for the completion (idempotent; pays only PAID orders).
+    await onOrderCompleted(prisma, { orderId: order.id, now: new Date() });
   }
 
   // Set pod to CLEANING
@@ -3305,13 +3403,15 @@ app.post("/orders/:id/addons", async (req, reply) => {
     where: { id: { in: menuItemIds } },
   });
 
-  let totalCents = 0;
+  let subtotalCents = 0;
   const orderItems = items.map(item => {
     const menuItem = menuItems.find(m => m.id === item.menuItemId);
     if (!menuItem) throw new Error(`Menu item ${item.menuItemId} not found`);
+    const qty = Number(item.quantity || 1);
+    if (!Number.isInteger(qty) || qty < 1 || qty > 10) throw new Error("Invalid quantity");
 
-    const itemPrice = menuItem.basePriceCents * (item.quantity || 1);
-    totalCents += itemPrice;
+    const itemPrice = menuItem.basePriceCents * qty;
+    subtotalCents += itemPrice;
 
     return {
       menuItemId: item.menuItemId,
@@ -3320,6 +3420,10 @@ app.post("/orders/:id/addons", async (req, reply) => {
       selectedValue: item.selectedValue || null,
     };
   });
+
+  const addonLocation = order.locationId ? await prisma.location.findUnique({ where: { id: order.locationId } }) : null;
+  const addonTaxCents = taxCents(subtotalCents, addonLocation?.taxRate || 0);
+  const totalCents = subtotalCents + addonTaxCents;
 
   // Generate order number for the add-on
   const addonOrderNumber = `ADD-${Date.now()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
@@ -3335,7 +3439,12 @@ app.post("/orders/:id/addons", async (req, reply) => {
       addOnType: "PAID_ADDON",
       status: "PENDING_PAYMENT",
       paymentStatus: "PENDING",
+      // Server quote (Task A6): paid through POST /orders/:id/payment-intent
+      // and /confirm-payment like any order; tax at the location's rate.
+      subtotalCents,
+      taxCents: addonTaxCents,
       totalCents,
+      amountDueCents: totalCents,
       customizations: notes ? { notes } : null,
       items: {
         create: orderItems,
@@ -3364,7 +3473,19 @@ app.post("/orders/:id/addons", async (req, reply) => {
 // ====================
 
 app.get("/orders", async (req, reply) => {
-  const { status, locationId, userId } = req.query || {};
+  const { status, userId } = req.query || {};
+  let { locationId } = req.query || {};
+
+  if (userId) {
+    // Filtering by a user exposes that user's orders: only the user (or a trusted service).
+    if (!(await customerAuth.requireSelf(req, reply, userId))) return reply;
+  } else {
+    // Any other listing spans customers: staff only (kiosk device or admin),
+    // and a kiosk is pinned to its own location.
+    const staff = await kioskAuth.requireKioskOrAdmin(req, reply);
+    if (!staff) return reply;
+    locationId = kioskAuth.scopedLocationId(staff, locationId);
+  }
 
   const where = {};
   if (status) {
@@ -3439,12 +3560,14 @@ app.get("/orders/by-number/:orderNumber", async (req, reply) => {
 
   // Create or retrieve Stripe payment intent
   let clientSecret = null;
-  if (stripe && order.totalCents > 0) {
+  // Server-priced orders (Task A6) charge amountDueCents; legacy ones their totalCents.
+  const amountToCharge = order.amountDueCents ?? order.totalCents;
+  if (stripe && amountToCharge > 0) {
     try {
       // Check if we already have a payment intent
       if (order.stripePaymentIntentId) {
         const existingIntent = await stripe.paymentIntents.retrieve(order.stripePaymentIntentId);
-        if (existingIntent.status === "requires_payment_method" || existingIntent.status === "requires_confirmation") {
+        if ((existingIntent.status === "requires_payment_method" || existingIntent.status === "requires_confirmation") && existingIntent.amount === amountToCharge) {
           clientSecret = existingIntent.client_secret;
         }
       }
@@ -3452,7 +3575,7 @@ app.get("/orders/by-number/:orderNumber", async (req, reply) => {
       // Create new payment intent if needed
       if (!clientSecret) {
         const paymentIntent = await stripe.paymentIntents.create({
-          amount: order.totalCents,
+          amount: amountToCharge,
           currency: "usd",
           metadata: {
             orderId: order.id,
@@ -3534,159 +3657,8 @@ app.get("/orders/:id", async (req, reply) => {
   return localizedOrder;
 });
 
-app.post("/orders", async (req, reply) => {
-  // Feature flag: dine-in ordering toggle.
-  // Persisted in Tenant.dineInOrdersEnabled (default ON) and flipped at runtime
-  // via PATCH /admin/site-config/order-now (admin console "Order Now" toggle).
-  // Does NOT affect /orders/event or catering attendee orders.
-  if (!isDineInOrdersEnabled()) {
-    return reply.code(403).send({
-      error: "Online ordering is currently unavailable. Please visit us in person.",
-    });
-  }
-
-  const { locationId, tenantId, items, seatId, estimatedArrival, podSelectionMethod, userId, guestId, guestName, isKioskOrder, dualPartnerSeatId, isDualPod } =
-    req.body || {};
-
-  if (!locationId || !tenantId || !items || !items.length) {
-    return reply
-      .code(400)
-      .send({ error: "locationId, tenantId, and items required" });
-  }
-
-  // Note: Arrival time validation disabled - frontend filters available times
-  // Backend accepts any arrival time to avoid timezone calculation issues
-
-  // Calculate total
-  const menuItems = await prisma.menuItem.findMany({
-    where: {
-      id: { in: items.map((item) => item.menuItemId) },
-    },
-  });
-
-  // Helper function to calculate item price with flexible pricing
-  function calculateItemPrice(menuItem, quantity) {
-    // If quantity is within included amount, price is 0
-    if (quantity <= menuItem.includedQuantity) {
-      return 0;
-    }
-
-    // If there's an included quantity, only charge for extras
-    if (menuItem.includedQuantity > 0) {
-      const extraQuantity = quantity - menuItem.includedQuantity;
-      return menuItem.basePriceCents + menuItem.additionalPriceCents * (extraQuantity - 1);
-    }
-
-    // Standard pricing: base + additional for each extra
-    return menuItem.basePriceCents + menuItem.additionalPriceCents * (quantity - 1);
-  }
-
-  let totalCents = 0;
-  const orderItems = items.map((item) => {
-    const menuItem = menuItems.find((m) => m.id === item.menuItemId);
-    if (!menuItem) throw new Error(`Menu item ${item.menuItemId} not found`);
-
-    const itemTotal = calculateItemPrice(menuItem, item.quantity);
-    totalCents += itemTotal;
-
-    return {
-      menuItemId: item.menuItemId,
-      quantity: item.quantity,
-      priceCents: itemTotal,
-      // Store the display label for slider items (e.g., "Light", "Medium")
-      selectedValue: item.selectedValue || null,
-    };
-  });
-
-  // Generate unique order number (long format)
-  const orderNumber = `ORD-${Date.now()}-${Math.random()
-    .toString(36)
-    .substr(2, 6)
-    .toUpperCase()}`;
-
-  // Generate order QR code for customer scanning (at kiosk and pod)
-  const orderQrCode = `ORDER-${locationId.slice(-8)}-${Date.now()}-${Math.random()
-    .toString(36)
-    .substr(2, 6)
-    .toUpperCase()}`;
-
-  // Generate daily kitchen order number (0001-9999 per location per day)
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-
-  // Count today's PAID orders for this location to get next number
-  let todaysOrderCount = 0;
-  try {
-    todaysOrderCount = await prisma.order.count({
-      where: {
-        locationId,
-        paymentStatus: "PAID",
-        createdAt: {
-          gte: today,
-          lt: tomorrow,
-        },
-      },
-    });
-  } catch (error) {
-    console.error('Failed to count orders for kitchen number:', error.message);
-    // Fallback: use timestamp-based number
-    todaysOrderCount = 0;
-  }
-
-  // Format as 4-digit string (e.g., "0001", "0042", "0234")
-  const kitchenOrderNumber = String(todaysOrderCount + 1).padStart(4, "0");
-
-  // Create guest record if guestName provided (kiosk orders)
-  let resolvedGuestId = guestId;
-  if (!resolvedGuestId && guestName) {
-    const guest = await prisma.guest.create({
-      data: {
-        name: guestName,
-        sessionToken: `kiosk-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
-      },
-    });
-    resolvedGuestId = guest.id;
-  }
-
-  const order = await prisma.order.create({
-    data: {
-      orderNumber,
-      orderQrCode,
-      kitchenOrderNumber,
-      tenantId,
-      locationId,
-      seatId,
-      podSelectionMethod: seatId ? (podSelectionMethod || "CUSTOMER_SELECTED") : null,
-      podAssignedAt: seatId ? new Date() : null,
-      // Dual pod data
-      dualPartnerSeatId: dualPartnerSeatId || null,
-      isDualPod: isDualPod || false,
-      totalCents,
-      estimatedArrival: estimatedArrival ? new Date(estimatedArrival) : null,
-      userId: userId || null,
-      guestId: resolvedGuestId || null,
-      items: {
-        create: orderItems,
-      },
-    },
-    include: {
-      items: {
-        include: {
-          menuItem: true,
-        },
-      },
-      seat: true,
-      location: true,
-      guest: true,
-      user: true,
-    },
-  });
-
-  return order;
-});
+// POST /orders, /orders/quote, /orders/:id/payment-intent and /orders/:id/confirm-payment live in
+// orders/routes.js on the shared order service (orders/service.js, Task A6).
 
 // ==========================================
 // CNY PARTY 2026 EVENT ORDERING
@@ -4273,291 +4245,21 @@ function getZodiacEmoji(zodiac) {
   return emojis[zodiac] || "✨";
 }
 
-// PATCH /orders/:id - Update order status
-app.patch("/orders/:id", async (req, reply) => {
-  const { id } = req.params;
-  const {
-    status,
-    paymentStatus,
-    userId,
-    guestId,
-    totalCents,
-    taxCents,
-    estimatedArrival,
-    seatId,
-    podSelectionMethod,
-    podAssignedAt,
-    podConfirmedAt,
-    podReservationExpiry,
-    orderSource,
-    stripePaymentId,
-    paymentMethodLast4,
-    paymentMethodBrand,
-    promoCodeId,
-    promoDiscountCents,
-  } = req.body || {};
-
-  const data = {};
-  if (status) data.status = status;
-  if (paymentStatus) {
-    data.paymentStatus = paymentStatus;
-    // When order is paid, automatically queue it for kitchen
-    if (paymentStatus === "PAID" && !status) {
-      data.status = "QUEUED";
-    }
-  }
-  if (userId) data.userId = userId;
-  if (guestId) data.guestId = guestId;
-  if (totalCents !== undefined) data.totalCents = totalCents;
-  if (taxCents !== undefined) data.taxCents = taxCents;
-  if (estimatedArrival) data.estimatedArrival = new Date(estimatedArrival);
-  if (seatId) data.seatId = seatId;
-  if (podSelectionMethod) data.podSelectionMethod = podSelectionMethod;
-  if (podAssignedAt) data.podAssignedAt = new Date(podAssignedAt);
-  if (podConfirmedAt) data.podConfirmedAt = new Date(podConfirmedAt);
-  if (podReservationExpiry) data.podReservationExpiry = new Date(podReservationExpiry);
-  if (orderSource) data.orderSource = orderSource;
-  if (stripePaymentId) data.stripePaymentId = stripePaymentId;
-  if (paymentMethodLast4) data.paymentMethodLast4 = paymentMethodLast4;
-  if (paymentMethodBrand) data.paymentMethodBrand = paymentMethodBrand;
-  if (promoCodeId) data.promoCodeId = promoCodeId;
-  if (promoDiscountCents !== undefined) data.promoDiscountCents = promoDiscountCents;
-
-  if (!Object.keys(data).length) {
-    return reply
-      .code(400)
-      .send({ error: "status, paymentStatus, userId, guestId, totalCents, estimatedArrival, or seatId required" });
-  }
-
-  // If setting payment to PAID, also set paidAt timestamp and reservation expiry
-  if (paymentStatus === "PAID") {
-    data.paidAt = new Date();
-    data.queuedAt = new Date(); // Track when it entered the kitchen queue
-
-    // Retrieve payment method info from Stripe if we have a payment ID
-    if (stripePaymentId && stripe && !paymentMethodLast4) {
-      try {
-        const paymentIntent = await stripe.paymentIntents.retrieve(stripePaymentId);
-        if (paymentIntent.payment_method) {
-          const paymentMethod = await stripe.paymentMethods.retrieve(paymentIntent.payment_method);
-          if (paymentMethod.card) {
-            data.paymentMethodLast4 = paymentMethod.card.last4;
-            data.paymentMethodBrand = paymentMethod.card.brand;
-          }
-        }
-      } catch (err) {
-        console.error("Failed to retrieve payment method info from Stripe:", err.message);
-        // Don't fail the order update if we can't get payment method info
-      }
-    }
-  }
-
-  const order = await prisma.order.update({
-    where: { id },
-    data,
-    include: {
-      items: { include: { menuItem: true } },
-      seat: true,
-      location: true,
-      user: true,
-      guest: true,
-    },
-  });
-
-  // Record promo code usage if promo was applied
-  if (promoCodeId && paymentStatus === "PAID") {
-    try {
-      await prisma.promoCodeUsage.create({
-        data: {
-          promoCodeId,
-          userId: userId || null,
-          guestId: guestId || null,
-          orderId: order.id,
-          discountCents: promoDiscountCents || 0,
-        },
-      });
-    } catch (err) {
-      console.error("Error recording promo code usage:", err);
-      // Don't fail the order update if usage recording fails
-    }
-  }
-
-  // If order just got paid and has a pre-selected seat, reserve it
-  if (paymentStatus === "PAID" && order.seatId) {
-    // Set 15-minute reservation expiry (advertised as 10 min, grace period of 5 min)
-    const expiryTime = new Date();
-    expiryTime.setMinutes(expiryTime.getMinutes() + 15);
-
-    // Build list of seats to reserve - primary seat, plus partner if dual pod
-    const seatsToReserve = [order.seatId];
-    if (order.isDualPod && order.dualPartnerSeatId) {
-      seatsToReserve.push(order.dualPartnerSeatId);
-    }
-
-    // Reserve the seat(s) and set expiry on the order
-    await Promise.all([
-      // Reserve all seats (primary + partner for dual pods)
-      prisma.seat.updateMany({
-        where: { id: { in: seatsToReserve } },
-        data: { status: "RESERVED" },
-      }),
-      prisma.order.update({
-        where: { id: order.id },
-        data: { podReservationExpiry: expiryTime },
-      }),
-    ]);
-
-    if (order.isDualPod && order.dualPartnerSeatId) {
-      console.log(`Dual Pod ${order.seat?.number} (both seats) reserved for order ${order.kitchenOrderNumber}, expires at ${expiryTime.toISOString()}`);
-    } else {
-      console.log(`Pod ${order.seat?.number} reserved for order ${order.kitchenOrderNumber}, expires at ${expiryTime.toISOString()}`);
-    }
-
-    // Send order confirmation notification
-    if (order.user || order.guest) {
-      sendOrderConfirmation(order, order.user).catch(err => {
-        console.error("Failed to send order confirmation:", err);
-      });
-    }
-  }
-
-  // Send order confirmation if paid (for orders without pre-selected seat)
-  if (paymentStatus === "PAID" && !order.seatId && (order.user || order.guest)) {
-    sendOrderConfirmation(order, order.user).catch(err => {
-      console.error("Failed to send order confirmation:", err);
-    });
-  }
-
-  // If podConfirmedAt was just set, mark seat as OCCUPIED
-  if (podConfirmedAt && order.seatId) {
-    const seatsToOccupy = [order.seatId];
-    if (order.isDualPod && order.dualPartnerSeatId) {
-      seatsToOccupy.push(order.dualPartnerSeatId);
-    }
-
-    await prisma.seat.updateMany({
-      where: { id: { in: seatsToOccupy } },
-      data: { status: "OCCUPIED" },
-    });
-
-    if (order.isDualPod && order.dualPartnerSeatId) {
-      console.log(`Dual Pod ${order.seat?.number} (both seats) now OCCUPIED - customer confirmed arrival for order ${order.kitchenOrderNumber}`);
-    } else {
-      console.log(`Pod ${order.seat?.number} now OCCUPIED - customer confirmed arrival for order ${order.kitchenOrderNumber}`);
-    }
-  }
-
-  // If order just got paid, update user progress
-  if (paymentStatus === "PAID" && order.user) {
-    const user = order.user;
-
-    // Calculate streak
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    let newStreak = 1;
-    let newLongestStreak = user.longestStreak;
-
-    if (user.lastOrderDate) {
-      const lastOrder = new Date(user.lastOrderDate);
-      lastOrder.setHours(0, 0, 0, 0);
-
-      const daysDiff = Math.floor(
-        (today.getTime() - lastOrder.getTime()) / (1000 * 60 * 60 * 24)
-      );
-
-      if (daysDiff === 0) {
-        // Same day - keep current streak
-        newStreak = user.currentStreak;
-      } else if (daysDiff === 1) {
-        // Consecutive day - increment streak
-        newStreak = user.currentStreak + 1;
-      } else {
-        // Gap > 1 day - reset streak
-        newStreak = 1;
-      }
-    }
-
-    // Update longest streak if current is higher
-    if (newStreak > newLongestStreak) {
-      newLongestStreak = newStreak;
-    }
-
-    // Update lifetime stats and streak
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        lifetimeOrderCount: { increment: 1 },
-        lifetimeSpentCents: { increment: order.totalCents },
-        tierProgressOrders: { increment: 1 },
-        currentStreak: newStreak,
-        longestStreak: newLongestStreak,
-        lastOrderDate: new Date(),
-      },
-    });
-
-    // Check for tier upgrade
-    await checkTierUpgrade(user.id);
-
-    // Award badges
-    await checkAndAwardBadges(user.id);
-
-    // Send wallet notification for order completion
-    sendOrderCompletedNotification(user.id, order.id).catch((err) => {
-      console.error("Failed to send wallet order notification:", err);
-    });
-
-    // Send tier progress notification if close to upgrade
-    checkAndSendTierProgressNotification(user.id).catch((err) => {
-      console.error("Failed to send wallet tier progress notification:", err);
-    });
-
-    // Update challenge progress
-    await updateChallengeProgress(user.id, {
-      totalCents: order.totalCents,
-      items: order.items,
-    });
-
-    // Note: Referral credit is awarded when order reaches COMPLETED status (not at payment)
-    // See /kitchen/orders/:id/status endpoint
-
-    // Award cashback credits based on user's tier
-    const tierBenefits = getTierBenefits(user.membershipTier);
-    const cashbackAmount = Math.floor((order.totalCents * tierBenefits.cashbackPercent) / 100);
-
-    if (cashbackAmount > 0) {
-      await prisma.creditEvent.create({
-        data: {
-          userId: user.id,
-          type: "CASHBACK",
-          amountCents: cashbackAmount,
-          orderId: order.id,
-          description: `${tierBenefits.cashbackPercent}% cashback on order`,
-        },
-      });
-
-      await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          creditsCents: { increment: cashbackAmount },
-        },
-      });
-
-      // Refresh wallet pass to show updated credit balance
-      refreshUserWalletPass(user.id).catch(console.error);
-    }
-  }
-
-  return order;
-});
+// PATCH /orders/:id moved to orders/routes.js (Task A6): payment and price fields are no longer client input.
 
 // ====================
 // REFERRAL SYSTEM
 // ====================
 
-// Create or get user (simplified - no auth yet)
+// Sign-up upsert: create or get the caller's user row.
+// The email must be the caller's verified Clerk primary email (auth/customer.js).
+// Trusted server-to-server callers (x-admin-api-key) may still upsert by email or phone.
 app.post("/users", async (req, reply) => {
-  const { email, phone, name, referredByCode } = req.body || {};
+  const { name, referredByCode } = req.body || {};
+  // Verified email only; a client phone is never used to find a row (auth/customer.js signupFields).
+  const allowed = await customerAuth.signupFields(req, reply);
+  if (!allowed) return reply;
+  const { email, phone } = allowed;
 
   console.log("POST /users - Received:", { email, phone, name, referredByCode });
 
@@ -4568,7 +4270,7 @@ app.post("/users", async (req, reply) => {
   // Check if user exists
   const existing = await prisma.user.findFirst({
     where: {
-      OR: [email ? { email } : {}, phone ? { phone } : {}].filter(
+      OR: [email ? { email: { equals: email, mode: "insensitive" } } : {}, phone ? { phone } : {}].filter(
         (obj) => Object.keys(obj).length > 0
       ),
     },
@@ -4582,43 +4284,14 @@ app.post("/users", async (req, reply) => {
     console.log("  - NEW referredByCode param:", referredByCode);
 
     // If existing user has NO referrer but a referral code is provided, apply it
+    // (membership/engine.js: sets referredById and grants a WELCOME credit lot).
     if (!existing.referredById && referredByCode) {
-      console.log("🎯 Existing user has no referrer, applying new referral code!");
-
-      // Find referrer
-      const referrer = await prisma.user.findUnique({
-        where: { referralCode: referredByCode },
-      });
-
-      if (referrer) {
-        console.log("✅ Found referrer:", referrer.id, referrer.email);
-
-        // Update existing user with referrer and add $5 welcome bonus
-        const updatedUser = await prisma.user.update({
-          where: { id: existing.id },
-          data: {
-            referredById: referrer.id,
-            creditsCents: (existing.creditsCents || 0) + 500,
-          },
-        });
-
-        // Create credit event
-        await prisma.creditEvent.create({
-          data: {
-            userId: existing.id,
-            type: "REFERRAL_SIGNUP",
-            amountCents: 500,
-            description: "Welcome bonus - referred by a friend!",
-          },
-        });
-
-        console.log("✅ Updated existing user with referral. New credits:", updatedUser.creditsCents);
+      const result = await applyReferralSignup(prisma, { userId: existing.id, referralCode: referredByCode, now: new Date() });
+      if (result.applied) {
+        const updatedUser = await prisma.user.findUnique({ where: { id: existing.id } });
         return { ...updatedUser, referralJustApplied: true };
-      } else {
-        console.log("❌ Referrer not found for code:", referredByCode);
       }
-    } else {
-      console.log("ℹ️ Existing user already has referrer or no new referral code provided");
+      console.log("❌ Referral code not applied for existing user:", referredByCode);
     }
 
     // Update name if it changed in Clerk
@@ -4633,32 +4306,11 @@ app.post("/users", async (req, reply) => {
     return existing;
   }
 
-  // Find referrer if code provided
-  let referredById = null;
-  if (referredByCode) {
-    console.log("Looking up referrer with code:", referredByCode);
-    const referrer = await prisma.user.findUnique({
-      where: { referralCode: referredByCode },
-    });
-    if (referrer) {
-      console.log("Found referrer:", referrer.id, referrer.email);
-      referredById = referrer.id;
-    } else {
-      console.log("No referrer found with that code");
-    }
-  } else {
-    console.log("No referral code provided");
-  }
-
-  // Create new user with $5 welcome bonus if referred
+  // Create the new user first; a referral code (if any) is applied right
+  // after via the membership engine, which sets referredById and grants the
+  // referee's WELCOME credit lot (membership/engine.js applyReferralSignup).
   const user = await prisma.user.create({
-    data: {
-      email,
-      phone,
-      name,
-      referredById,
-      creditsCents: referredById ? 500 : 0, // $5 welcome bonus if referred
-    },
+    data: { email, phone, name },
   });
 
   // Notify admin of new user (fire-and-forget)
@@ -4666,29 +4318,26 @@ app.post("/users", async (req, reply) => {
     console.error("[ADMIN SMS] Failed:", err)
   );
 
-  // If referred, create a credit event for the new user
-  if (referredById) {
-    await prisma.creditEvent.create({
-      data: {
-        userId: user.id,
-        type: "REFERRAL_SIGNUP",
-        amountCents: 500,
-        description: "Welcome bonus - referred by a friend!",
-      },
-    });
-    return { ...user, referralJustApplied: true };
+  if (referredByCode) {
+    const result = await applyReferralSignup(prisma, { userId: user.id, referralCode: referredByCode, now: new Date() });
+    if (result.applied) {
+      const updatedUser = await prisma.user.findUnique({ where: { id: user.id } });
+      return { ...updatedUser, referralJustApplied: true };
+    }
+    console.log("❌ Referral code not applied for new user:", referredByCode);
   }
 
   return user;
 });
 
-// Get user by email (for mapping Clerk ID to database ID)
+// Get user by email (for mapping Clerk ID to database ID). Only the caller's own verified email.
 app.get("/users/by-email/:email", async (req, reply) => {
   const { email } = req.params;
 
   if (!email) {
     return reply.code(400).send({ error: "Email required" });
   }
+  if (!(await customerAuth.requireEmail(req, reply, decodeURIComponent(email)))) return reply;
 
   const user = await prisma.user.findUnique({
     where: { email: decodeURIComponent(email) },
@@ -4710,14 +4359,29 @@ app.get("/users/by-email/:email", async (req, reply) => {
   return user;
 });
 
+// The signed-in caller's own user row (404 until POST /users has created it).
+app.get("/users/me", async (req, reply) => {
+  const who = await customerAuth.resolve(req);
+  if (who.kind !== "user") return reply.code(401).send({ error: "Sign in required" });
+  if (!who.userId) return reply.code(404).send({ error: "User not found" });
+  const user = await prisma.user.findUnique({
+    where: { id: who.userId },
+    select: { id: true, email: true, name: true, membershipTier: true, creditsCents: true, referralCode: true },
+  });
+  if (!user) return reply.code(404).send({ error: "User not found" });
+  return user;
+});
+
 // Get user by referral code
 app.get("/users/referral/:code", async (req, reply) => {
   const { code } = req.params;
   const user = await prisma.user.findUnique({
     where: { referralCode: code },
+    select: { name: true, referralCode: true },
   });
-  if (!user) return reply.code(404).send({ error: "Invalid referral code" });
-  return { name: user.name, email: user.email };
+  // Public lookup: first name, code and validity only (never email, id or phone).
+  if (!user) return reply.code(404).send({ valid: false, error: "Invalid referral code" });
+  return publicReferral(user);
 });
 
 // ====================
@@ -4735,16 +4399,30 @@ function generateSessionToken() {
 }
 
 
-// Create Stripe Payment Intent
+// Stripe PaymentIntent for NON-food purchases only (shop, gift cards, meal
+// gifts). Food orders are charged only through POST /orders/:id/payment-intent,
+// whose amount is the server's quote (orders/service.js). The shop and gift
+// card amounts here are still client-computed until Task D10 (ruling R9).
+const PAYMENT_INTENT_KINDS = new Set(["shop_order", "shop_order_instore", "gift_card", "meal_gift"]);
+
 app.post("/create-payment-intent", async (req, reply) => {
   try {
     if (!stripe) {
       return reply.status(500).send({ error: "Stripe is not configured" });
     }
 
-    const { amountCents, metadata } = req.body;
+    const { amountCents, metadata } = req.body || {};
+    const kind = req.body?.kind || metadata?.type;
 
-    if (!amountCents || amountCents < 50) {
+    // kind guard: a food order (or anything naming an order) can't set its own amount.
+    if (metadata?.orderId || metadata?.orderIds || !PAYMENT_INTENT_KINDS.has(kind)) {
+      return reply.status(400).send({
+        error: "USE_ORDER_PAYMENT_INTENT",
+        message: "Food orders are paid through POST /orders/:id/payment-intent.",
+      });
+    }
+
+    if (!Number.isInteger(amountCents) || amountCents < 50) {
       return reply.status(400).send({ error: "Amount must be at least 50 cents" });
     }
 
@@ -4796,6 +4474,44 @@ app.post("/payments/confirm", async (req, reply) => {
 
     if (!order) {
       return reply.status(404).send({ error: "Order not found" });
+    }
+
+    // Payment integrity (Task A6): a succeeded PaymentIntent is not enough; it
+    // must be this order's, for this order's amount. Server-priced orders go
+    // through the shared markPaid (idempotent, spends savings, side effects).
+    if (order.amountDueCents !== null && order.amountDueCents !== undefined) {
+      try {
+        const result = await markPaid(prisma, stripe, { orderId: order.id, paymentIntentId, now: new Date() }, orderEffects);
+        return {
+          success: true,
+          alreadyPaid: result.alreadyPaid,
+          orderNumber: result.order.orderNumber,
+          paymentStatus: result.order.paymentStatus,
+          status: result.order.status,
+          seatNumber: order.seat?.number || null,
+          locationName: order.location?.name || null,
+        };
+      } catch (err) {
+        if (err instanceof OrderError) return reply.status(err.status).send({ error: err.code, message: err.message, ...err.extra });
+        throw err;
+      }
+    }
+    if (order.paymentStatus === "PAID") {
+      return { success: true, alreadyPaid: true, orderNumber: order.orderNumber, paymentStatus: order.paymentStatus, status: order.status, seatNumber: order.seat?.number || null, locationName: order.location?.name || null };
+    }
+    // Legacy (pre-quote) order: the PaymentIntent from GET /orders/by-number
+    // carries metadata.orderId and order.totalCents.
+    if (paymentIntent.metadata?.orderId !== order.id || paymentIntent.amount !== order.totalCents) {
+      return reply.status(402).send({ error: "PAYMENT_NOT_VERIFIED", message: "Payment could not be verified." });
+    }
+    // A refunded PaymentIntent keeps status "succeeded"; it never pays (Task A6).
+    try {
+      if (await intentHasRefund(stripe, paymentIntent)) {
+        return reply.status(409).send({ error: "PAYMENT_REFUNDED", message: "This payment was refunded. Please pay again." });
+      }
+    } catch (err) {
+      if (err instanceof OrderError) return reply.status(err.status).send({ error: err.code, message: err.message });
+      throw err;
     }
 
     // Determine if this is an ASAP order (arrival within 20 minutes)
@@ -4872,6 +4588,10 @@ app.post("/payments/confirm", async (req, reply) => {
     };
   } catch (error) {
     console.error("Error confirming payment:", error);
+    // A failure after a verified charge was refunded (orders/service.js): say so.
+    if (error && error.refunded !== undefined) {
+      return reply.status(500).send({ error: "PAYMENT_NOT_APPLIED", code: "PAYMENT_NOT_APPLIED", refunded: error.refunded });
+    }
     return reply.status(500).send({ error: error.message });
   }
 });
@@ -5065,56 +4785,7 @@ app.post("/users/:id/deduct-credits", async (req, reply) => {
   };
 });
 
-// Apply credits to an order
-app.post("/orders/:id/apply-credits", async (req, reply) => {
-  const { id } = req.params;
-  const { userId, creditsCents } = req.body || {};
-
-  if (!userId || !creditsCents) {
-    return reply.code(400).send({ error: "userId and creditsCents required" });
-  }
-
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user) return reply.code(404).send({ error: "User not found" });
-
-  // Limit credits to $5 (500 cents) per order
-  const MAX_CREDITS_PER_ORDER = 500;
-  const maxCredits = Math.min(user.creditsCents, creditsCents, MAX_CREDITS_PER_ORDER);
-  if (maxCredits <= 0) {
-    return reply.code(400).send({ error: "Insufficient credits" });
-  }
-
-  // Apply credits
-  const order = await prisma.order.update({
-    where: { id },
-    data: {
-      totalCents: { decrement: maxCredits },
-      userId,
-    },
-  });
-
-  // Deduct from user balance
-  await prisma.user.update({
-    where: { id: userId },
-    data: { creditsCents: { decrement: maxCredits } },
-  });
-
-  // Record the event
-  await prisma.creditEvent.create({
-    data: {
-      userId,
-      orderId: id,
-      type: "CREDIT_APPLIED",
-      amountCents: -maxCredits,
-      description: `Applied to order ${order.orderNumber}`,
-    },
-  });
-
-  // Refresh wallet pass to show updated credit balance
-  refreshUserWalletPass(userId).catch(console.error);
-
-  return { appliedCredits: maxCredits, newTotal: order.totalCents };
-});
+// POST /orders/:id/apply-credits moved to orders/routes.js (Task A6): a quote update, spent at PAID.
 
 // ====================
 // MEMBERSHIP & GAMIFICATION
@@ -5156,20 +4827,53 @@ app.get("/users/:id/profile", async (req, reply) => {
 
   if (!user) return reply.code(404).send({ error: "User not found" });
 
-  // Calculate tier benefits
-  const tierBenefits = getTierBenefits(user.membershipTier);
-
-  // Calculate progress to next tier
-  const nextTier = getNextTier(user.membershipTier);
-  const tierProgress = calculateTierProgress(user, nextTier);
+  // Tier, progress, credits, expiring lots, rewards and badges all come from
+  // the membership engine now (packages/api/src/membership/engine.js).
+  // tierBenefits/nextTier/tierProgress below are a back-compat shim mapping
+  // the engine's shape onto the old response keys so the pre-Phase-D UI
+  // keeps working; the new UI should read `membership` directly.
+  const membership = await profileForUser(prisma, id, new Date());
 
   return {
     ...user,
-    tierBenefits,
-    nextTier,
-    tierProgress,
+    tierBenefits: legacyTierBenefits(membership.tier),
+    nextTier: legacyNextTier(membership.tier),
+    tierProgress: legacyTierProgress(membership.progress),
+    membership,
   };
 });
+
+/** @deprecated back-compat shim for the pre-Phase-D UI; use PROGRAM/profileForUser directly instead. */
+function legacyTierBenefits(tier) {
+  const rule = tierRule(tier);
+  const perksByTier = {
+    CHOPSTICK: ["referralBonus", "cashback1", "earlyAccess"],
+    NOODLE_MASTER: ["referralBonus", "cashback2", "prioritySeating", "memberEvents", "freeBowlUpgrade"],
+    BEEF_BOSS: ["referralBonus", "cashback3", "merchandiseDrops", "premiumAddons", "vipGift"],
+  };
+  return {
+    referralBonus: PROGRAM.referral.referrerCents,
+    cashbackPercent: rule.cashbackPct,
+    perks: perksByTier[tier] || [],
+  };
+}
+
+/** @deprecated back-compat shim; the old shape nested the next tier's requirements here. */
+function legacyNextTier(tier) {
+  const rule = tierRule(tier);
+  if (!rule.next) return null;
+  return { next: rule.next, ordersNeeded: rule.need.orders, referralsNeeded: rule.need.referrals };
+}
+
+/** @deprecated back-compat shim; the old shape used {current, needed, percent} per counter. */
+function legacyTierProgress(progress) {
+  if (!progress.next) return { atMaxTier: true };
+  const pct = (have, need) => (need ? Math.min(100, Math.round((have / need) * 100)) : 100);
+  return {
+    orders: { current: progress.orders.have, needed: progress.orders.need, percent: pct(progress.orders.have, progress.orders.need) },
+    referrals: { current: progress.referrals.have, needed: progress.referrals.need, percent: pct(progress.referrals.have, progress.referrals.need) },
+  };
+}
 
 // Update user phone and SMS preferences
 app.patch("/users/:id/phone", async (req, reply) => {
@@ -5851,6 +5555,16 @@ app.get("/users/:id/wallet", async (req, reply) => {
     return reply.code(404).send({ error: "User not found" });
   }
 
+  // Pass downloads are plain navigations (no Authorization header), so the
+  // links carry a 5-minute HMAC signature the /wallet/apple|google guard accepts.
+  let signed = "";
+  try {
+    const { exp, sig } = customerAuth.signLink("wallet", id);
+    signed = `?exp=${exp}&sig=${encodeURIComponent(sig)}`;
+  } catch {
+    /* CHAPPY_GUEST_SECRET unset: links still work with an Authorization header */
+  }
+
   return {
     user: {
       id: user.id,
@@ -5863,8 +5577,8 @@ app.get("/users/:id/wallet", async (req, reply) => {
       memberSince: user.createdAt,
     },
     walletLinks: {
-      apple: `/users/${id}/wallet/apple`,
-      google: `/users/${id}/wallet/google`,
+      apple: `/users/${id}/wallet/apple${signed}`,
+      google: `/users/${id}/wallet/google${signed}`,
     },
     configured: {
       apple: isAppleWalletConfigured(),
@@ -5971,87 +5685,6 @@ app.post("/wallet/v1/log", async (req, reply) => {
 // ====================
 // CRON ENDPOINTS
 // ====================
-
-// Disburse pending credits - should be called by cron on 1st and 16th of each month
-// POST /cron/disburse-credits
-// Headers: x-cron-secret: <secret> (for basic auth)
-app.post("/cron/disburse-credits", async (req, reply) => {
-  // Basic security check - in production, use proper auth
-  const cronSecret = req.headers["x-cron-secret"];
-  const expectedSecret = process.env.CRON_SECRET;
-  if (!expectedSecret && process.env.NODE_ENV === 'production') {
-    return reply.code(500).send({ error: "CRON_SECRET not configured" });
-  }
-  const effectiveCronSecret = expectedSecret || "dev-cron-secret-DO-NOT-USE-IN-PROD";
-
-  if (cronSecret !== effectiveCronSecret) {
-    return reply.code(401).send({ error: "Unauthorized" });
-  }
-
-  const now = new Date();
-
-  // Find all pending credits scheduled for today or earlier
-  const pendingCredits = await prisma.pendingCredit.findMany({
-    where: {
-      disbursedAt: null,
-      scheduledFor: { lte: now },
-    },
-    include: {
-      user: true,
-    },
-  });
-
-  console.log(`💰 Disbursing ${pendingCredits.length} pending credits...`);
-
-  const results = {
-    processed: 0,
-    totalAmountCents: 0,
-    errors: [],
-  };
-
-  for (const pending of pendingCredits) {
-    try {
-      // Add credits to user's balance
-      await prisma.user.update({
-        where: { id: pending.userId },
-        data: {
-          creditsCents: { increment: pending.amountCents },
-        },
-      });
-
-      // Create credit event
-      await prisma.creditEvent.create({
-        data: {
-          userId: pending.userId,
-          type: "REFERRAL_ORDER",
-          amountCents: pending.amountCents,
-          description: "Referral bonus disbursed",
-        },
-      });
-
-      // Mark pending credit as disbursed
-      await prisma.pendingCredit.update({
-        where: { id: pending.id },
-        data: { disbursedAt: now },
-      });
-
-      results.processed++;
-      results.totalAmountCents += pending.amountCents;
-
-      console.log(`✅ Disbursed $${pending.amountCents / 100} to ${pending.user.email}`);
-
-      // Refresh wallet pass to show updated credit balance
-      refreshUserWalletPass(pending.userId).catch(console.error);
-    } catch (error) {
-      console.error(`❌ Failed to disburse credit ${pending.id}:`, error);
-      results.errors.push({ id: pending.id, error: error.message });
-    }
-  }
-
-  console.log(`💰 Disbursement complete: ${results.processed} credits totaling $${results.totalAmountCents / 100}`);
-
-  return results;
-});
 
 // Wallet notification cron: Streak at risk - run daily at 5pm local time
 app.post("/cron/wallet-streak-notifications", async (req, reply) => {
@@ -6167,7 +5800,10 @@ app.post("/wallet/refresh-all", async (req, reply) => {
   return result;
 });
 
-// Diagnostic endpoint to check APNs status and test push
+// Diagnostic endpoint to check APNs status and test push.
+// Admin only, like /wallet/refresh-all and /wallet/test-push/:userId
+// (ADMIN_ONLY_ROUTES in auth/hardening.js): they list members' emails and
+// push to arbitrary users. Kept reachable in production for APNs debugging.
 app.get("/wallet/debug", async (req, reply) => {
   const apnsConfigured = isAPNsConfigured();
   const apnsEnvironment = getAPNsEnvironment();
@@ -6517,6 +6153,12 @@ app.patch("/kitchen/orders/:id/status", async (req, reply) => {
     data.completedTime = new Date();
   }
 
+  // Only call the membership engine on an actual transition into COMPLETED,
+  // not on every request that happens to repeat status: "COMPLETED".
+  const wasAlreadyCompleted = status === "COMPLETED"
+    ? (await prisma.order.findUnique({ where: { id }, select: { status: true } }))?.status === "COMPLETED"
+    : true;
+
   const order = await prisma.order.update({
     where: { id },
     data,
@@ -6559,65 +6201,16 @@ app.patch("/kitchen/orders/:id/status", async (req, reply) => {
     // which will automatically trigger queue processing
   }
 
-  // Award referral credit when order is COMPLETED (not just PAID)
-  // This ensures the customer actually received and completed their meal
-  if (status === "COMPLETED" && order.user?.referredById) {
-    const user = order.user;
-
-    // Check if this is their first COMPLETED order
-    const completedOrderCount = await prisma.order.count({
-      where: {
-        userId: user.id,
-        status: "COMPLETED",
-      },
-    });
-
-    if (completedOrderCount === 1) {
-      // This is their first completed order - check $20 minimum requirement
-      const MINIMUM_ORDER_FOR_REFERRAL = 2000; // $20.00 in cents
-
-      if (order.totalCents >= MINIMUM_ORDER_FOR_REFERRAL) {
-        // Order meets minimum - credit referrer
-        const referrer = await prisma.user.findUnique({
-          where: { id: user.referredById },
-        });
-
-        if (referrer) {
-          // Get referrer's tier benefits
-          const tierBenefits = getTierBenefits(referrer.membershipTier);
-          const referralBonus = tierBenefits.referralBonus;
-
-          // Add credits to referrer's balance
-          await prisma.user.update({
-            where: { id: user.referredById },
-            data: {
-              creditsCents: { increment: referralBonus },
-              tierProgressReferrals: { increment: 1 },
-            },
-          });
-
-          // Create credit event for tracking
-          await prisma.creditEvent.create({
-            data: {
-              userId: user.referredById,
-              type: "REFERRAL_ORDER",
-              amountCents: referralBonus,
-              orderId: order.id,
-              description: `Referral bonus - friend completed their first order`,
-            },
-          });
-
-          // Check if referrer should be upgraded
-          await checkTierUpgrade(user.referredById);
-
-          console.log(`✅ Referral credit of $${referralBonus / 100} awarded to ${referrer.email} (order COMPLETED)`);
-
-          // Refresh referrer's wallet pass to show updated credit balance
-          refreshUserWalletPass(user.referredById).catch(console.error);
-        }
-      } else {
-        console.log(`❌ Referral credit not awarded - order total $${order.totalCents / 100} below $20 minimum`);
-      }
+  // Cashback, referral payouts and tier upgrades all live in the membership
+  // engine now, and all run only once the order is COMPLETED (not just
+  // PAID): this is the actual production call site (kitchen-display.tsx
+  // drives status here), and PATCH /orders/:id calls the same function so
+  // either path completing an order runs it. onOrderCompleted is idempotent
+  // per orderId, so it's safe even if both paths fire for the same order.
+  if (status === "COMPLETED" && !wasAlreadyCompleted) {
+    const result = await onOrderCompleted(prisma, { orderId: order.id, now: new Date() });
+    if (result.cashbackCents > 0 || result.referralPaid || result.upgradedTo) {
+      refreshUserWalletPass(order.userId).catch(console.error);
     }
   }
 
@@ -6798,131 +6391,6 @@ function getNextDisbursementDate() {
   } else {
     // Next disbursement is the 1st of next month
     return new Date(currentYear, currentMonth + 1, 1, 0, 0, 0);
-  }
-}
-
-function getTierBenefits(tier) {
-  const benefits = {
-    CHOPSTICK: {
-      referralBonus: 500,
-      cashbackPercent: 1,
-      perks: [
-        "referralBonus",
-        "cashback1",
-        "earlyAccess",
-      ],
-    },
-    NOODLE_MASTER: {
-      referralBonus: 500,
-      cashbackPercent: 2,
-      perks: [
-        "referralBonus",
-        "cashback2",
-        "prioritySeating",
-        "memberEvents",
-        "freeBowlUpgrade",
-      ],
-    },
-    BEEF_BOSS: {
-      referralBonus: 500,
-      cashbackPercent: 3,
-      perks: [
-        "referralBonus",
-        "cashback3",
-        "merchandiseDrops",
-        "premiumAddons",
-        "vipGift",
-      ],
-    },
-  };
-  return benefits[tier];
-}
-
-function getNextTier(currentTier) {
-  const tiers = {
-    CHOPSTICK: { next: "NOODLE_MASTER", ordersNeeded: 10, referralsNeeded: 5 },
-    NOODLE_MASTER: { next: "BEEF_BOSS", ordersNeeded: 25, referralsNeeded: 10 },
-    BEEF_BOSS: null, // Max tier
-  };
-  return tiers[currentTier];
-}
-
-function calculateTierProgress(user, nextTier) {
-  if (!nextTier) return { atMaxTier: true };
-
-  const orderProgress = Math.min(
-    100,
-    (user.tierProgressOrders / nextTier.ordersNeeded) * 100
-  );
-  const referralProgress = Math.min(
-    100,
-    (user.tierProgressReferrals / nextTier.referralsNeeded) * 100
-  );
-
-  return {
-    orders: {
-      current: user.tierProgressOrders,
-      needed: nextTier.ordersNeeded,
-      percent: Math.round(orderProgress),
-    },
-    referrals: {
-      current: user.tierProgressReferrals,
-      needed: nextTier.referralsNeeded,
-      percent: Math.round(referralProgress),
-    },
-  };
-}
-
-// Helper function to check and upgrade tier
-async function checkTierUpgrade(userId) {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-  });
-
-  if (!user) return;
-
-  let newTier = user.membershipTier;
-
-  // Check for upgrades (requires BOTH orders AND referrals)
-  if (user.membershipTier === "CHOPSTICK") {
-    if (user.tierProgressOrders >= 10 && user.tierProgressReferrals >= 5) {
-      newTier = "NOODLE_MASTER";
-    }
-  } else if (user.membershipTier === "NOODLE_MASTER") {
-    if (user.tierProgressOrders >= 25 && user.tierProgressReferrals >= 10) {
-      newTier = "BEEF_BOSS";
-    }
-  }
-
-  // Upgrade if tier changed
-  if (newTier !== user.membershipTier) {
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        membershipTier: newTier,
-        tierProgressOrders: 0, // Reset progress for next tier
-        tierProgressReferrals: 0,
-      },
-    });
-
-    // Award VIP badge if reached Beef Boss
-    if (newTier === "BEEF_BOSS") {
-      const vipBadge = await prisma.badge.findUnique({
-        where: { slug: "vip" },
-      });
-      if (vipBadge) {
-        await prisma.userBadge
-          .create({
-            data: {
-              userId: userId,
-              badgeId: vipBadge.id,
-            },
-          })
-          .catch(() => {}); // Ignore if already exists
-      }
-    }
-
-    console.log(`🎉 User ${userId} upgraded to ${newTier}!`);
   }
 }
 
@@ -7298,6 +6766,24 @@ async function releaseExpiredReservations() {
 
     if (expiredOrders.length > 0) {
       console.log(`⏰ Released ${expiredOrders.length} expired pod reservation(s)`);
+    }
+
+    // Abandoned checkouts: POST /orders claims a pod for POD_HOLD_MS while
+    // the customer pays (orders/service.js). An unpaid order past its hold
+    // gives the pod back. The conditional order update loses to a concurrent
+    // markPaid (it only matches while the order is still unpaid).
+    const staleHolds = await prisma.order.findMany({
+      where: { podReservationExpiry: { lt: now }, seatId: { not: null }, paymentStatus: "PENDING", status: "PENDING_PAYMENT" },
+      select: { id: true, seatId: true, isDualPod: true, dualPartnerSeatId: true },
+    });
+    for (const hold of staleHolds) {
+      const cleared = await prisma.order.updateMany({
+        where: { id: hold.id, paymentStatus: "PENDING", seatId: hold.seatId },
+        data: { seatId: null, podSelectionMethod: null, podReservationExpiry: null, isDualPod: false, dualPartnerSeatId: null },
+      });
+      if (cleared.count !== 1) continue;
+      const seatIds = [hold.seatId, ...(hold.isDualPod && hold.dualPartnerSeatId ? [hold.dualPartnerSeatId] : [])];
+      await prisma.seat.updateMany({ where: { id: { in: seatIds }, status: "RESERVED" }, data: { status: "AVAILABLE" } });
     }
   } catch (error) {
     console.error("Error releasing expired reservations:", error);
@@ -8768,6 +8254,8 @@ app.get("/users/by-email/:email/order-patterns", async (req, reply) => {
   if (!email) {
     return reply.status(400).send({ error: "Email required" });
   }
+  // Only the caller's own verified email (auth/customer.js).
+  if (!(await customerAuth.requireEmail(req, reply, decodeURIComponent(email)))) return reply;
 
   try {
     // First, find the user by email
@@ -10628,553 +10116,6 @@ app.get("/analytics/ga4/hourly", async (req, reply) => {
   }
 });
 
-// ====================
-// GROUP ORDERS
-// ====================
-
-// Helper to generate 6-character group code
-function generateGroupCode() {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // No I, O, 0, 1 to avoid confusion
-  let code = "";
-  for (let i = 0; i < 6; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return code;
-}
-
-// POST /group-orders - Create a new group order (host initiates)
-app.post("/group-orders", async (req, reply) => {
-  const { locationId, tenantId, hostUserId, hostGuestId, estimatedArrival } = req.body || {};
-
-  if (!locationId || !tenantId) {
-    return reply.code(400).send({ error: "locationId and tenantId required" });
-  }
-
-  if (!hostUserId && !hostGuestId) {
-    return reply.code(400).send({ error: "Either hostUserId or hostGuestId required" });
-  }
-
-  // Generate unique code (retry if collision)
-  let code;
-  let attempts = 0;
-  while (!code && attempts < 10) {
-    const candidate = generateGroupCode();
-    const existing = await prisma.groupOrder.findUnique({ where: { code: candidate } });
-    if (!existing) code = candidate;
-    attempts++;
-  }
-
-  if (!code) {
-    return reply.code(500).send({ error: "Failed to generate unique group code" });
-  }
-
-  // Set expiry to 30 minutes from now
-  const expiresAt = new Date();
-  expiresAt.setMinutes(expiresAt.getMinutes() + 30);
-
-  const groupOrder = await prisma.groupOrder.create({
-    data: {
-      code,
-      locationId,
-      tenantId,
-      hostUserId: hostUserId || null,
-      hostGuestId: hostGuestId || null,
-      estimatedArrival: estimatedArrival ? new Date(estimatedArrival) : null,
-      expiresAt,
-      status: "GATHERING",
-    },
-    include: {
-      location: true,
-      hostUser: true,
-      hostGuest: true,
-      orders: {
-        include: {
-          items: { include: { menuItem: true } },
-          user: true,
-          guest: true,
-        },
-      },
-    },
-  });
-
-  return groupOrder;
-});
-
-// GET /group-orders/:code - Get group order by code (for joining)
-app.get("/group-orders/:code", async (req, reply) => {
-  const { code } = req.params;
-
-  const groupOrder = await prisma.groupOrder.findUnique({
-    where: { code: code.toUpperCase() },
-    include: {
-      location: true,
-      hostUser: true,
-      hostGuest: true,
-      orders: {
-        include: {
-          items: { include: { menuItem: true } },
-          user: true,
-          guest: true,
-          seat: true,
-        },
-      },
-      memberUsers: true,
-      memberGuests: true,
-    },
-  });
-
-  if (!groupOrder) {
-    return reply.code(404).send({ error: "Group not found" });
-  }
-
-  // Check if expired
-  if (new Date() > groupOrder.expiresAt && groupOrder.status === "GATHERING") {
-    // Auto-cancel expired groups
-    await prisma.groupOrder.update({
-      where: { id: groupOrder.id },
-      data: { status: "CANCELLED" },
-    });
-    return reply.code(410).send({ error: "Group order has expired" });
-  }
-
-  return groupOrder;
-});
-
-// POST /group-orders/:code/join - Join a group order
-app.post("/group-orders/:code/join", async (req, reply) => {
-  const { code } = req.params;
-  const { userId, guestId } = req.body || {};
-
-  if (!userId && !guestId) {
-    return reply.code(400).send({ error: "Either userId or guestId required" });
-  }
-
-  const groupOrder = await prisma.groupOrder.findUnique({
-    where: { code: code.toUpperCase() },
-    include: {
-      orders: true,
-      memberUsers: true,
-      memberGuests: true,
-    },
-  });
-
-  if (!groupOrder) {
-    return reply.code(404).send({ error: "Group not found" });
-  }
-
-  // Check if can still join
-  if (groupOrder.status !== "GATHERING") {
-    return reply.code(400).send({ error: "Group is no longer accepting new members" });
-  }
-
-  if (new Date() > groupOrder.expiresAt) {
-    return reply.code(410).send({ error: "Group order has expired" });
-  }
-
-  // Check max group size (8 people)
-  const memberCount = groupOrder.orders.length + 1; // +1 for host
-  if (memberCount >= 8) {
-    return reply.code(400).send({ error: "Group is full (max 8 people)" });
-  }
-
-  // Add member to group
-  const updateData = {};
-  if (userId) {
-    // Check if already a member
-    const alreadyMember = groupOrder.memberUsers.some(u => u.id === userId);
-    if (!alreadyMember) {
-      updateData.memberUsers = { connect: { id: userId } };
-    }
-  } else if (guestId) {
-    const alreadyMember = groupOrder.memberGuests.some(g => g.id === guestId);
-    if (!alreadyMember) {
-      updateData.memberGuests = { connect: { id: guestId } };
-    }
-  }
-
-  const updated = await prisma.groupOrder.update({
-    where: { id: groupOrder.id },
-    data: updateData,
-    include: {
-      location: true,
-      hostUser: true,
-      hostGuest: true,
-      orders: {
-        include: {
-          items: { include: { menuItem: true } },
-          user: true,
-          guest: true,
-        },
-      },
-      memberUsers: true,
-      memberGuests: true,
-    },
-  });
-
-  return updated;
-});
-
-// PATCH /group-orders/:code - Update group order (host controls)
-app.patch("/group-orders/:code", async (req, reply) => {
-  const { code } = req.params;
-  const { status, paymentMethod, closedAt } = req.body || {};
-
-  const groupOrder = await prisma.groupOrder.findUnique({
-    where: { code: code.toUpperCase() },
-  });
-
-  if (!groupOrder) {
-    return reply.code(404).send({ error: "Group not found" });
-  }
-
-  const data = {};
-
-  // Close group (stop accepting new members)
-  if (status === "CLOSED" && groupOrder.status === "GATHERING") {
-    data.status = "CLOSED";
-    data.closedAt = new Date();
-  }
-
-  // Set payment method
-  if (paymentMethod && ["HOST_PAYS_ALL", "PAY_YOUR_OWN"].includes(paymentMethod)) {
-    data.paymentMethod = paymentMethod;
-  }
-
-  // Mark as paying
-  if (status === "PAYING" && (groupOrder.status === "CLOSED" || groupOrder.status === "GATHERING")) {
-    data.status = "PAYING";
-    if (!groupOrder.closedAt) {
-      data.closedAt = new Date();
-    }
-  }
-
-  // Mark as paid
-  if (status === "PAID") {
-    data.status = "PAID";
-    data.finalizedAt = new Date();
-  }
-
-  // Mark as partially paid
-  if (status === "PARTIALLY_PAID") {
-    data.status = "PARTIALLY_PAID";
-  }
-
-  // Cancel group
-  if (status === "CANCELLED") {
-    data.status = "CANCELLED";
-  }
-
-  const updated = await prisma.groupOrder.update({
-    where: { id: groupOrder.id },
-    data,
-    include: {
-      location: true,
-      hostUser: true,
-      hostGuest: true,
-      orders: {
-        include: {
-          items: { include: { menuItem: true } },
-          user: true,
-          guest: true,
-        },
-      },
-      memberUsers: true,
-      memberGuests: true,
-    },
-  });
-
-  return updated;
-});
-
-// POST /group-orders/:code/orders - Add an order to a group
-app.post("/group-orders/:code/orders", async (req, reply) => {
-  const { code } = req.params;
-  const { items, userId, guestId } = req.body || {};
-
-  if (!items || !items.length) {
-    return reply.code(400).send({ error: "items required" });
-  }
-
-  if (!userId && !guestId) {
-    return reply.code(400).send({ error: "Either userId or guestId required" });
-  }
-
-  const groupOrder = await prisma.groupOrder.findUnique({
-    where: { code: code.toUpperCase() },
-    include: { orders: true },
-  });
-
-  if (!groupOrder) {
-    return reply.code(404).send({ error: "Group not found" });
-  }
-
-  if (groupOrder.status !== "GATHERING" && groupOrder.status !== "CLOSED") {
-    return reply.code(400).send({ error: "Cannot add orders to this group" });
-  }
-
-  // Calculate total for this order
-  const menuItems = await prisma.menuItem.findMany({
-    where: { id: { in: items.map((item) => item.menuItemId) } },
-  });
-
-  function calculateItemPrice(menuItem, quantity) {
-    if (quantity <= menuItem.includedQuantity) return 0;
-    if (menuItem.includedQuantity > 0) {
-      const extraQuantity = quantity - menuItem.includedQuantity;
-      return menuItem.basePriceCents + menuItem.additionalPriceCents * (extraQuantity - 1);
-    }
-    return menuItem.basePriceCents + menuItem.additionalPriceCents * (quantity - 1);
-  }
-
-  let totalCents = 0;
-  const orderItems = items.map((item) => {
-    const menuItem = menuItems.find((m) => m.id === item.menuItemId);
-    if (!menuItem) throw new Error(`Menu item ${item.menuItemId} not found`);
-
-    const itemTotal = calculateItemPrice(menuItem, item.quantity);
-    totalCents += itemTotal;
-
-    return {
-      menuItemId: item.menuItemId,
-      quantity: item.quantity,
-      priceCents: itemTotal,
-      selectedValue: item.selectedValue || null,
-    };
-  });
-
-  // Generate order numbers
-  const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
-  const orderQrCode = `ORDER-${groupOrder.locationId.slice(-8)}-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
-
-  // Check if this is the host's order - ensure boolean (not null/undefined)
-  const isHost = Boolean((userId && userId === groupOrder.hostUserId) || (guestId && guestId === groupOrder.hostGuestId));
-
-  const order = await prisma.order.create({
-    data: {
-      orderNumber,
-      orderQrCode,
-      tenant: { connect: { id: groupOrder.tenantId } },
-      location: { connect: { id: groupOrder.locationId } },
-      totalCents,
-      ...(userId ? { user: { connect: { id: userId } } } : {}),
-      ...(guestId ? { guest: { connect: { id: guestId } } } : {}),
-      groupOrder: { connect: { id: groupOrder.id } },
-      isGroupHost: isHost,
-      estimatedArrival: groupOrder.estimatedArrival,
-      items: {
-        create: orderItems,
-      },
-    },
-    include: {
-      items: { include: { menuItem: true } },
-      user: true,
-      guest: true,
-    },
-  });
-
-  return order;
-});
-
-// DELETE /group-orders/:code/orders/:orderId - Remove an order from a group
-app.delete("/group-orders/:code/orders/:orderId", async (req, reply) => {
-  const { code, orderId } = req.params;
-
-  const groupOrder = await prisma.groupOrder.findUnique({
-    where: { code: code.toUpperCase() },
-  });
-
-  if (!groupOrder) {
-    return reply.code(404).send({ error: "Group not found" });
-  }
-
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
-  });
-
-  if (!order) {
-    return reply.code(404).send({ error: "Order not found" });
-  }
-
-  if (order.groupOrderId !== groupOrder.id) {
-    return reply.code(400).send({ error: "Order does not belong to this group" });
-  }
-
-  // Can only delete if not yet paid
-  if (order.paymentStatus === "PAID") {
-    return reply.code(400).send({ error: "Cannot delete paid orders" });
-  }
-
-  // Delete order items first, then the order
-  await prisma.orderItem.deleteMany({ where: { orderId } });
-  await prisma.order.delete({ where: { id: orderId } });
-
-  return { success: true };
-});
-
-// POST /group-orders/:code/transfer-host - Transfer host role to another member
-app.post("/group-orders/:code/transfer-host", async (req, reply) => {
-  const { code } = req.params;
-  const { newHostUserId, newHostGuestId } = req.body || {};
-
-  if (!newHostUserId && !newHostGuestId) {
-    return reply.code(400).send({ error: "Either newHostUserId or newHostGuestId required" });
-  }
-
-  const groupOrder = await prisma.groupOrder.findUnique({
-    where: { code: code.toUpperCase() },
-    include: { orders: true },
-  });
-
-  if (!groupOrder) {
-    return reply.code(404).send({ error: "Group not found" });
-  }
-
-  // Verify new host has an order in the group
-  const newHostOrder = groupOrder.orders.find(o =>
-    (newHostUserId && o.userId === newHostUserId) ||
-    (newHostGuestId && o.guestId === newHostGuestId)
-  );
-
-  if (!newHostOrder) {
-    return reply.code(400).send({ error: "New host must have an order in the group" });
-  }
-
-  // Update host
-  const updated = await prisma.groupOrder.update({
-    where: { id: groupOrder.id },
-    data: {
-      hostUserId: newHostUserId || null,
-      hostGuestId: newHostGuestId || null,
-    },
-    include: {
-      location: true,
-      hostUser: true,
-      hostGuest: true,
-      orders: {
-        include: {
-          items: { include: { menuItem: true } },
-          user: true,
-          guest: true,
-        },
-      },
-    },
-  });
-
-  // Update isGroupHost flag on orders
-  await prisma.order.updateMany({
-    where: { groupOrderId: groupOrder.id },
-    data: { isGroupHost: false },
-  });
-  await prisma.order.update({
-    where: { id: newHostOrder.id },
-    data: { isGroupHost: true },
-  });
-
-  return updated;
-});
-
-// POST /group-orders/:code/complete - Complete group order and notify kitchen/cleaning
-app.post("/group-orders/:code/complete", async (req, reply) => {
-  const { code } = req.params;
-  const { seatIds, seatingOption } = req.body || {};
-
-  const groupOrder = await prisma.groupOrder.findUnique({
-    where: { code: code.toUpperCase() },
-    include: {
-      orders: {
-        include: {
-          items: { include: { menuItem: true } },
-          user: true,
-          guest: true,
-        },
-      },
-      location: true,
-    },
-  });
-
-  if (!groupOrder) {
-    return reply.code(404).send({ error: "Group not found" });
-  }
-
-  // If group is already PAID and all orders are QUEUED, return success (idempotent)
-  if (groupOrder.status === "PAID") {
-    const allQueued = groupOrder.orders.every(o => o.status === "QUEUED");
-    if (allQueued) {
-      console.log(`[Group Order Already Complete] Code: ${groupOrder.code} - returning existing data`);
-      return groupOrder;
-    }
-  }
-
-  // Verify all orders are paid (check paymentStatus, not status - status changes to QUEUED when paid)
-  const allPaid = groupOrder.orders.every(o => o.paymentStatus === "PAID");
-  if (!allPaid) {
-    return reply.code(400).send({ error: "Not all orders are paid" });
-  }
-
-  // Update group status to PAID
-  const updatedGroup = await prisma.groupOrder.update({
-    where: { id: groupOrder.id },
-    data: { status: "PAID" },
-    include: {
-      orders: {
-        include: {
-          items: { include: { menuItem: true } },
-          user: true,
-          guest: true,
-        },
-      },
-      location: true,
-    },
-  });
-
-  const now = new Date();
-
-  // If seat IDs provided, reserve them and assign to orders
-  if (seatIds && seatIds.length > 0) {
-    for (let i = 0; i < seatIds.length && i < groupOrder.orders.length; i++) {
-      const seatId = seatIds[i];
-      const order = groupOrder.orders[i];
-
-      // Reserve the seat
-      await prisma.seat.update({
-        where: { id: seatId },
-        data: {
-          status: "RESERVED",
-          reservedUntil: new Date(Date.now() + 30 * 60 * 1000), // 30 min reservation
-        },
-      });
-
-      // Assign seat to order and queue it for kitchen
-      await prisma.order.update({
-        where: { id: order.id },
-        data: {
-          seatId: seatId,
-          podSelectionMethod: "GROUP_HOST_SELECTED",
-          status: "QUEUED",
-          queuedAt: now,
-          paidAt: order.paidAt || now,
-        },
-      });
-    }
-  } else {
-    // No seats provided - still queue orders for kitchen
-    for (const order of groupOrder.orders) {
-      await prisma.order.update({
-        where: { id: order.id },
-        data: {
-          status: "QUEUED",
-          queuedAt: now,
-          paidAt: order.paidAt || now,
-        },
-      });
-    }
-  }
-
-  console.log(`[Group Order Completed] Code: ${groupOrder.code}, Orders: ${groupOrder.orders.length}, Seating Option: ${seatingOption}, Kitchen notified`);
-
-  return updatedGroup;
-});
-
 
 // =================
 // MEAL FOR A STRANGER
@@ -11182,15 +10123,20 @@ app.post("/group-orders/:code/complete", async (req, reply) => {
 
 // POST /meal-gifts - Create a new meal gift
 app.post("/meal-gifts", async (req, reply) => {
-  const { giverId, locationId, amountCents, messageFromGiver } = req.body || {};
+  const { locationId, amountCents, messageFromGiver, paymentIntentId } = req.body || {};
 
-  if (!giverId || !locationId || !amountCents) {
-    return reply.code(400).send({ error: "giverId, locationId, and amountCents required" });
+  // Task A6: the giver is the verified caller (a body giverId is never
+  // identity), and the gift exists only once the giver's PaymentIntent is
+  // verified server-side (succeeded, exactly amountCents, metadata binds
+  // giver and location). createMealGift records paidAt.
+  const who = await customerAuth.requireUser(req, reply);
+  if (!who) return reply;
+  if (req.body?.giverId && req.body.giverId !== who.userId) {
+    return reply.code(403).send({ error: "Forbidden" });
   }
 
-  // Validate amount range ($15.99 - $35.00)
-  if (amountCents < 1599 || amountCents > 3500) {
-    return reply.code(400).send({ error: "Amount must be between $15.99 and $35.00" });
+  if (!locationId || !amountCents) {
+    return reply.code(400).send({ error: "locationId and amountCents required" });
   }
 
   // Get location to calculate expiration (end of business day)
@@ -11213,22 +10159,29 @@ app.post("/meal-gifts", async (req, reply) => {
     expiresAt.setDate(expiresAt.getDate() + 1);
   }
 
-  const mealGift = await prisma.mealGift.create({
-    data: {
-      giverId,
+  let created;
+  try {
+    created = await createMealGift(prisma, stripe, {
+      giverId: who.userId,
       locationId,
       amountCents,
-      messageFromGiver: messageFromGiver || null,
+      messageFromGiver,
+      paymentIntentId,
       expiresAt,
-      status: "PENDING",
-    },
+      now,
+    });
+  } catch (err) {
+    if (err instanceof OrderError) return reply.code(err.status).send({ error: err.message, code: err.code, ...err.extra });
+    throw err;
+  }
+
+  return prisma.mealGift.findUnique({
+    where: { id: created.id },
     include: {
       giver: { select: { id: true, name: true } },
       location: { select: { id: true, name: true, city: true } },
     },
   });
-
-  return mealGift;
 });
 
 // GET /meal-gifts/next/:locationId - Get next pending meal gift for location (FIFO)
@@ -11240,6 +10193,7 @@ app.get("/meal-gifts/next/:locationId", async (req, reply) => {
     where: {
       locationId,
       status: "PENDING",
+      paidAt: { not: null }, // Funded gifts only (Task A6)
       expiresAt: { gt: new Date() }, // Not expired
     },
     orderBy: {
@@ -11264,158 +10218,8 @@ app.get("/meal-gifts/next/:locationId", async (req, reply) => {
   return mealGift;
 });
 
-// POST /meal-gifts/:id/accept - Accept a meal gift and apply to order
-app.post("/meal-gifts/:id/accept", async (req, reply) => {
-  const { id } = req.params;
-  const { recipientId, orderId, messageFromRecipient, orderTotalCents } = req.body || {};
-
-  if (!recipientId || !orderId) {
-    return reply.code(400).send({ error: "recipientId and orderId required" });
-  }
-
-  const mealGift = await prisma.mealGift.findUnique({
-    where: { id },
-    include: { giver: true, chain: true },
-  });
-
-  if (!mealGift) {
-    return reply.code(404).send({ error: "Meal gift not found" });
-  }
-
-  if (mealGift.status !== "PENDING") {
-    return reply.code(400).send({ error: "Meal gift is not available" });
-  }
-
-  if (new Date() > mealGift.expiresAt) {
-    return reply.code(400).send({ error: "Meal gift has expired" });
-  }
-
-  // Calculate excess gift amount (gift - order total)
-  const giftAmount = mealGift.amountCents;
-  const orderTotal = orderTotalCents || 0;
-  const excessAmount = Math.max(0, giftAmount - orderTotal);
-
-  // Update meal gift to ACCEPTED status
-  const updatedGift = await prisma.mealGift.update({
-    where: { id },
-    data: {
-      status: "ACCEPTED",
-      acceptedById: recipientId,
-      orderId,
-      acceptedAt: new Date(),
-    },
-  });
-
-  // Add chain entry for ACCEPTED action
-  await prisma.mealGiftChain.create({
-    data: {
-      mealGiftId: id,
-      recipientId,
-      action: "ACCEPTED",
-      messageFromRecipient: messageFromRecipient || null,
-    },
-  });
-
-  // Credit excess gift amount to recipient (if any)
-  if (excessAmount > 0) {
-    // Check if recipient is a User (not a Guest)
-    const recipientUser = await prisma.user.findUnique({ where: { id: recipientId } });
-
-    if (recipientUser) {
-      // Create credit event for the excess
-      await prisma.creditEvent.create({
-        data: {
-          userId: recipientId,
-          amountCents: excessAmount,
-          type: "GIFT_EXCESS",
-          description: `Meal gift excess credited (Gift: $${(giftAmount / 100).toFixed(2)}, Order: $${(orderTotal / 100).toFixed(2)})`,
-          metadata: { mealGiftId: id },
-        },
-      });
-
-      // Update recipient's credit balance
-      await prisma.user.update({
-        where: { id: recipientId },
-        data: {
-          creditsCents: {
-            increment: excessAmount,
-          },
-        },
-      });
-
-      // Refresh recipient's wallet pass to show updated credit balance
-      refreshUserWalletPass(recipientId).catch(console.error);
-    }
-  }
-
-  // Check if giver has already completed this challenge (only reward once)
-  const challenge = await prisma.challenge.findUnique({
-    where: { slug: "meal-for-stranger" },
-  });
-
-  let alreadyRewarded = false;
-  if (challenge) {
-    const existingChallenge = await prisma.userChallenge.findUnique({
-      where: {
-        userId_challengeId: {
-          userId: mealGift.giverId,
-          challengeId: challenge.id,
-        },
-      },
-    });
-    alreadyRewarded = existingChallenge?.rewardClaimed === true;
-  }
-
-  // Only give $5 reward if not already claimed
-  if (!alreadyRewarded) {
-    await prisma.creditEvent.create({
-      data: {
-        userId: mealGift.giverId,
-        amountCents: 500, // $5 reward
-        type: "CHALLENGE_REWARD",
-        description: "Meal for a Stranger challenge completed",
-      },
-    });
-
-    // Update giver's credit balance
-    await prisma.user.update({
-      where: { id: mealGift.giverId },
-      data: {
-        creditsCents: {
-          increment: 500,
-        },
-      },
-    });
-
-    // Refresh giver's wallet pass to show updated credit balance
-    refreshUserWalletPass(mealGift.giverId).catch(console.error);
-
-    // Mark challenge as completed for giver
-    if (challenge) {
-      await prisma.userChallenge.upsert({
-        where: {
-          userId_challengeId: {
-            userId: mealGift.giverId,
-            challengeId: challenge.id,
-          },
-        },
-        update: {
-          completedAt: new Date(),
-          rewardClaimed: true,
-        },
-        create: {
-          userId: mealGift.giverId,
-          challengeId: challenge.id,
-          progress: JSON.stringify({ accepted: true }),
-          completedAt: new Date(),
-          rewardClaimed: true,
-        },
-      });
-    }
-  }
-
-  return updatedGift;
-});
+// POST /meal-gifts/:id/accept was removed in Task A7 fix round 1: checkout
+// consumes a meal gift from the order's quote at PAID (orders/service.js).
 
 // POST /meal-gifts/:id/pay-forward - Pay forward a meal gift to next person
 app.post("/meal-gifts/:id/pay-forward", async (req, reply) => {
@@ -11475,48 +10279,36 @@ app.post("/meal-gifts/expire", async (req, reply) => {
       status: "PENDING",
       expiresAt: { lte: now },
     },
-    include: {
-      giver: true,
-    },
   });
 
   const results = [];
 
   for (const gift of expiredGifts) {
-    // Mark as expired
-    await prisma.mealGift.update({
-      where: { id: gift.id },
-      data: {
-        status: "EXPIRED",
-        expiredAt: now,
-      },
+    // Conditional: a gift accepted meanwhile is left alone.
+    const expired = await prisma.mealGift.updateMany({
+      where: { id: gift.id, status: "PENDING" },
+      data: { status: "EXPIRED", expiredAt: now },
     });
+    if (expired.count !== 1) continue;
 
-    // Refund giver as credit
-    await prisma.creditEvent.create({
-      data: {
+    // Only a gift the giver actually paid for (Task A6: paidAt) is returned,
+    // as credit through the ledger.
+    const refunded = Boolean(gift.paidAt);
+    if (refunded) {
+      await grantCredit(prisma, {
         userId: gift.giverId,
+        source: "MEAL_GIFT",
+        eventType: "REFUND_RESTORE",
         amountCents: gift.amountCents,
-        type: "REFUND",
-        description: "Meal gift expired and refunded",
-      },
-    });
-
-    // Update giver's credit balance
-    await prisma.user.update({
-      where: { id: gift.giverId },
-      data: {
-        creditBalanceCents: {
-          increment: gift.amountCents,
-        },
-      },
-    });
+        note: "Meal gift expired and refunded",
+      });
+    }
 
     results.push({
       id: gift.id,
       giverId: gift.giverId,
       amountCents: gift.amountCents,
-      refunded: true,
+      refunded,
     });
   }
 
@@ -12124,266 +10916,10 @@ app.delete("/users/:id/payment-methods/:methodId", async (req, reply) => {
 // GIFT CARDS
 // ====================
 
-// Generate secure gift card code (XXXX-XXXX-XXXX-XXXX)
-function generateGiftCardCode() {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // No I, O, 0, 1 for clarity
-  let code = "";
-  for (let i = 0; i < 16; i++) {
-    if (i > 0 && i % 4 === 0) code += "-";
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return code;
-}
-
-// Purchase a gift card
-app.post("/gift-cards", async (req, reply) => {
-  try {
-    const {
-      amountCents,
-      designId,
-      recipientEmail,
-      recipientName,
-      personalMessage,
-      purchaserId,
-      stripePaymentId,
-    } = req.body;
-
-    if (!amountCents || amountCents < 1000) {
-      return reply.status(400).send({ error: "Minimum gift card amount is $10" });
-    }
-
-    if (amountCents > 50000) {
-      return reply.status(400).send({ error: "Maximum gift card amount is $500" });
-    }
-
-    // Generate unique code with retry
-    let code;
-    let attempts = 0;
-    while (!code && attempts < 10) {
-      const candidate = generateGiftCardCode();
-      const existing = await prisma.giftCard.findUnique({ where: { code: candidate } });
-      if (!existing) code = candidate;
-      attempts++;
-    }
-
-    if (!code) {
-      return reply.status(500).send({ error: "Failed to generate unique code" });
-    }
-
-    const giftCard = await prisma.giftCard.create({
-      data: {
-        code,
-        amountCents,
-        balanceCents: amountCents,
-        designId: designId || "classic",
-        purchaserId: purchaserId || null,
-        recipientEmail: recipientEmail || null,
-        recipientName: recipientName || null,
-        personalMessage: personalMessage || null,
-        stripePaymentId: stripePaymentId || null,
-        status: "ACTIVE",
-      },
-    });
-
-    // Send email delivery if recipient email provided
-    if (recipientEmail) {
-      try {
-        await sendGiftCardEmail(giftCard);
-        await prisma.giftCard.update({
-          where: { id: giftCard.id },
-          data: { deliveredAt: new Date() },
-        });
-      } catch (emailErr) {
-        console.error("Failed to send gift card email:", emailErr);
-        // Don't fail the purchase if email fails
-      }
-    }
-
-    return reply.send(giftCard);
-  } catch (error) {
-    console.error("Error creating gift card:", error);
-    return reply.status(500).send({ error: error.message });
-  }
-});
-
-// Get gift card by ID
-app.get("/gift-cards/:id", async (req, reply) => {
-  try {
-    const { id } = req.params;
-
-    const giftCard = await prisma.giftCard.findUnique({
-      where: { id },
-      include: {
-        purchaser: { select: { id: true, name: true } },
-        redeemedBy: { select: { id: true, name: true } },
-      },
-    });
-
-    if (!giftCard) {
-      return reply.status(404).send({ error: "Gift card not found" });
-    }
-
-    return reply.send(giftCard);
-  } catch (error) {
-    console.error("Error fetching gift card:", error);
-    return reply.status(500).send({ error: error.message });
-  }
-});
-
-// Lookup gift card by code (for redemption)
-app.get("/gift-cards/code/:code", async (req, reply) => {
-  try {
-    const { code } = req.params;
-    // Normalize code (remove dashes, uppercase)
-    const normalizedCode = code.toUpperCase().replace(/[^A-Z0-9]/g, "");
-
-    // Build code with dashes for lookup
-    const formattedCode = normalizedCode.length === 16
-      ? `${normalizedCode.slice(0, 4)}-${normalizedCode.slice(4, 8)}-${normalizedCode.slice(8, 12)}-${normalizedCode.slice(12, 16)}`
-      : code.toUpperCase();
-
-    const giftCard = await prisma.giftCard.findFirst({
-      where: {
-        OR: [
-          { code: formattedCode },
-          { code: code.toUpperCase() },
-        ],
-        status: "ACTIVE",
-        balanceCents: { gt: 0 },
-      },
-    });
-
-    if (!giftCard) {
-      return reply.status(404).send({ error: "Gift card not found or has no balance" });
-    }
-
-    // Return limited info for security
-    return reply.send({
-      id: giftCard.id,
-      balanceCents: giftCard.balanceCents,
-      designId: giftCard.designId,
-    });
-  } catch (error) {
-    console.error("Error looking up gift card:", error);
-    return reply.status(500).send({ error: error.message });
-  }
-});
-
-// Redeem gift card to user balance (adds full balance to user credits)
-app.post("/gift-cards/:id/redeem", async (req, reply) => {
-  try {
-    const { id } = req.params;
-    const { userId } = req.body;
-
-    if (!userId) {
-      return reply.status(400).send({ error: "User ID required" });
-    }
-
-    const giftCard = await prisma.giftCard.findUnique({ where: { id } });
-    if (!giftCard) {
-      return reply.status(404).send({ error: "Gift card not found" });
-    }
-
-    if (giftCard.status !== "ACTIVE" || giftCard.balanceCents <= 0) {
-      return reply.status(400).send({ error: "Gift card is not available for redemption" });
-    }
-
-    // Add to user credits (NO LIMIT for gift cards/shop)
-    await prisma.user.update({
-      where: { id: userId },
-      data: { creditsCents: { increment: giftCard.balanceCents } },
-    });
-
-    // Record credit event
-    await prisma.creditEvent.create({
-      data: {
-        userId,
-        type: "ADMIN_ADJUSTMENT", // Using existing type for now
-        amountCents: giftCard.balanceCents,
-        description: `Gift card ${giftCard.code} redeemed to account balance`,
-        metadata: { giftCardId: giftCard.id, giftCardCode: giftCard.code },
-      },
-    });
-
-    // Mark gift card as redeemed
-    const updated = await prisma.giftCard.update({
-      where: { id },
-      data: {
-        status: "REDEEMED",
-        redeemedById: userId,
-        redeemedAt: new Date(),
-        balanceCents: 0,
-      },
-    });
-
-    return reply.send({
-      success: true,
-      creditsAdded: giftCard.balanceCents,
-      giftCard: updated,
-    });
-  } catch (error) {
-    console.error("Error redeeming gift card:", error);
-    return reply.status(500).send({ error: error.message });
-  }
-});
-
-// Apply gift card at checkout (partial use allowed)
-app.post("/gift-cards/:id/apply", async (req, reply) => {
-  try {
-    const { id } = req.params;
-    const { amountCents } = req.body;
-
-    if (!amountCents || amountCents <= 0) {
-      return reply.status(400).send({ error: "Amount required" });
-    }
-
-    const giftCard = await prisma.giftCard.findUnique({ where: { id } });
-    if (!giftCard) {
-      return reply.status(404).send({ error: "Gift card not found" });
-    }
-
-    if (giftCard.status !== "ACTIVE" || giftCard.balanceCents <= 0) {
-      return reply.status(400).send({ error: "Gift card is not available" });
-    }
-
-    const amountToApply = Math.min(amountCents, giftCard.balanceCents);
-    const newBalance = giftCard.balanceCents - amountToApply;
-
-    await prisma.giftCard.update({
-      where: { id },
-      data: {
-        balanceCents: newBalance,
-        status: newBalance === 0 ? "EXHAUSTED" : "ACTIVE",
-      },
-    });
-
-    return reply.send({
-      applied: amountToApply,
-      remainingBalance: newBalance,
-    });
-  } catch (error) {
-    console.error("Error applying gift card:", error);
-    return reply.status(500).send({ error: error.message });
-  }
-});
-
-// Confirm gift card payment (called by webhook)
-app.post("/gift-cards/:id/confirm-payment", async (req, reply) => {
-  try {
-    const { id } = req.params;
-    const { stripePaymentId } = req.body;
-
-    await prisma.giftCard.update({
-      where: { id },
-      data: { stripePaymentId },
-    });
-
-    return reply.send({ success: true });
-  } catch (error) {
-    console.error("Error confirming gift card payment:", error);
-    return reply.status(500).send({ error: error.message });
-  }
-});
+// Gift card routes live in orders/gift-card-routes.js (registered with the
+// order routes). POST /gift-cards/:id/apply (fix round 1) and
+// POST /gift-cards/:id/redeem (fix round 2: card value may not become
+// expiring credit) are gone; cards are spent only as checkout tender.
 
 // ====================
 // SHOP PRODUCTS
@@ -12718,16 +11254,21 @@ app.get("/shop/orders/:id", async (req, reply) => {
   }
 });
 
-// Update shop order (payment status, fulfillment, tracking)
+// Update shop order (fulfillment, tracking)
 app.patch("/shop/orders/:id", async (req, reply) => {
   try {
     const { id } = req.params;
-    const updates = req.body;
+    const updates = req.body || {};
+
+    // Task A7: payment status is never client input. (Its only caller, the
+    // Stripe webhook's metadata.shopOrderId branch, never fired: no shop
+    // PaymentIntent carries that key.) Verified shop payment is Task D10.
+    if (updates.paymentStatus !== undefined || updates.stripePaymentId !== undefined) {
+      return reply.status(400).send({ error: "unknown field: paymentStatus, stripePaymentId" });
+    }
 
     // Allowed updates
     const allowedFields = [
-      "paymentStatus",
-      "stripePaymentId",
       "fulfillmentStatus",
       "trackingNumber",
       "trackingUrl",
@@ -12760,16 +11301,23 @@ app.patch("/shop/orders/:id", async (req, reply) => {
 app.post("/shop/orders/:id/apply-credits", async (req, reply) => {
   try {
     const { id } = req.params;
-    const { userId, amountCents } = req.body;
+    const { amountCents } = req.body || {};
 
-    if (!userId || !amountCents) {
-      return reply.status(400).send({ error: "userId and amountCents required" });
+    // Credits are spent only from the verified caller's balance, on a shop
+    // order that caller owns. A body userId is ignored (auth/hardening.js).
+    const who = await customerAuth.requireUser(req, reply);
+    if (!who) return reply;
+
+    if (!Number.isInteger(amountCents) || amountCents <= 0) {
+      return reply.status(400).send({ error: "amountCents required" });
     }
 
     const order = await prisma.shopOrder.findUnique({ where: { id } });
-    if (!order) {
-      return reply.status(404).send({ error: "Order not found" });
+    const verdict = shopCreditSpender(who, order);
+    if (verdict.status) {
+      return reply.status(verdict.status).send({ error: verdict.error });
     }
+    const userId = verdict.userId;
 
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
@@ -12783,31 +11331,37 @@ app.post("/shop/orders/:id/apply-credits", async (req, reply) => {
       return reply.status(400).send({ error: "No credits to apply" });
     }
 
-    // Deduct from user
-    await prisma.user.update({
-      where: { id: userId },
-      data: { creditsCents: { decrement: creditsToApply } },
-    });
-
-    // Update order
-    const updatedOrder = await prisma.shopOrder.update({
-      where: { id },
-      data: {
-        creditsApplied: { increment: creditsToApply },
-        totalCents: { decrement: creditsToApply },
-      },
-    });
-
-    // Record event
-    await prisma.creditEvent.create({
-      data: {
-        userId,
-        type: "CREDIT_APPLIED",
-        amountCents: -creditsToApply,
-        description: `Credits applied to shop order ${order.orderNumber}`,
-        metadata: { shopOrderId: id },
-      },
-    });
+    // Deduct, discount and record atomically, and only while the balance and
+    // the order total still cover it, so two concurrent requests can never
+    // leave a negative balance or a negative order total.
+    const CONFLICT = Symbol("conflict");
+    let updatedOrder;
+    try {
+      updatedOrder = await basePrisma.$transaction(async (tx) => {
+        const deducted = await tx.user.updateMany({
+          where: { id: userId, creditsCents: { gte: creditsToApply } },
+          data: { creditsCents: { decrement: creditsToApply } },
+        });
+        const discounted = await tx.shopOrder.updateMany({
+          where: { id, userId, totalCents: { gte: creditsToApply } },
+          data: { creditsApplied: { increment: creditsToApply }, totalCents: { decrement: creditsToApply } },
+        });
+        if (deducted.count !== 1 || discounted.count !== 1) throw CONFLICT;
+        await tx.creditEvent.create({
+          data: {
+            userId,
+            type: "CREDIT_APPLIED",
+            amountCents: -creditsToApply,
+            description: `Credits applied to shop order ${order.orderNumber}`,
+            metadata: { shopOrderId: id },
+          },
+        });
+        return tx.shopOrder.findUnique({ where: { id } });
+      });
+    } catch (err) {
+      if (err === CONFLICT) return reply.status(409).send({ error: "Balance or order total changed, try again" });
+      throw err;
+    }
 
     return reply.send({
       success: true,
@@ -14516,30 +13070,58 @@ app.post("/chappy/sms", async (req, reply) => {
   }
 });
 
+/**
+ * Who a web Chappy request is for (decision logic: resolveChappyWebIdentity in
+ * auth/customer.js). identifier is null for an unidentified request; routes
+ * answer 401 rather than falling back to a shared conversation key.
+ */
+async function chappyWebIdentity(req, { guestId, sessionId, verifiedUserId = null }) {
+  return resolveChappyWebIdentity({
+    who: await customerAuth.resolve(req),
+    ticketUserId: verifiedUserId,
+    guestId,
+    sessionId,
+    isMemberId: async (id) => Boolean(await basePrisma.user.findUnique({ where: { id }, select: { id: true } })),
+  });
+}
+const CHAPPY_UNIDENTIFIED = { error: "Sign in, or start a guest chat session, to talk to Chappy" };
+
+// Short-lived ticket so EventSource (which cannot send headers) can stream as the signed-in member.
+app.post("/chappy/stream-ticket", async (req, reply) => {
+  const who = await customerAuth.requireUser(req, reply);
+  if (!who) return reply;
+  try {
+    const { exp, sig } = customerAuth.signLink("chappy-stream", who.userId, 2 * 60 * 1000);
+    return { uid: who.userId, exp, sig };
+  } catch {
+    return reply.code(503).send({ error: "Streaming tickets are not configured" });
+  }
+});
+
 // Web Chat API - For in-app chat widget
 app.post("/chappy/chat", async (req, reply) => {
   try {
-    const { message, userId, guestId, locationId, sessionId } = req.body;
+    const { message, locationId } = req.body;
 
     if (!message) {
       return reply.status(400).send({ error: "Message is required" });
     }
 
+    const { userId, guestId, identifier } = await chappyWebIdentity(req, req.body);
+    if (!identifier) return reply.status(401).send(CHAPPY_UNIDENTIFIED);
+
     // Get user context if logged in
     let user = null;
     let guest = null;
-    let identifier = sessionId || "anonymous";
 
     if (userId) {
       user = await prisma.user.findUnique({
         where: { id: userId },
       });
-      identifier = userId;
     } else if (guestId) {
       guest = await prisma.guest.findUnique({
         where: { id: guestId },
       });
-      identifier = guestId;
     }
 
     // Get tenant
@@ -14596,27 +13178,30 @@ app.post("/chappy/chat", async (req, reply) => {
 // Web Chat Streaming API - Server-Sent Events for real-time responses
 app.get("/chappy/chat/stream", async (req, reply) => {
   try {
-    const { message, userId, guestId, locationId, sessionId } = req.query;
+    const { message, locationId, uid, exp, sig } = req.query;
 
     if (!message) {
       return reply.status(400).send({ error: "Message is required" });
     }
 
+    // Members stream with a signed ticket from POST /chappy/stream-ticket (EventSource has no headers).
+    const ticketUserId = uid && customerAuth.verifyLink("chappy-stream", uid, exp, sig) ? uid : null;
+    const { userId, guestId, identifier } = await chappyWebIdentity(req, { ...req.query, verifiedUserId: ticketUserId });
+    // No shared fallback conversation: an unidentified stream is refused before any SSE headers.
+    if (!identifier) return reply.status(401).send(CHAPPY_UNIDENTIFIED);
+
     // Get user context if logged in
     let user = null;
     let guest = null;
-    let identifier = sessionId || "anonymous";
 
     if (userId) {
       user = await prisma.user.findUnique({
         where: { id: userId },
       });
-      identifier = userId;
     } else if (guestId) {
       guest = await prisma.guest.findUnique({
         where: { id: guestId },
       });
-      identifier = guestId;
     }
 
     // Get tenant
@@ -14688,11 +13273,10 @@ app.get("/chappy/chat/stream", async (req, reply) => {
 // Get conversation history (for web chat)
 app.get("/chappy/history", async (req, reply) => {
   try {
-    const { userId, guestId, sessionId } = req.query;
-    const identifier = userId || guestId || sessionId;
+    const { identifier } = await chappyWebIdentity(req, req.query);
 
     if (!identifier) {
-      return reply.status(400).send({ error: "Identifier required" });
+      return reply.status(401).send(CHAPPY_UNIDENTIFIED);
     }
 
     const conversation = await prisma.chappyConversation.findFirst({
@@ -14731,11 +13315,13 @@ app.get("/chappy/history", async (req, reply) => {
 // Clear conversation (start fresh)
 app.post("/chappy/reset", async (req, reply) => {
   try {
-    const { userId, guestId, sessionId, channel = "web" } = req.body;
-    const identifier = userId || guestId || sessionId;
+    const body = req.body || {};
+    // Only trusted services may reset another channel (an SMS conversation is keyed by phone number).
+    const channel = customerAuth.isServiceCall(req) ? body.channel || "web" : "web";
+    const { identifier } = await chappyWebIdentity(req, body);
 
     if (!identifier) {
-      return reply.status(400).send({ error: "Identifier required" });
+      return reply.status(401).send(CHAPPY_UNIDENTIFIED);
     }
 
     await resetConversation(basePrisma, identifier, channel);
@@ -14785,58 +13371,52 @@ app.post("/chappy/confirm-payment", async (req, reply) => {
       });
     }
 
-    // Verify the payment intent with Stripe
-    const Stripe = (await import("stripe")).default;
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    // Server-verified payment (Task A6): the PaymentIntent's status, exact
+    // amount and metadata.orderId, through the shared order service. A
+    // server-priced order goes through markPaid (idempotent, spends its
+    // savings, refunds a charge it can't apply); a legacy order needs
+    // amount === totalCents.
+    let result;
+    try {
+      result = await confirmOrderPayment(prisma, stripe, { orderId, paymentIntentId, now: new Date() }, orderEffects);
+    } catch (err) {
+      if (err instanceof OrderError) return reply.status(err.status).send({ error: err.code, message: err.message, ...err.extra });
+      throw err;
+    }
 
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-
-    if (paymentIntent.status !== "succeeded") {
-      return reply.status(400).send({
-        error: "Payment not completed",
-        status: paymentIntent.status,
+    if (result.legacy && !result.alreadyPaid) {
+      // Legacy (pre-quote) Chappy order: its original follow-ups.
+      await prisma.order.update({
+        where: { id: orderId },
+        data: { status: "PAID", podAssignedAt: order.seatId ? new Date() : null },
       });
-    }
 
-    // Verify payment intent matches order
-    if (paymentIntent.metadata.orderId !== orderId) {
-      return reply.status(400).send({ error: "Payment intent does not match order" });
-    }
-
-    // Update order to PAID
-    const updatedOrder = await prisma.order.update({
-      where: { id: orderId },
-      data: {
-        paymentStatus: "PAID",
-        status: "PAID",
-        stripePaymentId: paymentIntentId,
-        podAssignedAt: order.seatId ? new Date() : null,
-      },
-      include: {
-        items: { include: { menuItem: true } },
-        location: true,
-        seat: true,
-      },
-    });
-
-    // Apply credits if user had any applied
-    if (order.userId && order.user?.creditsCents > 0) {
-      const creditsApplied = Math.min(500, order.user.creditsCents);
+      // Apply credits only for the verified caller's own order (auth/customer.js).
+      const creditsApplied = chappyCreditsToDeduct(await customerAuth.resolve(req), order);
       if (creditsApplied > 0) {
         await prisma.user.update({
           where: { id: order.userId },
           data: { creditsCents: { decrement: creditsApplied } },
         });
       }
+
+      // Mark seat as occupied if one was selected
+      if (order.seatId) {
+        await prisma.seat.update({
+          where: { id: order.seatId },
+          data: { status: "OCCUPIED" },
+        });
+      }
     }
 
-    // Mark seat as occupied if one was selected
-    if (order.seatId) {
-      await prisma.seat.update({
-        where: { id: order.seatId },
-        data: { status: "OCCUPIED" },
-      });
-    }
+    const updatedOrder = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        items: { include: { menuItem: true } },
+        location: true,
+        seat: true,
+      },
+    });
 
     return reply.send({
       success: true,
@@ -14857,6 +13437,9 @@ app.post("/chappy/confirm-payment", async (req, reply) => {
     });
   } catch (error) {
     console.error("[Chappy Confirm Payment Error]", error);
+    if (error && error.refunded !== undefined) {
+      return reply.status(500).send({ error: "PAYMENT_NOT_APPLIED", code: "PAYMENT_NOT_APPLIED", refunded: error.refunded });
+    }
     return reply.status(500).send({ error: "Failed to confirm payment" });
   }
 });

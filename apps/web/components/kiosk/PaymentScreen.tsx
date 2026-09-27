@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { kioskAuthHeaders } from './KioskDeviceProvider';
 
 // Kiosk color system
 const COLORS = {
@@ -30,6 +31,9 @@ type PaymentStatus =
 
 interface PaymentScreenProps {
   orderId: string;
+  /** Every order this payment covers (single check); the server charges their sum. */
+  orderIds?: string[];
+  /** Shown on screen only; the charge is computed by the API from the orders. */
   amountCents: number;
   locationId?: string;
   /** Business-plan demo: simulate the terminal; no PaymentIntent, no reader. */
@@ -45,6 +49,7 @@ interface PaymentScreenProps {
  */
 export function PaymentScreen({
   orderId,
+  orderIds,
   amountCents,
   locationId,
   demo = false,
@@ -123,8 +128,8 @@ export function PaymentScreen({
       // Step 1: Create PaymentIntent
       const intentRes = await fetch('/api/kiosk/payments/create-intent', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId, amountCents, locationId }),
+        headers: { 'Content-Type': 'application/json', ...kioskAuthHeaders() },
+        body: JSON.stringify({ orderId, orderIds: orderIds && orderIds.length ? orderIds : [orderId], locationId }),
       });
 
       if (!intentRes.ok) {
@@ -133,6 +138,12 @@ export function PaymentScreen({
       }
 
       const { paymentIntentId: intentId } = await intentRes.json();
+      if (!intentId) {
+        // Nothing to charge (fully covered): the server confirms the zero balance.
+        setStatus('success');
+        onSuccess('');
+        return;
+      }
       setPaymentIntentId(intentId);
 
       // Step 2: Send to S700 reader
@@ -167,7 +178,7 @@ export function PaymentScreen({
       setError(errorMessage);
       onError?.(errorMessage);
     }
-  }, [orderId, amountCents, locationId, demo, onSuccess, onError, pollPaymentStatus]);
+  }, [orderId, orderIds, locationId, demo, onSuccess, onError, pollPaymentStatus]);
 
   // Demo only: the "card" was tapped, so play processing and success.
   const demoTap = async () => {

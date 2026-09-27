@@ -804,6 +804,7 @@
     "addToAppleWallet": "加入 Apple 錢包",
     "addToGoogleWallet": "加入 Google 錢包",
     "walletComingSoon": "完整錢包功能即將推出！預覽模式已可使用。",
+    "walletUnavailable": "電子錢包票卡暫時無法使用，請稍後再試。",
     "tiers": {
       "chopstick": "筷子會員",
       "noodleMaster": "麵條大師",
@@ -1538,7 +1539,18 @@
     "enterYourName": "請輸入您的姓名",
     "wantToEarnRewards": "想要賺取獎勵並追蹤訂單嗎？",
     "signInInstead": "改為登入",
-    "waitLoadingAccount": "請稍候，正在載入您的帳戶..."
+    "waitLoadingAccount": "請稍候，正在載入您的帳戶...",
+    "errorCodes": {
+      "CREDIT_SHORT": "你的點數餘額已變更，請確認總額後再試一次。",
+      "GIFT_CARD_SHORT": "你的禮物卡餘額已變更，請確認總額後再試一次。",
+      "MEAL_GIFT_UNAVAILABLE": "這份愛心餐已無法使用。",
+      "REWARD_UNAVAILABLE": "這項獎勵已無法使用。",
+      "PAYMENT_NOT_VERIFIED": "我們尚未確認你的付款。若已扣款，請向店員出示此畫面。",
+      "ORDER_FAILED": "無法完成訂單，請再試一次。",
+      "QUOTE_CHANGED": "你的訂單總額已變更，請確認後再試一次。",
+      "REFUNDED": "我們無法套用你的付款，款項已全額退回你的卡片。請再試一次。",
+      "GROUP_CHANGED": "本組部分訂單已付款或有變動。請查看小組後重試。"
+    }
   },
   "groupOrder": {
     "notFound": "找不到群組",
@@ -1552,7 +1564,23 @@
     "groupOrders": "群組訂單",
     "checkInAll": "全部報到（模擬自助機）",
     "checkingIn": "報到中...",
-    "simulateCheckIn": "模擬報到"
+    "simulateCheckIn": "模擬報到",
+    "hostPay": {
+      "signInTitle": "登入後為全組付款",
+      "signInBody": "由組長登入後為所有人付款。",
+      "signIn": "登入",
+      "loading": "正在準備付款...",
+      "processing": "正在確認付款...",
+      "amountDue": "全組合計：{amount}",
+      "confirmFree": "確認團體訂單",
+      "returnToGroup": "返回小組",
+      "notHost": "只有組長可以為所有人付款。",
+      "nothingToPay": "本組所有訂單均已付款。",
+      "groupChanged": "付款期間小組有變動。請查看小組後重新付款。",
+      "notVerified": "我們暫時無法確認您的付款。如已扣款，請向店員出示此頁面。",
+      "refunded": "我們無法使用這筆付款，已全額退回您的信用卡。請重試。",
+      "failed": "無法完成團體付款。請重試。"
+    }
   },
   "social": {
     "instagram": "Instagram",
@@ -1850,7 +1878,8 @@
       "missingInfo": "缺少訂單或門市資訊",
       "orderNotFound": "找不到訂單",
       "failedToLoad": "載入訂單詳情失敗",
-      "oops": "哎呀！"
+      "oops": "哎呀！",
+      "deviceNotAuthorized": "此自助機尚未設定會員報到。請向工作人員尋求協助。"
     },
     "loading": "正在載入您的訂單...",
     "orderFlow": {

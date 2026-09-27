@@ -7,6 +7,8 @@ import { trackPurchase, event } from "@/lib/analytics";
 import Image from "next/image";
 import { PhoneCollectionModal } from "@/components/PhoneCollectionModal";
 import { useUser } from "@clerk/nextjs";
+import { useSiteApi } from "@/lib/site/api";
+import { confirmPayment, paymentIntentIdFromClientSecret } from "@/lib/site/orders";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -19,6 +21,7 @@ function ConfirmationContent() {
   const tCommon = useTranslations("common");
   const locale = useLocale();
   const { user: clerkUser, isLoaded: clerkLoaded, isSignedIn } = useUser();
+  const api = useSiteApi();
   const orderNumber = searchParams.get("orderNumber");
   const orderId = searchParams.get("orderId");
   const total = searchParams.get("total");
@@ -78,7 +81,7 @@ function ConfirmationContent() {
         if (isSignedIn && clerkUser?.primaryEmailAddress?.emailAddress) {
           try {
             // Look up or create user in our system
-            const userResponse = await fetch(`${BASE}/users`, {
+            const userResponse = await api(`${BASE}/users`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
@@ -102,33 +105,15 @@ function ConfirmationContent() {
         }
 
         // Extract payment intent ID from client secret
-        const paymentIntentId = paymentIntentClientSecret?.split("_secret_")[0];
+        const paymentIntentId = paymentIntentIdFromClientSecret(paymentIntentClientSecret);
 
-        // Update order with payment info and user link
-        const patchData: any = {
-          paymentStatus: "PAID",
-        };
+        // The server verifies the PaymentIntent and marks the order PAID once
+        // (idempotent with the Stripe webhook). The order's owner was set,
+        // from the verified session, when it was created.
+        const confirmed = await confirmPayment(orderId, paymentIntentId, { fetcher: api, baseUrl: BASE });
 
-        if (paymentIntentId) {
-          patchData.stripePaymentId = paymentIntentId;
-        }
-
-        if (userId) {
-          patchData.userId = userId;
-        }
-
-        console.log("Patching order with redirect data:", patchData);
-
-        const patchResponse = await fetch(`${BASE}/orders/${orderId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(patchData),
-        });
-
-        if (patchResponse.ok) {
-          const updatedOrder = await patchResponse.json();
-          console.log("Order updated after redirect, user:", updatedOrder.user?.id);
-          setOrder(updatedOrder);
+        if (confirmed.ok) {
+          setOrder(confirmed.data);
         } else {
           console.error("Failed to update order after redirect");
           // Still try to fetch and display the order
