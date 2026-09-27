@@ -65,9 +65,12 @@ import { getScheduler } from "./triggers/index.js";
 import { getOrchestrator } from "./autonomous/index.js";
 import { registerCateringRoutes, isDineInOrdersEnabled } from "./catering/routes.js";
 import { registerPlanRoutes } from "./plan/routes.js";
+import { registerAdminConsoleRoutes } from "./admin/console-routes.js";
 import { withStatusDemo, registerStatusDemoGuard } from "./demo/status-demo.js";
-import { createAdminAuth } from "./auth/admin.js";
-import { registerConsoleGuard, registerAdminPathGuard } from "./auth/console-guard.js";
+import { createClerkClient } from "@clerk/backend";
+import { createAdminAuth, parseAdminEmails } from "./auth/admin.js";
+import { registerAdminAuthHooks } from "./auth/admin-hook.js";
+import { registerTeamRoutes } from "./admin/team-routes.js";
 
 // DEMO- order codes resolve to a synthetic order (see demo/status-demo.js):
 // the plan's live status-page demo reads real routes without touching the DB.
@@ -159,18 +162,17 @@ await app.register(rateLimit, {
 });
 
 // Admin authentication middleware: see src/auth/admin.js. Clerk session
-// tokens are verified server-side and checked against the ADMIN_EMAILS
-// allowlist; x-admin-api-key remains for server-to-server callers.
-const { requireAdminAuth } = createAdminAuth({ log: (...args) => app.log.warn({ args }, "admin auth") });
+// tokens are verified server-side and set req.adminRole (owner, manager or
+// station); an allowlisted email (ADMIN_EMAILS) is always owner.
+// x-admin-api-key remains for server-to-server callers (owner).
+const { requireAdminAuth, requireRole, forget: forgetAdminRole } = createAdminAuth({ log: (...args) => app.log.warn({ args }, "admin auth") });
 
-// Console-only routes outside /admin (see auth/console-guard.js). Must run before routes are declared.
-registerConsoleGuard(app, { requireAdminAuth });
+// All admin auth wiring: /admin/* role checks and the console-only routes
+// outside /admin (see auth/admin-hook.js). Must run before routes are declared.
+registerAdminAuthHooks(app, { requireAdminAuth, requireRole });
 
 // Demo orders never write: call staff, add-ons, refills and "done eating" are simulated.
 registerStatusDemoGuard(app, { source: statusDemoSource });
-
-// Apply admin auth to all /admin/* routes
-registerAdminPathGuard(app, { requireAdminAuth });
 
 // Register autonomous agent routes
 await registerAutonomousRoutes(app);
@@ -180,6 +182,22 @@ await registerCateringRoutes(app);
 
 // Register interactive business plan routes (/plan/* BFF + /admin/plan/*)
 await registerPlanRoutes(app);
+
+// Admin console today pulse and dine-in order lookup (see src/admin/console-routes.js)
+await registerAdminConsoleRoutes(app, {
+  prisma,
+  resolveTenant: (req) => prisma.tenant.findUnique({ where: { slug: getTenantContext(req) }, select: { id: true } }),
+});
+
+// Owner team management via Clerk roles (see src/admin/team-routes.js)
+if (process.env.CLERK_SECRET_KEY) {
+  await registerTeamRoutes(app, {
+    clerk: createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY }),
+    adminEmails: parseAdminEmails(process.env.ADMIN_EMAILS),
+    forgetRole: forgetAdminRole,
+    adminUrl: process.env.ADMIN_URL || "https://admin-oh-beef-noodle-soup.vercel.app",
+  });
+}
 
 const PORT = process.env.PORT || process.env.API_PORT || 4000;
 
