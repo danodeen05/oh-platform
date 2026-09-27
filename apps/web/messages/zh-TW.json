@@ -1548,7 +1548,8 @@
       "PAYMENT_NOT_VERIFIED": "我們尚未確認你的付款。若已扣款，請向店員出示此畫面。",
       "ORDER_FAILED": "無法完成訂單，請再試一次。",
       "QUOTE_CHANGED": "你的訂單總額已變更，請確認後再試一次。",
-      "REFUNDED": "我們無法套用你的付款，款項已全額退回你的卡片。請再試一次。"
+      "REFUNDED": "我們無法套用你的付款，款項已全額退回你的卡片。請再試一次。",
+      "GROUP_CHANGED": "本組部分訂單已付款或有變動。請查看小組後重試。"
     }
   },
   "groupOrder": {
@@ -1564,7 +1565,22 @@
     "checkInAll": "全部報到（模擬自助機）",
     "checkingIn": "報到中...",
     "simulateCheckIn": "模擬報到",
-    "hostPayUnavailable": "主揪目前還不能替所有人付款。每位成員請在群組頁面支付自己的部分。"
+    "hostPay": {
+      "signInTitle": "登入後為全組付款",
+      "signInBody": "由組長登入後為所有人付款。",
+      "signIn": "登入",
+      "loading": "正在準備付款...",
+      "processing": "正在確認付款...",
+      "amountDue": "全組合計：{amount}",
+      "confirmFree": "確認團體訂單",
+      "returnToGroup": "返回小組",
+      "notHost": "只有組長可以為所有人付款。",
+      "nothingToPay": "本組所有訂單均已付款。",
+      "groupChanged": "付款期間小組有變動。請查看小組後重新付款。",
+      "notVerified": "我們暫時無法確認您的付款。如已扣款，請向店員出示此頁面。",
+      "refunded": "我們無法使用這筆付款，已全額退回您的信用卡。請重試。",
+      "failed": "無法完成團體付款。請重試。"
+    }
   },
   "social": {
     "instagram": "Instagram",

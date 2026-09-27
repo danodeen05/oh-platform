@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { useSiteApi } from "@/lib/site/api";
+import { create as createOrder, groupIdentityHeaders } from "@/lib/site/orders";
 import { useTranslations, useLocale } from "next-intl";
 import { SliderControl, SliderLegend } from "./slider-control";
 import { RadioGroup } from "./radio-group";
@@ -800,18 +801,16 @@ export default function EnhancedMenuBuilder({
             return;
           }
 
-          // api() attaches the Clerk session: the API takes the member from it, not from the body userId.
+          // api() attaches the Clerk session and a guest sends its session token:
+          // the API takes the member from those, never from a body id.
           const groupResponse = await api(`${BASE}/group-orders/${groupCode}/orders`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
               "x-tenant-slug": "oh",
+              ...groupIdentityHeaders(dbUserId ? null : guest),
             },
-            body: JSON.stringify({
-              items,
-              userId: dbUserId || null,
-              guestId: guestId,
-            }),
+            body: JSON.stringify({ items, guestId }),
           });
 
           if (!groupResponse.ok) {
@@ -858,21 +857,16 @@ export default function EnhancedMenuBuilder({
         }
       }
 
-      const response = await api(`${BASE}/orders`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(orderPayload),
-      });
+      const created = await createOrder(orderPayload, { fetcher: api, baseUrl: BASE });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error("Order creation failed:", response.status, errorData);
+      if (!created.ok) {
+        console.error("Order creation failed:", created.status, created.error);
         toast.error(t("errors.createOrder"));
         setSubmitting(false);
         return;
       }
 
-      order = await response.json();
+      order = created.data;
     }
 
     if (!order || !order.id || !order.orderNumber) {

@@ -1639,7 +1639,8 @@
       "PAYMENT_NOT_VERIFIED": "We couldn't confirm your payment yet. If you were charged, show this screen to our staff.",
       "ORDER_FAILED": "We couldn't complete your order. Please try again.",
       "QUOTE_CHANGED": "Your order total changed. Check it and try again.",
-      "REFUNDED": "We couldn't apply your payment, so your card was refunded in full. Please try again."
+      "REFUNDED": "We couldn't apply your payment, so your card was refunded in full. Please try again.",
+      "GROUP_CHANGED": "Part of this group was already paid or changed. Check the group and try again."
     }
   },
   "groupOrder": {
@@ -1655,7 +1656,22 @@
     "checkInAll": "Check In All Orders (Simulate Kiosk)",
     "checkingIn": "Checking in...",
     "simulateCheckIn": "Simulate Check-in",
-    "hostPayUnavailable": "The host can't pay for everyone yet. Each member pays their own share from the group page."
+    "hostPay": {
+      "signInTitle": "Sign in to pay for the group",
+      "signInBody": "The host signs in to pay for everyone.",
+      "signIn": "Sign in",
+      "loading": "Preparing the payment...",
+      "processing": "Confirming the payment...",
+      "amountDue": "Group total: {amount}",
+      "confirmFree": "Confirm group order",
+      "returnToGroup": "Return to group",
+      "notHost": "Only the group's host can pay for everyone.",
+      "nothingToPay": "Every order in this group is already paid.",
+      "groupChanged": "The group changed while you were paying. Review the group and pay again.",
+      "notVerified": "We couldn't confirm your payment yet. If you were charged, show this screen to our staff.",
+      "refunded": "We couldn't apply your payment, so your card was refunded in full. Please try again.",
+      "failed": "We couldn't complete the group payment. Please try again."
+    }
   },
   "social": {
     "instagram": "Instagram",

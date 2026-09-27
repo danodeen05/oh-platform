@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useUser, SignInButton } from "@clerk/nextjs";
 import { useSiteApi } from "@/lib/site/api";
+import * as ordersApi from "@/lib/site/orders";
 import { useGuest } from "@/contexts/guest-context";
 import { trackBeginCheckout, trackReferralCodeUsed } from "@/lib/analytics";
 import { useTranslations } from "next-intl";
@@ -94,7 +95,7 @@ export default function OrderPaymentForm({
   const showCreditsBreakdown = promoDiscount > 0 || creditsApplied > 0 || giftApplied > 0 || giftCardAmount > 0;
 
   function messageForCode(code: string | undefined, fallback?: string) {
-    const known = ["CREDIT_SHORT", "GIFT_CARD_SHORT", "MEAL_GIFT_UNAVAILABLE", "REWARD_UNAVAILABLE", "PAYMENT_NOT_VERIFIED", "QUOTE_CHANGED"];
+    const known = ["CREDIT_SHORT", "GIFT_CARD_SHORT", "MEAL_GIFT_UNAVAILABLE", "REWARD_UNAVAILABLE", "PAYMENT_NOT_VERIFIED", "QUOTE_CHANGED", "GROUP_CHANGED"];
     if (code && known.includes(code)) return t(`errorCodes.${code}`);
     return fallback || t("errorCodes.ORDER_FAILED");
   }
@@ -186,33 +187,23 @@ export default function OrderPaymentForm({
   const giftCardCodeValue = giftCardApplied?.code ?? null;
   const refreshPayment = useCallback(async () => {
     const request = (useCreditsCents: number) =>
-      api(`${BASE}/orders/${orderId}/payment-intent`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          useCreditsCents,
-          promoCode: promoCodeValue,
-          giftCardCode: giftCardCodeValue,
-          mealGiftId: mealGiftId ?? null,
-        }),
-      });
+      ordersApi.paymentIntent(
+        orderId,
+        { useCreditsCents, promoCode: promoCodeValue, giftCardCode: giftCardCodeValue, mealGiftId: mealGiftId ?? null },
+        { fetcher: api, baseUrl: BASE },
+      );
 
-    try {
-      let response = await request(wantsCredits ? MAX_CREDITS_PER_ORDER : 0);
-      // An order started before signing in can't take member credits.
-      if (response.status === 403 && wantsCredits) response = await request(0);
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        setError(messageForCode(data.error));
-        return;
-      }
-      setServerTotals(data.totals ?? null);
-      setClientSecret(data.clientSecret ?? null);
-      setPaymentIntentId(data.paymentIntentId ?? null);
-    } catch (err) {
-      console.error("Error creating payment intent:", err);
-      setError(messageForCode(undefined));
+    let res = await request(wantsCredits ? MAX_CREDITS_PER_ORDER : 0);
+    // An order started before signing in can't take member credits.
+    if (!res.ok && res.status === 403 && wantsCredits) res = await request(0);
+    if (!res.ok) {
+      if (res.status === 0) console.error("Error creating payment intent: network");
+      setError(messageForCode(res.error.code ?? undefined));
+      return;
     }
+    setServerTotals(res.data.totals ?? null);
+    setClientSecret(res.data.clientSecret ?? null);
+    setPaymentIntentId(res.data.paymentIntentId ?? null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId, wantsCredits, promoCodeValue, giftCardCodeValue, mealGiftId]);
 
@@ -225,15 +216,10 @@ export default function OrderPaymentForm({
 
   /** POST /orders/:id/confirm-payment: the server verifies the PaymentIntent (or a zero balance). */
   async function confirmPaid(stripePaymentIntentId?: string) {
-    const response = await api(`${BASE}/orders/${orderId}/confirm-payment`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ paymentIntentId: stripePaymentIntentId }),
-    });
-    const data = await response.json().catch(() => ({}));
+    const res = await ordersApi.confirmPayment(orderId, stripePaymentIntentId, { fetcher: api, baseUrl: BASE });
     // A charge the server could not apply was refunded in full (Task A6).
-    if (!response.ok) throw new Error(data.refunded ? t("errorCodes.REFUNDED") : messageForCode(data.error));
-    return data;
+    if (!res.ok) throw new Error(res.error.refunded ? t("errorCodes.REFUNDED") : messageForCode(res.error.code ?? undefined));
+    return res.data;
   }
 
   async function initializeUser() {

@@ -1548,7 +1548,8 @@
       "PAYMENT_NOT_VERIFIED": "我们尚未确认你的付款。若已扣款，请向店员出示此画面。",
       "ORDER_FAILED": "无法完成订单，请再试一次。",
       "QUOTE_CHANGED": "你的订单总额已变更，请确认后再试一次。",
-      "REFUNDED": "我们无法使用你的付款，款项已全额退回你的卡。请再试一次。"
+      "REFUNDED": "我们无法使用你的付款，款项已全额退回你的卡。请再试一次。",
+      "GROUP_CHANGED": "本组部分订单已付款或有变动。请查看小组后重试。"
     }
   },
   "groupOrder": {
@@ -1564,7 +1565,22 @@
     "checkInAll": "全部报到（模拟自助机）",
     "checkingIn": "报到中...",
     "simulateCheckIn": "模拟报到",
-    "hostPayUnavailable": "发起人目前还不能替所有人付款。每位成员请在群组页面支付自己的部分。"
+    "hostPay": {
+      "signInTitle": "登录后为全组付款",
+      "signInBody": "由组长登录后为所有人付款。",
+      "signIn": "登录",
+      "loading": "正在准备付款...",
+      "processing": "正在确认付款...",
+      "amountDue": "全组合计：{amount}",
+      "confirmFree": "确认团体订单",
+      "returnToGroup": "返回小组",
+      "notHost": "只有组长可以为所有人付款。",
+      "nothingToPay": "本组所有订单均已付款。",
+      "groupChanged": "付款期间小组有变动。请查看小组后重新付款。",
+      "notVerified": "我们暂时无法确认您的付款。如已扣款，请向店员出示此页面。",
+      "refunded": "我们无法使用这笔付款，已全额退回您的银行卡。请重试。",
+      "failed": "无法完成团体付款。请重试。"
+    }
   },
   "social": {
     "instagram": "Instagram",

@@ -57,10 +57,9 @@ export default async function GroupPaymentPage({
     );
   }
 
-  const totalCents = group.orders.reduce(
-    (sum: number, order: any) => sum + order.totalCents,
-    0
-  );
+  // What the host pays: the server-quoted amount due of every order not yet paid.
+  const unpaid = group.orders.filter((o: any) => o.paymentStatus !== "PAID" && o.status !== "CANCELLED");
+  const totalCents = unpaid.reduce((sum: number, order: any) => sum + (order.amountDueCents ?? order.totalCents), 0);
 
   // Find the host's order for confirmation page redirect
   const hostOrder = group.orders.find((o: any) => o.isGroupHost) || group.orders[0];
@@ -87,7 +86,6 @@ export default async function GroupPaymentPage({
         }}
       >
         <div style={{ textAlign: "center", marginBottom: 24 }}>
-          <span style={{ fontSize: "2rem" }}>👥</span>
           <h1 style={{ margin: "8px 0 4px" }}>Pay for Group</h1>
           <p style={{ color: "#666" }}>
             Group Code: <strong>{group.code}</strong> at {group.location.name}
@@ -138,7 +136,7 @@ export default async function GroupPaymentPage({
                   </span>
                 </span>
                 <span style={{ fontWeight: 600 }}>
-                  ${(order.totalCents / 100).toFixed(2)}
+                  ${((order.paymentStatus === "PAID" ? 0 : order.amountDueCents ?? order.totalCents) / 100).toFixed(2)}
                 </span>
               </div>
               <div style={{ fontSize: "0.85rem", color: "#666" }}>
@@ -167,8 +165,6 @@ export default async function GroupPaymentPage({
 
         <GroupPaymentForm
           groupCode={group.code}
-          totalCents={totalCents}
-          orderIds={group.orders.map((o: any) => o.id)}
           seatingOption={seatingOption}
           locationId={group.locationId}
           hostOrderId={hostOrder.id}

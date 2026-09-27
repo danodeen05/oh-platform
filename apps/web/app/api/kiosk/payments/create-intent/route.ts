@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { API_URL } from '@/lib/api';
+import { kioskPaymentIntent } from '@/lib/site/orders';
 
 /**
  * POST /api/kiosk/payments/create-intent
@@ -26,22 +27,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Kiosk device not authorized' }, { status: 401 });
     }
 
-    const res = await fetch(`${API_URL}/kiosk/orders/payment-intent`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: authorization },
-      body: JSON.stringify({ orderIds: ids, terminal: true }),
-    });
-    const data = await res.json().catch(() => ({}));
-
+    const res = await kioskPaymentIntent(ids, { baseUrl: API_URL, headers: { Authorization: authorization }, terminal: true });
     if (!res.ok) {
-      return NextResponse.json({ error: data.message || data.error || 'Failed to create payment' }, { status: res.status });
+      return NextResponse.json({ error: res.error.message || res.error.code || 'Failed to create payment' }, { status: res.status || 502 });
     }
 
     return NextResponse.json({
-      paymentIntentId: data.paymentIntentId,
-      clientSecret: data.clientSecret,
-      status: data.status,
-      amountCents: data.amountCents,
+      paymentIntentId: res.data.paymentIntentId,
+      clientSecret: res.data.clientSecret,
+      status: res.data.status,
+      amountCents: res.data.amountCents,
     });
   } catch (error) {
     console.error('Failed to create PaymentIntent:', error);

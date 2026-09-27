@@ -8,6 +8,7 @@ import Image from "next/image";
 import { PhoneCollectionModal } from "@/components/PhoneCollectionModal";
 import { useUser } from "@clerk/nextjs";
 import { useSiteApi } from "@/lib/site/api";
+import { confirmPayment, paymentIntentIdFromClientSecret } from "@/lib/site/orders";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -104,21 +105,15 @@ function ConfirmationContent() {
         }
 
         // Extract payment intent ID from client secret
-        const paymentIntentId = paymentIntentClientSecret?.split("_secret_")[0];
+        const paymentIntentId = paymentIntentIdFromClientSecret(paymentIntentClientSecret);
 
         // The server verifies the PaymentIntent and marks the order PAID once
         // (idempotent with the Stripe webhook). The order's owner was set,
         // from the verified session, when it was created.
-        const patchResponse = await api(`${BASE}/orders/${orderId}/confirm-payment`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ paymentIntentId }),
-        });
+        const confirmed = await confirmPayment(orderId, paymentIntentId, { fetcher: api, baseUrl: BASE });
 
-        if (patchResponse.ok) {
-          const updatedOrder = await patchResponse.json();
-          console.log("Order updated after redirect, user:", updatedOrder.user?.id);
-          setOrder(updatedOrder);
+        if (confirmed.ok) {
+          setOrder(confirmed.data);
         } else {
           console.error("Failed to update order after redirect");
           // Still try to fetch and display the order

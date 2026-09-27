@@ -8,6 +8,7 @@ import { VirtualKeyboard, PrintableReceipt, generateQRDataUrl, LanguageSelector,
 import { PaymentScreen } from "@/components/kiosk/PaymentScreen";
 import { STATUS_DEMO_CODE } from "@/lib/plan/statusDemo";
 import { kioskAuthHeaders } from "@/components/kiosk/KioskDeviceProvider";
+import { create as createOrder, kioskConfirmPayment } from "@/lib/site/orders";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -805,29 +806,30 @@ export default function KioskOrderFlow({
     });
 
     try {
-      const response = demo ? null : await fetch(`${BASE}/orders`, {
-        method: "POST",
-        // Kiosk device auth: the API pins the order to this device's location.
-        headers: { "Content-Type": "application/json", ...kioskAuthHeaders() },
-        body: JSON.stringify({
-          locationId: location.id,
-          tenantId: location.tenantId,
-          items,
-          estimatedArrival: new Date().toISOString(),
-          fulfillmentType: "WALK_IN",
-          guestName: currentGuest.guestName,
-          isKioskOrder: true,
-        }),
-      });
+      // Kiosk device auth: the API pins the order to this device's location.
+      const created = demo
+        ? null
+        : await createOrder(
+            {
+              locationId: location.id,
+              tenantId: location.tenantId,
+              items,
+              estimatedArrival: new Date().toISOString(),
+              fulfillmentType: "WALK_IN",
+              guestName: currentGuest.guestName,
+              isKioskOrder: true,
+            },
+            { baseUrl: BASE, headers: kioskAuthHeaders() },
+          );
 
-      if (response && !response.ok) {
+      if (created && !created.ok) {
         throw new Error("Failed to create order");
       }
 
       // Demo: a stand-in order that never touches the API. Its QR code opens the
       // plan's synthetic status page, so scanning it on a phone still works.
-      const order = response
-        ? await response.json()
+      const order: any = created
+        ? created.data
         : {
             id: `demo-kiosk-${currentGuest.guestNumber}`,
             orderNumber: `DEMO-${currentGuest.guestNumber}`,
@@ -900,12 +902,8 @@ export default function KioskOrderFlow({
   // The API verifies the Terminal PaymentIntent (succeeded, amount = these
   // orders' sum, metadata.orderIds) and marks them PAID (Task A6).
   async function confirmKioskPayment(orderIds: string[], paymentIntentId: string) {
-    const response = await fetch(`${BASE}/kiosk/orders/confirm-payment`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...kioskAuthHeaders() },
-      body: JSON.stringify({ orderIds, paymentIntentId: paymentIntentId || undefined }),
-    });
-    if (!response.ok) throw new Error("Failed to confirm payment");
+    const res = await kioskConfirmPayment(orderIds, paymentIntentId || null, { baseUrl: BASE, headers: kioskAuthHeaders() });
+    if (!res.ok) throw new Error("Failed to confirm payment");
   }
 
   // Called when Stripe Terminal payment succeeds

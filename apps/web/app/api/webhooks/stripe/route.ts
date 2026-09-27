@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
+import { confirmPayment, groupConfirmPayment } from '@/lib/site/orders';
 
 function getStripe() {
   if (!process.env.STRIPE_SECRET_KEY) {
@@ -85,48 +86,40 @@ async function handlePaymentSucceeded(paymentIntent: Stripe.PaymentIntent) {
   const metadata = paymentIntent.metadata;
   console.log(`Payment succeeded: ${paymentIntent.id}`, metadata);
 
+  // Host pays for the group (Task A7): one PaymentIntent for several orders.
+  // The API re-verifies it (status, amount, metadata.orderIds, group) and
+  // settles every order once; idempotent with the host's return page. The
+  // route takes the host's session or a trusted service call, so without
+  // ADMIN_API_KEY here the host's page is what confirms.
+  if (metadata.kind === 'group' && metadata.groupCode) {
+    const serviceKey = process.env.ADMIN_API_KEY;
+    if (!serviceKey) {
+      console.log(`Group payment ${paymentIntent.id}: no ADMIN_API_KEY, left to the host's confirmation`);
+      return;
+    }
+    const res = await groupConfirmPayment(metadata.groupCode, paymentIntent.id, {
+      baseUrl: API_BASE_URL,
+      headers: { 'x-admin-api-key': serviceKey },
+    });
+    if (!res.ok) console.error(`Failed to confirm group ${metadata.groupCode}:`, res.status, res.error.code);
+    return;
+  }
+
   // Handle food order payment
   if (metadata.orderId && metadata.source !== 'shop' && metadata.source !== 'gift_card') {
-    try {
-      // The API re-retrieves the PaymentIntent and checks status, amount and
-      // metadata.orderId itself; this call is idempotent with the return page.
-      const response = await fetch(`${API_BASE_URL}/orders/${metadata.orderId}/confirm-payment`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ paymentIntentId: paymentIntent.id }),
-      });
-
-      if (!response.ok) {
-        console.error(`Failed to update order ${metadata.orderId}:`, await response.text());
-      } else {
-        console.log(`Order ${metadata.orderId} marked as PAID via webhook`);
-      }
-    } catch (error) {
-      console.error(`Error updating order ${metadata.orderId}:`, error);
+    // The API re-retrieves the PaymentIntent and checks status, amount and
+    // metadata.orderId itself; this call is idempotent with the return page.
+    const res = await confirmPayment(metadata.orderId, paymentIntent.id, { baseUrl: API_BASE_URL });
+    if (!res.ok) {
+      console.error(`Failed to confirm order ${metadata.orderId}:`, res.status, res.error.code, res.error.refunded ? '(refunded)' : '');
+    } else {
+      console.log(`Order ${metadata.orderId} marked as PAID via webhook`);
     }
   }
 
-  // Handle shop order payment
-  if (metadata.shopOrderId) {
-    try {
-      const response = await fetch(`${API_BASE_URL}/shop/orders/${metadata.shopOrderId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          paymentStatus: 'PAID',
-          stripePaymentId: paymentIntent.id,
-        }),
-      });
-
-      if (!response.ok) {
-        console.error(`Failed to update shop order ${metadata.shopOrderId}:`, await response.text());
-      } else {
-        console.log(`Shop order ${metadata.shopOrderId} marked as PAID via webhook`);
-      }
-    } catch (error) {
-      console.error(`Error updating shop order ${metadata.shopOrderId}:`, error);
-    }
-  }
+  // Shop orders: no shop PaymentIntent carries metadata.shopOrderId, so the
+  // old PATCH {paymentStatus: 'PAID'} branch never ran; it is gone (clients
+  // never send paymentStatus). Verified shop payment is Task D10.
 
   // Handle gift card purchase
   if (metadata.source === 'gift_card' && metadata.giftCardId) {
@@ -163,24 +156,5 @@ async function handlePaymentFailed(paymentIntent: Stripe.PaymentIntent) {
   // no longer settable through PATCH /orders/:id (Task A6).
   if (metadata.orderId && metadata.source !== 'shop' && metadata.source !== 'gift_card') {
     console.log(`Food order ${metadata.orderId} payment failed; order left unpaid for retry`);
-  }
-
-  // Handle shop order payment failure
-  if (metadata.shopOrderId) {
-    try {
-      const response = await fetch(`${API_BASE_URL}/shop/orders/${metadata.shopOrderId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          paymentStatus: 'FAILED',
-        }),
-      });
-
-      if (!response.ok) {
-        console.error(`Failed to update shop order ${metadata.shopOrderId} as failed:`, await response.text());
-      }
-    } catch (error) {
-      console.error(`Error updating shop order ${metadata.shopOrderId} as failed:`, error);
-    }
   }
 }

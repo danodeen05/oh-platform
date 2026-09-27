@@ -1548,7 +1548,8 @@
       "PAYMENT_NOT_VERIFIED": "Aún no pudimos confirmar tu pago. Si se te cobró, muestra esta pantalla a nuestro personal.",
       "ORDER_FAILED": "No pudimos completar tu pedido. Inténtalo de nuevo.",
       "QUOTE_CHANGED": "El total de tu pedido cambió. Revísalo e inténtalo de nuevo.",
-      "REFUNDED": "No pudimos aplicar tu pago, así que te reembolsamos el total en tu tarjeta. Inténtalo de nuevo."
+      "REFUNDED": "No pudimos aplicar tu pago, así que te reembolsamos el total en tu tarjeta. Inténtalo de nuevo.",
+      "GROUP_CHANGED": "Parte de este grupo ya se pagó o cambió. Revisa el grupo e inténtalo de nuevo."
     }
   },
   "groupOrder": {
@@ -1564,7 +1565,22 @@
     "checkInAll": "Registrar todos (Simular kiosco)",
     "checkingIn": "Registrando...",
     "simulateCheckIn": "Simular registro",
-    "hostPayUnavailable": "El anfitrión todavía no puede pagar por todos. Cada miembro paga su parte desde la página del grupo."
+    "hostPay": {
+      "signInTitle": "Inicia sesión para pagar por el grupo",
+      "signInBody": "El anfitrión inicia sesión para pagar por todos.",
+      "signIn": "Iniciar sesión",
+      "loading": "Preparando el pago...",
+      "processing": "Confirmando el pago...",
+      "amountDue": "Total del grupo: {amount}",
+      "confirmFree": "Confirmar pedido del grupo",
+      "returnToGroup": "Volver al grupo",
+      "notHost": "Solo el anfitrión del grupo puede pagar por todos.",
+      "nothingToPay": "Todos los pedidos de este grupo ya están pagados.",
+      "groupChanged": "El grupo cambió mientras pagabas. Revisa el grupo y vuelve a pagar.",
+      "notVerified": "Aún no pudimos confirmar tu pago. Si se hizo el cargo, muestra esta pantalla a nuestro personal.",
+      "refunded": "No pudimos aplicar tu pago, así que te reembolsamos el total a tu tarjeta. Inténtalo de nuevo.",
+      "failed": "No pudimos completar el pago del grupo. Inténtalo de nuevo."
+    }
   },
   "social": {
     "instagram": "Instagram",

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useToast } from "@/components/ui/Toast";
 import { useSiteApi, useMemberId } from "@/lib/site/api";
+import { create as createOrder } from "@/lib/site/orders";
 import { trackFavoriteAdded, trackReorder } from "@/lib/analytics";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -156,17 +157,13 @@ export default function OrdersPage() {
         })),
       };
 
-      const response = await api(`${BASE}/orders`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(orderData),
-      });
+      const created = await createOrder(orderData, { fetcher: api, baseUrl: BASE });
 
-      if (!response.ok) {
+      if (!created.ok) {
         throw new Error("Failed to create reorder");
       }
 
-      const newOrder = await response.json();
+      const newOrder = created.data as unknown as { id: string; locationId: string };
 
       // Redirect to location menu page with reorder flag to skip directly to arrival time selection
       router.push(
