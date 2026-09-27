@@ -147,7 +147,8 @@ const allowedOrigins = [
     'http://localhost:3100',
     'http://localhost:3101',
     'http://localhost:3200',
-    'http://localhost:3201'
+    'http://localhost:3201',
+    'http://localhost:3300'
   ] : [])
 ];
 
