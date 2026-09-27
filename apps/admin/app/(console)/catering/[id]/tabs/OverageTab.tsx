@@ -1,218 +1,82 @@
 "use client";
+import { useState } from "react";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { useConfirm } from "@/components/ui/Confirm";
+import { ErrorCard } from "@/components/ui/ErrorCard";
+import { SkeletonList } from "@/components/ui/Skeleton";
+import { StatTile } from "@/components/ui/StatTile";
+import { useToast } from "@/components/ui/Toast";
+import { api, ApiError } from "@/lib/api";
+import { money } from "@/lib/format";
+import type { Overage, OverageInvoiceResult } from "@/lib/catering";
+import { useResource } from "@/lib/use-resource";
 
-import { useState, useEffect, useTransition } from "react";
-import StatCard from "../../../analytics/components/StatCard";
-import type { Overage } from "../../_components/types";
+const errorText = (e: unknown) => (e instanceof ApiError || e instanceof Error ? e.message : "Something went wrong.");
 
-const BASE = process.env.NEXT_PUBLIC_API_URL || "";
+export default function OverageTab({ eventId, pricePerBowlCents }: { eventId: string; pricePerBowlCents: number }) {
+  const { show } = useToast();
+  const ask = useConfirm();
+  const res = useResource(`catering-overage:${eventId}`, (signal) => api<Overage>(`/admin/catering/events/${eventId}/overage`, { signal }));
+  const [charging, setCharging] = useState(false);
+  const [invoiceResult, setInvoiceResult] = useState<OverageInvoiceResult | null>(null);
+  const overage = res.data;
 
-interface OverageTabProps {
-  eventId: string;
-  pricePerBowlCents: number;
-}
+  if (res.error && !overage) return <ErrorCard message="Couldn't load overage." onRetry={res.reload} />;
+  if (!overage) return <SkeletonList rows={3} />;
 
-export default function OverageTab({ eventId, pricePerBowlCents }: OverageTabProps) {
-  const [overage, setOverage] = useState<Overage | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [pending, startTransition] = useTransition();
-  const [invoiceResult, setInvoiceResult] = useState<{ invoiceUrl: string; status: string } | null>(null);
-
-  const fetchOverage = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`${BASE}/admin/catering/events/${eventId}/overage`);
-      if (!res.ok) return;
-      const data: Overage = await res.json();
-      setOverage(data);
-    } catch (err) {
-      console.error("Failed to fetch overage:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchOverage();
-  }, [eventId]);
-
-  const handleInvoice = () => {
-    if (!overage) return;
-    const total = (overage.overageAmountCents / 100).toFixed(2);
-    if (
-      !confirm(
-        `Charge client for ${overage.overageCount} extra bowl${overage.overageCount !== 1 ? "s" : ""} = $${total}?\n\nThis will create a Stripe invoice and send it to the client.`
-      )
-    ) {
-      return;
-    }
-
-    startTransition(async () => {
-      try {
-        const res = await fetch(`${BASE}/admin/catering/events/${eventId}/overage-invoice`, {
-          method: "POST",
-        });
-        if (!res.ok) {
-          const data = await res.json();
-          alert(data.error || "Failed to create overage invoice");
-          return;
-        }
-        const data = await res.json();
-        setInvoiceResult({ invoiceUrl: data.invoiceUrl, status: data.status });
-        await fetchOverage();
-      } catch (err) {
-        console.error("Failed to create overage invoice:", err);
-        alert("Failed to create overage invoice");
-      }
+  async function charge() {
+    const ok = await ask({
+      title: `Charge client for ${overage!.overageBowls} extra bowl${overage!.overageBowls !== 1 ? "s" : ""} (${money(overage!.overageAmountCents)})?`,
+      body: "This creates a Stripe invoice.", confirmLabel: "Charge",
     });
-  };
-
-  if (loading) {
-    return <p style={{ color: "#6b7280" }}>Loading...</p>;
-  }
-
-  if (!overage) {
-    return (
-      <p style={{ color: "#9ca3af" }}>No overage data available yet.</p>
-    );
+    if (!ok) return;
+    setCharging(true);
+    try {
+      const data = await api<OverageInvoiceResult>(`/admin/catering/events/${eventId}/overage-invoice`, { method: "POST" });
+      setInvoiceResult(data);
+    } catch (e) {
+      show({ message: `Couldn't create the invoice. ${errorText(e)}`, tone: "alert" });
+    } finally {
+      setCharging(false);
+    }
   }
 
   return (
-    <div>
-      {/* Stat cards */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-          gap: 16,
-          marginBottom: 24,
-        }}
-      >
-        <StatCard title="Bowls Booked (committed)" value={overage.bowlsBooked} color="blue" />
-        <StatCard title="Bowls Ordered (actual)" value={overage.bowlsOrdered} color="green" />
-        <StatCard
-          title="Overage Bowls"
-          value={overage.overageCount}
-          color={overage.overageCount > 0 ? "yellow" : "default"}
-        />
-        {overage.overageCount > 0 && (
-          <StatCard
-            title="Overage Amount"
-            value={`$${(overage.overageAmountCents / 100).toFixed(2)}`}
-            subtitle={`${overage.overageCount} x $${(pricePerBowlCents / 100).toFixed(2)}`}
-            color="yellow"
-          />
+    <div className="space-y-4 lg:space-y-6">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatTile label="Bowls booked" value={overage.bookedBowls} />
+        <StatTile label="Bowls ordered" value={overage.orderedCount} />
+        <StatTile label="Overage bowls" value={overage.overageBowls} tone={overage.overageBowls > 0 ? "pending" : "neutral"} />
+        {overage.overageBowls > 0 && (
+          <StatTile label="Overage amount" value={money(overage.overageAmountCents)} hint={`${overage.overageBowls} x ${money(pricePerBowlCents)}`} tone="pending" />
         )}
       </div>
 
-      {/* Already charged */}
-      {overage.charge && (
-        <div
-          style={{
-            padding: 16,
-            backgroundColor: "#d1fae5",
-            borderRadius: 8,
-            border: "1px solid #10b981",
-            marginBottom: 20,
-          }}
-        >
-          <div style={{ fontWeight: 600, color: "#065f46", marginBottom: 8 }}>
-            Overage Invoice Sent
-          </div>
-          <div style={{ fontSize: "0.9rem", color: "#374151", marginBottom: 8 }}>
-            Status:{" "}
-            <span style={{ fontWeight: 500 }}>{overage.charge.status}</span>
-          </div>
-          <a
-            href={overage.charge.invoiceUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: "#4f46e5", fontSize: "0.9rem" }}
-          >
-            View Stripe Invoice
-          </a>
-        </div>
-      )}
-
-      {/* Invoice result after creating */}
       {invoiceResult && (
-        <div
-          style={{
-            padding: 16,
-            backgroundColor: "#d1fae5",
-            borderRadius: 8,
-            border: "1px solid #10b981",
-            marginBottom: 20,
-          }}
-        >
-          <div style={{ fontWeight: 600, color: "#065f46", marginBottom: 8 }}>
-            Invoice Created Successfully
-          </div>
-          <div style={{ fontSize: "0.9rem", color: "#374151", marginBottom: 8 }}>
-            Status: {invoiceResult.status}
-          </div>
-          <a
-            href={invoiceResult.invoiceUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: "#4f46e5", fontSize: "0.9rem" }}
-          >
-            View Stripe Invoice
-          </a>
-        </div>
+        <Card>
+          <p className="font-semibold text-oh-olive">Overage invoice sent</p>
+          <p className="mt-1 text-[15px] text-oh-charcoal">Status: <span className="font-semibold">{invoiceResult.charge.status}</span></p>
+          {invoiceResult.invoice.url && (
+            <a href={invoiceResult.invoice.url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-sm font-semibold text-oh-ember-deep hover:underline">View Stripe invoice</a>
+          )}
+        </Card>
       )}
 
-      {/* Action to charge */}
-      {overage.overageCount > 0 && !overage.charge && !invoiceResult && (
-        <div
-          style={{
-            padding: 20,
-            backgroundColor: "#fffbeb",
-            borderRadius: 8,
-            border: "1px solid #f59e0b",
-          }}
-        >
-          <div style={{ fontWeight: 600, color: "#92400e", marginBottom: 8 }}>
-            Overage Detected
-          </div>
-          <div style={{ fontSize: "0.9rem", color: "#78350f", marginBottom: 16 }}>
-            {overage.overageCount} extra bowl{overage.overageCount !== 1 ? "s" : ""} were ordered
-            beyond the committed amount. Charge the client $
-            {(overage.overageAmountCents / 100).toFixed(2)}.
-          </div>
-          <button
-            onClick={handleInvoice}
-            disabled={pending}
-            style={{
-              padding: "10px 24px",
-              backgroundColor: "#dc2626",
-              color: "white",
-              border: "none",
-              borderRadius: 6,
-              cursor: pending ? "not-allowed" : "pointer",
-              fontWeight: 600,
-              opacity: pending ? 0.7 : 1,
-            }}
-          >
-            {pending
-              ? "Creating Invoice..."
-              : `Charge Client for ${overage.overageCount} Extra Bowl${overage.overageCount !== 1 ? "s" : ""} ($${(overage.overageAmountCents / 100).toFixed(2)})`}
-          </button>
-        </div>
+      {overage.overageBowls > 0 && !invoiceResult && (
+        <Card>
+          <p className="font-semibold text-oh-clay">Overage detected</p>
+          <p className="mt-1 text-[15px] text-oh-charcoal">
+            {overage.overageBowls} extra bowl{overage.overageBowls !== 1 ? "s" : ""} were ordered beyond the committed amount. Charge the client {money(overage.overageAmountCents)}.
+          </p>
+          <Button variant="primary" className="mt-3" onClick={charge} loading={charging}>
+            Charge client for {overage.overageBowls} extra bowl{overage.overageBowls !== 1 ? "s" : ""} ({money(overage.overageAmountCents)})
+          </Button>
+        </Card>
       )}
 
-      {overage.overageCount === 0 && (
-        <div
-          style={{
-            padding: 16,
-            backgroundColor: "#f0fdf4",
-            borderRadius: 8,
-            border: "1px solid #10b981",
-            fontSize: "0.9rem",
-            color: "#065f46",
-          }}
-        >
-          No overage — orders are within the committed amount.
-        </div>
+      {overage.overageBowls === 0 && (
+        <Card><p className="text-[15px] text-oh-olive">No overage. Orders are within the committed amount.</p></Card>
       )}
     </div>
   );

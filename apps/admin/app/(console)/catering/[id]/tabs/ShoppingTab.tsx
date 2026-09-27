@@ -1,118 +1,60 @@
 "use client";
+import { useState } from "react";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ErrorCard } from "@/components/ui/ErrorCard";
+import { SkeletonList } from "@/components/ui/Skeleton";
+import { useToast } from "@/components/ui/Toast";
+import { api, ApiError } from "@/lib/api";
+import type { ShoppingListItem } from "@/lib/catering";
+import { useResource } from "@/lib/use-resource";
 
-import { useState, useEffect, useTransition } from "react";
-import DataTable from "../../../analytics/components/DataTable";
-import type { ShoppingListItem } from "../../_components/types";
+const errorText = (e: unknown) => (e instanceof ApiError || e instanceof Error ? e.message : "Something went wrong.");
 
-const BASE = process.env.NEXT_PUBLIC_API_URL || "";
+export default function ShoppingTab({ eventId }: { eventId: string }) {
+  const { show } = useToast();
+  const res = useResource(`catering-shopping:${eventId}`, async (signal) => {
+    const data = await api<{ shoppingList: ShoppingListItem[] }>(`/admin/catering/events/${eventId}/shopping-list`, { signal }).catch(() => null);
+    return Array.isArray(data?.shoppingList) ? data.shoppingList : [];
+  });
+  const [generating, setGenerating] = useState(false);
+  const items = res.data ?? [];
 
-interface ShoppingTabProps {
-  eventId: string;
-}
-
-export default function ShoppingTab({ eventId }: ShoppingTabProps) {
-  const [items, setItems] = useState<ShoppingListItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [pending, startTransition] = useTransition();
-
-  const fetchList = async () => {
-    setLoading(true);
+  async function generate() {
+    setGenerating(true);
     try {
-      const res = await fetch(`${BASE}/admin/catering/events/${eventId}/shopping-list`);
-      if (!res.ok) {
-        setItems([]);
-        return;
-      }
-      const data = await res.json();
-      setItems(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error("Failed to fetch shopping list:", err);
-      setItems([]);
+      await api(`/admin/catering/events/${eventId}/shopping-list`, { method: "POST" });
+      res.reload();
+    } catch (e) {
+      show({ message: `Couldn't generate the shopping list. ${errorText(e)}`, tone: "alert" });
     } finally {
-      setLoading(false);
+      setGenerating(false);
     }
-  };
-
-  useEffect(() => {
-    fetchList();
-  }, [eventId]);
-
-  const handleGenerate = () => {
-    startTransition(async () => {
-      try {
-        const res = await fetch(`${BASE}/admin/catering/events/${eventId}/shopping-list`, {
-          method: "POST",
-        });
-        if (!res.ok) {
-          const data = await res.json();
-          alert(data.error || "Failed to generate shopping list");
-          return;
-        }
-        await fetchList();
-      } catch (err) {
-        console.error("Failed to generate shopping list:", err);
-        alert("Failed to generate shopping list");
-      }
-    });
-  };
-
-  const tableRows = items.map((item) => ({
-    ingredient: item.ingredient,
-    quantity: item.quantity,
-    unit: item.unit,
-  }));
+  }
 
   return (
-    <div>
-      <div style={{ marginBottom: 20, display: "flex", gap: 12, alignItems: "center" }}>
-        <button
-          onClick={handleGenerate}
-          disabled={pending}
-          style={{
-            padding: "10px 20px",
-            backgroundColor: "#4f46e5",
-            color: "white",
-            border: "none",
-            borderRadius: 6,
-            cursor: pending ? "not-allowed" : "pointer",
-            fontWeight: 500,
-            opacity: pending ? 0.7 : 1,
-          }}
-        >
-          {pending ? "Generating..." : "Generate Shopping List"}
-        </button>
-        {items.length > 0 && (
-          <span style={{ fontSize: "0.85rem", color: "#6b7280" }}>
-            {items.length} ingredient{items.length !== 1 ? "s" : ""}
-          </span>
-        )}
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <Button variant="primary" onClick={generate} loading={generating}>Generate shopping list</Button>
+        {items.length > 0 && <span className="text-sm text-oh-stone/70">{items.length} ingredient{items.length !== 1 ? "s" : ""}</span>}
       </div>
 
-      {loading ? (
-        <p style={{ color: "#6b7280" }}>Loading...</p>
+      {res.error && !res.data ? (
+        <ErrorCard message="Couldn't load the shopping list." onRetry={res.reload} />
+      ) : !res.data ? (
+        <SkeletonList rows={4} />
       ) : items.length === 0 ? (
-        <div
-          style={{
-            padding: 32,
-            textAlign: "center",
-            color: "#9ca3af",
-            backgroundColor: "#f9fafb",
-            borderRadius: 8,
-            border: "1px solid #e5e7eb",
-          }}
-        >
-          No shopping list yet. Generate one based on current orders.
-        </div>
+        <EmptyState icon="bag" title="No shopping list yet" body="Generate one based on current orders." />
       ) : (
-        <DataTable
-          title="Shopping List"
-          columns={[
-            { key: "ingredient", label: "Ingredient" },
-            { key: "quantity", label: "Quantity", align: "right" },
-            { key: "unit", label: "Unit" },
-          ]}
-          data={tableRows as Record<string, unknown>[]}
-        />
+        <Card title="Shopping list" padded={false}>
+          {items.map((item, i) => (
+            <div key={i} className="flex min-h-12 items-center justify-between gap-3 px-4 py-2.5">
+              <span className="text-[15px] text-oh-charcoal">{item.ingredient}</span>
+              <span className="tabular-nums text-oh-stone/70">{item.quantity} {item.unit}</span>
+            </div>
+          ))}
+        </Card>
       )}
     </div>
   );

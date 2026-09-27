@@ -1,160 +1,93 @@
 "use client";
+import { useState } from "react";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { ErrorCard } from "@/components/ui/ErrorCard";
+import { SkeletonList } from "@/components/ui/Skeleton";
+import { StatTile } from "@/components/ui/StatTile";
+import { api } from "@/lib/api";
+import { isSpecialDiet, type CateringOrder, type Rsvp } from "@/lib/catering";
+import { denverDateTime } from "@/lib/format";
+import { useResource } from "@/lib/use-resource";
 
-import { useState, useEffect, useCallback } from "react";
-import StatCard from "../../../analytics/components/StatCard";
-import DataTable from "../../../analytics/components/DataTable";
-import type { Rsvp, CateringOrder } from "../../_components/types";
+const SHOWN = 10;
 
-const BASE = process.env.NEXT_PUBLIC_API_URL || "";
-
-interface OrdersTabProps {
-  eventId: string;
-  minimumBowls: number;
+function ShowAllList<T>({ items, showAll, setShowAll, render, empty }: {
+  items: T[]; showAll: boolean; setShowAll: (v: boolean) => void; render: (item: T, i: number) => React.ReactNode; empty: string;
+}) {
+  if (items.length === 0) return <p className="px-4 py-4 text-[15px] text-oh-stone/70">{empty}</p>;
+  const shown = showAll ? items : items.slice(0, SHOWN);
+  return (
+    <>
+      {shown.map(render)}
+      {items.length > SHOWN && !showAll && (
+        <div className="px-4 py-3"><Button size="sm" onClick={() => setShowAll(true)}>Show all {items.length}</Button></div>
+      )}
+    </>
+  );
 }
 
-export default function OrdersTab({ eventId, minimumBowls }: OrdersTabProps) {
-  const [rsvps, setRsvps] = useState<Rsvp[]>([]);
-  const [orders, setOrders] = useState<CateringOrder[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function OrdersTab({ eventId, minimumBowls }: { eventId: string; minimumBowls: number }) {
+  const res = useResource(`catering-orders:${eventId}`, async (signal) => {
+    const [rsvps, orders] = await Promise.all([
+      api<Rsvp[]>(`/admin/catering/events/${eventId}/rsvps`, { signal }),
+      api<CateringOrder[]>(`/admin/catering/events/${eventId}/orders`, { signal }),
+    ]);
+    return { rsvps: Array.isArray(rsvps) ? rsvps : [], orders: Array.isArray(orders) ? orders : [] };
+  }, { refreshMs: 10_000 });
 
-  const fetchData = useCallback(async () => {
-    try {
-      const [rsvpRes, orderRes] = await Promise.all([
-        fetch(`${BASE}/admin/catering/events/${eventId}/rsvps`),
-        fetch(`${BASE}/admin/catering/events/${eventId}/orders`),
-      ]);
-      if (rsvpRes.ok) {
-        const d = await rsvpRes.json();
-        setRsvps(Array.isArray(d) ? d : []);
-      }
-      if (orderRes.ok) {
-        const d = await orderRes.json();
-        setOrders(Array.isArray(d) ? d : []);
-      }
-    } catch (err) {
-      console.error("Failed to fetch orders/rsvps:", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [eventId]);
+  const [showAllRsvps, setShowAllRsvps] = useState(false);
+  const [showAllOrders, setShowAllOrders] = useState(false);
 
-  useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 10000);
-    return () => clearInterval(interval);
-  }, [fetchData]);
+  if (res.error && !res.data) return <ErrorCard message="Couldn't load orders." onRetry={res.reload} />;
+  if (!res.data) return <SkeletonList rows={5} />;
 
-  const totalBowls = orders.reduce(
-    (sum, o) => sum + o.items.reduce((s, i) => s + i.quantity, 0),
-    0
-  );
-  const orderedCount = orders.length;
-  const notOrdered = rsvps.length - orderedCount;
-
-  if (loading) {
-    return <p style={{ color: "#6b7280" }}>Loading...</p>;
-  }
-
-  const SPECIAL_DIET = ["no beef", "no meat", "no noodles", "soup only", "vegetarian"];
-  const isSpecialDiet = (o: CateringOrder) =>
-    o.items.some((i) => {
-      const hay = `${i.menuItem?.name || ""} ${i.selectedValue || ""}`.toLowerCase();
-      return SPECIAL_DIET.some((t) => hay.includes(t));
-    });
-
-  const rsvpRows = rsvps.map((r) => ({
-    name: r.name,
-    phone: r.phone || "—",
-    zodiac: r.zodiac || "—",
-    rsvpAt: new Date(r.createdAt).toLocaleString(),
-  }));
-
-  const orderRows = orders.map((o) => ({
-    attendee: o.guestName || o.guest?.name || "—",
-    items: o.items
-      .map(
-        (item) =>
-          `${item.quantity > 1 ? `${item.quantity}x ` : ""}${item.menuItem?.name || ""}${item.selectedValue ? ` (${item.selectedValue})` : ""}`
-      )
-      .join(", "),
-    dietary: isSpecialDiet(o) ? (
-      <span
-        style={{
-          padding: "2px 8px",
-          borderRadius: 4,
-          fontSize: "0.75rem",
-          fontWeight: 600,
-          backgroundColor: "#fee2e2",
-          color: "#991b1b",
-        }}
-      >
-        Special Diet
-      </span>
-    ) : (
-      <span style={{ color: "#9ca3af", fontSize: "0.85rem" }}>Standard</span>
-    ),
-    time: new Date(o.createdAt).toLocaleString(),
-  }));
+  const { rsvps, orders } = res.data;
+  const totalBowls = orders.reduce((sum, o) => sum + o.items.reduce((s, i) => s + i.quantity, 0), 0);
+  const notOrdered = Math.max(0, rsvps.length - orders.length);
 
   return (
-    <div>
-      {/* Stats */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-          gap: 16,
-          marginBottom: 24,
-        }}
-      >
-        <StatCard title="RSVP'd" value={rsvps.length} color="blue" />
-        <StatCard title="Ordered" value={orderedCount} color="green" />
-        <StatCard
-          title="Not Ordered"
-          value={notOrdered > 0 ? notOrdered : 0}
-          color={notOrdered > 0 ? "yellow" : "default"}
-        />
-        <StatCard
-          title="Total Bowls"
-          value={totalBowls}
-          subtitle={`${minimumBowls} min`}
-          color={totalBowls >= minimumBowls ? "green" : "yellow"}
-        />
+    <div className="space-y-4 lg:space-y-6">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatTile label="RSVP'd" value={rsvps.length} />
+        <StatTile label="Ordered" value={orders.length} tone="good" />
+        <StatTile label="Not ordered" value={notOrdered} tone={notOrdered > 0 ? "pending" : "neutral"} />
+        <StatTile label="Total bowls" value={totalBowls} hint={`${minimumBowls} min`} tone={totalBowls >= minimumBowls ? "good" : "pending"} />
       </div>
 
-      {/* RSVPs table */}
-      <div style={{ marginBottom: 24 }}>
-        <DataTable
-          title={`RSVPs (${rsvps.length})`}
-          columns={[
-            { key: "name", label: "Name" },
-            { key: "phone", label: "Phone" },
-            { key: "zodiac", label: "Zodiac" },
-            { key: "rsvpAt", label: "RSVP'd At" },
-          ]}
-          data={rsvpRows as Record<string, unknown>[]}
-          expandable
-          defaultLimit={10}
-        />
-      </div>
+      <Card title={`RSVPs (${rsvps.length})`} padded={false}>
+        <ShowAllList items={rsvps} showAll={showAllRsvps} setShowAll={setShowAllRsvps} empty="No RSVPs yet."
+          render={(r) => (
+            <div key={r.id} className="flex min-h-14 items-center justify-between gap-3 px-4 py-3">
+              <span className="min-w-0">
+                <span className="block text-[15px] font-semibold text-oh-charcoal">{r.name}</span>
+                <span className="block text-sm text-oh-stone/60">{r.phone || "No phone"}{r.zodiac ? ` · ${r.zodiac}` : ""}</span>
+              </span>
+              <span className="shrink-0 text-sm tabular-nums text-oh-stone/60">{denverDateTime(r.createdAt)}</span>
+            </div>
+          )} />
+      </Card>
 
-      {/* Orders table */}
-      <DataTable
-        title={`Orders (${orders.length})`}
-        columns={[
-          { key: "attendee", label: "Attendee" },
-          { key: "items", label: "Items" },
-          { key: "dietary", label: "Dietary" },
-          { key: "time", label: "Time" },
-        ]}
-        data={orderRows as Record<string, unknown>[]}
-        expandable
-        defaultLimit={10}
-      />
+      <Card title={`Orders (${orders.length})`} padded={false}>
+        <ShowAllList items={orders} showAll={showAllOrders} setShowAll={setShowAllOrders} empty="No orders yet."
+          render={(o) => (
+            <div key={o.id} className="flex min-h-14 flex-col gap-1 px-4 py-3">
+              <div className="flex items-start justify-between gap-3">
+                <span className="text-[15px] font-semibold text-oh-charcoal">{o.guestName || o.guest?.name || "Guest"}</span>
+                <span className="flex shrink-0 items-center gap-2">
+                  {isSpecialDiet(o) && <Badge tone="alert">Special diet</Badge>}
+                  <span className="text-sm tabular-nums text-oh-stone/60">{denverDateTime(o.createdAt)}</span>
+                </span>
+              </div>
+              <p className="text-sm text-oh-stone/70">
+                {o.items.map((i) => `${i.quantity > 1 ? `${i.quantity}x ` : ""}${i.menuItem?.name || ""}${i.selectedValue ? ` (${i.selectedValue})` : ""}`).join(", ")}
+              </p>
+            </div>
+          )} />
+      </Card>
 
-      <div style={{ marginTop: 8, fontSize: "0.75rem", color: "#9ca3af" }}>
-        Auto-refreshing every 10 seconds
-      </div>
+      <p className="text-sm text-oh-stone/60">Updates every 10 seconds.</p>
     </div>
   );
 }

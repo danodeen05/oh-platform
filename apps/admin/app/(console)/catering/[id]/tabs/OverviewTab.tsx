@@ -1,288 +1,103 @@
 "use client";
+import { QRCodeSVG } from "qrcode.react";
+import { EnrichmentReview } from "../../_components/EnrichmentReview";
+import { LogoUpload } from "../../_components/LogoUpload";
+import { Card } from "@/components/ui/Card";
+import { Icon } from "@/components/ui/icons";
+import { StatTile } from "@/components/ui/StatTile";
+import { money } from "@/lib/format";
+import type { CateringEvent } from "@/lib/catering";
+import { webUrl } from "@/lib/urls";
 
-// NEXT_PUBLIC_WEB_URL isn't defined in dev, so derive the web origin from the
-// admin host: dev admin -> dev web, prod admin -> prod web. Otherwise share
-// links (attendee/RSVP, dashboard, survey) point at production from dev.
-function getWebOrigin() {
-  if (process.env.NEXT_PUBLIC_WEB_URL) return process.env.NEXT_PUBLIC_WEB_URL;
-  if (typeof window !== "undefined") {
-    const host = window.location.hostname;
-    if (host.includes("devadmin") || host.includes("localhost")) {
-      return "https://devwebapp.ohbeef.com";
-    }
-  }
-  return "https://www.ohbeef.com";
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="text-xs text-oh-stone/60">{label}</p>
+      <div className="text-[15px] text-oh-charcoal">{children}</div>
+    </div>
+  );
 }
 
-import StatCard from "../../../analytics/components/StatCard";
-import QRCode from "../../../_components/qr-code";
-import EnrichmentReview from "../../_components/EnrichmentReview";
-import LogoUpload from "../../_components/LogoUpload";
-import type { CateringEvent } from "../../_components/types";
-
-interface OverviewTabProps {
-  event: CateringEvent;
-  onRefresh: () => void;
-}
-
-export default function OverviewTab({ event, onRefresh }: OverviewTabProps) {
-  const WEB_ORIGIN = getWebOrigin();
-  const attendeeUrl = `${WEB_ORIGIN}/en/catering/e/${event.slug}`;
-  const dashboardUrl = event.booking?.bookingToken
-    ? `${WEB_ORIGIN}/en/catering/dashboard/${event.booking.bookingToken}`
-    : null;
-
+export default function OverviewTab({ event, onRefresh }: { event: CateringEvent; onRefresh: () => void }) {
+  const origin = webUrl();
+  const attendeeUrl = `${origin}/en/catering/e/${event.slug}`;
+  const dashboardUrl = event.booking?.bookingToken ? `${origin}/en/catering/dashboard/${event.booking.bookingToken}` : null;
   const showEnrichment = event.status === "NEEDS_REVIEW" || event.status === "ENRICHING";
 
   return (
-    <div>
-      {/* Event Config Summary */}
-      <div
-        style={{
-          backgroundColor: "#f9fafb",
-          borderRadius: 8,
-          padding: 16,
-          marginBottom: 20,
-          border: "1px solid #e5e7eb",
-        }}
-      >
-        <h4 style={{ marginTop: 0, marginBottom: 12 }}>Event Details</h4>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            gap: 12,
-            fontSize: "0.9rem",
-          }}
-        >
-          <div>
-            <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: 2 }}>Client Company</div>
-            <div style={{ fontWeight: 500 }}>{event.clientCompany}</div>
-          </div>
+    <div className="space-y-4 lg:space-y-6">
+      <Card title="Details">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Row label="Client company">{event.clientCompany}</Row>
           {event.clientWebsite && (
-            <div>
-              <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: 2 }}>Website</div>
-              <a
-                href={event.clientWebsite}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: "#4f46e5", textDecoration: "none", wordBreak: "break-all" }}
-              >
-                {event.clientWebsite}
+            <Row label="Website">
+              <a href={event.clientWebsite} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 break-all text-oh-ember-deep hover:underline">
+                <Icon name="external" size={16} />{event.clientWebsite}
               </a>
-            </div>
+            </Row>
           )}
-          {event.contactName && (
-            <div>
-              <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: 2 }}>Contact</div>
-              <div>{event.contactName}</div>
-              {event.contactEmail && (
-                <div style={{ fontSize: "0.8rem", color: "#6b7280" }}>{event.contactEmail}</div>
-              )}
-              {event.contactPhone && (
-                <div style={{ fontSize: "0.8rem", color: "#6b7280" }}>{event.contactPhone}</div>
-              )}
-            </div>
+          {(event.contactName || event.contactEmail || event.contactPhone) && (
+            <Row label="Contact">
+              {event.contactName && <span className="block">{event.contactName}</span>}
+              {event.contactEmail && <a href={`mailto:${event.contactEmail}`} className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-oh-ember-deep hover:underline"><Icon name="mail" size={16} />{event.contactEmail}</a>}
+              {event.contactPhone && <a href={`tel:${event.contactPhone}`} className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-oh-ember-deep hover:underline"><Icon name="phone" size={16} />{event.contactPhone}</a>}
+            </Row>
           )}
           {event.eventAddress && (
-            <div style={{ gridColumn: "1 / -1" }}>
-              <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: 2 }}>Event Address</div>
-              <a
-                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.eventAddress)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: "#4f46e5", textDecoration: "none" }}
-              >
-                {event.eventAddress}
-              </a>
-            </div>
+            <Row label="Event address">
+              <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.eventAddress)}`} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-oh-ember-deep hover:underline"><Icon name="pin" size={16} />{event.eventAddress}</a>
+            </Row>
           )}
-          <div>
-            <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: 2 }}>Event Code</div>
-            <code
-              style={{
-                fontFamily: "monospace",
-                backgroundColor: "#e5e7eb",
-                padding: "2px 6px",
-                borderRadius: 3,
-              }}
-            >
-              {event.eventCode}
-            </code>
-          </div>
-          {event.eventType && (
-            <div>
-              <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: 2 }}>Event Type</div>
-              <div>{event.eventType}</div>
-            </div>
-          )}
-          {event.expectedGuests != null && (
-            <div>
-              <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: 2 }}>Expected Guests</div>
-              <div>{event.expectedGuests}</div>
-            </div>
-          )}
+          <Row label="Event code"><code className="rounded bg-oh-stone/10 px-2 py-0.5 font-mono text-sm">{event.eventCode}</code></Row>
+          {event.eventType && <Row label="Event type">{event.eventType}</Row>}
+          {event.expectedGuests != null && <Row label="Expected guests">{event.expectedGuests}</Row>}
           {(event.onsiteContactName || event.onsiteContactPhone) && (
-            <div>
-              <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: 2 }}>Day-of On-site Contact</div>
-              {event.onsiteContactName && <div>{event.onsiteContactName}</div>}
-              {event.onsiteContactPhone && (
-                <div style={{ fontSize: "0.8rem", color: "#6b7280" }}>{event.onsiteContactPhone}</div>
-              )}
-            </div>
+            <Row label="Day-of on-site contact">
+              {event.onsiteContactName && <span className="block">{event.onsiteContactName}</span>}
+              {event.onsiteContactPhone && <span className="block text-sm text-oh-stone/70">{event.onsiteContactPhone}</span>}
+            </Row>
           )}
-          {event.dietaryNotes && (
-            <div style={{ gridColumn: "1 / -1" }}>
-              <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: 2 }}>Dietary Needs</div>
-              <div style={{ fontSize: "0.85rem", color: "#374151", whiteSpace: "pre-wrap" }}>{event.dietaryNotes}</div>
-            </div>
-          )}
-          {event.setupNotes && (
-            <div style={{ gridColumn: "1 / -1" }}>
-              <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: 2 }}>Setup &amp; Space Notes</div>
-              <div style={{ fontSize: "0.85rem", color: "#374151", whiteSpace: "pre-wrap" }}>{event.setupNotes}</div>
-            </div>
-          )}
-          {event.notes && (
-            <div style={{ gridColumn: "1 / -1" }}>
-              <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: 2 }}>Notes</div>
-              <div style={{ fontSize: "0.85rem", color: "#374151", whiteSpace: "pre-wrap" }}>{event.notes}</div>
-            </div>
-          )}
+          {event.dietaryNotes && <div className="sm:col-span-2"><Row label="Dietary needs"><p className="whitespace-pre-wrap">{event.dietaryNotes}</p></Row></div>}
+          {event.setupNotes && <div className="sm:col-span-2"><Row label="Setup and space notes"><p className="whitespace-pre-wrap">{event.setupNotes}</p></Row></div>}
+          {event.notes && <div className="sm:col-span-2"><Row label="Notes"><p className="whitespace-pre-wrap">{event.notes}</p></Row></div>}
         </div>
-      </div>
+      </Card>
 
-      {/* Logo upload — replaces the AI-scraped logo */}
-      <div style={{ marginBottom: 20 }}>
-        <LogoUpload eventId={event.id} currentLogoUrl={event.logoUrl} onSaved={onRefresh} />
-      </div>
+      <Card title="Logo"><LogoUpload eventId={event.id} currentLogoUrl={event.logoUrl} onSaved={onRefresh} /></Card>
 
-      {/* Booking / Payment StatCards */}
-      {event.booking && (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-            gap: 16,
-            marginBottom: 20,
-          }}
-        >
-          <StatCard
-            title="Bowls Booked"
-            value={event.booking.bowlsBooked}
-            color="blue"
-          />
-          <StatCard
-            title="Price Per Bowl"
-            value={`$${(event.pricePerBowlCents / 100).toFixed(2)}`}
-            color="default"
-          />
-          <StatCard
-            title="Total Charged"
-            value={`$${(event.booking.priceCents / 100).toFixed(2)}`}
-            color="green"
-          />
-          <StatCard
-            title="Amount Paid"
-            value={`$${(event.booking.paidCents / 100).toFixed(2)}`}
-            subtitle={event.booking.paymentStatus}
-            color={event.booking.paidCents >= event.booking.priceCents ? "green" : "yellow"}
-          />
-          {event.booking.promoCode && (
-            <StatCard title="Promo Code" value={event.booking.promoCode} color="default" />
-          )}
+      {event.booking ? (
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <StatTile label="Bowls booked" value={event.booking.bowlsBooked} />
+          <StatTile label="Price per bowl" value={money(event.pricePerBowlCents)} />
+          <StatTile label="Total charged" value={money(event.booking.priceCents)} />
+          <StatTile label="Amount paid" value={money(event.booking.paidCents)} hint={event.booking.paymentStatus}
+            tone={event.booking.paidCents >= event.booking.priceCents ? "good" : "pending"} />
         </div>
+      ) : (
+        <Card>
+          <p className="text-[15px] text-oh-clay">
+            No booking confirmed yet. Minimum commitment: {event.minimumBowls} bowls at {money(event.pricePerBowlCents)}/bowl = {money(event.minimumBowls * event.pricePerBowlCents)}.
+          </p>
+        </Card>
       )}
 
-      {!event.booking && (
-        <div
-          style={{
-            padding: 16,
-            backgroundColor: "#fef3c7",
-            borderRadius: 8,
-            border: "1px solid #f59e0b",
-            marginBottom: 20,
-            fontSize: "0.9rem",
-            color: "#92400e",
-          }}
-        >
-          No booking confirmed yet. Minimum commitment: {event.minimumBowls} bowls @ $
-          {(event.pricePerBowlCents / 100).toFixed(2)}/bowl = $
-          {((event.minimumBowls * event.pricePerBowlCents) / 100).toFixed(2)}
-        </div>
-      )}
+      {showEnrichment && <Card title="AI brand enrichment"><EnrichmentReview eventId={event.id} onPublished={onRefresh} /></Card>}
 
-      {/* Enrichment Review */}
-      {showEnrichment && (
-        <div
-          style={{
-            backgroundColor: "#f9fafb",
-            borderRadius: 8,
-            padding: 16,
-            marginBottom: 20,
-            border: "1px solid #e5e7eb",
-          }}
-        >
-          <h4 style={{ marginTop: 0, marginBottom: 12 }}>AI Brand Enrichment</h4>
-          <EnrichmentReview eventId={event.id} onPublished={onRefresh} />
-        </div>
-      )}
-
-      {/* QR Codes */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: dashboardUrl ? "1fr 1fr" : "1fr",
-          gap: 20,
-          marginBottom: 20,
-        }}
-      >
-        <div
-          style={{
-            backgroundColor: "#f9fafb",
-            borderRadius: 8,
-            padding: 20,
-            border: "1px solid #e5e7eb",
-            textAlign: "center",
-          }}
-        >
-          <h4 style={{ marginTop: 0, marginBottom: 12 }}>Attendee Event Page</h4>
-          <QRCode value={attendeeUrl} size={160} title="" showValue />
-          <div style={{ marginTop: 12 }}>
-            <a
-              href={attendeeUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ fontSize: "0.8rem", color: "#4f46e5", textDecoration: "none" }}
-            >
-              Open link
-            </a>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Card title="Attendee event page" className="text-center">
+          <div className="flex flex-col items-center gap-3">
+            <div className="rounded-xl bg-white p-3"><QRCodeSVG value={attendeeUrl} size={160} level="H" /></div>
+            <a href={attendeeUrl} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-oh-ember-deep hover:underline">Open link</a>
           </div>
-        </div>
-
+        </Card>
         {dashboardUrl && (
-          <div
-            style={{
-              backgroundColor: "#f9fafb",
-              borderRadius: 8,
-              padding: 20,
-              border: "1px solid #e5e7eb",
-              textAlign: "center",
-            }}
-          >
-            <h4 style={{ marginTop: 0, marginBottom: 12 }}>Client Dashboard</h4>
-            <QRCode value={dashboardUrl} size={160} title="" showValue />
-            <div style={{ marginTop: 12 }}>
-              <a
-                href={dashboardUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ fontSize: "0.8rem", color: "#4f46e5", textDecoration: "none" }}
-              >
-                Open link
-              </a>
+          <Card title="Client dashboard" className="text-center">
+            <div className="flex flex-col items-center gap-3">
+              <div className="rounded-xl bg-white p-3"><QRCodeSVG value={dashboardUrl} size={160} level="H" /></div>
+              <a href={dashboardUrl} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-oh-ember-deep hover:underline">Open link</a>
             </div>
-          </div>
+          </Card>
         )}
       </div>
     </div>

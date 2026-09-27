@@ -1,9 +1,12 @@
 "use client";
-
 import { useRef, useState } from "react";
+import { Button } from "@/components/ui/Button";
+import { useConfirm } from "@/components/ui/Confirm";
+import { api, ApiError } from "@/lib/api";
 
-const BASE = process.env.NEXT_PUBLIC_API_URL || "";
 const MAX_DIM = 400; // logos display small; cap the longest side
+
+const errorText = (e: unknown) => (e instanceof ApiError || e instanceof Error ? e.message : "Something went wrong.");
 
 /**
  * Read an image file and return a compact data URL. SVGs are kept as-is
@@ -45,15 +48,10 @@ async function fileToLogoDataUrl(file: File): Promise<string> {
   return out;
 }
 
-export default function LogoUpload({
-  eventId,
-  currentLogoUrl,
-  onSaved,
-}: {
-  eventId: string;
-  currentLogoUrl?: string | null;
-  onSaved: () => void;
+export function LogoUpload({ eventId, currentLogoUrl, onSaved }: {
+  eventId: string; currentLogoUrl?: string | null; onSaved: () => void;
 }) {
+  const ask = useConfirm();
   const inputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -61,11 +59,11 @@ export default function LogoUpload({
 
   const shown = preview || currentLogoUrl || null;
 
-  const onPick = async (file: File | undefined) => {
+  async function onPick(file: File | undefined) {
     if (!file) return;
     setError("");
     if (!file.type.startsWith("image/")) {
-      setError("Please choose an image file (PNG, JPG, SVG, etc.).");
+      setError("Please choose an image file (PNG, JPG, SVG, and so on).");
       return;
     }
     try {
@@ -73,103 +71,47 @@ export default function LogoUpload({
     } catch {
       setError("Could not read that image. Try a different file.");
     }
-  };
+  }
 
-  const save = async (logoUrl: string | null) => {
+  async function save(logoUrl: string | null) {
     setBusy(true);
     setError("");
     try {
-      const res = await fetch(`${BASE}/admin/catering/events/${eventId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ logoUrl }),
-      });
-      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || "Save failed");
+      await api(`/admin/catering/events/${eventId}`, { method: "PATCH", body: { logoUrl } });
       setPreview(null);
       if (inputRef.current) inputRef.current.value = "";
       onSaved();
     } catch (e) {
-      setError("Failed to save logo: " + (e as Error).message);
+      setError(`Failed to save logo. ${errorText(e)}`);
     } finally {
       setBusy(false);
     }
-  };
+  }
+
+  async function remove() {
+    const ok = await ask({ title: "Remove the logo?", confirmLabel: "Remove", tone: "danger" });
+    if (ok) save(null);
+  }
 
   return (
-    <div style={{ border: "1px solid #e5e7eb", borderRadius: 8, padding: 16 }}>
-      <div style={{ fontSize: "0.75rem", color: "#6b7280", marginBottom: 8 }}>Event / Company Logo</div>
-      <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
-        <div
-          style={{
-            width: 96,
-            height: 96,
-            borderRadius: 10,
-            background: "#FBF7F0",
-            border: "1px solid #e5e7eb",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            overflow: "hidden",
-            flexShrink: 0,
-          }}
-        >
-          {shown ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={shown} alt="Logo preview" style={{ maxWidth: "84px", maxHeight: "84px", objectFit: "contain" }} />
-          ) : (
-            <span style={{ fontSize: "0.7rem", color: "#9ca3af" }}>No logo</span>
-          )}
-        </div>
+    <div className="flex flex-wrap items-center gap-4">
+      <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-oh-stone/15 bg-oh-paper">
+        {shown ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={shown} alt="Logo preview" className="max-h-20 max-w-20 object-contain" />
+        ) : (
+          <span className="text-xs text-oh-stone/50">No logo</span>
+        )}
+      </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <input
-            ref={inputRef}
-            type="file"
-            accept="image/*"
-            onChange={(e) => onPick(e.target.files?.[0])}
-            style={{ fontSize: "0.85rem" }}
-          />
-          <div style={{ display: "flex", gap: 8 }}>
-            <button
-              onClick={() => save(preview)}
-              disabled={!preview || busy}
-              style={{
-                padding: "6px 14px",
-                backgroundColor: !preview || busy ? "#c7d2fe" : "#4f46e5",
-                color: "white",
-                border: "none",
-                borderRadius: 6,
-                fontSize: "0.82rem",
-                fontWeight: 500,
-                cursor: !preview || busy ? "default" : "pointer",
-              }}
-            >
-              {busy ? "Saving…" : "Save Logo"}
-            </button>
-            {currentLogoUrl && (
-              <button
-                onClick={() => save(null)}
-                disabled={busy}
-                style={{
-                  padding: "6px 14px",
-                  backgroundColor: "#fef2f2",
-                  color: "#b91c1c",
-                  border: "1px solid #fecaca",
-                  borderRadius: 6,
-                  fontSize: "0.82rem",
-                  fontWeight: 500,
-                  cursor: busy ? "default" : "pointer",
-                }}
-              >
-                Remove
-              </button>
-            )}
-          </div>
-          <p style={{ margin: 0, fontSize: "0.72rem", color: "#9ca3af" }}>
-            PNG, JPG, or SVG. It&apos;s auto-resized and scaled to fit wherever it appears.
-          </p>
-          {error && <p style={{ margin: 0, fontSize: "0.75rem", color: "#dc2626" }}>{error}</p>}
+      <div className="flex flex-col gap-2">
+        <input ref={inputRef} type="file" accept="image/*" onChange={(e) => onPick(e.target.files?.[0])} className="text-sm text-oh-stone" />
+        <div className="flex gap-2">
+          <Button size="sm" variant="primary" disabled={!preview} loading={busy} onClick={() => save(preview)}>Save logo</Button>
+          {currentLogoUrl && <Button size="sm" variant="danger" disabled={busy} onClick={remove}>Remove</Button>}
         </div>
+        <p className="text-xs text-oh-stone/60">PNG, JPG, or SVG. It is auto-resized and scaled to fit wherever it appears.</p>
+        {error && <p className="text-xs text-oh-ember-deep">{error}</p>}
       </div>
     </div>
   );
