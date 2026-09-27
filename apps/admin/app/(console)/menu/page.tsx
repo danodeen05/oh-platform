@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MenuItemSheet } from "@/components/menu/MenuItemSheet";
 import { MenuList } from "@/components/menu/MenuList";
 import { Button } from "@/components/ui/Button";
@@ -47,7 +47,14 @@ export default function MenuPage() {
   const soldOut = items?.filter((i) => !i.isAvailable).length ?? 0;
 
   const setAvailable = (id: string, v: boolean) => setItems((list) => list && list.map((i) => (i.id === id ? { ...i, isAvailable: v } : i)));
-  const markBusy = (id: string, on: boolean) => setBusy((s) => { const n = new Set(s); if (on) n.add(id); else n.delete(id); return n; });
+  // Refs so a toast's Undo, created earlier, sees the current state.
+  const busyRef = useRef(new Set<string>());
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+  const markBusy = (id: string, on: boolean) => {
+    if (on) busyRef.current.add(id); else busyRef.current.delete(id);
+    setBusy(new Set(busyRef.current));
+  };
 
   const flip = useCallback(async function flip(item: MenuItem, next: boolean, isUndo = false) {
     markBusy(item.id, true);
@@ -62,7 +69,12 @@ export default function MenuPage() {
       message: next ? `${item.name} is back on` : `${item.name} is sold out`,
       tone: next ? "good" : "info",
       // Undo is only offered for a change the server accepted, and never for an undo.
-      action: isUndo ? undefined : { label: "Undo", onClick: () => { flip(item, !next, true); } },
+      // It is ignored while a newer toggle of the same item is in flight or already changed it back.
+      action: isUndo ? undefined : { label: "Undo", onClick: () => {
+        const now = itemsRef.current?.find((i) => i.id === item.id);
+        if (busyRef.current.has(item.id) || !now || now.isAvailable !== next) return;
+        flip(item, !next, true);
+      } },
       durationMs: isUndo ? undefined : 5000,
     });
   }, [show]);
@@ -91,7 +103,7 @@ export default function MenuPage() {
         <SkeletonList rows={6} />
       ) : items.length === 0 ? (
         <EmptyState icon="bowl" title="No menu items yet" body="Add the first item to start taking orders."
-          action={<Button variant="primary" icon="plus" onClick={() => setSheet({ item: null })}>New item</Button>} />
+          action={<Button variant="secondary" icon="plus" onClick={() => setSheet({ item: null })}>New item</Button>} />
       ) : shown.length === 0 ? (
         filter === "soldOut" && !query.trim()
           ? <EmptyState icon="check" title="Nothing is sold out" body="Every item is available." />

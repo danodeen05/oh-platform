@@ -64,3 +64,10 @@ test("an edited item round-trips through the form unchanged", async () => {
   const it = item({ name: "Wagyu", category: "main01", categoryType: "MAIN", selectionMode: "SINGLE", displayOrder: 1, basePriceCents: 2399, additionalPriceCents: 150, includedQuantity: 2, isAvailable: false, tenantId: "t" });
   expect(readMenuForm(formFromItem(it, "other")).body).toMatchObject({ name: "Wagyu", category: "main01", categoryType: "MAIN", selectionMode: "SINGLE", displayOrder: 1, basePriceCents: 2399, additionalPriceCents: 150, includedQuantity: 2, isAvailable: false, tenantId: "t" });
 });
+
+test("an edit never sends tenantId (it is create-only on the API)", async () => {
+  const { formFromItem, readMenuForm, editBody } = await import("../menu");
+  const body = readMenuForm(formFromItem(item({ name: "Wagyu", basePriceCents: 100 }), "t")).body!;
+  expect(editBody(body)).not.toHaveProperty("tenantId");
+  expect(editBody(body)).toMatchObject({ name: "Wagyu", basePriceCents: 100 });
+});

@@ -6,7 +6,7 @@ import { Field, MoneyInput, NumberInput, Select, TextArea, TextInput, Toggle } f
 import { Sheet } from "@/components/ui/Sheet";
 import { useToast } from "@/components/ui/Toast";
 import { api, ApiError } from "@/lib/api";
-import { CATEGORY_TYPES, formFromItem, parseCents, readMenuForm, SELECTION_MODES, type MenuForm, type MenuItem, type Tenant } from "@/lib/menu";
+import { CATEGORY_TYPES, editBody, formFromItem, parseCents, readMenuForm, SELECTION_MODES, type MenuForm, type MenuItem, type Tenant } from "@/lib/menu";
 
 type Props = {
   open: boolean; item: MenuItem | null; tenants: Tenant[]; defaultTenantId: string;
@@ -35,7 +35,7 @@ export function MenuItemSheet({ open, item, tenants, defaultTenantId, onClose, o
     setSaving(true);
     try {
       const saved = item
-        ? await api<MenuItem>(`/menu/${item.id}`, { method: "PATCH", body })
+        ? await api<MenuItem>(`/menu/${item.id}`, { method: "PATCH", body: editBody(body) })
         : await api<MenuItem>("/menu", { method: "POST", body });
       onSaved(saved, !item);
     } catch (e) {
@@ -125,12 +125,22 @@ export function MenuItemSheet({ open, item, tenants, defaultTenantId, onClose, o
           <Toggle checked={form.isAvailable} onChange={(v) => set("isAvailable", v)} label="Available" hideLabel />
         </div>
 
-        <Field label="Tenant" hint="Brand" error={errors.tenantId}>
-          <Select value={form.tenantId} onChange={(e) => set("tenantId", e.target.value)} aria-invalid={Boolean(errors.tenantId)}>
-            <option value="" disabled>Choose a brand</option>
-            {tenants.map((t) => <option key={t.id} value={t.id}>{t.brandName}</option>)}
-          </Select>
-        </Field>
+        {item ? (
+          <div>
+            <span className="mb-1.5 block text-sm font-semibold text-oh-charcoal">Tenant</span>
+            <p className="flex min-h-11 items-center rounded-xl border border-oh-stone/15 bg-oh-linen/60 px-3 text-[16px] text-oh-stone">
+              {tenants.find((t) => t.id === form.tenantId)?.brandName ?? "Unknown brand"}
+            </p>
+            <span className="mt-1.5 block text-sm text-oh-stone/70">Brand. Set when the item is created.</span>
+          </div>
+        ) : (
+          <Field label="Tenant" hint="Brand" error={errors.tenantId}>
+            <Select value={form.tenantId} onChange={(e) => set("tenantId", e.target.value)} aria-invalid={Boolean(errors.tenantId)}>
+              <option value="" disabled>Choose a brand</option>
+              {tenants.map((t) => <option key={t.id} value={t.id}>{t.brandName}</option>)}
+            </Select>
+          </Field>
+        )}
         <button type="submit" hidden aria-hidden="true" tabIndex={-1} />
       </form>
     </Sheet>

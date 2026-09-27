@@ -5,11 +5,11 @@ import { menuPatchData } from "../menu-fields.js";
 test("menu patch: keeps the legacy fields and adds availability and layout fields", () => {
   const out = menuPatchData({
     name: "Bok choy", category: "side01", description: null, basePriceCents: 0, additionalPriceCents: 100, includedQuantity: 1,
-    isAvailable: false, categoryType: "SIDE", selectionMode: "MULTIPLE", displayOrder: 3, tenantId: "t1",
+    isAvailable: false, categoryType: "SIDE", selectionMode: "MULTIPLE", displayOrder: 3,
   });
   assert.deepEqual(out, { data: {
     name: "Bok choy", category: "side01", description: null, basePriceCents: 0, additionalPriceCents: 100, includedQuantity: 1,
-    isAvailable: false, categoryType: "SIDE", selectionMode: "MULTIPLE", displayOrder: 3, tenantId: "t1",
+    isAvailable: false, categoryType: "SIDE", selectionMode: "MULTIPLE", displayOrder: 3,
   } });
 });
 
@@ -32,4 +32,10 @@ test("menu patch: rejects bad values instead of writing them", () => {
   assert.ok(menuPatchData({ displayOrder: 1.5 }).error);
   assert.ok(menuPatchData({}).error);
   assert.ok(menuPatchData(null).error);
+});
+
+test("menu patch: tenantId is create-only and is rejected, never written", () => {
+  const out = menuPatchData({ name: "Bok choy", tenantId: "other-tenant" });
+  assert.ok(out.error);
+  assert.equal(out.data, undefined);
 });

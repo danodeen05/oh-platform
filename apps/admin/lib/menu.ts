@@ -90,3 +90,10 @@ export function readMenuForm(f: MenuForm): { errors: Partial<Record<keyof MenuFo
     },
   };
 }
+
+/** The PATCH body for an edit: every field except the brand, which only a create sets. */
+export function editBody(body: MenuBody): Omit<MenuBody, "tenantId"> {
+  const { tenantId: _omit, ...rest } = body;
+  void _omit;
+  return rest;
+}

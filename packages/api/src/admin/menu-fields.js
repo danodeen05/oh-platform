@@ -5,10 +5,12 @@
  */
 const CATEGORY_TYPES = ["MAIN", "SLIDER", "ADDON", "SIDE", "DRINK", "DESSERT"];
 const SELECTION_MODES = ["SINGLE", "MULTIPLE", "SLIDER", "INCLUDED"];
-const PASS_THROUGH = ["name", "category", "description", "additionalPriceCents", "includedQuantity", "tenantId"];
+// tenantId is create-only: a PATCH must never move an item to another brand.
+const PASS_THROUGH = ["name", "category", "description", "additionalPriceCents", "includedQuantity"];
 
 export function menuPatchData(body) {
   const b = body && typeof body === "object" ? body : {};
+  if (b.tenantId !== undefined) return { error: "tenantId can't be changed" };
   const data = {};
   for (const k of PASS_THROUGH) if (b[k] !== undefined) data[k] = b[k];
   if (b.basePriceCents !== undefined) data.basePriceCents = b.basePriceCents;
