@@ -1,242 +1,90 @@
 "use client";
+import { useState } from "react";
+import { Card } from "@/components/ui/Card";
+import { ErrorCard } from "@/components/ui/ErrorCard";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { SkeletonList } from "@/components/ui/Skeleton";
+import { StatTile } from "@/components/ui/StatTile";
+import { API_BASE, api } from "@/lib/api";
+import type { Period } from "@/lib/analytics";
+import { useResource } from "@/lib/use-resource";
+import { PeriodSelector } from "../components/PeriodSelector";
+import { SimpleBarChart, type BarPoint } from "../components/SimpleBarChart";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import StatCard from "../components/StatCard";
-import PeriodSelector from "../components/PeriodSelector";
-import SimpleBarChart from "../components/SimpleBarChart";
-
-const BASE = process.env.NEXT_PUBLIC_API_URL || "";
-
+type Metric = { value: string; unit: string; sampleSize: number };
 type OperationsData = {
-  period: string;
-  dateRange: { start: string; end: string };
-  metrics: {
-    averagePrepTime: { value: string; unit: string; sampleSize: number };
-    averageWaitTime: { value: string; unit: string; sampleSize: number };
-    averageTurnaroundTime: { value: string; unit: string; sampleSize: number };
-    onTimeArrivalRate: { value: string; unit: string; sampleSize: number };
-  };
+  metrics: { averagePrepTime: Metric; averageWaitTime: Metric; averageTurnaroundTime: Metric; onTimeArrivalRate: Metric };
   statusBreakdown: Record<string, number>;
   peakHours: Array<{ hour: number; count: number }>;
   hourlyDistribution: Record<string, number>;
 };
 
+const STATUS_LABELS: Record<string, string> = {
+  PENDING_PAYMENT: "Pending", PAID: "Paid", QUEUED: "Queued", PREPPING: "Prepping",
+  READY: "Ready", SERVING: "Serving", COMPLETED: "Completed", CANCELLED: "Cancelled",
+};
+
 export default function OperationsPage() {
-  const [period, setPeriod] = useState("week");
-  const [data, setData] = useState<OperationsData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState<Period>("week");
+  const res = useResource(`operations:${period}`, (signal) => api<OperationsData>("/analytics/operations", { signal, query: { period } }));
+  const dev = process.env.NODE_ENV !== "production";
+  const failed = res.error && !res.data;
 
-  async function loadData() {
-    try {
-      const res = await fetch(`${BASE}/analytics/operations?period=${period}`, {
-        headers: { "x-tenant-slug": "oh" },
-      });
-      setData(await res.json());
-      setLoading(false);
-    } catch (error) {
-      console.error("Failed to load operations data:", error);
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    loadData();
-  }, [period]);
-
-  if (loading) {
-    return (
-      <div style={{ padding: "48px", textAlign: "center", color: "#6b7280" }}>
-        Loading operations analytics...
-      </div>
-    );
-  }
-
-  // Format hourly data for chart
-  const hourlyChartData = data?.hourlyDistribution
-    ? Object.entries(data.hourlyDistribution).map(([hour, count]) => ({
-        label: `${hour}:00`,
-        value: count,
-        formatted: `${count} orders`,
-      }))
+  const hourlyChart: BarPoint[] = res.data
+    ? Object.entries(res.data.hourlyDistribution).map(([hour, count]) => ({ label: `${hour}:00`, value: count, formatted: `${count} orders` }))
     : [];
-
-  // Status breakdown data
-  const statusLabels: Record<string, string> = {
-    PENDING_PAYMENT: "Pending",
-    PAID: "Paid",
-    QUEUED: "Queued",
-    PREPPING: "Prepping",
-    READY: "Ready",
-    SERVING: "Serving",
-    COMPLETED: "Completed",
-    CANCELLED: "Cancelled",
-  };
-
-  const statusData = data?.statusBreakdown
-    ? Object.entries(data.statusBreakdown)
-        .filter(([_, count]) => count > 0)
-        .map(([status, count]) => ({
-          status: statusLabels[status] || status,
-          count,
-        }))
+  const statusData = res.data
+    ? Object.entries(res.data.statusBreakdown).filter(([, count]) => count > 0).map(([status, count]) => ({ status: STATUS_LABELS[status] ?? status, count }))
     : [];
 
   return (
-    <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
-      {/* Header */}
-      <div style={{ marginBottom: "32px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px" }}>
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
-              <Link href="/analytics" style={{ color: "#6b7280", textDecoration: "none", fontSize: "0.875rem" }}>
-                Analytics
-              </Link>
-              <span style={{ color: "#d1d5db" }}>/</span>
-              <span style={{ color: "#374151", fontWeight: 500 }}>Operations</span>
-            </div>
-            <h1 style={{ fontSize: "1.875rem", fontWeight: 700, marginBottom: "8px" }}>
-              Operations Analytics
-            </h1>
-            <p style={{ color: "#6b7280" }}>
-              Monitor kitchen efficiency, wait times, and operational metrics
-            </p>
-          </div>
-        </div>
+    <>
+      <PageHeader title="Operations" subtitle="Kitchen efficiency, wait times and peak hours." back={{ href: "/analytics", label: "Analytics" }} />
+      <div className="space-y-5 lg:space-y-6">
         <PeriodSelector value={period} onChange={setPeriod} />
+        {failed ? (
+          <ErrorCard message={`Couldn't load operations.${dev ? ` API: ${API_BASE || "not set"}` : ""}`} onRetry={res.reload} />
+        ) : !res.data ? (
+          <SkeletonList rows={4} />
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <StatTile label="Avg prep time" value={`${res.data.metrics.averagePrepTime.value} min`} hint={`${res.data.metrics.averagePrepTime.sampleSize} orders`} />
+              <StatTile label="Avg wait time" value={`${res.data.metrics.averageWaitTime.value} min`} hint={`${res.data.metrics.averageWaitTime.sampleSize} orders`} />
+              <StatTile label="Avg turnaround" value={`${res.data.metrics.averageTurnaroundTime.value} min`} hint={`${res.data.metrics.averageTurnaroundTime.sampleSize} orders`} />
+              <StatTile label="On-time arrivals" value={`${res.data.metrics.onTimeArrivalRate.value}%`} hint={`${res.data.metrics.onTimeArrivalRate.sampleSize} check-ins`} />
+            </div>
+
+            {res.data.peakHours.length > 0 && (
+              <Card title="Peak hours">
+                <div className="flex flex-wrap gap-2">
+                  {res.data.peakHours.map((p, i) => (
+                    <div key={p.hour} className={`rounded-xl border px-4 py-2.5 ${i === 0 ? "border-oh-gold bg-oh-gold/10" : "border-oh-stone/15 bg-oh-paper"}`}>
+                      <div className="font-display text-lg tabular-nums text-oh-charcoal">{String(p.hour).padStart(2, "0")}:00</div>
+                      <div className="text-sm text-oh-stone/70">{p.count} orders</div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            <SimpleBarChart title="Orders by hour of day" data={hourlyChart} />
+
+            {statusData.length > 0 && (
+              <Card title="Order status">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {statusData.map((s) => (
+                    <div key={s.status} className="rounded-xl border border-oh-stone/15 bg-oh-paper p-3">
+                      <div className="font-display text-2xl tabular-nums text-oh-charcoal">{s.count}</div>
+                      <div className="text-sm text-oh-stone/70">{s.status}</div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+          </>
+        )}
       </div>
-
-      {/* Key Metrics */}
-      {data && (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            gap: "20px",
-            marginBottom: "32px",
-          }}
-        >
-          <StatCard
-            title="Avg Prep Time"
-            value={`${data.metrics.averagePrepTime.value} min`}
-            subtitle={`${data.metrics.averagePrepTime.sampleSize} orders`}
-            color="blue"
-          />
-          <StatCard
-            title="Avg Wait Time"
-            value={`${data.metrics.averageWaitTime.value} min`}
-            subtitle={`${data.metrics.averageWaitTime.sampleSize} orders`}
-            color="yellow"
-          />
-          <StatCard
-            title="Avg Turnaround"
-            value={`${data.metrics.averageTurnaroundTime.value} min`}
-            subtitle={`${data.metrics.averageTurnaroundTime.sampleSize} orders`}
-            color="green"
-          />
-          <StatCard
-            title="On-Time Arrivals"
-            value={`${data.metrics.onTimeArrivalRate.value}%`}
-            subtitle={`${data.metrics.onTimeArrivalRate.sampleSize} check-ins`}
-            color="default"
-          />
-        </div>
-      )}
-
-      {/* Peak Hours */}
-      {data?.peakHours && data.peakHours.length > 0 && (
-        <div
-          style={{
-            background: "white",
-            borderRadius: "12px",
-            border: "1px solid #e5e7eb",
-            padding: "24px",
-            marginBottom: "32px",
-          }}
-        >
-          <h3 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: "16px", color: "#374151" }}>
-            Peak Hours
-          </h3>
-          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-            {data.peakHours.map((ph, i) => (
-              <div
-                key={ph.hour}
-                style={{
-                  padding: "12px 20px",
-                  background: i === 0 ? "#fef3c7" : "#f3f4f6",
-                  borderRadius: "8px",
-                  border: i === 0 ? "2px solid #f59e0b" : "1px solid #e5e7eb",
-                }}
-              >
-                <div style={{ fontWeight: 600, fontSize: "1.25rem" }}>
-                  {ph.hour.toString().padStart(2, "0")}:00
-                </div>
-                <div style={{ color: "#6b7280", fontSize: "0.875rem" }}>
-                  {ph.count} orders
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Hourly Distribution */}
-      {hourlyChartData.length > 0 && (
-        <div style={{ marginBottom: "32px" }}>
-          <SimpleBarChart
-            data={hourlyChartData}
-            title="Orders by Hour of Day"
-            color="#6366f1"
-            height={200}
-          />
-        </div>
-      )}
-
-      {/* Status Breakdown */}
-      {statusData.length > 0 && (
-        <div
-          style={{
-            background: "white",
-            borderRadius: "12px",
-            border: "1px solid #e5e7eb",
-            padding: "24px",
-          }}
-        >
-          <h3 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: "16px", color: "#374151" }}>
-            Order Status Breakdown
-          </h3>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: "12px" }}>
-            {statusData.map((s) => {
-              const colors: Record<string, string> = {
-                Completed: "#10b981",
-                Prepping: "#f59e0b",
-                Ready: "#3b82f6",
-                Serving: "#8b5cf6",
-                Queued: "#6b7280",
-                Paid: "#06b6d4",
-                Cancelled: "#ef4444",
-                Pending: "#d1d5db",
-              };
-              return (
-                <div
-                  key={s.status}
-                  style={{
-                    padding: "16px",
-                    background: "#f9fafb",
-                    borderRadius: "8px",
-                    borderLeft: `4px solid ${colors[s.status] || "#9ca3af"}`,
-                  }}
-                >
-                  <div style={{ fontSize: "1.5rem", fontWeight: 700, color: "#374151" }}>
-                    {s.count}
-                  </div>
-                  <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>{s.status}</div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </div>
+    </>
   );
 }

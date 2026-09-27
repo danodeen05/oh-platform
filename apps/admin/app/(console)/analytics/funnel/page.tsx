@@ -1,342 +1,97 @@
 "use client";
+import { useState } from "react";
+import { Card } from "@/components/ui/Card";
+import { ErrorCard } from "@/components/ui/ErrorCard";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { SkeletonList } from "@/components/ui/Skeleton";
+import { StatTile } from "@/components/ui/StatTile";
+import { LinkButton } from "@/components/ui/Button";
+import { Icon } from "@/components/ui/icons";
+import { api, ApiError } from "@/lib/api";
+import type { Period } from "@/lib/analytics";
+import { useResource } from "@/lib/use-resource";
+import { PeriodSelector } from "../components/PeriodSelector";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import StatCard from "../components/StatCard";
-import PeriodSelector from "../components/PeriodSelector";
+type FunnelStep = { name: string; event: string; count: number; users: number; conversionRate: string; dropOff: string };
+type FunnelData = { steps: FunnelStep[]; overallConversionRate: string; totalVisitors: number; totalPurchases: number };
 
-const BASE = process.env.NEXT_PUBLIC_API_URL || "";
-
-type FunnelStep = {
-  name: string;
-  event: string;
-  count: number;
-  users: number;
-  conversionRate: string;
-  dropOff: string;
-};
-
-type FunnelData = {
-  period: string;
-  steps: FunnelStep[];
-  overallConversionRate: string;
-  totalVisitors: number;
-  totalPurchases: number;
-};
+const errorText = (e: unknown) => (e instanceof ApiError || e instanceof Error ? e.message : "Failed to fetch funnel data");
 
 export default function FunnelPage() {
-  const [period, setPeriod] = useState("week");
-  const [funnel, setFunnel] = useState<FunnelData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  async function loadData() {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const res = await fetch(`${BASE}/analytics/ga4/funnel?period=${period}`, {
-        headers: { "x-tenant-slug": "oh" },
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Failed to fetch funnel data");
-      }
-
-      setFunnel(await res.json());
-      setLoading(false);
-    } catch (err: any) {
-      console.error("Failed to load funnel data:", err);
-      setError(err.message || "Failed to load funnel analytics");
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    loadData();
-  }, [period]);
-
-  if (loading) {
-    return (
-      <div style={{ padding: "48px", textAlign: "center", color: "#6b7280" }}>
-        Loading funnel analytics...
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
-        <div style={{ marginBottom: "32px" }}>
-          <Link
-            href="/analytics"
-            style={{ color: "#6b7280", textDecoration: "none", fontSize: "0.875rem" }}
-          >
-            ← Back to Analytics
-          </Link>
-          <h1 style={{ fontSize: "1.875rem", fontWeight: 700, marginTop: "16px" }}>
-            Conversion Funnel
-          </h1>
-        </div>
-        <div
-          style={{
-            padding: "48px",
-            textAlign: "center",
-            background: "#fef2f2",
-            border: "1px solid #fecaca",
-            borderRadius: "12px",
-            color: "#dc2626",
-          }}
-        >
-          <div style={{ fontSize: "1.25rem", fontWeight: 600, marginBottom: "8px" }}>
-            GA4 Not Configured
-          </div>
-          <p style={{ color: "#991b1b" }}>{error}</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Calculate max users for bar width scaling
-  const maxUsers = Math.max(...(funnel?.steps.map((s) => s.users) || [1]));
+  const [period, setPeriod] = useState<Period>("week");
+  const res = useResource(`funnel:${period}`, (signal) => api<FunnelData>("/analytics/ga4/funnel", { signal, query: { period } }));
+  const failed = res.error && !res.data;
+  const data = res.data;
+  const maxUsers = Math.max(...(data?.steps.map((s) => s.users) ?? [1]), 1);
 
   return (
-    <div style={{ maxWidth: "1400px", margin: "0 auto" }}>
-      {/* Header */}
-      <div style={{ marginBottom: "32px" }}>
-        <Link
-          href="/analytics"
-          style={{ color: "#6b7280", textDecoration: "none", fontSize: "0.875rem" }}
-        >
-          ← Back to Analytics
-        </Link>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            marginTop: "16px",
-            marginBottom: "16px",
-          }}
-        >
-          <div>
-            <h1 style={{ fontSize: "1.875rem", fontWeight: 700, marginBottom: "8px" }}>
-              Order Conversion Funnel
-            </h1>
-            <p style={{ color: "#6b7280" }}>
-              Track how visitors convert to customers through your order flow
-            </p>
-          </div>
-          <Link
-            href="/analytics/traffic"
-            style={{
-              padding: "8px 16px",
-              background: "#f3f4f6",
-              color: "#374151",
-              borderRadius: "8px",
-              textDecoration: "none",
-              fontSize: "0.875rem",
-            }}
-          >
-            ← Traffic Overview
-          </Link>
-        </div>
+    <>
+      <PageHeader title="Funnel" subtitle="Order conversion, step by step." back={{ href: "/analytics", label: "Analytics" }}
+        actions={<LinkButton href="/analytics/traffic" icon="chart">Traffic</LinkButton>} />
+      <div className="space-y-5 lg:space-y-6">
         <PeriodSelector value={period} onChange={setPeriod} />
-      </div>
+        {failed ? (
+          <ErrorCard message={`GA4 not configured. ${errorText(res.error)}`} onRetry={res.reload} />
+        ) : !data ? (
+          <SkeletonList rows={4} />
+        ) : (
+          <>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <StatTile label="Total visitors" value={data.totalVisitors.toLocaleString()} hint="Page views" />
+              <StatTile label="Total purchases" value={data.totalPurchases.toLocaleString()} hint="Completed orders" />
+              <StatTile label="Conversion rate" value={data.overallConversionRate} hint="Visitor to purchase" />
+            </div>
 
-      {/* Summary Cards */}
-      {funnel && (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: "20px",
-            marginBottom: "32px",
-          }}
-        >
-          <StatCard
-            title="Total Visitors"
-            value={funnel.totalVisitors.toLocaleString()}
-            subtitle="page views"
-            icon="@"
-            color="blue"
-          />
-          <StatCard
-            title="Total Purchases"
-            value={funnel.totalPurchases.toLocaleString()}
-            subtitle="completed orders"
-            icon="$"
-            color="green"
-          />
-          <StatCard
-            title="Conversion Rate"
-            value={funnel.overallConversionRate}
-            subtitle="visitor to purchase"
-            color="yellow"
-          />
-        </div>
-      )}
-
-      {/* Funnel Visualization */}
-      {funnel && (
-        <div
-          style={{
-            background: "white",
-            border: "1px solid #e5e7eb",
-            borderRadius: "16px",
-            padding: "32px",
-            marginBottom: "32px",
-          }}
-        >
-          <h2 style={{ fontSize: "1.25rem", fontWeight: 600, marginBottom: "24px" }}>
-            Funnel Steps
-          </h2>
-
-          <div style={{ display: "grid", gap: "16px" }}>
-            {funnel.steps.map((step, i) => {
-              const widthPercent = (step.users / maxUsers) * 100;
-              const isLast = i === funnel.steps.length - 1;
-
-              return (
-                <div key={step.event}>
-                  {/* Step Row */}
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "180px 1fr 120px 100px",
-                      alignItems: "center",
-                      gap: "16px",
-                    }}
-                  >
-                    {/* Step Name */}
-                    <div>
-                      <div style={{ fontWeight: 600, marginBottom: "4px" }}>{step.name}</div>
-                      <div style={{ fontSize: "0.75rem", color: "#9ca3af" }}>{step.event}</div>
-                    </div>
-
-                    {/* Funnel Bar */}
-                    <div
-                      style={{
-                        height: "40px",
-                        background: "#f3f4f6",
-                        borderRadius: "8px",
-                        overflow: "hidden",
-                        position: "relative",
-                      }}
-                    >
-                      <div
-                        style={{
-                          height: "100%",
-                          width: `${widthPercent}%`,
-                          background: isLast
-                            ? "linear-gradient(135deg, #10b981 0%, #059669 100%)"
-                            : "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
-                          borderRadius: "8px",
-                          display: "flex",
-                          alignItems: "center",
-                          paddingLeft: "12px",
-                          color: "white",
-                          fontWeight: 600,
-                          fontSize: "0.875rem",
-                          minWidth: "60px",
-                        }}
-                      >
-                        {step.users.toLocaleString()}
+            <Card title="Funnel steps">
+              <div className="space-y-4">
+                {data.steps.map((step, i) => {
+                  const isLast = i === data.steps.length - 1;
+                  const widthPct = Math.max(4, (step.users / maxUsers) * 100);
+                  const dropOff = parseFloat(step.dropOff);
+                  return (
+                    <div key={step.event} className="space-y-1.5">
+                      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+                        <span className="text-sm font-semibold text-oh-charcoal">{step.name}</span>
+                        <span className="text-sm tabular-nums text-oh-stone/70">
+                          {step.users.toLocaleString()} &middot; {step.conversionRate}% conversion
+                          {i > 0 && dropOff > 0 ? ` · -${step.dropOff}% drop-off` : ""}
+                        </span>
+                      </div>
+                      <div className="h-8 overflow-hidden rounded-lg bg-oh-linen">
+                        <div
+                          style={{ width: `${widthPct}%` }} // style-ok: bar width from step users
+                          className={`h-full rounded-lg ${isLast ? "bg-oh-olive" : "bg-oh-ember-deep"}`} />
                       </div>
                     </div>
+                  );
+                })}
+              </div>
+            </Card>
 
-                    {/* Conversion Rate */}
-                    <div style={{ textAlign: "right" }}>
-                      <div style={{ fontWeight: 600, color: "#10b981" }}>
-                        {step.conversionRate}%
-                      </div>
-                      <div style={{ fontSize: "0.75rem", color: "#9ca3af" }}>conversion</div>
-                    </div>
-
-                    {/* Drop-off */}
-                    <div style={{ textAlign: "right" }}>
-                      {i > 0 && parseFloat(step.dropOff) > 0 ? (
-                        <>
-                          <div style={{ fontWeight: 600, color: "#ef4444" }}>-{step.dropOff}%</div>
-                          <div style={{ fontSize: "0.75rem", color: "#9ca3af" }}>drop-off</div>
-                        </>
-                      ) : (
-                        <div style={{ color: "#9ca3af" }}>—</div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Arrow between steps */}
-                  {!isLast && (
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "center",
-                        padding: "8px 0",
-                      }}
-                    >
-                      <svg
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="#d1d5db"
-                        strokeWidth="2"
-                      >
-                        <path d="M12 5v14M5 12l7 7 7-7" />
-                      </svg>
-                    </div>
+            <Card>
+              <div className="flex items-start gap-3">
+                <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-oh-gold/20 text-oh-clay" aria-hidden="true">
+                  <Icon name="sparkle" size={18} />
+                </span>
+                <div className="space-y-2 text-[15px] leading-relaxed text-oh-stone">
+                  <p className="font-semibold text-oh-charcoal">Insights</p>
+                  {data.steps.map((step, i) => {
+                    if (i === 0) return null;
+                    const dropOff = parseFloat(step.dropOff);
+                    if (dropOff > 50) return <p key={step.event}><strong className="text-oh-charcoal">{dropOff}%</strong> of users drop off at &quot;{step.name}&quot;. Consider optimizing this step.</p>;
+                    return null;
+                  })}
+                  {parseFloat(data.overallConversionRate) < 1 ? (
+                    <p>Your overall conversion rate is <strong className="text-oh-charcoal">{data.overallConversionRate}</strong>. Focus on reducing friction in steps with high drop-off.</p>
+                  ) : (
+                    <p>Your conversion rate of <strong className="text-oh-charcoal">{data.overallConversionRate}</strong> is healthy. Keep monitoring for opportunities to improve.</p>
                   )}
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Insights */}
-      {funnel && (
-        <div
-          style={{
-            background: "#fffbeb",
-            border: "1px solid #fcd34d",
-            borderRadius: "12px",
-            padding: "24px",
-          }}
-        >
-          <h3 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: "12px", color: "#92400e" }}>
-            💡 Insights
-          </h3>
-          <div style={{ display: "grid", gap: "8px", color: "#78350f" }}>
-            {funnel.steps.map((step, i) => {
-              if (i === 0) return null;
-              const dropOff = parseFloat(step.dropOff);
-              if (dropOff > 50) {
-                return (
-                  <p key={step.event} style={{ margin: 0 }}>
-                    <strong>{dropOff}%</strong> of users drop off at "{step.name}". Consider
-                    optimizing this step.
-                  </p>
-                );
-              }
-              return null;
-            })}
-            {parseFloat(funnel.overallConversionRate) < 1 && (
-              <p style={{ margin: 0 }}>
-                Your overall conversion rate is <strong>{funnel.overallConversionRate}</strong>.
-                Focus on reducing friction in steps with high drop-off.
-              </p>
-            )}
-            {parseFloat(funnel.overallConversionRate) >= 1 && (
-              <p style={{ margin: 0 }}>
-                Your conversion rate of <strong>{funnel.overallConversionRate}</strong> is healthy!
-                Keep monitoring for opportunities to improve.
-              </p>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
+              </div>
+            </Card>
+          </>
+        )}
+      </div>
+    </>
   );
 }
