@@ -13,7 +13,6 @@ function files(dir: string): string[] {
 export const LEGACY: string[] = [
   "app/(console)/analytics",
   "app/(console)/cleaning/config",
-  "app/(console)/kiosks",
   "app/(console)/plan-access",
 ];
 const all = DIRS.flatMap(files).filter((f) => !LEGACY.some((l) => path.relative(root, f).startsWith(l)));
