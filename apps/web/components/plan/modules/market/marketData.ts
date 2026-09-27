@@ -28,6 +28,8 @@ export interface Competitor {
   /** 0..1 experience quality (product, room, ritual). */
   experience: number;
   oh?: boolean;
+  /** Optional per-competitor vertical nudge (px) for the SVG label, to dodge a neighbor without moving the data point. */
+  labelDy?: number;
 }
 export const COMPETITORS: readonly Competitor[] = [
   { key: "fullServiceAsian", efficiency: 0.3, experience: 0.6 },
@@ -35,5 +37,6 @@ export const COMPETITORS: readonly Competitor[] = [
   { key: "noodleChain", efficiency: 0.62, experience: 0.45 },
   { key: "ramenShop", efficiency: 0.38, experience: 0.72 },
   { key: "ichiran", efficiency: 0.7, experience: 0.82 },
+  { key: "dinTaiFung", efficiency: 0.42, experience: 0.9, labelDy: -6 },
   { key: "oh", efficiency: 0.9, experience: 0.86, oh: true },
 ];
