@@ -2,6 +2,7 @@
 
 import { use, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { NdaPanel } from "../_components/NdaPanel";
 import { API_BASE, formatDate, formatMinutes, inviteLink, statusColors, type CodeDetail, type HeatRow } from "../_components/planAccess";
 
 export default function PlanCodeDetailPage({ params }: { params: Promise<{ codeId: string }> }) {
@@ -58,6 +59,8 @@ export default function PlanCodeDetailPage({ params }: { params: Promise<{ codeI
         </div>
         <code style={{ fontSize: "0.8rem", background: "white", border: "1px solid #e5e7eb", padding: "6px 10px", borderRadius: 6 }}>{inviteLink(code.code)}</code>
       </div>
+
+      <NdaPanel codeId={codeId} />
 
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 20, alignItems: "start" }}>
         <section style={{ background: "white", border: "1px solid #e5e7eb", borderRadius: 8, padding: 16 }}>

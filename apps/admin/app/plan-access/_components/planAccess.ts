@@ -33,6 +33,9 @@ export interface CodeRow {
   sessionCount: number;
   questionCount: number;
   totalSeconds: number;
+  ndaRequired: boolean;
+  ndaStatus: "NOT_REQUIRED" | "PENDING" | "SIGNED";
+  ndaSignedAt: string | null;
 }
 
 export interface SectionView {
@@ -87,7 +90,7 @@ export interface Question {
   createdAt: string;
 }
 
-export interface CodeDetail extends Omit<CodeRow, "sessionCount" | "questionCount" | "totalSeconds"> {
+export interface CodeDetail extends Omit<CodeRow, "sessionCount" | "questionCount" | "totalSeconds" | "ndaStatus" | "ndaSignedAt"> {
   sessions: Session[];
   questions: Question[];
 }

@@ -48,8 +48,10 @@ async function getToken({ env, fetchImpl, now }) {
  *   to: string | string[],
  *   subject: string,
  *   html: string,
+ *   replyTo?: string,
  *   inlineImages?: { contentId: string, name: string, contentType: string, contentBytes: string }[],
- * }} message  contentBytes is base64.
+ *   attachments?: { name: string, contentType: string, contentBytes: string }[],
+ * }} message  contentBytes is base64. Graph's single sendMail call takes about 3 MB of attachments.
  * @param {{ env?: Record<string, string|undefined>, fetchImpl?: typeof fetch, now?: () => number }} [deps]
  */
 export async function sendGraphMail(message, deps = {}) {
@@ -71,14 +73,24 @@ export async function sendGraphMail(message, deps = {}) {
         subject: message.subject,
         body: { contentType: "HTML", content: message.html },
         toRecipients: to.map((address) => ({ emailAddress: { address } })),
-        attachments: (message.inlineImages || []).map((img) => ({
-          "@odata.type": "#microsoft.graph.fileAttachment",
-          name: img.name,
-          contentType: img.contentType,
-          contentBytes: img.contentBytes,
-          contentId: img.contentId,
-          isInline: true,
-        })),
+        ...(message.replyTo ? { replyTo: [{ emailAddress: { address: message.replyTo } }] } : {}),
+        attachments: [
+          ...(message.inlineImages || []).map((img) => ({
+            "@odata.type": "#microsoft.graph.fileAttachment",
+            name: img.name,
+            contentType: img.contentType,
+            contentBytes: img.contentBytes,
+            contentId: img.contentId,
+            isInline: true,
+          })),
+          ...(message.attachments || []).map((file) => ({
+            "@odata.type": "#microsoft.graph.fileAttachment",
+            name: file.name,
+            contentType: file.contentType,
+            contentBytes: file.contentBytes,
+            isInline: false,
+          })),
+        ],
       },
       saveToSentItems: true,
     };

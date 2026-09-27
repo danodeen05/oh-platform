@@ -35,6 +35,8 @@ import { sendSMS } from "../notifications.js";
 import { generateCode, normalizeCode, safeEqual } from "./codes.js";
 import { escalationText, firstChatText, ownerPhone } from "./chappy.js";
 import { startVisitSummaries } from "./summaries.js";
+import { createPii, piiKeyFromEnv } from "./pii.js";
+import { registerPlanNdaRoutes } from "./nda.js";
 
 const AUDIENCES = ["INVESTOR", "LENDER", "LANDLORD", "PARTNER", "ADVISOR", "INTERNAL"];
 const SCENARIOS = ["CONSERVATIVE", "BASE", "AGGRESSIVE"];
@@ -50,6 +52,18 @@ const TARGET_KEY_MAX = 40;
 const TARGETS_PER_SECTION = 60;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const INVALID = { error: "invalid" };
+const NDA_REQUIRED = { error: "nda_required" };
+
+// What every session lookup needs to know about the code's NDA: the flag and
+// whether a signed NDA exists (its email is reused so nobody is asked twice).
+const SIGNED_NDA = { where: { status: "SIGNED" }, select: { id: true, emailEnc: true }, take: 1 };
+const CODE_GATE_SELECT = { id: true, label: true, audience: true, revokedAt: true, expiresAt: true, ndaRequired: true, ndas: SIGNED_NDA };
+
+/** "none" (no NDA needed), "pending" (needed, not signed) or "signed". */
+export function ndaState(code) {
+  if (code?.ndas?.length) return "signed";
+  return code?.ndaRequired ? "pending" : "none";
+}
 
 let defaultPrisma = null;
 function getDefaultPrisma() {
@@ -70,6 +84,13 @@ function codeStatus(code, now = new Date()) {
   return "ACTIVE";
 }
 
+/** Admin table NDA column: NOT_REQUIRED, PENDING or SIGNED (+ when). */
+function adminNdaStatus(code) {
+  const signed = (code.ndas || []).find((n) => n.status === "SIGNED");
+  if (signed) return { ndaStatus: "SIGNED", ndaSignedAt: signed.signedAt || null };
+  return { ndaStatus: code.ndaRequired ? "PENDING" : "NOT_REQUIRED", ndaSignedAt: null };
+}
+
 function parseDate(value) {
   if (value === undefined || value === null || value === "") return null;
   const d = new Date(value);
@@ -78,14 +99,27 @@ function parseDate(value) {
 
 /**
  * @param {import('fastify').FastifyInstance} app
- * @param {{ prisma?: any, sendSms?: (msg: {to: string, body: string}) => Promise<unknown>, apiKey?: string, now?: () => Date, summaries?: false | object }} [deps]
+ * @param {{ prisma?: any, sendSms?: (msg: {to: string, body: string}) => Promise<unknown>, apiKey?: string, now?: () => Date, summaries?: false | object, pii?: object | null, sendMail?: Function, deliverNda?: Function }} [deps]
  *   summaries: false disables the idle-visit sweeper (tests); an object is passed to startVisitSummaries.
+ *   pii: the NDA field cipher (createPii); defaults to PLAN_PII_KEY, null when the key is missing.
  */
 export async function registerPlanRoutes(app, deps = {}) {
   const prisma = deps.prisma || getDefaultPrisma();
   const sendSms = deps.sendSms || sendSMS;
   const now = deps.now || (() => new Date());
   const apiKey = deps.apiKey !== undefined ? deps.apiKey : process.env.PLAN_API_KEY;
+  const piiKey = piiKeyFromEnv();
+  const pii = deps.pii !== undefined ? deps.pii : piiKey ? createPii(piiKey) : null;
+  if (!pii) app.log.warn("[plan] PLAN_PII_KEY is missing or not 32 bytes; NDA signing is unavailable");
+  const ndaEmail = (code) => {
+    const enc = code?.ndas?.[0]?.emailEnc;
+    if (!enc || !pii) return null;
+    try {
+      return pii.open(enc);
+    } catch {
+      return null;
+    }
+  };
 
   if (!apiKey) {
     app.log.warn("[plan] PLAN_API_KEY is not set; all /plan/* BFF routes will refuse requests");
@@ -152,7 +186,7 @@ export async function registerPlanRoutes(app, deps = {}) {
 
       const record = await prisma.planAccessCode.findUnique({
         where: { code },
-        include: { _count: { select: { sessions: true } } },
+        include: { _count: { select: { sessions: true } }, ndas: SIGNED_NDA },
       });
 
       if (!isActive(record, now())) return fail();
@@ -178,6 +212,7 @@ export async function registerPlanRoutes(app, deps = {}) {
         scenario: record.defaultScenario,
         sections: record.allowedSections,
         label: record.label,
+        nda: ndaState(record),
       });
     },
   );
@@ -187,9 +222,11 @@ export async function registerPlanRoutes(app, deps = {}) {
   app.post("/plan/sessions/:sid/status", { onRequest: requirePlanApiKey }, async (req, reply) => {
     const session = await prisma.planViewSession.findUnique({
       where: { id: req.params.sid },
-      include: { accessCode: { select: { revokedAt: true, expiresAt: true } } },
+      include: { accessCode: { select: CODE_GATE_SELECT } },
     });
-    return reply.send({ active: Boolean(session && isActive(session.accessCode, now())) });
+    const active = Boolean(session && isActive(session.accessCode, now()));
+    const nda = active ? ndaState(session.accessCode) : "none";
+    return reply.send({ active, nda, contactOnFile: nda === "signed" && Boolean(ndaEmail(session.accessCode)) });
   });
 
   app.post("/plan/sessions/:sid/heartbeat", { onRequest: requirePlanApiKey }, async (req, reply) => {
@@ -202,9 +239,10 @@ export async function registerPlanRoutes(app, deps = {}) {
 
     const session = await prisma.planViewSession.findUnique({
       where: { id: sid },
-      include: { accessCode: { select: { id: true, revokedAt: true, expiresAt: true } } },
+      include: { accessCode: { select: CODE_GATE_SELECT } },
     });
     if (!session || !isActive(session.accessCode, now())) return reply.code(401).send(INVALID);
+    if (ndaState(session.accessCode) === "pending") return reply.code(403).send(NDA_REQUIRED);
 
     const where = { sessionId_sectionKey: { sessionId: sid, sectionKey } };
     const hasTargets = body.targets && typeof body.targets === "object" && Object.keys(body.targets).length > 0;
@@ -231,14 +269,17 @@ export async function registerPlanRoutes(app, deps = {}) {
     const body = req.body || {};
     const sectionKey = typeof body.sectionKey === "string" ? body.sectionKey : "";
     const text = typeof body.body === "string" ? body.body.trim().slice(0, 4000) : "";
-    const contactEmail = typeof body.contactEmail === "string" ? body.contactEmail.trim().slice(0, 254) : null;
+    let contactEmail = typeof body.contactEmail === "string" ? body.contactEmail.trim().slice(0, 254) : null;
     if (!SECTION_KEY_RE.test(sectionKey) || text.length < 3) return reply.code(400).send({ error: "bad_request" });
 
     const session = await prisma.planViewSession.findUnique({
       where: { id: sid },
-      include: { accessCode: { select: { id: true, label: true, audience: true, revokedAt: true, expiresAt: true } } },
+      include: { accessCode: { select: CODE_GATE_SELECT } },
     });
     if (!session || !isActive(session.accessCode, now())) return reply.code(401).send(INVALID);
+    if (ndaState(session.accessCode) === "pending") return reply.code(403).send(NDA_REQUIRED);
+    // The NDA already collected an email; never ask for it twice.
+    if (!contactEmail) contactEmail = ndaEmail(session.accessCode);
 
     // A simple cap so a stuck button or a script cannot page the owner all night:
     // 20 questions per access code in any rolling 24 hours.
@@ -271,9 +312,22 @@ export async function registerPlanRoutes(app, deps = {}) {
   const loadActiveSession = async (sid) => {
     const session = await prisma.planViewSession.findUnique({
       where: { id: sid },
-      include: { accessCode: { select: { id: true, label: true, audience: true, revokedAt: true, expiresAt: true } } },
+      include: { accessCode: { select: CODE_GATE_SELECT } },
     });
     return session && isActive(session.accessCode, now()) ? session : null;
+  };
+  /** Sends the right error and returns null unless the session may see plan content. */
+  const contentSession = async (sid, reply) => {
+    const session = await loadActiveSession(sid);
+    if (!session) {
+      reply.code(401).send(INVALID);
+      return null;
+    }
+    if (ndaState(session.accessCode) === "pending") {
+      reply.code(403).send(NDA_REQUIRED);
+      return null;
+    }
+    return session;
   };
 
   const chatHistory = async (sid, take) => {
@@ -293,8 +347,8 @@ export async function registerPlanRoutes(app, deps = {}) {
     const sectionKey = typeof body.sectionKey === "string" && SECTION_KEY_RE.test(body.sectionKey) ? body.sectionKey : null;
     if (message.length < 1 || message.length > CHAT_MAX_CHARS) return reply.code(400).send({ error: "bad_request" });
 
-    const session = await loadActiveSession(sid);
-    if (!session) return reply.code(401).send(INVALID);
+    const session = await contentSession(sid, reply);
+    if (!session) return reply;
 
     const since = new Date(now().getTime() - DAY_MS);
     const [mine, theirs] = await Promise.all([
@@ -322,7 +376,7 @@ export async function registerPlanRoutes(app, deps = {}) {
         app.log.error({ err }, "[plan] first-chat SMS failed");
       }
     }
-    return reply.send({ ok: true, history: history.map(({ role, content }) => ({ role, content })) });
+    return reply.send({ ok: true, history: history.map(({ role, content }) => ({ role, content })), contactOnFile: Boolean(ndaEmail(session.accessCode)) });
   });
 
   app.post("/plan/sessions/:sid/chat/complete", { onRequest: requirePlanApiKey }, async (req, reply) => {
@@ -331,8 +385,8 @@ export async function registerPlanRoutes(app, deps = {}) {
     const content = typeof body.content === "string" ? body.content.trim().slice(0, 8000) : "";
     const sectionKey = typeof body.sectionKey === "string" && SECTION_KEY_RE.test(body.sectionKey) ? body.sectionKey : null;
     if (!content) return reply.code(400).send({ error: "bad_request" });
-    const session = await loadActiveSession(sid);
-    if (!session) return reply.code(401).send(INVALID);
+    const session = await contentSession(sid, reply);
+    if (!session) return reply;
     await prisma.planChatMessage.create({
       data: { sessionId: sid, accessCodeId: session.accessCode.id, role: "assistant", content, sectionKey, escalated: body.escalated === true },
     });
@@ -341,8 +395,8 @@ export async function registerPlanRoutes(app, deps = {}) {
   });
 
   app.post("/plan/sessions/:sid/chat/history", { onRequest: requirePlanApiKey }, async (req, reply) => {
-    const session = await loadActiveSession(req.params.sid);
-    if (!session) return reply.code(401).send(INVALID);
+    const session = await contentSession(req.params.sid, reply);
+    if (!session) return reply;
     const history = await chatHistory(req.params.sid, 40);
     return reply.send({ history: history.map(({ role, content }) => ({ role, content })) });
   });
@@ -353,13 +407,15 @@ export async function registerPlanRoutes(app, deps = {}) {
     const type = typeof body.type === "string" ? body.type : "";
     if (!EVENT_TYPES.includes(type)) return reply.code(400).send({ error: "bad_event" });
     const value = typeof body.value === "string" ? body.value.slice(0, 40) : undefined;
-    const session = await loadActiveSession(sid);
-    if (!session) return reply.code(401).send(INVALID);
+    const session = await contentSession(sid, reply);
+    if (!session) return reply;
     const prior = Array.isArray(session.events) ? session.events : [];
     const events = [...prior, { type, ...(value ? { value } : {}), at: now().toISOString() }].slice(-EVENTS_MAX);
     await prisma.planViewSession.update({ where: { id: sid }, data: { events, lastSeenAt: now() } });
     return reply.send({ ok: true });
   });
+
+  await registerPlanNdaRoutes(app, { prisma, requirePlanApiKey, isActive, now, sendSms, pii, sendMail: deps.sendMail, deliverNda: deps.deliverNda });
 
   if (deps.summaries !== false) {
     startVisitSummaries({ prisma, sendSms, log: app.log, ...(typeof deps.summaries === "object" ? deps.summaries : {}) });
@@ -372,7 +428,10 @@ export async function registerPlanRoutes(app, deps = {}) {
   app.get("/admin/plan/codes", async (req, reply) => {
     const codes = await prisma.planAccessCode.findMany({
       orderBy: { createdAt: "desc" },
-      include: { _count: { select: { sessions: true, questions: true } } },
+      include: {
+        _count: { select: { sessions: true, questions: true } },
+        ndas: { where: { status: { in: ["DRAFT", "SIGNED"] } }, select: { status: true, signedAt: true } },
+      },
     });
     const totals = await prisma.planViewSession.groupBy({
       by: ["accessCodeId"],
@@ -397,6 +456,8 @@ export async function registerPlanRoutes(app, deps = {}) {
         sessionCount: c._count.sessions,
         questionCount: c._count.questions,
         totalSeconds: secondsByCode.get(c.id) || 0,
+        ndaRequired: Boolean(c.ndaRequired),
+        ...adminNdaStatus(c),
       })),
     });
   });
@@ -431,6 +492,7 @@ export async function registerPlanRoutes(app, deps = {}) {
             expiresAt,
             maxSessions,
             createdByUserId: typeof body.createdByUserId === "string" ? body.createdByUserId.slice(0, 64) : null,
+            ndaRequired: body.ndaRequired === true,
           },
         });
         return reply.code(201).send({ code: created });

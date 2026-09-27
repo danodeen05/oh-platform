@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { fetchCountersigner } from "./nda";
 import { API_BASE, AUDIENCES, SCENARIOS, SECTION_KEYS, type Audience, type CodeRow, type Scenario } from "./planAccess";
 
 interface Props {
@@ -26,6 +27,12 @@ export function IssueCodeModal({ onClose, onCreated }: Props) {
   const [sections, setSections] = useState<string[]>([]);
   const [expiresAt, setExpiresAt] = useState("");
   const [maxSessions, setMaxSessions] = useState("");
+  const [ndaRequired, setNdaRequired] = useState(true);
+  const [hasCountersigner, setHasCountersigner] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    fetchCountersigner().then((c) => setHasCountersigner(Boolean(c))).catch(() => setHasCountersigner(null));
+  }, []);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,11 +55,12 @@ export function IssueCodeModal({ onClose, onCreated }: Props) {
           allowedSections: allSections ? [] : sections,
           expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
           maxSessions: maxSessions ? Number(maxSessions) : null,
+          ndaRequired,
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not issue code");
-      onCreated({ ...data.code, status: "ACTIVE", sessionCount: 0, questionCount: 0, totalSeconds: 0 });
+      onCreated({ ...data.code, status: "ACTIVE", sessionCount: 0, questionCount: 0, totalSeconds: 0, ndaStatus: data.code.ndaRequired ? "PENDING" : "NOT_REQUIRED", ndaSignedAt: null });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not issue code");
     } finally {
@@ -114,6 +122,19 @@ export function IssueCodeModal({ onClose, onCreated }: Props) {
             <label style={labelStyle}>Max sessions (optional)</label>
             <input style={inputStyle} type="number" min={1} value={maxSessions} onChange={(e) => setMaxSessions(e.target.value)} placeholder="unlimited" />
           </div>
+        </div>
+
+        <div style={{ marginBottom: 14, padding: 12, border: "1px solid #e5e7eb", borderRadius: 8, background: "#fafaf9" }}>
+          <label style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: "0.9rem", cursor: "pointer" }}>
+            <input type="checkbox" checked={ndaRequired} onChange={(e) => setNdaRequired(e.target.checked)} style={{ marginTop: 3 }} />
+            <span>
+              <strong>Require NDA</strong>
+              <span style={{ display: "block", color: "#6b7280", fontSize: "0.8rem" }}>The recipient signs the confidential disclosure agreement (and verifies their mobile) before seeing any of the plan.</span>
+            </span>
+          </label>
+          {ndaRequired && hasCountersigner === false && (
+            <p style={{ margin: "8px 0 0", color: "#92400e", fontSize: "0.8rem" }}>Heads up: adopt your NDA countersignature on the Plan Access page first, or the recipient will not be able to sign.</p>
+          )}
         </div>
 
         {error && <p style={{ color: "#991b1b", fontSize: "0.85rem", marginBottom: 12 }}>{error}</p>}
