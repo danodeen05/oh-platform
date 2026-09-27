@@ -13,7 +13,10 @@ test("status link uses WEB_APP_URL and the order's code", () => {
 
 test("confirmation text links to the live status page, no em dashes", () => {
   const text = orderConfirmationText(order, {});
-  assert.match(text, /^Oh! Order #A12 confirmed\. Total: \$23\.46\. Follow it live, crack your fortune cookie and order more to your pod: https:\/\/www\.ohbeef\.com\/en\/order\/status\?orderQrCode=ORDER-abc-1$/);
+  assert.equal(text, "Oh! Order #A12 confirmed, $23.46. Follow it live: https://www.ohbeef.com/en/order/status?orderQrCode=ORDER-abc-1");
+  // One SMS segment with a realistic code (ORDER-<8>-<13-digit ts>-<6>).
+  const real = orderConfirmationText({ ...order, orderQrCode: "ORDER-2nnnxxpm-1790521233720-a1b2c3" }, {});
+  assert.ok(real.length <= 160, `${real.length} chars`);
   assert.ok(!text.includes("—"));
   assert.match(orderConfirmationText({ ...order, orderQrCode: null }, {}), /Show this text at check-in\.$/);
 });

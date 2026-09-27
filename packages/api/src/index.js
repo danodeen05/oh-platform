@@ -70,7 +70,8 @@ import { createAdminAuth } from "./auth/admin.js";
 
 // DEMO- order codes resolve to a synthetic order (see demo/status-demo.js):
 // the plan's live status-page demo reads real routes without touching the DB.
-const { prisma, source: statusDemoSource } = withStatusDemo(new PrismaClient());
+const basePrisma = new PrismaClient();
+const { prisma, source: statusDemoSource } = withStatusDemo(basePrisma);
 const app = Fastify({ logger: true });
 
 // Initialize Anthropic client (uses ANTHROPIC_API_KEY env var automatically)
@@ -14484,7 +14485,7 @@ app.post("/chappy/sms", async (req, reply) => {
         location,
         tenantId: tenant.id,
       },
-      prisma,
+      prisma: basePrisma,
     });
 
     // Get messages array (supports multi-message responses)
@@ -14566,7 +14567,7 @@ app.post("/chappy/chat", async (req, reply) => {
         location,
         tenantId: tenant.id,
       },
-      prisma,
+      prisma: basePrisma,
     });
 
     return reply.send({
@@ -14658,7 +14659,7 @@ app.get("/chappy/chat/stream", async (req, reply) => {
         location,
         tenantId: tenant.id,
       },
-      prisma,
+      prisma: basePrisma,
     });
 
     for await (const chunk of streamGenerator) {
@@ -14733,7 +14734,7 @@ app.post("/chappy/reset", async (req, reply) => {
       return reply.status(400).send({ error: "Identifier required" });
     }
 
-    await resetConversation(prisma, identifier, channel);
+    await resetConversation(basePrisma, identifier, channel);
 
     return reply.send({
       success: true,

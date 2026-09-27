@@ -407,7 +407,8 @@ export const JOURNEY_STEPS: readonly JourneyStep[] = [
   { key: "corridor", actor: "kitchen", realSeconds: 375, at: 0.64 },
   { key: "hatch", actor: "kitchen", realSeconds: 410, at: 0.72 },
   { key: "delivered", actor: "both", realSeconds: 420, at: 0.76 },
-  { key: "addon", actor: "both", realSeconds: 780, at: 0.8, phone: true },
+  // Halfway through the meal: an add-on ordered from the phone comes through the hatch.
+  { key: "addon", actor: "both", realSeconds: Math.round((420 + SEATED_AT + DWELL) / 2 / 60) * 60, at: 0.8, phone: true },
   { key: "finish", actor: "guest", realSeconds: SEATED_AT + DWELL, at: 0.84 },
   { key: "done", actor: "guest", realSeconds: SEATED_AT + DWELL, at: 0.84, phone: true },
   { key: "cleared", actor: "kitchen", realSeconds: SEATED_AT + DWELL, at: 0.84 },

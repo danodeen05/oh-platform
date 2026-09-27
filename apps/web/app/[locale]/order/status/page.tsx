@@ -441,7 +441,8 @@ function StatusContent() {
         }
 
         // Clear active order from localStorage when completed
-        if (data.order?.status === "COMPLETED") {
+        // (never for the demo: it shares the site's storage with a guest's real order)
+        if (data.order?.status === "COMPLETED" && !isDemo) {
           localStorage.removeItem("activeOrderQrCode");
         }
       } else {

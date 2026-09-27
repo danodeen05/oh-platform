@@ -133,14 +133,17 @@ export function buildDemoOrder({ code, stage, menu, location, now = new Date() }
 /** Real menu rows and a location for tenant "oh", cached for ten minutes. */
 export function createDemoSource(basePrisma, { now = () => new Date(), tenantSlug = "oh" } = {}) {
   let cache = null;
+  const fallbackLocation = { id: "demo-location", name: "City Creek Mall", city: "Salt Lake City", tenantId: null };
   const load = async () => {
     if (cache && cache.expires > Date.now()) return cache.value;
     const tenant = await basePrisma.tenant.findUnique({ where: { slug: tenantSlug } });
+    // Without the tenant a query would drop its tenantId filter; show an empty demo instead (and retry next time).
+    if (!tenant?.id) return { menu: [], location: fallbackLocation };
     const [menu, location] = await Promise.all([
       basePrisma.menuItem.findMany({ where: { tenantId: tenant?.id, name: { in: ORDER_LINES.map((l) => l.name) } } }),
       basePrisma.location.findFirst({ where: { tenantId: tenant?.id, name: "City Creek Mall" } }),
     ]);
-    const value = { menu, location: location || { id: "demo-location", name: "City Creek Mall", city: "Salt Lake City", tenantId: tenant?.id } };
+    const value = { menu, location: location || { ...fallbackLocation, tenantId: tenant.id } };
     cache = { value, expires: Date.now() + MENU_TTL_MS };
     return value;
   };
@@ -158,6 +161,9 @@ export function createDemoSource(basePrisma, { now = () => new Date(), tenantSlu
  */
 export async function resolveDemoLookup(args, source) {
   const where = args?.where || {};
+  // Only a plain lookup by code or by id. Anything narrower (e.g. {id, userId})
+  // goes to the database, which has no demo rows, so it finds nothing.
+  if (Object.keys(where).length !== 1) return undefined;
   let code = null;
   if (isDemoCode(where.orderQrCode)) code = where.orderQrCode;
   else if (isDemoOrderId(where.id)) code = `${DEMO_PREFIX}${where.id.slice(DEMO_ID_PREFIX.length).toUpperCase()}`;
@@ -186,33 +192,46 @@ export function withStatusDemo(prisma, options = {}) {
   return { prisma: extended, source };
 }
 
-// Writes the status page can make; for a demo order each is answered here.
-const ID_WRITES = [
-  ["POST", /^\/orders\/(demo-[\w-]+)\/(call-staff|refill|extra-vegetables|dessert-ready)$/],
-  ["POST", /^\/orders\/(demo-[\w-]+)\/addons$/],
-  ["PATCH", /^\/orders\/(demo-[\w-]+)$/],
-  ["PATCH", /^\/kitchen\/orders\/(demo-[\w-]+)\/status$/],
-];
+// Writes the status page makes; for a demo order each gets a simulated success.
+const SIMULATED = new Set([
+  "POST /orders/:id/call-staff",
+  "POST /orders/:id/refill",
+  "POST /orders/:id/extra-vegetables",
+  "POST /orders/:id/dessert-ready",
+  "POST /orders/:id/addons",
+  "PATCH /orders/:id",
+  "PATCH /kitchen/orders/:id/status",
+  "POST /orders/link-to-account",
+]);
+const READ_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
+/** True when a request names a demo order in its (decoded) params or body. */
+function namesDemoOrder(req) {
+  const p = req.params || {};
+  const b = req.body && typeof req.body === "object" ? req.body : {};
+  return isDemoOrderId(p.id) || isDemoOrderId(p.orderId) || isDemoCode(p.orderQrCode) || isDemoCode(b.orderQrCode) || isDemoCode(b.qrCode) || isDemoOrderId(b.orderId);
+}
+
+/**
+ * Deny by default: any write naming a demo order never reaches its handler.
+ * The status page's own writes get a simulated success; every other write
+ * (check-in, pod assignment, payments, Chappy tools...) gets a 409.
+ * Matches on the route pattern and decoded params, so percent-encoding
+ * cannot slip past it.
+ */
 export function registerStatusDemoGuard(app, { source }) {
   app.addHook("preHandler", async (req, reply) => {
-    const path = req.url.split("?")[0];
-    if (req.method === "POST" && path === "/orders/link-to-account") {
-      if (isDemoCode(req.body?.orderQrCode)) return reply.send({ success: true, demo: true, pointsAwarded: 23 });
-      return;
+    if (READ_METHODS.has(req.method) || !namesDemoOrder(req)) return;
+    const route = `${req.method} ${req.routeOptions?.url ?? req.routerPath ?? ""}`;
+    if (!SIMULATED.has(route)) return reply.code(409).send({ error: "This is a demo order; nothing here reaches a real kitchen.", demo: true });
+    if (route === "POST /orders/link-to-account") return reply.send({ success: true, demo: true, pointsAwarded: 23 });
+    if (route === "POST /orders/:id/addons") {
+      const items = Array.isArray(req.body?.items) ? req.body.items.slice(0, 20) : [];
+      const rows = items.length ? await source.menuItems(items.map((i) => String(i.menuItemId))) : [];
+      const price = new Map(rows.map((r) => [r.id, r.basePriceCents || 0]));
+      const totalCents = items.reduce((s, i) => s + (price.get(String(i.menuItemId)) || 0) * Math.max(1, Math.min(3, Number(i.quantity) || 1)), 0);
+      return reply.send({ success: true, demo: true, totalCents, order: { id: `demo-addon-${Date.now()}`, totalCents, status: "PENDING_PAYMENT" } });
     }
-    for (const [method, re] of ID_WRITES) {
-      if (req.method !== method) continue;
-      const m = re.exec(path);
-      if (!m) continue;
-      if (m[2] === undefined && path.endsWith("/addons")) {
-        const items = Array.isArray(req.body?.items) ? req.body.items.slice(0, 20) : [];
-        const rows = items.length ? await source.menuItems(items.map((i) => String(i.menuItemId))) : [];
-        const price = new Map(rows.map((r) => [r.id, r.basePriceCents || 0]));
-        const totalCents = items.reduce((s, i) => s + (price.get(String(i.menuItemId)) || 0) * Math.max(1, Math.min(3, Number(i.quantity) || 1)), 0);
-        return reply.send({ success: true, demo: true, totalCents, order: { id: `demo-addon-${Date.now()}`, totalCents, status: "PENDING_PAYMENT" } });
-      }
-      return reply.send({ success: true, demo: true, order: { id: m[1] } });
-    }
+    return reply.send({ success: true, demo: true, order: { id: req.params?.id } });
   });
 }

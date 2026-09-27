@@ -101,8 +101,24 @@ describe("resolveDemoLookup", () => {
     assert.equal(await resolveDemoLookup({ where: { orderQrCode: "ORDER-1" } }, source), undefined);
     assert.equal(await resolveDemoLookup({ where: { id: "cmreal" } }, source), undefined);
     assert.equal(await resolveDemoLookup({ where: { status: "PAID" } }, source), undefined);
+    assert.equal(await resolveDemoLookup({ where: { id: "demo-plan", userId: "u1" } }, source), undefined, "only exact code or id lookups");
+    assert.equal(await resolveDemoLookup({ where: { orderQrCode: "DEMO-PLAN", status: "PAID" } }, source), undefined);
     await resolveDemoLookup({ where: { id: "demo-plan" } }, source);
     assert.equal(base.calls, 1, "menu is cached");
+  });
+});
+
+describe("tenant guard", () => {
+  test("no tenant means an empty demo, never another tenant's menu, and no cache", async () => {
+    let menuCalls = 0;
+    const base = { tenant: { findUnique: async () => null }, menuItem: { findMany: async () => { menuCalls += 1; return []; } }, location: { findFirst: async () => null } };
+    const source = createDemoSource(base);
+    const v = await source.load();
+    assert.deepEqual(v.menu, []);
+    assert.equal(menuCalls, 0);
+    const o = await resolveDemoLookup({ where: { orderQrCode: "DEMO-PLAN" } }, source);
+    assert.equal(o.items.length, 0);
+    assert.equal(o.location.name, "City Creek Mall");
   });
 });
 
@@ -112,7 +128,7 @@ describe("write guard", () => {
     const a = Fastify({ logger: false });
     registerStatusDemoGuard(a, { source: createDemoSource(base) });
     const hit = [];
-    for (const [m, u] of [["POST", "/orders/:id/call-staff"], ["POST", "/orders/:id/refill"], ["POST", "/orders/:id/extra-vegetables"], ["POST", "/orders/:id/dessert-ready"], ["POST", "/orders/:id/addons"], ["PATCH", "/orders/:id"], ["PATCH", "/kitchen/orders/:id/status"], ["POST", "/orders/link-to-account"]]) {
+    for (const [m, u] of [["POST", "/orders/:id/call-staff"], ["POST", "/orders/:id/refill"], ["POST", "/orders/:id/extra-vegetables"], ["POST", "/orders/:id/dessert-ready"], ["POST", "/orders/:id/addons"], ["PATCH", "/orders/:id"], ["PATCH", "/kitchen/orders/:id/status"], ["POST", "/orders/link-to-account"], ["POST", "/orders/:id/assign-pod"], ["POST", "/orders/check-in"], ["GET", "/orders/:id"]]) {
       a.route({ method: m, url: u, handler: async () => { hit.push(u); return { real: true }; } });
     }
     await a.ready();
@@ -134,11 +150,27 @@ describe("write guard", () => {
     assert.equal((await post("/orders/link-to-account", { orderQrCode: "DEMO-PLAN.SERVING" })).json().demo, true);
     assert.deepEqual(hit, []);
   });
+  test("percent-encoded demo ids are still caught (decoded params)", async () => {
+    const { a, hit } = await app();
+    const r = await a.inject({ method: "POST", url: "/orders/demo%2Dplan/call-staff", payload: {} });
+    assert.equal(r.json().demo, true);
+    const r2 = await a.inject({ method: "PATCH", url: "/orders/demo-pl%61n", payload: {} });
+    assert.equal(r2.json().demo, true);
+    assert.deepEqual(hit, []);
+  });
+  test("any other write that names a demo order is refused, reads pass", async () => {
+    const { a, hit } = await app();
+    assert.equal((await a.inject({ method: "POST", url: "/orders/demo-plan/assign-pod", payload: {} })).statusCode, 409);
+    assert.equal((await a.inject({ method: "POST", url: "/orders/check-in", payload: { orderQrCode: "DEMO-PLAN.PAID" } })).statusCode, 409);
+    assert.equal((await a.inject({ method: "GET", url: "/orders/demo-plan" })).statusCode, 200);
+    assert.deepEqual(hit, ["/orders/:id"]);
+  });
   test("real orders pass straight through", async () => {
     const { a, hit } = await app();
     await a.inject({ method: "POST", url: "/orders/cmreal/call-staff", payload: {} });
     await a.inject({ method: "POST", url: "/orders/link-to-account", payload: { orderQrCode: "ORDER-1" } });
     await a.inject({ method: "PATCH", url: "/kitchen/orders/cmreal/status", payload: { status: "PREPPING" } });
-    assert.equal(hit.length, 3);
+    await a.inject({ method: "POST", url: "/orders/check-in", payload: { orderQrCode: "ORDER-1" } });
+    assert.equal(hit.length, 4);
   });
 });

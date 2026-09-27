@@ -97,7 +97,7 @@ export function orderConfirmationText(order, env = process.env) {
   const totalFormatted = `$${(order.totalCents / 100).toFixed(2)}`;
   const link = orderStatusUrl(order, order.locale || "en", env);
   return link
-    ? `Oh! Order #${orderNumber} confirmed. Total: ${totalFormatted}. Follow it live, crack your fortune cookie and order more to your pod: ${link}`
+    ? `Oh! Order #${orderNumber} confirmed, ${totalFormatted}. Follow it live: ${link}`
     : `Oh! Order #${orderNumber} confirmed. Total: ${totalFormatted}. Show this text at check-in.`;
 }
 
@@ -136,7 +136,7 @@ export async function sendPodReadyNotification(order, user, podNumber) {
   if (user?.phone && canSendSMS(user, null)) {
     results.sms = await sendSMS({
       to: user.phone,
-      body: `Oh! Your Pod #${podNumber} is ready. Order #${orderNumber}. Head to your pod to enjoy your meal.${orderStatusUrl(order) ? ` Live status: ${orderStatusUrl(order)}` : ""}`,
+      body: orderStatusUrl(order) ? `Oh! Pod #${podNumber} is ready. Live status: ${orderStatusUrl(order)}` : `Oh! Your Pod #${podNumber} is ready. Order #${orderNumber}. Head to your pod to enjoy your meal.`,
     });
   } else if (user?.phone && !canSendSMS(user, null)) {
     console.log(`[SMS] Skipping pod ready - no SMS opt-in for phone ${user.phone.slice(-4)}`);
