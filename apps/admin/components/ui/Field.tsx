@@ -4,7 +4,7 @@ import { Icon } from "./icons";
 
 /** Shared control look: 44px tall, 16px text (no iOS zoom), gold focus ring. */
 export const controlCls =
-  "block min-h-11 w-full rounded-xl border border-oh-stone/25 bg-white/70 px-3 text-[16px] text-oh-charcoal placeholder:text-oh-ash transition-[border-color,box-shadow] focus:border-oh-gold focus:outline-none focus:ring-3 focus:ring-oh-gold/30 aria-[invalid=true]:border-oh-ember-deep/70 disabled:opacity-60";
+  "block min-h-11 w-full rounded-xl border border-oh-stone/25 bg-oh-paper px-3 text-[16px] text-oh-charcoal placeholder:text-oh-ash transition-[border-color,box-shadow] focus:border-oh-gold focus:outline-none focus:ring-3 focus:ring-oh-gold/30 aria-[invalid=true]:border-oh-ember-deep/70 disabled:opacity-60";
 
 /** Label, control, then a hint or an error. The label wraps the control so tapping it focuses. */
 export function Field({ label, hint, error, children, className = "" }: { label: ReactNode; hint?: ReactNode; error?: ReactNode; children: ReactNode; className?: string }) {
