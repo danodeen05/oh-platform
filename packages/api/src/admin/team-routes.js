@@ -4,10 +4,30 @@ const INVITABLE = ["manager", "station"];
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const primaryEmail = (u) => (u.emailAddresses || []).find((e) => e.id === u.primaryEmailAddressId)?.emailAddress?.toLowerCase() ?? null;
 
+const USER_PAGE_SIZE = 100;
+const USER_PAGE_MAX = 50; // safety stop: 5,000 users, far beyond any realistic staff+customer pool
+
+/**
+ * The Clerk user pool includes every customer, not just staff, so it can
+ * easily exceed a single getUserList page. Page through with offset until a
+ * page comes back short (or the safety stop trips) so no admin/manager/
+ * station user past the first page is silently dropped from the listing.
+ */
+async function fetchAllUsers(clerk) {
+  const all = [];
+  for (let page = 0; page < USER_PAGE_MAX; page += 1) {
+    const offset = page * USER_PAGE_SIZE;
+    const { data } = await clerk.users.getUserList({ limit: USER_PAGE_SIZE, offset });
+    all.push(...data);
+    if (data.length < USER_PAGE_SIZE) break;
+  }
+  return all;
+}
+
 export async function registerTeamRoutes(app, { clerk, adminEmails, forgetRole, adminUrl }) {
   app.get("/admin/team", async () => {
-    const [{ data: users }, { data: invites }] = await Promise.all([
-      clerk.users.getUserList({ limit: 200 }),
+    const [users, { data: invites }] = await Promise.all([
+      fetchAllUsers(clerk),
       clerk.invitations.getInvitationList({ status: "pending" }),
     ]);
     const members = users
