@@ -8,7 +8,7 @@ export function AccountButton() {
   if (process.env.NODE_ENV !== "production") {
     return (
       <span title="Local dev. Set ADMIN_DEV_ROLE to preview another role."
-        className="inline-flex min-h-8 items-center whitespace-nowrap rounded-full bg-oh-gold/15 px-2.5 text-xs font-semibold text-oh-gold">
+        className="inline-flex min-h-11 items-center whitespace-nowrap rounded-full bg-oh-gold/15 px-2.5 text-xs font-semibold text-oh-gold">
         Dev · {role}
       </span>
     );

@@ -15,7 +15,7 @@ export function ConsoleShell({ children }: { children: React.ReactNode }) {
     <div className="oh-console min-h-svh bg-oh-paper lg:pl-[248px]">
       <Sidebar />
       <TopBar />
-      <main className="mx-auto w-full min-w-0 max-w-[1200px] overflow-x-clip px-4 pt-4 pb-[calc(88px+env(safe-area-inset-bottom))] lg:px-8 lg:pt-8 lg:pb-12">{children}</main>
+      <main className="mx-auto w-full min-w-0 max-w-[1200px] max-lg:overflow-x-clip px-4 pt-4 pb-[calc(88px+env(safe-area-inset-bottom))] lg:px-8 lg:pt-8 lg:pb-12">{children}</main>
       <Dock onMore={() => setMoreOpen(true)} moreOpen={moreOpen} />
       <MoreSheet open={moreOpen} onClose={() => setMoreOpen(false)} />
     </div>

@@ -54,9 +54,9 @@ export function OrderNowSwitch({ variant = "row", surface = "light" }: { variant
       const now = typeof r?.enabled === "boolean" ? r.enabled : next;
       set({ enabled: now, saving: false });
       show({ message: now ? "Dine-in ordering is live" : "Dine-in ordering is off", tone: now ? "good" : "info" });
-    } catch (err) {
+    } catch {
       set({ enabled: prev, saving: false });
-      show({ message: `Couldn't change dine-in ordering. ${(err as Error)?.message || "Try again."}`, tone: "alert" });
+      show({ message: "Couldn't change dine-in ordering. Try again.", tone: "alert" });
     }
   }, [ask, show]);
 
