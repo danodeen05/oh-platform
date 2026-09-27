@@ -9,6 +9,7 @@ import assert from "node:assert/strict";
 import Fastify from "fastify";
 import { makeMemoryPrisma } from "../../__tests__/helpers/prisma-memory.js";
 import { registerSupportRoutes, notifyCase, notifyMode } from "../routes.js";
+import { fullRefundCase, REFUND_LEASE_MS } from "../refund.js";
 
 const NOW = new Date("2026-10-01T12:00:00-06:00");
 const HOUR = 60 * 60 * 1000;
@@ -16,7 +17,7 @@ const DAY = 24 * HOUR;
 
 const ENV = { SUPPORT_NOTIFY: "live", ADMIN_PHONE_NUMBER: "+18015550100", PLAN_NOTIFY_EMAIL: "owner@example.com" };
 
-function fakeStripe({ failCreate = false } = {}) {
+function fakeStripe({ failCreate = false, intents = { pi_1: { amount: 800 }, pi_3: { amount: 1500 } }, onCreate = null } = {}) {
   const issued = [];
   const createCalls = [];
   return {
@@ -28,13 +29,20 @@ function fakeStripe({ failCreate = false } = {}) {
       },
       async create(params, options) {
         createCalls.push([params, options]);
+        if (onCreate) await onCreate(params);
         if (failCreate) throw new Error("stripe down");
-        // Stripe dedups on the idempotency key.
+        // Stripe dedups on the idempotency key; no amount means the full charge.
         const prior = issued.find((r) => r.key === options?.idempotencyKey);
         if (prior) return prior;
-        const refund = { id: `re_${issued.length + 1}`, payment_intent: params.payment_intent, key: options?.idempotencyKey };
+        const refund = { id: `re_${issued.length + 1}`, payment_intent: params.payment_intent, key: options?.idempotencyKey, status: "succeeded", amount: params.amount ?? intents[params.payment_intent]?.amount };
         issued.push(refund);
         return refund;
+      },
+    },
+    paymentIntents: {
+      async retrieve(id) {
+        if (!intents[id]) throw new Error(`No such payment_intent: ${id}`);
+        return { id, status: "succeeded", currency: "usd", ...intents[id] };
       },
     },
   };
@@ -300,7 +308,7 @@ describe("GET /admin/support/cases", () => {
 describe("POST /admin/support/cases/:id/resolve", () => {
   const resolve = (app, id, payload) => app.inject({ method: "POST", url: `/admin/support/cases/${id}/resolve`, payload });
 
-  function refundFixture({ order = {}, reward = {}, mealGift = {}, giftCard = {}, extraOrders = [] } = {}) {
+  function refundFixture({ order = {}, reward = {}, mealGift = {}, giftCard = {}, extraOrders = [], more = {} } = {}) {
     return seedDb({
       orders: [
         {
@@ -318,6 +326,7 @@ describe("POST /admin/support/cases/:id/resolve", () => {
         { id: "c2", userId: "u1", orderId: "o1", type: "ORDER_ISSUE", status: "OPEN", summary: "same order again" },
         { id: "cAnon", userId: null, type: "CONTACT", status: "OPEN", summary: "anon" },
       ],
+      ...more,
     });
   }
 
@@ -430,7 +439,11 @@ describe("POST /admin/support/cases/:id/resolve", () => {
     const res = await resolve(app, "c1", { action: "full_refund" });
     assert.equal(res.statusCode, 409);
     assert.equal(res.json().code, "SHARED_PAYMENT");
+    assert.match(res.json().error, /store credit/i);
+    assert.doesNotMatch(res.json().error, /stripe|by hand/i, "the owner's rule: never point staff at a manual card refund");
     assert.equal(stripe.createCalls.length, 0);
+    const c = await prisma.supportCase.findUnique({ where: { id: "c1" } });
+    assert.deepEqual([c.status, c.resolution ?? null], ["OPEN", null], "the refund claim is released");
   });
 
   test("Stripe failure: 502, case stays OPEN, order stays PAID, nothing restored; a retry then succeeds", async () => {
@@ -439,7 +452,10 @@ describe("POST /admin/support/cases/:id/resolve", () => {
     const res = await resolve(failing.app, "c1", { action: "full_refund" });
     assert.equal(res.statusCode, 502);
     assert.equal(res.json().code, "REFUND_FAILED");
-    assert.equal((await prisma.supportCase.findUnique({ where: { id: "c1" } })).status, "OPEN");
+    const failedCase = await prisma.supportCase.findUnique({ where: { id: "c1" } });
+    assert.deepEqual([failedCase.status, failedCase.resolution ?? null, failedCase.resolvedAt ?? null], ["OPEN", null, null], "the pending claim is released");
+    assert.equal(failedCase.resolutionDetail.refundPending, undefined);
+    assert.equal(failedCase.resolutionDetail.lastRefundAttempt.error, "REFUND_FAILED");
     assert.equal((await prisma.order.findUnique({ where: { id: "o1" } })).paymentStatus, "PAID");
     assert.equal((await prisma.creditLot.findMany()).length, 0);
     const ok = await buildApp({ prisma });
@@ -534,5 +550,209 @@ describe("POST /admin/support/cases/:id/resolve", () => {
     const after = await resolve(app, "c1", { action: "credit", amountCents: 100 });
     assert.equal(after.json().alreadyResolved, true);
     assert.equal((await prisma.creditLot.findMany()).length, 0);
+  });
+  // ---------------------------------------------------------------- fix round 1
+  test("fix 1: refunding a PREPPING order cancels it and frees its pod and dual partner", async () => {
+    const prisma = refundFixture({
+      order: { status: "PREPPING", seatId: "s1", isDualPod: true, dualPartnerSeatId: "s2" },
+      more: { seats: [{ id: "s1", status: "OCCUPIED" }, { id: "s2", status: "RESERVED" }, { id: "s3", status: "OCCUPIED" }] },
+    });
+    const { app } = await buildApp({ prisma });
+    assert.equal((await resolve(app, "c1", { action: "full_refund" })).statusCode, 200);
+    const order = await prisma.order.findUnique({ where: { id: "o1" } });
+    assert.deepEqual([order.status, order.paymentStatus], ["CANCELLED", "REFUNDED"]);
+    assert.equal((await prisma.seat.findUnique({ where: { id: "s1" } })).status, "AVAILABLE");
+    assert.equal((await prisma.seat.findUnique({ where: { id: "s2" } })).status, "AVAILABLE");
+    assert.equal((await prisma.seat.findUnique({ where: { id: "s3" } })).status, "OCCUPIED", "other pods untouched");
+  });
+
+  test("fix 1: a pod another active order now holds is not released; a COMPLETED order keeps its status", async () => {
+    let prisma = refundFixture({
+      order: { status: "QUEUED", seatId: "s1" },
+      extraOrders: [{ id: "o8", userId: "u2", status: "SERVING", paymentStatus: "PAID", seatId: "s1", stripePaymentId: "pi_8" }],
+      more: { seats: [{ id: "s1", status: "OCCUPIED" }] },
+    });
+    let b = await buildApp({ prisma });
+    assert.equal((await resolve(b.app, "c1", { action: "full_refund" })).statusCode, 200);
+    assert.equal((await prisma.order.findUnique({ where: { id: "o1" } })).status, "CANCELLED");
+    assert.equal((await prisma.seat.findUnique({ where: { id: "s1" } })).status, "OCCUPIED");
+
+    prisma = refundFixture({ order: { status: "COMPLETED", seatId: "s1" }, more: { seats: [{ id: "s1", status: "CLEANING" }] } });
+    b = await buildApp({ prisma });
+    assert.equal((await resolve(b.app, "c1", { action: "full_refund" })).statusCode, 200);
+    assert.equal((await prisma.order.findUnique({ where: { id: "o1" } })).status, "COMPLETED");
+    assert.equal((await prisma.seat.findUnique({ where: { id: "s1" } })).status, "CLEANING");
+  });
+
+  test("fix 2: the order's cashback is reversed (unspent fully, partly spent only the remainder); the cache equals the lots", async () => {
+    const lot = (id, source, amountCents, remainingCents, orderId) => ({ id, userId: "u1", source, amountCents, remainingCents, orderId, expiresAt: new Date(NOW.getTime() + 60 * DAY), createdAt: new Date(NOW.getTime() - HOUR) });
+    const prisma = refundFixture({
+      more: {
+        users: [{ id: "u1", email: "u1@x.com", creditsCents: 170 }, { id: "u2", email: "u2@x.com", creditsCents: 0 }],
+        creditLots: [
+          lot("cb-unspent", "CASHBACK", 50, 50, "o1"),
+          lot("cb-partly", "CASHBACK", 50, 20, "o1"),
+          lot("cb-other", "CASHBACK", 40, 40, "o7"), // another order's cashback: untouched
+          lot("admin", "ADMIN", 60, 60, null),
+        ],
+      },
+    });
+    const { app } = await buildApp({ prisma });
+    const res = await resolve(app, "c1", { action: "full_refund" });
+    assert.equal(res.statusCode, 200, res.body);
+    const byId = async (id) => (await prisma.creditLot.findUnique({ where: { id } })).remainingCents;
+    assert.deepEqual([await byId("cb-unspent"), await byId("cb-partly"), await byId("cb-other"), await byId("admin")], [0, 0, 40, 60]);
+    assert.equal((await prisma.creditLot.findUnique({ where: { id: "cb-partly" } })).amountCents, 50, "the spent part is left alone");
+    const lots = await prisma.creditLot.findMany({ where: { userId: "u1" } });
+    const user = await prisma.user.findUnique({ where: { id: "u1" } });
+    assert.equal(user.creditsCents, lots.reduce((sum, l) => sum + l.remainingCents, 0));
+    assert.equal(user.creditsCents, 170 - 70 + 300);
+    const reversal = await prisma.creditEvent.findMany({ where: { userId: "u1", type: "ADMIN_ADJUSTMENT" } });
+    assert.deepEqual(reversal.map((e) => [e.amountCents, e.description, e.orderId]), [[-70, "cashback reversed on refund", "o1"]]);
+    assert.equal(res.json().restores.cashbackReversed, 70);
+  });
+
+  test("fix 2: the cache never goes below 0 when it is already short", async () => {
+    const prisma = refundFixture({
+      order: { creditsAppliedCents: 0 },
+      more: {
+        users: [{ id: "u1", email: "u1@x.com", creditsCents: 10 }, { id: "u2", email: "u2@x.com", creditsCents: 0 }],
+        creditLots: [{ id: "cb", userId: "u1", source: "CASHBACK", amountCents: 50, remainingCents: 50, orderId: "o1", expiresAt: new Date(NOW.getTime() + DAY) }],
+      },
+    });
+    const { app } = await buildApp({ prisma });
+    assert.equal((await resolve(app, "c1", { action: "full_refund" })).statusCode, 200);
+    assert.equal((await prisma.user.findUnique({ where: { id: "u1" } })).creditsCents, 0);
+  });
+
+  test("fix 4: a decline, a credit and a second refund landing while Stripe refunds: exactly one refund, order REFUNDED, restores ran", async () => {
+    const prisma = refundFixture();
+    let app;
+    const during = [];
+    const stripe = fakeStripe({
+      onCreate: async () => {
+        // All of these land after the refund claim and before Stripe answers.
+        during.push(await app.inject({ method: "POST", url: "/admin/support/cases/c1/resolve", payload: { action: "decline", reason: "too late" } }));
+        const c1 = await prisma.supportCase.findUnique({ where: { id: "c1" } });
+        during.push(await fullRefundCase(prisma, stripe, { supportCase: c1, resolvedBy: "other-staff", now: NOW }).catch((e) => e));
+        during.push(await app.inject({ method: "POST", url: "/admin/support/cases/c1/resolve", payload: { action: "credit", amountCents: 100 } }));
+      },
+    });
+    ({ app } = await buildApp({ prisma, stripe }));
+    const c1 = await prisma.supportCase.findUnique({ where: { id: "c1" } });
+    const r = await fullRefundCase(prisma, stripe, { supportCase: c1, resolvedBy: "staff", now: NOW });
+    assert.equal(r.alreadyResolved, false);
+    assert.equal(during[0].statusCode, 409);
+    assert.equal(during[0].json().code, "REFUND_IN_PROGRESS");
+    assert.equal(during[1].code, "REFUND_IN_PROGRESS");
+    assert.equal(during[2].json().code, "REFUND_IN_PROGRESS");
+    assert.equal(stripe.createCalls.length, 1);
+    assert.equal(stripe.issued.length, 1);
+    const order = await prisma.order.findUnique({ where: { id: "o1" } });
+    assert.equal(order.paymentStatus, "REFUNDED");
+    assert.deepEqual((await prisma.creditLot.findMany()).map((l) => [l.source, l.amountCents]), [["ADMIN", 300]]);
+    assert.equal((await prisma.giftCard.findUnique({ where: { id: "gc1" } })).balanceCents, 700);
+    const c = await prisma.supportCase.findUnique({ where: { id: "c1" } });
+    assert.deepEqual([c.status, c.resolution, c.resolvedBy], ["RESOLVED", "FULL_REFUND", "staff"]);
+    assert.equal(c.resolutionDetail.refundPending, undefined);
+  });
+
+  test("fix 4: a case resolved between the route's read and the claim is not refunded", async () => {
+    const prisma = refundFixture();
+    const stripe = fakeStripe();
+    const stale = await prisma.supportCase.findUnique({ where: { id: "c1" } });
+    await prisma.supportCase.update({ where: { id: "c1" }, data: { status: "DECLINED", resolution: "DECLINED", resolutionNote: "x" } });
+    const r = await fullRefundCase(prisma, stripe, { supportCase: stale, resolvedBy: "staff", now: NOW });
+    assert.equal(r.alreadyResolved, true);
+    assert.equal(stripe.createCalls.length, 0);
+    assert.equal((await prisma.order.findUnique({ where: { id: "o1" } })).paymentStatus, "PAID");
+  });
+
+  test("fix 4: a crash after the Stripe refund is finished by a retry once the lease expires (no second refund)", async () => {
+    const prisma = refundFixture();
+    const stripe = fakeStripe();
+    stripe.issued.push({ id: "re_earlier", payment_intent: "pi_1", status: "succeeded", amount: 800 });
+    const leaseAt = new Date(NOW.getTime() - REFUND_LEASE_MS - 1000);
+    await prisma.supportCase.update({ where: { id: "c1" }, data: { resolution: "FULL_REFUND", resolvedBy: "crashed", resolvedAt: leaseAt, resolutionDetail: { refundPending: true, leaseAt: leaseAt.toISOString() } } });
+    const { app } = await buildApp({ prisma, stripe });
+    const credit = await resolve(app, "c1", { action: "credit", amountCents: 100 });
+    assert.equal(credit.json().code, "REFUND_IN_PROGRESS", "a pending refund blocks credit and decline even when stale");
+    const res = await resolve(app, "c1", { action: "full_refund" });
+    assert.equal(res.statusCode, 200, res.body);
+    assert.equal(stripe.createCalls.length, 0);
+    assert.equal((await prisma.order.findUnique({ where: { id: "o1" } })).paymentStatus, "REFUNDED");
+    assert.equal((await prisma.creditLot.findMany()).length, 1);
+    assert.equal(res.json().refundId, "re_earlier");
+  });
+
+  test("fix 4: a fresh pending refund held by someone else is 409 REFUND_IN_PROGRESS without a Stripe call", async () => {
+    const prisma = refundFixture();
+    await prisma.supportCase.update({ where: { id: "c1" }, data: { resolution: "FULL_REFUND", resolvedAt: new Date(NOW.getTime() - 1000), resolutionDetail: { refundPending: true } } });
+    const { app, stripe } = await buildApp({ prisma });
+    const res = await resolve(app, "c1", { action: "full_refund" });
+    assert.equal(res.statusCode, 409);
+    assert.equal(res.json().code, "REFUND_IN_PROGRESS");
+    assert.equal(stripe.createCalls.length, 0);
+  });
+
+  test("fix 6: a PaymentIntent partially refunded elsewhere is 409 PARTIALLY_REFUNDED_ELSEWHERE, never topped up", async () => {
+    const prisma = refundFixture();
+    const stripe = fakeStripe();
+    stripe.issued.push({ id: "re_dash", payment_intent: "pi_1", status: "succeeded", amount: 300 });
+    const { app } = await buildApp({ prisma, stripe });
+    const res = await resolve(app, "c1", { action: "full_refund" });
+    assert.equal(res.statusCode, 409);
+    assert.equal(res.json().code, "PARTIALLY_REFUNDED_ELSEWHERE");
+    assert.equal(stripe.createCalls.length, 0);
+    assert.equal((await prisma.order.findUnique({ where: { id: "o1" } })).paymentStatus, "PAID");
+    assert.equal((await prisma.creditLot.findMany()).length, 0);
+    const c = await prisma.supportCase.findUnique({ where: { id: "c1" } });
+    assert.deepEqual([c.status, c.resolution ?? null], ["OPEN", null]);
+  });
+
+  test("fix 6: a PaymentIntent already fully refunded (two refunds adding up, a failed one ignored) is treated as done", async () => {
+    const prisma = refundFixture();
+    const stripe = fakeStripe();
+    stripe.issued.push(
+      { id: "re_a", payment_intent: "pi_1", status: "succeeded", amount: 500 },
+      { id: "re_b", payment_intent: "pi_1", status: "succeeded", amount: 300 },
+      { id: "re_f", payment_intent: "pi_1", status: "failed", amount: 800 },
+    );
+    const { app } = await buildApp({ prisma, stripe });
+    const res = await resolve(app, "c1", { action: "full_refund" });
+    assert.equal(res.statusCode, 200, res.body);
+    assert.equal(stripe.createCalls.length, 0);
+    assert.equal((await prisma.order.findUnique({ where: { id: "o1" } })).paymentStatus, "REFUNDED");
+    assert.equal((await prisma.supportCase.findUnique({ where: { id: "c1" } })).resolutionDetail.refundedCents, 800);
+  });
+
+  test("fix 6: refundFullPayment itself refuses a partial prior refund (the A6 path included)", async () => {
+    const { refundFullPayment } = await import("../../orders/service.js");
+    const stripe = fakeStripe();
+    stripe.issued.push({ id: "re_dash", payment_intent: "pi_1", status: "succeeded", amount: 100 });
+    await assert.rejects(refundFullPayment(stripe, { id: "pi_1", amount: 800 }), (e) => e.code === "PARTIALLY_REFUNDED_ELSEWHERE" && e.refundedCents === 100 && e.amountCents === 800);
+    await assert.rejects(refundFullPayment(stripe, "pi_1"), (e) => e.code === "PARTIALLY_REFUNDED_ELSEWHERE");
+    assert.equal(stripe.createCalls.length, 0);
+  });
+
+  test("fix 7: a gift card that cannot be restored is a warning in the response and in the owner email", async () => {
+    const notify = spies();
+    const { app, prisma } = await buildApp({ prisma: refundFixture({ giftCard: { status: "CANCELLED" } }), notify });
+    const res = await resolve(app, "c1", { action: "full_refund" });
+    assert.equal(res.statusCode, 200, res.body);
+    assert.deepEqual(res.json().warnings, ["GIFT_CARD_NOT_RESTORED:CANCELLED"]);
+    assert.equal((await prisma.giftCard.findUnique({ where: { id: "gc1" } })).balanceCents, 0);
+    assert.equal(notify.mail.length, 1);
+    assert.match(notify.mail[0].html, /GIFT_CARD_NOT_RESTORED:CANCELLED/);
+    assert.match(notify.mail[0].subject, /needs attention/i);
+    assert.deepEqual((await prisma.supportCase.findUnique({ where: { id: "c1" } })).resolutionDetail.warnings, ["GIFT_CARD_NOT_RESTORED:CANCELLED"]);
+  });
+
+  test("fix 7: a clean refund has no warnings and sends no extra notification", async () => {
+    const notify = spies();
+    const { app } = await buildApp({ prisma: refundFixture(), notify });
+    const res = await resolve(app, "c1", { action: "full_refund" });
+    assert.deepEqual(res.json().warnings, []);
+    assert.equal(notify.mail.length, 0);
   });
 });

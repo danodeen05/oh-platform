@@ -28,13 +28,15 @@ async function sumGoodwill(prisma, where) {
  * Returns { allowedCents, reason }. `reason` names the cap that holds the
  * allowance below the full per-order amount ("PER_ORDER", "PER_30_DAYS",
  * "LIFETIME"; the most lasting one on a tie), or why nothing is allowed at
- * all ("NOT_OWNER", "ORDER_TOO_OLD"); it is null when the full per-order
+ * all ("NOT_OWNER", "ORDER_NOT_PAID", "ORDER_TOO_OLD"); it is null when the full per-order
  * amount is available.
  */
 export async function goodwillAllowance(prisma, { userId, orderId, now = new Date() }) {
   const caps = PROGRAM.goodwill;
   const order = userId && orderId ? await prisma.order.findUnique({ where: { id: orderId } }) : null;
   if (!order || order.userId !== userId) return { allowedCents: 0, reason: "NOT_OWNER" };
+  // Goodwill makes up for a paid meal: only on an order whose paymentStatus is still PAID.
+  if (order.paymentStatus !== "PAID") return { allowedCents: 0, reason: "ORDER_NOT_PAID" };
 
   const at = new Date(order.completedTime || order.createdAt);
   if (!(now.getTime() - at.getTime() <= caps.orderAgeHours * 60 * 60 * 1000)) return { allowedCents: 0, reason: "ORDER_TOO_OLD" };

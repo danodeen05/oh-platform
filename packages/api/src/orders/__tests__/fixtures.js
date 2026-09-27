@@ -61,7 +61,7 @@ export function fakeStripe(intents = {}, { onRetrieve = null, failCreate = false
       },
       async create(params, options) {
         refundCalls.push([params, options]);
-        const refund = { id: `re_test_${issuedRefunds.length + 1}`, payment_intent: params.payment_intent, status: "succeeded" };
+        const refund = { id: `re_test_${issuedRefunds.length + 1}`, payment_intent: params.payment_intent, status: "succeeded", amount: params.amount ?? intents[params.payment_intent]?.amount };
         issuedRefunds.push(refund);
         return refund;
       },

@@ -46,10 +46,12 @@ const dollars = (cents) => `$${(cents / 100).toFixed(2)}`;
 /**
  * Tells the owner about a case: an SMS (sendSMS to ADMIN_PHONE_NUMBER) when
  * it is urgent or amountCents >= 2000, and always an email (sendGraphMail to
- * PLAN_NOTIFY_EMAIL, else OWNER_EMAIL). Honors SUPPORT_NOTIFY. Never throws.
+ * PLAN_NOTIFY_EMAIL, else OWNER_EMAIL). `warnings` (e.g. a gift card a refund
+ * could not restore) mark the email "needs attention" and are listed in it.
+ * Honors SUPPORT_NOTIFY. Never throws.
  * Returns { sms, email }, each "sent" | "logged" | "off" | "skipped" | "failed".
  */
-export async function notifyCase(deps, supportCase, { urgent = false } = {}) {
+export async function notifyCase(deps, supportCase, { urgent = false, warnings = [] } = {}) {
   const env = deps.env || process.env;
   const log = deps.log || ((line) => console.log(line));
   const mode = notifyMode(env);
@@ -61,11 +63,13 @@ export async function notifyCase(deps, supportCase, { urgent = false } = {}) {
   const summary = String(c.summary || "").replace(/\s+/g, " ").trim();
   const money = Number.isInteger(c.amountCents) ? ` (${dollars(c.amountCents)})` : "";
   const smsBody = `Oh! support${urgent ? " URGENT" : ""}: ${c.type || "CASE"}${money}. ${summary.slice(0, 120)}${summary.length > 120 ? "..." : ""} Case ${c.id}`;
-  const subject = `Support case${urgent ? " (urgent)" : ""}: ${c.type || "CASE"}${money}`;
+  const attention = Array.isArray(warnings) && warnings.length > 0;
+  const subject = `Support case${urgent ? " (urgent)" : ""}${attention ? " (needs attention)" : ""}: ${c.type || "CASE"}${money}`;
   const contact = c.contact && typeof c.contact === "object" ? c.contact : {};
   const html = [
     `<p><strong>${escapeHtml(subject)}</strong></p>`,
     `<p>${escapeHtml(c.summary || "")}</p>`,
+    attention ? `<p><strong>Needs attention:</strong> ${escapeHtml(warnings.join(", "))}</p>` : "",
     `<p>Case ${escapeHtml(c.id)}${c.orderId ? `, order ${escapeHtml(c.orderId)}` : ""}${c.userId ? `, member ${escapeHtml(c.userId)}` : ""}${c.locale ? `, locale ${escapeHtml(c.locale)}` : ""}</p>`,
     contact.email || contact.phone || contact.name
       ? `<p>Contact: ${escapeHtml([contact.name, contact.email, contact.phone].filter(Boolean).join(", "))}</p>`
@@ -323,19 +327,23 @@ export async function registerSupportRoutes(app, deps) {
     }
 
     const id = req.params.id;
+    const REFUND_IN_PROGRESS = { status: 409, body: { error: "A card refund for this case is in progress. Retry the full refund, or wait.", code: "REFUND_IN_PROGRESS" } };
     const resolvedBy = resolvedByOf(req);
     const t = now();
     const result = await withCaseLock(id, async () => {
       const supportCase = await prisma.supportCase.findUnique({ where: { id } });
       if (!supportCase) return { status: 404, body: { error: "Case not found", code: "NOT_FOUND" } };
       if (supportCase.status !== "OPEN") return { status: 200, body: { ok: true, alreadyResolved: true, case: supportCase } };
+      // A card refund is under way (or crashed mid-way): only a full_refund retry may touch the case.
+      if (supportCase.resolution && action !== "full_refund") return REFUND_IN_PROGRESS;
 
       if (action === "decline") {
         const claim = await prisma.supportCase.updateMany({
-          where: { id, status: "OPEN" },
+          where: { id, status: "OPEN", resolution: null },
           data: { status: "DECLINED", resolution: "DECLINED", resolvedBy, resolvedAt: t, resolutionNote: reason },
         });
         const after = await prisma.supportCase.findUnique({ where: { id } });
+        if (claim.count !== 1 && after?.status === "OPEN") return REFUND_IN_PROGRESS;
         return { status: 200, body: { ok: true, alreadyResolved: claim.count !== 1, case: after } };
       }
 
@@ -345,10 +353,14 @@ export async function registerSupportRoutes(app, deps) {
         const order = supportCase.orderId ? await prisma.order.findUnique({ where: { id: supportCase.orderId } }) : null;
         return prisma.$transaction(async (tx) => {
           const claim = await tx.supportCase.updateMany({
-            where: { id, status: "OPEN" },
+            where: { id, status: "OPEN", resolution: null },
             data: { status: "RESOLVED", resolution: "STAFF_CREDIT", amountCents, resolvedBy, resolvedAt: t, resolutionNote: reason },
           });
-          if (claim.count !== 1) return { status: 200, body: { ok: true, alreadyResolved: true, case: await tx.supportCase.findUnique({ where: { id } }) } };
+          if (claim.count !== 1) {
+            const current = await tx.supportCase.findUnique({ where: { id } });
+            if (current?.status === "OPEN") return REFUND_IN_PROGRESS;
+            return { status: 200, body: { ok: true, alreadyResolved: true, case: current } };
+          }
           const lot = await grantCreditInTx(tx, {
             userId: supportCase.userId,
             source: "ADMIN",
@@ -363,6 +375,14 @@ export async function registerSupportRoutes(app, deps) {
 
       try {
         const r = await fullRefundCase(prisma, stripe, { supportCase, resolvedBy, reason, now: t });
+        // A restore that could not happen: tell the owner, not just the clicking staff member.
+        if (!r.alreadyResolved && r.warnings.length) {
+          try {
+            await notifyCase(notifyDeps, r.case, { urgent: false, warnings: r.warnings });
+          } catch (err) {
+            console.error(`[support] refund warning notify failed for case ${id}:`, err?.message || err);
+          }
+        }
         return { status: 200, body: { ok: true, ...r } };
       } catch (err) {
         if (err instanceof SupportError) return { status: err.status, body: { error: err.message, code: err.code, ...err.extra } };

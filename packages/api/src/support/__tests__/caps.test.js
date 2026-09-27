@@ -97,6 +97,24 @@ describe("goodwillAllowance", () => {
     assert.deepEqual(await goodwillAllowance(prisma, { userId: null, orderId: "o1", now: NOW }), { allowedCents: 0, reason: "NOT_OWNER" });
   });
 
+  test("fix round 1: an order that is not PAID (PENDING, REFUNDED) gets ORDER_NOT_PAID, 0 allowed, and no lot", async () => {
+    const prisma = setup({
+      orders: [
+        { id: "pending", userId: "u1", paymentStatus: "PENDING", totalCents: 1924, createdAt: ago(HOUR) },
+        { id: "refunded", userId: "u1", paymentStatus: "REFUNDED", totalCents: 1924, createdAt: ago(HOUR) },
+        { id: "othersPending", userId: "u2", paymentStatus: "PENDING", totalCents: 1924, createdAt: ago(HOUR) },
+      ],
+    });
+    for (const orderId of ["pending", "refunded"]) {
+      assert.deepEqual(await goodwillAllowance(prisma, { userId: "u1", orderId, now: NOW }), { allowedCents: 0, reason: "ORDER_NOT_PAID" });
+      const r = await grantGoodwill(prisma, { userId: "u1", orderId, requestedCents: 500, caseId: null, now: NOW });
+      assert.deepEqual([r.grantedCents, r.reason], [0, "ORDER_NOT_PAID"]);
+    }
+    assert.equal((await prisma.creditLot.findMany()).length, 0);
+    assert.equal((await prisma.user.findUnique({ where: { id: "u1" } })).creditsCents, 0);
+    assert.deepEqual(await goodwillAllowance(prisma, { userId: "u1", orderId: "othersPending", now: NOW }), { allowedCents: 0, reason: "NOT_OWNER" }, "NOT_OWNER is checked first");
+  });
+
   test("an order older than 24 hours: ORDER_TOO_OLD; a recent completion counts from completion", async () => {
     const prisma = setup();
     assert.deepEqual(await goodwillAllowance(prisma, { userId: "u1", orderId: "old", now: NOW }), { allowedCents: 0, reason: "ORDER_TOO_OLD" });

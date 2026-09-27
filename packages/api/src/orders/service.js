@@ -637,23 +637,49 @@ export async function intentHasRefund(stripe, pi) {
   }
 }
 
+/** A PaymentIntent that already has a PARTIAL refund (e.g. from the Stripe dashboard). */
+export class PartialRefundError extends Error {
+  constructor(refundedCents, amountCents) {
+    super(`PaymentIntent already partially refunded (${refundedCents} of ${amountCents} cents)`);
+    this.name = "PartialRefundError";
+    this.code = "PARTIALLY_REFUNDED_ELSEWHERE";
+    this.refundedCents = refundedCents;
+    this.amountCents = amountCents;
+  }
+}
+
 /**
  * The one card-refund path (owner's rule: FULL refunds only, never partial).
  * `stripe.refunds.create` gets the PaymentIntent and nothing else: no amount
  * field, so Stripe refunds the whole charge. Idempotent per PaymentIntent:
- * when Stripe already has a refund for it nothing new is created, and the
- * create itself carries a per-PaymentIntent idempotency key shared by every
+ * the create carries a per-PaymentIntent idempotency key shared by every
  * caller (the unapplied-payment path here and staff actions in
  * support/refund.js), so two paths can never refund the same charge twice.
- * Throws when Stripe fails; the caller decides what that means.
+ *
+ * Existing refunds (not failed/canceled) are summed against the charged
+ * amount: fully refunded -> { alreadyRefunded: true }, nothing new is
+ * created; PARTIALLY refunded -> throws PartialRefundError and never tops it
+ * up (a second refund would be a partial one). Throws on Stripe errors too;
+ * the caller decides what that means.
  */
 export async function refundFullPayment(stripe, pi, { idempotencyKey = null } = {}) {
   const id = typeof pi === "string" ? pi : pi?.id;
   if (!id) throw new Error("refundFullPayment: a PaymentIntent id is required");
-  const existing = await stripe.refunds.list({ payment_intent: id, limit: 1 });
-  if (existing?.data?.length) return { refundId: existing.data[0].id, alreadyRefunded: true };
+  const existing = await stripe.refunds.list({ payment_intent: id, limit: 100 });
+  const live = (existing?.data || []).filter((r) => r.status !== "failed" && r.status !== "canceled");
+  if (live.length) {
+    const known = pi && typeof pi === "object" ? pi.amount_received ?? pi.amount : null;
+    let amountCents = Number.isInteger(known) ? known : null;
+    if (amountCents === null) {
+      const fresh = await stripe.paymentIntents.retrieve(id);
+      amountCents = fresh.amount_received ?? fresh.amount;
+    }
+    const refundedCents = live.reduce((sum, r) => sum + (Number.isInteger(r.amount) ? r.amount : 0), 0);
+    if (refundedCents >= amountCents) return { refundId: live[0].id, alreadyRefunded: true, refundedCents };
+    throw new PartialRefundError(refundedCents, amountCents);
+  }
   const refund = await stripe.refunds.create({ payment_intent: id }, { idempotencyKey: idempotencyKey || `order-refund-${id}` });
-  return { refundId: refund.id, alreadyRefunded: false };
+  return { refundId: refund.id, alreadyRefunded: false, refundedCents: refund.amount ?? null };
 }
 
 /**
