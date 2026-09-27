@@ -24,7 +24,7 @@ export function LocationSwitcher() {
   return (
     <>
       <button type="button" onClick={() => setOpen(true)} aria-haspopup="dialog" aria-label={`Location: ${name}. Change location`}
-        className="inline-flex min-h-11 max-w-[52vw] shrink-0 items-center gap-1.5 rounded-full border border-oh-cream/15 bg-oh-cream/5 py-2 pl-3 pr-2.5 text-sm font-semibold text-oh-cream transition-colors hover:bg-oh-cream/10 active:bg-oh-cream/15 lg:max-w-xs">
+        className="inline-flex min-h-11 min-w-11 max-w-[52vw] shrink items-center gap-1.5 rounded-full border border-oh-cream/15 bg-oh-cream/5 py-2 pl-3 pr-2.5 text-sm font-semibold text-oh-cream transition-colors hover:bg-oh-cream/10 active:bg-oh-cream/15 lg:max-w-xs">
         <Icon name="pin" size={16} className={current ? "shrink-0 text-oh-gold" : "shrink-0 text-oh-cream/60"} />
         <span className="truncate">{name}</span>
         <Icon name="chevron-right" size={14} className="shrink-0 rotate-90 text-oh-cream/60" />
