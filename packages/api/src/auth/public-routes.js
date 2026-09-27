@@ -173,26 +173,16 @@ export const PUBLIC_ROUTES = Object.freeze([
   p("GET", "/catering/events/:slug/survey/identity", "catering-public"),
   p("POST", "/catering/events/:slug/survey", "catering-public"),
 
-  // Agents (proxied by the web server)
-  p("GET", "/agents/ideas", "agents"),
+  // Agents: only the routes the web proxy (apps/web/app/api/agents/*/route.ts) actually
+  // calls stay public. Everything else in autonomous/routes.js moved to CONSOLE_ROUTES
+  // (OWNER) because it had no caller anywhere in apps/ and autonomous/routes.js applies
+  // no auth of its own.
+  // TODO(security): web proxy has Clerk auth but API does not; needs a shared secret
   p("POST", "/agents/ideas", "agents"),
   p("GET", "/agents/runs", "agents"),
   p("GET", "/agents/runs/:id", "agents"),
-  p("POST", "/agents/runs/:id/cancel", "agents"),
-  p("GET", "/agents/approvals", "agents"),
   p("POST", "/agents/approvals/:id", "agents"),
-  p("GET", "/agents/questions", "agents"),
   p("POST", "/agents/questions/:id", "agents"),
-  p("POST", "/agents/classify", "agents"),
-  p("POST", "/agents/notifications/devices", "agents"),
-  p("DELETE", "/agents/notifications/devices/:deviceId", "agents"),
-  p("POST", "/agents/notifications/test", "agents"),
-  p("GET", "/agents/models/routing", "agents"),
-  p("GET", "/agents/models/usage", "agents"),
-  p("POST", "/agents/models/estimate", "agents"),
-  p("GET", "/agents/scheduler/status", "agents"),
-  p("POST", "/agents/scheduler/trigger", "agents"),
-  p("GET", "/agents/health", "agents"),
 
   // Webhooks
   p("POST", "/webhooks/github", "webhook"),

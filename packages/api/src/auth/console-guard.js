@@ -85,6 +85,23 @@ export const CONSOLE_ROUTES = Object.freeze([
   r("GET", "/analytics/language", STAFF),
   r("GET", "/analytics/challenges", STAFF),
   r("GET", "/analytics/badges", STAFF),
+  // Agents (autonomous/routes.js): no auth of its own; only the routes the web
+  // proxy actually calls (see public-routes.js) stay public. These have no caller
+  // anywhere in apps/, so they were silently open before this fix.
+  r("GET", "/agents/ideas", OWNER),
+  r("POST", "/agents/runs/:id/cancel", OWNER),
+  r("GET", "/agents/approvals", OWNER),
+  r("GET", "/agents/questions", OWNER),
+  r("POST", "/agents/classify", OWNER),
+  r("POST", "/agents/notifications/devices", OWNER),
+  r("DELETE", "/agents/notifications/devices/:deviceId", OWNER),
+  r("POST", "/agents/notifications/test", OWNER),
+  r("GET", "/agents/models/routing", OWNER),
+  r("GET", "/agents/models/usage", OWNER),
+  r("POST", "/agents/models/estimate", OWNER),
+  r("GET", "/agents/scheduler/status", OWNER),
+  r("POST", "/agents/scheduler/trigger", OWNER),
+  r("GET", "/agents/health", OWNER),
   // Unused but dangerous when open
   r("POST", "/challenges", OWNER),
   r("PATCH", "/challenges/:id", OWNER),
