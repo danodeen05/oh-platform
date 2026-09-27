@@ -508,6 +508,7 @@ test("amount mismatch is rejected", async () => { /* PI amount 100, order due 19
   - `apps/web/app/[locale]/kiosk/order/kiosk-order-flow.tsx:859,892`
   - `apps/web/app/api/webhooks/stripe/route.ts:91-185`
   - The group-order API paths in `index.js` (`/group-orders/:code/orders`) so they call `quoteOrder`/`createOrder`
+  - Every other `/group-orders*` route (create, join, patch, transfer-host, complete, delete): the acting member comes from `req.customer`, and client-sent user ids are ignored (added during execution, after A10b)
 - Create: `apps/web/lib/site/orders.ts` (typed client: `quote`, `create`, `paymentIntent`, `confirmPayment`)
 
 This task keeps the current UI working on the new API. Phase D replaces the UI itself.
@@ -1273,7 +1274,7 @@ export function simulate(program: PublicProgram, input: { bowlsPerMonth: number;
   1. Apply `20260928000000_site_overhaul/migration.sql` to Railway Postgres with psql (URL from `.env.prod-bak`).
   2. Run `seed-comb-seats --all` and `backfill-i18n` against prod.
   3. Run `cutover-credit-lots --dry-run`, review it, then run it for real.
-  4. Generate and print the new pod QR codes from admin.
+  4. Generate and print the new pod QR codes from admin. Confirm every prod `KioskDevice` has its `apiKey` set on its tablet (keyless kiosks lose member-QR check-in after A10b).
   5. Set Railway variables: `CHAPPY_GUEST_SECRET`, `CHAPPY_LIMITS_JSON`, `CHAPPY_MODEL` (optional).
   6. Deploy Railway, then Vercel. Verify `prisma` is a dependency, not a devDependency (memory: railway-prisma-build).
   7. Run the prod smoke test (the G1 subset against www, with a Stripe live-mode $0 path using a reward, so there's no real charge).
