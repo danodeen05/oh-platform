@@ -88,7 +88,7 @@ export default function GiftCardsPage() {
           <StatTile label="Outstanding" value={statsRes.data ? money(statsRes.data.outstandingBalanceCents) : "…"} tone="pending" />
         </div>
 
-        <SearchField value={text} onChange={setText} onSubmit={(v) => setQ(v.trim())} placeholder="Code or email" label="Search gift cards" />
+        <SearchField value={text} onChange={(v) => { setText(v); if (!v) setQ(""); }} onSubmit={(v) => setQ(v.trim())} placeholder="Code or email" label="Search gift cards" />
 
         <FilterBar activeCount={activeCount} onClear={clear}>
           <Field label="Status" className="lg:w-44">

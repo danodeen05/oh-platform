@@ -193,7 +193,7 @@ function ProductChecklist({ products, selected, onToggle }: { products: Product[
   return (
     <div className="max-h-40 space-y-0.5 overflow-y-auto rounded-xl border border-oh-stone/20 p-1.5">
       {products.map((p) => (
-        <label key={p.id} className="flex min-h-10 cursor-pointer items-center gap-2.5 rounded-lg px-2 text-[15px] text-oh-charcoal hover:bg-oh-linen">
+        <label key={p.id} className="flex min-h-11 cursor-pointer items-center gap-2.5 rounded-lg px-2 text-[15px] text-oh-charcoal hover:bg-oh-linen">
           <input type="checkbox" checked={selected.includes(p.id)} onChange={() => onToggle(p.id)} className="h-4 w-4 accent-oh-ember-deep" />
           {p.name}
         </label>

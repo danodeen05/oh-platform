@@ -64,3 +64,26 @@ test("usageByScope and topCodes derive from the per-code analytics rows", () => 
     { code: "B", usageCount: 2, discountGivenCents: 100 },
   ]);
 });
+
+test("expiresAt round-trips through formFromPromo -> promoBody in a non-UTC TZ", () => {
+  // datetime-local reads/writes local wall-clock time with no offset in the string, and
+  // promoBody's `new Date(...)` parse also treats it as local - both sides must agree, or
+  // re-saving an untouched expiry silently shifts it by the local UTC offset (this
+  // regressed once: formFromPromo used to format in UTC while promoBody parsed as local).
+  const prevTz = process.env.TZ;
+  process.env.TZ = "America/Denver";
+  try {
+    for (const original of ["2026-01-15T19:00:00.000Z", "2026-07-15T19:00:00.000Z"]) {
+      const form = formFromPromo({
+        id: "1", code: "FALL", discountType: "PERCENTAGE", discountValue: 15, maxDiscountCents: null, scope: "ALL",
+        totalUsageLimit: null, perUserLimit: 1, currentUsageCount: 0, minimumOrderCents: null, startsAt: original,
+        expiresAt: original, isActive: true, description: null,
+        targetCategories: [], targetProductIds: [], excludedProductIds: [], locationIds: [],
+      } as never);
+      const body = promoBody({ ...f, expiresAt: form.expiresAt } as never);
+      expect(body.expiresAt).toBe(original);
+    }
+  } finally {
+    process.env.TZ = prevTz;
+  }
+});

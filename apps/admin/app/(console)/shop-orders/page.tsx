@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { OrdersTabs } from "@/components/orders/OrdersTabs";
 import { Badge } from "@/components/ui/Badge";
@@ -9,7 +10,6 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorCard } from "@/components/ui/ErrorCard";
 import { controlCls, Field, Select } from "@/components/ui/Field";
 import { FilterBar } from "@/components/ui/FilterBar";
-import { ListRow } from "@/components/ui/ListRow";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { SearchField } from "@/components/ui/SearchField";
 import { SkeletonList } from "@/components/ui/Skeleton";
@@ -57,23 +57,30 @@ const COLUMNS: Column<ShopOrderSummary>[] = [
 
 export default function ShopOrdersPage() {
   const role = useRole();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [text, setText] = useState("");
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
 
-  // Initial filters can arrive from Today ("?fulfillmentStatus=PENDING").
+  // Filters can arrive from elsewhere ("?fulfillmentStatus=PENDING" from Today, or the
+  // page's own Pending fulfillment tile). Reactive to searchParams, not just on mount, so
+  // tapping that tile while already on this page updates the select too.
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const fulfillmentStatus = params.get("fulfillmentStatus");
-    if (fulfillmentStatus) setFilters((f) => ({ ...f, fulfillmentStatus }));
-  }, []);
+    const fulfillmentStatus = searchParams.get("fulfillmentStatus");
+    if (fulfillmentStatus) setFilters((f) => (f.fulfillmentStatus === fulfillmentStatus ? f : { ...f, fulfillmentStatus }));
+  }, [searchParams]);
 
   useEffect(() => { setPage(1); }, [filters, q]);
 
   const set = <K extends keyof Filters>(k: K, v: Filters[K]) => setFilters((f) => ({ ...f, [k]: v }));
   const activeCount = Object.values(filters).filter(Boolean).length;
-  const clear = () => { setFilters(EMPTY_FILTERS); setText(""); setQ(""); };
+  const clear = () => {
+    setFilters(EMPTY_FILTERS); setText(""); setQ("");
+    if (searchParams.toString()) router.replace(pathname);
+  };
 
   const key = `shop-orders:${JSON.stringify(filters)}:${q}:${page}`;
   const res = useResource(key, (signal) => api<{ orders: ShopOrderSummary[]; pagination: Pagination }>("/admin/shop/orders", {
@@ -101,7 +108,7 @@ export default function ShopOrdersPage() {
           {role === "owner" && <StatTile label="Revenue" value={statsRes.data ? money(statsRes.data.totalRevenueCents) : "…"} tone="good" />}
         </div>
 
-        <SearchField value={text} onChange={setText} onSubmit={(v) => { setQ(v.trim()); if (!v.trim()) setQ(""); }} placeholder="Order #, email, name" label="Search shop orders" />
+        <SearchField value={text} onChange={(v) => { setText(v); if (!v) setQ(""); }} onSubmit={(v) => setQ(v.trim())} placeholder="Order #, email, name" label="Search shop orders" />
 
         <FilterBar activeCount={activeCount} onClear={clear}>
           <Field label="Payment status" className="lg:w-44">
@@ -139,15 +146,23 @@ export default function ShopOrdersPage() {
           <DataList rows={orders} rowKey={(o) => o.id} columns={COLUMNS}
             empty={<EmptyState icon="bag" title="No orders found" body="Try different filters or clear them." />}
             renderCard={(o) => (
-              <ListRow href={`/shop-orders/${o.id}`}
-                title={<>#{o.orderNumber} <span className="font-normal text-oh-stone/60">· {shortDate(o.createdAt)}</span></>}
-                meta={<>{customerName(o)} · {itemsSummary(o.items)}</>}
-                trailing={
-                  <span className="flex flex-col items-end gap-1.5">
-                    <Badge tone={fulfillmentTone(o.fulfillmentStatus)}>{fulfillmentLabel(o.fulfillmentStatus)}</Badge>
-                    <span className="text-sm font-semibold tabular-nums text-oh-charcoal">{money(o.totalCents)}</span>
+              <Link href={`/shop-orders/${o.id}`} className="block px-4 py-3 transition-colors hover:bg-oh-linen/60 active:bg-oh-linen">
+                <div className="flex items-start justify-between gap-2">
+                  <span>
+                    <span className="block font-semibold text-oh-charcoal">#{o.orderNumber}</span>
+                    <span className="block text-sm text-oh-stone/60">{shortDate(o.createdAt)}</span>
                   </span>
-                } />
+                  <span className="text-[15px] font-semibold tabular-nums text-oh-charcoal">{money(o.totalCents)}</span>
+                </div>
+                <p className="mt-1.5 truncate text-sm text-oh-stone">{customerName(o)}{customerEmail(o) && <span className="text-oh-stone/60"> · {customerEmail(o)}</span>}</p>
+                <p className="mt-0.5 truncate text-sm text-oh-stone/60">{itemsSummary(o.items)}</p>
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                  <Badge tone={paymentTone(o.paymentStatus)}>{paymentLabel(o.paymentStatus)}</Badge>
+                  <Badge tone={fulfillmentTone(o.fulfillmentStatus)}>{fulfillmentLabel(o.fulfillmentStatus)}</Badge>
+                  <span className="text-sm text-oh-stone/70">{typeLabel(o.fulfillmentType)}</span>
+                  {o.trackingNumber && <span className="font-mono text-xs text-oh-stone/60">{o.trackingNumber}</span>}
+                </div>
+              </Link>
             )} />
         )}
 

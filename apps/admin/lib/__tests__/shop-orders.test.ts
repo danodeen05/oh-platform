@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import {
-  customerEmail, customerName, denverDayRange, fulfillmentLabel, fulfillmentTone, isShipped,
+  canMarkShipped, customerEmail, customerName, denverDayRange, fulfillmentLabel, fulfillmentTone, isShipped,
   itemCount, itemsSummary, pageSummary, paymentLabel, paymentTone, typeLabel,
 } from "../shop-orders";
 
@@ -31,6 +31,14 @@ test("isShipped: only SHIPPED and COMPLETED hide Mark as shipped", () => {
   expect(isShipped("PENDING")).toBe(false);
   expect(isShipped("PROCESSING")).toBe(false);
   expect(isShipped("READY_PICKUP")).toBe(false);
+});
+
+test("canMarkShipped: hidden once shipped/done, cancelled, or picked up in-store", () => {
+  expect(canMarkShipped({ fulfillmentStatus: "PENDING", fulfillmentType: "SHIPPING" })).toBe(true);
+  expect(canMarkShipped({ fulfillmentStatus: "SHIPPED", fulfillmentType: "SHIPPING" })).toBe(false);
+  expect(canMarkShipped({ fulfillmentStatus: "COMPLETED", fulfillmentType: "SHIPPING" })).toBe(false);
+  expect(canMarkShipped({ fulfillmentStatus: "CANCELLED", fulfillmentType: "SHIPPING" })).toBe(false);
+  expect(canMarkShipped({ fulfillmentStatus: "PENDING", fulfillmentType: "IN_STORE_PICKUP" })).toBe(false);
 });
 
 test("customerName and customerEmail: user wins over guest, then Guest fallback", () => {

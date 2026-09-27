@@ -13,7 +13,7 @@ import { useToast } from "@/components/ui/Toast";
 import { api, ApiError } from "@/lib/api";
 import { denverDateTime, money } from "@/lib/format";
 import {
-  customerEmail, customerName, fulfillmentLabel, fulfillmentTone, isShipped, paymentLabel, paymentTone,
+  canMarkShipped, customerEmail, customerName, fulfillmentLabel, fulfillmentTone, isShipped, paymentLabel, paymentTone,
   typeLabel, CARRIERS, FULFILLMENT_STATUSES, type ShopOrderDetail,
 } from "@/lib/shop-orders";
 import { useResource } from "@/lib/use-resource";
@@ -31,7 +31,7 @@ function Line({ label, value, strong, muted }: { label: string; value: string; s
 
 type FulfillmentForm = { fulfillmentStatus: string; trackingCarrier: string; trackingNumber: string; trackingUrl: string; adminNotes: string };
 
-function FulfillmentSheet({ order, presetShipped, onClose, onSaved }: { order: ShopOrderDetail; presetShipped: boolean; onClose: () => void; onSaved: (o: ShopOrderDetail, marked: boolean) => void }) {
+function FulfillmentSheet({ order, presetShipped, onClose, onSaved }: { order: ShopOrderDetail; presetShipped: boolean; onClose: () => void; onSaved: (marked: boolean) => void }) {
   const { show } = useToast();
   const [form, setForm] = useState<FulfillmentForm>(() => ({
     fulfillmentStatus: presetShipped ? "SHIPPED" : order.fulfillmentStatus, trackingCarrier: order.trackingCarrier ?? "",
@@ -49,7 +49,9 @@ function FulfillmentSheet({ order, presetShipped, onClose, onSaved }: { order: S
     setSaving(true);
     try {
       const wasUnshipped = !isShipped(order.fulfillmentStatus);
-      const saved = await api<ShopOrderDetail>(`/admin/shop/orders/${order.id}`, {
+      // The PATCH response only includes items/user/guest, not giftCard/promoCode - the
+      // parent reloads the full record instead of trusting this, so those cards don't vanish.
+      await api(`/admin/shop/orders/${order.id}`, {
         method: "PATCH",
         body: {
           fulfillmentStatus: form.fulfillmentStatus,
@@ -59,7 +61,7 @@ function FulfillmentSheet({ order, presetShipped, onClose, onSaved }: { order: S
           adminNotes: form.adminNotes || null,
         },
       });
-      onSaved(saved, wasUnshipped && form.fulfillmentStatus === "SHIPPED");
+      onSaved(wasUnshipped && form.fulfillmentStatus === "SHIPPED");
     } catch (e) {
       show({ message: `Couldn't save. ${errorText(e)}`, tone: "alert" });
     } finally {
@@ -104,9 +106,8 @@ export default function ShopOrderDetailPage({ params }: { params: Promise<{ id: 
   const { id } = use(params);
   const { show } = useToast();
   const res = useResource(`shop-order:${id}`, (signal) => api<ShopOrderDetail>(`/admin/shop/orders/${encodeURIComponent(id)}`, { signal }));
-  const [order, setOrder] = useState<ShopOrderDetail | null>(null);
+  const order = res.data;
   const [sheetMode, setSheetMode] = useState<"edit" | "shipped" | null>(null);
-  if (res.data && order?.id !== res.data.id) setOrder(res.data);
 
   if (!order) {
     return (
@@ -126,7 +127,7 @@ export default function ShopOrderDetailPage({ params }: { params: Promise<{ id: 
     <>
       <PageHeader title={`Order #${order.orderNumber}`} back={BACK}
         subtitle={<span className="flex flex-wrap items-center gap-2"><Badge tone={fulfillmentTone(order.fulfillmentStatus)}>{fulfillmentLabel(order.fulfillmentStatus)}</Badge><span>{denverDateTime(order.createdAt)}</span></span>}
-        actions={!isShipped(order.fulfillmentStatus) && (
+        actions={canMarkShipped(order) && (
           <Button variant="primary" onClick={() => setSheetMode("shipped")}>Mark as shipped</Button>
         )} />
 
@@ -213,8 +214,8 @@ export default function ShopOrderDetailPage({ params }: { params: Promise<{ id: 
 
       {sheetMode && (
         <FulfillmentSheet key={sheetMode} order={order} presetShipped={sheetMode === "shipped"} onClose={() => setSheetMode(null)}
-          onSaved={(saved, marked) => {
-            setOrder(saved);
+          onSaved={(marked) => {
+            res.reload();
             setSheetMode(null);
             show({ message: marked ? "Order marked as shipped." : "Fulfillment updated.", tone: "good" });
           }} />

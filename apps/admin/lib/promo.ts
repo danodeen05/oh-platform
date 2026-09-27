@@ -43,7 +43,19 @@ export function emptyPromoForm(): PromoForm {
 }
 
 const dollars = (cents: number | null | undefined) => (cents == null ? "" : (cents / 100).toFixed(2));
-const toDatetimeLocal = (iso: string | null) => (iso ? new Date(iso).toISOString().slice(0, 16) : "");
+/**
+ * A `datetime-local` input reads and writes its value as local wall-clock time (no
+ * timezone in the string), and `promoBody` parses it back with `new Date(...)`, which
+ * also treats a timezone-less string as local time. So this must format in local time
+ * too - `toISOString()` (always UTC) would drift the saved expiry by the local UTC
+ * offset (6-7h in Denver) on every edit, even one that didn't touch the field.
+ */
+const toDatetimeLocal = (iso: string | null) => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
 
 export function formFromPromo(p: PromoCode | null): PromoForm {
   if (!p) return emptyPromoForm();

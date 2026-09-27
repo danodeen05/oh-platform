@@ -26,7 +26,7 @@ const errorText = (e: unknown) => (e instanceof ApiError || e instanceof Error ?
 const categoryLabel = (c: string) => c.charAt(0) + c.slice(1).toLowerCase().replace(/_/g, " ");
 
 function ProductSheet({ product, onClose, onSaved, onDeleted }: {
-  product: ShopProduct | null; onClose: () => void; onSaved: (p: ShopProduct, created: boolean) => void; onDeleted: (id: string) => void;
+  product: ShopProduct | null; onClose: () => void; onSaved: (p: ShopProduct, created: boolean) => void; onDeleted: (id: string, softDeleted: boolean) => void;
 }) {
   const ask = useConfirm();
   const { show } = useToast();
@@ -63,8 +63,10 @@ function ProductSheet({ product, onClose, onSaved, onDeleted }: {
     if (!ok) return;
     setDeleting(true);
     try {
+      // Products with order history are soft-deleted (marked unavailable) instead of
+      // removed outright, so the row needs to stay - just flipped - not disappear.
       const data = await api<{ message: string }>(`/admin/shop/products/${product.id}`, { method: "DELETE" });
-      onDeleted(product.id);
+      onDeleted(product.id, data.message.toLowerCase().includes("unavailable"));
       show({ message: data.message, tone: "info" });
     } catch (e) {
       show({ message: errorText(e), tone: "alert" });
@@ -226,8 +228,10 @@ export default function ProductsPage() {
             setSheet(null);
             show({ message: created ? `${saved.name} added` : `${saved.name} saved`, tone: "good" });
           }}
-          onDeleted={(id) => {
-            setProducts((list) => list && list.filter((p) => p.id !== id));
+          onDeleted={(id, softDeleted) => {
+            setProducts((list) => list && (softDeleted
+              ? list.map((p) => (p.id === id ? { ...p, isAvailable: false } : p))
+              : list.filter((p) => p.id !== id)));
             setSheet(null);
           }} />
       )}

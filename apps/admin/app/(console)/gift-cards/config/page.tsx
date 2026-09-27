@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Button, IconButton } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { useConfirm } from "@/components/ui/Confirm";
@@ -12,6 +12,7 @@ import { SkeletonList } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { api, ApiError } from "@/lib/api";
 import { money } from "@/lib/format";
+import { runOptimistic } from "@/lib/optimistic";
 import { slugifyDesignId, validateCustomRange, validateDenomination, type CustomRange, type Denomination, type Design } from "@/lib/gift-cards";
 import { useResource } from "@/lib/use-resource";
 
@@ -75,6 +76,7 @@ export default function GiftCardConfigPage() {
 
   const [newAmount, setNewAmount] = useState("");
   const [amountError, setAmountError] = useState<string | undefined>();
+  const [denomInputKey, setDenomInputKey] = useState(0);
   const [minAmount, setMinAmount] = useState("");
   const [maxAmount, setMaxAmount] = useState("");
   const [rangeErrors, setRangeErrors] = useState<{ min?: string; max?: string }>({});
@@ -96,6 +98,7 @@ export default function GiftCardConfigPage() {
       const created = await api<Denomination>("/admin/gift-card-config/denominations", { method: "POST", body: { amountCents: dollarsToCents(newAmount), displayOrder: config?.denominations.length ?? 0 } });
       setConfig((c) => (c ? { ...c, denominations: [...c.denominations, created] } : c));
       setNewAmount("");
+      setDenomInputKey((k) => k + 1); // remount the MoneyInput so its own text state clears too
       show({ message: `${money(created.amountCents)} added.`, tone: "good" });
     } catch (e) {
       show({ message: errorText(e), tone: "alert" });
@@ -128,18 +131,24 @@ export default function GiftCardConfigPage() {
   }
 
   const markBusy = (id: string, on: boolean) => setBusy((s) => { const n = new Set(s); if (on) n.add(id); else n.delete(id); return n; });
+  const setDesignActive = (id: string, v: boolean) => setConfig((c) => c && { ...c, designs: c.designs.map((x) => (x.id === id ? { ...x, isActive: v } : x)) });
 
-  async function toggleDesign(d: Design) {
+  const toggleDesign = useCallback(async function toggleDesign(d: Design, next: boolean, isUndo = false) {
     markBusy(d.id, true);
-    try {
-      const saved = await api<Design>(`/admin/gift-card-config/designs/${d.id}`, { method: "PATCH", body: { isActive: !d.isActive } });
-      setConfig((c) => (c ? { ...c, designs: c.designs.map((x) => (x.id === d.id ? saved : x)) } : c));
-    } catch (e) {
-      show({ message: errorText(e), tone: "alert" });
-    } finally {
-      markBusy(d.id, false);
-    }
-  }
+    const ok = await runOptimistic({
+      apply: () => setDesignActive(d.id, next),
+      revert: () => setDesignActive(d.id, !next),
+      commit: () => api(`/admin/gift-card-config/designs/${d.id}`, { method: "PATCH", body: { isActive: next } }),
+    });
+    markBusy(d.id, false);
+    if (!ok) { show({ message: `Couldn't update ${d.designName}. Try again.`, tone: "alert" }); return; }
+    show({
+      message: next ? `${d.designName} is active` : `${d.designName} is inactive`,
+      tone: next ? "good" : "info",
+      action: isUndo ? undefined : { label: "Undo", onClick: () => { toggleDesign(d, !next, true); } },
+      durationMs: isUndo ? undefined : 5000,
+    });
+  }, [show]);
 
   async function removeDesign(d: Design) {
     const ok = await ask({ title: `Delete ${d.designName}?`, confirmLabel: "Delete", tone: "danger" });
@@ -178,7 +187,7 @@ export default function GiftCardConfigPage() {
           </div>
           <div className="mt-4 flex flex-wrap items-end gap-3">
             <Field label="Add a denomination" error={amountError} className="w-40">
-              <MoneyInput cents={null} onCents={() => {}} onInput={(e) => { setNewAmount(e.currentTarget.value); setAmountError(undefined); }} placeholder="0.00" aria-invalid={Boolean(amountError)} />
+              <MoneyInput key={denomInputKey} cents={null} onCents={() => {}} onInput={(e) => { setNewAmount(e.currentTarget.value); setAmountError(undefined); }} placeholder="0.00" aria-invalid={Boolean(amountError)} />
             </Field>
             <Button onClick={addDenomination}>Add</Button>
           </div>
@@ -187,10 +196,10 @@ export default function GiftCardConfigPage() {
             <p className="mb-3 text-[15px] font-semibold text-oh-charcoal">Custom amount range</p>
             <div className="flex flex-wrap items-end gap-3">
               <Field label="Minimum" error={rangeErrors.min} className="w-32">
-                <MoneyInput cents={null} onCents={() => {}} onInput={(e) => { setMinAmount(e.currentTarget.value); setRangeErrors((r) => ({ ...r, min: undefined })); }} placeholder="10.00" aria-invalid={Boolean(rangeErrors.min)} />
+                <MoneyInput cents={dollarsToCents(minAmount)} onCents={() => {}} onInput={(e) => { setMinAmount(e.currentTarget.value); setRangeErrors((r) => ({ ...r, min: undefined })); }} placeholder="10.00" aria-invalid={Boolean(rangeErrors.min)} />
               </Field>
               <Field label="Maximum" error={rangeErrors.max} className="w-32">
-                <MoneyInput cents={null} onCents={() => {}} onInput={(e) => { setMaxAmount(e.currentTarget.value); setRangeErrors((r) => ({ ...r, max: undefined })); }} placeholder="500.00" aria-invalid={Boolean(rangeErrors.max)} />
+                <MoneyInput cents={dollarsToCents(maxAmount)} onCents={() => {}} onInput={(e) => { setMaxAmount(e.currentTarget.value); setRangeErrors((r) => ({ ...r, max: undefined })); }} placeholder="500.00" aria-invalid={Boolean(rangeErrors.max)} />
               </Field>
               <Button onClick={saveRange}>Update range</Button>
             </div>
@@ -209,7 +218,7 @@ export default function GiftCardConfigPage() {
                     <p className="font-semibold text-oh-charcoal">{d.designName}</p>
                     <p className="font-mono text-xs text-oh-stone/60">{d.designId}</p>
                     <div className="flex items-center justify-between pt-1">
-                      <Toggle checked={d.isActive} disabled={busy.has(d.id)} label="Active" onChange={() => toggleDesign(d)} />
+                      <Toggle checked={d.isActive} disabled={busy.has(d.id)} label="Active" onChange={(next) => toggleDesign(d, next)} />
                       <Button size="sm" variant="danger" onClick={() => removeDesign(d)}>Delete</Button>
                     </div>
                   </div>

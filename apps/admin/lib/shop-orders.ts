@@ -49,6 +49,11 @@ export const typeLabel = (s: string) => (s === "SHIPPING" ? "Shipping" : "In-sto
 /** "SHIPPED" is terminal-ish once shipped or fully done; that's when "Mark as shipped" hides. */
 export const isShipped = (status: string) => status === "SHIPPED" || status === "COMPLETED";
 
+/** "Mark as shipped" only makes sense for a shippable order that isn't already done or cancelled. */
+export function canMarkShipped(o: Pick<ShopOrderSummary, "fulfillmentStatus" | "fulfillmentType">): boolean {
+  return o.fulfillmentType !== "IN_STORE_PICKUP" && o.fulfillmentStatus !== "CANCELLED" && !isShipped(o.fulfillmentStatus);
+}
+
 export function customerName(o: Pick<ShopOrderSummary, "user" | "guest">): string {
   return o.user?.name || o.guest?.name || "Guest";
 }

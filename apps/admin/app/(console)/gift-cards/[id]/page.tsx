@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { use, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -22,7 +22,7 @@ import { useResource } from "@/lib/use-resource";
 const BACK = { href: "/gift-cards", label: "Gift cards" };
 const errorText = (e: unknown) => (e instanceof ApiError || e instanceof Error ? e.message : "Something went wrong.");
 
-function AdjustBalanceSheet({ card, onClose, onSaved }: { card: GiftCardDetail; onClose: () => void; onSaved: (c: GiftCardDetail) => void }) {
+function AdjustBalanceSheet({ card, onClose, onSaved }: { card: GiftCardDetail; onClose: () => void; onSaved: () => void }) {
   const { show } = useToast();
   const ask = useConfirm();
   const [amount, setAmount] = useState("");
@@ -43,8 +43,9 @@ function AdjustBalanceSheet({ card, onClose, onSaved }: { card: GiftCardDetail; 
 
     setSaving(true);
     try {
-      const saved = await api<GiftCardDetail>(`/admin/gift-cards/${card.id}`, { method: "PATCH", body: { balanceAdjustment: cents, adjustmentReason: reason.trim() } });
-      onSaved(saved);
+      // The response only echoes purchaser/redeemedBy, not shopOrders - the parent reloads the full record instead of using this.
+      await api<GiftCardDetail>(`/admin/gift-cards/${card.id}`, { method: "PATCH", body: { balanceAdjustment: cents, adjustmentReason: reason.trim() } });
+      onSaved();
     } catch (e) {
       show({ message: `Couldn't adjust balance. ${errorText(e)}`, tone: "alert" });
     } finally {
@@ -72,16 +73,16 @@ export default function GiftCardDetailPage({ params }: { params: Promise<{ id: s
   const { show } = useToast();
   const ask = useConfirm();
   const res = useResource(`gift-card:${id}`, (signal) => api<GiftCardDetail>(`/admin/gift-cards/${encodeURIComponent(id)}`, { signal }));
-  const [card, setCard] = useState<GiftCardDetail | null>(null);
+  const card = res.data;
   const [status, setStatus] = useState("");
   const [notes, setNotes] = useState("");
-  const [seededId, setSeededId] = useState<string | null>(null);
-  if (res.data && seededId !== res.data.id) {
-    setCard(res.data);
-    setStatus(res.data.status);
-    setNotes(res.data.adminNotes ?? "");
-    setSeededId(res.data.id);
-  }
+  // Reseed the editable fields from the full record every time it (re)loads - including
+  // after a write, since res.reload() is what refreshes `card` (see save/deactivate/reactivate
+  // below). This also means the audit line a balance adjustment appends to adminNotes is
+  // always picked up before the next Save, instead of being wiped by stale local state.
+  useEffect(() => {
+    if (res.data) { setStatus(res.data.status); setNotes(res.data.adminNotes ?? ""); }
+  }, [res.data]);
 
   const [adjustOpen, setAdjustOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -100,10 +101,18 @@ export default function GiftCardDetailPage({ params }: { params: Promise<{ id: s
   const usedCents = card.amountCents - card.balanceCents;
 
   async function save() {
+    // Setting CANCELLED from the status select is the same destructive action as the
+    // Deactivate button, so it goes through the same confirmation.
+    if (status === "CANCELLED" && card!.status !== "CANCELLED") {
+      const ok = await ask({ title: `Deactivate ${card!.code}?`, body: "This prevents it from being used. You can reactivate it later.", confirmLabel: "Deactivate", tone: "danger" });
+      if (!ok) return;
+    }
     setSaving(true);
     try {
-      const saved = await api<GiftCardDetail>(`/admin/gift-cards/${card!.id}`, { method: "PATCH", body: { status, adminNotes: notes || null } });
-      setCard(saved);
+      // The PATCH response only echoes purchaser/redeemedBy, not shopOrders - reload the
+      // full record instead of trusting it, so the usage-history card doesn't crash.
+      await api(`/admin/gift-cards/${card!.id}`, { method: "PATCH", body: { status, adminNotes: notes || null } });
+      res.reload();
       show({ message: "Gift card updated.", tone: "good" });
     } catch (e) {
       show({ message: errorText(e), tone: "alert" });
@@ -116,8 +125,8 @@ export default function GiftCardDetailPage({ params }: { params: Promise<{ id: s
     const ok = await ask({ title: `Deactivate ${card!.code}?`, body: "This prevents it from being used. You can reactivate it later.", confirmLabel: "Deactivate", tone: "danger" });
     if (!ok) return;
     try {
-      const saved = await api<GiftCardDetail>(`/admin/gift-cards/${card!.id}`, { method: "PATCH", body: { status: "CANCELLED" } });
-      setCard(saved); setStatus(saved.status);
+      await api(`/admin/gift-cards/${card!.id}`, { method: "PATCH", body: { status: "CANCELLED" } });
+      res.reload();
       show({ message: "Gift card deactivated.", tone: "info" });
     } catch (e) {
       show({ message: errorText(e), tone: "alert" });
@@ -128,8 +137,8 @@ export default function GiftCardDetailPage({ params }: { params: Promise<{ id: s
     const ok = await ask({ title: `Reactivate ${card!.code}?`, confirmLabel: "Reactivate" });
     if (!ok) return;
     try {
-      const saved = await api<GiftCardDetail>(`/admin/gift-cards/${card!.id}`, { method: "PATCH", body: { status: "ACTIVE" } });
-      setCard(saved); setStatus(saved.status);
+      await api(`/admin/gift-cards/${card!.id}`, { method: "PATCH", body: { status: "ACTIVE" } });
+      res.reload();
       show({ message: "Gift card reactivated.", tone: "good" });
     } catch (e) {
       show({ message: errorText(e), tone: "alert" });
@@ -226,7 +235,7 @@ export default function GiftCardDetailPage({ params }: { params: Promise<{ id: s
 
       {adjustOpen && (
         <AdjustBalanceSheet card={card} onClose={() => setAdjustOpen(false)}
-          onSaved={(saved) => { setCard(saved); setStatus(saved.status); setAdjustOpen(false); show({ message: "Balance adjusted.", tone: "good" }); }} />
+          onSaved={() => { res.reload(); setAdjustOpen(false); show({ message: "Balance adjusted.", tone: "good" }); }} />
       )}
     </>
   );
