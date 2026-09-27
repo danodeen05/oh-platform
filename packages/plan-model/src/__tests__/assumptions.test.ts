@@ -27,27 +27,25 @@ describe("scenario presets", () => {
     expect(Object.isFrozen(RAMP_CURVE)).toBe(true);
     for (const key of SCENARIO_KEYS) expect(SCENARIOS[key].key).toBe(key);
   });
-  it("only utilization and check components differ from base", () => {
+  it("conservative moves utilization, prices and staffing; aggressive moves utilization and staffing", () => {
     const differing = (a: object, b: object) => {
       const ra = a as Record<string, unknown>;
       const rb = b as Record<string, unknown>;
       return Object.keys(ra).filter((k) => ra[k] !== rb[k]);
     };
-    expect(differing(CONSERVATIVE.assumptions, BASE_ASSUMPTIONS).sort()).toEqual(
-      ["addOnAttachRate", "avgAddOnSpend", "avgBeverageSpend", "avgBowlPrice", "beverageAttachRate", "retailAttachRate", "utilizationRate"].sort(),
-    );
-    expect(differing(AGGRESSIVE.assumptions, BASE_ASSUMPTIONS).sort()).toEqual(
-      ["addOnAttachRate", "avgBowlPrice", "beverageAttachRate", "retailAttachRate", "utilizationRate"].sort(),
-    );
+    expect(differing(CONSERVATIVE.assumptions, BASE_ASSUMPTIONS).sort()).toEqual(["avgBowlPrice", "foodCostPct", "kitchenFTE", "kitchenHoursPerDay", "utilizationRate"].sort());
+    expect(differing(AGGRESSIVE.assumptions, BASE_ASSUMPTIONS).sort()).toEqual(["kitchenFTE", "kitchenHoursPerDay", "utilizationRate"].sort());
   });
   it("isScenarioKey guards strings", () => {
     expect(isScenarioKey("base")).toBe(true);
     expect(isScenarioKey("BASE")).toBe(false);
     expect(isScenarioKey("")).toBe(false);
   });
-  it("ramp curve has 18 months and ends at the plateau", () => {
-    expect(RAMP_CURVE).toHaveLength(18);
-    expect(RAMP_CURVE[17]).toBe(BASE_ASSUMPTIONS.rampPlateau);
+  it("ramp curve has 12 months, keeps the trough and ends at the plateau", () => {
+    expect(RAMP_CURVE).toHaveLength(12);
+    expect(RAMP_CURVE[11]).toBe(BASE_ASSUMPTIONS.rampPlateau);
+    expect(RAMP_CURVE[0]).toBe(0.7);
+    expect(Math.min(...RAMP_CURVE.slice(3, 6))).toBe(0.78);
   });
 });
 
@@ -70,6 +68,13 @@ describe("reference data", () => {
     const partner = [...ROUND_ONE.sources, ...ROUND_TWO.sources].filter((s) => s.key === "partnerEquity").reduce((s, x) => s + x.amount, 0);
     expect(PARTNERSHIP_TERMS.partnerCapital).toBe(partner);
     expect(PARTNERSHIP_TERMS.founderCapital).toBe(200_000);
+  });
+  it("no market is a JV any more and wave two waits for year 8", () => {
+    expect(FRANCHISE_MARKETS.some((m) => m.structure === "jv")).toBe(false);
+    for (const key of ["tokyo", "shanghai", "beijing", "chengdu"]) expect(FRANCHISE_MARKETS.find((m) => m.key === key)?.structure).toBe("master-franchise");
+    const waveTwo = FRANCHISE_MARKETS.filter((m) => m.territoryYear >= 8);
+    expect(waveTwo).toHaveLength(16);
+    expect(waveTwo.every((m) => Object.keys(m.unitsByYear).every((y) => Number(y) >= 8))).toBe(true);
   });
   it("territory fees sit in the spec's range, US metros carry a development fee, Paris is a sub-franchise", () => {
     for (const m of FRANCHISE_MARKETS) {

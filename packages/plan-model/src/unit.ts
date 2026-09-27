@@ -1,4 +1,4 @@
-import { computeCapex, computeDebtService, computeDscr } from "./capital";
+import { capexLineAmount, computeCapex, computeDebtService, computeDepreciation, computeDscr } from "./capital";
 import { computeLocation } from "./location";
 import { computeRamp } from "./ramp";
 import type { LoanAssumptions, LocationAssumptions, Scenario, UnitModel } from "./types";
@@ -21,6 +21,12 @@ export function computeUnit(scenario: Scenario, options: UnitOptions): UnitModel
   const capex = computeCapex(a, flagship ? {} : scenario.subsequentUnitOverrides);
   const debt = computeDebtService(options.loan);
   const dscr = computeDscr(location.ebitda, debt.annualDebtService);
-  const ramp = computeRamp(a, { capex: capex.total, annualDebtService: debt.annualDebtService, ...(options.months !== undefined ? { months: options.months } : {}) });
-  return { scenario: scenario.key, flagship, location, capex, debt, dscr, ramp };
+  const preOpeningCost = capexLineAmount(capex, "preOpening");
+  const ramp = computeRamp(a, {
+    capex: capex.total,
+    annualDebtService: debt.annualDebtService,
+    preOpeningCost,
+    ...(options.months !== undefined ? { months: options.months } : {}),
+  });
+  return { scenario: scenario.key, flagship, location, capex, debt, dscr, ramp, depreciation: computeDepreciation(capex) };
 }

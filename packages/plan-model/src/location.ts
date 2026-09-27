@@ -10,19 +10,27 @@ export function computeAvgCheck(a: LocationAssumptions): number {
   );
 }
 
-/** Share of revenue that scales with sales. Everything except labor, occupancy and insurance. */
+/** Card processing is charged on the gross ticket (menu price plus sales tax), so its share of net revenue is grossed up. */
+export function processingPctOfRevenue(a: LocationAssumptions): number {
+  return a.paymentProcessingPct * (1 + a.salesTaxPct);
+}
+
+/** Share of revenue that scales with sales. Everything except labor, occupancy, insurance and the fixed member spend. */
 export function variableCostPct(a: LocationAssumptions): number {
   return (
     a.foodCostPct +
     a.packagingPct +
+    a.memberProgramPct +
+    a.discountsCompsPct +
     a.utilitiesPct +
-    a.paymentProcessingPct +
+    processingPctOfRevenue(a) +
     a.marketingPct +
     a.techPlatformPct +
     a.suppliesPct +
     a.repairsMaintPct +
     a.gaPct +
-    a.contingencyPct
+    a.contingencyPct +
+    a.communityGivingPct
   );
 }
 
@@ -37,9 +45,9 @@ export function computeOccupancy(a: LocationAssumptions): number {
   return a.squareFeet * (a.rentPerSqFtAnnual + a.nnnPerSqFtAnnual);
 }
 
-/** Costs that do not move with revenue in a given year. */
+/** Costs that do not move with revenue in a given year: labor, occupancy, insurance and the fixed member-program spend. */
 export function fixedCosts(a: LocationAssumptions): number {
-  return computeLabor(a) + computeOccupancy(a) + a.insuranceAnnual;
+  return computeLabor(a) + computeOccupancy(a) + a.insuranceAnnual + a.memberSwagAnnual;
 }
 
 /**
@@ -58,12 +66,14 @@ export function computeLocation(a: LocationAssumptions): LocationModel {
 
   const foodCost = annualRevenue * a.foodCostPct;
   const packaging = annualRevenue * a.packagingPct;
-  const grossProfit = annualRevenue - foodCost - packaging;
+  const memberProgram = annualRevenue * a.memberProgramPct + a.memberSwagAnnual;
+  const discountsComps = annualRevenue * a.discountsCompsPct;
+  const grossProfit = annualRevenue - foodCost - packaging - memberProgram - discountsComps;
 
   const labor = computeLabor(a);
   const occupancy = computeOccupancy(a);
   const utilities = annualRevenue * a.utilitiesPct;
-  const paymentProcessing = annualRevenue * a.paymentProcessingPct;
+  const paymentProcessing = annualRevenue * processingPctOfRevenue(a);
   const marketing = annualRevenue * a.marketingPct;
   const techPlatform = annualRevenue * a.techPlatformPct;
   const supplies = annualRevenue * a.suppliesPct;
@@ -71,12 +81,13 @@ export function computeLocation(a: LocationAssumptions): LocationModel {
   const insurance = a.insuranceAnnual;
   const ga = annualRevenue * a.gaPct;
   const contingency = annualRevenue * a.contingencyPct;
+  const communityGiving = annualRevenue * a.communityGivingPct;
 
   const totalOpex =
-    labor + occupancy + utilities + paymentProcessing + marketing + techPlatform + supplies + repairsMaint + insurance + ga + contingency;
+    labor + occupancy + utilities + paymentProcessing + marketing + techPlatform + supplies + repairsMaint + insurance + ga + contingency + communityGiving;
   const ebitda = grossProfit - totalOpex;
 
-  const fixed = labor + occupancy + insurance;
+  const fixed = labor + occupancy + insurance + a.memberSwagAnnual;
   const varPct = variableCostPct(a);
   const contribution = 1 - varPct;
   // With a non-positive contribution margin there is no break-even; report Infinity so the UI can say so.
@@ -87,10 +98,12 @@ export function computeLocation(a: LocationAssumptions): LocationModel {
   const lines: CostLine[] = [
     { key: "foodCost", amount: foodCost, pct: a.foodCostPct, fixed: false, group: "cogs" },
     { key: "packaging", amount: packaging, pct: a.packagingPct, fixed: false, group: "cogs" },
+    { key: "memberProgram", amount: memberProgram, pct: pct(memberProgram), fixed: false, group: "cogs" },
+    { key: "discountsComps", amount: discountsComps, pct: a.discountsCompsPct, fixed: false, group: "cogs" },
     { key: "labor", amount: labor, pct: pct(labor), fixed: true, group: "opex" },
     { key: "occupancy", amount: occupancy, pct: pct(occupancy), fixed: true, group: "opex" },
     { key: "utilities", amount: utilities, pct: a.utilitiesPct, fixed: false, group: "opex" },
-    { key: "paymentProcessing", amount: paymentProcessing, pct: a.paymentProcessingPct, fixed: false, group: "opex" },
+    { key: "paymentProcessing", amount: paymentProcessing, pct: processingPctOfRevenue(a), fixed: false, group: "opex" },
     { key: "marketing", amount: marketing, pct: a.marketingPct, fixed: false, group: "opex" },
     { key: "techPlatform", amount: techPlatform, pct: a.techPlatformPct, fixed: false, group: "opex" },
     { key: "supplies", amount: supplies, pct: a.suppliesPct, fixed: false, group: "opex" },
@@ -98,6 +111,7 @@ export function computeLocation(a: LocationAssumptions): LocationModel {
     { key: "insurance", amount: insurance, pct: pct(insurance), fixed: true, group: "opex" },
     { key: "ga", amount: ga, pct: a.gaPct, fixed: false, group: "opex" },
     { key: "contingency", amount: contingency, pct: a.contingencyPct, fixed: false, group: "opex" },
+    { key: "communityGiving", amount: communityGiving, pct: a.communityGivingPct, fixed: false, group: "opex" },
   ];
 
   return {
@@ -111,6 +125,8 @@ export function computeLocation(a: LocationAssumptions): LocationModel {
     revenuePerSqFt,
     foodCost,
     packaging,
+    memberProgram,
+    discountsComps,
     grossProfit,
     grossMarginPct: pct(grossProfit),
     labor,
@@ -125,6 +141,7 @@ export function computeLocation(a: LocationAssumptions): LocationModel {
     insurance,
     ga,
     contingency,
+    communityGiving,
     totalOpex,
     totalOpexPct: pct(totalOpex),
     ebitda,
@@ -158,7 +175,8 @@ export interface ComparisonRow {
 export function compareToTraditional(m: LocationModel): readonly ComparisonRow[] {
   const rev = m.annualRevenue;
   const share = (amount: number): number => (rev > 0 ? amount / rev : 0);
-  const otherOpex = m.totalOpex - m.labor - m.occupancy + m.packaging;
+  // Everything that is not food, labor, occupancy or EBITDA, so the five rows sum to revenue.
+  const otherOpex = m.totalOpex - m.labor - m.occupancy + m.packaging + m.memberProgram + m.discountsComps;
   return [
     { key: "foodCost", traditional: TRADITIONAL_RESTAURANT.foodCostPct, oh: share(m.foodCost) },
     { key: "labor", traditional: TRADITIONAL_RESTAURANT.laborPct, oh: share(m.labor) },

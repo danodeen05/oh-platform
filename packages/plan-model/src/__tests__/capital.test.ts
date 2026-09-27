@@ -1,13 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
   BASE_ASSUMPTIONS,
+  DEPRECIATION_LIVES,
   ROUND_ONE,
   SBA_REFERENCE_LOAN,
+  capexLineAmount,
   computeCapex,
   computeCapitalStack,
   computeDebtService,
+  computeDepreciation,
   computeDilution,
   computeDscr,
+  roundUse,
 } from "../index";
 
 describe("computeCapex", () => {
@@ -21,6 +25,32 @@ describe("computeCapex", () => {
     expect(c.lines.find((l) => l.key === "podUnitCost")?.amount).toBe(320_000);
     expect(c.lines.find((l) => l.key === "buildoutPerSqFt")?.amount).toBe(780_000);
     expect(c.lines.find((l) => l.key === "tenantImprovementAllowancePerSqFt")?.amount).toBe(-220_000);
+  });
+});
+
+describe("capexLineAmount and computeDepreciation", () => {
+  it("reads a line or returns zero when the model has none", () => {
+    const c = computeCapex(BASE_ASSUMPTIONS);
+    expect(capexLineAmount(c, "preOpening")).toBe(110_000);
+    expect(capexLineAmount({ lines: [], total: 0 }, "preOpening")).toBe(0);
+  });
+  it("depreciates by asset class with buildout net of TI", () => {
+    const d = computeDepreciation(computeCapex(BASE_ASSUMPTIONS));
+    expect(d.lines.map((l) => l.key)).toEqual(Object.keys(DEPRECIATION_LIVES));
+    expect(d.lines.find((l) => l.key === "buildoutPerSqFt")?.basis).toBe(682_500 - 192_500);
+    expect(d.lines.find((l) => l.key === "techHardware")?.annual).toBeCloseTo(95_000 / 3, 6);
+    expect(d.byYear).toHaveLength(10);
+    expect(d.byYear[0]).toBeCloseTo(d.annual, 9);
+    // Tech hardware drops out after year 3, the 7-year classes after year 7.
+    expect(d.byYear[3]).toBeCloseTo(d.annual - 95_000 / 3, 6);
+    expect(d.byYear[9]).toBeCloseTo((682_500 - 192_500) / 10 + 165_000 / 10, 6);
+    const none = computeDepreciation({ lines: [], total: 0 });
+    expect(none.annual).toBe(0);
+    expect(none.lines.every((l) => l.basis === 0)).toBe(true);
+  });
+  it("roundUse reads a round's use line or throws", () => {
+    expect(roundUse(ROUND_ONE, "platformDevelopment")).toBe(600_000);
+    expect(() => roundUse(ROUND_ONE, "yacht")).toThrow(RangeError);
   });
 });
 

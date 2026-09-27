@@ -7,7 +7,7 @@ import type { LeverKey, SharedScenario } from "./types";
  * value is validated against LEVER_BOUNDS on decode, so a stale or edited
  * link fails loudly instead of silently rendering wrong numbers.
  */
-export const SHARE_VERSION = 1;
+export const SHARE_VERSION = 2; // 2026-09-26: the re-baseline changed lever meanings (kitchenFTE step, new fields); version-1 links fail closed.
 
 interface Payload {
   v: number;

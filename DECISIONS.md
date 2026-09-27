@@ -81,3 +81,28 @@ Still open: US metro dates and fees (item 22 defaults accepted "for now"); confi
 | Performance | Plan routes skip ClerkProvider, Google Analytics and the site's five-family Google Fonts stylesheet (Raleway only; CJK via next/font); logo served at 176 px instead of the 487 KB original | Lighthouse mobile went from 41 to 53 with these costs on the page; the marketing homepage scores 32 under the same throttling, so the remaining gap is site-wide |
 | PDF export | `scripts/plan-export-pdf.cjs` (Playwright, droplet-side) prints `/plan/print` for a code; Vercel has no Chromium | Spec 7.5 |
 | Print page numbers | Not in the contents list; browsers lack `target-counter()` | Phase 5 leftover |
+
+## Engine re-baseline (`packages/plan-model` 2026.09.26), Sep 2026
+
+Owner decisions taken 2026-09-26 after the diligence review. The full field-by-field
+log with old and new values is `packages/plan-model/CHANGELOG.md` and `MODEL_CHANGELOG`
+in `src/changelog.ts`; the Model integrity section renders both.
+
+| # | Item | Decision | Effect |
+|---|---|---|---|
+| 25 | Operating days | Closed Sundays: 313 days (was 355) | Base unit revenue $3.26M, not $4.20M; every daily figure scales with it |
+| 26 | Menu and check | Prices reset as the base case ($17.99 Classic, $27.99 Wagyu at 4.5 oz cooked, $12.99 no-beef); the check and food cost are derived from the menu (`menu.ts`), never asserted. Conservative keeps today's prices | Check $23.18 (conservative $20.78); food cost 32.7% (36.5%) with Prime and American Wagyu at public price ranges; supplier quotes are an open item |
+| 27 | Member program | Costed at 1.4% of revenue plus $30K fixed per unit (about 2.1% all-in) on the recommended design: $5 to the new member on first order, referrer paid on the friend's first completed order, 90-day expiry, perks priced at COGS | New `memberProgram` cost line; the app changes are follow-up PRs listed in the integrity section's open items |
+| 28 | Corporate overhead | Founder compensation $180,000 from nine months before opening; full role schedule in `overhead.ts` ($1.0M year 1 to $2.9M year 5); lean case shown ($0.8M to $2.4M) | Consolidated EBITDA, free cash flow and cumulative cash now exist; corporate units alone do not carry the HQ, franchise and platform profit do |
+| 29 | Franchise pace | Phased: Las Vegas and Seattle signed year 3 and open year 4; LA, NYC, Taipei year 4 to 5; Singapore, London, Melbourne year 5 to 6; Paris and Tokyo year 7; wave two from year 8, still on the map | 7 units in 5 markets by year 5 (was 36 in 26), 15 by year 6, 27 by year 7 |
+| 30 | JVs | Tokyo, Shanghai, Beijing and Chengdu convert to master franchises; no brand capital, no third round for international | Every structure now has explicit economics (`STRUCTURE_ECONOMICS`): brand share of royalty and fees, sales, entry, opening and support costs, FX haircut |
+| 31 | Ownership | Derived honestly on consolidated, recurring-only exit EBITDA with tax distributions; preferred construct modeled (8% pref, 1x liquidation preference, common capped at 49%); exit year 7 at a 6x hybrid multiple shown next to year 5; the funding page says plainly when the cap binds | Year 5 at 5x: exit EBITDA $0.65M, cap binds, partner 0.18x common (0.37x preferred). Year 7 hybrid: $3.0M, partner 0.98x (1.71x preferred). Re-sequencing the ask is the open plan decision |
+| 32 | Public target | 15% four-wall EBITDA, 20% at maturity as the stretch; 25% withdrawn | Base 14.5% (rounds to the target), aggressive 20.2% |
+| 33 | Spec freeze | The 2026-09-25 presets are frozen in `assumptions/legacy-spec.ts`; the spec-anchor tests run against them as drift tests | The engine still reproduces the spec's tables from the spec's inputs, so a mechanical change cannot hide behind an assumption change |
+| 34 | Model integrity | Every assumption registered with source, date, confidence and a live reader (`registry.ts`); benchmark scorecard with low-side watch bands (`benchmarks.ts`); automated invariants (`checks.ts`); dated change log and snapshots held equal to the engine by test (`changelog.ts`); committed test manifest with a freshness test | A new field without a registry entry fails typecheck; a changed number without a snapshot bump fails the suite |
+
+## Community giving pledge (`packages/plan-model` 2026.09.27), Sep 2026
+
+| # | Item | Decision | Effect |
+|---|---|---|---|
+| 35 | Giving pledge | Every company restaurant gives 1% of revenue to ONE RED STEP AT A TIME®, a mental-health 501(c)(3) (Centerville, UT; EIN 33-7041706), modeled as an opex line (`communityGivingPct`, all scenarios). Related party, disclosed: the foundation's founder is the owner's best friend; the owner is the foundation's volunteer CTO and receives no compensation of any kind from it. Guest donations through the order-status CTA are pass-through and not Oh! revenue. Franchise units carry no pledge cost to Oh!; inviting franchisees to join is an open item. Terms to be set in a written giving agreement | Base unit EBITDA 13.5% (was 14.5%), $32,643 a year per unit; payback from opening 4.7 years; minimum cash $149K at end of year 3; partner 0.13x / 0.27x at year 5, 0.92x / 1.64x at year 7 hybrid |

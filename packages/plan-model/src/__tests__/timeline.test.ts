@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { BASE, BASE_ASSUMPTIONS, FRANCHISE_MARKETS, OPENING_SCHEDULE, computeLocation, computeTimeline, franchiseOpenMonths } from "../index";
+// Timeline mechanics on the frozen 2026-09-25 presets and market list; the phased schedule is covered in rebase-2026-09-26.test.ts.
+import { LEGACY_BASE, LEGACY_BASE_ASSUMPTIONS, LEGACY_FRANCHISE_MARKETS, OPENING_SCHEDULE, computeLocation, computeTimeline, franchiseOpenMonths } from "../index";
 
 describe("franchiseOpenMonths", () => {
   it("spreads a year's openings across its months, sorted", () => {
@@ -11,11 +12,11 @@ describe("franchiseOpenMonths", () => {
 });
 
 describe("computeTimeline", () => {
-  const t = computeTimeline(OPENING_SCHEDULE, FRANCHISE_MARKETS, BASE);
-  const base = computeLocation(BASE_ASSUMPTIONS);
+  const t = computeTimeline(OPENING_SCHEDULE, LEGACY_FRANCHISE_MARKETS, LEGACY_BASE);
+  const base = computeLocation(LEGACY_BASE_ASSUMPTIONS);
   it("defaults to 72 months and lists every corporate and franchise unit", () => {
     expect(t.months).toHaveLength(72);
-    const franchiseCount = FRANCHISE_MARKETS.reduce((s, m) => s + Object.values(m.unitsByYear).reduce((a, b) => a + b, 0), 0);
+    const franchiseCount = LEGACY_FRANCHISE_MARKETS.reduce((s, m) => s + Object.values(m.unitsByYear).reduce((a, b) => a + b, 0), 0);
     expect(t.units).toHaveLength(OPENING_SCHEDULE.length + franchiseCount);
     expect(t.units.filter((u) => u.structure === "corporate").map((u) => u.key)).toEqual(OPENING_SCHEDULE.map((o) => o.key));
     expect(t.units.find((u) => u.key === "nyc-1")?.steadyRevenue).toBeCloseTo(base.annualRevenue * 1.5, 6);
@@ -40,10 +41,10 @@ describe("computeTimeline", () => {
     }
   });
   it("handles a horizon shorter than the schedule and a unit opening after it", () => {
-    const short = computeTimeline(OPENING_SCHEDULE, [], BASE, { months: 6 });
+    const short = computeTimeline(OPENING_SCHEDULE, [], LEGACY_BASE, { months: 6 });
     expect(short.months).toHaveLength(6);
     expect(short.months[5]?.locationsOpen).toBe(1);
-    const one = computeTimeline([{ ...OPENING_SCHEDULE[0]!, openMonth: 0 }], [], BASE, { months: 1 });
+    const one = computeTimeline([{ ...OPENING_SCHEDULE[0]!, openMonth: 0 }], [], LEGACY_BASE, { months: 1 });
     expect(one.months[0]?.runRateRevenue).toBeCloseTo(base.annualRevenue * 1.18, 6);
   });
 });

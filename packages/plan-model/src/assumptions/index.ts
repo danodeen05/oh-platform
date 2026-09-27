@@ -57,27 +57,56 @@ export const FRANCHISE_TERMS: FranchiseTerms = Object.freeze({
 });
 
 /**
- * Franchise markets, locations 6 and beyond (owner decision 2026-09-25).
+ * Franchise markets, locations 6 and beyond, re-phased 2026-09-26 (owner
+ * decision; findings F1 and F3). An FDD is effective around month 24 and
+ * New York, California and Washington are registration states, so nothing
+ * franchised opens before plan year 4 and the count builds at a pace a
+ * five-unit operator can support: 7 units in 5 markets by the end of year
+ * 5, 15 by year 6, 27 by year 7.
  *
- * US metros (spec 5.9 named them corporate at $5.5M to $6.5M AUV) are now
- * area-development franchises opening from plan year 4, one unit each, with
- * a development fee in place of a territory fee. International markets are
- * master franchises or JVs from year 4 and 5 as spec 5.9 lays out. Territory
- * fees sit inside the spec's $250K to $750K range; unit counts and timing are
- * engine assumptions flagged in DECISIONS.md. Paris is a sub-franchise under
- * London and carries no fee. auvIndex scales the base unit's steady revenue.
+ * Phase one (signed year 3, open year 4): Las Vegas and Seattle.
+ * Phase two (signed year 4, open year 5): Los Angeles, New York, Taipei.
+ * Phase three (signed year 5, open year 6): Singapore, London, Melbourne;
+ * Paris as a sub-franchise under London and Tokyo from year 7.
+ * Wave two (territory year 8, first units year 8): Greater China, Southeast
+ * Asia, the Gulf, Europe, Latin America and Canada, one unit per city; still
+ * on the map, not in the five-year numbers. Former JVs (Tokyo, Shanghai,
+ * Beijing, Chengdu) are master franchises: no brand capital, no third round.
+ * Territory fees sit inside the spec's $250K to $750K range; unit counts,
+ * timing and auvIndex are engine assumptions. `currency` drives the FX
+ * haircut in STRUCTURE_ECONOMICS.
  */
 const franchiseMarkets: FranchiseMarket[] = [
-  { key: "nyc", name: "New York City", structure: "franchise", territoryFee: 100_000, territoryYear: 4, unitsByYear: { 4: 1, 5: 1, 6: 2 }, auvIndex: 1.5 },
-  { key: "la", name: "Los Angeles", structure: "franchise", territoryFee: 100_000, territoryYear: 4, unitsByYear: { 4: 1, 5: 1, 6: 2 }, auvIndex: 1.45 },
-  { key: "las-vegas", name: "Las Vegas", structure: "franchise", territoryFee: 100_000, territoryYear: 4, unitsByYear: { 4: 1, 5: 1, 6: 1 }, auvIndex: 1.4 },
-  { key: "seattle", name: "Seattle", structure: "franchise", territoryFee: 100_000, territoryYear: 4, unitsByYear: { 4: 1, 5: 1, 6: 1 }, auvIndex: 1.3 },
-  { key: "taipei", name: "Taipei", structure: "master-franchise", territoryFee: 500_000, territoryYear: 4, unitsByYear: { 4: 3, 5: 5, 6: 6 }, auvIndex: 0.85 },
-  { key: "tokyo", name: "Tokyo", structure: "jv", territoryFee: 750_000, territoryYear: 4, unitsByYear: { 4: 2, 5: 5, 6: 6 }, auvIndex: 1.05 },
-  { key: "london", name: "London", structure: "master-franchise", territoryFee: 500_000, territoryYear: 4, unitsByYear: { 4: 2, 5: 4, 6: 5 }, auvIndex: 1.1 },
-  { key: "paris", name: "Paris", structure: "sub-franchise", territoryFee: 0, territoryYear: 5, unitsByYear: { 5: 2, 6: 3 }, auvIndex: 1.0 },
-  { key: "singapore", name: "Singapore", structure: "master-franchise", territoryFee: 350_000, territoryYear: 4, unitsByYear: { 4: 1, 5: 3, 6: 3 }, auvIndex: 1.15 },
-  { key: "melbourne", name: "Melbourne", structure: "master-franchise", territoryFee: 250_000, territoryYear: 5, unitsByYear: { 5: 4, 6: 4 }, auvIndex: 0.95 },
+  // Phase one
+  { key: "las-vegas", name: "Las Vegas", structure: "franchise", territoryFee: 100_000, territoryYear: 3, unitsByYear: { 4: 1, 5: 1, 6: 1, 7: 1 }, auvIndex: 1.4 },
+  { key: "seattle", name: "Seattle", structure: "franchise", territoryFee: 100_000, territoryYear: 3, unitsByYear: { 4: 1, 5: 1, 6: 1, 7: 1 }, auvIndex: 1.3 },
+  // Phase two
+  { key: "la", name: "Los Angeles", structure: "franchise", territoryFee: 100_000, territoryYear: 4, unitsByYear: { 5: 1, 6: 1, 7: 2 }, auvIndex: 1.45 },
+  { key: "nyc", name: "New York City", structure: "franchise", territoryFee: 100_000, territoryYear: 4, unitsByYear: { 5: 1, 6: 1, 7: 2 }, auvIndex: 1.5 },
+  { key: "taipei", name: "Taipei", structure: "master-franchise", territoryFee: 500_000, territoryYear: 4, unitsByYear: { 5: 1, 6: 1, 7: 1 }, auvIndex: 0.85, currency: "TWD" },
+  // Phase three
+  { key: "singapore", name: "Singapore", structure: "master-franchise", territoryFee: 350_000, territoryYear: 5, unitsByYear: { 6: 1, 7: 1 }, auvIndex: 1.15, currency: "SGD" },
+  { key: "london", name: "London", structure: "master-franchise", territoryFee: 500_000, territoryYear: 5, unitsByYear: { 6: 1, 7: 1 }, auvIndex: 1.1, currency: "GBP" },
+  { key: "melbourne", name: "Melbourne", structure: "master-franchise", territoryFee: 250_000, territoryYear: 5, unitsByYear: { 6: 1, 7: 1 }, auvIndex: 0.95, currency: "AUD" },
+  { key: "paris", name: "Paris", structure: "sub-franchise", territoryFee: 0, territoryYear: 7, unitsByYear: { 7: 1 }, auvIndex: 1.0, currency: "EUR" },
+  { key: "tokyo", name: "Tokyo", structure: "master-franchise", territoryFee: 750_000, territoryYear: 7, unitsByYear: { 7: 1 }, auvIndex: 1.05, currency: "JPY" },
+  // Wave two: territory year 8, one unit each from year 8
+  { key: "hong-kong", name: "Hong Kong", structure: "master-franchise", territoryFee: 500_000, territoryYear: 8, unitsByYear: { 8: 1 }, auvIndex: 1.2, currency: "HKD" },
+  { key: "shanghai", name: "Shanghai", structure: "master-franchise", territoryFee: 750_000, territoryYear: 8, unitsByYear: { 8: 1 }, auvIndex: 1.0, currency: "CNY" },
+  { key: "kuala-lumpur", name: "Kuala Lumpur", structure: "master-franchise", territoryFee: 250_000, territoryYear: 8, unitsByYear: { 8: 1 }, auvIndex: 0.7, currency: "MYR" },
+  { key: "bangkok", name: "Bangkok", structure: "master-franchise", territoryFee: 300_000, territoryYear: 8, unitsByYear: { 8: 1 }, auvIndex: 0.75, currency: "THB" },
+  { key: "toronto", name: "Toronto", structure: "master-franchise", territoryFee: 350_000, territoryYear: 8, unitsByYear: { 8: 1 }, auvIndex: 1.15, currency: "CAD" },
+  { key: "vancouver", name: "Vancouver", structure: "master-franchise", territoryFee: 250_000, territoryYear: 8, unitsByYear: { 8: 1 }, auvIndex: 1.1, currency: "CAD" },
+  { key: "beijing", name: "Beijing", structure: "master-franchise", territoryFee: 500_000, territoryYear: 8, unitsByYear: { 8: 1 }, auvIndex: 0.95, currency: "CNY" },
+  { key: "chengdu", name: "Chengdu", structure: "master-franchise", territoryFee: 350_000, territoryYear: 8, unitsByYear: { 8: 1 }, auvIndex: 0.8, currency: "CNY" },
+  { key: "jakarta", name: "Jakarta", structure: "master-franchise", territoryFee: 250_000, territoryYear: 8, unitsByYear: { 8: 1 }, auvIndex: 0.65, currency: "IDR" },
+  { key: "manila", name: "Manila", structure: "master-franchise", territoryFee: 250_000, territoryYear: 8, unitsByYear: { 8: 1 }, auvIndex: 0.65, currency: "PHP" },
+  { key: "dubai", name: "Dubai", structure: "master-franchise", territoryFee: 500_000, territoryYear: 8, unitsByYear: { 8: 1 }, auvIndex: 1.25, currency: "AED" },
+  { key: "mexico-city", name: "Mexico City", structure: "master-franchise", territoryFee: 300_000, territoryYear: 8, unitsByYear: { 8: 1 }, auvIndex: 0.7, currency: "MXN" },
+  { key: "geneva", name: "Geneva", structure: "sub-franchise", territoryFee: 0, territoryYear: 8, unitsByYear: { 8: 1 }, auvIndex: 1.3, currency: "CHF" },
+  { key: "barcelona", name: "Barcelona", structure: "sub-franchise", territoryFee: 0, territoryYear: 8, unitsByYear: { 8: 1 }, auvIndex: 0.95, currency: "EUR" },
+  { key: "rome", name: "Rome", structure: "sub-franchise", territoryFee: 0, territoryYear: 8, unitsByYear: { 8: 1 }, auvIndex: 0.95, currency: "EUR" },
+  { key: "sao-paulo", name: "São Paulo", structure: "master-franchise", territoryFee: 300_000, territoryYear: 8, unitsByYear: { 8: 1 }, auvIndex: 0.7, currency: "BRL" },
 ];
 // Typed through a mutable local first: Object.freeze on a literal loses the
 // contextual type, and a consumer without exactOptionalPropertyTypes then
@@ -155,14 +184,65 @@ export const PARTNERSHIP_TERMS: PartnershipTerms = Object.freeze({
   targetMultiple: 3.0,
   exitYear: 5,
   exitMultiple: 5.0,
-  franchiseMarginPct: 0.6,
+  franchiseMarginPct: 0.6, // deprecated 2026-09-26; STRUCTURE_ECONOMICS carries the franchise cost now
   sweatEquityBenchmark: Object.freeze({ min: 0.25, max: 0.4 }),
   partnerPctCap: 0.49,
-  distributionPct: 0.5,
+  distributionPct: 0.5, // 2026-09-26: of post-tax free cash flow, not of unit EBITDA
+  // 2026-09-26 (owner decision): preferred terms, tax distributions, recurring-only exit, capital by round.
+  taxDistributionRate: 0.37,
+  recurringOnlyExit: true,
+  preferredReturnPct: 0.08,
+  liquidationPreference: 1,
+  partnerCapitalSchedule: Object.freeze([
+    { year: 1, amount: 3_000_000 },
+    { year: 2, amount: 7_500_000 },
+  ]),
 });
+
+/** Plan year each round lands in: round 1 before opening (year 1), round 2 at about T0+12 (year 2). */
+export const ROUND_YEARS: Readonly<Record<string, number>> = Object.freeze({ round1: 1, round2: 2 });
+
+/** Amount of one use line in a round; throws when the round has no such line so a renamed key cannot silently zero a cash flow. */
+export function roundUse(round: RoundAssumptions, key: string): number {
+  const use = round.uses.find((u) => u.key === key);
+  if (!use) throw new RangeError(`round ${round.key} has no use "${key}"`);
+  return use.amount;
+}
+
+/** Equity by plan year from the rounds; seeds the portfolio's cumulative cash. */
+export const DEFAULT_EQUITY_BY_YEAR: Readonly<Record<number, number>> = Object.freeze({
+  [ROUND_YEARS.round1 as number]: ROUND_ONE.sources.reduce((s, x) => s + x.amount, 0),
+  [ROUND_YEARS.round2 as number]: ROUND_TWO.sources.reduce((s, x) => s + x.amount, 0),
+});
+
+/**
+ * Capitalized investments outside unit capex (finding K2): the $600K platform
+ * build in round 1 and the $1.0M corporate infrastructure in round 2 are
+ * cash out, amortized over five years for the tax line.
+ */
+export const DEFAULT_INVESTMENTS_BY_YEAR: Readonly<Record<number, number>> = Object.freeze({
+  [ROUND_YEARS.round1 as number]: roundUse(ROUND_ONE, "platformDevelopment"),
+  [ROUND_YEARS.round2 as number]: roundUse(ROUND_TWO, "corporateInfrastructure"),
+});
+
+/** Pass-through income tax funded by member distributions (finding K6). */
+export const DEFAULT_TAX_DISTRIBUTION_RATE = 0.37;
 
 /** Fixed illustrative rates, units per USD (spec 7.4). Update the date when you update the rates. */
 export const FX_RATES: FxTable = Object.freeze({
   ratesAsOf: "2026-09-01",
   rates: Object.freeze({ USD: 1, TWD: 32.2, JPY: 148.5, GBP: 0.78, EUR: 0.91, SGD: 1.34, AUD: 1.51 }),
 });
+
+export {
+  LEGACY_AGGRESSIVE,
+  LEGACY_AGGRESSIVE_ASSUMPTIONS,
+  LEGACY_BASE,
+  LEGACY_BASE_ASSUMPTIONS,
+  LEGACY_CONSERVATIVE,
+  LEGACY_CONSERVATIVE_ASSUMPTIONS,
+  LEGACY_FRANCHISE_MARKETS,
+  LEGACY_RAMP_CURVE,
+  LEGACY_SCENARIOS,
+  LEGACY_SUBSEQUENT_UNIT_OVERRIDES,
+} from "./legacy-spec";

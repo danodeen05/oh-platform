@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
+// Sensitivity mechanics on the frozen 2026-09-25 presets, where the spec's revenue table gives exact expectations.
 import {
-  BASE_ASSUMPTIONS,
+  LEGACY_BASE_ASSUMPTIONS,
   computeLocation,
   heatGrid,
   monteCarlo,
@@ -13,21 +14,21 @@ import {
 
 describe("withLever", () => {
   it("returns a new object with one lever changed", () => {
-    const a = withLever(BASE_ASSUMPTIONS, "pods", 80);
+    const a = withLever(LEGACY_BASE_ASSUMPTIONS, "pods", 80);
     expect(a.pods).toBe(80);
-    expect(a).not.toBe(BASE_ASSUMPTIONS);
-    expect(BASE_ASSUMPTIONS.pods).toBe(75);
+    expect(a).not.toBe(LEGACY_BASE_ASSUMPTIONS);
+    expect(LEGACY_BASE_ASSUMPTIONS.pods).toBe(75);
   });
 });
 
 describe("tornado", () => {
   it("sorts bars by swing, largest first", () => {
-    const t = tornado(BASE_ASSUMPTIONS, [
+    const t = tornado(LEGACY_BASE_ASSUMPTIONS, [
       { key: "foodCostPct", low: 0.28, high: 0.32 },
       { key: "utilizationRate", low: 0.22, high: 0.4 },
     ]);
     expect(t.metric).toBe("ebitda");
-    expect(t.base).toBeCloseTo(computeLocation(BASE_ASSUMPTIONS).ebitda, 6);
+    expect(t.base).toBeCloseTo(computeLocation(LEGACY_BASE_ASSUMPTIONS).ebitda, 6);
     expect(t.bars.map((b) => b.key)).toEqual(["utilizationRate", "foodCostPct"]);
     const u = t.bars[0];
     expect(u?.atLow).toBeLessThan(t.base);
@@ -35,7 +36,7 @@ describe("tornado", () => {
     expect(u?.swing).toBeCloseTo((u?.atHigh ?? 0) - (u?.atLow ?? 0), 9);
   });
   it("supports other metrics", () => {
-    const t = tornado(BASE_ASSUMPTIONS, [{ key: "avgBowlPrice", low: 18, high: 21 }], "annualRevenue");
+    const t = tornado(LEGACY_BASE_ASSUMPTIONS, [{ key: "avgBowlPrice", low: 18, high: 21 }], "annualRevenue");
     expect(t.base).toBeCloseTo(4_201_425, 6);
     expect(t.bars[0]?.atHigh).toBeCloseTo(450 * 27.8 * 355, 6);
   });
@@ -44,7 +45,7 @@ describe("tornado", () => {
 describe("heatGrid", () => {
   it("fills cells[y][x] and tracks the range", () => {
     const g = heatGrid(
-      BASE_ASSUMPTIONS,
+      LEGACY_BASE_ASSUMPTIONS,
       { key: "utilizationRate", values: [0.22, 0.3, 0.4] },
       { key: "avgBowlPrice", values: [18.5, 19.5] },
       "annualRevenue",
@@ -57,7 +58,7 @@ describe("heatGrid", () => {
     expect(g.metric).toBe("annualRevenue");
   });
   it("defaults to EBITDA", () => {
-    const g = heatGrid(BASE_ASSUMPTIONS, { key: "pods", values: [75] }, { key: "pods", values: [75] });
+    const g = heatGrid(LEGACY_BASE_ASSUMPTIONS, { key: "pods", values: [75] }, { key: "pods", values: [75] });
     expect(g.cells[0]?.[0]).toBeCloseTo(1_248_529.075, 3);
   });
 });
@@ -109,8 +110,8 @@ describe("monteCarlo", () => {
     { key: "foodCostPct" as const, min: 0.27, mode: 0.3, max: 0.35 },
   ];
   it("is reproducible for a seed and sorted", () => {
-    const a = monteCarlo(BASE_ASSUMPTIONS, dists, { runs: 300, seed: 7 });
-    const b = monteCarlo(BASE_ASSUMPTIONS, dists, { runs: 300, seed: 7 });
+    const a = monteCarlo(LEGACY_BASE_ASSUMPTIONS, dists, { runs: 300, seed: 7 });
+    const b = monteCarlo(LEGACY_BASE_ASSUMPTIONS, dists, { runs: 300, seed: 7 });
     expect(a.samples).toEqual(b.samples);
     expect(a.runs).toBe(300);
     expect(a.seed).toBe(7);
@@ -125,13 +126,13 @@ describe("monteCarlo", () => {
     expect(a.probabilityBelow).toBe(0);
   });
   it("uses defaults and honors the threshold", () => {
-    const m = monteCarlo(BASE_ASSUMPTIONS, dists);
+    const m = monteCarlo(LEGACY_BASE_ASSUMPTIONS, dists);
     expect(m.runs).toBe(2000);
-    const all = monteCarlo(BASE_ASSUMPTIONS, dists, { runs: 50, threshold: 1e12, metric: "annualRevenue" });
+    const all = monteCarlo(LEGACY_BASE_ASSUMPTIONS, dists, { runs: 50, threshold: 1e12, metric: "annualRevenue" });
     expect(all.probabilityBelow).toBe(1);
     expect(all.metric).toBe("annualRevenue");
   });
   it("rejects zero runs", () => {
-    expect(() => monteCarlo(BASE_ASSUMPTIONS, dists, { runs: 0 })).toThrow(RangeError);
+    expect(() => monteCarlo(LEGACY_BASE_ASSUMPTIONS, dists, { runs: 0 })).toThrow(RangeError);
   });
 });

@@ -4,6 +4,8 @@ import type {
   CapexModel,
   CapitalStackModel,
   DebtServiceModel,
+  DepreciationLine,
+  DepreciationModel,
   DilutionModel,
   LoanAssumptions,
   Owner,
@@ -30,9 +32,43 @@ export function computeCapex(a: CapexInput, overrides: Readonly<Partial<CapexAss
     { key: "designArchPermits", amount: c.designArchPermits },
     { key: "ffeSignage", amount: c.ffeSignage },
     { key: "preOpening", amount: c.preOpening },
+    { key: "launchMarketing", amount: c.launchMarketing },
   ];
   const total = lines.reduce((sum, line) => sum + line.amount, 0);
   return { lines, total };
+}
+
+/** Amount of one capex line, zero when the model has no such line. */
+export function capexLineAmount(capex: CapexModel, key: keyof CapexAssumptions): number {
+  return capex.lines.find((l) => l.key === key)?.amount ?? 0;
+}
+
+/** Straight-line lives by asset class (2026-09-26, finding K3). Pre-opening and launch marketing are expensed, not depreciated. */
+export const DEPRECIATION_LIVES: Readonly<Partial<Record<keyof CapexAssumptions, number>>> = Object.freeze({
+  podUnitCost: 7,
+  kitchenEquipment: 7,
+  ffeSignage: 7,
+  buildoutPerSqFt: 10,
+  techHardware: 3,
+  designArchPermits: 10,
+});
+
+/**
+ * Depreciation of one unit's build. Buildout is depreciated net of the TI
+ * allowance (the landlord's money is not our asset). About $208K a year for
+ * the flagship and $174K for a later unit while every class is in service.
+ */
+export function computeDepreciation(capex: CapexModel): DepreciationModel {
+  const amount = (key: keyof CapexAssumptions): number => capexLineAmount(capex, key);
+  const lines: DepreciationLine[] = [];
+  for (const [key, lifeYears] of Object.entries(DEPRECIATION_LIVES) as [keyof CapexAssumptions, number][]) {
+    const basis = key === "buildoutPerSqFt" ? amount(key) + amount("tenantImprovementAllowancePerSqFt") : amount(key);
+    lines.push({ key, basis, lifeYears, annual: basis / lifeYears });
+  }
+  const longest = lines.reduce((max, l) => Math.max(max, l.lifeYears), 0);
+  const byYear: number[] = [];
+  for (let y = 1; y <= longest; y++) byYear.push(lines.filter((l) => y <= l.lifeYears).reduce((s, l) => s + l.annual, 0));
+  return { lines, annual: byYear[0] as number, byYear };
 }
 
 /** Standard monthly amortizing loan. A zero rate degrades to straight-line. */
