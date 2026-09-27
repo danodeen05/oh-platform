@@ -46,6 +46,7 @@ import {
   validateArrivalTime,
   DEFAULT_HOURS,
 } from "./utils/operating-hours.js";
+import { parseModelJson } from "./utils/model-json.js";
 import {
   updateUserCredits,
   refreshUserWalletPass,
@@ -7385,7 +7386,7 @@ Return ONLY valid JSON in this exact format (no markdown):
       });
 
       const responseText = message.content[0]?.text?.trim();
-      const parsed = JSON.parse(responseText);
+      const parsed = parseModelJson(responseText);
 
       if (parsed.year && parsed.event) {
         return { year: parsed.year, event: parsed.event };
@@ -7542,7 +7543,7 @@ Return ONLY valid JSON (no markdown):
     });
 
     const responseText = message.content[0]?.text?.trim();
-    const parsed = JSON.parse(responseText);
+    const parsed = parseModelJson(responseText);
 
     if (parsed.traditional && parsed.pinyin && parsed.english) {
       return parsed;
@@ -8000,6 +8001,7 @@ app.get("/orders/roast", async (req, reply) => {
     // Try to generate AI roast
     let roast = null;
     let source = "ai";
+    let aiHighlights = false;
 
     if (anthropic && roastInsights.length > 0) {
       try {
@@ -8104,16 +8106,18 @@ Respond with ONLY the JSON object. No other text.`;
 
         const responseText = message.content[0]?.text?.trim();
         try {
-          const parsed = JSON.parse(responseText);
+          const parsed = parseModelJson(responseText);
           roast = parsed.roast;
           if (parsed.highlights && Array.isArray(parsed.highlights)) {
             // Use AI-generated highlights instead of the English ones
             roastInsights.length = 0; // Clear the array
             roastInsights.push(...parsed.highlights);
+            aiHighlights = true;
           }
         } catch (parseError) {
-          // If JSON parsing fails, treat the whole response as the roast
-          roast = responseText;
+          // Plain prose is usable as the roast; broken JSON (e.g. cut off at
+          // max_tokens) is not, so leave roast null and use the fallback.
+          if (responseText && !/[{}]|```/.test(responseText)) roast = responseText;
         }
       } catch (aiError) {
         console.error("AI roast generation failed:", aiError);
@@ -8129,9 +8133,9 @@ Respond with ONLY the JSON object. No other text.`;
       roast = getLocalizedFallbackRoast(locale, firstName);
     }
 
-    // Build highlights from the most interesting insights
-    // If AI generated translated highlights, roastInsights will already be in the target language
-    const highlights = roastInsights
+    // AI highlights are already curated (and in the target language); the
+    // keyword filter below is only for the hand-written English insights.
+    const highlights = aiHighlights ? roastInsights.slice(0, 4) : roastInsights
       .filter(i =>
         i.includes("SKIPPED") ||
         i.includes("EXTRA") ||
@@ -8700,7 +8704,7 @@ Return ONLY valid JSON (no markdown). The "question" field should be "${question
     });
 
     const responseText = message.content[0]?.text?.trim();
-    const parsed = JSON.parse(responseText);
+    const parsed = parseModelJson(responseText);
 
     if (parsed.question && parsed.fact && parsed.source) {
       return reply.send({
