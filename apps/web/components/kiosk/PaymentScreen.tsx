@@ -32,6 +32,8 @@ interface PaymentScreenProps {
   orderId: string;
   amountCents: number;
   locationId?: string;
+  /** Business-plan demo: simulate the terminal; no PaymentIntent, no reader. */
+  demo?: boolean;
   onSuccess: (paymentIntentId: string) => void;
   onCancel: () => void;
   onError?: (error: string) => void;
@@ -45,6 +47,7 @@ export function PaymentScreen({
   orderId,
   amountCents,
   locationId,
+  demo = false,
   onSuccess,
   onCancel,
   onError,
@@ -105,6 +108,14 @@ export function PaymentScreen({
     if (!isRetry && initiatedRef.current) return;
     initiatedRef.current = true;
 
+    if (demo) {
+      setStatus('initializing');
+      setError(null);
+      await new Promise(r => setTimeout(r, 900));
+      setStatus('waiting_for_card');
+      return; // the guest's tap on the screen stands in for the card reader
+    }
+
     try {
       setStatus('initializing');
       setError(null);
@@ -156,7 +167,15 @@ export function PaymentScreen({
       setError(errorMessage);
       onError?.(errorMessage);
     }
-  }, [orderId, amountCents, locationId, onSuccess, onError, pollPaymentStatus]);
+  }, [orderId, amountCents, locationId, demo, onSuccess, onError, pollPaymentStatus]);
+
+  // Demo only: the "card" was tapped, so play processing and success.
+  const demoTap = async () => {
+    setStatus('processing');
+    await new Promise(r => setTimeout(r, 1800));
+    setStatus('success');
+    setTimeout(() => onSuccess('pi_demo'), 1500);
+  };
 
   // Start payment on mount, cancel on unmount
   useEffect(() => {
@@ -164,10 +183,11 @@ export function PaymentScreen({
 
     // Cleanup: cancel reader action when component unmounts
     return () => {
+      if (demo) return;
       // Cancel reader action directly (fire-and-forget)
       fetch('/api/kiosk/payments/cancel-reader', { method: 'POST' }).catch(() => {});
     };
-  }, [initiatePayment]);
+  }, [initiatePayment, demo]);
 
   // Handle cancel
   const handleCancel = async () => {
@@ -242,12 +262,28 @@ export function PaymentScreen({
             <h2 style={{ fontSize: '1.75rem', fontWeight: 600, color: COLORS.text, marginBottom: 12 }}>
               Tap, Insert, or Swipe
             </h2>
-            <p style={{ color: COLORS.textMuted, fontSize: '1.125rem', marginBottom: 24 }}>
-              Use the card reader below
-            </p>
-            <div style={{ fontSize: '3rem' }} className="kiosk-bounce">
-              ↓
-            </div>
+            {demo ? (
+              <>
+                <p style={{ color: COLORS.textMuted, fontSize: '1.125rem', marginBottom: 24 }}>
+                  Tap below to pay with a demo card
+                </p>
+                <button onClick={demoTap} className="kiosk-btn kiosk-btn-primary">
+                  Tap to Pay
+                </button>
+                <p style={{ color: COLORS.textMuted, fontSize: '0.95rem', marginTop: 16, marginBottom: 0 }}>
+                  Demo only. No card is charged.
+                </p>
+              </>
+            ) : (
+              <>
+                <p style={{ color: COLORS.textMuted, fontSize: '1.125rem', marginBottom: 24 }}>
+                  Use the card reader below
+                </p>
+                <div style={{ fontSize: '3rem' }} className="kiosk-bounce">
+                  ↓
+                </div>
+              </>
+            )}
           </>
         )}
 

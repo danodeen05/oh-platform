@@ -4,8 +4,9 @@ import { useRouter } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { QRCodeSVG } from "qrcode.react";
 import { pdf } from "@react-pdf/renderer";
-import { VirtualKeyboard, PrintableReceipt, generateQRDataUrl, LanguageSelector, useKioskScale, useKioskPrinter, useKioskNarrow } from "@/components/kiosk";
+import { VirtualKeyboard, PrintableReceipt, generateQRDataUrl, LanguageSelector, useKioskScale, useKioskPrinter, useKioskNarrow, useKioskDemo } from "@/components/kiosk";
 import { PaymentScreen } from "@/components/kiosk/PaymentScreen";
+import { STATUS_DEMO_CODE } from "@/lib/plan/statusDemo";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -427,6 +428,25 @@ function calculateItemPrice(item: MenuItem, quantity: number): number {
   return item.basePriceCents + effectiveAdditionalPrice * (quantity - 1);
 }
 
+// Demo mode prices the order here instead of creating it: the chosen soup plus
+// any paid add-ons, sides, drinks and desserts (sliders are free).
+function demoSubtotalCents(menuSteps: MenuStep[], guest: GuestOrder): number {
+  let cents = 0;
+  menuSteps.forEach((step) => {
+    step.sections.forEach((section) => {
+      if (section.selectionMode === "SINGLE") {
+        const item = section.items?.find((i) => i.id === guest.selections[section.id]);
+        if (item) cents += item.basePriceCents;
+      } else if (section.selectionMode === "MULTIPLE") {
+        section.items?.forEach((item) => {
+          cents += calculateItemPrice(item, guest.cart[item.id] || 0);
+        });
+      }
+    });
+  });
+  return cents;
+}
+
 export default function KioskOrderFlow({
   location,
   partySize,
@@ -441,6 +461,7 @@ export default function KioskOrderFlow({
   const tKiosk = useTranslations("kiosk");
   const tCommon = useTranslations("common");
   const locale = useLocale();
+  const demo = useKioskDemo();
   const [menuSteps, setMenuSteps] = useState<MenuStep[]>([]);
   const [seats, setSeats] = useState<Seat[]>([]);
   const [loading, setLoading] = useState(true);
@@ -783,7 +804,7 @@ export default function KioskOrderFlow({
     });
 
     try {
-      const response = await fetch(`${BASE}/orders`, {
+      const response = demo ? null : await fetch(`${BASE}/orders`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -797,11 +818,21 @@ export default function KioskOrderFlow({
         }),
       });
 
-      if (!response.ok) {
+      if (response && !response.ok) {
         throw new Error("Failed to create order");
       }
 
-      const order = await response.json();
+      // Demo: a stand-in order that never touches the API. Its QR code opens the
+      // plan's synthetic status page, so scanning it on a phone still works.
+      const order = response
+        ? await response.json()
+        : {
+            id: `demo-kiosk-${currentGuest.guestNumber}`,
+            orderNumber: `DEMO-${currentGuest.guestNumber}`,
+            orderQrCode: STATUS_DEMO_CODE,
+            kitchenOrderNumber: 40 + currentGuest.guestNumber,
+            totalCents: demoSubtotalCents(menuSteps, currentGuest),
+          };
 
       // Calculate tax from the order subtotal
       const subtotalCents = order.totalCents; // Backend returns pre-tax total
@@ -850,6 +881,17 @@ export default function KioskOrderFlow({
 
   // Called when Stripe Terminal payment succeeds
   async function onPaymentSuccess(paymentIntentId: string) {
+    if (demo) {
+      // Nothing was created or charged, so there is nothing to mark paid.
+      if (paymentType === "separate") {
+        updateCurrentGuest({ paid: true });
+        setView(currentGuestIndex < partySize - 1 ? "pass" : "complete");
+      } else {
+        setGuestOrders((prev) => prev.map((g) => ({ ...g, paid: true })));
+        setView("complete");
+      }
+      return;
+    }
     setSubmitting(true);
 
     try {
@@ -1150,6 +1192,7 @@ export default function KioskOrderFlow({
         orderId={paymentOrderId}
         amountCents={paymentTotalCents}
         locationId={location.id}
+        demo={demo}
         onSuccess={onPaymentSuccess}
         onCancel={onPaymentCancel}
         onError={(error) => {
@@ -1167,6 +1210,7 @@ export default function KioskOrderFlow({
         guestOrders={guestOrders}
         seats={seats}
         location={location}
+        demo={demo}
         onNewOrder={startOver}
       />
     );
@@ -5712,11 +5756,13 @@ function CompleteView({
   guestOrders,
   seats,
   location,
+  demo,
   onNewOrder,
 }: {
   guestOrders: GuestOrder[];
   seats: Seat[];
   location: Location;
+  demo: boolean;
   onNewOrder: () => void;
 }) {
   const locale = useLocale();
@@ -5892,8 +5938,8 @@ function CompleteView({
         <KioskBrand size="xlarge" />
       </div>
 
-      {/* Printer Status Indicator - top right for debugging */}
-      <div style={{
+      {/* Printer Status Indicator - top right for debugging (not in the demo) */}
+      {!demo && <div style={{
         position: "absolute",
         top: 16,
         right: 16,
@@ -5909,7 +5955,7 @@ function CompleteView({
          isPrinterConnected ? "Printer: Connected" :
          printerError ? `Printer: ${printerError}` :
          "Printer: Not configured"}
-      </div>
+      </div>}
 
       {/* Fixed Header with success color */}
       <div
