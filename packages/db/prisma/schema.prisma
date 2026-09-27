@@ -305,6 +305,11 @@ model Order {
   completedTime DateTime? // When customer finished
   podCleanedAt  DateTime? // When pod was cleaned after customer left
 
+  // Membership engine claim (site overhaul): set atomically by onOrderCompleted's
+  // updateMany claim (id + membershipProcessedAt: null + paymentStatus: PAID) so
+  // two concurrent completions of the same order can't both win the payout.
+  membershipProcessedAt DateTime?
+
   // Pod/Seat Assignment
   seatId               String?
   seat                 Seat?     @relation(fields: [seatId], references: [id])

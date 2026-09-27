@@ -68,7 +68,7 @@ import { registerCateringRoutes, isDineInOrdersEnabled } from "./catering/routes
 import { registerPlanRoutes } from "./plan/routes.js";
 import { registerMembershipRoutes } from "./membership/routes.js";
 import { PROGRAM, tierRule } from "./membership/program.js";
-import { onOrderCompleted, applyReferralSignup, earlyAccessVisible, profileForUser } from "./membership/engine.js";
+import { onOrderCompleted, applyReferralSignup, visibleMenuItems, firstUnreleasedItem, profileForUser } from "./membership/engine.js";
 import { withStatusDemo, registerStatusDemoGuard } from "./demo/status-demo.js";
 import { createAdminAuth } from "./auth/admin.js";
 import { registerConsoleGuard, registerAdminPathGuard } from "./auth/console-guard.js";
@@ -201,6 +201,18 @@ registerAdminPathGuard(app, { requireAdminAuth });
 const customerAuth = createCustomerAuth({ prisma: basePrisma, log: (...args) => app.log.warn({ args }, "customer auth") });
 registerCustomerIdentity(app, customerAuth);
 for (const warning of customerAuth.warnings) console.warn(`WARNING (customer auth): ${warning}`);
+
+/**
+ * The verified caller's membership tier for early-access checks
+ * (membership/engine.js earlyAccessVisible), or null for a guest/anonymous
+ * caller or one with no database row yet.
+ */
+async function resolveCallerMembershipTier(req) {
+  const who = await customerAuth.resolve(req);
+  if (who.kind !== "user" || !who.userId) return null;
+  const caller = await prisma.user.findUnique({ where: { id: who.userId }, select: { membershipTier: true } });
+  return caller?.membershipTier || null;
+}
 
 // Register autonomous agent routes
 await registerAutonomousRoutes(app);
@@ -1232,8 +1244,13 @@ app.get("/menu", async (req, reply) => {
     ]
   });
 
+  // Early access (membership/engine.js): don't list an item before its
+  // releaseAt unless the caller's tier earns it early - same rule as /menu/steps.
+  const callerTier = await resolveCallerMembershipTier(req);
+  const visibleItems = visibleMenuItems(items, callerTier, new Date());
+
   // Localize all items
-  return items.map(item => localizeMenuItem(item, locale));
+  return visibleItems.map(item => localizeMenuItem(item, locale));
 });
 
 // GET /menu/steps - Returns structured menu for multi-step order builder
@@ -1261,14 +1278,8 @@ app.get("/menu/steps", async (req, reply) => {
   // are only visible to a tier whose earlyAccessDays window reaches it. A
   // guest or anonymous caller (no verified session) gets tier null, so they
   // only ever see items that have already released.
-  const who = await customerAuth.resolve(req);
-  let callerTier = null;
-  if (who.kind === "user" && who.userId) {
-    const caller = await prisma.user.findUnique({ where: { id: who.userId }, select: { membershipTier: true } });
-    callerTier = caller?.membershipTier || null;
-  }
-  const now = new Date();
-  const visibleItems = items.filter((item) => earlyAccessVisible(item, callerTier, now));
+  const callerTier = await resolveCallerMembershipTier(req);
+  const visibleItems = visibleMenuItems(items, callerTier, new Date());
 
   // Localize all items
   const localizedItems = visibleItems.map(item => localizeMenuItem(item, locale));
@@ -3603,6 +3614,15 @@ app.post("/orders", async (req, reply) => {
     },
   });
 
+  // Early access (membership/engine.js): reject an item the caller can't see
+  // yet, the same rule GET /menu and /menu/steps filter by - a client can't
+  // route around the listing filter by ordering the item's id directly.
+  const callerTier = await resolveCallerMembershipTier(req);
+  const notReleasedYet = firstUnreleasedItem(menuItems, callerTier, new Date());
+  if (notReleasedYet) {
+    return reply.code(400).send({ error: "ITEM_NOT_RELEASED", menuItemId: notReleasedYet.id });
+  }
+
   // Helper function to calculate item price with flexible pricing
   function calculateItemPrice(menuItem, quantity) {
     // If quantity is within included amount, price is 0
@@ -4391,6 +4411,12 @@ app.patch("/orders/:id", async (req, reply) => {
     }
   }
 
+  // Only call the membership engine on an actual PATCH-driven transition into
+  // COMPLETED, not on every request that happens to repeat status: "COMPLETED".
+  const wasAlreadyCompleted = status === "COMPLETED"
+    ? (await prisma.order.findUnique({ where: { id }, select: { status: true } }))?.status === "COMPLETED"
+    : true;
+
   const order = await prisma.order.update({
     where: { id },
     data,
@@ -4564,7 +4590,7 @@ app.patch("/orders/:id", async (req, reply) => {
     // below when this same route sets status to COMPLETED.
   }
 
-  if (status === "COMPLETED") {
+  if (status === "COMPLETED" && !wasAlreadyCompleted) {
     await onOrderCompleted(prisma, { orderId: order.id, now: new Date() });
   }
 
@@ -6478,6 +6504,12 @@ app.patch("/kitchen/orders/:id/status", async (req, reply) => {
     data.completedTime = new Date();
   }
 
+  // Only call the membership engine on an actual transition into COMPLETED,
+  // not on every request that happens to repeat status: "COMPLETED".
+  const wasAlreadyCompleted = status === "COMPLETED"
+    ? (await prisma.order.findUnique({ where: { id }, select: { status: true } }))?.status === "COMPLETED"
+    : true;
+
   const order = await prisma.order.update({
     where: { id },
     data,
@@ -6526,7 +6558,7 @@ app.patch("/kitchen/orders/:id/status", async (req, reply) => {
   // drives status here), and PATCH /orders/:id calls the same function so
   // either path completing an order runs it. onOrderCompleted is idempotent
   // per orderId, so it's safe even if both paths fire for the same order.
-  if (status === "COMPLETED") {
+  if (status === "COMPLETED" && !wasAlreadyCompleted) {
     const result = await onOrderCompleted(prisma, { orderId: order.id, now: new Date() });
     if (result.cashbackCents > 0 || result.referralPaid || result.upgradedTo) {
       refreshUserWalletPass(order.userId).catch(console.error);

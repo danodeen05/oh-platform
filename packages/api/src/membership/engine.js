@@ -10,12 +10,36 @@
  * up in the member's favor beyond what's configured).
  */
 import { PROGRAM, tierRule, evaluateProgress } from "./program.js";
-import { grantCredit, availableCredit, expiringSoon } from "./credits.js";
+import { grantCredit, grantCreditInTx, availableCredit, expiringSoon } from "./credits.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+const NO_OP_RESULT = Object.freeze({ cashbackCents: 0, upgradedTo: null, rewardIssued: null, referralPaid: false });
+
 function addDays(date, days) {
   return new Date(date.getTime() + days * DAY_MS);
+}
+
+/**
+ * Creates a Reward, tolerating a `(userId, type, issuedFor)` conflict: a
+ * `findFirst` check first (the common case), and a defensive catch of
+ * Prisma's P2002 (unique constraint) for the race where two callers pass
+ * that check at the same time and both try to create - the loser reads back
+ * whatever the winner created instead of throwing. Returns the existing or
+ * newly-created reward either way.
+ */
+async function issueRewardIdempotent(prisma, data) {
+  const key = { userId: data.userId, type: data.type, issuedFor: data.issuedFor };
+  const existing = await prisma.reward.findFirst({ where: key });
+  if (existing) return existing;
+  try {
+    return await prisma.reward.create({ data });
+  } catch (err) {
+    if (err && err.code === "P2002") {
+      return prisma.reward.findFirst({ where: key });
+    }
+    throw err;
+  }
 }
 
 /**
@@ -88,46 +112,61 @@ export function earlyAccessVisible(menuItem, tier, now = new Date()) {
 }
 
 /**
+ * The subset of `items` that `tier` (null for a guest/anonymous caller) may
+ * see at `now`. Shared by GET /menu and GET /menu/steps so both list the
+ * same set.
+ */
+export function visibleMenuItems(items, tier, now = new Date()) {
+  return items.filter((item) => earlyAccessVisible(item, tier, now));
+}
+
+/**
+ * The first item in `items` that `tier` isn't allowed to see yet at `now`, or
+ * null if every item is visible. Used by POST /orders to reject ordering an
+ * item a client found some other way (e.g. by id) before its early-access
+ * window opens for them.
+ */
+export function firstUnreleasedItem(items, tier, now = new Date()) {
+  return items.find((item) => !earlyAccessVisible(item, tier, now)) || null;
+}
+
+/**
  * Evaluates `userId`'s progress and, if they're ready, upgrades their tier:
  * resets both progress counters and issues the upgrade FREE_BOWL reward
  * (issuedFor `upgrade:<newTier>`, window `upgradeRewardWindowDays` long).
- * Returns the new tier key, or null if no upgrade happened.
+ * Returns the new tier key, or null if no upgrade happened. `tx` must be
+ * either the top-level prisma client or an open transaction client - this
+ * function never opens its own transaction.
  */
-async function evaluateAndApplyUpgrade(prisma, userId, now) {
-  const user = await prisma.user.findUnique({ where: { id: userId } });
+async function evaluateAndApplyUpgrade(tx, userId, now) {
+  const user = await tx.user.findUnique({ where: { id: userId } });
   if (!user) return null;
   const progress = evaluateProgress(user);
   if (!progress.ready || !progress.next) return null;
 
   const newTier = progress.next;
-  await prisma.user.update({
+  await tx.user.update({
     where: { id: userId },
     data: { membershipTier: newTier, tierProgressOrders: 0, tierProgressReferrals: 0 },
   });
 
-  const issuedFor = `upgrade:${newTier}`;
-  const existing = await prisma.reward.findFirst({ where: { userId, type: PROGRAM.upgradeReward, issuedFor } });
-  if (!existing) {
-    await prisma.reward.create({
-      data: {
-        userId,
-        type: PROGRAM.upgradeReward,
-        issuedFor,
-        windowEndsAt: addDays(now, PROGRAM.upgradeRewardWindowDays),
-      },
-    });
-  }
+  await issueRewardIdempotent(tx, {
+    userId,
+    type: PROGRAM.upgradeReward,
+    issuedFor: `upgrade:${newTier}`,
+    windowEndsAt: addDays(now, PROGRAM.upgradeRewardWindowDays),
+  });
 
   // Preserves the pre-engine behavior of awarding the "vip" Badge on reaching
   // BEEF_BOSS (previously in index.js's checkTierUpgrade). This runs for
   // anyone who reaches BEEF_BOSS through this function, including a referrer
   // upgraded by a referral payout, not just someone completing their own order.
   if (newTier === "BEEF_BOSS") {
-    const vipBadge = await prisma.badge.findUnique({ where: { slug: "vip" } });
+    const vipBadge = await tx.badge.findUnique({ where: { slug: "vip" } });
     if (vipBadge) {
-      const hasBadge = await prisma.userBadge.findFirst({ where: { userId, badgeId: vipBadge.id } });
+      const hasBadge = await tx.userBadge.findFirst({ where: { userId, badgeId: vipBadge.id } });
       if (!hasBadge) {
-        await prisma.userBadge.create({ data: { userId, badgeId: vipBadge.id } }).catch(() => {});
+        await tx.userBadge.create({ data: { userId, badgeId: vipBadge.id } }).catch(() => {});
       }
     }
   }
@@ -139,25 +178,29 @@ async function evaluateAndApplyUpgrade(prisma, userId, now) {
  * Pays the referrer PROGRAM.referral.referrerCents when `referee`'s order is
  * their first COMPLETED order, capped at `maxPaidPer30Days` paid referrals
  * per referrer in a rolling 30-day window. Over the cap, writes a zero-amount
- * "note" CreditEvent instead of paying, and pays nothing.
+ * "note" CreditEvent instead of paying, and pays nothing. Those zero-amount
+ * notes are excluded from the cap count itself (`amountCents: { gt: 0 }`) so
+ * a referrer sitting at the cap doesn't get walled off forever as their own
+ * notes age out of the 30-day window right alongside the real payments.
+ * `tx` must already be an open transaction client (see `onOrderCompleted`).
  * Returns true if a referral was actually paid.
  */
-async function payReferralIfEligible(prisma, { referee, order, now }) {
+async function payReferralIfEligible(tx, { referee, order, now }) {
   if (!referee?.referredById) return false;
 
-  const completedCount = await prisma.order.count({
+  const completedCount = await tx.order.count({
     where: { userId: referee.id, status: "COMPLETED" },
   });
   if (completedCount !== 1) return false; // not their first completed order
 
   const referrerId = referee.referredById;
   const windowStart = new Date(now.getTime() - 30 * DAY_MS);
-  const paidInWindow = await prisma.creditEvent.count({
-    where: { userId: referrerId, type: "REFERRAL_ORDER", createdAt: { gte: windowStart } },
+  const paidInWindow = await tx.creditEvent.count({
+    where: { userId: referrerId, type: "REFERRAL_ORDER", amountCents: { gt: 0 }, createdAt: { gte: windowStart } },
   });
 
   if (paidInWindow >= PROGRAM.referral.maxPaidPer30Days) {
-    await prisma.creditEvent.create({
+    await tx.creditEvent.create({
       data: {
         userId: referrerId,
         type: "REFERRAL_ORDER",
@@ -169,7 +212,7 @@ async function payReferralIfEligible(prisma, { referee, order, now }) {
     return false;
   }
 
-  await grantCredit(prisma, {
+  await grantCreditInTx(tx, {
     userId: referrerId,
     source: "REFERRAL",
     amountCents: PROGRAM.referral.referrerCents,
@@ -177,11 +220,11 @@ async function payReferralIfEligible(prisma, { referee, order, now }) {
     note: "Referral bonus - friend completed their first order",
     now,
   });
-  await prisma.user.update({
+  await tx.user.update({
     where: { id: referrerId },
     data: { tierProgressReferrals: { increment: 1 } },
   });
-  await evaluateAndApplyUpgrade(prisma, referrerId, now);
+  await evaluateAndApplyUpgrade(tx, referrerId, now);
 
   return true;
 }
@@ -189,57 +232,91 @@ async function payReferralIfEligible(prisma, { referee, order, now }) {
 /**
  * Runs every membership side effect for an order that has just reached
  * COMPLETED: cashback, tier-progress increment and upgrade, and the
- * referrer's payout. Idempotent per order: a CASHBACK CreditEvent already
- * carrying this orderId means the order was already processed, so a second
- * call is a no-op.
+ * referrer's payout.
+ *
+ * Race-safety: two concurrent calls for the same order (for example the
+ * status PATCH firing twice, or two routes both completing it) must not both
+ * pay out. The whole thing runs inside one `prisma.$transaction`, and the
+ * first thing it does is an `updateMany` claim -
+ * `{ id: orderId, membershipProcessedAt: null, paymentStatus: "PAID" }` ->
+ * `{ membershipProcessedAt: now }` - which the database itself can only ever
+ * let one concurrent transaction win (the loser's WHERE stops matching once
+ * the winner commits, so its updateMany affects 0 rows). Anything after a
+ * failed claim is a no-op. If a later step in this same transaction throws,
+ * the whole transaction (including the claim) rolls back, so the order is
+ * left claimable again for a retry rather than stuck half-processed.
+ *
+ * The claim also enforces "paid only": an order that isn't PAID yet can't be
+ * claimed, so completing an unpaid order pays nothing.
+ *
+ * The pre-existing CASHBACK CreditEvent check is kept as a secondary guard so
+ * an order processed by the pre-claim code path (before `membershipProcessedAt`
+ * existed) is never double-counted.
  */
 export async function onOrderCompleted(prisma, { orderId, now = new Date() }) {
-  const already = await prisma.creditEvent.findFirst({ where: { orderId, type: "CASHBACK" } });
-  if (already) {
-    return { cashbackCents: 0, upgradedTo: null, rewardIssued: null, referralPaid: false };
+  const alreadyProcessed = await prisma.creditEvent.findFirst({ where: { orderId, type: "CASHBACK" } });
+  if (alreadyProcessed) {
+    return NO_OP_RESULT;
   }
 
-  const order = await prisma.order.findUnique({ where: { id: orderId } });
-  if (!order || !order.userId) {
-    return { cashbackCents: 0, upgradedTo: null, rewardIssued: null, referralPaid: false };
-  }
-
-  const user = await prisma.user.findUnique({ where: { id: order.userId } });
-  if (!user) {
-    return { cashbackCents: 0, upgradedTo: null, rewardIssued: null, referralPaid: false };
-  }
-
-  const rule = tierRule(user.membershipTier);
-  const cashbackCents = Math.floor((order.totalCents * rule.cashbackPct) / 100);
-  if (cashbackCents > 0) {
-    await grantCredit(prisma, {
-      userId: user.id,
-      source: "CASHBACK",
-      amountCents: cashbackCents,
-      orderId,
-      note: `${rule.cashbackPct}% cashback on order`,
-      now,
+  return prisma.$transaction(async (tx) => {
+    const claim = await tx.order.updateMany({
+      where: { id: orderId, membershipProcessedAt: null, paymentStatus: "PAID" },
+      data: { membershipProcessedAt: now },
     });
-  } else {
-    // Nothing to grant, but we still need a marker for the idempotency check above.
-    await prisma.creditEvent.create({
-      data: { userId: user.id, type: "CASHBACK", amountCents: 0, orderId, description: "No cashback (order too small)" },
-    });
-  }
+    if (claim.count !== 1) {
+      return NO_OP_RESULT;
+    }
 
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { tierProgressOrders: { increment: 1 } },
+    // Belt-and-braces re-check inside the transaction: a CreditEvent written
+    // by some other path between the pre-check above and winning the claim.
+    const alreadyInTx = await tx.creditEvent.findFirst({ where: { orderId, type: "CASHBACK" } });
+    if (alreadyInTx) {
+      return NO_OP_RESULT;
+    }
+
+    const order = await tx.order.findUnique({ where: { id: orderId } });
+    if (!order || !order.userId) {
+      return NO_OP_RESULT;
+    }
+
+    const user = await tx.user.findUnique({ where: { id: order.userId } });
+    if (!user) {
+      return NO_OP_RESULT;
+    }
+
+    const rule = tierRule(user.membershipTier);
+    const cashbackCents = Math.floor((order.totalCents * rule.cashbackPct) / 100);
+    if (cashbackCents > 0) {
+      await grantCreditInTx(tx, {
+        userId: user.id,
+        source: "CASHBACK",
+        amountCents: cashbackCents,
+        orderId,
+        note: `${rule.cashbackPct}% cashback on order`,
+        now,
+      });
+    } else {
+      // Nothing to grant, but we still need a marker for the idempotency check above.
+      await tx.creditEvent.create({
+        data: { userId: user.id, type: "CASHBACK", amountCents: 0, orderId, description: "No cashback (order too small)" },
+      });
+    }
+
+    await tx.user.update({
+      where: { id: user.id },
+      data: { tierProgressOrders: { increment: 1 } },
+    });
+
+    const upgradedTo = await evaluateAndApplyUpgrade(tx, user.id, now);
+    const rewardIssued = upgradedTo
+      ? await tx.reward.findFirst({ where: { userId: user.id, type: PROGRAM.upgradeReward, issuedFor: `upgrade:${upgradedTo}` } })
+      : null;
+
+    const referralPaid = await payReferralIfEligible(tx, { referee: user, order, now });
+
+    return { cashbackCents, upgradedTo, rewardIssued, referralPaid };
   });
-
-  const upgradedTo = await evaluateAndApplyUpgrade(prisma, user.id, now);
-  const rewardIssued = upgradedTo
-    ? await prisma.reward.findFirst({ where: { userId: user.id, type: PROGRAM.upgradeReward, issuedFor: `upgrade:${upgradedTo}` } })
-    : null;
-
-  const referralPaid = await payReferralIfEligible(prisma, { referee: user, order, now });
-
-  return { cashbackCents, upgradedTo, rewardIssued, referralPaid };
 }
 
 /**
@@ -282,10 +359,19 @@ export async function issueQuarterlyPerks(prisma, now = new Date()) {
   const members = await prisma.user.findMany({ where: { membershipTier: tier } });
   let issued = 0;
   for (const member of members) {
-    const existing = await prisma.reward.findFirst({ where: { userId: member.id, type, issuedFor } });
+    const key = { userId: member.id, type, issuedFor };
+    const existing = await prisma.reward.findFirst({ where: key });
     if (existing) continue;
-    await prisma.reward.create({ data: { userId: member.id, type, issuedFor, windowEndsAt } });
-    issued++;
+    try {
+      await prisma.reward.create({ data: { ...key, windowEndsAt } });
+      issued++;
+    } catch (err) {
+      // A P2002 here means someone else (another request, another instance of
+      // this cron) issued the same member's reward between our findFirst and
+      // this create. Not a bug and not double-issued - move on to the rest of
+      // the members rather than letting one conflict fail the whole batch.
+      if (!err || err.code !== "P2002") throw err;
+    }
   }
   return issued;
 }

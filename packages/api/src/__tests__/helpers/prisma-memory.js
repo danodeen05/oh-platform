@@ -19,13 +19,28 @@
 
 const COLLECTIONS = ["creditLot", "creditEvent", "user", "reward", "order", "seat", "supportCase", "userBadge", "badge", "menuItem"];
 
+/**
+ * `@@unique` constraints the schema declares that engine/credits code
+ * actually relies on being enforced (e.g. to exercise a real P2002 conflict
+ * path). `create()` checks these and throws a Prisma-shaped error
+ * (`err.code === "P2002"`) on a clash, same as a real unique-index violation.
+ */
+const UNIQUE_INDEXES = {
+  reward: [["userId", "type", "issuedFor"]],
+};
+
 function toTime(v) {
   return v instanceof Date ? v.getTime() : v;
 }
 
 function valEquals(a, b) {
   if (a instanceof Date || b instanceof Date) return toTime(a) === toTime(b);
-  return a === b;
+  // A real Postgres row always has a concrete value for every column - never
+  // "missing". A seed/create call that omits a nullable field should match a
+  // `where: { field: null }` filter the same way an explicit `null` would.
+  const av = a === undefined ? null : a;
+  const bv = b === undefined ? null : b;
+  return av === bv;
 }
 
 function compare(a, b) {
@@ -90,6 +105,15 @@ function makeDelegate(store, prefix, nextId) {
     async create({ data } = {}) {
       const rec = { createdAt: new Date(), ...data };
       if (rec.id === undefined) rec.id = nextId(prefix);
+      for (const fields of UNIQUE_INDEXES[prefix] || []) {
+        const clash = [...store.values()].some((r) => fields.every((f) => valEquals(r[f], rec[f])));
+        if (clash) {
+          const err = new Error(`prisma-memory: unique constraint failed on ${prefix}(${fields.join(", ")})`);
+          err.code = "P2002";
+          err.meta = { target: fields };
+          throw err;
+        }
+      }
       store.set(rec.id, { ...rec });
       return { ...rec };
     },
@@ -145,22 +169,45 @@ function cloneDb(db) {
   return clone;
 }
 
-function buildClient(db, nextId) {
+/**
+ * A tiny run-in-order queue. Real Postgres serializes conflicting
+ * transactions (a second `updateMany` claim blocks until the first commits,
+ * then re-evaluates its WHERE clause and sees 0 matching rows). This stub's
+ * transactions are snapshot-clone-and-commit, which by itself has no such
+ * blocking behavior: two `$transaction` calls started before either commits
+ * would each clone the same pre-claim state and both believe they won a
+ * race. Routing every `$transaction` call on a given in-memory database
+ * through one mutex makes concurrent callers (e.g. two `Promise.all`'d
+ * `onOrderCompleted` calls for the same order) run their transactions one at
+ * a time, in start order, which is what actually gives the second one a
+ * post-first-commit view to correctly lose its claim against.
+ */
+function createMutex() {
+  let tail = Promise.resolve();
+  return function withLock(fn) {
+    const result = tail.then(fn, fn);
+    tail = result.then(() => undefined, () => undefined);
+    return result;
+  };
+}
+
+function buildClient(db, nextId, mutex) {
   const client = {};
   for (const name of COLLECTIONS) {
     client[name] = makeDelegate(db[name], name, nextId);
   }
-  client.$transaction = async (fn) => {
-    const snapshot = cloneDb(db);
-    const tx = buildClient(snapshot, nextId);
-    // No try/catch: if fn throws, we simply never commit, which is the rollback.
-    const result = await fn(tx);
-    for (const key of Object.keys(db)) {
-      db[key].clear();
-      for (const [id, rec] of snapshot[key]) db[key].set(id, rec);
-    }
-    return result;
-  };
+  client.$transaction = (fn) =>
+    mutex(async () => {
+      const snapshot = cloneDb(db);
+      const tx = buildClient(snapshot, nextId, mutex);
+      // No try/catch: if fn throws, we simply never commit, which is the rollback.
+      const result = await fn(tx);
+      for (const key of Object.keys(db)) {
+        db[key].clear();
+        for (const [id, rec] of snapshot[key]) db[key].set(id, rec);
+      }
+      return result;
+    });
   return client;
 }
 
@@ -192,5 +239,5 @@ export function makeMemoryPrisma(seed = {}) {
     }
   }
 
-  return buildClient(db, nextId);
+  return buildClient(db, nextId, createMutex());
 }

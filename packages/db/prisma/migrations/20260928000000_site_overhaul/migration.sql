@@ -46,6 +46,9 @@ ADD COLUMN     "slug" TEXT;
 ALTER TABLE "MenuItem" ADD COLUMN     "releaseAt" TIMESTAMP(3);
 
 -- AlterTable
+ALTER TABLE "Order" ADD COLUMN     "membershipProcessedAt" TIMESTAMP(3);
+
+-- AlterTable
 ALTER TABLE "Seat" ADD COLUMN     "finger" INTEGER,
 ADD COLUMN     "label" TEXT,
 ADD COLUMN     "position" INTEGER,

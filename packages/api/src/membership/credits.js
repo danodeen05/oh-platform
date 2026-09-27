@@ -45,30 +45,43 @@ function assertPositiveAmount(amountCents) {
  */
 export async function grantCredit(prisma, { userId, source, amountCents, orderId = null, note = null, now = new Date() }) {
   assertPositiveAmount(amountCents);
-  return prisma.$transaction(async (tx) => {
-    const lot = await tx.creditLot.create({
-      data: {
-        userId,
-        source,
-        amountCents,
-        remainingCents: amountCents,
-        expiresAt: addDays(now, PROGRAM.creditExpiryDays),
-        orderId,
-        note,
-      },
-    });
-    await tx.user.update({ where: { id: userId }, data: { creditsCents: { increment: amountCents } } });
-    await tx.creditEvent.create({
-      data: {
-        userId,
-        type: GRANT_EVENT_TYPE[source] || "ADMIN_ADJUSTMENT",
-        amountCents,
-        orderId,
-        description: note,
-      },
-    });
-    return lot;
+  return prisma.$transaction((tx) => grantCreditInTx(tx, { userId, source, amountCents, orderId, note, now }));
+}
+
+/**
+ * The same grant as `grantCredit`, but for a caller that already has an open
+ * transaction client (`tx`) and wants this grant to be part of it, rather
+ * than opening its own nested transaction. Real Prisma's interactive
+ * transaction client has no `$transaction` of its own, so code that runs
+ * inside e.g. `prisma.$transaction(async (tx) => { ...; await grantCredit(tx, ...); })`
+ * would break against a real database even though it happens to work
+ * against the in-memory test stub (whose `tx` objects have a `$transaction`
+ * too). Use this instead whenever `tx` is already a transaction client.
+ */
+export async function grantCreditInTx(tx, { userId, source, amountCents, orderId = null, note = null, now = new Date() }) {
+  assertPositiveAmount(amountCents);
+  const lot = await tx.creditLot.create({
+    data: {
+      userId,
+      source,
+      amountCents,
+      remainingCents: amountCents,
+      expiresAt: addDays(now, PROGRAM.creditExpiryDays),
+      orderId,
+      note,
+    },
   });
+  await tx.user.update({ where: { id: userId }, data: { creditsCents: { increment: amountCents } } });
+  await tx.creditEvent.create({
+    data: {
+      userId,
+      type: GRANT_EVENT_TYPE[source] || "ADMIN_ADJUSTMENT",
+      amountCents,
+      orderId,
+      description: note,
+    },
+  });
+  return lot;
 }
 
 /** Sum of `remainingCents` across lots that haven't expired as of `now`. */
