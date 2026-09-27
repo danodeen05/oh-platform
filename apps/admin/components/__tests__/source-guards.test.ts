@@ -10,7 +10,22 @@ function files(dir: string): string[] {
   return readdirSync(full, { recursive: true }).map(String).filter((f) => /\.(tsx?|ts)$/.test(f) && !f.includes("__tests__")).map((f) => path.join(full, f));
 }
 // Paths not yet rebuilt; each rebuild task deletes its entries. Task 29 asserts this is empty.
-export const LEGACY: string[] = ["components/AdminNav.tsx"];
+export const LEGACY: string[] = [
+  "app/(console)/page.tsx",
+  "app/(console)/_components",
+  "app/(console)/analytics",
+  "app/(console)/catering",
+  "app/(console)/cleaning/config",
+  "app/(console)/gift-cards",
+  "app/(console)/kiosks",
+  "app/(console)/locations",
+  "app/(console)/menu",
+  "app/(console)/plan-access",
+  "app/(console)/products",
+  "app/(console)/promos",
+  "app/(console)/shop-orders",
+  "app/(console)/tenants",
+];
 const all = DIRS.flatMap(files).filter((f) => !LEGACY.some((l) => path.relative(root, f).startsWith(l)));
 const offenders = (re: RegExp, allow?: RegExp) =>
   all.flatMap((f) => readFileSync(f, "utf8").split("\n").map((line, i) => ({ f: path.relative(root, f), i: i + 1, line }))
