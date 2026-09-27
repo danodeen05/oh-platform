@@ -16,3 +16,4 @@ export { Sheet } from "./Sheet";
 export { ConfirmProvider, useConfirm, type ConfirmOptions } from "./Confirm";
 export { ToastProvider, useToast, type ToastInput } from "./Toast";
 export { DataList, type Column } from "./DataList";
+export { FilterBar } from "./FilterBar";

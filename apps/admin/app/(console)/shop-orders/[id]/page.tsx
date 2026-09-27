@@ -1,481 +1,224 @@
 "use client";
+import { use, useState } from "react";
+import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { ErrorCard } from "@/components/ui/ErrorCard";
+import { Field, Select, TextArea, TextInput } from "@/components/ui/Field";
+import { Icon } from "@/components/ui/icons";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Sheet } from "@/components/ui/Sheet";
+import { Skeleton, SkeletonList } from "@/components/ui/Skeleton";
+import { useToast } from "@/components/ui/Toast";
+import { api, ApiError } from "@/lib/api";
+import { denverDateTime, money } from "@/lib/format";
+import {
+  customerEmail, customerName, fulfillmentLabel, fulfillmentTone, isShipped, paymentLabel, paymentTone,
+  typeLabel, CARRIERS, FULFILLMENT_STATUSES, type ShopOrderDetail,
+} from "@/lib/shop-orders";
+import { useResource } from "@/lib/use-resource";
 
-import { useState, useEffect, useTransition } from "react";
-import { useParams, useRouter } from "next/navigation";
-import Link from "next/link";
+const BACK = { href: "/shop-orders", label: "Shop orders" };
+const errorText = (e: unknown) => (e instanceof ApiError || e instanceof Error ? e.message : "Something went wrong.");
 
-const BASE = process.env.NEXT_PUBLIC_API_URL || "";
-
-const FULFILLMENT_STATUSES = ["PENDING", "PROCESSING", "SHIPPED", "DELIVERED", "CANCELLED"];
-const CARRIERS = ["USPS", "UPS", "FedEx", "DHL", "Other"];
-
-interface ShopOrderItem {
-  id: string;
-  quantity: number;
-  priceCents: number;
-  product: {
-    id: string;
-    name: string;
-    slug: string;
-    imageUrl?: string;
-  };
-}
-
-interface ShopOrder {
-  id: string;
-  orderNumber: string;
-  customerEmail: string;
-  customerName?: string;
-  shippingAddress?: string;
-  shippingCity?: string;
-  shippingState?: string;
-  shippingZip?: string;
-  shippingCountry?: string;
-  subtotalCents: number;
-  taxCents: number;
-  shippingCents: number;
-  discountCents: number;
-  totalCents: number;
-  paymentStatus: string;
-  stripePaymentIntentId?: string;
-  fulfillmentStatus: string;
-  fulfillmentType: string;
-  trackingNumber?: string;
-  trackingUrl?: string;
-  trackingCarrier?: string;
-  adminNotes?: string;
-  createdAt: string;
-  updatedAt: string;
-  items: ShopOrderItem[];
-  promoCode?: {
-    code: string;
-    discountType: string;
-    discountValue: number;
-  };
-  giftCard?: {
-    code: string;
-    originalAmountCents: number;
-  };
-}
-
-function PaymentStatusBadge({ status }: { status: string }) {
-  const colors: Record<string, { bg: string; text: string }> = {
-    PENDING: { bg: "#fef3c7", text: "#92400e" },
-    PAID: { bg: "#d1fae5", text: "#065f46" },
-    FAILED: { bg: "#fee2e2", text: "#991b1b" },
-    REFUNDED: { bg: "#e0e7ff", text: "#3730a3" },
-  };
-  const color = colors[status] || { bg: "#f3f4f6", text: "#374151" };
-
+function Line({ label, value, strong, muted }: { label: string; value: string; strong?: boolean; muted?: boolean }) {
   return (
-    <span style={{
-      padding: "4px 12px",
-      borderRadius: 4,
-      fontSize: "0.85rem",
-      fontWeight: 500,
-      backgroundColor: color.bg,
-      color: color.text,
-    }}>
-      {status}
-    </span>
+    <div className={`flex justify-between gap-3 text-[15px] ${strong ? "font-semibold text-oh-charcoal" : muted ? "text-oh-stone/70" : "text-oh-stone"}`}>
+      <span>{label}</span><span className="tabular-nums">{value}</span>
+    </div>
   );
 }
 
-function FulfillmentStatusBadge({ status }: { status: string }) {
-  const colors: Record<string, { bg: string; text: string }> = {
-    PENDING: { bg: "#f3f4f6", text: "#374151" },
-    PROCESSING: { bg: "#fef3c7", text: "#92400e" },
-    SHIPPED: { bg: "#dbeafe", text: "#1e40af" },
-    DELIVERED: { bg: "#d1fae5", text: "#065f46" },
-    CANCELLED: { bg: "#fee2e2", text: "#991b1b" },
-  };
-  const color = colors[status] || { bg: "#f3f4f6", text: "#374151" };
+type FulfillmentForm = { fulfillmentStatus: string; trackingCarrier: string; trackingNumber: string; trackingUrl: string; adminNotes: string };
 
-  return (
-    <span style={{
-      padding: "4px 12px",
-      borderRadius: 4,
-      fontSize: "0.85rem",
-      fontWeight: 500,
-      backgroundColor: color.bg,
-      color: color.text,
-    }}>
-      {status}
-    </span>
-  );
-}
+function FulfillmentSheet({ order, presetShipped, onClose, onSaved }: { order: ShopOrderDetail; presetShipped: boolean; onClose: () => void; onSaved: (o: ShopOrderDetail, marked: boolean) => void }) {
+  const { show } = useToast();
+  const [form, setForm] = useState<FulfillmentForm>(() => ({
+    fulfillmentStatus: presetShipped ? "SHIPPED" : order.fulfillmentStatus, trackingCarrier: order.trackingCarrier ?? "",
+    trackingNumber: order.trackingNumber ?? "", trackingUrl: order.trackingUrl ?? "", adminNotes: order.adminNotes ?? "",
+  }));
+  const [error, setError] = useState<string | undefined>();
+  const [saving, setSaving] = useState(false);
+  const set = <K extends keyof FulfillmentForm>(k: K, v: FulfillmentForm[K]) => { setForm((f) => ({ ...f, [k]: v })); if (k === "trackingNumber") setError(undefined); };
 
-export default function ShopOrderDetailPage() {
-  const params = useParams();
-  const router = useRouter();
-  const orderId = params.id as string;
-
-  const [order, setOrder] = useState<ShopOrder | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-
-  // Editable fields
-  const [fulfillmentStatus, setFulfillmentStatus] = useState("");
-  const [trackingNumber, setTrackingNumber] = useState("");
-  const [trackingUrl, setTrackingUrl] = useState("");
-  const [trackingCarrier, setTrackingCarrier] = useState("");
-  const [adminNotes, setAdminNotes] = useState("");
-
-  const fetchOrder = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`${BASE}/admin/shop/orders/${orderId}`);
-      if (!res.ok) {
-        throw new Error("Order not found");
-      }
-      const data = await res.json();
-      setOrder(data);
-      setFulfillmentStatus(data.fulfillmentStatus);
-      setTrackingNumber(data.trackingNumber || "");
-      setTrackingUrl(data.trackingUrl || "");
-      setTrackingCarrier(data.trackingCarrier || "");
-      setAdminNotes(data.adminNotes || "");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load order");
-    }
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    if (orderId) {
-      fetchOrder();
-    }
-  }, [orderId]);
-
-  const handleSave = () => {
-    startTransition(async () => {
-      try {
-        const res = await fetch(`${BASE}/admin/shop/orders/${orderId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            fulfillmentStatus,
-            trackingNumber: trackingNumber || null,
-            trackingUrl: trackingUrl || null,
-            trackingCarrier: trackingCarrier || null,
-            adminNotes: adminNotes || null,
-          }),
-        });
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || "Failed to update order");
-        }
-        fetchOrder();
-        alert("Order updated successfully");
-      } catch (err) {
-        alert(err instanceof Error ? err.message : "Failed to update");
-      }
-    });
-  };
-
-  const handleMarkShipped = () => {
-    if (!trackingNumber) {
-      alert("Please enter a tracking number before marking as shipped");
+  async function save() {
+    if (form.fulfillmentStatus === "SHIPPED" && !form.trackingNumber.trim()) {
+      setError("Add a tracking number before marking this shipped.");
       return;
     }
-    setFulfillmentStatus("SHIPPED");
-    startTransition(async () => {
-      try {
-        const res = await fetch(`${BASE}/admin/shop/orders/${orderId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            fulfillmentStatus: "SHIPPED",
-            trackingNumber,
-            trackingUrl: trackingUrl || null,
-            trackingCarrier: trackingCarrier || null,
-          }),
-        });
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || "Failed to update order");
-        }
-        fetchOrder();
-        alert("Order marked as shipped");
-      } catch (err) {
-        alert(err instanceof Error ? err.message : "Failed to update");
-      }
-    });
-  };
-
-  if (loading) {
-    return <main style={{ padding: 24 }}><p>Loading...</p></main>;
+    setSaving(true);
+    try {
+      const wasUnshipped = !isShipped(order.fulfillmentStatus);
+      const saved = await api<ShopOrderDetail>(`/admin/shop/orders/${order.id}`, {
+        method: "PATCH",
+        body: {
+          fulfillmentStatus: form.fulfillmentStatus,
+          trackingCarrier: form.trackingCarrier || null,
+          trackingNumber: form.trackingNumber || null,
+          trackingUrl: form.trackingUrl || null,
+          adminNotes: form.adminNotes || null,
+        },
+      });
+      onSaved(saved, wasUnshipped && form.fulfillmentStatus === "SHIPPED");
+    } catch (e) {
+      show({ message: `Couldn't save. ${errorText(e)}`, tone: "alert" });
+    } finally {
+      setSaving(false);
+    }
   }
 
-  if (error || !order) {
+  return (
+    <Sheet open onClose={onClose} title="Fulfillment"
+      footer={<Button variant="primary" className="w-full" onClick={save} loading={saving}>Save</Button>}>
+      <form className="space-y-5" onSubmit={(e) => { e.preventDefault(); save(); }} noValidate>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Status">
+            <Select value={form.fulfillmentStatus} onChange={(e) => set("fulfillmentStatus", e.target.value)}>
+              {FULFILLMENT_STATUSES.map((s) => <option key={s} value={s}>{fulfillmentLabel(s)}</option>)}
+            </Select>
+          </Field>
+          <Field label="Carrier">
+            <Select value={form.trackingCarrier} onChange={(e) => set("trackingCarrier", e.target.value)}>
+              <option value="">Choose a carrier</option>
+              {CARRIERS.map((c) => <option key={c} value={c}>{c}</option>)}
+            </Select>
+          </Field>
+        </div>
+        <Field label="Tracking number" error={error}>
+          <TextInput value={form.trackingNumber} onChange={(e) => set("trackingNumber", e.target.value)} aria-invalid={Boolean(error)}
+            placeholder="1Z999..." autoCapitalize="characters" autoCorrect="off" spellCheck={false} />
+        </Field>
+        <Field label="Tracking URL" hint="Optional">
+          <TextInput type="url" value={form.trackingUrl} onChange={(e) => set("trackingUrl", e.target.value)} placeholder="https://..." autoCapitalize="none" autoCorrect="off" />
+        </Field>
+        <Field label="Admin notes" hint="Internal, not shown to the customer">
+          <TextArea rows={3} value={form.adminNotes} onChange={(e) => set("adminNotes", e.target.value)} placeholder="Internal notes" />
+        </Field>
+        <button type="submit" hidden aria-hidden="true" tabIndex={-1} />
+      </form>
+    </Sheet>
+  );
+}
+
+export default function ShopOrderDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const { show } = useToast();
+  const res = useResource(`shop-order:${id}`, (signal) => api<ShopOrderDetail>(`/admin/shop/orders/${encodeURIComponent(id)}`, { signal }));
+  const [order, setOrder] = useState<ShopOrderDetail | null>(null);
+  const [sheetMode, setSheetMode] = useState<"edit" | "shipped" | null>(null);
+  if (res.data && order?.id !== res.data.id) setOrder(res.data);
+
+  if (!order) {
     return (
-      <main style={{ padding: 24 }}>
-        <p style={{ color: "#991b1b" }}>{error || "Order not found"}</p>
-        <Link href="/shop-orders" style={{ color: "#4f46e5" }}>Back to Orders</Link>
-      </main>
+      <>
+        <PageHeader title="Order" back={BACK} />
+        {res.error
+          ? <ErrorCard message={res.error === "Order not found" ? "This order doesn't exist." : "Couldn't load this order."} onRetry={res.error === "Order not found" ? undefined : res.reload} />
+          : <div className="space-y-4"><Skeleton className="h-32 rounded-card" /><SkeletonList rows={3} /></div>}
+      </>
     );
   }
 
+  const subtotal = order.items.reduce((s, i) => s + i.priceCents * i.quantity, 0);
+  const card = order.stripePaymentId ? "Card on file" : "No card on file";
+
   return (
-    <main style={{ padding: 24, maxWidth: 1200 }}>
-      {/* Header */}
-      <div style={{ marginBottom: 24 }}>
-        <Link href="/shop-orders" style={{ color: "#6b7280", textDecoration: "none", fontSize: "0.9rem" }}>
-          ← Back to Orders
-        </Link>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
-          <div>
-            <h2 style={{ margin: 0 }}>Order {order.orderNumber}</h2>
-            <p style={{ color: "#6b7280", margin: "4px 0 0" }}>
-              {new Date(order.createdAt).toLocaleString()}
-            </p>
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <PaymentStatusBadge status={order.paymentStatus} />
-            <FulfillmentStatusBadge status={order.fulfillmentStatus} />
-          </div>
-        </div>
-      </div>
+    <>
+      <PageHeader title={`Order #${order.orderNumber}`} back={BACK}
+        subtitle={<span className="flex flex-wrap items-center gap-2"><Badge tone={fulfillmentTone(order.fulfillmentStatus)}>{fulfillmentLabel(order.fulfillmentStatus)}</Badge><span>{denverDateTime(order.createdAt)}</span></span>}
+        actions={!isShipped(order.fulfillmentStatus) && (
+          <Button variant="primary" onClick={() => setSheetMode("shipped")}>Mark as shipped</Button>
+        )} />
 
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 24 }}>
-        {/* Left Column */}
-        <div>
-          {/* Order Items */}
-          <div style={{ backgroundColor: "#f9fafb", borderRadius: 8, padding: 16, marginBottom: 16, border: "1px solid #e5e7eb" }}>
-            <h3 style={{ marginTop: 0 }}>Order Items</h3>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
-                  <th style={{ textAlign: "left", padding: 8 }}>Product</th>
-                  <th style={{ textAlign: "right", padding: 8 }}>Qty</th>
-                  <th style={{ textAlign: "right", padding: 8 }}>Price</th>
-                  <th style={{ textAlign: "right", padding: 8 }}>Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {order.items.map((item) => (
-                  <tr key={item.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
-                    <td style={{ padding: 8 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        {item.product.imageUrl && (
-                          <img src={item.product.imageUrl} alt={item.product.name} style={{ width: 40, height: 40, objectFit: "cover", borderRadius: 4 }} />
-                        )}
-                        <div>
-                          <div style={{ fontWeight: 500 }}>{item.product.name}</div>
-                          <div style={{ fontSize: "0.75rem", color: "#6b7280" }}>{item.product.slug}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td style={{ textAlign: "right", padding: 8 }}>{item.quantity}</td>
-                    <td style={{ textAlign: "right", padding: 8 }}>${(item.priceCents / 100).toFixed(2)}</td>
-                    <td style={{ textAlign: "right", padding: 8, fontWeight: 500 }}>${((item.priceCents * item.quantity) / 100).toFixed(2)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      <div className="grid gap-4 lg:grid-cols-2 lg:items-start lg:gap-6">
+        <div className="space-y-4 lg:space-y-6">
+          <Card title="Items">
+            <ul className="space-y-3">
+              {order.items.map((i) => (
+                <li key={i.id} className="flex justify-between gap-3">
+                  <span className="min-w-0">
+                    <span className="text-[15px] text-oh-charcoal"><span className="tabular-nums text-oh-stone/70">{i.quantity} ×</span> {i.product.name}</span>
+                  </span>
+                  <span className="shrink-0 text-[15px] tabular-nums text-oh-stone">{money(i.priceCents * i.quantity)}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-4 space-y-1.5 border-t border-oh-stone/15 pt-3">
+              <Line label="Subtotal" value={money(subtotal)} muted />
+              {!!order.promoDiscountCents && <Line label={`Discount${order.promoCode ? ` (${order.promoCode.code})` : ""}`} value={`−${money(order.promoDiscountCents)}`} muted />}
+              <Line label="Shipping" value={money(order.shippingCents)} muted />
+              <Line label="Tax" value={money(order.taxCents)} muted />
+              <div className="pt-1.5"><Line label="Total" value={money(order.totalCents)} strong /></div>
+            </div>
+          </Card>
 
-            {/* Order Totals */}
-            <div style={{ marginTop: 16, borderTop: "2px solid #e5e7eb", paddingTop: 16 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                <span>Subtotal</span>
-                <span>${(order.subtotalCents / 100).toFixed(2)}</span>
-              </div>
-              {order.discountCents > 0 && (
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4, color: "#059669" }}>
-                  <span>Discount {order.promoCode && `(${order.promoCode.code})`}</span>
-                  <span>-${(order.discountCents / 100).toFixed(2)}</span>
+          <Card title="Fulfillment" action={<Button variant="ghost" size="sm" icon="edit" onClick={() => setSheetMode("edit")}>Edit</Button>}>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between"><span className="text-sm text-oh-stone/70">Status</span><Badge tone={fulfillmentTone(order.fulfillmentStatus)}>{fulfillmentLabel(order.fulfillmentStatus)}</Badge></div>
+              <div className="flex items-center justify-between"><span className="text-sm text-oh-stone/70">Type</span><span className="text-[15px] text-oh-charcoal">{typeLabel(order.fulfillmentType)}</span></div>
+              {order.trackingNumber ? (
+                <div className="mt-3 rounded-xl border border-oh-stone/15 bg-oh-linen/50 p-3">
+                  {order.trackingCarrier && <p className="text-[15px] font-semibold text-oh-charcoal">{order.trackingCarrier}</p>}
+                  <p className="font-mono text-sm text-oh-stone">{order.trackingNumber}</p>
+                  {order.trackingUrl && (
+                    <a href={order.trackingUrl} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-sm font-semibold text-oh-ember-deep hover:underline">
+                      Track package <Icon name="external" size={14} />
+                    </a>
+                  )}
                 </div>
+              ) : (
+                <p className="pt-1 text-sm text-oh-stone/60">No tracking number yet.</p>
               )}
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                <span>Shipping</span>
-                <span>${(order.shippingCents / 100).toFixed(2)}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                <span>Tax</span>
-                <span>${(order.taxCents / 100).toFixed(2)}</span>
-              </div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 600, fontSize: "1.1rem", marginTop: 8, paddingTop: 8, borderTop: "1px solid #e5e7eb" }}>
-                <span>Total</span>
-                <span>${(order.totalCents / 100).toFixed(2)}</span>
-              </div>
+              {order.adminNotes && <p className="mt-2 whitespace-pre-wrap text-sm text-oh-stone/70">{order.adminNotes}</p>}
             </div>
-          </div>
-
-          {/* Fulfillment Controls */}
-          <div style={{ backgroundColor: "#f9fafb", borderRadius: 8, padding: 16, border: "1px solid #e5e7eb" }}>
-            <h3 style={{ marginTop: 0 }}>Fulfillment</h3>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
-              <div>
-                <label style={{ display: "block", fontSize: "0.85rem", color: "#374151", marginBottom: 4 }}>Status</label>
-                <select
-                  value={fulfillmentStatus}
-                  onChange={(e) => setFulfillmentStatus(e.target.value)}
-                  style={{ width: "100%", padding: 8, borderRadius: 4, border: "1px solid #d1d5db" }}
-                >
-                  {FULFILLMENT_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </div>
-              <div>
-                <label style={{ display: "block", fontSize: "0.85rem", color: "#374151", marginBottom: 4 }}>Carrier</label>
-                <select
-                  value={trackingCarrier}
-                  onChange={(e) => setTrackingCarrier(e.target.value)}
-                  style={{ width: "100%", padding: 8, borderRadius: 4, border: "1px solid #d1d5db" }}
-                >
-                  <option value="">Select carrier...</option>
-                  {CARRIERS.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-            </div>
-
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: "block", fontSize: "0.85rem", color: "#374151", marginBottom: 4 }}>Tracking Number</label>
-              <input
-                type="text"
-                value={trackingNumber}
-                onChange={(e) => setTrackingNumber(e.target.value)}
-                placeholder="Enter tracking number..."
-                style={{ width: "100%", padding: 8, borderRadius: 4, border: "1px solid #d1d5db", boxSizing: "border-box" }}
-              />
-            </div>
-
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: "block", fontSize: "0.85rem", color: "#374151", marginBottom: 4 }}>Tracking URL (optional)</label>
-              <input
-                type="url"
-                value={trackingUrl}
-                onChange={(e) => setTrackingUrl(e.target.value)}
-                placeholder="https://..."
-                style={{ width: "100%", padding: 8, borderRadius: 4, border: "1px solid #d1d5db", boxSizing: "border-box" }}
-              />
-            </div>
-
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: "block", fontSize: "0.85rem", color: "#374151", marginBottom: 4 }}>Admin Notes</label>
-              <textarea
-                value={adminNotes}
-                onChange={(e) => setAdminNotes(e.target.value)}
-                placeholder="Internal notes..."
-                rows={3}
-                style={{ width: "100%", padding: 8, borderRadius: 4, border: "1px solid #d1d5db", boxSizing: "border-box", resize: "vertical" }}
-              />
-            </div>
-
-            <div style={{ display: "flex", gap: 8 }}>
-              <button
-                onClick={handleSave}
-                disabled={pending}
-                style={{
-                  padding: "10px 20px",
-                  backgroundColor: "#4f46e5",
-                  color: "white",
-                  border: "none",
-                  borderRadius: 4,
-                  cursor: pending ? "not-allowed" : "pointer",
-                  opacity: pending ? 0.7 : 1,
-                }}
-              >
-                {pending ? "Saving..." : "Save Changes"}
-              </button>
-              {order.fulfillmentStatus !== "SHIPPED" && order.fulfillmentStatus !== "DELIVERED" && (
-                <button
-                  onClick={handleMarkShipped}
-                  disabled={pending}
-                  style={{
-                    padding: "10px 20px",
-                    backgroundColor: "#059669",
-                    color: "white",
-                    border: "none",
-                    borderRadius: 4,
-                    cursor: pending ? "not-allowed" : "pointer",
-                    opacity: pending ? 0.7 : 1,
-                  }}
-                >
-                  Mark as Shipped
-                </button>
-              )}
-            </div>
-          </div>
+          </Card>
         </div>
 
-        {/* Right Column */}
-        <div>
-          {/* Customer Info */}
-          <div style={{ backgroundColor: "#f9fafb", borderRadius: 8, padding: 16, marginBottom: 16, border: "1px solid #e5e7eb" }}>
-            <h3 style={{ marginTop: 0 }}>Customer</h3>
-            <div style={{ marginBottom: 8 }}>
-              <div style={{ fontWeight: 500 }}>{order.customerName || "Guest"}</div>
-              <div style={{ fontSize: "0.9rem", color: "#6b7280" }}>{order.customerEmail}</div>
-            </div>
-          </div>
+        <div className="space-y-4 lg:space-y-6">
+          <Card title="Customer">
+            <p className="text-[17px] font-semibold text-oh-charcoal">{customerName(order)}</p>
+            {customerEmail(order) && <p className="mt-0.5 text-sm text-oh-stone/70">{customerEmail(order)}</p>}
+          </Card>
 
-          {/* Shipping Address */}
-          {order.fulfillmentType === "SHIPPING" && (
-            <div style={{ backgroundColor: "#f9fafb", borderRadius: 8, padding: 16, marginBottom: 16, border: "1px solid #e5e7eb" }}>
-              <h3 style={{ marginTop: 0 }}>Shipping Address</h3>
-              <div style={{ fontSize: "0.9rem" }}>
-                {order.shippingAddress && <div>{order.shippingAddress}</div>}
+          <Card title={order.fulfillmentType === "SHIPPING" ? "Shipping address" : "In-store pickup"}>
+            {order.fulfillmentType === "SHIPPING" ? (
+              <div className="text-[15px] text-oh-stone">
+                {order.shippingAddress1 && <p>{order.shippingAddress1}</p>}
+                {order.shippingAddress2 && <p>{order.shippingAddress2}</p>}
                 {(order.shippingCity || order.shippingState || order.shippingZip) && (
-                  <div>{[order.shippingCity, order.shippingState, order.shippingZip].filter(Boolean).join(", ")}</div>
+                  <p>{[order.shippingCity, order.shippingState, order.shippingZip].filter(Boolean).join(", ")}</p>
                 )}
-                {order.shippingCountry && <div>{order.shippingCountry}</div>}
+                {order.shippingCountry && <p>{order.shippingCountry}</p>}
+                {!order.shippingAddress1 && <p className="text-oh-stone/60">No address on file.</p>}
               </div>
-            </div>
-          )}
-
-          {order.fulfillmentType === "IN_STORE_PICKUP" && (
-            <div style={{ backgroundColor: "#fef3c7", borderRadius: 8, padding: 16, marginBottom: 16, border: "1px solid #fcd34d" }}>
-              <h3 style={{ marginTop: 0, color: "#92400e" }}>In-Store Pickup</h3>
-              <p style={{ margin: 0, fontSize: "0.9rem", color: "#92400e" }}>Customer will pick up at store</p>
-            </div>
-          )}
-
-          {/* Payment Info */}
-          <div style={{ backgroundColor: "#f9fafb", borderRadius: 8, padding: 16, marginBottom: 16, border: "1px solid #e5e7eb" }}>
-            <h3 style={{ marginTop: 0 }}>Payment</h3>
-            <div style={{ marginBottom: 8 }}>
-              <PaymentStatusBadge status={order.paymentStatus} />
-            </div>
-            {order.stripePaymentIntentId && (
-              <div style={{ fontSize: "0.8rem", color: "#6b7280", marginTop: 8 }}>
-                <div>Stripe Payment ID:</div>
-                <div style={{ fontFamily: "monospace", fontSize: "0.75rem" }}>{order.stripePaymentIntentId}</div>
-              </div>
+            ) : (
+              <p className="text-[15px] text-oh-stone">The customer will pick this order up at the store.</p>
             )}
+          </Card>
+
+          <Card title="Payment">
+            <div className="flex items-center justify-between gap-3">
+              <Badge tone={paymentTone(order.paymentStatus)}>{paymentLabel(order.paymentStatus)}</Badge>
+              <span className="text-[15px] text-oh-stone">{card}</span>
+            </div>
+            {order.stripePaymentId && <p className="mt-2 break-all font-mono text-xs text-oh-stone/60">{order.stripePaymentId}</p>}
             {order.giftCard && (
-              <div style={{ marginTop: 8, padding: 8, backgroundColor: "#e0e7ff", borderRadius: 4 }}>
-                <div style={{ fontSize: "0.8rem", color: "#3730a3" }}>
-                  Gift Card: {order.giftCard.code}
-                </div>
-              </div>
+              <a href={`/gift-cards/${order.giftCard.id}`} className="mt-2 block rounded-lg bg-oh-linen px-3 py-2 text-sm font-semibold text-oh-charcoal hover:bg-oh-linen/70">
+                Gift card {order.giftCard.code}
+              </a>
             )}
-          </div>
-
-          {/* Tracking Info */}
-          {order.trackingNumber && (
-            <div style={{ backgroundColor: "#dbeafe", borderRadius: 8, padding: 16, border: "1px solid #93c5fd" }}>
-              <h3 style={{ marginTop: 0, color: "#1e40af" }}>Tracking</h3>
-              <div style={{ fontSize: "0.9rem" }}>
-                {order.trackingCarrier && <div style={{ fontWeight: 500 }}>{order.trackingCarrier}</div>}
-                <div style={{ fontFamily: "monospace" }}>{order.trackingNumber}</div>
-                {order.trackingUrl && (
-                  <a
-                    href={order.trackingUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ color: "#1e40af", fontSize: "0.85rem" }}
-                  >
-                    Track Package →
-                  </a>
-                )}
-              </div>
-            </div>
-          )}
+          </Card>
         </div>
       </div>
-    </main>
+
+      {sheetMode && (
+        <FulfillmentSheet key={sheetMode} order={order} presetShipped={sheetMode === "shipped"} onClose={() => setSheetMode(null)}
+          onSaved={(saved, marked) => {
+            setOrder(saved);
+            setSheetMode(null);
+            show({ message: marked ? "Order marked as shipped." : "Fulfillment updated.", tone: "good" });
+          }} />
+      )}
+    </>
   );
 }

@@ -21,7 +21,6 @@ export const LEGACY: string[] = [
   "app/(console)/plan-access",
   "app/(console)/products",
   "app/(console)/promos",
-  "app/(console)/shop-orders",
   "app/(console)/tenants",
 ];
 const all = DIRS.flatMap(files).filter((f) => !LEGACY.some((l) => path.relative(root, f).startsWith(l)));
