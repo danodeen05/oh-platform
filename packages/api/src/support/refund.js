@@ -13,7 +13,7 @@
  *   (d) meal gift     -> back to PENDING if it has not expired
  *   (e) order         -> paymentStatus REFUNDED (the order-level claim); an order still
  *                        in the kitchen is CANCELLED and its pod freed
- *   (f) cashback      -> the unspent remainder of the order's CASHBACK lot(s) reversed
+ *   (f) cashback and goodwill earned on the order -> unspent remainder reversed
  *
  * See fullRefundCase for the claim / refund / finish sequence that keeps a
  * refunded card and a PAID order from ever co-existing without restores.
@@ -131,14 +131,19 @@ async function cancelActiveOrder(tx, order) {
 }
 
 /**
- * Cashback the order earned is taken back: the unspent remainder of its
- * CASHBACK lot(s) goes to 0 (conditional on the remainder just read, so a
- * concurrent spend is never double-counted); what was already spent stays
- * spent. The cached balance drops by exactly that amount, never below 0.
+ * Credit the order EARNED is taken back once the order is refunded in full:
+ * CASHBACK, and GOODWILL (the refund already makes the customer whole, so
+ * keeping goodwill for the same order would be double compensation). The
+ * unspent remainder of each such lot goes to 0 (conditional on the remainder
+ * just read, so a concurrent spend is never double-counted); what was already
+ * spent stays spent. The cached balance drops by exactly that amount, never
+ * below 0, with an ADMIN_ADJUSTMENT event carrying `description`.
+ * Reversed goodwill still counts toward the goodwill caps: those sum grants
+ * (amountCents), not balances.
  */
-async function reverseCashback(tx, order) {
+async function reverseOrderLots(tx, order, source, description) {
   if (!order.userId) return 0;
-  const lots = await tx.creditLot.findMany({ where: { userId: order.userId, source: "CASHBACK", orderId: order.id, remainingCents: { gt: 0 } } });
+  const lots = await tx.creditLot.findMany({ where: { userId: order.userId, source, orderId: order.id, remainingCents: { gt: 0 } } });
   let reversed = 0;
   for (const lot of lots) {
     const res = await tx.creditLot.updateMany({ where: { id: lot.id, remainingCents: lot.remainingCents }, data: { remainingCents: 0 } });
@@ -148,7 +153,7 @@ async function reverseCashback(tx, order) {
   const dec = await tx.user.updateMany({ where: { id: order.userId, creditsCents: { gte: reversed } }, data: { creditsCents: { decrement: reversed } } });
   if (dec.count !== 1) await tx.user.updateMany({ where: { id: order.userId }, data: { creditsCents: 0 } });
   await tx.creditEvent.create({
-    data: { userId: order.userId, type: "ADMIN_ADJUSTMENT", amountCents: -reversed, orderId: order.id, description: "cashback reversed on refund" },
+    data: { userId: order.userId, type: "ADMIN_ADJUSTMENT", amountCents: -reversed, orderId: order.id, description },
   });
   return reversed;
 }
@@ -266,12 +271,13 @@ export async function fullRefundCase(prisma, stripe, { supportCase, resolvedBy, 
   // 4. The card is refunded: finish, whatever else happened meanwhile.
   return prisma.$transaction(async (tx) => {
     const warnings = [];
-    let restores = { order: null, seatsReleased: 0, cashbackReversed: 0, credit: null, giftCard: null, reward: null, mealGift: null };
+    let restores = { order: null, seatsReleased: 0, cashbackReversed: 0, goodwillReversed: 0, credit: null, giftCard: null, reward: null, mealGift: null };
     const orderClaim = await tx.order.updateMany({ where: { id: order.id, paymentStatus: "PAID" }, data: { paymentStatus: "REFUNDED" } });
     if (orderClaim.count === 1) {
       const cancel = await cancelActiveOrder(tx, order);
-      const cashbackReversed = await reverseCashback(tx, order);
-      restores = { ...cancel, cashbackReversed, ...(await restoreTenders(tx, order, now)) };
+      const cashbackReversed = await reverseOrderLots(tx, order, "CASHBACK", "cashback reversed on refund");
+      const goodwillReversed = await reverseOrderLots(tx, order, "GOODWILL", "goodwill reversed on refund");
+      restores = { ...cancel, cashbackReversed, goodwillReversed, ...(await restoreTenders(tx, order, now)) };
       warnings.push(...warningsFor(restores));
     } else {
       warnings.push("ORDER_ALREADY_REFUNDED");

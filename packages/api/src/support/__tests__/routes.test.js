@@ -612,6 +612,56 @@ describe("POST /admin/support/cases/:id/resolve", () => {
     assert.equal(res.json().restores.cashbackReversed, 70);
   });
 
+  test("ruling: the order's goodwill is reversed like cashback (unspent fully, partly spent only the remainder); caps still count the grants", async () => {
+    const lot = (id, source, amountCents, remainingCents, orderId) => ({ id, userId: "u1", source, amountCents, remainingCents, orderId, expiresAt: new Date(NOW.getTime() + 60 * DAY), createdAt: new Date(NOW.getTime() - HOUR / 2) });
+    const prisma = refundFixture({
+      more: {
+        users: [{ id: "u1", email: "u1@x.com", creditsCents: 405 }, { id: "u2", email: "u2@x.com", creditsCents: 0 }],
+        creditLots: [
+          lot("gw-unspent", "GOODWILL", 300, 300, "o1"),
+          lot("gw-partly", "GOODWILL", 200, 45, "o1"),
+          lot("gw-other", "GOODWILL", 500, 0, "o6"), // another order's goodwill: untouched
+          lot("cb", "CASHBACK", 60, 60, "o1"),
+        ],
+      },
+      extraOrders: [{ id: "o5", userId: "u1", paymentStatus: "PAID", status: "COMPLETED", totalCents: 1500, amountDueCents: 1500, stripePaymentId: "pi_5", createdAt: new Date(NOW.getTime() - HOUR) }],
+    });
+    const { app } = await buildApp({ prisma });
+    const res = await resolve(app, "c1", { action: "full_refund" });
+    assert.equal(res.statusCode, 200, res.body);
+    const byId = async (id) => prisma.creditLot.findUnique({ where: { id } });
+    assert.equal((await byId("gw-unspent")).remainingCents, 0);
+    assert.equal((await byId("gw-partly")).remainingCents, 0);
+    assert.equal((await byId("gw-partly")).amountCents, 200, "the spent part stays spent");
+    assert.equal((await byId("gw-other")).remainingCents, 0);
+    assert.equal((await byId("cb")).remainingCents, 0);
+    assert.equal(res.json().restores.goodwillReversed, 345);
+    assert.equal(res.json().restores.cashbackReversed, 60);
+    const lots = await prisma.creditLot.findMany({ where: { userId: "u1" } });
+    const user = await prisma.user.findUnique({ where: { id: "u1" } });
+    assert.equal(user.creditsCents, lots.reduce((sum, l) => sum + l.remainingCents, 0), "cache equals the lots");
+    assert.equal(user.creditsCents, 405 - 345 - 60 + 300);
+    const events = await prisma.creditEvent.findMany({ where: { userId: "u1", type: "ADMIN_ADJUSTMENT" } });
+    assert.deepEqual(events.map((e) => [e.amountCents, e.description]).sort(), [[-345, "goodwill reversed on refund"], [-60, "cashback reversed on refund"]].sort());
+    // Caps count grants, not balances: $10 granted in 30 days (300 + 200 + 500) still blocks more.
+    const { goodwillAllowance } = await import("../caps.js");
+    assert.deepEqual(await goodwillAllowance(prisma, { userId: "u1", orderId: "o5", now: NOW }), { allowedCents: 0, reason: "PER_30_DAYS" });
+  });
+
+  test("ruling: goodwill reversal never drives the cache below 0", async () => {
+    const prisma = refundFixture({
+      order: { creditsAppliedCents: 0 },
+      more: {
+        users: [{ id: "u1", email: "u1@x.com", creditsCents: 20 }, { id: "u2", email: "u2@x.com", creditsCents: 0 }],
+        creditLots: [{ id: "gw", userId: "u1", source: "GOODWILL", amountCents: 100, remainingCents: 100, orderId: "o1", expiresAt: new Date(NOW.getTime() + DAY) }],
+      },
+    });
+    const { app } = await buildApp({ prisma });
+    assert.equal((await resolve(app, "c1", { action: "full_refund" })).statusCode, 200);
+    assert.equal((await prisma.user.findUnique({ where: { id: "u1" } })).creditsCents, 0);
+    assert.equal((await prisma.creditLot.findUnique({ where: { id: "gw" } })).remainingCents, 0);
+  });
+
   test("fix 2: the cache never goes below 0 when it is already short", async () => {
     const prisma = refundFixture({
       order: { creditsAppliedCents: 0 },
