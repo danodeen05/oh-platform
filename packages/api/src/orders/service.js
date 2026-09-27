@@ -269,8 +269,18 @@ function quoteColumns(quote) {
 // Pods
 // ---------------------------------------------------------------------------
 
-/** Entry-nearest first: finger A before B, low kitchen position first. */
+/**
+ * Entry-nearest first. `bestRank` (Task A8: 1 = the free pod nearest the
+ * entry by walking distance, computed offline by `@oh/floor-plan` and
+ * persisted per seat) sorts first, nulls last for legacy/pre-comb seats that
+ * don't have one. Within an equal `bestRank` (including "no bestRank on
+ * either side"), fall back to the original finger-then-position order.
+ */
 function podOrder(a, b) {
+  const rank = (s) => (s.bestRank === null || s.bestRank === undefined ? Infinity : s.bestRank);
+  const ra = rank(a);
+  const rb = rank(b);
+  if (ra !== rb) return ra - rb;
   const key = (s) => [s.finger ?? 999, s.position ?? 999, String(s.number || "")];
   const [af, ap, an] = key(a);
   const [bf, bp, bn] = key(b);

@@ -87,6 +87,7 @@ import { onOrderCompleted, applyReferralSignup, visibleMenuItems, firstUnrelease
 import { createCustomerAuth, registerCustomerIdentity, orderOwnerId, chappyCreditsToDeduct, resolveChappyWebIdentity } from "./auth/customer.js";
 import { createKioskAuth } from "./auth/kiosk.js";
 import { publicReferral, shopCreditSpender, registerAdminOnlyRoutes } from "./auth/hardening.js";
+import { listLocationSeats } from "./seats/service.js";
 
 // DEMO- order codes resolve to a synthetic order (see demo/status-demo.js):
 // the plan's live status-page demo reads real routes without touching the DB.
@@ -807,6 +808,8 @@ app.get("/locations/:id/availability", async (req, reply) => {
       operatingHours: true,
       timezone: true,
       isClosed: true,
+      layoutKey: true,
+      layoutMirror: true,
     },
   });
 
@@ -815,11 +818,17 @@ app.get("/locations/:id/availability", async (req, reply) => {
   }
 
   const status = getLocationStatus(location);
+  // Task A8: fold the comb-seat layout (retired seats excluded) into the
+  // same response the ordering flow already polls for operating hours.
+  const { layoutKey, layoutMirror, seats } = await listLocationSeats(prisma, id, location);
 
   return {
     locationId: location.id,
     locationName: location.name,
     ...status,
+    layoutKey,
+    layoutMirror,
+    seats,
   };
 });
 
@@ -1638,52 +1647,11 @@ app.delete("/seats/:id", async (req, reply) => {
   return { success: true };
 });
 
-// GET /locations/:id/seats - Get all pods for a location
+// GET /locations/:id/seats - Active comb pods for a location (Task A8: the
+// documented public shape, retired pods excluded - see seats/service.js).
 app.get("/locations/:id/seats", async (req, reply) => {
   const { id } = req.params;
-
-  const seats = await prisma.seat.findMany({
-    where: { locationId: id },
-    include: {
-      orders: {
-        where: {
-          status: {
-            in: ["QUEUED", "PREPPING", "READY", "SERVING", "COMPLETED"],
-          },
-          podCleanedAt: null,
-        },
-        include: {
-          items: {
-            include: {
-              menuItem: true,
-            },
-          },
-          user: {
-            select: {
-              id: true,
-              name: true,
-              membershipTier: true,
-            },
-          },
-          guest: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-        take: 1,
-      },
-    },
-    orderBy: {
-      number: "asc",
-    },
-  });
-
-  return seats;
+  return listLocationSeats(prisma, id);
 });
 
 // POST /orders/check-in - Customer arrives and scans order QR at kiosk

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildLayout, LOCATION_LAYOUTS, podLabel, parsePodLabel } from "../src";
+import { buildLayout, LOCATION_LAYOUTS, podLabel, parsePodLabel, entryWalkDistance, rankPodsByEntry } from "../src";
 
 const overlaps = (a: {x:number;y:number;w:number;h:number}, b: typeof a) =>
   a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
@@ -50,5 +50,38 @@ describe("buildLayout", () => {
     expect(labels[0]).toMatch(/^A-0[1-9]$/);
     for (const p of l.pods) expect(parsePodLabel(podLabel(p))).toEqual({ finger: p.finger, position: p.position });
     expect(parsePodLabel("Z-99")).toBeNull();
+  });
+});
+
+describe("rankPodsByEntry (Task A8: best pod = nearest free pod to the entry)", () => {
+  it.each([["comb-75"], ["comb-70-mirrored"]] as const)("%s: rank 1 is nearer the entry than the last-ranked pod", (key) => {
+    const l = buildLayout(LOCATION_LAYOUTS[key]);
+    const ranks = rankPodsByEntry(l);
+    expect(ranks.size).toBe(l.pods.length);
+    const byRank = [...l.pods].sort((a, b) => (ranks.get(a.number) as number) - (ranks.get(b.number) as number));
+    const nearest = byRank[0]!;
+    const farthest = byRank[byRank.length - 1]!;
+    expect(ranks.get(nearest.number)).toBe(1);
+    expect(ranks.get(farthest.number)).toBe(l.pods.length);
+    expect(entryWalkDistance(l, nearest)).toBeLessThan(entryWalkDistance(l, farthest));
+  });
+
+  it("ranks are exactly 1..N with no gaps or repeats", () => {
+    const l = buildLayout(LOCATION_LAYOUTS["comb-75"]);
+    const ranks = rankPodsByEntry(l);
+    const values = [...ranks.values()].sort((a, b) => a - b);
+    expect(values).toEqual(Array.from({ length: 75 }, (_, i) => i + 1));
+  });
+
+  it("the mirrored layout's rank-1 pod is on the opposite side from the unmirrored one", () => {
+    const unmirrored = buildLayout({ pods: 70, mirror: false });
+    const mirrored = buildLayout({ pods: 70, mirror: true });
+    const rank1 = (l: typeof unmirrored) => {
+      const ranks = rankPodsByEntry(l);
+      return l.pods.find((p) => ranks.get(p.number) === 1)!;
+    };
+    const a = rank1(unmirrored);
+    const b = rank1(mirrored);
+    expect(a.side).not.toBe(b.side);
   });
 });

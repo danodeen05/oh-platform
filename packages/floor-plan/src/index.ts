@@ -28,6 +28,8 @@ export {
   HEIGHTS,
   POD,
   ROW_CAPACITY,
+  entryWalkDistance,
+  rankPodsByEntry,
 } from "./layout";
 export type {
   LayoutOptions,

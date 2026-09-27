@@ -247,6 +247,7 @@ model Seat {
   rowSide   String? // which side of the finger the pod sits on
   position  Int? // 2-digit kitchen position within the finger
   label     String? // display label, e.g. "B-07"
+  bestRank  Int? // 1 = nearest free pod to the entry (walking distance); ties break by label. Null for legacy (pre-comb) seats.
   retiredAt DateTime? // set when a pod is removed from a rebuilt layout
 
   // Dual Pod configuration (two adjacent pods that can be booked together)

@@ -355,6 +355,9 @@ importers:
 
   packages/db:
     dependencies:
+      '@oh/floor-plan':
+        specifier: workspace:*
+        version: link:../floor-plan
       '@prisma/client':
         specifier: 5.19.1
         version: 5.19.1(prisma@5.19.1)

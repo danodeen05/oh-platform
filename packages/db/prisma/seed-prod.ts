@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { seedLocation, LOCATIONS } from '../scripts/seed-comb-seats';
 
 const prisma = new PrismaClient({
   datasourceUrl: process.env.RAILWAY_DATABASE_URL
@@ -337,126 +338,18 @@ async function seedCoreData() {
   console.log(`✓ Created/updated ${challenges.length} challenges`);
 
   // ==========================================
-  // SEATS (PODS) - U-Shape Layout with Dual Pods
+  // SEATS (PODS) - Comb layout (Task A8)
   // ==========================================
-  console.log('\nCreating/updating seats (pods)...');
+  // Real comb-layout seats (75 pods at City Creek, 70 mirrored at University
+  // Place) replace the old 12-pod U-shape placeholder. `seedLocation` sets
+  // the location's slug/layoutKey/layoutMirror/podCount, seeds/retires its
+  // `Seat` rows via `seedCombSeats` (idempotent), and syncs
+  // `LocationStats.totalSeats` to `podCount`.
+  console.log('\nSeeding comb seats...');
 
-  // City Creek Mall: Dual pods at 01-02 (left) and 11-12 (right)
-  const cityCreekSeats = [
-    { number: '01', side: 'left', row: 0, col: 0, podType: 'DUAL' as const },
-    { number: '02', side: 'left', row: 0, col: 1, podType: 'DUAL' as const },
-    { number: '03', side: 'left', row: 0, col: 2, podType: 'SINGLE' as const },
-    { number: '04', side: 'left', row: 0, col: 3, podType: 'SINGLE' as const },
-    { number: '05', side: 'bottom', row: 1, col: 0, podType: 'SINGLE' as const },
-    { number: '06', side: 'bottom', row: 1, col: 1, podType: 'SINGLE' as const },
-    { number: '07', side: 'bottom', row: 1, col: 2, podType: 'SINGLE' as const },
-    { number: '08', side: 'bottom', row: 1, col: 3, podType: 'SINGLE' as const },
-    { number: '09', side: 'right', row: 2, col: 0, podType: 'SINGLE' as const },
-    { number: '10', side: 'right', row: 2, col: 1, podType: 'SINGLE' as const },
-    { number: '11', side: 'right', row: 2, col: 2, podType: 'DUAL' as const },
-    { number: '12', side: 'right', row: 2, col: 3, podType: 'DUAL' as const },
-  ];
-
-  // University Place: Dual pods at 05-06 and 07-08 (bottom)
-  const universityPlaceSeats = [
-    { number: '01', side: 'left', row: 0, col: 0, podType: 'SINGLE' as const },
-    { number: '02', side: 'left', row: 0, col: 1, podType: 'SINGLE' as const },
-    { number: '03', side: 'left', row: 0, col: 2, podType: 'SINGLE' as const },
-    { number: '04', side: 'left', row: 0, col: 3, podType: 'SINGLE' as const },
-    { number: '05', side: 'bottom', row: 1, col: 0, podType: 'DUAL' as const },
-    { number: '06', side: 'bottom', row: 1, col: 1, podType: 'DUAL' as const },
-    { number: '07', side: 'bottom', row: 1, col: 2, podType: 'DUAL' as const },
-    { number: '08', side: 'bottom', row: 1, col: 3, podType: 'DUAL' as const },
-    { number: '09', side: 'right', row: 2, col: 0, podType: 'SINGLE' as const },
-    { number: '10', side: 'right', row: 2, col: 1, podType: 'SINGLE' as const },
-    { number: '11', side: 'right', row: 2, col: 2, podType: 'SINGLE' as const },
-    { number: '12', side: 'right', row: 2, col: 3, podType: 'SINGLE' as const },
-  ];
-
-  // Helper function to create or update seats for a location
-  async function seedLocationSeats(
-    location: { id: string; name: string },
-    seatConfigs: typeof cityCreekSeats,
-    dualPairs: [string, string][]  // pairs of pod numbers that are linked
-  ) {
-    const createdSeats: Record<string, string> = {};  // number -> id
-
-    // First pass: create/update all seats
-    for (const config of seatConfigs) {
-      const existing = await prisma.seat.findFirst({
-        where: { locationId: location.id, number: config.number }
-      });
-
-      if (existing) {
-        await prisma.seat.update({
-          where: { id: existing.id },
-          data: {
-            side: config.side,
-            row: config.row,
-            col: config.col,
-            podType: config.podType,
-            status: 'AVAILABLE',
-          }
-        });
-        createdSeats[config.number] = existing.id;
-      } else {
-        const seat = await prisma.seat.create({
-          data: {
-            locationId: location.id,
-            number: config.number,
-            qrCode: `POD-${location.id.slice(-8)}-${config.number}-${Date.now()}`,
-            status: 'AVAILABLE',
-            side: config.side,
-            row: config.row,
-            col: config.col,
-            podType: config.podType,
-          }
-        });
-        createdSeats[config.number] = seat.id;
-      }
-    }
-
-    // Second pass: link dual pods
-    for (const [pod1, pod2] of dualPairs) {
-      const id1 = createdSeats[pod1];
-      const id2 = createdSeats[pod2];
-      if (id1 && id2) {
-        await prisma.seat.update({
-          where: { id: id1 },
-          data: { dualPartnerId: id2 }
-        });
-      }
-    }
-
-    console.log(`✓ Created/updated 12 pods for ${location.name}`);
-  }
-
-  // Seed City Creek Mall seats (dual: 01-02, 11-12)
-  await seedLocationSeats(cityCreek, cityCreekSeats, [['01', '02'], ['11', '12']]);
-
-  // Seed University Place seats (dual: 05-06, 07-08)
-  await seedLocationSeats(universityPlace, universityPlaceSeats, [['05', '06'], ['07', '08']]);
-
-  // ==========================================
-  // LOCATION STATS
-  // ==========================================
-  console.log('\nCreating location stats...');
-
-  for (const location of [cityCreek, universityPlace]) {
-    await prisma.locationStats.upsert({
-      where: { locationId: location.id },
-      update: {
-        totalSeats: 12,
-      },
-      create: {
-        locationId: location.id,
-        totalSeats: 12,
-        availableSeats: 12,
-        occupiedSeats: 0,
-        avgWaitMinutes: 0,
-      }
-    });
-    console.log(`✓ Location stats for ${location.name}`);
+  for (const entry of LOCATIONS) {
+    const result = await seedLocation(prisma, entry);
+    console.log(`✓ ${entry.slug}: created ${result.created}, retired ${result.retired} pods`);
   }
 
   console.log('\n✅ Production database seeded successfully!');

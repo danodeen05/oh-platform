@@ -12,9 +12,12 @@
     "seed:prod": "tsx scripts/export-to-production.js",
     "seed:prod:preview": "tsx scripts/preview-export.js",
     "seed:catering-menu": "node prisma/seed-catering-menu.js",
-    "seed:leland-event": "node prisma/seed-leland-event.js"
+    "seed:leland-event": "node prisma/seed-leland-event.js",
+    "seed:comb-seats": "tsx scripts/seed-comb-seats.ts --all",
+    "test": "tsx --test scripts/__tests__/*.test.ts"
   },
   "dependencies": {
+    "@oh/floor-plan": "workspace:*",
     "@prisma/client": "5.19.1",
     "prisma": "5.19.1"
   },

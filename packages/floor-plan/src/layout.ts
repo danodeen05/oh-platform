@@ -806,3 +806,43 @@ export const LOCATION_LAYOUTS: Record<"comb-75" | "comb-70-mirrored", LayoutOpti
   "comb-75": { pods: 75, mirror: false },
   "comb-70-mirrored": { pods: 70, mirror: true },
 };
+
+/* ------------------------------------------------------------ best pod */
+
+function pathLength(path: readonly Point[]): number {
+  let total = 0;
+  for (let i = 1; i < path.length; i += 1) {
+    const [ax, ay] = path[i - 1] as Point;
+    const [bx, by] = path[i] as Point;
+    total += Math.hypot(bx - ax, by - ay);
+  }
+  return total;
+}
+
+/**
+ * Walking distance from the entry door to a pod's seat, along the same
+ * guest-in path used for the journey animation (entry door, kiosk, into the
+ * cross-aisle, up the guest aisle, to the seat - see `buildPaths`). This is
+ * the real path a guest walks, not a straight line, so it respects the
+ * aisle/cross-aisle geometry (a Manhattan-style route through the guest
+ * territory) for both the unmirrored and mirrored layouts.
+ */
+export function entryWalkDistance(layout: Layout, pod: Pod): number {
+  const { guestPath } = buildPaths(pod, layout.zones, layout.doors, layout.openings, layout.guestAisles, layout.staffCorridors, layout.crossAisle, layout.kiosks);
+  return pathLength(guestPath);
+}
+
+/**
+ * Ranks every pod in a layout by walking distance from the entry door,
+ * nearest = 1 ("best pod": spec 6.2 defines best as nearest free pod to the
+ * entry). Ties break by label so the ranking is total and stable. Returns a
+ * map keyed by `Pod.number` (stable across mirroring), for a seed script to
+ * persist as `Seat.bestRank`.
+ */
+export function rankPodsByEntry(layout: Layout): Map<number, number> {
+  const withDistance = layout.pods.map((pod) => ({ pod, distance: entryWalkDistance(layout, pod) }));
+  withDistance.sort((a, b) => a.distance - b.distance || a.pod.label.localeCompare(b.pod.label));
+  const ranks = new Map<number, number>();
+  withDistance.forEach(({ pod }, i) => ranks.set(pod.number, i + 1));
+  return ranks;
+}
