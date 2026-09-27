@@ -1,7 +1,28 @@
 "use client";
 import { useState, useEffect } from "react";
+import { extractSeatsArray, seatDisplayNumber } from "../../lib/seats/adapt-seats";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "";
+
+/**
+ * Task A8: {layoutKey, layoutMirror, seats: [...]} replaced the bare array;
+ * qrCode/locationId/createdAt/orders aren't in the new shape (comb pods
+ * don't carry a pod's active-order info in this endpoint any more), so they
+ * default to blank/the location we asked for and no order. Occupancy display
+ * for comb pods is out of scope for A8 (see Tasks D4/D5 and a follow-up
+ * admin task).
+ */
+function adaptPods(data: unknown, locationId: string): Pod[] {
+  return extractSeatsArray(data).map((s: any, i: number) => ({
+    id: s.id,
+    number: seatDisplayNumber(s, String(i + 1)),
+    qrCode: typeof s.qrCode === "string" ? s.qrCode : "",
+    status: s.status,
+    locationId: typeof s.locationId === "string" ? s.locationId : locationId,
+    createdAt: typeof s.createdAt === "string" ? s.createdAt : "",
+    orders: Array.isArray(s.orders) ? s.orders : undefined,
+  }));
+}
 
 type Pod = {
   id: string;
@@ -129,7 +150,7 @@ export default function PodsManager({ locations }: { locations: Location[] }) {
             headers: { "x-tenant-slug": "oh" },
           });
           const data = await response.json();
-          allPods.push(...data);
+          allPods.push(...adaptPods(data, loc.id));
         }
         setPods(allPods);
       } else {
@@ -137,7 +158,7 @@ export default function PodsManager({ locations }: { locations: Location[] }) {
           headers: { "x-tenant-slug": "oh" },
         });
         const data = await response.json();
-        setPods(data);
+        setPods(adaptPods(data, selectedLocation));
       }
     } catch (error) {
       console.error("Failed to load pods:", error);

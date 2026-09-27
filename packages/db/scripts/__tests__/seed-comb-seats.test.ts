@@ -7,16 +7,40 @@
  *
  * Uses a tiny local fake Prisma (just the `seat` calls the script makes),
  * not the API's `prisma-memory` helper, which lives in another workspace
- * package and is scoped to the API's own tests.
+ * package and is scoped to the API's own tests. `create`/`update` enforce
+ * the same unique indexes Postgres does (Task A8 fix round 1, Important):
+ * `(locationId, number)`, `qrCode`, and `dualPartnerId` (nulls never clash,
+ * matching Postgres), throwing a Prisma-shaped `P2002` on a clash - so a
+ * repeat or partially-cleared seed run that accidentally violates one of
+ * these is actually caught here, not just asserted by hand.
  */
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { buildLayout, LOCATION_LAYOUTS, podLabel, rankPodsByEntry } from "@oh/floor-plan";
 import { seedCombSeats } from "../seed-comb-seats.ts";
 
+const UNIQUE_INDEXES: readonly (readonly string[])[] = [["locationId", "number"], ["qrCode"], ["dualPartnerId"]];
+
+/** Throws a Prisma-shaped P2002 if `candidate` (a full record, post-write) clashes with any OTHER seat on a unique index. `excludeId` is the record being written (self-clashes, e.g. re-writing the same value, are not a clash). */
+function assertUnique(seats: Map<string, any>, excludeId: string | undefined, candidate: Record<string, unknown>) {
+  for (const fields of UNIQUE_INDEXES) {
+    if (fields.some((f) => candidate[f] === null || candidate[f] === undefined)) continue;
+    for (const [otherId, other] of seats) {
+      if (otherId === excludeId) continue;
+      if (fields.every((f) => other[f] === candidate[f])) {
+        const err = new Error(`fake prisma: unique constraint failed on Seat(${fields.join(", ")})`);
+        (err as any).code = "P2002";
+        (err as any).meta = { target: fields };
+        throw err;
+      }
+    }
+  }
+}
+
 function makeFakeSeatPrisma(initialSeats: any[] = []) {
   let seq = 0;
   const seats = new Map<string, any>(initialSeats.map((s) => [s.id, { retiredAt: null, dualPartnerId: null, ...s }]));
+  // The constructor above bypasses assertUnique (it's fixture setup, not code under test).
   return {
     _seats: seats,
     seat: {
@@ -31,12 +55,15 @@ function makeFakeSeatPrisma(initialSeats: any[] = []) {
       async create({ data }: any) {
         const id = data.id ?? `seat_${++seq}`;
         const rec = { retiredAt: null, dualPartnerId: null, ...data, id };
+        assertUnique(seats, undefined, rec);
         seats.set(id, rec);
         return { ...rec };
       },
       async update({ where, data }: any) {
         const rec = seats.get(where.id);
         if (!rec) throw new Error(`fake prisma: seat not found for update: ${where.id}`);
+        const merged = { ...rec, ...data };
+        assertUnique(seats, where.id, merged);
         Object.assign(rec, data);
         return { ...rec };
       },
@@ -119,6 +146,42 @@ describe("seedCombSeats", () => {
     const seats = await prisma.seat.findMany({ where: { locationId: "cmip6jbz700022nnnxxpmm5hf" } });
     const a01 = seats.find((s: any) => s.label === "A-01");
     assert.equal(a01.qrCode, "POD-xxpmm5hf-A-01");
+  });
+
+  test("two seeding runs in a row, plus a run after one partner link was manually cleared, give no unique violation and correct bidirectional links (Task A8 fix round 1)", async () => {
+    const prisma = makeFakeSeatPrisma();
+
+    await seedCombSeats(prisma, { locationId: "univ-id", layoutKey: "comb-70-mirrored" });
+    // Second run: re-writing the same (locationId, number), qrCode, and
+    // dualPartnerId values must not trip the unique-index check.
+    await assert.doesNotReject(seedCombSeats(prisma, { locationId: "univ-id", layoutKey: "comb-70-mirrored" }));
+
+    const beforeClear = await prisma.seat.findMany({ where: { locationId: "univ-id" } });
+    const duoSeat = beforeClear.find((s: any) => s.podType === "DUAL" && s.dualPartnerId);
+    assert.ok(duoSeat, "fixture should have at least one duo pod");
+    const partnerId = duoSeat.dualPartnerId;
+
+    // Simulate drift: one side of a duo pair lost its partner link (e.g. a
+    // manual admin unlink that didn't clear the other side).
+    await prisma.seat.update({ where: { id: duoSeat.id }, data: { dualPartnerId: null } });
+
+    // Re-seeding must not throw a unique violation (the earlier bug this
+    // guards against: re-`update`-ing both sides back to their expected
+    // dualPartnerId, in sequence, must never look like a clash with a STALE
+    // value elsewhere) and must restore the bidirectional link.
+    await assert.doesNotReject(seedCombSeats(prisma, { locationId: "univ-id", layoutKey: "comb-70-mirrored" }));
+
+    const afterReseed = await prisma.seat.findMany({ where: { locationId: "univ-id" } });
+    const restored = afterReseed.find((s: any) => s.id === duoSeat.id);
+    const partner = afterReseed.find((s: any) => s.id === partnerId);
+    assert.equal(restored.dualPartnerId, partnerId, "the cleared side's link should be restored");
+    assert.equal(partner.dualPartnerId, duoSeat.id, "the partner's back-link should still point home");
+
+    // No duplicate/degenerate unique-index values snuck in anywhere.
+    const qrCodes = afterReseed.map((s: any) => s.qrCode);
+    assert.equal(new Set(qrCodes).size, qrCodes.length, "qrCode must stay unique per seat");
+    const numbers = afterReseed.map((s: any) => s.number);
+    assert.equal(new Set(numbers).size, numbers.length, "number must stay unique per location");
   });
 
   test("bestRank matches @oh/floor-plan's rankPodsByEntry for the same layout", async () => {

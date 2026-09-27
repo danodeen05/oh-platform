@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { useSiteApi } from "@/lib/site/api";
 import { groupPaymentIntent, groupConfirmPayment, type OrderApiError } from "@/lib/site/orders";
 import { StripeProvider, PaymentForm } from "@/components/payments";
+import { extractSeatsArray } from "@/lib/pod-selection/adapt-seats";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -72,11 +73,11 @@ export default function GroupPaymentForm({
       try {
         const seatsRes = await fetch(`${BASE}/locations/${locationId}/seats`, { headers: { "x-tenant-slug": "oh" } });
         if (seatsRes.ok) {
-          const seats = await seatsRes.json();
-          const free = seats.filter((s: { status: string }) => s.status === "AVAILABLE");
+          const seats = extractSeatsArray(await seatsRes.json()) as { id: string; status: string }[];
+          const free = seats.filter((s) => s.status === "AVAILABLE");
           if (free.length >= orderCount) {
             const start = option === 1 ? 0 : option === 2 ? Math.floor(free.length / 3) : Math.floor((free.length * 2) / 3);
-            seatIds = free.slice(start, start + orderCount).map((s: { id: string }) => s.id);
+            seatIds = free.slice(start, start + orderCount).map((s) => s.id);
           }
         }
         await api(`${BASE}/group-orders/${encodeURIComponent(groupCode)}/complete`, {

@@ -10,6 +10,7 @@ import { RadioGroup } from "./radio-group";
 import { CheckboxGroup } from "./checkbox-group";
 import { DietaryLegend } from "./dietary-legend";
 import SeatingMap, { Seat } from "@/components/SeatingMap";
+import { extractSeatsArray, seatDisplayNumber } from "@/lib/pod-selection/adapt-seats";
 import { useGuest } from "@/contexts/guest-context";
 import { useToast } from "@/components/ui/Toast";
 import { MealGiftModal } from "@/components/MealGiftModal";
@@ -474,14 +475,17 @@ export default function EnhancedMenuBuilder({
         if (!response.ok) throw new Error("Failed to load seats");
 
         const seatsData = await response.json();
-        // Map API response to Seat type (including dual pod info)
-        const mappedSeats: Seat[] = seatsData.map((s: any) => ({
+        // Map API response to Seat type (including dual pod info). Task A8
+        // changed this endpoint to {layoutKey, layoutMirror, seats: [...]}
+        // with a comb `label` instead of `number`; extractSeatsArray/
+        // seatDisplayNumber keep this working (and never throw) for either shape.
+        const mappedSeats: Seat[] = extractSeatsArray(seatsData).map((s: any, i: number) => ({
           id: s.id,
-          number: s.number,
+          number: seatDisplayNumber(s, String(i + 1)),
           status: s.status,
-          side: s.side || "left",
+          side: s.side === "bottom" || s.side === "right" ? s.side : "left",
           row: s.row || 0,
-          col: s.col || 0,
+          col: s.col ?? i,
           podType: s.podType || "SINGLE",
           dualPartnerId: s.dualPartnerId || null,
         }));

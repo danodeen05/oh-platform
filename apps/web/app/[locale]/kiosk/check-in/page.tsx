@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import "../kiosk.css";
 import { kioskAuthHeaders } from "@/components/kiosk/KioskDeviceProvider";
+import { adaptKioskSeats } from "@/lib/pod-selection/adapt-seats";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "";
 
@@ -160,7 +161,7 @@ export default function CheckInPage() {
 
       try {
         const seatsRes = await fetch(`${BASE}/locations/${locationId}/seats`, { headers: { "x-tenant-slug": "oh" } });
-        if (seatsRes.ok) setSeats(await seatsRes.json());
+        if (seatsRes.ok) setSeats(adaptKioskSeats(await seatsRes.json()));
 
         if (orderId) {
           const orderRes = await fetch(`${BASE}/orders/${orderId}`, { headers: { "x-tenant-slug": "oh" } });

@@ -7,6 +7,7 @@ import { groupIdentityHeaders } from "@/lib/site/orders";
 import { API_URL } from "@/lib/api";
 import { useGuest } from "@/contexts/guest-context";
 import SeatingMap, { Seat } from "@/components/SeatingMap";
+import { extractSeatsArray, seatDisplayNumber } from "@/lib/pod-selection/adapt-seats";
 import { useTranslations } from "next-intl";
 import { useToast } from "@/components/ui/Toast";
 import { ConfirmDialog } from "@/components/ui/Dialog";
@@ -223,13 +224,13 @@ export default function GroupLobby({ initialGroup }: GroupLobbyProps) {
       });
       if (res.ok) {
         const seatsData = await res.json();
-        const mappedSeats: Seat[] = seatsData.map((s: any) => ({
+        const mappedSeats: Seat[] = extractSeatsArray(seatsData).map((s: any, i: number) => ({
           id: s.id,
-          number: s.number,
+          number: seatDisplayNumber(s, String(i + 1)),
           status: s.status,
-          side: s.side || "left",
+          side: s.side === "bottom" || s.side === "right" ? s.side : "left",
           row: s.row || 0,
-          col: s.col || 0,
+          col: s.col ?? i,
           podType: s.podType || "SINGLE",
           dualPartnerId: s.dualPartnerId || null,
         }));

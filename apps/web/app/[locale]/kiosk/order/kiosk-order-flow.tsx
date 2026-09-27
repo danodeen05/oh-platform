@@ -8,6 +8,7 @@ import { VirtualKeyboard, PrintableReceipt, generateQRDataUrl, LanguageSelector,
 import { PaymentScreen } from "@/components/kiosk/PaymentScreen";
 import { STATUS_DEMO_CODE } from "@/lib/plan/statusDemo";
 import { kioskAuthHeaders } from "@/components/kiosk/KioskDeviceProvider";
+import { adaptKioskSeats } from "@/lib/pod-selection/adapt-seats";
 import { create as createOrder, kioskConfirmPayment } from "@/lib/site/orders";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -521,7 +522,7 @@ export default function KioskOrderFlow({
 
         if (seatsRes.ok) {
           const seatsData = await seatsRes.json();
-          setSeats(seatsData);
+          setSeats(adaptKioskSeats(seatsData));
         }
 
         // Initialize cart with slider defaults for first guest
@@ -569,7 +570,7 @@ export default function KioskOrderFlow({
         });
         if (res.ok) {
           const seatsData = await res.json();
-          setSeats(seatsData);
+          setSeats(adaptKioskSeats(seatsData));
         }
       } catch (error) {
         console.error("Failed to poll seats:", error);
