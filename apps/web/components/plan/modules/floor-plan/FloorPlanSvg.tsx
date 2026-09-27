@@ -345,7 +345,8 @@ export function FloorPlanSvg({
       {/* territory mode: the wall between the two territories, hatches are the gaps */}
       {territory
         ? ROWS.map((r) => {
-            const x = r.hatch === "east" ? r.x + r.w : r.x;
+            // The hatch sits on the corridor-facing edge, opposite the seat: east on a west row, west on an east row.
+            const x = r.side === "west" ? r.x + r.w : r.x;
             return <line key={r.key} x1={px(x)} y1={px(r.y)} x2={px(x)} y2={px(r.y + r.h)} stroke={c.textStrong} strokeWidth={2} />;
           })
         : null}
@@ -378,7 +379,12 @@ export function FloorPlanSvg({
           );
         })}
         {label(DOORS.find((d) => d.key === "entry")!.x + 1.5, BUILDING.h + 1.4, labels.entry, 8, { strong: true })}
-        {label(BUILDING.w + 1.6, DOORS.find((d) => d.key === "exit")!.y + 1.5, labels.exit, 8, { rotate: 90, strong: true })}
+        {(() => {
+          // The exit sits on whichever exterior wall it's mirrored onto (x = 0 or x = BUILDING.w), never assumed to be the east/right wall.
+          const exit = DOORS.find((d) => d.key === "exit")!;
+          const exitLabelX = exit.x === 0 ? exit.x - 1.6 : exit.x + 1.6;
+          return label(exitLabelX, exit.y + 1.5, labels.exit, 8, { rotate: 90, strong: true });
+        })()}
         {label(DOORS.find((d) => d.key === "staff")!.x + 1.5, -1.3, labels.staffDoor, 7)}
         {label(DOORS.find((d) => d.key === "receiving")!.x + 1.5, -1.3, labels.receiving, 7)}
       </g>
@@ -389,8 +395,8 @@ export function FloorPlanSvg({
           {PODS.map((p) => {
             const isActive = p.number === activePod;
             const isFocus = p.number === focusPod;
-            const hatchX = p.hatch === "east" ? p.x + p.w : p.x;
-            const seatX = p.facing === "west" ? p.x : p.x + p.w;
+            const hatchX = p.side === "west" ? p.x + p.w : p.x;
+            const seatX = p.side === "west" ? p.x : p.x + p.w;
             const hatchLit = isActive || litCorridor === p.corridor;
             const duoBelow = p.type === "duo" && p.duoWith !== undefined && p.duoWith > p.number;
             const handlers = interactive
