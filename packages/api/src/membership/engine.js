@@ -319,6 +319,37 @@ export async function onOrderCompleted(prisma, { orderId, now = new Date() }) {
   });
 }
 
+/** How long a COMPLETED+PAID order may sit unprocessed before the sweep retries it. */
+export const SWEEP_GRACE_MS = 5 * 60 * 1000;
+
+/**
+ * Retry net for onOrderCompleted: any order that is COMPLETED and PAID but
+ * never got its membership claim (a crash between the status write and the
+ * engine call, or a path that forgot to call it) and hasn't changed for
+ * SWEEP_GRACE_MS. onOrderCompleted's own claim keeps this idempotent, so it
+ * is safe to run daily next to expire-credits. Returns the number processed.
+ */
+export async function sweepUnprocessedCompletedOrders(prisma, now = new Date()) {
+  const stale = await prisma.order.findMany({
+    where: {
+      status: "COMPLETED",
+      paymentStatus: "PAID",
+      membershipProcessedAt: null,
+      updatedAt: { lt: new Date(now.getTime() - SWEEP_GRACE_MS) },
+    },
+    select: { id: true },
+  });
+  let processed = 0;
+  for (const { id } of stale) {
+    const before = await prisma.order.findUnique({ where: { id }, select: { membershipProcessedAt: true } });
+    if (before?.membershipProcessedAt) continue;
+    await onOrderCompleted(prisma, { orderId: id, now });
+    const after = await prisma.order.findUnique({ where: { id }, select: { membershipProcessedAt: true } });
+    if (after?.membershipProcessedAt) processed++;
+  }
+  return processed;
+}
+
 /**
  * Applies a referral code at signup: sets `referredById` (only if the user
  * doesn't already have a referrer) and grants the referee a WELCOME credit

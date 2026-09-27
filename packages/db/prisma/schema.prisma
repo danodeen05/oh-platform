@@ -310,6 +310,20 @@ model Order {
   // two concurrent completions of the same order can't both win the payout.
   membershipProcessedAt DateTime?
 
+  // Server-computed quote (Task A6, orders/service.js quoteOrder). totalCents =
+  // subtotal - promo - reward + tax; amountDueCents = totalCents - credits -
+  // meal gift - gift card, and is the only amount a PaymentIntent may charge.
+  // A null amountDueCents marks a legacy (pre-quote) order: never markPaid-able.
+  subtotalCents        Int?
+  amountDueCents       Int?
+  creditsAppliedCents  Int     @default(0)
+  rewardId             String?
+  rewardDiscountCents  Int     @default(0)
+  giftCardId           String?
+  giftCardAppliedCents Int     @default(0)
+  mealGiftId           String?
+  mealGiftAppliedCents Int     @default(0)
+
   // Pod/Seat Assignment
   seatId               String?
   seat                 Seat?     @relation(fields: [seatId], references: [id])

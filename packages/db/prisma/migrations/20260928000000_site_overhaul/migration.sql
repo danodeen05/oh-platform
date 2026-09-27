@@ -48,6 +48,17 @@ ALTER TABLE "MenuItem" ADD COLUMN     "releaseAt" TIMESTAMP(3);
 -- AlterTable
 ALTER TABLE "Order" ADD COLUMN     "membershipProcessedAt" TIMESTAMP(3);
 
+-- AlterTable (Task A6: server-computed quote persisted on the order)
+ALTER TABLE "Order" ADD COLUMN     "subtotalCents" INTEGER,
+ADD COLUMN     "amountDueCents" INTEGER,
+ADD COLUMN     "creditsAppliedCents" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "rewardId" TEXT,
+ADD COLUMN     "rewardDiscountCents" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "giftCardId" TEXT,
+ADD COLUMN     "giftCardAppliedCents" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "mealGiftId" TEXT,
+ADD COLUMN     "mealGiftAppliedCents" INTEGER NOT NULL DEFAULT 0;
+
 -- AlterTable
 ALTER TABLE "Seat" ADD COLUMN     "finger" INTEGER,
 ADD COLUMN     "label" TEXT,

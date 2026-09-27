@@ -440,3 +440,25 @@ test("profileForUser returns tier, progress, credits, expiring, rewards, badges 
   assert.deepEqual(profile.badges, []);
   assert.deepEqual(profile.flags, { welcomeSeenAt: null, lastTierCelebrated: null });
 });
+
+test("sweepUnprocessedCompletedOrders pays COMPLETED+PAID orders older than 5 minutes that were never processed", async () => {
+  const { sweepUnprocessedCompletedOrders } = await import("../engine.js");
+  const old = new Date(NOW.getTime() - 10 * 60 * 1000);
+  const fresh = new Date(NOW.getTime() - 60 * 1000);
+  const prisma = makeMemoryPrisma({
+    users: [{ id: "u1", membershipTier: "CHOPSTICK", creditsCents: 0, tierProgressOrders: 0, tierProgressReferrals: 0 }],
+    orders: [
+      { id: "stuck", userId: "u1", totalCents: 2000, status: "COMPLETED", paymentStatus: "PAID", membershipProcessedAt: null, updatedAt: old },
+      { id: "fresh", userId: "u1", totalCents: 2000, status: "COMPLETED", paymentStatus: "PAID", membershipProcessedAt: null, updatedAt: fresh },
+      { id: "unpaid", userId: "u1", totalCents: 2000, status: "COMPLETED", paymentStatus: "PENDING", membershipProcessedAt: null, updatedAt: old },
+    ],
+  });
+
+  const swept = await sweepUnprocessedCompletedOrders(prisma, NOW);
+
+  assert.equal(swept, 1);
+  assert.ok((await prisma.order.findUnique({ where: { id: "stuck" } })).membershipProcessedAt);
+  assert.equal((await prisma.order.findUnique({ where: { id: "fresh" } })).membershipProcessedAt ?? null, null);
+  assert.equal((await prisma.creditLot.findMany({ where: { source: "CASHBACK" } })).length, 1);
+  assert.equal(await sweepUnprocessedCompletedOrders(prisma, NOW), 0, "idempotent");
+});

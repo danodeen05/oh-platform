@@ -9,7 +9,8 @@
  * Supported per delegate: create, findUnique, findFirst, findMany
  * (where: equals / gt / gte / lt / lte / in / not, orderBy, take),
  * update (plain assignment plus {increment}/{decrement}/{set}), updateMany
- * (returns {count}), aggregate ({_sum}), count.
+ * (returns {count}), createMany (returns {count}), aggregate ({_sum}), count.
+ * `include` and `select` are ignored (whole rows come back).
  *
  * Plus `$transaction(fn)`: runs `fn(tx)` against a cloned snapshot of the
  * whole in-memory database. If `fn` resolves, the snapshot is committed
@@ -17,7 +18,11 @@
  * and the real collections are left untouched (rollback).
  */
 
-const COLLECTIONS = ["creditLot", "creditEvent", "user", "reward", "order", "seat", "supportCase", "userBadge", "badge", "menuItem"];
+const COLLECTIONS = [
+  "creditLot", "creditEvent", "user", "reward", "order", "seat", "supportCase", "userBadge", "badge", "menuItem",
+  // Order service (Task A6)
+  "orderItem", "location", "tenant", "guest", "promoCode", "promoCodeUsage", "giftCard", "mealGift", "mealGiftChain",
+];
 
 /**
  * `@@unique` constraints the schema declares that engine/credits code
@@ -116,6 +121,10 @@ function makeDelegate(store, prefix, nextId) {
       }
       store.set(rec.id, { ...rec });
       return { ...rec };
+    },
+    async createMany({ data = [] } = {}) {
+      for (const row of data) await this.create({ data: row });
+      return { count: data.length };
     },
     async findUnique({ where } = {}) {
       if (where && where.id !== undefined) {
@@ -231,6 +240,15 @@ export function makeMemoryPrisma(seed = {}) {
     userBadges: "userBadge",
     badges: "badge",
     menuItems: "menuItem",
+    orderItems: "orderItem",
+    locations: "location",
+    tenants: "tenant",
+    guests: "guest",
+    promoCodes: "promoCode",
+    promoCodeUsages: "promoCodeUsage",
+    giftCards: "giftCard",
+    mealGifts: "mealGift",
+    mealGiftChains: "mealGiftChain",
   };
   for (const [seedKey, collection] of Object.entries(seedMap)) {
     for (const rec of seed[seedKey] || []) {

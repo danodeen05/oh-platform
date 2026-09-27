@@ -101,27 +101,36 @@ export async function availableCredit(prisma, userId, now = new Date()) {
  */
 export async function spendCredit(prisma, { userId, amountCents, orderId, now = new Date() }) {
   assertPositiveAmount(amountCents);
-  return prisma.$transaction(async (tx) => {
-    const lots = await tx.creditLot.findMany({
-      where: { userId, remainingCents: { gt: 0 }, expiresAt: { gt: now } },
-      orderBy: { expiresAt: "asc" },
-    });
+  return prisma.$transaction((tx) => spendCreditInTx(tx, { userId, amountCents, orderId, now }));
+}
 
-    const available = lots.reduce((sum, lot) => sum + lot.remainingCents, 0);
-    if (available < amountCents) throw new CreditShortError(available);
+/**
+ * The same spend as `spendCredit`, inside a transaction the caller already
+ * holds (see `grantCreditInTx` for why: a real interactive-transaction client
+ * has no `$transaction`). Throws CreditShortError before writing anything when
+ * the unexpired balance is short, so the caller's whole transaction rolls back.
+ */
+export async function spendCreditInTx(tx, { userId, amountCents, orderId, now = new Date() }) {
+  assertPositiveAmount(amountCents);
+  const lots = await tx.creditLot.findMany({
+    where: { userId, remainingCents: { gt: 0 }, expiresAt: { gt: now } },
+    orderBy: { expiresAt: "asc" },
+  });
 
-    let remaining = amountCents;
-    for (const lot of lots) {
-      if (remaining <= 0) break;
-      const take = Math.min(lot.remainingCents, remaining);
-      await tx.creditLot.update({ where: { id: lot.id }, data: { remainingCents: { decrement: take } } });
-      remaining -= take;
-    }
+  const available = lots.reduce((sum, lot) => sum + lot.remainingCents, 0);
+  if (available < amountCents) throw new CreditShortError(available);
 
-    await tx.user.update({ where: { id: userId }, data: { creditsCents: { decrement: amountCents } } });
-    await tx.creditEvent.create({
-      data: { userId, type: "CREDIT_APPLIED", amountCents: -amountCents, orderId },
-    });
+  let remaining = amountCents;
+  for (const lot of lots) {
+    if (remaining <= 0) break;
+    const take = Math.min(lot.remainingCents, remaining);
+    await tx.creditLot.update({ where: { id: lot.id }, data: { remainingCents: { decrement: take } } });
+    remaining -= take;
+  }
+
+  await tx.user.update({ where: { id: userId }, data: { creditsCents: { decrement: amountCents } } });
+  await tx.creditEvent.create({
+    data: { userId, type: "CREDIT_APPLIED", amountCents: -amountCents, orderId },
   });
 }
 

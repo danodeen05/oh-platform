@@ -10,6 +10,7 @@
  * - Credits Reminder: Weekly on Monday at 10am
  * - Tier Progress: After order completion (triggered via API)
  * - Expire Credits: Daily at 3am (membership/credits.js expireLots)
+ * - Membership Sweep: Daily at 3:10am (membership/engine.js sweepUnprocessedCompletedOrders)
  * - Quarterly Perk: Daily at 3:05am, idempotent per quarter
  *   (membership/engine.js issueQuarterlyPerks)
  *
@@ -26,7 +27,7 @@ import {
   checkAndSendChallengeDeadlineNotifications,
 } from '../wallet/wallet-notification-service.js';
 import { expireLots } from '../membership/credits.js';
-import { issueQuarterlyPerks } from '../membership/engine.js';
+import { issueQuarterlyPerks, sweepUnprocessedCompletedOrders } from '../membership/engine.js';
 
 const prisma = new PrismaClient();
 
@@ -68,6 +69,11 @@ async function runJob(jobName) {
       case 'quarterly-perk':
         result = await issueQuarterlyPerks(prisma);
         console.log(`[CRON] Issued ${result} quarterly perk reward(s)`);
+        break;
+
+      case 'membership-sweep':
+        result = await sweepUnprocessedCompletedOrders(prisma);
+        console.log(`[CRON] Membership sweep processed ${result} completed order(s)`);
         break;
 
       default:
@@ -112,6 +118,10 @@ function shouldRunJob(jobName) {
       // so running it every day just costs a no-op after the first success.
       return hour === 3 && minute >= 5 && minute < 10;
 
+    case 'membership-sweep':
+      // Daily at 3:10am, after expire-credits; idempotent via onOrderCompleted's claim.
+      return hour === 3 && minute >= 10 && minute < 15;
+
     default:
       return false;
   }
@@ -129,6 +139,7 @@ async function startCronService() {
   console.log('  - Credits Reminder: Monday at 10am');
   console.log('  - Expire Credits: Daily at 3am');
   console.log('  - Quarterly Perk: Daily at 3:05am (idempotent per quarter)');
+  console.log('  - Membership Sweep: Daily at 3:10am (idempotent)');
 
   // Run immediately on startup for testing
   if (process.env.RUN_ON_STARTUP === 'true') {
@@ -156,6 +167,9 @@ async function startCronService() {
     }
     if (shouldRunJob('quarterly-perk')) {
       await runJob('quarterly-perk');
+    }
+    if (shouldRunJob('membership-sweep')) {
+      await runJob('membership-sweep');
     }
   }, 60000); // Check every minute
 }
@@ -229,7 +243,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     console.log('  node wallet-cron.js run <job>            Run a specific job immediately');
     console.log('  node wallet-cron.js trigger <endpoint>   Trigger job via HTTP');
     console.log('');
-    console.log('Jobs: streak, challenge, credits, expire-credits, quarterly-perk');
+    console.log('Jobs: streak, challenge, credits, expire-credits, quarterly-perk, membership-sweep');
     console.log('');
     console.log('Environment variables:');
     console.log('  API_URL          API base URL (default: http://localhost:3001)');

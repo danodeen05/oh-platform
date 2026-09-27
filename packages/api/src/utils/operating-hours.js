@@ -370,4 +370,66 @@ export function getLocationStatus(location, date = new Date()) {
   };
 }
 
+const SLOT_MS = 15 * 60 * 1000;
+
+/** Offset (ms) of `timeZone` from UTC at instant `ms` (e.g. -6h for MDT). */
+function zoneOffsetMs(timeZone, ms) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).formatToParts(new Date(ms));
+  const get = (type) => Number(parts.find((p) => p.type === type)?.value);
+  const asUtc = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"), get("second"));
+  return asUtc - (ms - (ms % 1000));
+}
+
+/**
+ * The UTC instant of wall-clock `minutes` after local midnight on y-m-d in
+ * `timeZone`. For a wall time that happens twice (DST fall-back) this is the
+ * first one; that never matters for opening or closing hours.
+ */
+function zonedWallTimeToDate(timeZone, y, m, d, minutes) {
+  const guess = Date.UTC(y, m - 1, d, 0, minutes);
+  let t = guess - zoneOffsetMs(timeZone, guess);
+  const corrected = guess - zoneOffsetMs(timeZone, t);
+  if (corrected !== t) t = corrected;
+  return t;
+}
+
+/**
+ * Arrival slots for a location's local calendar day `date` ("YYYY-MM-DD"),
+ * as Date instants 15 real minutes apart, from opening (or the next quarter
+ * hour after `now`) through close minus 15, all in the location's timezone.
+ *
+ * Built on real instants, not wall-clock labels, so a DST day has no
+ * duplicates or gaps: on the fall-back day the repeated hour is offered once
+ * per real quarter, and on the spring-forward day the skipped hour simply
+ * isn't there. Honors isClosed and closed days; ignores the testing bypass
+ * (DISABLE_TIME_RESTRICTIONS) so slots are always real hours.
+ */
+export function slotsFor(location, date, now = new Date()) {
+  if (location?.isClosed) return [];
+  const [y, m, d] = String(date).split("-").map(Number);
+  if (!y || !m || !d) return [];
+  const dayKey = DAY_KEYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()];
+  const dayHours = getHoursForDay(location, dayKey);
+  if (!dayHours) return [];
+
+  const tz = location?.timezone || "America/Denver";
+  const openMs = zonedWallTimeToDate(tz, y, m, d, parseTimeToMinutes(dayHours.open));
+  const lastMs = zonedWallTimeToDate(tz, y, m, d, parseTimeToMinutes(dayHours.close) + ORDER_CLOSE_OFFSET_MINUTES);
+  const nowMs = now.getTime();
+  const firstMs = nowMs <= openMs ? openMs : openMs + Math.ceil((nowMs - openMs) / SLOT_MS) * SLOT_MS;
+
+  const slots = [];
+  for (let t = firstMs; t <= lastMs; t += SLOT_MS) slots.push(new Date(t));
+  return slots;
+}
+
 export { DEFAULT_HOURS };
