@@ -35,14 +35,22 @@
   --font-body: var(--font-raleway), system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
-/* Console-only base: scoped to .oh-console so display routes keep browser defaults. */
-.oh-console { font-family: var(--font-body); color: var(--color-oh-charcoal); background: var(--color-oh-paper); -webkit-tap-highlight-color: transparent; }
-.oh-console *, .oh-console *::before, .oh-console *::after { box-sizing: border-box; }
-.oh-console :where(h1, h2, h3, p) { margin: 0; }
-.oh-console :where(button) { font: inherit; cursor: pointer; }
-.oh-console :where(input, select, textarea) { font: inherit; font-size: max(16px, 1em); }
-.oh-console :where(a) { color: inherit; text-decoration: none; }
-.oh-console :focus-visible { outline: 2px solid var(--color-oh-gold); outline-offset: 2px; }
+/* Console-only base: scoped to .oh-console so display routes keep browser defaults.
+ * It lives in a cascade layer so every (unlayered) utility wins over it, including
+ * Tailwind's zero-specificity :where() utilities such as divide-* and space-*,
+ * while it still beats the browser's own button and input styles. */
+@layer oh-base {
+  .oh-console { font-family: var(--font-body); color: var(--color-oh-charcoal); background: var(--color-oh-paper); -webkit-tap-highlight-color: transparent; -webkit-font-smoothing: antialiased; }
+  .oh-console *, .oh-console *::before, .oh-console *::after { box-sizing: border-box; border: 0 solid; }
+  .oh-console :where(h1, h2, h3, h4, p, ul, ol, figure) { margin: 0; padding: 0; }
+  .oh-console :where(ul, ol) { list-style: none; }
+  .oh-console :where(button, input, select, textarea) { font: inherit; color: inherit; letter-spacing: inherit; background: transparent; padding: 0; border-radius: 0; }
+  .oh-console :where(button) { cursor: pointer; }
+  .oh-console :where(input, select, textarea) { font-size: max(16px, 1em); }
+  .oh-console :where(a) { color: inherit; text-decoration: none; }
+  .oh-console :where(table) { border-collapse: collapse; }
+  .oh-console :focus-visible { outline: 2px solid var(--color-oh-gold); outline-offset: 2px; }
+}
 
 @keyframes oh-fade { from { opacity: 0 } to { opacity: 1 } }
 @keyframes oh-sheet-up { from { transform: translateY(100%) } to { transform: none } }
