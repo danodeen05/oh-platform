@@ -9,6 +9,9 @@
  * - Challenge Deadlines: Daily at 10am local time
  * - Credits Reminder: Weekly on Monday at 10am
  * - Tier Progress: After order completion (triggered via API)
+ * - Expire Credits: Daily at 3am (membership/credits.js expireLots)
+ * - Quarterly Perk: Daily at 3:05am, idempotent per quarter
+ *   (membership/engine.js issueQuarterlyPerks)
  *
  * USAGE:
  * - As a service: node src/cron/wallet-cron.js
@@ -22,6 +25,8 @@ import {
   sendBatchCreditsReminder,
   checkAndSendChallengeDeadlineNotifications,
 } from '../wallet/wallet-notification-service.js';
+import { expireLots } from '../membership/credits.js';
+import { issueQuarterlyPerks } from '../membership/engine.js';
 
 const prisma = new PrismaClient();
 
@@ -53,6 +58,16 @@ async function runJob(jobName) {
       case 'credits':
         result = await sendBatchCreditsReminder();
         console.log(`[CRON] Credits notifications: ${result.sent} sent, ${result.skipped} skipped`);
+        break;
+
+      case 'expire-credits':
+        result = await expireLots(prisma);
+        console.log(`[CRON] Expired ${result} credit lot(s)`);
+        break;
+
+      case 'quarterly-perk':
+        result = await issueQuarterlyPerks(prisma);
+        console.log(`[CRON] Issued ${result} quarterly perk reward(s)`);
         break;
 
       default:
@@ -88,6 +103,15 @@ function shouldRunJob(jobName) {
       // Run on Monday at 10am
       return dayOfWeek === 1 && hour === 10 && minute < 5;
 
+    case 'expire-credits':
+      // Run daily at 3am (credit lots are keyed on real calendar days, not local rush hours)
+      return hour === 3 && minute < 5;
+
+    case 'quarterly-perk':
+      // Run daily at 3:05am; issueQuarterlyPerks is idempotent per quarter,
+      // so running it every day just costs a no-op after the first success.
+      return hour === 3 && minute >= 5 && minute < 10;
+
     default:
       return false;
   }
@@ -103,6 +127,8 @@ async function startCronService() {
   console.log('  - Streak at Risk: Daily at 5pm');
   console.log('  - Challenge Deadlines: Daily at 10am');
   console.log('  - Credits Reminder: Monday at 10am');
+  console.log('  - Expire Credits: Daily at 3am');
+  console.log('  - Quarterly Perk: Daily at 3:05am (idempotent per quarter)');
 
   // Run immediately on startup for testing
   if (process.env.RUN_ON_STARTUP === 'true') {
@@ -110,6 +136,8 @@ async function startCronService() {
     await runJob('streak');
     await runJob('challenge');
     await runJob('credits');
+    await runJob('expire-credits');
+    await runJob('quarterly-perk');
   }
 
   // Check every minute
@@ -122,6 +150,12 @@ async function startCronService() {
     }
     if (shouldRunJob('credits')) {
       await runJob('credits');
+    }
+    if (shouldRunJob('expire-credits')) {
+      await runJob('expire-credits');
+    }
+    if (shouldRunJob('quarterly-perk')) {
+      await runJob('quarterly-perk');
     }
   }, 60000); // Check every minute
 }
@@ -195,7 +229,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     console.log('  node wallet-cron.js run <job>            Run a specific job immediately');
     console.log('  node wallet-cron.js trigger <endpoint>   Trigger job via HTTP');
     console.log('');
-    console.log('Jobs: streak, challenge, credits');
+    console.log('Jobs: streak, challenge, credits, expire-credits, quarterly-perk');
     console.log('');
     console.log('Environment variables:');
     console.log('  API_URL          API base URL (default: http://localhost:3001)');

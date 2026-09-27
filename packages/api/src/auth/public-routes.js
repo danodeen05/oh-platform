@@ -56,7 +56,6 @@ export const PUBLIC_ROUTES = Object.freeze([
   p("POST", "/cron/cny-sms-reminder", "cron"),
   p("POST", "/cron/cny-sms-order-link", "cron"),
   p("POST", "/cron/cny-sms-test", "cron"),
-  p("POST", "/cron/disburse-credits", "cron"),
   p("POST", "/cron/wallet-streak-notifications", "cron"),
   p("POST", "/cron/wallet-challenge-notifications", "cron"),
   p("POST", "/cron/wallet-credits-reminder", "cron"),
@@ -98,6 +97,10 @@ export const PUBLIC_ROUTES = Object.freeze([
   p("POST", "/users/:userId/challenges/:challengeId/claim", "customer"),
   p("GET", "/users/:id/badge-progress", "customer"),
   p("GET", "/users/:id/pending-credits", "customer"),
+  p("GET", "/users/:id/rewards", "customer"),
+
+  // Membership engine (packages/api/src/membership/routes.js)
+  p("GET", "/membership/program", "public-read"),
 
   // Wallet passes (customer-facing status/actions) and Wallet v1 (pass-token auth)
   p("GET", "/wallet/status", "customer"),

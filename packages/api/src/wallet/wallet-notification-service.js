@@ -15,6 +15,7 @@
 import { PrismaClient } from '@oh/db';
 import { notifyUserPassUpdate } from './apns-service.js';
 import { markPassUpdated } from './wallet-web-service.js';
+import { PROGRAM } from '../membership/program.js';
 
 const prisma = new PrismaClient();
 
@@ -28,12 +29,15 @@ const NOTIFICATION_COOLDOWNS = {
   ORDER_COMPLETED: 0, // No cooldown - each order gets a notification
 };
 
-// Tier requirements for progression
-const TIER_REQUIREMENTS = {
-  CHOPSTICK: { nextTier: 'NOODLE_MASTER', ordersNeeded: 10, referralsNeeded: 5 },
-  NOODLE_MASTER: { nextTier: 'BEEF_BOSS', ordersNeeded: 25, referralsNeeded: 10 },
-  BEEF_BOSS: null, // Max tier
-};
+// Tier requirements for progression, derived from the membership engine's
+// PROGRAM config (packages/api/src/membership/program.js) rather than
+// hard-coded, so this never drifts from the actual tier rules again.
+const TIER_REQUIREMENTS = Object.fromEntries(
+  PROGRAM.tiers.map((t) => [
+    t.key,
+    t.next ? { nextTier: t.next, ordersNeeded: t.need.orders, referralsNeeded: t.need.referrals } : null,
+  ]),
+);
 
 /**
  * Check if a notification can be sent (cooldown check)

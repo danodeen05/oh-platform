@@ -17,7 +17,7 @@
  * and the real collections are left untouched (rollback).
  */
 
-const COLLECTIONS = ["creditLot", "creditEvent", "user", "reward", "order", "seat", "supportCase"];
+const COLLECTIONS = ["creditLot", "creditEvent", "user", "reward", "order", "seat", "supportCase", "userBadge", "badge", "menuItem"];
 
 function toTime(v) {
   return v instanceof Date ? v.getTime() : v;
@@ -181,6 +181,9 @@ export function makeMemoryPrisma(seed = {}) {
     orders: "order",
     seats: "seat",
     supportCases: "supportCase",
+    userBadges: "userBadge",
+    badges: "badge",
+    menuItems: "menuItem",
   };
   for (const [seedKey, collection] of Object.entries(seedMap)) {
     for (const rec of seed[seedKey] || []) {

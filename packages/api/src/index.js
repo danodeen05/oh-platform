@@ -66,6 +66,9 @@ import { getScheduler } from "./triggers/index.js";
 import { getOrchestrator } from "./autonomous/index.js";
 import { registerCateringRoutes, isDineInOrdersEnabled } from "./catering/routes.js";
 import { registerPlanRoutes } from "./plan/routes.js";
+import { registerMembershipRoutes } from "./membership/routes.js";
+import { PROGRAM, tierRule } from "./membership/program.js";
+import { onOrderCompleted, applyReferralSignup, earlyAccessVisible, profileForUser } from "./membership/engine.js";
 import { withStatusDemo, registerStatusDemoGuard } from "./demo/status-demo.js";
 import { createAdminAuth } from "./auth/admin.js";
 import { registerConsoleGuard, registerAdminPathGuard } from "./auth/console-guard.js";
@@ -207,6 +210,9 @@ await registerCateringRoutes(app);
 
 // Register interactive business plan routes (/plan/* BFF + /admin/plan/*)
 await registerPlanRoutes(app);
+
+// Register membership engine routes (GET /membership/program, GET /users/:id/rewards)
+await registerMembershipRoutes(app, { prisma });
 
 const PORT = process.env.PORT || process.env.API_PORT || 4000;
 
@@ -1251,8 +1257,21 @@ app.get("/menu/steps", async (req, reply) => {
     ]
   });
 
+  // Early access (membership/engine.js): items whose releaseAt hasn't passed
+  // are only visible to a tier whose earlyAccessDays window reaches it. A
+  // guest or anonymous caller (no verified session) gets tier null, so they
+  // only ever see items that have already released.
+  const who = await customerAuth.resolve(req);
+  let callerTier = null;
+  if (who.kind === "user" && who.userId) {
+    const caller = await prisma.user.findUnique({ where: { id: who.userId }, select: { membershipTier: true } });
+    callerTier = caller?.membershipTier || null;
+  }
+  const now = new Date();
+  const visibleItems = items.filter((item) => earlyAccessVisible(item, callerTier, now));
+
   // Localize all items
-  const localizedItems = items.map(item => localizeMenuItem(item, locale));
+  const localizedItems = visibleItems.map(item => localizeMenuItem(item, locale));
 
   // Group items by category for easier frontend rendering
   const main01 = localizedItems.filter(i => i.category === 'main01');
@@ -4503,21 +4522,22 @@ app.patch("/orders/:id", async (req, reply) => {
       newLongestStreak = newStreak;
     }
 
-    // Update lifetime stats and streak
+    // Update lifetime stats and streak. Tier progress (tierProgressOrders /
+    // tierProgressReferrals) is NOT touched here: it's owned by the
+    // membership engine's onOrderCompleted, which only runs once an order
+    // reaches COMPLETED (see membership/engine.js and the COMPLETED handling
+    // below and in PATCH /kitchen/orders/:id/status). Counting it here too
+    // would double-count every order that goes PAID -> COMPLETED.
     await prisma.user.update({
       where: { id: user.id },
       data: {
         lifetimeOrderCount: { increment: 1 },
         lifetimeSpentCents: { increment: order.totalCents },
-        tierProgressOrders: { increment: 1 },
         currentStreak: newStreak,
         longestStreak: newLongestStreak,
         lastOrderDate: new Date(),
       },
     });
-
-    // Check for tier upgrade
-    await checkTierUpgrade(user.id);
 
     // Award badges
     await checkAndAwardBadges(user.id);
@@ -4538,34 +4558,14 @@ app.patch("/orders/:id", async (req, reply) => {
       items: order.items,
     });
 
-    // Note: Referral credit is awarded when order reaches COMPLETED status (not at payment)
-    // See /kitchen/orders/:id/status endpoint
+    // Note: cashback, referral payouts and tier upgrades are all awarded when
+    // the order reaches COMPLETED (not at payment) - see onOrderCompleted in
+    // membership/engine.js, called from PATCH /kitchen/orders/:id/status and
+    // below when this same route sets status to COMPLETED.
+  }
 
-    // Award cashback credits based on user's tier
-    const tierBenefits = getTierBenefits(user.membershipTier);
-    const cashbackAmount = Math.floor((order.totalCents * tierBenefits.cashbackPercent) / 100);
-
-    if (cashbackAmount > 0) {
-      await prisma.creditEvent.create({
-        data: {
-          userId: user.id,
-          type: "CASHBACK",
-          amountCents: cashbackAmount,
-          orderId: order.id,
-          description: `${tierBenefits.cashbackPercent}% cashback on order`,
-        },
-      });
-
-      await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          creditsCents: { increment: cashbackAmount },
-        },
-      });
-
-      // Refresh wallet pass to show updated credit balance
-      refreshUserWalletPass(user.id).catch(console.error);
-    }
+  if (status === "COMPLETED") {
+    await onOrderCompleted(prisma, { orderId: order.id, now: new Date() });
   }
 
   return order;
@@ -4608,43 +4608,14 @@ app.post("/users", async (req, reply) => {
     console.log("  - NEW referredByCode param:", referredByCode);
 
     // If existing user has NO referrer but a referral code is provided, apply it
+    // (membership/engine.js: sets referredById and grants a WELCOME credit lot).
     if (!existing.referredById && referredByCode) {
-      console.log("🎯 Existing user has no referrer, applying new referral code!");
-
-      // Find referrer
-      const referrer = await prisma.user.findUnique({
-        where: { referralCode: referredByCode },
-      });
-
-      if (referrer) {
-        console.log("✅ Found referrer:", referrer.id, referrer.email);
-
-        // Update existing user with referrer and add $5 welcome bonus
-        const updatedUser = await prisma.user.update({
-          where: { id: existing.id },
-          data: {
-            referredById: referrer.id,
-            creditsCents: (existing.creditsCents || 0) + 500,
-          },
-        });
-
-        // Create credit event
-        await prisma.creditEvent.create({
-          data: {
-            userId: existing.id,
-            type: "REFERRAL_SIGNUP",
-            amountCents: 500,
-            description: "Welcome bonus - referred by a friend!",
-          },
-        });
-
-        console.log("✅ Updated existing user with referral. New credits:", updatedUser.creditsCents);
+      const result = await applyReferralSignup(prisma, { userId: existing.id, referralCode: referredByCode, now: new Date() });
+      if (result.applied) {
+        const updatedUser = await prisma.user.findUnique({ where: { id: existing.id } });
         return { ...updatedUser, referralJustApplied: true };
-      } else {
-        console.log("❌ Referrer not found for code:", referredByCode);
       }
-    } else {
-      console.log("ℹ️ Existing user already has referrer or no new referral code provided");
+      console.log("❌ Referral code not applied for existing user:", referredByCode);
     }
 
     // Update name if it changed in Clerk
@@ -4659,32 +4630,11 @@ app.post("/users", async (req, reply) => {
     return existing;
   }
 
-  // Find referrer if code provided
-  let referredById = null;
-  if (referredByCode) {
-    console.log("Looking up referrer with code:", referredByCode);
-    const referrer = await prisma.user.findUnique({
-      where: { referralCode: referredByCode },
-    });
-    if (referrer) {
-      console.log("Found referrer:", referrer.id, referrer.email);
-      referredById = referrer.id;
-    } else {
-      console.log("No referrer found with that code");
-    }
-  } else {
-    console.log("No referral code provided");
-  }
-
-  // Create new user with $5 welcome bonus if referred
+  // Create the new user first; a referral code (if any) is applied right
+  // after via the membership engine, which sets referredById and grants the
+  // referee's WELCOME credit lot (membership/engine.js applyReferralSignup).
   const user = await prisma.user.create({
-    data: {
-      email,
-      phone,
-      name,
-      referredById,
-      creditsCents: referredById ? 500 : 0, // $5 welcome bonus if referred
-    },
+    data: { email, phone, name },
   });
 
   // Notify admin of new user (fire-and-forget)
@@ -4692,17 +4642,13 @@ app.post("/users", async (req, reply) => {
     console.error("[ADMIN SMS] Failed:", err)
   );
 
-  // If referred, create a credit event for the new user
-  if (referredById) {
-    await prisma.creditEvent.create({
-      data: {
-        userId: user.id,
-        type: "REFERRAL_SIGNUP",
-        amountCents: 500,
-        description: "Welcome bonus - referred by a friend!",
-      },
-    });
-    return { ...user, referralJustApplied: true };
+  if (referredByCode) {
+    const result = await applyReferralSignup(prisma, { userId: user.id, referralCode: referredByCode, now: new Date() });
+    if (result.applied) {
+      const updatedUser = await prisma.user.findUnique({ where: { id: user.id } });
+      return { ...updatedUser, referralJustApplied: true };
+    }
+    console.log("❌ Referral code not applied for new user:", referredByCode);
   }
 
   return user;
@@ -5206,20 +5152,53 @@ app.get("/users/:id/profile", async (req, reply) => {
 
   if (!user) return reply.code(404).send({ error: "User not found" });
 
-  // Calculate tier benefits
-  const tierBenefits = getTierBenefits(user.membershipTier);
-
-  // Calculate progress to next tier
-  const nextTier = getNextTier(user.membershipTier);
-  const tierProgress = calculateTierProgress(user, nextTier);
+  // Tier, progress, credits, expiring lots, rewards and badges all come from
+  // the membership engine now (packages/api/src/membership/engine.js).
+  // tierBenefits/nextTier/tierProgress below are a back-compat shim mapping
+  // the engine's shape onto the old response keys so the pre-Phase-D UI
+  // keeps working; the new UI should read `membership` directly.
+  const membership = await profileForUser(prisma, id, new Date());
 
   return {
     ...user,
-    tierBenefits,
-    nextTier,
-    tierProgress,
+    tierBenefits: legacyTierBenefits(membership.tier),
+    nextTier: legacyNextTier(membership.tier),
+    tierProgress: legacyTierProgress(membership.progress),
+    membership,
   };
 });
+
+/** @deprecated back-compat shim for the pre-Phase-D UI; use PROGRAM/profileForUser directly instead. */
+function legacyTierBenefits(tier) {
+  const rule = tierRule(tier);
+  const perksByTier = {
+    CHOPSTICK: ["referralBonus", "cashback1", "earlyAccess"],
+    NOODLE_MASTER: ["referralBonus", "cashback2", "prioritySeating", "memberEvents", "freeBowlUpgrade"],
+    BEEF_BOSS: ["referralBonus", "cashback3", "merchandiseDrops", "premiumAddons", "vipGift"],
+  };
+  return {
+    referralBonus: PROGRAM.referral.referrerCents,
+    cashbackPercent: rule.cashbackPct,
+    perks: perksByTier[tier] || [],
+  };
+}
+
+/** @deprecated back-compat shim; the old shape nested the next tier's requirements here. */
+function legacyNextTier(tier) {
+  const rule = tierRule(tier);
+  if (!rule.next) return null;
+  return { next: rule.next, ordersNeeded: rule.need.orders, referralsNeeded: rule.need.referrals };
+}
+
+/** @deprecated back-compat shim; the old shape used {current, needed, percent} per counter. */
+function legacyTierProgress(progress) {
+  if (!progress.next) return { atMaxTier: true };
+  const pct = (have, need) => (need ? Math.min(100, Math.round((have / need) * 100)) : 100);
+  return {
+    orders: { current: progress.orders.have, needed: progress.orders.need, percent: pct(progress.orders.have, progress.orders.need) },
+    referrals: { current: progress.referrals.have, needed: progress.referrals.need, percent: pct(progress.referrals.have, progress.referrals.need) },
+  };
+}
 
 // Update user phone and SMS preferences
 app.patch("/users/:id/phone", async (req, reply) => {
@@ -6032,87 +6011,6 @@ app.post("/wallet/v1/log", async (req, reply) => {
 // CRON ENDPOINTS
 // ====================
 
-// Disburse pending credits - should be called by cron on 1st and 16th of each month
-// POST /cron/disburse-credits
-// Headers: x-cron-secret: <secret> (for basic auth)
-app.post("/cron/disburse-credits", async (req, reply) => {
-  // Basic security check - in production, use proper auth
-  const cronSecret = req.headers["x-cron-secret"];
-  const expectedSecret = process.env.CRON_SECRET;
-  if (!expectedSecret && process.env.NODE_ENV === 'production') {
-    return reply.code(500).send({ error: "CRON_SECRET not configured" });
-  }
-  const effectiveCronSecret = expectedSecret || "dev-cron-secret-DO-NOT-USE-IN-PROD";
-
-  if (cronSecret !== effectiveCronSecret) {
-    return reply.code(401).send({ error: "Unauthorized" });
-  }
-
-  const now = new Date();
-
-  // Find all pending credits scheduled for today or earlier
-  const pendingCredits = await prisma.pendingCredit.findMany({
-    where: {
-      disbursedAt: null,
-      scheduledFor: { lte: now },
-    },
-    include: {
-      user: true,
-    },
-  });
-
-  console.log(`💰 Disbursing ${pendingCredits.length} pending credits...`);
-
-  const results = {
-    processed: 0,
-    totalAmountCents: 0,
-    errors: [],
-  };
-
-  for (const pending of pendingCredits) {
-    try {
-      // Add credits to user's balance
-      await prisma.user.update({
-        where: { id: pending.userId },
-        data: {
-          creditsCents: { increment: pending.amountCents },
-        },
-      });
-
-      // Create credit event
-      await prisma.creditEvent.create({
-        data: {
-          userId: pending.userId,
-          type: "REFERRAL_ORDER",
-          amountCents: pending.amountCents,
-          description: "Referral bonus disbursed",
-        },
-      });
-
-      // Mark pending credit as disbursed
-      await prisma.pendingCredit.update({
-        where: { id: pending.id },
-        data: { disbursedAt: now },
-      });
-
-      results.processed++;
-      results.totalAmountCents += pending.amountCents;
-
-      console.log(`✅ Disbursed $${pending.amountCents / 100} to ${pending.user.email}`);
-
-      // Refresh wallet pass to show updated credit balance
-      refreshUserWalletPass(pending.userId).catch(console.error);
-    } catch (error) {
-      console.error(`❌ Failed to disburse credit ${pending.id}:`, error);
-      results.errors.push({ id: pending.id, error: error.message });
-    }
-  }
-
-  console.log(`💰 Disbursement complete: ${results.processed} credits totaling $${results.totalAmountCents / 100}`);
-
-  return results;
-});
-
 // Wallet notification cron: Streak at risk - run daily at 5pm local time
 app.post("/cron/wallet-streak-notifications", async (req, reply) => {
   const cronSecret = req.headers["x-cron-secret"];
@@ -6622,65 +6520,16 @@ app.patch("/kitchen/orders/:id/status", async (req, reply) => {
     // which will automatically trigger queue processing
   }
 
-  // Award referral credit when order is COMPLETED (not just PAID)
-  // This ensures the customer actually received and completed their meal
-  if (status === "COMPLETED" && order.user?.referredById) {
-    const user = order.user;
-
-    // Check if this is their first COMPLETED order
-    const completedOrderCount = await prisma.order.count({
-      where: {
-        userId: user.id,
-        status: "COMPLETED",
-      },
-    });
-
-    if (completedOrderCount === 1) {
-      // This is their first completed order - check $20 minimum requirement
-      const MINIMUM_ORDER_FOR_REFERRAL = 2000; // $20.00 in cents
-
-      if (order.totalCents >= MINIMUM_ORDER_FOR_REFERRAL) {
-        // Order meets minimum - credit referrer
-        const referrer = await prisma.user.findUnique({
-          where: { id: user.referredById },
-        });
-
-        if (referrer) {
-          // Get referrer's tier benefits
-          const tierBenefits = getTierBenefits(referrer.membershipTier);
-          const referralBonus = tierBenefits.referralBonus;
-
-          // Add credits to referrer's balance
-          await prisma.user.update({
-            where: { id: user.referredById },
-            data: {
-              creditsCents: { increment: referralBonus },
-              tierProgressReferrals: { increment: 1 },
-            },
-          });
-
-          // Create credit event for tracking
-          await prisma.creditEvent.create({
-            data: {
-              userId: user.referredById,
-              type: "REFERRAL_ORDER",
-              amountCents: referralBonus,
-              orderId: order.id,
-              description: `Referral bonus - friend completed their first order`,
-            },
-          });
-
-          // Check if referrer should be upgraded
-          await checkTierUpgrade(user.referredById);
-
-          console.log(`✅ Referral credit of $${referralBonus / 100} awarded to ${referrer.email} (order COMPLETED)`);
-
-          // Refresh referrer's wallet pass to show updated credit balance
-          refreshUserWalletPass(user.referredById).catch(console.error);
-        }
-      } else {
-        console.log(`❌ Referral credit not awarded - order total $${order.totalCents / 100} below $20 minimum`);
-      }
+  // Cashback, referral payouts and tier upgrades all live in the membership
+  // engine now, and all run only once the order is COMPLETED (not just
+  // PAID): this is the actual production call site (kitchen-display.tsx
+  // drives status here), and PATCH /orders/:id calls the same function so
+  // either path completing an order runs it. onOrderCompleted is idempotent
+  // per orderId, so it's safe even if both paths fire for the same order.
+  if (status === "COMPLETED") {
+    const result = await onOrderCompleted(prisma, { orderId: order.id, now: new Date() });
+    if (result.cashbackCents > 0 || result.referralPaid || result.upgradedTo) {
+      refreshUserWalletPass(order.userId).catch(console.error);
     }
   }
 
@@ -6861,131 +6710,6 @@ function getNextDisbursementDate() {
   } else {
     // Next disbursement is the 1st of next month
     return new Date(currentYear, currentMonth + 1, 1, 0, 0, 0);
-  }
-}
-
-function getTierBenefits(tier) {
-  const benefits = {
-    CHOPSTICK: {
-      referralBonus: 500,
-      cashbackPercent: 1,
-      perks: [
-        "referralBonus",
-        "cashback1",
-        "earlyAccess",
-      ],
-    },
-    NOODLE_MASTER: {
-      referralBonus: 500,
-      cashbackPercent: 2,
-      perks: [
-        "referralBonus",
-        "cashback2",
-        "prioritySeating",
-        "memberEvents",
-        "freeBowlUpgrade",
-      ],
-    },
-    BEEF_BOSS: {
-      referralBonus: 500,
-      cashbackPercent: 3,
-      perks: [
-        "referralBonus",
-        "cashback3",
-        "merchandiseDrops",
-        "premiumAddons",
-        "vipGift",
-      ],
-    },
-  };
-  return benefits[tier];
-}
-
-function getNextTier(currentTier) {
-  const tiers = {
-    CHOPSTICK: { next: "NOODLE_MASTER", ordersNeeded: 10, referralsNeeded: 5 },
-    NOODLE_MASTER: { next: "BEEF_BOSS", ordersNeeded: 25, referralsNeeded: 10 },
-    BEEF_BOSS: null, // Max tier
-  };
-  return tiers[currentTier];
-}
-
-function calculateTierProgress(user, nextTier) {
-  if (!nextTier) return { atMaxTier: true };
-
-  const orderProgress = Math.min(
-    100,
-    (user.tierProgressOrders / nextTier.ordersNeeded) * 100
-  );
-  const referralProgress = Math.min(
-    100,
-    (user.tierProgressReferrals / nextTier.referralsNeeded) * 100
-  );
-
-  return {
-    orders: {
-      current: user.tierProgressOrders,
-      needed: nextTier.ordersNeeded,
-      percent: Math.round(orderProgress),
-    },
-    referrals: {
-      current: user.tierProgressReferrals,
-      needed: nextTier.referralsNeeded,
-      percent: Math.round(referralProgress),
-    },
-  };
-}
-
-// Helper function to check and upgrade tier
-async function checkTierUpgrade(userId) {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-  });
-
-  if (!user) return;
-
-  let newTier = user.membershipTier;
-
-  // Check for upgrades (requires BOTH orders AND referrals)
-  if (user.membershipTier === "CHOPSTICK") {
-    if (user.tierProgressOrders >= 10 && user.tierProgressReferrals >= 5) {
-      newTier = "NOODLE_MASTER";
-    }
-  } else if (user.membershipTier === "NOODLE_MASTER") {
-    if (user.tierProgressOrders >= 25 && user.tierProgressReferrals >= 10) {
-      newTier = "BEEF_BOSS";
-    }
-  }
-
-  // Upgrade if tier changed
-  if (newTier !== user.membershipTier) {
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        membershipTier: newTier,
-        tierProgressOrders: 0, // Reset progress for next tier
-        tierProgressReferrals: 0,
-      },
-    });
-
-    // Award VIP badge if reached Beef Boss
-    if (newTier === "BEEF_BOSS") {
-      const vipBadge = await prisma.badge.findUnique({
-        where: { slug: "vip" },
-      });
-      if (vipBadge) {
-        await prisma.userBadge
-          .create({
-            data: {
-              userId: userId,
-              badgeId: vipBadge.id,
-            },
-          })
-          .catch(() => {}); // Ignore if already exists
-      }
-    }
-
-    console.log(`🎉 User ${userId} upgraded to ${newTier}!`);
   }
 }
 
