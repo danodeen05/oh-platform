@@ -143,9 +143,11 @@ const allowedOrigins = [
     'http://localhost:4000',
     'http://127.0.0.1:3000',
     'http://127.0.0.1:3001',
-    // site-overhaul worktree dev servers (web 3100, admin 3101)
+    // site-overhaul worktree dev servers (web 3100, admin 3101; UI lane web 3200, admin 3201)
     'http://localhost:3100',
-    'http://localhost:3101'
+    'http://localhost:3101',
+    'http://localhost:3200',
+    'http://localhost:3201'
   ] : [])
 ];
 
