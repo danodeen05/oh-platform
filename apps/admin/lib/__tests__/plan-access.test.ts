@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { canCopyLink, formatDate, formatMinutes, ndaBadge, scenarioForAudience, sessionsSummary, shortDate, statusTone } from "../plan-access";
+import { canCopyLink, formatDate, formatMinutes, ndaBadge, scenarioForAudience, sessionsSummary, shortDate, statusTone, validateMaxSessions } from "../plan-access";
 
 describe("formatMinutes", () => {
   test("seconds under a minute", () => expect(formatMinutes(45)).toBe("45s"));
@@ -51,4 +51,15 @@ describe("scenarioForAudience", () => {
 describe("sessionsSummary", () => {
   test("with a max", () => expect(sessionsSummary({ sessionCount: 2, maxSessions: 5 })).toBe("2 / 5"));
   test("unlimited", () => expect(sessionsSummary({ sessionCount: 2, maxSessions: null })).toBe("2"));
+});
+
+describe("validateMaxSessions", () => {
+  test("empty means no limit, so it's valid", () => expect(validateMaxSessions("")).toBeUndefined());
+  test("whitespace-only also means no limit", () => expect(validateMaxSessions("   ")).toBeUndefined());
+  test("a positive whole number is valid", () => expect(validateMaxSessions("5")).toBeUndefined());
+  test("1 is the minimum allowed", () => expect(validateMaxSessions("1")).toBeUndefined());
+  test("0 is rejected", () => expect(validateMaxSessions("0")).toBeTruthy());
+  test("a negative number is rejected", () => expect(validateMaxSessions("-1")).toBeTruthy());
+  test("a decimal is rejected", () => expect(validateMaxSessions("1.5")).toBeTruthy());
+  test("non-numeric text is rejected", () => expect(validateMaxSessions("abc")).toBeTruthy());
 });

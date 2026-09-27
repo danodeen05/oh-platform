@@ -19,7 +19,6 @@ export function RegisterDeviceSheet({ open, locations, onClose, onRegistered }: 
   const [locationId, setLocationId] = useState("");
   const [errors, setErrors] = useState<{ deviceId?: string; name?: string; locationId?: string }>({});
   const [saving, setSaving] = useState(false);
-  const [serverError, setServerError] = useState<string | null>(null);
   const [result, setResult] = useState<{ apiKey: string } | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -31,13 +30,12 @@ export function RegisterDeviceSheet({ open, locations, onClose, onRegistered }: 
     setErrors(errs);
     if (errs.deviceId || errs.name || errs.locationId) return;
     setSaving(true);
-    setServerError(null);
     try {
       const data = await api<KioskDevice & { apiKey: string }>("/kiosk-devices", { method: "POST", body: { deviceId: deviceId.trim(), name: name.trim(), locationId } });
       setResult({ apiKey: data.apiKey });
       onRegistered();
     } catch (e) {
-      setServerError(errorText(e));
+      show({ message: `Couldn't register the device. ${errorText(e)}`, tone: "alert" });
     } finally {
       setSaving(false);
     }
@@ -73,7 +71,6 @@ export function RegisterDeviceSheet({ open, locations, onClose, onRegistered }: 
               {locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
             </Select>
           </Field>
-          {serverError && <p role="alert" className="text-sm font-medium text-oh-ember-deep">{serverError}</p>}
           <button type="submit" hidden aria-hidden="true" tabIndex={-1} />
         </form>
       )}

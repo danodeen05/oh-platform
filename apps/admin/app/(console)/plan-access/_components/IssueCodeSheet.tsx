@@ -3,14 +3,16 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Field, NumberInput, Select, TextInput, Toggle } from "@/components/ui/Field";
 import { Sheet } from "@/components/ui/Sheet";
+import { useToast } from "@/components/ui/Toast";
 import { api, ApiError } from "@/lib/api";
-import { AUDIENCES, SCENARIOS, SECTION_KEYS, scenarioForAudience, type Audience, type CodeRow, type Scenario } from "@/lib/plan-access";
+import { AUDIENCES, SCENARIOS, SECTION_KEYS, scenarioForAudience, validateMaxSessions, type Audience, type CodeRow, type Scenario } from "@/lib/plan-access";
 import { fetchCountersigner } from "@/lib/plan-nda";
 
 type Props = { open: boolean; onClose: () => void; onCreated: (code: CodeRow) => void };
 const errorText = (e: unknown) => (e instanceof ApiError || e instanceof Error ? e.message : "Something went wrong.");
 
 export function IssueCodeSheet({ open, onClose, onCreated }: Props) {
+  const { show } = useToast();
   const [label, setLabel] = useState("");
   const [audience, setAudience] = useState<Audience>("INVESTOR");
   const [scenario, setScenario] = useState<Scenario>("BASE");
@@ -21,7 +23,7 @@ export function IssueCodeSheet({ open, onClose, onCreated }: Props) {
   const [ndaRequired, setNdaRequired] = useState(true);
   const [hasCountersigner, setHasCountersigner] = useState<boolean | null>(null);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [maxSessionsError, setMaxSessionsError] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     fetchCountersigner().then((c) => setHasCountersigner(Boolean(c))).catch(() => setHasCountersigner(null));
@@ -33,8 +35,10 @@ export function IssueCodeSheet({ open, onClose, onCreated }: Props) {
 
   async function save() {
     if (!label.trim()) return;
+    const maxSessionsErr = validateMaxSessions(maxSessions);
+    setMaxSessionsError(maxSessionsErr);
+    if (maxSessionsErr) return;
     setSaving(true);
-    setError(null);
     try {
       const data = await api<{ code: CodeRow }>("/admin/plan/codes", {
         method: "POST",
@@ -42,13 +46,13 @@ export function IssueCodeSheet({ open, onClose, onCreated }: Props) {
           label: label.trim(), audience, defaultScenario: scenario,
           allowedSections: allSections ? [] : sections,
           expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
-          maxSessions: maxSessions ? Number(maxSessions) : null,
+          maxSessions: maxSessions.trim() ? Number(maxSessions.trim()) : null,
           ndaRequired,
         },
       });
       onCreated({ ...data.code, status: "ACTIVE", sessionCount: 0, questionCount: 0, totalSeconds: 0, ndaStatus: data.code.ndaRequired ? "PENDING" : "NOT_REQUIRED", ndaSignedAt: null });
     } catch (e) {
-      setError(errorText(e));
+      show({ message: `Couldn't issue the code. ${errorText(e)}`, tone: "alert" });
     } finally {
       setSaving(false);
     }
@@ -96,8 +100,10 @@ export function IssueCodeSheet({ open, onClose, onCreated }: Props) {
             <input type="datetime-local" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)}
               className="block min-h-11 w-full rounded-xl border border-oh-stone/25 bg-oh-paper px-3 text-[16px] text-oh-charcoal focus:border-oh-gold focus:outline-none focus:ring-3 focus:ring-oh-gold/30" />
           </Field>
-          <Field label="Max sessions" hint="Unlimited if empty">
-            <NumberInput value={maxSessions} onChange={(e) => setMaxSessions(e.target.value)} min={1} placeholder="unlimited" />
+          <Field label="Max sessions" hint={maxSessionsError ? undefined : "Unlimited if empty"} error={maxSessionsError}>
+            <NumberInput value={maxSessions}
+              onChange={(e) => { setMaxSessions(e.target.value); if (maxSessionsError) setMaxSessionsError(undefined); }}
+              min={1} placeholder="unlimited" aria-invalid={Boolean(maxSessionsError)} />
           </Field>
         </div>
 
@@ -109,7 +115,6 @@ export function IssueCodeSheet({ open, onClose, onCreated }: Props) {
           )}
         </div>
 
-        {error && <p role="alert" className="text-sm font-medium text-oh-ember-deep">{error}</p>}
         <button type="submit" hidden aria-hidden="true" tabIndex={-1} />
       </form>
     </Sheet>

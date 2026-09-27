@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { CountersignatureCard } from "./_components/CountersignatureCard";
 import { IssueCodeSheet } from "./_components/IssueCodeSheet";
 import { Badge } from "@/components/ui/Badge";
@@ -23,12 +23,16 @@ const errorText = (e: unknown) => (e instanceof ApiError || e instanceof Error ?
 /** Copies the invite link; falls back to selecting the text in a read-only input if the clipboard API fails. */
 function CopyLink({ code }: { code: CodeRow }) {
   const [state, setState] = useState<"idle" | "copied" | "fallback">("idle");
+  // A stable ref (empty deps) so this only fires once, when the input mounts -
+  // an inline arrow function would get a new identity, and React would re-run
+  // it (re-selecting the text) on every render, fighting the user's own clicks.
+  const selectOnMount = useCallback((el: HTMLInputElement | null) => el?.select(), []);
   if (!canCopyLink(code)) return null;
   const url = planInviteUrl(code.code);
   if (state === "fallback") {
     return (
       <input readOnly value={url} aria-label={`Invite link for ${code.label}`}
-        ref={(el) => el?.select()} onBlur={() => setState("idle")}
+        ref={selectOnMount} onBlur={() => setState("idle")}
         className="min-h-11 w-full max-w-[220px] rounded-lg border border-oh-stone/25 bg-oh-paper px-2 text-sm text-oh-charcoal" />
     );
   }

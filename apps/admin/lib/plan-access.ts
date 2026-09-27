@@ -101,3 +101,11 @@ export function scenarioForAudience(audience: Audience, current: Scenario): Scen
 export function sessionsSummary(code: Pick<CodeRow, "sessionCount" | "maxSessions">): string {
   return `${code.sessionCount}${code.maxSessions ? ` / ${code.maxSessions}` : ""}`;
 }
+
+/** Max sessions: empty means no limit; otherwise a whole number of at least 1. */
+export function validateMaxSessions(value: string): string | undefined {
+  const t = value.trim();
+  if (!t) return undefined;
+  if (!/^\d+$/.test(t) || Number(t) < 1) return "Enter a whole number of at least 1.";
+  return undefined;
+}
