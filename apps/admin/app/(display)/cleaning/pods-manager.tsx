@@ -6,11 +6,12 @@ const BASE = process.env.NEXT_PUBLIC_API_URL || "";
 
 /**
  * Task A8: {layoutKey, layoutMirror, seats: [...]} replaced the bare array;
- * qrCode/locationId/createdAt/orders aren't in the new shape (comb pods
- * don't carry a pod's active-order info in this endpoint any more), so they
- * default to blank/the location we asked for and no order. Occupancy display
- * for comb pods is out of scope for A8 (see Tasks D4/D5 and a follow-up
- * admin task).
+ * qrCode/locationId/createdAt aren't in the new shape (comb pods don't carry
+ * a QR code or a denormalized locationId in this endpoint), so they default
+ * to blank/the location we asked for. `orders` (fix round 2, Important: the
+ * per-seat active order this cleaning display depends on for occupancy) IS
+ * back in the new shape too - `s.orders` is forwarded through unchanged
+ * (same array-of-0-or-1, same items+menuItem/user/guest shape as before A8).
  */
 function adaptPods(data: unknown, locationId: string): Pod[] {
   return extractSeatsArray(data).map((s: any, i: number) => ({

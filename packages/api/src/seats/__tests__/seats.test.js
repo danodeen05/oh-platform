@@ -6,11 +6,11 @@
  * `Seat` fields (`label`, `finger`, `rowSide`, `position`, `bestRank`, ...)
  * that script writes. So these tests cover: the documented public shape of
  * `GET /locations/:id/seats` (and the same shape folded into `/availability`),
- * retired-seat exclusion, `pickBestPod`'s `bestRank` ordering (best pod =
- * lowest `bestRank`, legacy null-`bestRank` seats sort last), and that
- * `PATCH`/`DELETE /locations/:id` are already admin-gated (console-guard,
- * OWNER) - see A8 controller note 1: that guard is NOT re-added here, only
- * asserted.
+ * retired-seat exclusion, the restored per-seat `orders` (fix round 2),
+ * `pickBestPod`'s `bestRank` ordering (best pod = lowest `bestRank`, legacy
+ * null-`bestRank` seats sort last), and that `PATCH`/`DELETE /locations/:id`
+ * are already admin-gated (console-guard, OWNER) - see A8 controller note 1:
+ * that guard is NOT re-added here, only asserted.
  */
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
@@ -20,16 +20,21 @@ import { pickBestPod } from "../../orders/service.js";
 import { listLocationSeats } from "../service.js";
 import { CONSOLE_ROUTES, registerConsoleGuard } from "../../auth/console-guard.js";
 
-function seed({ seats = [], locations = [] } = {}) {
+function seed({ seats = [], locations = [], orders = [], orderItems = [], menuItems = [], users = [], guests = [] } = {}) {
   return makeMemoryPrisma({
     tenants: [{ id: "t1", slug: "oh" }],
     locations: locations.length ? locations : [{ id: "L1", tenantId: "t1", name: "City Creek Mall", layoutKey: "comb-75", layoutMirror: false, podCount: 75 }],
     seats,
+    orders,
+    orderItems,
+    menuItems,
+    users,
+    guests,
   });
 }
 
 describe("listLocationSeats (GET /locations/:id/seats and /availability)", () => {
-  test("returns {layoutKey, layoutMirror, seats} in the documented shape", async () => {
+  test("returns {layoutKey, layoutMirror, seats} in the documented shape, with an empty orders array when there's no active order", async () => {
     const prisma = seed({
       seats: [
         { id: "s1", locationId: "L1", number: "A-01", label: "A-01", finger: 1, rowSide: "west", position: 1, status: "AVAILABLE", podType: "SINGLE", bestRank: 1 },
@@ -39,7 +44,7 @@ describe("listLocationSeats (GET /locations/:id/seats and /availability)", () =>
     assert.equal(result.layoutKey, "comb-75");
     assert.equal(result.layoutMirror, false);
     assert.deepEqual(result.seats, [
-      { id: "s1", label: "A-01", finger: 1, rowSide: "west", position: 1, status: "AVAILABLE", podType: "SINGLE", dualPartnerId: null },
+      { id: "s1", label: "A-01", finger: 1, rowSide: "west", position: 1, status: "AVAILABLE", podType: "SINGLE", dualPartnerId: null, orders: [] },
     ]);
   });
 
@@ -53,6 +58,75 @@ describe("listLocationSeats (GET /locations/:id/seats and /availability)", () =>
     const result = await listLocationSeats(prisma, "L1");
     assert.equal(result.seats.length, 1);
     assert.equal(result.seats[0].id, "s1");
+  });
+
+  test("fix round 2 (Important): a seat with an active order returns it under seat.orders, with items+menuItem and a user select", async () => {
+    const prisma = seed({
+      seats: [{ id: "s1", locationId: "L1", number: "A-01", label: "A-01", status: "OCCUPIED", podType: "SINGLE" }],
+      users: [{ id: "u1", name: "Dan", membershipTier: "NOODLE_MASTER", email: "dan@x.com" }],
+      orders: [
+        {
+          id: "o1", orderNumber: "ORD-1", seatId: "s1", userId: "u1", status: "SERVING", podCleanedAt: null,
+          totalCents: 1599, createdAt: new Date("2026-09-27T12:00:00Z"), tenantId: "t1",
+        },
+      ],
+      menuItems: [{ id: "m1", tenantId: "t1", name: "Classic Beef Noodle Soup", basePriceCents: 1599, category: "main01", categoryType: "MAIN" }],
+      orderItems: [{ id: "oi1", orderId: "o1", menuItemId: "m1", quantity: 1, priceCents: 1599 }],
+    });
+    const result = await listLocationSeats(prisma, "L1");
+    assert.equal(result.seats.length, 1);
+    const [seat] = result.seats;
+    assert.equal(seat.orders.length, 1);
+    const [order] = seat.orders;
+    assert.equal(order.id, "o1");
+    assert.equal(order.orderNumber, "ORD-1");
+    assert.deepEqual(order.user, { id: "u1", name: "Dan", membershipTier: "NOODLE_MASTER" });
+    assert.equal(order.guest, null);
+    assert.equal(order.items.length, 1);
+    assert.equal(order.items[0].menuItem.name, "Classic Beef Noodle Soup");
+    assert.equal(order.items[0].quantity, 1);
+  });
+
+  test("fix round 2: a guest order returns seat.orders[0].guest (select), not user", async () => {
+    const prisma = seed({
+      seats: [{ id: "s1", locationId: "L1", number: "A-01", label: "A-01", status: "OCCUPIED", podType: "SINGLE" }],
+      guests: [{ id: "g1", name: "Walk-in Guest", phone: "555-0100" }],
+      orders: [{ id: "o1", orderNumber: "ORD-2", seatId: "s1", guestId: "g1", status: "QUEUED", podCleanedAt: null, totalCents: 1599, createdAt: new Date(), tenantId: "t1" }],
+    });
+    const result = await listLocationSeats(prisma, "L1");
+    assert.deepEqual(result.seats[0].orders[0].guest, { id: "g1", name: "Walk-in Guest" });
+    assert.equal(result.seats[0].orders[0].user, null);
+  });
+
+  test("fix round 2: a cleaned pod's order (podCleanedAt set) doesn't count as active", async () => {
+    const prisma = seed({
+      seats: [{ id: "s1", locationId: "L1", number: "A-01", label: "A-01", status: "AVAILABLE", podType: "SINGLE" }],
+      orders: [{ id: "o1", orderNumber: "ORD-3", seatId: "s1", status: "COMPLETED", podCleanedAt: new Date(), totalCents: 1599, createdAt: new Date(), tenantId: "t1" }],
+    });
+    const result = await listLocationSeats(prisma, "L1");
+    assert.deepEqual(result.seats[0].orders, []);
+  });
+
+  test("fix round 2: a PENDING_PAYMENT order (not in the active-status list) doesn't count as active", async () => {
+    const prisma = seed({
+      seats: [{ id: "s1", locationId: "L1", number: "A-01", label: "A-01", status: "AVAILABLE", podType: "SINGLE" }],
+      orders: [{ id: "o1", orderNumber: "ORD-4", seatId: "s1", status: "PENDING_PAYMENT", podCleanedAt: null, totalCents: 1599, createdAt: new Date(), tenantId: "t1" }],
+    });
+    const result = await listLocationSeats(prisma, "L1");
+    assert.deepEqual(result.seats[0].orders, []);
+  });
+
+  test("fix round 2: only the most recent active order per seat comes back (take 1, most recent first)", async () => {
+    const prisma = seed({
+      seats: [{ id: "s1", locationId: "L1", number: "A-01", label: "A-01", status: "OCCUPIED", podType: "SINGLE" }],
+      orders: [
+        { id: "o-old", orderNumber: "ORD-OLD", seatId: "s1", status: "SERVING", podCleanedAt: null, totalCents: 1599, createdAt: new Date("2026-09-27T10:00:00Z"), tenantId: "t1" },
+        { id: "o-new", orderNumber: "ORD-NEW", seatId: "s1", status: "SERVING", podCleanedAt: null, totalCents: 1599, createdAt: new Date("2026-09-27T11:00:00Z"), tenantId: "t1" },
+      ],
+    });
+    const result = await listLocationSeats(prisma, "L1");
+    assert.equal(result.seats[0].orders.length, 1);
+    assert.equal(result.seats[0].orders[0].id, "o-new");
   });
 
   test("includes a duo seat's dualPartnerId", async () => {
