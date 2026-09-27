@@ -1,30 +1,20 @@
 "use client";
-
-import { useState, useEffect } from "react";
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
-import type { CateringSlot } from "./types";
+import { Card } from "@/components/ui/Card";
+import { ErrorCard } from "@/components/ui/ErrorCard";
+import { IconButton } from "@/components/ui/Button";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { api } from "@/lib/api";
+import { useResource } from "@/lib/use-resource";
+import type { CalendarSlotInfo, CateringSlot } from "@/lib/catering";
 
-const BASE = process.env.NEXT_PUBLIC_API_URL || "";
+type RawEntry = { date: string; slot: CateringSlot; status: string; event?: { id: string; clientCompany: string } };
 
-interface CalendarSlotInfo {
-  date: string;
-  slot: CateringSlot;
-  booked: boolean;
-  blocked?: boolean;
-  clientCompany?: string;
-  eventId?: string;
-}
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-interface CalendarDay {
-  date: string; // YYYY-MM-DD
-  slots: CalendarSlotInfo[];
-}
-
-interface BookingCalendarProps {
-  onCreateWithPrefill?: (date: string, slot: CateringSlot) => void;
-}
-
-function getDaysInMonth(year: number, month: number): string[] {
+function daysInMonth(year: number, month: number): string[] {
   const days: string[] = [];
   const date = new Date(year, month, 1);
   while (date.getMonth() === month) {
@@ -34,259 +24,110 @@ function getDaysInMonth(year: number, month: number): string[] {
   return days;
 }
 
-function getFirstDayOfWeek(year: number, month: number): number {
-  return new Date(year, month, 1).getDay();
+const chipBase = "flex min-h-11 w-full items-center justify-center rounded-lg border px-1 text-[11px] font-semibold leading-tight";
+
+function SlotChip({ info, onOpen }: { info: CalendarSlotInfo | undefined; onOpen: () => void }) {
+  if (info?.blocked) {
+    return <span className={`${chipBase} cursor-not-allowed border-oh-ember/30 bg-oh-ember/10 text-oh-ember-deep`} title="Blocked">Blocked</span>;
+  }
+  if (info?.booked) {
+    const tone = info.slot === "LUNCH" ? "border-oh-olive/40 bg-oh-olive/15 text-oh-olive" : "border-oh-ink/30 bg-oh-ink/10 text-oh-ink";
+    return (
+      <button type="button" onClick={onOpen} title={info.clientCompany} className={`${chipBase} truncate ${tone} hover:opacity-80`}>
+        {info.clientCompany}
+      </button>
+    );
+  }
+  return (
+    <button type="button" onClick={onOpen} aria-label={`Book ${info?.slot === "DINNER" ? "dinner" : "lunch"}`}
+      className={`${chipBase} border-dashed border-oh-stone/25 text-oh-stone/50 hover:border-oh-stone/45 hover:text-oh-stone`}>
+      +
+    </button>
+  );
 }
 
-const MONTHS = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
-
-const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-export default function BookingCalendar({ onCreateWithPrefill }: BookingCalendarProps) {
+export function BookingCalendar({ year, month, onMonthChange, onCreateWithPrefill }: {
+  year: number; month: number; onMonthChange: (year: number, month: number) => void;
+  onCreateWithPrefill: (date: string, slot: CateringSlot) => void;
+}) {
   const router = useRouter();
-  const today = new Date();
-  const [year, setYear] = useState(today.getFullYear());
-  const [month, setMonth] = useState(today.getMonth());
-  const [calendarData, setCalendarData] = useState<Record<string, CalendarSlotInfo[]>>({});
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchCalendar = async () => {
-      setLoading(true);
-      const from = `${year}-${String(month + 1).padStart(2, "0")}-01`;
-      const lastDay = new Date(year, month + 1, 0).getDate();
-      const to = `${year}-${String(month + 1).padStart(2, "0")}-${lastDay}`;
-      try {
-        const res = await fetch(`${BASE}/admin/catering/calendar?from=${from}&to=${to}`);
-        if (!res.ok) return;
-        const data = await res.json();
-        // Build a map from date -> slots
-        const map: Record<string, CalendarSlotInfo[]> = {};
-        if (Array.isArray(data)) {
-          for (const entry of data) {
-            const d = entry.date as string;
-            if (!map[d]) map[d] = [];
-            map[d].push({
-              date: d,
-              slot: entry.slot,
-              booked: entry.status === "BOOKED",
-              blocked: entry.status === "BLOCKED",
-              clientCompany: entry.event?.clientCompany,
-              eventId: entry.event?.id,
-            });
-          }
-        }
-        setCalendarData(map);
-      } catch (err) {
-        console.error("Failed to fetch calendar:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchCalendar();
-  }, [year, month]);
-
-  const prevMonth = () => {
-    if (month === 0) {
-      setMonth(11);
-      setYear((y) => y - 1);
-    } else {
-      setMonth((m) => m - 1);
+  const key = `catering-calendar:${year}-${month}`;
+  const res = useResource(key, async (signal) => {
+    const from = `${year}-${String(month + 1).padStart(2, "0")}-01`;
+    const lastDay = new Date(year, month + 1, 0).getDate();
+    const to = `${year}-${String(month + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+    const data = await api<RawEntry[]>("/admin/catering/calendar", { signal, query: { from, to } });
+    const map: Record<string, CalendarSlotInfo[]> = {};
+    for (const entry of Array.isArray(data) ? data : []) {
+      const list = map[entry.date] ?? (map[entry.date] = []);
+      list.push({
+        date: entry.date, slot: entry.slot, booked: entry.status === "BOOKED", blocked: entry.status === "BLOCKED",
+        clientCompany: entry.event?.clientCompany, eventId: entry.event?.id,
+      });
     }
-  };
+    return map;
+  });
 
-  const nextMonth = () => {
-    if (month === 11) {
-      setMonth(0);
-      setYear((y) => y + 1);
-    } else {
-      setMonth((m) => m + 1);
-    }
-  };
+  const days = useMemo(() => daysInMonth(year, month), [year, month]);
+  const firstDow = new Date(year, month, 1).getDay();
+  const today = new Date().toISOString().slice(0, 10);
 
-  const days = getDaysInMonth(year, month);
-  const firstDow = getFirstDayOfWeek(year, month);
-  const blanks = Array(firstDow).fill(null);
-
-  const handleSlotClick = (date: string, slotInfo: CalendarSlotInfo | null, slot: CateringSlot) => {
-    if (slotInfo?.booked && slotInfo.eventId) {
-      router.push(`/catering/${slotInfo.eventId}`);
-    } else {
-      onCreateWithPrefill?.(date, slot);
-    }
-  };
+  function prevMonth() {
+    onMonthChange(month === 0 ? year - 1 : year, month === 0 ? 11 : month - 1);
+  }
+  function nextMonth() {
+    onMonthChange(month === 11 ? year + 1 : year, month === 11 ? 0 : month + 1);
+  }
+  function openSlot(date: string, info: CalendarSlotInfo | undefined, slot: CateringSlot) {
+    if (info?.booked && info.eventId) router.push(`/catering/${info.eventId}`);
+    else onCreateWithPrefill(date, slot);
+  }
 
   return (
-    <div
-      style={{
-        backgroundColor: "white",
-        borderRadius: 12,
-        border: "1px solid #e5e7eb",
-        overflow: "hidden",
-      }}
-    >
-      {/* Header */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "16px 20px",
-          borderBottom: "1px solid #e5e7eb",
-        }}
-      >
-        <button
-          onClick={prevMonth}
-          style={{
-            padding: "6px 12px",
-            border: "1px solid #e5e7eb",
-            borderRadius: 6,
-            cursor: "pointer",
-            backgroundColor: "white",
-          }}
-        >
-          &larr;
-        </button>
-        <h3 style={{ margin: 0, fontWeight: 600 }}>
-          {MONTHS[month]} {year}
-        </h3>
-        <button
-          onClick={nextMonth}
-          style={{
-            padding: "6px 12px",
-            border: "1px solid #e5e7eb",
-            borderRadius: 6,
-            cursor: "pointer",
-            backgroundColor: "white",
-          }}
-        >
-          &rarr;
-        </button>
+    <Card padded={false}
+      title={<span className="tabular-nums">{MONTHS[month]} {year}</span>}
+      action={
+        <span className="flex gap-1">
+          <IconButton icon="chevron-left" label="Previous month" onClick={prevMonth} />
+          <IconButton icon="chevron-right" label="Next month" onClick={nextMonth} />
+        </span>
+      }>
+      <div className="p-3">
+        {res.error && !res.data ? (
+          <ErrorCard message="Couldn't load the calendar." onRetry={res.reload} />
+        ) : !res.data ? (
+          <Skeleton className="h-64" />
+        ) : (
+          <>
+            <div className="grid grid-cols-7 gap-1">
+              {DAYS.map((d) => <div key={d} className="pb-1 text-center text-xs font-semibold text-oh-stone/60">{d}</div>)}
+              {Array.from({ length: firstDow }, (_, i) => <div key={`b${i}`} />)}
+              {days.map((date) => {
+                const slots = res.data![date] || [];
+                const lunch = slots.find((s) => s.slot === "LUNCH");
+                const dinner = slots.find((s) => s.slot === "DINNER");
+                const dayNum = Number(date.slice(8));
+                const isToday = date === today;
+                return (
+                  <div key={date} className={`min-h-[74px] rounded-lg border p-1 ${isToday ? "border-oh-ember-deep bg-oh-ember/5" : "border-oh-stone/10"}`}>
+                    <div className={`mb-1 text-center text-xs tabular-nums ${isToday ? "font-bold text-oh-ember-deep" : "text-oh-stone/70"}`}>{dayNum}</div>
+                    <div className="space-y-1">
+                      <SlotChip info={lunch} onOpen={() => openSlot(date, lunch, "LUNCH")} />
+                      <SlotChip info={dinner} onOpen={() => openSlot(date, dinner, "DINNER")} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs text-oh-stone/70">
+              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm border border-oh-olive/40 bg-oh-olive/15" />Lunch booked</span>
+              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm border border-oh-ink/30 bg-oh-ink/10" />Dinner booked</span>
+              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm border border-oh-ember/30 bg-oh-ember/10" />Blocked</span>
+              <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm border border-dashed border-oh-stone/25" />Available, tap to create</span>
+            </div>
+          </>
+        )}
       </div>
-
-      {loading && (
-        <div style={{ padding: 24, textAlign: "center", color: "#6b7280", fontSize: "0.9rem" }}>
-          Loading calendar...
-        </div>
-      )}
-
-      {!loading && (
-        <div style={{ padding: 12 }}>
-          {/* Day headers */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", marginBottom: 4 }}>
-            {DAYS.map((d) => (
-              <div
-                key={d}
-                style={{
-                  textAlign: "center",
-                  fontSize: "0.75rem",
-                  fontWeight: 600,
-                  color: "#9ca3af",
-                  padding: "4px 0",
-                }}
-              >
-                {d}
-              </div>
-            ))}
-          </div>
-
-          {/* Calendar grid */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
-            {blanks.map((_, i) => (
-              <div key={`blank-${i}`} />
-            ))}
-            {days.map((date) => {
-              const daySlots = calendarData[date] || [];
-              const lunchInfo = daySlots.find((s) => s.slot === "LUNCH") ?? null;
-              const dinnerInfo = daySlots.find((s) => s.slot === "DINNER") ?? null;
-              const dayNum = parseInt(date.slice(8), 10);
-              const isToday = date === today.toISOString().slice(0, 10);
-
-              return (
-                <div
-                  key={date}
-                  style={{
-                    border: isToday ? "2px solid #4f46e5" : "1px solid #f3f4f6",
-                    borderRadius: 6,
-                    padding: 4,
-                    minHeight: 80,
-                    backgroundColor: isToday ? "#f5f3ff" : "white",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: "0.8rem",
-                      fontWeight: isToday ? 700 : 400,
-                      color: isToday ? "#4f46e5" : "#374151",
-                      marginBottom: 4,
-                    }}
-                  >
-                    {dayNum}
-                  </div>
-                  {/* Lunch chip */}
-                  <div
-                    onClick={() => { if (!lunchInfo?.blocked) handleSlotClick(date, lunchInfo, "LUNCH"); }}
-                    style={{
-                      marginBottom: 2,
-                      padding: "2px 4px",
-                      borderRadius: 3,
-                      fontSize: "0.65rem",
-                      cursor: lunchInfo?.blocked ? "not-allowed" : "pointer",
-                      backgroundColor: lunchInfo?.blocked ? "#fee2e2" : lunchInfo?.booked ? "#d1fae5" : "#f3f4f6",
-                      color: lunchInfo?.blocked ? "#b91c1c" : lunchInfo?.booked ? "#065f46" : "#9ca3af",
-                      border: lunchInfo?.blocked ? "1px solid #fca5a5" : lunchInfo?.booked ? "1px solid #10b981" : "1px dashed #d1d5db",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                    title={lunchInfo?.blocked ? "Lunch: blocked" : lunchInfo?.booked ? `Lunch: ${lunchInfo.clientCompany}` : "Click to book Lunch"}
-                  >
-                    L {lunchInfo?.blocked ? "Blocked" : lunchInfo?.booked ? lunchInfo.clientCompany : "+"}
-                  </div>
-                  {/* Dinner chip */}
-                  <div
-                    onClick={() => { if (!dinnerInfo?.blocked) handleSlotClick(date, dinnerInfo, "DINNER"); }}
-                    style={{
-                      padding: "2px 4px",
-                      borderRadius: 3,
-                      fontSize: "0.65rem",
-                      cursor: dinnerInfo?.blocked ? "not-allowed" : "pointer",
-                      backgroundColor: dinnerInfo?.blocked ? "#fee2e2" : dinnerInfo?.booked ? "#dbeafe" : "#f3f4f6",
-                      color: dinnerInfo?.blocked ? "#b91c1c" : dinnerInfo?.booked ? "#1e40af" : "#9ca3af",
-                      border: dinnerInfo?.blocked ? "1px solid #fca5a5" : dinnerInfo?.booked ? "1px solid #3b82f6" : "1px dashed #d1d5db",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                    title={dinnerInfo?.blocked ? "Dinner: blocked" : dinnerInfo?.booked ? `Dinner: ${dinnerInfo.clientCompany}` : "Click to book Dinner"}
-                  >
-                    D {dinnerInfo?.blocked ? "Blocked" : dinnerInfo?.booked ? dinnerInfo.clientCompany : "+"}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Legend */}
-          <div style={{ display: "flex", gap: 16, marginTop: 12, fontSize: "0.75rem", color: "#6b7280" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <span style={{ display: "inline-block", width: 10, height: 10, backgroundColor: "#d1fae5", border: "1px solid #10b981", borderRadius: 2 }} />
-              Lunch booked
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <span style={{ display: "inline-block", width: 10, height: 10, backgroundColor: "#dbeafe", border: "1px solid #3b82f6", borderRadius: 2 }} />
-              Dinner booked
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <span style={{ display: "inline-block", width: 10, height: 10, backgroundColor: "#f3f4f6", border: "1px dashed #d1d5db", borderRadius: 2 }} />
-              Available (click to create)
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+    </Card>
   );
 }

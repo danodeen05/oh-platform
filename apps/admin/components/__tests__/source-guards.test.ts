@@ -13,7 +13,6 @@ function files(dir: string): string[] {
 export const LEGACY: string[] = [
   "app/(console)/_components",
   "app/(console)/analytics",
-  "app/(console)/catering",
   "app/(console)/cleaning/config",
   "app/(console)/kiosks",
   "app/(console)/locations",
