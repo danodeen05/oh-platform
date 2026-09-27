@@ -60,6 +60,7 @@ import {
   getAPNsEnvironment,
 } from "./wallet/apns-service.js";
 import { computeDiscountCents } from "./promos/discount.js";
+import { buildUsageDateFilter, summarizePromoAnalytics } from "./promos/analytics.js";
 import { registerAutonomousRoutes } from "./autonomous/index.js";
 import { getScheduler } from "./triggers/index.js";
 import { getOrchestrator } from "./autonomous/index.js";
@@ -14130,13 +14131,7 @@ app.patch("/admin/promo-codes/:id", async (req, reply) => {
 app.get("/admin/promo-codes/analytics", async (req, reply) => {
   try {
     const { startDate, endDate } = req.query;
-
-    const dateFilter = {};
-    if (startDate || endDate) {
-      dateFilter.usedAt = {};
-      if (startDate) dateFilter.usedAt.gte = new Date(startDate);
-      if (endDate) dateFilter.usedAt.lte = new Date(endDate);
-    }
+    const dateFilter = buildUsageDateFilter(startDate, endDate);
 
     // Get all promo codes with usage stats
     const promoCodes = await prisma.promoCode.findMany({
@@ -14148,44 +14143,14 @@ app.get("/admin/promo-codes/analytics", async (req, reply) => {
           where: dateFilter,
           select: {
             discountCents: true,
-            usedAt: true,
+            createdAt: true,
           },
         },
       },
       orderBy: { currentUsageCount: "desc" },
     });
 
-    // Calculate analytics per code
-    const analytics = promoCodes.map((code) => {
-      const totalDiscountCents = code.usages.reduce((sum, u) => sum + u.discountCents, 0);
-      return {
-        id: code.id,
-        code: code.code,
-        discountType: code.discountType,
-        discountValue: code.discountValue,
-        scope: code.scope,
-        isActive: code.isActive,
-        totalUsages: code.currentUsageCount,
-        usagesInPeriod: code.usages.length,
-        totalDiscountGivenCents: totalDiscountCents,
-        usageLimit: code.totalUsageLimit,
-        expiresAt: code.expiresAt,
-      };
-    });
-
-    // Overall stats
-    const totalUsages = analytics.reduce((sum, a) => sum + a.usagesInPeriod, 0);
-    const totalDiscountCents = analytics.reduce((sum, a) => sum + a.totalDiscountGivenCents, 0);
-
-    return reply.send({
-      promoCodes: analytics,
-      summary: {
-        totalCodes: promoCodes.length,
-        activeCodes: promoCodes.filter((c) => c.isActive).length,
-        totalUsagesInPeriod: totalUsages,
-        totalDiscountGivenCents: totalDiscountCents,
-      },
-    });
+    return reply.send(summarizePromoAnalytics(promoCodes));
   } catch (error) {
     console.error("Error fetching promo code analytics:", error);
     return reply.status(500).send({ error: error.message });
