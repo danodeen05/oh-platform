@@ -1833,8 +1833,9 @@ model PlanAccessCode {
   createdAt       DateTime     @default(now())
   createdByUserId String?
 
-  sessions  PlanViewSession[]
-  questions PlanQuestion[]
+  sessions     PlanViewSession[]
+  questions    PlanQuestion[]
+  chatMessages PlanChatMessage[]
 }
 
 model PlanViewSession {
@@ -1842,13 +1843,16 @@ model PlanViewSession {
   accessCodeId String
   accessCode   PlanAccessCode @relation(fields: [accessCodeId], references: [id], onDelete: Cascade)
   startedAt    DateTime       @default(now())
-  lastSeenAt   DateTime       @updatedAt
+  lastSeenAt   DateTime       @default(now()) // Set explicitly on activity (heartbeat, chat); not @updatedAt so bookkeeping writes don't look like reading
   userAgent    String?
   ipHash       String? // Salted SHA-256; the raw IP is never stored
   country      String?
   totalSeconds Int            @default(0)
+  events       Json           @default("[]") // [{type, value?, at}] scenario switches, print, language; capped at 50
 
-  sectionViews PlanSectionView[]
+  sectionViews   PlanSectionView[]
+  chatMessages   PlanChatMessage[]
+  visitSummaries PlanVisitSummary[]
 
   @@index([accessCodeId, startedAt])
 }
@@ -1861,6 +1865,7 @@ model PlanSectionView {
   seconds      Int             @default(0)
   enteredAt    DateTime        @default(now())
   interactions Int             @default(0) // Slider moves, toggles, expands
+  targets      Json? // { "<control label>": count } so the owner can see what they touched
 
   @@unique([sessionId, sectionKey])
   @@index([sessionId, sectionKey])
@@ -1878,4 +1883,42 @@ model PlanQuestion {
   createdAt    DateTime       @default(now())
 
   @@index([accessCodeId, createdAt])
+}
+
+// One row per chat turn with Chappy on the plan. Viewer text is untrusted.
+model PlanChatMessage {
+  id           String          @id @default(cuid())
+  sessionId    String
+  session      PlanViewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  accessCodeId String
+  accessCode   PlanAccessCode  @relation(fields: [accessCodeId], references: [id], onDelete: Cascade)
+  role         String // "user" | "assistant"
+  content      String
+  sectionKey   String?
+  escalated    Boolean         @default(false) // Chappy passed it to the owner
+  createdAt    DateTime        @default(now())
+
+  @@index([sessionId, createdAt])
+  @@index([accessCodeId, createdAt])
+}
+
+// One row per finished visit (a burst of activity followed by 15 min idle).
+// `sections` is the CUMULATIVE per-section snapshot at visitEnd, so the next
+// visit's numbers are deltas against it.
+model PlanVisitSummary {
+  id         String          @id @default(cuid())
+  sessionId  String
+  session    PlanViewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  visitStart DateTime
+  visitEnd   DateTime
+  seconds    Int             @default(0)
+  sections   Json            @default("{}")
+  chatCount  Int             @default(0)
+  verdict    String?
+  take       String?
+  emailedAt  DateTime?
+  error      String?
+  createdAt  DateTime        @default(now())
+
+  @@index([sessionId, visitEnd])
 }

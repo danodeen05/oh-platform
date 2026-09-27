@@ -12,17 +12,43 @@
  *     web BFF sends a salted hash.
  *   - /plan/auth is rate limited per ipHash: 5 FAILED attempts per 15 minutes; successes do not count.
  *
- * Deps (prisma, sendSms) are injectable so the routes can be tested with
- * fastify.inject() and a stub, without a database.
+ * Deps (prisma, sendSms, summaries) are injectable so the routes can be
+ * tested with fastify.inject() and a stub, without a database.
  */
+
+/** Merge `{label: count}` maps, keeping at most TARGETS_PER_SECTION labels. */
+export function mergeTargets(existing, incoming) {
+  const out = { ...(existing && typeof existing === "object" && !Array.isArray(existing) ? existing : {}) };
+  if (!incoming || typeof incoming !== "object" || Array.isArray(incoming)) return out;
+  for (const [rawKey, rawCount] of Object.entries(incoming)) {
+    const key = String(rawKey).replace(/\s+/g, " ").trim().slice(0, TARGET_KEY_MAX);
+    const count = Math.max(0, Math.min(1000, Math.floor(Number(rawCount) || 0)));
+    if (!key || count === 0) continue;
+    if (!(key in out) && Object.keys(out).length >= TARGETS_PER_SECTION) continue;
+    out[key] = (Number(out[key]) || 0) + count;
+  }
+  return out;
+}
 
 import { PrismaClient } from "@oh/db";
 import { sendSMS } from "../notifications.js";
 import { generateCode, normalizeCode, safeEqual } from "./codes.js";
+import { escalationText, firstChatText, ownerPhone } from "./chappy.js";
+import { startVisitSummaries } from "./summaries.js";
 
 const AUDIENCES = ["INVESTOR", "LENDER", "LANDLORD", "PARTNER", "ADVISOR", "INTERNAL"];
 const SCENARIOS = ["CONSERVATIVE", "BASE", "AGGRESSIVE"];
 const SECTION_KEY_RE = /^[a-z][a-z0-9-]{1,40}$/;
+const QUESTIONS_PER_DAY = 20;
+const CHAT_PER_SESSION_DAY = 40;
+const CHAT_PER_CODE_DAY = 150;
+const CHAT_MAX_CHARS = 1500;
+const CHAT_HISTORY = 20;
+const EVENT_TYPES = ["scenario", "print_view", "printed", "locale"];
+const EVENTS_MAX = 50;
+const TARGET_KEY_MAX = 40;
+const TARGETS_PER_SECTION = 60;
+const DAY_MS = 24 * 60 * 60 * 1000;
 const INVALID = { error: "invalid" };
 
 let defaultPrisma = null;
@@ -52,7 +78,8 @@ function parseDate(value) {
 
 /**
  * @param {import('fastify').FastifyInstance} app
- * @param {{ prisma?: any, sendSms?: (msg: {to: string, body: string}) => Promise<unknown>, apiKey?: string, now?: () => Date }} [deps]
+ * @param {{ prisma?: any, sendSms?: (msg: {to: string, body: string}) => Promise<unknown>, apiKey?: string, now?: () => Date, summaries?: false | object }} [deps]
+ *   summaries: false disables the idle-visit sweeper (tests); an object is passed to startVisitSummaries.
  */
 export async function registerPlanRoutes(app, deps = {}) {
   const prisma = deps.prisma || getDefaultPrisma();
@@ -179,10 +206,17 @@ export async function registerPlanRoutes(app, deps = {}) {
     });
     if (!session || !isActive(session.accessCode, now())) return reply.code(401).send(INVALID);
 
+    const where = { sessionId_sectionKey: { sessionId: sid, sectionKey } };
+    const hasTargets = body.targets && typeof body.targets === "object" && Object.keys(body.targets).length > 0;
+    let targets;
+    if (hasTargets) {
+      const existing = await prisma.planSectionView.findUnique({ where });
+      targets = mergeTargets(existing?.targets, body.targets);
+    }
     await prisma.planSectionView.upsert({
-      where: { sessionId_sectionKey: { sessionId: sid, sectionKey } },
-      create: { sessionId: sid, sectionKey, seconds, interactions },
-      update: { seconds: { increment: seconds }, interactions: { increment: interactions } },
+      where,
+      create: { sessionId: sid, sectionKey, seconds, interactions, ...(targets ? { targets } : {}) },
+      update: { seconds: { increment: seconds }, interactions: { increment: interactions }, ...(targets ? { targets } : {}) },
     });
     await prisma.planViewSession.update({
       where: { id: sid },
@@ -202,20 +236,26 @@ export async function registerPlanRoutes(app, deps = {}) {
 
     const session = await prisma.planViewSession.findUnique({
       where: { id: sid },
-      include: { accessCode: { select: { id: true, label: true, revokedAt: true, expiresAt: true } } },
+      include: { accessCode: { select: { id: true, label: true, audience: true, revokedAt: true, expiresAt: true } } },
     });
     if (!session || !isActive(session.accessCode, now())) return reply.code(401).send(INVALID);
+
+    // A simple cap so a stuck button or a script cannot page the owner all night:
+    // 20 questions per access code in any rolling 24 hours.
+    const since = new Date(now().getTime() - 24 * 60 * 60 * 1000);
+    const recent = await prisma.planQuestion.count({ where: { accessCodeId: session.accessCode.id, createdAt: { gte: since } } });
+    if (recent >= QUESTIONS_PER_DAY) return reply.code(429).send({ error: "too_many_questions" });
 
     const question = await prisma.planQuestion.create({
       data: { accessCodeId: session.accessCode.id, sectionKey, body: text, contactEmail: contactEmail || null },
     });
 
-    const to = process.env.OWNER_ALERT_PHONE || process.env.ADMIN_PHONE_NUMBER;
+    const to = ownerPhone();
     if (to) {
       try {
         await sendSms({
           to,
-          body: `Plan question from ${session.accessCode.label} (${sectionKey}): ${text.slice(0, 200)}`,
+          body: escalationText({ label: session.accessCode.label, audience: session.accessCode.audience, sectionKey, question: text, contactEmail }),
         });
       } catch (err) {
         app.log.error({ err }, "[plan] question SMS failed");
@@ -223,6 +263,107 @@ export async function registerPlanRoutes(app, deps = {}) {
     }
     return reply.code(201).send({ ok: true, id: question.id });
   });
+
+  // ------------------------------------------------------------------
+  // Chappy chat (the LLM call runs in the web BFF; this stores the turns)
+  // ------------------------------------------------------------------
+
+  const loadActiveSession = async (sid) => {
+    const session = await prisma.planViewSession.findUnique({
+      where: { id: sid },
+      include: { accessCode: { select: { id: true, label: true, audience: true, revokedAt: true, expiresAt: true } } },
+    });
+    return session && isActive(session.accessCode, now()) ? session : null;
+  };
+
+  const chatHistory = async (sid, take) => {
+    const rows = await prisma.planChatMessage.findMany({
+      where: { sessionId: sid },
+      orderBy: { createdAt: "desc" },
+      take,
+      select: { role: true, content: true, createdAt: true, escalated: true },
+    });
+    return rows.reverse();
+  };
+
+  app.post("/plan/sessions/:sid/chat/begin", { onRequest: requirePlanApiKey }, async (req, reply) => {
+    const { sid } = req.params;
+    const body = req.body || {};
+    const message = typeof body.message === "string" ? body.message.trim() : "";
+    const sectionKey = typeof body.sectionKey === "string" && SECTION_KEY_RE.test(body.sectionKey) ? body.sectionKey : null;
+    if (message.length < 1 || message.length > CHAT_MAX_CHARS) return reply.code(400).send({ error: "bad_request" });
+
+    const session = await loadActiveSession(sid);
+    if (!session) return reply.code(401).send(INVALID);
+
+    const since = new Date(now().getTime() - DAY_MS);
+    const [mine, theirs] = await Promise.all([
+      prisma.planChatMessage.count({ where: { sessionId: sid, role: "user", createdAt: { gte: since } } }),
+      prisma.planChatMessage.count({ where: { accessCodeId: session.accessCode.id, role: "user", createdAt: { gte: since } } }),
+    ]);
+    if (mine >= CHAT_PER_SESSION_DAY || theirs >= CHAT_PER_CODE_DAY) return reply.code(429).send({ error: "too_many_messages" });
+
+    // The visit started at the end of the last summarized visit (or the session start).
+    const lastVisit = await prisma.planVisitSummary.findFirst({ where: { sessionId: sid }, orderBy: { visitEnd: "desc" }, select: { visitEnd: true } });
+    const visitStart = lastVisit?.visitEnd || session.startedAt;
+    const earlier = await prisma.planChatMessage.count({ where: { sessionId: sid, role: "user", createdAt: { gt: visitStart } } });
+
+    const history = await chatHistory(sid, CHAT_HISTORY);
+    await prisma.planChatMessage.create({
+      data: { sessionId: sid, accessCodeId: session.accessCode.id, role: "user", content: message, sectionKey },
+    });
+    await prisma.planViewSession.update({ where: { id: sid }, data: { lastSeenAt: now() } });
+
+    const to = ownerPhone();
+    if (earlier === 0 && to) {
+      try {
+        await sendSms({ to, body: firstChatText({ label: session.accessCode.label, audience: session.accessCode.audience, sectionKey, message }) });
+      } catch (err) {
+        app.log.error({ err }, "[plan] first-chat SMS failed");
+      }
+    }
+    return reply.send({ ok: true, history: history.map(({ role, content }) => ({ role, content })) });
+  });
+
+  app.post("/plan/sessions/:sid/chat/complete", { onRequest: requirePlanApiKey }, async (req, reply) => {
+    const { sid } = req.params;
+    const body = req.body || {};
+    const content = typeof body.content === "string" ? body.content.trim().slice(0, 8000) : "";
+    const sectionKey = typeof body.sectionKey === "string" && SECTION_KEY_RE.test(body.sectionKey) ? body.sectionKey : null;
+    if (!content) return reply.code(400).send({ error: "bad_request" });
+    const session = await loadActiveSession(sid);
+    if (!session) return reply.code(401).send(INVALID);
+    await prisma.planChatMessage.create({
+      data: { sessionId: sid, accessCodeId: session.accessCode.id, role: "assistant", content, sectionKey, escalated: body.escalated === true },
+    });
+    await prisma.planViewSession.update({ where: { id: sid }, data: { lastSeenAt: now() } });
+    return reply.code(201).send({ ok: true });
+  });
+
+  app.post("/plan/sessions/:sid/chat/history", { onRequest: requirePlanApiKey }, async (req, reply) => {
+    const session = await loadActiveSession(req.params.sid);
+    if (!session) return reply.code(401).send(INVALID);
+    const history = await chatHistory(req.params.sid, 40);
+    return reply.send({ history: history.map(({ role, content }) => ({ role, content })) });
+  });
+
+  app.post("/plan/sessions/:sid/event", { onRequest: requirePlanApiKey }, async (req, reply) => {
+    const { sid } = req.params;
+    const body = req.body || {};
+    const type = typeof body.type === "string" ? body.type : "";
+    if (!EVENT_TYPES.includes(type)) return reply.code(400).send({ error: "bad_event" });
+    const value = typeof body.value === "string" ? body.value.slice(0, 40) : undefined;
+    const session = await loadActiveSession(sid);
+    if (!session) return reply.code(401).send(INVALID);
+    const prior = Array.isArray(session.events) ? session.events : [];
+    const events = [...prior, { type, ...(value ? { value } : {}), at: now().toISOString() }].slice(-EVENTS_MAX);
+    await prisma.planViewSession.update({ where: { id: sid }, data: { events, lastSeenAt: now() } });
+    return reply.send({ ok: true });
+  });
+
+  if (deps.summaries !== false) {
+    startVisitSummaries({ prisma, sendSms, log: app.log, ...(typeof deps.summaries === "object" ? deps.summaries : {}) });
+  }
 
   // ------------------------------------------------------------------
   // Admin routes (guarded by the /admin hook in index.js)
@@ -319,7 +460,11 @@ export async function registerPlanRoutes(app, deps = {}) {
       include: {
         sessions: {
           orderBy: { startedAt: "desc" },
-          include: { sectionViews: { orderBy: { enteredAt: "asc" } } },
+          include: {
+            sectionViews: { orderBy: { enteredAt: "asc" } },
+            chatMessages: { orderBy: { createdAt: "asc" }, select: { id: true, role: true, content: true, sectionKey: true, escalated: true, createdAt: true } },
+            visitSummaries: { orderBy: { visitEnd: "desc" } },
+          },
         },
         questions: { orderBy: { createdAt: "desc" } },
       },

@@ -6,7 +6,7 @@ import { test, describe, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import Fastify from "fastify";
 import rateLimit from "@fastify/rate-limit";
-import { registerPlanRoutes } from "../routes.js";
+import { registerPlanRoutes, mergeTargets } from "../routes.js";
 import { generateCode, normalizeCode, safeEqual, CODE_WORDS } from "../codes.js";
 
 const API_KEY = "test-plan-key";
@@ -16,6 +16,8 @@ function makePrismaStub() {
   const sessions = new Map();
   const views = new Map();
   const questions = new Map();
+  const chats = [];
+  const summaries = [];
   let seq = 0;
   const id = (p) => `${p}_${++seq}`;
 
@@ -24,6 +26,8 @@ function makePrismaStub() {
     _sessions: sessions,
     _views: views,
     _questions: questions,
+    _chats: chats,
+    _summaries: summaries,
     planAccessCode: {
       async findUnique({ where, include }) {
         const rec = where.code
@@ -81,6 +85,7 @@ function makePrismaStub() {
         const rec = sessions.get(where.id);
         if (data.totalSeconds?.increment) rec.totalSeconds += data.totalSeconds.increment;
         if (data.lastSeenAt) rec.lastSeenAt = data.lastSeenAt;
+        if (data.events) rec.events = data.events;
         return rec;
       },
       async groupBy() {
@@ -90,12 +95,16 @@ function makePrismaStub() {
       },
     },
     planSectionView: {
+      async findUnique({ where }) {
+        return views.get(`${where.sessionId_sectionKey.sessionId}:${where.sessionId_sectionKey.sectionKey}`) || null;
+      },
       async upsert({ where, create, update }) {
         const key = `${where.sessionId_sectionKey.sessionId}:${where.sessionId_sectionKey.sectionKey}`;
         const existing = views.get(key);
         if (existing) {
           existing.seconds += update.seconds.increment;
           existing.interactions += update.interactions.increment;
+          if (update.targets) existing.targets = update.targets;
           return existing;
         }
         const rec = { id: id("view"), enteredAt: new Date(), ...create };
@@ -109,8 +118,38 @@ function makePrismaStub() {
         questions.set(rec.id, rec);
         return rec;
       },
+      async count({ where }) {
+        return [...questions.values()].filter((q) => q.accessCodeId === where.accessCodeId && (!where.createdAt?.gte || q.createdAt >= where.createdAt.gte)).length;
+      },
       async findUnique({ where }) { return questions.get(where.id) || null; },
       async update({ where, data }) { const rec = questions.get(where.id); Object.assign(rec, data); return rec; },
+    },
+    planChatMessage: {
+      async create({ data }) {
+        const rec = { id: id("chat"), createdAt: new Date(Date.now() + chats.length), escalated: false, ...data };
+        chats.push(rec);
+        return rec;
+      },
+      async count({ where }) {
+        return chats.filter((c) => (!where.sessionId || c.sessionId === where.sessionId)
+          && (!where.accessCodeId || c.accessCodeId === where.accessCodeId)
+          && (!where.role || c.role === where.role)
+          && (!where.createdAt?.gte || c.createdAt >= where.createdAt.gte)
+          && (!where.createdAt?.gt || c.createdAt > where.createdAt.gt)).length;
+      },
+      async findMany({ where, orderBy, take }) {
+        let rows = chats.filter((c) => c.sessionId === where.sessionId && (!where.createdAt?.gt || c.createdAt > where.createdAt.gt));
+        if (orderBy?.createdAt === "desc") rows = [...rows].reverse();
+        return take ? rows.slice(0, take) : rows;
+      },
+    },
+    planVisitSummary: {
+      async findFirst({ where }) {
+        const rows = summaries.filter((r) => r.sessionId === where.sessionId).sort((a, b) => b.visitEnd - a.visitEnd);
+        return rows[0] || null;
+      },
+      async create({ data }) { const rec = { id: id("visit"), ...data }; summaries.push(rec); return rec; },
+      async update({ where, data }) { const rec = summaries.find((r) => r.id === where.id); Object.assign(rec, data); return rec; },
     },
   };
   return stub;
@@ -124,6 +163,7 @@ async function buildApp({ prisma, sms = [], now } = {}) {
     apiKey: API_KEY,
     sendSms: async (msg) => { sms.push(msg); },
     now,
+    summaries: false,
   });
   await app.ready();
   return app;
@@ -276,7 +316,7 @@ describe("heartbeat and questions", () => {
     assert.equal(prisma._questions.size, 1);
     assert.equal(sms.length, 1);
     assert.match(sms[0].body, /Jim R\./);
-    assert.match(sms[0].body, /sensitivity/);
+    assert.match(sms[0].body, /Sensitivity and Risk/);
     const bad = await app.inject({ method: "POST", url: `/plan/sessions/${sid}/questions`, headers: { "x-plan-api-key": API_KEY }, payload: { sectionKey: "sensitivity", body: "x" } });
     assert.equal(bad.statusCode, 400);
   });
@@ -334,5 +374,77 @@ describe("/admin/plan", () => {
     const list2 = await app.inject({ method: "GET", url: "/admin/plan/codes" });
     assert.equal(list2.json().codes[0].status, "REVOKED");
     assert.equal((await app.inject({ method: "PATCH", url: "/admin/plan/codes/nope/revoke" })).statusCode, 404);
+  });
+});
+
+describe("Chappy chat, events and interaction targets", () => {
+  let prisma; let app; let sid; const sms = [];
+  const post = (url, payload) => app.inject({ method: "POST", url, headers: { "x-plan-api-key": API_KEY }, payload });
+  beforeEach(async () => {
+    sms.length = 0;
+    process.env.OWNER_ALERT_PHONE = "+15550001111";
+    prisma = makePrismaStub();
+    await prisma.planAccessCode.create({ data: { code: "OH-HERON-4444", label: "Pat L. - Lakeview Realty", audience: "LANDLORD", defaultScenario: "BASE", allowedSections: [] } });
+    app = await buildApp({ prisma, sms });
+    sid = (await app.inject(auth({ code: "OH-HERON-4444", ipHash: "z" }))).json().sid;
+  });
+
+  test("first chat of a visit texts the owner once; later messages do not", async () => {
+    const a = await post(`/plan/sessions/${sid}/chat/begin`, { message: "How many square feet?", sectionKey: "floor-plan" });
+    assert.equal(a.statusCode, 200);
+    assert.deepEqual(a.json().history, []);
+    await post(`/plan/sessions/${sid}/chat/complete`, { content: "About 2,400. Try to keep up.", sectionKey: "floor-plan" });
+    const b = await post(`/plan/sessions/${sid}/chat/begin`, { message: "And hours?", sectionKey: "operations" });
+    assert.equal(b.statusCode, 200);
+    assert.deepEqual(b.json().history.map((m) => m.role), ["user", "assistant"]);
+    assert.equal(sms.length, 1);
+    assert.match(sms[0].body, /Pat L\. - Lakeview Realty \(Landlord\)/);
+    assert.match(sms[0].body, /How many square feet\?/);
+    const hist = await post(`/plan/sessions/${sid}/chat/history`, {});
+    assert.equal(hist.json().history.length, 3);
+  });
+
+  test("a new visit after a summary texts again", async () => {
+    await post(`/plan/sessions/${sid}/chat/begin`, { message: "hi" });
+    prisma._summaries.push({ id: "v1", sessionId: sid, visitEnd: new Date(Date.now() + 10_000) });
+    await new Promise((r) => setTimeout(r, 5));
+    prisma._chats.forEach((c) => { c.createdAt = new Date(0); });
+    await post(`/plan/sessions/${sid}/chat/begin`, { message: "back again" });
+    assert.equal(sms.length, 2);
+  });
+
+  test("chat rejects empty and overlong messages and enforces the per-session cap", async () => {
+    assert.equal((await post(`/plan/sessions/${sid}/chat/begin`, { message: "" })).statusCode, 400);
+    assert.equal((await post(`/plan/sessions/${sid}/chat/begin`, { message: "x".repeat(1501) })).statusCode, 400);
+    for (let i = 0; i < 40; i += 1) await prisma.planChatMessage.create({ data: { sessionId: sid, accessCodeId: prisma._sessions.get(sid).accessCodeId, role: "user", content: "q" } });
+    assert.equal((await post(`/plan/sessions/${sid}/chat/begin`, { message: "one more" })).statusCode, 429);
+  });
+
+  test("escalations text the owner in Chappy's voice with the reply address", async () => {
+    const res = await post(`/plan/sessions/${sid}/questions`, { sectionKey: "floor-plan", body: "Can we meet about the lease?", contactEmail: "pat@lakeview.example" });
+    assert.equal(res.statusCode, 201);
+    assert.match(sms.at(-1).body, /^Chappy escalation: Pat L\./);
+    assert.match(sms.at(-1).body, /pat@lakeview\.example/);
+  });
+
+  test("events append with a cap and reject unknown types", async () => {
+    assert.equal((await post(`/plan/sessions/${sid}/event`, { type: "hack" })).statusCode, 400);
+    for (let i = 0; i < 55; i += 1) await post(`/plan/sessions/${sid}/event`, { type: "scenario", value: `v${i}` });
+    const ev = prisma._sessions.get(sid).events;
+    assert.equal(ev.length, 50);
+    assert.equal(ev.at(-1).value, "v54");
+  });
+
+  test("heartbeat merges interaction targets", async () => {
+    await post(`/plan/sessions/${sid}/heartbeat`, { sectionKey: "floor-plan", seconds: 5, interactions: 3, targets: { "3D view": 2, "Pods": 1 } });
+    await post(`/plan/sessions/${sid}/heartbeat`, { sectionKey: "floor-plan", seconds: 5, interactions: 1, targets: { "3D view": 1 } });
+    const view = prisma._views.get(`${sid}:floor-plan`);
+    assert.deepEqual(view.targets, { "3D view": 3, "Pods": 1 });
+    assert.equal(view.seconds, 10);
+  });
+
+  test("mergeTargets clips labels and ignores junk", () => {
+    assert.deepEqual(mergeTargets(null, { "  a   b ": 2, bad: -1, zero: 0 }), { "a b": 2 });
+    assert.deepEqual(mergeTargets({ a: 1 }, ["x"]), { a: 1 });
   });
 });
