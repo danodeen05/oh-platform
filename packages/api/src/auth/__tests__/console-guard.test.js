@@ -102,6 +102,15 @@ describe("requestPath", () => {
   test("returns the raw path without throwing on malformed encoding", () => {
     assert.equal(requestPath({ url: "/%E0%A4%A" }), "/%E0%A4%A");
   });
+
+  // catering/routes.js reuses requestPath for the CATERING_PUBLIC_ENABLED gate
+  // (see packages/api/src/catering/routes.js). registerCateringRoutes isn't
+  // cheaply unit-testable in isolation: it calls loadDineInFlag() at
+  // registration time, which hits the real Prisma-backed DB. This test only
+  // covers the shared decoding behavior the gate depends on.
+  test("decodes the /%63atering/... bypass the same way as /admin", () => {
+    assert.equal(requestPath({ url: "/%63atering/x" }), "/catering/x");
+  });
 });
 
 describe("registerAdminPathGuard", () => {
