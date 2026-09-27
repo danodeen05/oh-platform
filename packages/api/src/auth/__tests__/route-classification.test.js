@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { CONSOLE_ROUTES, MUST_STAY_OPEN, routeKey } from "../console-guard.js";
 import { PUBLIC_ROUTES } from "../public-routes.js";
 
-const SOURCES = ["../../index.js", "../../catering/routes.js", "../../autonomous/routes.js", "../../triggers/webhooks.js"];
+const SOURCES = ["../../index.js", "../../catering/routes.js", "../../autonomous/routes.js", "../../triggers/webhooks.js", "../../membership/routes.js", "../../orders/routes.js", "../../orders/group-routes.js", "../../orders/gift-card-routes.js"];
 const ROUTE_RE = /\b(?:app|fastify|server|instance)\.(get|post|put|patch|delete)\(\s*["'`]([^"'`]+)["'`]/g;
 
 function parsedRoutes() {

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { API_URL } from "@/lib/api";
+import { useSiteApi } from "@/lib/site/api";
 
 type PhoneCollectionModalProps = {
   userId: string;
@@ -18,6 +19,7 @@ export function PhoneCollectionModal({
   onSkip,
 }: PhoneCollectionModalProps) {
   const t = useTranslations("phoneCollection");
+  const api = useSiteApi();
   const [phone, setPhone] = useState("");
   const [smsOptIn, setSmsOptIn] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -40,7 +42,7 @@ export function PhoneCollectionModal({
     setError("");
 
     try {
-      const response = await fetch(`${API_URL}/users/${userId}/phone`, {
+      const response = await api(`${API_URL}/users/${userId}/phone`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",

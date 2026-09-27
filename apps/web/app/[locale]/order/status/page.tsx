@@ -3,6 +3,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState, useRef, Suspense } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { useUser, useSignUp, useSignIn } from "@clerk/nextjs";
+import { useSiteApi } from "@/lib/site/api";
 import { useToast } from "@/components/ui/Toast";
 import { ConfirmDialog } from "@/components/ui/Dialog";
 
@@ -353,6 +354,7 @@ function StatusContent() {
   const tOrder = useTranslations("order");
   const toast = useToast();
   const { user, isLoaded: isUserLoaded } = useUser();
+  const api = useSiteApi();
   // DEMO- codes are the synthetic demo order (packages/api/src/demo/status-demo.js).
   // In demo mode the stage is pinned in the code ("DEMO-PLAN.PREPPING") and
   // either plays by itself or, with ?demoSync=parent, follows postMessages from
@@ -796,31 +798,24 @@ function StatusContent() {
         throw new Error(data.error || "Failed to create add-on order");
       }
 
-      const { order: addonOrder, totalCents } = await response.json();
+      const { order: addonOrder, totalCents, demo } = await response.json();
 
-      // Mark as paid (test payment mode - same as main payment flow)
-      // Add-on orders go straight to PREPPING since customer is already at pod
-      const payResponse = await fetch(`${BASE}/orders/${addonOrder.id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "x-tenant-slug": "oh",
-        },
-        body: JSON.stringify({
-          paymentStatus: "PAID",
-          status: "PREPPING",
-          podConfirmedAt: new Date().toISOString(),
-        }),
-      });
-
-      if (!payResponse.ok) {
-        throw new Error("Payment processing failed");
+      // The plan's status demo simulates the add-on; nothing is charged or cooked.
+      if (demo) {
+        toast.success(tOrder("success.addonOrdered", { amount: `$${(totalCents / 100).toFixed(2)}` }));
+        setShowAddOnModal(false);
+        setSelectedPaidAddons(new Map());
+        setShowPaymentConfirm(false);
+        return;
       }
 
-      toast.success(tOrder("success.addonOrdered", { amount: `$${(totalCents / 100).toFixed(2)}` }));
+      // Pay through the regular checkout: the server prices the add-on and
+      // marks it PAID only after Stripe confirms (Task A6). A paid add-on then
+      // goes straight to PREPPING since the guest is already at the pod.
       setShowAddOnModal(false);
       setSelectedPaidAddons(new Map());
       setShowPaymentConfirm(false);
+      window.location.href = `/${locale}/order/payment?orderId=${addonOrder.id}&orderNumber=${encodeURIComponent(addonOrder.orderNumber)}`;
     } catch (err: any) {
       console.error("Failed to submit paid add-on:", err);
       toast.error(err.message || tOrder("errors.placeAddonOrder"));
@@ -873,17 +868,23 @@ function StatusContent() {
         // Only link if we're viewing the same order that was pending
         if (pendingQrCode !== orderQrCode) return;
 
-        // Call API to link order to account
-        const response = await fetch(`${BASE}/orders/link-to-account`, {
+        // Make sure the member row exists (POST /users is the sign-up upsert),
+        // then link. The API takes the account from the verified session.
+        const email = user.primaryEmailAddress?.emailAddress;
+        if (email) {
+          await api(`${BASE}/users`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, name: user.fullName || user.firstName || undefined }),
+          });
+        }
+        const response = await api(`${BASE}/orders/link-to-account`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             "x-tenant-slug": "oh",
           },
-          body: JSON.stringify({
-            orderQrCode: pendingQrCode,
-            userId: user.id,
-          }),
+          body: JSON.stringify({ orderQrCode: pendingQrCode }),
         });
 
         if (response.ok) {

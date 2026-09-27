@@ -84,26 +84,28 @@ export default async function PlanLayout({ children, params }: Props) {
 
       <header data-plan-shell="" className="relative sticky top-0 z-40 border-b border-oh-stone bg-oh-charcoal/95 backdrop-blur supports-[backdrop-filter]:bg-oh-charcoal/80">
         {/* Desktop (lg and up): the mark sits in the left margin, vertically centered across both header rows,
-            so it can be large without making the header taller. It hugs the content column once the
-            viewport is wide enough to have a real margin (2xl); below that the rows get left padding. */}
+            so it can be large without making the header taller. It sits 1.5rem outside the content column
+            once the margin is wide enough; until then the rows' left padding grows just enough to clear it
+            (mark 7.875rem + 1.5rem inset + 1rem gap = 10.375rem, less the margin already there). */}
         <a
           href={sectionHref(locale, { slug: "" })}
           aria-hidden="true"
           tabIndex={-1}
           className="absolute top-1/2 hidden -translate-y-1/2 lg:block"
-          style={{ left: "max(1.5rem, calc(50% - 40rem - 6rem))" }}
+          style={{ left: "max(1.5rem, calc(50% - 40rem - 9.375rem))" }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/plan/mark-light-176.png" alt="" width={72} height={71} className="h-[4.5rem] w-auto" />
+          <img src="/plan/mark-light-256.png" alt="" width={126} height={125} className="h-[7.875rem] w-auto" />
         </a>
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 lg:pl-28 lg:pr-8 2xl:pl-8">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 lg:pl-[max(7rem,calc(10.375rem_-_max(0rem,(100%_-_80rem)/2)))] lg:pr-8 2xl:pl-[max(2rem,calc(10.375rem_-_max(0rem,(100%_-_80rem)/2)))]">
           <a href={sectionHref(locale, { slug: "" })} aria-label={t("planTitle")} className="flex min-w-0 items-center gap-3 text-oh-cream">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/plan/mark-light-56.png" alt="" width={28} height={28} className="h-7 w-auto lg:hidden" />
+            <img src="/plan/mark-light-176.png" alt="" width={49} height={48} className="h-[3.0625rem] w-auto lg:hidden" />
             <span className="hidden truncate whitespace-nowrap font-display text-[1.35rem] tracking-wide sm:inline lg:text-[1.6rem]">{t("planTitle")}</span>
           </a>
           <div className="flex shrink-0 items-center gap-2 lg:gap-3">
-            <span className="hidden lg:inline-flex">
+            {/* capped below xl so the top row still fits beside the large mark at 1024px */}
+            <span className="hidden lg:inline-flex lg:max-w-[10rem] xl:max-w-none">
               <AudienceBadge audience={t(`audience.${claims.aud}`)} label={claims.lbl} />
             </span>
             <span className="hidden md:inline-flex">
@@ -119,7 +121,7 @@ export default async function PlanLayout({ children, params }: Props) {
             <ClosePlanButton label={t("signOut")} locale={locale} />
           </div>
         </div>
-        <div className="mx-auto hidden max-w-7xl px-4 pb-2 md:block md:px-6 lg:pl-28 lg:pr-8 2xl:pl-8">
+        <div className="mx-auto hidden max-w-7xl px-4 pb-2 md:block md:px-6 lg:pl-[max(7rem,calc(10.375rem_-_max(0rem,(100%_-_80rem)/2)))] lg:pr-8 2xl:pl-[max(2rem,calc(10.375rem_-_max(0rem,(100%_-_80rem)/2)))]">
           <PlanNav locale={locale} sections={sections} labels={{ sections: t("sections") }} />
         </div>
       </header>

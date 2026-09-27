@@ -1,5 +1,7 @@
 "use client";
 
+import { FrameLoader, useIframeLoaded } from "@/components/plan/primitives/FrameLoader";
+
 interface Props {
   src: string;
   title: string;
@@ -14,6 +16,7 @@ interface Props {
  * scales it to whatever size the screen is, so nothing re-flows or overlaps.
  */
 export function KioskFrame({ src, title }: Props) {
+  const { loaded, onLoad, check } = useIframeLoaded(src);
   return (
     <div className="mx-auto w-full max-w-[980px]">
       {/* body */}
@@ -24,7 +27,8 @@ export function KioskFrame({ src, title }: Props) {
         <div className="rounded-[1.5rem] bg-oh-charcoal p-[10px] shadow-[inset_0_0_0_1px_rgba(242,237,228,0.06)]">
           {/* screen, 4:3 like the tablet the kiosk was built for */}
           <div className="relative overflow-hidden rounded-[1.1rem] bg-[#FAF9F6] ring-1 ring-oh-stone/70" style={{ aspectRatio: "1366 / 1024" }}>
-            <iframe src={src} title={title} loading="lazy" className="absolute inset-0 h-full w-full border-0" />
+            <iframe ref={check} src={src} title={title} loading="lazy" onLoad={onLoad} className="absolute inset-0 h-full w-full border-0" />
+            <FrameLoader done={loaded} className="w-[14%] max-w-[130px]" />
             {/* glass: a faint highlight along the top edge, never in the way of taps */}
             <div aria-hidden="true" className="pointer-events-none absolute inset-0 rounded-[1.1rem] bg-[linear-gradient(180deg,rgba(242,237,228,0.05)_0%,rgba(242,237,228,0)_18%)]" />
           </div>

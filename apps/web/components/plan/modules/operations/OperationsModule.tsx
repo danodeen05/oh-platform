@@ -123,7 +123,7 @@ export function OperationsModule() {
       </section>
 
       <section className="grid items-start gap-8 md:grid-cols-[1fr_1fr]">
-        <PlanPhoto src="/plan/operations-kds.webp" alt={t("kds.needs")} width={1600} height={932} caption={t("kds.caption")} />
+        <PlanPhoto src="/plan/operations-kds.webp" alt={t("kds.needs")} width={1600} height={794} caption={t("kds.caption")} />
         <div>
           <h2 className="m-0 mb-1 font-display text-[1.5rem] text-oh-cream">{t("kds.title")}</h2>
           <p className="m-0 text-[0.9rem] leading-relaxed text-oh-mute">{t("kds.body")}</p>

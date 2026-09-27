@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { kioskAuthHeaders } from './KioskDeviceProvider';
 
 // Kiosk color system
 const COLORS = {
@@ -30,8 +31,13 @@ type PaymentStatus =
 
 interface PaymentScreenProps {
   orderId: string;
+  /** Every order this payment covers (single check); the server charges their sum. */
+  orderIds?: string[];
+  /** Shown on screen only; the charge is computed by the API from the orders. */
   amountCents: number;
   locationId?: string;
+  /** Business-plan demo: simulate the terminal; no PaymentIntent, no reader. */
+  demo?: boolean;
   onSuccess: (paymentIntentId: string) => void;
   onCancel: () => void;
   onError?: (error: string) => void;
@@ -43,8 +49,10 @@ interface PaymentScreenProps {
  */
 export function PaymentScreen({
   orderId,
+  orderIds,
   amountCents,
   locationId,
+  demo = false,
   onSuccess,
   onCancel,
   onError,
@@ -105,6 +113,14 @@ export function PaymentScreen({
     if (!isRetry && initiatedRef.current) return;
     initiatedRef.current = true;
 
+    if (demo) {
+      setStatus('initializing');
+      setError(null);
+      await new Promise(r => setTimeout(r, 900));
+      setStatus('waiting_for_card');
+      return; // the guest's tap on the screen stands in for the card reader
+    }
+
     try {
       setStatus('initializing');
       setError(null);
@@ -112,8 +128,8 @@ export function PaymentScreen({
       // Step 1: Create PaymentIntent
       const intentRes = await fetch('/api/kiosk/payments/create-intent', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId, amountCents, locationId }),
+        headers: { 'Content-Type': 'application/json', ...kioskAuthHeaders() },
+        body: JSON.stringify({ orderId, orderIds: orderIds && orderIds.length ? orderIds : [orderId], locationId }),
       });
 
       if (!intentRes.ok) {
@@ -122,6 +138,12 @@ export function PaymentScreen({
       }
 
       const { paymentIntentId: intentId } = await intentRes.json();
+      if (!intentId) {
+        // Nothing to charge (fully covered): the server confirms the zero balance.
+        setStatus('success');
+        onSuccess('');
+        return;
+      }
       setPaymentIntentId(intentId);
 
       // Step 2: Send to S700 reader
@@ -156,7 +178,15 @@ export function PaymentScreen({
       setError(errorMessage);
       onError?.(errorMessage);
     }
-  }, [orderId, amountCents, locationId, onSuccess, onError, pollPaymentStatus]);
+  }, [orderId, orderIds, locationId, demo, onSuccess, onError, pollPaymentStatus]);
+
+  // Demo only: the "card" was tapped, so play processing and success.
+  const demoTap = async () => {
+    setStatus('processing');
+    await new Promise(r => setTimeout(r, 1800));
+    setStatus('success');
+    setTimeout(() => onSuccess('pi_demo'), 1500);
+  };
 
   // Start payment on mount, cancel on unmount
   useEffect(() => {
@@ -164,10 +194,11 @@ export function PaymentScreen({
 
     // Cleanup: cancel reader action when component unmounts
     return () => {
+      if (demo) return;
       // Cancel reader action directly (fire-and-forget)
       fetch('/api/kiosk/payments/cancel-reader', { method: 'POST' }).catch(() => {});
     };
-  }, [initiatePayment]);
+  }, [initiatePayment, demo]);
 
   // Handle cancel
   const handleCancel = async () => {
@@ -242,12 +273,28 @@ export function PaymentScreen({
             <h2 style={{ fontSize: '1.75rem', fontWeight: 600, color: COLORS.text, marginBottom: 12 }}>
               Tap, Insert, or Swipe
             </h2>
-            <p style={{ color: COLORS.textMuted, fontSize: '1.125rem', marginBottom: 24 }}>
-              Use the card reader below
-            </p>
-            <div style={{ fontSize: '3rem' }} className="kiosk-bounce">
-              ↓
-            </div>
+            {demo ? (
+              <>
+                <p style={{ color: COLORS.textMuted, fontSize: '1.125rem', marginBottom: 24 }}>
+                  Tap below to pay with a demo card
+                </p>
+                <button onClick={demoTap} className="kiosk-btn kiosk-btn-primary">
+                  Tap to Pay
+                </button>
+                <p style={{ color: COLORS.textMuted, fontSize: '0.95rem', marginTop: 16, marginBottom: 0 }}>
+                  Demo only. No card is charged.
+                </p>
+              </>
+            ) : (
+              <>
+                <p style={{ color: COLORS.textMuted, fontSize: '1.125rem', marginBottom: 24 }}>
+                  Use the card reader below
+                </p>
+                <div style={{ fontSize: '3rem' }} className="kiosk-bounce">
+                  ↓
+                </div>
+              </>
+            )}
           </>
         )}
 

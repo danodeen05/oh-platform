@@ -3,7 +3,7 @@ import { useState, useEffect, useLayoutEffect, ReactNode, Suspense } from "react
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import "./kiosk.css";
-import { IdleTimer, KioskDeviceProvider, useKioskDevice, KioskLockdown, KioskPrinterProvider } from "@/components/kiosk";
+import { IdleTimer, KioskDeviceProvider, useKioskDevice, KioskLockdown, KioskPrinterProvider, useKioskDemo } from "@/components/kiosk";
 
 // Default staff PIN - in production this would come from environment/config
 const STAFF_PIN = process.env.NEXT_PUBLIC_KIOSK_STAFF_PIN || "1234";
@@ -85,6 +85,8 @@ export default function KioskLayout({ children }: { children: ReactNode }) {
   // the tab so the order flow keeps it) or whenever the kiosk is embedded.
   const [fit, setFit] = useState(false);
   const [fitScale, setFitScale] = useState(1);
+  // Reads ?demo=1 on whichever kiosk page the demo opens on and keeps it for the tab.
+  useKioskDemo();
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const asked = params.get("fit") === "1";

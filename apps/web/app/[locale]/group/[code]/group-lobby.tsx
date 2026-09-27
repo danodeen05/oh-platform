@@ -2,6 +2,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { SignInButton, useUser } from "@clerk/nextjs";
+import { useSiteApi } from "@/lib/site/api";
+import { groupIdentityHeaders } from "@/lib/site/orders";
 import { API_URL } from "@/lib/api";
 import { useGuest } from "@/contexts/guest-context";
 import SeatingMap, { Seat } from "@/components/SeatingMap";
@@ -72,6 +74,8 @@ export default function GroupLobby({ initialGroup }: GroupLobbyProps) {
   const t = useTranslations("order");
   const toast = useToast();
   const { user, isLoaded: userLoaded } = useUser();
+  const api = useSiteApi();
+  // Group routes take the member from the Clerk session (api) or the guest session token.
   const { guest, isGuest, startGuestSession, isLoading: guestLoading } = useGuest();
   const [group, setGroup] = useState<GroupOrder>(initialGroup);
   const [joining, setJoining] = useState(false);
@@ -113,7 +117,7 @@ export default function GroupLobby({ initialGroup }: GroupLobbyProps) {
       setDbUserLoading(true);
       try {
         console.log("[GroupLobby] Fetching db user for:", user.primaryEmailAddress.emailAddress);
-        const res = await fetch(`${API_URL}/users`, {
+        const res = await api(`${API_URL}/users`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -143,6 +147,9 @@ export default function GroupLobby({ initialGroup }: GroupLobbyProps) {
 
     fetchDbUser();
   }, [userLoaded, user?.primaryEmailAddress?.emailAddress, user?.fullName, user?.firstName]);
+
+  // A guest proves who they are with their server-issued session token.
+  const identityHeaders = groupIdentityHeaders(dbUserId ? null : isGuest ? guest : null);
 
   // Check if current user is the host (compare database user IDs or guest IDs)
   const isHost = (dbUserId && dbUserId === group.hostUserId) ||
@@ -305,16 +312,15 @@ export default function GroupLobby({ initialGroup }: GroupLobbyProps) {
       }
 
       console.log("[GroupLobby] Calling join API with:", { userId, guestId });
-      const res = await fetch(`${API_URL}/group-orders/${group.code}/join`, {
+      const res = await api(`${API_URL}/group-orders/${group.code}/join`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "x-tenant-slug": "oh",
+          ...identityHeaders,
         },
-        body: JSON.stringify({
-          userId,
-          guestId,
-        }),
+        // The member is taken from the session; a guest id is only the guest checkout row.
+        body: JSON.stringify({ guestId }),
       });
 
       if (!res.ok) {
@@ -347,11 +353,12 @@ export default function GroupLobby({ initialGroup }: GroupLobbyProps) {
   // Host controls: close group (stop new members)
   async function handleCloseGroup() {
     try {
-      const res = await fetch(`${API_URL}/group-orders/${group.code}`, {
+      const res = await api(`${API_URL}/group-orders/${group.code}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
           "x-tenant-slug": "oh",
+          ...identityHeaders,
         },
         body: JSON.stringify({ status: "CLOSED" }),
       });
@@ -367,11 +374,12 @@ export default function GroupLobby({ initialGroup }: GroupLobbyProps) {
   // Host controls: cancel group order
   async function handleCancelGroup() {
     try {
-      const res = await fetch(`${API_URL}/group-orders/${group.code}`, {
+      const res = await api(`${API_URL}/group-orders/${group.code}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
           "x-tenant-slug": "oh",
+          ...identityHeaders,
         },
         body: JSON.stringify({ status: "CANCELLED" }),
       });
@@ -425,11 +433,12 @@ export default function GroupLobby({ initialGroup }: GroupLobbyProps) {
   // Host controls: set payment method
   async function handleSetPaymentMethod(method: "HOST_PAYS_ALL" | "PAY_YOUR_OWN") {
     try {
-      const res = await fetch(`${API_URL}/group-orders/${group.code}`, {
+      const res = await api(`${API_URL}/group-orders/${group.code}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
           "x-tenant-slug": "oh",
+          ...identityHeaders,
         },
         body: JSON.stringify({ paymentMethod: method }),
       });
@@ -466,11 +475,12 @@ export default function GroupLobby({ initialGroup }: GroupLobbyProps) {
       }
 
       // Mark group as ready for kitchen
-      const res = await fetch(`${API_URL}/group-orders/${group.code}/complete`, {
+      const res = await api(`${API_URL}/group-orders/${group.code}/complete`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "x-tenant-slug": "oh",
+          ...identityHeaders,
         },
         body: JSON.stringify({
           seatIds: assignedSeatIds,
@@ -499,9 +509,9 @@ export default function GroupLobby({ initialGroup }: GroupLobbyProps) {
     if (!myOrder) return;
 
     try {
-      const res = await fetch(`${API_URL}/group-orders/${group.code}/orders/${myOrder.id}`, {
+      const res = await api(`${API_URL}/group-orders/${group.code}/orders/${myOrder.id}`, {
         method: "DELETE",
-        headers: { "x-tenant-slug": "oh" },
+        headers: { "x-tenant-slug": "oh", ...identityHeaders },
       });
 
       if (res.ok) {
@@ -780,7 +790,7 @@ export default function GroupLobby({ initialGroup }: GroupLobbyProps) {
           </div>
 
           {/* Host Controls - integrated into "Your Order" block */}
-          {isHost && (group.status === "GATHERING" || group.status === "CLOSED") && (
+          {isHost && (group.status === "GATHERING" || group.status === "CLOSED" || group.status === "PAYING") && (
             <div style={{ marginTop: 20, paddingTop: 16, borderTop: "1px solid #86efac" }}>
               <h4 style={{ marginBottom: 12, color: "#166534", fontSize: "0.95rem" }}>Host Controls</h4>
 
@@ -862,7 +872,7 @@ export default function GroupLobby({ initialGroup }: GroupLobbyProps) {
               </div>
 
               {/* Pod Selection & Payment - when closed and payment method selected */}
-              {group.status === "CLOSED" && group.paymentMethod === "HOST_PAYS_ALL" && group.orders.length > 0 && (
+              {(group.status === "CLOSED" || group.status === "PAYING") && group.paymentMethod === "HOST_PAYS_ALL" && group.orders.length > 0 && (
                 <div style={{ marginTop: 16 }}>
                   {/* Step 1: Select Seating Option */}
                   <div style={{ marginBottom: 16 }}>

@@ -1,6 +1,7 @@
 "use client";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
+import { useSiteApi } from "@/lib/site/api";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -31,6 +32,7 @@ function PodContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const qrCode = searchParams.get("qr");
+  const api = useSiteApi();
 
   const [podInfo, setPodInfo] = useState<PodInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -88,10 +90,8 @@ function PodContent() {
     setError(null);
 
     try {
-      // Get userId from localStorage if available
-      const userId = localStorage.getItem("userId");
-
-      const response = await fetch(`${BASE}/pods/confirm-arrival`, {
+      // The API matches the signed-in member's order from the verified session.
+      const response = await api(`${BASE}/pods/confirm-arrival`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -99,7 +99,6 @@ function PodContent() {
         },
         body: JSON.stringify({
           podQrCode: qrCode,
-          userId: userId || undefined,
         }),
       });
 

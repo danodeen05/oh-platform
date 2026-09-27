@@ -53,7 +53,8 @@ export default async function PaymentPage({
   }
 
   // Get total from the order data, not from URL param
-  const subtotalCents = order.totalCents;
+  // Server-priced orders carry subtotalCents (their totalCents already includes tax).
+  const subtotalCents = order.subtotalCents ?? order.totalCents;
   const taxRate = order.location?.taxRate || 0;
   const taxCents = Math.round(subtotalCents * taxRate);
   const totalCents = subtotalCents + taxCents;

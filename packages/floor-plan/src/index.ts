@@ -1,0 +1,63 @@
+/**
+ * Public surface of `@oh/floor-plan`. Deliberately narrow: the mirror- and
+ * pod-count-dependent geometry (zones, walls, pods, paths, ...) is reached
+ * only through `buildLayout()`, never as a bare, always-unmirrored constant,
+ * so a caller can't accidentally bypass a location's `mirror`/`pods` option.
+ */
+export {
+  buildLayout,
+  LOCATION_LAYOUTS,
+  generatePods,
+  journeyClock,
+  samplePath,
+  pointAt,
+  statusStageAt,
+  area,
+  inRect,
+  JOURNEY_STEPS,
+  ANIMATED_STEPS,
+  JOURNEY_REAL_SECONDS,
+  JOURNEY_SECONDS,
+  PHASES,
+  PHONE_STAGES,
+  JOURNEY_POD,
+  LAYER_KEYS,
+  FT,
+  BUILDING,
+  DIMS,
+  HEIGHTS,
+  POD,
+  ROW_CAPACITY,
+} from "./layout";
+export type {
+  LayoutOptions,
+  Layout,
+  Rect,
+  Territory,
+  Side,
+  Point,
+  ZoneKey,
+  Zone,
+  FingerIndex,
+  Finger,
+  StaffCorridor,
+  AisleIndex,
+  GuestAisle,
+  Wall,
+  DoorKey,
+  Door,
+  OpeningKey,
+  Opening,
+  RowKey,
+  Row,
+  Pod,
+  AreaKey,
+  AreaLine,
+  LayerKey,
+  Actor,
+  JourneyStep,
+  PhoneStage,
+  JourneyMarkers,
+} from "./layout";
+
+export { podLabel, parsePodLabel } from "./labels";

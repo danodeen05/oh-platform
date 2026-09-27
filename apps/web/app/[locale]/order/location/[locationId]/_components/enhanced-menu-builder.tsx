@@ -2,6 +2,8 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
+import { useSiteApi } from "@/lib/site/api";
+import { create as createOrder, groupIdentityHeaders } from "@/lib/site/orders";
 import { useTranslations, useLocale } from "next-intl";
 import { SliderControl, SliderLegend } from "./slider-control";
 import { RadioGroup } from "./radio-group";
@@ -105,6 +107,7 @@ export default function EnhancedMenuBuilder({
 }: EnhancedMenuBuilderProps) {
   const router = useRouter();
   const { user, isLoaded: userLoaded } = useUser();
+  const api = useSiteApi();
   const { guest, isGuest } = useGuest();
   const t = useTranslations("order");
   const tMenu = useTranslations("menu");
@@ -195,7 +198,7 @@ export default function EnhancedMenuBuilder({
       }
 
       try {
-        const res = await fetch(`${BASE}/users`, {
+        const res = await api(`${BASE}/users`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -370,7 +373,7 @@ export default function EnhancedMenuBuilder({
         if (firstName) {
           url.searchParams.set("firstName", firstName);
         }
-        const response = await fetch(url.toString(), {
+        const response = await api(url.toString(), {
           headers: { "x-tenant-slug": "oh" },
         });
         if (response.ok) {
@@ -798,17 +801,16 @@ export default function EnhancedMenuBuilder({
             return;
           }
 
-          const groupResponse = await fetch(`${BASE}/group-orders/${groupCode}/orders`, {
+          // api() attaches the Clerk session and a guest sends its session token:
+          // the API takes the member from those, never from a body id.
+          const groupResponse = await api(`${BASE}/group-orders/${groupCode}/orders`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
               "x-tenant-slug": "oh",
+              ...groupIdentityHeaders(dbUserId ? null : guest),
             },
-            body: JSON.stringify({
-              items,
-              userId: dbUserId || null,
-              guestId: guestId,
-            }),
+            body: JSON.stringify({ items, guestId }),
           });
 
           if (!groupResponse.ok) {
@@ -855,21 +857,16 @@ export default function EnhancedMenuBuilder({
         }
       }
 
-      const response = await fetch(`${BASE}/orders`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(orderPayload),
-      });
+      const created = await createOrder(orderPayload, { fetcher: api, baseUrl: BASE });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error("Order creation failed:", response.status, errorData);
+      if (!created.ok) {
+        console.error("Order creation failed:", created.status, created.error);
         toast.error(t("errors.createOrder"));
         setSubmitting(false);
         return;
       }
 
-      order = await response.json();
+      order = created.data;
     }
 
     if (!order || !order.id || !order.orderNumber) {

@@ -804,6 +804,7 @@
     "addToAppleWallet": "Agregar a Apple Wallet",
     "addToGoogleWallet": "Agregar a Google Wallet",
     "walletComingSoon": "¡Integración completa de cartera próximamente! Modo de vista previa disponible.",
+    "walletUnavailable": "Los pases de Wallet no están disponibles en este momento. Inténtalo más tarde.",
     "tiers": {
       "chopstick": "Palillos",
       "noodleMaster": "Maestro de Fideos",
@@ -1538,7 +1539,18 @@
     "enterYourName": "Por favor ingresa tu nombre",
     "wantToEarnRewards": "¿Quieres ganar recompensas y rastrear tus pedidos?",
     "signInInstead": "Iniciar sesión en su lugar",
-    "waitLoadingAccount": "Por favor espera mientras cargamos tu cuenta..."
+    "waitLoadingAccount": "Por favor espera mientras cargamos tu cuenta...",
+    "errorCodes": {
+      "CREDIT_SHORT": "Tu saldo de créditos cambió. Revisa tu total e inténtalo de nuevo.",
+      "GIFT_CARD_SHORT": "El saldo de tu tarjeta de regalo cambió. Revisa tu total e inténtalo de nuevo.",
+      "MEAL_GIFT_UNAVAILABLE": "Ese regalo de comida ya no está disponible.",
+      "REWARD_UNAVAILABLE": "Esa recompensa ya no se puede usar.",
+      "PAYMENT_NOT_VERIFIED": "Aún no pudimos confirmar tu pago. Si se te cobró, muestra esta pantalla a nuestro personal.",
+      "ORDER_FAILED": "No pudimos completar tu pedido. Inténtalo de nuevo.",
+      "QUOTE_CHANGED": "El total de tu pedido cambió. Revísalo e inténtalo de nuevo.",
+      "REFUNDED": "No pudimos aplicar tu pago, así que te reembolsamos el total en tu tarjeta. Inténtalo de nuevo.",
+      "GROUP_CHANGED": "Parte de este grupo ya se pagó o cambió. Revisa el grupo e inténtalo de nuevo."
+    }
   },
   "groupOrder": {
     "notFound": "Grupo no encontrado",
@@ -1552,7 +1564,23 @@
     "groupOrders": "Pedidos del grupo",
     "checkInAll": "Registrar todos (Simular kiosco)",
     "checkingIn": "Registrando...",
-    "simulateCheckIn": "Simular registro"
+    "simulateCheckIn": "Simular registro",
+    "hostPay": {
+      "signInTitle": "Inicia sesión para pagar por el grupo",
+      "signInBody": "El anfitrión inicia sesión para pagar por todos.",
+      "signIn": "Iniciar sesión",
+      "loading": "Preparando el pago...",
+      "processing": "Confirmando el pago...",
+      "amountDue": "Total del grupo: {amount}",
+      "confirmFree": "Confirmar pedido del grupo",
+      "returnToGroup": "Volver al grupo",
+      "notHost": "Solo el anfitrión del grupo puede pagar por todos.",
+      "nothingToPay": "Todos los pedidos de este grupo ya están pagados.",
+      "groupChanged": "El grupo cambió mientras pagabas. Revisa el grupo y vuelve a pagar.",
+      "notVerified": "Aún no pudimos confirmar tu pago. Si se hizo el cargo, muestra esta pantalla a nuestro personal.",
+      "refunded": "No pudimos aplicar tu pago, así que te reembolsamos el total a tu tarjeta. Inténtalo de nuevo.",
+      "failed": "No pudimos completar el pago del grupo. Inténtalo de nuevo."
+    }
   },
   "social": {
     "instagram": "Instagram",
@@ -1850,7 +1878,8 @@
       "missingInfo": "Falta información del pedido o ubicación",
       "orderNotFound": "Pedido no encontrado",
       "failedToLoad": "Error al cargar detalles del pedido",
-      "oops": "¡Ups!"
+      "oops": "¡Ups!",
+      "deviceNotAuthorized": "Este kiosco no está configurado para el registro de miembros. Pide ayuda a un miembro del equipo."
     },
     "loading": "Cargando tu pedido...",
     "orderFlow": {

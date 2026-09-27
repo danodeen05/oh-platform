@@ -100,9 +100,9 @@ export function ExperienceModule() {
           <p className="m-0 mb-2 text-[0.72rem] uppercase tracking-[0.14em] text-oh-gold">{t("kiosk.eyebrow")}</p>
           <h2 className="m-0 font-display text-[clamp(1.6rem,3vw,2.2rem)] leading-[1.05] text-oh-cream">{t("kiosk.title")}</h2>
           <p className="m-0 mt-4 text-[1rem] leading-relaxed text-oh-mute">{t("kiosk.body")}</p>
-          <a href={`/${locale}/kiosk?locationId=${KIOSK_DEMO_LOCATION_ID}&fit=1`} target="_blank" rel="noreferrer" className="mt-4 inline-block text-[0.85rem] text-oh-ember-light underline-offset-2 hover:underline">{t("kiosk.open")}</a>
+          <a href={`/${locale}/kiosk?locationId=${KIOSK_DEMO_LOCATION_ID}&fit=1&demo=1`} target="_blank" rel="noreferrer" className="mt-4 inline-block text-[0.85rem] text-oh-ember-light underline-offset-2 hover:underline">{t("kiosk.open")}</a>
         </div>
-        <KioskFrame src={`/${locale}/kiosk?locationId=${KIOSK_DEMO_LOCATION_ID}&fit=1`} title={t("kiosk.title")} />
+        <KioskFrame src={`/${locale}/kiosk?locationId=${KIOSK_DEMO_LOCATION_ID}&fit=1&demo=1`} title={t("kiosk.title")} />
       </section>
     </div>
   );

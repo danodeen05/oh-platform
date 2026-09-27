@@ -107,7 +107,6 @@ export const CONSOLE_ROUTES = Object.freeze([
   r("PATCH", "/challenges/:id", OWNER),
   r("DELETE", "/challenges/:id", OWNER),
   r("GET", "/gift-cards/:id", STAFF),
-  r("POST", "/gift-cards/:id/redeem", OWNER),
   r("PATCH", "/shop/products/:id/inventory", STAFF),
   r("GET", "/shop/products/inventory/low-stock", STAFF),
   r("GET", "/shop/orders/:id", STAFF),
