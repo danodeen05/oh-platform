@@ -4,6 +4,7 @@ import Fastify from "fastify";
 import {
   CONSOLE_ROUTES, MUST_STAY_OPEN, OWNER, STAFF, FLOOR,
   registerConsoleGuard, routeKey, adminPathRoles,
+  registerAdminPathGuard, requestPath,
 } from "../console-guard.js";
 
 async function build({ requireRole } = {}) {
@@ -81,5 +82,71 @@ describe("route lists", () => {
     assert.equal(adminPathRoles("/admin/team?x=1"), OWNER);
     assert.equal(adminPathRoles("/admin/gift-cards/stats"), STAFF);
     assert.equal(adminPathRoles("/admin/planner"), STAFF);
+  });
+});
+
+describe("requestPath", () => {
+  test("prefers the matched route pattern when present", () => {
+    const req = { routeOptions: { url: "/admin/shop/orders/:id" }, url: "/admin/shop/orders/1" };
+    assert.equal(requestPath(req), "/admin/shop/orders/:id");
+  });
+
+  test("falls back to decoding raw url when routeOptions is missing", () => {
+    assert.equal(requestPath({ url: "/%61dmin/x?y" }), "/admin/x");
+  });
+
+  test("falls back to decoding raw url when routeOptions.url is absent", () => {
+    assert.equal(requestPath({ routeOptions: {}, url: "/%61dmin/x?y" }), "/admin/x");
+  });
+
+  test("returns the raw path without throwing on malformed encoding", () => {
+    assert.equal(requestPath({ url: "/%E0%A4%A" }), "/%E0%A4%A");
+  });
+});
+
+describe("registerAdminPathGuard", () => {
+  async function build() {
+    const app = Fastify({ logger: false });
+    const requireAdminAuth = async (req, reply) => {
+      if (req.headers.authorization !== "Bearer ok") {
+        return reply.code(401).send({ error: "Unauthorized - Admin authentication required" });
+      }
+    };
+    registerAdminPathGuard(app, { requireAdminAuth });
+    app.get("/admin/plan/codes", async () => ({ ok: true }));
+    app.get("/admin/shop/orders/:id", async () => ({ ok: true }));
+    app.get("/menu", async () => ({ ok: true }));
+    await app.ready();
+    return app;
+  }
+
+  test("blocks the raw-url encoding bypass and other /admin variants without auth", async () => {
+    const app = await build();
+    const cases = [
+      "/admin/plan/codes",
+      "/%61dmin/plan/codes",
+      "/admin/pl%61n/codes",
+      "/%2561dmin/plan/codes",
+      "/admin/shop/orders/%31",
+      "/admin/plan/codes?x=1",
+    ];
+    for (const url of cases) {
+      const res = await app.inject({ method: "GET", url });
+      assert.notEqual(res.statusCode, 200, `${url} must not be 200`);
+    }
+  });
+
+  test("allows admin routes with a valid token, including the encoded path", async () => {
+    const app = await build();
+    const res = await app.inject({
+      method: "GET", url: "/%61dmin/plan/codes", headers: { authorization: "Bearer ok" },
+    });
+    assert.equal(res.statusCode, 200);
+  });
+
+  test("public routes stay open without auth", async () => {
+    const app = await build();
+    const res = await app.inject({ method: "GET", url: "/menu" });
+    assert.equal(res.statusCode, 200);
   });
 });

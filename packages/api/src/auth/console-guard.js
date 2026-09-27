@@ -159,6 +159,27 @@ export function adminPathRoles(url) {
   return OWNER_ADMIN_PREFIXES.some((p) => path === p || path.startsWith(p + "/")) ? OWNER : STAFF;
 }
 
+/**
+ * The path Fastify actually routed this request to. Use this, never raw req.url,
+ * for auth decisions: /%61dmin/... routes to /admin/... but doesn't startWith("/admin").
+ */
+export function requestPath(req) {
+  const matched = req.routeOptions?.url;
+  if (typeof matched === "string" && matched.length > 0) return matched;
+  const raw = String(req.url || "").split("?")[0];
+  try { return decodeURIComponent(raw); } catch { return raw; }
+}
+
+/** Admin auth on every /admin route, decided on the routed path (see requestPath). */
+export function registerAdminPathGuard(app, { requireAdminAuth }) {
+  app.addHook("onRequest", async (req, reply) => {
+    if (requestPath(req).startsWith("/admin")) {
+      await requireAdminAuth(req, reply);
+      if (reply.sent) return reply;
+    }
+  });
+}
+
 export function registerConsoleGuard(app, { requireAdminAuth, requireRole, routes = CONSOLE_ROUTES }) {
   const index = new Map(routes.map((route) => [routeKey(route.method, route.url), route]));
   app.addHook("onRoute", (opts) => {
