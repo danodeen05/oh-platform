@@ -67,6 +67,9 @@ import { getOrchestrator } from "./autonomous/index.js";
 import { registerCateringRoutes, isDineInOrdersEnabled } from "./catering/routes.js";
 import { registerPlanRoutes } from "./plan/routes.js";
 import { registerMembershipRoutes } from "./membership/routes.js";
+import { registerOrderRoutes } from "./orders/routes.js";
+import { configureOrderService, markPaid, quoteOrder, OrderError } from "./orders/service.js";
+import { taxCents } from "./orders/pricing.js";
 import { PROGRAM, tierRule } from "./membership/program.js";
 import { onOrderCompleted, applyReferralSignup, visibleMenuItems, firstUnreleasedItem, profileForUser } from "./membership/engine.js";
 import { withStatusDemo, registerStatusDemoGuard } from "./demo/status-demo.js";
@@ -225,6 +228,49 @@ await registerPlanRoutes(app);
 
 // Register membership engine routes (GET /membership/program, GET /users/:id/rewards)
 await registerMembershipRoutes(app, { prisma });
+
+// Shared order service (orders/service.js, Task A6): pricing, creation and
+// server-verified payment for dine-in orders. The PAID side effects that used
+// to live in PATCH /orders/:id run from markPaid through these hooks.
+const notifyMode = () => (process.env.SUPPORT_NOTIFY || "live").toLowerCase();
+const orderEffects = {
+  // Honors SUPPORT_NOTIFY (off | log | live) so dev and tests never text anyone.
+  async sendOrderConfirmation(order) {
+    const mode = notifyMode();
+    if (mode === "off") return;
+    const full = await prisma.order.findUnique({ where: { id: order.id }, include: { items: { include: { menuItem: true } }, seat: true, location: true, user: true, guest: true } });
+    if (!full || !(full.user || full.guest)) return;
+    if (mode === "log") {
+      console.log(`[orders] SUPPORT_NOTIFY=log: would send order confirmation for ${full.orderNumber}`);
+      return;
+    }
+    await sendOrderConfirmation(full, full.user);
+  },
+  async afterPaid(order) {
+    if (!order.userId) return;
+    await checkAndAwardBadges(order.userId);
+    sendOrderCompletedNotification(order.userId, order.id).catch((err) => console.error("Failed to send wallet order notification:", err));
+    checkAndSendTierProgressNotification(order.userId).catch((err) => console.error("Failed to send wallet tier progress notification:", err));
+    const items = await prisma.orderItem.findMany({ where: { orderId: order.id }, include: { menuItem: true } });
+    await updateChallengeProgress(order.userId, { totalCents: order.totalCents, items });
+    if (order.creditsAppliedCents > 0) refreshUserWalletPass(order.userId).catch(console.error);
+  },
+  async mealGiftAccepted({ mealGiftId, order, appliedCents }) {
+    const mealGift = await prisma.mealGift.findUnique({ where: { id: mealGiftId } });
+    if (mealGift) await finishMealGiftAcceptance({ mealGift, recipientUserId: order.userId || null, appliedCents });
+  },
+  onOrderCompleted,
+};
+configureOrderService({ isDineInOrdersEnabled, effects: orderEffects });
+await registerOrderRoutes(app, {
+  prisma,
+  stripe,
+  customerAuth,
+  kioskAuth,
+  isDineInOrdersEnabled,
+  effects: orderEffects,
+  onOrderCompleted,
+});
 
 const PORT = process.env.PORT || process.env.API_PORT || 4000;
 
@@ -2729,6 +2775,8 @@ app.post("/seats/:id/force-clean", async (req, reply) => {
     });
     completedOrderIds.push(order.id);
     console.log(`Force-completed order ${order.kitchenOrderNumber || order.orderNumber} on pod ${seat.number}`);
+    // Membership payouts for the completion (idempotent; pays only PAID orders).
+    await onOrderCompleted(prisma, { orderId: order.id, now: new Date() });
   }
 
   // Set pod to CLEANING
@@ -3340,13 +3388,15 @@ app.post("/orders/:id/addons", async (req, reply) => {
     where: { id: { in: menuItemIds } },
   });
 
-  let totalCents = 0;
+  let subtotalCents = 0;
   const orderItems = items.map(item => {
     const menuItem = menuItems.find(m => m.id === item.menuItemId);
     if (!menuItem) throw new Error(`Menu item ${item.menuItemId} not found`);
+    const qty = Number(item.quantity || 1);
+    if (!Number.isInteger(qty) || qty < 1 || qty > 10) throw new Error("Invalid quantity");
 
-    const itemPrice = menuItem.basePriceCents * (item.quantity || 1);
-    totalCents += itemPrice;
+    const itemPrice = menuItem.basePriceCents * qty;
+    subtotalCents += itemPrice;
 
     return {
       menuItemId: item.menuItemId,
@@ -3355,6 +3405,10 @@ app.post("/orders/:id/addons", async (req, reply) => {
       selectedValue: item.selectedValue || null,
     };
   });
+
+  const addonLocation = order.locationId ? await prisma.location.findUnique({ where: { id: order.locationId } }) : null;
+  const addonTaxCents = taxCents(subtotalCents, addonLocation?.taxRate || 0);
+  const totalCents = subtotalCents + addonTaxCents;
 
   // Generate order number for the add-on
   const addonOrderNumber = `ADD-${Date.now()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
@@ -3370,7 +3424,12 @@ app.post("/orders/:id/addons", async (req, reply) => {
       addOnType: "PAID_ADDON",
       status: "PENDING_PAYMENT",
       paymentStatus: "PENDING",
+      // Server quote (Task A6): paid through POST /orders/:id/payment-intent
+      // and /confirm-payment like any order; tax at the location's rate.
+      subtotalCents,
+      taxCents: addonTaxCents,
       totalCents,
+      amountDueCents: totalCents,
       customizations: notes ? { notes } : null,
       items: {
         create: orderItems,
@@ -3486,12 +3545,14 @@ app.get("/orders/by-number/:orderNumber", async (req, reply) => {
 
   // Create or retrieve Stripe payment intent
   let clientSecret = null;
-  if (stripe && order.totalCents > 0) {
+  // Server-priced orders (Task A6) charge amountDueCents; legacy ones their totalCents.
+  const amountToCharge = order.amountDueCents ?? order.totalCents;
+  if (stripe && amountToCharge > 0) {
     try {
       // Check if we already have a payment intent
       if (order.stripePaymentIntentId) {
         const existingIntent = await stripe.paymentIntents.retrieve(order.stripePaymentIntentId);
-        if (existingIntent.status === "requires_payment_method" || existingIntent.status === "requires_confirmation") {
+        if ((existingIntent.status === "requires_payment_method" || existingIntent.status === "requires_confirmation") && existingIntent.amount === amountToCharge) {
           clientSecret = existingIntent.client_secret;
         }
       }
@@ -3499,7 +3560,7 @@ app.get("/orders/by-number/:orderNumber", async (req, reply) => {
       // Create new payment intent if needed
       if (!clientSecret) {
         const paymentIntent = await stripe.paymentIntents.create({
-          amount: order.totalCents,
+          amount: amountToCharge,
           currency: "usd",
           metadata: {
             orderId: order.id,
@@ -3581,171 +3642,8 @@ app.get("/orders/:id", async (req, reply) => {
   return localizedOrder;
 });
 
-app.post("/orders", async (req, reply) => {
-  // Feature flag: dine-in ordering toggle.
-  // Persisted in Tenant.dineInOrdersEnabled (default ON) and flipped at runtime
-  // via PATCH /admin/site-config/order-now (admin console "Order Now" toggle).
-  // Does NOT affect /orders/event or catering attendee orders.
-  if (!isDineInOrdersEnabled()) {
-    return reply.code(403).send({
-      error: "Online ordering is currently unavailable. Please visit us in person.",
-    });
-  }
-
-  const { locationId, tenantId, items, seatId, estimatedArrival, podSelectionMethod, guestId, guestName, isKioskOrder, dualPartnerSeatId, isDualPod } =
-    req.body || {};
-  // The order belongs to the verified caller only; a body userId is ignored
-  // (anonymous, guest and kiosk orders get null). See auth/customer.js.
-  const userId = orderOwnerId(await customerAuth.resolve(req));
-
-  if (!locationId || !tenantId || !items || !items.length) {
-    return reply
-      .code(400)
-      .send({ error: "locationId, tenantId, and items required" });
-  }
-
-  // Note: Arrival time validation disabled - frontend filters available times
-  // Backend accepts any arrival time to avoid timezone calculation issues
-
-  // Calculate total
-  const menuItems = await prisma.menuItem.findMany({
-    where: {
-      id: { in: items.map((item) => item.menuItemId) },
-    },
-  });
-
-  // Early access (membership/engine.js): reject an item the caller can't see
-  // yet, the same rule GET /menu and /menu/steps filter by - a client can't
-  // route around the listing filter by ordering the item's id directly.
-  const callerTier = await resolveCallerMembershipTier(req);
-  const notReleasedYet = firstUnreleasedItem(menuItems, callerTier, new Date());
-  if (notReleasedYet) {
-    return reply.code(400).send({ error: "ITEM_NOT_RELEASED", menuItemId: notReleasedYet.id });
-  }
-
-  // Helper function to calculate item price with flexible pricing
-  function calculateItemPrice(menuItem, quantity) {
-    // If quantity is within included amount, price is 0
-    if (quantity <= menuItem.includedQuantity) {
-      return 0;
-    }
-
-    // If there's an included quantity, only charge for extras
-    if (menuItem.includedQuantity > 0) {
-      const extraQuantity = quantity - menuItem.includedQuantity;
-      return menuItem.basePriceCents + menuItem.additionalPriceCents * (extraQuantity - 1);
-    }
-
-    // Standard pricing: base + additional for each extra
-    return menuItem.basePriceCents + menuItem.additionalPriceCents * (quantity - 1);
-  }
-
-  let totalCents = 0;
-  const orderItems = items.map((item) => {
-    const menuItem = menuItems.find((m) => m.id === item.menuItemId);
-    if (!menuItem) throw new Error(`Menu item ${item.menuItemId} not found`);
-
-    const itemTotal = calculateItemPrice(menuItem, item.quantity);
-    totalCents += itemTotal;
-
-    return {
-      menuItemId: item.menuItemId,
-      quantity: item.quantity,
-      priceCents: itemTotal,
-      // Store the display label for slider items (e.g., "Light", "Medium")
-      selectedValue: item.selectedValue || null,
-    };
-  });
-
-  // Generate unique order number (long format)
-  const orderNumber = `ORD-${Date.now()}-${Math.random()
-    .toString(36)
-    .substr(2, 6)
-    .toUpperCase()}`;
-
-  // Generate order QR code for customer scanning (at kiosk and pod)
-  const orderQrCode = `ORDER-${locationId.slice(-8)}-${Date.now()}-${Math.random()
-    .toString(36)
-    .substr(2, 6)
-    .toUpperCase()}`;
-
-  // Generate daily kitchen order number (0001-9999 per location per day)
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-
-  // Count today's PAID orders for this location to get next number
-  let todaysOrderCount = 0;
-  try {
-    todaysOrderCount = await prisma.order.count({
-      where: {
-        locationId,
-        paymentStatus: "PAID",
-        createdAt: {
-          gte: today,
-          lt: tomorrow,
-        },
-      },
-    });
-  } catch (error) {
-    console.error('Failed to count orders for kitchen number:', error.message);
-    // Fallback: use timestamp-based number
-    todaysOrderCount = 0;
-  }
-
-  // Format as 4-digit string (e.g., "0001", "0042", "0234")
-  const kitchenOrderNumber = String(todaysOrderCount + 1).padStart(4, "0");
-
-  // Create guest record if guestName provided (kiosk orders)
-  let resolvedGuestId = guestId;
-  if (!resolvedGuestId && guestName) {
-    const guest = await prisma.guest.create({
-      data: {
-        name: guestName,
-        sessionToken: `kiosk-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
-      },
-    });
-    resolvedGuestId = guest.id;
-  }
-
-  const order = await prisma.order.create({
-    data: {
-      orderNumber,
-      orderQrCode,
-      kitchenOrderNumber,
-      tenantId,
-      locationId,
-      seatId,
-      podSelectionMethod: seatId ? (podSelectionMethod || "CUSTOMER_SELECTED") : null,
-      podAssignedAt: seatId ? new Date() : null,
-      // Dual pod data
-      dualPartnerSeatId: dualPartnerSeatId || null,
-      isDualPod: isDualPod || false,
-      totalCents,
-      estimatedArrival: estimatedArrival ? new Date(estimatedArrival) : null,
-      userId: userId || null,
-      guestId: resolvedGuestId || null,
-      items: {
-        create: orderItems,
-      },
-    },
-    include: {
-      items: {
-        include: {
-          menuItem: true,
-        },
-      },
-      seat: true,
-      location: true,
-      guest: true,
-      user: true,
-    },
-  });
-
-  return order;
-});
+// POST /orders, /orders/quote, /orders/:id/payment-intent and /orders/:id/confirm-payment live in
+// orders/routes.js on the shared order service (orders/service.js, Task A6).
 
 // ==========================================
 // CNY PARTY 2026 EVENT ORDERING
@@ -4332,270 +4230,7 @@ function getZodiacEmoji(zodiac) {
   return emojis[zodiac] || "✨";
 }
 
-// PATCH /orders/:id - Update order status
-app.patch("/orders/:id", async (req, reply) => {
-  const { id } = req.params;
-  const {
-    status,
-    paymentStatus,
-    userId,
-    guestId,
-    totalCents,
-    taxCents,
-    estimatedArrival,
-    seatId,
-    podSelectionMethod,
-    podAssignedAt,
-    podConfirmedAt,
-    podReservationExpiry,
-    orderSource,
-    stripePaymentId,
-    paymentMethodLast4,
-    paymentMethodBrand,
-    promoCodeId,
-    promoDiscountCents,
-  } = req.body || {};
-
-  const data = {};
-  if (status) data.status = status;
-  if (paymentStatus) {
-    data.paymentStatus = paymentStatus;
-    // When order is paid, automatically queue it for kitchen
-    if (paymentStatus === "PAID" && !status) {
-      data.status = "QUEUED";
-    }
-  }
-  if (userId) data.userId = userId;
-  if (guestId) data.guestId = guestId;
-  if (totalCents !== undefined) data.totalCents = totalCents;
-  if (taxCents !== undefined) data.taxCents = taxCents;
-  if (estimatedArrival) data.estimatedArrival = new Date(estimatedArrival);
-  if (seatId) data.seatId = seatId;
-  if (podSelectionMethod) data.podSelectionMethod = podSelectionMethod;
-  if (podAssignedAt) data.podAssignedAt = new Date(podAssignedAt);
-  if (podConfirmedAt) data.podConfirmedAt = new Date(podConfirmedAt);
-  if (podReservationExpiry) data.podReservationExpiry = new Date(podReservationExpiry);
-  if (orderSource) data.orderSource = orderSource;
-  if (stripePaymentId) data.stripePaymentId = stripePaymentId;
-  if (paymentMethodLast4) data.paymentMethodLast4 = paymentMethodLast4;
-  if (paymentMethodBrand) data.paymentMethodBrand = paymentMethodBrand;
-  if (promoCodeId) data.promoCodeId = promoCodeId;
-  if (promoDiscountCents !== undefined) data.promoDiscountCents = promoDiscountCents;
-
-  if (!Object.keys(data).length) {
-    return reply
-      .code(400)
-      .send({ error: "status, paymentStatus, userId, guestId, totalCents, estimatedArrival, or seatId required" });
-  }
-
-  // If setting payment to PAID, also set paidAt timestamp and reservation expiry
-  if (paymentStatus === "PAID") {
-    data.paidAt = new Date();
-    data.queuedAt = new Date(); // Track when it entered the kitchen queue
-
-    // Retrieve payment method info from Stripe if we have a payment ID
-    if (stripePaymentId && stripe && !paymentMethodLast4) {
-      try {
-        const paymentIntent = await stripe.paymentIntents.retrieve(stripePaymentId);
-        if (paymentIntent.payment_method) {
-          const paymentMethod = await stripe.paymentMethods.retrieve(paymentIntent.payment_method);
-          if (paymentMethod.card) {
-            data.paymentMethodLast4 = paymentMethod.card.last4;
-            data.paymentMethodBrand = paymentMethod.card.brand;
-          }
-        }
-      } catch (err) {
-        console.error("Failed to retrieve payment method info from Stripe:", err.message);
-        // Don't fail the order update if we can't get payment method info
-      }
-    }
-  }
-
-  // Only call the membership engine on an actual PATCH-driven transition into
-  // COMPLETED, not on every request that happens to repeat status: "COMPLETED".
-  const wasAlreadyCompleted = status === "COMPLETED"
-    ? (await prisma.order.findUnique({ where: { id }, select: { status: true } }))?.status === "COMPLETED"
-    : true;
-
-  const order = await prisma.order.update({
-    where: { id },
-    data,
-    include: {
-      items: { include: { menuItem: true } },
-      seat: true,
-      location: true,
-      user: true,
-      guest: true,
-    },
-  });
-
-  // Record promo code usage if promo was applied
-  if (promoCodeId && paymentStatus === "PAID") {
-    try {
-      await prisma.promoCodeUsage.create({
-        data: {
-          promoCodeId,
-          userId: userId || null,
-          guestId: guestId || null,
-          orderId: order.id,
-          discountCents: promoDiscountCents || 0,
-        },
-      });
-    } catch (err) {
-      console.error("Error recording promo code usage:", err);
-      // Don't fail the order update if usage recording fails
-    }
-  }
-
-  // If order just got paid and has a pre-selected seat, reserve it
-  if (paymentStatus === "PAID" && order.seatId) {
-    // Set 15-minute reservation expiry (advertised as 10 min, grace period of 5 min)
-    const expiryTime = new Date();
-    expiryTime.setMinutes(expiryTime.getMinutes() + 15);
-
-    // Build list of seats to reserve - primary seat, plus partner if dual pod
-    const seatsToReserve = [order.seatId];
-    if (order.isDualPod && order.dualPartnerSeatId) {
-      seatsToReserve.push(order.dualPartnerSeatId);
-    }
-
-    // Reserve the seat(s) and set expiry on the order
-    await Promise.all([
-      // Reserve all seats (primary + partner for dual pods)
-      prisma.seat.updateMany({
-        where: { id: { in: seatsToReserve } },
-        data: { status: "RESERVED" },
-      }),
-      prisma.order.update({
-        where: { id: order.id },
-        data: { podReservationExpiry: expiryTime },
-      }),
-    ]);
-
-    if (order.isDualPod && order.dualPartnerSeatId) {
-      console.log(`Dual Pod ${order.seat?.number} (both seats) reserved for order ${order.kitchenOrderNumber}, expires at ${expiryTime.toISOString()}`);
-    } else {
-      console.log(`Pod ${order.seat?.number} reserved for order ${order.kitchenOrderNumber}, expires at ${expiryTime.toISOString()}`);
-    }
-
-    // Send order confirmation notification
-    if (order.user || order.guest) {
-      sendOrderConfirmation(order, order.user).catch(err => {
-        console.error("Failed to send order confirmation:", err);
-      });
-    }
-  }
-
-  // Send order confirmation if paid (for orders without pre-selected seat)
-  if (paymentStatus === "PAID" && !order.seatId && (order.user || order.guest)) {
-    sendOrderConfirmation(order, order.user).catch(err => {
-      console.error("Failed to send order confirmation:", err);
-    });
-  }
-
-  // If podConfirmedAt was just set, mark seat as OCCUPIED
-  if (podConfirmedAt && order.seatId) {
-    const seatsToOccupy = [order.seatId];
-    if (order.isDualPod && order.dualPartnerSeatId) {
-      seatsToOccupy.push(order.dualPartnerSeatId);
-    }
-
-    await prisma.seat.updateMany({
-      where: { id: { in: seatsToOccupy } },
-      data: { status: "OCCUPIED" },
-    });
-
-    if (order.isDualPod && order.dualPartnerSeatId) {
-      console.log(`Dual Pod ${order.seat?.number} (both seats) now OCCUPIED - customer confirmed arrival for order ${order.kitchenOrderNumber}`);
-    } else {
-      console.log(`Pod ${order.seat?.number} now OCCUPIED - customer confirmed arrival for order ${order.kitchenOrderNumber}`);
-    }
-  }
-
-  // If order just got paid, update user progress
-  if (paymentStatus === "PAID" && order.user) {
-    const user = order.user;
-
-    // Calculate streak
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    let newStreak = 1;
-    let newLongestStreak = user.longestStreak;
-
-    if (user.lastOrderDate) {
-      const lastOrder = new Date(user.lastOrderDate);
-      lastOrder.setHours(0, 0, 0, 0);
-
-      const daysDiff = Math.floor(
-        (today.getTime() - lastOrder.getTime()) / (1000 * 60 * 60 * 24)
-      );
-
-      if (daysDiff === 0) {
-        // Same day - keep current streak
-        newStreak = user.currentStreak;
-      } else if (daysDiff === 1) {
-        // Consecutive day - increment streak
-        newStreak = user.currentStreak + 1;
-      } else {
-        // Gap > 1 day - reset streak
-        newStreak = 1;
-      }
-    }
-
-    // Update longest streak if current is higher
-    if (newStreak > newLongestStreak) {
-      newLongestStreak = newStreak;
-    }
-
-    // Update lifetime stats and streak. Tier progress (tierProgressOrders /
-    // tierProgressReferrals) is NOT touched here: it's owned by the
-    // membership engine's onOrderCompleted, which only runs once an order
-    // reaches COMPLETED (see membership/engine.js and the COMPLETED handling
-    // below and in PATCH /kitchen/orders/:id/status). Counting it here too
-    // would double-count every order that goes PAID -> COMPLETED.
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        lifetimeOrderCount: { increment: 1 },
-        lifetimeSpentCents: { increment: order.totalCents },
-        currentStreak: newStreak,
-        longestStreak: newLongestStreak,
-        lastOrderDate: new Date(),
-      },
-    });
-
-    // Award badges
-    await checkAndAwardBadges(user.id);
-
-    // Send wallet notification for order completion
-    sendOrderCompletedNotification(user.id, order.id).catch((err) => {
-      console.error("Failed to send wallet order notification:", err);
-    });
-
-    // Send tier progress notification if close to upgrade
-    checkAndSendTierProgressNotification(user.id).catch((err) => {
-      console.error("Failed to send wallet tier progress notification:", err);
-    });
-
-    // Update challenge progress
-    await updateChallengeProgress(user.id, {
-      totalCents: order.totalCents,
-      items: order.items,
-    });
-
-    // Note: cashback, referral payouts and tier upgrades are all awarded when
-    // the order reaches COMPLETED (not at payment) - see onOrderCompleted in
-    // membership/engine.js, called from PATCH /kitchen/orders/:id/status and
-    // below when this same route sets status to COMPLETED.
-  }
-
-  if (status === "COMPLETED" && !wasAlreadyCompleted) {
-    await onOrderCompleted(prisma, { orderId: order.id, now: new Date() });
-  }
-
-  return order;
-});
+// PATCH /orders/:id moved to orders/routes.js (Task A6): payment and price fields are no longer client input.
 
 // ====================
 // REFERRAL SYSTEM
@@ -4749,16 +4384,30 @@ function generateSessionToken() {
 }
 
 
-// Create Stripe Payment Intent
+// Stripe PaymentIntent for NON-food purchases only (shop, gift cards, meal
+// gifts). Food orders are charged only through POST /orders/:id/payment-intent,
+// whose amount is the server's quote (orders/service.js). The shop and gift
+// card amounts here are still client-computed until Task D10 (ruling R9).
+const PAYMENT_INTENT_KINDS = new Set(["shop_order", "shop_order_instore", "gift_card", "meal_gift"]);
+
 app.post("/create-payment-intent", async (req, reply) => {
   try {
     if (!stripe) {
       return reply.status(500).send({ error: "Stripe is not configured" });
     }
 
-    const { amountCents, metadata } = req.body;
+    const { amountCents, metadata } = req.body || {};
+    const kind = req.body?.kind || metadata?.type;
 
-    if (!amountCents || amountCents < 50) {
+    // kind guard: a food order (or anything naming an order) can't set its own amount.
+    if (metadata?.orderId || metadata?.orderIds || !PAYMENT_INTENT_KINDS.has(kind)) {
+      return reply.status(400).send({
+        error: "USE_ORDER_PAYMENT_INTENT",
+        message: "Food orders are paid through POST /orders/:id/payment-intent.",
+      });
+    }
+
+    if (!Number.isInteger(amountCents) || amountCents < 50) {
       return reply.status(400).send({ error: "Amount must be at least 50 cents" });
     }
 
@@ -4810,6 +4459,35 @@ app.post("/payments/confirm", async (req, reply) => {
 
     if (!order) {
       return reply.status(404).send({ error: "Order not found" });
+    }
+
+    // Payment integrity (Task A6): a succeeded PaymentIntent is not enough; it
+    // must be this order's, for this order's amount. Server-priced orders go
+    // through the shared markPaid (idempotent, spends savings, side effects).
+    if (order.amountDueCents !== null && order.amountDueCents !== undefined) {
+      try {
+        const result = await markPaid(prisma, stripe, { orderId: order.id, paymentIntentId, now: new Date() }, orderEffects);
+        return {
+          success: true,
+          alreadyPaid: result.alreadyPaid,
+          orderNumber: result.order.orderNumber,
+          paymentStatus: result.order.paymentStatus,
+          status: result.order.status,
+          seatNumber: order.seat?.number || null,
+          locationName: order.location?.name || null,
+        };
+      } catch (err) {
+        if (err instanceof OrderError) return reply.status(err.status).send({ error: err.code, message: err.message });
+        throw err;
+      }
+    }
+    if (order.paymentStatus === "PAID") {
+      return { success: true, alreadyPaid: true, orderNumber: order.orderNumber, paymentStatus: order.paymentStatus, status: order.status, seatNumber: order.seat?.number || null, locationName: order.location?.name || null };
+    }
+    // Legacy (pre-quote) order: the PaymentIntent from GET /orders/by-number
+    // carries metadata.orderId and order.totalCents.
+    if (paymentIntent.metadata?.orderId !== order.id || paymentIntent.amount !== order.totalCents) {
+      return reply.status(402).send({ error: "PAYMENT_NOT_VERIFIED", message: "Payment could not be verified." });
     }
 
     // Determine if this is an ASAP order (arrival within 20 minutes)
@@ -5079,64 +4757,7 @@ app.post("/users/:id/deduct-credits", async (req, reply) => {
   };
 });
 
-// Apply credits to an order
-app.post("/orders/:id/apply-credits", async (req, reply) => {
-  const { id } = req.params;
-  const { creditsCents } = req.body || {};
-
-  // Credits are spent from the verified caller's balance; a body userId must match it.
-  const who = await customerAuth.requireUser(req, reply);
-  if (!who) return reply;
-  if (req.body?.userId && req.body.userId !== who.userId) {
-    return reply.code(403).send({ error: "Forbidden" });
-  }
-  const userId = who.userId;
-
-  if (!creditsCents) {
-    return reply.code(400).send({ error: "userId and creditsCents required" });
-  }
-
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user) return reply.code(404).send({ error: "User not found" });
-
-  // Limit credits to $5 (500 cents) per order
-  const MAX_CREDITS_PER_ORDER = 500;
-  const maxCredits = Math.min(user.creditsCents, creditsCents, MAX_CREDITS_PER_ORDER);
-  if (maxCredits <= 0) {
-    return reply.code(400).send({ error: "Insufficient credits" });
-  }
-
-  // Apply credits
-  const order = await prisma.order.update({
-    where: { id },
-    data: {
-      totalCents: { decrement: maxCredits },
-      userId,
-    },
-  });
-
-  // Deduct from user balance
-  await prisma.user.update({
-    where: { id: userId },
-    data: { creditsCents: { decrement: maxCredits } },
-  });
-
-  // Record the event
-  await prisma.creditEvent.create({
-    data: {
-      userId,
-      orderId: id,
-      type: "CREDIT_APPLIED",
-      amountCents: -maxCredits,
-      description: `Applied to order ${order.orderNumber}`,
-    },
-  });
-
-  // Refresh wallet pass to show updated credit balance
-  refreshUserWalletPass(userId).catch(console.error);
-
-  return { appliedCredits: maxCredits, newTotal: order.totalCents };
-});
+// POST /orders/:id/apply-credits moved to orders/routes.js (Task A6): a quote update, spent at PAID.
 
 // ====================
 // MEMBERSHIP & GAMIFICATION
@@ -7117,6 +6738,24 @@ async function releaseExpiredReservations() {
 
     if (expiredOrders.length > 0) {
       console.log(`⏰ Released ${expiredOrders.length} expired pod reservation(s)`);
+    }
+
+    // Abandoned checkouts: POST /orders claims a pod for POD_HOLD_MS while
+    // the customer pays (orders/service.js). An unpaid order past its hold
+    // gives the pod back. The conditional order update loses to a concurrent
+    // markPaid (it only matches while the order is still unpaid).
+    const staleHolds = await prisma.order.findMany({
+      where: { podReservationExpiry: { lt: now }, seatId: { not: null }, paymentStatus: "PENDING", status: "PENDING_PAYMENT" },
+      select: { id: true, seatId: true, isDualPod: true, dualPartnerSeatId: true },
+    });
+    for (const hold of staleHolds) {
+      const cleared = await prisma.order.updateMany({
+        where: { id: hold.id, paymentStatus: "PENDING", seatId: hold.seatId },
+        data: { seatId: null, podSelectionMethod: null, podReservationExpiry: null, isDualPod: false, dualPartnerSeatId: null },
+      });
+      if (cleared.count !== 1) continue;
+      const seatIds = [hold.seatId, ...(hold.isDualPod && hold.dualPartnerSeatId ? [hold.dualPartnerSeatId] : [])];
+      await prisma.seat.updateMany({ where: { id: { in: seatIds }, status: "RESERVED" }, data: { status: "AVAILABLE" } });
     }
   } catch (error) {
     console.error("Error releasing expired reservations:", error);
@@ -10737,35 +10376,18 @@ app.post("/group-orders/:code/orders", async (req, reply) => {
     return reply.code(400).send({ error: "Cannot add orders to this group" });
   }
 
-  // Calculate total for this order
-  const menuItems = await prisma.menuItem.findMany({
-    where: { id: { in: items.map((item) => item.menuItemId) } },
-  });
-
-  function calculateItemPrice(menuItem, quantity) {
-    if (quantity <= menuItem.includedQuantity) return 0;
-    if (menuItem.includedQuantity > 0) {
-      const extraQuantity = quantity - menuItem.includedQuantity;
-      return menuItem.basePriceCents + menuItem.additionalPriceCents * (extraQuantity - 1);
-    }
-    return menuItem.basePriceCents + menuItem.additionalPriceCents * (quantity - 1);
+  // Server quote (Task A6, orders/service.js): tenant-scoped, available and
+  // released items only; tax at the location's rate. Members pay their own
+  // order through POST /orders/:id/payment-intent and /confirm-payment.
+  let groupQuote;
+  try {
+    groupQuote = await quoteOrder(prisma, { locationId: groupOrder.locationId, items, userId: userId || null, now: new Date() });
+  } catch (err) {
+    if (err instanceof OrderError) return reply.code(err.status).send({ error: err.code, message: err.message, ...err.extra });
+    throw err;
   }
-
-  let totalCents = 0;
-  const orderItems = items.map((item) => {
-    const menuItem = menuItems.find((m) => m.id === item.menuItemId);
-    if (!menuItem) throw new Error(`Menu item ${item.menuItemId} not found`);
-
-    const itemTotal = calculateItemPrice(menuItem, item.quantity);
-    totalCents += itemTotal;
-
-    return {
-      menuItemId: item.menuItemId,
-      quantity: item.quantity,
-      priceCents: itemTotal,
-      selectedValue: item.selectedValue || null,
-    };
-  });
+  const orderItems = groupQuote.lines;
+  const totalCents = groupQuote.totalCents;
 
   // Generate order numbers
   const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
@@ -10780,7 +10402,10 @@ app.post("/group-orders/:code/orders", async (req, reply) => {
       orderQrCode,
       tenant: { connect: { id: groupOrder.tenantId } },
       location: { connect: { id: groupOrder.locationId } },
+      subtotalCents: groupQuote.subtotalCents,
+      taxCents: groupQuote.taxCents,
       totalCents,
+      amountDueCents: groupQuote.amountDueCents,
       ...(userId ? { user: { connect: { id: userId } } } : {}),
       ...(guestId ? { guest: { connect: { id: guestId } } } : {}),
       groupOrder: { connect: { id: groupOrder.id } },
@@ -11115,10 +10740,7 @@ app.post("/meal-gifts/:id/accept", async (req, reply) => {
     return reply.code(400).send({ error: "Meal gift has expired" });
   }
 
-  // Calculate excess gift amount (gift - order total)
-  const giftAmount = mealGift.amountCents;
   const orderTotal = orderTotalCents || 0;
-  const excessAmount = Math.max(0, giftAmount - orderTotal);
 
   // Update meal gift to ACCEPTED status
   const updatedGift = await prisma.mealGift.update({
@@ -11131,46 +10753,60 @@ app.post("/meal-gifts/:id/accept", async (req, reply) => {
     },
   });
 
-  // Add chain entry for ACCEPTED action
-  await prisma.mealGiftChain.create({
-    data: {
-      mealGiftId: id,
-      recipientId,
-      action: "ACCEPTED",
-      messageFromRecipient: messageFromRecipient || null,
-    },
+  const recipientUser = await prisma.user.findUnique({ where: { id: recipientId }, select: { id: true } });
+  await finishMealGiftAcceptance({
+    mealGift,
+    recipientUserId: recipientUser ? recipientId : null,
+    appliedCents: Math.min(mealGift.amountCents, orderTotal),
+    messageFromRecipient,
   });
 
-  // Credit excess gift amount to recipient (if any)
-  if (excessAmount > 0) {
-    // Check if recipient is a User (not a Guest)
-    const recipientUser = await prisma.user.findUnique({ where: { id: recipientId } });
+  return updatedGift;
+});
 
-    if (recipientUser) {
-      // Create credit event for the excess
-      await prisma.creditEvent.create({
-        data: {
-          userId: recipientId,
-          amountCents: excessAmount,
-          type: "GIFT_EXCESS",
-          description: `Meal gift excess credited (Gift: $${(giftAmount / 100).toFixed(2)}, Order: $${(orderTotal / 100).toFixed(2)})`,
-          metadata: { mealGiftId: id },
-        },
-      });
+/**
+ * Everything that follows a meal gift being accepted onto an order: the chain
+ * entry, the recipient's GIFT_EXCESS credit (gift value beyond what the order
+ * used) and the giver's one-time Meal for a Stranger reward. Shared by
+ * POST /meal-gifts/:id/accept and the order service's markPaid (a meal gift
+ * applied as a tender is consumed at PAID, orders/service.js).
+ */
+async function finishMealGiftAcceptance({ mealGift, recipientUserId, appliedCents, messageFromRecipient = null }) {
+  const id = mealGift.id;
+  const giftAmount = mealGift.amountCents;
+  const excessAmount = Math.max(0, giftAmount - (appliedCents || 0));
 
-      // Update recipient's credit balance
-      await prisma.user.update({
-        where: { id: recipientId },
-        data: {
-          creditsCents: {
-            increment: excessAmount,
-          },
-        },
-      });
+  // Add chain entry for ACCEPTED action (the chain's recipient is a member)
+  if (recipientUserId) {
+    await prisma.mealGiftChain.create({
+      data: {
+        mealGiftId: id,
+        recipientId: recipientUserId,
+        action: "ACCEPTED",
+        messageFromRecipient: messageFromRecipient || null,
+      },
+    });
+  }
 
-      // Refresh recipient's wallet pass to show updated credit balance
-      refreshUserWalletPass(recipientId).catch(console.error);
-    }
+  // Credit excess gift amount to the recipient (members only), as before
+  if (excessAmount > 0 && recipientUserId) {
+    await prisma.creditEvent.create({
+      data: {
+        userId: recipientUserId,
+        amountCents: excessAmount,
+        type: "GIFT_EXCESS",
+        description: `Meal gift excess credited (Gift: $${(giftAmount / 100).toFixed(2)}, Order: $${((appliedCents || 0) / 100).toFixed(2)})`,
+        metadata: { mealGiftId: id },
+      },
+    });
+
+    await prisma.user.update({
+      where: { id: recipientUserId },
+      data: { creditsCents: { increment: excessAmount } },
+    });
+
+    // Refresh recipient's wallet pass to show updated credit balance
+    refreshUserWalletPass(recipientUserId).catch(console.error);
   }
 
   // Check if giver has already completed this challenge (only reward once)
@@ -11238,9 +10874,7 @@ app.post("/meal-gifts/:id/accept", async (req, reply) => {
       });
     }
   }
-
-  return updatedGift;
-});
+}
 
 // POST /meal-gifts/:id/pay-forward - Pay forward a meal gift to next person
 app.post("/meal-gifts/:id/pay-forward", async (req, reply) => {

@@ -1539,7 +1539,15 @@
     "enterYourName": "请输入您的姓名",
     "wantToEarnRewards": "想要赚取奖励并追踪订单吗？",
     "signInInstead": "改为登录",
-    "waitLoadingAccount": "请稍候，正在加载您的账户..."
+    "waitLoadingAccount": "请稍候，正在加载您的账户...",
+    "errorCodes": {
+      "CREDIT_SHORT": "你的积分余额已变更，请确认总额后再试一次。",
+      "GIFT_CARD_SHORT": "你的礼品卡余额已变更，请确认总额后再试一次。",
+      "MEAL_GIFT_UNAVAILABLE": "这份爱心餐已无法使用。",
+      "REWARD_UNAVAILABLE": "这项奖励已无法使用。",
+      "PAYMENT_NOT_VERIFIED": "我们尚未确认你的付款。若已扣款，请向店员出示此画面。",
+      "ORDER_FAILED": "无法完成订单，请再试一次。"
+    }
   },
   "groupOrder": {
     "notFound": "找不到群组",

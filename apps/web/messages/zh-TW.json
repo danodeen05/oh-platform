@@ -1539,7 +1539,15 @@
     "enterYourName": "請輸入您的姓名",
     "wantToEarnRewards": "想要賺取獎勵並追蹤訂單嗎？",
     "signInInstead": "改為登入",
-    "waitLoadingAccount": "請稍候，正在載入您的帳戶..."
+    "waitLoadingAccount": "請稍候，正在載入您的帳戶...",
+    "errorCodes": {
+      "CREDIT_SHORT": "你的點數餘額已變更，請確認總額後再試一次。",
+      "GIFT_CARD_SHORT": "你的禮物卡餘額已變更，請確認總額後再試一次。",
+      "MEAL_GIFT_UNAVAILABLE": "這份愛心餐已無法使用。",
+      "REWARD_UNAVAILABLE": "這項獎勵已無法使用。",
+      "PAYMENT_NOT_VERIFIED": "我們尚未確認你的付款。若已扣款，請向店員出示此畫面。",
+      "ORDER_FAILED": "無法完成訂單，請再試一次。"
+    }
   },
   "groupOrder": {
     "notFound": "找不到群組",

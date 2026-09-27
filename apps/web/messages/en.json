@@ -1630,7 +1630,15 @@
     "enterYourName": "Please enter your name",
     "wantToEarnRewards": "Want to earn rewards and track your orders?",
     "signInInstead": "Sign In Instead",
-    "waitLoadingAccount": "Please wait while we load your account..."
+    "waitLoadingAccount": "Please wait while we load your account...",
+    "errorCodes": {
+      "CREDIT_SHORT": "Your credit balance changed. Check your total and try again.",
+      "GIFT_CARD_SHORT": "Your gift card balance changed. Check your total and try again.",
+      "MEAL_GIFT_UNAVAILABLE": "That meal gift is no longer available.",
+      "REWARD_UNAVAILABLE": "That reward can no longer be used.",
+      "PAYMENT_NOT_VERIFIED": "We couldn't confirm your payment yet. If you were charged, show this screen to our staff.",
+      "ORDER_FAILED": "We couldn't complete your order. Please try again."
+    }
   },
   "groupOrder": {
     "notFound": "Group Not Found",

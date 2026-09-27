@@ -88,14 +88,12 @@ async function handlePaymentSucceeded(paymentIntent: Stripe.PaymentIntent) {
   // Handle food order payment
   if (metadata.orderId && metadata.source !== 'shop' && metadata.source !== 'gift_card') {
     try {
-      const response = await fetch(`${API_BASE_URL}/orders/${metadata.orderId}`, {
-        method: 'PATCH',
+      // The API re-retrieves the PaymentIntent and checks status, amount and
+      // metadata.orderId itself; this call is idempotent with the return page.
+      const response = await fetch(`${API_BASE_URL}/orders/${metadata.orderId}/confirm-payment`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          paymentStatus: 'PAID',
-          stripePaymentId: paymentIntent.id,
-          status: 'PAID',
-        }),
+        body: JSON.stringify({ paymentIntentId: paymentIntent.id }),
       });
 
       if (!response.ok) {
@@ -160,23 +158,11 @@ async function handlePaymentFailed(paymentIntent: Stripe.PaymentIntent) {
   const errorMessage = paymentIntent.last_payment_error?.message || 'Payment failed';
   console.log(`Payment failed: ${paymentIntent.id}`, errorMessage, metadata);
 
-  // Handle food order payment failure
+  // Food order payment failure: nothing to write. The order stays unpaid
+  // (PENDING) and the customer can retry; payment status is server-owned and
+  // no longer settable through PATCH /orders/:id (Task A6).
   if (metadata.orderId && metadata.source !== 'shop' && metadata.source !== 'gift_card') {
-    try {
-      const response = await fetch(`${API_BASE_URL}/orders/${metadata.orderId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          paymentStatus: 'FAILED',
-        }),
-      });
-
-      if (!response.ok) {
-        console.error(`Failed to update order ${metadata.orderId} as failed:`, await response.text());
-      }
-    } catch (error) {
-      console.error(`Error updating order ${metadata.orderId} as failed:`, error);
-    }
+    console.log(`Food order ${metadata.orderId} payment failed; order left unpaid for retry`);
   }
 
   // Handle shop order payment failure

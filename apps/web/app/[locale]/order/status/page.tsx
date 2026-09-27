@@ -798,31 +798,24 @@ function StatusContent() {
         throw new Error(data.error || "Failed to create add-on order");
       }
 
-      const { order: addonOrder, totalCents } = await response.json();
+      const { order: addonOrder, totalCents, demo } = await response.json();
 
-      // Mark as paid (test payment mode - same as main payment flow)
-      // Add-on orders go straight to PREPPING since customer is already at pod
-      const payResponse = await fetch(`${BASE}/orders/${addonOrder.id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "x-tenant-slug": "oh",
-        },
-        body: JSON.stringify({
-          paymentStatus: "PAID",
-          status: "PREPPING",
-          podConfirmedAt: new Date().toISOString(),
-        }),
-      });
-
-      if (!payResponse.ok) {
-        throw new Error("Payment processing failed");
+      // The plan's status demo simulates the add-on; nothing is charged or cooked.
+      if (demo) {
+        toast.success(tOrder("success.addonOrdered", { amount: `$${(totalCents / 100).toFixed(2)}` }));
+        setShowAddOnModal(false);
+        setSelectedPaidAddons(new Map());
+        setShowPaymentConfirm(false);
+        return;
       }
 
-      toast.success(tOrder("success.addonOrdered", { amount: `$${(totalCents / 100).toFixed(2)}` }));
+      // Pay through the regular checkout: the server prices the add-on and
+      // marks it PAID only after Stripe confirms (Task A6). A paid add-on then
+      // goes straight to PREPPING since the guest is already at the pod.
       setShowAddOnModal(false);
       setSelectedPaidAddons(new Map());
       setShowPaymentConfirm(false);
+      window.location.href = `/${locale}/order/payment?orderId=${addonOrder.id}&orderNumber=${encodeURIComponent(addonOrder.orderNumber)}`;
     } catch (err: any) {
       console.error("Failed to submit paid add-on:", err);
       toast.error(err.message || tOrder("errors.placeAddonOrder"));

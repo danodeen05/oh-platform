@@ -106,25 +106,13 @@ function ConfirmationContent() {
         // Extract payment intent ID from client secret
         const paymentIntentId = paymentIntentClientSecret?.split("_secret_")[0];
 
-        // Update order with payment info and user link
-        const patchData: any = {
-          paymentStatus: "PAID",
-        };
-
-        if (paymentIntentId) {
-          patchData.stripePaymentId = paymentIntentId;
-        }
-
-        if (userId) {
-          patchData.userId = userId;
-        }
-
-        console.log("Patching order with redirect data:", patchData);
-
-        const patchResponse = await fetch(`${BASE}/orders/${orderId}`, {
-          method: "PATCH",
+        // The server verifies the PaymentIntent and marks the order PAID once
+        // (idempotent with the Stripe webhook). The order's owner was set,
+        // from the verified session, when it was created.
+        const patchResponse = await api(`${BASE}/orders/${orderId}/confirm-payment`, {
+          method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(patchData),
+          body: JSON.stringify({ paymentIntentId }),
         });
 
         if (patchResponse.ok) {

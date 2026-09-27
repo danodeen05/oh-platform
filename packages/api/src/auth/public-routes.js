@@ -23,6 +23,8 @@ export const PUBLIC_ROUTES = Object.freeze([
   p("POST", "/kiosk/heartbeat", "kiosk"),
   p("GET", "/orders/by-member", "kiosk"),
   p("GET", "/orders/lookup", "kiosk"),
+  p("POST", "/kiosk/orders/payment-intent", "kiosk"),
+  p("POST", "/kiosk/orders/confirm-payment", "kiosk"),
 
   // Customer ordering flow
   p("POST", "/orders/check-in", "customer"),
@@ -39,6 +41,9 @@ export const PUBLIC_ROUTES = Object.freeze([
   p("POST", "/orders/:id/addons", "customer"),
   p("GET", "/orders/:id", "customer"),
   p("POST", "/orders", "customer"),
+  p("POST", "/orders/quote", "customer"),
+  p("POST", "/orders/:id/payment-intent", "customer"),
+  p("POST", "/orders/:id/confirm-payment", "customer"),
   p("GET", "/orders/event/check", "customer"),
   p("POST", "/orders/event", "customer"),
   p("GET", "/orders/zodiac-insights", "customer"),

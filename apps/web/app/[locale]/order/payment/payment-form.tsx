@@ -11,6 +11,18 @@ import { PromoCodeInput, type AppliedPromo } from "@/components/PromoCodeInput";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
+type ServerTotals = {
+  subtotalCents: number;
+  promoDiscountCents: number;
+  rewardDiscountCents: number;
+  taxCents: number;
+  totalCents: number;
+  creditsAppliedCents: number;
+  mealGiftAppliedCents: number;
+  giftCardAppliedCents: number;
+  amountDueCents: number;
+};
+
 export default function OrderPaymentForm({
   orderId,
   totalCents,
@@ -68,20 +80,24 @@ export default function OrderPaymentForm({
   const [guestSmsOptIn, setGuestSmsOptIn] = useState(guest?.smsOptIn || false);
   const [guestFormError, setGuestFormError] = useState("");
 
-  // Calculate discounted total
+  // Totals come from the server's quote (POST /orders/:id/payment-intent).
+  // The browser never computes what is charged; it only shows it.
+  const [serverTotals, setServerTotals] = useState<ServerTotals | null>(null);
   const validTotalCents = typeof totalCents === "number" && !isNaN(totalCents) ? totalCents : 0;
-  // Apply promo discount first
-  const promoDiscount = appliedPromo?.discountCents || 0;
-  const afterPromoTotal = Math.max(0, validTotalCents - promoDiscount);
-  const creditsApplied = applyCredits ? Math.min(userCredits, afterPromoTotal, MAX_CREDITS_PER_ORDER) : 0;
-  const afterCreditsTotal = afterPromoTotal - creditsApplied;
-  const giftApplied = Math.min(mealGiftCredit, afterCreditsTotal);
-  const giftExcess = mealGiftCredit - giftApplied;
-  const afterMealGiftTotal = afterCreditsTotal - giftApplied;
-  // Apply gift card to remaining amount
-  const giftCardAmount = giftCardApplied?.amountToApply || 0;
-  const discountedTotal = Math.max(0, afterMealGiftTotal - giftCardAmount);
-  const showCreditsBreakdown = promoDiscount > 0 || (applyCredits && creditsApplied > 0) || giftApplied > 0 || giftCardAmount > 0;
+  const promoDiscount = serverTotals?.promoDiscountCents ?? 0;
+  const creditsApplied = serverTotals?.creditsAppliedCents ?? 0;
+  const giftApplied = serverTotals?.mealGiftAppliedCents ?? 0;
+  const giftExcess = Math.max(0, mealGiftCredit - giftApplied);
+  const giftCardAmount = serverTotals?.giftCardAppliedCents ?? 0;
+  const discountedTotal = serverTotals ? serverTotals.amountDueCents : validTotalCents;
+  const afterMealGiftTotal = discountedTotal + giftCardAmount;
+  const showCreditsBreakdown = promoDiscount > 0 || creditsApplied > 0 || giftApplied > 0 || giftCardAmount > 0;
+
+  function messageForCode(code: string | undefined, fallback?: string) {
+    const known = ["CREDIT_SHORT", "GIFT_CARD_SHORT", "MEAL_GIFT_UNAVAILABLE", "REWARD_UNAVAILABLE", "PAYMENT_NOT_VERIFIED"];
+    if (code && known.includes(code)) return t(`errorCodes.${code}`);
+    return fallback || t("errorCodes.ORDER_FAILED");
+  }
 
   useEffect(() => {
     const referralCode = localStorage.getItem("pendingReferralCode");
@@ -162,62 +178,62 @@ export default function OrderPaymentForm({
     }
   }, [mealGiftId]);
 
-  // Create PaymentIntent when we know the final amount
-  const createPaymentIntent = useCallback(async (amountCents: number, customerId?: string) => {
-    if (amountCents <= 0) {
-      // Order is fully covered by credits/gifts - no Stripe payment needed
-      setClientSecret(null);
-      return;
-    }
-
-    try {
-      const response = await fetch(`${BASE}/create-payment-intent`, {
+  // Re-quote the order with the chosen savings and get a PaymentIntent for
+  // the server's amount due (Task A6). Nothing is spent until payment is
+  // confirmed; credits, gift cards and meal gifts are applied at PAID.
+  const wantsCredits = Boolean(userId) && applyCredits;
+  const promoCodeValue = appliedPromo?.code ?? null;
+  const giftCardCodeValue = giftCardApplied?.code ?? null;
+  const refreshPayment = useCallback(async () => {
+    const request = (useCreditsCents: number) =>
+      api(`${BASE}/orders/${orderId}/payment-intent`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          amountCents,
-          customerId: customerId || undefined,
-          metadata: {
-            orderId,
-            orderNumber,
-            source: "web",
-          },
+          useCreditsCents,
+          promoCode: promoCodeValue,
+          giftCardCode: giftCardCodeValue,
+          mealGiftId: mealGiftId ?? null,
         }),
       });
 
+    try {
+      let response = await request(wantsCredits ? MAX_CREDITS_PER_ORDER : 0);
+      // An order started before signing in can't take member credits.
+      if (response.status === 403 && wantsCredits) response = await request(0);
+      const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error("Failed to create payment intent");
+        setError(messageForCode(data.error));
+        return;
       }
-
-      const data = await response.json();
-      setClientSecret(data.clientSecret);
-      setPaymentIntentId(data.id);
+      setServerTotals(data.totals ?? null);
+      setClientSecret(data.clientSecret ?? null);
+      setPaymentIntentId(data.paymentIntentId ?? null);
     } catch (err) {
       console.error("Error creating payment intent:", err);
-      setError("Failed to initialize payment. Please try again.");
+      setError(messageForCode(undefined));
     }
-  }, [orderId, orderNumber]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderId, wantsCredits, promoCodeValue, giftCardCodeValue, mealGiftId]);
 
-  // Recreate PaymentIntent when discounted total changes
   useEffect(() => {
-    if (userInitialized && discountedTotal > 0) {
-      createPaymentIntent(discountedTotal, stripeCustomerId || undefined);
-    } else if (discountedTotal === 0) {
-      setClientSecret(null);
-    }
-  }, [discountedTotal, userInitialized, stripeCustomerId, createPaymentIntent]);
+    if (!isLoaded) return;
+    if (isSignedIn && !userInitialized) return;
+    if (!isSignedIn && !(isGuest && guest)) return;
+    refreshPayment();
+  }, [isLoaded, isSignedIn, userInitialized, isGuest, guest?.id, refreshPayment]);
 
-  // Create PaymentIntent for guest checkout
-  useEffect(() => {
-    // Use discounted total (after promo) for guests
-    const guestTotal = discountedTotal;
-    if (isGuest && guest && guestTotal > 0 && !clientSecret) {
-      createPaymentIntent(guestTotal);
-    } else if (isGuest && guest && guestTotal <= 0) {
-      // No payment needed - clear clientSecret
-      setClientSecret(null);
-    }
-  }, [isGuest, guest, discountedTotal, clientSecret, createPaymentIntent]);
+  /** POST /orders/:id/confirm-payment: the server verifies the PaymentIntent (or a zero balance). */
+  async function confirmPaid(stripePaymentIntentId?: string) {
+    const response = await api(`${BASE}/orders/${orderId}/confirm-payment`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ paymentIntentId: stripePaymentIntentId }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(messageForCode(data.error));
+    return data;
+  }
 
   async function initializeUser() {
     if (!user?.primaryEmailAddress?.emailAddress) return;
@@ -301,59 +317,6 @@ export default function OrderPaymentForm({
     }
   }
 
-  async function acceptMealGift() {
-    if (!mealGiftId) return;
-
-    const recipientId = userId || guest?.id;
-    if (!recipientId) {
-      return;
-    }
-
-    const messageFromRecipient = localStorage.getItem("mealGiftMessage") || undefined;
-
-    try {
-      const response = await fetch(`${BASE}/meal-gifts/${mealGiftId}/accept`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-tenant-slug": "oh",
-        },
-        body: JSON.stringify({
-          recipientId,
-          orderId,
-          messageFromRecipient,
-          orderTotalCents: validTotalCents,
-        }),
-      });
-
-      if (response.ok) {
-        localStorage.removeItem("mealGiftMessage");
-      }
-    } catch (error) {
-      console.warn("Error accepting meal gift:", error);
-    }
-  }
-
-  async function applyCreditsToOrder() {
-    if (!userId || !applyCredits || userCredits <= 0) return;
-
-    const creditsToApply = Math.min(userCredits, validTotalCents, MAX_CREDITS_PER_ORDER);
-    if (creditsToApply <= 0) return;
-
-    try {
-      await api(`${BASE}/orders/${orderId}/apply-credits`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: userId,
-          creditsCents: creditsToApply,
-        }),
-      });
-    } catch (err) {
-      console.warn("Error applying credits:", err);
-    }
-  }
-
   // Apply gift card code
   async function handleApplyGiftCard() {
     if (!giftCardCode.trim()) return;
@@ -390,70 +353,30 @@ export default function OrderPaymentForm({
       setGiftCardLoading(false);
     }
   }
-
-  // Apply gift card to order when payment succeeds
-  async function applyGiftCardToOrder() {
-    if (!giftCardApplied) return;
-
-    try {
-      await fetch(`${BASE}/gift-cards/${giftCardApplied.id}/apply`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          orderId,
-          amountCents: giftCardApplied.amountToApply,
-        }),
-      });
-    } catch (err) {
-      console.warn("Error applying gift card:", err);
-    }
-  }
-
   // Handle successful Stripe payment
   async function handlePaymentSuccess(stripePaymentIntentId: string) {
     setProcessing(true);
     setError("");
 
     try {
-      // Accept meal gift if one was selected
-      await acceptMealGift();
-
-      // Apply credits to order
-      await applyCreditsToOrder();
-
-      // Apply gift card to order
-      await applyGiftCardToOrder();
-
-      // Mark order as paid and link to user
-      const response = await fetch(`${BASE}/orders/${orderId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          paymentStatus: "PAID",
-          stripePaymentId: stripePaymentIntentId,
-          userId: userId || undefined,
-          promoCodeId: appliedPromo?.id,
-          promoDiscountCents: promoDiscount > 0 ? promoDiscount : undefined,
-        }),
-      });
-
-      if (!response.ok) throw new Error("Failed to update order");
-
-      const updatedOrder = await response.json();
+      // The server verifies the PaymentIntent, spends the credits, gift card
+      // and meal gift on the quote, and marks the order PAID (once).
+      const updatedOrder = await confirmPaid(stripePaymentIntentId);
+      localStorage.removeItem("mealGiftMessage");
 
       router.push(
         `/order/confirmation?orderId=${orderId}&orderNumber=${orderNumber}&total=${updatedOrder.totalCents}&paid=true`
       );
     } catch (err: any) {
-      setError(err.message || "Payment failed");
+      setError(err.message || messageForCode(undefined));
       setProcessing(false);
     }
   }
 
-  // Handle free order (fully covered by credits/gifts)
+  // Handle free order (fully covered by credits/gifts, verified by the server)
   async function handleFreeOrder() {
     if (discountedTotal > 0) {
-      setError("Order requires payment");
+      setError(messageForCode(undefined));
       return;
     }
 
@@ -461,73 +384,52 @@ export default function OrderPaymentForm({
     setError("");
 
     try {
-      await acceptMealGift();
-      await applyCreditsToOrder();
-      await applyGiftCardToOrder();
-
-      const response = await fetch(`${BASE}/orders/${orderId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          paymentStatus: "PAID",
-          userId: userId || undefined,
-          promoCodeId: appliedPromo?.id,
-          promoDiscountCents: promoDiscount > 0 ? promoDiscount : undefined,
-        }),
-      });
-
-      if (!response.ok) throw new Error("Failed to update order");
-
-      const updatedOrder = await response.json();
+      const updatedOrder = await confirmPaid();
+      localStorage.removeItem("mealGiftMessage");
 
       router.push(
         `/order/confirmation?orderId=${orderId}&orderNumber=${orderNumber}&total=${updatedOrder.totalCents}&paid=true`
       );
     } catch (err: any) {
-      setError(err.message || "Failed to complete order");
+      setError(err.message || messageForCode(undefined));
       setProcessing(false);
     }
   }
 
-  // Handle guest payment success
-  async function handleGuestPaymentSuccess(stripePaymentIntentId: string) {
+  async function saveGuestDetails() {
+    if (guest && (guestName !== guest.name || guestPhone !== guest.phone || guestEmail !== guest.email || guestSmsOptIn !== guest.smsOptIn)) {
+      await updateGuest({
+        name: guestName.trim(),
+        phone: guestPhone.trim() || undefined,
+        email: guestEmail.trim() || undefined,
+        smsOptIn: guestPhone.trim() ? guestSmsOptIn : false,
+      });
+    }
+    // Link the guest to the order (PATCH still accepts guestId; never payment fields).
+    if (guest?.id) {
+      await fetch(`${BASE}/orders/${orderId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ guestId: guest.id }),
+      }).catch(() => undefined);
+    }
+  }
+
+  // Handle guest payment success (Stripe) or a guest's fully covered order (no PaymentIntent)
+  async function handleGuestPaymentSuccess(stripePaymentIntentId?: string) {
     setProcessing(true);
     setError("");
 
     try {
-      await acceptMealGift();
-
-      // Update guest details if changed
-      if (guest && (guestName !== guest.name || guestPhone !== guest.phone || guestEmail !== guest.email || guestSmsOptIn !== guest.smsOptIn)) {
-        await updateGuest({
-          name: guestName.trim(),
-          phone: guestPhone.trim() || undefined,
-          email: guestEmail.trim() || undefined,
-          smsOptIn: guestPhone.trim() ? guestSmsOptIn : false,
-        });
-      }
-
-      const response = await fetch(`${BASE}/orders/${orderId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          paymentStatus: "PAID",
-          stripePaymentId: stripePaymentIntentId,
-          guestId: guest?.id,
-          promoCodeId: appliedPromo?.id,
-          promoDiscountCents: promoDiscount > 0 ? promoDiscount : undefined,
-        }),
-      });
-
-      if (!response.ok) throw new Error("Payment failed");
-
-      const updatedOrder = await response.json();
+      await saveGuestDetails();
+      const updatedOrder = await confirmPaid(stripePaymentIntentId);
+      localStorage.removeItem("mealGiftMessage");
 
       router.push(
         `/order/confirmation?orderId=${orderId}&orderNumber=${orderNumber}&total=${updatedOrder.totalCents}&paid=true`
       );
     } catch (err: any) {
-      setError(err.message || "Payment failed");
+      setError(err.message || messageForCode(undefined));
       setProcessing(false);
     }
   }
@@ -786,36 +688,7 @@ export default function OrderPaymentForm({
                   </div>
                 </div>
                 <button
-                  onClick={async () => {
-                    setProcessing(true);
-                    try {
-                      await acceptMealGift();
-                      if (guest && (guestName !== guest.name || guestPhone !== guest.phone || guestEmail !== guest.email || guestSmsOptIn !== guest.smsOptIn)) {
-                        await updateGuest({
-                          name: guestName.trim(),
-                          phone: guestPhone.trim() || undefined,
-                          email: guestEmail.trim() || undefined,
-                          smsOptIn: guestPhone.trim() ? guestSmsOptIn : false,
-                        });
-                      }
-                      const response = await fetch(`${BASE}/orders/${orderId}`, {
-                        method: "PATCH",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                          paymentStatus: "PAID",
-                          guestId: guest?.id,
-                          promoCodeId: appliedPromo?.id,
-                          promoDiscountCents: promoDiscount > 0 ? promoDiscount : undefined,
-                        }),
-                      });
-                      if (!response.ok) throw new Error("Failed to complete order");
-                      const updatedOrder = await response.json();
-                      router.push(`/order/confirmation?orderId=${orderId}&orderNumber=${orderNumber}&total=${updatedOrder.totalCents}&paid=true`);
-                    } catch (err: any) {
-                      setError(err.message || "Failed to complete order");
-                      setProcessing(false);
-                    }
-                  }}
+                  onClick={() => handleGuestPaymentSuccess()}
                   disabled={processing || !guestName.trim()}
                   style={{
                     width: "100%",

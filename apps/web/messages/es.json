@@ -1539,7 +1539,15 @@
     "enterYourName": "Por favor ingresa tu nombre",
     "wantToEarnRewards": "¿Quieres ganar recompensas y rastrear tus pedidos?",
     "signInInstead": "Iniciar sesión en su lugar",
-    "waitLoadingAccount": "Por favor espera mientras cargamos tu cuenta..."
+    "waitLoadingAccount": "Por favor espera mientras cargamos tu cuenta...",
+    "errorCodes": {
+      "CREDIT_SHORT": "Tu saldo de créditos cambió. Revisa tu total e inténtalo de nuevo.",
+      "GIFT_CARD_SHORT": "El saldo de tu tarjeta de regalo cambió. Revisa tu total e inténtalo de nuevo.",
+      "MEAL_GIFT_UNAVAILABLE": "Ese regalo de comida ya no está disponible.",
+      "REWARD_UNAVAILABLE": "Esa recompensa ya no se puede usar.",
+      "PAYMENT_NOT_VERIFIED": "Aún no pudimos confirmar tu pago. Si se te cobró, muestra esta pantalla a nuestro personal.",
+      "ORDER_FAILED": "No pudimos completar tu pedido. Inténtalo de nuevo."
+    }
   },
   "groupOrder": {
     "notFound": "Grupo no encontrado",
