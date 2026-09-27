@@ -7,6 +7,7 @@ import { trackPurchase, event } from "@/lib/analytics";
 import Image from "next/image";
 import { PhoneCollectionModal } from "@/components/PhoneCollectionModal";
 import { useUser } from "@clerk/nextjs";
+import { useSiteApi } from "@/lib/site/api";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -19,6 +20,7 @@ function ConfirmationContent() {
   const tCommon = useTranslations("common");
   const locale = useLocale();
   const { user: clerkUser, isLoaded: clerkLoaded, isSignedIn } = useUser();
+  const api = useSiteApi();
   const orderNumber = searchParams.get("orderNumber");
   const orderId = searchParams.get("orderId");
   const total = searchParams.get("total");
@@ -78,7 +80,7 @@ function ConfirmationContent() {
         if (isSignedIn && clerkUser?.primaryEmailAddress?.emailAddress) {
           try {
             // Look up or create user in our system
-            const userResponse = await fetch(`${BASE}/users`, {
+            const userResponse = await api(`${BASE}/users`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({

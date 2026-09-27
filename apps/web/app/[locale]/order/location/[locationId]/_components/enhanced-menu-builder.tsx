@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
+import { useSiteApi } from "@/lib/site/api";
 import { useTranslations, useLocale } from "next-intl";
 import { SliderControl, SliderLegend } from "./slider-control";
 import { RadioGroup } from "./radio-group";
@@ -105,6 +106,7 @@ export default function EnhancedMenuBuilder({
 }: EnhancedMenuBuilderProps) {
   const router = useRouter();
   const { user, isLoaded: userLoaded } = useUser();
+  const api = useSiteApi();
   const { guest, isGuest } = useGuest();
   const t = useTranslations("order");
   const tMenu = useTranslations("menu");
@@ -195,7 +197,7 @@ export default function EnhancedMenuBuilder({
       }
 
       try {
-        const res = await fetch(`${BASE}/users`, {
+        const res = await api(`${BASE}/users`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -370,7 +372,7 @@ export default function EnhancedMenuBuilder({
         if (firstName) {
           url.searchParams.set("firstName", firstName);
         }
-        const response = await fetch(url.toString(), {
+        const response = await api(url.toString(), {
           headers: { "x-tenant-slug": "oh" },
         });
         if (response.ok) {

@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { SignInButton, useUser } from "@clerk/nextjs";
+import { useSiteApi } from "@/lib/site/api";
 import { API_URL } from "@/lib/api";
 import { useGuest } from "@/contexts/guest-context";
 import SeatingMap, { Seat } from "@/components/SeatingMap";
@@ -72,6 +73,7 @@ export default function GroupLobby({ initialGroup }: GroupLobbyProps) {
   const t = useTranslations("order");
   const toast = useToast();
   const { user, isLoaded: userLoaded } = useUser();
+  const api = useSiteApi();
   const { guest, isGuest, startGuestSession, isLoading: guestLoading } = useGuest();
   const [group, setGroup] = useState<GroupOrder>(initialGroup);
   const [joining, setJoining] = useState(false);
@@ -113,7 +115,7 @@ export default function GroupLobby({ initialGroup }: GroupLobbyProps) {
       setDbUserLoading(true);
       try {
         console.log("[GroupLobby] Fetching db user for:", user.primaryEmailAddress.emailAddress);
-        const res = await fetch(`${API_URL}/users`, {
+        const res = await api(`${API_URL}/users`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

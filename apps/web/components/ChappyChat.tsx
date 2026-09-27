@@ -6,6 +6,7 @@ import Image from "next/image";
 import { loadStripe, Stripe, PaymentRequest } from "@stripe/stripe-js";
 import { StripeProvider } from "./payments/StripeProvider";
 import { PaymentForm } from "./payments/PaymentForm";
+import { useSiteApi } from "@/lib/site/api";
 
 // Singleton Stripe promise
 let stripePromise: Promise<Stripe | null> | null = null;
@@ -97,6 +98,7 @@ export function ChappyChat({
   position = "bottom-right",
   onOrderCreated,
 }: ChappyChatProps) {
+  const api = useSiteApi();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
@@ -181,7 +183,8 @@ export function ChappyChat({
         else if (guestId) params.set("guestId", guestId);
         else params.set("sessionId", effectiveSessionId);
 
-        const res = await fetch(`${apiUrl}/chappy/history?${params}`);
+        // Members are identified by the Bearer token (the API ignores a client userId).
+        const res = await api(`${apiUrl}/chappy/history?${params}`);
         const data = await res.json();
 
         if (data.messages && data.messages.length > 0) {
@@ -429,8 +432,20 @@ export function ChappyChat({
       const params = new URLSearchParams({
         message: encodeURIComponent(text.trim()),
       });
-      if (userId) params.set("userId", userId);
-      else if (guestId) params.set("guestId", guestId);
+      if (userId) {
+        // EventSource cannot send headers: exchange the session for a short-lived signed ticket.
+        try {
+          const ticketRes = await api(`${apiUrl}/chappy/stream-ticket`, { method: "POST" });
+          if (ticketRes.ok) {
+            const ticket = await ticketRes.json();
+            params.set("uid", ticket.uid);
+            params.set("exp", ticket.exp);
+            params.set("sig", ticket.sig);
+          }
+        } catch {
+          /* stream anonymously rather than fail */
+        }
+      } else if (guestId) params.set("guestId", guestId);
       else params.set("sessionId", effectiveSessionId);
       if (locationId) params.set("locationId", locationId);
 
@@ -565,7 +580,7 @@ export function ChappyChat({
         setIsLoading(false);
       });
     },
-    [userId, guestId, effectiveSessionId, locationId, apiUrl, isLoading, isStreaming, isOpen, onOrderCreated, resetScrollTracking]
+    [userId, guestId, effectiveSessionId, locationId, apiUrl, api, isLoading, isStreaming, isOpen, onOrderCreated, resetScrollTracking]
   );
 
   // Handle action button clicks

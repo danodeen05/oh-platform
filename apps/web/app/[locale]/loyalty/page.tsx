@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useTranslations, useLocale } from "next-intl";
 import { event, trackLoyaltySignup } from "@/lib/analytics";
+import { useSiteApi } from "@/lib/site/api";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -52,6 +53,7 @@ export default function LoyaltyPage() {
   const tCommon = useTranslations("common");
   const locale = useLocale();
   const [userTier, setUserTier] = useState<string | null>(null);
+  const api = useSiteApi();
   const [badges, setBadges] = useState<Badge[]>([]);
   const [challenges, setChallenges] = useState<Challenge[]>([]);
 
@@ -78,7 +80,7 @@ export default function LoyaltyPage() {
   useEffect(() => {
     const userId = localStorage.getItem("userId");
     if (userId) {
-      fetch(`${BASE}/users/${userId}/profile`)
+      api(`${BASE}/users/${userId}/profile`)
         .then((res) => res.json())
         .then((data) => {
           if (data.membershipTier) {

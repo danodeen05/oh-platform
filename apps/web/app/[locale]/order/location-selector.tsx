@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
+import { useSiteApi } from "@/lib/site/api";
 import { useTranslations } from "next-intl";
 import { API_URL } from "@/lib/api";
 import { useGuest } from "@/contexts/guest-context";
@@ -53,6 +54,7 @@ export default function LocationSelector({
 }) {
   const router = useRouter();
   const { user, isLoaded: userLoaded } = useUser();
+  const api = useSiteApi();
   const { guest, isGuest } = useGuest();
   const t = useTranslations("order");
   const toast = useToast();
@@ -116,7 +118,7 @@ export default function LocationSelector({
 
         // If user is signed in with Clerk, get/create their database user ID
         if (user?.primaryEmailAddress?.emailAddress) {
-          const userResponse = await fetch(`${API_URL}/users`, {
+          const userResponse = await api(`${API_URL}/users`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",

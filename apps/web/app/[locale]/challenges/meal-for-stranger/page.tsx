@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
+import { useSiteApi } from "@/lib/site/api";
 import { useTranslations } from "next-intl";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
@@ -35,6 +36,7 @@ function PaymentForm({
 }) {
   const router = useRouter();
   const { user } = useUser();
+  const api = useSiteApi();
   const t = useTranslations("mealGift");
   const toast = useToast();
   const stripe = useStripe();
@@ -68,7 +70,7 @@ function PaymentForm({
 
     try {
       // Get/create user in database
-      const userResponse = await fetch(`${API_URL}/users`, {
+      const userResponse = await api(`${API_URL}/users`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -171,7 +173,7 @@ function PaymentForm({
 
       // Deduct credits if used
       if (creditsToUse > 0) {
-        await fetch(`${API_URL}/users/${giverId}/deduct-credits`, {
+        await api(`${API_URL}/users/${giverId}/deduct-credits`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -284,6 +286,7 @@ function PaymentForm({
 
 export default function MealForStrangerPage() {
   const { user, isLoaded: userLoaded } = useUser();
+  const api = useSiteApi();
   const t = useTranslations("mealGift");
 
   const [locations, setLocations] = useState<Location[]>([]);
@@ -316,7 +319,7 @@ export default function MealForStrangerPage() {
 
       try {
         // First, try to get/create user in our system (like payment form does)
-        const userResponse = await fetch(`${API_URL}/users`, {
+        const userResponse = await api(`${API_URL}/users`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -333,7 +336,7 @@ export default function MealForStrangerPage() {
           localStorage.setItem("userId", userData.id);
 
           // Now fetch the full profile to get credit balance
-          const profileResponse = await fetch(`${API_URL}/users/${userData.id}/profile`, {
+          const profileResponse = await api(`${API_URL}/users/${userData.id}/profile`, {
             headers: { "x-tenant-slug": "oh" },
           });
 
@@ -343,7 +346,7 @@ export default function MealForStrangerPage() {
           }
 
           // Check if user has already completed this challenge
-          const challengesResponse = await fetch(`${API_URL}/users/${userData.id}/challenges`, {
+          const challengesResponse = await api(`${API_URL}/users/${userData.id}/challenges`, {
             headers: { "x-tenant-slug": "oh" },
           });
 

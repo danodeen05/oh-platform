@@ -3,6 +3,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState, useRef, Suspense } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { useUser, useSignUp, useSignIn } from "@clerk/nextjs";
+import { useSiteApi } from "@/lib/site/api";
 import { useToast } from "@/components/ui/Toast";
 import { ConfirmDialog } from "@/components/ui/Dialog";
 
@@ -353,6 +354,7 @@ function StatusContent() {
   const tOrder = useTranslations("order");
   const toast = useToast();
   const { user, isLoaded: isUserLoaded } = useUser();
+  const api = useSiteApi();
   // DEMO- codes are the synthetic demo order (packages/api/src/demo/status-demo.js).
   // In demo mode the stage is pinned in the code ("DEMO-PLAN.PREPPING") and
   // either plays by itself or, with ?demoSync=parent, follows postMessages from
@@ -873,17 +875,23 @@ function StatusContent() {
         // Only link if we're viewing the same order that was pending
         if (pendingQrCode !== orderQrCode) return;
 
-        // Call API to link order to account
-        const response = await fetch(`${BASE}/orders/link-to-account`, {
+        // Make sure the member row exists (POST /users is the sign-up upsert),
+        // then link. The API takes the account from the verified session.
+        const email = user.primaryEmailAddress?.emailAddress;
+        if (email) {
+          await api(`${BASE}/users`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, name: user.fullName || user.firstName || undefined }),
+          });
+        }
+        const response = await api(`${BASE}/orders/link-to-account`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             "x-tenant-slug": "oh",
           },
-          body: JSON.stringify({
-            orderQrCode: pendingQrCode,
-            userId: user.id,
-          }),
+          body: JSON.stringify({ orderQrCode: pendingQrCode }),
         });
 
         if (response.ok) {

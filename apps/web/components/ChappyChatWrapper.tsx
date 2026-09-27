@@ -2,10 +2,12 @@
 
 import { useUser, useAuth } from "@clerk/nextjs";
 import { ChappyChat } from "./ChappyChat";
+import { useSiteApi } from "@/lib/site/api";
 import { useEffect, useState } from "react";
 
 export function ChappyChatWrapper() {
   const { user, isLoaded, isSignedIn } = useUser();
+  const api = useSiteApi();
   const [guestId, setGuestId] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [dbUserId, setDbUserId] = useState<string | null>(null);
@@ -38,7 +40,8 @@ export function ChappyChatWrapper() {
       const apiUrl = getApiUrl();
 
       // Fetch user by email to get database ID
-      fetch(`${apiUrl}/users/by-email/${encodeURIComponent(email)}`)
+      // Only the caller's own email resolves (the API checks the Bearer token).
+      api(`${apiUrl}/users/by-email/${encodeURIComponent(email)}`)
         .then(res => res.ok ? res.json() : null)
         .then(data => {
           if (data?.id) {

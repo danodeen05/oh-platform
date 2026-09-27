@@ -6,6 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useUser } from "@clerk/nextjs";
+import { useSiteApi } from "@/lib/site/api";
 import { useGuest } from "@/contexts/guest-context";
 import { StripeProvider, PaymentForm, type SavedPaymentMethod } from "@/components/payments";
 import { PromoCodeInput, type AppliedPromo } from "@/components/PromoCodeInput";
@@ -62,6 +63,7 @@ export default function GiftCardPurchasePage() {
   const t = useTranslations("giftCards");
   const tCommon = useTranslations("common");
   const { user, isLoaded: clerkLoaded } = useUser();
+  const api = useSiteApi();
   const { guestId, isGuest } = useGuest();
 
   // Get initial values from URL params
@@ -205,7 +207,7 @@ export default function GiftCardPurchasePage() {
     const fetchUserData = async () => {
       try {
         // Create or get user in our system
-        const userRes = await fetch(`${API_URL}/users`, {
+        const userRes = await api(`${API_URL}/users`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -228,7 +230,7 @@ export default function GiftCardPurchasePage() {
         });
 
         // Fetch or create Stripe customer
-        const customerRes = await fetch(`${API_URL}/users/${userData.id}/stripe-customer`, {
+        const customerRes = await api(`${API_URL}/users/${userData.id}/stripe-customer`, {
           method: "POST",
         });
         if (customerRes.ok) {
@@ -237,7 +239,7 @@ export default function GiftCardPurchasePage() {
         }
 
         // Fetch saved payment methods
-        const methodsRes = await fetch(`${API_URL}/users/${userData.id}/payment-methods`);
+        const methodsRes = await api(`${API_URL}/users/${userData.id}/payment-methods`);
         if (methodsRes.ok) {
           const methods = await methodsRes.json();
           setSavedPaymentMethods(methods);

@@ -69,6 +69,7 @@ import { registerPlanRoutes } from "./plan/routes.js";
 import { withStatusDemo, registerStatusDemoGuard } from "./demo/status-demo.js";
 import { createAdminAuth } from "./auth/admin.js";
 import { registerConsoleGuard, registerAdminPathGuard } from "./auth/console-guard.js";
+import { createCustomerAuth, registerCustomerIdentity } from "./auth/customer.js";
 
 // DEMO- order codes resolve to a synthetic order (see demo/status-demo.js):
 // the plan's live status-page demo reads real routes without touching the DB.
@@ -120,7 +121,10 @@ const allowedOrigins = [
     'http://localhost:3001',
     'http://localhost:4000',
     'http://127.0.0.1:3000',
-    'http://127.0.0.1:3001'
+    'http://127.0.0.1:3001',
+    // site-overhaul worktree dev servers (web 3100, admin 3101)
+    'http://localhost:3100',
+    'http://localhost:3101'
   ] : [])
 ];
 
@@ -172,6 +176,13 @@ registerStatusDemoGuard(app, { source: statusDemoSource });
 
 // Apply admin auth to all /admin/* routes
 registerAdminPathGuard(app, { requireAdminAuth });
+
+// Customer identity: see src/auth/customer.js. Member-scoped routes read the
+// caller from a verified Clerk session (or a signed guest token), never from a
+// client-sent userId. Every /users/:id/* route requires the caller to be that
+// user; this must stay above the route declarations (it uses onRoute).
+const customerAuth = createCustomerAuth({ prisma: basePrisma, log: (...args) => app.log.warn({ args }, "customer auth") });
+registerCustomerIdentity(app, customerAuth);
 
 // Register autonomous agent routes
 await registerAutonomousRoutes(app);
@@ -2164,22 +2175,24 @@ app.get("/orders/status", async (req, reply) => {
   return response;
 });
 
-// POST /orders/link-to-account - Link a guest order to a user account
+// POST /orders/link-to-account - Link a guest order to the signed-in caller's account.
+// Identity comes from the verified session (auth/customer.js); a body userId is ignored.
+// Before 2026-09-27 this looked users up by a clerkId column the schema does not
+// have and incremented nonexistent loyalty fields, so it always failed.
 app.post("/orders/link-to-account", async (req, reply) => {
-  const { orderQrCode, userId } = req.body || {};
+  const { orderQrCode } = req.body || {};
 
   if (!orderQrCode) {
     return reply.code(400).send({ error: "orderQrCode required" });
   }
 
-  if (!userId) {
-    return reply.code(400).send({ error: "userId required" });
-  }
+  const who = await customerAuth.requireUser(req, reply);
+  if (!who) return reply;
 
   // Find the order
   const order = await prisma.order.findUnique({
     where: { orderQrCode },
-    include: { user: true, items: true },
+    select: { id: true, userId: true, totalCents: true },
   });
 
   if (!order) {
@@ -2189,55 +2202,26 @@ app.post("/orders/link-to-account", async (req, reply) => {
   // Check if order is already linked to an account
   if (order.userId) {
     // If already linked to this user, that's fine
-    if (order.userId === userId) {
+    if (order.userId === who.userId) {
       return { success: true, message: "Order already linked to your account" };
     }
     // If linked to a different user, reject
     return reply.code(400).send({ error: "Order is already linked to another account" });
   }
 
-  // Find or create the user record (userId is the Clerk ID)
-  let user = await prisma.user.findUnique({
-    where: { clerkId: userId },
+  // Link only while still unlinked, so two racing requests cannot both claim it.
+  const linked = await prisma.order.updateMany({
+    where: { id: order.id, userId: null },
+    data: { userId: who.userId },
   });
-
-  if (!user) {
-    // Create user record if it doesn't exist
-    user = await prisma.user.create({
-      data: {
-        clerkId: userId,
-        tenantId: order.tenantId,
-        totalSpentCents: 0,
-        visitCount: 0,
-        loyaltyPointsBalance: 0,
-      },
-    });
+  if (linked.count === 0) {
+    return reply.code(400).send({ error: "Order is already linked to another account" });
   }
-
-  // Calculate points to award (1 point per dollar spent)
-  const pointsToAward = Math.floor(order.totalCents / 100);
-
-  // Link the order to the user and award points
-  const [updatedOrder, updatedUser] = await prisma.$transaction([
-    prisma.order.update({
-      where: { id: order.id },
-      data: { userId: user.id },
-    }),
-    prisma.user.update({
-      where: { id: user.id },
-      data: {
-        loyaltyPointsBalance: { increment: pointsToAward },
-        totalSpentCents: { increment: order.totalCents },
-        visitCount: { increment: 1 },
-      },
-    }),
-  ]);
 
   return {
     success: true,
     message: "Order linked successfully",
-    pointsAwarded: pointsToAward,
-    newPointsBalance: updatedUser.loyaltyPointsBalance,
+    pointsAwarded: Math.floor(order.totalCents / 100),
   };
 });
 
@@ -3365,6 +3349,9 @@ app.post("/orders/:id/addons", async (req, reply) => {
 
 app.get("/orders", async (req, reply) => {
   const { status, locationId, userId } = req.query || {};
+
+  // Filtering by a user exposes that user's orders: only the user (or a trusted service).
+  if (userId && !(await customerAuth.requireSelf(req, reply, userId))) return reply;
 
   const where = {};
   if (status) {
@@ -4555,9 +4542,27 @@ app.patch("/orders/:id", async (req, reply) => {
 // REFERRAL SYSTEM
 // ====================
 
-// Create or get user (simplified - no auth yet)
+// Sign-up upsert: create or get the caller's user row.
+// The email must be the caller's verified Clerk primary email (auth/customer.js).
+// Trusted server-to-server callers (x-admin-api-key) may still upsert by email or phone.
 app.post("/users", async (req, reply) => {
-  const { email, phone, name, referredByCode } = req.body || {};
+  const body = req.body || {};
+  const { name, referredByCode } = body;
+  let { email, phone } = body;
+
+  if (!customerAuth.isServiceCall(req)) {
+    const who = await customerAuth.resolve(req);
+    if (who.kind !== "user") {
+      return reply.code(401).send({ error: "Sign in required" });
+    }
+    if (typeof email !== "string" || email.trim().toLowerCase() !== who.email) {
+      return reply.code(403).send({ error: "Email must match your signed-in account" });
+    }
+    // Look up by the verified email only: matching on a client-sent phone
+    // would hand back someone else's row. Phone changes use PATCH /users/:id/phone.
+    email = email.trim();
+    phone = undefined;
+  }
 
   console.log("POST /users - Received:", { email, phone, name, referredByCode });
 
@@ -4568,7 +4573,7 @@ app.post("/users", async (req, reply) => {
   // Check if user exists
   const existing = await prisma.user.findFirst({
     where: {
-      OR: [email ? { email } : {}, phone ? { phone } : {}].filter(
+      OR: [email ? { email: { equals: email, mode: "insensitive" } } : {}, phone ? { phone } : {}].filter(
         (obj) => Object.keys(obj).length > 0
       ),
     },
@@ -4682,13 +4687,14 @@ app.post("/users", async (req, reply) => {
   return user;
 });
 
-// Get user by email (for mapping Clerk ID to database ID)
+// Get user by email (for mapping Clerk ID to database ID). Only the caller's own verified email.
 app.get("/users/by-email/:email", async (req, reply) => {
   const { email } = req.params;
 
   if (!email) {
     return reply.code(400).send({ error: "Email required" });
   }
+  if (!(await customerAuth.requireEmail(req, reply, decodeURIComponent(email)))) return reply;
 
   const user = await prisma.user.findUnique({
     where: { email: decodeURIComponent(email) },
@@ -4707,6 +4713,19 @@ app.get("/users/by-email/:email", async (req, reply) => {
     return reply.code(404).send({ error: "User not found" });
   }
 
+  return user;
+});
+
+// The signed-in caller's own user row (404 until POST /users has created it).
+app.get("/users/me", async (req, reply) => {
+  const who = await customerAuth.resolve(req);
+  if (who.kind !== "user") return reply.code(401).send({ error: "Sign in required" });
+  if (!who.userId) return reply.code(404).send({ error: "User not found" });
+  const user = await prisma.user.findUnique({
+    where: { id: who.userId },
+    select: { id: true, email: true, name: true, membershipTier: true, creditsCents: true, referralCode: true },
+  });
+  if (!user) return reply.code(404).send({ error: "User not found" });
   return user;
 });
 
@@ -5068,9 +5087,17 @@ app.post("/users/:id/deduct-credits", async (req, reply) => {
 // Apply credits to an order
 app.post("/orders/:id/apply-credits", async (req, reply) => {
   const { id } = req.params;
-  const { userId, creditsCents } = req.body || {};
+  const { creditsCents } = req.body || {};
 
-  if (!userId || !creditsCents) {
+  // Credits are spent from the verified caller's balance; a body userId must match it.
+  const who = await customerAuth.requireUser(req, reply);
+  if (!who) return reply;
+  if (req.body?.userId && req.body.userId !== who.userId) {
+    return reply.code(403).send({ error: "Forbidden" });
+  }
+  const userId = who.userId;
+
+  if (!creditsCents) {
     return reply.code(400).send({ error: "userId and creditsCents required" });
   }
 
@@ -5851,6 +5878,16 @@ app.get("/users/:id/wallet", async (req, reply) => {
     return reply.code(404).send({ error: "User not found" });
   }
 
+  // Pass downloads are plain navigations (no Authorization header), so the
+  // links carry a 5-minute HMAC signature the /wallet/apple|google guard accepts.
+  let signed = "";
+  try {
+    const { exp, sig } = customerAuth.signLink("wallet", id);
+    signed = `?exp=${exp}&sig=${encodeURIComponent(sig)}`;
+  } catch {
+    /* CHAPPY_GUEST_SECRET unset: links still work with an Authorization header */
+  }
+
   return {
     user: {
       id: user.id,
@@ -5863,8 +5900,8 @@ app.get("/users/:id/wallet", async (req, reply) => {
       memberSince: user.createdAt,
     },
     walletLinks: {
-      apple: `/users/${id}/wallet/apple`,
-      google: `/users/${id}/wallet/google`,
+      apple: `/users/${id}/wallet/apple${signed}`,
+      google: `/users/${id}/wallet/google${signed}`,
     },
     configured: {
       apple: isAppleWalletConfigured(),
@@ -8768,6 +8805,8 @@ app.get("/users/by-email/:email/order-patterns", async (req, reply) => {
   if (!email) {
     return reply.status(400).send({ error: "Email required" });
   }
+  // Only the caller's own verified email (auth/customer.js).
+  if (!(await customerAuth.requireEmail(req, reply, decodeURIComponent(email)))) return reply;
 
   try {
     // First, find the user by email
@@ -14516,25 +14555,59 @@ app.post("/chappy/sms", async (req, reply) => {
   }
 });
 
+/**
+ * Who a web Chappy request is for. A member comes only from the verified
+ * session (auth/customer.js) or a signed stream ticket; a client-sent userId
+ * is ignored. Guests keep their client guestId/sessionId until Task B1 moves
+ * them to signed guest tokens, but a claimed id that is a member's id is
+ * refused, since conversations are keyed by it.
+ */
+async function chappyWebIdentity(req, { guestId, sessionId, verifiedUserId = null }) {
+  let userId = verifiedUserId;
+  if (!userId) {
+    const who = await customerAuth.resolve(req);
+    if (who.kind === "user" && who.userId) userId = who.userId;
+  }
+  if (userId) return { userId, guestId: null, identifier: userId };
+  const claimed = guestId || sessionId || null;
+  if (claimed && (await basePrisma.user.findUnique({ where: { id: claimed }, select: { id: true } }))) {
+    return { userId: null, guestId: null, identifier: null };
+  }
+  return { userId: null, guestId: guestId || null, identifier: claimed };
+}
+
+// Short-lived ticket so EventSource (which cannot send headers) can stream as the signed-in member.
+app.post("/chappy/stream-ticket", async (req, reply) => {
+  const who = await customerAuth.requireUser(req, reply);
+  if (!who) return reply;
+  try {
+    const { exp, sig } = customerAuth.signLink("chappy-stream", who.userId, 2 * 60 * 1000);
+    return { uid: who.userId, exp, sig };
+  } catch {
+    return reply.code(503).send({ error: "Streaming tickets are not configured" });
+  }
+});
+
 // Web Chat API - For in-app chat widget
 app.post("/chappy/chat", async (req, reply) => {
   try {
-    const { message, userId, guestId, locationId, sessionId } = req.body;
+    const { message, locationId } = req.body;
 
     if (!message) {
       return reply.status(400).send({ error: "Message is required" });
     }
 
+    const { userId, guestId, identifier: resolvedIdentifier } = await chappyWebIdentity(req, req.body);
+
     // Get user context if logged in
     let user = null;
     let guest = null;
-    let identifier = sessionId || "anonymous";
+    let identifier = resolvedIdentifier || "anonymous";
 
     if (userId) {
       user = await prisma.user.findUnique({
         where: { id: userId },
       });
-      identifier = userId;
     } else if (guestId) {
       guest = await prisma.guest.findUnique({
         where: { id: guestId },
@@ -14596,27 +14669,29 @@ app.post("/chappy/chat", async (req, reply) => {
 // Web Chat Streaming API - Server-Sent Events for real-time responses
 app.get("/chappy/chat/stream", async (req, reply) => {
   try {
-    const { message, userId, guestId, locationId, sessionId } = req.query;
+    const { message, locationId, uid, exp, sig } = req.query;
 
     if (!message) {
       return reply.status(400).send({ error: "Message is required" });
     }
 
+    // Members stream with a signed ticket from POST /chappy/stream-ticket (EventSource has no headers).
+    const ticketUserId = uid && customerAuth.verifyLink("chappy-stream", uid, exp, sig) ? uid : null;
+    const { userId, guestId, identifier: resolvedIdentifier } = await chappyWebIdentity(req, { ...req.query, verifiedUserId: ticketUserId });
+
     // Get user context if logged in
     let user = null;
     let guest = null;
-    let identifier = sessionId || "anonymous";
+    let identifier = resolvedIdentifier || "anonymous";
 
     if (userId) {
       user = await prisma.user.findUnique({
         where: { id: userId },
       });
-      identifier = userId;
     } else if (guestId) {
       guest = await prisma.guest.findUnique({
         where: { id: guestId },
       });
-      identifier = guestId;
     }
 
     // Get tenant
@@ -14688,8 +14763,7 @@ app.get("/chappy/chat/stream", async (req, reply) => {
 // Get conversation history (for web chat)
 app.get("/chappy/history", async (req, reply) => {
   try {
-    const { userId, guestId, sessionId } = req.query;
-    const identifier = userId || guestId || sessionId;
+    const { identifier } = await chappyWebIdentity(req, req.query);
 
     if (!identifier) {
       return reply.status(400).send({ error: "Identifier required" });
@@ -14731,8 +14805,10 @@ app.get("/chappy/history", async (req, reply) => {
 // Clear conversation (start fresh)
 app.post("/chappy/reset", async (req, reply) => {
   try {
-    const { userId, guestId, sessionId, channel = "web" } = req.body;
-    const identifier = userId || guestId || sessionId;
+    const body = req.body || {};
+    // Only trusted services may reset another channel (an SMS conversation is keyed by phone number).
+    const channel = customerAuth.isServiceCall(req) ? body.channel || "web" : "web";
+    const { identifier } = await chappyWebIdentity(req, body);
 
     if (!identifier) {
       return reply.status(400).send({ error: "Identifier required" });

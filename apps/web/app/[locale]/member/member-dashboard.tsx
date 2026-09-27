@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useTranslations, useLocale } from "next-intl";
 import { useToast } from "@/components/ui/Toast";
 import { setUserProperties } from "@/lib/analytics";
+import { useSiteApi, useMemberId } from "@/lib/site/api";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -326,6 +327,8 @@ export default function MemberDashboard() {
   const tCommon = useTranslations("common");
   const tMealGift = useTranslations("mealGift");
   const toast = useToast();
+  const api = useSiteApi();
+  const member = useMemberId();
   const [email, setEmail] = useState("");
   const [userId, setUserId] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -340,19 +343,23 @@ export default function MemberDashboard() {
   const [showTiersModal, setShowTiersModal] = useState(false);
 
   useEffect(() => {
-    const savedUserId = localStorage.getItem("userId");
-    if (savedUserId) {
-      setUserId(savedUserId);
-      loadProfile(savedUserId);
-      loadOrders(savedUserId);
-      loadBadgeProgress(savedUserId);
-      loadUserChallenges(savedUserId);
-      loadMealGifts(savedUserId);
-    }
     loadAllBadges();
     loadAvailableChallenges();
     loadWalletStatus();
   }, []);
+
+  // The member id comes from the verified Clerk session (GET /users/me), not localStorage.
+  useEffect(() => {
+    if (!member.ready || !member.userId) return;
+    const uid = member.userId;
+    setUserId(uid);
+    loadProfile(uid);
+    loadOrders(uid);
+    loadBadgeProgress(uid);
+    loadUserChallenges(uid);
+    loadMealGifts(uid);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [member.ready, member.userId]);
 
   async function loadWalletStatus() {
     try {
@@ -367,16 +374,32 @@ export default function MemberDashboard() {
     }
   }
 
-  function handleAddToAppleWallet() {
+  // Pass downloads are plain navigations that cannot carry an Authorization
+  // header, so fetch short-lived signed links (GET /users/:id/wallet) first.
+  // The tab is opened synchronously so popup blockers allow it.
+  async function openWalletLink(kind: "apple" | "google") {
     if (!userId) return;
-    // Open the wallet pass endpoint - browser will handle the download
-    window.open(`${BASE}/users/${userId}/wallet/apple`, "_blank");
+    const tab = window.open("", "_blank");
+    try {
+      const response = await api(`${BASE}/users/${userId}/wallet`);
+      const data = response.ok ? await response.json() : null;
+      const path = data?.walletLinks?.[kind];
+      if (!path) throw new Error("no wallet link");
+      if (tab) tab.location.href = `${BASE}${path}`;
+      else window.location.href = `${BASE}${path}`;
+    } catch (error) {
+      tab?.close();
+      console.error("Failed to open wallet pass:", error);
+    }
+  }
+
+  function handleAddToAppleWallet() {
+    openWalletLink("apple");
   }
 
   function handleAddToGoogleWallet() {
-    if (!userId) return;
     // For now, show demo data (until Google Wallet is configured)
-    window.open(`${BASE}/users/${userId}/wallet/google`, "_blank");
+    openWalletLink("google");
   }
 
   async function loadProfile(uid: string) {
@@ -385,13 +408,13 @@ export default function MemberDashboard() {
       const url = `${BASE}/users/${uid}/profile`;
       console.log("BASE:", BASE);
       console.log("Fetching profile from:", url);
-      const response = await fetch(url);
+      const response = await api(url);
       console.log("Response status:", response.status);
 
       if (!response.ok) {
         console.error("Profile request failed with status:", response.status);
-        // Clear invalid userId from localStorage if user not found
-        if (response.status === 404) {
+        // Clear invalid userId from localStorage if user not found or not this account
+        if (response.status === 404 || response.status === 403) {
           localStorage.removeItem("userId");
           setUserId(null);
         }
@@ -441,7 +464,7 @@ export default function MemberDashboard() {
 
   async function loadOrders(uid: string) {
     try {
-      const response = await fetch(`${BASE}/users/${uid}/orders`);
+      const response = await api(`${BASE}/users/${uid}/orders`);
       if (!response.ok) {
         console.error("Orders request failed with status:", response.status);
         return;
@@ -455,7 +478,7 @@ export default function MemberDashboard() {
 
   async function loadBadgeProgress(uid: string) {
     try {
-      const response = await fetch(`${BASE}/users/${uid}/badge-progress`);
+      const response = await api(`${BASE}/users/${uid}/badge-progress`);
       if (!response.ok) {
         console.error("Badge progress request failed with status:", response.status);
         return;
@@ -469,7 +492,7 @@ export default function MemberDashboard() {
 
   async function loadUserChallenges(uid: string) {
     try {
-      const response = await fetch(`${BASE}/users/${uid}/challenges`);
+      const response = await api(`${BASE}/users/${uid}/challenges`);
       if (!response.ok) {
         console.error("User challenges request failed with status:", response.status);
         return;
@@ -483,7 +506,7 @@ export default function MemberDashboard() {
 
   async function loadMealGifts(uid: string) {
     try {
-      const response = await fetch(`${BASE}/users/${uid}/meal-gifts`);
+      const response = await api(`${BASE}/users/${uid}/meal-gifts`);
       if (!response.ok) {
         console.error("Meal gifts request failed with status:", response.status);
         return;
@@ -508,7 +531,7 @@ export default function MemberDashboard() {
   async function enrollInChallenge(challenge: Challenge) {
     if (!userId) return;
     try {
-      const response = await fetch(`${BASE}/users/${userId}/challenges/${challenge.id}/enroll`, {
+      const response = await api(`${BASE}/users/${userId}/challenges/${challenge.id}/enroll`, {
         method: "POST",
       });
       if (response.ok) {
@@ -528,7 +551,7 @@ export default function MemberDashboard() {
   async function claimChallengeReward(challengeId: string) {
     if (!userId) return;
     try {
-      const response = await fetch(`${BASE}/users/${userId}/challenges/${challengeId}/claim`, {
+      const response = await api(`${BASE}/users/${userId}/challenges/${challengeId}/claim`, {
         method: "POST",
       });
       if (response.ok) {
@@ -550,11 +573,17 @@ export default function MemberDashboard() {
 
     setLoading(true);
     try {
-      const response = await fetch(`${BASE}/users`, {
+      // POST /users only accepts the signed-in account's own email.
+      const response = await api(`${BASE}/users`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
+      if (!response.ok) {
+        toast.warning(tCommon("enterEmail"));
+        setLoading(false);
+        return;
+      }
       const userData = await response.json();
       setUserId(userData.id);
       localStorage.setItem("userId", userData.id);
@@ -633,7 +662,7 @@ export default function MemberDashboard() {
     },
   ];
 
-  if (!userId) {
+  if (!userId && member.ready) {
     return (
       <div
         style={{

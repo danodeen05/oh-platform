@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useSiteApi, useMemberId } from "@/lib/site/api";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -26,19 +27,22 @@ export default function CreditsPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [credits, setCredits] = useState<CreditData | null>(null);
+  const api = useSiteApi();
+  const member = useMemberId();
 
   useEffect(() => {
-    const userId = localStorage.getItem("userId");
-    if (!userId) {
+    if (!member.ready) return;
+    if (!member.userId) {
       router.push("/member");
       return;
     }
-    loadCredits(userId);
-  }, []);
+    loadCredits(member.userId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [member.ready, member.userId]);
 
   async function loadCredits(userId: string) {
     try {
-      const response = await fetch(`${BASE}/users/${userId}/credits`);
+      const response = await api(`${BASE}/users/${userId}/credits`);
       const data = await response.json();
       setCredits(data);
       setLoading(false);

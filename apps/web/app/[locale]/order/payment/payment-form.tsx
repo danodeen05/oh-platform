@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useUser, SignInButton } from "@clerk/nextjs";
+import { useSiteApi } from "@/lib/site/api";
 import { useGuest } from "@/contexts/guest-context";
 import { trackBeginCheckout, trackReferralCodeUsed } from "@/lib/analytics";
 import { useTranslations } from "next-intl";
@@ -25,6 +26,7 @@ export default function OrderPaymentForm({
   const t = useTranslations("payment");
   const tMealGift = useTranslations("mealGift");
   const { user, isLoaded, isSignedIn } = useUser();
+  const api = useSiteApi();
   const { guest, isGuest, updateGuest } = useGuest();
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState("");
@@ -231,7 +233,7 @@ export default function OrderPaymentForm({
       const referralCode = localStorage.getItem("pendingReferralCode");
 
       // Create or get user in our system
-      const userResponse = await fetch(`${BASE}/users`, {
+      const userResponse = await api(`${BASE}/users`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -254,7 +256,7 @@ export default function OrderPaymentForm({
 
       // Get or create Stripe customer
       try {
-        const customerResponse = await fetch(`${BASE}/users/${userData.id}/stripe-customer`, {
+        const customerResponse = await api(`${BASE}/users/${userData.id}/stripe-customer`, {
           method: "POST",
         });
 
@@ -263,7 +265,7 @@ export default function OrderPaymentForm({
           setStripeCustomerId(customerData.customerId);
 
           // Fetch saved payment methods
-          const methodsResponse = await fetch(`${BASE}/users/${userData.id}/payment-methods`);
+          const methodsResponse = await api(`${BASE}/users/${userData.id}/payment-methods`);
           if (methodsResponse.ok) {
             const methods = await methodsResponse.json();
             setSavedPaymentMethods(methods);
@@ -339,7 +341,7 @@ export default function OrderPaymentForm({
     if (creditsToApply <= 0) return;
 
     try {
-      await fetch(`${BASE}/orders/${orderId}/apply-credits`, {
+      await api(`${BASE}/orders/${orderId}/apply-credits`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
