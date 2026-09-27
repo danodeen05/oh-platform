@@ -19,7 +19,7 @@
  *  - Cashback and referral payouts are NOT paid here: they happen when the
  *    order reaches COMPLETED (membership/engine.js onOrderCompleted).
  */
-import { priceLines, computeTotals, rewardDiscountCents, bowlCount, PricingError } from "./pricing.js";
+import { priceLines, computeTotals, rewardDiscountCents, bowlCount, spendBaseCents, PricingError } from "./pricing.js";
 import { availableCredit, spendCreditInTx, CreditShortError } from "../membership/credits.js";
 import { firstUnreleasedItem, redeemReward, onOrderCompleted as engineOnOrderCompleted } from "../membership/engine.js";
 import { canAcceptOrders, validateArrivalTime } from "../utils/operating-hours.js";
@@ -103,12 +103,20 @@ async function resolvePromo(prisma, { promoCode, promoCodeId, userId, locationId
   return { ok: true, promo };
 }
 
+/** Stored codes are XXXX-XXXX-XXXX-XXXX; customers type them with or without dashes. */
+export function giftCardCodeCandidates(input) {
+  const raw = String(input).trim();
+  const upper = raw.toUpperCase();
+  const alnum = upper.replace(/[^A-Z0-9]/g, "");
+  const dashed = alnum.length === 16 ? `${alnum.slice(0, 4)}-${alnum.slice(4, 8)}-${alnum.slice(8, 12)}-${alnum.slice(12, 16)}` : upper;
+  return [...new Set([raw, upper, dashed])];
+}
+
 async function resolveGiftCard(prisma, { giftCardCode, giftCardId, now }) {
   let card = null;
   if (giftCardId) card = await prisma.giftCard.findUnique({ where: { id: giftCardId } });
   else if (typeof giftCardCode === "string" && giftCardCode.trim()) {
-    const raw = giftCardCode.trim();
-    card = await prisma.giftCard.findFirst({ where: { code: { in: [...new Set([raw, raw.toUpperCase()])] } } });
+    card = await prisma.giftCard.findFirst({ where: { code: { in: giftCardCodeCandidates(giftCardCode) } } });
   } else return null;
   const usable = card && card.status === "ACTIVE" && card.balanceCents > 0 && !(card.expiresAt && card.expiresAt <= now);
   return usable ? card : false;
@@ -117,7 +125,8 @@ async function resolveGiftCard(prisma, { giftCardCode, giftCardId, now }) {
 async function resolveMealGift(prisma, { mealGiftId, locationId, now }) {
   if (!mealGiftId) return null;
   const gift = await prisma.mealGift.findUnique({ where: { id: mealGiftId } });
-  const usable = gift && gift.status === "PENDING" && gift.expiresAt > now && gift.locationId === locationId;
+  // Only a gift whose giver's payment was verified server-side (paidAt) is a tender.
+  const usable = gift && gift.paidAt && gift.status === "PENDING" && gift.expiresAt > now && gift.locationId === locationId;
   return usable ? gift : false;
 }
 
@@ -479,6 +488,10 @@ export async function requoteOrder(prisma, { orderId, userId = null, changes = {
   if (memberChange && (!userId || order.userId !== userId)) {
     throw new OrderError("FORBIDDEN", 403, "Only the order's owner can use credits or rewards on it.");
   }
+  // A member's order: only that member may add, change or remove any saving.
+  if (order.userId && Object.keys(changes).length > 0 && userId !== order.userId) {
+    throw new OrderError("FORBIDDEN", 403, "Only the order's owner can change its savings.");
+  }
 
   const location = await prisma.location.findUnique({ where: { id: order.locationId } });
   if (!location) throw new OrderError("LOCATION_NOT_FOUND", 404, "Location not found");
@@ -501,7 +514,10 @@ export async function requoteOrder(prisma, { orderId, userId = null, changes = {
     now,
   });
 
-  const updated = await prisma.order.update({ where: { id: orderId }, data: quoteColumns(quote) });
+  // Conditional write: never re-price an order that has been paid meanwhile.
+  const written = await prisma.order.updateMany({ where: { id: orderId, paymentStatus: { not: "PAID" } }, data: quoteColumns(quote) });
+  if (written.count !== 1) throw new OrderError("ALREADY_PAID", 409, "This order is already paid.");
+  const updated = await prisma.order.findUnique({ where: { id: orderId } });
   return { order: updated, quote };
 }
 
@@ -521,7 +537,7 @@ async function assertSavingsStillAvailable(prisma, order, now) {
   }
   if (order.mealGiftId && order.mealGiftAppliedCents > 0) {
     const gift = await prisma.mealGift.findUnique({ where: { id: order.mealGiftId } });
-    if (!gift || gift.status !== "PENDING" || gift.expiresAt <= now) throw new OrderError("MEAL_GIFT_UNAVAILABLE", 409, "That meal gift is no longer available.");
+    if (!gift || !gift.paidAt || gift.status !== "PENDING" || gift.expiresAt <= now) throw new OrderError("MEAL_GIFT_UNAVAILABLE", 409, "That meal gift is no longer available.");
   }
   if (order.rewardId) {
     const reward = await prisma.reward.findUnique({ where: { id: order.rewardId } });
@@ -563,7 +579,7 @@ export async function createPaymentIntent(prisma, stripe, { orderId, userId = nu
  * Retrieves a PaymentIntent from Stripe and checks it paid exactly `amount`
  * in USD and that `matchesMetadata(pi.metadata)`. Throws a 402 otherwise.
  */
-async function verifiedIntent(stripe, paymentIntentId, { amount, matchesMetadata }) {
+export async function verifiedIntent(stripe, paymentIntentId, { amount, matchesMetadata }) {
   if (!paymentIntentId || typeof paymentIntentId !== "string") throw new OrderError("PAYMENT_REQUIRED", 402, "Payment required.");
   if (!stripe) throw new OrderError("PAYMENTS_UNAVAILABLE", 503, "Payments are not configured.");
   let pi;
@@ -572,14 +588,55 @@ async function verifiedIntent(stripe, paymentIntentId, { amount, matchesMetadata
   } catch {
     throw new OrderError("PAYMENT_NOT_VERIFIED", 402, "Payment could not be verified.");
   }
-  const ok =
-    pi &&
-    pi.status === "succeeded" &&
-    pi.amount === amount &&
-    (pi.currency || "usd").toLowerCase() === "usd" &&
-    matchesMetadata(pi.metadata || {});
-  if (!ok) throw new OrderError("PAYMENT_NOT_VERIFIED", 402, "Payment could not be verified.", { stripeStatus: pi?.status || null });
+  const ours = Boolean(pi) && matchesMetadata(pi.metadata || {});
+  const ok = ours && pi.status === "succeeded" && pi.amount === amount && (pi.currency || "usd").toLowerCase() === "usd";
+  if (!ok) {
+    const err = new OrderError("PAYMENT_NOT_VERIFIED", 402, "Payment could not be verified.", { stripeStatus: pi?.status || null });
+    // This order's own PaymentIntent took money but can't be applied (e.g. it
+    // was for an older total): the caller refunds it rather than keep it silently.
+    if (ours && pi.status === "succeeded") Object.defineProperty(err, "chargedIntent", { value: pi });
+    throw err;
+  }
   return pi;
+}
+
+/**
+ * A PaymentIntent that took the customer's money but could not be applied to
+ * the order: FULL refund (owner's rule: never partial), a SupportCase for
+ * staff, and an error log. Idempotent per PaymentIntent: when Stripe already
+ * has a refund for it (a webhook retry, the return page), nothing new is
+ * refunded or filed.
+ */
+export async function refundUnappliedPayment(prisma, stripe, { pi, orderId, userId = null, code }) {
+  let refundId = null;
+  let refunded = false;
+  try {
+    const existing = await stripe.refunds.list({ payment_intent: pi.id, limit: 1 });
+    if (existing?.data?.length) return { refunded: true, refundId: existing.data[0].id, alreadyRefunded: true };
+    const refund = await stripe.refunds.create({ payment_intent: pi.id }, { idempotencyKey: `order-refund-${pi.id}` });
+    refundId = refund.id;
+    refunded = true;
+  } catch (err) {
+    console.error(`[orders] refund FAILED for ${pi.id} (order ${orderId}):`, err?.message || err);
+  }
+  const summary = refunded
+    ? `Payment ${pi.id} for order ${orderId} could not be applied (${code}); refunded in full, refund ${refundId}.`
+    : `Payment ${pi.id} for order ${orderId} could not be applied (${code}); REFUND FAILED, refund it manually.`;
+  try {
+    await prisma.supportCase.create({ data: { type: "ORDER_ISSUE", orderId, userId, summary, amountCents: pi.amount ?? null } });
+  } catch (err) {
+    console.error(`[orders] could not file support case for ${pi.id}:`, err?.message || err);
+  }
+  console.error(`[orders] ${summary}`);
+  return { refunded, refundId, alreadyRefunded: false };
+}
+
+/** Adds the refund outcome to a settle-time OrderError after a verified charge. */
+async function refundOnFailure(prisma, stripe, err, { pi, orderId, userId }) {
+  if (!(err instanceof OrderError) || !pi) return err;
+  const r = await refundUnappliedPayment(prisma, stripe, { pi, orderId, userId, code: err.code });
+  err.extra = { ...err.extra, refunded: r.refunded, ...(r.refundId ? { refundId: r.refundId } : {}) };
+  return err;
 }
 
 /** Card last4/brand for receipts; best effort, never fails a payment. */
@@ -606,12 +663,18 @@ function denverDay(date) {
  * The first write is the idempotency claim; if another confirmation already
  * won it this returns { alreadyPaid: true } having written nothing.
  */
-async function settleInTx(tx, orderId, { paymentIntentId = null, card = {}, now }) {
+async function settleInTx(tx, orderId, { expectedAmountDueCents, paymentIntentId = null, card = {}, now }) {
+  // The claim is pinned to the amount due that was verified against Stripe:
+  // a re-quote that landed after verification makes it miss.
   const claim = await tx.order.updateMany({
-    where: { id: orderId, paymentStatus: { not: "PAID" } },
+    where: { id: orderId, paymentStatus: { not: "PAID" }, amountDueCents: expectedAmountDueCents },
     data: { paymentStatus: "PAID", paidAt: now, ...(paymentIntentId ? { stripePaymentId: paymentIntentId } : {}), ...card },
   });
-  if (claim.count !== 1) return { alreadyPaid: true };
+  if (claim.count !== 1) {
+    const current = await tx.order.findUnique({ where: { id: orderId } });
+    if (current?.paymentStatus === "PAID") return { alreadyPaid: true };
+    throw new OrderError("QUOTE_CHANGED", 409, "Your order total changed. Review it and try again.");
+  }
 
   const order = await tx.order.findUnique({ where: { id: orderId } });
 
@@ -654,7 +717,7 @@ async function settleInTx(tx, orderId, { paymentIntentId = null, card = {}, now 
 
   if (order.mealGiftId && order.mealGiftAppliedCents > 0) {
     const taken = await tx.mealGift.updateMany({
-      where: { id: order.mealGiftId, status: "PENDING", expiresAt: { gt: now } },
+      where: { id: order.mealGiftId, status: "PENDING", paidAt: { not: null }, expiresAt: { gt: now } },
       data: { status: "ACCEPTED", acceptedById: order.userId || null, orderId, acceptedAt: now },
     });
     if (taken.count !== 1) throw new OrderError("MEAL_GIFT_UNAVAILABLE", 409, "That meal gift is no longer available.");
@@ -690,7 +753,7 @@ async function settleInTx(tx, orderId, { paymentIntentId = null, card = {}, now 
         where: { id: user.id },
         data: {
           lifetimeOrderCount: { increment: 1 },
-          lifetimeSpentCents: { increment: order.totalCents },
+          lifetimeSpentCents: { increment: spendBaseCents(order) },
           currentStreak: streak,
           longestStreak: Math.max(user.longestStreak || 0, streak),
           lastOrderDate: now,
@@ -744,20 +807,36 @@ function mapTxError(err) {
 export async function markPaid(prisma, stripe, { orderId, paymentIntentId = null, now = new Date() }, effects = config.effects) {
   const existing = await prisma.order.findUnique({ where: { id: orderId } });
   if (!existing) throw new OrderError("ORDER_NOT_FOUND", 404, "Order not found");
-  if (existing.paymentStatus === "PAID") return { alreadyPaid: true, order: existing };
+  if (existing.paymentStatus === "PAID") {
+    // A second, different PaymentIntent that also charged this order (two
+    // tabs, a retry) is refunded rather than kept.
+    if (paymentIntentId && stripe && paymentIntentId !== existing.stripePaymentId) {
+      const extra = await stripe.paymentIntents.retrieve(paymentIntentId).catch(() => null);
+      if (extra && extra.status === "succeeded" && extra.metadata?.orderId === orderId) {
+        const r = await refundUnappliedPayment(prisma, stripe, { pi: extra, orderId, userId: existing.userId, code: "DUPLICATE_PAYMENT" });
+        return { alreadyPaid: true, order: existing, refunded: r.refunded };
+      }
+    }
+    return { alreadyPaid: true, order: existing };
+  }
   const order = loadPayableOrder(existing);
 
   let pi = null;
   if (order.amountDueCents > 0) {
-    pi = await verifiedIntent(stripe, paymentIntentId, { amount: order.amountDueCents, matchesMetadata: (md) => md.orderId === orderId });
+    try {
+      pi = await verifiedIntent(stripe, paymentIntentId, { amount: order.amountDueCents, matchesMetadata: (md) => md.orderId === orderId });
+    } catch (err) {
+      if (err.chargedIntent) throw await refundOnFailure(prisma, stripe, err, { pi: err.chargedIntent, orderId, userId: order.userId });
+      throw err;
+    }
   }
   const card = pi ? await cardDetails(stripe, pi) : {};
 
   let result;
   try {
-    result = await prisma.$transaction((tx) => settleInTx(tx, orderId, { paymentIntentId: pi?.id || null, card, now }));
+    result = await prisma.$transaction((tx) => settleInTx(tx, orderId, { expectedAmountDueCents: order.amountDueCents, paymentIntentId: pi?.id || null, card, now }));
   } catch (err) {
-    throw mapTxError(err);
+    throw await refundOnFailure(prisma, stripe, mapTxError(err), { pi, orderId, userId: order.userId });
   }
   if (result.alreadyPaid) return { alreadyPaid: true, order: await prisma.order.findUnique({ where: { id: orderId } }) };
 
@@ -790,10 +869,15 @@ export async function markPaidBatch(prisma, stripe, { orderIds, paymentIntentId 
   let pi = null;
   if (sum > 0) {
     const want = [...ids].sort().join(",");
-    pi = await verifiedIntent(stripe, paymentIntentId, {
-      amount: sum,
-      matchesMetadata: (md) => typeof md.orderIds === "string" && md.orderIds.split(",").map((s) => s.trim()).filter(Boolean).sort().join(",") === want,
-    });
+    try {
+      pi = await verifiedIntent(stripe, paymentIntentId, {
+        amount: sum,
+        matchesMetadata: (md) => typeof md.orderIds === "string" && md.orderIds.split(",").map((s) => s.trim()).filter(Boolean).sort().join(",") === want,
+      });
+    } catch (err) {
+      if (err.chargedIntent) throw await refundOnFailure(prisma, stripe, err, { pi: err.chargedIntent, orderId: ids.join(","), userId: null });
+      throw err;
+    }
   }
   const card = pi ? await cardDetails(stripe, pi) : {};
 
@@ -801,11 +885,14 @@ export async function markPaidBatch(prisma, stripe, { orderIds, paymentIntentId 
   try {
     settled = await prisma.$transaction(async (tx) => {
       const out = [];
-      for (const id of ids) out.push(await settleInTx(tx, id, { paymentIntentId: pi?.id || null, card, now }));
+      for (const o of orders) {
+        // Each claim is pinned to that order's verified amount due.
+        out.push(await settleInTx(tx, o.id, { expectedAmountDueCents: o.amountDueCents, paymentIntentId: pi?.id || null, card, now }));
+      }
       return out;
     });
   } catch (err) {
-    throw mapTxError(err);
+    throw await refundOnFailure(prisma, stripe, mapTxError(err), { pi, orderId: ids.join(","), userId: null });
   }
 
   const paid = [];
@@ -817,6 +904,29 @@ export async function markPaidBatch(prisma, stripe, { orderIds, paymentIntentId 
   const fresh = [];
   for (const id of ids) fresh.push(await prisma.order.findUnique({ where: { id } }));
   return { alreadyPaid: paid.length === 0, orders: fresh };
+}
+
+/**
+ * Payment confirmation for callers that may still see legacy (pre-quote)
+ * orders, e.g. /chappy/confirm-payment. A server-priced order goes through
+ * markPaid. A legacy order (null amountDueCents) is PAID only for a
+ * succeeded PaymentIntent with metadata.orderId === orderId and
+ * amount === order.totalCents, through a conditional claim.
+ * Returns { alreadyPaid, order, legacy }.
+ */
+export async function confirmOrderPayment(prisma, stripe, { orderId, paymentIntentId = null, now = new Date() }, effects = config.effects) {
+  const order = await prisma.order.findUnique({ where: { id: orderId } });
+  if (!order) throw new OrderError("ORDER_NOT_FOUND", 404, "Order not found");
+  if (order.amountDueCents !== null && order.amountDueCents !== undefined) {
+    return { ...(await markPaid(prisma, stripe, { orderId, paymentIntentId, now }, effects)), legacy: false };
+  }
+  if (order.paymentStatus === "PAID") return { alreadyPaid: true, order, legacy: true };
+  const pi = await verifiedIntent(stripe, paymentIntentId, { amount: order.totalCents, matchesMetadata: (md) => md.orderId === orderId });
+  const claim = await prisma.order.updateMany({
+    where: { id: orderId, paymentStatus: { not: "PAID" } },
+    data: { paymentStatus: "PAID", paidAt: now, stripePaymentId: pi.id },
+  });
+  return { alreadyPaid: claim.count !== 1, order: await prisma.order.findUnique({ where: { id: orderId } }), legacy: true };
 }
 
 /**

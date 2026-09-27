@@ -441,6 +441,44 @@ test("profileForUser returns tier, progress, credits, expiring, rewards, badges 
   assert.deepEqual(profile.flags, { welcomeSeenAt: null, lastTierCelebrated: null });
 });
 
+test("two concurrent redemptions of one reward: exactly one succeeds", async () => {
+  const prisma = makeMemoryPrisma({
+    users: [{ id: "u1" }],
+    rewards: [{ id: "r1", userId: "u1", type: "FREE_BOWL", issuedFor: "upgrade:NOODLE_MASTER", windowEndsAt: new Date(NOW.getTime() + DAY_MS), redeemedAt: null }],
+  });
+  const results = await Promise.allSettled([
+    prisma.$transaction((tx) => redeemReward(tx, { userId: "u1", rewardId: "r1", orderId: "o1", now: NOW })),
+    prisma.$transaction((tx) => redeemReward(tx, { userId: "u1", rewardId: "r1", orderId: "o2", now: NOW })),
+  ]);
+  assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
+  const reward = await prisma.reward.findUnique({ where: { id: "r1" } });
+  assert.ok(["o1", "o2"].includes(reward.redeemedOrderId));
+});
+
+test("redeemReward claims conditionally (a racing redemption is refused)", async () => {
+  const calls = [];
+  const tx = {
+    reward: {
+      findUnique: async () => ({ id: "r1", userId: "u1", redeemedAt: null, windowEndsAt: new Date(NOW.getTime() + DAY_MS) }),
+      updateMany: async (args) => {
+        calls.push(args);
+        return { count: 0 };
+      },
+    },
+  };
+  await assert.rejects(redeemReward(tx, { userId: "u1", rewardId: "r1", orderId: "o1", now: NOW }), /already redeemed/);
+  assert.deepEqual(calls[0].where, { id: "r1", userId: "u1", redeemedAt: null, windowEndsAt: { gt: NOW } });
+});
+
+test("cashback base: $20.00 subtotal, $2 promo, plus tax -> 1% of $18.00 = 18 cents", async () => {
+  const prisma = makeMemoryPrisma({
+    users: [{ id: "u1", membershipTier: "CHOPSTICK", creditsCents: 0 }],
+    orders: [{ id: "o1", userId: "u1", subtotalCents: 2000, promoDiscountCents: 200, rewardDiscountCents: 0, taxCents: 170, totalCents: 1970, amountDueCents: 1470, creditsAppliedCents: 500, status: "COMPLETED", paymentStatus: "PAID" }],
+  });
+  const result = await onOrderCompleted(prisma, { orderId: "o1", now: NOW });
+  assert.equal(result.cashbackCents, 18);
+});
+
 test("sweepUnprocessedCompletedOrders pays COMPLETED+PAID orders older than 5 minutes that were never processed", async () => {
   const { sweepUnprocessedCompletedOrders } = await import("../engine.js");
   const old = new Date(NOW.getTime() - 10 * 60 * 1000);

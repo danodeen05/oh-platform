@@ -1546,7 +1546,9 @@
       "MEAL_GIFT_UNAVAILABLE": "Ese regalo de comida ya no está disponible.",
       "REWARD_UNAVAILABLE": "Esa recompensa ya no se puede usar.",
       "PAYMENT_NOT_VERIFIED": "Aún no pudimos confirmar tu pago. Si se te cobró, muestra esta pantalla a nuestro personal.",
-      "ORDER_FAILED": "No pudimos completar tu pedido. Inténtalo de nuevo."
+      "ORDER_FAILED": "No pudimos completar tu pedido. Inténtalo de nuevo.",
+      "QUOTE_CHANGED": "El total de tu pedido cambió. Revísalo e inténtalo de nuevo.",
+      "REFUNDED": "No pudimos aplicar tu pago, así que te reembolsamos el total en tu tarjeta. Inténtalo de nuevo."
     }
   },
   "groupOrder": {
@@ -1561,7 +1563,8 @@
     "groupOrders": "Pedidos del grupo",
     "checkInAll": "Registrar todos (Simular kiosco)",
     "checkingIn": "Registrando...",
-    "simulateCheckIn": "Simular registro"
+    "simulateCheckIn": "Simular registro",
+    "hostPayUnavailable": "El anfitrión todavía no puede pagar por todos. Cada miembro paga su parte desde la página del grupo."
   },
   "social": {
     "instagram": "Instagram",

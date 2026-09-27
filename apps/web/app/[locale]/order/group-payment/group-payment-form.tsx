@@ -2,8 +2,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUser, SignInButton } from "@clerk/nextjs";
+import { useTranslations } from "next-intl";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+
+// "Host pays for everyone" marked every order PAID without taking a payment.
+// Orders are PAID only after a server-verified payment now (Task A6), so the
+// option is off until Task A7 adds a real group payment; members pay their
+// own share from the group page.
+const HOST_PAY_ENABLED = false;
 
 export default function GroupPaymentForm({
   groupCode,
@@ -26,6 +33,26 @@ export default function GroupPaymentForm({
   const { user, isLoaded, isSignedIn } = useUser();
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState("");
+  const t = useTranslations("groupOrder");
+
+  if (!HOST_PAY_ENABLED) {
+    return (
+      <div
+        role="status"
+        style={{
+          border: "2px solid #7C7A67",
+          borderRadius: 12,
+          padding: 24,
+          background: "rgba(124, 122, 103, 0.1)",
+          textAlign: "center",
+          fontSize: "1rem",
+          lineHeight: 1.5,
+        }}
+      >
+        {t("hostPayUnavailable")}
+      </div>
+    );
+  }
 
   async function handleGroupPayment() {
     setProcessing(true);

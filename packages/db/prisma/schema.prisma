@@ -739,6 +739,7 @@ enum CreditLotSource {
   CHALLENGE
   ADMIN
   LEGACY
+  MEAL_GIFT // meal gift excess or an expired funded gift returned to its giver
 }
 
 model CreditLot {
@@ -1076,6 +1077,11 @@ model MealGift {
   expiresAt  DateTime // End of business day at location
   acceptedAt DateTime? // When finally accepted
   expiredAt  DateTime? // When it expired and was refunded
+
+  // Funding (Task A6): a gift is usable only once the giver's PaymentIntent
+  // was verified server-side (succeeded, full amount, bound by metadata).
+  stripePaymentIntentId String?   @unique
+  paidAt                DateTime?
 
   // Chain tracking
   chain MealGiftChain[]

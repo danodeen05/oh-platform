@@ -179,3 +179,14 @@ export function computeTotals({
     amountDueCents: remaining,
   };
 }
+
+/**
+ * What an order is worth for cashback, lifetime spend and challenge progress
+ * (controller ruling, Task A6 fix round 1): pre-tax and after promo and
+ * reward, including whatever tender (credits, gift card, meal gift) paid for
+ * it. Legacy orders without a stored subtotal fall back to totalCents.
+ */
+export function spendBaseCents(order) {
+  if (order?.subtotalCents === null || order?.subtotalCents === undefined) return Math.max(0, order?.totalCents || 0);
+  return Math.max(0, order.subtotalCents - (order.promoDiscountCents || 0) - (order.rewardDiscountCents || 0));
+}

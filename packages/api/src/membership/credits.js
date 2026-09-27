@@ -25,6 +25,7 @@ const GRANT_EVENT_TYPE = {
   ADMIN: "ADMIN_ADJUSTMENT",
   LEGACY: "ADMIN_ADJUSTMENT",
   CHALLENGE: "CHALLENGE_REWARD",
+  MEAL_GIFT: "GIFT_EXCESS",
 };
 
 function addDays(date, days) {
@@ -43,9 +44,9 @@ function assertPositiveAmount(amountCents) {
  * increments the cached `User.creditsCents`, and logs a CreditEvent.
  * Returns the created lot.
  */
-export async function grantCredit(prisma, { userId, source, amountCents, orderId = null, note = null, now = new Date() }) {
+export async function grantCredit(prisma, { userId, source, amountCents, orderId = null, note = null, eventType = null, now = new Date() }) {
   assertPositiveAmount(amountCents);
-  return prisma.$transaction((tx) => grantCreditInTx(tx, { userId, source, amountCents, orderId, note, now }));
+  return prisma.$transaction((tx) => grantCreditInTx(tx, { userId, source, amountCents, orderId, note, eventType, now }));
 }
 
 /**
@@ -58,7 +59,7 @@ export async function grantCredit(prisma, { userId, source, amountCents, orderId
  * against the in-memory test stub (whose `tx` objects have a `$transaction`
  * too). Use this instead whenever `tx` is already a transaction client.
  */
-export async function grantCreditInTx(tx, { userId, source, amountCents, orderId = null, note = null, now = new Date() }) {
+export async function grantCreditInTx(tx, { userId, source, amountCents, orderId = null, note = null, eventType = null, now = new Date() }) {
   assertPositiveAmount(amountCents);
   const lot = await tx.creditLot.create({
     data: {
@@ -75,7 +76,8 @@ export async function grantCreditInTx(tx, { userId, source, amountCents, orderId
   await tx.creditEvent.create({
     data: {
       userId,
-      type: GRANT_EVENT_TYPE[source] || "ADMIN_ADJUSTMENT",
+      // eventType overrides the source's default (e.g. MEAL_GIFT logs GIFT_EXCESS or REFUND).
+      type: eventType || GRANT_EVENT_TYPE[source] || "ADMIN_ADJUSTMENT",
       amountCents,
       orderId,
       description: note,
@@ -124,7 +126,13 @@ export async function spendCreditInTx(tx, { userId, amountCents, orderId, now = 
   for (const lot of lots) {
     if (remaining <= 0) break;
     const take = Math.min(lot.remainingCents, remaining);
-    await tx.creditLot.update({ where: { id: lot.id }, data: { remainingCents: { decrement: take } } });
+    // Conditional decrement: a concurrent spend that already took from this
+    // lot makes the WHERE miss (count 0) instead of driving it negative.
+    const res = await tx.creditLot.updateMany({
+      where: { id: lot.id, remainingCents: { gte: take }, expiresAt: { gt: now } },
+      data: { remainingCents: { decrement: take } },
+    });
+    if (res.count !== 1) throw new CreditShortError(available - (amountCents - remaining));
     remaining -= take;
   }
 

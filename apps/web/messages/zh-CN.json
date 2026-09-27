@@ -1546,7 +1546,9 @@
       "MEAL_GIFT_UNAVAILABLE": "这份爱心餐已无法使用。",
       "REWARD_UNAVAILABLE": "这项奖励已无法使用。",
       "PAYMENT_NOT_VERIFIED": "我们尚未确认你的付款。若已扣款，请向店员出示此画面。",
-      "ORDER_FAILED": "无法完成订单，请再试一次。"
+      "ORDER_FAILED": "无法完成订单，请再试一次。",
+      "QUOTE_CHANGED": "你的订单总额已变更，请确认后再试一次。",
+      "REFUNDED": "我们无法使用你的付款，款项已全额退回你的卡。请再试一次。"
     }
   },
   "groupOrder": {
@@ -1561,7 +1563,8 @@
     "groupOrders": "群组订单",
     "checkInAll": "全部报到（模拟自助机）",
     "checkingIn": "报到中...",
-    "simulateCheckIn": "模拟报到"
+    "simulateCheckIn": "模拟报到",
+    "hostPayUnavailable": "发起人目前还不能替所有人付款。每位成员请在群组页面支付自己的部分。"
   },
   "social": {
     "instagram": "Instagram",

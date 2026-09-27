@@ -44,11 +44,26 @@ export function seed(extra = {}) {
 }
 
 /** A Stripe double: `intents` is a live map the test can fill after it knows an order id. */
-export function fakeStripe(intents = {}) {
+export function fakeStripe(intents = {}, { onRetrieve = null } = {}) {
   const created = [];
+  const issuedRefunds = []; // refunds Stripe "has"
+  const refundCalls = []; // every refunds.create call: [params, options]
   return {
     intents,
     created,
+    issuedRefunds,
+    refundCalls,
+    refunds: {
+      async list({ payment_intent }) {
+        return { data: issuedRefunds.filter((r) => r.payment_intent === payment_intent) };
+      },
+      async create(params, options) {
+        refundCalls.push([params, options]);
+        const refund = { id: `re_test_${issuedRefunds.length + 1}`, payment_intent: params.payment_intent, status: "succeeded" };
+        issuedRefunds.push(refund);
+        return refund;
+      },
+    },
     paymentIntents: {
       async retrieve(id) {
         const pi = intents[id];
@@ -57,7 +72,9 @@ export function fakeStripe(intents = {}) {
           err.code = "resource_missing";
           throw err;
         }
-        return { id, currency: "usd", ...pi };
+        const result = { id, currency: "usd", ...pi };
+        if (onRetrieve) await onRetrieve(id, result);
+        return result;
       },
       async create(params) {
         const id = `pi_test_${created.length + 1}`;

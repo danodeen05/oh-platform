@@ -68,8 +68,10 @@ import { registerCateringRoutes, isDineInOrdersEnabled } from "./catering/routes
 import { registerPlanRoutes } from "./plan/routes.js";
 import { registerMembershipRoutes } from "./membership/routes.js";
 import { registerOrderRoutes } from "./orders/routes.js";
-import { configureOrderService, markPaid, quoteOrder, OrderError } from "./orders/service.js";
-import { taxCents } from "./orders/pricing.js";
+import { configureOrderService, markPaid, quoteOrder, confirmOrderPayment, OrderError } from "./orders/service.js";
+import { createGiftCard, createMealGift } from "./orders/tenders.js";
+import { grantCredit } from "./membership/credits.js";
+import { taxCents, spendBaseCents } from "./orders/pricing.js";
 import { PROGRAM, tierRule } from "./membership/program.js";
 import { onOrderCompleted, applyReferralSignup, visibleMenuItems, firstUnreleasedItem, profileForUser } from "./membership/engine.js";
 import { withStatusDemo, registerStatusDemoGuard } from "./demo/status-demo.js";
@@ -252,7 +254,7 @@ const orderEffects = {
     sendOrderCompletedNotification(order.userId, order.id).catch((err) => console.error("Failed to send wallet order notification:", err));
     checkAndSendTierProgressNotification(order.userId).catch((err) => console.error("Failed to send wallet tier progress notification:", err));
     const items = await prisma.orderItem.findMany({ where: { orderId: order.id }, include: { menuItem: true } });
-    await updateChallengeProgress(order.userId, { totalCents: order.totalCents, items });
+    await updateChallengeProgress(order.userId, { totalCents: spendBaseCents(order), items });
     if (order.creditsAppliedCents > 0) refreshUserWalletPass(order.userId).catch(console.error);
   },
   async mealGiftAccepted({ mealGiftId, order, appliedCents }) {
@@ -10632,15 +10634,20 @@ app.post("/group-orders/:code/complete", async (req, reply) => {
 
 // POST /meal-gifts - Create a new meal gift
 app.post("/meal-gifts", async (req, reply) => {
-  const { giverId, locationId, amountCents, messageFromGiver } = req.body || {};
+  const { locationId, amountCents, messageFromGiver, paymentIntentId } = req.body || {};
 
-  if (!giverId || !locationId || !amountCents) {
-    return reply.code(400).send({ error: "giverId, locationId, and amountCents required" });
+  // Task A6: the giver is the verified caller (a body giverId is never
+  // identity), and the gift exists only once the giver's PaymentIntent is
+  // verified server-side (succeeded, exactly amountCents, metadata binds
+  // giver and location). createMealGift records paidAt.
+  const who = await customerAuth.requireUser(req, reply);
+  if (!who) return reply;
+  if (req.body?.giverId && req.body.giverId !== who.userId) {
+    return reply.code(403).send({ error: "Forbidden" });
   }
 
-  // Validate amount range ($15.99 - $35.00)
-  if (amountCents < 1599 || amountCents > 3500) {
-    return reply.code(400).send({ error: "Amount must be between $15.99 and $35.00" });
+  if (!locationId || !amountCents) {
+    return reply.code(400).send({ error: "locationId and amountCents required" });
   }
 
   // Get location to calculate expiration (end of business day)
@@ -10663,22 +10670,29 @@ app.post("/meal-gifts", async (req, reply) => {
     expiresAt.setDate(expiresAt.getDate() + 1);
   }
 
-  const mealGift = await prisma.mealGift.create({
-    data: {
-      giverId,
+  let created;
+  try {
+    created = await createMealGift(prisma, stripe, {
+      giverId: who.userId,
       locationId,
       amountCents,
-      messageFromGiver: messageFromGiver || null,
+      messageFromGiver,
+      paymentIntentId,
       expiresAt,
-      status: "PENDING",
-    },
+      now,
+    });
+  } catch (err) {
+    if (err instanceof OrderError) return reply.code(err.status).send({ error: err.message, code: err.code, ...err.extra });
+    throw err;
+  }
+
+  return prisma.mealGift.findUnique({
+    where: { id: created.id },
     include: {
       giver: { select: { id: true, name: true } },
       location: { select: { id: true, name: true, city: true } },
     },
   });
-
-  return mealGift;
 });
 
 // GET /meal-gifts/next/:locationId - Get next pending meal gift for location (FIFO)
@@ -10690,6 +10704,7 @@ app.get("/meal-gifts/next/:locationId", async (req, reply) => {
     where: {
       locationId,
       status: "PENDING",
+      paidAt: { not: null }, // Funded gifts only (Task A6)
       expiresAt: { gt: new Date() }, // Not expired
     },
     orderBy: {
@@ -10717,11 +10732,26 @@ app.get("/meal-gifts/next/:locationId", async (req, reply) => {
 // POST /meal-gifts/:id/accept - Accept a meal gift and apply to order
 app.post("/meal-gifts/:id/accept", async (req, reply) => {
   const { id } = req.params;
-  const { recipientId, orderId, messageFromRecipient, orderTotalCents } = req.body || {};
+  const { orderId, messageFromRecipient } = req.body || {};
 
-  if (!recipientId || !orderId) {
-    return reply.code(400).send({ error: "recipientId and orderId required" });
+  // Task A6: the recipient is the verified caller, on their own order, and
+  // the excess is measured against that order's real total. (Checkout now
+  // consumes a meal gift server-side at PAID; this route is legacy.)
+  const who = await customerAuth.requireUser(req, reply);
+  if (!who) return reply;
+  if (req.body?.recipientId && req.body.recipientId !== who.userId) {
+    return reply.code(403).send({ error: "Forbidden" });
   }
+  const recipientId = who.userId;
+
+  if (!orderId) {
+    return reply.code(400).send({ error: "orderId required" });
+  }
+  const recipientOrder = await prisma.order.findUnique({ where: { id: orderId } });
+  if (!recipientOrder || recipientOrder.userId !== recipientId) {
+    return reply.code(403).send({ error: "Forbidden" });
+  }
+  const orderTotalCents = recipientOrder.totalCents;
 
   const mealGift = await prisma.mealGift.findUnique({
     where: { id },
@@ -10732,7 +10762,7 @@ app.post("/meal-gifts/:id/accept", async (req, reply) => {
     return reply.code(404).send({ error: "Meal gift not found" });
   }
 
-  if (mealGift.status !== "PENDING") {
+  if (mealGift.status !== "PENDING" || !mealGift.paidAt) {
     return reply.code(400).send({ error: "Meal gift is not available" });
   }
 
@@ -10790,19 +10820,13 @@ async function finishMealGiftAcceptance({ mealGift, recipientUserId, appliedCent
 
   // Credit excess gift amount to the recipient (members only), as before
   if (excessAmount > 0 && recipientUserId) {
-    await prisma.creditEvent.create({
-      data: {
-        userId: recipientUserId,
-        amountCents: excessAmount,
-        type: "GIFT_EXCESS",
-        description: `Meal gift excess credited (Gift: $${(giftAmount / 100).toFixed(2)}, Order: $${((appliedCents || 0) / 100).toFixed(2)})`,
-        metadata: { mealGiftId: id },
-      },
-    });
-
-    await prisma.user.update({
-      where: { id: recipientUserId },
-      data: { creditsCents: { increment: excessAmount } },
+    // Through the credit ledger (a CreditLot that expires like any credit).
+    await grantCredit(prisma, {
+      userId: recipientUserId,
+      source: "MEAL_GIFT",
+      eventType: "GIFT_EXCESS",
+      amountCents: excessAmount,
+      note: `Meal gift excess credited (Gift: $${(giftAmount / 100).toFixed(2)}, Order: $${((appliedCents || 0) / 100).toFixed(2)})`,
     });
 
     // Refresh recipient's wallet pass to show updated credit balance
@@ -10829,23 +10853,12 @@ async function finishMealGiftAcceptance({ mealGift, recipientUserId, appliedCent
 
   // Only give $5 reward if not already claimed
   if (!alreadyRewarded) {
-    await prisma.creditEvent.create({
-      data: {
-        userId: mealGift.giverId,
-        amountCents: 500, // $5 reward
-        type: "CHALLENGE_REWARD",
-        description: "Meal for a Stranger challenge completed",
-      },
-    });
-
-    // Update giver's credit balance
-    await prisma.user.update({
-      where: { id: mealGift.giverId },
-      data: {
-        creditsCents: {
-          increment: 500,
-        },
-      },
+    // $5 reward through the credit ledger
+    await grantCredit(prisma, {
+      userId: mealGift.giverId,
+      source: "CHALLENGE",
+      amountCents: 500,
+      note: "Meal for a Stranger challenge completed",
     });
 
     // Refresh giver's wallet pass to show updated credit balance
@@ -10934,48 +10947,36 @@ app.post("/meal-gifts/expire", async (req, reply) => {
       status: "PENDING",
       expiresAt: { lte: now },
     },
-    include: {
-      giver: true,
-    },
   });
 
   const results = [];
 
   for (const gift of expiredGifts) {
-    // Mark as expired
-    await prisma.mealGift.update({
-      where: { id: gift.id },
-      data: {
-        status: "EXPIRED",
-        expiredAt: now,
-      },
+    // Conditional: a gift accepted meanwhile is left alone.
+    const expired = await prisma.mealGift.updateMany({
+      where: { id: gift.id, status: "PENDING" },
+      data: { status: "EXPIRED", expiredAt: now },
     });
+    if (expired.count !== 1) continue;
 
-    // Refund giver as credit
-    await prisma.creditEvent.create({
-      data: {
+    // Only a gift the giver actually paid for (Task A6: paidAt) is returned,
+    // as credit through the ledger.
+    const refunded = Boolean(gift.paidAt);
+    if (refunded) {
+      await grantCredit(prisma, {
         userId: gift.giverId,
+        source: "MEAL_GIFT",
+        eventType: "REFUND_RESTORE",
         amountCents: gift.amountCents,
-        type: "REFUND",
-        description: "Meal gift expired and refunded",
-      },
-    });
-
-    // Update giver's credit balance
-    await prisma.user.update({
-      where: { id: gift.giverId },
-      data: {
-        creditBalanceCents: {
-          increment: gift.amountCents,
-        },
-      },
-    });
+        note: "Meal gift expired and refunded",
+      });
+    }
 
     results.push({
       id: gift.id,
       giverId: gift.giverId,
       amountCents: gift.amountCents,
-      refunded: true,
+      refunded,
     });
   }
 
@@ -11603,46 +11604,32 @@ app.post("/gift-cards", async (req, reply) => {
       recipientEmail,
       recipientName,
       personalMessage,
-      purchaserId,
       stripePaymentId,
-    } = req.body;
+    } = req.body || {};
 
-    if (!amountCents || amountCents < 1000) {
-      return reply.status(400).send({ error: "Minimum gift card amount is $10" });
-    }
-
-    if (amountCents > 50000) {
-      return reply.status(400).send({ error: "Maximum gift card amount is $500" });
-    }
-
-    // Generate unique code with retry
-    let code;
-    let attempts = 0;
-    while (!code && attempts < 10) {
-      const candidate = generateGiftCardCode();
-      const existing = await prisma.giftCard.findUnique({ where: { code: candidate } });
-      if (!existing) code = candidate;
-      attempts++;
-    }
-
-    if (!code) {
-      return reply.status(500).send({ error: "Failed to generate unique code" });
-    }
-
-    const giftCard = await prisma.giftCard.create({
-      data: {
-        code,
+    // Task A6: a gift card is a tender, so it must be funded. A customer card
+    // needs its purchase PaymentIntent verified here (succeeded, exactly
+    // amountCents, metadata {type:"gift_card", amountCents}, unused). Trusted
+    // server-to-server callers (x-admin-api-key) may issue without one.
+    const trusted = customerAuth.isServiceCall(req);
+    const who = await customerAuth.resolve(req);
+    let giftCard;
+    try {
+      giftCard = await createGiftCard(prisma, stripe, {
         amountCents,
-        balanceCents: amountCents,
-        designId: designId || "classic",
-        purchaserId: purchaserId || null,
-        recipientEmail: recipientEmail || null,
-        recipientName: recipientName || null,
-        personalMessage: personalMessage || null,
+        designId,
+        recipientEmail,
+        recipientName,
+        personalMessage,
+        purchaserId: trusted ? req.body?.purchaserId || null : orderOwnerId(who),
         stripePaymentId: stripePaymentId || null,
-        status: "ACTIVE",
-      },
-    });
+        trusted,
+        generateCode: generateGiftCardCode,
+      });
+    } catch (err) {
+      if (err instanceof OrderError) return reply.status(err.status).send({ error: err.message, code: err.code, ...err.extra });
+      throw err;
+    }
 
     // Send email delivery if recipient email provided
     if (recipientEmail) {
@@ -11844,7 +11831,15 @@ app.post("/gift-cards/:id/apply", async (req, reply) => {
 app.post("/gift-cards/:id/confirm-payment", async (req, reply) => {
   try {
     const { id } = req.params;
-    const { stripePaymentId } = req.body;
+    const { stripePaymentId } = req.body || {};
+
+    const card = await prisma.giftCard.findUnique({ where: { id } });
+    if (!card) return reply.status(404).send({ error: "Gift card not found" });
+    // Task A6: record only a succeeded PaymentIntent for this card's amount that names this card.
+    const pi = stripe && stripePaymentId ? await stripe.paymentIntents.retrieve(stripePaymentId).catch(() => null) : null;
+    if (!pi || pi.status !== "succeeded" || pi.amount !== card.amountCents || pi.metadata?.giftCardId !== id) {
+      return reply.status(402).send({ error: "PAYMENT_NOT_VERIFIED" });
+    }
 
     await prisma.giftCard.update({
       where: { id },
@@ -14303,56 +14298,52 @@ app.post("/chappy/confirm-payment", async (req, reply) => {
       });
     }
 
-    // Verify the payment intent with Stripe
-    const Stripe = (await import("stripe")).default;
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+    // Server-verified payment (Task A6): the PaymentIntent's status, exact
+    // amount and metadata.orderId, through the shared order service. A
+    // server-priced order goes through markPaid (idempotent, spends its
+    // savings, refunds a charge it can't apply); a legacy order needs
+    // amount === totalCents.
+    let result;
+    try {
+      result = await confirmOrderPayment(prisma, stripe, { orderId, paymentIntentId, now: new Date() }, orderEffects);
+    } catch (err) {
+      if (err instanceof OrderError) return reply.status(err.status).send({ error: err.code, message: err.message, ...err.extra });
+      throw err;
+    }
 
-    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-
-    if (paymentIntent.status !== "succeeded") {
-      return reply.status(400).send({
-        error: "Payment not completed",
-        status: paymentIntent.status,
+    if (result.legacy && !result.alreadyPaid) {
+      // Legacy (pre-quote) Chappy order: its original follow-ups.
+      await prisma.order.update({
+        where: { id: orderId },
+        data: { status: "PAID", podAssignedAt: order.seatId ? new Date() : null },
       });
+
+      // Apply credits only for the verified caller's own order (auth/customer.js).
+      const creditsApplied = chappyCreditsToDeduct(await customerAuth.resolve(req), order);
+      if (creditsApplied > 0) {
+        await prisma.user.update({
+          where: { id: order.userId },
+          data: { creditsCents: { decrement: creditsApplied } },
+        });
+      }
+
+      // Mark seat as occupied if one was selected
+      if (order.seatId) {
+        await prisma.seat.update({
+          where: { id: order.seatId },
+          data: { status: "OCCUPIED" },
+        });
+      }
     }
 
-    // Verify payment intent matches order
-    if (paymentIntent.metadata.orderId !== orderId) {
-      return reply.status(400).send({ error: "Payment intent does not match order" });
-    }
-
-    // Update order to PAID
-    const updatedOrder = await prisma.order.update({
+    const updatedOrder = await prisma.order.findUnique({
       where: { id: orderId },
-      data: {
-        paymentStatus: "PAID",
-        status: "PAID",
-        stripePaymentId: paymentIntentId,
-        podAssignedAt: order.seatId ? new Date() : null,
-      },
       include: {
         items: { include: { menuItem: true } },
         location: true,
         seat: true,
       },
     });
-
-    // Apply credits only for the verified caller's own order (auth/customer.js).
-    const creditsApplied = chappyCreditsToDeduct(await customerAuth.resolve(req), order);
-    if (creditsApplied > 0) {
-      await prisma.user.update({
-        where: { id: order.userId },
-        data: { creditsCents: { decrement: creditsApplied } },
-      });
-    }
-
-    // Mark seat as occupied if one was selected
-    if (order.seatId) {
-      await prisma.seat.update({
-        where: { id: order.seatId },
-        data: { status: "OCCUPIED" },
-      });
-    }
 
     return reply.send({
       success: true,

@@ -94,7 +94,7 @@ export default function OrderPaymentForm({
   const showCreditsBreakdown = promoDiscount > 0 || creditsApplied > 0 || giftApplied > 0 || giftCardAmount > 0;
 
   function messageForCode(code: string | undefined, fallback?: string) {
-    const known = ["CREDIT_SHORT", "GIFT_CARD_SHORT", "MEAL_GIFT_UNAVAILABLE", "REWARD_UNAVAILABLE", "PAYMENT_NOT_VERIFIED"];
+    const known = ["CREDIT_SHORT", "GIFT_CARD_SHORT", "MEAL_GIFT_UNAVAILABLE", "REWARD_UNAVAILABLE", "PAYMENT_NOT_VERIFIED", "QUOTE_CHANGED"];
     if (code && known.includes(code)) return t(`errorCodes.${code}`);
     return fallback || t("errorCodes.ORDER_FAILED");
   }
@@ -129,7 +129,7 @@ export default function OrderPaymentForm({
               const amountToApply = Math.min(giftCard.balanceCents, remainingTotal);
               setGiftCardApplied({
                 id: giftCard.id,
-                code: giftCard.code,
+                code: pendingCode.trim(), // the lookup returns no code; the API matches the typed one
                 balanceCents: giftCard.balanceCents,
                 amountToApply,
               });
@@ -231,7 +231,8 @@ export default function OrderPaymentForm({
       body: JSON.stringify({ paymentIntentId: stripePaymentIntentId }),
     });
     const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(messageForCode(data.error));
+    // A charge the server could not apply was refunded in full (Task A6).
+    if (!response.ok) throw new Error(data.refunded ? t("errorCodes.REFUNDED") : messageForCode(data.error));
     return data;
   }
 
@@ -342,7 +343,7 @@ export default function OrderPaymentForm({
 
       setGiftCardApplied({
         id: giftCard.id,
-        code: giftCard.code,
+        code: giftCardCode.trim(), // the lookup returns no code; the API matches the typed one
         balanceCents: giftCard.balanceCents,
         amountToApply,
       });

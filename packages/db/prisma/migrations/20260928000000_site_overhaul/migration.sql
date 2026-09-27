@@ -1,5 +1,5 @@
 -- CreateEnum
-CREATE TYPE "CreditLotSource" AS ENUM ('CASHBACK', 'REFERRAL', 'WELCOME', 'GOODWILL', 'CHALLENGE', 'ADMIN', 'LEGACY');
+CREATE TYPE "CreditLotSource" AS ENUM ('CASHBACK', 'REFERRAL', 'WELCOME', 'GOODWILL', 'CHALLENGE', 'ADMIN', 'LEGACY', 'MEAL_GIFT');
 
 -- CreateEnum
 CREATE TYPE "RewardType" AS ENUM ('FREE_BOWL', 'PREMIUM_ADDON');
@@ -58,6 +58,13 @@ ADD COLUMN     "giftCardId" TEXT,
 ADD COLUMN     "giftCardAppliedCents" INTEGER NOT NULL DEFAULT 0,
 ADD COLUMN     "mealGiftId" TEXT,
 ADD COLUMN     "mealGiftAppliedCents" INTEGER NOT NULL DEFAULT 0;
+
+-- AlterTable (Task A6: a meal gift is usable only once its funding is verified)
+ALTER TABLE "MealGift" ADD COLUMN     "stripePaymentIntentId" TEXT,
+ADD COLUMN     "paidAt" TIMESTAMP(3);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "MealGift_stripePaymentIntentId_key" ON "MealGift"("stripePaymentIntentId");
 
 -- AlterTable
 ALTER TABLE "Seat" ADD COLUMN     "finger" INTEGER,

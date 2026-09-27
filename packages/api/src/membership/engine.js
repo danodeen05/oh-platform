@@ -11,6 +11,7 @@
  */
 import { PROGRAM, tierRule, evaluateProgress } from "./program.js";
 import { grantCredit, grantCreditInTx, availableCredit, expiringSoon } from "./credits.js";
+import { spendBaseCents } from "../orders/pricing.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -286,7 +287,8 @@ export async function onOrderCompleted(prisma, { orderId, now = new Date() }) {
     }
 
     const rule = tierRule(user.membershipTier);
-    const cashbackCents = Math.floor((order.totalCents * rule.cashbackPct) / 100);
+    // Pre-tax, post-discount spend (orders/pricing.js spendBaseCents); legacy orders use totalCents.
+    const cashbackCents = Math.floor((spendBaseCents(order) * rule.cashbackPct) / 100);
     if (cashbackCents > 0) {
       await grantCreditInTx(tx, {
         userId: user.id,
@@ -424,7 +426,15 @@ export async function redeemReward(tx, { userId, rewardId, orderId, now = new Da
   if (reward.windowEndsAt <= now) {
     throw new Error("Reward expired");
   }
-  return tx.reward.update({ where: { id: rewardId }, data: { redeemedOrderId: orderId, redeemedAt: now } });
+  // Conditional claim: of two concurrent redemptions only one matches.
+  const claim = await tx.reward.updateMany({
+    where: { id: rewardId, userId, redeemedAt: null, windowEndsAt: { gt: now } },
+    data: { redeemedOrderId: orderId, redeemedAt: now },
+  });
+  if (claim.count !== 1) {
+    throw new Error("Reward already redeemed");
+  }
+  return tx.reward.findUnique({ where: { id: rewardId } });
 }
 
 /**

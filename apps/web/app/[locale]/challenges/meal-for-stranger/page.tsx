@@ -19,6 +19,9 @@ type Location = {
   address: string;
 };
 
+
+// Meal gifts are funded only by a verified card payment for their full amount (Task A6).
+const MEAL_GIFT_CREDITS_ENABLED = false;
 function PaymentForm({
   selectedLocationId,
   giftAmount,
@@ -149,14 +152,15 @@ function PaymentForm({
       }
 
       // Create meal gift
-      const mealGiftResponse = await fetch(`${API_URL}/meal-gifts`, {
+      // The API takes the giver from the verified session and creates the
+      // gift only after it verifies this PaymentIntent (Task A6).
+      const mealGiftResponse = await api(`${API_URL}/meal-gifts`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "x-tenant-slug": "oh",
         },
         body: JSON.stringify({
-          giverId,
           locationId: selectedLocationId,
           amountCents: giftAmount,
           messageFromGiver: message || null,
@@ -470,8 +474,9 @@ export default function MealForStrangerPage() {
         </div>
       </div>
 
-      {/* Credit Balance & Application */}
-      {userProfile && (
+      {/* Credit Balance & Application: off until the API can spend credits for
+          a meal gift (Task A6 funds a gift only by a verified card payment). */}
+      {MEAL_GIFT_CREDITS_ENABLED && userProfile && (
         <div style={{ background: "#f0f9ff", padding: 16, borderRadius: 8, marginBottom: 24, border: "1px solid #bae6fd" }}>
           <div style={{ marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ fontWeight: "600" }}>{t("form.availableCredits")}:</span>
@@ -498,7 +503,7 @@ export default function MealForStrangerPage() {
           giftAmount={giftAmount}
           message={message}
           userProfile={userProfile}
-          applyCredits={applyCredits}
+          applyCredits={MEAL_GIFT_CREDITS_ENABLED && applyCredits}
           challengeAlreadyCompleted={challengeAlreadyCompleted}
         />
       </Elements>

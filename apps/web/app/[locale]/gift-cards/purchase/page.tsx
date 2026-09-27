@@ -187,12 +187,17 @@ export default function GiftCardPurchasePage() {
   const minCustomAmount = customAmountRange.minAmountCents / 100;
   const maxCustomAmount = customAmountRange.maxAmountCents / 100;
 
+  // The API issues a card only for a verified payment of its full amount
+  // (Task A6), so promo codes and credits don't apply to gift card purchases
+  // until the server can price them (Task D10).
+  const DISCOUNTS_ENABLED = false;
+
   // Promo discount applied
-  const promoDiscount = appliedPromo?.discountCents || 0;
+  const promoDiscount = DISCOUNTS_ENABLED ? appliedPromo?.discountCents || 0 : 0;
   const amountAfterPromo = Math.max(0, amountCents - promoDiscount);
 
   // Credits applied (UNLIMITED for gift cards)
-  const creditsToApply = applyCredits && userCredits
+  const creditsToApply = DISCOUNTS_ENABLED && applyCredits && userCredits
     ? Math.min(userCredits.totalCredits, amountAfterPromo)
     : 0;
   const amountAfterCredits = amountAfterPromo - creditsToApply;
@@ -368,7 +373,9 @@ export default function GiftCardPurchasePage() {
     setError(null);
 
     try {
-      const res = await fetch(`${API_URL}/gift-cards`, {
+      // The API verifies the PaymentIntent (succeeded, full amount, a gift
+      // card purchase) before it issues the card.
+      const res = await api(`${API_URL}/gift-cards`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -377,11 +384,6 @@ export default function GiftCardPurchasePage() {
           recipientEmail,
           recipientName,
           personalMessage,
-          purchaserId: internalUserId,
-          guestId: isGuest ? guestId : undefined,
-          creditsApplied: creditsToApply,
-          promoCodeId: appliedPromo?.id,
-          promoDiscountCents: promoDiscount,
           stripePaymentId: stripePaymentIntentId,
         }),
       });
@@ -922,6 +924,7 @@ export default function GiftCardPurchasePage() {
               </div>
 
               {/* Promo Code Section */}
+              {DISCOUNTS_ENABLED && (
               <div style={{ marginBottom: "20px", paddingBottom: "20px", borderBottom: "1px solid #e5e7eb" }}>
                 <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "500", color: "#555", marginBottom: "8px" }}>
                   Promo Code
@@ -937,9 +940,10 @@ export default function GiftCardPurchasePage() {
                   placeholder="Enter promo code"
                 />
               </div>
+              )}
 
               {/* Credits Section - Only for signed-in users */}
-              {user && userCredits && userCredits.totalCredits > 0 && (
+              {DISCOUNTS_ENABLED && user && userCredits && userCredits.totalCredits > 0 && (
                 <div style={{ marginBottom: "20px", paddingBottom: "20px", borderBottom: "1px solid #e5e7eb" }}>
                   <label
                     style={{

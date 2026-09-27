@@ -216,3 +216,41 @@ test("convertLegacyBalances creates one LEGACY lot per user with a positive bala
   const u1LotsAfter = await prisma.creditLot.findMany({ where: { userId: "u1" } });
   assert.equal(u1LotsAfter.length, 1); // no duplicate lot created
 });
+
+test("two concurrent spends that together exceed the balance: exactly one succeeds", async () => {
+  const now = new Date("2026-10-01T12:00:00Z");
+  const prisma = makeMemoryPrisma({
+    users: [{ id: "u1", creditsCents: 500 }],
+    creditLots: [{ id: "l1", userId: "u1", source: "WELCOME", amountCents: 500, remainingCents: 500, expiresAt: new Date(now.getTime() + 86400000) }],
+  });
+  const results = await Promise.allSettled([
+    spendCredit(prisma, { userId: "u1", amountCents: 300, orderId: "o1", now }),
+    spendCredit(prisma, { userId: "u1", amountCents: 300, orderId: "o2", now }),
+  ]);
+  assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
+  const lost = results.find((r) => r.status === "rejected");
+  assert.ok(lost.reason instanceof CreditShortError);
+  assert.equal((await prisma.creditLot.findUnique({ where: { id: "l1" } })).remainingCents, 200);
+  assert.equal((await prisma.user.findUnique({ where: { id: "u1" } })).creditsCents, 200);
+});
+
+test("the per-lot decrement is conditional: a lot drained under us is CreditShortError, never negative", async () => {
+  const { spendCreditInTx } = await import("../credits.js");
+  const now = new Date("2026-10-01T12:00:00Z");
+  const calls = [];
+  const tx = {
+    creditLot: {
+      findMany: async () => [{ id: "l1", userId: "u1", remainingCents: 500, expiresAt: new Date(now.getTime() + 86400000) }],
+      updateMany: async (args) => {
+        calls.push(args);
+        return { count: 0 }; // a concurrent spend took it first
+      },
+    },
+    user: { update: async () => assert.fail("must not touch the balance") },
+    creditEvent: { create: async () => assert.fail("must not log a spend") },
+  };
+  await assert.rejects(spendCreditInTx(tx, { userId: "u1", amountCents: 300, orderId: "o1", now }), CreditShortError);
+  assert.deepEqual(calls[0].where, { id: "l1", remainingCents: { gte: 300 }, expiresAt: { gt: now } });
+  assert.deepEqual(calls[0].data, { remainingCents: { decrement: 300 } });
+  await assert.rejects(spendCreditInTx(tx, { userId: "u1", amountCents: 0, orderId: "o1", now }), RangeError);
+});

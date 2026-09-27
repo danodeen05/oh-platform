@@ -1637,7 +1637,9 @@
       "MEAL_GIFT_UNAVAILABLE": "That meal gift is no longer available.",
       "REWARD_UNAVAILABLE": "That reward can no longer be used.",
       "PAYMENT_NOT_VERIFIED": "We couldn't confirm your payment yet. If you were charged, show this screen to our staff.",
-      "ORDER_FAILED": "We couldn't complete your order. Please try again."
+      "ORDER_FAILED": "We couldn't complete your order. Please try again.",
+      "QUOTE_CHANGED": "Your order total changed. Check it and try again.",
+      "REFUNDED": "We couldn't apply your payment, so your card was refunded in full. Please try again."
     }
   },
   "groupOrder": {
@@ -1652,7 +1654,8 @@
     "groupOrders": "Group Orders",
     "checkInAll": "Check In All Orders (Simulate Kiosk)",
     "checkingIn": "Checking in...",
-    "simulateCheckIn": "Simulate Check-in"
+    "simulateCheckIn": "Simulate Check-in",
+    "hostPayUnavailable": "The host can't pay for everyone yet. Each member pays their own share from the group page."
   },
   "social": {
     "instagram": "Instagram",

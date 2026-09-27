@@ -11,6 +11,7 @@ import {
   requoteOrder,
   OrderError,
   PodUnavailableError,
+  confirmOrderPayment,
 } from "../service.js";
 
 const DINE_IN_ON = () => true;
@@ -107,7 +108,7 @@ describe("quoteOrder", () => {
 
   test("a meal gift and a gift card are tenders after tax", async () => {
     const prisma = seed({
-      mealGifts: [{ id: "mg1", giverId: "u2", locationId: "L1", amountCents: 500, status: "PENDING", expiresAt: new Date(NOW.getTime() + 6 * HOUR_MS), createdAt: NOW }],
+      mealGifts: [{ id: "mg1", giverId: "u2", locationId: "L1", amountCents: 500, status: "PENDING", expiresAt: new Date(NOW.getTime() + 6 * HOUR_MS), createdAt: NOW, paidAt: NOW, stripePaymentIntentId: "pi_gift" }],
       giftCards: [{ id: "gc1", code: "AAAA-BBBB-CCCC-DDDD", amountCents: 1000, balanceCents: 1000, status: "ACTIVE" }],
     });
     const quote = await quoteOrder(prisma, { locationId: "L1", items: CLASSIC_BOWL, userId: "u1", mealGiftId: "mg1", giftCardCode: "aaaa-bbbb-cccc-dddd", now: NOW });
@@ -284,7 +285,7 @@ describe("markPaid", () => {
     const user = await prisma.user.findUnique({ where: { id: "u1" } });
     assert.equal(user.currentStreak, 3, "consecutive day: streak +1 once");
     assert.equal(user.lifetimeOrderCount, 5);
-    assert.equal(user.lifetimeSpentCents, 1924);
+    assert.equal(user.lifetimeSpentCents, 1749, "pre-tax, post-discount spend");
     assert.equal((await prisma.creditLot.findMany({ where: { source: "CASHBACK" } })).length, 0, "cashback is paid at COMPLETED, not PAID");
     assert.equal((await prisma.creditEvent.findMany({ where: { type: "CASHBACK" } })).length, 0);
     assert.equal((await prisma.seat.findUnique({ where: { id: "s-b07" } })).status, "RESERVED");
@@ -368,7 +369,7 @@ describe("markPaid", () => {
   });
 
   test("a meal gift is consumed once, at PAID", async () => {
-    const prisma = seed({ mealGifts: [{ id: "mg1", giverId: "u2", locationId: "L1", amountCents: 2500, status: "PENDING", expiresAt: new Date(NOW.getTime() + 6 * HOUR_MS), createdAt: NOW }] });
+    const prisma = seed({ mealGifts: [{ id: "mg1", giverId: "u2", locationId: "L1", amountCents: 2500, status: "PENDING", expiresAt: new Date(NOW.getTime() + 6 * HOUR_MS), createdAt: NOW, paidAt: NOW, stripePaymentIntentId: "pi_gift" }] });
     const { order } = await placeOrder(prisma, { mealGiftId: "mg1" });
     assert.equal(order.amountDueCents, 0);
     const { calls, effects } = fakeEffects();
