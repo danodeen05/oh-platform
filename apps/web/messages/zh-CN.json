@@ -1851,7 +1851,8 @@
       "missingInfo": "缺少订单或门店信息",
       "orderNotFound": "未找到订单",
       "failedToLoad": "加载订单详情失败",
-      "oops": "哎呀！"
+      "oops": "哎呀！",
+      "deviceNotAuthorized": "此自助机尚未设置会员签到。请向工作人员寻求帮助。"
     },
     "loading": "正在加载您的订单...",
     "orderFlow": {

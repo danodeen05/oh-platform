@@ -1851,7 +1851,8 @@
       "missingInfo": "Falta información del pedido o ubicación",
       "orderNotFound": "Pedido no encontrado",
       "failedToLoad": "Error al cargar detalles del pedido",
-      "oops": "¡Ups!"
+      "oops": "¡Ups!",
+      "deviceNotAuthorized": "Este kiosco no está configurado para el registro de miembros. Pide ayuda a un miembro del equipo."
     },
     "loading": "Cargando tu pedido...",
     "orderFlow": {

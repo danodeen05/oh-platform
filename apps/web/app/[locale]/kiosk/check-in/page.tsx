@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import "../kiosk.css";
+import { kioskAuthHeaders } from "@/components/kiosk/KioskDeviceProvider";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "";
 
@@ -205,9 +206,16 @@ export default function CheckInPage() {
         }
 
         if (memberId) {
-          const memberRes = await fetch(`${BASE}/orders/by-member?memberId=${encodeURIComponent(memberId)}&locationId=${encodeURIComponent(locationId)}`, { headers: { "x-tenant-slug": "oh" } });
+          const memberRes = await fetch(`${BASE}/orders/by-member?memberId=${encodeURIComponent(memberId)}&locationId=${encodeURIComponent(locationId)}`, { headers: { "x-tenant-slug": "oh", ...kioskAuthHeaders() } });
           if (!memberRes.ok) {
             const errData = await memberRes.json().catch(() => ({}));
+            // Member lookups are staff only: this device needs its kiosk key (Setup).
+            if (memberRes.status === 401) {
+              setError(t("errors.deviceNotAuthorized"));
+              setStep("error");
+              setLoading(false);
+              return;
+            }
             // Handle "already checked in" - show pod assignment screen
             if (errData.error === "Order already checked in") {
               setOrder(errData.order || null);

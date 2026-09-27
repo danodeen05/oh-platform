@@ -800,7 +800,8 @@ export default function EnhancedMenuBuilder({
             return;
           }
 
-          const groupResponse = await fetch(`${BASE}/group-orders/${groupCode}/orders`, {
+          // api() attaches the Clerk session: the API takes the member from it, not from the body userId.
+          const groupResponse = await api(`${BASE}/group-orders/${groupCode}/orders`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",

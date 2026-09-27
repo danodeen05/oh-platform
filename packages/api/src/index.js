@@ -70,6 +70,8 @@ import { withStatusDemo, registerStatusDemoGuard } from "./demo/status-demo.js";
 import { createAdminAuth } from "./auth/admin.js";
 import { registerConsoleGuard, registerAdminPathGuard } from "./auth/console-guard.js";
 import { createCustomerAuth, registerCustomerIdentity, orderOwnerId, chappyCreditsToDeduct, resolveChappyWebIdentity } from "./auth/customer.js";
+import { createKioskAuth } from "./auth/kiosk.js";
+import { publicReferral, shopCreditSpender, groupOrderMember, registerAdminOnlyRoutes } from "./auth/hardening.js";
 
 // DEMO- order codes resolve to a synthetic order (see demo/status-demo.js):
 // the plan's live status-page demo reads real routes without touching the DB.
@@ -170,6 +172,18 @@ const { requireAdminAuth } = createAdminAuth({ log: (...args) => app.log.warn({ 
 
 // Console-only routes outside /admin (see auth/console-guard.js). Must run before routes are declared.
 registerConsoleGuard(app, { requireAdminAuth });
+
+// Operator routes outside /admin/* (wallet diagnostics, kiosk device admin):
+// see ADMIN_ONLY_ROUTES in src/auth/hardening.js. Uses onRoute, so it must
+// stay above the route declarations.
+registerAdminOnlyRoutes(app, requireAdminAuth);
+
+// Kiosk device auth (src/auth/kiosk.js): staff-only order lists accept an
+// active KioskDevice key (Bearer kiosk_...) or admin auth.
+const kioskAuth = createKioskAuth({
+  findDeviceByKey: (apiKey) => basePrisma.kioskDevice.findUnique({ where: { apiKey }, include: { location: true } }),
+  requireAdminAuth,
+});
 
 // Demo orders never write: call staff, add-ons, refills and "done eating" are simulated.
 registerStatusDemoGuard(app, { source: statusDemoSource });
@@ -1863,9 +1877,13 @@ app.post("/orders/check-in", async (req, reply) => {
 });
 
 // GET /orders/by-member - Look up member's active orders for kiosk check-in
-// Supports lookup by user ID or referral code
+// Supports lookup by user ID or referral code. Staff only: an active kiosk
+// device key (pinned to its own location) or admin auth; see auth/kiosk.js.
 app.get("/orders/by-member", async (req, reply) => {
-  const { memberId, locationId } = req.query || {};
+  const staff = await kioskAuth.requireKioskOrAdmin(req, reply);
+  if (!staff) return reply;
+  const { memberId } = req.query || {};
+  const locationId = kioskAuth.scopedLocationId(staff, req.query?.locationId);
 
   if (!memberId) {
     return reply.code(400).send({ error: "memberId required" });
@@ -3351,10 +3369,19 @@ app.post("/orders/:id/addons", async (req, reply) => {
 // ====================
 
 app.get("/orders", async (req, reply) => {
-  const { status, locationId, userId } = req.query || {};
+  const { status, userId } = req.query || {};
+  let { locationId } = req.query || {};
 
-  // Filtering by a user exposes that user's orders: only the user (or a trusted service).
-  if (userId && !(await customerAuth.requireSelf(req, reply, userId))) return reply;
+  if (userId) {
+    // Filtering by a user exposes that user's orders: only the user (or a trusted service).
+    if (!(await customerAuth.requireSelf(req, reply, userId))) return reply;
+  } else {
+    // Any other listing spans customers: staff only (kiosk device or admin),
+    // and a kiosk is pinned to its own location.
+    const staff = await kioskAuth.requireKioskOrAdmin(req, reply);
+    if (!staff) return reply;
+    locationId = kioskAuth.scopedLocationId(staff, locationId);
+  }
 
   const where = {};
   if (status) {
@@ -4728,9 +4755,11 @@ app.get("/users/referral/:code", async (req, reply) => {
   const { code } = req.params;
   const user = await prisma.user.findUnique({
     where: { referralCode: code },
+    select: { name: true, referralCode: true },
   });
-  if (!user) return reply.code(404).send({ error: "Invalid referral code" });
-  return { name: user.name, email: user.email };
+  // Public lookup: first name, code and validity only (never email, id or phone).
+  if (!user) return reply.code(404).send({ valid: false, error: "Invalid referral code" });
+  return publicReferral(user);
 });
 
 // ====================
@@ -6198,7 +6227,10 @@ app.post("/wallet/refresh-all", async (req, reply) => {
   return result;
 });
 
-// Diagnostic endpoint to check APNs status and test push
+// Diagnostic endpoint to check APNs status and test push.
+// Admin only, like /wallet/refresh-all and /wallet/test-push/:userId
+// (ADMIN_ONLY_ROUTES in auth/hardening.js): they list members' emails and
+// push to arbitrary users. Kept reachable in production for APNs debugging.
 app.get("/wallet/debug", async (req, reply) => {
   const apnsConfigured = isAPNsConfigured();
   const apnsEnvironment = getAPNsEnvironment();
@@ -10922,15 +10954,19 @@ app.patch("/group-orders/:code", async (req, reply) => {
 // POST /group-orders/:code/orders - Add an order to a group
 app.post("/group-orders/:code/orders", async (req, reply) => {
   const { code } = req.params;
-  const { items, userId, guestId } = req.body || {};
+  const { items } = req.body || {};
 
   if (!items || !items.length) {
     return reply.code(400).send({ error: "items required" });
   }
 
-  if (!userId && !guestId) {
-    return reply.code(400).send({ error: "Either userId or guestId required" });
+  // The member is the verified caller (a body userId is ignored); guests get
+  // userId null and keep their guest-checkout guestId. See auth/hardening.js.
+  const member = groupOrderMember(await customerAuth.resolve(req), req.body || {});
+  if (member.status) {
+    return reply.code(member.status).send({ error: member.error });
   }
+  const { userId, guestId } = member;
 
   const groupOrder = await prisma.groupOrder.findUnique({
     where: { code: code.toUpperCase() },
@@ -12306,11 +12342,11 @@ app.get("/gift-cards/code/:code", async (req, reply) => {
 app.post("/gift-cards/:id/redeem", async (req, reply) => {
   try {
     const { id } = req.params;
-    const { userId } = req.body;
 
-    if (!userId) {
-      return reply.status(400).send({ error: "User ID required" });
-    }
+    // The redeemer is the verified caller; a body userId is ignored.
+    const who = await customerAuth.requireUser(req, reply);
+    if (!who) return reply;
+    const userId = who.userId;
 
     const giftCard = await prisma.giftCard.findUnique({ where: { id } });
     if (!giftCard) {
@@ -12321,33 +12357,47 @@ app.post("/gift-cards/:id/redeem", async (req, reply) => {
       return reply.status(400).send({ error: "Gift card is not available for redemption" });
     }
 
-    // Add to user credits (NO LIMIT for gift cards/shop)
-    await prisma.user.update({
-      where: { id: userId },
-      data: { creditsCents: { increment: giftCard.balanceCents } },
-    });
+    // Claim the card, credit the redeemer and record it atomically. The claim
+    // only matches the card as read above, so a concurrent redeem (or apply)
+    // cannot credit the same balance twice.
+    const CONFLICT = Symbol("conflict");
+    let updated;
+    try {
+      updated = await basePrisma.$transaction(async (tx) => {
+        const claimed = await tx.giftCard.updateMany({
+          where: { id, status: "ACTIVE", balanceCents: giftCard.balanceCents },
+          data: {
+            status: "REDEEMED",
+            redeemedById: userId,
+            redeemedAt: new Date(),
+            balanceCents: 0,
+          },
+        });
+        if (claimed.count !== 1) throw CONFLICT;
 
-    // Record credit event
-    await prisma.creditEvent.create({
-      data: {
-        userId,
-        type: "ADMIN_ADJUSTMENT", // Using existing type for now
-        amountCents: giftCard.balanceCents,
-        description: `Gift card ${giftCard.code} redeemed to account balance`,
-        metadata: { giftCardId: giftCard.id, giftCardCode: giftCard.code },
-      },
-    });
+        // Add to user credits (NO LIMIT for gift cards/shop)
+        await tx.user.update({
+          where: { id: userId },
+          data: { creditsCents: { increment: giftCard.balanceCents } },
+        });
 
-    // Mark gift card as redeemed
-    const updated = await prisma.giftCard.update({
-      where: { id },
-      data: {
-        status: "REDEEMED",
-        redeemedById: userId,
-        redeemedAt: new Date(),
-        balanceCents: 0,
-      },
-    });
+        // Record credit event
+        await tx.creditEvent.create({
+          data: {
+            userId,
+            type: "ADMIN_ADJUSTMENT", // Using existing type for now
+            amountCents: giftCard.balanceCents,
+            description: `Gift card ${giftCard.code} redeemed to account balance`,
+            metadata: { giftCardId: giftCard.id, giftCardCode: giftCard.code },
+          },
+        });
+
+        return tx.giftCard.findUnique({ where: { id } });
+      });
+    } catch (err) {
+      if (err === CONFLICT) return reply.status(409).send({ error: "Gift card is not available for redemption" });
+      throw err;
+    }
 
     return reply.send({
       success: true,
@@ -12793,16 +12843,23 @@ app.patch("/shop/orders/:id", async (req, reply) => {
 app.post("/shop/orders/:id/apply-credits", async (req, reply) => {
   try {
     const { id } = req.params;
-    const { userId, amountCents } = req.body;
+    const { amountCents } = req.body || {};
 
-    if (!userId || !amountCents) {
-      return reply.status(400).send({ error: "userId and amountCents required" });
+    // Credits are spent only from the verified caller's balance, on a shop
+    // order that caller owns. A body userId is ignored (auth/hardening.js).
+    const who = await customerAuth.requireUser(req, reply);
+    if (!who) return reply;
+
+    if (!Number.isInteger(amountCents) || amountCents <= 0) {
+      return reply.status(400).send({ error: "amountCents required" });
     }
 
     const order = await prisma.shopOrder.findUnique({ where: { id } });
-    if (!order) {
-      return reply.status(404).send({ error: "Order not found" });
+    const verdict = shopCreditSpender(who, order);
+    if (verdict.status) {
+      return reply.status(verdict.status).send({ error: verdict.error });
     }
+    const userId = verdict.userId;
 
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
@@ -12816,31 +12873,37 @@ app.post("/shop/orders/:id/apply-credits", async (req, reply) => {
       return reply.status(400).send({ error: "No credits to apply" });
     }
 
-    // Deduct from user
-    await prisma.user.update({
-      where: { id: userId },
-      data: { creditsCents: { decrement: creditsToApply } },
-    });
-
-    // Update order
-    const updatedOrder = await prisma.shopOrder.update({
-      where: { id },
-      data: {
-        creditsApplied: { increment: creditsToApply },
-        totalCents: { decrement: creditsToApply },
-      },
-    });
-
-    // Record event
-    await prisma.creditEvent.create({
-      data: {
-        userId,
-        type: "CREDIT_APPLIED",
-        amountCents: -creditsToApply,
-        description: `Credits applied to shop order ${order.orderNumber}`,
-        metadata: { shopOrderId: id },
-      },
-    });
+    // Deduct, discount and record atomically, and only while the balance and
+    // the order total still cover it, so two concurrent requests can never
+    // leave a negative balance or a negative order total.
+    const CONFLICT = Symbol("conflict");
+    let updatedOrder;
+    try {
+      updatedOrder = await basePrisma.$transaction(async (tx) => {
+        const deducted = await tx.user.updateMany({
+          where: { id: userId, creditsCents: { gte: creditsToApply } },
+          data: { creditsCents: { decrement: creditsToApply } },
+        });
+        const discounted = await tx.shopOrder.updateMany({
+          where: { id, userId, totalCents: { gte: creditsToApply } },
+          data: { creditsApplied: { increment: creditsToApply }, totalCents: { decrement: creditsToApply } },
+        });
+        if (deducted.count !== 1 || discounted.count !== 1) throw CONFLICT;
+        await tx.creditEvent.create({
+          data: {
+            userId,
+            type: "CREDIT_APPLIED",
+            amountCents: -creditsToApply,
+            description: `Credits applied to shop order ${order.orderNumber}`,
+            metadata: { shopOrderId: id },
+          },
+        });
+        return tx.shopOrder.findUnique({ where: { id } });
+      });
+    } catch (err) {
+      if (err === CONFLICT) return reply.status(409).send({ error: "Balance or order total changed, try again" });
+      throw err;
+    }
 
     return reply.send({
       success: true,

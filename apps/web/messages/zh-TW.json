@@ -1851,7 +1851,8 @@
       "missingInfo": "缺少訂單或門市資訊",
       "orderNotFound": "找不到訂單",
       "failedToLoad": "載入訂單詳情失敗",
-      "oops": "哎呀！"
+      "oops": "哎呀！",
+      "deviceNotAuthorized": "此自助機尚未設定會員報到。請向工作人員尋求協助。"
     },
     "loading": "正在載入您的訂單...",
     "orderFlow": {

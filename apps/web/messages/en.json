@@ -1970,7 +1970,8 @@
       "noActiveOrdersForMember": "Hi {name}! We couldn't find any active orders for you at this location.",
       "memberNotFound": "Member not found. Please try scanning again.",
       "tryAgain": "Try Again",
-      "scanDifferentCode": "Scan Different Code"
+      "scanDifferentCode": "Scan Different Code",
+      "deviceNotAuthorized": "This kiosk is not set up for member check-in. Please ask a team member for help."
     },
     "loading": "Loading your order...",
     "orderFlow": {

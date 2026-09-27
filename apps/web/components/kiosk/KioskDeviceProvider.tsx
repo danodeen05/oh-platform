@@ -173,6 +173,20 @@ export function useKioskDevice() {
   return context;
 }
 
+/**
+ * Authorization header carrying this device's kiosk key, for staff-only API
+ * routes (GET /orders/by-member, GET /orders). Empty when the device is not
+ * set up; the API then answers 401.
+ */
+export function kioskAuthHeaders(): Record<string, string> {
+  try {
+    const apiKey = localStorage.getItem(STORAGE_KEY);
+    return apiKey ? { Authorization: `Bearer ${apiKey}` } : {};
+  } catch {
+    return {};
+  }
+}
+
 // Hook to check if device auth is available (has stored key)
 export function useHasDeviceAuth(): boolean {
   const [hasAuth, setHasAuth] = useState(false);
