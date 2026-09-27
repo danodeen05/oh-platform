@@ -67,8 +67,10 @@ import { registerCateringRoutes, isDineInOrdersEnabled } from "./catering/routes
 import { registerPlanRoutes } from "./plan/routes.js";
 import { registerAdminConsoleRoutes } from "./admin/console-routes.js";
 import { withStatusDemo, registerStatusDemoGuard } from "./demo/status-demo.js";
-import { createAdminAuth } from "./auth/admin.js";
+import { createClerkClient } from "@clerk/backend";
+import { createAdminAuth, parseAdminEmails } from "./auth/admin.js";
 import { registerAdminAuthHooks } from "./auth/admin-hook.js";
+import { registerTeamRoutes } from "./admin/team-routes.js";
 
 // DEMO- order codes resolve to a synthetic order (see demo/status-demo.js):
 // the plan's live status-page demo reads real routes without touching the DB.
@@ -186,6 +188,16 @@ await registerAdminConsoleRoutes(app, {
   prisma,
   resolveTenant: (req) => prisma.tenant.findUnique({ where: { slug: getTenantContext(req) }, select: { id: true } }),
 });
+
+// Owner team management via Clerk roles (see src/admin/team-routes.js)
+if (process.env.CLERK_SECRET_KEY) {
+  await registerTeamRoutes(app, {
+    clerk: createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY }),
+    adminEmails: parseAdminEmails(process.env.ADMIN_EMAILS),
+    forgetRole: forgetAdminRole,
+    adminUrl: process.env.ADMIN_URL || "https://admin-oh-beef-noodle-soup.vercel.app",
+  });
+}
 
 const PORT = process.env.PORT || process.env.API_PORT || 4000;
 
