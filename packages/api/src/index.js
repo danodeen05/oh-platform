@@ -78,6 +78,8 @@ import { registerMembershipRoutes } from "./membership/routes.js";
 import { registerOrderRoutes } from "./orders/routes.js";
 import { registerGroupOrderRoutes } from "./orders/group-routes.js";
 import { registerGiftCardRoutes } from "./orders/gift-card-routes.js";
+import { registerSupportRoutes } from "./support/routes.js";
+import { sendGraphMail } from "./email/graph.js";
 import { configureOrderService, markPaid, confirmOrderPayment, intentHasRefund, OrderError } from "./orders/service.js";
 import { createMealGift, finishMealGiftAcceptance } from "./orders/tenders.js";
 import { grantCredit } from "./membership/credits.js";
@@ -308,6 +310,11 @@ await registerGroupOrderRoutes(app, {
   isDineInOrdersEnabled,
   effects: orderEffects,
 });
+// Support cases (Task A9): public create (contact form, Chappy), staff list and
+// resolve (store credit, full-order card refund, decline). /admin/support/* is
+// behind the admin path hook above. Notifications honor SUPPORT_NOTIFY.
+// TODO(roles): pass requireOwner: requireRole("owner") once admin-overhaul merges.
+await registerSupportRoutes(app, { prisma: basePrisma, stripe, customerAuth, requireAdminAuth, sendSMS, sendGraphMail });
 
 const PORT = process.env.PORT || process.env.API_PORT || 4000;
 

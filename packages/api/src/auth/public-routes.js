@@ -54,6 +54,9 @@ export const PUBLIC_ROUTES = Object.freeze([
   p("GET", "/orders/:id/backstory", "customer"),
   p("GET", "/orders/mental-health-fact", "customer"),
   p("POST", "/orders/:id/apply-credits", "customer"),
+
+  // Support cases (Task A9): contact form and Chappy. Customer from auth only; validated, honeypot, 5/hour limit.
+  p("POST", "/support/cases", "customer"),
   p("PATCH", "/kitchen/orders/:id/status", "customer"),
 
   // Cron

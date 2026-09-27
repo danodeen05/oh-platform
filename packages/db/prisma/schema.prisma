@@ -824,10 +824,14 @@ model SupportCase {
   contact    Json?
   locale     String?
 
-  resolution  SupportResolution?
-  amountCents Int?
-  resolvedBy  String?
-  resolvedAt  DateTime?
+  resolution       SupportResolution?
+  amountCents      Int?
+  resolvedBy       String?
+  resolvedAt       DateTime?
+  // Task A9: staff's reason (required to decline) and what a resolution did
+  // (refund id, restored tenders), for the admin Support tab.
+  resolutionNote   String?
+  resolutionDetail Json?
 
   createdAt DateTime @default(now())
 

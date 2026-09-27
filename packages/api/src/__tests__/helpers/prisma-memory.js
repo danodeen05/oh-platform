@@ -14,6 +14,12 @@
  * kept as an array of ids on the row (for implicit many-to-many lists).
  * `include` and `select` are ignored (whole rows come back).
  *
+ * Plus `$queryRaw` / `$executeRaw` (tagged templates): no-ops that return []
+ * / 0 and append `{ sql, values, inTransaction }` to `client.$rawLog`, so a
+ * test can assert e.g. that a row lock (`SELECT ... FOR UPDATE`) was taken
+ * inside a transaction. Transactions here are already serialized (see
+ * createMutex), which is what a row lock gives real Postgres.
+ *
  * Plus `$transaction(fn)`: runs `fn(tx)` against a cloned snapshot of the
  * whole in-memory database. If `fn` resolves, the snapshot is committed
  * back over the real collections; if it throws, the snapshot is discarded
@@ -228,16 +234,23 @@ function createMutex() {
   };
 }
 
-function buildClient(db, nextId, mutex) {
+function buildClient(db, nextId, mutex, rawLog, inTransaction = false) {
   const client = {};
   for (const name of COLLECTIONS) {
     client[name] = makeDelegate(db[name], name, nextId);
   }
+  const raw = (result) => async (strings, ...values) => {
+    rawLog.push({ sql: Array.isArray(strings) ? strings.join("?") : String(strings), values, inTransaction });
+    return result;
+  };
+  client.$queryRaw = raw([]);
+  client.$executeRaw = raw(0);
+  client.$rawLog = rawLog;
   client.$transaction = (fn) =>
     mutex(async () => {
       const base = cloneDb(db);
       const snapshot = cloneDb(db);
-      const tx = buildClient(snapshot, nextId, mutex);
+      const tx = buildClient(snapshot, nextId, mutex, rawLog, true);
       // No try/catch: if fn throws, we simply never commit, which is the rollback.
       const result = await fn(tx);
       // Commit only what this transaction changed (like row-level writes in
@@ -297,5 +310,5 @@ export function makeMemoryPrisma(seed = {}) {
     }
   }
 
-  return buildClient(db, nextId, createMutex());
+  return buildClient(db, nextId, createMutex(), []);
 }

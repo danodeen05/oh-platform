@@ -638,6 +638,25 @@ export async function intentHasRefund(stripe, pi) {
 }
 
 /**
+ * The one card-refund path (owner's rule: FULL refunds only, never partial).
+ * `stripe.refunds.create` gets the PaymentIntent and nothing else: no amount
+ * field, so Stripe refunds the whole charge. Idempotent per PaymentIntent:
+ * when Stripe already has a refund for it nothing new is created, and the
+ * create itself carries a per-PaymentIntent idempotency key shared by every
+ * caller (the unapplied-payment path here and staff actions in
+ * support/refund.js), so two paths can never refund the same charge twice.
+ * Throws when Stripe fails; the caller decides what that means.
+ */
+export async function refundFullPayment(stripe, pi, { idempotencyKey = null } = {}) {
+  const id = typeof pi === "string" ? pi : pi?.id;
+  if (!id) throw new Error("refundFullPayment: a PaymentIntent id is required");
+  const existing = await stripe.refunds.list({ payment_intent: id, limit: 1 });
+  if (existing?.data?.length) return { refundId: existing.data[0].id, alreadyRefunded: true };
+  const refund = await stripe.refunds.create({ payment_intent: id }, { idempotencyKey: idempotencyKey || `order-refund-${id}` });
+  return { refundId: refund.id, alreadyRefunded: false };
+}
+
+/**
  * A PaymentIntent that took the customer's money but could not be applied to
  * the order: FULL refund (owner's rule: never partial), a SupportCase for
  * staff, and an error log. Idempotent per PaymentIntent: when Stripe already
@@ -648,10 +667,9 @@ export async function refundUnappliedPayment(prisma, stripe, { pi, orderId, user
   let refundId = null;
   let refunded = false;
   try {
-    const existing = await stripe.refunds.list({ payment_intent: pi.id, limit: 1 });
-    if (existing?.data?.length) return { refunded: true, refundId: existing.data[0].id, alreadyRefunded: true };
-    const refund = await stripe.refunds.create({ payment_intent: pi.id }, { idempotencyKey: `order-refund-${pi.id}` });
-    refundId = refund.id;
+    const r = await refundFullPayment(stripe, pi);
+    if (r.alreadyRefunded) return { refunded: true, refundId: r.refundId, alreadyRefunded: true };
+    refundId = r.refundId;
     refunded = true;
   } catch (err) {
     console.error(`[orders] refund FAILED for ${pi.id} (order ${orderId}):`, err?.message || err);
