@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { canLinkDual, dualPodCount, partnerNumber, selectionLabel, singlePodCount, sortByNumber, toggleSelection, type Seat } from "../seats";
+import { canLinkDual, dualPodCount, normalizeSeats, partnerNumber, podName, selectionLabel, singlePodCount, sortByNumber, toggleSelection, type Seat } from "../seats";
 
 const seat = (over: Partial<Seat>): Seat => ({ id: over.id ?? "1", number: "01", status: "AVAILABLE", podType: "SINGLE", dualPartnerId: null, ...over });
 
@@ -67,5 +67,33 @@ describe("selectionLabel", () => {
   });
   test("empty when nothing is selected", () => {
     expect(selectionLabel([], [])).toBe("");
+  });
+});
+
+describe("normalizeSeats", () => {
+  test("accepts today's bare array", () => {
+    const seats = [seat({ id: "a" })];
+    expect(normalizeSeats(seats)).toEqual({ seats, layoutKey: null, layoutMirror: null });
+  });
+  test("accepts the next release's object shape", () => {
+    const seats = [seat({ id: "a", label: "A1" })];
+    expect(normalizeSeats({ layoutKey: "comb-75", layoutMirror: true, seats })).toEqual({ seats, layoutKey: "comb-75", layoutMirror: true });
+  });
+  test("tolerates missing or malformed fields", () => {
+    expect(normalizeSeats({ layoutKey: 7 })).toEqual({ seats: [], layoutKey: null, layoutMirror: null });
+    expect(normalizeSeats(null)).toEqual({ seats: [], layoutKey: null, layoutMirror: null });
+  });
+});
+
+describe("podName", () => {
+  test("prefers the label, falls back to the number", () => {
+    expect(podName(seat({ number: "07", label: "B7" }))).toBe("B7");
+    expect(podName(seat({ number: "07" }))).toBe("07");
+    expect(podName(seat({ number: "07", label: null }))).toBe("07");
+  });
+  test("partner and selection text use labels", () => {
+    const seats = [seat({ id: "1", number: "01", label: "A1", podType: "DUAL", dualPartnerId: "2" }), seat({ id: "2", number: "02", label: "A2", podType: "DUAL", dualPartnerId: "1" })];
+    expect(partnerNumber(seats, seats[0])).toBe("A2");
+    expect(selectionLabel(seats, ["1", "2"])).toBe("Selected: Pods A1 and A2");
   });
 });

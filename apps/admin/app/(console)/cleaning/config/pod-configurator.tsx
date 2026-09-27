@@ -10,7 +10,7 @@ import { StatTile } from "@/components/ui/StatTile";
 import { useToast } from "@/components/ui/Toast";
 import { api, ApiError } from "@/lib/api";
 import {
-  canLinkDual, dualPodCount, partnerNumber, selectionLabel, singlePodCount, sortByNumber, toggleSelection, type Seat,
+  canLinkDual, dualPodCount, normalizeSeats, partnerNumber, podName, selectionLabel, singlePodCount, sortByNumber, toggleSelection, type Seat,
 } from "@/lib/seats";
 import { useResource } from "@/lib/use-resource";
 
@@ -19,14 +19,14 @@ const errorText = (e: unknown) => (e instanceof ApiError || e instanceof Error ?
 export function PodConfigurator({ locationId }: { locationId: string }) {
   const { show } = useToast();
   const ask = useConfirm();
-  const res = useResource(`seats:${locationId}`, (signal) => api<Seat[]>(`/locations/${locationId}/seats`, { signal }));
+  const res = useResource(`seats:${locationId}`, (signal) => api<unknown>(`/locations/${locationId}/seats`, { signal }).then(normalizeSeats));
   const [selected, setSelected] = useState<string[]>([]);
   const [linking, setLinking] = useState(false);
   const [unlinkingId, setUnlinkingId] = useState<string | null>(null);
 
   useEffect(() => { setSelected([]); }, [locationId]);
 
-  const seats = res.data;
+  const seats = res.data?.seats;
 
   function tap(seat: Seat) {
     if (seat.podType === "DUAL") return;
@@ -51,13 +51,13 @@ export function PodConfigurator({ locationId }: { locationId: string }) {
   }
 
   async function unlinkDual(seat: Seat) {
-    const ok = await ask({ title: `Unlink pod ${seat.number}?`, body: "This pod and its partner go back to seating single diners.", confirmLabel: "Unlink", tone: "danger" });
+    const ok = await ask({ title: `Unlink pod ${podName(seat)}?`, body: "This pod and its partner go back to seating single diners.", confirmLabel: "Unlink", tone: "danger" });
     if (!ok) return;
     setUnlinkingId(seat.id);
     try {
       await api("/seats/unlink-dual", { method: "POST", body: { seatId: seat.id } });
       res.reload();
-      show({ message: `Pod ${seat.number} unlinked.`, tone: "info" });
+      show({ message: `Pod ${podName(seat)} unlinked.`, tone: "info" });
     } catch (e) {
       show({ message: errorText(e), tone: "alert" });
     } finally {
@@ -93,7 +93,7 @@ export function PodConfigurator({ locationId }: { locationId: string }) {
             const badge = isDual && (
               <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-oh-olive text-xs font-bold text-oh-cream">2</span>
             );
-            const numberEl = <span className="font-display text-xl leading-none text-oh-charcoal tabular-nums">{seat.number}</span>;
+            const numberEl = <span className="font-display text-xl leading-none text-oh-charcoal tabular-nums">{podName(seat)}</span>;
             const typeEl = <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-oh-stone/70">{isDual ? `Dual with ${partner ?? "?"}` : "Single"}</span>;
 
             // A dual pod's tile isn't tappable to select (only its own Unlink button is),
@@ -104,8 +104,8 @@ export function PodConfigurator({ locationId }: { locationId: string }) {
                   {badge}
                   {numberEl}
                   {typeEl}
-                  <button type="button" onClick={() => unlinkDual(seat)} disabled={unlinkingId === seat.id} aria-label={`Unlink pod ${seat.number}`}
-                    className="mt-1 inline-flex min-h-6 items-center rounded-full px-2 text-[11px] font-semibold text-oh-ember-deep hover:bg-oh-ember/10 disabled:opacity-60">
+                  <button type="button" onClick={() => unlinkDual(seat)} disabled={unlinkingId === seat.id} aria-label={`Unlink pod ${podName(seat)}`}
+                    className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full px-2 text-[11px] font-semibold text-oh-ember-deep hover:bg-oh-ember/10 disabled:opacity-60">
                     {unlinkingId === seat.id ? "..." : "Unlink"}
                   </button>
                 </div>

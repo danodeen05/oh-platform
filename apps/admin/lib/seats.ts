@@ -8,7 +8,33 @@ export type Seat = {
   status: SeatStatus;
   podType: "SINGLE" | "DUAL";
   dualPartnerId: string | null;
+  /** Display name from the next site release (for example "A3"); older APIs send only number. */
+  label?: string | null;
 };
+
+export type SeatsResponse = { seats: Seat[]; layoutKey: string | null; layoutMirror: boolean | null };
+
+/**
+ * GET /locations/:id/seats returns a bare array today and
+ * { layoutKey, layoutMirror, seats } from the next site release. Accept both.
+ */
+export function normalizeSeats(data: unknown): SeatsResponse {
+  if (Array.isArray(data)) return { seats: data as Seat[], layoutKey: null, layoutMirror: null };
+  if (data && typeof data === "object") {
+    const o = data as { seats?: unknown; layoutKey?: unknown; layoutMirror?: unknown };
+    return {
+      seats: Array.isArray(o.seats) ? (o.seats as Seat[]) : [],
+      layoutKey: typeof o.layoutKey === "string" ? o.layoutKey : null,
+      layoutMirror: typeof o.layoutMirror === "boolean" ? o.layoutMirror : null,
+    };
+  }
+  return { seats: [], layoutKey: null, layoutMirror: null };
+}
+
+/** The pod name shown to people: its label when the API sends one, else its number. */
+export function podName(seat: Pick<Seat, "number" | "label">): string {
+  return seat.label ?? seat.number;
+}
 
 /** "01" -> 1, so string-padded numbers (and a future "B-07" format) sort numerically. */
 function numericValue(number: string): number {
@@ -31,7 +57,8 @@ export function singlePodCount(seats: Seat[]): number {
 
 export function partnerNumber(seats: Seat[], seat: Seat): string | null {
   if (!seat.dualPartnerId) return null;
-  return seats.find((s) => s.id === seat.dualPartnerId)?.number ?? null;
+  const partner = seats.find((s) => s.id === seat.dualPartnerId);
+  return partner ? podName(partner) : null;
 }
 
 /** Tapping a non-dual pod selects it. At most 2 can be selected; a third replaces the oldest. */
@@ -53,7 +80,7 @@ export function canLinkDual(seats: Seat[], selected: string[]): LinkCheck {
 }
 
 export function selectionLabel(seats: Seat[], selected: string[]): string {
-  const numbers = selected.map((id) => seats.find((s) => s.id === id)?.number).filter(Boolean);
+  const numbers = selected.map((id) => seats.find((s) => s.id === id)).filter((s): s is Seat => Boolean(s)).map(podName);
   if (numbers.length === 0) return "";
   if (numbers.length === 1) return `Selected: Pod ${numbers[0]}`;
   return `Selected: Pods ${numbers.join(" and ")}`;
