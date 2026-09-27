@@ -1,79 +1,19 @@
-import Link from "next/link";
 import { SignOutButton } from "@clerk/nextjs";
+import { Button, LinkButton } from "@/components/ui/Button";
 
 export default function UnauthorizedPage() {
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        minHeight: "60vh",
-        textAlign: "center",
-        padding: "24px",
-      }}
-    >
-      <div
-        style={{
-          fontSize: "4rem",
-          marginBottom: "16px",
-        }}
-      >
-        🔒
+    <div className="oh-console flex min-h-svh flex-col items-center justify-center gap-6 bg-oh-charcoal px-6 py-12 text-center text-oh-cream">
+      <img src="/Oh_Logo_Mark_Light.png" alt="Oh!" className="h-12 w-12 object-contain" />
+      <div className="max-w-sm space-y-2">
+        <h1 className="font-display text-[2rem] leading-tight">Access denied</h1>
+        <p className="text-[15px] text-oh-cream/70">This account doesn&apos;t have admin access.</p>
       </div>
-      <h1
-        style={{
-          fontSize: "2rem",
-          fontWeight: 600,
-          color: "#111827",
-          marginBottom: "8px",
-        }}
-      >
-        Access Denied
-      </h1>
-      <p
-        style={{
-          color: "#6b7280",
-          fontSize: "1.1rem",
-          maxWidth: "400px",
-          marginBottom: "24px",
-        }}
-      >
-        Your account does not have permission to access the admin portal.
-        Please contact an administrator if you believe this is an error.
-      </p>
-      <div style={{ display: "flex", gap: "12px" }}>
+      <div className="flex flex-wrap items-center justify-center gap-3">
         <SignOutButton>
-          <button
-            style={{
-              padding: "10px 20px",
-              background: "#ef4444",
-              color: "white",
-              border: "none",
-              borderRadius: "6px",
-              fontSize: "0.875rem",
-              fontWeight: 500,
-              cursor: "pointer",
-            }}
-          >
-            Sign Out
-          </button>
+          <Button variant="primary">Sign out</Button>
         </SignOutButton>
-        <Link
-          href="https://ohbeef.com"
-          style={{
-            padding: "10px 20px",
-            background: "#f3f4f6",
-            color: "#374151",
-            borderRadius: "6px",
-            fontSize: "0.875rem",
-            fontWeight: 500,
-            textDecoration: "none",
-          }}
-        >
-          Go to Main Site
-        </Link>
+        <LinkButton href="https://ohbeef.com" variant="secondary">Go to the main site</LinkButton>
       </div>
     </div>
   );
