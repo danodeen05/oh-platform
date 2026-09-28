@@ -7,6 +7,7 @@ import { enUS, zhTW, zhCN, esES } from "@clerk/localizations";
 import { routing } from "@/i18n/routing";
 import { Providers } from "@/components/Providers";
 import { IntlClientProvider } from "@/components/site/IntlClientProvider";
+import { SERVER_ONLY_NAMESPACES, omitNamespaces } from "@/lib/site/client-messages";
 import LanguageTracker from "@/components/LanguageTracker";
 import { LangSync } from "@/components/plan/shell/LangSync";
 
@@ -22,6 +23,10 @@ const clerkLocalizations: Record<string, typeof enUS> = {
   "zh-CN": zhCN,
   es: esES,
 };
+
+// Task G2a: (site), legacy, agents and kiosk-unauthorized pages get their
+// messages from their own layouts (components/site/ScopedIntl.tsx).
+const GROUP_SCOPED = {};
 
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
@@ -70,7 +75,7 @@ export default async function LocaleLayout({ children, params }: Props) {
   if (headersList.get("x-embed") === "1") {
     return (
       <ClerkProvider localization={clerkLocalization}>
-        <NextIntlClientProvider messages={messages}>
+        <NextIntlClientProvider messages={GROUP_SCOPED}>
           <IntlClientProvider>
             <Providers>
               <LangSync locale={locale} />
@@ -86,7 +91,7 @@ export default async function LocaleLayout({ children, params }: Props) {
   if (isKioskRoute || isCNYRoute) {
     return (
       <ClerkProvider localization={clerkLocalization}>
-        <NextIntlClientProvider messages={messages}>
+        <NextIntlClientProvider messages={omitNamespaces(messages, SERVER_ONLY_NAMESPACES) as typeof messages}>
           <IntlClientProvider>
             <LangSync locale={locale} />
             {children}
@@ -101,9 +106,15 @@ export default async function LocaleLayout({ children, params }: Props) {
   // Footer and floating Chappy (components/legacy/LegacyChrome.tsx), and the
   // `(site)` group renders SiteShell. Nothing here wraps {children} in
   // `.legacy-ui`, so rebuilt routes never inherit legacy styling.
+  //
+  // Task G2a: no messages are serialized here. This layout is shared by
+  // (site) and legacy pages and is not re-rendered on a client navigation
+  // between them, so each group's layout provides its own set (ScopedIntl in
+  // (site)/layout.tsx and LegacyChrome); the client components rendered
+  // here (Providers, LanguageTracker, LangSync) read none.
   return (
     <ClerkProvider localization={clerkLocalization}>
-      <NextIntlClientProvider messages={messages}>
+      <NextIntlClientProvider messages={GROUP_SCOPED}>
         <IntlClientProvider>
           <Providers>
             <LangSync locale={locale} />

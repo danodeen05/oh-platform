@@ -8,6 +8,7 @@
  * Phones: logo, account, and the More trigger (the dock carries the rest).
  * 768px and up: logo, the desktop nav, the language menu and account.
  */
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
@@ -16,7 +17,12 @@ import { Icon } from "@/components/site/icons/Icon";
 import { AccountButton } from "./AccountButton";
 import { DesktopNav } from "./DesktopNav";
 import { LocaleSwitch } from "./LocaleSwitch";
-import { MoreSheet } from "./MoreSheet";
+
+// Task G2a: the More sheet (and framer-motion, which only the sheet uses in
+// the shell, about 42 KB gzipped) loads on first open instead of with every
+// page. Intent (hover, touch, focus on a trigger) starts the download early.
+const loadMoreSheet = () => import("./MoreSheet");
+const MoreSheet = dynamic(() => loadMoreSheet().then((m) => m.MoreSheet), { ssr: false });
 
 const SCROLLED_AT = 8;
 
@@ -25,6 +31,13 @@ export function TopBar() {
   const locale = useLocale();
   const [scrolled, setScrolled] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  // Mounted on first open and kept, so its close animation still plays.
+  const [moreMounted, setMoreMounted] = useState(false);
+  const openMore = () => {
+    setMoreMounted(true);
+    setMoreOpen(true);
+  };
+  const preloadMore = () => void loadMoreSheet();
 
   useEffect(() => {
     const onScroll = () => {
@@ -54,7 +67,7 @@ export function TopBar() {
             <Image src="/Oh_Logo_Mark_Light.png" alt="" width={34} height={34} priority className="h-[34px] w-[34px] object-contain" />
           </Link>
 
-          <DesktopNav onOpenMore={() => setMoreOpen(true)} moreOpen={moreOpen} />
+          <DesktopNav onOpenMore={openMore} onPreloadMore={preloadMore} moreOpen={moreOpen} />
 
           <div className="ml-auto flex items-center gap-1 md:ml-2">
             <div className="hidden md:block">
@@ -66,7 +79,10 @@ export function TopBar() {
               data-site-more-trigger
               aria-haspopup="dialog"
               aria-expanded={moreOpen}
-              onClick={() => setMoreOpen(true)}
+              onClick={openMore}
+              onPointerEnter={preloadMore}
+              onTouchStart={preloadMore}
+              onFocus={preloadMore}
               className="flex h-11 w-11 cursor-pointer appearance-none items-center justify-center rounded-full border-0 bg-transparent p-0 text-oh-cream transition-colors hover:bg-oh-stone/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oh-cream md:hidden"
             >
               <Icon name="menu" size={24} title={t("more")} />
@@ -76,7 +92,7 @@ export function TopBar() {
       </header>
       {/* Outside <header>: its backdrop-filter would otherwise become the
           containing block for the sheet's position: fixed. */}
-      <MoreSheet open={moreOpen} onClose={() => setMoreOpen(false)} />
+      {moreMounted ? <MoreSheet open={moreOpen} onClose={() => setMoreOpen(false)} /> : null}
     </>
   );
 }

@@ -10,7 +10,7 @@
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { Icon } from "@/components/site/icons/Icon";
-import { Sheet } from "@/components/site/motion/Sheet";
+import { LazySheet as Sheet } from "@/components/site/motion/LazySheet";
 import { Seal } from "@/components/site/seal/Seal";
 import { useRewardsMember } from "./RewardsMember";
 

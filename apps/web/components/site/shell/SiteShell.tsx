@@ -22,7 +22,8 @@
 import { headers } from "next/headers";
 import { getLocale } from "next-intl/server";
 import type { ReactNode } from "react";
-import { siteFontVariables } from "@/components/site/fonts";
+import { siteDisplayFont, siteFontCss } from "@/components/site/site-fonts";
+import { CjkFonts } from "./CjkFonts";
 import { ChappyProvider } from "@/components/site/chappy/ChappyLauncher";
 import { ActiveOrderPill } from "./ActiveOrderPill";
 import { Dock } from "./Dock";
@@ -33,7 +34,7 @@ import { TopBar } from "./TopBar";
 /** The wrapper classes every site page gets, embedded or not. */
 function rootClass(cjk: boolean): string {
   return [
-    siteFontVariables,
+    siteDisplayFont.variable,
     cjk ? "font-cjk" : "font-body",
     // shrink-0: <body> is a flex column (globals.css); without it the
     // shell shrinks to the viewport and the page past the fold shows
@@ -46,10 +47,19 @@ export async function SiteShell({ children }: { children: ReactNode }) {
   const h = await headers();
   const locale = await getLocale();
   const cjk = locale.startsWith("zh");
+  // Task G2a: the site's font custom properties on <html> (so portals get
+  // them too) and, on zh pages only, the non-blocking CJK stylesheet.
+  const fonts = (
+    <>
+      <style dangerouslySetInnerHTML={{ __html: siteFontCss(locale) }} />
+      <CjkFonts locale={locale} />
+    </>
+  );
 
   if (h.get("x-embed") === "1") {
     return (
       <div data-site-shell="embed" className={`${rootClass(cjk)} [--dock-h:0px]`}>
+        {fonts}
         {children}
       </div>
     );
@@ -66,6 +76,7 @@ export async function SiteShell({ children }: { children: ReactNode }) {
           "pb-[var(--dock-h)]",
         ].join(" ")}
       >
+        {fonts}
         <SkipLink />
         <TopBar />
         <main id="site-main" tabIndex={-1} className="flex-1 outline-none">

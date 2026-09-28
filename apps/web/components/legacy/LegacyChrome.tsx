@@ -12,20 +12,34 @@
  *
  * Embed contract: with the `x-embed` request header (`?embed=1`) this renders
  * the page alone, with no header, footer or chat.
+ *
+ * Task G2a: it also brings what the shared layers used to give every page
+ * and now give only legacy ones: the legacy Google Fonts set (LegacyFonts)
+ * and every message namespace but the plan's (ScopedIntl).
  */
 import { headers } from "next/headers";
 import type { ReactNode } from "react";
 import ActiveOrderBanner from "@/components/ActiveOrderBanner";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
+import { ScopedIntl } from "@/components/site/ScopedIntl";
 import { LegacyChappy } from "./LegacyChappy";
+import { LegacyFonts } from "./LegacyFonts";
 
 export async function LegacyChrome({ children }: { children: ReactNode }) {
   const h = await headers();
-  if (h.get("x-embed") === "1") return <>{children}</>;
+  if (h.get("x-embed") === "1") {
+    return (
+      <ScopedIntl scope="legacy">
+        <LegacyFonts />
+        {children}
+      </ScopedIntl>
+    );
+  }
 
   return (
-    <>
+    <ScopedIntl scope="legacy">
+      <LegacyFonts />
       <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
         <div className="legacy-ui">
           <Header />
@@ -41,6 +55,6 @@ export async function LegacyChrome({ children }: { children: ReactNode }) {
       <div className="legacy-ui">
         <LegacyChappy />
       </div>
-    </>
+    </ScopedIntl>
   );
 }

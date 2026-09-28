@@ -16,7 +16,16 @@ import { DOCK_ITEMS, MORE_ITEMS, isNavActive, isNavLink, localizedHref, type Nav
 const LINK =
   "inline-flex h-11 cursor-pointer appearance-none items-center whitespace-nowrap rounded-full border-0 bg-transparent px-3 font-[inherit] no-underline text-sm tracking-wide text-oh-cream/80 transition-colors hover:bg-oh-stone/50 hover:text-oh-cream focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oh-cream aria-[current=page]:text-oh-cream aria-[current=page]:underline aria-[current=page]:decoration-oh-ember-light aria-[current=page]:decoration-2 aria-[current=page]:underline-offset-8";
 
-export function DesktopNav({ onOpenMore, moreOpen }: { onOpenMore: () => void; moreOpen: boolean }) {
+export function DesktopNav({
+  onOpenMore,
+  onPreloadMore,
+  moreOpen,
+}: {
+  onOpenMore: () => void;
+  /** Starts downloading the lazily loaded More sheet (hover or focus). */
+  onPreloadMore?: () => void;
+  moreOpen: boolean;
+}) {
   const t = useTranslations("site");
   const locale = useLocale();
   const pathname = usePathname();
@@ -74,6 +83,8 @@ export function DesktopNav({ onOpenMore, moreOpen }: { onOpenMore: () => void; m
             aria-haspopup="dialog"
             aria-expanded={moreOpen}
             onClick={onOpenMore}
+            onPointerEnter={onPreloadMore}
+            onFocus={onPreloadMore}
             className={`${LINK} gap-1`}
           >
             {t("shell.more")}

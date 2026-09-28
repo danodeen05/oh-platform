@@ -1,3 +1,4 @@
+import { preload } from "react-dom";
 import { SITE_IMAGES, type ImageKey } from "@/lib/site/images";
 
 export interface SitePictureProps {
@@ -38,6 +39,19 @@ export interface SitePictureProps {
 export function SitePicture({ image, sizes, priority = false, className, alt }: SitePictureProps) {
   const entry = SITE_IMAGES[image];
   const fallbackSrc = pickWidth(entry.srcSet.webp, 780);
+  if (priority) {
+    // Task G2a: a <link rel=preload> in <head> for the LCP image, so its
+    // request starts with the first bytes of the document instead of when
+    // the parser reaches the <picture>. Same AVIF candidates and sizes as
+    // the <source>, so the browser picks the file the picture will use.
+    preload(pickWidth(entry.srcSet.avif, 1200), {
+      as: "image",
+      type: "image/avif",
+      imageSrcSet: entry.srcSet.avif,
+      imageSizes: sizes,
+      fetchPriority: "high",
+    });
+  }
 
   return (
     <picture className={className}>

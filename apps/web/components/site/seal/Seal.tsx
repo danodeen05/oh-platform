@@ -1,3 +1,4 @@
+import { SEAL_FONT_FAMILY } from "./seal-font";
 import { SEALS, DEFAULT_SEAL } from "./seals";
 
 export type SealVariant = "filled" | "outline";
@@ -24,7 +25,11 @@ export interface SealProps {
 const CINNABAR = "var(--color-oh-ember, #C1502E)";
 const PAPER = "var(--color-oh-cream, #F2EDE4)";
 
-const GLYPH_FONT = "'Noto Serif TC', 'Noto Serif SC', 'PingFang TC', serif";
+// Task G2a: the seal's own ~5 KB subset of Noto Serif TC (public/fonts/
+// seal-glyphs.woff2, @font-face in app/globals.css) comes first, so a seal
+// never pulls the full CJK web font into an English page. The rest is the
+// old chain, only reached if that file fails to load.
+const GLYPH_FONT = `'${SEAL_FONT_FAMILY}', 'Noto Serif TC', 'Noto Serif SC', 'PingFang TC', serif`;
 
 function sanitizeId(key: string): string {
   return key.replace(/[^a-zA-Z0-9_-]/g, "-");

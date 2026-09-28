@@ -5,6 +5,7 @@
  * `.legacy-ui` anywhere in this tree.
  */
 import type { Viewport } from "next";
+import { ScopedIntl } from "@/components/site/ScopedIntl";
 import { SiteShell } from "@/components/site/shell/SiteShell";
 
 // Lets the shell's env(safe-area-inset-*) padding take effect on notched
@@ -12,5 +13,10 @@ import { SiteShell } from "@/components/site/shell/SiteShell";
 export const viewport: Viewport = { viewportFit: "cover" };
 
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
-  return <SiteShell>{children}</SiteShell>;
+  // Task G2a: only the message namespaces (site) client components read.
+  return (
+    <ScopedIntl scope="site">
+      <SiteShell>{children}</SiteShell>
+    </ScopedIntl>
+  );
 }

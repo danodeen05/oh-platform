@@ -46,6 +46,20 @@
   --font-cjk: var(--font-noto-tc), var(--font-noto-sc), var(--font-primary);
 }
 
+/*
+ * Chop-seal glyphs (Task G2a): Noto Serif TC Regular (SIL OFL 1.1) subset to
+ * the characters in components/site/seal/seals.ts, about 5 KB, built by
+ * scripts/subset-seal-font.mjs. Only fetched when a seal is laid out; `block`
+ * so a seal never flashes a fallback glyph.
+ */
+@font-face {
+  font-family: "Oh Seal Glyphs";
+  src: url("/fonts/seal-glyphs.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+
 /* Design System - Oh Beef Noodle Soup */
 :root {
   /* Color Palette */
