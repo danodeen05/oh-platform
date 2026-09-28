@@ -22,6 +22,9 @@ import { SitePicture } from "@/components/site/picture/SitePicture";
 import { SITE_IMAGES } from "@/lib/site/images";
 import { SITE_API_URL, useMemberId, useSiteApi } from "@/lib/site/api";
 import { confirmPayment, groupIdentityHeaders, paymentIntent, type PaymentIntentResult } from "@/lib/site/orders";
+import { statusPath } from "@/lib/site/order-status";
+
+type PodChange = { changed?: boolean; from?: string | null; to?: string | null; noPod?: boolean };
 import { clearDraft } from "@/lib/site/order-draft";
 import { formatCents, orderErrorCode, stripeLocale } from "@/lib/site/order-flow";
 import { podWalkSteps } from "@/lib/site/pod-walk";
@@ -100,10 +103,17 @@ export function PayStep({ orderId, orderNumber }: { orderId: string | null; orde
   const returning = search.get("payment_intent");
   const done = useRef(false);
 
-  const statusHref = useCallback((qr: string | null | undefined) => (qr ? `/${locale}/order/status?orderQrCode=${encodeURIComponent(qr)}` : `/${locale}/order/confirmation?orderId=${encodeURIComponent(orderId || "")}&orderNumber=${encodeURIComponent(orderNumber || "")}&paid=true`), [locale, orderId, orderNumber]);
+  // Task D6: a pod that moved at payment (D12's podChange) rides along, so the next page says "Your pod is now B-07".
+  const statusHref = useCallback(
+    (qr: string | null | undefined, change?: PodChange | null) =>
+      qr
+        ? statusPath(locale, qr, change)
+        : `/${locale}/order/confirmation?orderId=${encodeURIComponent(orderId || "")}&orderNumber=${encodeURIComponent(orderNumber || "")}&paid=true${change?.changed && change.from ? `&podFrom=${encodeURIComponent(change.from)}` : ""}`,
+    [locale, orderId, orderNumber],
+  );
 
   const finish = useCallback(
-    (qr: string | null | undefined) => {
+    (qr: string | null | undefined, change?: PodChange | null) => {
       done.current = true;
       try {
         if (qr) localStorage.setItem("activeOrderQrCode", qr);
@@ -115,7 +125,7 @@ export function PayStep({ orderId, orderNumber }: { orderId: string | null; orde
       } catch {
         /* ignore */
       }
-      router.replace(statusHref(qr));
+      router.replace(statusHref(qr, change));
     },
     [router, statusHref],
   );
@@ -210,7 +220,7 @@ export function PayStep({ orderId, orderNumber }: { orderId: string | null; orde
     (async () => {
       setProcessing(true);
       const res = await confirmPayment(orderId, returning, { fetcher: api, baseUrl: SITE_API_URL, headers: identity });
-      if (res.ok) finish((res.data.orderQrCode as string | undefined) ?? order?.orderQrCode);
+      if (res.ok) finish((res.data.orderQrCode as string | undefined) ?? order?.orderQrCode, (res.data as { podChange?: PodChange }).podChange);
       else {
         setProcessing(false);
         setError({ text: res.error.refunded ? `${te(orderErrorCode(res.error.code, res.status))} ${t("refunded")}` : te(orderErrorCode(res.error.code, res.status)), retry: true });
@@ -236,7 +246,7 @@ export function PayStep({ orderId, orderNumber }: { orderId: string | null; orde
     setError(null);
     const res = await confirmPayment(orderId, paymentIntentId, { fetcher: api, baseUrl: SITE_API_URL, headers: identity });
     if (res.ok) {
-      finish((res.data.orderQrCode as string | undefined) ?? order?.orderQrCode);
+      finish((res.data.orderQrCode as string | undefined) ?? order?.orderQrCode, (res.data as { podChange?: PodChange }).podChange);
       return;
     }
     setProcessing(false);

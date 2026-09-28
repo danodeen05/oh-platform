@@ -1452,39 +1452,47 @@
     },
     "demo": {
       "banner": "实时演示 · 非真实订单"
-    }
-  },
-  "features": {
-    "fortuneCookie": {
-      "title": "您的数字幸运饼干",
-      "subtitle": "等待时，打开您的个性化运势",
-      "crackOpen": "打开它",
-      "loading": "解读您的运势中...",
-      "luckyNumbers": "幸运数字",
-      "thisDay": "历史上的今天 ({year})",
-      "learnChinese": "学中文",
-      "unavailable": "运势暂时无法显示 - 但您的餐点一定很棒！"
     },
-    "roast": {
-      "title": "吐槽区",
-      "subtitle": "想听听我们对您点餐选择的（搞笑）真实评论吗？",
-      "button": "吐槽我的订单",
-      "loading": "分析您的人生选择中...",
-      "highlights": "我们注意到的：",
-      "unavailable": "吐槽师傅休息中。您的订单应该没问题。应该吧。"
-    },
-    "backstory": {
-      "title": "幕后故事",
-      "subtitle": "想知道您食材的秘密生活吗？",
-      "button": "告诉我一切",
-      "loading": "挖掘八卦中...",
-      "heading": "不为人知的故事",
-      "unavailable": "食材们选择保持匿名。神秘的一群。"
-    },
-    "kitchen": {
-      "label": "厨房直播",
-      "listening": "聆听厨房中...",
-      "quiet": "厨房异常安静。他们在策划什么。"
+    "lines": {
+      "feed": {
+        "label": "厨房实时动态",
+        "listening": "正在聆听厨房",
+        "quiet": "厨房暂时安静下来。好东西快来了。"
+      },
+      "fortune": {
+        "title": "你的签语",
+        "lede": "汤头熬煮时，来一块幸运饼干。",
+        "open": "打开它",
+        "loading": "正在解读你的签语",
+        "lucky": "幸运号码",
+        "thisDay": "{year} 年的今天",
+        "learn": "学一个词",
+        "unavailable": "今天没有签语。你的面仍在路上。"
+      },
+      "roast": {
+        "title": "吐槽我的点餐",
+        "lede": "我们对你这份点餐的真心又温柔的评论。",
+        "open": "开始吐槽",
+        "loading": "正在研究你的选择",
+        "highlights": "亮点",
+        "unavailable": "吐槽暂停中。你的点餐看起来很棒。"
+      },
+      "backstory": {
+        "title": "碗里的故事",
+        "lede": "你的食材今晚之前去过哪里。",
+        "open": "说给我听",
+        "loading": "正在询问食材",
+        "unavailable": "食材今天不愿透露秘密。"
+      },
+      "redStep": {
+        "label": "关注心理健康",
+        "loading": "正在加载今日小知识",
+        "source": "资料来源：{source}",
+        "lede": "{name}，这里不收小费，因为公平薪资已包含在每一碗里。若你想捐款，这是我们推荐的去处。",
+        "cta": "支持这项公益",
+        "newTab": "（在新标签页打开）",
+        "foundation": "美国心理健康公益基金会，501(c)(3) 非营利组织"
+      }
     }
   },
   "payment": {
@@ -2370,6 +2378,296 @@
       "GIFT_CARD_INVALID": "礼品卡代码无效或已无余额。",
       "CREDITS_REQUIRE_SIGN_IN": "请登录以使用储值金。",
       "MEAL_GIFT_UNAVAILABLE": "这份爱心餐已无法使用。"
+    }
+  },
+  "phoneCollection": {
+    "title": "掌握订单最新状态",
+    "greeting": "嗨，{name}！",
+    "description": "添加手机号码，即可通过短信收到订单状态通知，包括餐点完成时。",
+    "phoneLabel": "手机号码",
+    "phonePlaceholder": "(555) 555-5555",
+    "smsConsent": "我同意接收 Oh Beef Noodle Soup 关于我的订单的短信（订单确认与餐点完成通知）。发送频率不定，可能产生短信与流量费用。回复 STOP 即可退订。",
+    "privacyPolicy": "隐私政策",
+    "savePhone": "保存并接收通知",
+    "saving": "保存中...",
+    "skipForNow": "稍后再说",
+    "skipNote": "你随时可以在账户设置中添加手机号码。",
+    "phoneRequired": "请输入你的手机号码",
+    "invalidPhone": "请输入有效的手机号码",
+    "updateFailed": "无法保存手机号码，请再试一次。"
+  },
+  "afterOrder": {
+    "common": {
+      "orderNumber": "订单 {number}",
+      "podNumber": "座舱 {label}",
+      "yourPod": "你的座舱",
+      "loading": "正在加载你的订单",
+      "notFound": "找不到这笔订单",
+      "notFoundLede": "请检查链接，或开始新订单。",
+      "error": "无法连接到餐厅",
+      "errorLede": "请检查网络连接后再试一次。",
+      "retry": "再试一次",
+      "newOrder": "开始点餐",
+      "demo": "实时演示，并非真实订单。",
+      "podMoved": "你的座舱已改为 {to}。",
+      "podMovedLede": "{from} 在你完成付款前已被占用，所以我们为你保留了下一个最佳座舱。",
+      "podNone": "你付款时没有空座舱。到店后请报到，我们会为你安排座位。",
+      "qty": "x {count}",
+      "needHelp": "需要帮助吗？",
+      "askChappy": "问问 Chappy",
+      "networkError": "无法连接到餐厅。请检查网络连接后再试一次。"
+    },
+    "status": {
+      "metaTitle": "你的订单",
+      "progressLabel": "订单进度",
+      "progress": "第 {current} 步，共 {total} 步",
+      "autoRefresh": "此页面会自动更新。",
+      "friend": "朋友",
+      "stages": {
+        "PENDING_PAYMENT": {
+          "title": "等待付款",
+          "lede": "这笔订单尚未付款。"
+        },
+        "PAID": {
+          "title": "已下单",
+          "lede": "请前往餐厅，到店后报到。"
+        },
+        "QUEUED": {
+          "title": "排队中",
+          "lede": "厨房已收到你的订单，很快就会开始煮你的面。"
+        },
+        "PREPPING": {
+          "title": "烹调中",
+          "lede": "汤头正在炉上，面条也下锅了。"
+        },
+        "READY": {
+          "title": "快好了",
+          "lede": "你的面通过最后检查，正送往你的座舱。"
+        },
+        "SERVING": {
+          "title": "请慢用",
+          "lede": "慢慢享用，有需要随时找我们。"
+        },
+        "COMPLETED": {
+          "title": "谢谢光临",
+          "lede": "期待很快再见到你。"
+        },
+        "CANCELLED": {
+          "title": "订单已取消",
+          "lede": "这笔订单已取消，无需其他操作。"
+        },
+        "UNKNOWN": {
+          "title": "你的订单",
+          "lede": "我们正在确认中。"
+        }
+      },
+      "timeline": {
+        "label": "你的用餐流程",
+        "PAID": "已付款",
+        "QUEUED": "已报到",
+        "PREPPING": "烹调中",
+        "READY": "最后检查",
+        "SERVING": "已送达座舱",
+        "COMPLETED": "已完成",
+        "now": "当前",
+        "totalTime": "从付款到上面：{minutes} 分钟"
+      },
+      "pod": {
+        "goTo": "请前往你的座舱，到了再告诉我们。",
+        "confirm": "我已到座舱",
+        "checkedIn": "已报到",
+        "callStaff": "呼叫服务人员",
+        "calling": "呼叫中",
+        "staffCalled": "已呼叫",
+        "staffComing": "服务人员正在过来。",
+        "callFailed": "无法呼叫服务人员。请再试一次，或向我们招手。",
+        "addItems": "加点",
+        "dessert": "可以上甜点了",
+        "dessertSending": "正在通知厨房",
+        "dessertCalled": "甜点准备中",
+        "dessertComing": "甜点马上来。",
+        "dessertFailed": "没有发送成功，请再试一次。"
+      },
+      "queue": {
+        "title": "等待座舱",
+        "position": "第 {position} 位",
+        "wait": "约 {minutes} 分钟",
+        "note": "有空座舱时我们会通知你。"
+      },
+      "done": {
+        "cta": "我吃完了",
+        "prompt": "吃完了吗？我们会通知服务人员清理你的座舱。",
+        "confirm": "是的，吃完了",
+        "cancel": "还没",
+        "failed": "没有发送成功，请再试一次。"
+      },
+      "join": {
+        "eyebrow": "Oh! 会员奖励",
+        "title": "这笔订单也能累积奖励",
+        "lede": "免费创建账户，订单 {number} 就会计入你的下一碗免费面。",
+        "benefits": {
+          "one": "每笔订单都有返现",
+          "two": "升级时送一碗免费面",
+          "three": "订单与印章集中一处"
+        },
+        "create": "创建账户",
+        "signIn": "我已有账户",
+        "linked": "这笔订单已加入你的账户。"
+      },
+      "bowl": {
+        "title": "你的面"
+      },
+      "links": {
+        "label": "接下来",
+        "orderAgain": "再点一次",
+        "account": "我的账户"
+      },
+      "noCode": {
+        "title": "没有可显示的订单",
+        "lede": "请从订单链接或确认页打开此页面。"
+      }
+    },
+    "addOns": {
+      "title": "加点",
+      "close": "关闭",
+      "loading": "正在加载可加点的项目",
+      "loadFailed": "无法加载加点项目。请呼叫服务人员，我们会帮助你。",
+      "callInstead": "改为呼叫服务人员",
+      "none": "目前没有可加点的项目。",
+      "refills": "续杯",
+      "free": "免费",
+      "water": "白开水",
+      "refill": "续杯",
+      "refillSent": "续杯马上来。",
+      "extras": "加量蔬菜",
+      "requestExtras": "{count, plural, other {加点 # 份}}",
+      "extrasSent": "加量蔬菜马上来。",
+      "paid": "加购",
+      "add": "加入",
+      "addOne": "加入{name}",
+      "less": "减少一份{name}",
+      "more": "增加一份{name}",
+      "total": "合计",
+      "pay": "付款 {amount}",
+      "demoAdded": "已加入。演示中不会收费。",
+      "failed": "没有发送成功，请再试一次。"
+    },
+    "confirmation": {
+      "metaTitle": "订单已确认",
+      "title": "一切就绪",
+      "paid": "已付款 {amount}，谢谢。",
+      "pending": "付款处理中，完成后此页会自动更新。",
+      "qrTitle": "你的订单码",
+      "qrLede": "到店后在自助机出示，或直接用手机报到。",
+      "qrAlt": "订单 {number} 的 QR 码",
+      "arrival": "预计到店时间 {time}",
+      "signInForCode": "请登录下单时使用的账户，即可查看订单码。",
+      "podNote": "报到前会为你保留。",
+      "checkIn": "立即报到",
+      "track": "跟踪订单",
+      "group": {
+        "title": "{count, plural, other {你的团体，共 # 笔订单}}",
+        "host": "发起人",
+        "guest": "来宾 {number}",
+        "noPod": "尚未分配座舱",
+        "checkedIn": "已在座舱",
+        "arrived": "已报到",
+        "waiting": "尚未到店",
+        "checkIn": "报到",
+        "checkInAll": "全员报到"
+      },
+      "receipt": {
+        "title": "收据",
+        "bowl": "主餐",
+        "extras": "加点",
+        "subtotal": "小计",
+        "savings": "抵扣",
+        "tax": "税费",
+        "total": "总计"
+      },
+      "share": {
+        "title": "邀请朋友",
+        "lede": "朋友首次下单可抵扣 $5，朋友下单后你也能获得 $5。",
+        "button": "分享",
+        "copied": "已复制链接",
+        "text": "我刚在 Oh! Beef Noodle Soup 点了餐。首碗抵扣 $5：{url}"
+      },
+      "home": "返回首页"
+    },
+    "checkIn": {
+      "metaTitle": "报到",
+      "eyebrow": "在餐厅",
+      "title": "报到",
+      "lede": "到了吗？报到后我们会引导你到座舱。",
+      "steps": {
+        "one": "在确认页找到你的订单代码。",
+        "two": "在下方输入，或在自助机扫描。",
+        "three": "前往座舱，你到了厨房就开始烹调。"
+      },
+      "codeLabel": "订单代码",
+      "codeHint": "在确认页的 QR 码下方。",
+      "submit": "帮我报到",
+      "checking": "报到中",
+      "required": "请输入你的订单代码。",
+      "notFound": "找不到这个代码，请确认后再试一次。",
+      "notPaid": "这笔订单尚未付款。",
+      "noPod": "这笔订单尚未分配座舱。",
+      "failed": "报到没有成功，请再试一次或询问服务人员。",
+      "help": "遇到问题？任何一位服务人员都能帮你报到。"
+    },
+    "scan": {
+      "metaTitle": "确认座舱",
+      "eyebrow": "在你的座舱",
+      "title": "确认座舱",
+      "lede": "到座舱了吗？确认后厨房就开始煮你的面。",
+      "podNote": "请在这里坐下，然后在下方确认。",
+      "notFound": "找不到这笔订单。",
+      "noPod": "这笔订单尚未分配座舱，请先报到。",
+      "codeLabel": "订单代码",
+      "codeHint": "与确认页上的代码相同。",
+      "submit": "我已到座舱",
+      "confirming": "确认中",
+      "required": "请输入你的订单代码。",
+      "notPaid": "这笔订单尚未付款。",
+      "failed": "没有发送成功，请再试一次或询问服务人员。",
+      "checkInFirst": "先报到",
+      "back": "返回我的订单",
+      "success": "报到完成",
+      "successLede": "厨房正在开始煮你的面。"
+    },
+    "pod": {
+      "metaTitle": "你的座舱",
+      "title": "座舱 {label}",
+      "error": "无法读取此座舱的代码",
+      "errorLede": "请询问任何一位服务人员，我们会为你安排座位。",
+      "noCode": "扫描座舱上的二维码",
+      "noCodeLede": "每个座舱的桌上都有二维码。",
+      "confirmed": "欢迎来到座舱 {label}",
+      "confirmedLede": "你的面正要送进厨房。",
+      "waiting": "你的订单在这里等你",
+      "waitingLede": "订单 {number} 保留在这个座舱。告诉厨房你已到店。",
+      "confirm": "我到了",
+      "confirming": "正在通知厨房",
+      "noOrder": "这个座舱目前没有等待中的订单。",
+      "notYours": "这个座舱已保留给其他订单。",
+      "already": "你已在这里报到过了。",
+      "failed": "没有发送成功，请再试一次或询问服务人员。",
+      "free": "这个座舱目前空着",
+      "freeSteps": {
+        "one": "在线点餐并选择这个座舱。",
+        "two": "快到到店时间时再过来。",
+        "three": "再次扫描这个二维码即可报到。"
+      },
+      "mapTitle": "你的位置",
+      "mapHint": "已标出座舱 {label}",
+      "mapError": "地图没有加载，但座舱仍为你保留。",
+      "account": "我的账户"
+    },
+    "reorder": {
+      "note": "你上次的点餐已放回碗里，价格以今天为准。",
+      "unavailable": "已不在菜单上：{items}。",
+      "missing": "你的账户中找不到这笔订单。",
+      "loading": "正在加载你上次的订单"
     }
   }
 }

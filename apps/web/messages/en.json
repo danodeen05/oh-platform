@@ -1541,39 +1541,47 @@
     },
     "demo": {
       "banner": "Live demo · not a real order"
-    }
-  },
-  "features": {
-    "fortuneCookie": {
-      "title": "Your Digital Fortune Cookie",
-      "subtitle": "While you wait, crack open your personalized fortune",
-      "crackOpen": "Crack It Open",
-      "loading": "Reading your fortune...",
-      "luckyNumbers": "Lucky Numbers",
-      "thisDay": "This Day in History ({year})",
-      "learnChinese": "Learn Chinese",
-      "unavailable": "Fortune unavailable - but your meal is still going to be amazing!"
     },
-    "roast": {
-      "title": "The Roast Zone",
-      "subtitle": "Want our brutally honest (and hilarious) take on your order choices?",
-      "button": "Roast My Order",
-      "loading": "Analyzing your life choices...",
-      "highlights": "What caught our attention:",
-      "unavailable": "Our roast chef is on break. Your order is probably fine. Probably."
-    },
-    "backstory": {
-      "title": "Behind the Scenes",
-      "subtitle": "Ever wonder about the secret lives of your ingredients?",
-      "button": "Tell Me Everything",
-      "loading": "Digging up the dirt...",
-      "heading": "The Untold Stories",
-      "unavailable": "The ingredients prefer to remain anonymous. Mysterious bunch."
-    },
-    "kitchen": {
-      "label": "Live Kitchen Feed",
-      "listening": "Listening to the kitchen...",
-      "quiet": "The kitchen is suspiciously quiet. They're up to something."
+    "lines": {
+      "feed": {
+        "label": "Live from the kitchen",
+        "listening": "Listening to the kitchen",
+        "quiet": "The kitchen is quiet for a moment. Something good is coming."
+      },
+      "fortune": {
+        "title": "Your fortune",
+        "lede": "A fortune cookie while the broth does its work.",
+        "open": "Crack it open",
+        "loading": "Reading your fortune",
+        "lucky": "Lucky numbers",
+        "thisDay": "On this day in {year}",
+        "learn": "Learn a word",
+        "unavailable": "No fortune today. Your bowl is still on its way."
+      },
+      "roast": {
+        "title": "Roast my order",
+        "lede": "Our honest, affectionate take on what you chose.",
+        "open": "Roast it",
+        "loading": "Studying your choices",
+        "highlights": "What stood out",
+        "unavailable": "The roast is off for now. Your order looks great."
+      },
+      "backstory": {
+        "title": "Behind the bowl",
+        "lede": "Where your ingredients have been before tonight.",
+        "open": "Tell me",
+        "loading": "Asking the ingredients",
+        "unavailable": "The ingredients are keeping their secrets today."
+      },
+      "redStep": {
+        "label": "Mental health matters",
+        "loading": "Loading today's fact",
+        "source": "Source: {source}",
+        "lede": "{name}, there's no tip here because fair wages are built into every bowl. If you'd like to give, this is where we'd send it.",
+        "cta": "Support the cause",
+        "newTab": "(opens in a new tab)",
+        "foundation": "One Red Step at a Time Foundation, a 501(c)(3)"
+      }
     }
   },
   "payment": {
@@ -4675,6 +4683,280 @@
       "GIFT_CARD_INVALID": "That gift card code isn't valid or has no balance.",
       "CREDITS_REQUIRE_SIGN_IN": "Sign in to use your credit.",
       "MEAL_GIFT_UNAVAILABLE": "That meal gift is no longer available."
+    }
+  },
+  "afterOrder": {
+    "common": {
+      "orderNumber": "Order {number}",
+      "podNumber": "Pod {label}",
+      "yourPod": "Your pod",
+      "loading": "Loading your order",
+      "notFound": "We couldn't find that order",
+      "notFoundLede": "Check the link, or start a new order.",
+      "error": "We couldn't reach the restaurant",
+      "errorLede": "Check your connection and try again.",
+      "retry": "Try again",
+      "newOrder": "Start an order",
+      "demo": "Live demo. Not a real order.",
+      "podMoved": "Your pod is now {to}.",
+      "podMovedLede": "{from} was taken before your payment went through, so we held the next best pod for you.",
+      "podNone": "No pod was free when you paid. Check in when you arrive and we'll seat you.",
+      "qty": "x {count}",
+      "needHelp": "Need a hand?",
+      "askChappy": "Ask Chappy",
+      "networkError": "We couldn't reach the restaurant. Check your connection and try again."
+    },
+    "status": {
+      "metaTitle": "Your order",
+      "progressLabel": "Order progress",
+      "progress": "Step {current} of {total}",
+      "autoRefresh": "This page updates on its own.",
+      "friend": "Friend",
+      "stages": {
+        "PENDING_PAYMENT": {
+          "title": "Waiting for payment",
+          "lede": "This order isn't paid yet."
+        },
+        "PAID": {
+          "title": "Order placed",
+          "lede": "Head to the restaurant. Check in when you arrive."
+        },
+        "QUEUED": {
+          "title": "You're in line",
+          "lede": "The kitchen has your order. It starts on your bowl soon."
+        },
+        "PREPPING": {
+          "title": "Cooking now",
+          "lede": "Your broth is on the fire and your noodles are going in."
+        },
+        "READY": {
+          "title": "Almost there",
+          "lede": "Your bowl passed its final check. It's on its way to your pod."
+        },
+        "SERVING": {
+          "title": "Enjoy your bowl",
+          "lede": "Take your time. We're here if you need anything."
+        },
+        "COMPLETED": {
+          "title": "Thanks for coming",
+          "lede": "We hope to see you again soon."
+        },
+        "CANCELLED": {
+          "title": "Order cancelled",
+          "lede": "This order was cancelled. Nothing more to do here."
+        },
+        "UNKNOWN": {
+          "title": "Your order",
+          "lede": "We're checking on it."
+        }
+      },
+      "timeline": {
+        "label": "Your visit",
+        "PAID": "Paid",
+        "QUEUED": "Checked in",
+        "PREPPING": "Cooking",
+        "READY": "Final check",
+        "SERVING": "At your pod",
+        "COMPLETED": "Finished",
+        "now": "now",
+        "totalTime": "Payment to bowl: {minutes} min"
+      },
+      "pod": {
+        "goTo": "Go to your pod, then let us know you're there.",
+        "confirm": "I'm at my pod",
+        "checkedIn": "Checked in",
+        "callStaff": "Call staff",
+        "calling": "Calling",
+        "staffCalled": "Staff called",
+        "staffComing": "Staff are on the way.",
+        "callFailed": "We couldn't reach staff. Try again, or wave us down.",
+        "addItems": "Add to my order",
+        "dessert": "Ready for dessert",
+        "dessertSending": "Letting the kitchen know",
+        "dessertCalled": "Dessert is coming",
+        "dessertComing": "Dessert is on its way.",
+        "dessertFailed": "That didn't go through. Try again."
+      },
+      "queue": {
+        "title": "Waiting for a pod",
+        "position": "Number {position}",
+        "wait": "About {minutes} minutes",
+        "note": "We'll let you know when a pod opens."
+      },
+      "done": {
+        "cta": "I'm done eating",
+        "prompt": "All finished? We'll let staff know your pod is ready to clean.",
+        "confirm": "Yes, I'm done",
+        "cancel": "Not yet",
+        "failed": "That didn't go through. Try again."
+      },
+      "join": {
+        "eyebrow": "Oh! Rewards",
+        "title": "Earn rewards on this order",
+        "lede": "Create a free account and order {number} counts toward your next free bowl.",
+        "benefits": {
+          "one": "Cashback on every order",
+          "two": "A free bowl when you move up a tier",
+          "three": "Your orders and seals in one place"
+        },
+        "create": "Create an account",
+        "signIn": "I have an account",
+        "linked": "This order is now in your account."
+      },
+      "bowl": {
+        "title": "Your bowl"
+      },
+      "links": {
+        "label": "What's next",
+        "orderAgain": "Order again",
+        "account": "My account"
+      },
+      "noCode": {
+        "title": "No order to show",
+        "lede": "Open this page from your order link or your confirmation."
+      }
+    },
+    "addOns": {
+      "title": "Add to my order",
+      "close": "Close",
+      "loading": "Loading what you can add",
+      "loadFailed": "We couldn't load the extras. Call staff and we'll help.",
+      "callInstead": "Call staff instead",
+      "none": "Nothing to add right now.",
+      "refills": "Refills",
+      "free": "Free",
+      "water": "Water",
+      "refill": "Refill",
+      "refillSent": "A refill is on its way.",
+      "extras": "Extra vegetables",
+      "requestExtras": "{count, plural, one {Request # extra} other {Request # extras}}",
+      "extrasSent": "Your extras are on their way.",
+      "paid": "Add-ons",
+      "add": "Add",
+      "addOne": "Add {name}",
+      "less": "One fewer {name}",
+      "more": "One more {name}",
+      "total": "Total",
+      "pay": "Pay {amount}",
+      "demoAdded": "Added. Nothing is charged in the demo.",
+      "failed": "That didn't go through. Try again."
+    },
+    "confirmation": {
+      "metaTitle": "Order confirmed",
+      "title": "You're all set",
+      "paid": "Paid {amount}. Thank you.",
+      "pending": "Your payment is processing. This page updates when it's done.",
+      "qrTitle": "Your order code",
+      "qrLede": "Show it at the kiosk when you arrive, or check in from your phone.",
+      "qrAlt": "QR code for order {number}",
+      "arrival": "Expected at {time}",
+      "signInForCode": "Sign in with the account you ordered with to see your order code.",
+      "podNote": "Held for you until you check in.",
+      "checkIn": "Check in now",
+      "track": "Track my order",
+      "group": {
+        "title": "{count, plural, one {Your group, # order} other {Your group, # orders}}",
+        "host": "Host",
+        "guest": "Guest {number}",
+        "noPod": "No pod yet",
+        "checkedIn": "At their pod",
+        "arrived": "Checked in",
+        "waiting": "Not here yet",
+        "checkIn": "Check in",
+        "checkInAll": "Check everyone in"
+      },
+      "receipt": {
+        "title": "Receipt",
+        "bowl": "The bowl",
+        "extras": "Extras",
+        "subtotal": "Subtotal",
+        "savings": "Savings",
+        "tax": "Tax",
+        "total": "Total"
+      },
+      "share": {
+        "title": "Bring a friend",
+        "lede": "Friends get $5 off their first order. You get $5 when they order.",
+        "button": "Share",
+        "copied": "Link copied",
+        "text": "I just ordered at Oh! Beef Noodle Soup. Get $5 off your first bowl: {url}"
+      },
+      "home": "Back to home"
+    },
+    "checkIn": {
+      "metaTitle": "Check in",
+      "eyebrow": "At the restaurant",
+      "title": "Check in",
+      "lede": "Arrived? Check in and we'll send you to your pod.",
+      "steps": {
+        "one": "Find your order code on your confirmation.",
+        "two": "Enter it below, or scan it at the kiosk.",
+        "three": "Go to your pod. The kitchen starts when you're there."
+      },
+      "codeLabel": "Order code",
+      "codeHint": "It's under the QR code on your confirmation.",
+      "submit": "Check me in",
+      "checking": "Checking in",
+      "required": "Enter your order code.",
+      "notFound": "We couldn't find that code. Check it and try again.",
+      "notPaid": "This order isn't paid yet.",
+      "noPod": "This order doesn't have a pod yet.",
+      "failed": "Check-in didn't go through. Try again, or ask staff.",
+      "help": "Stuck? Any of our staff can check you in."
+    },
+    "scan": {
+      "metaTitle": "Confirm your pod",
+      "eyebrow": "At your pod",
+      "title": "Confirm your pod",
+      "lede": "At your pod? Confirm it and the kitchen starts your bowl.",
+      "podNote": "Sit down here, then confirm below.",
+      "notFound": "We couldn't find that order.",
+      "noPod": "This order doesn't have a pod yet. Check in first.",
+      "codeLabel": "Order code",
+      "codeHint": "The same code from your confirmation.",
+      "submit": "I'm at my pod",
+      "confirming": "Confirming",
+      "required": "Enter your order code.",
+      "notPaid": "This order isn't paid yet.",
+      "failed": "That didn't go through. Try again, or ask staff.",
+      "checkInFirst": "Check in first",
+      "back": "Back to my order",
+      "success": "You're checked in",
+      "successLede": "The kitchen is starting your bowl."
+    },
+    "pod": {
+      "metaTitle": "Your pod",
+      "title": "Pod {label}",
+      "error": "We couldn't read this pod's code",
+      "errorLede": "Ask any of our staff and we'll get you seated.",
+      "noCode": "Scan your pod's code",
+      "noCodeLede": "The code is on the table at every pod.",
+      "confirmed": "Welcome to pod {label}",
+      "confirmedLede": "Your bowl is on its way to the kitchen line.",
+      "waiting": "Your order is waiting here",
+      "waitingLede": "Order {number} is held at this pod. Tell the kitchen you've arrived.",
+      "confirm": "I'm here",
+      "confirming": "Letting the kitchen know",
+      "noOrder": "There's no order waiting at this pod right now.",
+      "notYours": "This pod is held for a different order.",
+      "already": "You've already checked in here.",
+      "failed": "That didn't go through. Try again, or ask staff.",
+      "free": "This pod is free",
+      "freeSteps": {
+        "one": "Order online and choose this pod.",
+        "two": "Come back when your arrival time is near.",
+        "three": "Scan this code again to check in."
+      },
+      "mapTitle": "Where you are",
+      "mapHint": "Pod {label} is marked",
+      "mapError": "The map didn't load. Your pod is still yours.",
+      "account": "My account"
+    },
+    "reorder": {
+      "note": "Your last order is back in your bowl. Prices are today's.",
+      "unavailable": "No longer on the menu: {items}.",
+      "missing": "We couldn't find that order in your account.",
+      "loading": "Loading your last order"
     }
   }
 }

@@ -36,7 +36,10 @@ export type IconName =
   | "wallet"
   | "arrow"
   | "globe"
-  | "mail";
+  | "mail"
+  | "bell"
+  | "plus"
+  | "qr";
 
 export interface IconDef {
   /** One or more filled outline paths (fill-rule evenodd), no stroke. */
@@ -337,6 +340,42 @@ export const ICON_PATHS: Record<IconName, IconDef> = {
         1.5,
         0.35,
       ),
+    ],
+  },
+
+  // Task D6 (after-order pages): call staff. A solid bell silhouette with a
+  // knob and a separate clapper, the same filled-silhouette approach as the pin.
+  bell: {
+    paths: [
+      "M12 4.2C8.7 4.2 6.7 6.8 6.7 10.2V13.6L4.7 16.8H19.3L17.3 13.6V10.2C17.3 6.8 15.3 4.2 12 4.2Z",
+      circlePath(12, 3.4, 1.1),
+      circlePath(12, 19.1, 1.6),
+    ],
+  },
+
+  // Task D6: add to my order. Two crossing brush strokes, each thick where
+  // the brush lands and thinning out.
+  plus: {
+    paths: [
+      taperLine({ x: 12, y: 4.4 }, { x: 12, y: 19.6 }, 2, 0.5, { capStart: true }),
+      taperLine({ x: 4.4, y: 12 }, { x: 19.6, y: 12 }, 2, 0.5, { capStart: true }),
+    ],
+  },
+
+  // Task D6: the order code. Three finder squares (a ring around a solid
+  // center) and a scatter of modules, like a real QR corner.
+  qr: {
+    paths: [
+      ringRect(3.4, 3.4, 7, 7, 1.2, 1.4),
+      roundedRectPath(5.7, 5.7, 2.4, 2.4, 0.4),
+      ringRect(13.6, 3.4, 7, 7, 1.2, 1.4),
+      roundedRectPath(15.9, 5.7, 2.4, 2.4, 0.4),
+      ringRect(3.4, 13.6, 7, 7, 1.2, 1.4),
+      roundedRectPath(5.7, 15.9, 2.4, 2.4, 0.4),
+      roundedRectPath(13.6, 13.6, 2.6, 2.6, 0.5),
+      roundedRectPath(17.9, 17.9, 2.6, 2.6, 0.5),
+      roundedRectPath(13.8, 18.2, 2.2, 2.2, 0.4),
+      roundedRectPath(18.2, 13.8, 2.2, 2.2, 0.4),
     ],
   },
 };

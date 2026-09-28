@@ -548,3 +548,18 @@ describe("combMap translations", () => {
     }
   });
 });
+
+describe("live mode: your pod (Task D6, the pod page)", () => {
+  it("highlights the selected pod and adds 'Your pod' to the key", () => {
+    const html = renderToString(<CombMap layoutKey="comb-75" mode="live" labels={labels} seats={seatsFor("comb-75", { "B-07": "RESERVED" })} selected="B-07" orientation="portrait" />);
+    expect(html).toMatch(/data-pod="B-07"[^>]*data-selected="true"/);
+    expect(count(html, /data-selected="true"/g)).toBe(1);
+    expect(html).toContain(labels.legend.selected);
+  });
+
+  it("without a selection, a live map marks nothing and keeps its usual key", () => {
+    const html = renderToString(<CombMap layoutKey="comb-75" mode="live" labels={labels} seats={seatsFor("comb-75")} orientation="portrait" />);
+    expect(count(html, /data-selected="true"/g)).toBe(0);
+    expect(html).not.toContain(labels.legend.selected);
+  });
+});

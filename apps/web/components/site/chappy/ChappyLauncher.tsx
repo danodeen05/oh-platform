@@ -31,6 +31,15 @@ export function useChappy(): ChappyApi {
   return ctx;
 }
 
+/**
+ * Task D6: the same API, or null where the shell has no Chappy (an embedded
+ * page, `?embed=1`, e.g. the business plan's phone demo). Callers hide their
+ * "Ask Chappy" when it's null.
+ */
+export function useOptionalChappy(): ChappyApi | null {
+  return useContext(ChappyContext);
+}
+
 export function ChappyProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [prefill, setPrefill] = useState<string | undefined>(undefined);

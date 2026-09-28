@@ -111,6 +111,7 @@ import { listLocationSeats, resolveSeatViewer } from "./seats/service.js";
 import { claimCheckInSeat } from "./seats/kiosk-seat.js";
 import { claimSeat, holdSeatForOrder, holdPodAtPay } from "./orders/service.js";
 import { canSeeFullOrder, safeOrderView, firstNameOnly } from "./orders/order-view.js";
+import { buildStatusView } from "./orders/status-view.js";
 import { registerKitchenStatusRoutes } from "./orders/kitchen-status.js";
 import { publicMealGift, nextMealGiftFor } from "./orders/meal-gift-view.js";
 import { registerMealGiftPayForward } from "./orders/meal-gift-routes.js";
@@ -2251,65 +2252,9 @@ app.get("/orders/status", async (req, reply) => {
     resolveCustomer: customerAuth.resolve,
     findGuestBySessionToken: (token) => prisma.guest.findUnique({ where: { sessionToken: token } }),
   });
-  const fullGuestName = order.guestName || order.guest?.name || null;
-  const guestName = canSeeFull ? fullGuestName : firstNameOnly(fullGuestName);
-
-  // Build response with status info
-  const response = {
-    order: {
-      id: order.id,
-      orderNumber: order.orderNumber,
-      kitchenOrderNumber: order.kitchenOrderNumber,
-      orderQrCode: order.orderQrCode,
-      status: order.status,
-      totalCents: order.totalCents,
-      estimatedArrival: order.estimatedArrival,
-
-      // Timestamps
-      paidAt: order.paidAt,
-      arrivedAt: order.arrivedAt,
-      queuedAt: order.queuedAt,
-      prepStartTime: order.prepStartTime,
-      readyTime: order.readyTime,
-      deliveredAt: order.deliveredAt,
-      completedTime: order.completedTime,
-
-      // Pod info
-      podNumber: order.seat?.number,
-      podAssignedAt: order.podAssignedAt,
-      podConfirmedAt: order.podConfirmedAt,
-
-      // Queue info
-      queuePosition: order.queuePosition,
-      estimatedWaitMinutes: order.estimatedWaitMinutes,
-
-      // Location
-      location: {
-        id: order.location.id,
-        name: order.location.name,
-        city: order.location.city,
-      },
-
-      // Guest name (for non-authenticated orders) - fallback to guest record name.
-      // Full name for the verified owner/staff/guest-owner; a first name otherwise.
-      guestName,
-
-      // Items - localized based on user's language preference
-      items: order.items.map((item) => {
-        const localizedMenuItem = localizeMenuItem(item.menuItem, locale);
-        return {
-          id: item.id,
-          name: localizedMenuItem.name,
-          quantity: item.quantity,
-          selectedValue: item.selectedValue,
-          priceCents: item.priceCents,
-          categoryType: item.menuItem.categoryType,
-        };
-      }),
-    },
-  };
-
-  return response;
+  // Task D6: the body is built in orders/status-view.js (same fields, plus
+  // podLabel, location.timezone and items[].selectedLabel in the page's language).
+  return buildStatusView(order, { locale, canSeeFull });
 });
 
 // POST /orders/link-to-account - Link a guest order to the signed-in caller's account.
@@ -2560,16 +2505,19 @@ app.get("/pods/info", async (req, reply) => {
     },
   });
 
+  // Task D6: the rebuilt pod page shows the comb label and the location in the page's language.
+  const podLocation = localizeLocation(pod.location, getLocale(req));
   return {
     pod: {
       id: pod.id,
       number: pod.number,
+      label: pod.label ?? null,
       qrCode: pod.qrCode,
       status: pod.status,
     },
     location: {
       id: pod.location.id,
-      name: pod.location.name,
+      name: podLocation.name,
       city: pod.location.city,
     },
     hasActiveOrder: !!activeOrder,
