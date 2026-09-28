@@ -180,6 +180,62 @@ describe("Sheet accessibility", () => {
   });
 });
 
+// Follow-up D: a transformed ancestor (the order flow's .oh-step-in entrance
+// animation) became the containing block of the sheet's position: fixed and
+// trapped its z-index under the top bar. The sheet renders through a portal
+// into the site shell's root (or <body> outside the shell), never in place.
+describe("Sheet portal", () => {
+  let shell: HTMLDivElement;
+  let root: Root;
+
+  beforeEach(() => {
+    mockReducedMotion();
+    polyfillRaf();
+    window.scrollTo = vi.fn() as unknown as typeof window.scrollTo;
+  });
+
+  afterEach(() => {
+    act(() => root.unmount());
+    shell?.remove();
+    document.body.style.position = "";
+    document.body.style.top = "";
+    vi.restoreAllMocks();
+  });
+
+  function renderInside(host: HTMLElement) {
+    const transformed = document.createElement("div");
+    transformed.className = "oh-step-in";
+    transformed.style.transform = "translateY(12px)";
+    host.appendChild(transformed);
+    root = createRoot(transformed);
+    act(() => {
+      root.render(createElement(Sheet, { open: true, onClose: () => {}, label: "Pods", children: createElement("button", null, "Pick") }));
+    });
+    return transformed;
+  }
+
+  it("renders into the site shell's root, not inside a transformed ancestor", () => {
+    shell = document.createElement("div");
+    shell.setAttribute("data-site-shell", "full");
+    document.body.appendChild(shell);
+    const transformed = renderInside(shell);
+    const sheetRoot = document.querySelector(".oh-sheet-root");
+    expect(sheetRoot).not.toBeNull();
+    expect(transformed.contains(sheetRoot)).toBe(false);
+    expect(sheetRoot!.parentElement).toBe(shell);
+    expect(document.activeElement?.textContent).toBe("Pick");
+  });
+
+  it("falls back to <body> outside the site shell", () => {
+    shell = document.createElement("div");
+    document.body.appendChild(shell);
+    const transformed = renderInside(shell);
+    const sheetRoot = document.querySelector(".oh-sheet-root");
+    expect(transformed.contains(sheetRoot)).toBe(false);
+    expect(sheetRoot!.parentElement).toBe(document.body);
+  });
+});
+
 // Fix round 1: iOS has no reliable "overflow: hidden on body" scroll lock,
 // so Sheet pins the body with position: fixed at its negated scrollY and
 // restores that scroll position on close. The lock is ref-counted at
