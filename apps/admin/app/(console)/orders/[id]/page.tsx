@@ -10,7 +10,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Skeleton, SkeletonList } from "@/components/ui/Skeleton";
 import { api } from "@/lib/api";
 import { denverDateTime, money } from "@/lib/format";
-import { paymentLabel, paymentTone, sourceLabel, type OrderDetail } from "@/lib/orders";
+import { paymentLabel, paymentTone, podLabel, sourceLabel, type OrderDetail } from "@/lib/orders";
 import { useResource } from "@/lib/use-resource";
 
 const BACK = { href: "/orders", label: "Orders" };
@@ -59,7 +59,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ id: stri
           <Card title="Guest">
             <p className="text-[17px] font-semibold text-oh-charcoal">{o.customerName}</p>
             <p className="mt-0.5 text-sm text-oh-stone/70">
-              {[o.locationName, o.seatNumber != null ? `Pod ${o.seatNumber}` : null].filter(Boolean).join(" · ") || "No pod assigned"}
+              {[o.locationName, podLabel(o) ? `Pod ${podLabel(o)}` : null].filter(Boolean).join(" · ") || "No pod assigned"}
             </p>
             {(o.customerPhone || o.customerEmail) && (
               <div className="-mx-2 mt-2 flex flex-col">

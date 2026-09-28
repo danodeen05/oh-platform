@@ -40,6 +40,7 @@ type Order = {
   }>;
   seat?: {
     number: string;
+    label?: string | null; // comb pod label, e.g. "B-07" (Task D12)
   };
   location: {
     name: string;
@@ -66,6 +67,7 @@ type PodCall = {
   acknowledgedAt?: string;
   seat: {
     number: string;
+    label?: string | null;
   };
   order: {
     id: string;
@@ -640,7 +642,7 @@ export default function KitchenDisplay({ locations, cateringMode = false }: { lo
                 : order.orderSource === "CATERING"
                   ? "Catering"
                   : order.seat
-                    ? `Pod ${order.seat.number}`
+                    ? `Pod ${order.seat.label || order.seat.number}`
                     : "Dine-In"
               }
             </div>
@@ -1112,7 +1114,7 @@ export default function KitchenDisplay({ locations, cateringMode = false }: { lo
                         color: call.status === "ACKNOWLEDGED" ? "#22c55e" : "#ea580c",
                       }}
                     >
-                      Pod {call.seat.number}
+                      Pod {call.seat.label || call.seat.number}
                     </div>
                   </div>
                   <div style={{ flex: 1 }}>

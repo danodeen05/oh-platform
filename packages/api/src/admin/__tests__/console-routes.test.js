@@ -70,7 +70,7 @@ test("orders: search masks phone to last 4 and flattens names", async () => {
   assert.deepEqual(body.orders[0], {
     id: "o1", orderNumber: "A100", kitchenOrderNumber: "12", status: "PREPPING", paymentStatus: "PAID",
     totalCents: 1899, createdAt: "2026-09-27T18:00:00.000Z", orderSource: "WEB",
-    locationName: "SoHo", seatNumber: 7, customerName: "Mei", phoneLast4: "0142",
+    locationName: "SoHo", seatNumber: 7, seatLabel: 7, customerName: "Mei", phoneLast4: "0142",
   });
   const where = prisma.calls["order.findMany"][0].where;
   assert.ok(Array.isArray(where.OR), "search uses OR across fields");
@@ -82,6 +82,22 @@ test("orders: blank q lists today; limit is capped at 100", async () => {
   const args = prisma.calls["order.findMany"][0];
   assert.equal(args.take, 100);
   assert.equal(args.where.createdAt.gte.toISOString(), "2026-09-27T06:00:00.000Z");
+});
+
+test("orders: a comb pod shows its label (B-07); the select asks for it (Task D12)", async () => {
+  const prisma = prismaStub();
+  prisma.order.findMany = async (args) => {
+    (prisma.calls["order.findMany"] ||= []).push(args);
+    return [{
+      id: "o2", orderNumber: "A101", kitchenOrderNumber: null, status: "QUEUED", paymentStatus: "PAID",
+      totalCents: 1500, createdAt: new Date("2026-09-27T18:00:00Z"), orderSource: "WEB",
+      guestName: "Ana", guestPhone: null, user: null, location: { name: "City Creek" }, seat: { number: "31", label: "B-07" },
+    }];
+  };
+  const { app } = await build("manager", prisma);
+  const body = (await app.inject({ url: "/admin/orders" })).json();
+  assert.equal(body.orders[0].seatLabel, "B-07");
+  assert.deepEqual(prisma.calls["order.findMany"][0].include.seat, { select: { number: true, label: true } });
 });
 
 test("order detail: 404 when missing", async () => {

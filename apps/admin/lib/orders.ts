@@ -18,7 +18,9 @@ export const STEP_LABELS: Record<string, string> = {
 
 export type OrderSummary = {
   id: string; orderNumber: string; kitchenOrderNumber: string | null; status: string; paymentStatus: string; totalCents: number;
-  createdAt: string; orderSource: string; locationName: string | null; seatNumber: number | null; customerName: string; phoneLast4: string | null;
+  createdAt: string; orderSource: string; locationName: string | null; seatNumber: string | number | null;
+  /** Comb pod label ("B-07"), else the legacy number (Task D12). Older APIs omit it. */
+  seatLabel?: string | number | null; customerName: string; phoneLast4: string | null;
 };
 export type OrderDetail = OrderSummary & {
   customerEmail: string | null; customerPhone: string | null;
@@ -31,8 +33,14 @@ export type OrderDetail = OrderSummary & {
 export const orderTitle = (o: Pick<OrderSummary, "orderNumber" | "kitchenOrderNumber">) =>
   o.kitchenOrderNumber ? `#${o.orderNumber} · K${o.kitchenOrderNumber}` : `#${o.orderNumber}`;
 
-export const orderMeta = (o: Pick<OrderSummary, "customerName" | "locationName" | "seatNumber" | "createdAt">, now = new Date()) =>
-  [o.customerName, o.locationName, o.seatNumber != null ? `Pod ${o.seatNumber}` : null, relativeTime(o.createdAt, now)].filter(Boolean).join(" · ");
+/** The pod name staff see: the comb label ("B-07"), falling back to the number for retired legacy seats. */
+export const podLabel = (o: Pick<OrderSummary, "seatNumber" | "seatLabel">): string | null => {
+  const v = o.seatLabel ?? o.seatNumber;
+  return v == null || v === "" ? null : String(v);
+};
+
+export const orderMeta = (o: Pick<OrderSummary, "customerName" | "locationName" | "seatNumber" | "seatLabel" | "createdAt">, now = new Date()) =>
+  [o.customerName, o.locationName, podLabel(o) ? `Pod ${podLabel(o)}` : null, relativeTime(o.createdAt, now)].filter(Boolean).join(" · ");
 
 /** "WEB" to "Web", "KIOSK" to "Kiosk". */
 export const sourceLabel = (s: string | null | undefined) => (s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase().replace(/_/g, " ") : "");

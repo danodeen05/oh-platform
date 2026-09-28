@@ -9,6 +9,8 @@ import { PaymentScreen } from "@/components/kiosk/PaymentScreen";
 import { STATUS_DEMO_CODE } from "@/lib/plan/statusDemo";
 import { kioskAuthHeaders } from "@/components/kiosk/KioskDeviceProvider";
 import { adaptKioskSeats } from "@/lib/pod-selection/adapt-seats";
+import { KioskCombPicker } from "@/components/kiosk/KioskCombPicker";
+import { kioskCombFrom, podNames, podPatchBody, type KioskComb } from "@/lib/kiosk/comb-pick";
 import { create as createOrder, kioskConfirmPayment } from "@/lib/site/orders";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -467,6 +469,8 @@ export default function KioskOrderFlow({
   const demo = useKioskDemo();
   const [menuSteps, setMenuSteps] = useState<MenuStep[]>([]);
   const [seats, setSeats] = useState<Seat[]>([]);
+  // The comb map view of the same response (labels, layout key) for the pod picker (Task D12).
+  const [comb, setComb] = useState<KioskComb>({ layoutKey: null, seats: [] });
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -523,6 +527,7 @@ export default function KioskOrderFlow({
         if (seatsRes.ok) {
           const seatsData = await seatsRes.json();
           setSeats(adaptKioskSeats(seatsData));
+          setComb(kioskCombFrom(seatsData));
         }
 
         // Initialize cart with slider defaults for first guest
@@ -571,6 +576,7 @@ export default function KioskOrderFlow({
         if (res.ok) {
           const seatsData = await res.json();
           setSeats(adaptKioskSeats(seatsData));
+          setComb(kioskCombFrom(seatsData));
         }
       } catch (error) {
         console.error("Failed to poll seats:", error);
@@ -886,17 +892,13 @@ export default function KioskOrderFlow({
 
   // Pod choice for one guest's order (PATCH takes pod fields, never payment fields).
   async function assignPod(orderId: string, guestState: { selectedPodId?: string | null; podAutoAssigned?: boolean }) {
-    if (!guestState.selectedPodId) return;
+    // The seat id of the pod label the guest tapped on the comb map (see lib/kiosk/comb-pick).
+    const body = podPatchBody(guestState);
+    if (!body) return;
     await fetch(`${BASE}/orders/${orderId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        seatId: guestState.selectedPodId,
-        podSelectionMethod: guestState.podAutoAssigned ? "AUTO_ASSIGNED" : "CUSTOMER_SELECTED",
-        podAssignedAt: new Date().toISOString(),
-        // Note: podConfirmedAt is NOT set here - customer must confirm at pod via QR scan
-        podReservationExpiry: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
-      }),
+      body: JSON.stringify(body),
     });
   }
 
@@ -1118,7 +1120,7 @@ export default function KioskOrderFlow({
   if (view === "pod-selection") {
     return (
       <PodSelectionView
-        seats={seats}
+        comb={comb}
         guestOrders={guestOrders}
         currentGuestIndex={currentGuestIndex}
         partySize={partySize}
@@ -4451,7 +4453,7 @@ function ReviewView({
 }
 
 function PodSelectionView({
-  seats,
+  comb,
   guestOrders,
   currentGuestIndex,
   partySize,
@@ -4461,7 +4463,7 @@ function PodSelectionView({
   onConfirm,
   onBack,
 }: {
-  seats: Seat[];
+  comb: KioskComb;
   guestOrders: GuestOrder[];
   currentGuestIndex: number;
   partySize: number;
@@ -4473,22 +4475,10 @@ function PodSelectionView({
 }) {
   const tKiosk = useTranslations("kiosk");
   const [showDualPodRules, setShowDualPodRules] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
 
   // Scroll to top on mount
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
-  }, []);
-
-  // Ensure video plays on mount (handles browser autoplay restrictions)
-  useEffect(() => {
-    const video = videoRef.current;
-    if (video) {
-      video.play().catch(() => {
-        // Autoplay blocked - video will remain paused until user interaction
-        console.log("Video autoplay blocked by browser");
-      });
-    }
   }, []);
 
   // Get pods already selected by other guests in this party
@@ -4502,44 +4492,7 @@ function PodSelectionView({
   // 2. Host is paying for all orders (single payment, not separate)
   const canSelectDualPod = partySize >= 2 && paymentType === "single";
 
-  // Helper to check if a seat is part of a dual pod
-  const isDualPodSeat = (seat: Seat) => {
-    if (seat.podType !== "DUAL") return false;
-    if (seat.dualPartnerId) return true;
-    return seats.some(s => s.dualPartnerId === seat.id);
-  };
-
-  const selectedSeat = seats.find((s) => s.id === selectedPodId);
-
-  // Group seats by side for U-shape layout
-  // Left: top to bottom (col ascending)
-  // Bottom: left to right (col ascending)
-  // Right: bottom to top (col descending) - to continue the U-shape flow
-  const leftSeats = seats.filter((s) => s.side === "left").sort((a, b) => a.col - b.col);
-  const bottomSeats = seats.filter((s) => s.side === "bottom").sort((a, b) => a.col - b.col);
-  const rightSeats = seats.filter((s) => s.side === "right").sort((a, b) => b.col - a.col);
-
-  // Helper to check if a seat is part of a dual pod
-  const isDualPod = (seat: Seat) => {
-    if (seat.podType !== "DUAL") return false;
-    if (seat.dualPartnerId) return true;
-    return seats.some(s => s.dualPartnerId === seat.id);
-  };
-
-  // Helper to get partner seat
-  const getPartner = (seat: Seat) => {
-    if (seat.dualPartnerId) {
-      return seats.find(s => s.id === seat.dualPartnerId);
-    }
-    return seats.find(s => s.dualPartnerId === seat.id);
-  };
-
-  // Check if a seat should be hidden (it's the secondary seat of a dual pod pair)
-  const shouldHideSeat = (seat: Seat) => {
-    if (seat.podType !== "DUAL") return false;
-    if (seat.dualPartnerId) return false;
-    return seats.some(s => s.dualPartnerId === seat.id);
-  };
+  const selectedPod = podNames(comb.seats, selectedPodId);
 
   return (
     <main
@@ -4615,317 +4568,30 @@ function PodSelectionView({
         paddingBottom: 100,
       }}>
 
-      {/* Pod Map - U-Shape Layout (Centered) */}
+      {/* Pod Map (Centered) */}
       <div
         style={{
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
           gap: 12,
+          width: "100%",
         }}
       >
-        {/* Store Border Container - wraps entire floor plan */}
-        <div style={{
-          position: "relative",
-          padding: "52px 73px 26px 73px",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          background: "rgba(124, 122, 103, 0.08)",
-          border: "4px solid #7C7A67",
-          borderRadius: 20,
-        }}>
-          {/* Entrance opening - covers border at top center */}
-          <div style={{
-            position: "absolute",
-            top: -4,
-            left: "50%",
-            transform: "translateX(-50%)",
-            width: "24%",
-            height: 8,
-            background: COLORS.surface,
-          }} />
-          {/* Exit opening - covers border at bottom center */}
-          <div style={{
-            position: "absolute",
-            bottom: -4,
-            left: "50%",
-            transform: "translateX(-50%)",
-            width: "24%",
-            height: 8,
-            background: COLORS.surface,
-          }} />
-
-          {/* Entrance Label - positioned at top opening */}
-          <div style={{
-            position: "absolute",
-            top: -12,
-            left: "50%",
-            transform: "translateX(-50%)",
-            color: COLORS.textMuted,
-            fontSize: "1.1rem",
-            fontWeight: 700,
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-          }}>
-            <span>🚪</span> {tKiosk("orderFlow.entrance")}
+        {/* Comb floor plan (Task D12): tap a pod; duo rules and party picks handled in KioskCombPicker. */}
+        {comb.layoutKey ? (
+          <div className="mx-auto w-full max-w-[1040px] self-stretch">
+            <KioskCombPicker
+              layoutKey={comb.layoutKey}
+              seats={comb.seats}
+              selectedPodId={selectedPodId}
+              takenPodIds={takenPodIds}
+              canSelectDualPod={canSelectDualPod}
+              onSelectPod={onSelectPod}
+              onDualBlocked={() => setShowDualPodRules(true)}
+            />
           </div>
-
-          {/* Wall of Fame - Top Left, near the wall */}
-          <div style={{
-            position: "absolute",
-            top: 8,
-            left: 12,
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            color: COLORS.textMuted,
-            fontSize: "0.9rem",
-            fontWeight: 600,
-          }}>
-            <span style={{ fontSize: "1.25rem" }}>🏆</span>
-            <span>Wall of Fame</span>
-          </div>
-
-          {/* Kiosk / You Are Here - centered, closer to kitchen */}
-          <div style={{
-            position: "absolute",
-            top: 75,
-            left: "50%",
-            transform: "translateX(-50%)",
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-          }}>
-            <div style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              color: COLORS.textMuted,
-              fontSize: "0.9rem",
-              fontWeight: 600,
-            }}>
-              <span style={{ fontSize: "1.25rem" }}>🖥️</span>
-              <span>Kiosk</span>
-            </div>
-            <div style={{
-              fontSize: "0.7rem",
-              color: COLORS.primary,
-              fontWeight: 700,
-              background: COLORS.primaryLight,
-              padding: "2px 8px",
-              borderRadius: 4,
-            }}>
-              📍 You are here
-            </div>
-          </div>
-
-          {/* Spacer for lobby area (between entrance and kitchen) */}
-          <div style={{ height: 50 }} />
-
-        {/* U-Shape Container: Left Column | Kitchen | Right Column */}
-        <div style={{ display: "flex", gap: 10, alignItems: "stretch" }}>
-          {/* Left Column with wall on top */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {/* Wall separator above pods - extends to kitchen */}
-            <div style={{
-              width: "calc(100% + 10px)",
-              height: 3,
-              background: "#7C7A67",
-              borderRadius: "2px 0 0 2px",
-              marginBottom: 4,
-            }} />
-            {leftSeats.filter(seat => !shouldHideSeat(seat)).map((seat) => {
-              const isDual = isDualPod(seat);
-              const partner = isDual ? getPartner(seat) : null;
-              const isSelectedDual = isDual && partner && (selectedPodId === seat.id || selectedPodId === partner.id);
-              const isCurrentlySelected = selectedPodId === seat.id || isSelectedDual;
-              return (
-                <PodButton
-                  key={seat.id}
-                  seat={seat}
-                  partner={partner}
-                  isDual={isDual}
-                  isSelected={isCurrentlySelected}
-                  isTaken={takenPodIds.includes(seat.id) || (partner ? takenPodIds.includes(partner.id) : false)}
-                  canSelectDualPod={canSelectDualPod}
-                  onClick={() => onSelectPod(isCurrentlySelected ? "" : seat.id)}
-                  onDisabledDualClick={() => setShowDualPodRules(true)}
-                  orientation="vertical"
-                />
-              );
-            })}
-          </div>
-
-          {/* Kitchen in the center with full border */}
-          <div style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "16px 36px",
-            minHeight: 180,
-            border: "3px solid #7C7A67",
-            borderRadius: "0 0 16px 16px",
-            background: "rgba(124, 122, 103, 0.35)",
-          }}>
-            <div style={{
-              width: 140,
-              height: 140,
-              borderRadius: "50%",
-              overflow: "hidden",
-              marginBottom: 8,
-              boxShadow: "0 4px 16px rgba(0,0,0,0.2)",
-              border: `3px solid ${COLORS.primary}`,
-            }}>
-              <video
-                ref={videoRef}
-                autoPlay
-                muted
-                playsInline
-                onEnded={(e) => {
-                  // Pause for 3 seconds at end, then loop
-                  const video = e.currentTarget;
-                  setTimeout(() => {
-                    // Check if video still exists and is connected to DOM
-                    if (video && video.isConnected) {
-                      try {
-                        video.currentTime = 0;
-                        video.play();
-                      } catch {
-                        // Video element was removed, ignore
-                      }
-                    }
-                  }, 3000);
-                }}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                }}
-              >
-                <source src="/kiosk-video.mp4" type="video/mp4" />
-              </video>
-            </div>
-            <span style={{ fontSize: "1.25rem", fontWeight: 600, color: COLORS.text }}>{tKiosk("orderFlow.kitchen")}</span>
-          </div>
-
-          {/* Right Column with wall on top */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {/* Wall separator above pods - extends to kitchen */}
-            <div style={{
-              width: "calc(100% + 10px)",
-              height: 3,
-              background: "#7C7A67",
-              borderRadius: "0 2px 2px 0",
-              marginLeft: -10,
-              marginBottom: 4,
-            }} />
-            {rightSeats.filter(seat => !shouldHideSeat(seat)).map((seat) => {
-              const isDual = isDualPod(seat);
-              const partner = isDual ? getPartner(seat) : null;
-              const isSelectedDual = isDual && partner && (selectedPodId === seat.id || selectedPodId === partner.id);
-              const isCurrentlySelected = selectedPodId === seat.id || isSelectedDual;
-              return (
-                <PodButton
-                  key={seat.id}
-                  seat={seat}
-                  partner={partner}
-                  isDual={isDual}
-                  isSelected={isCurrentlySelected}
-                  isTaken={takenPodIds.includes(seat.id) || (partner ? takenPodIds.includes(partner.id) : false)}
-                  canSelectDualPod={canSelectDualPod}
-                  onClick={() => onSelectPod(isCurrentlySelected ? "" : seat.id)}
-                  onDisabledDualClick={() => setShowDualPodRules(true)}
-                  orientation="vertical"
-                />
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Bottom Row - below the U-shape */}
-        <div
-          style={{
-            display: "flex",
-            gap: 10,
-            marginTop: 4,
-          }}
-        >
-          {bottomSeats.filter(seat => !shouldHideSeat(seat)).map((seat) => {
-            const isDual = isDualPod(seat);
-            const partner = isDual ? getPartner(seat) : null;
-            const isSelectedDual = isDual && partner && (selectedPodId === seat.id || selectedPodId === partner.id);
-            const isCurrentlySelected = selectedPodId === seat.id || isSelectedDual;
-            return (
-              <PodButton
-                key={seat.id}
-                seat={seat}
-                partner={partner}
-                isDual={isDual}
-                isSelected={isCurrentlySelected}
-                isTaken={takenPodIds.includes(seat.id) || (partner ? takenPodIds.includes(partner.id) : false)}
-                canSelectDualPod={canSelectDualPod}
-                onClick={() => onSelectPod(isCurrentlySelected ? "" : seat.id)}
-                onDisabledDualClick={() => setShowDualPodRules(true)}
-                orientation="horizontal"
-              />
-            );
-          })}
-        </div>
-
-          {/* Spacer for exit area (between bottom pods and exit) */}
-          <div style={{ height: 50 }} />
-
-          {/* Store Indicator - Bottom Left */}
-          <div style={{
-            position: "absolute",
-            bottom: 8,
-            left: 12,
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            color: COLORS.textMuted,
-            fontSize: "0.9rem",
-            fontWeight: 600,
-          }}>
-            <span style={{ fontSize: "1.25rem" }}>🛍️</span>
-            <span>{tKiosk("orderFlow.store")}</span>
-          </div>
-
-          {/* Restrooms Indicator - Bottom Right */}
-          <div style={{
-            position: "absolute",
-            bottom: 8,
-            right: 12,
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            color: COLORS.textMuted,
-            fontSize: "0.9rem",
-            fontWeight: 600,
-          }}>
-            <span style={{ fontSize: "1.25rem" }}>🚻</span>
-            <span>{tKiosk("orderFlow.restrooms")}</span>
-          </div>
-
-          {/* Exit Label - positioned at bottom opening */}
-          <div style={{
-            position: "absolute",
-            bottom: -12,
-            left: "50%",
-            transform: "translateX(-50%)",
-            color: COLORS.textMuted,
-            fontSize: "1.1rem",
-            fontWeight: 700,
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-          }}>
-            <span>🚶</span> {tKiosk("orderFlow.exit")}
-          </div>
-        </div>{/* Close Store Border Container */}
+        ) : null}
 
         {/* Selection Info Card - shows either "No Preference" or "Pod Selected" */}
         <div
@@ -4938,24 +4604,15 @@ function PodSelectionView({
             marginTop: 8,
           }}
         >
-          {selectedSeat ? (
+          {selectedPod ? (
             <>
               <div style={{ fontSize: "1rem", fontWeight: 600 }}>
-                {(() => {
-                  const isDual = isDualPod(selectedSeat);
-                  if (isDual) {
-                    const partner = getPartner(selectedSeat);
-                    if (partner) {
-                      const num1 = parseInt(selectedSeat.number);
-                      const num2 = parseInt(partner.number);
-                      return tKiosk("pod.dualPodSelected", { numbers: `${Math.min(num1, num2).toString().padStart(2, '0')} & ${Math.max(num1, num2).toString().padStart(2, '0')}` });
-                    }
-                  }
-                  return tKiosk("pod.podSelected", { number: selectedSeat.number });
-                })()}
+                {selectedPod.duo
+                  ? tKiosk("pod.dualPodSelected", { numbers: selectedPod.label })
+                  : tKiosk("pod.podSelected", { number: selectedPod.label })}
               </div>
               <div style={{ color: COLORS.textMuted, fontSize: "0.8rem" }}>
-                {isDualPod(selectedSeat) ? tKiosk("pod.dualPod") : tKiosk("pod.singlePod")}
+                {selectedPod.duo ? tKiosk("pod.dualPod") : tKiosk("pod.singlePod")}
               </div>
             </>
           ) : (
@@ -4982,29 +4639,6 @@ function PodSelectionView({
           )}
         </div>
 
-        {/* Legend - Horizontal */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 20, justifyContent: "center", marginTop: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ width: 24, height: 24, borderRadius: 4, background: COLORS.success }} />
-            <span style={{ fontSize: "1rem", color: COLORS.textMuted }}>{tKiosk("orderFlow.available")}</span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ width: 40, height: 24, borderRadius: 4, background: "#0891b2" }} />
-            <span style={{ fontSize: "1rem", color: COLORS.textMuted }}>{tKiosk("orderFlow.dualPod")}</span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ width: 24, height: 24, borderRadius: 4, background: "#f59e0b" }} />
-            <span style={{ fontSize: "1rem", color: COLORS.textMuted }}>{tKiosk("orderFlow.cleaning")}</span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ width: 24, height: 24, borderRadius: 4, background: "#ef4444" }} />
-            <span style={{ fontSize: "1rem", color: COLORS.textMuted }}>{tKiosk("orderFlow.occupied")}</span>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ width: 24, height: 24, borderRadius: 4, background: COLORS.primary, border: `2px solid ${COLORS.text}` }} />
-            <span style={{ fontSize: "1rem", color: COLORS.textMuted }}>{tKiosk("orderFlow.yourSelection")}</span>
-          </div>
-        </div>
       </div>{/* Close Pod Map Container */}
       </div>{/* Close Scrollable Content */}
 
@@ -5136,159 +4770,6 @@ function PodSelectionView({
         </div>
       )}
     </main>
-  );
-}
-
-function PodButton({
-  seat,
-  partner,
-  isDual,
-  isSelected,
-  isTaken,
-  canSelectDualPod = true,
-  onClick,
-  onDisabledDualClick,
-  orientation = "vertical",
-}: {
-  seat: Seat;
-  partner?: Seat | null;
-  isDual?: boolean;
-  isSelected: boolean;
-  isTaken: boolean;
-  canSelectDualPod?: boolean;
-  onClick: () => void;
-  onDisabledDualClick?: () => void;
-  orientation?: "vertical" | "horizontal";
-}) {
-  const tKiosk = useTranslations("kiosk");
-  const partnerAvailable = partner ? partner.status === "AVAILABLE" : true;
-  // For dual pods, also check if dual pods can be selected (requires 2+ guests with single payment)
-  const isAvailable = seat.status === "AVAILABLE" && partnerAvailable && !isTaken && (!isDual || canSelectDualPod);
-
-  // Determine pod status for display
-  const isCleaning = seat.status === "CLEANING";
-  const isOccupied = seat.status === "OCCUPIED" || seat.status === "SERVING";
-
-  const getStatusText = () => {
-    if (isOccupied) {
-      return tKiosk("pod.statusOccupied");
-    }
-    if (isCleaning) {
-      return tKiosk("pod.statusCleaning");
-    }
-    if (isAvailable) {
-      return tKiosk("pod.statusAvailable");
-    }
-    return null;
-  };
-  const statusText = getStatusText();
-
-  // Color logic:
-  // - Selected: primary color
-  // - Cleaning: orange/dark yellow
-  // - Occupied/Serving: red
-  // - Available dual pods: dark cyan/teal
-  // - Available single pods: green
-  // - Dual pods not selectable due to party size/payment rules: grey
-  const bgColor = isSelected
-    ? COLORS.primary
-    : isCleaning
-    ? "#f59e0b" // amber-500 - orange/dark yellow for cleaning
-    : isOccupied
-    ? "#ef4444" // red for occupied
-    : isDual && !canSelectDualPod
-    ? "#9ca3af" // gray-400 - greyed out for unavailable dual pods
-    : isDual
-    ? "#0891b2" // cyan-600 - darker cyan for dual pods (better contrast with white text)
-    : COLORS.success;
-
-  // For dual pods, make the button larger (double in one direction)
-  // Sizes reduced by ~10% for better fit
-  const isHorizontal = orientation === "horizontal";
-  const width = isDual ? (isHorizontal ? 152 : 76) : 76;
-  const height = isDual ? (isHorizontal ? 76 : 152) : 76;
-
-  // Get display numbers for dual pods
-  const getDisplayNumbers = () => {
-    if (!isDual || !partner) return null;
-    const num1 = parseInt(seat.number);
-    const num2 = parseInt(partner.number);
-    // For vertical: lower number on top for left side, higher on top for right side
-    // For horizontal: lower number on left
-    if (isHorizontal) {
-      return {
-        first: Math.min(num1, num2).toString().padStart(2, '0'),
-        second: Math.max(num1, num2).toString().padStart(2, '0'),
-      };
-    } else {
-      // Vertical - for right side, higher numbers on top; for left side, lower on top
-      // We determine side by checking if this seat is on the right
-      const isRightSide = seat.side === "right";
-      if (isRightSide) {
-        return {
-          first: Math.max(num1, num2).toString().padStart(2, '0'),
-          second: Math.min(num1, num2).toString().padStart(2, '0'),
-        };
-      } else {
-        return {
-          first: Math.min(num1, num2).toString().padStart(2, '0'),
-          second: Math.max(num1, num2).toString().padStart(2, '0'),
-        };
-      }
-    }
-  };
-
-  const dualNumbers = getDisplayNumbers();
-
-  // Check if this is a greyed-out dual pod (available but rules don't allow selection)
-  const isGreyedOutDual = isDual && !canSelectDualPod && seat.status === "AVAILABLE" && partnerAvailable && !isTaken;
-
-  const handleClick = () => {
-    if (isAvailable) {
-      onClick();
-    } else if (isGreyedOutDual && onDisabledDualClick) {
-      onDisabledDualClick();
-    }
-  };
-
-  return (
-    <button
-      onClick={handleClick}
-      disabled={!isAvailable && !isGreyedOutDual}
-      style={{
-        width,
-        height,
-        borderRadius: 16,
-        border: isSelected ? `4px solid ${COLORS.text}` : "none",
-        background: bgColor,
-        color: isAvailable ? COLORS.textOnPrimary : "rgba(255,255,255,0.7)",
-        fontSize: "1.35rem",
-        fontWeight: 700,
-        cursor: isAvailable ? "pointer" : isGreyedOutDual ? "pointer" : "not-allowed",
-        display: "flex",
-        flexDirection: isHorizontal ? "row" : "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: isDual ? 8 : 0,
-        transition: "all 0.2s",
-        position: "relative",
-      }}
-    >
-      {isDual && dualNumbers ? (
-        <>
-          <span style={{ fontSize: "1.35rem", fontWeight: 700 }}>{dualNumbers.first}</span>
-          <span style={{ fontSize: "0.6rem", opacity: 0.9 }}>{statusText || "Dual"}</span>
-          <span style={{ fontSize: "1.35rem", fontWeight: 700 }}>{dualNumbers.second}</span>
-        </>
-      ) : (
-        <>
-          <span>{seat.number}</span>
-          {statusText && (
-            <span style={{ fontSize: "0.6rem", opacity: 0.9, marginTop: 2 }}>{statusText}</span>
-          )}
-        </>
-      )}
-    </button>
   );
 }
 

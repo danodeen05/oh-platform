@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { activeHref, navFor, NAV_GROUPS, DOCK_ITEMS } from "../nav";
+import { activeHref, navFor, NAV_GROUPS, DOCK_ITEMS, HAS_SUPPORT } from "../nav";
 import { canAccess } from "../access";
 
 describe("navFor", () => {
@@ -33,5 +33,13 @@ describe("activeHref", () => {
   test("shop orders belong to the Orders section", () => {
     expect(activeHref("/shop-orders", hrefs)).toBe("/orders");
     expect(activeHref("/shop-orders/s1", hrefs)).toBe("/orders");
+  });
+  test("support belongs to the Orders section (Task D12); owner and manager open it, stations don't", () => {
+    expect(HAS_SUPPORT).toBe(true);
+    expect(activeHref("/support", hrefs)).toBe("/orders");
+    expect(activeHref("/support/c1", hrefs)).toBe("/orders");
+    expect(canAccess("owner", "/support/c1")).toBe(true);
+    expect(canAccess("manager", "/support")).toBe(true);
+    expect(canAccess("station", "/support")).toBe(false);
   });
 });

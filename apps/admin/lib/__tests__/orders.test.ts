@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { orderMeta, orderTitle, statusLabel, statusTone, STEP_LABELS } from "../orders";
+import { orderMeta, orderTitle, podLabel, statusLabel, statusTone, STEP_LABELS } from "../orders";
 
 test("status labels and tones cover every OrderStatus", () => {
   const all = ["PENDING_PAYMENT", "PAID", "QUEUED", "PREPPING", "READY", "SERVING", "COMPLETED", "CANCELLED"];
@@ -17,6 +17,10 @@ test("row title and meta skip missing parts", () => {
   expect(orderTitle({ orderNumber: "A100", kitchenOrderNumber: null })).toBe("#A100");
   expect(orderMeta({ customerName: "Mei", locationName: "SoHo", seatNumber: 7, createdAt: "2026-09-27T19:55:00Z" }, now)).toBe("Mei · SoHo · Pod 7 · 5m ago");
   expect(orderMeta({ customerName: "Guest", locationName: null, seatNumber: null, createdAt: "2026-09-27T19:59:30Z" }, now)).toBe("Guest · Just now");
+  // Task D12: comb pods show their label; retired legacy seats fall back to the number.
+  expect(orderMeta({ customerName: "Ana", locationName: "City Creek", seatNumber: "31", seatLabel: "B-07", createdAt: "2026-09-27T19:55:00Z" }, now)).toBe("Ana · City Creek · Pod B-07 · 5m ago");
+  expect(podLabel({ seatNumber: "04", seatLabel: null })).toBe("04");
+  expect(podLabel({ seatNumber: null, seatLabel: null })).toBeNull();
 });
 test("enum-ish values read as words", async () => {
   const { sourceLabel } = await import("../orders");

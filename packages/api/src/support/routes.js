@@ -3,7 +3,9 @@
  *
  *   POST /support/cases                     Public (contact form, Chappy). The customer
  *                                           comes from customerAuth.resolve, never the body.
- *   GET  /admin/support/cases?status=       Staff: newest first.
+ *   GET  /admin/support/cases?status=&type=&limit=&cursor=
+ *                                           Staff: newest first, paged (Task D12).
+ *   GET  /admin/support/cases/:id           Staff: one case with order and member context (Task D12).
  *   POST /admin/support/cases/:id/resolve   Staff: {action: "credit" | "full_refund" | "decline" | "close"}
  *
  * Money rules (owner's): staff give store credit (ADMIN lot, 1..50000 cents,
@@ -19,8 +21,10 @@
  * owner role (requireOwner, wired to requireRole("owner") in index.js).
  */
 import crypto from "node:crypto";
-import { grantCreditInTx } from "../membership/credits.js";
+import { grantCreditInTx, availableCredit } from "../membership/credits.js";
+import { PROGRAM } from "../membership/program.js";
 import { fullRefundCase, SupportError, REFUND_LEASE_MS } from "./refund.js";
+import { lifetimeGoodwillCents } from "./caps.js";
 
 export const SUPPORT_CASE_TYPES = Object.freeze(["POD_ISSUE", "ORDER_ISSUE", "REFUND_REQUEST", "GENERAL", "CONTACT"]);
 export const SUPPORT_CASE_STATUSES = Object.freeze(["OPEN", "RESOLVED", "DECLINED"]);
@@ -29,6 +33,7 @@ export const STAFF_CREDIT_MAX_CENTS = 50000;
 export const SMS_AMOUNT_THRESHOLD_CENTS = 2000;
 export const CASE_RATE_LIMIT = Object.freeze({ max: 5, windowMs: 60 * 60 * 1000 });
 const SUMMARY_MAX = 2000;
+const LIST_MAX = 200;
 const TRANSCRIPT_MAX_CHARS = 60000;
 const REASON_MAX = 1000;
 const EMAIL_RE = /^[^\s@<>]{1,64}@[^\s@<>]{1,255}\.[A-Za-z]{2,}$/;
@@ -297,13 +302,98 @@ export async function registerSupportRoutes(app, deps) {
     return reply.send({ ok: true, caseId: supportCase.id });
   });
 
+  // Newest first. ?status= and ?type= filter; ?limit= (1..200, default 200)
+  // and ?cursor=<last case id of the previous page> page through the rest.
+  // Each case carries a small customer and order summary for the list.
   app.get("/admin/support/cases", adminPre, async (req, reply) => {
-    const status = req.query?.status;
+    const q = req.query || {};
+    const { status, type } = q;
     if (status !== undefined && status !== "" && !SUPPORT_CASE_STATUSES.includes(status)) {
       return reply.code(400).send({ error: `status must be one of ${SUPPORT_CASE_STATUSES.join(", ")}`, code: "INVALID_STATUS" });
     }
-    const cases = await prisma.supportCase.findMany({ where: status ? { status } : {}, orderBy: { createdAt: "desc" }, take: 200 });
-    return { cases };
+    if (type !== undefined && type !== "" && !SUPPORT_CASE_TYPES.includes(type)) {
+      return reply.code(400).send({ error: `type must be one of ${SUPPORT_CASE_TYPES.join(", ")}`, code: "INVALID_TYPE" });
+    }
+    const take = Math.min(Math.max(parseInt(q.limit, 10) || LIST_MAX, 1), LIST_MAX);
+    const where = { ...(status ? { status } : {}), ...(type ? { type } : {}) };
+    if (q.cursor !== undefined && q.cursor !== "") {
+      const cur = typeof q.cursor === "string" && q.cursor.length <= 64 ? await prisma.supportCase.findUnique({ where: { id: q.cursor } }) : null;
+      if (!cur) return reply.code(400).send({ error: "Unknown cursor.", code: "INVALID_CURSOR" });
+      where.OR = [{ createdAt: { lt: cur.createdAt } }, { createdAt: cur.createdAt, id: { lt: cur.id } }];
+    }
+    const cases = await prisma.supportCase.findMany({ where, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take });
+
+    const userIds = [...new Set(cases.map((c) => c.userId).filter(Boolean))];
+    const orderIds = [...new Set(cases.map((c) => c.orderId).filter(Boolean))];
+    const [users, orders] = await Promise.all([
+      userIds.length ? prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, name: true, email: true } }) : [],
+      orderIds.length ? prisma.order.findMany({ where: { id: { in: orderIds } }, select: { id: true, orderNumber: true, kitchenOrderNumber: true, totalCents: true, paymentStatus: true } }) : [],
+    ]);
+    const userById = new Map(users.map((u) => [u.id, { name: u.name ?? null, email: u.email ?? null }]));
+    const orderById = new Map(orders.map((o) => [o.id, { orderNumber: o.orderNumber ?? null, kitchenOrderNumber: o.kitchenOrderNumber ?? null, totalCents: o.totalCents ?? null, paymentStatus: o.paymentStatus ?? null }]));
+    return {
+      cases: cases.map((c) => ({ ...c, customer: c.userId ? userById.get(c.userId) || null : null, order: c.orderId ? orderById.get(c.orderId) || null : null })),
+      nextCursor: cases.length === take ? cases[cases.length - 1].id : null,
+    };
+  });
+
+  // One case with what staff need to resolve it: the order (items, total,
+  // payment, pod label, whether a card PaymentIntent exists), the member
+  // (tier, credit balance, lifetime goodwill), the transcript and the prior
+  // resolution detail. Read-only.
+  app.get("/admin/support/cases/:id", adminPre, async (req, reply) => {
+    const supportCase = await prisma.supportCase.findUnique({ where: { id: req.params.id } });
+    if (!supportCase) return reply.code(404).send({ error: "Case not found", code: "NOT_FOUND" });
+
+    let order = null;
+    if (supportCase.orderId) {
+      const o = await prisma.order.findUnique({ where: { id: supportCase.orderId } });
+      if (o) {
+        const [items, seat] = await Promise.all([
+          prisma.orderItem.findMany({ where: { orderId: o.id } }),
+          o.seatId ? prisma.seat.findUnique({ where: { id: o.seatId } }) : null,
+        ]);
+        const menuIds = [...new Set(items.map((i) => i.menuItemId).filter(Boolean))];
+        const menu = menuIds.length ? await prisma.menuItem.findMany({ where: { id: { in: menuIds } }, select: { id: true, name: true } }) : [];
+        const nameOf = new Map(menu.map((m) => [m.id, m.name]));
+        order = {
+          id: o.id,
+          orderNumber: o.orderNumber ?? null,
+          kitchenOrderNumber: o.kitchenOrderNumber ?? null,
+          status: o.status ?? null,
+          paymentStatus: o.paymentStatus ?? null,
+          totalCents: o.totalCents ?? null,
+          createdAt: o.createdAt ?? null,
+          seatLabel: seat ? seat.label || seat.number || null : null,
+          hasPaymentIntent: Boolean(o.stripePaymentId),
+          creditsAppliedCents: o.creditsAppliedCents || 0,
+          giftCardAppliedCents: o.giftCardAppliedCents || 0,
+          items: items.map((i) => ({ name: nameOf.get(i.menuItemId) || "Item", quantity: i.quantity, priceCents: i.priceCents, selectedValue: i.selectedValue ?? null })),
+        };
+      }
+    }
+
+    let customer = null;
+    if (supportCase.userId) {
+      const u = await prisma.user.findUnique({ where: { id: supportCase.userId } });
+      if (u) {
+        const [creditBalanceCents, goodwillLifetimeCents] = await Promise.all([
+          availableCredit(prisma, u.id, now()),
+          lifetimeGoodwillCents(prisma, u.id),
+        ]);
+        customer = {
+          id: u.id, name: u.name ?? null, email: u.email ?? null, phone: u.phone ?? null,
+          tier: u.membershipTier ?? null, creditBalanceCents, goodwillLifetimeCents,
+        };
+      }
+    }
+
+    return {
+      case: supportCase,
+      order,
+      customer,
+      limits: { staffCreditMaxCents: STAFF_CREDIT_MAX_CENTS, goodwillLifetimeCapCents: PROGRAM.goodwill.lifetimeCents },
+    };
   });
 
   app.post("/admin/support/cases/:id/resolve", adminPre, async (req, reply) => {

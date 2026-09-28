@@ -3,8 +3,8 @@ import type { IconName } from "../components/ui/icons";
 
 export type NavItem = { href: string; label: string; icon: IconName };
 
-/** Flip to true in the branch that lands second once app/(console)/support exists (spec A7). */
-export const HAS_SUPPORT = false;
+/** app/(console)/support exists (Task D12): Support is the third Orders tab. */
+export const HAS_SUPPORT = true;
 
 export const DOCK_ITEMS: NavItem[] = [
   { href: "/", label: "Today", icon: "today" },
@@ -42,8 +42,8 @@ export function navFor(role: AdminRole) {
   };
 }
 
-/** Pages reached through another section's tabs: Shop orders is the Shop tab of Orders. */
-const SECTION_ALIASES: Record<string, string> = { "/shop-orders": "/orders" };
+/** Pages reached through another section's tabs: Shop orders and Support are tabs of Orders. */
+const SECTION_ALIASES: Record<string, string> = { "/shop-orders": "/orders", "/support": "/orders" };
 
 export function activeHref(rawPathname: string, hrefs: string[]): string | null {
   const alias = Object.keys(SECTION_ALIASES).find((a) => rawPathname === a || rawPathname.startsWith(a + "/"));
