@@ -2,10 +2,25 @@
  * Notification Service
  * Handles SMS (Twilio) notifications for orders
  * Updated: 2026-06-02 - Removed Resend email, switched Twilio to API Keys
+ * Updated: 2026-09-28 (Task F2) - Localized customer texts (packages/api/src/notifications/templates/*),
+ * a shared phone normalizer, and tier-up / credit-expiry SMS.
  */
 
 import twilio from "twilio";
 import QRCode from "qrcode";
+import { normalizePhoneE164 } from "./utils/phone.js";
+import { resolveLocale, normalizeLocale } from "./locale.js";
+import en from "./notifications/templates/en.js";
+import zhTW from "./notifications/templates/zh-TW.js";
+import zhCN from "./notifications/templates/zh-CN.js";
+import es from "./notifications/templates/es.js";
+
+const TEMPLATES = { en, "zh-TW": zhTW, "zh-CN": zhCN, es };
+
+/** The rendered-string template set for `locale` (any of SUPPORTED_LOCALES; anything else falls back to en). */
+function templateFor(locale) {
+  return TEMPLATES[normalizeLocale(locale)] || TEMPLATES.en;
+}
 
 /**
  * Generate a QR code as a base64 data URL
@@ -40,6 +55,21 @@ const twilioClient =
 const TWILIO_PHONE = process.env.TWILIO_PHONE_NUMBER;
 
 /**
+ * off | log | live (default "live" when unset). Anything unrecognised is
+ * treated as "log", never "live" - same contract as support/routes.js's
+ * notifyMode, duplicated here (rather than imported) to keep notifications.js
+ * independent of the support module. Every NEW customer-SMS code path this
+ * task adds (tier-up, credit-expiry) honors this so dev/test never actually
+ * texts anyone (R3).
+ */
+export function notifyMode(env = process.env) {
+  const raw = env.SUPPORT_NOTIFY;
+  if (raw === undefined || raw === null || raw === "") return "live";
+  const mode = String(raw).trim().toLowerCase();
+  return mode === "off" || mode === "live" ? mode : "log";
+}
+
+/**
  * Check if user/guest has opted in to SMS notifications
  * @param {object} user - User object (may have smsOptIn field)
  * @param {object} guest - Guest object (may have smsOptIn field)
@@ -55,7 +85,9 @@ function canSendSMS(user, guest) {
 }
 
 /**
- * Send an SMS notification
+ * Send an SMS notification. `to` is normalized to E.164 (packages/api/src/utils/phone.js)
+ * before it ever reaches Twilio; an unparseable number is refused rather than
+ * sent to a garbled destination.
  */
 export async function sendSMS({ to, body }) {
   if (!twilioClient || !TWILIO_PHONE) {
@@ -63,8 +95,11 @@ export async function sendSMS({ to, body }) {
     return { success: false, reason: "not_configured" };
   }
 
-  // Normalize phone number (ensure it has country code)
-  const normalizedPhone = to.startsWith("+") ? to : `+1${to.replace(/\D/g, "")}`;
+  const normalizedPhone = normalizePhoneE164(to);
+  if (!normalizedPhone) {
+    console.error(`[SMS] Invalid phone number, skipping SMS (...${String(to || "").slice(-4)})`);
+    return { success: false, reason: "invalid_phone" };
+  }
 
   try {
     const message = await twilioClient.messages.create({
@@ -73,17 +108,17 @@ export async function sendSMS({ to, body }) {
       to: normalizedPhone,
     });
 
-    console.log(`[SMS] Sent to ${normalizedPhone}: ${message.sid}`);
+    // Task F2 fix round 1: logs show only the last 4 digits of any phone, never the full number.
+    console.log(`[SMS] Sent to ...${normalizedPhone.slice(-4)}: ${message.sid}`);
     return { success: true, sid: message.sid };
   } catch (error) {
-    console.error("[SMS] Failed to send:", error);
+    // Twilio error messages/codes can echo the `to` number back; log only
+    // the code/message, never the error object itself, and no phone.
+    console.error(`[SMS] Failed to send to ...${normalizedPhone.slice(-4)}:`, error?.code, error?.message);
     return { success: false, error: error.message };
   }
 }
 
-/**
- * Send order confirmation notification (SMS only)
- */
 /** Public link to the live order status page (sent in the guest's texts). */
 export function orderStatusUrl(order, locale = "en", env = process.env) {
   if (!order?.orderQrCode) return null;
@@ -91,14 +126,22 @@ export function orderStatusUrl(order, locale = "en", env = process.env) {
   return `${base}/${locale}/order/status?orderQrCode=${encodeURIComponent(order.orderQrCode)}`;
 }
 
-/** The order confirmation text: number, total, and the live status link. */
+/**
+ * The order confirmation text: number, total, and the live status link, in
+ * the resolved locale (order.user, then order.locale/order.guest.locale if
+ * present, then "en" - see locale.js resolveLocale). Signature stays
+ * `(order, env)`: the demo status-link test (packages/api/src/demo/__tests__/status-link.test.js,
+ * pinned per the Plan status demo global constraint) calls it exactly this way.
+ */
 export function orderConfirmationText(order, env = process.env) {
+  const locale = resolveLocale(order?.user, order, order?.guest);
+  const t = templateFor(locale);
   const orderNumber = order.kitchenOrderNumber || order.orderNumber.slice(-6);
   const totalFormatted = `$${(order.totalCents / 100).toFixed(2)}`;
-  const link = orderStatusUrl(order, order.locale || "en", env);
+  const link = orderStatusUrl(order, locale, env);
   return link
-    ? `Oh! Order #${orderNumber} confirmed, ${totalFormatted}. Follow it live: ${link}`
-    : `Oh! Order #${orderNumber} confirmed. Total: ${totalFormatted}. Show this text at check-in.`;
+    ? t.orderConfirmed({ orderNumber, total: totalFormatted, link })
+    : t.orderConfirmedNoLink({ orderNumber, total: totalFormatted });
 }
 
 export async function sendOrderConfirmation(order, user) {
@@ -112,7 +155,7 @@ export async function sendOrderConfirmation(order, user) {
   if (phone && canSendSMS(user, order.guest)) {
     results.sms = await sendSMS({
       to: phone,
-      body: orderConfirmationText(order),
+      body: orderConfirmationText({ ...order, user: order.user || user }),
     });
   } else if (phone && !canSendSMS(user, order.guest)) {
     console.log(`[SMS] Skipping order confirmation - no SMS opt-in for phone ${phone.slice(-4)}`);
@@ -134,9 +177,14 @@ export async function sendPodReadyNotification(order, user, podNumber) {
 
   // SMS notification - only if user has opted in
   if (user?.phone && canSendSMS(user, null)) {
+    const locale = resolveLocale(user, order, null);
+    const t = templateFor(locale);
+    // Previously called orderStatusUrl(order) with no locale; the link now
+    // matches the text it's sent in (Task F2 binding note).
+    const link = orderStatusUrl(order, locale);
     results.sms = await sendSMS({
       to: user.phone,
-      body: orderStatusUrl(order) ? `Oh! Pod #${podNumber} is ready. Live status: ${orderStatusUrl(order)}` : `Oh! Your Pod #${podNumber} is ready. Order #${orderNumber}. Head to your pod to enjoy your meal.`,
+      body: link ? t.podReady({ podNumber, link }) : t.podReadyNoLink({ podNumber, orderNumber }),
     });
   } else if (user?.phone && !canSendSMS(user, null)) {
     console.log(`[SMS] Skipping pod ready - no SMS opt-in for phone ${user.phone.slice(-4)}`);
@@ -155,9 +203,10 @@ export async function sendQueueUpdateNotification(order, user, queuePosition, es
 
   // Only send SMS for queue updates (email would be too spammy) - check opt-in
   if (user?.phone && canSendSMS(user, null)) {
+    const t = templateFor(resolveLocale(user, order, null));
     results.sms = await sendSMS({
       to: user.phone,
-      body: `Oh! Order #${orderNumber}: You're #${queuePosition} in line. Estimated wait: ~${estimatedMinutes} min. We'll notify you when your pod is ready!`,
+      body: t.queueUpdate({ orderNumber, position: queuePosition, minutes: estimatedMinutes }),
     });
   } else if (user?.phone && !canSendSMS(user, null)) {
     console.log(`[SMS] Skipping queue update - no SMS opt-in for phone ${user.phone.slice(-4)}`);
@@ -179,9 +228,10 @@ export async function sendOrderReadyNotification(order, user) {
 
   // SMS notification - check opt-in
   if (user?.phone && canSendSMS(user, null)) {
+    const t = templateFor(resolveLocale(user, order, null));
     results.sms = await sendSMS({
       to: user.phone,
-      body: `Oh! Your order #${orderNumber} is ready! Head over to pick it up. Enjoy!`,
+      body: t.orderReady({ orderNumber }),
     });
   } else if (user?.phone && !canSendSMS(user, null)) {
     console.log(`[SMS] Skipping order ready - no SMS opt-in for phone ${user.phone.slice(-4)}`);
@@ -189,6 +239,84 @@ export async function sendOrderReadyNotification(order, user) {
   }
 
   return results;
+}
+
+/**
+ * Send a tier-up SMS (Task F2): sent when membership/engine.js's
+ * onOrderCompleted returns `upgradedTo`. Localized by the user's locale.
+ */
+export async function sendTierUp(user, tierKey) {
+  if (!user?.phone || !canSendSMS(user, null)) {
+    return { success: false, reason: user?.phone ? "not_opted_in" : "no_phone" };
+  }
+  const locale = resolveLocale(user, null, null);
+  const t = templateFor(locale);
+  const link = (() => {
+    const base = (process.env.WEB_APP_URL || "https://www.ohbeef.com").replace(/\/+$/, "");
+    return `${base}/${locale}/member`;
+  })();
+  return sendSMS({ to: user.phone, body: t.tierUp({ tierKey, link }) });
+}
+
+/**
+ * Fire-and-forget wrapper for every onOrderCompleted call site (index.js x2,
+ * orders/routes.js, orders/service.js runPaidEffects): looks up the user,
+ * honors SUPPORT_NOTIFY, and sends `sendTierUp` only when there's an actual
+ * upgrade. Always called AFTER the membership transaction has committed,
+ * never from inside it. Never throws.
+ */
+export async function notifyTierUpIfNeeded(prisma, { userId, upgradedTo }, { env = process.env, log = console.log } = {}) {
+  if (!upgradedTo || !userId) return null;
+  const mode = notifyMode(env);
+  if (mode === "off") return null;
+  try {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) return null;
+    if (mode === "log") {
+      log(`[notifications] SUPPORT_NOTIFY=log: would send tier-up (${upgradedTo}) SMS to user ${userId}`);
+      return null;
+    }
+    return await sendTierUp(user, upgradedTo);
+  } catch (err) {
+    console.error("[notifications] notifyTierUpIfNeeded failed:", err?.message || err);
+    return null;
+  }
+}
+
+// Task F2 fix round 1: a date reads naturally per locale, not always US
+// MM/DD (a Spanish reader would misread "12/31" as day 12 of a 31st month).
+// "short" gives most locales a natural short form, including Chinese, whose
+// ICU short-month pattern is exactly the "M月D日" reviewers asked for; es
+// wants day-first numeric ("31/12"), not a Latin month abbreviation ("dic").
+const DATE_INTL_LOCALE = { en: "en-US", "zh-TW": "zh-TW", "zh-CN": "zh-CN", es: "es" };
+const DATE_FORMAT_OPTIONS = { en: { month: "short", day: "numeric" }, "zh-TW": { month: "short", day: "numeric" }, "zh-CN": { month: "short", day: "numeric" }, es: { month: "numeric", day: "numeric" } };
+
+/** `date` formatted the way `locale`'s readers expect, always in America/Denver. */
+export function formatExpiryDate(locale, date) {
+  const key = normalizeLocale(locale);
+  return new Intl.DateTimeFormat(DATE_INTL_LOCALE[key], { timeZone: "America/Denver", ...DATE_FORMAT_OPTIONS[key] }).format(date);
+}
+
+/**
+ * Send a credit-expiry-warning SMS (Task F2, fix round 1: one text per user
+ * per day, not one per lot - membership/credits.js's `sendExpiryWarnings`
+ * groups every unwarned lot inside PROGRAM.expiryWarningDays by user and
+ * sums them before calling this, so `totalCents` and `soonestExpiresAt`
+ * cover the whole group, not a single lot).
+ */
+export async function sendCreditExpiryWarning(user, { totalCents, soonestExpiresAt }) {
+  if (!user?.phone || !canSendSMS(user, null)) {
+    return { success: false, reason: user?.phone ? "not_opted_in" : "no_phone" };
+  }
+  const locale = resolveLocale(user, null, null);
+  const t = templateFor(locale);
+  const amount = `$${(totalCents / 100).toFixed(2)}`;
+  const date = formatExpiryDate(locale, soonestExpiresAt);
+  const link = (() => {
+    const base = (process.env.WEB_APP_URL || "https://www.ohbeef.com").replace(/\/+$/, "");
+    return `${base}/${locale}/member/credits`;
+  })();
+  return sendSMS({ to: user.phone, body: t.creditExpiring({ amount, date, link }) });
 }
 
 /**

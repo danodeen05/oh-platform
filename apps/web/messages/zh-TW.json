@@ -1535,6 +1535,7 @@
     "optional": "選填",
     "yourName": "您的姓名",
     "forOrderUpdates": "用於訂單更新",
+    "invalidPhone": "請輸入有效的電話號碼，或留空",
     "forReceipt": "用於收據",
     "enterYourName": "請輸入您的姓名",
     "wantToEarnRewards": "想要賺取獎勵並追蹤訂單嗎？",
@@ -4312,6 +4313,50 @@
     "marker": {
       "guest": "您",
       "bowl": "您的麵"
+    }
+  },
+  "site": {
+    "nav": {
+      "order": "點餐",
+      "menu": "菜單",
+      "rewards": "會員禮遇",
+      "chappy": "Chappy",
+      "locations": "門市",
+      "experience": "用餐體驗",
+      "store": "商店",
+      "giftCards": "禮品卡",
+      "contact": "聯絡我們",
+      "account": "我的帳戶"
+    },
+    "shell": {
+      "home": "哦！牛肉麵首頁",
+      "mainNav": "主選單",
+      "dock": "快速選項",
+      "more": "更多",
+      "close": "關閉",
+      "language": "語言",
+      "account": "帳戶",
+      "signIn": "登入",
+      "skipToContent": "跳至主要內容",
+      "activeOrder": "訂單 {number}",
+      "activeOrderNoNumber": "您的訂單",
+      "viewOrder": "查看訂單狀態",
+      "orderStatus": {
+        "placed": "已下單",
+        "inQueue": "排隊中",
+        "checkedIn": "已報到",
+        "preparing": "烹煮中",
+        "ready": "即將完成",
+        "serving": "請慢用",
+        "active": "處理中"
+      },
+      "footer": {
+        "tagline": "用心熬煮的牛肉麵。",
+        "copyright": "哦！牛肉麵 {year}。保留所有權利。",
+        "privacy": "隱私政策",
+        "accessibility": "無障礙服務",
+        "nav": "頁尾連結"
+      }
     }
   }
 }

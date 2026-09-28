@@ -1535,6 +1535,7 @@
     "optional": "opcional",
     "yourName": "Tu nombre",
     "forOrderUpdates": "Para actualizaciones del pedido",
+    "invalidPhone": "Ingresa un número de teléfono válido, o déjalo en blanco",
     "forReceipt": "Para el recibo",
     "enterYourName": "Por favor ingresa tu nombre",
     "wantToEarnRewards": "¿Quieres ganar recompensas y rastrear tus pedidos?",
@@ -2109,6 +2110,50 @@
     "marker": {
       "guest": "Tú",
       "bowl": "Tu tazón"
+    }
+  },
+  "site": {
+    "nav": {
+      "order": "Pedir",
+      "menu": "Menú",
+      "rewards": "Recompensas",
+      "chappy": "Chappy",
+      "locations": "Ubicaciones",
+      "experience": "Experiencia",
+      "store": "Tienda",
+      "giftCards": "Tarjetas de regalo",
+      "contact": "Contacto",
+      "account": "Mi cuenta"
+    },
+    "shell": {
+      "home": "Oh! Beef Noodle Soup, inicio",
+      "mainNav": "Principal",
+      "dock": "Acciones rápidas",
+      "more": "Más",
+      "close": "Cerrar",
+      "language": "Idioma",
+      "account": "Cuenta",
+      "signIn": "Iniciar sesión",
+      "skipToContent": "Saltar al contenido",
+      "activeOrder": "Pedido {number}",
+      "activeOrderNoNumber": "Tu pedido",
+      "viewOrder": "Ver estado del pedido",
+      "orderStatus": {
+        "placed": "Pedido realizado",
+        "inQueue": "En la fila",
+        "checkedIn": "Registrado",
+        "preparing": "Cocinando",
+        "ready": "Casi listo",
+        "serving": "Buen provecho",
+        "active": "En curso"
+      },
+      "footer": {
+        "tagline": "Sopa de fideos con res, hecha con cuidado.",
+        "copyright": "Oh! Beef Noodle Soup, {year}. Todos los derechos reservados.",
+        "privacy": "Privacidad",
+        "accessibility": "Accesibilidad",
+        "nav": "Enlaces del pie de página"
+      }
     }
   }
 }

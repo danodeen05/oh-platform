@@ -7,6 +7,7 @@
  * transaction as every grant, spend and expiry.
  */
 import { PROGRAM } from "./program.js";
+import { sendCreditExpiryWarning, notifyMode } from "../notifications.js";
 
 export class CreditShortError extends Error {
   constructor(availableCents) {
@@ -112,7 +113,7 @@ export async function spendCredit(prisma, { userId, amountCents, orderId, now = 
  * has no `$transaction`). Throws CreditShortError before writing anything when
  * the unexpired balance is short, so the caller's whole transaction rolls back.
  */
-export async function spendCreditInTx(tx, { userId, amountCents, orderId, now = new Date() }) {
+export async function spendCreditInTx(tx, { userId, amountCents, orderId, now = new Date(), description = undefined, metadata = undefined }) {
   assertPositiveAmount(amountCents);
   const lots = await tx.creditLot.findMany({
     where: { userId, remainingCents: { gt: 0 }, expiresAt: { gt: now } },
@@ -138,7 +139,8 @@ export async function spendCreditInTx(tx, { userId, amountCents, orderId, now = 
 
   await tx.user.update({ where: { id: userId }, data: { creditsCents: { decrement: amountCents } } });
   await tx.creditEvent.create({
-    data: { userId, type: "CREDIT_APPLIED", amountCents: -amountCents, orderId },
+    // description/metadata: optional context, e.g. a shop order (CreditEvent.orderId is a food Order).
+    data: { userId, type: "CREDIT_APPLIED", amountCents: -amountCents, orderId, ...(description ? { description } : {}), ...(metadata ? { metadata } : {}) },
   });
 }
 
@@ -173,6 +175,119 @@ export async function expiringSoon(prisma, userId, now = new Date()) {
     where: { userId, remainingCents: { gt: 0 }, expiresAt: { gt: now, lte: warnBy } },
     orderBy: { expiresAt: "asc" },
   });
+}
+
+// Idempotency marker for the expiry-warning SMS, stored as a note on the lot
+// itself rather than a new CreditEvent type. Two reasons: (1) the controller
+// notes prefer a note on an existing thing over a schema migration, and (2)
+// a CreditEvent would show up in the customer's own /users/:id/credits
+// history (GET returns the last 50 raw), which would confuse a member with a
+// $0.00 "admin adjustment" line that isn't real money moving.
+const EXPIRY_WARNED_MARKER = "expiry-warned";
+
+function isExpiryWarned(lot) {
+  return typeof lot.note === "string" && lot.note.includes(`[${EXPIRY_WARNED_MARKER}]`);
+}
+
+/**
+ * Every not-yet-expired lot (across all users) that expires within
+ * `PROGRAM.expiryWarningDays` of `now` and hasn't been warned about yet
+ * (see `markExpiryWarned`). This is what the daily cron sends the
+ * `creditExpiring` SMS for; a lot appears here at most once no matter how
+ * many times the cron runs. Soonest-expiring first.
+ */
+export async function lotsNeedingExpiryWarning(prisma, now = new Date()) {
+  const warnBy = addDays(now, PROGRAM.expiryWarningDays);
+  const lots = await prisma.creditLot.findMany({
+    where: { remainingCents: { gt: 0 }, expiresAt: { gt: now, lte: warnBy } },
+    orderBy: { expiresAt: "asc" },
+  });
+  return lots.filter((lot) => !isExpiryWarned(lot));
+}
+
+/**
+ * Marks `lot` as warned so a later cron run's `lotsNeedingExpiryWarning`
+ * skips it. Idempotent: calling it twice on the same lot is a no-op the
+ * second time.
+ */
+export async function markExpiryWarned(prisma, lotId) {
+  const lot = await prisma.creditLot.findUnique({ where: { id: lotId } });
+  if (!lot || isExpiryWarned(lot)) return lot || null;
+  const marker = `[${EXPIRY_WARNED_MARKER}]`;
+  const note = lot.note ? `${lot.note} ${marker}` : marker;
+  return prisma.creditLot.update({ where: { id: lotId }, data: { note } });
+}
+
+/**
+ * Strips the internal `[expiry-warned]` marker from `lot.note` (Task F2 fix
+ * round 1, review minor). Nothing parses `note` today, but `profileForUser`
+ * (membership/engine.js) returns raw `expiringSoon` lots - including
+ * `note` - to the customer over `GET /users/:id/profile`, and those are
+ * exactly the ones the marker gets attached to. Returns `lot` unchanged if
+ * it has no marker (so callers can map over a mixed list safely).
+ */
+export function stripExpiryWarnedMarker(lot) {
+  if (!isExpiryWarned(lot)) return lot;
+  const note = lot.note.replace(`[${EXPIRY_WARNED_MARKER}]`, "").trim() || null;
+  return { ...lot, note };
+}
+
+/**
+ * Sends AT MOST ONE `creditExpiring` SMS per user per run (Task F2 fix round
+ * 1, controller ruling: one text per small cashback lot is spam). Every
+ * unwarned lot `lotsNeedingExpiryWarning` returns is grouped by `userId`;
+ * the group's `remainingCents` are summed and its soonest `expiresAt` is
+ * used. A text is sent only if that total reaches `PROGRAM.expiryWarningMinCents`
+ * (100 cents) - below it, nothing is sent, but every lot in the group is
+ * still marked warned (see `markExpiryWarned`), so a lot is only ever
+ * considered once, whether or not it crossed the floor with its group.
+ *
+ * Honors `notifications.js`'s SUPPORT_NOTIFY gate (off | log | live) the
+ * same way every other customer-SMS code path does (R3): "off" does nothing
+ * at all (not even a lookup), "log" looks the lots up and logs what it would
+ * have sent without calling Twilio, "live" actually sends (still subject to
+ * `canSendSMS`/opt-in inside `sendCreditExpiryWarning`, and to Twilio simply
+ * not being configured in dev/test). Never throws.
+ */
+export async function sendExpiryWarnings(prisma, { now = new Date(), env = process.env, log = console.log } = {}) {
+  const mode = notifyMode(env);
+  if (mode === "off") return { sent: 0, warned: 0 };
+
+  const lots = await lotsNeedingExpiryWarning(prisma, now);
+  const byUser = new Map(); // userId -> lot[]
+  for (const lot of lots) {
+    if (!byUser.has(lot.userId)) byUser.set(lot.userId, []);
+    byUser.get(lot.userId).push(lot);
+  }
+
+  let sent = 0;
+  let warned = 0;
+  for (const [userId, userLots] of byUser) {
+    const totalCents = userLots.reduce((sum, l) => sum + l.remainingCents, 0);
+    const soonestExpiresAt = userLots.reduce((min, l) => (l.expiresAt < min ? l.expiresAt : min), userLots[0].expiresAt);
+
+    if (totalCents >= PROGRAM.expiryWarningMinCents) {
+      try {
+        if (mode === "log") {
+          log(`[cron] SUPPORT_NOTIFY=log: would send credit-expiry warning to user ${userId} for ${userLots.length} lot(s), $${(totalCents / 100).toFixed(2)}`);
+        } else {
+          const user = await prisma.user.findUnique({ where: { id: userId } });
+          if (user) {
+            const result = await sendCreditExpiryWarning(user, { totalCents, soonestExpiresAt });
+            if (result?.success) sent++;
+          }
+        }
+      } catch (err) {
+        console.error(`[cron] sendExpiryWarnings failed for user ${userId}:`, err?.message || err);
+      }
+    }
+
+    for (const lot of userLots) {
+      await markExpiryWarned(prisma, lot.id);
+      warned++;
+    }
+  }
+  return { sent, warned };
 }
 
 /**

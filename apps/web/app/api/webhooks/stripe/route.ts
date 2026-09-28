@@ -94,41 +94,20 @@ async function handlePaymentSucceeded(paymentIntent: Stripe.PaymentIntent) {
   const metadata = paymentIntent.metadata;
   console.log(`Payment succeeded: ${paymentIntent.id}`, metadata);
 
-  // Food orders and host-paid groups (Task A7): the API re-retrieves the
-  // PaymentIntent, checks status, amount and metadata itself, and settles
-  // once (idempotent with the return page). A retryable failure (network, API
-  // 5xx) throws so Stripe delivers the event again; a verified refusal or
-  // "already paid" is final.
+  // Food orders, host-paid groups (Task A7), shop orders and gift cards
+  // (Task D10a): the API re-retrieves the PaymentIntent, checks status, amount
+  // and metadata itself, and settles once (idempotent with the return page).
+  // Shop orders go to POST /shop/orders/:id/confirm-payment (metadata
+  // {kind:"shop", shopOrderId}); gift cards to POST /gift-cards/confirm-payment,
+  // which finds the card by its PaymentIntent or issues it from the server-built
+  // metadata. A retryable failure (network, API 5xx) throws so Stripe delivers
+  // the event again; a verified refusal or "already paid" is final.
   const result = await confirmFromWebhook(paymentIntent, { baseUrl: API_BASE_URL, serviceKey: process.env.ADMIN_API_KEY || null });
   if (result.handled) {
     if (result.ok) console.log(`${result.handled} payment ${paymentIntent.id} confirmed via webhook`);
+    else if (result.code === 'ADMIN_API_KEY_MISSING') console.error(`Stripe webhook: ADMIN_API_KEY is not set; cannot confirm ${result.handled} payment ${paymentIntent.id}. Asking Stripe to retry.`);
     else console.error(`Failed to confirm ${result.handled} payment ${paymentIntent.id}:`, result.status, result.code);
     if (result.retry) throw new RetryableWebhookError(`${result.handled} confirm failed with ${result.status}`);
-  }
-
-  // Shop orders: no shop PaymentIntent carries metadata.shopOrderId, so the
-  // old PATCH {paymentStatus: 'PAID'} branch never ran; it is gone (clients
-  // never send paymentStatus). Verified shop payment is Task D10.
-
-  // Handle gift card purchase
-  if (metadata.source === 'gift_card' && metadata.giftCardId) {
-    try {
-      const response = await fetch(`${API_BASE_URL}/gift-cards/${metadata.giftCardId}/confirm-payment`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          stripePaymentId: paymentIntent.id,
-        }),
-      });
-
-      if (!response.ok) {
-        console.error(`Failed to confirm gift card ${metadata.giftCardId}:`, await response.text());
-      } else {
-        console.log(`Gift card ${metadata.giftCardId} payment confirmed via webhook`);
-      }
-    } catch (error) {
-      console.error(`Error confirming gift card ${metadata.giftCardId}:`, error);
-    }
   }
 }
 

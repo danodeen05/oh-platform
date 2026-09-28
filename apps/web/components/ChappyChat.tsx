@@ -80,7 +80,7 @@ interface Card {
   [key: string]: unknown;
 }
 
-interface ChappyChatProps {
+export interface ChappyChatProps {
   userId?: string;
   /** Signed guest token from POST /chappy/guest-token (sent as x-chappy-guest). */
   guestToken?: string;
@@ -90,6 +90,16 @@ interface ChappyChatProps {
   apiUrl?: string;
   position?: "bottom-right" | "bottom-left";
   onOrderCreated?: (order: unknown) => void;
+  /**
+   * Task C4 (site shell, until E1): the shell's dock opens the chat, so it
+   * hides the floating launcher and drives `open` itself. Omit all four for
+   * the legacy floating widget (unchanged behavior).
+   */
+  hideLauncher?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** Text placed in the input when the chat is opened with it. */
+  prefill?: string;
 }
 
 export function ChappyChat({
@@ -101,9 +111,18 @@ export function ChappyChat({
   apiUrl = "",
   position = "bottom-right",
   onOrderCreated,
+  hideLauncher = false,
+  open,
+  onOpenChange,
+  prefill,
 }: ChappyChatProps) {
   const api = useSiteApi();
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isOpen = open ?? internalOpen;
+  const setIsOpen = (next: boolean) => {
+    if (open === undefined) setInternalOpen(next);
+    onOpenChange?.(next);
+  };
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -169,6 +188,11 @@ export function ChappyChat({
   const resetScrollTracking = useCallback(() => {
     userScrolledUpRef.current = false;
   }, []);
+
+  // A prefill (from the shell's openChappy) lands in the input when the chat opens.
+  useEffect(() => {
+    if (isOpen && prefill) setInputValue(prefill);
+  }, [isOpen, prefill]);
 
   // Focus input when chat opens
   useEffect(() => {
@@ -1185,7 +1209,7 @@ export function ChappyChat({
   return createPortal(
     <>
       <style>{animationStyles}</style>
-      {chatButton}
+      {hideLauncher ? null : chatButton}
       {chatPanel}
     </>,
     document.body

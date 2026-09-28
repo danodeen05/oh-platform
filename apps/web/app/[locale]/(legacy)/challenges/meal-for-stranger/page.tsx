@@ -20,7 +20,8 @@ type Location = {
 };
 
 
-// Meal gifts are funded only by a verified card payment for their full amount (Task A6).
+// Meal gifts are funded only by a verified card payment for their full amount
+// (Task A6). No store credit and no promo codes on meal gifts, ever (D10a).
 const MEAL_GIFT_CREDITS_ENABLED = false;
 function PaymentForm({
   selectedLocationId,
@@ -98,20 +99,17 @@ function PaymentForm({
       // Handle Stripe payment if needed
       if (needsStripePayment) {
         // Create payment intent
-        const paymentResponse = await fetch(`${API_URL}/create-payment-intent`, {
+        // The API binds the PaymentIntent to the verified giver and location (D10a).
+        const paymentResponse = await api(`${API_URL}/create-payment-intent`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             "x-tenant-slug": "oh",
           },
           body: JSON.stringify({
+            kind: "meal_gift",
             amountCents: remainingAmount,
-            metadata: {
-              type: "meal_gift",
-              giverId,
-              locationId: selectedLocationId,
-              creditsApplied: creditsToUse,
-            },
+            locationId: selectedLocationId,
           }),
         });
 
@@ -174,21 +172,6 @@ function PaymentForm({
       }
 
       const mealGift = await mealGiftResponse.json();
-
-      // Deduct credits if used
-      if (creditsToUse > 0) {
-        await api(`${API_URL}/users/${giverId}/deduct-credits`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-tenant-slug": "oh",
-          },
-          body: JSON.stringify({
-            amountCents: creditsToUse,
-            description: `Meal for a Stranger gift - ${mealGift.id}`,
-          }),
-        });
-      }
 
       toast.success(t("success.created"));
       router.push(`/member`);
@@ -473,28 +456,6 @@ export default function MealForStrangerPage() {
           {message.length}/200
         </div>
       </div>
-
-      {/* Credit Balance & Application: off until the API can spend credits for
-          a meal gift (Task A6 funds a gift only by a verified card payment). */}
-      {MEAL_GIFT_CREDITS_ENABLED && userProfile && (
-        <div style={{ background: "#f0f9ff", padding: 16, borderRadius: 8, marginBottom: 24, border: "1px solid #bae6fd" }}>
-          <div style={{ marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontWeight: "600" }}>{t("form.availableCredits")}:</span>
-            <span style={{ fontWeight: "bold", color: "#0284c7", fontSize: "1.1rem" }}>
-              ${(creditBalance / 100).toFixed(2)}
-            </span>
-          </div>
-          <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
-            <input
-              type="checkbox"
-              checked={applyCredits}
-              onChange={(e) => setApplyCredits(e.target.checked)}
-              style={{ width: 18, height: 18, cursor: "pointer" }}
-            />
-            <span style={{ fontSize: "0.95rem" }}>{t("form.useCredits")}</span>
-          </label>
-        </div>
-      )}
 
       {/* Wrap PaymentForm in Elements provider */}
       <Elements stripe={stripePromise}>

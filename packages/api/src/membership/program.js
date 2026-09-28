@@ -8,6 +8,12 @@ export const PROGRAM = {
   quarterlyPerk: { tier: "BEEF_BOSS", type: "PREMIUM_ADDON" },
   referral: { referrerCents: 500, refereeCents: 500, maxPaidPer30Days: 10 },
   creditExpiryDays: 90, expiryWarningDays: 7,
+  // Task F2 fix round 1: one expiry-warning text per user per day, summing
+  // every unwarned lot expiring within expiryWarningDays, sent only if that
+  // total reaches this floor. Below it, the lots are still marked warned
+  // (never resent), just silently - a $0.20 cashback lot alone shouldn't
+  // earn its own text.
+  expiryWarningMinCents: 100,
   goodwill: { perOrderCents: 500, per30DaysCents: 1000, lifetimeCents: 4500, orderAgeHours: 24 },
   timezone: "America/Denver",
 };

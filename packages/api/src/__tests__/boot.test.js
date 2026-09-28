@@ -9,6 +9,12 @@
  * path (pass, fail, throw) kills the child; `after` is a safety net in case a
  * failure short-circuits the test body before its own `finally`.
  *
+ * Task F2 fix round 1 (review) added a few more requests after /health: they
+ * exist only to prove index.js's own wiring for a couple of untestable-any-
+ * other-way routes/behaviors (PATCH /users/:id is registered and auth-guarded,
+ * POST /guests 400s on an invalid phone) - not to re-test logic that already
+ * has real unit coverage elsewhere (locale.js, utils/phone.js).
+ *
  * Schedulers that could send anything are kept off: REDIS_URL is cleared (the
  * autonomous scheduler only starts when it's set), and PLAN_VISIT_SUMMARIES /
  * SUPPORT_NOTIFY are forced off, so this test sends no messages and hits no
@@ -110,6 +116,39 @@ test("the API boots and answers GET /health (Task B1 startup-crash regression)",
     ]);
     assert.equal(res.status, 200);
     assert.deepEqual(await res.json(), { ok: true });
+
+    // Task F2 fix round 1 (review): index.js wires phone normalization and
+    // the new PATCH /users/:id route directly (no unit test can reach them
+    // without spawning the real process - see notifications/locale.js's own
+    // tests for the logic itself). Prove the wiring here instead.
+    const base = `http://127.0.0.1:${port}`;
+
+    // PATCH /users/:id is registered and guarded by registerCustomerIdentity's
+    // onRoute hook: an unauthenticated caller gets 401 (never a 404, which
+    // would mean the route isn't registered at all).
+    const patchLocale = await fetch(`${base}/users/does-not-exist`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ locale: "es" }),
+    });
+    assert.equal(patchLocale.status, 401, `PATCH /users/:id (no auth): ${await patchLocale.text()}`);
+
+    // POST /guests normalizes phone to E.164 and 400s on garbage (Task F2).
+    const postGuests = await fetch(`${base}/guests`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: "Boot Test", phone: "abc" }),
+    });
+    assert.equal(postGuests.status, 400);
+    assert.equal((await postGuests.json()).code, "INVALID_PHONE");
+
+    // PATCH /users/:id/phone is guarded the same way as PATCH /users/:id.
+    const patchPhone = await fetch(`${base}/users/does-not-exist/phone`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone: "abc" }),
+    });
+    assert.equal(patchPhone.status, 401, `PATCH /users/:id/phone (no auth): ${await patchPhone.text()}`);
   } catch (err) {
     const tail = (buf) => Buffer.concat(buf).toString("utf8").slice(-4000);
     console.error("[boot.test] server exited:", exited, "stdout tail:", tail(stdout), "stderr tail:", tail(stderr));

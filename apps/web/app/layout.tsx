@@ -55,6 +55,13 @@ export default async function RootLayout({
           Phase D tasks that rebuild those specific pages away from them; only
           /plan (which loads Instrument Serif and Noto Serif/Sans TC-SC via
           next/font, see components/site/fonts.ts) is excluded.
+
+          Task C4 fix round 1 checked whether the `Noto Serif TC` family here
+          duplicates next/font's copy and can go. It can't yet: CNY (cny.css,
+          slides/slides.css), the legacy `--font-heading` (globals.css, used
+          by every (legacy) h1-h3) and the chop Seal's GLYPH_FONT all name
+          'Noto Serif TC' directly. Drop it when those move to
+          var(--font-noto-serif-tc) (G-phase cleanup).
         */}
         <link
           href={

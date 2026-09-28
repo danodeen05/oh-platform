@@ -15,7 +15,10 @@ import {
   sendShopOrderConfirmation,
   sendGiftCardEmail,
   sendSMS,
+  notifyTierUpIfNeeded,
 } from "./notifications.js";
+import { normalizePhoneE164 } from "./utils/phone.js";
+import { applyUserLocaleUpdate } from "./locale.js";
 import { BetaAnalyticsDataClient } from "@google-analytics/data";
 import { readFileSync } from "fs";
 import crypto from "crypto";
@@ -84,6 +87,11 @@ import { registerMembershipRoutes } from "./membership/routes.js";
 import { registerOrderRoutes } from "./orders/routes.js";
 import { registerGroupOrderRoutes } from "./orders/group-routes.js";
 import { registerGiftCardRoutes } from "./orders/gift-card-routes.js";
+import { registerPurchaseIntentRoute, giftDiscountFields, notAllowedForGiftCards } from "./orders/purchase-intents.js";
+import { registerEventCheckRoute, createIpLimiter, eventRateLimit, eventDuplicateBody } from "./orders/event-routes.js";
+import { registerShopOrderRoutes } from "./shop/routes.js";
+import { paymentAuditNotes, markShopOrderPaidByStaff } from "./shop/service.js";
+import { challengeCreateData } from "./membership/challenge-input.js";
 import { registerSupportRoutes } from "./support/routes.js";
 import { sendGraphMail } from "./email/graph.js";
 import { configureOrderService, markPaid, confirmOrderPayment, intentHasRefund, OrderError } from "./orders/service.js";
@@ -98,7 +106,7 @@ import { createChappyLimits } from "./chappy/limits.js";
 import { createPodCall, PodCallError } from "./orders/pod-calls.js";
 import { FASTIFY_OPTIONS, rateLimitKey } from "./http-config.js";
 import { createKioskAuth } from "./auth/kiosk.js";
-import { publicReferral, shopCreditSpender, registerAdminOnlyRoutes } from "./auth/hardening.js";
+import { publicReferral, registerAdminOnlyRoutes } from "./auth/hardening.js";
 import { listLocationSeats, resolveSeatViewer } from "./seats/service.js";
 import { claimCheckInSeat } from "./seats/kiosk-seat.js";
 import { claimSeat, holdSeatForOrder, holdPodAtPay } from "./orders/service.js";
@@ -323,6 +331,23 @@ await registerOrderRoutes(app, {
 });
 // Gift cards (Task A7): purchase, lookup, webhook confirm. No apply, no redeem.
 await registerGiftCardRoutes(app, { prisma, stripe, customerAuth, sendGiftCardEmail });
+// Shop orders (Task D10a): server-priced, PAID only after a verified PaymentIntent or a zero balance.
+const { shopOrderAccess } = await registerShopOrderRoutes(app, {
+  prisma: basePrisma,
+  stripe,
+  customerAuth,
+  async onShopOrderPaid(order) {
+    const mode = notifyMode();
+    if (mode === "off") return;
+    if (mode === "log") {
+      console.log(`[shop] SUPPORT_NOTIFY=log: would send shop order confirmation for ${order.orderNumber}`);
+      return;
+    }
+    await sendShopOrderConfirmation(order);
+  },
+});
+// Non-food PaymentIntents (shop, gift cards, meal gifts). Food: POST /orders/:id/payment-intent.
+registerPurchaseIntentRoute(app, { prisma: basePrisma, stripe, customerAuth, shopOrderAccess });
 // Group orders (Task A7): verified members, server-priced orders, host pays via one verified PaymentIntent.
 await registerGroupOrderRoutes(app, {
   prisma,
@@ -2779,7 +2804,13 @@ app.post("/seats/:id/force-clean", async (req, reply) => {
     completedOrderIds.push(order.id);
     console.log(`Force-completed order ${order.kitchenOrderNumber || order.orderNumber} on pod ${seat.number}`);
     // Membership payouts for the completion (idempotent; pays only PAID orders).
-    await onOrderCompleted(prisma, { orderId: order.id, now: new Date() });
+    const membershipResult = await onOrderCompleted(prisma, { orderId: order.id, now: new Date() });
+    // Task F2: tier-up SMS after the membership transaction has committed.
+    if (membershipResult?.upgradedTo) {
+      notifyTierUpIfNeeded(prisma, { userId: order.userId, upgradedTo: membershipResult.upgradedTo }).catch((err) =>
+        console.error("[pods] tier-up notify failed:", err?.message || err),
+      );
+    }
   }
 
   // Set pod to CLEANING
@@ -3628,51 +3659,24 @@ const CNY_EVENT_CODE = "cny-party-2026";
 const CNY_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyUdlLe3sVsJcs5XSh4LvZcmBJA3IyUi0qNHkZVc4GdY7n6nFXcoQhFpZIK2_dOFLU2dg/exec";
 const CNY_TEST_PHONE = "(801) 739-3205"; // Dano's number for testing
 
-// GET /orders/event/check - Check if guest already has an order
-app.get("/orders/event/check", async (req, reply) => {
-  const { phone } = req.query;
-
-  if (!phone) {
-    return reply.code(400).send({ error: "Phone number required" });
-  }
-
-  const normalizedPhone = phone.replace(/\D/g, "");
-
-  const existingOrder = await prisma.order.findFirst({
+// GET /orders/event/check (orders/event-routes.js, Task D10a): per-IP limited,
+// and only { exists } unless the caller holds the order's guest session.
+const cnyEventLimiter = createIpLimiter();
+registerEventCheckRoute(app, {
+  limiter: cnyEventLimiter,
+  findEventOrderByPhone: (digits) => prisma.order.findFirst({
     where: {
       locationId: CNY_PARTY_LOCATION_ID,
       status: { not: "CANCELLED" },
-      guest: {
-        phone: { contains: normalizedPhone.slice(-10) },
-      },
+      guest: { phone: { contains: digits.slice(-10) } },
     },
-    include: {
-      guest: true,
-      items: {
-        include: {
-          menuItem: true,
-        },
-      },
-    },
-  });
-
-  if (existingOrder) {
-    return {
-      exists: true,
-      kitchenOrderNumber: existingOrder.kitchenOrderNumber,
-      orderQrCode: existingOrder.orderQrCode,
-      items: existingOrder.items.map((item) => ({
-        menuItem: { name: item.menuItem.name },
-        selectedValue: item.selectedValue,
-      })),
-    };
-  }
-
-  return { exists: false };
+    include: { guest: true, items: { include: { menuItem: true } } },
+  }),
+  findGuestBySessionToken: (token) => prisma.guest.findUnique({ where: { sessionToken: token } }),
 });
 
 // POST /orders/event - Create order for private event (no payment required)
-app.post("/orders/event", async (req, reply) => {
+app.post("/orders/event", { preHandler: eventRateLimit(cnyEventLimiter) }, async (req, reply) => {
   const { locationId, tenantId, items, guestName, guestPhone, eventCode } = req.body || {};
 
   // Validate required fields
@@ -3707,11 +3711,8 @@ app.post("/orders/event", async (req, reply) => {
     });
 
     if (existingOrder) {
-      return reply.code(400).send({
-        error: "One order per guest allowed",
-        existingOrderNumber: existingOrder.kitchenOrderNumber,
-        existingOrderQrCode: existingOrder.orderQrCode,
-      });
+      // Never the order number or QR code: a phone number alone proves nothing (D10a).
+      return reply.code(400).send(eventDuplicateBody());
     }
   }
 
@@ -3759,12 +3760,15 @@ app.post("/orders/event", async (req, reply) => {
 
   const kitchenOrderNumber = String(todaysOrderCount + 1).padStart(4, "0");
 
-  // Create guest record (store normalized phone for duplicate detection)
+  // Create guest record. `normalizedPhone` (digits only) stays as-is for the
+  // "one order per phone" contains-matching above/below; Guest.phone itself
+  // is stored E.164 (Task F2) so Chappy SMS can match identity exactly.
   const guest = await prisma.guest.create({
     data: {
       name: guestName || "CNY Guest",
-      phone: normalizedPhone || null, // Store digits only for consistent matching
-      sessionToken: `cny-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      phone: normalizePhoneE164(guestPhone) || null,
+      // Proof of this order on the event page (D10a), so unguessable.
+      sessionToken: `cny-${crypto.randomBytes(24).toString("base64url")}`,
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
     },
   });
@@ -4218,7 +4222,17 @@ app.post("/users", async (req, reply) => {
   // Verified email only; a client phone is never used to find a row (auth/customer.js signupFields).
   const allowed = await customerAuth.signupFields(req, reply);
   if (!allowed) return reply;
-  const { email, phone } = allowed;
+  const { email } = allowed;
+  // Chappy SMS matches identity by exact E.164 (Task F2): normalize on write.
+  // (A signed-in customer's `phone` is always undefined here - signupFields
+  // never trusts a client phone; only a trusted service call may set one.)
+  let phone;
+  if (allowed.phone !== undefined && allowed.phone !== null && allowed.phone !== "") {
+    phone = normalizePhoneE164(allowed.phone);
+    if (!phone) return reply.code(400).send({ error: "Invalid phone number", code: "INVALID_PHONE" });
+  } else {
+    phone = allowed.phone;
+  }
 
   console.log("POST /users - Received:", { email, phone, name, referredByCode });
 
@@ -4325,10 +4339,21 @@ app.get("/users/me", async (req, reply) => {
   if (!who.userId) return reply.code(404).send({ error: "User not found" });
   const user = await prisma.user.findUnique({
     where: { id: who.userId },
-    select: { id: true, email: true, name: true, membershipTier: true, creditsCents: true, referralCode: true },
+    select: { id: true, email: true, name: true, membershipTier: true, creditsCents: true, referralCode: true, locale: true },
   });
   if (!user) return reply.code(404).send({ error: "User not found" });
   return user;
+});
+
+// PATCH /users/:id - self-update (locale only today: apps/web/components/LanguageTracker.tsx
+// calls this when a signed-in member's locale changes). Auth (the caller must
+// be this user, or a trusted service call) is enforced by auth/customer.js's
+// registerCustomerIdentity onRoute hook, wired near the top of this file, for
+// every /users/:id/* route - see packages/api/src/locale.js for the handler
+// logic and packages/api/src/__tests__/locale.test.js for its HTTP-level tests.
+app.patch("/users/:id", async (req, reply) => {
+  const result = await applyUserLocaleUpdate(prisma, { id: req.params.id, locale: req.body?.locale });
+  return reply.code(result.status).send(result.body);
 });
 
 // Get user by referral code
@@ -4358,52 +4383,7 @@ function generateSessionToken() {
 }
 
 
-// Stripe PaymentIntent for NON-food purchases only (shop, gift cards, meal
-// gifts). Food orders are charged only through POST /orders/:id/payment-intent,
-// whose amount is the server's quote (orders/service.js). The shop and gift
-// card amounts here are still client-computed until Task D10 (ruling R9).
-const PAYMENT_INTENT_KINDS = new Set(["shop_order", "shop_order_instore", "gift_card", "meal_gift"]);
-
-app.post("/create-payment-intent", async (req, reply) => {
-  try {
-    if (!stripe) {
-      return reply.status(500).send({ error: "Stripe is not configured" });
-    }
-
-    const { amountCents, metadata } = req.body || {};
-    const kind = req.body?.kind || metadata?.type;
-
-    // kind guard: a food order (or anything naming an order) can't set its own amount.
-    if (metadata?.orderId || metadata?.orderIds || !PAYMENT_INTENT_KINDS.has(kind)) {
-      return reply.status(400).send({
-        error: "USE_ORDER_PAYMENT_INTENT",
-        message: "Food orders are paid through POST /orders/:id/payment-intent.",
-      });
-    }
-
-    if (!Number.isInteger(amountCents) || amountCents < 50) {
-      return reply.status(400).send({ error: "Amount must be at least 50 cents" });
-    }
-
-    // Create payment intent
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: amountCents,
-      currency: "usd",
-      metadata: metadata || {},
-      automatic_payment_methods: {
-        enabled: true,
-      },
-    });
-
-    reply.send({
-      clientSecret: paymentIntent.client_secret,
-      id: paymentIntent.id,
-    });
-  } catch (error) {
-    console.error("Error creating payment intent:", error);
-    reply.status(500).send({ error: error.message });
-  }
-});
+// POST /create-payment-intent (non-food purchases) lives in orders/purchase-intents.js (Task D10a).
 
 // POST /payments/confirm - Confirm payment for SMS order link
 app.post("/payments/confirm", async (req, reply) => {
@@ -4562,6 +4542,13 @@ app.post("/payments/confirm", async (req, reply) => {
 app.post("/guests", async (req, reply) => {
   const { name, phone, email } = req.body || {};
 
+  // Chappy SMS matches identity by exact E.164 (Task F2): normalize on write.
+  let phoneE164 = null;
+  if (phone !== undefined && phone !== null && phone !== "") {
+    phoneE164 = normalizePhoneE164(phone);
+    if (!phoneE164) return reply.code(400).send({ error: "Invalid phone number", code: "INVALID_PHONE" });
+  }
+
   // Name is required at checkout, but we can create a session first
   const sessionToken = generateSessionToken();
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
@@ -4569,7 +4556,7 @@ app.post("/guests", async (req, reply) => {
   const guest = await prisma.guest.create({
     data: {
       name: name || "Guest", // Placeholder until checkout
-      phone: phone || null,
+      phone: phoneE164,
       email: email || null,
       sessionToken,
       expiresAt,
@@ -4606,7 +4593,16 @@ app.patch("/guests/:id", async (req, reply) => {
 
   const data = {};
   if (name) data.name = name;
-  if (phone !== undefined) data.phone = phone;
+  if (phone !== undefined) {
+    // Chappy SMS matches identity by exact E.164 (Task F2): normalize on write.
+    if (phone === null || phone === "") {
+      data.phone = null;
+    } else {
+      const phoneE164 = normalizePhoneE164(phone);
+      if (!phoneE164) return reply.code(400).send({ error: "Invalid phone number", code: "INVALID_PHONE" });
+      data.phone = phoneE164;
+    }
+  }
   if (email !== undefined) data.email = email;
   if (smsOptIn !== undefined) {
     data.smsOptIn = smsOptIn;
@@ -4852,7 +4848,16 @@ app.patch("/users/:id/phone", async (req, reply) => {
   const { phone, smsOptIn } = req.body || {};
 
   const data = {};
-  if (phone !== undefined) data.phone = phone;
+  if (phone !== undefined) {
+    // Chappy SMS matches identity by exact E.164 (Task F2): normalize on write.
+    if (phone === null || phone === "") {
+      data.phone = null;
+    } else {
+      const phoneE164 = normalizePhoneE164(phone);
+      if (!phoneE164) return reply.code(400).send({ error: "Invalid phone number", code: "INVALID_PHONE" });
+      data.phone = phoneE164;
+    }
+  }
   if (smsOptIn !== undefined) {
     data.smsOptIn = smsOptIn;
     // Record opt-in date/method when opting in
@@ -4922,34 +4927,22 @@ app.get("/users/:id/challenges", async (req, reply) => {
 
 // Create a new challenge
 app.post("/challenges", async (req, reply) => {
-  const { slug, name, description, rewardCents, iconEmoji, requirements, startsAt, endsAt } = req.body;
-
-  if (!slug || !name || !description || !requirements) {
+  const data = challengeCreateData(req.body);
+  if (!data) {
     return reply.code(400).send({ error: "slug, name, description, and requirements are required" });
   }
 
-  const challenge = await prisma.challenge.create({
-    data: {
-      slug,
-      name,
-      description,
-      rewardCents: rewardCents || 0,
-      iconEmoji: iconEmoji || "🎯",
-      requirements,
-      startsAt: startsAt ? new Date(startsAt) : null,
-      endsAt: endsAt ? new Date(endsAt) : null,
-      isActive: true,
-    },
-  });
+  const challenge = await prisma.challenge.create({ data });
+  const name = data.name;
 
-  console.log(`🎯 Challenge created: ${name}`);
+  console.log(`Challenge created: ${name}`);
   return challenge;
 });
 
 // Update a challenge
 app.patch("/challenges/:id", async (req, reply) => {
   const { id } = req.params;
-  const { name, description, rewardCents, iconEmoji, requirements, startsAt, endsAt, isActive } = req.body;
+  const { name, description, rewardCents, iconEmoji, iconKey, requirements, startsAt, endsAt, isActive } = req.body || {};
 
   const challenge = await prisma.challenge.update({
     where: { id },
@@ -4958,6 +4951,7 @@ app.patch("/challenges/:id", async (req, reply) => {
       ...(description !== undefined && { description }),
       ...(rewardCents !== undefined && { rewardCents }),
       ...(iconEmoji !== undefined && { iconEmoji }),
+      ...(iconKey !== undefined && { iconKey }),
       ...(requirements !== undefined && { requirements }),
       ...(startsAt !== undefined && { startsAt: startsAt ? new Date(startsAt) : null }),
       ...(endsAt !== undefined && { endsAt: endsAt ? new Date(endsAt) : null }),
@@ -4965,7 +4959,7 @@ app.patch("/challenges/:id", async (req, reply) => {
     },
   });
 
-  console.log(`🎯 Challenge updated: ${challenge.name}`);
+  console.log(`Challenge updated: ${challenge.name}`);
   return challenge;
 });
 
@@ -6195,6 +6189,12 @@ app.patch("/kitchen/orders/:id/status", async (req, reply) => {
     const result = await onOrderCompleted(prisma, { orderId: order.id, now: new Date() });
     if (result.cashbackCents > 0 || result.referralPaid || result.upgradedTo) {
       refreshUserWalletPass(order.userId).catch(console.error);
+    }
+    // Task F2: tier-up SMS after the membership transaction has committed.
+    if (result.upgradedTo) {
+      notifyTierUpIfNeeded(prisma, { userId: order.userId, upgradedTo: result.upgradedTo }).catch((err) =>
+        console.error("[orders] tier-up notify failed:", err?.message || err),
+      );
     }
   }
 
@@ -10122,6 +10122,13 @@ app.get("/analytics/ga4/hourly", async (req, reply) => {
 app.post("/meal-gifts", async (req, reply) => {
   const { locationId, amountCents, messageFromGiver, paymentIntentId } = req.body || {};
 
+  // D10a ruling: no promo codes and no store credit on meal gifts, ever.
+  const discounts = giftDiscountFields(req.body || {});
+  if (discounts.length) {
+    const err = notAllowedForGiftCards(discounts);
+    return reply.code(err.status).send({ error: err.code, message: err.message, ...err.extra });
+  }
+
   // Task A6: the giver is the verified caller (a body giverId is never
   // identity), and the gift exists only once the giver's PaymentIntent is
   // verified server-side (succeeded, exactly amountCents, metadata binds
@@ -11039,191 +11046,7 @@ app.get("/shop/products/inventory/low-stock", async (req, reply) => {
 // SHOP ORDERS
 // ====================
 
-// Generate shop order number
-function generateShopOrderNumber() {
-  const timestamp = Date.now().toString(36).toUpperCase();
-  const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-  return `SHOP-${timestamp}-${random}`;
-}
-
-// Create shop order
-app.post("/shop/orders", async (req, reply) => {
-  try {
-    const {
-      items, // [{productId, quantity, variant}]
-      userId,
-      guestId,
-      locationId,
-      fulfillmentType, // SHIPPING or IN_STORE_PICKUP
-      shipping, // {name, address1, address2, city, state, zip, phone, email}
-      creditsToApply,
-      giftCardId,
-      stripePaymentId,
-    } = req.body;
-
-    if (!items || items.length === 0) {
-      return reply.status(400).send({ error: "Items required" });
-    }
-
-    if (!fulfillmentType) {
-      return reply.status(400).send({ error: "Fulfillment type required" });
-    }
-
-    // Calculate totals
-    let subtotalCents = 0;
-    const orderItems = [];
-
-    for (const item of items) {
-      // Support both database ID and slug for product lookup
-      let product = await prisma.shopProduct.findUnique({
-        where: { id: item.productId },
-      });
-      if (!product) {
-        product = await prisma.shopProduct.findUnique({
-          where: { slug: item.productId },
-        });
-      }
-
-      if (!product) {
-        return reply.status(400).send({ error: `Product ${item.productId} not found` });
-      }
-
-      if (!product.isAvailable) {
-        return reply.status(400).send({ error: `Product ${product.name} is not available` });
-      }
-
-      // Check stock
-      if (product.stockCount !== null && product.stockCount < item.quantity) {
-        return reply.status(400).send({ error: `Insufficient stock for ${product.name}` });
-      }
-
-      subtotalCents += product.priceCents * item.quantity;
-      orderItems.push({
-        productId: product.id,
-        quantity: item.quantity,
-        priceCents: product.priceCents,
-        variant: item.variant || null,
-      });
-    }
-
-    // Calculate shipping (free over $75 for shipping orders)
-    const shippingCents = fulfillmentType === "SHIPPING" && subtotalCents < 7500 ? 899 : 0;
-
-    // Apply credits (NO LIMIT for shop orders)
-    let creditsApplied = 0;
-    if (creditsToApply && userId) {
-      const user = await prisma.user.findUnique({ where: { id: userId } });
-      if (user) {
-        creditsApplied = Math.min(creditsToApply, user.creditsCents, subtotalCents + shippingCents);
-      }
-    }
-
-    // Apply gift card
-    let giftCardApplied = 0;
-    if (giftCardId) {
-      const gc = await prisma.giftCard.findUnique({ where: { id: giftCardId } });
-      if (gc?.status === "ACTIVE" && gc.balanceCents > 0) {
-        const remaining = subtotalCents + shippingCents - creditsApplied;
-        giftCardApplied = Math.min(gc.balanceCents, remaining);
-      }
-    }
-
-    // Calculate tax (approximate 8% on taxable amount)
-    const taxableAmount = subtotalCents - creditsApplied - giftCardApplied;
-    const taxCents = Math.round(Math.max(0, taxableAmount) * 0.08);
-
-    const totalCents = subtotalCents + shippingCents + taxCents - creditsApplied - giftCardApplied;
-
-    // Generate order number
-    const orderNumber = generateShopOrderNumber();
-
-    // Create order
-    const shopOrder = await prisma.shopOrder.create({
-      data: {
-        orderNumber,
-        userId: userId || null,
-        guestId: guestId || null,
-        locationId: locationId || null,
-        subtotalCents,
-        shippingCents,
-        taxCents,
-        totalCents: Math.max(0, totalCents),
-        creditsApplied,
-        giftCardApplied,
-        giftCardId: giftCardId || null,
-        fulfillmentType,
-        shippingName: shipping?.name || null,
-        shippingAddress1: shipping?.address1 || null,
-        shippingAddress2: shipping?.address2 || null,
-        shippingCity: shipping?.city || null,
-        shippingState: shipping?.state || null,
-        shippingZip: shipping?.zip || null,
-        shippingCountry: shipping?.country || "US",
-        shippingPhone: shipping?.phone || null,
-        shippingEmail: shipping?.email || null,
-        stripePaymentId: stripePaymentId || null,
-        paymentStatus: stripePaymentId ? "PAID" : "PENDING",
-        fulfillmentStatus: "PENDING",
-        items: { create: orderItems },
-      },
-      include: { items: { include: { product: true } } },
-    });
-
-    // Deduct credits if applied
-    if (creditsApplied > 0 && userId) {
-      await prisma.user.update({
-        where: { id: userId },
-        data: { creditsCents: { decrement: creditsApplied } },
-      });
-
-      await prisma.creditEvent.create({
-        data: {
-          userId,
-          type: "CREDIT_APPLIED",
-          amountCents: -creditsApplied,
-          description: `Credits applied to shop order ${orderNumber}`,
-          metadata: { shopOrderId: shopOrder.id },
-        },
-      });
-    }
-
-    // Update gift card balance
-    if (giftCardApplied > 0 && giftCardId) {
-      const gc = await prisma.giftCard.findUnique({ where: { id: giftCardId } });
-      if (gc) {
-        const newBalance = gc.balanceCents - giftCardApplied;
-        await prisma.giftCard.update({
-          where: { id: giftCardId },
-          data: {
-            balanceCents: newBalance,
-            status: newBalance === 0 ? "EXHAUSTED" : "ACTIVE",
-          },
-        });
-      }
-    }
-
-    // Decrement product stock
-    for (const item of orderItems) {
-      const product = await prisma.shopProduct.findUnique({ where: { id: item.productId } });
-      if (product?.stockCount !== null) {
-        await prisma.shopProduct.update({
-          where: { id: item.productId },
-          data: { stockCount: { decrement: item.quantity } },
-        });
-      }
-    }
-
-    // Send order confirmation email
-    sendShopOrderConfirmation(shopOrder).catch(err => {
-      console.error("Failed to send shop order confirmation email:", err);
-    });
-
-    return reply.send(shopOrder);
-  } catch (error) {
-    console.error("Error creating shop order:", error);
-    return reply.status(500).send({ error: error.message });
-  }
-});
+// POST /shop/orders lives in shop/routes.js (Task D10a).
 
 // Get shop order by ID
 app.get("/shop/orders/:id", async (req, reply) => {
@@ -11251,125 +11074,8 @@ app.get("/shop/orders/:id", async (req, reply) => {
   }
 });
 
-// Update shop order (fulfillment, tracking)
-app.patch("/shop/orders/:id", async (req, reply) => {
-  try {
-    const { id } = req.params;
-    const updates = req.body || {};
-
-    // Task A7: payment status is never client input. (Its only caller, the
-    // Stripe webhook's metadata.shopOrderId branch, never fired: no shop
-    // PaymentIntent carries that key.) Verified shop payment is Task D10.
-    if (updates.paymentStatus !== undefined || updates.stripePaymentId !== undefined) {
-      return reply.status(400).send({ error: "unknown field: paymentStatus, stripePaymentId" });
-    }
-
-    // Allowed updates
-    const allowedFields = [
-      "fulfillmentStatus",
-      "trackingNumber",
-      "trackingUrl",
-      "shippedAt",
-      "deliveredAt",
-      "pickedUpAt",
-    ];
-
-    const data = {};
-    for (const field of allowedFields) {
-      if (updates[field] !== undefined) {
-        data[field] = updates[field];
-      }
-    }
-
-    const order = await prisma.shopOrder.update({
-      where: { id },
-      data,
-      include: { items: { include: { product: true } } },
-    });
-
-    return reply.send(order);
-  } catch (error) {
-    console.error("Error updating shop order:", error);
-    return reply.status(500).send({ error: error.message });
-  }
-});
-
-// Apply credits to shop order (NO LIMIT for shop orders)
-app.post("/shop/orders/:id/apply-credits", async (req, reply) => {
-  try {
-    const { id } = req.params;
-    const { amountCents } = req.body || {};
-
-    // Credits are spent only from the verified caller's balance, on a shop
-    // order that caller owns. A body userId is ignored (auth/hardening.js).
-    const who = await customerAuth.requireUser(req, reply);
-    if (!who) return reply;
-
-    if (!Number.isInteger(amountCents) || amountCents <= 0) {
-      return reply.status(400).send({ error: "amountCents required" });
-    }
-
-    const order = await prisma.shopOrder.findUnique({ where: { id } });
-    const verdict = shopCreditSpender(who, order);
-    if (verdict.status) {
-      return reply.status(verdict.status).send({ error: verdict.error });
-    }
-    const userId = verdict.userId;
-
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) {
-      return reply.status(404).send({ error: "User not found" });
-    }
-
-    // NO LIMIT for shop orders - apply full requested amount up to user balance
-    const creditsToApply = Math.min(amountCents, user.creditsCents, order.totalCents);
-
-    if (creditsToApply <= 0) {
-      return reply.status(400).send({ error: "No credits to apply" });
-    }
-
-    // Deduct, discount and record atomically, and only while the balance and
-    // the order total still cover it, so two concurrent requests can never
-    // leave a negative balance or a negative order total.
-    const CONFLICT = Symbol("conflict");
-    let updatedOrder;
-    try {
-      updatedOrder = await basePrisma.$transaction(async (tx) => {
-        const deducted = await tx.user.updateMany({
-          where: { id: userId, creditsCents: { gte: creditsToApply } },
-          data: { creditsCents: { decrement: creditsToApply } },
-        });
-        const discounted = await tx.shopOrder.updateMany({
-          where: { id, userId, totalCents: { gte: creditsToApply } },
-          data: { creditsApplied: { increment: creditsToApply }, totalCents: { decrement: creditsToApply } },
-        });
-        if (deducted.count !== 1 || discounted.count !== 1) throw CONFLICT;
-        await tx.creditEvent.create({
-          data: {
-            userId,
-            type: "CREDIT_APPLIED",
-            amountCents: -creditsToApply,
-            description: `Credits applied to shop order ${order.orderNumber}`,
-            metadata: { shopOrderId: id },
-          },
-        });
-        return tx.shopOrder.findUnique({ where: { id } });
-      });
-    } catch (err) {
-      if (err === CONFLICT) return reply.status(409).send({ error: "Balance or order total changed, try again" });
-      throw err;
-    }
-
-    return reply.send({
-      success: true,
-      creditsApplied: creditsToApply,
-      newTotal: updatedOrder.totalCents,
-    });
-  } catch (error) {
-    console.error("Error applying credits to shop order:", error);
-    return reply.status(500).send({ error: error.message });
-  }
-});
+// PATCH /shop/orders/:id, POST /shop/orders/:id/apply-credits and
+// POST /shop/orders/:id/confirm-payment live in shop/routes.js (Task D10a).
 
 // Get user's shop orders
 app.get("/users/:id/shop-orders", async (req, reply) => {
@@ -12292,6 +11998,26 @@ app.patch("/admin/shop/orders/:id", async (req, reply) => {
         } else {
           data[field] = updates[field];
         }
+      }
+    }
+
+    // Manual payment corrections stay possible here, but are recorded with who made them (D10a fix round 1).
+    if (updates.paymentStatus !== undefined || updates.stripePaymentId !== undefined) {
+      const existing = await prisma.shopOrder.findUnique({ where: { id } });
+      if (!existing) return reply.status(404).send({ error: "Order not found" });
+      const notes = paymentAuditNotes(existing, updates, { adminUserId: req.adminUserId || null, adminRole: req.adminRole || null });
+      if (notes) data.adminNotes = notes;
+      // A manual PENDING -> PAID runs the same settle as a card payment (fix round 2):
+      // recorded credits, gift card and stock are spent, or 409 for the admin.
+      if (updates.paymentStatus === "PAID" && existing.paymentStatus !== "PAID") {
+        try {
+          await markShopOrderPaidByStaff(prisma, { orderId: id, stripePaymentId: typeof updates.stripePaymentId === "string" ? updates.stripePaymentId : null });
+        } catch (err) {
+          if (err instanceof OrderError) return reply.status(err.status).send({ error: err.code, message: err.message });
+          throw err;
+        }
+        delete data.paymentStatus;
+        delete data.stripePaymentId;
       }
     }
 

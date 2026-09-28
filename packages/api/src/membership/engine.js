@@ -10,7 +10,7 @@
  * up in the member's favor beyond what's configured).
  */
 import { PROGRAM, tierRule, evaluateProgress } from "./program.js";
-import { grantCredit, grantCreditInTx, availableCredit, expiringSoon } from "./credits.js";
+import { grantCredit, grantCreditInTx, availableCredit, expiringSoon, stripExpiryWarnedMarker } from "./credits.js";
 import { spendBaseCents } from "../orders/pricing.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -462,13 +462,16 @@ export async function profileForUser(prisma, userId, now = new Date()) {
   const badges = userBadges.map((ub) => ({ ...ub, badge: badgesById.get(ub.badgeId) || null }));
 
   const activeRewards = rewards.filter((r) => !r.redeemedAt && r.windowEndsAt > now);
+  // Task F2 fix round 1: strip the internal expiry-warning marker before this
+  // reaches the customer (see credits.js stripExpiryWarnedMarker).
+  const expiringForClient = expiring.map(stripExpiryWarnedMarker);
 
   return {
     tier: user.membershipTier,
     cashbackPct: rule.cashbackPct,
     progress,
     credits,
-    expiring,
+    expiring: expiringForClient,
     rewards: activeRewards,
     badges,
     flags: {

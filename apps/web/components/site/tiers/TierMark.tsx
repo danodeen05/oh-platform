@@ -9,7 +9,7 @@
 import { TIER_PATHS, type Tier } from "./tier-paths";
 
 export type { Tier };
-export type Tone = "cream" | "gold" | "ink";
+export type Tone = "cream" | "gold" | "ink" | "current";
 
 export const TIERS = Object.keys(TIER_PATHS) as Tier[];
 
@@ -28,6 +28,9 @@ const TONE_VALUES: Record<Tone, string> = {
   cream: "var(--color-oh-cream, #F2EDE4)",
   gold: "var(--color-oh-gold, #C9A227)",
   ink: "var(--color-oh-ink, #2A2724)",
+  // Task C4 fix round 1: follows the surrounding text color (the dock's
+  // active and inactive states), like the in-house icons.
+  current: "currentColor",
 };
 
 /**

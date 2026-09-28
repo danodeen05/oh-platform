@@ -12,10 +12,9 @@
  * serves normally. Using `lab` (no underscore) instead, with the actual
  * production gate done here in code via `notFound()`.
  *
- * Sits outside both `(legacy)` and `(site)` (the route-group ruling in the
- * task brief): it isn't a real customer route, so it doesn't belong in
- * either the pre- or post-rebuild set, and a route group can't gate
- * `notFound()` for us anyway. This is a plain server component so the env
+ * Task C4 moved it into `(site)` so the kit is seen inside the new shell.
+ * A route group can't gate `notFound()` for us, so the gate stays here.
+ * This is a plain server component so the env
  * check runs before anything client-side mounts; the actual demo content
  * lives in a client component.
  */

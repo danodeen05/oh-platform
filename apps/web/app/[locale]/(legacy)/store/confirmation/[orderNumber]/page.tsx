@@ -1,8 +1,13 @@
 "use client";
 
-import { use } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useLocale } from "next-intl";
+import { useSiteApi, SITE_API_URL } from "@/lib/site/api";
+import { useGuest } from "@/contexts/guest-context";
+import { useCart } from "@/contexts/cart-context";
+import { shopConfirmPayment } from "@/lib/site/orders";
 
 interface Props {
   params: Promise<{ orderNumber: string }>;
@@ -11,6 +16,30 @@ interface Props {
 export default function OrderConfirmationPage({ params }: Props) {
   const { orderNumber } = use(params);
   const locale = useLocale();
+  const searchParams = useSearchParams();
+  const api = useSiteApi();
+  const { guest, isLoading: guestLoading } = useGuest();
+  const { clearCart } = useCart();
+  const [confirmError, setConfirmError] = useState<string | null>(null);
+  const confirmed = useRef(false);
+
+  // Stripe's redirect return (3D Secure, wallets) lands here with
+  // ?shopOrderId=&payment_intent=: the API verifies that PaymentIntent and
+  // marks the order PAID once (Task D10a; the webhook does the same).
+  const shopOrderId = searchParams.get("shopOrderId");
+  const paymentIntentId = searchParams.get("payment_intent");
+  useEffect(() => {
+    if (!shopOrderId || !paymentIntentId || guestLoading || confirmed.current) return;
+    confirmed.current = true;
+    shopConfirmPayment(shopOrderId, paymentIntentId, {
+      fetcher: api,
+      baseUrl: SITE_API_URL,
+      headers: guest?.sessionToken ? { "x-guest-session": guest.sessionToken } : undefined,
+    }).then((res) => {
+      if (res.ok) clearCart();
+      else setConfirmError(res.error.message || "We couldn't confirm your payment yet. If you were charged, we'll sort it out; please contact us.");
+    });
+  }, [shopOrderId, paymentIntentId, guestLoading, guest?.sessionToken, api, clearCart]);
 
   return (
     <div style={{ background: "#faf9f7", minHeight: "100vh" }}>
@@ -47,6 +76,11 @@ export default function OrderConfirmationPage({ params }: Props) {
           <p style={{ color: "rgba(255,255,255,0.8)", fontSize: "1.1rem" }}>
             Thank you for your order
           </p>
+          {confirmError && (
+            <p role="alert" style={{ color: "#fecaca", fontSize: "0.95rem", marginTop: "12px" }}>
+              {confirmError}
+            </p>
+          )}
         </div>
       </div>
 

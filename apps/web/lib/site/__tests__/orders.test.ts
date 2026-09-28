@@ -115,7 +115,21 @@ describe("lib/site/orders", () => {
     const o = await confirmFromWebhook({ id: "pi_o", metadata: { orderId: "o1" } }, { fetcher, baseUrl: "http://api", serviceKey: "k" });
     expect(o).toMatchObject({ handled: "order", ok: true, retry: false });
     expect(calls[1].url).toBe("http://api/orders/o1/confirm-payment");
-    expect(await confirmFromWebhook({ id: "pi_x", metadata: { source: "gift_card", giftCardId: "gc" } }, { fetcher })).toMatchObject({ handled: null, retry: false });
+    expect(await confirmFromWebhook({ id: "pi_x", metadata: { source: "other" } }, { fetcher })).toMatchObject({ handled: null, retry: false });
+  });
+
+  test("confirmFromWebhook (D10a): shop PaymentIntents go to the shop confirm, gift cards to the gift card confirm, with the service key", async () => {
+    const { calls, fetcher } = fakeFetch(200, { alreadyPaid: false });
+    const s = await confirmFromWebhook({ id: "pi_s", metadata: { kind: "shop", shopOrderId: "so 1" } }, { fetcher, baseUrl: "http://api", serviceKey: "k" });
+    expect(s).toMatchObject({ handled: "shop", ok: true, retry: false });
+    expect(calls[0].url).toBe("http://api/shop/orders/so%201/confirm-payment");
+    expect(bodyOf(calls[0])).toEqual({ paymentIntentId: "pi_s" });
+    expect(new Headers(calls[0].init.headers).get("x-admin-api-key")).toBe("k");
+    const g = await confirmFromWebhook({ id: "pi_g", metadata: { type: "gift_card", amountCents: "2500" } }, { fetcher, baseUrl: "http://api", serviceKey: "k" });
+    expect(g).toMatchObject({ handled: "gift_card", ok: true });
+    expect(calls[1].url).toBe("http://api/gift-cards/confirm-payment");
+    expect(bodyOf(calls[1])).toEqual({ paymentIntentId: "pi_g" });
+    expect(String(calls[0].init.body) + String(calls[1].init.body)).not.toMatch(/paymentStatus|amountCents/);
   });
 
   test("confirmFromWebhook asks Stripe to retry on a network error or an API 5xx, not on a refusal", async () => {
@@ -125,6 +139,32 @@ describe("lib/site/orders", () => {
     expect(five.retry).toBe(true);
     const refused = await confirmFromWebhook({ id: "pi", metadata: { orderId: "o1" } }, { fetcher: fakeFetch(402, { error: "PAYMENT_NOT_VERIFIED" }).fetcher });
     expect(refused).toMatchObject({ ok: false, retry: false, code: "PAYMENT_NOT_VERIFIED" });
+  });
+
+  test("confirmFromWebhook (fix round 1): shop and gift card without ADMIN_API_KEY ask Stripe to retry, without calling the API", async () => {
+    const { calls, fetcher } = fakeFetch(200, {});
+    for (const metadata of [{ kind: "shop", shopOrderId: "so1" }, { type: "gift_card", amountCents: "2500" }]) {
+      for (const serviceKey of [null, ""]) {
+        const r = await confirmFromWebhook({ id: "pi", metadata }, { fetcher, baseUrl: "http://api", serviceKey });
+        expect(r).toMatchObject({ ok: false, retry: true, code: "ADMIN_API_KEY_MISSING" });
+      }
+    }
+    expect(calls).toHaveLength(0);
+    // Food orders and groups don't need the key.
+    expect(await confirmFromWebhook({ id: "pi", metadata: { orderId: "o1" } }, { fetcher, baseUrl: "http://api" })).toMatchObject({ handled: "order", retry: false });
+  });
+
+  test("confirmFromWebhook (fix round 1): a 401/403 from the shop or gift card confirm is a key mismatch, so retry; other 4xx stay final", async () => {
+    for (const status of [401, 403]) {
+      for (const metadata of [{ kind: "shop", shopOrderId: "so1" }, { type: "gift_card" }]) {
+        const r = await confirmFromWebhook({ id: "pi", metadata }, { fetcher: fakeFetch(status, { error: "FORBIDDEN" }).fetcher, serviceKey: "wrong" });
+        expect(r).toMatchObject({ ok: false, retry: true, status });
+      }
+    }
+    const refused = await confirmFromWebhook({ id: "pi", metadata: { kind: "shop", shopOrderId: "so1" } }, { fetcher: fakeFetch(402, { error: "PAYMENT_NOT_VERIFIED" }).fetcher, serviceKey: "k" });
+    expect(refused).toMatchObject({ ok: false, retry: false, code: "PAYMENT_NOT_VERIFIED" });
+    const food = await confirmFromWebhook({ id: "pi", metadata: { orderId: "o1" } }, { fetcher: fakeFetch(403, { error: "FORBIDDEN" }).fetcher, serviceKey: "k" });
+    expect(food.retry).toBe(false);
   });
 
   test("paymentIntentIdFromClientSecret", () => {

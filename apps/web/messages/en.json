@@ -1624,6 +1624,7 @@
     "optional": "optional",
     "yourName": "Your name",
     "forOrderUpdates": "For order updates",
+    "invalidPhone": "Please enter a valid phone number, or leave it blank",
     "forReceipt": "For receipt",
     "smsConsent": "I agree to receive SMS text messages from Oh Beef Noodle Soup regarding my order (confirmation & ready-for-pickup alerts). Message frequency varies. Msg & data rates may apply. Reply STOP to unsubscribe.",
     "privacyPolicy": "Privacy Policy",
@@ -4414,6 +4415,50 @@
     "marker": {
       "guest": "You",
       "bowl": "Your bowl"
+    }
+  },
+  "site": {
+    "nav": {
+      "order": "Order",
+      "menu": "Menu",
+      "rewards": "Rewards",
+      "chappy": "Chappy",
+      "locations": "Locations",
+      "experience": "Experience",
+      "store": "Store",
+      "giftCards": "Gift cards",
+      "contact": "Contact",
+      "account": "My account"
+    },
+    "shell": {
+      "home": "Oh! Beef Noodle Soup home",
+      "mainNav": "Main",
+      "dock": "Quick actions",
+      "more": "More",
+      "close": "Close",
+      "language": "Language",
+      "account": "Account",
+      "signIn": "Sign in",
+      "skipToContent": "Skip to content",
+      "activeOrder": "Order {number}",
+      "activeOrderNoNumber": "Your order",
+      "viewOrder": "View order status",
+      "orderStatus": {
+        "placed": "Order placed",
+        "inQueue": "In the queue",
+        "checkedIn": "Checked in",
+        "preparing": "Cooking now",
+        "ready": "Almost ready",
+        "serving": "Enjoy your bowl",
+        "active": "In progress"
+      },
+      "footer": {
+        "tagline": "Beef noodle soup, made with care.",
+        "copyright": "Oh! Beef Noodle Soup, {year}. All rights reserved.",
+        "privacy": "Privacy",
+        "accessibility": "Accessibility",
+        "nav": "Footer links"
+      }
     }
   }
 }

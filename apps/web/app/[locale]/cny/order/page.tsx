@@ -11,6 +11,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 const CNY_PARTY_LOCATION_ID = "cny-party-2026";
 const CNY_TENANT_ID = "cmip6jbxa00002nnnktgu64dc"; // Oh! tenant
 const CNY_EVENT_CODE = "cny-party-2026";
+const CNY_GUEST_SESSION_KEY = "cny-guest-session"; // the order's guest session (Task D10a)
 
 // Menu Item IDs (from production seed)
 const MENU_ITEMS = {
@@ -68,10 +69,19 @@ function CNYOrderContent() {
       }
 
       try {
+        // The API returns the order number and QR code only to the guest
+        // session that placed the order (kept on this device); anyone else
+        // learns only that an order exists (Task D10a).
+        let guestSession: string | null = null;
+        try {
+          guestSession = localStorage.getItem(CNY_GUEST_SESSION_KEY);
+        } catch {
+          guestSession = null;
+        }
         const response = await fetch(
           `${API_URL}/orders/event/check?phone=${encodeURIComponent(guestPhone)}`,
           {
-            headers: { "x-tenant-slug": "oh" },
+            headers: { "x-tenant-slug": "oh", ...(guestSession ? { "x-guest-session": guestSession } : {}) },
           }
         );
 
@@ -79,8 +89,8 @@ function CNYOrderContent() {
           const data = await response.json();
           if (data.exists) {
             setExistingOrder({
-              orderNumber: data.kitchenOrderNumber,
-              qrCode: data.orderQrCode,
+              orderNumber: data.kitchenOrderNumber || "",
+              qrCode: data.orderQrCode || "",
               items: data.items || [],
             });
             setStep(3); // Go to review page to show existing order
@@ -170,19 +180,22 @@ function CNYOrderContent() {
 
       if (!response.ok) {
         if (data.error?.includes("One order per guest")) {
-          setExistingOrder({
-            orderNumber: data.existingOrderNumber,
-            qrCode: data.existingOrderQrCode || "",
-            items: [],
-          });
+          setExistingOrder({ orderNumber: "", qrCode: "", items: [] });
           setError(
-            `You've already placed your order (#${data.existingOrderNumber}). If you want to change your order, come visit us in the kitchen area.`
+            "You've already placed your order. If you want to change your order, come visit us in the kitchen area."
           );
         } else {
           setError(data.error || "Failed to place order");
         }
         setIsSubmitting(false);
         return;
+      }
+
+      // Keep this order's guest session so this device can see it again.
+      try {
+        if (data.guest?.sessionToken) localStorage.setItem(CNY_GUEST_SESSION_KEY, data.guest.sessionToken);
+      } catch {
+        // storage unavailable: the confirmation page still has the QR code
       }
 
       // Success! Redirect to confirmation
@@ -648,7 +661,7 @@ function CNYOrderContent() {
                       letterSpacing: "1px",
                     }}
                   >
-                    Order #{existingOrder.orderNumber}
+                    {existingOrder.orderNumber ? `Order #${existingOrder.orderNumber}` : "Your order is in"}
                   </p>
                   <div
                     style={{
@@ -737,7 +750,11 @@ function CNYOrderContent() {
             )}
 
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px", marginTop: "20px" }}>
-              {existingOrder ? (
+              {existingOrder && !existingOrder.qrCode ? (
+                <p style={{ color: "#D7B66E", fontSize: "0.85rem", textAlign: "center", margin: 0 }}>
+                  Come visit us in the kitchen area if you need anything.
+                </p>
+              ) : existingOrder ? (
                 <a
                   href={`/en/cny/order/status?qrCode=${existingOrder.qrCode}`}
                   className="cny-button cny-button-glow"
