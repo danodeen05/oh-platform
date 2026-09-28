@@ -86,6 +86,9 @@ import { createAdminAuth, parseAdminEmails } from "./auth/admin.js";
 import { registerAdminAuthHooks } from "./auth/admin-hook.js";
 import { registerTeamRoutes } from "./admin/team-routes.js";
 import { registerMembershipRoutes } from "./membership/routes.js";
+import { referralSummary } from "./membership/referral-summary.js";
+import { isTrackableChallenge, earlyOrderMet } from "./membership/challenge-rules.js";
+import { completeUserChallenge, claimChallengeReward } from "./membership/challenge-rewards.js";
 import { registerOrderRoutes } from "./orders/routes.js";
 import { registerGroupOrderRoutes } from "./orders/group-routes.js";
 import { registerGiftCardRoutes } from "./orders/gift-card-routes.js";
@@ -118,7 +121,7 @@ import { buildStatusView } from "./orders/status-view.js";
 import { registerOrderServiceGuard, registerPodServiceRoutes } from "./orders/pod-service.js";
 import { registerKitchenStatusRoutes } from "./orders/kitchen-status.js";
 import { publicMealGift, nextMealGiftFor } from "./orders/meal-gift-view.js";
-import { registerMealGiftPayForward } from "./orders/meal-gift-routes.js";
+import { registerMealGiftPayForward, registerMealGiftConfirm, mealGiftExpiresAt } from "./orders/meal-gift-routes.js";
 
 // DEMO- order codes resolve to a synthetic order (see demo/status-demo.js):
 // the plan's live status-page demo reads real routes without touching the DB.
@@ -314,7 +317,7 @@ const orderEffects = {
     sendOrderCompletedNotification(order.userId, order.id).catch((err) => console.error("Failed to send wallet order notification:", err));
     checkAndSendTierProgressNotification(order.userId).catch((err) => console.error("Failed to send wallet tier progress notification:", err));
     const items = await prisma.orderItem.findMany({ where: { orderId: order.id }, include: { menuItem: true } });
-    await updateChallengeProgress(order.userId, { totalCents: spendBaseCents(order), items });
+    await updateChallengeProgress(order.userId, { totalCents: spendBaseCents(order), items, createdAt: order.createdAt });
     if (order.creditsAppliedCents > 0) refreshUserWalletPass(order.userId).catch(console.error);
   },
   async mealGiftAccepted({ mealGiftId, order, appliedCents }) {
@@ -4317,51 +4320,15 @@ app.get("/users/:id/credits", async (req, reply) => {
     lifetimeEarningsCents,
     rank: userRank > 0 ? userRank : totalUsersWithEarnings + 1,
     totalUsers: totalUsersWithEarnings || 1,
+    // Task D9: the referral page's earnings (REFERRAL CreditLots) and the cap count.
+    referral: await referralSummary(prisma, id),
   };
 });
 
-// Deduct credits from user (for meal gifts, etc.)
-app.post("/users/:id/deduct-credits", async (req, reply) => {
-  const { id } = req.params;
-  const { amountCents, description, mealGiftId } = req.body || {};
-
-  if (!amountCents || amountCents <= 0) {
-    return reply.code(400).send({ error: "Valid amountCents required" });
-  }
-
-  const user = await prisma.user.findUnique({ where: { id } });
-  if (!user) return reply.code(404).send({ error: "User not found" });
-
-  if (user.creditsCents < amountCents) {
-    return reply.code(400).send({ error: "Insufficient credits" });
-  }
-
-  // Deduct from user balance
-  await prisma.user.update({
-    where: { id },
-    data: { creditsCents: { decrement: amountCents } },
-  });
-
-  // Record the debit event
-  await prisma.creditEvent.create({
-    data: {
-      userId: id,
-      type: "CREDIT_APPLIED",
-      amountCents: -amountCents,
-      description: description || "Credits used",
-      metadata: mealGiftId ? { mealGiftId } : undefined,
-    },
-  });
-
-  // Refresh wallet pass to show updated credit balance
-  refreshUserWalletPass(id).catch(console.error);
-
-  return {
-    success: true,
-    deducted: amountCents,
-    newBalance: user.creditsCents - amountCents
-  };
-});
+// POST /users/:id/deduct-credits was removed in Task D9 fix round 2: it
+// decremented User.creditsCents directly (no lots, so the cache and the
+// ledger diverged), and meal gifts can't be paid with credit anyway (D10a).
+// Credit is spent only through the ledger (membership/credits.js).
 
 // POST /orders/:id/apply-credits moved to orders/routes.js (Task A6): a quote update, spent at PAID.
 
@@ -4413,7 +4380,8 @@ app.get("/users/:id/profile", async (req, reply) => {
   const membership = await profileForUser(prisma, id, new Date());
   const locale = getLocale(req);
   user.badges = user.badges.map((ub) => ({ ...ub, badge: localizeBadge(ub.badge, locale) }));
-  user.challenges = user.challenges.map((uc) => ({ ...uc, challenge: localizeChallenge(uc.challenge, locale) }));
+  // Task D9 fix round 1: only challenges the engine can complete (membership/challenge-rules.js).
+  user.challenges = user.challenges.filter((uc) => isTrackableChallenge(uc.challenge)).map((uc) => ({ ...uc, challenge: localizeChallenge(uc.challenge, locale) }));
   // Fix round 1 (review, Important 2): the new UI reads `membership.badges`
   // directly (see the comment above), so it needs localizing too, not just
   // the back-compat `user.badges` shim.
@@ -4520,7 +4488,8 @@ app.get("/challenges", async (req, reply) => {
     where: { isActive: true },
     orderBy: { createdAt: "desc" },
   });
-  return challenges.map((challenge) => localizeChallenge(challenge, locale));
+  // Task D9 fix round 1: never list a challenge the engine can't complete.
+  return challenges.filter(isTrackableChallenge).map((challenge) => localizeChallenge(challenge, locale));
 });
 
 // Get user's challenge progress
@@ -4534,11 +4503,12 @@ app.get("/users/:id/challenges", async (req, reply) => {
       challenge: true,
     },
   });
-  userChallenges.forEach((uc) => {
-    if (uc.challenge) uc.challenge = localizeChallenge(uc.challenge, locale);
+  const tracked = userChallenges.filter((uc) => isTrackableChallenge(uc.challenge));
+  tracked.forEach((uc) => {
+    uc.challenge = localizeChallenge(uc.challenge, locale);
   });
 
-  return userChallenges;
+  return tracked;
 });
 
 // ====================
@@ -4636,6 +4606,10 @@ app.post("/users/:userId/challenges/:challengeId/enroll", async (req, reply) => 
   if (!challenge || !challenge.isActive) {
     return reply.code(404).send({ error: "Challenge not found or inactive" });
   }
+  // Task D9 fix round 1: no enrolling in a challenge the engine can't complete.
+  if (!isTrackableChallenge(challenge)) {
+    return reply.code(400).send({ error: "CHALLENGE_NOT_TRACKED" });
+  }
 
   // Check if already enrolled
   const existing = await prisma.userChallenge.findUnique({
@@ -4649,14 +4623,21 @@ app.post("/users/:userId/challenges/:challengeId/enroll", async (req, reply) => 
   // Initialize progress based on requirements type
   const initialProgress = { current: 0 };
 
-  const userChallenge = await prisma.userChallenge.create({
-    data: {
-      userId,
-      challengeId,
-      progress: initialProgress,
-    },
-    include: { challenge: true },
-  });
+  let userChallenge;
+  try {
+    userChallenge = await prisma.userChallenge.create({
+      data: {
+        userId,
+        challengeId,
+        progress: initialProgress,
+      },
+      include: { challenge: true },
+    });
+  } catch (err) {
+    // Two taps at once: the unique (userId, challengeId) keeps one enrollment.
+    if (err?.code === "P2002") return reply.code(400).send({ error: "Already enrolled in this challenge" });
+    throw err;
+  }
 
   console.log(`🎯 User ${userId} enrolled in challenge: ${challenge.name}`);
   return { ...userChallenge, challenge: localizeChallenge(userChallenge.challenge, locale) };
@@ -4684,28 +4665,13 @@ app.post("/users/:userId/challenges/:challengeId/claim", async (req, reply) => {
     return reply.code(400).send({ error: "Reward already claimed" });
   }
 
-  // Award the reward
-  await prisma.$transaction([
-    // Update user credits
-    prisma.user.update({
-      where: { id: userId },
-      data: { creditsCents: { increment: userChallenge.challenge.rewardCents } },
-    }),
-    // Create credit event
-    prisma.creditEvent.create({
-      data: {
-        userId,
-        type: "CHALLENGE_REWARD",
-        amountCents: userChallenge.challenge.rewardCents,
-        description: `Challenge completed: ${userChallenge.challenge.name}`,
-      },
-    }),
-    // Mark reward as claimed
-    prisma.userChallenge.update({
-      where: { id: userChallenge.id },
-      data: { rewardClaimed: true },
-    }),
-  ]);
+  // Task D9 fix round 2: a CHALLENGE credit lot through the ledger (it
+  // expires like all credit), claimed once per enrollment in one transaction.
+  // Rewards are granted at completion now; this is for older completions.
+  const claim = await claimChallengeReward(prisma, { userChallenge });
+  if (!claim.claimed) {
+    return reply.code(400).send({ error: "Reward already claimed" });
+  }
 
   console.log(`🎉 User ${userId} claimed reward for challenge: ${userChallenge.challenge.name}`);
 
@@ -6138,6 +6104,8 @@ async function updateChallengeProgress(userId, orderData) {
 
     // Skip if challenge hasn't started yet
     if (userChallenge.challenge.startsAt && userChallenge.challenge.startsAt > now) continue;
+    // Task D9 fix round 1: only the types this function (or the gift flow) advances.
+    if (!isTrackableChallenge(userChallenge.challenge)) continue;
 
     const requirements = userChallenge.challenge.requirements;
     const progress = userChallenge.progress || { current: 0 };
@@ -6178,7 +6146,7 @@ async function updateChallengeProgress(userId, orderData) {
 
       case "category_orders":
         // Check if order contains items from specific category
-        if (orderData.items?.some(item => item.categoryType === requirements.categoryType)) {
+        if (orderData.items?.some(item => (item.categoryType ?? item.menuItem?.categoryType) === requirements.categoryType)) {
           newCurrent = progress.current + 1;
           completed = newCurrent >= target;
         }
@@ -6197,9 +6165,9 @@ async function updateChallengeProgress(userId, orderData) {
         break;
 
       case "early_order":
-        // Check if order was placed before the specified hour
-        const orderHour = new Date(orderData.createdAt || new Date()).getHours();
-        if (orderHour < (requirements.beforeHour || 11)) {
+        // Placed before the specified hour on the Denver clock (Task D9 fix
+        // round 1: was the server's getHours(), UTC on Railway).
+        if (earlyOrderMet(orderData.createdAt || new Date(), requirements.beforeHour || 11)) {
           newCurrent = 1;
           completed = true;
         }
@@ -6216,24 +6184,23 @@ async function updateChallengeProgress(userId, orderData) {
         break;
     }
 
-    // Update progress
-    const updateData = {
-      progress: { ...progress, current: newCurrent },
-      updatedAt: new Date(),
-    };
+    const nextProgress = { ...progress, current: newCurrent };
 
     if (completed) {
-      updateData.completedAt = new Date();
+      // Task D9 fix round 2: completion and its reward (a CHALLENGE credit
+      // lot through the ledger) in one transaction, once per enrollment.
+      const done = await completeUserChallenge(prisma, { userChallenge, progress: nextProgress, now: new Date() });
+      if (done.completed) {
+        console.log(`🎯 Challenge completed: ${userChallenge.challenge.name} by user ${userId} (+${done.rewardCents}c credit)`);
+        if (done.rewardCents > 0) refreshUserWalletPass(userId).catch(console.error);
+      }
+      continue;
     }
 
     await prisma.userChallenge.update({
       where: { id: userChallenge.id },
-      data: updateData,
+      data: { progress: nextProgress, updatedAt: new Date() },
     });
-
-    if (completed) {
-      console.log(`🎯 Challenge completed: ${userChallenge.challenge.name} by user ${userId}`);
-    }
   }
 }
 
@@ -9688,15 +9655,11 @@ app.post("/meal-gifts", async (req, reply) => {
     return reply.code(404).send({ error: "Location not found" });
   }
 
-  // Calculate expiration: end of business day (9pm in location timezone)
+  // Expires at the end of the business day: 9pm on the location's clock
+  // (tomorrow when it's already past 9pm there). Task D9: this used the
+  // server's clock before (orders/meal-gift-routes.js mealGiftExpiresAt).
   const now = new Date();
-  const expiresAt = new Date();
-  expiresAt.setHours(21, 0, 0, 0); // 9pm
-
-  // If it's already past 9pm, expire tomorrow at 9pm
-  if (now.getHours() >= 21) {
-    expiresAt.setDate(expiresAt.getDate() + 1);
-  }
+  const expiresAt = mealGiftExpiresAt(now, location.timezone);
 
   let created;
   try {
@@ -9754,6 +9717,8 @@ app.get("/meal-gifts/next/:locationId", async (req, reply) => {
 // POST /meal-gifts/:id/pay-forward: signed-in caller only, the recipient is the
 // caller (Task D5 fix round 2, orders/meal-gift-routes.js).
 await registerMealGiftPayForward(app, { prisma, customerAuth });
+// POST /meal-gifts/confirm-payment: the Stripe webhook records a paid gift (Task D9 fix round 1).
+await registerMealGiftConfirm(app, { prisma, stripe, customerAuth });
 
 // POST /meal-gifts/expire - Expire and refund unclaimed gifts (cron job)
 app.post("/meal-gifts/expire", async (req, reply) => {

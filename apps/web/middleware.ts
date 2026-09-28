@@ -15,7 +15,6 @@ const CNY_HOSTNAMES = ["cny.ohbeef.com", "cny.localhost"];
 // /member is not here (Task D8): signed out, the passport page shows its own
 // translated sign-in state; the API still answers only the member (requireSelf).
 const isProtectedRoute = createRouteMatcher([
-  "/:locale/referral(.*)",
   "/:locale/agents(.*)",
   "/api/agents(.*)",
 ]);
@@ -30,6 +29,11 @@ const isPublicRoute = createRouteMatcher([
   "/:locale/locations(.*)",
   "/:locale/rewards(.*)",
   "/:locale/member(.*)",
+  "/:locale/loyalty(.*)",
+  // Task D9: signed-out visitors see the referral pitch with a sign-in panel,
+  // and anyone can read the challenges (giving a meal asks for sign-in).
+  "/:locale/referral(.*)",
+  "/:locale/challenges(.*)",
   "/:locale/gift-cards(.*)",
   "/:locale/store(.*)",
   "/:locale/contact(.*)",

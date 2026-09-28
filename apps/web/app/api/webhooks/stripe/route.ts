@@ -101,7 +101,9 @@ async function handlePaymentSucceeded(paymentIntent: Stripe.PaymentIntent) {
   // Shop orders go to POST /shop/orders/:id/confirm-payment (metadata
   // {kind:"shop", shopOrderId}); gift cards to POST /gift-cards/confirm-payment,
   // which finds the card by its PaymentIntent or issues it from the server-built
-  // metadata. A retryable failure (network, API 5xx) throws so Stripe delivers
+  // metadata. Meal gifts (Task D9 fix round 1, metadata {type:"meal_gift"}) go
+  // to POST /meal-gifts/confirm-payment, which records the gift from the
+  // PaymentIntent when the giver's page never did. A retryable failure (network, API 5xx) throws so Stripe delivers
   // the event again; a verified refusal or "already paid" is final.
   const result = await confirmFromWebhook(paymentIntent, { baseUrl: API_BASE_URL, headers: serverApiHeaders(), serviceKey: process.env.ADMIN_API_KEY || null });
   if (result.handled) {

@@ -146,6 +146,7 @@ export const MUST_STAY_OPEN = Object.freeze([
   { method: "POST", url: "/kiosk/heartbeat" },
   { method: "POST", url: "/shop/orders/:id/confirm-payment" },
   { method: "POST", url: "/gift-cards/confirm-payment" },
+  { method: "POST", url: "/meal-gifts/confirm-payment" },
   { method: "GET", url: "/catering/site-config/order-now" },
   { method: "GET", url: "/catering/kitchen-locations" },
 ]);

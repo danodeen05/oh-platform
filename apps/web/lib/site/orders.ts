@@ -235,6 +235,11 @@ export function giftCardConfirmPayment(paymentIntentId: string, opts?: CallOptio
   return call<{ success: boolean; giftCardId: string; created: boolean }>("/gift-cards/confirm-payment", "POST", { paymentIntentId }, opts);
 }
 
+/** Task D9 fix round 1: the webhook records a paid meal gift from its PaymentIntent (ADMIN_API_KEY). */
+export function mealGiftConfirmPayment(paymentIntentId: string, opts?: CallOptions) {
+  return call<{ success: boolean; mealGiftId: string; created: boolean }>("/meal-gifts/confirm-payment", "POST", { paymentIntentId }, opts);
+}
+
 /**
  * A confirm call that may succeed if repeated: a network failure or a 5xx
  * from the API. The Stripe webhook answers 5xx for these so Stripe retries.
@@ -260,20 +265,26 @@ export function isRetryableFailure(res: { ok: boolean; status: number; error?: O
 export async function confirmFromWebhook(
   paymentIntent: { id: string; metadata?: Record<string, string> | null },
   opts: CallOptions & { serviceKey?: string | null } = {},
-): Promise<{ handled: "group" | "order" | "shop" | "gift_card" | null; ok: boolean; retry: boolean; status: number; code: string | null }> {
+): Promise<{ handled: "group" | "order" | "shop" | "gift_card" | "meal_gift" | null; ok: boolean; retry: boolean; status: number; code: string | null }> {
   const md = paymentIntent.metadata || {};
   const call = { ...opts, headers: opts.serviceKey ? { ...(opts.headers as Record<string, string>), "x-admin-api-key": opts.serviceKey } : opts.headers };
-  let handled: "group" | "order" | "shop" | "gift_card" | null = null;
+  let handled: "group" | "order" | "shop" | "gift_card" | "meal_gift" | null = null;
   let res: OrderApiResult<unknown> | null = null;
   if (md.kind === "group" && md.groupCode) {
     handled = "group";
     res = await groupConfirmPayment(md.groupCode, paymentIntent.id, call);
-  } else if ((md.kind === "shop" && md.shopOrderId) || md.type === "gift_card") {
+  } else if ((md.kind === "shop" && md.shopOrderId) || md.type === "gift_card" || md.type === "meal_gift") {
     // Service-only confirms (fix round 1): without ADMIN_API_KEY they can only
     // fail, so ask Stripe to retry instead of dropping a charged payment.
-    handled = md.kind === "shop" ? "shop" : "gift_card";
+    // Meal gifts (Task D9 fix round 1) are recorded from the PaymentIntent's metadata.
+    handled = md.kind === "shop" ? "shop" : md.type === "meal_gift" ? "meal_gift" : "gift_card";
     if (!opts.serviceKey) return { handled, ok: false, retry: true, status: 0, code: "ADMIN_API_KEY_MISSING" };
-    res = handled === "shop" ? await shopConfirmPayment(md.shopOrderId, paymentIntent.id, call) : await giftCardConfirmPayment(paymentIntent.id, call);
+    res =
+      handled === "shop"
+        ? await shopConfirmPayment(md.shopOrderId, paymentIntent.id, call)
+        : handled === "meal_gift"
+          ? await mealGiftConfirmPayment(paymentIntent.id, call)
+          : await giftCardConfirmPayment(paymentIntent.id, call);
     // 401/403 here means the key doesn't match the API's, not a verified refusal.
     if (!res.ok && (res.status === 401 || res.status === 403)) {
       return { handled, ok: false, retry: true, status: res.status, code: res.error?.code ?? "SERVICE_KEY_REJECTED" };

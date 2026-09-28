@@ -19,6 +19,7 @@ import type { DraftSavings } from "@/lib/site/order-draft";
 import { formatCents } from "@/lib/site/order-flow";
 import type { OrderApiError } from "@/lib/site/orders";
 import { fetchNextMealGift, type MealGift } from "@/lib/site/meal-gift";
+import { MealGiftSheet } from "@/components/site/gift/MealGiftSheet";
 import { Receipt, type ReceiptLine, type ReceiptTotals } from "./Receipt";
 import type { ServerQuote } from "./useQuote";
 
@@ -45,6 +46,7 @@ export function SavingsStep({ locationId, userId, api, savings, onSavings, quote
   const t = useTranslations("orderFlow.savings");
   const tw = useTranslations("orderFlow.warnings");
   const te = useTranslations("orderFlow.errors");
+  const tg = useTranslations("mealGiftSheet");
   const locale = useLocale();
   const money = (c: number) => formatCents(c, locale);
   const day = (iso: string) => new Intl.DateTimeFormat(locale, { month: "short", day: "numeric", timeZone: "America/Denver" }).format(new Date(iso));
@@ -53,6 +55,9 @@ export function SavingsStep({ locationId, userId, api, savings, onSavings, quote
   const [promoInput, setPromoInput] = useState(savings.promoCode || "");
   const [giftInput, setGiftInput] = useState(savings.giftCardCode || "");
   const [mealGift, setMealGift] = useState<MealGift | null>(null);
+  // Task D9: take it or pass it on (MealGiftSheet); pass-on needs a signed-in member.
+  const [giftSheet, setGiftSheet] = useState(false);
+  const [passed, setPassed] = useState(false);
 
   // A meal someone paid forward at this location (fetchNextMealGift,
   // lib/site/meal-gift.ts - Task D5 fix round 3 follow-up: uses the
@@ -190,7 +195,7 @@ export function SavingsStep({ locationId, userId, api, savings, onSavings, quote
         </Block>
 
         {/* A meal paid forward */}
-        {mealGift || savings.mealGiftId ? (
+        {mealGift || savings.mealGiftId || passed ? (
           <Block name="mealGift" title={t("mealGift")}>
             {mealGift ? (
               <button
@@ -216,6 +221,39 @@ export function SavingsStep({ locationId, userId, api, savings, onSavings, quote
                   {savings.mealGiftId === mealGift.id ? t("applied") : t("apply")}
                 </span>
               </button>
+            ) : null}
+            {mealGift && userId && savings.mealGiftId !== mealGift.id ? (
+              <button
+                type="button"
+                data-meal-gift-open
+                onClick={() => setGiftSheet(true)}
+                className={`mt-1 min-h-11 cursor-pointer appearance-none border-0 bg-transparent p-0 font-[inherit] text-sm font-semibold text-oh-cream underline underline-offset-4 ${FOCUS}`}
+              >
+                {tg("pass")}
+              </button>
+            ) : null}
+            {passed ? (
+              <p role="status" data-meal-gift-passed className="m-0 text-[15px] text-oh-cream">
+                {tg("passed")}
+              </p>
+            ) : null}
+            {mealGift && giftSheet ? (
+              <MealGiftSheet
+                open={giftSheet}
+                gift={mealGift}
+                signedIn={Boolean(userId)}
+                amount={money(mealGift.amountCents)}
+                onTake={() => {
+                  setGiftSheet(false);
+                  onSavings({ ...savings, mealGiftId: mealGift.id });
+                }}
+                onPassed={() => {
+                  setGiftSheet(false);
+                  setMealGift(null);
+                  setPassed(true);
+                }}
+                onClose={() => setGiftSheet(false)}
+              />
             ) : null}
             {savings.mealGiftId && (warnings.has("MEAL_GIFT_UNAVAILABLE") || (mealGift && mealGift.id !== savings.mealGiftId)) ? (
               <p role="alert" className="m-0 mt-2 text-sm text-oh-ember-light">

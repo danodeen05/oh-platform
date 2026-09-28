@@ -88,7 +88,6 @@ export const PUBLIC_ROUTES = Object.freeze([
   p("PATCH", "/guests/:id", "customer"),
   p("POST", "/guests/session/refresh", "customer"),
   p("GET", "/users/:id/credits", "customer"),
-  p("POST", "/users/:id/deduct-credits", "customer"),
   p("GET", "/users/:id/profile", "customer"),
   p("PATCH", "/users/:id", "customer"), // self-update (locale today; Task F2)
   p("PATCH", "/users/:id/phone", "customer"),
@@ -143,6 +142,8 @@ export const PUBLIC_ROUTES = Object.freeze([
   // Meal gifts
   p("POST", "/meal-gifts", "customer"),
   p("GET", "/meal-gifts/next/:locationId", "customer"),
+  // Stripe webhook (x-admin-api-key): records a paid meal gift from its PaymentIntent (Task D9 fix round 1).
+  p("POST", "/meal-gifts/confirm-payment", "webhook"),
   p("POST", "/meal-gifts/:id/pay-forward", "customer"), // Task D5 fix round 2: signed-in caller only; the recipient is the caller
   p("GET", "/meal-gifts/:id", "customer"),
   p("GET", "/users/:userId/meal-gifts", "customer"),

@@ -54,3 +54,46 @@ export async function claimPendingReferral(
   const body = await res.json().catch(() => null);
   return body?.referralJustApplied ? "applied" : "not-applied";
 }
+
+// ------------------------------------------------------------ sharing (Task D9)
+
+/** A member's referral link. Locale-free, so the friend lands in their own language. */
+export function referralLink(origin: string, code: string): string {
+  return `${origin.replace(/\/$/, "")}/order?ref=${encodeURIComponent(code)}`;
+}
+
+export type ShareOutcome = "shared" | "copied" | "cancelled" | "failed";
+
+export type ShareNavigator = {
+  share?: (data: ShareData) => Promise<void>;
+  canShare?: (data: ShareData) => boolean;
+  clipboard?: { writeText: (text: string) => Promise<void> };
+};
+
+/**
+ * The phone's share sheet when there is one (`navigator.share`), else the
+ * clipboard. Closing the share sheet is "cancelled" (no copy, no toast); a
+ * share that fails for any other reason falls back to copying. "failed"
+ * means neither worked, and the page selects the link to copy by hand.
+ */
+export async function shareOrCopy(nav: ShareNavigator | null | undefined, data: { title: string; text: string; url: string }): Promise<ShareOutcome> {
+  if (nav?.share && (!nav.canShare || nav.canShare(data))) {
+    try {
+      await nav.share(data);
+      return "shared";
+    } catch (err) {
+      if ((err as { name?: string } | null)?.name === "AbortError") return "cancelled";
+    }
+  }
+  return copyText(nav, data.url);
+}
+
+export async function copyText(nav: ShareNavigator | null | undefined, text: string): Promise<ShareOutcome> {
+  try {
+    if (!nav?.clipboard?.writeText) return "failed";
+    await nav.clipboard.writeText(text);
+    return "copied";
+  } catch {
+    return "failed";
+  }
+}
