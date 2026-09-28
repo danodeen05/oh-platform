@@ -17,6 +17,7 @@
  */
 import { orderOwnerId } from "../auth/customer.js";
 import { onOrderCompleted as engineOnOrderCompleted } from "../membership/engine.js";
+import { notifyTierUpIfNeeded } from "../notifications.js";
 import { canSeeFullOrder, safeOrderView } from "./order-view.js";
 import {
   quoteOrder,
@@ -332,7 +333,13 @@ export async function registerOrderRoutes(app, {
 
     // Membership payouts only on a real transition into COMPLETED.
     if (status === "COMPLETED" && current.status !== "COMPLETED") {
-      await onOrderCompleted(prisma, { orderId: id, now: now() });
+      const membershipResult = await onOrderCompleted(prisma, { orderId: id, now: now() });
+      // Task F2: tier-up SMS after the membership transaction has committed.
+      if (membershipResult?.upgradedTo) {
+        notifyTierUpIfNeeded(prisma, { userId: order.userId, upgradedTo: membershipResult.upgradedTo }).catch((err) =>
+          console.error("[orders] tier-up notify failed:", err?.message || err),
+        );
+      }
     }
     return (await viewerCanSeeFull(req, order)) ? order : safeOrderView(order);
   });

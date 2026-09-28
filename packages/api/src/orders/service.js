@@ -23,6 +23,7 @@ import { priceLines, computeTotals, rewardDiscountCents, bowlCount, spendBaseCen
 import { availableCredit, spendCreditInTx, CreditShortError } from "../membership/credits.js";
 import { firstUnreleasedItem, redeemReward, onOrderCompleted as engineOnOrderCompleted } from "../membership/engine.js";
 import { canAcceptOrders, validateArrivalTime } from "../utils/operating-hours.js";
+import { notifyTierUpIfNeeded } from "../notifications.js";
 
 export const DINE_IN_DISABLED_MESSAGE = "Online ordering is currently unavailable. Please visit us in person.";
 /** How long a pod is held: while checking out, and again from payment (advertised as 10 minutes). */
@@ -950,11 +951,12 @@ async function settleInTx(tx, orderId, { expectedAmountDueCents, paymentIntentId
 /** Side effects after a PAID commit. Each is isolated: the payment is already recorded. */
 async function runPaidEffects(prisma, order, effects, now) {
   const run = async (name, fn) => {
-    if (typeof fn !== "function") return;
+    if (typeof fn !== "function") return undefined;
     try {
-      await fn();
+      return await fn();
     } catch (err) {
       console.error(`[orders] ${name} failed for order ${order.id}:`, err?.message || err);
+      return undefined;
     }
   };
   await run("sendOrderConfirmation", () => effects.sendOrderConfirmation?.(order));
@@ -966,7 +968,13 @@ async function runPaidEffects(prisma, order, effects, now) {
   // side now that it's PAID. onOrderCompleted is idempotent on its own claim.
   if (order.status === "COMPLETED") {
     const complete = effects.onOrderCompleted || engineOnOrderCompleted;
-    await run("onOrderCompleted", () => complete(prisma, { orderId: order.id, now }));
+    const membershipResult = await run("onOrderCompleted", () => complete(prisma, { orderId: order.id, now }));
+    // Task F2: tier-up SMS, sent after the membership transaction has
+    // committed (never from inside it) - fire-and-forget, same as the other
+    // wallet notifications below.
+    if (membershipResult?.upgradedTo) {
+      await run("notifyTierUp", () => notifyTierUpIfNeeded(prisma, { userId: order.userId, upgradedTo: membershipResult.upgradedTo }));
+    }
   }
 }
 

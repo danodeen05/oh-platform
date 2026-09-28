@@ -9,7 +9,8 @@
  * - Challenge Deadlines: Daily at 10am local time
  * - Credits Reminder: Weekly on Monday at 10am
  * - Tier Progress: After order completion (triggered via API)
- * - Expire Credits: Daily at 3am (membership/credits.js expireLots)
+ * - Expire Credits: Daily at 3am (membership/credits.js expireLots, then
+ *   sendExpiryWarnings for lots about to expire - Task F2)
  * - Membership Sweep: Daily at 3:10am (membership/engine.js sweepUnprocessedCompletedOrders)
  * - Quarterly Perk: Daily at 3:05am, idempotent per quarter
  *   (membership/engine.js issueQuarterlyPerks)
@@ -26,7 +27,7 @@ import {
   sendBatchCreditsReminder,
   checkAndSendChallengeDeadlineNotifications,
 } from '../wallet/wallet-notification-service.js';
-import { expireLots } from '../membership/credits.js';
+import { expireLots, sendExpiryWarnings } from '../membership/credits.js';
 import { issueQuarterlyPerks, sweepUnprocessedCompletedOrders } from '../membership/engine.js';
 
 const prisma = new PrismaClient();
@@ -64,6 +65,13 @@ async function runJob(jobName) {
       case 'expire-credits':
         result = await expireLots(prisma);
         console.log(`[CRON] Expired ${result} credit lot(s)`);
+        // Task F2: warn members whose credit is about to expire (once per lot,
+        // ever - see membership/credits.js sendExpiryWarnings/markExpiryWarned).
+        // Honors SUPPORT_NOTIFY the same way every other customer-SMS path does.
+        {
+          const warned = await sendExpiryWarnings(prisma);
+          console.log(`[CRON] Credit-expiry warnings: ${warned.sent} sent, ${warned.warned} lot(s) considered`);
+        }
         break;
 
       case 'quarterly-perk':

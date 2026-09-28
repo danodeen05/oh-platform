@@ -14,6 +14,7 @@
 import { PrismaClient } from "@oh/db";
 import Stripe from "stripe";
 import { sendSMS } from "../notifications.js";
+import { normalizePhoneE164 } from "../utils/phone.js";
 import QRCode from "qrcode";
 import {
   enrichFromWebsite,
@@ -2142,11 +2143,13 @@ export async function registerCateringRoutes(app) {
       } catch {}
       const kitchenOrderNumber = String(count + 1).padStart(4, "0");
 
-      // Create guest record
+      // Create guest record. `normalizedPhone` (digits only) stays as-is for
+      // the "one order per phone" contains-matching above; Guest.phone itself
+      // is stored E.164 (Task F2) so Chappy SMS can match identity exactly.
       const guest = await prisma.guest.create({
         data: {
           name: guestName || "Catering Guest",
-          phone: normalizedPhone || null,
+          phone: normalizePhoneE164(guestPhone) || null,
           sessionToken: `cat-${Date.now()}-${Math.random().toString(36).substr(2,9)}`,
           expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         },

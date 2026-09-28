@@ -10,6 +10,9 @@ import {
   expiringSoon,
   convertLegacyBalances,
   CreditShortError,
+  lotsNeedingExpiryWarning,
+  markExpiryWarned,
+  sendExpiryWarnings,
 } from "../credits.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -253,4 +256,78 @@ test("the per-lot decrement is conditional: a lot drained under us is CreditShor
   assert.deepEqual(calls[0].where, { id: "l1", remainingCents: { gte: 300 }, expiresAt: { gt: now } });
   assert.deepEqual(calls[0].data, { remainingCents: { decrement: 300 } });
   await assert.rejects(spendCreditInTx(tx, { userId: "u1", amountCents: 0, orderId: "o1", now }), RangeError);
+});
+
+test("lotsNeedingExpiryWarning finds unwarned lots inside the warning window, and markExpiryWarned is a note-based marker (no new CreditEvent, no migration)", async () => {
+  const prisma = makeMemoryPrisma({ users: [{ id: "u1", creditsCents: 0 }] });
+  const now = new Date("2026-10-01T12:00:00-06:00");
+  // Inside the warning window.
+  const soon = await grantCredit(prisma, {
+    userId: "u1", source: "CASHBACK", amountCents: 50,
+    now: new Date(now.getTime() - (PROGRAM.creditExpiryDays - (PROGRAM.expiryWarningDays - 1)) * DAY_MS),
+  });
+  // Far in the future: not due yet.
+  await grantCredit(prisma, { userId: "u1", source: "CASHBACK", amountCents: 50, now });
+
+  const first = await lotsNeedingExpiryWarning(prisma, now);
+  assert.deepEqual(first.map((l) => l.id), [soon.id]);
+
+  await markExpiryWarned(prisma, soon.id);
+  const lot = await prisma.creditLot.findUnique({ where: { id: soon.id } });
+  assert.match(lot.note || "", /\[expiry-warned\]/);
+
+  // Once warned, a second cron run (even with the same `now`) doesn't find it again.
+  const second = await lotsNeedingExpiryWarning(prisma, now);
+  assert.deepEqual(second, []);
+
+  // No CreditEvent was written for the warning itself - just the two original
+  // CASHBACK grants - so the warning never shows up in the customer's own
+  // credit history (GET /users/:id/credits returns raw creditEvents).
+  const events = await prisma.creditEvent.findMany({ where: { userId: "u1" } });
+  assert.equal(events.length, 2);
+  assert.ok(events.every((e) => e.type === "CASHBACK"));
+});
+
+test("markExpiryWarned is idempotent and preserves an existing note", async () => {
+  const prisma = makeMemoryPrisma({
+    users: [{ id: "u1", creditsCents: 100 }],
+    creditLots: [{ id: "l1", userId: "u1", source: "CASHBACK", amountCents: 100, remainingCents: 100, expiresAt: new Date("2026-11-01"), note: "1% cashback on order" }],
+  });
+  const once = await markExpiryWarned(prisma, "l1");
+  assert.match(once.note, /^1% cashback on order \[expiry-warned\]$/);
+  const twice = await markExpiryWarned(prisma, "l1");
+  assert.equal(twice.note, once.note); // no double-append
+});
+
+test("sendExpiryWarnings: the warning is sent once per lot across two cron runs", async () => {
+  const now = new Date("2026-10-01T12:00:00-06:00");
+  const prisma = makeMemoryPrisma({
+    users: [{ id: "u1", creditsCents: 50, phone: "+18015551234", smsOptIn: true, locale: "en" }],
+    creditLots: [
+      { id: "l1", userId: "u1", source: "CASHBACK", amountCents: 50, remainingCents: 50, expiresAt: new Date(now.getTime() + 3 * DAY_MS) },
+    ],
+  });
+  const logs = [];
+  const first = await sendExpiryWarnings(prisma, { now, env: { SUPPORT_NOTIFY: "log" }, log: (l) => logs.push(l) });
+  assert.equal(first.warned, 1);
+  assert.equal(logs.length, 1);
+  assert.match(logs[0], /would send credit-expiry warning for lot l1/);
+
+  const second = await sendExpiryWarnings(prisma, { now, env: { SUPPORT_NOTIFY: "log" }, log: (l) => logs.push(l) });
+  assert.equal(second.warned, 0); // already marked - not considered again
+  assert.equal(logs.length, 1); // no new log line
+});
+
+test("sendExpiryWarnings: SUPPORT_NOTIFY=off does nothing at all, not even marking the lot", async () => {
+  const now = new Date("2026-10-01T12:00:00-06:00");
+  const prisma = makeMemoryPrisma({
+    users: [{ id: "u1", creditsCents: 50, phone: "+18015551234", smsOptIn: true }],
+    creditLots: [
+      { id: "l1", userId: "u1", source: "CASHBACK", amountCents: 50, remainingCents: 50, expiresAt: new Date(now.getTime() + 3 * DAY_MS) },
+    ],
+  });
+  const result = await sendExpiryWarnings(prisma, { now, env: { SUPPORT_NOTIFY: "off" } });
+  assert.deepEqual(result, { sent: 0, warned: 0 });
+  const lot = await prisma.creditLot.findUnique({ where: { id: "l1" } });
+  assert.equal(lot.note, undefined);
 });

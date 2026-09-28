@@ -7,6 +7,7 @@
  * transaction as every grant, spend and expiry.
  */
 import { PROGRAM } from "./program.js";
+import { sendCreditExpiryWarning, notifyMode } from "../notifications.js";
 
 export class CreditShortError extends Error {
   constructor(availableCents) {
@@ -173,6 +174,85 @@ export async function expiringSoon(prisma, userId, now = new Date()) {
     where: { userId, remainingCents: { gt: 0 }, expiresAt: { gt: now, lte: warnBy } },
     orderBy: { expiresAt: "asc" },
   });
+}
+
+// Idempotency marker for the expiry-warning SMS, stored as a note on the lot
+// itself rather than a new CreditEvent type. Two reasons: (1) the controller
+// notes prefer a note on an existing thing over a schema migration, and (2)
+// a CreditEvent would show up in the customer's own /users/:id/credits
+// history (GET returns the last 50 raw), which would confuse a member with a
+// $0.00 "admin adjustment" line that isn't real money moving.
+const EXPIRY_WARNED_MARKER = "expiry-warned";
+
+function isExpiryWarned(lot) {
+  return typeof lot.note === "string" && lot.note.includes(`[${EXPIRY_WARNED_MARKER}]`);
+}
+
+/**
+ * Every not-yet-expired lot (across all users) that expires within
+ * `PROGRAM.expiryWarningDays` of `now` and hasn't been warned about yet
+ * (see `markExpiryWarned`). This is what the daily cron sends the
+ * `creditExpiring` SMS for; a lot appears here at most once no matter how
+ * many times the cron runs. Soonest-expiring first.
+ */
+export async function lotsNeedingExpiryWarning(prisma, now = new Date()) {
+  const warnBy = addDays(now, PROGRAM.expiryWarningDays);
+  const lots = await prisma.creditLot.findMany({
+    where: { remainingCents: { gt: 0 }, expiresAt: { gt: now, lte: warnBy } },
+    orderBy: { expiresAt: "asc" },
+  });
+  return lots.filter((lot) => !isExpiryWarned(lot));
+}
+
+/**
+ * Marks `lot` as warned so a later cron run's `lotsNeedingExpiryWarning`
+ * skips it. Idempotent: calling it twice on the same lot is a no-op the
+ * second time.
+ */
+export async function markExpiryWarned(prisma, lotId) {
+  const lot = await prisma.creditLot.findUnique({ where: { id: lotId } });
+  if (!lot || isExpiryWarned(lot)) return lot || null;
+  const marker = `[${EXPIRY_WARNED_MARKER}]`;
+  const note = lot.note ? `${lot.note} ${marker}` : marker;
+  return prisma.creditLot.update({ where: { id: lotId }, data: { note } });
+}
+
+/**
+ * Sends the `creditExpiring` SMS for every lot `lotsNeedingExpiryWarning`
+ * returns, then marks each one warned so a later run (the cron calls this
+ * daily, right after `expireLots`) never double-sends. Honors
+ * `notifications.js`'s SUPPORT_NOTIFY gate (off | log | live) the same way
+ * every other customer-SMS code path does (R3): "off" does nothing at all
+ * (not even a lookup), "log" looks the lots up and logs what it would have
+ * sent without calling Twilio, "live" actually sends (still subject to
+ * `canSendSMS`/opt-in inside `sendCreditExpiryWarning`, and to Twilio simply
+ * not being configured in dev/test). A lot is marked warned in every mode but
+ * "off", including "log" and an opted-out user, so it's a one-time
+ * consideration per lot rather than a guaranteed delivery. Never throws.
+ */
+export async function sendExpiryWarnings(prisma, { now = new Date(), env = process.env, log = console.log } = {}) {
+  const mode = notifyMode(env);
+  if (mode === "off") return { sent: 0, warned: 0 };
+
+  const lots = await lotsNeedingExpiryWarning(prisma, now);
+  let sent = 0;
+  for (const lot of lots) {
+    try {
+      if (mode === "log") {
+        log(`[cron] SUPPORT_NOTIFY=log: would send credit-expiry warning for lot ${lot.id} (user ${lot.userId})`);
+      } else {
+        const user = await prisma.user.findUnique({ where: { id: lot.userId } });
+        if (user) {
+          const result = await sendCreditExpiryWarning(user, lot);
+          if (result?.success) sent++;
+        }
+      }
+    } catch (err) {
+      console.error(`[cron] sendExpiryWarnings failed for lot ${lot.id}:`, err?.message || err);
+    }
+    await markExpiryWarned(prisma, lot.id);
+  }
+  return { sent, warned: lots.length };
 }
 
 /**

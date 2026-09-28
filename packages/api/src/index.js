@@ -15,7 +15,10 @@ import {
   sendShopOrderConfirmation,
   sendGiftCardEmail,
   sendSMS,
+  notifyTierUpIfNeeded,
 } from "./notifications.js";
+import { normalizePhoneE164 } from "./utils/phone.js";
+import { applyUserLocaleUpdate } from "./locale.js";
 import { BetaAnalyticsDataClient } from "@google-analytics/data";
 import { readFileSync } from "fs";
 import crypto from "crypto";
@@ -2826,7 +2829,13 @@ app.post("/seats/:id/force-clean", async (req, reply) => {
     completedOrderIds.push(order.id);
     console.log(`Force-completed order ${order.kitchenOrderNumber || order.orderNumber} on pod ${seat.number}`);
     // Membership payouts for the completion (idempotent; pays only PAID orders).
-    await onOrderCompleted(prisma, { orderId: order.id, now: new Date() });
+    const membershipResult = await onOrderCompleted(prisma, { orderId: order.id, now: new Date() });
+    // Task F2: tier-up SMS after the membership transaction has committed.
+    if (membershipResult?.upgradedTo) {
+      notifyTierUpIfNeeded(prisma, { userId: order.userId, upgradedTo: membershipResult.upgradedTo }).catch((err) =>
+        console.error("[pods] tier-up notify failed:", err?.message || err),
+      );
+    }
   }
 
   // Set pod to CLEANING
@@ -3806,11 +3815,13 @@ app.post("/orders/event", async (req, reply) => {
 
   const kitchenOrderNumber = String(todaysOrderCount + 1).padStart(4, "0");
 
-  // Create guest record (store normalized phone for duplicate detection)
+  // Create guest record. `normalizedPhone` (digits only) stays as-is for the
+  // "one order per phone" contains-matching above/below; Guest.phone itself
+  // is stored E.164 (Task F2) so Chappy SMS can match identity exactly.
   const guest = await prisma.guest.create({
     data: {
       name: guestName || "CNY Guest",
-      phone: normalizedPhone || null, // Store digits only for consistent matching
+      phone: normalizePhoneE164(guestPhone) || null,
       sessionToken: `cny-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
     },
@@ -4265,7 +4276,17 @@ app.post("/users", async (req, reply) => {
   // Verified email only; a client phone is never used to find a row (auth/customer.js signupFields).
   const allowed = await customerAuth.signupFields(req, reply);
   if (!allowed) return reply;
-  const { email, phone } = allowed;
+  const { email } = allowed;
+  // Chappy SMS matches identity by exact E.164 (Task F2): normalize on write.
+  // (A signed-in customer's `phone` is always undefined here - signupFields
+  // never trusts a client phone; only a trusted service call may set one.)
+  let phone;
+  if (allowed.phone !== undefined && allowed.phone !== null && allowed.phone !== "") {
+    phone = normalizePhoneE164(allowed.phone);
+    if (!phone) return reply.code(400).send({ error: "Invalid phone number", code: "INVALID_PHONE" });
+  } else {
+    phone = allowed.phone;
+  }
 
   console.log("POST /users - Received:", { email, phone, name, referredByCode });
 
@@ -4372,10 +4393,21 @@ app.get("/users/me", async (req, reply) => {
   if (!who.userId) return reply.code(404).send({ error: "User not found" });
   const user = await prisma.user.findUnique({
     where: { id: who.userId },
-    select: { id: true, email: true, name: true, membershipTier: true, creditsCents: true, referralCode: true },
+    select: { id: true, email: true, name: true, membershipTier: true, creditsCents: true, referralCode: true, locale: true },
   });
   if (!user) return reply.code(404).send({ error: "User not found" });
   return user;
+});
+
+// PATCH /users/:id - self-update (locale only today: apps/web/components/LanguageTracker.tsx
+// calls this when a signed-in member's locale changes). Auth (the caller must
+// be this user, or a trusted service call) is enforced by auth/customer.js's
+// registerCustomerIdentity onRoute hook, wired near the top of this file, for
+// every /users/:id/* route - see packages/api/src/locale.js for the handler
+// logic and packages/api/src/__tests__/locale.test.js for its HTTP-level tests.
+app.patch("/users/:id", async (req, reply) => {
+  const result = await applyUserLocaleUpdate(prisma, { id: req.params.id, locale: req.body?.locale });
+  return reply.code(result.status).send(result.body);
 });
 
 // Get user by referral code
@@ -4606,6 +4638,13 @@ app.post("/payments/confirm", async (req, reply) => {
 app.post("/guests", async (req, reply) => {
   const { name, phone, email } = req.body || {};
 
+  // Chappy SMS matches identity by exact E.164 (Task F2): normalize on write.
+  let phoneE164 = null;
+  if (phone !== undefined && phone !== null && phone !== "") {
+    phoneE164 = normalizePhoneE164(phone);
+    if (!phoneE164) return reply.code(400).send({ error: "Invalid phone number", code: "INVALID_PHONE" });
+  }
+
   // Name is required at checkout, but we can create a session first
   const sessionToken = generateSessionToken();
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
@@ -4613,7 +4652,7 @@ app.post("/guests", async (req, reply) => {
   const guest = await prisma.guest.create({
     data: {
       name: name || "Guest", // Placeholder until checkout
-      phone: phone || null,
+      phone: phoneE164,
       email: email || null,
       sessionToken,
       expiresAt,
@@ -4650,7 +4689,16 @@ app.patch("/guests/:id", async (req, reply) => {
 
   const data = {};
   if (name) data.name = name;
-  if (phone !== undefined) data.phone = phone;
+  if (phone !== undefined) {
+    // Chappy SMS matches identity by exact E.164 (Task F2): normalize on write.
+    if (phone === null || phone === "") {
+      data.phone = null;
+    } else {
+      const phoneE164 = normalizePhoneE164(phone);
+      if (!phoneE164) return reply.code(400).send({ error: "Invalid phone number", code: "INVALID_PHONE" });
+      data.phone = phoneE164;
+    }
+  }
   if (email !== undefined) data.email = email;
   if (smsOptIn !== undefined) {
     data.smsOptIn = smsOptIn;
@@ -4887,7 +4935,16 @@ app.patch("/users/:id/phone", async (req, reply) => {
   const { phone, smsOptIn } = req.body || {};
 
   const data = {};
-  if (phone !== undefined) data.phone = phone;
+  if (phone !== undefined) {
+    // Chappy SMS matches identity by exact E.164 (Task F2): normalize on write.
+    if (phone === null || phone === "") {
+      data.phone = null;
+    } else {
+      const phoneE164 = normalizePhoneE164(phone);
+      if (!phoneE164) return reply.code(400).send({ error: "Invalid phone number", code: "INVALID_PHONE" });
+      data.phone = phoneE164;
+    }
+  }
   if (smsOptIn !== undefined) {
     data.smsOptIn = smsOptIn;
     // Record opt-in date/method when opting in
@@ -6217,6 +6274,12 @@ app.patch("/kitchen/orders/:id/status", async (req, reply) => {
     const result = await onOrderCompleted(prisma, { orderId: order.id, now: new Date() });
     if (result.cashbackCents > 0 || result.referralPaid || result.upgradedTo) {
       refreshUserWalletPass(order.userId).catch(console.error);
+    }
+    // Task F2: tier-up SMS after the membership transaction has committed.
+    if (result.upgradedTo) {
+      notifyTierUpIfNeeded(prisma, { userId: order.userId, upgradedTo: result.upgradedTo }).catch((err) =>
+        console.error("[orders] tier-up notify failed:", err?.message || err),
+      );
     }
   }
 

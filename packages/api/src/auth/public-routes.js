@@ -85,6 +85,7 @@ export const PUBLIC_ROUTES = Object.freeze([
   p("GET", "/users/:id/credits", "customer"),
   p("POST", "/users/:id/deduct-credits", "customer"),
   p("GET", "/users/:id/profile", "customer"),
+  p("PATCH", "/users/:id", "customer"), // self-update (locale today; Task F2)
   p("PATCH", "/users/:id/phone", "customer"),
   p("GET", "/users/:id/orders", "customer"),
   p("GET", "/users/by-email/:email/order-patterns", "customer"),
