@@ -97,7 +97,8 @@ export type ChatError = { code: string; retryAfterSeconds?: number };
 
 export type ChatMessage = {
   id: string;
-  role: "user" | "assistant";
+  /** "note": a line the widget itself posts (a pay card settled, Task E2); never sent to the API. */
+  role: "user" | "assistant" | "note";
   text: string;
   cards: ChappyCard[];
   /** The assistant turn is still streaming. */

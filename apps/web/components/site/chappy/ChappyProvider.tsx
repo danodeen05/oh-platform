@@ -10,9 +10,15 @@
  * framer-motion) is a separate chunk loaded on the first open, never in the
  * first paint, and stays mounted after that so the conversation and a turn
  * in flight survive closing and reopening.
+ *
+ * Task E2: a pay card whose payment method left the page (a Stripe
+ * redirect) comes back here with ?chappyPay=. The provider strips those
+ * parameters from the address bar, opens Chappy and hands the return to
+ * the widget, which verifies it with the API (cards/pay-return.ts).
  */
 import dynamic from "next/dynamic";
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { readChappyReturn, type ChappyPayReturn } from "./cards/pay-return";
 
 const ChappyWidget = dynamic(() => import("./ChappyWidget"), { ssr: false });
 
@@ -39,6 +45,17 @@ export function ChappyProvider({ children }: { children?: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [prefill, setPrefill] = useState<{ text?: string; key: number }>({ key: 0 });
+  const [resume, setResume] = useState<ChappyPayReturn | null>(null);
+
+  // Back from a Stripe redirect that a Chappy pay card started.
+  useEffect(() => {
+    const found = readChappyReturn(window.location.href);
+    if (!found) return;
+    window.history.replaceState(window.history.state, "", found.cleanUrl);
+    setResume(found.ret);
+    setMounted(true);
+    setIsOpen(true);
+  }, []);
 
   const openChappy = useCallback((text?: string) => {
     // A click handler may pass its event; only a string is a prefill.
@@ -55,7 +72,7 @@ export function ChappyProvider({ children }: { children?: ReactNode }) {
   return (
     <ChappyContext.Provider value={api}>
       {children}
-      {mounted ? <ChappyWidget open={isOpen} onClose={closeChappy} onOpen={reopen} prefill={prefill.text} prefillKey={prefill.key} /> : null}
+      {mounted ? <ChappyWidget open={isOpen} onClose={closeChappy} onOpen={reopen} prefill={prefill.text} prefillKey={prefill.key} resume={resume} /> : null}
     </ChappyContext.Provider>
   );
 }

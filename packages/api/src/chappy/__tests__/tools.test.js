@@ -354,7 +354,7 @@ describe("checkout: a pay card only, never a charge", () => {
     await executeTool("set_arrival_and_pod", { locationId: "", arrival: "ASAP", pod: "best", partySize: 1 }, ctx);
     const r = await executeTool("checkout", { confirmed: true }, ctx);
     const [order] = await w.db.order.findMany({});
-    assert.deepEqual(r.card, { type: "pay", orderId: order.id, clientSecret: "pi_test_1_secret_abc", amountDueCents: order.amountDueCents, currency: "usd" });
+    assert.deepEqual(r.card, { type: "pay", orderId: order.id, clientSecret: "pi_test_1_secret_abc", amountDueCents: order.amountDueCents, currency: "usd", kitchenNumber: order.kitchenOrderNumber, pod: "A-01" });
     assert.equal(order.amountDueCents, 1924);
     assert.equal(order.orderSource, "CHAPPY");
     assert.equal(order.paymentStatus, "PENDING", "never markPaid");
@@ -375,7 +375,7 @@ describe("checkout: a pay card only, never a charge", () => {
     await addToCart(w, ctx, "wide");
     const r = await executeTool("checkout", { confirmed: true }, ctx);
     const [order] = await w.db.order.findMany({});
-    assert.deepEqual(r.card, { type: "confirm-zero", orderId: order.id });
+    assert.deepEqual(r.card, { type: "confirm-zero", orderId: order.id, kitchenNumber: order.kitchenOrderNumber, pod: null });
     assert.equal(w.stripe.created.length, 0);
     assert.equal(order.paymentStatus, "PENDING");
   });
@@ -746,5 +746,96 @@ describe("source scan: money only moves through the services", () => {
     assert.ok(!ALLOWED_IMPORTS.tools["../orders/service.js"].includes("markPaid"));
     assert.ok(!Object.hasOwn(ALLOWED_IMPORTS.tools, "../membership/credits.js"));
     assert.deepEqual(Object.keys(found), ["../orders/service.js", "../membership/credits.js"]);
+  });
+});
+
+describe("web cards (Task E2): display-only outputs, no new inputs", () => {
+  test("cart, reorder and apply_savings return a cart card with the server's quote and the localized display value", async () => {
+    const w = world();
+    await w.db.menuItem.update({ where: { id: "bokchoy" }, data: { nameZhTW: "青江菜", sliderConfig: { labels: ["Light", "Regular", "Extra"], labelsI18n: { "zh-TW": ["少", "正常", "多"] } } } });
+    const ctx = memberCtx(w, { locale: "zh-TW" });
+    for (const l of CLASSIC_BOWL) await addToCart(w, ctx, l.menuItemId, l.quantity);
+    const r = await addToCart(w, ctx, "bokchoy", 1, "Extra");
+    assert.equal(r.card.type, "cart");
+    assert.equal(r.card.totalCents, r.quote.totalCents);
+    assert.equal(r.card.amountDueCents, r.quote.amountDueCents);
+    assert.equal(r.card.subtotalCents, r.quote.subtotalCents);
+    const bok = r.card.lines.find((l) => l.menuItemId === "bokchoy" && l.value);
+    assert.deepEqual({ name: bok.name, value: bok.value, imageKey: bok.imageKey }, { name: "青江菜", value: "多", imageKey: "Baby Bok Choy" });
+    assert.equal(r.card.location, "City Creek Mall");
+    assert.equal(r.card.arrival, null, "ASAP");
+    // Cleared: no card (nothing to show).
+    const cleared = await executeTool("cart", { op: "clear", menuItemId: "", quantity: 0, option: "" }, ctx);
+    assert.equal(cleared.card, undefined);
+  });
+
+  test("set_arrival_and_pod and an unconfirmed checkout carry the cart card with the pod", async () => {
+    const w = world();
+    const ctx = memberCtx(w);
+    for (const l of CLASSIC_BOWL) await addToCart(w, ctx, l.menuItemId, l.quantity);
+    const set = await executeTool("set_arrival_and_pod", { locationId: "", arrival: "ASAP", pod: "best", partySize: 1 }, ctx);
+    assert.equal(set.card.type, "cart");
+    assert.equal(set.card.pod, set.pod.label);
+    const unconfirmed = await executeTool("checkout", { confirmed: false }, ctx);
+    assert.equal(unconfirmed.error, "NEEDS_CONFIRMATION");
+    assert.equal(unconfirmed.card.type, "cart");
+    assert.equal(unconfirmed.card.totalCents, unconfirmed.quote.totalCents);
+    assert.equal((await w.db.order.findMany({})).length, 0, "no order from a card");
+  });
+
+  test("get_order_status returns an order-status card with the stage, kitchen number, pod and status link", async () => {
+    const w = world({ orders: [paidOrder({ status: "PREPPING", kitchenOrderNumber: "0012", orderQrCode: "ORDER-Q1", seatId: "s-a01" })] });
+    const r = await executeTool("get_order_status", { orderId: "o_paid" }, memberCtx(w, { locale: "es" }));
+    assert.deepEqual(r.card, {
+      type: "order-status",
+      orderId: "o_paid",
+      kitchenNumber: "0012",
+      status: "PREPPING",
+      paid: true,
+      stage: "PREPPING",
+      pod: "A-01",
+      totalCents: 1924,
+      statusPath: "/es/order/status?orderQrCode=ORDER-Q1",
+    });
+    const w2 = world({ orders: [paidOrder({ status: "PENDING_PAYMENT", paymentStatus: "PENDING", orderQrCode: "ORDER-Q2" })] });
+    const unpaid = await executeTool("get_order_status", { orderId: "o_paid" }, memberCtx(w2));
+    assert.equal(unpaid.card.stage, "UNPAID");
+    assert.equal(unpaid.card.statusPath, null, "no status link before it is paid");
+  });
+
+  test("get_menu_item returns a menu-item card (localized name, price, image key, dietary flags)", async () => {
+    const w = world();
+    await w.db.menuItem.update({ where: { id: "classic" }, data: { nameEs: "Sopa clásica", spiceLevel: 2 } });
+    const r = await executeTool("get_menu_item", { itemId: "classic" }, guestCtx(w, { locale: "es" }));
+    assert.equal(r.card.type, "menu-item");
+    assert.equal(r.card.name, "Sopa clásica");
+    assert.equal(r.card.priceCents, 1599);
+    assert.equal(r.card.imageKey, "Classic Beef Noodle Soup");
+    assert.deepEqual(r.card.dietary, []);
+    assert.equal(r.card.spiceLevel, 2);
+  });
+
+  test("get_my_profile returns a reward card with the credit balance", async () => {
+    const w = world();
+    const r = await executeTool("get_my_profile", {}, memberCtx(w));
+    assert.equal(r.error, undefined);
+    assert.equal(r.card.type, "reward");
+    assert.equal(r.card.creditCents, r.creditCents);
+    assert.equal(r.card.tier, r.tier);
+  });
+
+  test("support cards say what kind of case they are; goodwill is store credit on the card, never a refund", async () => {
+    const w = world({ orders: [paidOrder()] });
+    const r = await executeTool("report_issue", { category: "cold_food", summary: "My bowl was cold", orderId: "", contact: "" }, memberCtx(w));
+    assert.equal(r.card.kind, "issue");
+    assert.ok(r.card.goodwillCents > 0 && r.card.goodwillCents <= 500);
+    assert.equal(w.stripe.refundCalls.length, 0);
+    const refund = await executeTool("request_refund", { orderId: "", reason: "Wrong bowl" }, memberCtx(w));
+    assert.equal(refund.card.kind, "refund");
+    assert.equal(refund.card.goodwillCents, undefined, "a refund request names no amount");
+  });
+
+  test("the tool input schemas are unchanged by the cards (strict size budget)", () => {
+    for (const def of TOOL_DEFS) assert.ok(!JSON.stringify(def.input_schema).includes('"card"'), `${def.name} takes no card input`);
   });
 });

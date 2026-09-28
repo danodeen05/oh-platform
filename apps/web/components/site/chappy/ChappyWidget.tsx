@@ -8,13 +8,23 @@
  * One conversation, two surfaces: the full-screen ChappySheet on phones and
  * the 420px ChappyPanel from 768px up. Both render the same header,
  * MessageList and Composer, fed by useChappyStream.
+ *
+ * Task E2: the native cards read ChappyCardProvider (sign-in, sending a
+ * card's own message, the member's authed fetch, and onPaid). When a pay
+ * card settles, the widget posts the translated system note ("Paid. Order
+ * #0012, pod B-07.") and the order's status card, and remembers the order
+ * for the site's active-order pill. A Stripe redirect return (`resume`,
+ * from ChappyProvider) is verified here the same way.
  */
 import { useClerk } from "@clerk/nextjs";
 import { useLocale, useTranslations } from "next-intl";
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { siteFontVariables } from "@/components/site/fonts";
 import { Icon } from "@/components/site/icons/Icon";
+import { useSiteApi } from "@/lib/site/api";
 import { CHAPPY_AVATAR } from "@/lib/site/nav";
+import { confirmPayment, type Order } from "@/lib/site/orders";
+import { ChappyCardProvider, type ChappyCardContext, type ChappyPayReturn } from "./cards";
 import { ChappyPanel } from "./ChappyPanel";
 import { ChappySheet } from "./ChappySheet";
 import { Composer, type ComposerHandle } from "./Composer";
@@ -42,15 +52,37 @@ export interface ChappyWidgetProps {
   onOpen: () => void;
   prefill?: string;
   prefillKey?: number;
+  /** A pay card's Stripe redirect return to finish (ChappyProvider read it from the URL). */
+  resume?: ChappyPayReturn | null;
 }
 
-export default function ChappyWidget({ open, onClose, onOpen, prefill, prefillKey }: ChappyWidgetProps) {
+const ACTIVE_ORDER_KEY = "activeOrderQrCode";
+
+/** The order-status card for an order the API just verified as PAID. */
+function paidStatusCard(order: Order, locale: string) {
+  const seat = (order.seat && typeof order.seat === "object" ? order.seat : null) as { label?: string | null; number?: string | null } | null;
+  const qr = typeof order.orderQrCode === "string" ? order.orderQrCode : null;
+  return {
+    type: "order-status",
+    orderId: order.id,
+    kitchenNumber: typeof order.kitchenOrderNumber === "string" ? order.kitchenOrderNumber : null,
+    status: order.status || "PAID",
+    paid: true,
+    stage: "PAID",
+    pod: seat?.label || seat?.number || null,
+    totalCents: order.totalCents,
+    statusPath: qr ? `/${locale}/order/status?orderQrCode=${encodeURIComponent(qr)}` : null,
+  };
+}
+
+export default function ChappyWidget({ open, onClose, onOpen, prefill, prefillKey, resume }: ChappyWidgetProps) {
   const t = useTranslations("chappyWeb");
   const locale = useLocale();
   const cjk = locale.startsWith("zh");
   const desktop = useIsDesktop();
   const chat = useChappyStream({ locale });
   const clerk = useClerk();
+  const api = useSiteApi();
   const composer = useRef<ComposerHandle | null>(null);
 
   // Sign-in (the sign-in card, a SIGN_IN_REQUIRED error): Clerk's modal
@@ -73,6 +105,45 @@ export default function ChappyWidget({ open, onClose, onOpen, prefill, prefillKe
   useEffect(() => {
     if (open) setAwaitingSignIn(false);
   }, [open]);
+
+  // A pay card (or a redirect return) settled: the system note, the status card, the active-order pill.
+  const { addNote } = chat;
+  const onPaid = useCallback(
+    (order: Order) => {
+      const card = paidStatusCard(order, locale);
+      const number = card.kitchenNumber || order.orderNumber;
+      addNote(card.pod ? t("cards.pay.paidNote", { number, pod: card.pod }) : t("cards.pay.paidNoteNoPod", { number }), [card]);
+      try {
+        if (typeof order.orderQrCode === "string") localStorage.setItem(ACTIVE_ORDER_KEY, order.orderQrCode);
+      } catch {
+        /* storage unavailable */
+      }
+    },
+    [addNote, locale, t],
+  );
+
+  // A Stripe redirect return: verify it once the conversation has loaded (so the note lands after the history).
+  const resumed = useRef<ChappyPayReturn | null>(null);
+  useEffect(() => {
+    if (!resume || resumed.current === resume || chat.status === "loading") return;
+    resumed.current = resume;
+    (async () => {
+      if (resume.status === "failed" || !resume.paymentIntentId) {
+        // Not paid: the same pay card again (its PaymentIntent still stands), nothing charged.
+        const cards = resume.clientSecret ? [{ type: "pay", orderId: resume.orderId, clientSecret: resume.clientSecret, amountDueCents: null }] : [];
+        addNote(t("cards.pay.returnFailed"), cards);
+        return;
+      }
+      const res = await confirmPayment(resume.orderId, resume.paymentIntentId, { fetcher: api });
+      if (res.ok) onPaid(res.data);
+      else addNote(res.error.refunded ? t("cards.pay.refunded") : resume.status === "processing" ? t("cards.pay.processing") : t("cards.pay.confirmFailed"));
+    })();
+  }, [resume, chat.status, addNote, api, onPaid, t]);
+
+  const cardContext = useMemo<ChappyCardContext>(
+    () => ({ locale, cjk, onSignIn: signIn, send: chat.send, onPaid, api, busy: chat.status !== "idle" }),
+    [locale, cjk, signIn, chat.send, onPaid, api, chat.status],
+  );
 
   // With a prefill, put the cursor in the box (the phone sheet otherwise
   // focuses its first control, so the keyboard doesn't jump up uninvited).
@@ -111,7 +182,9 @@ export default function ChappyWidget({ open, onClose, onOpen, prefill, prefillKe
           <Icon name="close" size={22} title={t("close")} />
         </button>
       </header>
-      <MessageList messages={chat.messages} status={chat.status} cjk={cjk} onQuick={chat.send} onRetry={chat.retry} onSignIn={signIn} />
+      <ChappyCardProvider value={cardContext}>
+        <MessageList messages={chat.messages} status={chat.status} cjk={cjk} onQuick={chat.send} onRetry={chat.retry} onSignIn={signIn} />
+      </ChappyCardProvider>
       <Composer ref={composer} onSend={chat.send} busy={chat.status !== "idle"} prefill={prefill} prefillKey={prefillKey} />
     </div>
   );

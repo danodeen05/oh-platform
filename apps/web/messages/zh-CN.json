@@ -2213,31 +2213,137 @@
     "cards": {
       "signIn": {
         "title": "登录以继续",
-        "body": "登录后，Chappy 就能帮你完成。"
+        "body": "登录后，Chappy 就能帮你完成。",
+        "label": "登录以继续"
       },
       "pay": {
         "title": "可以付款了",
-        "body": "你的订单已保存，可以付款了。"
+        "body": "你的订单已保存，可以付款了。",
+        "label": "为你的订单付款",
+        "amountLabel": "应付金额",
+        "order": "订单 #{number}",
+        "pod": "座舱 {pod}",
+        "podLater": "签到时安排座舱",
+        "or": "或用银行卡付款",
+        "payButton": "付款 {amount}",
+        "paying": "付款中",
+        "confirming": "正在提交订单",
+        "loading": "正在加载安全支付",
+        "secure": "卡片信息直接交给 Stripe，Chappy 看不到。",
+        "paidTitle": "已付款",
+        "paidNote": "已付款。订单 #{number}，座舱 {pod}。",
+        "paidNoteNoPod": "已付款。订单 #{number}。签到时会安排座舱。",
+        "failed": "这笔付款没有成功，你的卡没有被扣款。",
+        "confirmFailed": "付款已完成，但订单还没确认。请再试一次。",
+        "refunded": "订单无法成立，款项已全额退回。",
+        "processing": "银行还在处理这笔付款，完成后订单会自动更新。",
+        "returnFailed": "这笔付款没有成功，可以在下方再试一次。",
+        "unavailable": "目前无法付款，请稍后再试。"
       },
       "confirmZero": {
         "title": "无需付款",
-        "body": "你的优惠已覆盖这笔订单。"
+        "body": "你的优惠已覆盖这笔订单。",
+        "label": "提交你的订单",
+        "place": "提交订单",
+        "placing": "正在提交订单"
       },
       "groupShare": {
         "title": "团体订单",
-        "body": "分享代码，让同桌的人加点自己的面。"
+        "body": "分享代码，让同桌的人加点自己的面。",
+        "label": "团体订单",
+        "code": "团体代码",
+        "share": "分享链接",
+        "copy": "复制链接",
+        "copied": "已复制",
+        "open": "打开团体订单",
+        "shareText": "一起加入我的 Oh! 团体订单，代码 {code}。"
       },
       "podCall": {
         "title": "店员正在过去",
-        "body": "有人正前往你的座位。"
+        "body": "有人正前往你的座位。",
+        "label": "呼叫服务人员",
+        "bodyPod": "服务人员正前往座舱 {pod}。",
+        "again": "服务人员已经知道了，正前往座舱 {pod}。",
+        "againNoPod": "服务人员已经知道了，正在路上。"
       },
       "supportCase": {
         "title": "已创建工单",
-        "body": "团队会审核并与你联系。"
+        "body": "团队会审核并与你联系。",
+        "label": "客服工单",
+        "ref": "工单 {ref}",
+        "refundTitle": "已申请退款审核",
+        "refundBody": "团队会审核整笔订单的退款，并通知你结果。",
+        "escalationTitle": "已有专人处理",
+        "escalationBody": "团队成员很快会与你联系。",
+        "creditTitle": "已加入 {amount} 店内积分",
+        "creditBody": "积分已在你的账户，下次点餐就能用。"
       },
       "unknown": {
         "title": "来自 Chappy",
         "body": "这一步的详细信息会显示在这里。"
+      },
+      "cart": {
+        "label": "目前的订单",
+        "title": "你的订单",
+        "subtotal": "小计",
+        "savings": "优惠",
+        "tax": "税费",
+        "total": "总计",
+        "credit": "积分与礼品卡",
+        "due": "应付",
+        "arrival": "{time} 到店",
+        "asap": "尽快到店",
+        "pod": "座舱 {pod}",
+        "podBest": "最佳空座舱",
+        "podCheckIn": "签到时安排座舱",
+        "party": "{count} 位",
+        "item": "餐品"
+      },
+      "menuItem": {
+        "label": "餐品：{name}",
+        "add": "加入我的订单",
+        "addPrompt": "把{name}加入我的订单。",
+        "spice": "{level, plural, =0 {不辣} other {辣度 #}}",
+        "dietary": {
+          "vegetarian": "素食",
+          "vegan": "纯素",
+          "gluten_free": "无麸质"
+        }
+      },
+      "orderStatus": {
+        "label": "订单状态",
+        "title": "订单 #{number}",
+        "titleNoNumber": "你的订单",
+        "pod": "座舱 {pod}",
+        "open": "查看订单状态",
+        "progress": "第 {step} 步，共 {total} 步",
+        "stages": {
+          "PAID": "已付款",
+          "QUEUED": "排队中",
+          "PREPPING": "烹制中",
+          "READY": "已做好",
+          "SERVING": "送餐中",
+          "COMPLETED": "用餐结束",
+          "UNPAID": "等待付款",
+          "CANCELLED": "已取消",
+          "OTHER": "已下单"
+        }
+      },
+      "reward": {
+        "label": "你的会员权益",
+        "tiers": {
+          "CHOPSTICK": "筷子",
+          "NOODLE_MASTER": "面条大师",
+          "BEEF_BOSS": "牛肉老板"
+        },
+        "credit": "店内积分",
+        "cashback": "每笔订单返还 {pct}%",
+        "expiring": "{amount} 即将到期",
+        "toNext": "下一级：{tier}",
+        "orders": "订单 {have} / {need}",
+        "referrals": "推荐 {have} / {need}",
+        "top": "最高等级，谢谢你。",
+        "rewards": "{count, plural, =0 {暂无待用奖励} other {# 个待用奖励}}"
       }
     }
   },

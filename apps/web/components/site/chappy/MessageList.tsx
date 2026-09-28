@@ -6,15 +6,18 @@
  * breaks, plus a tiny markdown subset (paragraphs, "- " lists, **bold**)
  * built from React text nodes: never HTML from the model.
  *
- * Cards: E1 renders a translated fallback box for every card type; Task E2
- * replaces them with the native cards. The sign-in card already works.
+ * Cards: the native cards (Task E2, ./cards) through renderCard; a type
+ * this build doesn't know keeps E1's translated fallback box. Within one
+ * turn only the latest cart / order-status / reward card shows. A "note"
+ * is the widget's own line (a pay card settled), with its cards.
  */
 import { useTranslations } from "next-intl";
 import { useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
 import { Icon } from "@/components/site/icons/Icon";
 import { CHAPPY_AVATAR } from "@/lib/site/nav";
 import type { ChappyStatus } from "./useChappyStream";
-import { cardKey, errorMessage, isRetryable, toolStatusKey, type ChappyCard, type ChatMessage } from "./stream";
+import { renderCard, visibleCards } from "./cards";
+import { errorMessage, isRetryable, toolStatusKey, type ChatMessage } from "./stream";
 
 export const QUICK_ACTIONS = ["usual", "today", "where", "problem"] as const;
 
@@ -119,6 +122,8 @@ export function MessageList({ messages, status, cjk, onQuick, onRetry, onSignIn 
             <li key={m.id} className="chappy-enter min-w-0">
               {m.role === "user" ? (
                 <UserTurn text={m.text} label={t("you")} />
+              ) : m.role === "note" ? (
+                <NoteTurn message={m} />
               ) : (
                 <ChappyTurn message={m} busy={status === "streaming"} onRetry={onRetry} onSignIn={onSignIn} />
               )}
@@ -161,13 +166,7 @@ function ChappyTurn({ message, busy, onRetry, onSignIn }: { message: ChatMessage
           </p>
         ) : null}
 
-        {message.cards.length > 0 ? (
-          <div className="mt-3 grid gap-2">
-            {message.cards.map((card, i) => (
-              <CardFallback key={i} card={card} onSignIn={onSignIn} />
-            ))}
-          </div>
-        ) : null}
+        {message.cards.length > 0 ? <Cards cards={message.cards} spaced={!!message.text} /> : null}
 
         {err ? (
           <div data-chappy-error={message.error?.code} role="alert" className={message.text ? "mt-3" : ""}>
@@ -202,26 +201,32 @@ function ActionButton({ children, onClick, disabled }: { children: ReactNode; on
   );
 }
 
-/** E1's stand-in for every card type (E2 builds the native cards). */
-function CardFallback({ card, onSignIn }: { card: ChappyCard; onSignIn: () => void }) {
-  const t = useTranslations("chappyWeb");
-  const key = cardKey(card.type);
-  const code = card.type === "group-share" && typeof card.code === "string" ? card.code : null;
+function Cards({ cards, spaced }: { cards: ChatMessage["cards"]; spaced: boolean }) {
   return (
-    <section data-chappy-card={card.type} className="rounded-xl border border-oh-stone bg-oh-charcoal/70 px-4 py-3">
-      <p className="m-0 text-xs font-semibold uppercase tracking-[0.14em] text-oh-ember-light">{t(`cards.${key}.title`)}</p>
-      <p className="m-0 mt-1 text-sm leading-snug text-oh-cream/90">{t(`cards.${key}.body`)}</p>
-      {code ? <p className="m-0 mt-2 font-mono text-lg tracking-[0.2em] text-oh-cream">{code}</p> : null}
-      {card.type === "sign-in" ? (
-        <button
-          type="button"
-          onClick={onSignIn}
-          className="mt-3 inline-flex min-h-11 cursor-pointer appearance-none items-center rounded-full border-0 bg-oh-ember-deep px-5 font-[inherit] text-sm font-semibold text-oh-cream transition-colors hover:bg-oh-ember focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oh-cream"
-        >
-          {t("signIn")}
-        </button>
-      ) : null}
-    </section>
+    <div className={`${spaced ? "mt-3" : "mt-1"} grid gap-3`}>
+      {visibleCards(cards).map((card, i) => (
+        <div key={`${card.type}-${i}`} className="chappy-card-enter min-w-0">
+          {renderCard(card)}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** The widget's own line (Task E2): a pay card settled. A quiet check, not a speech turn. */
+function NoteTurn({ message }: { message: ChatMessage }) {
+  return (
+    <div data-chappy-turn="note" className="flex min-w-0 gap-3">
+      <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-oh-olive text-oh-cream" aria-hidden="true">
+        <Icon name="check" size={16} />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p role="status" className="m-0 pt-0.5 text-[0.95rem] font-semibold leading-snug text-oh-cream">
+          {message.text}
+        </p>
+        {message.cards.length > 0 ? <Cards cards={message.cards} spaced /> : null}
+      </div>
+    </div>
   );
 }
 

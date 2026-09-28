@@ -52,6 +52,8 @@ const POD_CALL_CATEGORIES = new Set(["cold_food", "wrong_item", "missing_item", 
 const ACTIVE_POD_STATUSES = ["PAID", "QUEUED", "PREPPING", "READY", "SERVING"];
 const IN_POD_WINDOW_MS = 4 * 60 * 60 * 1000;
 const SUMMARY_MAX = 1000;
+/** The order status page's stages (mirrors @oh/floor-plan PHONE_STAGES; the API never imports that package). */
+const PHONE_STAGES = ["PAID", "QUEUED", "PREPPING", "READY", "SERVING", "COMPLETED"];
 
 const S = (description) => ({ type: "string", description });
 const I = (description) => ({ type: "integer", description });
@@ -303,6 +305,69 @@ async function orderLines(ctx, orderId) {
   }));
 }
 
+/**
+ * A SLIDER line's value as the customer reads it (Task E2): the stored
+ * `selectedValue` is the canonical English label; the display text is the
+ * same index in `sliderConfig.labelsI18n[locale]` when that array lines up
+ * (the F1a displayLabels rule), else the label itself.
+ */
+function displayValue(item, value, locale) {
+  if (!value) return null;
+  const cfg = item?.sliderConfig;
+  const labels = Array.isArray(cfg?.labels) ? cfg.labels : null;
+  const i = labels ? labels.indexOf(value) : -1;
+  const loc = locale && locale !== "en" && cfg?.labelsI18n ? cfg.labelsI18n[locale] : null;
+  if (i >= 0 && Array.isArray(loc) && loc.length === labels.length && typeof loc[i] === "string" && loc[i]) return loc[i];
+  return value;
+}
+
+/** A location's name in the caller's locale (Location.i18n, the F1a rule: English is the row's own column). */
+function locationName(location, locale) {
+  if (!location) return null;
+  const copy = locale && locale !== "en" && location.i18n && typeof location.i18n === "object" ? location.i18n[locale] : null;
+  return (copy && typeof copy.name === "string" && copy.name) || location.name || null;
+}
+
+/**
+ * The web cart card (Task E2): display only, built from the server quote.
+ * `imageKey` is the item's English name, the key lib/menu-images.ts maps.
+ * Money is cents; the widget formats it. Nothing here is input to anything.
+ */
+async function cartCard(ctx, cart, quote) {
+  const menu = await namesFor(ctx.prisma, quote.lines.map((l) => l.menuItemId));
+  const locationId = cartLocation(ctx, cart);
+  const location = locationId ? await ctx.prisma.location.findUnique({ where: { id: locationId } }) : null;
+  const tz = location?.timezone || PROGRAM.timezone;
+  const arrival = cart.arrival ? new Date(cart.arrival) : null;
+  const d = quote.discounts || {};
+  return {
+    type: "cart",
+    currency: "usd",
+    lines: quote.lines.map((l) => {
+      const m = menu.get(l.menuItemId) || null;
+      return {
+        menuItemId: l.menuItemId,
+        name: m ? localized(m, "name", ctx.locale) : null,
+        imageKey: m ? m.name : null,
+        quantity: l.quantity,
+        value: displayValue(m, l.selectedValue, ctx.locale),
+        priceCents: l.priceCents,
+      };
+    }),
+    subtotalCents: quote.subtotalCents,
+    savingsCents: (d.promoCents || 0) + (d.rewardCents || 0),
+    taxCents: quote.taxCents,
+    totalCents: quote.totalCents,
+    creditCents: (d.creditsCents || 0) + (d.giftCardCents || 0) + (d.mealGiftCents || 0),
+    amountDueCents: quote.amountDueCents,
+    location: locationName(location, ctx.locale),
+    arrival: arrival && !Number.isNaN(arrival.getTime()) ? localHm(arrival, tz) : null,
+    pod: cart.pod ? cart.pod.label || null : null,
+    podBest: Boolean(cart.pod && cart.pod.best),
+    partySize: cart.partySize || 1,
+  };
+}
+
 /** A quote the model can read: named lines and the server's totals. */
 async function quoteView(ctx, quote) {
   const menu = await namesFor(ctx.prisma, quote.lines.map((l) => l.menuItemId));
@@ -343,7 +408,8 @@ function quoteCart(ctx, cart) {
 async function commitCart(ctx, next) {
   const quote = next.items.length ? await quoteCart(ctx, next) : null;
   const saved = await saveCart(ctx.prisma, ctx.conversationId, next);
-  return { cart: saved, quote: quote ? await quoteView(ctx, quote) : null };
+  if (!quote) return { cart: saved, quote: null };
+  return { cart: saved, quote: await quoteView(ctx, quote), card: await cartCard(ctx, saved, quote) };
 }
 
 function localDate(now, timeZone) {
@@ -460,14 +526,27 @@ export const HANDLERS = {
     const tenantId = await tenantIdOf(ctx);
     const item = clean(input.itemId) ? await ctx.prisma.menuItem.findUnique({ where: { id: clean(input.itemId) } }) : null;
     if (!item || !item.isAvailable || item.tenantId !== tenantId || !earlyAccessVisible(item, await callerTier(ctx), nowOf(ctx))) return { error: "NOT_FOUND" };
+    const summary = menuSummary(item, ctx.locale);
+    const description = localized(item, "description", ctx.locale);
     return {
-      ...menuSummary(item, ctx.locale),
+      ...summary,
       priceCents: item.basePriceCents,
       extraServingPriceCents: item.additionalPriceCents || 0,
       includedQuantity: item.includedQuantity || 0,
-      description: localized(item, "description", ctx.locale),
+      description,
       allergens: item.allergens || null,
       options: sliderOptions(item),
+      card: {
+        type: "menu-item",
+        id: item.id,
+        name: summary.name,
+        description: description ? String(description).slice(0, 280) : null,
+        priceCents: item.basePriceCents || 0,
+        imageKey: item.name,
+        categoryType: summary.categoryType,
+        dietary: summary.dietary,
+        spiceLevel: summary.spiceLevel,
+      },
     };
   },
 
@@ -509,6 +588,18 @@ export const HANDLERS = {
       expiringSoon: p.expiring,
       rewards: p.rewards.map((r) => ({ id: r.id, type: r.type, usableUntil: r.windowEndsAt })),
       badges: p.badges.length,
+      card: {
+        type: "reward",
+        tier: p.tier,
+        cashbackPct: p.cashbackPct,
+        creditCents: p.credits || 0,
+        expiringCents: (p.expiring || []).reduce((sum, lot) => sum + (lot.remainingCents || 0), 0),
+        expiringAt: p.expiring && p.expiring[0] ? p.expiring[0].expiresAt : null,
+        next: p.progress?.next || null,
+        orders: p.progress?.orders ? { have: p.progress.orders.have, need: p.progress.orders.need } : null,
+        referrals: p.progress?.referrals ? { have: p.progress.referrals.have, need: p.progress.referrals.need } : null,
+        rewards: p.rewards.length,
+      },
     };
   },
 
@@ -523,14 +614,27 @@ export const HANDLERS = {
     const order = await ownOrder(ctx, input.orderId);
     if (!order) return { error: "NOT_FOUND" };
     const seat = order.seatId ? await ctx.prisma.seat.findUnique({ where: { id: order.seatId } }) : null;
+    const pod = seat ? seat.label || seat.number : null;
+    const paid = order.paymentStatus === "PAID";
     return {
+      card: {
+        type: "order-status",
+        orderId: order.id,
+        kitchenNumber: order.kitchenOrderNumber || null,
+        status: order.status,
+        paid,
+        stage: paid && PHONE_STAGES.includes(order.status) ? order.status : paid ? null : "UNPAID",
+        pod,
+        totalCents: order.totalCents,
+        statusPath: paid && order.orderQrCode ? `/${ctx.locale || "en"}/order/status?orderQrCode=${encodeURIComponent(order.orderQrCode)}` : null,
+      },
       id: order.id,
       orderNumber: order.orderNumber,
       status: order.status,
       paymentStatus: order.paymentStatus,
       total: dollars(order.totalCents),
       amountDue: order.amountDueCents === null || order.amountDueCents === undefined ? null : dollars(order.amountDueCents),
-      pod: seat ? seat.label || seat.number : null,
+      pod,
       estimatedArrival: order.estimatedArrival || null,
       items: await orderLines(ctx, order.id),
     };
@@ -613,7 +717,18 @@ export const HANDLERS = {
     }
 
     const saved = await saveCart(ctx.prisma, ctx.conversationId, { ...cart, locationId: location.id, arrival: arrival ? arrival.toISOString() : null, pod, partySize });
+    // The cart card with the visit on it (the previewed pod label, when there is one).
+    let card = null;
+    if (saved.items.length) {
+      try {
+        const quote = await quoteCart(ctx, saved);
+        card = await cartCard(ctx, { ...saved, pod: preview ? { label: preview.seat.label || preview.seat.number } : saved.pod }, quote);
+      } catch (err) {
+        if (!(err instanceof OrderError)) throw err; // a refused quote: checkout says why
+      }
+    }
     return {
+      ...(card ? { card } : {}),
       location: { id: location.id, name: location.name },
       arrival: arrival ? slotView(arrival, tz) : "ASAP",
       partySize: saved.partySize,
@@ -652,6 +767,7 @@ export const HANDLERS = {
         message: "Show the items, total, location, arrival and pod, and get a clear yes first.",
         quote: await quoteView(ctx, quote),
         visit: await visitView(ctx, cart),
+        card: await cartCard(ctx, cart, quote),
       };
     }
     const locationId = cartLocation(ctx, cart);
@@ -678,6 +794,8 @@ export const HANDLERS = {
       pod: seat ? seat.label || seat.number : null,
       charged: false,
     };
+    // What the pay card shows beside the amount (Task E2): the kitchen number and the held pod.
+    const payInfo = { kitchenNumber: order.kitchenOrderNumber || null, pod: summary.pod };
     const paymentLink = `${ctx.webBaseUrl || "https://www.ohbeef.com"}/${ctx.locale || "en"}/order/payment?orderId=${encodeURIComponent(order.id)}&orderNumber=${encodeURIComponent(order.orderNumber)}`;
 
     if (ctx.channel === "sms") {
@@ -693,11 +811,11 @@ export const HANDLERS = {
       return { ...summary, error: "PAYMENT_SETUP_FAILED", message: "The pay card could not be prepared. Send the payment link instead.", paymentLink };
     }
     if (!pi.clientSecret) {
-      return { ...summary, card: { type: "confirm-zero", orderId: order.id }, message: "Nothing to pay. They tap Place order to confirm." };
+      return { ...summary, card: { type: "confirm-zero", orderId: order.id, ...payInfo }, message: "Nothing to pay. They tap Place order to confirm." };
     }
     return {
       ...summary,
-      card: { type: "pay", orderId: order.id, clientSecret: pi.clientSecret, amountDueCents: pi.amountDueCents, currency: "usd" },
+      card: { type: "pay", orderId: order.id, clientSecret: pi.clientSecret, amountDueCents: pi.amountDueCents, currency: "usd", ...payInfo },
       message: "The pay card is showing. Nothing is charged until they tap Pay.",
     };
   },
@@ -710,7 +828,7 @@ export const HANDLERS = {
     const result = await createGroupOrder(ctx.prisma, { hostUserId: ctx.userId, locationId: location.id, estimatedArrival: cart.arrival, now: nowOf(ctx) });
     if (result.error) return { error: "GROUP_CREATE_FAILED", message: result.error };
     const url = `${ctx.webBaseUrl || "https://www.ohbeef.com"}/${ctx.locale || "en"}/group/${result.group.code}`;
-    return { code: result.group.code, location: location.name, card: { type: "group-share", code: result.group.code, url } };
+    return { code: result.group.code, url, location: location.name, card: { type: "group-share", code: result.group.code, url } };
   },
 
   async report_issue(input, ctx) {
@@ -738,7 +856,7 @@ export const HANDLERS = {
           await createPodCall(ctx.prisma, { orderId: live.id, reason: "ASSISTANCE" });
         } catch (err) {
           if (!(err instanceof PodCallError) || err.code !== "ALREADY_PENDING") throw err;
-          return { podCall: true, alreadyPending: true, pod, goodwillCents: 0, card: { type: "pod-call", pod }, message: "Staff were already called to the pod." };
+          return { podCall: true, alreadyPending: true, pod, goodwillCents: 0, card: { type: "pod-call", pod, again: true }, message: "Staff were already called to the pod." };
         }
         return { podCall: true, pod, goodwillCents: 0, card: { type: "pod-call", pod }, message: "Staff are on their way to the pod." };
       }
@@ -773,7 +891,7 @@ export const HANDLERS = {
       goodwillCents: granted,
       goodwill: granted ? dollars(granted) : null,
       goodwillNote: granted ? "Added as store credit, usable on a next order." : goodwill.reason ? `No credit added (${goodwill.reason}). The team will review the case.` : "The team will review the case.",
-      card: caseCard(supportCase, { goodwillCents: granted }),
+      card: caseCard(supportCase, { kind: "issue", goodwillCents: granted }),
     };
   },
 
@@ -782,13 +900,13 @@ export const HANDLERS = {
     if (!order) return { error: "NOT_FOUND" };
     const c = await openCase(ctx, { type: "REFUND_REQUEST", tool: "request_refund", summary: clean(input.reason) || "Refund requested", orderId: order.id });
     await notify(ctx, c, {});
-    return { caseId: c.id, orderNumber: order.orderNumber, message: "Staff will review it. No refund or amount is promised.", card: caseCard(c) };
+    return { caseId: c.id, orderNumber: order.orderNumber, message: "Staff will review it. No refund or amount is promised.", card: caseCard(c, { kind: "refund" }) };
   },
 
   async escalate_to_human(input, ctx) {
     const c = await openCase(ctx, { type: "GENERAL", tool: "escalate_to_human", summary: `Escalated: ${clean(input.summary)}`, contactInput: input.contact });
     await notify(ctx, c, { urgent: true });
-    return { caseId: c.id, message: "A person has been alerted and will follow up.", card: caseCard(c, { urgent: true }) };
+    return { caseId: c.id, message: "A person has been alerted and will follow up.", card: caseCard(c, { kind: "escalation", urgent: true }) };
   },
 };
 

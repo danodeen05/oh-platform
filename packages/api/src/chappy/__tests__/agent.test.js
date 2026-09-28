@@ -12,6 +12,7 @@ import {
   CHAPPY_MODEL,
   MAX_TOOL_ROUNDS,
   HISTORY_LIMIT,
+  forModel,
 } from "../agent.js";
 import { FROZEN_SYSTEM, buildContextBlock, FALLBACK_TEXT } from "../prompts.js";
 import { TOOL_DEFS, validateToolInput, executeTool } from "../tools.js";
@@ -159,6 +160,17 @@ describe("request shape", () => {
     assert.equal(seen[0].now, NOW);
     assert.deepEqual(events.find((e) => e.type === "card")?.card, { type: "sign-in" });
     assert.match(client.calls[1].params.messages.at(-1).content[0].content, /SIGN_IN_REQUIRED/);
+  });
+
+  test("Task E2: a card's payload goes to the widget only; the model (and the saved conversation) sees just its type", () => {
+    const result = { orderId: "o1", message: "The pay card is showing.", card: { type: "pay", orderId: "o1", clientSecret: "pi_1_secret_x", amountDueCents: 656 } };
+    const seen = forModel(result);
+    assert.deepEqual(seen.card, { type: "pay" });
+    assert.ok(!JSON.stringify(seen).includes("secret"), "the client secret never reaches the prompt");
+    assert.equal(seen.message, result.message);
+    assert.equal(result.card.clientSecret, "pi_1_secret_x", "the widget's copy is untouched");
+    assert.deepEqual(forModel({ ok: true }), { ok: true });
+    assert.equal(forModel(null), null);
   });
 
   test("the context block shows the server-held cart (ids and choices, no prices)", async () => {

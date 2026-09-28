@@ -2213,31 +2213,137 @@
     "cards": {
       "signIn": {
         "title": "Inicia sesión para continuar",
-        "body": "Inicia sesión y Chappy lo termina por ti."
+        "body": "Inicia sesión y Chappy lo termina por ti.",
+        "label": "Inicia sesión para continuar"
       },
       "pay": {
         "title": "Listo para pagar",
-        "body": "Tu pedido está guardado y listo para pagar."
+        "body": "Tu pedido está guardado y listo para pagar.",
+        "label": "Paga tu pedido",
+        "amountLabel": "Total a pagar",
+        "order": "Pedido #{number}",
+        "pod": "Pod {pod}",
+        "podLater": "Pod al registrarte",
+        "or": "o paga con tarjeta",
+        "payButton": "Pagar {amount}",
+        "paying": "Pagando",
+        "confirming": "Enviando tu pedido",
+        "loading": "Cargando el pago seguro",
+        "secure": "Los datos de tu tarjeta van directo a Stripe. Chappy nunca los ve.",
+        "paidTitle": "Pagado",
+        "paidNote": "Pagado. Pedido #{number}, pod {pod}.",
+        "paidNoteNoPod": "Pagado. Pedido #{number}. Tu pod se asigna al registrarte.",
+        "failed": "El pago no se completó. No se hizo ningún cargo a tu tarjeta.",
+        "confirmFailed": "Tu pago se hizo, pero el pedido aún no está confirmado. Inténtalo de nuevo.",
+        "refunded": "No pudimos hacer el pedido, así que te devolvimos el pago completo.",
+        "processing": "Tu banco aún está procesando el pago. Tu pedido se actualiza cuando se complete.",
+        "returnFailed": "El pago no se completó. Puedes intentarlo de nuevo abajo.",
+        "unavailable": "El pago no está disponible ahora. Inténtalo en un momento."
       },
       "confirmZero": {
         "title": "Nada que pagar",
-        "body": "Tus ahorros cubren este pedido."
+        "body": "Tus ahorros cubren este pedido.",
+        "label": "Haz tu pedido",
+        "place": "Hacer pedido",
+        "placing": "Enviando tu pedido"
       },
       "groupShare": {
         "title": "Pedido en grupo",
-        "body": "Comparte el código para que tu mesa agregue sus tazones."
+        "body": "Comparte el código para que tu mesa agregue sus tazones.",
+        "label": "Pedido en grupo",
+        "code": "Código del grupo",
+        "share": "Compartir enlace",
+        "copy": "Copiar enlace",
+        "copied": "Copiado",
+        "open": "Abrir el pedido en grupo",
+        "shareText": "Únete a mi pedido en grupo de Oh!. Código {code}."
       },
       "podCall": {
         "title": "El personal va en camino",
-        "body": "Alguien va hacia tu cabina."
+        "body": "Alguien va hacia tu cabina.",
+        "label": "Llamada al personal",
+        "bodyPod": "El personal va en camino al pod {pod}.",
+        "again": "El personal ya lo sabe. Alguien va en camino al pod {pod}.",
+        "againNoPod": "El personal ya lo sabe. Alguien va en camino."
       },
       "supportCase": {
         "title": "Caso abierto",
-        "body": "El equipo lo revisará y te responderá."
+        "body": "El equipo lo revisará y te responderá.",
+        "label": "Caso de soporte",
+        "ref": "Caso {ref}",
+        "refundTitle": "Revisión de reembolso solicitada",
+        "refundBody": "El equipo revisará un reembolso del pedido completo y te avisará.",
+        "escalationTitle": "Una persona se encarga",
+        "escalationBody": "Alguien del equipo se comunicará contigo pronto.",
+        "creditTitle": "{amount} de crédito en tienda agregado",
+        "creditBody": "Ya está en tu cuenta, listo para tu próximo pedido."
       },
       "unknown": {
         "title": "De Chappy",
         "body": "Los detalles de este paso aparecen aquí."
+      },
+      "cart": {
+        "label": "Tu pedido hasta ahora",
+        "title": "Tu pedido",
+        "subtotal": "Subtotal",
+        "savings": "Ahorro",
+        "tax": "Impuestos",
+        "total": "Total",
+        "credit": "Crédito y tarjetas de regalo",
+        "due": "A pagar",
+        "arrival": "Llegada a las {time}",
+        "asap": "Llega en cuanto puedas",
+        "pod": "Pod {pod}",
+        "podBest": "El mejor pod libre",
+        "podCheckIn": "Pod al registrarte",
+        "party": "{count, plural, one {# persona} other {# personas}}",
+        "item": "Platillo"
+      },
+      "menuItem": {
+        "label": "Platillo: {name}",
+        "add": "Agregar a mi pedido",
+        "addPrompt": "Agrega {name} a mi pedido.",
+        "spice": "{level, plural, =0 {Sin picante} other {Picante nivel #}}",
+        "dietary": {
+          "vegetarian": "Vegetariano",
+          "vegan": "Vegano",
+          "gluten_free": "Sin gluten"
+        }
+      },
+      "orderStatus": {
+        "label": "Estado del pedido",
+        "title": "Pedido #{number}",
+        "titleNoNumber": "Tu pedido",
+        "pod": "Pod {pod}",
+        "open": "Ver el estado del pedido",
+        "progress": "Paso {step} de {total}",
+        "stages": {
+          "PAID": "Pagado",
+          "QUEUED": "En fila",
+          "PREPPING": "En la cocina",
+          "READY": "Listo",
+          "SERVING": "En camino",
+          "COMPLETED": "Terminado",
+          "UNPAID": "Esperando el pago",
+          "CANCELLED": "Cancelado",
+          "OTHER": "Recibido"
+        }
+      },
+      "reward": {
+        "label": "Tus recompensas",
+        "tiers": {
+          "CHOPSTICK": "Palillo",
+          "NOODLE_MASTER": "Maestro del Fideo",
+          "BEEF_BOSS": "Jefe de la Res"
+        },
+        "credit": "Crédito en tienda",
+        "cashback": "{pct}% de vuelta en cada pedido",
+        "expiring": "{amount} vence pronto",
+        "toNext": "Siguiente: {tier}",
+        "orders": "{have} de {need} pedidos",
+        "referrals": "{have} de {need} referidos",
+        "top": "Nivel más alto. Gracias.",
+        "rewards": "{count, plural, =0 {Sin recompensas pendientes} one {# recompensa pendiente} other {# recompensas pendientes}}"
       }
     }
   },

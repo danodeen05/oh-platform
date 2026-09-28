@@ -333,6 +333,17 @@ function cardsFrom(result) {
   return cards;
 }
 
+/**
+ * The tool result as the model (and the saved conversation) sees it (Task E2):
+ * a card is for the customer's screen, so the model gets only its type. Its
+ * payload repeats the result (the cart, the order) or is the customer's alone
+ * (a pay card's client secret), and never needs to be in the prompt.
+ */
+export function forModel(result) {
+  if (!result || typeof result !== "object" || !result.card || typeof result.card !== "object") return result ?? null;
+  return { ...result, card: { type: result.card.type } };
+}
+
 function addUsage(total, message) {
   const u = message?.usage || {};
   for (const k of ["input_tokens", "output_tokens", "cache_read_input_tokens", "cache_creation_input_tokens"]) {
@@ -508,7 +519,7 @@ export async function* runTurn({ client, prisma, identity, channel = "web", loca
         try {
           const result = await toolset.execute(block.name, block.input, toolCtx);
           for (const card of cardsFrom(result)) yield { type: "card", card };
-          results.push({ type: "tool_result", tool_use_id: block.id, content: typeof result === "string" ? result : JSON.stringify(result ?? null) });
+          results.push({ type: "tool_result", tool_use_id: block.id, content: typeof result === "string" ? result : JSON.stringify(forModel(result)) });
         } catch (err) {
           console.error(`[Chappy] tool ${block.name} failed:`, err?.message);
           results.push({ type: "tool_result", tool_use_id: block.id, is_error: true, content: `Error: ${err?.message || "tool failed"}` });

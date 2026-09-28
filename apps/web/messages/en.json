@@ -4518,31 +4518,137 @@
     "cards": {
       "signIn": {
         "title": "Sign in to continue",
-        "body": "Sign in and Chappy can finish this for you."
+        "body": "Sign in and Chappy can finish this for you.",
+        "label": "Sign in to continue"
       },
       "pay": {
         "title": "Ready to pay",
-        "body": "Your order is saved and ready to pay."
+        "body": "Your order is saved and ready to pay.",
+        "label": "Pay for your order",
+        "amountLabel": "Amount due",
+        "order": "Order #{number}",
+        "pod": "Pod {pod}",
+        "podLater": "Pod at check-in",
+        "or": "or pay with card",
+        "payButton": "Pay {amount}",
+        "paying": "Paying",
+        "confirming": "Placing your order",
+        "loading": "Loading secure checkout",
+        "secure": "Card details go straight to Stripe. Chappy never sees them.",
+        "paidTitle": "Paid",
+        "paidNote": "Paid. Order #{number}, pod {pod}.",
+        "paidNoteNoPod": "Paid. Order #{number}. Your pod is set at check-in.",
+        "failed": "That payment didn't go through. Your card wasn't charged.",
+        "confirmFailed": "Your payment went through, but the order isn't confirmed yet. Try again.",
+        "refunded": "We couldn't place the order, so the payment was refunded in full.",
+        "processing": "Your bank is still processing the payment. Your order updates when it clears.",
+        "returnFailed": "That payment didn't go through. You can try again below.",
+        "unavailable": "Payment isn't available right now. Try again in a moment."
       },
       "confirmZero": {
         "title": "Nothing to pay",
-        "body": "Your savings cover this order."
+        "body": "Your savings cover this order.",
+        "label": "Place your order",
+        "place": "Place order",
+        "placing": "Placing your order"
       },
       "groupShare": {
         "title": "Group order",
-        "body": "Share the code so your table can add their bowls."
+        "body": "Share the code so your table can add their bowls.",
+        "label": "Group order",
+        "code": "Group code",
+        "share": "Share link",
+        "copy": "Copy link",
+        "copied": "Copied",
+        "open": "Open group order",
+        "shareText": "Join my Oh! group order. Code {code}."
       },
       "podCall": {
         "title": "Staff are on the way",
-        "body": "Someone is headed to your pod."
+        "body": "Someone is headed to your pod.",
+        "label": "Staff call",
+        "bodyPod": "Staff are on their way to pod {pod}.",
+        "again": "Staff already know. Someone is on the way to pod {pod}.",
+        "againNoPod": "Staff already know. Someone is on the way."
       },
       "supportCase": {
         "title": "Case opened",
-        "body": "The team will review it and follow up."
+        "body": "The team will review it and follow up.",
+        "label": "Support case",
+        "ref": "Case {ref}",
+        "refundTitle": "Refund review requested",
+        "refundBody": "The team will review a refund for the whole order and let you know.",
+        "escalationTitle": "A person is on it",
+        "escalationBody": "Someone from the team will reach out soon.",
+        "creditTitle": "{amount} store credit added",
+        "creditBody": "It's in your account, ready for your next order."
       },
       "unknown": {
         "title": "From Chappy",
         "body": "Details for this step appear here."
+      },
+      "cart": {
+        "label": "Your order so far",
+        "title": "Your order",
+        "subtotal": "Subtotal",
+        "savings": "Savings",
+        "tax": "Tax",
+        "total": "Total",
+        "credit": "Credit and gift cards",
+        "due": "To pay",
+        "arrival": "Arrive at {time}",
+        "asap": "Arrive as soon as you can",
+        "pod": "Pod {pod}",
+        "podBest": "Best free pod",
+        "podCheckIn": "Pod at check-in",
+        "party": "{count, plural, one {# guest} other {# guests}}",
+        "item": "Menu item"
+      },
+      "menuItem": {
+        "label": "Menu item: {name}",
+        "add": "Add to my order",
+        "addPrompt": "Add {name} to my order.",
+        "spice": "{level, plural, =0 {Not spicy} other {Spice level #}}",
+        "dietary": {
+          "vegetarian": "Vegetarian",
+          "vegan": "Vegan",
+          "gluten_free": "Gluten free"
+        }
+      },
+      "orderStatus": {
+        "label": "Order status",
+        "title": "Order #{number}",
+        "titleNoNumber": "Your order",
+        "pod": "Pod {pod}",
+        "open": "Open order status",
+        "progress": "Step {step} of {total}",
+        "stages": {
+          "PAID": "Paid",
+          "QUEUED": "In line",
+          "PREPPING": "Cooking",
+          "READY": "Ready",
+          "SERVING": "On its way",
+          "COMPLETED": "Done",
+          "UNPAID": "Waiting for payment",
+          "CANCELLED": "Cancelled",
+          "OTHER": "Placed"
+        }
+      },
+      "reward": {
+        "label": "Your rewards",
+        "tiers": {
+          "CHOPSTICK": "Chopstick",
+          "NOODLE_MASTER": "Noodle Master",
+          "BEEF_BOSS": "Beef Boss"
+        },
+        "credit": "Store credit",
+        "cashback": "{pct}% back on every order",
+        "expiring": "{amount} expires soon",
+        "toNext": "Next: {tier}",
+        "orders": "{have} of {need} orders",
+        "referrals": "{have} of {need} referrals",
+        "top": "Top tier. Thank you.",
+        "rewards": "{count, plural, =0 {No rewards waiting} one {# reward waiting} other {# rewards waiting}}"
       }
     }
   },

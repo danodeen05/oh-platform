@@ -40,6 +40,8 @@ export interface ChappyStream {
   reset: () => void;
   /** Re-sends the last message after a retryable error. */
   retry: () => void;
+  /** Posts a system note (and its cards) into the conversation on screen (Task E2: a pay card settled). */
+  addNote: (text: string, cards?: ChatMessage["cards"]) => void;
   signedIn: boolean;
 }
 
@@ -250,5 +252,9 @@ export function useChappyStream({ locale, apiBase = SITE_API_URL }: { locale: st
     request("/chappy/reset", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }, { mint: false }).catch(() => {});
   }, [request]);
 
-  return { messages, status, send, reset, retry, signedIn: !!identityKey?.startsWith("member:") };
+  const addNote = useCallback((text: string, cards: ChatMessage["cards"] = []) => {
+    setMessages((list) => [...list, { id: newId("n"), role: "note", text, cards }]);
+  }, []);
+
+  return { messages, status, send, reset, retry, addNote, signedIn: !!identityKey?.startsWith("member:") };
 }

@@ -4416,31 +4416,137 @@
     "cards": {
       "signIn": {
         "title": "登入以繼續",
-        "body": "登入後，Chappy 就能幫你完成。"
+        "body": "登入後，Chappy 就能幫你完成。",
+        "label": "登入以繼續"
       },
       "pay": {
         "title": "可以付款了",
-        "body": "你的訂單已儲存，可以付款了。"
+        "body": "你的訂單已儲存，可以付款了。",
+        "label": "為你的訂單付款",
+        "amountLabel": "應付金額",
+        "order": "訂單 #{number}",
+        "pod": "座艙 {pod}",
+        "podLater": "報到時安排座艙",
+        "or": "或用信用卡付款",
+        "payButton": "付款 {amount}",
+        "paying": "付款中",
+        "confirming": "正在送出訂單",
+        "loading": "正在載入安全付款",
+        "secure": "卡片資料直接交給 Stripe，Chappy 看不到。",
+        "paidTitle": "已付款",
+        "paidNote": "已付款。訂單 #{number}，座艙 {pod}。",
+        "paidNoteNoPod": "已付款。訂單 #{number}。報到時會安排座艙。",
+        "failed": "這筆付款沒有成功，你的卡沒有被扣款。",
+        "confirmFailed": "付款已完成，但訂單還沒確認。請再試一次。",
+        "refunded": "訂單無法成立，款項已全額退回。",
+        "processing": "銀行還在處理這筆付款，完成後訂單會自動更新。",
+        "returnFailed": "這筆付款沒有成功，可以在下方再試一次。",
+        "unavailable": "目前無法付款，請稍後再試。"
       },
       "confirmZero": {
         "title": "不需付款",
-        "body": "你的優惠已涵蓋這筆訂單。"
+        "body": "你的優惠已涵蓋這筆訂單。",
+        "label": "送出你的訂單",
+        "place": "送出訂單",
+        "placing": "正在送出訂單"
       },
       "groupShare": {
         "title": "團體訂單",
-        "body": "分享代碼，讓同桌的人加點自己的麵。"
+        "body": "分享代碼，讓同桌的人加點自己的麵。",
+        "label": "團體訂單",
+        "code": "團體代碼",
+        "share": "分享連結",
+        "copy": "複製連結",
+        "copied": "已複製",
+        "open": "開啟團體訂單",
+        "shareText": "一起加入我的 Oh! 團體訂單，代碼 {code}。"
       },
       "podCall": {
         "title": "店員正在過去",
-        "body": "有人正前往你的座位。"
+        "body": "有人正前往你的座位。",
+        "label": "呼叫服務人員",
+        "bodyPod": "服務人員正前往座艙 {pod}。",
+        "again": "服務人員已經知道了，正前往座艙 {pod}。",
+        "againNoPod": "服務人員已經知道了，正在路上。"
       },
       "supportCase": {
         "title": "已建立案件",
-        "body": "團隊會審查並與你聯絡。"
+        "body": "團隊會審查並與你聯絡。",
+        "label": "客服案件",
+        "ref": "案件 {ref}",
+        "refundTitle": "已申請退款審核",
+        "refundBody": "團隊會審核整筆訂單的退款，並通知你結果。",
+        "escalationTitle": "已有專人處理",
+        "escalationBody": "團隊成員很快會與你聯絡。",
+        "creditTitle": "已加入 {amount} 店內點數",
+        "creditBody": "點數已在你的帳戶，下次點餐就能用。"
       },
       "unknown": {
         "title": "來自 Chappy",
         "body": "這一步的詳細資訊會顯示在這裡。"
+      },
+      "cart": {
+        "label": "目前的訂單",
+        "title": "你的訂單",
+        "subtotal": "小計",
+        "savings": "折扣",
+        "tax": "稅金",
+        "total": "總計",
+        "credit": "點數與禮物卡",
+        "due": "應付",
+        "arrival": "{time} 抵達",
+        "asap": "盡快抵達",
+        "pod": "座艙 {pod}",
+        "podBest": "最佳空座艙",
+        "podCheckIn": "報到時安排座艙",
+        "party": "{count} 位",
+        "item": "餐點"
+      },
+      "menuItem": {
+        "label": "餐點：{name}",
+        "add": "加入我的訂單",
+        "addPrompt": "把{name}加入我的訂單。",
+        "spice": "{level, plural, =0 {不辣} other {辣度 #}}",
+        "dietary": {
+          "vegetarian": "素食",
+          "vegan": "全素",
+          "gluten_free": "無麩質"
+        }
+      },
+      "orderStatus": {
+        "label": "訂單狀態",
+        "title": "訂單 #{number}",
+        "titleNoNumber": "你的訂單",
+        "pod": "座艙 {pod}",
+        "open": "查看訂單狀態",
+        "progress": "第 {step} 步，共 {total} 步",
+        "stages": {
+          "PAID": "已付款",
+          "QUEUED": "排隊中",
+          "PREPPING": "烹煮中",
+          "READY": "已完成",
+          "SERVING": "送餐中",
+          "COMPLETED": "用餐結束",
+          "UNPAID": "等待付款",
+          "CANCELLED": "已取消",
+          "OTHER": "已下單"
+        }
+      },
+      "reward": {
+        "label": "你的會員禮遇",
+        "tiers": {
+          "CHOPSTICK": "筷子",
+          "NOODLE_MASTER": "麵條大師",
+          "BEEF_BOSS": "牛肉老闆"
+        },
+        "credit": "店內點數",
+        "cashback": "每筆訂單回饋 {pct}%",
+        "expiring": "{amount} 即將到期",
+        "toNext": "下一級：{tier}",
+        "orders": "訂單 {have} / {need}",
+        "referrals": "推薦 {have} / {need}",
+        "top": "最高等級，謝謝你。",
+        "rewards": "{count, plural, =0 {目前沒有待用獎勵} other {# 個待用獎勵}}"
       }
     }
   },

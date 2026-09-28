@@ -90,3 +90,81 @@
     opacity: 0.35;
   }
 }
+
+/* ---- Task E2: native cards ---------------------------------------------- */
+
+/* A card arrives a beat after the words it belongs to. */
+.chappy-card-enter {
+  animation: chappy-card-enter 320ms cubic-bezier(0.2, 0.7, 0.2, 1) 60ms both;
+}
+
+@keyframes chappy-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+}
+
+/* The brush stroke inside a filled button (cream on ember-deep). */
+.chappy-brush--sm {
+  width: 22px;
+  height: 3px;
+  background: color-mix(in srgb, var(--color-oh-cream) 40%, transparent);
+}
+.chappy-brush--sm::after {
+  background: linear-gradient(90deg, transparent, var(--color-oh-cream), transparent);
+}
+
+/* Paid: the check settles in with a small press. */
+.chappy-paid-mark {
+  animation: chappy-paid 420ms cubic-bezier(0.3, 1.4, 0.5, 1) both;
+}
+
+@keyframes chappy-paid {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+
+/* The order's current stage breathes, slowly. */
+.chappy-stage-now {
+  animation: chappy-stage 2.4s ease-in-out infinite;
+}
+
+@keyframes chappy-stage {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+/* Staff called: one ring goes out from the pod mark, twice. */
+.chappy-pod-call::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 2px solid var(--color-oh-ember-light);
+  opacity: 0;
+  animation: chappy-ring 1.8s ease-out 2;
+}
+
+@keyframes chappy-ring {
+  from {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.35);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chappy-card-enter,
+  .chappy-paid-mark,
+  .chappy-stage-now,
+  .chappy-pod-call::after {
+    animation: none;
+  }
+}
