@@ -88,6 +88,7 @@ import { PROGRAM, tierRule } from "./membership/program.js";
 import { onOrderCompleted, applyReferralSignup, visibleMenuItems, firstUnreleasedItem, profileForUser } from "./membership/engine.js";
 import { createCustomerAuth, registerCustomerIdentity, orderOwnerId } from "./auth/customer.js";
 import { registerChappyRoutes } from "./chappy/routes.js";
+import { FASTIFY_OPTIONS, rateLimitKey } from "./http-config.js";
 import { createKioskAuth } from "./auth/kiosk.js";
 import { publicReferral, shopCreditSpender, registerAdminOnlyRoutes } from "./auth/hardening.js";
 import { listLocationSeats } from "./seats/service.js";
@@ -96,7 +97,8 @@ import { listLocationSeats } from "./seats/service.js";
 // the plan's live status-page demo reads real routes without touching the DB.
 const basePrisma = new PrismaClient();
 const { prisma, source: statusDemoSource } = withStatusDemo(basePrisma);
-const app = Fastify({ logger: true });
+// trustProxy: one hop (Railway edge / dev nginx), so req.ip is the real client. See http-config.js.
+const app = Fastify(FASTIFY_OPTIONS);
 
 // Initialize Anthropic client (uses ANTHROPIC_API_KEY env var automatically)
 const anthropic = process.env.ANTHROPIC_API_KEY ? new Anthropic() : null;
@@ -176,8 +178,8 @@ await app.register(rateLimit, {
   timeWindow: '1 minute',
   // Higher limits for certain routes
   keyGenerator: (req) => {
-    // Use IP address as the key
-    return req.ip || req.headers['x-forwarded-for'] || 'unknown';
+    // The real client IP (trustProxy: 1), never a client-supplied header
+    return rateLimitKey(req);
   },
   errorResponseBuilder: (req, context) => ({
     error: 'Too Many Requests',

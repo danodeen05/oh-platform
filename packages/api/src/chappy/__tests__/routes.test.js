@@ -10,6 +10,7 @@ import cors from "@fastify/cors";
 import formbody from "@fastify/formbody";
 import rateLimit from "@fastify/rate-limit";
 import twilio from "twilio";
+import { FASTIFY_OPTIONS, rateLimitKey } from "../../http-config.js";
 import { createCustomerAuth, registerCustomerIdentity } from "../../auth/customer.js";
 import { registerChappyRoutes, GUEST_TOKEN_RATE_LIMIT } from "../routes.js";
 import { fakeClient, fakePrisma, step, text } from "./fakes.js";
@@ -30,11 +31,11 @@ function customerAuth() {
   });
 }
 
-async function build({ script = [step({ content: [text("Hi from Chappy")] })], checkLimits, prisma, withRateLimit = false, env = SMS_ENV } = {}) {
-  const app = Fastify();
+async function build({ script = [step({ content: [text("Hi from Chappy")] })], checkLimits, prisma, withRateLimit = false, env = SMS_ENV, fastifyOptions = {} } = {}) {
+  const app = Fastify(fastifyOptions);
   await app.register(cors, { origin: (origin, cb) => cb(null, !origin || origin === ALLOWED), credentials: true });
   await app.register(formbody);
-  if (withRateLimit) await app.register(rateLimit, { max: 1000, timeWindow: "1 minute" });
+  if (withRateLimit) await app.register(rateLimit, { max: 1000, timeWindow: "1 minute", keyGenerator: rateLimitKey });
   const auth = customerAuth();
   registerCustomerIdentity(app, auth);
   const client = fakeClient(script);
@@ -201,6 +202,26 @@ describe("POST /chappy/guest-token", () => {
     let last;
     for (let i = 1; i <= GUEST_TOKEN_RATE_LIMIT.max; i++) last = await app.inject({ method: "POST", url: "/chappy/guest-token" });
     assert.equal(last.statusCode, 429);
+  });
+
+  test("behind the proxy (index.js server options), each real client IP gets its own bucket", async () => {
+    assert.equal(FASTIFY_OPTIONS.trustProxy, 1);
+    const { app } = await build({ withRateLimit: true, fastifyOptions: { ...FASTIFY_OPTIONS, logger: false } });
+    // Railway appends the address it saw: "<whatever the client sent>, <real ip>".
+    const from = (xff) => app.inject({ method: "POST", url: "/chappy/guest-token", headers: { "x-forwarded-for": xff } });
+    for (let i = 0; i < GUEST_TOKEN_RATE_LIMIT.max; i++) assert.equal((await from("203.0.113.10")).statusCode, 200);
+    assert.equal((await from("203.0.113.10")).statusCode, 429, "client A is out");
+    assert.equal((await from("198.51.100.20")).statusCode, 200, "client B has its own bucket");
+    // A client cannot pick a fresh bucket by forging the leftmost entry.
+    assert.equal((await from("1.2.3.4, 203.0.113.10")).statusCode, 429);
+    assert.equal((await from("5.6.7.8, 203.0.113.10")).statusCode, 429);
+  });
+
+  test("without trustProxy every client shares the proxy's bucket (the bug this fixes)", async () => {
+    const { app } = await build({ withRateLimit: true });
+    const from = (xff) => app.inject({ method: "POST", url: "/chappy/guest-token", headers: { "x-forwarded-for": xff } });
+    for (let i = 0; i < GUEST_TOKEN_RATE_LIMIT.max; i++) await from("203.0.113.10");
+    assert.equal((await from("198.51.100.20")).statusCode, 429);
   });
 });
 

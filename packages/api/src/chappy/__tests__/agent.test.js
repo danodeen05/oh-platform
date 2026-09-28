@@ -15,7 +15,7 @@ import {
 } from "../agent.js";
 import { FROZEN_SYSTEM, buildContextBlock, FALLBACK_TEXT } from "../prompts.js";
 import { readFileSync } from "node:fs";
-import { TOOL_DEFS, validateToolInput, executeTool } from "../tools.js";
+import { TOOL_DEFS, validateToolInput, executeTool, DISABLED_MONEY_TOOLS } from "../tools.js";
 import { toStrictToolDefs, countOptionalParams, STRICT_TOOL_LIMIT, STRICT_OPTIONAL_PARAM_BUDGET } from "../tool-schema.js";
 
 const NOW = new Date("2026-10-01T18:00:00Z");
@@ -108,23 +108,71 @@ describe("request shape", () => {
     assert.equal(strict.length, 0);
   });
 
-  test("create_and_pay_order is disabled: it never touches Stripe or the database", async () => {
-    const touched = [];
-    const trap = new Proxy({}, { get: (_, model) => new Proxy({}, { get: (_, op) => () => touched.push(`${String(model)}.${String(op)}`) }) });
-    const result = await executeTool(
-      "create_and_pay_order",
-      { locationId: "loc", items: [{ menuItemId: "m1", quantity: 1 }], paymentMethodId: "pm_1", arrivalTime: "ASAP" },
-      { prisma: trap, userId: "u1", locationId: "loc", tenantId: "t" },
+  // Fix round 1 (Critical): no tool may move money from chat. A trap prisma
+  // throws on ANY property access, so a disabled tool must return before it.
+  const trapPrisma = () =>
+    new Proxy(
+      {},
+      {
+        get(_, prop) {
+          throw new Error(`database touched: prisma.${String(prop)}`);
+        },
+      },
     );
-    assert.equal(result.charged, false);
+  const MONEY_INPUTS = {
+    apply_credits: { orderId: "o_other_user", amountCents: -50000 },
+    create_and_pay_order: { locationId: "loc", items: [{ menuItemId: "m1", quantity: 1 }], paymentMethodId: "pm_1", arrivalTime: "ASAP" },
+    create_apple_pay_order: { locationId: "loc", items: [{ menuItemId: "m1", quantity: 1 }], applyCredits: true },
+    create_order: { locationId: "loc", items: [{ menuItemId: "m1", quantity: 1 }] },
+    create_payment_link: { orderId: "o_someone_else" },
+  };
+
+  test("every money tool is disabled before any database access, for members and guests", async () => {
+    assert.deepEqual(Object.keys(DISABLED_MONEY_TOOLS).sort(), Object.keys(MONEY_INPUTS).sort());
+    for (const [name, input] of Object.entries(MONEY_INPUTS)) {
+      for (const userId of ["u1", null]) {
+        const result = await executeTool(name, input, { prisma: trapPrisma(), userId, guestId: null, locationId: "loc", tenantId: "t" });
+        assert.equal(result.error, "PAYMENT_NEEDS_CUSTOMER_TAP", name);
+        assert.equal(result.charged, false, name);
+        assert.match(result.message, /ohbeef\.com\/order/, name);
+      }
+    }
+  });
+
+  test("apply_credits with a negative amount mints nothing (disabled, no database access)", async () => {
+    const result = await executeTool("apply_credits", { orderId: "o1", amountCents: -100000 }, { prisma: trapPrisma(), userId: "u1" });
     assert.equal(result.error, "PAYMENT_NEEDS_CUSTOMER_TAP");
-    assert.match(result.instruction, /order\/payment\?orderId=/);
-    assert.deepEqual(touched, [], "no database access (a charge needs the saved card row first)");
-    // And the handler has no Stripe code path at all.
+  });
+
+  test("the loop runs a disabled money tool as a normal tool_result, never a charge", async () => {
+    const tools = { defs: TOOL_DEFS, execute: executeTool };
+    const script = [
+      step({ content: [toolUse("apply_credits", { orderId: "o1", amountCents: -5000 }, "m1")], stop_reason: "tool_use" }),
+      step({ content: [text("Credit is applied on the payment page.")] }),
+    ];
+    const client = fakeClient(script);
+    const db = fakePrisma({ users: [{ id: "u1", membershipTier: "CHOPSTICK" }] });
+    const conversation = conv();
+    db.convs.push(conversation);
+    await collect(runTurn({ client, prisma: db, identity: { kind: "member", userId: "u1" }, message: "use my credit", conversation, tools, now: NOW }));
+    const result = client.calls[1].params.messages.at(-1).content[0];
+    assert.equal(result.tool_use_id, "m1");
+    assert.match(result.content, /PAYMENT_NEEDS_CUSTOMER_TAP/);
+  });
+
+  test("scan: every legacy tool handler that writes to the database or Stripe is disabled", () => {
     const src = readFileSync(new URL("../tools.js", import.meta.url), "utf8");
-    const start = src.indexOf('case "create_and_pay_order"');
-    const block = src.slice(start, src.indexOf("    case ", start + 10));
-    assert.ok(start > 0 && !/stripe|paymentIntents/i.test(block), "create_and_pay_order must not reach Stripe");
+    const body = src.slice(src.indexOf("async function executeToolByName"));
+    // Code only (comments stripped): prisma writes, transactions, Stripe calls, atomic credit math.
+    const WRITES = /\.\s*(create|createMany|update|updateMany|upsert|delete|deleteMany)\s*\(|\$transaction|\bstripe\s*\.|new\s+Stripe\b|import\(\s*["']stripe["']\s*\)|\b(decrement|increment)\s*:/;
+    const writers = [];
+    for (const m of body.matchAll(/\n {4}case "([a-z_]+)": \{([\s\S]*?)(?=\n {4}case "|\n {4}default:)/g)) {
+      const code = m[2].replace(/\/\/[^\n]*/g, "");
+      if (WRITES.test(code)) writers.push(m[1]);
+    }
+    // The regex must still see the known (now unreachable) writers, or it proves nothing.
+    for (const known of ["create_order", "apply_credits", "create_apple_pay_order"]) assert.ok(writers.includes(known), `scan missed ${known}`);
+    for (const name of writers) assert.ok(Object.hasOwn(DISABLED_MONEY_TOOLS, name), `${name} writes but is not in DISABLED_MONEY_TOOLS`);
   });
 
   test("toStrictToolDefs refuses more strict tools than the API accepts", () => {
@@ -244,6 +292,60 @@ describe("loop", () => {
     assert.ok(!events.some((e) => e.type === "done"));
     assert.equal(tools.executed.length, 0);
     assert.equal(db.updates.length, 0);
+  });
+
+  test("a refusal AFTER tool rounds saves the completed rounds, never the refused content", async () => {
+    const script = [
+      step({ content: [text("Checking."), toolUse("zeta_lookup", { q: "made-an-order" }, "r1")], stop_reason: "tool_use" }),
+      step({ content: [toolUse("zeta_lookup", { q: "second" }, "r2")], stop_reason: "tool_use" }),
+      step({ content: [text("REFUSED PARTIAL")], stop_reason: "refusal" }),
+    ];
+    const { events, tools, db } = await turn({ script, message: "order me a bowl" });
+    assert.deepEqual(events.at(-1), { type: "error", code: "REFUSAL" });
+    assert.equal(tools.executed.length, 2);
+    assert.equal(db.updates.length, 1, "completed rounds saved once");
+    const saved = db.updates[0].data.messages;
+    const json = JSON.stringify(saved);
+    assert.ok(!json.includes("REFUSED PARTIAL"), "refused content is dropped");
+    assert.deepEqual(
+      saved.map((m) => [m.role, m.content.map((b) => b.type).join(",")]),
+      [["user", "text,text"], ["assistant", "text,tool_use"], ["user", "tool_result"], ["assistant", "tool_use"], ["user", "tool_result"]],
+    );
+    assert.ok(json.includes("made-an-order") && json.includes('"tool_use_id":"r2"'));
+    // The next turn can continue from that history without orphans.
+    const next = await turn({ script: [step()], history: saved, message: "did it work?" });
+    const sent = next.client.calls[0].params.messages;
+    assert.ok(JSON.stringify(sent).includes('"tool_use_id":"r1"'), "the side effect is still visible next turn");
+  });
+
+  test("an API error after tool rounds also keeps the completed rounds", async () => {
+    const script = [step({ content: [toolUse("zeta_lookup", { q: "x" }, "e1")], stop_reason: "tool_use" }), step({ throws: apiError(529) })];
+    const { events, db } = await turn({ script });
+    assert.equal(events.at(-1).code, "BUSY");
+    assert.equal(db.updates.length, 1);
+    assert.equal(db.updates[0].data.messages.at(-1).content[0].tool_use_id, "e1");
+  });
+
+  test("a JSON re-issue after text streamed does not show the text twice", async () => {
+    const script = (n) =>
+      n === 1
+        ? step({ content: [text("Let me look."), toolUse("zeta_lookup", { q: "x" })], stop_reason: "tool_use", throws: jsonParseError() })
+        : n === 2
+          ? step({ content: [text("Let me look."), toolUse("zeta_lookup", { q: "x" }, "j2")], stop_reason: "tool_use" })
+          : step({ content: [text("Found it.")] });
+    const { events, client } = await turn({ script });
+    assert.equal(client.calls.length, 3);
+    const shown = events.filter((e) => e.type === "text").map((e) => e.delta).join("");
+    assert.equal(shown, "Let me look.\n\nFound it.");
+  });
+
+  test("a JSON re-issue before any text streams shows the retry's text normally", async () => {
+    const script = (n) =>
+      n === 1
+        ? step({ content: [toolUse("zeta_lookup", { q: "x" })], stop_reason: "tool_use", throws: jsonParseError() })
+        : step({ content: [text("Here.")] });
+    const { events } = await turn({ script });
+    assert.equal(events.filter((e) => e.type === "text").map((e) => e.delta).join(""), "Here.");
   });
 
   test("max_tokens with a tool_use: finish the text, run no tools, request nothing more", async () => {

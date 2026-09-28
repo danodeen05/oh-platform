@@ -25,7 +25,9 @@
  *    final request still returns tool_use, those calls are dropped and a
  *    canned text ends the turn.
  *  - stop_reason is checked before content is used: "refusal" ends the turn
- *    with {type:"error", code:"REFUSAL"} and saves nothing; "max_tokens" keeps
+ *    with {type:"error", code:"REFUSAL"}; the refused content is never saved,
+ *    but tool rounds that already ran this turn are (so are they on an API
+ *    error), because their side effects are real; "max_tokens" keeps
  *    the text and runs no tools.
  *  - Eager input streaming means inputs are not validated server-side, so
  *    every tool input is validated against its schema before it runs; a bad
@@ -339,23 +341,44 @@ export async function* runTurn({ client, prisma, identity, channel = "web", loca
     yield { type: "text", delta: textToSay };
   }
 
+  // When a turn ends in a refusal or an error AFTER tool rounds ran, those
+  // tools may have had side effects (an order, a PaymentIntent). Keep the
+  // completed rounds (each tool_use with its tool_result) in history so the
+  // next turn knows about them; the refused/failed partial is never saved.
+  const baseLength = messages.length;
+  async function saveCompletedRounds() {
+    let end = messages.length;
+    while (end > baseLength && messages[end - 1].role !== "user") end--;
+    if (end <= baseLength) return;
+    try {
+      await saveConversation(prisma, conversation, messages.slice(0, end), now);
+    } catch (err) {
+      console.error("[Chappy] saving completed tool rounds failed:", err?.message);
+    }
+  }
+
   // Requests 1..6 may run tools; request 7 (if reached) is tool_choice "none".
   for (let round = 1; round <= MAX_TOOL_ROUNDS + 1; round++) {
     const finalRound = round > MAX_TOOL_ROUNDS;
     let final = null;
+    // After a JSON re-issue whose first attempt already streamed text, the
+    // retry's text is not streamed again (the customer would see it twice).
+    let suppressText = false;
     for (let attempt = 0; ; attempt++) {
       let needsBreak = emittedText;
+      let sentThisAttempt = false;
       try {
         const stream = client.beta.messages.stream(buildRequest({ messages, toolDefs: toolset.defs, finalRound }), signal ? { signal } : undefined);
         for await (const event of stream) {
           if (event.type === "content_block_start" && event.content_block?.type === "tool_use") {
             yield { type: "tool_start", name: event.content_block.name };
-          } else if (event.type === "content_block_delta" && event.delta?.type === "text_delta" && event.delta.text) {
+          } else if (event.type === "content_block_delta" && event.delta?.type === "text_delta" && event.delta.text && !suppressText) {
             if (needsBreak) {
               yield { type: "text", delta: "\n\n" };
               needsBreak = false;
             }
             emittedText = true;
+            sentThisAttempt = true;
             yield { type: "text", delta: event.delta.text };
           }
         }
@@ -364,9 +387,11 @@ export async function* runTurn({ client, prisma, identity, channel = "web", loca
       } catch (err) {
         if (isToolJsonError(err) && attempt < JSON_RETRY_LIMIT) {
           console.warn(`[Chappy] tool input JSON unparseable, re-issuing (attempt ${attempt + 1})`);
+          if (sentThisAttempt) suppressText = true;
           continue;
         }
         console.error("[Chappy] model request failed:", err?.status || "", err?.message);
+        await saveCompletedRounds();
         yield { type: "error", code: errorCode(err) };
         return;
       }
@@ -377,6 +402,7 @@ export async function* runTurn({ client, prisma, identity, channel = "web", loca
 
     // stop_reason first, content second.
     if (final.stop_reason === "refusal") {
+      await saveCompletedRounds();
       yield { type: "error", code: "REFUSAL" };
       return;
     }

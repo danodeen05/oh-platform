@@ -69,9 +69,9 @@ const EXPERIENCE = `How a visit works (dine-in only):
 const MONEY_RULES = `Ordering and money:
 - Before any order or payment step, show the items and the total and get an explicit yes in this conversation. "Sounds good" to a question about something else is not a yes.
 - You never charge a card, spend credit or move money on your own. The customer confirms payment with their own tap.
+- For now you cannot place orders, apply credit or take payment in chat. Help them choose, then send them to ohbeef.com/order to order and pay; credit is applied there.
 - Never ask for or accept card numbers in chat.
-- Guests (tier null) can browse and ask questions; ordering through chat needs a signed-in member. Otherwise point them to ohbeef.com.
-- If ordering fails, send them to ohbeef.com to order. Never offer pickup or delivery as a workaround.`;
+- If ordering fails, send them to ohbeef.com/order. Never offer pickup or delivery as a workaround.`;
 
 const SUPPORT_RULES = `Support:
 - Any goodwill you can offer is store credit only, never cash and never a card refund, and never an amount you invent.

@@ -7,6 +7,7 @@ import { loadStripe, Stripe, PaymentRequest } from "@stripe/stripe-js";
 import { StripeProvider } from "./payments/StripeProvider";
 import { PaymentForm } from "./payments/PaymentForm";
 import { useSiteApi } from "@/lib/site/api";
+import { splitSseFrames, finalChatText } from "@/lib/site/chappy-stream";
 
 // Singleton Stripe promise
 let stripePromise: Promise<Stripe | null> | null = null;
@@ -459,7 +460,7 @@ export function ChappyChat({
         setIsLoading(false);
       };
       // Keep whatever text already arrived; otherwise show the generic error.
-      const fail = () => finish(accumulatedText || "Oops! Something went wrong. Please try again. - Chappy");
+      const fail = () => finish(finalChatText(null, accumulatedText));
 
       // POST /chappy/chat streams server-sent events: text {delta}, tool_start {name},
       // card {card}, done {usage, text, actions, cards}, error {code}.
@@ -486,14 +487,15 @@ export function ChappyChat({
             }
             break;
           case "done":
-            finish(accumulatedText || data.text || "", { actions: data.actions, cards: data.cards });
+            finish(finalChatText({ event, data }, accumulatedText), { actions: data.actions, cards: data.cards });
             // Reset scroll tracking so the useEffect will scroll to show the response
             userScrolledUpRef.current = false;
             if (pendingApplePay) setApplePayOrder(pendingApplePay);
             if (!isOpen) setHasNewMessage(true);
             break;
           case "error":
-            fail();
+            // A REFUSAL drops any partial text that streamed before it.
+            finish(finalChatText({ event, data }, accumulatedText));
             break;
         }
       };
@@ -518,24 +520,9 @@ export function ChappyChat({
           const { value, done } = await reader.read();
           if (done) break;
           buffer += decoder.decode(value, { stream: true });
-          let sep = buffer.indexOf("\n\n");
-          while (sep >= 0) {
-            const frame = buffer.slice(0, sep);
-            buffer = buffer.slice(sep + 2);
-            sep = buffer.indexOf("\n\n");
-            let event = "message";
-            const dataLines: string[] = [];
-            for (const line of frame.split("\n")) {
-              if (line.startsWith("event:")) event = line.slice(6).trim();
-              else if (line.startsWith("data:")) dataLines.push(line.slice(5).trimStart());
-            }
-            if (dataLines.length === 0) continue;
-            try {
-              handleEvent(event, JSON.parse(dataLines.join("\n")));
-            } catch {
-              // Ignore a malformed frame; the rest of the stream still renders.
-            }
-          }
+          const { frames, rest } = splitSseFrames(buffer);
+          buffer = rest;
+          for (const frame of frames) handleEvent(frame.event, frame.data);
         }
         if (!finished) fail();
       } catch (error) {

@@ -68,12 +68,7 @@ Returns items grouped by category with prices, descriptions, and dietary info.`,
   // ==========================================
   {
     name: "create_order",
-    description: `Create a new order with specified items. Use after customer confirms:
-- What they want to order
-- Pickup time (optional)
-- Location (if not already set)
-
-This creates the order but does NOT process payment yet. Returns order details with total and order ID.`,
+    description: `DISABLED. Do not use. Chappy never creates orders, applies credit or takes payment in chat; the customer does that with their own tap. Send them to ohbeef.com/order.`,
     input_schema: {
       type: "object",
       properties: {
@@ -304,7 +299,7 @@ Returns: a 6-character code that others can use to join.`,
   // ==========================================
   {
     name: "create_payment_link",
-    description: `Create a payment link for an order. Use for SMS/RCS channels where we can't process payment directly. Returns a URL the customer can tap to pay.`,
+    description: `DISABLED. Do not use. Chappy never creates orders, applies credit or takes payment in chat; the customer does that with their own tap. Send them to ohbeef.com/order.`,
     input_schema: {
       type: "object",
       properties: {
@@ -323,9 +318,7 @@ Returns: a 6-character code that others can use to join.`,
 
   {
     name: "apply_credits",
-    description: `Apply user's available credits to an order. Max $5.00 per food order. Use when:
-- User has credits and wants to use them
-- Automatically suggest if user has credits available`,
+    description: `DISABLED. Do not use. Chappy never creates orders, applies credit or takes payment in chat; the customer does that with their own tap. Send them to ohbeef.com/order.`,
     input_schema: {
       type: "object",
       properties: {
@@ -529,7 +522,7 @@ Returns tokenized card info (last4, brand) - never raw card numbers. Only availa
 
   {
     name: "create_and_pay_order",
-    description: `DISABLED. Do not use. Chappy never charges a card; the customer pays with their own tap. To take payment, create the order with create_apple_pay_order and give the customer the payment step from its result.`,
+    description: `DISABLED. Do not use. Chappy never creates orders, applies credit or takes payment in chat; the customer does that with their own tap. Send them to ohbeef.com/order.`,
     input_schema: {
       type: "object",
       properties: {
@@ -646,14 +639,7 @@ Returns the configured items ready for ordering.`,
 
   {
     name: "create_apple_pay_order",
-    description: `Create an order for Apple Pay / Google Pay payment. Use when:
-- Customer has no saved payment methods but wants to pay with Apple Pay or Google Pay
-- Customer explicitly requests to pay with Apple Pay or Google Pay
-
-IMPORTANT: For reorders, use previousOrderId instead of items array - this is much simpler and more reliable.
-
-This creates a pending order and returns a payment intent for the frontend to process via Apple Pay.
-The frontend will handle the actual payment and confirm the order.`,
+    description: `DISABLED. Do not use. Chappy never creates orders, applies credit or takes payment in chat; the customer does that with their own tap. Send them to ohbeef.com/order.`,
     input_schema: {
       type: "object",
       properties: {
@@ -697,6 +683,35 @@ The frontend will handle the actual payment and confirm the order.`,
 ];
 
 /**
+ * Legacy tools that write credits, order totals or Stripe objects straight
+ * from chat. The owner's rule is that Chappy never moves money without the
+ * customer's own tap, so each returns PAYMENT_NEEDS_CUSTOMER_TAP before any
+ * database or Stripe access (same shape as the prod hotfix 2927819).
+ *  - apply_credits: decremented credits and order totals with no tap and no
+ *    ownership check, and a negative amountCents minted credit.
+ *  - create_and_pay_order: confirmed a PaymentIntent on a saved card.
+ *  - create_order / create_apple_pay_order: wrote client-assembled order totals
+ *    and credit discounts outside the order service (orders/service.js), and
+ *    created Stripe customers and PaymentIntents.
+ * B2 deletes these and builds the web pay card on the order service.
+ */
+export const DISABLED_MONEY_TOOLS = Object.freeze({
+  apply_credits: "Chappy can't apply or spend credit. Credits are chosen on the payment page.",
+  create_and_pay_order: "Chappy can't charge a card.",
+  create_apple_pay_order: "Chappy can't create orders or payments in chat yet.",
+  create_order: "Chappy can't create orders in chat yet.",
+  // Read any order by id with no ownership check and returned a /pay/ URL that does not exist.
+  create_payment_link: "Chappy can't make payment links in chat yet.",
+});
+
+const TAP_NEXT_STEP =
+  " Do not call this tool again. Send the customer to ohbeef.com/order to place the order and pay with their own tap; any credit is applied there.";
+
+export function paymentNeedsTap(name) {
+  return { error: "PAYMENT_NEEDS_CUSTOMER_TAP", charged: false, disabled: true, message: `${DISABLED_MONEY_TOOLS[name]}${TAP_NEXT_STEP}` };
+}
+
+/**
  * Execute tools and return results
  *
  * @param {Array} toolUseBlocks - Tool use blocks from Claude response
@@ -738,6 +753,8 @@ export async function executeTools(toolUseBlocks, context) {
  * Execute a specific tool by name
  */
 async function executeToolByName(name, input, context) {
+  // Money tools are disabled before anything else runs (see DISABLED_MONEY_TOOLS).
+  if (Object.hasOwn(DISABLED_MONEY_TOOLS, name)) return paymentNeedsTap(name);
   const { prisma, userId, guestId, locationId, tenantId } = context;
 
   switch (name) {
@@ -812,6 +829,7 @@ async function executeToolByName(name, input, context) {
     // ORDER TOOLS
     // ==========================================
     case "create_order": {
+      // Unreachable: disabled in DISABLED_MONEY_TOOLS (Task B1). B2 deletes this body.
       // Calculate total
       let totalCents = 0;
       const orderItems = [];
@@ -1088,6 +1106,7 @@ async function executeToolByName(name, input, context) {
     // PAYMENT TOOLS
     // ==========================================
     case "create_payment_link": {
+      // Unreachable: disabled in DISABLED_MONEY_TOOLS (Task B1). B2 deletes this body.
       const order = await prisma.order.findUnique({
         where: { id: input.orderId },
       });
@@ -1106,6 +1125,7 @@ async function executeToolByName(name, input, context) {
     }
 
     case "apply_credits": {
+      // Unreachable: disabled in DISABLED_MONEY_TOOLS (Task B1). B2 deletes this body.
       if (!userId) return "Credits can only be applied for logged-in users";
 
       const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -1337,21 +1357,6 @@ async function executeToolByName(name, input, context) {
       };
     }
 
-    case "create_and_pay_order": {
-      // DISABLED (controller ruling, Task B1). This tool used to create and
-      // confirm a PaymentIntent on a saved card after a verbal yes, which breaks
-      // the owner's rule that Chappy never moves money without the customer's
-      // own tap. It now charges nothing and points the model at the payment
-      // step. B2 deletes it (web: B2's pay card; SMS: the order payment link).
-      return {
-        charged: false,
-        disabled: true,
-        error: "PAYMENT_NEEDS_CUSTOMER_TAP",
-        instruction:
-          "Chappy cannot charge cards and this tool is disabled; do not call it again. Create the order with create_apple_pay_order, then let the customer pay with their own tap: on the web the payment card appears in the chat; by SMS send ohbeef.com/order/payment?orderId={orderId}&orderNumber={orderNumber} using the values from that tool's result.",
-      };
-    }
-
     case "reorder_previous_order": {
       console.log("[CHAPPY] reorder_previous_order called with input:", JSON.stringify(input, null, 2));
       console.log("[CHAPPY] userId:", userId);
@@ -1494,6 +1499,7 @@ async function executeToolByName(name, input, context) {
     }
 
     case "create_apple_pay_order": {
+      // Unreachable: disabled in DISABLED_MONEY_TOOLS (Task B1). B2 deletes this body.
       console.log("[CHAPPY] create_apple_pay_order called with input:", JSON.stringify(input, null, 2));
       console.log("[CHAPPY] Context - userId:", userId, "locationId:", locationId);
 
