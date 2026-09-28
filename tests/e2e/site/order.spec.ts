@@ -129,6 +129,7 @@ after(async () => {
   if (referrerId) {
     await tryDel("referrer lots", () => prisma.creditLot.deleteMany({ where: { userId: referrerId } }));
     await tryDel("referrer events", () => prisma.creditEvent.deleteMany({ where: { userId: referrerId } }));
+    await tryDel("referrer userChallenge", () => prisma.userChallenge.deleteMany({ where: { userId: referrerId } }));
     await tryDel("referrer", () => prisma.user.delete({ where: { id: referrerId } }));
   }
   if (clerkUserId) await clerk(`/users/${clerkUserId}`, { method: "DELETE" }).catch((e) => console.log(`[cleanup] clerk: ${e.message}`));
