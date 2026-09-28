@@ -24,13 +24,14 @@ describe("createIntlErrorHandlers", () => {
     expect(() => onError(missing())).toThrow(/MISSING_MESSAGE/);
   });
 
-  it("development: logs every error and shows the key path", () => {
+  it("development: shows the key path and logs once per key", () => {
     const log = vi.fn();
     const { onError, getMessageFallback } = createIntlErrorHandlers("development", log);
-    onError(missing());
-    onError(missing());
-    expect(log).toHaveBeenCalledTimes(2);
-    expect(getMessageFallback({ error: missing(), namespace: "site.nav", key: "menu" })).toBe("site.nav.menu");
+    for (let i = 0; i < 3; i++) {
+      onError(missing());
+      expect(getMessageFallback({ error: missing(), namespace: "site.nav", key: "menu" })).toBe("site.nav.menu");
+    }
+    expect(log.mock.calls.map((c) => c[0])).toEqual(["[i18n] MISSING_MESSAGE: site.nav.menu"]);
   });
 
   it("production: an empty string, logged once per key", () => {
@@ -59,13 +60,29 @@ describe("createIntlErrorHandlers", () => {
     expect(log).not.toHaveBeenCalled();
   });
 
-  it("production: other errors are logged once per message", () => {
+  it("production: per-message errors are logged by the fallback (with the key), others once per message by onError", () => {
     const log = vi.fn();
-    const { onError } = createIntlErrorHandlers("production", log);
-    const bad = Object.assign(new Error("INVALID_MESSAGE: site.shell.activeOrder"), { code: "INVALID_MESSAGE" });
-    onError(bad);
-    onError(bad);
-    expect(log).toHaveBeenCalledTimes(1);
+    const { onError, getMessageFallback } = createIntlErrorHandlers("production", log);
+    const invalid = Object.assign(new Error("INVALID_MESSAGE: bad ICU"), { code: "INVALID_MESSAGE" });
+    onError(invalid); // routed to the fallback, which knows the key
+    expect(getMessageFallback({ error: invalid, namespace: "site.shell", key: "activeOrder" })).toBe("");
+    const env = Object.assign(new Error("ENVIRONMENT_FALLBACK: no timeZone configured"), { code: "ENVIRONMENT_FALLBACK" });
+    onError(env);
+    onError(env);
+    expect(log.mock.calls.map((c) => c[0])).toEqual([
+      "[i18n] INVALID_MESSAGE: site.shell.activeOrder",
+      "[i18n] ENVIRONMENT_FALLBACK: ENVIRONMENT_FALLBACK: no timeZone configured",
+    ]);
+  });
+
+  it("the plan check is structural (the fallback's namespace), not a message regex", () => {
+    const log = vi.fn();
+    const { onError, getMessageFallback } = createIntlErrorHandlers("production", log);
+    // A formatting error whose text never mentions "plan" is still silent for a plan key.
+    const fmt = Object.assign(new Error("FORMATTING_ERROR: argument missing"), { code: "FORMATTING_ERROR" });
+    onError(fmt);
+    expect(getMessageFallback({ error: fmt, namespace: "plan.hero", key: "title" })).toBe("");
+    expect(log).not.toHaveBeenCalled();
   });
 
   it("is wired into i18n/request.ts, next to withPlanFallback", () => {

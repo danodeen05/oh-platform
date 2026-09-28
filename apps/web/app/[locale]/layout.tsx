@@ -6,6 +6,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { enUS, zhTW, zhCN, esES } from "@clerk/localizations";
 import { routing } from "@/i18n/routing";
 import { Providers } from "@/components/Providers";
+import { IntlClientProvider } from "@/components/site/IntlClientProvider";
 import LanguageTracker from "@/components/LanguageTracker";
 import { LangSync } from "@/components/plan/shell/LangSync";
 
@@ -56,8 +57,10 @@ export default async function LocaleLayout({ children, params }: Props) {
   if (isPlanRoute) {
     return (
       <NextIntlClientProvider messages={messages}>
-        <LangSync locale={locale} />
-        {children}
+        <IntlClientProvider>
+          <LangSync locale={locale} />
+          {children}
+        </IntlClientProvider>
       </NextIntlClientProvider>
     );
   }
@@ -68,10 +71,12 @@ export default async function LocaleLayout({ children, params }: Props) {
     return (
       <ClerkProvider localization={clerkLocalization}>
         <NextIntlClientProvider messages={messages}>
-          <Providers>
-            <LangSync locale={locale} />
-            {children}
-          </Providers>
+          <IntlClientProvider>
+            <Providers>
+              <LangSync locale={locale} />
+              {children}
+            </Providers>
+          </IntlClientProvider>
         </NextIntlClientProvider>
       </ClerkProvider>
     );
@@ -82,8 +87,10 @@ export default async function LocaleLayout({ children, params }: Props) {
     return (
       <ClerkProvider localization={clerkLocalization}>
         <NextIntlClientProvider messages={messages}>
-          <LangSync locale={locale} />
-          {children}
+          <IntlClientProvider>
+            <LangSync locale={locale} />
+            {children}
+          </IntlClientProvider>
         </NextIntlClientProvider>
       </ClerkProvider>
     );
@@ -97,11 +104,13 @@ export default async function LocaleLayout({ children, params }: Props) {
   return (
     <ClerkProvider localization={clerkLocalization}>
       <NextIntlClientProvider messages={messages}>
-        <Providers>
-          <LangSync locale={locale} />
-          <LanguageTracker />
-          {children}
-        </Providers>
+        <IntlClientProvider>
+          <Providers>
+            <LangSync locale={locale} />
+            <LanguageTracker />
+            {children}
+          </Providers>
+        </IntlClientProvider>
       </NextIntlClientProvider>
     </ClerkProvider>
   );
