@@ -37,7 +37,7 @@ describe("DOCK_ITEMS", () => {
     expect("href" in chappy).toBe(false);
   });
 
-  test("rewards points at the legacy loyalty page until D7 builds /rewards, with the chopstick tier mark", () => {
+  test("rewards points at the legacy loyalty page until D7 builds /rewards, with the chop seal icon", () => {
     expect(DOCK_ITEMS[2]).toMatchObject({ key: "rewards", href: "/loyalty", icon: "seal" });
   });
 

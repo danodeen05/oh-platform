@@ -18,7 +18,9 @@ const ITEM =
   "group relative flex h-12 min-h-11 w-full min-w-11 cursor-pointer appearance-none flex-col border-0 font-[inherit] no-underline items-center justify-center gap-0.5 rounded-2xl px-0.5 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oh-cream";
 const QUIET = "bg-transparent text-oh-mute hover:text-oh-cream aria-[current=page]:text-oh-cream aria-expanded:text-oh-cream";
 const PRIMARY = "bg-oh-ember-deep text-oh-cream shadow-[0_8px_24px_-10px] shadow-oh-ember-deep active:bg-oh-ember";
-const LABEL = "block max-w-full truncate text-xs font-medium leading-tight";
+// 600, not 500: at 12px under Chromium's mobile text path, Raleway 500 left a
+// visible gap after "C" in "Chappy"; kerning settings did not change it (C4 fix round 2).
+const LABEL = "block max-w-full truncate text-xs font-semibold leading-tight";
 
 export function Dock() {
   const t = useTranslations("site");
