@@ -728,7 +728,7 @@
 }
 
 .parent-names::before {
-  content: "🐴 ";
+  content: "";
   font-size: 0.9em;
 }
 

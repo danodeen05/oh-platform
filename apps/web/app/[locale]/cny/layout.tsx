@@ -1,5 +1,6 @@
 import "./cny.css";
 import { Metadata, Viewport } from "next";
+import { getTranslations } from "next-intl/server";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -8,30 +9,22 @@ export const viewport: Viewport = {
   userScalable: false,
 };
 
-export const metadata: Metadata = {
-  title: "You're Invited! CNY 2026 Party",
-  description: "Join us for a Chinese New Year celebration - Year of the Horse",
-  openGraph: {
-    title: "You're Invited! CNY 2026",
-    description: "Join us for a Chinese New Year celebration - Year of the Horse 2026",
-    type: "website",
-    siteName: "Oh! CNY 2026",
-    images: [
-      {
-        url: "/cny/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: "Chinese New Year 2026 - Year of the Horse Party Invitation",
-      },
-    ],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "You're Invited! CNY 2026",
-    description: "Join us for a Chinese New Year celebration - Year of the Horse 2026",
-    images: ["/cny/og-image.png"],
-  },
-};
+// Task D11: the invitation's metadata in the reader's language (strings only; the layout is unchanged).
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("cny.meta");
+  return {
+    title: t("title"),
+    description: t("description"),
+    openGraph: {
+      title: t("ogTitle"),
+      description: t("ogDescription"),
+      type: "website",
+      siteName: t("siteName"),
+      images: [{ url: "/cny/og-image.png", width: 1200, height: 630, alt: t("ogAlt") }],
+    },
+    twitter: { card: "summary_large_image", title: t("ogTitle"), description: t("ogDescription"), images: ["/cny/og-image.png"] },
+  };
+}
 
 export default function CNYLayout({
   children,

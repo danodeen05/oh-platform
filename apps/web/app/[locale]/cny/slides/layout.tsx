@@ -1,4 +1,5 @@
 import { Metadata, Viewport } from "next";
+import { getTranslations } from "next-intl/server";
 import "../cny.css";
 import "./slides.css";
 
@@ -9,10 +10,10 @@ export const viewport: Viewport = {
   userScalable: false,
 };
 
-export const metadata: Metadata = {
-  title: "CNY 2026 Party Slideshow",
-  description: "Year of the Horse - Zodiac Slideshow",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("cny.slidesMeta");
+  return { title: t("title"), description: t("description") };
+}
 
 export default function SlidesLayout({
   children,

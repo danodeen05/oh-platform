@@ -42,7 +42,7 @@ const FONTS = [{ cssSrc: "https://fonts.googleapis.com/css2?family=Raleway:wght@
  * first loadStripe call.
  */
 let stripePromise: Promise<Stripe | null> | null = null;
-function lazyStripe(): Promise<Stripe | null> {
+export function lazyStripe(): Promise<Stripe | null> {
   if (!stripePromise) {
     const key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
     stripePromise = key ? import("@stripe/stripe-js/pure").then(({ loadStripe }) => loadStripe(key)) : Promise.resolve(null);

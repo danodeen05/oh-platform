@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import { Attendee } from "@/lib/cny/slides-data";
 import { ZodiacAnimal, ZODIAC_COMPATIBLE } from "@/lib/cny/zodiac";
 import { AnimatedBackground } from "../AnimatedBackground";
@@ -25,6 +26,7 @@ const BABIES_2026 = [
 ];
 
 export function BabySlide({ allAttendeesByZodiac }: BabySlideProps) {
+  const t = useTranslations("cny");
   // Get compatible guests for the Horse babies
   const compatibleGuests = HORSE_COMPATIBLE.flatMap(
     (z) => allAttendeesByZodiac[z] || []
@@ -71,7 +73,7 @@ export function BabySlide({ allAttendeesByZodiac }: BabySlideProps) {
           <div className="zodiac-svg-container baby-zodiac">
             <Image
               src="/cny/slides/Zodiacs/Horse.svg"
-              alt="Year of the Horse"
+              alt={t("horseAlt")}
               width={500}
               height={500}
               className="zodiac-svg baby-horse"
@@ -84,17 +86,16 @@ export function BabySlide({ allAttendeesByZodiac }: BabySlideProps) {
         <div className="zodiac-right-panel baby-info-panel">
           {/* Header */}
           <div className="baby-header">
-            <h1 className="baby-title">Welcome to the Herd!</h1>
+            <h1 className="baby-title">{t("slides.baby.title")}</h1>
             <p className="baby-subtitle">
-              Year of the Horse Babies Arriving 2026
+              {t("slides.baby.subtitle")}
             </p>
           </div>
 
           {/* Expecting parents */}
           <div className="slide-section baby-parents-section">
             <h2 className="section-header">
-              <span className="section-header-icon">🐴</span>
-              Expecting Parents
+              {t("slides.baby.parents")}
             </h2>
             <div className="baby-parents-list">
               {BABIES_2026.map((baby, i) => (
@@ -108,34 +109,27 @@ export function BabySlide({ allAttendeesByZodiac }: BabySlideProps) {
           {/* Horse baby traits */}
           <div className="slide-section baby-traits-section">
             <h2 className="section-header">
-              <span className="section-header-icon">✨</span>
-              Born Under Lucky Stars
+              {t("slides.baby.luckyStars")}
             </h2>
             <p className="fortune-text">
-              2026 Horse babies are blessed with natural charisma, boundless
-              energy, and an adventurous spirit. They'll grow up confident,
-              independent, and destined to lead with warmth and passion.
+              {t("slides.baby.luckyStarsBody")}
             </p>
           </div>
 
           {/* What to look forward to */}
           <div className="slide-section baby-future-section">
             <h2 className="section-header">
-              <span className="section-header-icon">🌟</span>
-              Their Bright Future
+              {t("slides.baby.future")}
             </h2>
             <p className="fortune-text">
-              Fire Horse children are rare and powerful! Born only every 60
-              years, they bring transformation and positive change. Watch them
-              gallop toward greatness!
+              {t("slides.baby.futureBody")}
             </p>
           </div>
 
           {/* Compatible zodiac friends at the party */}
           <div className="slide-section baby-friends-section">
             <h2 className="section-header">
-              <span className="section-header-icon">🎉</span>
-              Future Best Friends Here Tonight
+              {t("slides.baby.friends")}
             </h2>
             {Object.keys(compatibleByZodiac).length > 0 ? (
               <div className="compatibility-names">
@@ -145,7 +139,7 @@ export function BabySlide({ allAttendeesByZodiac }: BabySlideProps) {
                       <span className="compatibility-name">
                         {names.join(", ")}
                       </span>{" "}
-                      <span className="compatibility-zodiac">({zodiac})</span>
+                      <span className="compatibility-zodiac">({t(`zodiac.animals.${zodiac}`)})</span>
                       {i < arr.length - 1 && " · "}
                     </span>
                   )
@@ -153,7 +147,7 @@ export function BabySlide({ allAttendeesByZodiac }: BabySlideProps) {
               </div>
             ) : (
               <p className="no-attendees">
-                Tigers, Goats & Dogs will be their lifelong allies!
+                {t("slides.baby.friendsNone")}
               </p>
             )}
           </div>

@@ -1,15 +1,17 @@
 "use client";
 
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import { AnimatedBackground } from "../AnimatedBackground";
 
 export function TitleSlide() {
+  const t = useTranslations("cny");
   return (
     <>
       {/* RedTitle.svg IS the full slide - no separate background needed */}
       <Image
         src="/cny/slides/RedTitle.svg"
-        alt="Year of the Horse 2026"
+        alt={t("fortune.year")}
         fill
         className="slide-background title-background"
         priority

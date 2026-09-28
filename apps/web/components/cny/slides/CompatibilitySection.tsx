@@ -1,10 +1,11 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Attendee } from "@/lib/cny/slides-data";
 
 interface CompatibilitySectionProps {
   title: string;
-  icon: string;
+  icon?: string;
   attendees: Attendee[];
   type: "compatible" | "avoid";
 }
@@ -15,6 +16,7 @@ export function CompatibilitySection({
   attendees,
   type,
 }: CompatibilitySectionProps) {
+  const t = useTranslations("cny");
   // Group attendees by zodiac for display
   const byZodiac = attendees.reduce(
     (acc, attendee) => {
@@ -36,7 +38,7 @@ export function CompatibilitySection({
   return (
     <div className={`slide-section compatibility-section ${type}`}>
       <h2 className="section-header">
-        <span className="section-header-icon">{icon}</span>
+        {icon ? <span className="section-header-icon">{icon}</span> : null}
         {title}
       </h2>
       {zodiacEntries.length > 0 ? (
@@ -47,16 +49,14 @@ export function CompatibilitySection({
                 {names.join(", ")}
               </span>
               {" "}
-              <span className="compatibility-zodiac">({zodiac})</span>
+              <span className="compatibility-zodiac">({t(`zodiac.animals.${zodiac}`)})</span>
               {i < zodiacEntries.length - 1 && " · "}
             </span>
           ))}
         </div>
       ) : (
         <p className="no-attendees">
-          {type === "compatible"
-            ? "Your compatible zodiacs haven't arrived yet!"
-            : "Coast is clear!"}
+          {type === "compatible" ? t("slides.noneCompatible") : t("slides.coastClear")}
         </p>
       )}
     </div>

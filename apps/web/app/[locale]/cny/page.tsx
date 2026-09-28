@@ -2,16 +2,19 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { AnimatedBackground } from "@/components/cny/AnimatedBackground";
 
 export default function CNYWelcome() {
   const router = useRouter();
+  const t = useTranslations("cny");
+  const locale = useLocale();
   const [isTransitioning, setIsTransitioning] = useState(false);
 
   const handleRSVP = () => {
     setIsTransitioning(true);
     setTimeout(() => {
-      router.push("/en/cny/details");
+      router.push(`/${locale}/cny/details`);
     }, 400);
   };
 
@@ -47,7 +50,7 @@ export default function CNYWelcome() {
             margin: 0,
           }}
         >
-          YOU'RE INVITED!
+          {t("invite.title")}
         </h1>
 
         <button
@@ -57,7 +60,7 @@ export default function CNYWelcome() {
             marginTop: "12px",
           }}
         >
-          RSVP Now
+          {t("invite.rsvp")}
         </button>
       </div>
     </div>

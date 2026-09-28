@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, Suspense } from "react";
 import Image from "next/image";
+import { useLocale, useTranslations } from "next-intl";
 import { AnimatedBackground } from "@/components/cny/AnimatedBackground";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -23,8 +24,20 @@ const MENU_ITEMS = {
   sprouts: "cmip6jc0h002d2nnn4zrbfozw", // Sprouts
 };
 
-// Slider labels
+// Slider labels: the canonical English values the kitchen reads (sent as selectedValue);
+// the page shows them translated (cny.order.levels).
 const SLIDER_LABELS = ["None", "Light", "Normal", "Extra"];
+
+// Task D11: the event menu's names (the API returns the English menu names) to their translation keys.
+const ITEM_KEYS: Record<string, string> = {
+  "Classic Beef Noodle Soup": "order.beef.name",
+  "Beef Noodle Soup": "order.beef.name",
+  "Classic Beef Noodle Soup (no beef)": "order.soupOnly.name",
+  "Baby Bok Choy": "order.toppings.bokChoy",
+  "Green Onions": "order.toppings.greenOnions",
+  Cilantro: "order.toppings.cilantro",
+  Sprouts: "order.toppings.sprouts",
+};
 
 // Default topping values
 const DEFAULT_TOPPINGS = {
@@ -37,6 +50,10 @@ const DEFAULT_TOPPINGS = {
 function CNYOrderContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const t = useTranslations("cny");
+  const locale = useLocale();
+  const level = (label: string) => (SLIDER_LABELS.includes(label) ? t(`order.levels.${label}`) : label);
+  const itemName = (name: string) => (ITEM_KEYS[name] ? t(ITEM_KEYS[name]) : name);
 
   // Get guest info from URL params (from RSVP/SMS link)
   const guestName = searchParams.get("name") || "";
@@ -128,7 +145,7 @@ function CNYOrderContent() {
 
   const handleSubmit = async () => {
     if (!guestName || !guestPhone) {
-      setError("Missing guest information. Please use the link from your invitation.");
+      setError(t("order.errors.missingGuest"));
       return;
     }
 
@@ -181,11 +198,9 @@ function CNYOrderContent() {
       if (!response.ok) {
         if (data.error?.includes("One order per guest")) {
           setExistingOrder({ orderNumber: "", qrCode: "", items: [] });
-          setError(
-            "You've already placed your order. If you want to change your order, come visit us in the kitchen area."
-          );
+          setError(t("order.errors.oneOrder"));
         } else {
-          setError(data.error || "Failed to place order");
+          setError(t("order.errors.failed"));
         }
         setIsSubmitting(false);
         return;
@@ -200,11 +215,11 @@ function CNYOrderContent() {
 
       // Success! Redirect to confirmation
       router.push(
-        `/en/cny/order/confirmation?orderNumber=${data.kitchenOrderNumber}&qrCode=${data.orderQrCode}`
+        `/${locale}/cny/order/confirmation?orderNumber=${data.kitchenOrderNumber}&qrCode=${data.orderQrCode}`
       );
     } catch (err) {
       console.error("Order submission error:", err);
-      setError("Failed to place order. Please try again.");
+      setError(t("order.errors.failedRetry"));
       setIsSubmitting(false);
     }
   };
@@ -223,7 +238,7 @@ function CNYOrderContent() {
           }}
         >
           <p style={{ color: "#D7B66E", fontSize: "1.1rem", fontFamily: "'Raleway', sans-serif" }}>
-            Loading...
+            {t("loading")}
           </p>
         </div>
       </div>
@@ -259,9 +274,9 @@ function CNYOrderContent() {
             color: "#D7B66E",
           }}
         >
-          {step === 1 && "Choose Your Soup"}
-          {step === 2 && "Add Your Toppings"}
-          {step === 3 && (firstName ? `${firstName}'s Order` : "Review Your Order")}
+          {step === 1 && t("order.steps.base")}
+          {step === 2 && t("order.steps.toppings")}
+          {step === 3 && (firstName ? t("order.steps.reviewNamed", { name: firstName }) : t("order.steps.review"))}
         </h1>
 
         {/* Step indicator */}
@@ -332,7 +347,7 @@ function CNYOrderContent() {
               >
                 <Image
                   src="/menu images/Classic Bowl.png"
-                  alt="Beef Noodle Soup"
+                  alt={t("order.beef.name")}
                   width={80}
                   height={80}
                   style={{ objectFit: "cover" }}
@@ -348,7 +363,7 @@ function CNYOrderContent() {
                     fontFamily: "'Raleway', sans-serif",
                   }}
                 >
-                  Beef Noodle Soup
+                  {t("order.beef.name")}
                 </p>
                 <p
                   style={{
@@ -358,7 +373,7 @@ function CNYOrderContent() {
                     fontFamily: "'Raleway', sans-serif",
                   }}
                 >
-                  Classic braised beef with noodles
+                  {t("order.beef.desc")}
                 </p>
               </div>
             </button>
@@ -396,7 +411,7 @@ function CNYOrderContent() {
               >
                 <Image
                   src="/menu images/Classic Bowl No Beef.png"
-                  alt="Soup Only"
+                  alt={t("order.soupOnly.name")}
                   width={80}
                   height={80}
                   style={{ objectFit: "cover" }}
@@ -412,7 +427,7 @@ function CNYOrderContent() {
                     fontFamily: "'Raleway', sans-serif",
                   }}
                 >
-                  Soup Only (No Beef)
+                  {t("order.soupOnly.name")}
                 </p>
                 <p
                   style={{
@@ -422,7 +437,7 @@ function CNYOrderContent() {
                     fontFamily: "'Raleway', sans-serif",
                   }}
                 >
-                  Rich broth with noodles, no meat
+                  {t("order.soupOnly.desc")}
                 </p>
               </div>
             </button>
@@ -438,13 +453,13 @@ function CNYOrderContent() {
                 pointerEvents: selectedBase ? "auto" : "none",
               }}
             >
-              Add Your Toppings
+              {t("order.addToppings")}
             </button>
 
             {/* Horse mascot */}
             <img
               src="/cny/horse.svg"
-              alt="Year of the Horse"
+              alt={t("horseAlt")}
               className="cny-horse-animated"
               style={{
                 marginTop: "16px",
@@ -492,16 +507,16 @@ function CNYOrderContent() {
                   fontFamily: "'Raleway', sans-serif",
                 }}
               >
-                Recommended
+                {t("order.recommended")}
               </span>
             </div>
 
             {/* Topping Sliders */}
             {[
-              { key: "bokChoy", label: "Baby Bok Choy", image: "/menu images/Baby Bok Choy.png" },
-              { key: "greenOnions", label: "Green Onions", image: "/menu images/Green Onions.png" },
-              { key: "cilantro", label: "Cilantro", image: "/menu images/Cilantro.png" },
-              { key: "sprouts", label: "Sprouts", image: "/menu images/Sprouts.png" },
+              { key: "bokChoy", label: t("order.toppings.bokChoy"), image: "/menu images/Baby Bok Choy.png" },
+              { key: "greenOnions", label: t("order.toppings.greenOnions"), image: "/menu images/Green Onions.png" },
+              { key: "cilantro", label: t("order.toppings.cilantro"), image: "/menu images/Cilantro.png" },
+              { key: "sprouts", label: t("order.toppings.sprouts"), image: "/menu images/Sprouts.png" },
             ].map((topping) => {
               const currentValue = toppings[topping.key as keyof typeof toppings];
               const defaultValue = DEFAULT_TOPPINGS[topping.key as keyof typeof DEFAULT_TOPPINGS];
@@ -590,7 +605,7 @@ function CNYOrderContent() {
                             transition: "all 0.2s ease",
                           }}
                         >
-                          {label}
+                          {level(label)}
                         </button>
                       );
                     })}
@@ -608,7 +623,7 @@ function CNYOrderContent() {
                   fontSize: "0.85rem",
                 }}
               >
-                Review Order
+                {t("order.reviewOrder")}
               </button>
               <button
                 onClick={() => setStep(1)}
@@ -623,7 +638,7 @@ function CNYOrderContent() {
                   cursor: "pointer",
                 }}
               >
-                ← Back
+                {t("order.back")}
               </button>
             </div>
           </div>
@@ -661,7 +676,7 @@ function CNYOrderContent() {
                       letterSpacing: "1px",
                     }}
                   >
-                    {existingOrder.orderNumber ? `Order #${existingOrder.orderNumber}` : "Your order is in"}
+                    {existingOrder.orderNumber ? t("order.orderNumber", { number: existingOrder.orderNumber }) : t("order.orderIn")}
                   </p>
                   <div
                     style={{
@@ -679,10 +694,10 @@ function CNYOrderContent() {
                           color: "#D7B66E",
                         }}
                       >
-                        <span>{item.menuItem.name}</span>
+                        <span>{itemName(item.menuItem.name)}</span>
                         {item.selectedValue && (
                           <span style={{ fontWeight: 600, color: "#D7B66E" }}>
-                            {item.selectedValue}
+                            {level(item.selectedValue)}
                           </span>
                         )}
                       </p>
@@ -701,9 +716,7 @@ function CNYOrderContent() {
                       fontFamily: "'Raleway', sans-serif",
                     }}
                   >
-                    {selectedBase === MENU_ITEMS.beefSoup
-                      ? "Beef Noodle Soup"
-                      : "Soup Only (No Beef)"}
+                    {selectedBase === MENU_ITEMS.beefSoup ? t("order.beef.name") : t("order.soupOnly.name")}
                   </p>
                   <div
                     style={{
@@ -712,20 +725,20 @@ function CNYOrderContent() {
                     }}
                   >
                     <p style={{ margin: "8px 0", display: "flex", justifyContent: "space-between", color: "#D7B66E" }}>
-                      <span>Baby Bok Choy</span>
-                      <span style={{ fontWeight: 600, color: "#D7B66E" }}>{SLIDER_LABELS[toppings.bokChoy]}</span>
+                      <span>{t("order.toppings.bokChoy")}</span>
+                      <span style={{ fontWeight: 600, color: "#D7B66E" }}>{level(SLIDER_LABELS[toppings.bokChoy])}</span>
                     </p>
                     <p style={{ margin: "8px 0", display: "flex", justifyContent: "space-between", color: "#D7B66E" }}>
-                      <span>Green Onions</span>
-                      <span style={{ fontWeight: 600, color: "#D7B66E" }}>{SLIDER_LABELS[toppings.greenOnions]}</span>
+                      <span>{t("order.toppings.greenOnions")}</span>
+                      <span style={{ fontWeight: 600, color: "#D7B66E" }}>{level(SLIDER_LABELS[toppings.greenOnions])}</span>
                     </p>
                     <p style={{ margin: "8px 0", display: "flex", justifyContent: "space-between", color: "#D7B66E" }}>
-                      <span>Cilantro</span>
-                      <span style={{ fontWeight: 600, color: "#D7B66E" }}>{SLIDER_LABELS[toppings.cilantro]}</span>
+                      <span>{t("order.toppings.cilantro")}</span>
+                      <span style={{ fontWeight: 600, color: "#D7B66E" }}>{level(SLIDER_LABELS[toppings.cilantro])}</span>
                     </p>
                     <p style={{ margin: "8px 0", display: "flex", justifyContent: "space-between", color: "#D7B66E" }}>
-                      <span>Sprouts</span>
-                      <span style={{ fontWeight: 600, color: "#D7B66E" }}>{SLIDER_LABELS[toppings.sprouts]}</span>
+                      <span>{t("order.toppings.sprouts")}</span>
+                      <span style={{ fontWeight: 600, color: "#D7B66E" }}>{level(SLIDER_LABELS[toppings.sprouts])}</span>
                     </p>
                   </div>
                 </>
@@ -752,11 +765,11 @@ function CNYOrderContent() {
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px", marginTop: "20px" }}>
               {existingOrder && !existingOrder.qrCode ? (
                 <p style={{ color: "#D7B66E", fontSize: "0.85rem", textAlign: "center", margin: 0 }}>
-                  Come visit us in the kitchen area if you need anything.
+                  {t("order.visitKitchen")}
                 </p>
               ) : existingOrder ? (
                 <a
-                  href={`/en/cny/order/status?qrCode=${existingOrder.qrCode}`}
+                  href={`/${locale}/cny/order/status?qrCode=${existingOrder.qrCode}`}
                   className="cny-button cny-button-glow"
                   style={{
                     padding: "10px 40px",
@@ -764,7 +777,7 @@ function CNYOrderContent() {
                     textDecoration: "none",
                   }}
                 >
-                  My Order Status
+                  {t("order.myStatus")}
                 </a>
               ) : (
                 <button
@@ -777,7 +790,7 @@ function CNYOrderContent() {
                     opacity: isSubmitting ? 0.7 : 1,
                   }}
                 >
-                  {isSubmitting ? "Placing Order..." : "Place My Order!"}
+                  {isSubmitting ? t("order.placing") : t("order.place")}
                 </button>
               )}
               {!existingOrder && (
@@ -796,7 +809,7 @@ function CNYOrderContent() {
                     opacity: isSubmitting ? 0.5 : 1,
                   }}
                 >
-                  ← Back
+                  {t("order.back")}
                 </button>
               )}
             </div>
@@ -839,7 +852,7 @@ function CNYOrderContent() {
             {/* Animated Horse */}
             <img
               src="/cny/horse.svg"
-              alt="Year of the Horse"
+              alt={t("horseAlt")}
               className="cny-horse-animated"
               style={{
                 width: "120px",
@@ -870,7 +883,7 @@ function CNYOrderContent() {
                 lineHeight: 1.5,
               }}
             >
-              You made it!<br />We're <span style={{ color: "#D7B66E", fontWeight: 700 }}>so hyped</span> you're here!
+              {t("order.welcome.made")}<br />{t.rich("order.welcome.hyped", { hl: (chunks) => <span style={{ color: "#D7B66E", fontWeight: 700 }}>{chunks}</span> })}
             </p>
 
             <p
@@ -882,7 +895,7 @@ function CNYOrderContent() {
                 lineHeight: 1.5,
               }}
             >
-              Build your perfect bowl and we'll have it out to you <span style={{ fontWeight: 600 }}>fresh & fast</span>!
+              {t.rich("order.welcome.build", { b: (chunks) => <span style={{ fontWeight: 600 }}>{chunks}</span> })}
             </p>
 
             {/* Important note */}
@@ -904,7 +917,7 @@ function CNYOrderContent() {
                   lineHeight: 1.5,
                 }}
               >
-                <span style={{ fontWeight: 700 }}>Tip:</span> Find your seat first, then place your order — we make it fresh the moment you order!
+                {t.rich("order.welcome.tip", { b: (chunks) => <span style={{ fontWeight: 700 }}>{chunks}</span> })}
               </p>
             </div>
 
@@ -917,7 +930,7 @@ function CNYOrderContent() {
                 width: "100%",
               }}
             >
-              Let's Go! 🔥
+              {t("order.welcome.go")}
             </button>
           </div>
         </div>
@@ -943,6 +956,13 @@ function CNYOrderContent() {
   );
 }
 
+
+/** Task D11: the Suspense fallback's word, translated. */
+function LoadingText() {
+  const t = useTranslations("cny");
+  return <>{t("loading")}</>;
+}
+
 export default function CNYOrderPage() {
   return (
     <Suspense
@@ -957,7 +977,9 @@ export default function CNYOrderPage() {
               height: "100vh",
             }}
           >
-            <p style={{ color: "#D7B66E", fontSize: "1.2rem" }}>Loading...</p>
+            <p style={{ color: "#D7B66E", fontSize: "1.2rem" }}>
+              <LoadingText />
+            </p>
           </div>
         </div>
       }

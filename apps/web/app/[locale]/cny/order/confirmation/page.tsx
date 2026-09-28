@@ -2,10 +2,13 @@
 
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { AnimatedBackground } from "@/components/cny/AnimatedBackground";
 
 function ConfirmationContent() {
   const searchParams = useSearchParams();
+  const t = useTranslations("cny");
+  const locale = useLocale();
   const orderNumber = searchParams.get("orderNumber") || "----";
   const qrCode = searchParams.get("qrCode");
 
@@ -66,7 +69,7 @@ function ConfirmationContent() {
             textAlign: "center",
           }}
         >
-          Order Placed!
+          {t("confirmation.placed")}
         </h1>
 
         {/* Order Number */}
@@ -89,7 +92,7 @@ function ConfirmationContent() {
               letterSpacing: "1px",
             }}
           >
-            Your Order Number
+            {t("confirmation.numberLabel")}
           </p>
           <p
             style={{
@@ -125,7 +128,7 @@ function ConfirmationContent() {
               textAlign: "center",
             }}
           >
-            What happens next?
+            {t("confirmation.next")}
           </p>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -156,7 +159,7 @@ function ConfirmationContent() {
                   lineHeight: 1.4,
                 }}
               >
-                Find a seat and relax - no assigned seating tonight!
+                {t("confirmation.seat")}
               </p>
             </div>
 
@@ -187,7 +190,7 @@ function ConfirmationContent() {
                   lineHeight: 1.4,
                 }}
               >
-                We're preparing your bowl fresh in the kitchen
+                {t("confirmation.preparing")}
               </p>
             </div>
 
@@ -218,7 +221,7 @@ function ConfirmationContent() {
                   lineHeight: 1.4,
                 }}
               >
-                We'll call your name when your bowl is ready.
+                {t("confirmation.call")}
               </p>
             </div>
           </div>
@@ -227,21 +230,21 @@ function ConfirmationContent() {
         {/* Track Order Button */}
         {qrCode && (
           <a
-            href={`/en/cny/order/status?qrCode=${qrCode}`}
+            href={`/${locale}/cny/order/status?qrCode=${qrCode}`}
             className="cny-button"
             style={{
               textDecoration: "none",
               marginTop: "8px",
             }}
           >
-            Track My Order
+            {t("confirmation.track")}
           </a>
         )}
 
         {/* Horse mascot */}
         <img
           src="/cny/horse.svg"
-          alt="Year of the Horse"
+          alt={t("horseAlt")}
           className="cny-horse-animated"
           style={{
             marginTop: "16px",
@@ -253,6 +256,13 @@ function ConfirmationContent() {
       </div>
     </div>
   );
+}
+
+
+/** Task D11: the Suspense fallback's word, translated. */
+function LoadingText() {
+  const t = useTranslations("cny");
+  return <>{t("loading")}</>;
 }
 
 export default function CNYOrderConfirmation() {
@@ -269,7 +279,9 @@ export default function CNYOrderConfirmation() {
               height: "100vh",
             }}
           >
-            <p style={{ color: "#D7B66E", fontSize: "1.2rem" }}>Loading...</p>
+            <p style={{ color: "#D7B66E", fontSize: "1.2rem" }}>
+              <LoadingText />
+            </p>
           </div>
         </div>
       }

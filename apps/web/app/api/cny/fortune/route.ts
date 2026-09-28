@@ -16,16 +16,26 @@ function getAnthropic() {
   });
 }
 
+// Task D11: the invitation is translated; so is the fortune.
+const FORTUNE_LANGUAGES: Record<string, string> = {
+  "zh-TW": "Traditional Chinese (Taiwan)",
+  "zh-CN": "Simplified Chinese",
+  es: "Spanish",
+};
+
 interface FortuneRequest {
   name: string;
   phone?: string;
   birthdate?: string;
+  /** Task D11: the reader's site locale; the fortune is written in it. */
+  locale?: string;
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body: FortuneRequest = await request.json();
     const { name, phone, birthdate } = body;
+    const language = FORTUNE_LANGUAGES[body.locale ?? "en"] ?? null;
 
     if (!name || !name.trim()) {
       return NextResponse.json({ error: "Name is required" }, { status: 400 });
@@ -51,7 +61,7 @@ export async function POST(request: NextRequest) {
       birthdate || null,
       zodiacInfo,
       phoneLuckyNumbers
-    );
+    ) + (language ? `\n- Write the whole fortune in ${language}, including the seven section headers (keep them in **bold**). Keep the lucky phrase format: [Chinese characters] ([pinyin]) - [meaning in ${language}].` : "");
 
     const message = await anthropic.messages.create({
       model: "claude-sonnet-4-20250514",

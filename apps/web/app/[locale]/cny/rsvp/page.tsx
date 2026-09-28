@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, FormEvent } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { getChineseZodiac } from "@/lib/cny/zodiac";
 import { AnimatedBackground } from "@/components/cny/AnimatedBackground";
 
@@ -27,6 +28,8 @@ const formatBirthdate = (value: string) => {
 
 export default function CNYRsvp() {
   const router = useRouter();
+  const t = useTranslations("cny");
+  const locale = useLocale();
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -40,7 +43,7 @@ export default function CNYRsvp() {
     setError("");
 
     if (!name.trim()) {
-      setError("Please enter your name");
+      setError(t("rsvp.nameRequired"));
       return;
     }
 
@@ -77,7 +80,7 @@ export default function CNYRsvp() {
 
       setIsTransitioning(true);
       setTimeout(() => {
-        router.push(`/en/cny/thanks?${thanksParams.toString()}`);
+        router.push(`/${locale}/cny/thanks?${thanksParams.toString()}`);
       }, 400);
     } catch (err) {
       console.error("RSVP submission error:", err);
@@ -89,7 +92,7 @@ export default function CNYRsvp() {
       });
       setIsTransitioning(true);
       setTimeout(() => {
-        router.push(`/en/cny/thanks?${thanksParams.toString()}`);
+        router.push(`/${locale}/cny/thanks?${thanksParams.toString()}`);
       }, 400);
     }
   };
@@ -127,19 +130,19 @@ export default function CNYRsvp() {
             color: "#D7B66E",
           }}
         >
-          RSVP!
+          {t("rsvp.title")}
         </h1>
 
         <form className="cny-form" onSubmit={handleSubmit} style={{ gap: "10px" }}>
           <div className="cny-input-group">
             <label className="cny-label" htmlFor="name" style={{ color: "#D7B66E", fontSize: "0.9rem", fontWeight: 700 }}>
-              Name
+              {t("rsvp.name")}
             </label>
             <input
               id="name"
               type="text"
               className="cny-input"
-              placeholder="Your name"
+              placeholder={t("rsvp.namePlaceholder")}
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
@@ -149,13 +152,13 @@ export default function CNYRsvp() {
 
           <div className="cny-input-group">
             <label className="cny-label" htmlFor="phone" style={{ color: "#D7B66E", fontSize: "0.9rem", fontWeight: 700 }}>
-              Phone
+              {t("rsvp.phone")}
             </label>
             <input
               id="phone"
               type="tel"
               className="cny-input"
-              placeholder="(xxx) xxx-xxxx"
+              placeholder="(801) 555-0123"
               value={phone}
               onChange={(e) => setPhone(formatPhone(e.target.value))}
               style={{ padding: "10px 14px", fontSize: "0.95rem" }}
@@ -164,19 +167,19 @@ export default function CNYRsvp() {
               className="cny-helper"
               style={{ textAlign: "left", marginTop: "2px", color: "#D7B66E", fontSize: "0.75rem" }}
             >
-              So we can text you any updates
+              {t("rsvp.phoneHint")}
             </span>
           </div>
 
           <div className="cny-input-group">
             <label className="cny-label" htmlFor="birthdate" style={{ color: "#D7B66E", fontSize: "0.9rem", fontWeight: 700 }}>
-              Birthdate
+              {t("rsvp.birthdate")}
             </label>
             <input
               id="birthdate"
               type="text"
               className="cny-input"
-              placeholder="MM/DD/YYYY"
+              placeholder="01/31/1990"
               value={birthdate}
               onChange={(e) => setBirthdate(formatBirthdate(e.target.value))}
               inputMode="numeric"
@@ -186,7 +189,7 @@ export default function CNYRsvp() {
               className="cny-helper"
               style={{ textAlign: "left", marginTop: "2px", color: "#D7B66E", fontSize: "0.75rem" }}
             >
-              Reveal your Chinese zodiac & what 2026 has in store!
+              {t("rsvp.birthdateHint")}
             </span>
           </div>
 
@@ -216,8 +219,7 @@ export default function CNYRsvp() {
               textAlign: "center",
             }}
           >
-            Bringing others? Each guest needs their own RSVP. Feel free to fill
-            one out for them.
+            {t("rsvp.bringing")}
           </p>
 
           <button
@@ -229,13 +231,13 @@ export default function CNYRsvp() {
               width: "100%",
             }}
           >
-            {isSubmitting ? "Submitting..." : "RSVP Now!"}
+            {isSubmitting ? t("rsvp.submitting") : t("rsvp.submit")}
           </button>
         </form>
 
         <img
           src="/cny/horse.svg"
-          alt="Year of the Horse"
+          alt={t("horseAlt")}
           className="cny-horse-animated"
           style={{
             marginTop: "0px",

@@ -4867,5 +4867,692 @@
     "kiosk": "Check in at the kiosk by the entrance. It gives you a pod.",
     "choose": "Choose your pod",
     "status": "See my order"
+  },
+  "cny": {
+    "meta": {
+      "title": "You're invited! CNY 2026 party",
+      "description": "Join us for a Chinese New Year celebration. Year of the Horse.",
+      "ogTitle": "You're invited! CNY 2026",
+      "ogDescription": "Join us for a Chinese New Year celebration. Year of the Horse, 2026.",
+      "siteName": "Oh! CNY 2026",
+      "ogAlt": "Chinese New Year 2026, Year of the Horse party invitation"
+    },
+    "slidesMeta": {
+      "title": "CNY 2026 party slideshow",
+      "description": "Year of the Horse zodiac slideshow"
+    },
+    "horseAlt": "Year of the Horse",
+    "loading": "Loading",
+    "invite": {
+      "title": "YOU'RE INVITED!",
+      "rsvp": "RSVP now"
+    },
+    "details": {
+      "title": "Year of the Horse",
+      "body": "Dano and Kristy are back with their annual Chinese New Year party. This year's beef noodle soup might be their best batch yet (bold claim, we know). Pull up a seat at the mahjong table (yes, there are prizes), pick up a few Chinese phrases, and find out what the Year of the Horse has in store for your zodiac. Come hungry, leave cultured.",
+      "aside": "And if culture isn't your thing, there's a golf simulator. No judgment. Your secret's safe with us.",
+      "when": "Fri, Feb 20 · 6 to 8 PM",
+      "continue": "Continue to RSVP"
+    },
+    "rsvp": {
+      "title": "RSVP!",
+      "name": "Name",
+      "namePlaceholder": "Your name",
+      "phone": "Phone",
+      "phoneHint": "So we can text you any updates",
+      "birthdate": "Birthdate",
+      "birthdateHint": "Reveal your Chinese zodiac and what 2026 has in store!",
+      "bringing": "Bringing others? Each guest needs their own RSVP. Feel free to fill one out for them.",
+      "submit": "RSVP now!",
+      "submitting": "Sending",
+      "nameRequired": "Please enter your name"
+    },
+    "thanks": {
+      "titleNamed": "THANK YOU, {name}!",
+      "title": "THANK YOU!",
+      "seeYou": "We'll see you on",
+      "date": "Friday, February 20!",
+      "viewFortune": "View your fortune",
+      "again": "RSVP for someone else"
+    },
+    "fortune": {
+      "consulting": "Consulting the stars for {name}",
+      "awaits": "The Year of the Horse awaits",
+      "resting": "The fortune spirits are resting",
+      "error": "Something went wrong",
+      "tryAgain": "Try again",
+      "title": "Your 2026 fortune",
+      "badge": "{element} {animal}",
+      "year": "Year of the Horse 2026",
+      "close": "Close"
+    },
+    "zodiac": {
+      "animals": {
+        "Rat": "Rat",
+        "Ox": "Ox",
+        "Tiger": "Tiger",
+        "Rabbit": "Rabbit",
+        "Dragon": "Dragon",
+        "Snake": "Snake",
+        "Horse": "Horse",
+        "Goat": "Goat",
+        "Monkey": "Monkey",
+        "Rooster": "Rooster",
+        "Dog": "Dog",
+        "Pig": "Pig"
+      },
+      "elements": {
+        "Metal": "Metal",
+        "Water": "Water",
+        "Wood": "Wood",
+        "Fire": "Fire",
+        "Earth": "Earth"
+      },
+      "traits": {
+        "Rat": [
+          "Clever",
+          "Quick-witted",
+          "Resourceful",
+          "Adaptable",
+          "Charming"
+        ],
+        "Ox": [
+          "Reliable",
+          "Strong",
+          "Patient",
+          "Methodical",
+          "Honest"
+        ],
+        "Tiger": [
+          "Brave",
+          "Confident",
+          "Competitive",
+          "Bold",
+          "Passionate"
+        ],
+        "Rabbit": [
+          "Gentle",
+          "Elegant",
+          "Cautious",
+          "Gracious",
+          "Sensitive"
+        ],
+        "Dragon": [
+          "Ambitious",
+          "Powerful",
+          "Charismatic",
+          "Lucky",
+          "Fearless"
+        ],
+        "Snake": [
+          "Wise",
+          "Intuitive",
+          "Mysterious",
+          "Sophisticated",
+          "Calm"
+        ],
+        "Horse": [
+          "Energetic",
+          "Free-spirited",
+          "Optimistic",
+          "Independent",
+          "Adventurous"
+        ],
+        "Goat": [
+          "Creative",
+          "Gentle",
+          "Artistic",
+          "Kind",
+          "Empathetic"
+        ],
+        "Monkey": [
+          "Witty",
+          "Clever",
+          "Curious",
+          "Playful",
+          "Inventive"
+        ],
+        "Rooster": [
+          "Honest",
+          "Punctual",
+          "Observant",
+          "Hardworking",
+          "Courageous"
+        ],
+        "Dog": [
+          "Loyal",
+          "Faithful",
+          "Honest",
+          "Protective",
+          "Dependable"
+        ],
+        "Pig": [
+          "Generous",
+          "Compassionate",
+          "Diligent",
+          "Sincere",
+          "Tolerant"
+        ]
+      },
+      "fortunes": {
+        "Rat": {
+          "lookForwardTo": "Fast thinking and quick opportunity spotting work in your favor. Career advancement and authority positions await those who step up.",
+          "thingsToAvoid": "Slow down on impulse decisions. The Horse year clashes with your energy, so ask extra questions before acting."
+        },
+        "Ox": {
+          "lookForwardTo": "Your natural endurance shines while others burn out. Romance is strongly indicated. This is your year to find love!",
+          "thingsToAvoid": "Don't resist change too strongly. Balance steady progress with warmth in relationships. Avoid overworking yourself."
+        },
+        "Tiger": {
+          "lookForwardTo": "Momentum returns! Exciting opportunities in leadership and creative self-expression. Doors open with greater ease.",
+          "thingsToAvoid": "Don't neglect personal relationships while chasing achievements. Keep your loved ones close as you rise."
+        },
+        "Rabbit": {
+          "lookForwardTo": "Your diplomacy and refined taste help you navigate situations smoothly without bulldozing through.",
+          "thingsToAvoid": "Not everything will go as planned. Pick one brave decision and commit fully rather than trying to please everyone."
+        },
+        "Dragon": {
+          "lookForwardTo": "The pace eases up, giving you breathing room for creativity and pleasure. Time to enjoy life's finer moments.",
+          "thingsToAvoid": "Prioritize experiences that refill you, not obligations that drain you. Stay flexible as situations unfold."
+        },
+        "Snake": {
+          "lookForwardTo": "Competition sharpens you this year. Rising standards and capable peers force meaningful growth and leveling up.",
+          "thingsToAvoid": "Put expectations in writing with collaborators. Focus on self-care and balance after an intense previous year."
+        },
+        "Horse": {
+          "lookForwardTo": "Everything amplifies: your confidence, charm and magnetic appeal surge! You're the protagonist of 2026.",
+          "thingsToAvoid": "This is your Ben Ming Nian (zodiac year). Wear red for luck! Protect finances from impulse spending and avoid major risks."
+        },
+        "Goat": {
+          "lookForwardTo": "Doors open through people this year. Mentors, friends and collaborators bring unexpected blessings. It's a blossoming year!",
+          "thingsToAvoid": "Stay generous with credit and follow through consistently. Don't spend too much time worrying about past or future."
+        },
+        "Monkey": {
+          "lookForwardTo": "Your speed matches the year perfectly. Access to new opportunities multiplies. Relationships improve across the board.",
+          "thingsToAvoid": "Choose your best projects and finish them instead of chasing shiny distractions. Focus brings the biggest wins."
+        },
+        "Rooster": {
+          "lookForwardTo": "Your precision and high standards become superpowers in this fast-paced year. Progress feels refreshing.",
+          "thingsToAvoid": "Swap critique for appreciation when possible. Embrace flexibility even when perfection isn't available."
+        },
+        "Dog": {
+          "lookForwardTo": "Your reliability and follow-through finally get noticed and rewarded! You're among the luckiest signs in 2026.",
+          "thingsToAvoid": "Accept care without picking it apart. Let your steadiness build trust over time rather than seeking instant validation."
+        },
+        "Pig": {
+          "lookForwardTo": "Progress comes through consistency rather than dramatic pushes. Your endurance is perfectly suited for this year.",
+          "thingsToAvoid": "Avoid forcing outcomes. Let impatient people burn themselves out while you stack steady progress."
+        }
+      }
+    },
+    "order": {
+      "steps": {
+        "base": "Choose your soup",
+        "toppings": "Add your toppings",
+        "review": "Review your order",
+        "reviewNamed": "{name}'s order"
+      },
+      "beef": {
+        "name": "Beef Noodle Soup",
+        "desc": "Classic braised beef with noodles"
+      },
+      "soupOnly": {
+        "name": "Soup only (no beef)",
+        "desc": "Rich broth with noodles, no meat"
+      },
+      "addToppings": "Add your toppings",
+      "recommended": "Recommended",
+      "toppings": {
+        "bokChoy": "Baby bok choy",
+        "greenOnions": "Green onions",
+        "cilantro": "Cilantro",
+        "sprouts": "Sprouts"
+      },
+      "levels": {
+        "None": "None",
+        "Light": "Light",
+        "Normal": "Normal",
+        "Extra": "Extra"
+      },
+      "reviewOrder": "Review order",
+      "back": "Back",
+      "orderNumber": "Order #{number}",
+      "orderIn": "Your order is in",
+      "visitKitchen": "Come visit us in the kitchen area if you need anything.",
+      "myStatus": "My order status",
+      "place": "Place my order!",
+      "placing": "Placing your order",
+      "welcome": {
+        "made": "You made it!",
+        "hyped": "We're <hl>so hyped</hl> you're here!",
+        "build": "Build your perfect bowl and we'll have it out to you <b>fresh and fast</b>!",
+        "tip": "<b>Tip:</b> Find your seat first, then place your order. We make it fresh the moment you order!",
+        "go": "Let's go!"
+      },
+      "errors": {
+        "missingGuest": "Missing guest information. Please use the link from your invitation.",
+        "oneOrder": "You've already placed your order. If you want to change it, come visit us in the kitchen area.",
+        "failed": "We couldn't place your order.",
+        "failedRetry": "We couldn't place your order. Please try again."
+      }
+    },
+    "confirmation": {
+      "placed": "Order placed!",
+      "numberLabel": "Your order number",
+      "next": "What happens next?",
+      "seat": "Find a seat and relax. No assigned seating tonight!",
+      "preparing": "We're preparing your bowl fresh in the kitchen.",
+      "call": "We'll call your name when your bowl is ready.",
+      "track": "Track my order"
+    },
+    "status": {
+      "loading": "Loading your order",
+      "notFound": "Order not found",
+      "noCode": "No order code provided",
+      "placeOrder": "Place an order",
+      "titleNamed": "{name}'s CNY 2026 party order",
+      "title": "Your CNY 2026 party order",
+      "states": {
+        "QUEUED": {
+          "label": "In queue",
+          "description": "Your order is waiting to be prepared"
+        },
+        "PREPPING": {
+          "label": "Preparing",
+          "description": "Our chefs are making your bowl fresh!"
+        },
+        "READY": {
+          "label": "Ready!",
+          "description": "Your order is ready. We're bringing it to you!"
+        },
+        "SERVING": {
+          "label": "Enjoy!",
+          "description": "Your order has been delivered. Enjoy your meal!"
+        },
+        "COMPLETED": {
+          "label": "Completed",
+          "description": "Thank you for dining with us!"
+        }
+      },
+      "listening": "Listening to the kitchen",
+      "yourOrder": "Your order:",
+      "item": "Item",
+      "readingStars": "Reading the stars",
+      "yourZodiac": "Your Chinese zodiac",
+      "messageTo": "Year of the Horse · Message to {name}",
+      "seekOut": "Seek out at tonight's party!",
+      "watchOut": "Watch out for tonight!",
+      "crack": "CRACK IT OPEN!",
+      "crackNamed": "CRACK IT OPEN, {name}!",
+      "luckyNumbers": "Lucky numbers:",
+      "unavailable": "Fortune unavailable",
+      "autoUpdate": "This page updates automatically"
+    },
+    "slides": {
+      "atParty": "At the party tonight",
+      "connect": "Connect with tonight",
+      "careful": "Tread carefully with tonight",
+      "lookForward": "Look forward to",
+      "avoid": "Things to avoid",
+      "more": "+{count} more",
+      "beFirst": "Be the first to join!",
+      "noneCompatible": "Your compatible zodiacs haven't arrived yet!",
+      "coastClear": "Coast is clear!",
+      "baby": {
+        "title": "Welcome to the herd!",
+        "subtitle": "Year of the Horse babies arriving 2026",
+        "parents": "Expecting parents",
+        "nickname": "Baby #{number}",
+        "luckyStars": "Born under lucky stars",
+        "luckyStarsBody": "2026 Horse babies are blessed with natural charisma, boundless energy and an adventurous spirit. They'll grow up confident, independent and destined to lead with warmth and passion.",
+        "future": "Their bright future",
+        "futureBody": "Fire Horse children are rare and powerful! Born only every 60 years, they bring transformation and positive change. Watch them gallop toward greatness!",
+        "friends": "Future best friends here tonight",
+        "friendsNone": "Tigers, Goats and Dogs will be their lifelong allies!"
+      }
+    }
+  },
+  "contactPage": {
+    "meta": {
+      "title": "Contact",
+      "description": "Write to the Oh! team. A person reads every message and replies within 24 to 48 hours."
+    },
+    "hero": {
+      "eyebrow": "Contact",
+      "title": "Write to us.",
+      "lede": "A question, feedback, a group dinner, something left at your pod. A person on our team reads every message and replies within 24 to 48 hours."
+    },
+    "form": {
+      "title": "Send a message",
+      "name": "Name",
+      "optional": "Optional",
+      "email": "Email",
+      "phone": "Phone",
+      "reachHint": "Leave an email or a phone number. We reply the way you prefer.",
+      "topic": "Topic",
+      "topics": {
+        "general": "A question",
+        "order": "An order",
+        "feedback": "Feedback",
+        "events": "Groups and events",
+        "press": "Press"
+      },
+      "message": "Message",
+      "messageHint": "Up to {max} characters.",
+      "honeypot": "Leave this field empty",
+      "submit": "Send message",
+      "sending": "Sending",
+      "privacy": "We use your details only to reply.",
+      "privacyLink": "Privacy policy"
+    },
+    "errors": {
+      "contactRequired": "Add an email or a phone number so we can reply.",
+      "messageRequired": "Write a message first.",
+      "invalidEmail": "That email address does not look right.",
+      "invalidPhone": "That phone number does not look right.",
+      "rateLimited": "You've sent several messages this hour. Try again later, or ask Chappy.",
+      "failed": "The message didn't send. Check your connection and try again."
+    },
+    "success": {
+      "title": "Message received.",
+      "body": "A person on our team will reply within 24 to 48 hours.",
+      "ref": "Reference",
+      "refHint": "Mention it if you write again.",
+      "another": "Send another message"
+    },
+    "other": {
+      "eyebrow": "Other ways",
+      "title": "Faster, sometimes.",
+      "email": {
+        "title": "Email",
+        "body": "Write to us directly."
+      },
+      "chappy": {
+        "title": "Chappy",
+        "body": "Order status, pods and rewards, answered at any hour.",
+        "cta": "Ask Chappy",
+        "prompt": "I have a question."
+      },
+      "visit": {
+        "title": "Visit",
+        "body": "Find a location and today's hours.",
+        "cta": "Locations"
+      }
+    }
+  },
+  "legal": {
+    "eyebrow": "The fine print",
+    "onThisPage": "On this page",
+    "jump": "Jump to a section",
+    "related": "More fine print",
+    "nav": {
+      "privacy": "Privacy policy",
+      "accessibility": "Accessibility",
+      "smsConsent": "SMS consent"
+    },
+    "questions": {
+      "title": "Questions?",
+      "body": "Write to us. A person reads every message.",
+      "cta": "Contact us"
+    },
+    "email": "Email",
+    "privacy": {
+      "meta": {
+        "title": "Privacy policy",
+        "description": "How Oh! Beef Noodle Soup collects, uses and protects your information."
+      },
+      "sharing": {
+        "serviceProviders": "Service providers",
+        "businessPartners": "Business partners",
+        "legalRequirements": "Legal requirements"
+      }
+    },
+    "accessibility": {
+      "meta": {
+        "title": "Accessibility",
+        "description": "How Oh! Beef Noodle Soup works to be accessible to everyone, online and in the restaurant."
+      }
+    }
+  },
+  "smsConsent": {
+    "meta": {
+      "title": "SMS consent",
+      "description": "How Oh! Beef Noodle Soup asks for and records consent to send order texts."
+    },
+    "hero": {
+      "title": "SMS opt-in consent",
+      "lede": "How Oh! Beef Noodle Soup asks for consent to send order texts, and how to stop them."
+    },
+    "overview": {
+      "title": "Overview",
+      "body": "We send transactional order texts only to customers who opt in. Consent is a clear checkbox that starts unchecked, and the customer must tick it. Consent is not required to make a purchase."
+    },
+    "points": {
+      "title": "Key compliance points",
+      "items": [
+        "The checkbox starts unchecked. Opting in takes an active tap.",
+        "Consent is separate from purchase. It is never required to complete an order.",
+        "The message types, frequency and data rates are disclosed.",
+        "The STOP and HELP keywords are shown.",
+        "A link to the privacy policy sits beside the consent."
+      ]
+    },
+    "language": {
+      "title": "Exact consent language",
+      "intro": "This text appears next to the opt-in checkbox:",
+      "quote": "I agree to receive SMS text messages from Oh Beef Noodle Soup regarding my order (confirmation & ready-for-pickup alerts). Message frequency varies. Msg & data rates may apply. Reply STOP to unsubscribe."
+    },
+    "types": {
+      "title": "Message types (transactional only)",
+      "intro": "We only send texts about a customer's own order. We do not send marketing, promotional or advertising texts.",
+      "confirmation": {
+        "label": "Order confirmation",
+        "body": "Sent right after the order is placed, with the order number."
+      },
+      "ready": {
+        "label": "Ready for pickup",
+        "body": "Sent when the order is ready at the restaurant."
+      },
+      "frequency": {
+        "label": "Message frequency",
+        "body": "1 to 2 messages per order: one confirmation and one ready notice."
+      }
+    },
+    "flow1": {
+      "title": "Opt-in flow 1: guest checkout",
+      "body": "On the payment page, when a guest enters a phone number, an unchecked checkbox appears for SMS updates. It is not pre-checked: the customer must tap it to consent. The phone number is optional, and SMS consent is not required to complete the purchase.",
+      "alt": "The SMS consent checkbox at guest checkout, unchecked by default",
+      "caption": "Guest checkout payment page with the SMS consent checkbox, unchecked by default."
+    },
+    "flow2": {
+      "title": "Opt-in flow 2: signed-in phone collection",
+      "body": "Signed-in customers with no phone number on file see an optional prompt on the order confirmation page, after a successful payment, to add a number and consent to SMS updates. They can dismiss it with \"Skip for now\". A phone number is never required.",
+      "alt": "The phone prompt for signed-in customers, with the SMS consent checkbox",
+      "caption": "Phone prompt for signed-in customers, with the SMS consent checkbox unchecked by default."
+    },
+    "optOut": {
+      "title": "Opting out",
+      "intro": "Customers can opt out at any time:",
+      "stop": {
+        "label": "Reply <kw>STOP</kw>",
+        "body": "Text <kw>STOP</kw> to any message to unsubscribe at once. It is handled automatically."
+      },
+      "help": {
+        "label": "Reply <kw>HELP</kw>",
+        "body": "Text <kw>HELP</kw> for help and opt-out instructions."
+      },
+      "email": {
+        "label": "Email",
+        "body": "Write to <email>@</email> to be removed from the SMS list."
+      }
+    },
+    "privacy": {
+      "title": "Privacy policy",
+      "body": "Our full privacy policy, including our SMS practices, is at:"
+    },
+    "business": {
+      "title": "Business contact information",
+      "name": "Business name",
+      "website": "Website",
+      "email": "Contact email",
+      "phone": "SMS phone number"
+    }
+  },
+  "groupLobby": {
+    "meta": {
+      "title": "Group order {code}",
+      "description": "Order together. Sit together."
+    },
+    "missing": {
+      "title": "We can't find that group.",
+      "body": "The code {code} doesn't match an open group. Groups close 30 minutes after they start.",
+      "noCode": "This link is missing its group code.",
+      "cta": "Start a new order"
+    },
+    "hero": {
+      "eyebrow": "Group order",
+      "title": "Together at {location}",
+      "codeLabel": "Group code",
+      "share": "Share",
+      "copied": "Link copied",
+      "shareTitle": "Join our group order",
+      "shareText": "Add your bowl to our group order at Oh! Code {code}.",
+      "closesIn": "Closes in {time}",
+      "closed": "This group has closed."
+    },
+    "status": {
+      "GATHERING": "Taking orders",
+      "CLOSED": "Closed, ready to pay",
+      "PAYING": "Paying",
+      "PAID": "Paid",
+      "PARTIALLY_PAID": "Partly paid",
+      "CANCELLED": "Cancelled"
+    },
+    "join": {
+      "title": "Join the group",
+      "body": "Add your own bowl. You'll sit with the group.",
+      "signIn": "Sign in to join",
+      "guest": "Continue as a guest",
+      "cta": "Join and order",
+      "joining": "Joining",
+      "loading": "One moment"
+    },
+    "host": {
+      "title": "You're the host.",
+      "body": "Share the code. Place your own order any time.",
+      "cta": "Place your order"
+    },
+    "mine": {
+      "title": "Your order",
+      "number": "Order {number}",
+      "edit": "Edit",
+      "remove": "Remove",
+      "paid": "Paid",
+      "pay": "Pay {amount}",
+      "payTitle": "Time to pay",
+      "payBody": "The group is closed. Pay for your own order.",
+      "waiting": "Your order is paid. Waiting for the others.",
+      "addFirst": "Add an order to pay for it."
+    },
+    "controls": {
+      "title": "Host controls",
+      "whoPays": "Who pays",
+      "hostPays": "I'll pay for everyone",
+      "eachPays": "Everyone pays their own",
+      "close": "Close the group",
+      "cancel": "Cancel the group",
+      "closeTitle": "Close the group?",
+      "closeBody": "No one new can join after you close it.",
+      "cancelTitle": "Cancel the group?",
+      "cancelBody": "This removes the group and every unpaid order in it.",
+      "removeTitle": "Remove your order?",
+      "removeBody": "Your order leaves the group. You can add a new one while the group is open.",
+      "confirm": "Yes",
+      "keep": "Not now"
+    },
+    "members": {
+      "title": "At the table",
+      "count": "{count, plural, one {# order} other {# orders}}",
+      "max": "Up to {max} people",
+      "empty": "No orders yet. Be the first.",
+      "host": "Host",
+      "guest": "Guest",
+      "items": "{count, plural, one {# item} other {# items}}",
+      "show": "Show order",
+      "paid": "Paid",
+      "hostPays": "Host pays",
+      "unpaid": "Not paid yet",
+      "total": "Group total",
+      "hostPaying": "The host is paying for everyone.",
+      "eachPaying": "Everyone pays their own.",
+      "bowl": "The bowl",
+      "extras": "Add-ons and extras",
+      "quantity": "{count} ×"
+    },
+    "pods": {
+      "eyebrow": "Pods",
+      "title": "Where you'll sit",
+      "live": "Live from the restaurant. The host picks the pods before paying.",
+      "later": "You're arriving later, so pods are set when you check in at the kiosk.",
+      "pickTitle": "Pick a pod for each of you",
+      "pickBody": "Choose a person, then a pod. A duo seats two side by side.",
+      "members": "Who sits where",
+      "none": "No pod yet",
+      "pickRest": "Pick the rest for me",
+      "clear": "Clear the picks",
+      "free": "{free} of {total} pods free",
+      "fillNote": "Anyone without a pod gets the best free one when you pay.",
+      "loading": "Loading the pods",
+      "error": "The pod map didn't load. Everyone gets the best free pods when you pay.",
+      "picked": "{name}, pod {label}"
+    },
+    "pay": {
+      "cta": "Pay for the group, {amount}",
+      "note": "One payment covers every order."
+    },
+    "done": {
+      "title": "Everyone's paid.",
+      "body": "The kitchen has your orders.",
+      "pods": "Your pods",
+      "pod": "Pod {label}",
+      "steps": {
+        "title": "Next",
+        "go": "Head to {location}.",
+        "find": "Find your pods.",
+        "scan": "Scan the code on your pod to check in.",
+        "served": "Your food comes to your pod."
+      },
+      "later": "You're arriving later. Pods are set when you check in at the kiosk.",
+      "view": "View my order"
+    },
+    "errors": {
+      "join": "We couldn't add you to the group. Try again.",
+      "signInFirst": "Sign in or continue as a guest to join.",
+      "action": "That didn't work. Try again."
+    },
+    "payment": {
+      "eyebrow": "Group payment",
+      "title": "Pay for the group",
+      "summary": "Group {code} at {location}",
+      "orders": "Orders",
+      "total": "Group total",
+      "due": "Due now",
+      "invalidMethod": "This group pays per person. Each member pays their own order.",
+      "back": "Back to the group",
+      "podsTitle": "Pods",
+      "podsPicked": "{count, plural, one {# pod picked} other {# pods picked}}",
+      "podsNone": "Everyone gets the best free pods when you pay.",
+      "seating": "Seating everyone",
+      "payButton": "Pay {amount}",
+      "paying": "Paying",
+      "confirming": "Confirming",
+      "or": "or pay with a card",
+      "loadingForm": "Loading the payment form",
+      "secure": "Card details go straight to Stripe. We never see them.",
+      "cardFailed": "Your card was not charged.",
+      "unfinished": "The payment didn't finish. Try again.",
+      "processing": "Your bank is still processing this payment. We'll finish it when it clears.",
+      "retry": "Try again"
+    }
   }
 }

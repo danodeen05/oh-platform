@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Attendee } from "@/lib/cny/slides-data";
 
 interface AttendeeNamesProps {
@@ -9,6 +10,7 @@ interface AttendeeNamesProps {
 }
 
 export function AttendeeNames({ attendees, title, icon }: AttendeeNamesProps) {
+  const t = useTranslations("cny.slides");
   // Get first names only for cleaner display
   const firstNames = attendees.map((a) => {
     const parts = a.name.trim().split(" ");
@@ -34,11 +36,11 @@ export function AttendeeNames({ attendees, title, icon }: AttendeeNamesProps) {
             </span>
           ))}
           {remaining > 0 && (
-            <span className="attendee-name"> +{remaining} more</span>
+            <span className="attendee-name"> {t("more", { count: remaining })}</span>
           )}
         </div>
       ) : (
-        <p className="no-attendees">Be the first to join!</p>
+        <p className="no-attendees">{t("beFirst")}</p>
       )}
     </div>
   );

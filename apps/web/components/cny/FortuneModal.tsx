@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
+import { useLocale, useTranslations } from "next-intl";
 
 interface FortuneModalProps {
   open: boolean;
@@ -40,8 +41,8 @@ function parseFortune(text: string): {
     const content = parts[i + 1]?.trim() || "";
 
     if (title && content) {
-      // Check if this is the lucky phrase section
-      if (title.toLowerCase().includes("lucky phrase")) {
+      // The lucky phrase section: its header is translated, so find it by its shape (four characters, then pinyin in parentheses).
+      if (/[一-龯]{4}\s*\([^)]+\)\s*[-–—]/.test(content)) {
         // Try to extract Chinese characters, pinyin, and meaning
         const phraseMatch = content.match(
           /([一-龯]{4})\s*\(([^)]+)\)\s*[-–—]\s*(.+?)(?:\n|$)/
@@ -68,6 +69,8 @@ export function FortuneModal({
   phone,
   birthdate,
 }: FortuneModalProps) {
+  const t = useTranslations("cny");
+  const locale = useLocale();
   const [state, setState] = useState<LoadingState>("loading");
   const [fortune, setFortune] = useState<FortuneResponse | null>(null);
   const [error, setError] = useState<string>("");
@@ -91,23 +94,24 @@ export function FortuneModal({
       const response = await fetch("/api/cny/fortune", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, phone, birthdate }),
+        body: JSON.stringify({ name, phone, birthdate, locale }),
       });
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || "Failed to generate fortune");
+        throw new Error(data.error || "fortune");
       }
 
       const data: FortuneResponse = await response.json();
       setFortune(data);
       setState("success");
       setIsTyping(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+    } catch {
+      // The server's reason is English and technical; the page says it plainly.
+      setError(t("fortune.error"));
       setState("error");
     }
-  }, [name, phone, birthdate]);
+  }, [name, phone, birthdate, locale, t]);
 
   // Fetch fortune when modal opens
   useEffect(() => {
@@ -173,6 +177,12 @@ export function FortuneModal({
   if (!open || !mounted) return null;
 
   const firstName = name.split(" ")[0];
+  // "Fire Horse" in the reader's words (the API names them in English).
+  const badge = (element: string | null, animal: string) => {
+    const e = element && t.has(`zodiac.elements.${element}`) ? t(`zodiac.elements.${element}`) : element ?? "";
+    const a = t.has(`zodiac.animals.${animal}`) ? t(`zodiac.animals.${animal}`) : animal;
+    return t("fortune.badge", { element: e, animal: a });
+  };
   const { luckyPhrase } = fortune ? parseFortune(fortune.fortune) : { luckyPhrase: null };
 
   const content = (
@@ -188,7 +198,7 @@ export function FortuneModal({
         <button
           onClick={onClose}
           className="fortune-modal-close"
-          aria-label="Close"
+          aria-label={t("fortune.close")}
         >
           &times;
         </button>
@@ -198,14 +208,14 @@ export function FortuneModal({
           <div className="fortune-loading">
             <img
               src="/cny/horse.svg"
-              alt="Loading..."
+              alt={t("loading")}
               className="fortune-horse-loading"
             />
             <p className="fortune-loading-text">
-              Consulting the stars for {firstName}...
+              {t("fortune.consulting", { name: firstName })}
             </p>
             <p className="fortune-loading-subtext">
-              The Year of the Horse awaits
+              {t("fortune.awaits")}
             </p>
           </div>
         )}
@@ -214,11 +224,11 @@ export function FortuneModal({
         {state === "error" && (
           <div className="fortune-error">
             <p className="fortune-error-text">
-              The fortune spirits are resting...
+              {t("fortune.resting")}
             </p>
             <p className="fortune-error-message">{error}</p>
             <button onClick={fetchFortune} className="fortune-retry-button">
-              Try Again
+              {t("fortune.tryAgain")}
             </button>
           </div>
         )}
@@ -227,12 +237,12 @@ export function FortuneModal({
         {state === "success" && fortune && (
           <div className="fortune-content">
             <h2 id="fortune-title" className="fortune-title">
-              Your 2026 Fortune
+              {t("fortune.title")}
             </h2>
 
             {fortune.zodiac && (
               <div className="fortune-zodiac-badge">
-                {fortune.element} {fortune.zodiac}
+                {badge(fortune.element, fortune.zodiac)}
               </div>
             )}
 
@@ -253,7 +263,7 @@ export function FortuneModal({
                   <span className="fortune-card-name">{name}</span>
                   {fortune.zodiac && (
                     <span className="fortune-card-zodiac">
-                      {fortune.element} {fortune.zodiac}
+                      {badge(fortune.element, fortune.zodiac)}
                     </span>
                   )}
                 </div>
@@ -262,7 +272,7 @@ export function FortuneModal({
                   {luckyPhrase.pinyin} - {luckyPhrase.meaning}
                 </div>
                 <div className="fortune-card-year">
-                  Year of the Horse 2026
+                  {t("fortune.year")}
                 </div>
               </div>
             )}
@@ -270,7 +280,7 @@ export function FortuneModal({
             {/* Close button appears after typing */}
             {!isTyping && (
               <button onClick={onClose} className="fortune-close-button">
-                Close
+                {t("fortune.close")}
               </button>
             )}
           </div>

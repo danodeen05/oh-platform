@@ -1271,6 +1271,20 @@
       "contactUs": {
         "title": "联系我们",
         "intro": "如果您对本隐私政策或我们的做法有任何疑问，请与我们联系："
+      },
+      "smsNotifications": {
+        "title": "短信通知",
+        "intro": "我们会通过短信发送与您订单相关的交易通知：",
+        "messageTypes": [
+          "订单确认，包含订单号和二维码",
+          "包间准备好时的通知",
+          "等候期间的排队位置更新",
+          "外带订单完成时的取餐通知"
+        ],
+        "frequency": "短信频率取决于您的订单情况，通常每次用餐 1 至 4 条。",
+        "consent": "您可以在结账时输入手机号码并勾选同意框，选择接收短信通知。您可以随时发送 STOP 到我们的号码或联系我们来退订。",
+        "carriers": "可能产生短信和流量费用。运营商不对延迟或未送达的短信负责。",
+        "help": "如需帮助，请发送 HELP，或发邮件至 orders@ohbeefnoodlesoup.com。"
       }
     }
   },
@@ -2562,5 +2576,692 @@
     "kiosk": "请到入口旁的自助机签到，它会为您安排座位。",
     "choose": "选择您的座位",
     "status": "查看我的订单"
+  },
+  "cny": {
+    "meta": {
+      "title": "诚挚邀请！2026 新春派对",
+      "description": "一起来庆祝农历新年。马年快乐。",
+      "ogTitle": "诚挚邀请！2026 新春派对",
+      "ogDescription": "一起来庆祝农历新年。2026 马年。",
+      "siteName": "Oh! 2026 新春",
+      "ogAlt": "2026 农历新年马年派对邀请函"
+    },
+    "slidesMeta": {
+      "title": "2026 新春派对幻灯片",
+      "description": "马年生肖幻灯片"
+    },
+    "horseAlt": "马年",
+    "loading": "加载中",
+    "invite": {
+      "title": "诚挚邀请您！",
+      "rsvp": "立即回复出席"
+    },
+    "details": {
+      "title": "马年",
+      "body": "Dano 和 Kristy 的年度新春派对又来了。今年的牛肉面可能是他们煮过最好的一锅（我们知道这话说得很大）。来麻将桌坐坐（对，有奖品），学几句中文，再看看马年会给你的生肖带来什么。空着肚子来，满载文化归。",
+      "aside": "如果文化不是你的菜，现场还有高尔夫模拟器。我们不会评判，也会替你保密。",
+      "when": "2 月 20 日（周五）· 晚上 6 点至 8 点",
+      "continue": "前往回复出席"
+    },
+    "rsvp": {
+      "title": "回复出席！",
+      "name": "姓名",
+      "namePlaceholder": "您的姓名",
+      "phone": "电话",
+      "phoneHint": "方便我们发短信通知最新消息",
+      "birthdate": "生日",
+      "birthdateHint": "揭晓您的生肖，看看 2026 年会带来什么！",
+      "bringing": "还有朋友一起来吗？每位宾客都需要各自回复，欢迎帮他们填一份。",
+      "submit": "立即回复出席！",
+      "submitting": "发送中",
+      "nameRequired": "请输入您的姓名"
+    },
+    "thanks": {
+      "titleNamed": "谢谢您，{name}！",
+      "title": "谢谢您！",
+      "seeYou": "我们到时见",
+      "date": "2 月 20 日星期五！",
+      "viewFortune": "查看您的运势",
+      "again": "替其他人回复出席"
+    },
+    "fortune": {
+      "consulting": "正在为 {name} 观星",
+      "awaits": "马年正等着您",
+      "resting": "运势精灵正在休息",
+      "error": "出了点问题",
+      "tryAgain": "再试一次",
+      "title": "您的 2026 运势",
+      "badge": "{element}{animal}",
+      "year": "2026 马年",
+      "close": "关闭"
+    },
+    "zodiac": {
+      "animals": {
+        "Rat": "鼠",
+        "Ox": "牛",
+        "Tiger": "虎",
+        "Rabbit": "兔",
+        "Dragon": "龙",
+        "Snake": "蛇",
+        "Horse": "马",
+        "Goat": "羊",
+        "Monkey": "猴",
+        "Rooster": "鸡",
+        "Dog": "狗",
+        "Pig": "猪"
+      },
+      "elements": {
+        "Metal": "金",
+        "Water": "水",
+        "Wood": "木",
+        "Fire": "火",
+        "Earth": "土"
+      },
+      "traits": {
+        "Rat": [
+          "聪明",
+          "机灵",
+          "足智多谋",
+          "善于应变",
+          "迷人"
+        ],
+        "Ox": [
+          "可靠",
+          "强壮",
+          "有耐心",
+          "有条理",
+          "诚实"
+        ],
+        "Tiger": [
+          "勇敢",
+          "自信",
+          "好胜",
+          "大胆",
+          "热情"
+        ],
+        "Rabbit": [
+          "温柔",
+          "优雅",
+          "谨慎",
+          "亲切",
+          "敏感"
+        ],
+        "Dragon": [
+          "有抱负",
+          "强大",
+          "有魅力",
+          "幸运",
+          "无畏"
+        ],
+        "Snake": [
+          "睿智",
+          "直觉敏锐",
+          "神秘",
+          "精致",
+          "沉稳"
+        ],
+        "Horse": [
+          "精力充沛",
+          "自由奔放",
+          "乐观",
+          "独立",
+          "爱冒险"
+        ],
+        "Goat": [
+          "有创意",
+          "温柔",
+          "有艺术感",
+          "善良",
+          "富有同理心"
+        ],
+        "Monkey": [
+          "风趣",
+          "聪明",
+          "好奇",
+          "爱玩",
+          "富有创造力"
+        ],
+        "Rooster": [
+          "诚实",
+          "守时",
+          "观察入微",
+          "勤奋",
+          "勇敢"
+        ],
+        "Dog": [
+          "忠诚",
+          "忠实",
+          "诚实",
+          "有保护欲",
+          "值得信赖"
+        ],
+        "Pig": [
+          "慷慨",
+          "有同情心",
+          "勤勉",
+          "真诚",
+          "宽容"
+        ]
+      },
+      "fortunes": {
+        "Rat": {
+          "lookForwardTo": "思维敏捷、善于发现机会，让你占尽优势。勇于挺身而出的人，将迎来升职和掌权的机会。",
+          "thingsToAvoid": "冲动的决定要放慢。马年与你的能量相冲，行动前多问几个问题。"
+        },
+        "Ox": {
+          "lookForwardTo": "别人精疲力尽时，你的耐力更加耀眼。桃花运很旺，今年就是你找到真爱的一年！",
+          "thingsToAvoid": "别太抗拒改变。在稳步前进和经营感情之间取得平衡，也别让自己过劳。"
+        },
+        "Tiger": {
+          "lookForwardTo": "气势回来了！领导和创意表达方面有令人兴奋的机会，许多门会更容易为你打开。",
+          "thingsToAvoid": "追求成就时别忽略身边的人。步步高升的同时，让所爱的人留在身边。"
+        },
+        "Rabbit": {
+          "lookForwardTo": "你的圆融和品味，让你能顺利应对各种局面，而不必硬闯。",
+          "thingsToAvoid": "不是每件事都会按计划走。选一个勇敢的决定并全力以赴，而不是试着讨好每个人。"
+        },
+        "Dragon": {
+          "lookForwardTo": "节奏放缓，让你有空间发挥创意、享受生活，是品味人生美好时刻的时候了。",
+          "thingsToAvoid": "优先选择让你充电的经历，而不是消耗你的义务。随着情势发展保持灵活。"
+        },
+        "Snake": {
+          "lookForwardTo": "今年的竞争让你更敏锐。越来越高的标准和能干的同伴，会推动你真正成长、更上一层楼。",
+          "thingsToAvoid": "与合作伙伴把期望写清楚。经历紧张的一年后，好好照顾自己、取得平衡。"
+        },
+        "Horse": {
+          "lookForwardTo": "一切都被放大：你的自信、魅力和吸引力大增！你就是 2026 年的主角。",
+          "thingsToAvoid": "今年是你的本命年。穿红色讨个好运！守好钱包别冲动消费，也避免重大风险。"
+        },
+        "Goat": {
+          "lookForwardTo": "今年的机会来自人脉。导师、朋友和伙伴会带来意想不到的福气，是花开的一年！",
+          "thingsToAvoid": "功劳要大方分享，并持续把事情做完。别花太多时间担心过去或未来。"
+        },
+        "Monkey": {
+          "lookForwardTo": "你的速度与今年完美契合。新机会倍增，各方面的人际关系都会变好。",
+          "thingsToAvoid": "挑出最好的项目并完成它，别被闪亮的诱惑分心。专注带来最大的胜利。"
+        },
+        "Rooster": {
+          "lookForwardTo": "在这快节奏的一年，你的精准和高标准会成为超能力。进展令人神清气爽。",
+          "thingsToAvoid": "能欣赏时就少批评。即使无法完美，也要拥抱灵活。"
+        },
+        "Dog": {
+          "lookForwardTo": "你的可靠和贯彻到底终于被看见并得到回报！你是 2026 年最幸运的生肖之一。",
+          "thingsToAvoid": "接受别人的关心，别过度分析。让你的稳定慢慢建立信任，而不是急着寻求认同。"
+        },
+        "Pig": {
+          "lookForwardTo": "进步来自持之以恒，而不是猛力冲刺。你的耐力非常适合今年。",
+          "thingsToAvoid": "别强求结果。让急躁的人自己耗尽力气，你只要稳稳积累进展。"
+        }
+      }
+    },
+    "order": {
+      "steps": {
+        "base": "选择汤底",
+        "toppings": "加点配料",
+        "review": "确认订单",
+        "reviewNamed": "{name}的订单"
+      },
+      "beef": {
+        "name": "牛肉面",
+        "desc": "经典红烧牛肉配面"
+      },
+      "soupOnly": {
+        "name": "清汤面（不加牛肉）",
+        "desc": "浓郁汤头配面，不含肉"
+      },
+      "addToppings": "加点配料",
+      "recommended": "推荐",
+      "toppings": {
+        "bokChoy": "小白菜",
+        "greenOnions": "葱花",
+        "cilantro": "香菜",
+        "sprouts": "豆芽"
+      },
+      "levels": {
+        "None": "不要",
+        "Light": "少量",
+        "Normal": "正常",
+        "Extra": "加量"
+      },
+      "reviewOrder": "确认订单",
+      "back": "返回",
+      "orderNumber": "订单 #{number}",
+      "orderIn": "您的订单已提交",
+      "visitKitchen": "有任何需要，欢迎到厨房区找我们。",
+      "myStatus": "我的订单状态",
+      "place": "提交订单！",
+      "placing": "正在提交订单",
+      "welcome": {
+        "made": "您来了！",
+        "hyped": "我们<hl>超开心</hl>您来了！",
+        "build": "打造您的完美一碗，我们会<b>新鲜又快速</b>地送到您手上！",
+        "tip": "<b>小提示：</b>先找好座位再点餐，我们会在您点餐的那一刻现煮！",
+        "go": "出发吧！"
+      },
+      "errors": {
+        "missingGuest": "缺少宾客信息，请使用邀请函中的链接。",
+        "oneOrder": "您已经点过餐了。如果想修改，请到厨房区找我们。",
+        "failed": "无法提交您的订单。",
+        "failedRetry": "无法提交您的订单，请再试一次。"
+      }
+    },
+    "confirmation": {
+      "placed": "订单已提交！",
+      "numberLabel": "您的订单号",
+      "next": "接下来呢？",
+      "seat": "找个位子放松一下，今晚不排座位！",
+      "preparing": "我们正在厨房为您现煮。",
+      "call": "您的面好了，我们会叫您的名字。",
+      "track": "跟踪我的订单"
+    },
+    "status": {
+      "loading": "正在加载您的订单",
+      "notFound": "找不到订单",
+      "noCode": "没有提供订单代码",
+      "placeOrder": "去点餐",
+      "titleNamed": "{name}的 2026 新春派对订单",
+      "title": "您的 2026 新春派对订单",
+      "states": {
+        "QUEUED": {
+          "label": "排队中",
+          "description": "您的订单正在等待制作"
+        },
+        "PREPPING": {
+          "label": "制作中",
+          "description": "我们的厨师正在为您现煮！"
+        },
+        "READY": {
+          "label": "好了！",
+          "description": "您的餐点好了，马上送到您面前！"
+        },
+        "SERVING": {
+          "label": "请享用！",
+          "description": "您的餐点已送达，请慢用！"
+        },
+        "COMPLETED": {
+          "label": "已完成",
+          "description": "谢谢您的光临！"
+        }
+      },
+      "listening": "正在听厨房的动静",
+      "yourOrder": "您的订单：",
+      "item": "菜品",
+      "readingStars": "正在解读星象",
+      "yourZodiac": "您的生肖",
+      "messageTo": "马年 · 给{name}的话",
+      "seekOut": "今晚派对上可以多聊聊！",
+      "watchOut": "今晚要小心！",
+      "crack": "打开幸运饼干！",
+      "crackNamed": "打开幸运饼干吧，{name}！",
+      "luckyNumbers": "幸运数字：",
+      "unavailable": "暂时无法获取运势",
+      "autoUpdate": "此页面会自动更新"
+    },
+    "slides": {
+      "atParty": "今晚在派对上",
+      "connect": "今晚可以多交流",
+      "careful": "今晚相处要小心",
+      "lookForward": "值得期待",
+      "avoid": "需要避免",
+      "more": "还有 {count} 位",
+      "beFirst": "成为第一位加入的人！",
+      "noneCompatible": "与你相合的生肖还没到哦！",
+      "coastClear": "一切安全！",
+      "baby": {
+        "title": "欢迎加入马群！",
+        "subtitle": "2026 年即将出生的马宝宝",
+        "parents": "准爸妈",
+        "nickname": "宝宝 #{number}",
+        "luckyStars": "福星高照",
+        "luckyStarsBody": "2026 年的马宝宝天生有魅力、精力无穷，又充满冒险精神。他们会长成自信、独立的人，注定以温暖和热情领导他人。",
+        "future": "光明的未来",
+        "futureBody": "火马宝宝稀有又强大！每 60 年才出现一次，带来转变和积极的改变。看他们奔向伟大吧！",
+        "friends": "今晚在场的未来好朋友",
+        "friendsNone": "属虎、属羊和属狗的人会是他们一辈子的好伙伴！"
+      }
+    }
+  },
+  "contactPage": {
+    "meta": {
+      "title": "联系我们",
+      "description": "给 Oh! 团队写信。每条消息都由真人阅读，并在 24 至 48 小时内回复。"
+    },
+    "hero": {
+      "eyebrow": "联系我们",
+      "title": "给我们写信。",
+      "lede": "问题、意见、团体聚餐，或是落在包厢里的东西。每条消息都由我们团队的真人阅读，并在 24 至 48 小时内回复。"
+    },
+    "form": {
+      "title": "发送消息",
+      "name": "姓名",
+      "optional": "选填",
+      "email": "电子邮箱",
+      "phone": "电话",
+      "reachHint": "请留下邮箱或电话号码，我们会用您喜欢的方式回复。",
+      "topic": "主题",
+      "topics": {
+        "general": "一般问题",
+        "order": "订单",
+        "feedback": "意见反馈",
+        "events": "团体与活动",
+        "press": "媒体"
+      },
+      "message": "消息",
+      "messageHint": "最多 {max} 个字符。",
+      "honeypot": "请勿填写此栏",
+      "submit": "发送消息",
+      "sending": "发送中",
+      "privacy": "您的信息只会用于回复您。",
+      "privacyLink": "隐私政策"
+    },
+    "errors": {
+      "contactRequired": "请留下邮箱或电话号码，方便我们回复您。",
+      "messageRequired": "请先输入消息。",
+      "invalidEmail": "这个邮箱地址好像不正确。",
+      "invalidPhone": "这个电话号码好像不正确。",
+      "rateLimited": "您这一小时已发送多条消息。请稍后再试，或问问 Chappy。",
+      "failed": "消息没有发出。请检查网络连接后再试一次。"
+    },
+    "success": {
+      "title": "消息已收到。",
+      "body": "我们团队的真人会在 24 至 48 小时内回复您。",
+      "ref": "参考编号",
+      "refHint": "再次来信时请附上此编号。",
+      "another": "再发一条消息"
+    },
+    "other": {
+      "eyebrow": "其他方式",
+      "title": "有时更快。",
+      "email": {
+        "title": "电子邮箱",
+        "body": "直接给我们写信。"
+      },
+      "chappy": {
+        "title": "Chappy",
+        "body": "订单状态、包厢和会员奖励，随时为您解答。",
+        "cta": "问问 Chappy",
+        "prompt": "我有一个问题。"
+      },
+      "visit": {
+        "title": "到店",
+        "body": "查看门店和今日营业时间。",
+        "cta": "门店"
+      }
+    }
+  },
+  "legal": {
+    "eyebrow": "详细条款",
+    "onThisPage": "本页内容",
+    "jump": "跳转到段落",
+    "related": "更多条款",
+    "nav": {
+      "privacy": "隐私政策",
+      "accessibility": "无障碍服务",
+      "smsConsent": "短信同意"
+    },
+    "questions": {
+      "title": "有疑问吗？",
+      "body": "给我们写信，每条消息都由真人阅读。",
+      "cta": "联系我们"
+    },
+    "email": "电子邮箱",
+    "privacy": {
+      "meta": {
+        "title": "隐私政策",
+        "description": "Oh! Beef Noodle Soup 如何收集、使用和保护您的信息。"
+      },
+      "sharing": {
+        "serviceProviders": "服务提供商",
+        "businessPartners": "业务合作伙伴",
+        "legalRequirements": "法律要求"
+      }
+    },
+    "accessibility": {
+      "meta": {
+        "title": "无障碍服务",
+        "description": "Oh! Beef Noodle Soup 如何让网站和餐厅对每个人都无障碍。"
+      }
+    }
+  },
+  "smsConsent": {
+    "meta": {
+      "title": "短信同意",
+      "description": "Oh! Beef Noodle Soup 如何获取并记录发送订单短信的同意。"
+    },
+    "hero": {
+      "title": "短信订阅同意流程",
+      "lede": "Oh! Beef Noodle Soup 如何获取发送订单短信的同意，以及如何停止接收。"
+    },
+    "overview": {
+      "title": "概述",
+      "body": "我们只会向主动选择接收的顾客发送订单相关的交易短信。同意方式是一个默认未勾选的复选框，顾客必须自己勾选。购买时不需要同意接收短信。"
+    },
+    "points": {
+      "title": "合规要点",
+      "items": [
+        "复选框默认未勾选，必须主动点选才算同意。",
+        "同意与购买分开，完成订单从不需要同意接收短信。",
+        "清楚说明短信类型、频率和流量费用。",
+        "标明退订和求助的关键词。",
+        "同意选项旁附有隐私政策链接。"
+      ]
+    },
+    "language": {
+      "title": "同意文字原文",
+      "intro": "以下文字会显示在同意复选框旁：",
+      "quote": "我同意接收 Oh Beef Noodle Soup 发送的订单相关短信（订单确认和取餐通知）。短信频率不定，可能产生短信和流量费用。回复 STOP 即可退订。"
+    },
+    "types": {
+      "title": "短信类型（仅限交易通知）",
+      "intro": "我们只发送与顾客本人订单有关的短信，不会发送营销、促销或广告短信。",
+      "confirmation": {
+        "label": "订单确认",
+        "body": "下单后立即发送，包含订单号。"
+      },
+      "ready": {
+        "label": "取餐通知",
+        "body": "订单在餐厅准备好时发送。"
+      },
+      "frequency": {
+        "label": "短信频率",
+        "body": "每笔订单 1 至 2 条：一条确认、一条取餐通知。"
+      }
+    },
+    "flow1": {
+      "title": "同意流程一：访客结账",
+      "body": "在付款页面，访客输入电话号码后，会出现一个未勾选的短信通知复选框。它不会预先勾选，顾客必须自己点选才算同意。电话号码为选填，完成购买不需要同意接收短信。",
+      "alt": "访客结账时的短信同意复选框，默认未勾选",
+      "caption": "访客结账付款页面上的短信同意复选框，默认未勾选。"
+    },
+    "flow2": {
+      "title": "同意流程二：已登录会员提供电话",
+      "body": "账户中没有电话号码的已登录顾客，在付款成功后的订单确认页会看到一个选填提示，可以添加电话并同意接收短信通知。顾客可以点击“以后再说”关闭提示，从不强制提供电话号码。",
+      "alt": "已登录顾客的电话提示和短信同意复选框",
+      "caption": "已登录顾客的电话提示，短信同意复选框默认未勾选。"
+    },
+    "optOut": {
+      "title": "退订",
+      "intro": "顾客随时可以退订：",
+      "stop": {
+        "label": "回复 <kw>STOP</kw>",
+        "body": "对任意一条短信回复 <kw>STOP</kw>，即可立即退订，系统会自动处理。"
+      },
+      "help": {
+        "label": "回复 <kw>HELP</kw>",
+        "body": "回复 <kw>HELP</kw> 获取帮助和退订说明。"
+      },
+      "email": {
+        "label": "电子邮箱",
+        "body": "发邮件至 <email>@</email>，要求将您从短信名单中移除。"
+      }
+    },
+    "privacy": {
+      "title": "隐私政策",
+      "body": "完整的隐私政策（包括短信做法）请见："
+    },
+    "business": {
+      "title": "商家联系信息",
+      "name": "商家名称",
+      "website": "网站",
+      "email": "联系邮箱",
+      "phone": "短信电话号码"
+    }
+  },
+  "groupLobby": {
+    "meta": {
+      "title": "团体订单 {code}",
+      "description": "一起点餐，一起入座。"
+    },
+    "missing": {
+      "title": "找不到这个团体。",
+      "body": "代码 {code} 没有对应的开放团体。团体会在创建 30 分钟后关闭。",
+      "noCode": "这个链接缺少团体代码。",
+      "cta": "开始新订单"
+    },
+    "hero": {
+      "eyebrow": "团体订单",
+      "title": "在{location}一起用餐",
+      "codeLabel": "团体代码",
+      "share": "分享",
+      "copied": "已复制链接",
+      "shareTitle": "加入我们的团体订单",
+      "shareText": "到 Oh! 加入我们的团体订单，点你自己的那一碗。代码 {code}。",
+      "closesIn": "{time} 后关闭",
+      "closed": "这个团体已关闭。"
+    },
+    "status": {
+      "GATHERING": "收单中",
+      "CLOSED": "已截止，等待付款",
+      "PAYING": "付款中",
+      "PAID": "已付款",
+      "PARTIALLY_PAID": "部分付款",
+      "CANCELLED": "已取消"
+    },
+    "join": {
+      "title": "加入团体",
+      "body": "点你自己的那一碗，和大家坐在一起。",
+      "signIn": "登录以加入",
+      "guest": "以访客身份继续",
+      "cta": "加入并点餐",
+      "joining": "加入中",
+      "loading": "请稍候"
+    },
+    "host": {
+      "title": "您是发起人。",
+      "body": "把代码分享给朋友，您随时可以点自己的餐。",
+      "cta": "点我的餐"
+    },
+    "mine": {
+      "title": "我的订单",
+      "number": "订单 {number}",
+      "edit": "修改",
+      "remove": "移除",
+      "paid": "已付款",
+      "pay": "支付 {amount}",
+      "payTitle": "该付款了",
+      "payBody": "团体已截止，请支付您自己的订单。",
+      "waiting": "您的订单已付款，正在等其他人。",
+      "addFirst": "先添加订单才能付款。"
+    },
+    "controls": {
+      "title": "发起人设置",
+      "whoPays": "由谁付款",
+      "hostPays": "我请大家",
+      "eachPays": "各付各的",
+      "close": "截止收单",
+      "cancel": "取消团体",
+      "closeTitle": "要截止收单吗？",
+      "closeBody": "截止后就不能再有新成员加入。",
+      "cancelTitle": "要取消团体吗？",
+      "cancelBody": "这会移除团体以及其中所有未付款的订单。",
+      "removeTitle": "要移除您的订单吗？",
+      "removeBody": "您的订单会离开团体。团体仍开放时，您可以再添加一笔。",
+      "confirm": "确定",
+      "keep": "先不要"
+    },
+    "members": {
+      "title": "同桌成员",
+      "count": "{count} 笔订单",
+      "max": "最多 {max} 人",
+      "empty": "还没有订单，您来当第一个。",
+      "host": "发起人",
+      "guest": "访客",
+      "items": "{count} 项",
+      "show": "查看订单",
+      "paid": "已付款",
+      "hostPays": "发起人付款",
+      "unpaid": "尚未付款",
+      "total": "团体合计",
+      "hostPaying": "发起人会替大家付款。",
+      "eachPaying": "每个人各付各的。",
+      "bowl": "主餐",
+      "extras": "加点和配菜",
+      "quantity": "{count} ×"
+    },
+    "pods": {
+      "eyebrow": "包厢",
+      "title": "你们的座位",
+      "live": "餐厅实时状态。发起人会在付款前选好包厢。",
+      "later": "你们会晚一点到，包厢会在自助机签到时安排。",
+      "pickTitle": "给每个人选一个包厢",
+      "pickBody": "先选一个人，再选一个包厢。双人包厢可以让两人并肩而坐。",
+      "members": "谁坐哪里",
+      "none": "尚未选择",
+      "pickRest": "其余的帮我选",
+      "clear": "清除选择",
+      "free": "{total} 个包厢中有 {free} 个空位",
+      "fillNote": "付款时，没有选包厢的人会安排到最好的空包厢。",
+      "loading": "正在加载包厢",
+      "error": "包厢图没有加载。付款时会给每个人安排最好的空包厢。",
+      "picked": "{name}，包厢 {label}"
+    },
+    "pay": {
+      "cta": "为团体付款，{amount}",
+      "note": "一次付款即涵盖所有订单。"
+    },
+    "done": {
+      "title": "大家都付好了。",
+      "body": "厨房已收到你们的订单。",
+      "pods": "你们的包厢",
+      "pod": "包厢 {label}",
+      "steps": {
+        "title": "接下来",
+        "go": "前往{location}。",
+        "find": "找到你们的包厢。",
+        "scan": "扫描包厢上的码完成签到。",
+        "served": "餐点会送到您的包厢。"
+      },
+      "later": "你们会晚一点到，包厢会在自助机签到时安排。",
+      "view": "查看我的订单"
+    },
+    "errors": {
+      "join": "无法把您加入团体，请再试一次。",
+      "signInFirst": "请登录或以访客身份继续，才能加入。",
+      "action": "操作没有成功，请再试一次。"
+    },
+    "payment": {
+      "eyebrow": "团体付款",
+      "title": "为团体付款",
+      "summary": "团体 {code}，{location}",
+      "orders": "订单",
+      "total": "团体合计",
+      "due": "应付金额",
+      "invalidMethod": "这个团体是各付各的，每位成员各自支付自己的订单。",
+      "back": "回到团体",
+      "podsTitle": "包厢",
+      "podsPicked": "已选 {count} 个包厢",
+      "podsNone": "付款时会给每个人安排最好的空包厢。",
+      "seating": "正在安排座位",
+      "payButton": "支付 {amount}",
+      "paying": "付款中",
+      "confirming": "确认中",
+      "or": "或使用银行卡付款",
+      "loadingForm": "正在加载付款表单",
+      "secure": "卡片信息直接发送给 Stripe，我们看不到。",
+      "cardFailed": "您的卡没有被扣款。",
+      "unfinished": "付款没有完成，请再试一次。",
+      "processing": "您的银行仍在处理这笔付款，完成后我们会接着处理。",
+      "retry": "再试一次"
+    }
   }
 }

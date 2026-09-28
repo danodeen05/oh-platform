@@ -2,16 +2,19 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { AnimatedBackground } from "@/components/cny/AnimatedBackground";
 
 export default function CNYDetails() {
   const router = useRouter();
+  const t = useTranslations("cny");
+  const locale = useLocale();
   const [isTransitioning, setIsTransitioning] = useState(false);
 
   const handleContinue = () => {
     setIsTransitioning(true);
     setTimeout(() => {
-      router.push("/en/cny/rsvp");
+      router.push(`/${locale}/cny/rsvp`);
     }, 400);
   };
 
@@ -48,7 +51,7 @@ export default function CNYDetails() {
               whiteSpace: "nowrap",
             }}
           >
-            Year of the Horse
+            {t("details.title")}
           </h1>
 
           <p
@@ -60,12 +63,7 @@ export default function CNYDetails() {
               fontWeight: 500,
             }}
           >
-            Dano & Kristy are back with their annual Chinese New Year party.
-            This year's beef noodle soup might be their best batch yet (bold
-            claim, we know). Pull up a seat at the mahjong table (yes, there are
-            prizes), pick up a few Chinese phrases, and find out what the Year
-            of the Horse has in store for your zodiac. Come hungry, leave
-            cultured.
+            {t("details.body")}
           </p>
           <p
             style={{
@@ -76,8 +74,7 @@ export default function CNYDetails() {
               fontStyle: "italic",
             }}
           >
-            And if culture isn't your thing, there's a golf simulator. No
-            judgment. Your secret's safe with us.
+            {t("details.aside")}
           </p>
 
           <div
@@ -88,7 +85,7 @@ export default function CNYDetails() {
               marginTop: "4px",
             }}
           >
-            <p style={{ margin: "4px 0" }}>Fri, Feb 20 · 6–8 PM</p>
+            <p style={{ margin: "4px 0" }}>{t("details.when")}</p>
             <p style={{ margin: "4px 0" }}>
               <a
                 href="https://maps.app.goo.gl/uNwHb59PnDSHD2BV6"
@@ -120,7 +117,7 @@ export default function CNYDetails() {
             animationDelay: "0.5s",
           }}
         >
-          Continue to RSVP
+          {t("details.continue")}
         </button>
       </div>
     </div>

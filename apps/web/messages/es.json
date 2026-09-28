@@ -1271,6 +1271,20 @@
       "contactUs": {
         "title": "Contáctanos",
         "intro": "Si tienes preguntas sobre esta Política de Privacidad o nuestras prácticas, contáctanos:"
+      },
+      "smsNotifications": {
+        "title": "Notificaciones por SMS",
+        "intro": "Usamos SMS para enviarte notificaciones sobre tus pedidos:",
+        "messageTypes": [
+          "Confirmación del pedido con tu número de pedido y código QR",
+          "Aviso cuando tu cabina está lista",
+          "Actualizaciones de tu lugar en la fila mientras esperas",
+          "Aviso cuando tu pedido para llevar está listo"
+        ],
+        "frequency": "La frecuencia de los mensajes depende de tus pedidos. Normalmente de 1 a 4 mensajes por visita.",
+        "consent": "Puedes aceptar recibir notificaciones por SMS al pagar, ingresando tu número de teléfono y marcando la casilla de consentimiento. Puedes darte de baja en cualquier momento enviando STOP a nuestro número o contactándonos.",
+        "carriers": "Pueden aplicarse tarifas de mensajes y datos. Los operadores no son responsables de mensajes retrasados o no entregados.",
+        "help": "Para obtener ayuda, envía HELP o escríbenos a orders@ohbeefnoodlesoup.com."
       }
     }
   },
@@ -2562,5 +2576,692 @@
     "kiosk": "Regístrate en el quiosco de la entrada. Te asigna una cabina.",
     "choose": "Elige tu cabina",
     "status": "Ver mi pedido"
+  },
+  "cny": {
+    "meta": {
+      "title": "¡Estás invitado! Fiesta de Año Nuevo Chino 2026",
+      "description": "Celebra con nosotros el Año Nuevo Chino. Año del Caballo.",
+      "ogTitle": "¡Estás invitado! Año Nuevo Chino 2026",
+      "ogDescription": "Celebra con nosotros el Año Nuevo Chino. Año del Caballo, 2026.",
+      "siteName": "Oh! Año Nuevo Chino 2026",
+      "ogAlt": "Invitación a la fiesta del Año Nuevo Chino 2026, Año del Caballo"
+    },
+    "slidesMeta": {
+      "title": "Presentación de la fiesta de Año Nuevo Chino 2026",
+      "description": "Presentación del zodiaco del Año del Caballo"
+    },
+    "horseAlt": "Año del Caballo",
+    "loading": "Cargando",
+    "invite": {
+      "title": "¡ESTÁS INVITADO!",
+      "rsvp": "Confirma tu asistencia"
+    },
+    "details": {
+      "title": "Año del Caballo",
+      "body": "Dano y Kristy vuelven con su fiesta anual de Año Nuevo Chino. La sopa de fideos con res de este año podría ser la mejor que han hecho (lo sabemos, es mucho decir). Siéntate a la mesa de mahjong (sí, hay premios), aprende algunas frases en chino y descubre lo que el Año del Caballo le depara a tu signo. Ven con hambre y vete con cultura.",
+      "aside": "Y si la cultura no es lo tuyo, hay un simulador de golf. Sin juicios. Tu secreto está a salvo.",
+      "when": "Vie 20 de feb · de 6 a 8 p. m.",
+      "continue": "Continuar para confirmar"
+    },
+    "rsvp": {
+      "title": "¡Confirma!",
+      "name": "Nombre",
+      "namePlaceholder": "Tu nombre",
+      "phone": "Teléfono",
+      "phoneHint": "Para enviarte novedades por mensaje de texto",
+      "birthdate": "Fecha de nacimiento",
+      "birthdateHint": "¡Descubre tu signo del zodiaco chino y lo que te depara 2026!",
+      "bringing": "¿Vienes con más gente? Cada invitado necesita su propia confirmación. Puedes llenarla por ellos.",
+      "submit": "¡Confirmar asistencia!",
+      "submitting": "Enviando",
+      "nameRequired": "Escribe tu nombre"
+    },
+    "thanks": {
+      "titleNamed": "¡GRACIAS, {name}!",
+      "title": "¡GRACIAS!",
+      "seeYou": "Nos vemos el",
+      "date": "¡viernes 20 de febrero!",
+      "viewFortune": "Ver tu fortuna",
+      "again": "Confirmar por otra persona"
+    },
+    "fortune": {
+      "consulting": "Consultando las estrellas para {name}",
+      "awaits": "El Año del Caballo te espera",
+      "resting": "Los espíritus de la fortuna están descansando",
+      "error": "Algo salió mal",
+      "tryAgain": "Intentar de nuevo",
+      "title": "Tu fortuna 2026",
+      "badge": "{animal} de {element}",
+      "year": "Año del Caballo 2026",
+      "close": "Cerrar"
+    },
+    "zodiac": {
+      "animals": {
+        "Rat": "Rata",
+        "Ox": "Buey",
+        "Tiger": "Tigre",
+        "Rabbit": "Conejo",
+        "Dragon": "Dragón",
+        "Snake": "Serpiente",
+        "Horse": "Caballo",
+        "Goat": "Cabra",
+        "Monkey": "Mono",
+        "Rooster": "Gallo",
+        "Dog": "Perro",
+        "Pig": "Cerdo"
+      },
+      "elements": {
+        "Metal": "Metal",
+        "Water": "Agua",
+        "Wood": "Madera",
+        "Fire": "Fuego",
+        "Earth": "Tierra"
+      },
+      "traits": {
+        "Rat": [
+          "Inteligente",
+          "Ingeniosa",
+          "Recursiva",
+          "Adaptable",
+          "Encantadora"
+        ],
+        "Ox": [
+          "Confiable",
+          "Fuerte",
+          "Paciente",
+          "Metódico",
+          "Honesto"
+        ],
+        "Tiger": [
+          "Valiente",
+          "Seguro",
+          "Competitivo",
+          "Audaz",
+          "Apasionado"
+        ],
+        "Rabbit": [
+          "Gentil",
+          "Elegante",
+          "Cauteloso",
+          "Amable",
+          "Sensible"
+        ],
+        "Dragon": [
+          "Ambicioso",
+          "Poderoso",
+          "Carismático",
+          "Afortunado",
+          "Intrépido"
+        ],
+        "Snake": [
+          "Sabia",
+          "Intuitiva",
+          "Misteriosa",
+          "Sofisticada",
+          "Serena"
+        ],
+        "Horse": [
+          "Enérgico",
+          "Libre",
+          "Optimista",
+          "Independiente",
+          "Aventurero"
+        ],
+        "Goat": [
+          "Creativa",
+          "Gentil",
+          "Artística",
+          "Bondadosa",
+          "Empática"
+        ],
+        "Monkey": [
+          "Ocurrente",
+          "Inteligente",
+          "Curioso",
+          "Juguetón",
+          "Inventivo"
+        ],
+        "Rooster": [
+          "Honesto",
+          "Puntual",
+          "Observador",
+          "Trabajador",
+          "Valiente"
+        ],
+        "Dog": [
+          "Leal",
+          "Fiel",
+          "Honesto",
+          "Protector",
+          "Confiable"
+        ],
+        "Pig": [
+          "Generoso",
+          "Compasivo",
+          "Diligente",
+          "Sincero",
+          "Tolerante"
+        ]
+      },
+      "fortunes": {
+        "Rat": {
+          "lookForwardTo": "Pensar rápido y ver oportunidades a tiempo juega a tu favor. Ascensos y puestos de autoridad esperan a quien dé el paso.",
+          "thingsToAvoid": "Frena las decisiones impulsivas. El año del Caballo choca con tu energía, así que pregunta más antes de actuar."
+        },
+        "Ox": {
+          "lookForwardTo": "Tu resistencia natural brilla mientras otros se agotan. El romance está muy presente: ¡este es tu año para encontrar el amor!",
+          "thingsToAvoid": "No te resistas tanto al cambio. Equilibra el avance constante con calidez en tus relaciones. No trabajes de más."
+        },
+        "Tiger": {
+          "lookForwardTo": "¡Vuelve el impulso! Oportunidades emocionantes en liderazgo y expresión creativa. Las puertas se abren con más facilidad.",
+          "thingsToAvoid": "No descuides tus relaciones personales mientras persigues logros. Mantén cerca a tus seres queridos al subir."
+        },
+        "Rabbit": {
+          "lookForwardTo": "Tu diplomacia y buen gusto te ayudan a manejar cualquier situación sin tener que imponerte.",
+          "thingsToAvoid": "No todo saldrá según el plan. Elige una decisión valiente y comprométete por completo en lugar de complacer a todos."
+        },
+        "Dragon": {
+          "lookForwardTo": "El ritmo baja y te deja espacio para la creatividad y el placer. Es momento de disfrutar lo mejor de la vida.",
+          "thingsToAvoid": "Prioriza las experiencias que te recargan, no las obligaciones que te agotan. Mantente flexible mientras todo se desarrolla."
+        },
+        "Snake": {
+          "lookForwardTo": "La competencia te afila este año. Estándares más altos y colegas capaces te empujan a crecer de verdad y subir de nivel.",
+          "thingsToAvoid": "Pon por escrito las expectativas con tus colaboradores. Cuídate y busca equilibrio tras un año intenso."
+        },
+        "Horse": {
+          "lookForwardTo": "Todo se amplifica: ¡tu confianza, tu encanto y tu magnetismo se disparan! Eres el protagonista de 2026.",
+          "thingsToAvoid": "Es tu año del signo propio. ¡Viste de rojo para la suerte! Protege tus finanzas de las compras impulsivas y evita grandes riesgos."
+        },
+        "Goat": {
+          "lookForwardTo": "Este año las puertas se abren gracias a la gente. Mentores, amigos y colaboradores traen bendiciones inesperadas. ¡Es un año para florecer!",
+          "thingsToAvoid": "Reparte el mérito con generosidad y cumple con constancia. No pases mucho tiempo preocupándote por el pasado o el futuro."
+        },
+        "Monkey": {
+          "lookForwardTo": "Tu rapidez encaja perfecto con el año. Se multiplican las oportunidades nuevas. Tus relaciones mejoran en todos los frentes.",
+          "thingsToAvoid": "Elige tus mejores proyectos y termínalos en lugar de perseguir distracciones brillantes. La concentración trae los mayores logros."
+        },
+        "Rooster": {
+          "lookForwardTo": "Tu precisión y tus altos estándares se vuelven superpoderes en este año acelerado. El progreso se siente renovador.",
+          "thingsToAvoid": "Cambia la crítica por el aprecio cuando puedas. Acepta la flexibilidad aunque la perfección no sea posible."
+        },
+        "Dog": {
+          "lookForwardTo": "¡Por fin notan y recompensan tu confiabilidad y constancia! Estás entre los signos con más suerte en 2026.",
+          "thingsToAvoid": "Acepta el cariño sin analizarlo de más. Deja que tu estabilidad construya confianza con el tiempo en vez de buscar aprobación inmediata."
+        },
+        "Pig": {
+          "lookForwardTo": "El progreso llega con constancia, no con empujones dramáticos. Tu resistencia es ideal para este año.",
+          "thingsToAvoid": "No fuerces los resultados. Deja que los impacientes se desgasten mientras tú avanzas paso a paso."
+        }
+      }
+    },
+    "order": {
+      "steps": {
+        "base": "Elige tu sopa",
+        "toppings": "Agrega tus toppings",
+        "review": "Revisa tu pedido",
+        "reviewNamed": "El pedido de {name}"
+      },
+      "beef": {
+        "name": "Sopa de fideos con res",
+        "desc": "Res estofada clásica con fideos"
+      },
+      "soupOnly": {
+        "name": "Solo sopa (sin res)",
+        "desc": "Caldo intenso con fideos, sin carne"
+      },
+      "addToppings": "Agrega tus toppings",
+      "recommended": "Recomendado",
+      "toppings": {
+        "bokChoy": "Bok choy baby",
+        "greenOnions": "Cebollín",
+        "cilantro": "Cilantro",
+        "sprouts": "Germinado de soya"
+      },
+      "levels": {
+        "None": "Nada",
+        "Light": "Poco",
+        "Normal": "Normal",
+        "Extra": "Extra"
+      },
+      "reviewOrder": "Revisar pedido",
+      "back": "Atrás",
+      "orderNumber": "Pedido n.º {number}",
+      "orderIn": "Tu pedido está hecho",
+      "visitKitchen": "Si necesitas algo, visítanos en el área de cocina.",
+      "myStatus": "Estado de mi pedido",
+      "place": "¡Hacer mi pedido!",
+      "placing": "Enviando tu pedido",
+      "welcome": {
+        "made": "¡Llegaste!",
+        "hyped": "¡Estamos <hl>felicísimos</hl> de que estés aquí!",
+        "build": "Arma tu tazón perfecto y te lo llevamos <b>fresco y rápido</b>.",
+        "tip": "<b>Consejo:</b> primero busca tu asiento y luego haz tu pedido. ¡Lo preparamos al momento!",
+        "go": "¡Vamos!"
+      },
+      "errors": {
+        "missingGuest": "Falta la información del invitado. Usa el enlace de tu invitación.",
+        "oneOrder": "Ya hiciste tu pedido. Si quieres cambiarlo, visítanos en el área de cocina.",
+        "failed": "No pudimos enviar tu pedido.",
+        "failedRetry": "No pudimos enviar tu pedido. Inténtalo de nuevo."
+      }
+    },
+    "confirmation": {
+      "placed": "¡Pedido enviado!",
+      "numberLabel": "Tu número de pedido",
+      "next": "¿Qué sigue?",
+      "seat": "Busca un asiento y relájate. ¡Hoy no hay lugares asignados!",
+      "preparing": "Estamos preparando tu tazón al momento en la cocina.",
+      "call": "Diremos tu nombre cuando tu tazón esté listo.",
+      "track": "Seguir mi pedido"
+    },
+    "status": {
+      "loading": "Cargando tu pedido",
+      "notFound": "No encontramos el pedido",
+      "noCode": "Falta el código del pedido",
+      "placeOrder": "Hacer un pedido",
+      "titleNamed": "Pedido de {name} para la fiesta de Año Nuevo Chino 2026",
+      "title": "Tu pedido para la fiesta de Año Nuevo Chino 2026",
+      "states": {
+        "QUEUED": {
+          "label": "En fila",
+          "description": "Tu pedido está esperando a prepararse"
+        },
+        "PREPPING": {
+          "label": "Preparando",
+          "description": "¡Nuestros cocineros preparan tu tazón al momento!"
+        },
+        "READY": {
+          "label": "¡Listo!",
+          "description": "Tu pedido está listo. ¡Te lo llevamos!"
+        },
+        "SERVING": {
+          "label": "¡Buen provecho!",
+          "description": "Tu pedido fue entregado. ¡Disfrútalo!"
+        },
+        "COMPLETED": {
+          "label": "Completado",
+          "description": "¡Gracias por acompañarnos!"
+        }
+      },
+      "listening": "Escuchando a la cocina",
+      "yourOrder": "Tu pedido:",
+      "item": "Artículo",
+      "readingStars": "Leyendo las estrellas",
+      "yourZodiac": "Tu signo del zodiaco chino",
+      "messageTo": "Año del Caballo · Mensaje para {name}",
+      "seekOut": "¡Búscalos en la fiesta de hoy!",
+      "watchOut": "¡Cuidado esta noche!",
+      "crack": "¡ÁBRELA!",
+      "crackNamed": "¡ÁBRELA, {name}!",
+      "luckyNumbers": "Números de la suerte:",
+      "unavailable": "Fortuna no disponible",
+      "autoUpdate": "Esta página se actualiza sola"
+    },
+    "slides": {
+      "atParty": "En la fiesta esta noche",
+      "connect": "Conecta esta noche con",
+      "careful": "Ve con cuidado esta noche con",
+      "lookForward": "Lo que viene",
+      "avoid": "Lo que conviene evitar",
+      "more": "y {count} más",
+      "beFirst": "¡Sé el primero en llegar!",
+      "noneCompatible": "¡Tus signos compatibles aún no llegan!",
+      "coastClear": "¡Todo despejado!",
+      "baby": {
+        "title": "¡Bienvenidos a la manada!",
+        "subtitle": "Bebés del Año del Caballo que llegan en 2026",
+        "parents": "Futuros papás",
+        "nickname": "Bebé n.º {number}",
+        "luckyStars": "Nacidos con buena estrella",
+        "luckyStarsBody": "Los bebés Caballo de 2026 nacen con carisma natural, energía sin fin y espíritu aventurero. Crecerán seguros, independientes y destinados a guiar con calidez y pasión.",
+        "future": "Su brillante futuro",
+        "futureBody": "¡Los niños del Caballo de Fuego son raros y poderosos! Nacen solo cada 60 años y traen transformación y cambios positivos. ¡Mírenlos galopar hacia la grandeza!",
+        "friends": "Futuros mejores amigos aquí esta noche",
+        "friendsNone": "¡Los Tigres, las Cabras y los Perros serán sus aliados de por vida!"
+      }
+    }
+  },
+  "contactPage": {
+    "meta": {
+      "title": "Contacto",
+      "description": "Escríbele al equipo de Oh! Una persona lee cada mensaje y responde en 24 a 48 horas."
+    },
+    "hero": {
+      "eyebrow": "Contacto",
+      "title": "Escríbenos.",
+      "lede": "Una pregunta, un comentario, una cena en grupo, algo que olvidaste en tu cabina. Una persona de nuestro equipo lee cada mensaje y responde en 24 a 48 horas."
+    },
+    "form": {
+      "title": "Envía un mensaje",
+      "name": "Nombre",
+      "optional": "Opcional",
+      "email": "Correo electrónico",
+      "phone": "Teléfono",
+      "reachHint": "Deja un correo o un número de teléfono. Te respondemos como prefieras.",
+      "topic": "Tema",
+      "topics": {
+        "general": "Una pregunta",
+        "order": "Un pedido",
+        "feedback": "Comentarios",
+        "events": "Grupos y eventos",
+        "press": "Prensa"
+      },
+      "message": "Mensaje",
+      "messageHint": "Hasta {max} caracteres.",
+      "honeypot": "Deja este campo vacío",
+      "submit": "Enviar mensaje",
+      "sending": "Enviando",
+      "privacy": "Usamos tus datos solo para responderte.",
+      "privacyLink": "Política de privacidad"
+    },
+    "errors": {
+      "contactRequired": "Agrega un correo o un número de teléfono para poder responderte.",
+      "messageRequired": "Primero escribe un mensaje.",
+      "invalidEmail": "Ese correo electrónico no parece correcto.",
+      "invalidPhone": "Ese número de teléfono no parece correcto.",
+      "rateLimited": "Enviaste varios mensajes en esta hora. Inténtalo más tarde o pregúntale a Chappy.",
+      "failed": "El mensaje no se envió. Revisa tu conexión e inténtalo de nuevo."
+    },
+    "success": {
+      "title": "Mensaje recibido.",
+      "body": "Una persona de nuestro equipo te responderá en 24 a 48 horas.",
+      "ref": "Referencia",
+      "refHint": "Menciónala si vuelves a escribir.",
+      "another": "Enviar otro mensaje"
+    },
+    "other": {
+      "eyebrow": "Otras formas",
+      "title": "A veces, más rápido.",
+      "email": {
+        "title": "Correo electrónico",
+        "body": "Escríbenos directamente."
+      },
+      "chappy": {
+        "title": "Chappy",
+        "body": "Estado del pedido, cabinas y recompensas, a cualquier hora.",
+        "cta": "Pregúntale a Chappy",
+        "prompt": "Tengo una pregunta."
+      },
+      "visit": {
+        "title": "Visítanos",
+        "body": "Encuentra un local y el horario de hoy.",
+        "cta": "Locales"
+      }
+    }
+  },
+  "legal": {
+    "eyebrow": "La letra pequeña",
+    "onThisPage": "En esta página",
+    "jump": "Ir a una sección",
+    "related": "Más letra pequeña",
+    "nav": {
+      "privacy": "Política de privacidad",
+      "accessibility": "Accesibilidad",
+      "smsConsent": "Consentimiento de SMS"
+    },
+    "questions": {
+      "title": "¿Preguntas?",
+      "body": "Escríbenos. Una persona lee cada mensaje.",
+      "cta": "Contáctanos"
+    },
+    "email": "Correo electrónico",
+    "privacy": {
+      "meta": {
+        "title": "Política de privacidad",
+        "description": "Cómo Oh! Beef Noodle Soup recopila, usa y protege tu información."
+      },
+      "sharing": {
+        "serviceProviders": "Proveedores de servicios",
+        "businessPartners": "Socios comerciales",
+        "legalRequirements": "Requisitos legales"
+      }
+    },
+    "accessibility": {
+      "meta": {
+        "title": "Accesibilidad",
+        "description": "Cómo Oh! Beef Noodle Soup trabaja para ser accesible para todos, en línea y en el restaurante."
+      }
+    }
+  },
+  "smsConsent": {
+    "meta": {
+      "title": "Consentimiento de SMS",
+      "description": "Cómo Oh! Beef Noodle Soup pide y registra el consentimiento para enviar mensajes sobre pedidos."
+    },
+    "hero": {
+      "title": "Consentimiento para recibir SMS",
+      "lede": "Cómo Oh! Beef Noodle Soup pide consentimiento para enviar mensajes sobre pedidos, y cómo dejar de recibirlos."
+    },
+    "overview": {
+      "title": "Resumen",
+      "body": "Solo enviamos mensajes de texto sobre pedidos a los clientes que aceptan recibirlos. El consentimiento es una casilla clara que empieza sin marcar, y el cliente debe marcarla. No se requiere consentimiento para hacer una compra."
+    },
+    "points": {
+      "title": "Puntos clave de cumplimiento",
+      "items": [
+        "La casilla empieza sin marcar. Aceptar requiere un toque activo.",
+        "El consentimiento es independiente de la compra. Nunca se requiere para completar un pedido.",
+        "Se informan los tipos de mensaje, la frecuencia y las tarifas de datos.",
+        "Se muestran las palabras clave para darse de baja y pedir ayuda.",
+        "Junto al consentimiento hay un enlace a la política de privacidad."
+      ]
+    },
+    "language": {
+      "title": "Texto exacto del consentimiento",
+      "intro": "Este texto aparece junto a la casilla de consentimiento:",
+      "quote": "Acepto recibir mensajes de texto de Oh Beef Noodle Soup sobre mi pedido (confirmación y aviso de pedido listo). La frecuencia de los mensajes varía. Pueden aplicarse tarifas de mensajes y datos. Responde STOP para darte de baja."
+    },
+    "types": {
+      "title": "Tipos de mensaje (solo transaccionales)",
+      "intro": "Solo enviamos mensajes sobre el pedido del propio cliente. No enviamos mensajes de marketing, promociones ni publicidad.",
+      "confirmation": {
+        "label": "Confirmación del pedido",
+        "body": "Se envía justo después de hacer el pedido, con el número de pedido."
+      },
+      "ready": {
+        "label": "Pedido listo",
+        "body": "Se envía cuando el pedido está listo en el restaurante."
+      },
+      "frequency": {
+        "label": "Frecuencia",
+        "body": "De 1 a 2 mensajes por pedido: una confirmación y un aviso de pedido listo."
+      }
+    },
+    "flow1": {
+      "title": "Flujo de aceptación 1: pago como invitado",
+      "body": "En la página de pago, cuando un invitado escribe su número de teléfono, aparece una casilla sin marcar para recibir avisos por SMS. No viene marcada: el cliente debe tocarla para aceptar. El teléfono es opcional y el consentimiento no es necesario para completar la compra.",
+      "alt": "La casilla de consentimiento de SMS en el pago como invitado, sin marcar",
+      "caption": "Página de pago como invitado con la casilla de consentimiento de SMS, sin marcar."
+    },
+    "flow2": {
+      "title": "Flujo de aceptación 2: teléfono de clientes con sesión iniciada",
+      "body": "Los clientes con sesión iniciada que no tienen un teléfono guardado ven, en la página de confirmación después de pagar, una invitación opcional para agregar un número y aceptar los avisos por SMS. Pueden cerrarla con \"Ahora no\". Nunca se exige un número de teléfono.",
+      "alt": "La invitación a agregar un teléfono, con la casilla de consentimiento de SMS",
+      "caption": "Invitación a agregar un teléfono para clientes con sesión iniciada, con la casilla sin marcar."
+    },
+    "optOut": {
+      "title": "Darse de baja",
+      "intro": "Los clientes pueden darse de baja en cualquier momento:",
+      "stop": {
+        "label": "Responde <kw>STOP</kw>",
+        "body": "Envía <kw>STOP</kw> en respuesta a cualquier mensaje para darte de baja al instante. Se procesa automáticamente."
+      },
+      "help": {
+        "label": "Responde <kw>HELP</kw>",
+        "body": "Envía <kw>HELP</kw> para recibir ayuda e instrucciones para darte de baja."
+      },
+      "email": {
+        "label": "Correo electrónico",
+        "body": "Escribe a <email>@</email> para salir de la lista de SMS."
+      }
+    },
+    "privacy": {
+      "title": "Política de privacidad",
+      "body": "Nuestra política de privacidad completa, incluidas nuestras prácticas de SMS, está en:"
+    },
+    "business": {
+      "title": "Datos de contacto del negocio",
+      "name": "Nombre del negocio",
+      "website": "Sitio web",
+      "email": "Correo de contacto",
+      "phone": "Número de SMS"
+    }
+  },
+  "groupLobby": {
+    "meta": {
+      "title": "Pedido en grupo {code}",
+      "description": "Pidan juntos. Siéntense juntos."
+    },
+    "missing": {
+      "title": "No encontramos ese grupo.",
+      "body": "El código {code} no corresponde a un grupo abierto. Los grupos se cierran 30 minutos después de empezar.",
+      "noCode": "A este enlace le falta el código del grupo.",
+      "cta": "Empezar un pedido nuevo"
+    },
+    "hero": {
+      "eyebrow": "Pedido en grupo",
+      "title": "Juntos en {location}",
+      "codeLabel": "Código del grupo",
+      "share": "Compartir",
+      "copied": "Enlace copiado",
+      "shareTitle": "Únete a nuestro pedido en grupo",
+      "shareText": "Agrega tu tazón a nuestro pedido en grupo en Oh! Código {code}.",
+      "closesIn": "Se cierra en {time}",
+      "closed": "Este grupo ya cerró."
+    },
+    "status": {
+      "GATHERING": "Recibiendo pedidos",
+      "CLOSED": "Cerrado, listo para pagar",
+      "PAYING": "Pagando",
+      "PAID": "Pagado",
+      "PARTIALLY_PAID": "Pagado en parte",
+      "CANCELLED": "Cancelado"
+    },
+    "join": {
+      "title": "Únete al grupo",
+      "body": "Agrega tu propio tazón. Te sentarás con el grupo.",
+      "signIn": "Inicia sesión para unirte",
+      "guest": "Continuar como invitado",
+      "cta": "Unirme y pedir",
+      "joining": "Uniéndote",
+      "loading": "Un momento"
+    },
+    "host": {
+      "title": "Eres el anfitrión.",
+      "body": "Comparte el código. Haz tu propio pedido cuando quieras.",
+      "cta": "Hacer mi pedido"
+    },
+    "mine": {
+      "title": "Tu pedido",
+      "number": "Pedido {number}",
+      "edit": "Editar",
+      "remove": "Quitar",
+      "paid": "Pagado",
+      "pay": "Pagar {amount}",
+      "payTitle": "Hora de pagar",
+      "payBody": "El grupo está cerrado. Paga tu propio pedido.",
+      "waiting": "Tu pedido está pagado. Esperando a los demás.",
+      "addFirst": "Agrega un pedido para poder pagarlo."
+    },
+    "controls": {
+      "title": "Opciones del anfitrión",
+      "whoPays": "Quién paga",
+      "hostPays": "Yo pago por todos",
+      "eachPays": "Cada quien paga lo suyo",
+      "close": "Cerrar el grupo",
+      "cancel": "Cancelar el grupo",
+      "closeTitle": "¿Cerrar el grupo?",
+      "closeBody": "Nadie más podrá unirse después de cerrarlo.",
+      "cancelTitle": "¿Cancelar el grupo?",
+      "cancelBody": "Esto elimina el grupo y todos sus pedidos sin pagar.",
+      "removeTitle": "¿Quitar tu pedido?",
+      "removeBody": "Tu pedido sale del grupo. Puedes agregar otro mientras el grupo siga abierto.",
+      "confirm": "Sí",
+      "keep": "Ahora no"
+    },
+    "members": {
+      "title": "En la mesa",
+      "count": "{count, plural, one {# pedido} other {# pedidos}}",
+      "max": "Hasta {max} personas",
+      "empty": "Aún no hay pedidos. Sé el primero.",
+      "host": "Anfitrión",
+      "guest": "Invitado",
+      "items": "{count, plural, one {# artículo} other {# artículos}}",
+      "show": "Ver pedido",
+      "paid": "Pagado",
+      "hostPays": "Paga el anfitrión",
+      "unpaid": "Sin pagar",
+      "total": "Total del grupo",
+      "hostPaying": "El anfitrión paga por todos.",
+      "eachPaying": "Cada quien paga lo suyo.",
+      "bowl": "El tazón",
+      "extras": "Extras y complementos",
+      "quantity": "{count} ×"
+    },
+    "pods": {
+      "eyebrow": "Pods",
+      "title": "Dónde se sentarán",
+      "live": "En vivo desde el restaurante. El anfitrión elige los pods antes de pagar.",
+      "later": "Llegan más tarde, así que los pods se asignan al registrarse en el quiosco.",
+      "pickTitle": "Elige un pod para cada uno",
+      "pickBody": "Elige una persona y luego un pod. Un pod dúo sienta a dos lado a lado.",
+      "members": "Quién se sienta dónde",
+      "none": "Sin pod",
+      "pickRest": "Elige el resto por mí",
+      "clear": "Borrar selección",
+      "free": "{free} de {total} pods libres",
+      "fillNote": "Quien no tenga pod recibe el mejor libre al pagar.",
+      "loading": "Cargando los pods",
+      "error": "El mapa de pods no cargó. Todos reciben los mejores pods libres al pagar.",
+      "picked": "{name}, pod {label}"
+    },
+    "pay": {
+      "cta": "Pagar por el grupo, {amount}",
+      "note": "Un solo pago cubre todos los pedidos."
+    },
+    "done": {
+      "title": "Todos pagaron.",
+      "body": "La cocina ya tiene sus pedidos.",
+      "pods": "Sus pods",
+      "pod": "Pod {label}",
+      "steps": {
+        "title": "Lo que sigue",
+        "go": "Vayan a {location}.",
+        "find": "Busquen sus pods.",
+        "scan": "Escanea el código de tu pod para registrarte.",
+        "served": "Tu comida llega a tu pod."
+      },
+      "later": "Llegan más tarde. Los pods se asignan al registrarse en el quiosco.",
+      "view": "Ver mi pedido"
+    },
+    "errors": {
+      "join": "No pudimos agregarte al grupo. Inténtalo de nuevo.",
+      "signInFirst": "Inicia sesión o continúa como invitado para unirte.",
+      "action": "Eso no funcionó. Inténtalo de nuevo."
+    },
+    "payment": {
+      "eyebrow": "Pago del grupo",
+      "title": "Pagar por el grupo",
+      "summary": "Grupo {code} en {location}",
+      "orders": "Pedidos",
+      "total": "Total del grupo",
+      "due": "A pagar ahora",
+      "invalidMethod": "En este grupo cada quien paga. Cada miembro paga su propio pedido.",
+      "back": "Volver al grupo",
+      "podsTitle": "Pods",
+      "podsPicked": "{count, plural, one {# pod elegido} other {# pods elegidos}}",
+      "podsNone": "Todos reciben los mejores pods libres al pagar.",
+      "seating": "Asignando los asientos",
+      "payButton": "Pagar {amount}",
+      "paying": "Pagando",
+      "confirming": "Confirmando",
+      "or": "o paga con tarjeta",
+      "loadingForm": "Cargando el formulario de pago",
+      "secure": "Los datos de la tarjeta van directo a Stripe. Nunca los vemos.",
+      "cardFailed": "No se hizo ningún cargo a tu tarjeta.",
+      "unfinished": "El pago no terminó. Inténtalo de nuevo.",
+      "processing": "Tu banco aún está procesando este pago. Lo terminaremos cuando se confirme.",
+      "retry": "Intentar de nuevo"
+    }
   }
 }

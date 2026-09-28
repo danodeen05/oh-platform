@@ -1,14 +1,9 @@
 "use client";
 
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import { ZodiacAnimal, ZODIAC_COMPATIBLE } from "@/lib/cny/zodiac";
-import {
-  Attendee,
-  ZODIAC_FORTUNES,
-  ZODIAC_SVG_FILES,
-  ZODIAC_INCOMPATIBLE,
-  ZODIAC_TRAITS,
-} from "@/lib/cny/slides-data";
+import { Attendee, ZODIAC_INCOMPATIBLE } from "@/lib/cny/slides-data";
 import { ZODIAC_YEARS } from "@/lib/cny/zodiac-years";
 import { AnimatedBackground } from "../AnimatedBackground";
 import { AnimatedZodiacSVG } from "./AnimatedZodiacSVG";
@@ -29,9 +24,10 @@ export function ZodiacSlide({
   attendees,
   allAttendeesByZodiac,
 }: ZodiacSlideProps) {
-  const fortune = ZODIAC_FORTUNES[zodiac];
+  // Task D11: the zodiac copy (name, traits, fortune) in the reader's language.
+  const t = useTranslations("cny");
   const years = ZODIAC_YEARS[zodiac];
-  const traits = ZODIAC_TRAITS[zodiac];
+  const traits = t.raw(`zodiac.traits.${zodiac}`) as string[];
   const compatibleZodiacs = ZODIAC_COMPATIBLE[zodiac];
   const incompatibleZodiacs = ZODIAC_INCOMPATIBLE[zodiac];
 
@@ -76,35 +72,29 @@ export function ZodiacSlide({
         <div className="zodiac-right-panel">
           {/* Zodiac name */}
           <div>
-            <h1 className="zodiac-name">{zodiac}</h1>
+            <h1 className="zodiac-name">{t(`zodiac.animals.${zodiac}`)}</h1>
             <p className="zodiac-traits">{traits.join(" · ")}</p>
             <p className="zodiac-years">{years.join(" · ")}</p>
           </div>
 
           {/* Attendees with this zodiac */}
-          <AttendeeNames
-            attendees={attendees}
-            title="At the Party Tonight"
-            icon="🎉"
-          />
+          <AttendeeNames attendees={attendees} title={t("slides.atParty")} />
 
           {/* Fortune sections */}
           <ZodiacFortune
-            lookForwardTo={fortune.lookForwardTo}
-            thingsToAvoid={fortune.thingsToAvoid}
+            lookForwardTo={t(`zodiac.fortunes.${zodiac}.lookForwardTo`)}
+            thingsToAvoid={t(`zodiac.fortunes.${zodiac}.thingsToAvoid`)}
           />
 
           {/* Compatibility sections */}
           <CompatibilitySection
-            title="Connect With Tonight"
-            icon="✨"
+            title={t("slides.connect")}
             attendees={compatibleAttendees}
             type="compatible"
           />
 
           <CompatibilitySection
-            title="Tread Carefully With Tonight"
-            icon="⚡"
+            title={t("slides.careful")}
             attendees={incompatibleAttendees}
             type="avoid"
           />

@@ -49,14 +49,14 @@ export const SITE_ROUTES: readonly SiteRoute[] = [
     params: { locationId: SAMPLE_LOCATION_ID },
   },
   { path: "/order/payment", group: "legacy", file: `${L}/order/payment/page.tsx` },
-  { path: "/order/group-payment", group: "legacy", file: `${L}/order/group-payment/page.tsx` },
+  { path: "/order/group-payment", group: "site", file: "(site)/order/group-payment/page.tsx", query: "groupCode=SAMPLE" },
   { path: "/order/confirmation", group: "legacy", file: `${L}/order/confirmation/page.tsx` },
   { path: "/order/scan", group: "legacy", file: `${L}/order/scan/page.tsx` },
   { path: "/order/check-in", group: "legacy", file: `${L}/order/check-in/page.tsx` },
   // A DEMO- code: synthetic status (packages/api/src/demo/status-demo.js), no DB rows.
   { path: "/order/status", group: "legacy", file: `${L}/order/status/page.tsx`, query: "orderQrCode=DEMO-PLAN.PREPPING" },
   { path: "/pod", group: "legacy", file: `${L}/pod/page.tsx` },
-  { path: "/group/:code", group: "legacy", file: `${L}/group/[code]/page.tsx`, params: { code: "SAMPLE" } },
+  { path: "/group/:code", group: "site", file: "(site)/group/[code]/page.tsx", params: { code: "SAMPLE" } },
   { path: "/gift-cards", group: "legacy", file: `${L}/gift-cards/page.tsx` },
   { path: "/gift-cards/purchase", group: "legacy", file: `${L}/gift-cards/purchase/page.tsx` },
   { path: "/gift-cards/balance", group: "legacy", file: `${L}/gift-cards/balance/page.tsx` },
@@ -72,11 +72,10 @@ export const SITE_ROUTES: readonly SiteRoute[] = [
     params: { orderNumber: "SAMPLE" },
   },
   { path: "/challenges/meal-for-stranger", group: "legacy", file: `${L}/challenges/meal-for-stranger/page.tsx` },
-  { path: "/contact", group: "legacy", file: `${L}/contact/page.tsx` },
-  { path: "/privacy", group: "legacy", file: `${L}/privacy/page.tsx` },
-  { path: "/accessibility", group: "legacy", file: `${L}/accessibility/page.tsx` },
-  { path: "/sms-consent", group: "legacy", file: `${L}/sms-consent/page.tsx` },
-  { path: "/tenants", group: "legacy", file: `${L}/tenants/page.tsx`, internal: true },
+  { path: "/contact", group: "site", file: "(site)/contact/page.tsx" },
+  { path: "/privacy", group: "site", file: "(site)/privacy/page.tsx" },
+  { path: "/accessibility", group: "site", file: "(site)/accessibility/page.tsx" },
+  { path: "/sms-consent", group: "site", file: "(site)/sms-consent/page.tsx" },
 ];
 
 /** The locale-free URL for a route, with params and query filled in. */

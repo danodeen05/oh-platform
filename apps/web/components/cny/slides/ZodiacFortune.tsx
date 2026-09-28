@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 interface ZodiacFortuneProps {
   lookForwardTo: string;
   thingsToAvoid: string;
@@ -9,12 +11,12 @@ export function ZodiacFortune({
   lookForwardTo,
   thingsToAvoid,
 }: ZodiacFortuneProps) {
+  const t = useTranslations("cny.slides");
   return (
     <div className="slide-section fortune-section-combined">
       <div className="fortune-block">
         <h3 className="fortune-subtitle">
-          <span className="section-header-icon">🌟</span>
-          Look Forward To
+          {t("lookForward")}
         </h3>
         <p className="fortune-text">{lookForwardTo}</p>
       </div>
@@ -23,8 +25,7 @@ export function ZodiacFortune({
 
       <div className="fortune-block">
         <h3 className="fortune-subtitle">
-          <span className="section-header-icon">🔮</span>
-          Things to Avoid
+          {t("avoid")}
         </h3>
         <p className="fortune-text">{thingsToAvoid}</p>
       </div>

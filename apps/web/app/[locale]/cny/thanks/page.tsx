@@ -2,11 +2,14 @@
 
 import { useSearchParams } from "next/navigation";
 import { useState, useEffect, Suspense } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { FortuneModal } from "@/components/cny/FortuneModal";
 import { AnimatedBackground } from "@/components/cny/AnimatedBackground";
 
 function ThanksContent() {
   const searchParams = useSearchParams();
+  const t = useTranslations("cny");
+  const locale = useLocale();
   const [showFortune, setShowFortune] = useState(false);
 
   // Read query params from RSVP form
@@ -58,7 +61,7 @@ function ThanksContent() {
             whiteSpace: "nowrap",
           }}
         >
-          {firstName ? `THANK YOU, ${firstName.toUpperCase()}!` : "THANK YOU!!"}
+          {firstName ? t("thanks.titleNamed", { name: firstName.toUpperCase() }) : t("thanks.title")}
         </h1>
 
         <div
@@ -77,14 +80,14 @@ function ThanksContent() {
             boxShadow: "0 4px 20px rgba(0, 0, 0, 0.2)",
           }}
         >
-          We'll see you on
+          {t("thanks.seeYou")}
           <br />
-          <strong>Friday, February 20th!</strong>
+          <strong>{t("thanks.date")}</strong>
         </div>
 
         <img
           src="/cny/horse.svg"
-          alt="Year of the Horse"
+          alt={t("horseAlt")}
           className="cny-horse-red"
           style={{
             marginTop: "8px",
@@ -107,12 +110,12 @@ function ThanksContent() {
               padding: "12px 28px",
             }}
           >
-            View Your Fortune
+            {t("thanks.viewFortune")}
           </button>
         )}
 
         <a
-          href="/en/cny"
+          href={`/${locale}/cny`}
           className="cny-button cny-button-red cny-button-glow-red"
           style={{
             marginTop: "32px",
@@ -121,7 +124,7 @@ function ThanksContent() {
             padding: "12px 28px",
           }}
         >
-          RSVP for Someone Else
+          {t("thanks.again")}
         </a>
       </div>
 
@@ -139,6 +142,7 @@ function ThanksContent() {
 
 // Loading fallback for Suspense
 function LoadingFallback() {
+  const t = useTranslations("cny");
   return (
     <div className="cny-page cny-page-2">
       <AnimatedBackground theme="gold" />
@@ -154,7 +158,7 @@ function LoadingFallback() {
       >
         <img
           src="/cny/horse.svg"
-          alt="Loading..."
+          alt={t("loading")}
           className="cny-horse-red"
           style={{
             width: "150px",
