@@ -12,19 +12,20 @@ export interface SitePictureProps {
   priority?: boolean;
   className?: string;
   /**
-   * Resolved alt text. SitePicture is a server-safe component with no hooks
-   * (so it can render identically on the server, in isolation, and under
-   * `renderToString` in tests with no next-intl provider present) and
-   * therefore cannot call `useTranslations` itself. Callers should resolve
-   * the message and pass it here:
+   * Resolved, translated alt text. Required: SitePicture is a server-safe
+   * component with no hooks (so it can render identically on the server, in
+   * isolation, and under `renderToString` in tests with no next-intl
+   * provider present) and therefore cannot call `useTranslations` itself.
+   * Callers must resolve the message and pass it here, e.g.:
    *
    *   <SitePicture image="storefront-dusk" sizes="100vw"
    *     alt={t(SITE_IMAGES["storefront-dusk"].alt)} />
    *
-   * When omitted, the raw `siteImages.*` message key is used as a fallback
-   * so the rendered `<img>` never ships with an empty `alt` attribute.
+   * There is no fallback to the raw `siteImages.*` message key: shipping an
+   * untranslated dotted key as visible/AT-read text would violate the
+   * no-untranslated-text rule, so omitting `alt` is a type error instead.
    */
-  alt?: string;
+  alt: string;
 }
 
 /**
@@ -36,7 +37,6 @@ export interface SitePictureProps {
  */
 export function SitePicture({ image, sizes, priority = false, className, alt }: SitePictureProps) {
   const entry = SITE_IMAGES[image];
-  const resolvedAlt = alt ?? entry.alt;
   const fallbackSrc = pickWidth(entry.srcSet.webp, 780);
 
   return (
@@ -46,7 +46,7 @@ export function SitePicture({ image, sizes, priority = false, className, alt }: 
       {/* eslint-disable-next-line @next/next/no-img-element -- precomputed static asset, not routed through next/image's optimizer on purpose */}
       <img
         src={fallbackSrc}
-        alt={resolvedAlt}
+        alt={alt}
         width={entry.w}
         height={entry.h}
         decoding="async"
