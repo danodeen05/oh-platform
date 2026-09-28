@@ -122,7 +122,13 @@
     view-timeline-axis: block;
     animation-name: oh-pinned-progress;
     animation-timeline: --oh-pinned-story;
-    animation-range: cover 0% cover 100%;
+    /* `contain`, not `cover`: for a box taller than the viewport, contain
+       runs from its top reaching the viewport top to its bottom reaching
+       the viewport bottom, which is exactly the pinned stretch, so the
+       native --progress matches progressFromScroll (the JS fallback)
+       0 to 1. `cover` would only reach about 0.25 to 0.75 while pinned
+       (Task D1, the first real consumer). */
+    animation-range: contain 0% contain 100%;
     animation-fill-mode: both;
     animation-timing-function: linear;
   }

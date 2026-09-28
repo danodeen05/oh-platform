@@ -12,6 +12,9 @@
 /** Literal terms, matched case-sensitively as whole words. Longest first matters for multi-word terms. */
 export const I18N_ALLOWLIST_TERMS = [
   "Oh! Beef Noodle Soup",
+  // The foundation's registered name, which it doesn't translate (Task D1's
+  // One Red Step chapter; the plan's zh-TW copy keeps it in English too).
+  "ONE RED STEP AT A TIME",
   "Apple Pay",
   "Google Pay",
   // Wallet brands as Apple and Google localize them (Task D8): "加入 Apple 錢包",

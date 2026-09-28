@@ -33,7 +33,7 @@ export const SAMPLE_LOCATION_ID = "SAMPLE_LOCATION_ID";
 const L = "(legacy)";
 
 export const SITE_ROUTES: readonly SiteRoute[] = [
-  { path: "/", group: "legacy", file: `${L}/page.tsx` },
+  { path: "/", group: "site", file: "(site)/page.tsx" },
   { path: "/menu", group: "legacy", file: `${L}/menu/page.tsx` },
   { path: "/locations", group: "legacy", file: `${L}/locations/page.tsx` },
   { path: "/rewards", group: "site", file: "(site)/rewards/page.tsx" },

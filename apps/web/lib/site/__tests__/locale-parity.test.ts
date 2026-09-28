@@ -66,6 +66,13 @@ describe("locale parity (non-plan keys)", () => {
     const have = new Set(keys(m));
     expect(EN_KEYS.filter((k) => k.startsWith("site.") && !have.has(k))).toEqual([]);
   });
+
+  // Task D1: the home story's namespace is complete in every locale, both ways.
+  it.each(LOCALES)("%s has exactly the home.* keys en has", (_name, m) => {
+    const theirs = keys(m).filter((k) => k.startsWith("home."));
+    const ours = EN_KEYS.filter((k) => k.startsWith("home."));
+    expect(theirs.sort()).toEqual(ours.sort());
+  });
 });
 
 describe("em dashes", () => {

@@ -66,89 +66,126 @@
   "home": {
     "brandName": "<oh>哦！</oh> <bebas>Oh! Beef Noodle Soup</bebas>",
     "brandNamePlain": "Oh! Beef Noodle Soup",
-    "tagline": "El único restaurante construido a <bold>tu</bold> medida.",
-    "heroDescription": "Nacido de la querida tradición taiwanesa de sopa de fideos con carne y elevado con una interpretación de fusión premium, disfruta tu tazón en tu propia cabina privada.",
-    "opensAt": "Abrimos a las 10am para pedidos",
-    "signature": {
-      "label": "NUESTRA ESPECIALIDAD",
-      "title": "Sopa de Fideos con Res Wagyu Americana",
-      "description": "Res Wagyu americana y USDA Prime, ahumada lenta y suavemente, sobre un caldo de hueso en dos fases: una cocción larga y luego un acabado pensado para el sabor. Servida en tu propia cabina privada y sin propinas, nunca.",
-      "stats": {
-        "pods": "CABINAS PRIVADAS",
-        "grade": "GRADO DE RES",
-        "gradeValue": "Wagyu americana",
-        "tips": "PROPINAS"
+    "meta": {
+      "title": "Oh! Beef Noodle Soup: el único restaurante construido a tu alrededor",
+      "description": "Sopa de fideos con res americana premium, servida en un pod privado. Sin anfitrión, sin mesero, sin cuenta, sin propina. City Creek y University Place, Utah."
+    },
+    "chapters": "La historia, en ocho capítulos",
+    "arrive": {
+      "eyebrow": "Sopa de fideos con res, en un pod solo para ti",
+      "title": "El único restaurante construido a tu alrededor.",
+      "lede": "Res americana premium sobre un caldo en dos fases, servida a través de la pared de un pod tranquilo. Sin anfitrión, sin mesero, sin cuenta, sin propina.",
+      "order": "Pide un tazón",
+      "story": "Mira cómo es una visita"
+    },
+    "live": {
+      "open": "Abierto ahora",
+      "closed": "Cerrado ahora",
+      "until": "Hasta las {time}",
+      "openUntil": "Abierto hasta las {time}",
+      "podsFree": "{count, plural, =0 {No hay pods libres} one {# pod libre} other {# pods libres}}"
+    },
+    "walkIn": {
+      "eyebrow": "Entra",
+      "lines": {
+        "one": "Entras y nadie te recibe.",
+        "two": "Así está diseñado.",
+        "three": "La sala es tranquila y la luz es baja. Fila tras fila, aparecen los pods.",
+        "four": "Pides en un quiosco en unos cuarenta segundos, y la pantalla te da un número de pod."
       }
     },
-    "difference": {
-      "label": "LA DIFERENCIA OH!",
-      "title": "Más que una comida"
-    },
-    "features": {
-      "recipe": {
-        "title": "Caldo en dos fases",
-        "description": "Una cocción larga de hueso y luego un acabado pensado para el sabor"
-      },
-      "beef": {
-        "title": "Carne Premium",
-        "description": "Wagyu americana y USDA Prime, ahumadas lentamente, en láminas de brisket o trozos de costilla de res"
-      },
-      "tech": {
-        "title": "Experiencia tecnológica",
-        "description": "Ordena con anticipación, gana recompensas y disfruta de un servicio impecable"
-      }
-    },
-    "experience": {
-      "label": "LA EXPERIENCIA OH!"
-    },
-    "pods": {
-      "title": "Cabinas de comedor privadas",
-      "description": "Experimenta una forma de comer como nunca antes. Nuestras cabinas individuales ofrecen un espacio tranquilo y sin distracciones para saborear cada sorbo. Sin mesas abarrotadas, sin ruido. Solo tú y tu tazón perfecto de sopa de fideos con carne.",
-      "features": {
-        "space": {
-          "title": "Tu espacio",
-          "description": "Cabina personal con iluminación ambiental y control de música"
+    "pod": {
+      "eyebrow": "El pod",
+      "steps": {
+        "a": {
+          "title": "Te sientas y la sala desaparece.",
+          "body": "Un gancho para tu bolsa, una repisa para tu teléfono, agua al alcance. Un toque le dice a la cocina que ya llegaste."
         },
-        "focus": {
-          "title": "Cero distracciones",
-          "description": "Concéntrate en tu comida sin el ajetreo de los restaurantes tradicionales"
+        "b": {
+          "title": "El panel se abre.",
+          "body": "Siete minutos después de pagar, tu tazón llega a través de la pared. Nunca ves una mano."
         },
-        "fast": {
-          "title": "Rápido y fresco",
-          "description": "Comida entregada directamente a tu cabina, caliente y lista"
+        "c": {
+          "title": "Luego se cierra.",
+          "body": "Más fideos, un relleno o un acompañante están a un toque, y llegan por el mismo panel."
         }
       }
     },
-    "noTipping": {
-      "title": "Sin propinas. Nunca.",
-      "description": "En Oh!, el precio que ves es el precio que pagas. Creemos que nuestro equipo merece salarios justos y estables, no propinas impredecibles. Por eso pagamos a nuestro personal de cocina y limpieza salarios competitivos con beneficios.",
-      "benefits": {
-        "wages": "Salarios justos para todos",
-        "math": "Sin cálculos incómodos",
-        "checkout": "Pago simple"
+    "bowl": {
+      "eyebrow": "El tazón",
+      "title": "Todo aquí está al servicio de este tazón.",
+      "lede": "Una interpretación de fusión premium de la sopa de fideos con res taiwanesa. No pretende ser la receta de la abuela.",
+      "callouts": {
+        "broth": {
+          "title": "Caldo en dos fases",
+          "body": "Un largo hervor de huesos y luego un final pensado para el sabor."
+        },
+        "beef": {
+          "title": "Res americana ahumada",
+          "body": "Wagyu americano o USDA Prime, ahumada lenta y suavemente. Nada por debajo."
+        },
+        "cut": {
+          "title": "Rebanadas o trozos",
+          "body": "Pecho rebanado contra la fibra, o costilla de res en trozos."
+        },
+        "yours": {
+          "title": "A tu manera",
+          "body": "Intensidad del caldo, fideo y extras, elegidos en el quiosco o en tu teléfono."
+        }
       },
-      "giveBack": {
-        "title": "¿Quieres contribuir?",
-        "description": "¿Cuánto poder hay en un par de calcetines rojos? Descubrámoslo juntos. Walk with Us™ para apoyar la salud mental.",
-        "button": "Camina con Nosotros"
-      }
+      "macro": "La primera cucharada. Primero el caldo, luego la res que elegiste.",
+      "menu": "Ver el menú"
     },
-    "customize": {
-      "label": "INGREDIENTES FRESCOS",
-      "title": "Personaliza tu tazón",
-      "description": "Elige entre fideos hechos a mano, vegetales frescos y toppings premium para crear tu tazón perfecto.",
-      "ingredients": {
-        "ramen": "Fideos Ramen",
-        "egg": "Huevo Cocido",
-        "bokChoy": "Bok Choy",
-        "marrow": "Tuétano"
-      }
+    "noTip": {
+      "eyebrow": "Sin cuenta, sin propina",
+      "words": {
+        "host": "Sin anfitrión.",
+        "server": "Sin mesero.",
+        "check": "Sin cuenta.",
+        "tip": "Sin propina."
+      },
+      "body": "Quienes hicieron tu tazón tienen salario. El precio que ves es el precio que pagas.",
+      "note": "Un toque en tu teléfono dice que terminaste. Te vas cuando quieras."
     },
-    "viewFullMenu": "VER MENÚ COMPLETO",
-    "cta": {
-      "title": "¿Listo para experimentar algo diferente?",
-      "description": "Entra en tu cabina privada, saborea sopa de fideos con carne premium y descubre por qué comer en Oh! es único.",
-      "button": "COMIENZA TU ORDEN"
+    "rewards": {
+      "eyebrow": "Recompensas",
+      "title": "Cada tazón te hace subir.",
+      "lede": "Tres niveles, devolución en cada pedido y un tazón gratis cada vez que subes.",
+      "cashback": "de devolución",
+      "cta": "Mira cómo se sube"
+    },
+    "redStep": {
+      "eyebrow": "Un paso rojo",
+      "title": "Cada visita es un paso más.",
+      "body": "Oh! dona el 1% de los ingresos de cada restaurante propio a ONE RED STEP AT A TIME, una organización sin fines de lucro de salud mental en Utah.",
+      "vision": "Un gran tazón, un espacio propio, y cada visita ayudando a alguien a dar un paso más hacia una mejor salud mental.",
+      "link": "Visita la fundación",
+      "newTab": "se abre en una pestaña nueva"
+    },
+    "locations": {
+      "eyebrow": "Dos ubicaciones",
+      "title": "El centro de Salt Lake City y Orem.",
+      "lede": "La misma sala, el mismo tazón. Pods y horarios en vivo, directo de la cocina.",
+      "cards": {
+        "cityCreek": {
+          "name": "City Creek",
+          "area": "Centro de Salt Lake City"
+        },
+        "universityPlace": {
+          "name": "University Place",
+          "area": "Orem"
+        }
+      },
+      "hours": "Hoy de {open} a {close}",
+      "closedToday": "Cerrado hoy",
+      "directions": "Cómo llegar",
+      "directionsLabel": "Cómo llegar a {name}, abre tu app de mapas",
+      "visit": "Visitar {name}",
+      "final": {
+        "title": "Tu pod te espera.",
+        "body": "Pide con anticipación, entra y ve directo a tu pod.",
+        "order": "Pide un tazón"
+      }
     }
   },
   "footer": {

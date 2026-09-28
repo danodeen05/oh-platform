@@ -66,89 +66,126 @@
   "home": {
     "brandName": "<oh>哦！</oh> <bebas>Oh! Beef Noodle Soup</bebas>",
     "brandNamePlain": "Oh! Beef Noodle Soup",
-    "tagline": "The only restaurant built around <bold>you</bold>.",
-    "heroDescription": "Born from Taiwan's beloved beef noodle tradition and elevated with a premium fusion interpretation, enjoy your bowl in your own private pod.",
-    "opensAt": "Opens at 10am for ordering",
-    "signature": {
-      "label": "OUR SIGNATURE",
-      "title": "American Wagyu Beef Noodle Soup",
-      "description": "American Wagyu and USDA Prime beef, smoked low and slow, over a two-phase bone broth: a long simmer, then a finish built for flavor. Served in your own private pod, with no tipping, ever.",
-      "stats": {
-        "pods": "PRIVATE PODS",
-        "grade": "BEEF GRADE",
-        "gradeValue": "American Wagyu",
-        "tips": "TIPPING"
+    "meta": {
+      "title": "Oh! Beef Noodle Soup: the only restaurant built around you",
+      "description": "Premium American beef noodle soup, served in a private pod. No host, no server, no check, no tip. City Creek and University Place, Utah."
+    },
+    "chapters": "The story, in eight chapters",
+    "arrive": {
+      "eyebrow": "Beef noodle soup, in a pod of your own",
+      "title": "The only restaurant built around you.",
+      "lede": "Premium American beef over a two-phase broth, served through the wall of a quiet pod. No host, no server, no check, no tip.",
+      "order": "Order a bowl",
+      "story": "See how a visit works"
+    },
+    "live": {
+      "open": "Open now",
+      "closed": "Closed now",
+      "until": "Until {time}",
+      "openUntil": "Open until {time}",
+      "podsFree": "{count, plural, =0 {No pods free} one {# pod free} other {# pods free}}"
+    },
+    "walkIn": {
+      "eyebrow": "Walk in",
+      "lines": {
+        "one": "You walk in and nobody greets you.",
+        "two": "That is the design.",
+        "three": "The room is quiet and the light is low. Row by row, the pods come into view.",
+        "four": "You order at a kiosk in about forty seconds, and the screen gives you a pod number."
       }
     },
-    "difference": {
-      "label": "THE OH! DIFFERENCE",
-      "title": "More Than Just a Meal"
-    },
-    "features": {
-      "recipe": {
-        "title": "Two-Phase Broth",
-        "description": "A long bone simmer, then a finish built for flavor"
-      },
-      "beef": {
-        "title": "Premium Beef",
-        "description": "American Wagyu and USDA Prime, smoked low and slow, as brisket slices or beef rib chunks"
-      },
-      "tech": {
-        "title": "Tech-First Experience",
-        "description": "Order ahead, earn rewards, and enjoy seamless service"
-      }
-    },
-    "experience": {
-      "label": "THE OH! EXPERIENCE"
-    },
-    "pods": {
-      "title": "Private Dining Pods",
-      "description": "Experience dining like never before. Our individual pods offer a peaceful, distraction-free space to savor every slurp. No crowded tables, no noise. Just you and your perfect bowl of beef noodle soup.",
-      "features": {
-        "space": {
-          "title": "Your Space",
-          "description": "Personal pod with ambient lighting and music controls"
+    "pod": {
+      "eyebrow": "The pod",
+      "steps": {
+        "a": {
+          "title": "You sit, and the room disappears.",
+          "body": "A hook for your bag, a shelf for your phone, water within reach. One tap tells the kitchen you are in."
         },
-        "focus": {
-          "title": "Zero Distractions",
-          "description": "Focus on your meal without the bustle of traditional dining"
+        "b": {
+          "title": "The panel slides open.",
+          "body": "Seven minutes after you pay, your bowl arrives through the wall. You never see a hand."
         },
-        "fast": {
-          "title": "Fast & Fresh",
-          "description": "Food delivered directly to your pod, hot and ready"
+        "c": {
+          "title": "Then it slides shut.",
+          "body": "Extra noodles, a refill or a side are a tap away, and they come through the same panel."
         }
       }
     },
-    "noTipping": {
-      "title": "No Tipping. Ever.",
-      "description": "At Oh!, the price you see is the price you pay. We believe our team deserves fair, stable wages, not unpredictable tips. That's why we pay our kitchen and cleaning staff competitive salaries with benefits.",
-      "benefits": {
-        "wages": "Fair wages for all",
-        "math": "No awkward math",
-        "checkout": "Simple checkout"
+    "bowl": {
+      "eyebrow": "The bowl",
+      "title": "Everything here is in service of this bowl.",
+      "lede": "A premium fusion interpretation of Taiwanese beef noodle soup. It does not pretend to be a grandmother's recipe.",
+      "callouts": {
+        "broth": {
+          "title": "Two-phase broth",
+          "body": "A long bone simmer, then a finish built for flavor."
+        },
+        "beef": {
+          "title": "Smoked American beef",
+          "body": "American Wagyu or USDA Prime, smoked low and slow. Nothing below it."
+        },
+        "cut": {
+          "title": "Slices or chunks",
+          "body": "Brisket sliced across the grain, or beef rib portioned into chunks."
+        },
+        "yours": {
+          "title": "Built your way",
+          "body": "Broth depth, noodle and add-ons, chosen at the kiosk or on your phone."
+        }
       },
-      "giveBack": {
-        "title": "Want to Give Back?",
-        "description": "How much power is in a pair of red socks? Let's find out together. Walk with Us™ to support mental health.",
-        "button": "Walk With Us"
-      }
+      "macro": "First spoon. Broth first, then the beef you chose.",
+      "menu": "See the menu"
     },
-    "customize": {
-      "label": "FRESH INGREDIENTS",
-      "title": "Customize Your Bowl",
-      "description": "Choose from hand-pulled noodles, fresh vegetables, and premium toppings to create your perfect bowl.",
-      "ingredients": {
-        "ramen": "Ramen Noodles",
-        "egg": "Soft Boiled Egg",
-        "bokChoy": "Baby Bok Choy",
-        "marrow": "Beef Marrow"
-      }
+    "noTip": {
+      "eyebrow": "No check, no tip",
+      "words": {
+        "host": "No host.",
+        "server": "No server.",
+        "check": "No check.",
+        "tip": "No tip."
+      },
+      "body": "The people who made your bowl are salaried. The price you see is the price you pay.",
+      "note": "One tap on your phone says you are done. You leave when you are ready."
     },
-    "viewFullMenu": "VIEW FULL MENU",
-    "cta": {
-      "title": "Ready to Experience Something Different?",
-      "description": "Step into your private pod, savor premium beef noodle soup, and discover why dining at Oh! is unlike anything else.",
-      "button": "START YOUR ORDER"
+    "rewards": {
+      "eyebrow": "Rewards",
+      "title": "Every bowl moves you up.",
+      "lede": "Three tiers, cashback on every order, and a free bowl each time you climb.",
+      "cashback": "cashback",
+      "cta": "See how the climb works"
+    },
+    "redStep": {
+      "eyebrow": "One Red Step",
+      "title": "Every visit is one more step.",
+      "body": "Oh! gives 1% of revenue from every company restaurant to ONE RED STEP AT A TIME, a Utah mental health nonprofit.",
+      "vision": "A great bowl, a space of your own, and every visit helping someone take one more step toward better mental health.",
+      "link": "Visit the foundation",
+      "newTab": "opens in a new tab"
+    },
+    "locations": {
+      "eyebrow": "Two locations",
+      "title": "Downtown Salt Lake City and Orem.",
+      "lede": "Same room, same bowl. Live pods and hours, straight from the kitchen.",
+      "cards": {
+        "cityCreek": {
+          "name": "City Creek",
+          "area": "Downtown Salt Lake City"
+        },
+        "universityPlace": {
+          "name": "University Place",
+          "area": "Orem"
+        }
+      },
+      "hours": "Today {open} to {close}",
+      "closedToday": "Closed today",
+      "directions": "Directions",
+      "directionsLabel": "Directions to {name}, opens your maps app",
+      "visit": "Visit {name}",
+      "final": {
+        "title": "Your pod is waiting.",
+        "body": "Order ahead, walk in, and go straight to your pod.",
+        "order": "Order a bowl"
+      }
     }
   },
   "footer": {
