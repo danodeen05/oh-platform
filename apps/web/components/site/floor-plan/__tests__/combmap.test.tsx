@@ -18,7 +18,7 @@ import es from "../../../../messages/es.json";
 import zhCN from "../../../../messages/zh-CN.json";
 import zhTW from "../../../../messages/zh-TW.json";
 import { CombMap, orientLayout, podTapAction, podScreenPx, type CombSeat, type CombMapLabels } from "../CombMap";
-import { rowZoomBox, rowPanBox, rowPanState, zoomDuration, fitBox, ZOOM_MS, MIN_TOUCH_PX } from "../RowZoom";
+import { rowZoomBox, rowPanBox, rowPanState, minTargetPx, zoomDuration, fitBox, ZOOM_MS, MIN_TOUCH_PX } from "../RowZoom";
 import { toCombSeats, layoutKeyOf } from "../useSeats";
 
 // React 19 act() environment flag for a hand-rolled root.
@@ -241,7 +241,7 @@ describe("CombMap interaction (jsdom)", () => {
       }
       disconnect() {}
     };
-    window.matchMedia = ((q: string) => ({ matches: q.includes("reduced-motion"), addEventListener() {}, removeEventListener() {} })) as unknown as typeof window.matchMedia;
+    window.matchMedia = ((q: string) => ({ matches: q.includes("reduced-motion") || q.includes("pointer: coarse"), addEventListener() {}, removeEventListener() {} })) as unknown as typeof window.matchMedia;
     try {
       const onSelect = vi.fn();
       const h = mount(<CombMap layoutKey="comb-75" mode="pick" labels={labels} seats={seatsFor("comb-75")} onSelect={onSelect} orientation="portrait" />);
@@ -337,6 +337,38 @@ describe("RowZoom", () => {
         }
       }
     }
+  });
+
+  it("minTargetPx: 44px for coarse (touch) pointers, 24px (WCAG 2.2 AA) for fine (mouse) pointers", () => {
+    expect(minTargetPx({ coarse: true })).toBe(44);
+    expect(minTargetPx({ coarse: false })).toBe(24);
+  });
+
+  it("a coarse pointer at 390px zooms first; a fine pointer at 1440 selects a ~35px pod directly", () => {
+    // Phone: the whole portrait map in a 358px element.
+    const phone = orientLayout(layoutOf("comb-75"), "portrait");
+    const phonePx = Math.min(...Object.values(podScreenPx(358 / phone.box.w, "portrait")));
+    expect(phonePx).toBeLessThan(24);
+    expect(podTapAction({ mode: "pick", via: "pointer", podPx: phonePx, selectable: true, coarse: true })).toBe("zoom");
+    // Desktop: landscape map in a 1100px column on a 1440 screen (the preview harness), pods about 35px on the short side.
+    const desk = orientLayout(layoutOf("comb-75"), "landscape");
+    const deskPx = Math.min(...Object.values(podScreenPx(1100 / desk.box.w, "landscape")));
+    expect(deskPx).toBeGreaterThan(30);
+    expect(deskPx).toBeLessThan(44);
+    expect(podTapAction({ mode: "pick", via: "pointer", podPx: deskPx, selectable: true, coarse: false })).toBe("select");
+    expect(podTapAction({ mode: "pick", via: "pointer", podPx: deskPx, selectable: true, coarse: true })).toBe("zoom");
+  });
+
+  it("a fine pointer's row zoom fits the whole row (24px rule), a coarse one tightens to a partial row (44px rule)", () => {
+    const o = orientLayout(layoutOf("comb-75"), "portrait");
+    const b07 = o.pods.find((p) => p.label === "B-07")!;
+    const row = o.rows.find((r) => r.key === b07.row)!;
+    const fine = rowZoomBox(row.rect, o.box, 358, b07.center, { coarse: false });
+    const coarse = rowZoomBox(row.rect, o.box, 358, b07.center, { coarse: true });
+    expect(fine.w).toBeGreaterThan(row.rect.w);
+    expect(Math.min(...Object.values(podScreenPx(358 / fine.w, "portrait")))).toBeGreaterThanOrEqual(24);
+    expect(coarse.w).toBeLessThan(row.rect.w);
+    expect(Math.min(...Object.values(podScreenPx(358 / coarse.w, "portrait")))).toBeGreaterThanOrEqual(44);
   });
 
   it("measures pods on the right axes: portrait rows run across the screen (pod width 2.35 ft), landscape rows run down it", () => {

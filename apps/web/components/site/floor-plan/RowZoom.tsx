@@ -61,6 +61,15 @@ export function clampBox(b: Box, full: Box): Box {
   return { x, y, w: b.w, h: b.h };
 }
 
+/**
+ * Minimum on-screen pod size for a direct tap. 44px is a touch-target rule, so it
+ * applies to coarse pointers (fingers); a fine pointer (a mouse) needs 24px
+ * (WCAG 2.2 AA target size).
+ */
+export function minTargetPx({ coarse }: { coarse: boolean }): number {
+  return coarse ? MIN_TOUCH_PX : 24;
+}
+
 /** A pod's short side (its 2.35 ft seat width along the row). A pod meets the touch rule when THIS side is 44px or more. */
 export const POD_MIN_FT = Math.min(POD.w, POD.d);
 /** What a partial-row zoom aims for: a little over 44px so browser rounding never lands under it. About 7 pods on a 390px phone. */
@@ -74,7 +83,10 @@ export const TARGET_POD_PX = 48;
  * 48px pods, centered on `focus` (the tapped pod); the rest of the row is a
  * swipe or a chevron away (`rowPanBox`).
  */
-export function rowZoomBox(row: Box, full: Box, elementPx: number, focus?: readonly [number, number]): Box {
+export function rowZoomBox(row: Box, full: Box, elementPx: number, focus?: readonly [number, number], { coarse = true }: { coarse?: boolean } = {}): Box {
+  const minPx = minTargetPx({ coarse });
+  // Aim a little over the minimum (48 for touch, 28 for a mouse) so browser rounding never lands under it.
+  const targetPx = coarse ? TARGET_POD_PX : minPx + 4;
   const aspect = full.w / full.h;
   const alongY = row.h > row.w;
   const across = 2.5; // ft each side: most of the neighbouring aisle
@@ -84,8 +96,8 @@ export function rowZoomBox(row: Box, full: Box, elementPx: number, focus?: reado
     : { x: row.x - along, y: row.y - across, w: row.w + 2 * along, h: row.h + 2 * across };
   let box = fitBox(padded, aspect);
   if (elementPx > 0) {
-    const fits = (POD_MIN_FT * elementPx) / box.w >= MIN_TOUCH_PX;
-    const maxW = (elementPx * POD_MIN_FT) / TARGET_POD_PX;
+    const fits = (POD_MIN_FT * elementPx) / box.w >= minPx;
+    const maxW = (elementPx * POD_MIN_FT) / targetPx;
     if (!fits) {
       const w = maxW;
       const h = w / aspect;

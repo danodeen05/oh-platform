@@ -30,7 +30,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState, useSyncExtern
 import { buildLayout, LOCATION_LAYOUTS, POD, type Layout, type Pod, type Rect, type Door } from "@oh/floor-plan";
 import { PodCell, StatusPatterns, TONES, type NavKey, type PodStatus, type PodView, type Point, type SeatStatus, type Tone } from "./PodCell";
 import { Legend, type LegendLabels } from "./Legend";
-import { MIN_TOUCH_PX, ZOOM_MIN_VIEW_FT, ZoomControls, boxString, rowAxis, rowPanBox, rowPanState, rowZoomBox, useRowZoom, type Box, type RowEnds, type ZoomControlLabels } from "./RowZoom";
+import { minTargetPx, ZOOM_MIN_VIEW_FT, ZoomControls, boxString, rowAxis, rowPanBox, rowPanState, rowZoomBox, useRowZoom, type Box, type RowEnds, type ZoomControlLabels } from "./RowZoom";
 
 export type CombLayoutKey = keyof typeof LOCATION_LAYOUTS;
 export type CombMapMode = "live" | "pick" | "journey";
@@ -221,10 +221,23 @@ export function podScreenPx(pxPerFt: number, orientation: Orientation): { w: num
 }
 
 /** What a tap or key press on a pod does. Pointer taps on pods too small to hit reliably zoom to the row first. */
-export function podTapAction({ mode, via, podPx, selectable }: { mode: CombMapMode; via: "pointer" | "keyboard"; podPx: number; selectable: boolean }): "select" | "zoom" | "none" {
+export function podTapAction({
+  mode,
+  via,
+  podPx,
+  selectable,
+  coarse = true,
+}: {
+  mode: CombMapMode;
+  via: "pointer" | "keyboard";
+  podPx: number;
+  selectable: boolean;
+  /** A coarse (touch) pointer needs 44px pods; a fine (mouse) pointer 24px. See minTargetPx. */
+  coarse?: boolean;
+}): "select" | "zoom" | "none" {
   if (mode === "journey") return "none";
   if (mode === "live") return "zoom";
-  if (via === "pointer" && podPx > 0 && podPx < MIN_TOUCH_PX) return "zoom";
+  if (via === "pointer" && podPx > 0 && podPx < minTargetPx({ coarse })) return "zoom";
   return selectable ? "select" : "none";
 }
 
@@ -281,11 +294,14 @@ function subscribeMedia(query: string) {
 }
 const NARROW = "(max-width: 767px)";
 const REDUCED = "(prefers-reduced-motion: reduce)";
+const COARSE = "(pointer: coarse)";
+const subCoarse = subscribeMedia(COARSE);
 const subNarrow = subscribeMedia(NARROW);
 const subReduced = subscribeMedia(REDUCED);
 const readMedia = (q: string) => () => (typeof window !== "undefined" && window.matchMedia ? window.matchMedia(q).matches : false);
 const readNarrow = readMedia(NARROW);
 const readReduced = readMedia(REDUCED);
+const readCoarse = readMedia(COARSE);
 
 /* ------------------------------------------------------------ component */
 
@@ -305,6 +321,10 @@ export function CombMap({
 }: CombMapProps) {
   const narrow = useSyncExternalStore(subNarrow, readNarrow, () => true);
   const reducedMotion = useSyncExternalStore(subReduced, readReduced, () => false);
+  // Touch-target rules follow the pointer: a coarse primary pointer, or any touch event on the map, means 44px; a mouse means 24px.
+  const coarseMedia = useSyncExternalStore(subCoarse, readCoarse, () => true);
+  const [touchSeen, setTouchSeen] = useState(false);
+  const coarse = coarseMedia || touchSeen;
   const resolved: Orientation = orientation === "auto" ? (narrow ? "portrait" : "landscape") : orientation;
 
   const layout = useMemo(() => buildLayout(LOCATION_LAYOUTS[layoutKey]), [layoutKey]);
@@ -393,8 +413,8 @@ export function CombMap({
   const rowByKey = useMemo(() => new Map(o.rows.map((r) => [r.key, r])), [o.rows]);
 
   // Pod callbacks read the latest render through a ref, so they keep one identity and the memoized PodCells skip re-rendering.
-  const latest = useRef({ zoom, o, podByLabel, rowByKey, statusOf, mode, podPx, onSelect });
-  latest.current = { zoom, o, podByLabel, rowByKey, statusOf, mode, podPx, onSelect };
+  const latest = useRef({ zoom, o, podByLabel, rowByKey, statusOf, mode, podPx, onSelect, coarse });
+  latest.current = { zoom, o, podByLabel, rowByKey, statusOf, mode, podPx, onSelect, coarse };
 
   const zoomToPod = useCallback((label: string) => {
     const { zoom: z, o: view, podByLabel: pods, rowByKey: rows } = latest.current;
@@ -402,7 +422,7 @@ export function CombMap({
     const row = pv ? rows.get(pv.row) : undefined;
     if (!pv || !row) return;
     setZoomedRow(row.key);
-    z.zoomTo(rowZoomBox(row.rect, view.box, z.elementPx, pv.center));
+    z.zoomTo(rowZoomBox(row.rect, view.box, z.elementPx, pv.center, { coarse: latest.current.coarse }));
   }, []);
 
   const onActivate = useCallback(
@@ -410,7 +430,7 @@ export function CombMap({
       const { zoom: z, podByLabel: pods, statusOf: status, mode: m, podPx: px, onSelect: select } = latest.current;
       if (via === "pointer" && z.consumeGesture()) return;
       setFocusLabel(label);
-      const action = podTapAction({ mode: m, via, podPx: px, selectable: m === "pick" && status(label) === "AVAILABLE" });
+      const action = podTapAction({ mode: m, via, podPx: px, selectable: m === "pick" && status(label) === "AVAILABLE", coarse: latest.current.coarse });
       if (action === "zoom") {
         const pv = pods.get(label);
         if (m === "live" && z.isZoomed && pv && zoomedRow.current === pv.row) {
@@ -473,7 +493,7 @@ export function CombMap({
   const markers = mode === "journey" ? o.markers(progress) : null;
   const guestLeaving = mode === "journey" && progress >= 0.84;
 
-  const hint = mode === "pick" ? (zoom.isZoomed || (podPx >= MIN_TOUCH_PX && zoom.pxPerFt > 0) ? labels.hintTapPod : labels.hintTapRow) : mode === "live" ? labels.hintLive : null;
+  const hint = mode === "pick" ? (zoom.isZoomed || (podPx >= minTargetPx({ coarse }) && zoom.pxPerFt > 0) ? labels.hintTapPod : labels.hintTapRow) : mode === "live" ? labels.hintLive : null;
   const showLegend = legend ?? mode !== "journey";
   const legendItems = mode === "pick" ? (["available", "reserved", "occupied", "cleaning", "duo", "selected", "hatch"] as const) : (["available", "reserved", "occupied", "cleaning", "duo", "hatch"] as const);
   const aspect = resolved === "portrait" ? "aspect-[53/73]" : "aspect-[73/53]";
@@ -528,6 +548,14 @@ export function CombMap({
           data-orientation={resolved}
           data-journey-target={mode === "journey" ? o.journeyTarget : undefined}
           {...zoom.handlers}
+          onPointerDown={(e) => {
+            if (e.pointerType === "touch") {
+              // The ref makes the click this very tap produces use the touch rule, before the re-render lands.
+              latest.current.coarse = true;
+              if (!touchSeen) setTouchSeen(true);
+            }
+            zoom.handlers.onPointerDown(e);
+          }}
         >
           <StatusPatterns ids={patternIds} tone={tone} />
 
