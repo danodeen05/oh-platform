@@ -12,7 +12,8 @@
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
-import { Sheet } from "@/components/site/motion/Sheet";
+// Task G2b: framer-motion loads on first open.
+import { LazySheet as Sheet } from "@/components/site/motion/LazySheet";
 import { SitePicture } from "@/components/site/picture/SitePicture";
 import { Icon } from "@/components/site/icons/Icon";
 import { useSeats, type CombLayoutKey } from "@/components/site/floor-plan/useSeats";

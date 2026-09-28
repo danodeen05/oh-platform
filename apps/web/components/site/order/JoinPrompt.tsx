@@ -7,7 +7,7 @@
  * finishes the link when the guest comes back signed in (same key and
  * route as the legacy page, POST /orders/link-to-account).
  */
-import { SignInButton, SignUpButton } from "@clerk/nextjs";
+import { SignInTrigger, SignUpTrigger } from "@/components/site/auth/AuthTriggers";
 import { useLocale, useTranslations } from "next-intl";
 import { Eyebrow, Title } from "@/components/site/Text";
 import { Icon } from "@/components/site/icons/Icon";
@@ -46,12 +46,12 @@ export function JoinPrompt({ orderId, orderQrCode, orderNumber, returnTo }: { or
         ))}
       </ul>
       <div className="mt-5 flex flex-col gap-2">
-        <SignUpButton mode="modal" forceRedirectUrl={returnTo} signInForceRedirectUrl={returnTo}>
+        <SignUpTrigger returnTo={returnTo}>
           <button type="button" data-join-create onClick={remember} className={PRIMARY}>
             {t("create")}
           </button>
-        </SignUpButton>
-        <SignInButton mode="modal" forceRedirectUrl={returnTo} signUpForceRedirectUrl={returnTo}>
+        </SignUpTrigger>
+        <SignInTrigger returnTo={returnTo}>
           <button
             type="button"
             onClick={remember}
@@ -59,7 +59,7 @@ export function JoinPrompt({ orderId, orderQrCode, orderNumber, returnTo }: { or
           >
             {t("signIn")}
           </button>
-        </SignInButton>
+        </SignInTrigger>
       </div>
     </section>
   );

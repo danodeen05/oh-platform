@@ -9,7 +9,7 @@
  * time the tap lands.
  */
 import { cloneElement, type MouseEvent, type ReactElement, type SyntheticEvent } from "react";
-import { useSiteAuth } from "@/lib/site/auth";
+import { useSiteAuth, type ModalOptions } from "@/lib/site/auth";
 
 type TriggerChild = ReactElement<{
   "aria-busy"?: boolean;
@@ -47,14 +47,17 @@ function withTrigger(children: TriggerChild, open: () => void, preload: () => vo
   });
 }
 
-export function SignInTrigger({ children }: { children: TriggerChild }) {
+/** `returnTo`: where the visitor lands after signing in or up (default: stays on this page). */
+export function SignInTrigger({ children, returnTo }: { children: TriggerChild; returnTo?: string }) {
   const auth = useSiteAuth();
-  return withTrigger(children, auth.openSignIn, auth.preload, auth.pending);
+  const opts: ModalOptions | undefined = returnTo ? { returnTo } : undefined;
+  return withTrigger(children, () => auth.openSignIn(opts), auth.preload, auth.pending);
 }
 
-export function SignUpTrigger({ children }: { children: TriggerChild }) {
+export function SignUpTrigger({ children, returnTo }: { children: TriggerChild; returnTo?: string }) {
   const auth = useSiteAuth();
-  return withTrigger(children, auth.openSignUp, auth.preload, auth.pending);
+  const opts: ModalOptions | undefined = returnTo ? { returnTo } : undefined;
+  return withTrigger(children, () => auth.openSignUp(opts), auth.preload, auth.pending);
 }
 
 /** Clerk's <SignedIn> / <SignedOut>, from SiteAuth. */

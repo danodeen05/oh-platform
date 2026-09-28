@@ -19,7 +19,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
 import { useLocale, useTranslations } from "next-intl";
-import { useUser } from "@clerk/nextjs";
+import { useSiteAuth } from "@/lib/site/auth";
 import { Display, Eyebrow } from "@/components/site/Text";
 import { Icon } from "@/components/site/icons/Icon";
 import { Reveal } from "@/components/site/motion/Reveal";
@@ -54,7 +54,7 @@ export function ConfirmationView({ orderId, orderNumber, totalParam, paid, group
   const locale = useLocale();
   const api = useSiteApi();
   const { guest } = useGuest();
-  const { user, isLoaded, isSignedIn } = useUser();
+  const { isLoaded, isSignedIn, email: authEmail, name: authName } = useSiteAuth();
   const [order, setOrder] = useState<AnyOrder | null>(null);
   const [load, setLoad] = useState<"loading" | "ready" | "missing">(orderId || groupCode ? "loading" : "missing");
   const [groupOrders, setGroupOrders] = useState<AnyOrder[]>([]);
@@ -102,9 +102,9 @@ export function ConfirmationView({ orderId, orderNumber, totalParam, paid, group
       // (two tabs, a retry) is refunded by the server rather than kept.
       if (stripeReturn) {
         // Make sure the member row exists before the order is finalized for them (legacy behavior).
-        const email = user?.primaryEmailAddress?.emailAddress;
+        const email = authEmail;
         if (isSignedIn && email && current?.paymentStatus !== "PAID") {
-          await api(`${SITE_API_URL}/users`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, name: user?.fullName || user?.firstName || undefined }) }).catch(() => null);
+          await api(`${SITE_API_URL}/users`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, name: authName || undefined }) }).catch(() => null);
         }
         const confirmed = await confirmPayment(orderKey, paymentIntentIdFromClientSecret(clientSecret), { fetcher: api, baseUrl: SITE_API_URL, headers: identity });
         if (confirmed.ok) {

@@ -25,16 +25,20 @@
  * Stripe webhook records the gift from the PaymentIntent's metadata.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
-import { loadStripe } from "@stripe/stripe-js";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { SignInButton, SignUpButton } from "@clerk/nextjs";
+import { SignInTrigger, SignUpTrigger } from "@/components/site/auth/AuthTriggers";
 import { useLocale, useTranslations } from "next-intl";
-import { StripeProvider, PaymentForm } from "@/components/payments";
+import dynamic from "next/dynamic";
 import { Icon } from "@/components/site/icons/Icon";
 import { Spinner } from "@/components/site/order/StepSheet";
 import { NIGHT_APPEARANCE, STRIPE_FONTS } from "@/components/site/order/stripe-appearance";
 import { SITE_API_URL, useMemberId, useSiteApi } from "@/lib/site/api";
 import { formatCents, stripeLocale } from "@/lib/site/order-flow";
+
+// Task G2b: Stripe loads only at the pay step (the page opens on the gift
+// form), and on a redirect return; never with the page.
+const StripeProvider = dynamic(() => import("@/components/payments/StripeProvider").then((m) => m.StripeProvider), { ssr: false });
+const PaymentForm = dynamic(() => import("@/components/payments/PaymentForm").then((m) => m.PaymentForm), { ssr: false });
 import {
   MEAL_GIFT_AMOUNTS,
   MEAL_GIFT_DEFAULT_CENTS,
@@ -163,6 +167,7 @@ export function GiveMealFlow({ locations }: { locations: GiveLocation[] }) {
     if (!key) return;
     let cancelled = false;
     (async () => {
+      const { loadStripe } = await import("@stripe/stripe-js");
       const stripe = await loadStripe(key).catch(() => null);
       const result = stripe ? await stripe.retrievePaymentIntent(pending.clientSecret!).catch(() => null) : null;
       if (cancelled || !result) return;
@@ -406,16 +411,16 @@ export function GiveMealFlow({ locations }: { locations: GiveLocation[] }) {
             <div data-give-signin className="flex flex-col gap-3 border-t border-oh-stone pt-5">
               <p className="m-0 text-lg font-semibold text-oh-cream">{t("signInTitle")}</p>
               <p className="m-0 text-[15px] leading-relaxed text-oh-mute">{t("signInBody")}</p>
-              <SignInButton mode="modal" forceRedirectUrl={back} signUpForceRedirectUrl={back}>
+              <SignInTrigger returnTo={back}>
                 <button type="button" data-give-signin-button className={PRIMARY}>
                   {t("signIn")}
                 </button>
-              </SignInButton>
-              <SignUpButton mode="modal" forceRedirectUrl={back} signInForceRedirectUrl={back}>
+              </SignInTrigger>
+              <SignUpTrigger returnTo={back}>
                 <button type="button" className={`${QUIET} self-start font-normal decoration-oh-ember-light decoration-2`}>
                   {t("create")}
                 </button>
-              </SignUpButton>
+              </SignUpTrigger>
             </div>
           )}
         </>

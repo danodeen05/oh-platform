@@ -22,7 +22,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { useUser } from "@clerk/nextjs";
+import { useSiteAuth } from "@/lib/site/auth";
 import { Display, Eyebrow, Title } from "@/components/site/Text";
 import { Icon, type IconName } from "@/components/site/icons/Icon";
 import { useOptionalChappy } from "@/components/site/chappy/ChappyLauncher";
@@ -66,7 +66,7 @@ export function StatusView({ code, embedded, followParent, demoStage: demoStageP
   const router = useRouter();
   const api = useSiteApi();
   const { guest } = useGuest();
-  const { user, isLoaded, isSignedIn } = useUser();
+  const { isLoaded, isSignedIn, email: authEmail, name: authName, firstName: authFirstName } = useSiteAuth();
   const member = useMemberId();
   const chappy = useOptionalChappy();
   const s = useOrderStatus({ code, demoStageParam, followParent, locale });
@@ -90,8 +90,8 @@ export function StatusView({ code, embedded, followParent, demoStage: demoStageP
   usePendingOrderLink({
     orderQrCode: order?.orderQrCode ?? null,
     signedIn: Boolean(isSignedIn),
-    email: user?.primaryEmailAddress?.emailAddress ?? null,
-    name: user?.fullName || user?.firstName || null,
+    email: authEmail ?? null,
+    name: authName || null,
     onLinked: useCallback(() => say(t("status.join.linked")), [say, t]),
   });
 
@@ -210,7 +210,7 @@ export function StatusView({ code, embedded, followParent, demoStage: demoStageP
   const hasDessert = o.items.some((i) => i.categoryType === "DESSERT");
   const signedOut = isLoaded && !isSignedIn;
   const number = o.kitchenOrderNumber || o.orderNumber;
-  const firstName = user?.firstName || o.guestName?.split(" ")[0] || t("status.friend");
+  const firstName = authFirstName || o.guestName?.split(" ")[0] || t("status.friend");
   const orderAgainHref = !s.isDemo && member.signedIn ? `/${locale}/order?reorder=${encodeURIComponent(o.id)}` : `/${locale}/order`;
   const bowl = o.items.filter((i) => i.categoryType !== "SLIDER");
   const choices = o.items.filter((i) => i.categoryType === "SLIDER" && (i.selectedLabel || i.selectedValue));

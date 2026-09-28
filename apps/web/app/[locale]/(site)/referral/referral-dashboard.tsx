@@ -9,7 +9,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { SignInButton, SignUpButton } from "@clerk/nextjs";
+import { SignInTrigger, SignUpTrigger } from "@/components/site/auth/AuthTriggers";
 import { useLocale, useTranslations } from "next-intl";
 import { Icon } from "@/components/site/icons/Icon";
 import { CountUp } from "@/components/site/motion/CountUp";
@@ -107,16 +107,16 @@ export default function ReferralDashboard({ program }: { program: ReferralProgra
           </h2>
           <p className="m-0 text-[15px] leading-relaxed text-oh-mute">{t("signedOutBody")}</p>
         </div>
-        <SignInButton mode="modal" forceRedirectUrl={back} signUpForceRedirectUrl={back}>
+        <SignInTrigger returnTo={back}>
           <button type="button" data-referral-signin-button className={PRIMARY}>
             {t("signIn")}
           </button>
-        </SignInButton>
-        <SignUpButton mode="modal" forceRedirectUrl={back} signInForceRedirectUrl={back}>
+        </SignInTrigger>
+        <SignUpTrigger returnTo={back}>
           <button type="button" className={`min-h-11 cursor-pointer appearance-none border-0 bg-transparent p-0 font-[inherit] text-[15px] text-oh-cream underline decoration-oh-ember-light decoration-2 underline-offset-4 ${FOCUS}`}>
             {t("create")}
           </button>
-        </SignUpButton>
+        </SignUpTrigger>
       </section>
     );
   }

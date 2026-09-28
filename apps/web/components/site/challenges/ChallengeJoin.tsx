@@ -12,7 +12,7 @@
  *  - done: the reward, which the API granted as Oh! credit at completion
  */
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import { SignInButton } from "@clerk/nextjs";
+import { SignInTrigger } from "@/components/site/auth/AuthTriggers";
 import { useLocale, useTranslations } from "next-intl";
 import { Icon } from "@/components/site/icons/Icon";
 import { Spinner } from "@/components/site/order/StepSheet";
@@ -89,11 +89,11 @@ export function ChallengeJoin({ challengeId, name, requirements, rewardCents }: 
   if (!ctx.signedIn) {
     const back = `/${locale}/challenges`;
     return (
-      <SignInButton mode="modal" forceRedirectUrl={back} signUpForceRedirectUrl={back}>
+      <SignInTrigger returnTo={back}>
         <button type="button" data-challenge-signin className={`${QUIET} mt-3 self-start`}>
           {t("signInToJoin")}
         </button>
-      </SignInButton>
+      </SignInTrigger>
     );
   }
 

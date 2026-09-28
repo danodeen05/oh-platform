@@ -14,7 +14,8 @@
 import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Sheet } from "@/components/site/motion/Sheet";
+// Task G2b: framer-motion loads on first open.
+import { LazySheet as Sheet } from "@/components/site/motion/LazySheet";
 import { Icon } from "@/components/site/icons/Icon";
 import { Eyebrow } from "@/components/site/Text";
 import { SITE_API_URL, type SiteFetch } from "@/lib/site/api";

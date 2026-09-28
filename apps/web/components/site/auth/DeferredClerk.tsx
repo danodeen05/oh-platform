@@ -23,7 +23,7 @@
  */
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { SiteAuthContext, type SiteAuth } from "@/lib/site/auth";
+import { SiteAuthContext, type ModalOptions, type SiteAuth } from "@/lib/site/auth";
 import type { ClerkSnapshot } from "./ClerkBridge";
 
 /** How long a signed-in token request waits for Clerk before going out anonymous. */
@@ -103,17 +103,17 @@ export function DeferredClerk({
   // While a modal waits for Clerk, `pending` is true, so the trigger can show it.
   const [pending, setPending] = useState(false);
   const openModal = useCallback(
-    (which: "openSignIn" | "openSignUp") => {
+    (which: "openSignIn" | "openSignUp", opts?: ModalOptions) => {
       if (!snapRef.current?.isLoaded) setPending(true);
       void ready().then((s) => {
         setPending(false);
-        s[which]();
+        s[which](opts);
       });
     },
     [ready],
   );
-  const openSignIn = useCallback(() => openModal("openSignIn"), [openModal]);
-  const openSignUp = useCallback(() => openModal("openSignUp"), [openModal]);
+  const openSignIn = useCallback((opts?: ModalOptions) => openModal("openSignIn", opts), [openModal]);
+  const openSignUp = useCallback((opts?: ModalOptions) => openModal("openSignUp", opts), [openModal]);
   const preload = useCallback(() => setLoad(true), []);
 
   const value = useMemo<SiteAuth>(() => {
@@ -124,6 +124,7 @@ export function DeferredClerk({
       userId: snap?.userId ?? null,
       email: snap?.email,
       name: snap?.name,
+      firstName: snap?.firstName,
       getToken,
       openSignIn,
       openSignUp,

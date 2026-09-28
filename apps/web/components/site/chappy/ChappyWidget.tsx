@@ -16,7 +16,7 @@
  * for the site's active-order pill. A Stripe redirect return (`resume`,
  * from ChappyProvider) is verified here the same way.
  */
-import { useClerk } from "@clerk/nextjs";
+import { useSiteAuth } from "@/lib/site/auth";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { siteDisplayFont } from "@/components/site/site-fonts";
@@ -83,7 +83,7 @@ export default function ChappyWidget({ open, onClose, onOpen, prefill, prefillKe
   const cjk = locale.startsWith("zh");
   const desktop = useIsDesktop();
   const chat = useChappyStream({ locale });
-  const clerk = useClerk();
+  const auth = useSiteAuth();
   const api = useSiteApi();
   const composer = useRef<ComposerHandle | null>(null);
 
@@ -94,8 +94,8 @@ export default function ChappyWidget({ open, onClose, onOpen, prefill, prefillKe
   const signIn = useCallback(() => {
     setAwaitingSignIn(true);
     onClose();
-    clerk.openSignIn();
-  }, [clerk, onClose]);
+    auth.openSignIn();
+  }, [auth, onClose]);
   useEffect(() => {
     if (awaitingSignIn && chat.signedIn) {
       setAwaitingSignIn(false);

@@ -20,7 +20,8 @@
  * Only the signed-in host can pay (the API checks). Styling and the Stripe
  * appearance and locale are shared with Chappy's pay card.
  */
-import { SignInButton, useUser } from "@clerk/nextjs";
+import { SignInTrigger } from "@/components/site/auth/AuthTriggers";
+import { useSiteAuth } from "@/lib/site/auth";
 import { Elements, ExpressCheckoutElement, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import type { StripeExpressCheckoutElementConfirmEvent, StripeExpressCheckoutElementReadyEvent } from "@stripe/stripe-js";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -47,7 +48,7 @@ export function GroupPayForm({ groupCode, hostOrderId, hostOrderNumber }: { grou
   const router = useRouter();
   const params = useSearchParams();
   const api = useSiteApi();
-  const { isLoaded, isSignedIn } = useUser();
+  const { isLoaded, isSignedIn } = useSiteAuth();
   const [phase, setPhase] = useState<Phase>("loading");
   const [message, setMessage] = useState<string | null>(null);
   const [intent, setIntent] = useState<{ clientSecret: string | null; amountCents: number; orderCount: number } | null>(null);
@@ -157,11 +158,11 @@ export function GroupPayForm({ groupCode, hostOrderId, hostOrderNumber }: { grou
       <div data-group-signin>
         <p className="m-0 text-lg font-semibold text-oh-cream">{th("signInTitle")}</p>
         <p className="m-0 mt-1 text-base text-oh-cream/75">{th("signInBody")}</p>
-        <SignInButton mode="modal">
+        <SignInTrigger>
           <button type="button" className={`${primary} mt-5`}>
             {th("signIn")}
           </button>
-        </SignInButton>
+        </SignInTrigger>
       </div>
     );
   }

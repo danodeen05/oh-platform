@@ -25,7 +25,7 @@ import type { CombMapLabels } from "@/components/site/floor-plan/CombMap";
 import { useSiteApi, SITE_API_URL } from "@/lib/site/api";
 import { groupIdentityHeaders } from "@/lib/site/orders";
 import { useGuest } from "@/contexts/guest-context";
-import { useUser } from "@clerk/nextjs";
+import { useSiteAuth } from "@/lib/site/auth";
 import { arrivalAttempts, classifyArrival, shouldForgetSaved, tryNext, type ArrivalOutcome } from "@/lib/site/pod-arrival";
 import { PRIMARY, SECONDARY } from "./PodCard";
 import { Spinner } from "./StepSheet";
@@ -84,7 +84,7 @@ export function PodView({ qr }: { qr: string | null }) {
   const router = useRouter();
   const api = useSiteApi();
   const { guest } = useGuest();
-  const { isSignedIn } = useUser();
+  const { isSignedIn } = useSiteAuth();
   const [info, setInfo] = useState<PodInfo | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "error" | "none">(qr ? "loading" : "none");
   const [busy, setBusy] = useState(false);

@@ -11,7 +11,8 @@ import { useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useCart } from "@/contexts/cart-context";
 import { Icon } from "@/components/site/icons/Icon";
-import { Sheet } from "@/components/site/motion/Sheet";
+// Task G2b: framer-motion loads on first open.
+import { LazySheet as Sheet } from "@/components/site/motion/LazySheet";
 import { Reveal } from "@/components/site/motion/Reveal";
 import { formatCents } from "@/lib/site/order-flow";
 import { categoryKey, localizeProduct, LOW_STOCK, maxQuantity, productImage, productSizes, SHOP_CATEGORIES, type ShopCategory, type ShopProductRow } from "@/lib/site/store";

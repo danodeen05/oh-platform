@@ -13,7 +13,8 @@
  */
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Sheet } from "@/components/site/motion/Sheet";
+// Task G2b: framer-motion loads on first open.
+import { LazySheet as Sheet } from "@/components/site/motion/LazySheet";
 import { Icon } from "@/components/site/icons/Icon";
 import { Spinner } from "@/components/site/order/StepSheet";
 import { SITE_API_URL, useSiteApi } from "@/lib/site/api";

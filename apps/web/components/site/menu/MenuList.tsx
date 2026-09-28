@@ -13,7 +13,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useAuth } from "@clerk/nextjs";
+import { useSiteAuth } from "@/lib/site/auth";
 import { useLocale, useTranslations } from "next-intl";
 import { Reveal } from "@/components/site/motion/Reveal";
 import { SitePicture } from "@/components/site/picture/SitePicture";
@@ -34,7 +34,7 @@ export function MenuList({ initialSteps }: { initialSteps: ApiMenuStep[] }) {
   const locale = useLocale();
   const cjk = locale.startsWith("zh");
   const api = useSiteApi();
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn } = useSiteAuth();
   const [steps, setSteps] = useState<ApiMenuStep[]>(initialSteps);
   const [selected, setSelected] = useState<MenuCard | null>(null);
   const [open, setOpen] = useState(false);

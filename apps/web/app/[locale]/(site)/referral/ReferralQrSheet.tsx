@@ -8,7 +8,8 @@
 import Image from "next/image";
 import { QRCodeSVG } from "qrcode.react";
 import { useTranslations } from "next-intl";
-import { Sheet } from "@/components/site/motion/Sheet";
+// Task G2b: framer-motion loads on first open.
+import { LazySheet as Sheet } from "@/components/site/motion/LazySheet";
 
 const SHEET = "[&_.oh-sheet-panel]:bg-oh-ink [&_.oh-sheet-panel]:text-oh-cream [&_.oh-sheet-grabber]:bg-oh-stone [&_.oh-sheet-panel]:max-w-md [&_.oh-sheet-panel]:px-4";
 const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oh-cream";

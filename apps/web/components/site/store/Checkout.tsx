@@ -27,8 +27,15 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { SignInButton, useUser } from "@clerk/nextjs";
-import { StripeProvider, PaymentForm, type SavedPaymentMethod } from "@/components/payments";
+import { SignInTrigger } from "@/components/site/auth/AuthTriggers";
+import { useSiteAuth } from "@/lib/site/auth";
+import type { SavedPaymentMethod } from "@/components/payments";
+import dynamic from "next/dynamic";
+
+// Task G2b: Stripe loads at the pay step, not with the page (the first screen
+// is a form). Both chunks are fetched when the payment section mounts.
+const StripeProvider = dynamic(() => import("@/components/payments/StripeProvider").then((m) => m.StripeProvider), { ssr: false });
+const PaymentForm = dynamic(() => import("@/components/payments/PaymentForm").then((m) => m.PaymentForm), { ssr: false });
 import { useCart } from "@/contexts/cart-context";
 import { useGuest } from "@/contexts/guest-context";
 import { Icon } from "@/components/site/icons/Icon";
@@ -63,7 +70,7 @@ export function Checkout({ initialFulfillment = "SHIPPING" }: { initialFulfillme
   const router = useRouter();
   const api = useSiteApi();
   const member = useMemberId();
-  const { user } = useUser();
+  const auth = useSiteAuth();
   const { guest, startGuestSession, isLoading: guestLoading } = useGuest();
   const { items, subtotalCents, clearCart } = useCart();
   const catalog = useShopCatalog();
@@ -102,13 +109,13 @@ export function Checkout({ initialFulfillment = "SHIPPING" }: { initialFulfillme
 
   // Prefill from the member's account.
   useEffect(() => {
-    if (!user) return;
+    if (!auth.isSignedIn || (!auth.name && !auth.email)) return;
     setFields((f) => ({
       ...f,
-      name: f.name || user.fullName || user.firstName || "",
-      email: f.email || user.primaryEmailAddress?.emailAddress || "",
+      name: f.name || auth.name || "",
+      email: f.email || auth.email || "",
     }));
-  }, [user]);
+  }, [auth.isSignedIn, auth.name, auth.email]);
 
   // The member's credit (GET /users/:id/profile) and saved cards.
   useEffect(() => {
@@ -534,11 +541,11 @@ export function Checkout({ initialFulfillment = "SHIPPING" }: { initialFulfillme
             ) : member.ready ? (
               <p className="m-0 flex flex-wrap items-center gap-x-2 text-[15px] text-oh-cream/85">
                 {t("creditsSignIn")}
-                <SignInButton mode="modal" forceRedirectUrl={`/${locale}/store/checkout`} signUpForceRedirectUrl={`/${locale}/store/checkout`}>
+                <SignInTrigger returnTo={`/${locale}/store/checkout`}>
                   <button type="button" className={TEXT_LINK} disabled={locked}>
                     {t("signIn")}
                   </button>
-                </SignInButton>
+                </SignInTrigger>
               </p>
             ) : null}
 

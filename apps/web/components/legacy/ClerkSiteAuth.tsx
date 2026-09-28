@@ -9,7 +9,7 @@
  */
 import { useAuth, useClerk, useUser } from "@clerk/nextjs";
 import { useMemo, type ReactNode } from "react";
-import { SiteAuthContext, type SiteAuth } from "@/lib/site/auth";
+import { SiteAuthContext, clerkModalProps, type SiteAuth } from "@/lib/site/auth";
 
 export function ClerkSiteAuth({ children }: { children: ReactNode }) {
   const { isLoaded, isSignedIn, userId, getToken } = useAuth();
@@ -25,12 +25,13 @@ export function ClerkSiteAuth({ children }: { children: ReactNode }) {
       userId: userId ?? null,
       email,
       name,
+      firstName: user?.firstName || undefined,
       getToken: async () => (await getToken()) ?? null,
-      openSignIn: () => clerk.openSignIn(),
-      openSignUp: () => clerk.openSignUp(),
+      openSignIn: (opts) => clerk.openSignIn(clerkModalProps("signIn", opts)),
+      openSignUp: (opts) => clerk.openSignUp(clerkModalProps("signUp", opts)),
       preload: () => {},
     }),
-    [isLoaded, isSignedIn, userId, email, name, getToken, clerk],
+    [isLoaded, isSignedIn, userId, email, name, user?.firstName, getToken, clerk],
   );
 
   return <SiteAuthContext.Provider value={value}>{children}</SiteAuthContext.Provider>;

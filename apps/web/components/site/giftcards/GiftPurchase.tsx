@@ -18,7 +18,12 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { StripeProvider, PaymentForm } from "@/components/payments";
+import dynamic from "next/dynamic";
+
+// Task G2b: Stripe loads at the pay step, not with the page (the first screen
+// is a form). Both chunks are fetched when the payment section mounts.
+const StripeProvider = dynamic(() => import("@/components/payments/StripeProvider").then((m) => m.StripeProvider), { ssr: false });
+const PaymentForm = dynamic(() => import("@/components/payments/PaymentForm").then((m) => m.PaymentForm), { ssr: false });
 import { Icon } from "@/components/site/icons/Icon";
 import { Reveal } from "@/components/site/motion/Reveal";
 import { Display, Eyebrow, Title } from "@/components/site/Text";

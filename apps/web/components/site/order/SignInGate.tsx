@@ -6,7 +6,7 @@
  * instead. The draft stays in sessionStorage, and the Clerk modal returns
  * to the same step, so nothing is lost.
  */
-import { SignInButton, SignUpButton } from "@clerk/nextjs";
+import { SignInTrigger, SignUpTrigger } from "@/components/site/auth/AuthTriggers";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/site/icons/Icon";
 import { CTA_CLASS } from "./StepSheet";
@@ -22,19 +22,19 @@ export function SignInGate({ returnTo }: { returnTo: string }) {
         <h2 className="m-0 text-xl font-semibold text-oh-cream">{t("title")}</h2>
         <p className="m-0 text-[15px] leading-relaxed text-oh-mute">{t("body")}</p>
       </div>
-      <SignInButton mode="modal" forceRedirectUrl={returnTo} signUpForceRedirectUrl={returnTo}>
+      <SignInTrigger returnTo={returnTo}>
         <button type="button" data-order-signin-button className={`${CTA_CLASS} w-full`}>
           {t("cta")}
         </button>
-      </SignInButton>
-      <SignUpButton mode="modal" forceRedirectUrl={returnTo} signInForceRedirectUrl={returnTo}>
+      </SignInTrigger>
+      <SignUpTrigger returnTo={returnTo}>
         <button
           type="button"
           className="min-h-11 cursor-pointer appearance-none border-0 bg-transparent p-0 font-[inherit] text-[15px] text-oh-cream underline decoration-oh-ember-light decoration-2 underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oh-cream"
         >
           {t("create")}
         </button>
-      </SignUpButton>
+      </SignUpTrigger>
     </div>
   );
 }

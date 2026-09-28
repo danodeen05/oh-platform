@@ -25,7 +25,7 @@
  * assistant message (applyEvent). A turn that starts under one identity and
  * finishes after the identity changed (or after reset) is ignored.
  */
-import { useAuth } from "@clerk/nextjs";
+import { useSiteAuth } from "@/lib/site/auth";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SITE_API_URL } from "@/lib/site/api";
 import { clearGuestToken, ensureGuestToken, readGuestToken } from "./guest";
@@ -53,7 +53,8 @@ const newId = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${(seq++
 type Headers = Record<string, string>;
 
 export function useChappyStream({ locale, apiBase = SITE_API_URL }: { locale: string; apiBase?: string }): ChappyStream {
-  const { isLoaded, isSignedIn, userId, getToken } = useAuth();
+  // Task G2b: SiteAuth, so Chappy works on (site) pages, where Clerk loads after first paint.
+  const { isLoaded, isSignedIn, userId, getToken } = useSiteAuth();
   // If Clerk never loads (a blocked script), chat as a guest after a grace
   // period instead of a spinner forever; a later load still switches over.
   const [clerkTimedOut, setClerkTimedOut] = useState(false);

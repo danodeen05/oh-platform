@@ -12,6 +12,7 @@ import { esES } from "@clerk/localizations/es-ES";
 import { zhCN } from "@clerk/localizations/zh-CN";
 import { zhTW } from "@clerk/localizations/zh-TW";
 import { useEffect } from "react";
+import { clerkModalProps, type ModalOptions } from "@/lib/site/auth";
 
 export interface ClerkSnapshot {
   isLoaded: boolean;
@@ -19,9 +20,10 @@ export interface ClerkSnapshot {
   userId: string | null;
   email: string | undefined;
   name: string | undefined;
+  firstName: string | undefined;
   getToken: () => Promise<string | null>;
-  openSignIn: () => void;
-  openSignUp: () => void;
+  openSignIn: (opts?: ModalOptions) => void;
+  openSignUp: (opts?: ModalOptions) => void;
 }
 
 // Same map as lib/clerk-localization.ts (the server side's).
@@ -49,11 +51,12 @@ function Publisher({ onSnapshot }: { onSnapshot: (s: ClerkSnapshot) => void }) {
       userId: userId ?? null,
       email,
       name,
+      firstName: user?.firstName || undefined,
       getToken: async () => (await getToken()) ?? null,
-      openSignIn: () => clerk.openSignIn(),
-      openSignUp: () => clerk.openSignUp(),
+      openSignIn: (opts) => clerk.openSignIn(clerkModalProps("signIn", opts)),
+      openSignUp: (opts) => clerk.openSignUp(clerkModalProps("signUp", opts)),
     });
-  }, [onSnapshot, isLoaded, isSignedIn, userId, email, name, getToken, clerk]);
+  }, [onSnapshot, isLoaded, isSignedIn, userId, email, name, user?.firstName, getToken, clerk]);
 
   return null;
 }

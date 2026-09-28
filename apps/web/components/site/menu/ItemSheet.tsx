@@ -11,7 +11,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { Sheet } from "@/components/site/motion/Sheet";
+// Task G2b: framer-motion loads on first open.
+import { LazySheet as Sheet } from "@/components/site/motion/LazySheet";
 import { SitePicture } from "@/components/site/picture/SitePicture";
 import { Seal } from "@/components/site/seal/Seal";
 import { Icon } from "@/components/site/icons/Icon";

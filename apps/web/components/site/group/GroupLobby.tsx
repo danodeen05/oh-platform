@@ -18,14 +18,15 @@
  */
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { SignInButton, useUser } from "@clerk/nextjs";
+import { SignInTrigger } from "@/components/site/auth/AuthTriggers";
+import { useSiteAuth } from "@/lib/site/auth";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { CombMap, type CombMapLabels } from "@/components/site/floor-plan/CombMap";
 import { useSeats } from "@/components/site/floor-plan/useSeats";
 import { Icon } from "@/components/site/icons/Icon";
 import { Reveal } from "@/components/site/motion/Reveal";
-import { Sheet } from "@/components/site/motion/Sheet";
+import { LazySheet as Sheet } from "@/components/site/motion/LazySheet";
 import { formatMoney } from "@/components/site/rewards/format";
 import { Body, Display, Eyebrow } from "@/components/site/Text";
 import { useGuest } from "@/contexts/guest-context";
@@ -65,7 +66,7 @@ export function GroupLobby({ initialGroup }: { initialGroup: Group }) {
   const locale = useLocale();
   const router = useRouter();
   const api = useSiteApi();
-  const { isLoaded: clerkLoaded } = useUser();
+  const { isLoaded: clerkLoaded } = useSiteAuth();
   const member = useMemberId();
   const { guest, isGuest, startGuestSession, isLoading: guestLoading } = useGuest();
   const [group, setGroup] = useState<Group>(initialGroup);
@@ -265,11 +266,11 @@ export function GroupLobby({ initialGroup }: { initialGroup: Group }) {
                 </button>
               ) : (
                 <div className="flex flex-wrap gap-3">
-                  <SignInButton mode="modal">
+                  <SignInTrigger>
                     <button type="button" className={primary}>
                       {t("join.signIn")}
                     </button>
-                  </SignInButton>
+                  </SignInTrigger>
                   <button type="button" className={quiet} onClick={() => void startGuestSession()}>
                     {t("join.guest")}
                   </button>
