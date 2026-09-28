@@ -17,8 +17,15 @@
  * same PaymentIntent; the API's one-gift-per-PaymentIntent rule makes that
  * idempotent. A 3DS or wallet redirect comes back here with
  * ?payment_intent=... and is recorded the same way.
+ *
+ * Fix round 1: a reload (or coming back to the tab) resumes the saved gift
+ * from sessionStorage. Its PaymentIntent's status (Stripe.js) decides:
+ * succeeded is recorded, unfinished shows the same payment form again,
+ * processing waits for the webhook. And if the tab is gone for good, the
+ * Stripe webhook records the gift from the PaymentIntent's metadata.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
+import { loadStripe } from "@stripe/stripe-js";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { SignInButton, SignUpButton } from "@clerk/nextjs";
 import { useLocale, useTranslations } from "next-intl";
@@ -37,6 +44,7 @@ import {
   clearPendingGift,
   readPendingGift,
   recordMealGift,
+  resumeAction,
   savePendingGift,
   startMealGiftPayment,
   type GiftErrorCode,
@@ -83,6 +91,7 @@ export function GiveMealFlow({ locations }: { locations: GiveLocation[] }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const recording = useRef(false);
+  const resumed = useRef(false);
   const returning = search.get("payment_intent");
 
   const errorText = useCallback(
@@ -144,6 +153,40 @@ export function GiveMealFlow({ locations }: { locations: GiveLocation[] }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [returning, member.ready]);
 
+  // A reload with a saved gift: pick up where the giver was (fix round 1).
+  useEffect(() => {
+    if (returning || !member.ready || !member.signedIn || resumed.current) return;
+    resumed.current = true;
+    const pending = readPendingGift(sessionStore(), null);
+    if (!pending?.clientSecret) return;
+    const key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+    if (!key) return;
+    let cancelled = false;
+    (async () => {
+      const stripe = await loadStripe(key).catch(() => null);
+      const result = stripe ? await stripe.retrievePaymentIntent(pending.clientSecret!).catch(() => null) : null;
+      if (cancelled || !result) return;
+      const action = resumeAction(result.paymentIntent?.status);
+      setLocationId(pending.locationId);
+      setAmountCents(pending.amountCents);
+      setMessage(pending.message || "");
+      if (action === "record") record(pending);
+      else if (action === "pay") {
+        setGift(pending);
+        setClientSecret(pending.clientSecret!);
+        setPhase("pay");
+      } else if (action === "wait") {
+        setGift(pending);
+        setError(t("recordFailed"));
+        setPhase("recordError");
+      } else clearPendingGift(sessionStore());
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [returning, member.ready, member.signedIn]);
+
   async function onContinue() {
     if (!locationId) {
       setError(errorText("LOCATION_REQUIRED"));
@@ -151,13 +194,14 @@ export function GiveMealFlow({ locations }: { locations: GiveLocation[] }) {
     }
     setBusy(true);
     setError(null);
-    const r = await startMealGiftPayment(api, SITE_API_URL, { locationId, amountCents });
+    const note = message.trim() || null;
+    const r = await startMealGiftPayment(api, SITE_API_URL, { locationId, amountCents, message: note });
     setBusy(false);
     if (!r.ok) {
       setError(errorText((r as Extract<StartResult, { ok: false }>).code));
       return;
     }
-    const pending: PendingGift = { paymentIntentId: r.paymentIntentId, locationId, amountCents, message: message.trim() || null };
+    const pending: PendingGift = { paymentIntentId: r.paymentIntentId, locationId, amountCents, message: note, clientSecret: r.clientSecret };
     // Saved before Stripe confirms, so a redirect return (or a lost response) can still record it.
     savePendingGift(sessionStore(), pending);
     setGift(pending);

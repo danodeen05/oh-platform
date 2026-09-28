@@ -5,6 +5,7 @@ import {
   paymentIntentIdFromSecret,
   PENDING_GIFT_KEY,
   readPendingGift,
+  resumeAction,
   recordMealGift,
   savePendingGift,
   startMealGiftPayment,
@@ -43,7 +44,7 @@ describe("meal gift giving helpers (Task D9)", () => {
   it("keeps the pending gift only for the same PaymentIntent", () => {
     const s = memory();
     savePendingGift(s, GIFT);
-    expect(readPendingGift(s, "pi_123")).toEqual(GIFT);
+    expect(readPendingGift(s, "pi_123")).toEqual({ ...GIFT, clientSecret: null });
     expect(readPendingGift(s, "pi_other")).toBeNull();
     s.m.set(PENDING_GIFT_KEY, JSON.stringify({ ...GIFT, amountCents: 99999 }));
     expect(readPendingGift(s, "pi_123")).toBeNull();
@@ -51,6 +52,26 @@ describe("meal gift giving helpers (Task D9)", () => {
     expect(readPendingGift(s, "pi_123")).toBeNull();
     clearPendingGift(s);
     expect(s.m.has(PENDING_GIFT_KEY)).toBe(false);
+  });
+
+  it("fix round 1: a reload finds any saved gift, keeps only its own client secret, and resumes by status", () => {
+    const s = memory();
+    savePendingGift(s, { ...GIFT, clientSecret: "pi_123_secret_abc" });
+    expect(readPendingGift(s, null)).toEqual({ ...GIFT, clientSecret: "pi_123_secret_abc" });
+    savePendingGift(s, { ...GIFT, clientSecret: "pi_other_secret_abc" });
+    expect(readPendingGift(s, null)?.clientSecret).toBeNull();
+    expect(resumeAction("succeeded")).toBe("record");
+    expect(resumeAction("processing")).toBe("wait");
+    expect(resumeAction("requires_payment_method")).toBe("pay");
+    expect(resumeAction("requires_action")).toBe("pay");
+    expect(resumeAction("canceled")).toBe("drop");
+    expect(resumeAction(undefined)).toBe("drop");
+  });
+
+  it("fix round 1: the note rides on the PaymentIntent so the webhook can record the gift", async () => {
+    const calls: { url: string; body: unknown }[] = [];
+    await startMealGiftPayment(api(200, { clientSecret: "pi_9_secret_z", paymentIntentId: "pi_9" }, calls), "http://api", { locationId: "L1", amountCents: 2500, message: "Enjoy" });
+    expect(calls[0].body).toEqual({ kind: "meal_gift", amountCents: 2500, locationId: "L1", messageFromGiver: "Enjoy" });
   });
 
   it("starts a meal_gift PaymentIntent with only the amount and location (no credit, no promo)", async () => {

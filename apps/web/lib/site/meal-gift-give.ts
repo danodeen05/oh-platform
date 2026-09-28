@@ -15,6 +15,13 @@
  * successful charge) records the gift with the same PaymentIntent instead of
  * charging again. A 409 PAYMENT_ALREADY_USED means that PaymentIntent already
  * funded a gift: that is success, not an error.
+ *
+ * Task D9 fix round 1: the note also rides on the PaymentIntent (the server
+ * puts giver, location and note in its metadata), so the Stripe webhook
+ * records the gift even when the tab is closed before step 3
+ * (POST /meal-gifts/confirm-payment). The saved gift keeps the client secret
+ * too, so a reload resumes: a succeeded PaymentIntent is recorded, an
+ * unfinished one shows its payment form again (never a second PaymentIntent).
  */
 import type { SiteFetch } from "./api";
 
@@ -32,7 +39,7 @@ export const PENDING_GIFT_KEY = "ohMealGiftPending";
  */
 export const MEAL_GIFT_GIVER_REWARD_CENTS = 500;
 
-export type PendingGift = { paymentIntentId: string; locationId: string; amountCents: number; message: string | null };
+export type PendingGift = { paymentIntentId: string; locationId: string; amountCents: number; message: string | null; clientSecret?: string | null };
 
 type StorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
@@ -76,17 +83,29 @@ export function savePendingGift(storage: StorageLike | null | undefined, gift: P
   }
 }
 
-/** The saved gift for this PaymentIntent, or null (a different or missing one). */
-export function readPendingGift(storage: StorageLike | null | undefined, paymentIntentId: string): PendingGift | null {
+/** The saved gift for this PaymentIntent (any saved gift when `paymentIntentId` is null), or null. */
+export function readPendingGift(storage: StorageLike | null | undefined, paymentIntentId: string | null): PendingGift | null {
   try {
     const raw = storage?.getItem(PENDING_GIFT_KEY);
     if (!raw) return null;
     const g = JSON.parse(raw) as PendingGift;
-    if (g?.paymentIntentId !== paymentIntentId || typeof g.locationId !== "string" || !validGiftAmount(g.amountCents)) return null;
-    return { paymentIntentId: g.paymentIntentId, locationId: g.locationId, amountCents: g.amountCents, message: typeof g.message === "string" ? g.message : null };
+    if (typeof g?.paymentIntentId !== "string" || !g.paymentIntentId.startsWith("pi_")) return null;
+    if (paymentIntentId !== null && g.paymentIntentId !== paymentIntentId) return null;
+    if (typeof g.locationId !== "string" || !validGiftAmount(g.amountCents)) return null;
+    const secret = typeof g.clientSecret === "string" && paymentIntentIdFromSecret(g.clientSecret) === g.paymentIntentId ? g.clientSecret : null;
+    return { paymentIntentId: g.paymentIntentId, locationId: g.locationId, amountCents: g.amountCents, message: typeof g.message === "string" ? g.message : null, clientSecret: secret };
   } catch {
     return null;
   }
+}
+
+/** What a reload does with a saved gift, from its PaymentIntent's status (Stripe.js retrievePaymentIntent). */
+export type ResumeAction = "record" | "pay" | "wait" | "drop";
+export function resumeAction(status: string | null | undefined): ResumeAction {
+  if (status === "succeeded") return "record";
+  if (status === "processing") return "wait";
+  if (status === "requires_payment_method" || status === "requires_confirmation" || status === "requires_action") return "pay";
+  return "drop";
 }
 
 export function clearPendingGift(storage: StorageLike | null | undefined): void {
@@ -103,13 +122,13 @@ async function body(res: Response): Promise<Record<string, unknown>> {
 
 export type StartResult = { ok: true; clientSecret: string; paymentIntentId: string } | { ok: false; code: GiftErrorCode; retry: boolean };
 
-export async function startMealGiftPayment(api: SiteFetch, apiBase: string, input: { locationId: string; amountCents: number }): Promise<StartResult> {
+export async function startMealGiftPayment(api: SiteFetch, apiBase: string, input: { locationId: string; amountCents: number; message?: string | null }): Promise<StartResult> {
   let res: Response;
   try {
     res = await api(`${apiBase}/create-payment-intent`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-tenant-slug": "oh" },
-      body: JSON.stringify({ kind: "meal_gift", amountCents: input.amountCents, locationId: input.locationId }),
+      body: JSON.stringify({ kind: "meal_gift", amountCents: input.amountCents, locationId: input.locationId, ...(input.message ? { messageFromGiver: input.message } : {}) }),
     });
   } catch {
     return { ok: false, code: "NETWORK_ERROR", retry: true };

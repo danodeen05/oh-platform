@@ -86,6 +86,7 @@ import { registerAdminAuthHooks } from "./auth/admin-hook.js";
 import { registerTeamRoutes } from "./admin/team-routes.js";
 import { registerMembershipRoutes } from "./membership/routes.js";
 import { referralSummary } from "./membership/referral-summary.js";
+import { isTrackableChallenge, earlyOrderMet } from "./membership/challenge-rules.js";
 import { registerOrderRoutes } from "./orders/routes.js";
 import { registerGroupOrderRoutes } from "./orders/group-routes.js";
 import { registerGiftCardRoutes } from "./orders/gift-card-routes.js";
@@ -117,7 +118,7 @@ import { buildStatusView } from "./orders/status-view.js";
 import { registerOrderServiceGuard, registerPodServiceRoutes } from "./orders/pod-service.js";
 import { registerKitchenStatusRoutes } from "./orders/kitchen-status.js";
 import { publicMealGift, nextMealGiftFor } from "./orders/meal-gift-view.js";
-import { registerMealGiftPayForward, mealGiftExpiresAt } from "./orders/meal-gift-routes.js";
+import { registerMealGiftPayForward, registerMealGiftConfirm, mealGiftExpiresAt } from "./orders/meal-gift-routes.js";
 
 // DEMO- order codes resolve to a synthetic order (see demo/status-demo.js):
 // the plan's live status-page demo reads real routes without touching the DB.
@@ -325,7 +326,7 @@ const orderEffects = {
     sendOrderCompletedNotification(order.userId, order.id).catch((err) => console.error("Failed to send wallet order notification:", err));
     checkAndSendTierProgressNotification(order.userId).catch((err) => console.error("Failed to send wallet tier progress notification:", err));
     const items = await prisma.orderItem.findMany({ where: { orderId: order.id }, include: { menuItem: true } });
-    await updateChallengeProgress(order.userId, { totalCents: spendBaseCents(order), items });
+    await updateChallengeProgress(order.userId, { totalCents: spendBaseCents(order), items, createdAt: order.createdAt });
     if (order.creditsAppliedCents > 0) refreshUserWalletPass(order.userId).catch(console.error);
   },
   async mealGiftAccepted({ mealGiftId, order, appliedCents }) {
@@ -4565,7 +4566,8 @@ app.get("/users/:id/profile", async (req, reply) => {
   const membership = await profileForUser(prisma, id, new Date());
   const locale = getLocale(req);
   user.badges = user.badges.map((ub) => ({ ...ub, badge: localizeBadge(ub.badge, locale) }));
-  user.challenges = user.challenges.map((uc) => ({ ...uc, challenge: localizeChallenge(uc.challenge, locale) }));
+  // Task D9 fix round 1: only challenges the engine can complete (membership/challenge-rules.js).
+  user.challenges = user.challenges.filter((uc) => isTrackableChallenge(uc.challenge)).map((uc) => ({ ...uc, challenge: localizeChallenge(uc.challenge, locale) }));
   // Fix round 1 (review, Important 2): the new UI reads `membership.badges`
   // directly (see the comment above), so it needs localizing too, not just
   // the back-compat `user.badges` shim.
@@ -4672,7 +4674,8 @@ app.get("/challenges", async (req, reply) => {
     where: { isActive: true },
     orderBy: { createdAt: "desc" },
   });
-  return challenges.map((challenge) => localizeChallenge(challenge, locale));
+  // Task D9 fix round 1: never list a challenge the engine can't complete.
+  return challenges.filter(isTrackableChallenge).map((challenge) => localizeChallenge(challenge, locale));
 });
 
 // Get user's challenge progress
@@ -4686,11 +4689,12 @@ app.get("/users/:id/challenges", async (req, reply) => {
       challenge: true,
     },
   });
-  userChallenges.forEach((uc) => {
-    if (uc.challenge) uc.challenge = localizeChallenge(uc.challenge, locale);
+  const tracked = userChallenges.filter((uc) => isTrackableChallenge(uc.challenge));
+  tracked.forEach((uc) => {
+    uc.challenge = localizeChallenge(uc.challenge, locale);
   });
 
-  return userChallenges;
+  return tracked;
 });
 
 // ====================
@@ -4787,6 +4791,10 @@ app.post("/users/:userId/challenges/:challengeId/enroll", async (req, reply) => 
 
   if (!challenge || !challenge.isActive) {
     return reply.code(404).send({ error: "Challenge not found or inactive" });
+  }
+  // Task D9 fix round 1: no enrolling in a challenge the engine can't complete.
+  if (!isTrackableChallenge(challenge)) {
+    return reply.code(400).send({ error: "CHALLENGE_NOT_TRACKED" });
   }
 
   // Check if already enrolled
@@ -6289,6 +6297,8 @@ async function updateChallengeProgress(userId, orderData) {
 
     // Skip if challenge hasn't started yet
     if (userChallenge.challenge.startsAt && userChallenge.challenge.startsAt > now) continue;
+    // Task D9 fix round 1: only the types this function (or the gift flow) advances.
+    if (!isTrackableChallenge(userChallenge.challenge)) continue;
 
     const requirements = userChallenge.challenge.requirements;
     const progress = userChallenge.progress || { current: 0 };
@@ -6329,7 +6339,7 @@ async function updateChallengeProgress(userId, orderData) {
 
       case "category_orders":
         // Check if order contains items from specific category
-        if (orderData.items?.some(item => item.categoryType === requirements.categoryType)) {
+        if (orderData.items?.some(item => (item.categoryType ?? item.menuItem?.categoryType) === requirements.categoryType)) {
           newCurrent = progress.current + 1;
           completed = newCurrent >= target;
         }
@@ -6348,9 +6358,9 @@ async function updateChallengeProgress(userId, orderData) {
         break;
 
       case "early_order":
-        // Check if order was placed before the specified hour
-        const orderHour = new Date(orderData.createdAt || new Date()).getHours();
-        if (orderHour < (requirements.beforeHour || 11)) {
+        // Placed before the specified hour on the Denver clock (Task D9 fix
+        // round 1: was the server's getHours(), UTC on Railway).
+        if (earlyOrderMet(orderData.createdAt || new Date(), requirements.beforeHour || 11)) {
           newCurrent = 1;
           completed = true;
         }
@@ -9901,6 +9911,8 @@ app.get("/meal-gifts/next/:locationId", async (req, reply) => {
 // POST /meal-gifts/:id/pay-forward: signed-in caller only, the recipient is the
 // caller (Task D5 fix round 2, orders/meal-gift-routes.js).
 await registerMealGiftPayForward(app, { prisma, customerAuth });
+// POST /meal-gifts/confirm-payment: the Stripe webhook records a paid gift (Task D9 fix round 1).
+await registerMealGiftConfirm(app, { prisma, stripe, customerAuth });
 
 // POST /meal-gifts/expire - Expire and refund unclaimed gifts (cron job)
 app.post("/meal-gifts/expire", async (req, reply) => {

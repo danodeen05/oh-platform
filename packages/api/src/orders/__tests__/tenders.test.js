@@ -124,6 +124,41 @@ describe("fix round 2: races", () => {
   });
 });
 
+describe("D9 fix round 1: the giver reward is paid the first time only", () => {
+  const gift = (id, amountCents = 2000) => ({ id, giverId: "u2", locationId: "L1", amountCents, status: "ACCEPTED", paidAt: NOW });
+  const rewardLots = (prisma) => prisma.creditLot.findMany({ where: { userId: "u2", source: "CHALLENGE" } });
+
+  test("with no Challenge row configured, two concurrent takes and a later third pay $5 exactly once", async () => {
+    const prisma = seed();
+    const results = await Promise.all([
+      finishMealGiftAcceptance(prisma, { mealGift: gift("mg1"), recipientUserId: "u1", appliedCents: 1924, now: NOW }),
+      finishMealGiftAcceptance(prisma, { mealGift: gift("mg2"), recipientUserId: "u1", appliedCents: 1924, now: NOW }),
+    ]);
+    const third = await finishMealGiftAcceptance(prisma, { mealGift: gift("mg3"), recipientUserId: "u1", appliedCents: 1924, now: NOW });
+    assert.equal(results.filter((r) => r.giverRewarded).length, 1);
+    assert.equal(third.giverRewarded, false);
+    const lots = await rewardLots(prisma);
+    assert.equal(lots.length, 1);
+    assert.equal(lots[0].amountCents, 500);
+    // The claim row was created, inactive, so it is never listed.
+    const ch = await prisma.challenge.findMany({ where: { slug: "meal-for-stranger" } });
+    assert.equal(ch.length, 1);
+    assert.equal(ch[0].isActive, false);
+    assert.deepEqual(ch[0].requirements, { type: "meal_gift" });
+  });
+
+  test("a giver paid under the old every-gift rule (a prior reward lot) is not paid again", async () => {
+    const prisma = seed({
+      creditLots: [{ id: "old", userId: "u2", source: "CHALLENGE", amountCents: 500, remainingCents: 0, expiresAt: new Date(NOW.getTime() + 30 * 864e5), note: "Meal for a Stranger challenge completed", createdAt: new Date(NOW.getTime() - 864e5) }],
+    });
+    const r = await finishMealGiftAcceptance(prisma, { mealGift: gift("mg1"), recipientUserId: "u1", appliedCents: 1924, now: NOW });
+    assert.equal(r.giverRewarded, false);
+    assert.equal((await rewardLots(prisma)).length, 1);
+    const uc = await prisma.userChallenge.findMany({ where: { userId: "u2" } });
+    assert.equal(uc[0].rewardClaimed, true);
+  });
+});
+
 describe("D5 fix round 3: a giver can't redeem their own gift", () => {
   test("quoteOrder refuses 400 OWN_GIFT for the giver", async () => {
     const prisma = seed();

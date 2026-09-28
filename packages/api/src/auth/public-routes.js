@@ -142,6 +142,8 @@ export const PUBLIC_ROUTES = Object.freeze([
   // Meal gifts
   p("POST", "/meal-gifts", "customer"),
   p("GET", "/meal-gifts/next/:locationId", "customer"),
+  // Stripe webhook (x-admin-api-key): records a paid meal gift from its PaymentIntent (Task D9 fix round 1).
+  p("POST", "/meal-gifts/confirm-payment", "webhook"),
   p("POST", "/meal-gifts/:id/pay-forward", "customer"), // Task D5 fix round 2: signed-in caller only; the recipient is the caller
   p("GET", "/meal-gifts/:id", "customer"),
   p("GET", "/users/:userId/meal-gifts", "customer"),

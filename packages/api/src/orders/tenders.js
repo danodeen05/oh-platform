@@ -182,35 +182,70 @@ export async function finishMealGiftAcceptance(prisma, { mealGift, recipientUser
     refresh(recipientUserId);
   }
 
-  // Giver reward, once per giver: claim UserChallenge.rewardClaimed
-  // (false -> true) with a conditional update; only the winner grants.
-  const challenge = await prisma.challenge.findUnique({ where: { slug: MEAL_GIFT_CHALLENGE_SLUG } });
-  let rewardGiver = !challenge; // no challenge configured: once per gift (the gift claim guarantees it)
-  if (challenge) {
-    try {
-      await prisma.userChallenge.create({
-        data: { userId: mealGift.giverId, challengeId: challenge.id, progress: JSON.stringify({ accepted: true }), rewardClaimed: false },
-      });
-    } catch (err) {
-      if (!isUniqueViolation(err)) throw err; // the row already exists: fine
-    }
-    const claim = await prisma.userChallenge.updateMany({
-      where: { userId: mealGift.giverId, challengeId: challenge.id, rewardClaimed: false },
-      data: { rewardClaimed: true, completedAt: now },
+  // Giver reward, the FIRST time only (Task D9 fix round 1, as the page
+  // promises): claim UserChallenge.rewardClaimed (false -> true) with a
+  // conditional update, so of any number of concurrent takes exactly one
+  // wins. The Challenge row the claim hangs on is created (inactive) when it
+  // is missing; before, a missing row paid the giver on every taken gift.
+  // A giver already paid under that old rule (a prior reward lot) is marked
+  // claimed and not paid again.
+  const challenge = await mealGiftChallenge(prisma);
+  try {
+    await prisma.userChallenge.create({
+      data: { userId: mealGift.giverId, challengeId: challenge.id, progress: JSON.stringify({ accepted: true }), rewardClaimed: false },
     });
-    rewardGiver = claim.count === 1;
+  } catch (err) {
+    if (!isUniqueViolation(err)) throw err; // the row already exists: fine
+  }
+  const claim = await prisma.userChallenge.updateMany({
+    where: { userId: mealGift.giverId, challengeId: challenge.id, rewardClaimed: false },
+    data: { rewardClaimed: true, completedAt: now },
+  });
+  let rewardGiver = claim.count === 1;
+  if (rewardGiver) {
+    const prior = await prisma.creditLot.findFirst({ where: { userId: mealGift.giverId, source: "CHALLENGE", note: GIVER_REWARD_NOTE } });
+    if (prior) rewardGiver = false;
   }
   if (rewardGiver) {
     await grantCredit(prisma, {
       userId: mealGift.giverId,
       source: "CHALLENGE",
       amountCents: MEAL_GIFT_GIVER_REWARD_CENTS,
-      note: "Meal for a Stranger challenge completed",
+      note: GIVER_REWARD_NOTE,
       now,
     });
     refresh(mealGift.giverId);
   }
   return { excessCents: recipientUserId ? excessAmount : 0, giverRewarded: rewardGiver };
+}
+
+const GIVER_REWARD_NOTE = "Meal for a Stranger challenge completed";
+
+/**
+ * The Meal for a Stranger Challenge row the giver claim hangs on. Created
+ * inactive when missing (so it is never listed; the site has its own page
+ * for it). Two concurrent creates: the loser's unique violation re-reads.
+ */
+async function mealGiftChallenge(prisma) {
+  const found = await prisma.challenge.findUnique({ where: { slug: MEAL_GIFT_CHALLENGE_SLUG } });
+  if (found) return found;
+  try {
+    return await prisma.challenge.create({
+      data: {
+        slug: MEAL_GIFT_CHALLENGE_SLUG,
+        name: "Meal for a Stranger",
+        description: "Buy the next guest a bowl.",
+        rewardCents: MEAL_GIFT_GIVER_REWARD_CENTS,
+        iconEmoji: "",
+        iconKey: MEAL_GIFT_CHALLENGE_SLUG,
+        requirements: { type: "meal_gift" },
+        isActive: false,
+      },
+    });
+  } catch (err) {
+    if (!isUniqueViolation(err)) throw err;
+    return prisma.challenge.findUnique({ where: { slug: MEAL_GIFT_CHALLENGE_SLUG } });
+  }
 }
 
 // POST /gift-cards/:id/apply (A7 fix round 1), POST /meal-gifts/:id/accept

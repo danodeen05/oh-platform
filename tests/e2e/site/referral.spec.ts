@@ -38,6 +38,8 @@ const BASE = process.env.E2E_BASE_URL || "http://localhost:3300";
 const SHOTS = process.env.E2E_SHOT_DIR || "";
 const CLERK_KEY = process.env.CLERK_SECRET_KEY || "";
 const STRIPE_KEY = process.env.STRIPE_SECRET_KEY || "";
+// Mirrors packages/api/src/membership/challenge-rules.js TRACKED_CHALLENGE_TYPES.
+const TRACKED = new Set(["order_count", "spend_amount", "order_streak", "specific_item", "category_orders", "early_order", "meal_gift"]);
 const AXE = new URL("../../../apps/web/node_modules/axe-core/axe.min.js", import.meta.url).pathname;
 const EMOJI = /\p{Extended_Pictographic}/u;
 const PACE_MS = Number(process.env.E2E_PACE_MS ?? 5_000);
@@ -298,7 +300,13 @@ test("challenges: localized DB names, and Give a meal opens the giving page", as
     const page = await ctx.newPage();
     await hideDevBadge(page);
     await open(page, `/${locale}/challenges`, "[data-challenges-page]");
-    for (const c of rows.filter((r) => r.slug !== "meal-for-stranger")) {
+    // Fix round 1: challenges the engine can't complete are never shown.
+    const tracked = (r: (typeof rows)[number]) => TRACKED.has(String((r.requirements as { type?: string } | null)?.type));
+    for (const c of rows.filter((r) => !tracked(r))) {
+      assert.equal(await page.locator(`[data-challenge="${c.slug}"]`).count(), 0, `${c.slug} (untracked) is hidden`);
+    }
+    assert.ok(rows.some((r) => !tracked(r)), "the DB has an untracked challenge to hide (Noodle Explorer)");
+    for (const c of rows.filter((r) => r.slug !== "meal-for-stranger" && tracked(r))) {
       const want = ((c.i18n as Record<string, { name?: string }> | null)?.[locale]?.name) || c.name;
       assert.match(await page.locator(`[data-challenge="${c.slug}"]`).innerText(), new RegExp(want.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     }
@@ -360,6 +368,106 @@ test("giving a meal: a verified PaymentIntent funds the gift", async () => {
   // Recording the same PaymentIntent again is refused (one gift per payment).
   const count = await prisma.mealGift.count({ where: { stripePaymentIntentId: gift.stripePaymentIntentId } });
   assert.equal(count, 1);
+  await ctx.close();
+});
+
+// ------------------------------------------------------------ fix round 1: paid but not recorded
+
+async function stripeApi(p: string, form?: Record<string, string>) {
+  const res = await fetch(`https://api.stripe.com/v1${p}`, {
+    method: form ? "POST" : "GET",
+    headers: { Authorization: `Bearer ${STRIPE_KEY}`, ...(form ? { "Content-Type": "application/x-www-form-urlencoded" } : {}) },
+    body: form ? new URLSearchParams(form).toString() : undefined,
+  });
+  const body = await res.json();
+  assert.ok(res.ok, `Stripe ${p}: ${JSON.stringify(body).slice(0, 300)}`);
+  return body;
+}
+
+/** Up to the pay step, then hand back the gift the page saved (PaymentIntent id and client secret). */
+async function toPayStep(page: Page, note: string) {
+  await signIn(page, "/en/challenges/meal-for-stranger", "[data-give-form]");
+  await hydrated(page, `[data-give-location="${CITY_CREEK}"]`);
+  await page.locator(`[data-give-location="${CITY_CREEK}"]`).click();
+  await page.locator('[data-give-amount="1999"]').click();
+  await page.locator("[data-give-message]").fill(note);
+  await page.locator("[data-give-continue]").click();
+  await page.locator("[data-give-pay-step]").waitFor({ timeout: 60_000 });
+  const saved = await page.evaluate(() => JSON.parse(sessionStorage.getItem("ohMealGiftPending") || "null"));
+  assert.ok(saved?.paymentIntentId?.startsWith("pi_"), "the gift is saved under its PaymentIntent");
+  assert.ok(String(saved.clientSecret).startsWith(`${saved.paymentIntentId}_secret_`), "with its client secret");
+  return saved as { paymentIntentId: string; clientSecret: string };
+}
+
+/** Pay the PaymentIntent on Stripe's side, as if the page's confirm went through and the tab then died. */
+async function payServerSide(pi: string) {
+  const paid = await stripeApi(`/payment_intents/${pi}/confirm`, { payment_method: "pm_card_visa", return_url: `${BASE}/en/challenges/meal-for-stranger` });
+  assert.equal(paid.status, "succeeded");
+  return paid;
+}
+
+const WEBHOOK_SECRET = process.env.E2E_STRIPE_WEBHOOK_SECRET || "";
+
+async function deliverWebhook(paymentIntent: unknown) {
+  const { createHmac } = await import("node:crypto");
+  const payload = JSON.stringify({ id: `evt_${Date.now()}`, object: "event", type: "payment_intent.succeeded", data: { object: paymentIntent } });
+  const t = Math.floor(Date.now() / 1000);
+  const sig = createHmac("sha256", WEBHOOK_SECRET).update(`${t}.${payload}`).digest("hex");
+  return fetch(`${BASE}/api/webhooks/stripe`, { method: "POST", headers: { "Content-Type": "application/json", "stripe-signature": `t=${t},v1=${sig}` }, body: payload });
+}
+
+test(
+  "fix round 1: the tab closes after paying, and the Stripe webhook records exactly one gift",
+  { skip: !WEBHOOK_SECRET && "needs E2E_STRIPE_WEBHOOK_SECRET (the web server's STRIPE_WEBHOOK_SECRET) and ADMIN_API_KEY on web and API" },
+  async () => {
+    const ctx = await newContext();
+    const page = await ctx.newPage();
+    await hideDevBadge(page);
+    const saved = await toPayStep(page, "From the webhook.");
+    const md = (await stripeApi(`/payment_intents/${saved.paymentIntentId}`)).metadata;
+    assert.deepEqual({ ...md }, { type: "meal_gift", giverId: dbUserId, locationId: CITY_CREEK, messageFromGiver: "From the webhook." }, "the gift rides on the PaymentIntent");
+    await ctx.close(); // the tab is gone before anything is recorded
+    const pi = await payServerSide(saved.paymentIntentId);
+    assert.equal(await prisma.mealGift.count({ where: { stripePaymentIntentId: pi.id } }), 0);
+
+    const first = await deliverWebhook(pi);
+    assert.equal(first.status, 200, `webhook answered ${first.status}: ${await first.text()}`);
+    const again = await deliverWebhook(pi); // Stripe redelivers
+    assert.equal(again.status, 200);
+    const gifts = await prisma.mealGift.findMany({ where: { stripePaymentIntentId: pi.id } });
+    assert.equal(gifts.length, 1, "exactly one gift");
+    assert.equal(gifts[0].giverId, dbUserId);
+    assert.equal(gifts[0].amountCents, 1999);
+    assert.equal(gifts[0].messageFromGiver, "From the webhook.");
+    assert.ok(gifts[0].paidAt);
+  },
+);
+
+test("fix round 1: a reload after paying resumes and records the gift once", async () => {
+  const ctx = await newContext();
+  const page = await ctx.newPage();
+  await hideDevBadge(page);
+  const saved = await toPayStep(page, "From the reload.");
+  await payServerSide(saved.paymentIntentId);
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.locator("[data-give-done]").waitFor({ timeout: 90_000 });
+  const gifts = await prisma.mealGift.findMany({ where: { stripePaymentIntentId: saved.paymentIntentId } });
+  assert.equal(gifts.length, 1);
+  assert.equal(gifts[0].messageFromGiver, "From the reload.");
+  assert.equal(await page.evaluate(() => sessionStorage.getItem("ohMealGiftPending")), null, "the saved gift is cleared");
+  await ctx.close();
+});
+
+test("fix round 1: a reload before paying shows the same payment form (no second PaymentIntent)", async () => {
+  const ctx = await newContext();
+  const page = await ctx.newPage();
+  await hideDevBadge(page);
+  const saved = await toPayStep(page, "Not paid yet.");
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.locator("[data-give-pay-step]").waitFor({ timeout: 90_000 });
+  const after = await page.evaluate(() => JSON.parse(sessionStorage.getItem("ohMealGiftPending") || "null"));
+  assert.equal(after?.paymentIntentId, saved.paymentIntentId);
+  assert.match(await page.locator("[data-give-summary]").innerText(), /\$19\.99/);
   await ctx.close();
 });
 

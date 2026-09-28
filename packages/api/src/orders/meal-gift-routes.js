@@ -9,6 +9,58 @@
  * `recipientId` naming someone else is a 403. Nothing moves money here.
  */
 import { publicMealGift } from "./meal-gift-view.js";
+import { createMealGift } from "./tenders.js";
+import { OrderError } from "./service.js";
+
+/**
+ * POST /meal-gifts/confirm-payment (Task D9 fix round 1): the Stripe webhook
+ * (server to server, x-admin-api-key) makes sure a succeeded meal_gift
+ * PaymentIntent ends with its gift, even when the giver's page closed before
+ * POST /meal-gifts. The gift comes from the PaymentIntent's server-built
+ * metadata (giver, location, note; POST /create-payment-intent) and its
+ * amount, through the same createMealGift verification as the giver's own
+ * call (succeeded, exact amount, metadata binding, one gift per
+ * PaymentIntent). Idempotent: a second call, or the giver's page arriving
+ * later (409 PAYMENT_ALREADY_USED there), finds the same one gift.
+ */
+export function registerMealGiftConfirm(app, { prisma, stripe, customerAuth, now = () => new Date() }) {
+  app.post("/meal-gifts/confirm-payment", async (req, reply) => {
+    if (!customerAuth.isServiceCall(req)) return reply.code(401).send({ error: "UNAUTHORIZED" });
+    const paymentIntentId = req.body?.paymentIntentId;
+    if (typeof paymentIntentId !== "string" || !paymentIntentId) return reply.code(400).send({ error: "PAYMENT_INTENT_REQUIRED" });
+
+    const existing = await prisma.mealGift.findFirst({ where: { stripePaymentIntentId: paymentIntentId } });
+    if (existing) return { success: true, mealGiftId: existing.id, created: false };
+    if (!stripe) return reply.code(503).send({ error: "PAYMENTS_UNAVAILABLE" });
+
+    const pi = await stripe.paymentIntents.retrieve(paymentIntentId).catch(() => null);
+    const md = pi?.metadata || {};
+    if (!pi || md.type !== "meal_gift" || !md.giverId || !md.locationId) return reply.code(402).send({ error: "PAYMENT_NOT_VERIFIED" });
+    const location = await prisma.location.findUnique({ where: { id: md.locationId } });
+    if (!location) return reply.code(404).send({ error: "LOCATION_NOT_FOUND" });
+
+    const at = now();
+    try {
+      const gift = await createMealGift(prisma, stripe, {
+        giverId: md.giverId,
+        locationId: md.locationId,
+        amountCents: pi.amount,
+        messageFromGiver: md.messageFromGiver || null,
+        paymentIntentId,
+        expiresAt: mealGiftExpiresAt(at, location.timezone),
+        now: at,
+      });
+      return { success: true, mealGiftId: gift.id, created: true };
+    } catch (err) {
+      if (err instanceof OrderError && err.code === "PAYMENT_ALREADY_USED") {
+        const raced = await prisma.mealGift.findFirst({ where: { stripePaymentIntentId: paymentIntentId } });
+        if (raced) return { success: true, mealGiftId: raced.id, created: false };
+      }
+      if (err instanceof OrderError) return reply.code(err.status).send({ error: err.code, message: err.message, ...err.extra });
+      throw err;
+    }
+  });
+}
 
 export const MAX_PAY_FORWARD_MESSAGE = 280;
 

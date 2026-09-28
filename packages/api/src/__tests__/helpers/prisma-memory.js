@@ -51,6 +51,7 @@ const UNIQUE_INDEXES = {
   giftCard: [["code"], ["stripePaymentId"]],
   mealGift: [["stripePaymentIntentId"], ["orderId"]],
   userChallenge: [["userId", "challengeId"]],
+  challenge: [["slug"]],
 };
 
 function toTime(v) {

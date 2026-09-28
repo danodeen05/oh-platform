@@ -132,6 +132,21 @@ describe("lib/site/orders", () => {
     expect(String(calls[0].init.body) + String(calls[1].init.body)).not.toMatch(/paymentStatus|amountCents/);
   });
 
+  test("confirmFromWebhook (D9 fix round 1): meal gifts go to the meal gift confirm with the service key; no key or a key mismatch retries", async () => {
+    const { calls, fetcher } = fakeFetch(200, { success: true, mealGiftId: "mg1", created: true });
+    const md = { type: "meal_gift", giverId: "u2", locationId: "L1" };
+    expect(await confirmFromWebhook({ id: "pi_m", metadata: md }, { fetcher, baseUrl: "http://api", serviceKey: "k" })).toMatchObject({ handled: "meal_gift", ok: true, retry: false });
+    expect(calls[0].url).toBe("http://api/meal-gifts/confirm-payment");
+    expect(bodyOf(calls[0])).toEqual({ paymentIntentId: "pi_m" });
+    expect(new Headers(calls[0].init.headers).get("x-admin-api-key")).toBe("k");
+    expect(await confirmFromWebhook({ id: "pi_m", metadata: md }, { fetcher, baseUrl: "http://api", serviceKey: null })).toMatchObject({ handled: "meal_gift", retry: true, code: "ADMIN_API_KEY_MISSING" });
+    expect(calls).toHaveLength(1);
+    const mismatch = await confirmFromWebhook({ id: "pi_m", metadata: md }, { fetcher: fakeFetch(401, { error: "UNAUTHORIZED" }).fetcher, serviceKey: "wrong" });
+    expect(mismatch).toMatchObject({ retry: true });
+    const refused = await confirmFromWebhook({ id: "pi_m", metadata: md }, { fetcher: fakeFetch(402, { error: "PAYMENT_NOT_VERIFIED" }).fetcher, serviceKey: "k" });
+    expect(refused).toMatchObject({ ok: false, retry: false });
+  });
+
   test("confirmFromWebhook asks Stripe to retry on a network error or an API 5xx, not on a refusal", async () => {
     const down = await confirmFromWebhook({ id: "pi", metadata: { orderId: "o1" } }, { fetcher: async () => { throw new Error("ECONNREFUSED"); } });
     expect(down.retry).toBe(true);

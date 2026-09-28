@@ -57,6 +57,17 @@ export function validGiftCardAmount(value) {
 
 const text = (v, max) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null);
 
+/** The note a giver may leave (the page allows 200; Stripe metadata values allow 500). */
+export const MEAL_GIFT_MESSAGE_MAX = 200;
+
+/** Server-built meal gift metadata (Task D9 fix round 1): giver, location and the note. */
+export function mealGiftMetadata({ giverId, locationId, messageFromGiver }) {
+  const md = { type: "meal_gift", giverId, locationId };
+  const note = text(messageFromGiver, MEAL_GIFT_MESSAGE_MAX);
+  if (note) md.messageFromGiver = note;
+  return md;
+}
+
 /** Server-built gift card metadata (Stripe: values up to 500 characters). */
 export function giftCardMetadata({ amountCents, purchaserId, designId, recipientName, recipientEmail, personalMessage }) {
   const md = { type: "gift_card", amountCents: String(amountCents) };
@@ -126,7 +137,10 @@ export function registerPurchaseIntentRoute(app, { prisma, stripe, customerAuth,
         const pi = await stripe.paymentIntents.create({
           amount: amountCents,
           currency: "usd",
-          metadata: { type: "meal_gift", giverId: who.userId, locationId },
+          // Task D9 fix round 1: the whole gift rides on the PaymentIntent, so the
+          // Stripe webhook can record it (POST /meal-gifts/confirm-payment) when
+          // the giver's page never comes back.
+          metadata: mealGiftMetadata({ giverId: who.userId, locationId, messageFromGiver: body.messageFromGiver }),
           automatic_payment_methods: { enabled: true },
         });
         return reply.send({ clientSecret: pi.client_secret, id: pi.id, paymentIntentId: pi.id, amountCents });
