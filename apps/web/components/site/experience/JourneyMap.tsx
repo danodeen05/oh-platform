@@ -177,7 +177,7 @@ export function JourneyMap({ comb, title, note, stepperLabel, steps, progress }:
         <p className="m-0 font-body text-xs font-medium uppercase tracking-[0.2em] text-oh-gold">{title}</p>
       </div>
       {Comb ? (
-        <Comb layoutKey={EXPERIENCE_LAYOUT} mode="journey" labels={comb} journeyProgress={value} legend={false} className="xp-map-in lg:mt-4" />
+        <Comb layoutKey={EXPERIENCE_LAYOUT} mode="journey" labels={comb} journeyProgress={value} bowlFrom={progress.order} legend={false} className="xp-map-in lg:mt-4" />
       ) : (
         // Same box as the map (portrait under 768px, like CombMap's own switch), so nothing shifts when it arrives.
         <div aria-hidden="true" className="aspect-[53/73] w-full rounded-2xl bg-oh-ink md:aspect-[73/53] lg:mt-4" />

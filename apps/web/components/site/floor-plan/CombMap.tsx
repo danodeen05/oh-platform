@@ -75,6 +75,12 @@ export interface CombMapProps {
   partySize?: 1 | 2;
   /** 0..1 (journey mode). */
   journeyProgress?: number;
+  /**
+   * Journey mode: the progress from which the bowl marker shows (G2b, D2
+   * review). Before it the guest hasn't ordered, so there is no bowl yet;
+   * the experience page passes its "order" step's progress. Default 0.
+   */
+  bowlFrom?: number;
   /** auto: portrait under 768px wide. Server render assumes portrait (mobile first). */
   orientation?: "auto" | Orientation;
   tone?: Tone;
@@ -326,6 +332,7 @@ export function CombMap({
   onSelect,
   partySize = 1,
   journeyProgress = 0,
+  bowlFrom = 0,
   orientation = "auto",
   tone = "night",
   legend,
@@ -506,7 +513,8 @@ export function CombMap({
       : null;
 
   const progress = Math.min(1, Math.max(0, journeyProgress));
-  const markers = mode === "journey" ? o.markers(progress) : null;
+  const raw = mode === "journey" ? o.markers(progress) : null;
+  const markers = raw && progress < bowlFrom ? { ...raw, bowl: null } : raw;
   const guestLeaving = mode === "journey" && progress >= 0.84;
 
   const hint = mode === "pick" ? (zoom.isZoomed || (podPx >= minTargetPx({ coarse }) && zoom.pxPerFt > 0) ? labels.hintTapPod : labels.hintTapRow) : mode === "live" ? labels.hintLive : null;

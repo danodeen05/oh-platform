@@ -20,6 +20,9 @@ import zhTW from "../../../../messages/zh-TW.json";
 import { CombMap, coarseFor, orientLayout, podTapAction, podScreenPx, type CombSeat, type CombMapLabels } from "../CombMap";
 import { rowZoomBox, rowPanBox, rowPanState, minTargetPx, zoomDuration, fitBox, ZOOM_MS, MIN_TOUCH_PX } from "../RowZoom";
 import { toCombSeats, layoutKeyOf } from "../useSeats";
+import { readFileSync } from "node:fs";
+import path from "node:path";
+import { stepProgress } from "@/lib/site/experience-progress";
 
 // React 19 act() environment flag for a hand-rolled root.
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -168,6 +171,25 @@ describe("CombMap markup", () => {
     expect(mid).not.toMatch(/data-pod="[^"]*"[^>]*role="button"/);
     expect(mid).toMatch(/<svg[^>]*role="img"/);
     expect(mid).toContain(`data-journey-target="${layout.journeyTarget.label}"`);
+  });
+});
+
+// Task G2b (D2 review): no bowl before the guest has ordered.
+describe("CombMap journey: the bowl appears at the order step", () => {
+  it("hides the bowl marker before bowlFrom and shows it from there", () => {
+    const layout = layoutOf("comb-75");
+    const steps = stepProgress(layout);
+    const at = (p: number) =>
+      renderToString(<CombMap layoutKey="comb-75" mode="journey" labels={labels} journeyProgress={p} bowlFrom={steps.order} orientation="landscape" />);
+    expect(at(steps.arrive)).not.toContain('data-marker="bowl"');
+    expect(at(steps.arrive)).toContain('data-marker="guest"');
+    expect(at(steps.order)).toContain('data-marker="bowl"');
+    expect(at(steps.settle)).toContain('data-marker="bowl"');
+  });
+
+  it("the experience page's map passes the order step as bowlFrom", () => {
+    const src = readFileSync(path.resolve(__dirname, "../../experience/JourneyMap.tsx"), "utf8");
+    expect(src).toMatch(/mode="journey"[^>]*bowlFrom=\{progress\.order\}/);
   });
 });
 

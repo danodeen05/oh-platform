@@ -9,6 +9,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 import { API_URL } from "@/lib/api";
+import { serverApiHeaders } from "@/lib/server/api-headers";
 import { Body, Display, Eyebrow, Title } from "@/components/site/Text";
 import { Icon } from "@/components/site/icons/Icon";
 import { Reveal } from "@/components/site/motion/Reveal";
@@ -26,7 +27,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 async function getMenu(locale: string): Promise<ApiMenuStep[] | null> {
   try {
-    const res = await fetch(`${API_URL}/menu/steps?locale=${encodeURIComponent(locale)}`, { cache: "no-store", headers: { "x-tenant-slug": "oh" } });
+    const res = await fetch(`${API_URL}/menu/steps?locale=${encodeURIComponent(locale)}`, { cache: "no-store", headers: serverApiHeaders({ "x-tenant-slug": "oh" }) });
     if (!res.ok) return null;
     const body = await res.json();
     return Array.isArray(body?.steps) ? body.steps : null;

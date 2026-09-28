@@ -10,6 +10,7 @@
  * if the API is down, each card still renders with its link and no live
  * numbers.
  */
+import { serverApiHeaders } from "@/lib/server/api-headers";
 
 const API = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -78,7 +79,7 @@ export function toHomeLocations(rows: unknown): HomeLocation[] {
 
 export async function getHomeLocations(): Promise<HomeLocation[]> {
   try {
-    const res = await fetch(`${API}/locations`, { headers: { "x-tenant-slug": "oh" }, next: { revalidate: 300 } });
+    const res = await fetch(`${API}/locations`, { headers: serverApiHeaders({ "x-tenant-slug": "oh" }), next: { revalidate: 300 } });
     return toHomeLocations(res.ok ? await res.json() : []);
   } catch {
     return toHomeLocations([]);

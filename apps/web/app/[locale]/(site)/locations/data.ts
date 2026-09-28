@@ -6,13 +6,14 @@
  * location".
  */
 import { API_URL } from "@/lib/api";
+import { serverApiHeaders } from "@/lib/server/api-headers";
 import { siteLocations, type ApiLocation, type SiteLocation } from "@/lib/site/locations";
 
 export async function getSiteLocations(locale: string): Promise<{ locations: SiteLocation[]; failed: boolean }> {
   try {
     const res = await fetch(`${API_URL}/locations?locale=${encodeURIComponent(locale)}`, {
       cache: "no-store",
-      headers: { "x-tenant-slug": "oh" },
+      headers: serverApiHeaders({ "x-tenant-slug": "oh" }),
     });
     if (!res.ok) return { locations: [], failed: true };
     const rows: ApiLocation[] = await res.json();
