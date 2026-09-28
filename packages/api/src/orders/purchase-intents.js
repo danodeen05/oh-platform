@@ -61,8 +61,10 @@ const text = (v, max) => (typeof v === "string" && v.trim() ? v.trim().slice(0, 
 export const MEAL_GIFT_MESSAGE_MAX = 200;
 
 /** Server-built meal gift metadata (Task D9 fix round 1): giver, location and the note. */
-export function mealGiftMetadata({ giverId, locationId, messageFromGiver }) {
+export function mealGiftMetadata({ giverId, locationId, messageFromGiver, amountCents }) {
   const md = { type: "meal_gift", giverId, locationId };
+  // The amount the payment is for: a funding request for any other amount is not "ours".
+  if (Number.isInteger(amountCents)) md.amountCents = String(amountCents);
   const note = text(messageFromGiver, MEAL_GIFT_MESSAGE_MAX);
   if (note) md.messageFromGiver = note;
   return md;
@@ -140,7 +142,7 @@ export function registerPurchaseIntentRoute(app, { prisma, stripe, customerAuth,
           // Task D9 fix round 1: the whole gift rides on the PaymentIntent, so the
           // Stripe webhook can record it (POST /meal-gifts/confirm-payment) when
           // the giver's page never comes back.
-          metadata: mealGiftMetadata({ giverId: who.userId, locationId, messageFromGiver: body.messageFromGiver }),
+          metadata: mealGiftMetadata({ giverId: who.userId, locationId, messageFromGiver: body.messageFromGiver, amountCents }),
           automatic_payment_methods: { enabled: true },
         });
         return reply.send({ clientSecret: pi.client_secret, id: pi.id, paymentIntentId: pi.id, amountCents });
