@@ -5028,7 +5028,16 @@
     "empty": "目前沒有進行中的挑戰，請稍後再來看看。",
     "error": "無法載入挑戰。",
     "retry": "再試一次",
-    "creditNote": "獎勵為 Oh! 店內儲值金，不是現金。"
+    "creditNote": "獎勵為 Oh! 店內儲值金，不是現金。",
+    "join": "參加",
+    "joinNamed": "參加{name}",
+    "joining": "參加中",
+    "joinFailed": "無法參加，請再試一次。",
+    "signInToJoin": "登入以參加",
+    "joinedOnce": "已參加，從下一筆訂單開始計算。",
+    "progress": "{current} / {target}",
+    "done": "已完成，{amount} 儲值金已入帳。",
+    "doneNoReward": "已完成。"
   },
   "giveMeal": {
     "meta": {

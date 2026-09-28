@@ -15,7 +15,7 @@
  * amount) is refunded in full with a support case.
  */
 import { OrderError, verifiedIntent, refundUnappliedPayment } from "./service.js";
-import { grantCredit } from "../membership/credits.js";
+import { grantCredit, grantCreditInTx } from "../membership/credits.js";
 
 export const MEAL_GIFT_GIVER_REWARD_CENTS = 500;
 export const MEAL_GIFT_CHALLENGE_SLUG = "meal-for-stranger";
@@ -197,25 +197,26 @@ export async function finishMealGiftAcceptance(prisma, { mealGift, recipientUser
   } catch (err) {
     if (!isUniqueViolation(err)) throw err; // the row already exists: fine
   }
-  const claim = await prisma.userChallenge.updateMany({
-    where: { userId: mealGift.giverId, challengeId: challenge.id, rewardClaimed: false },
-    data: { rewardClaimed: true, completedAt: now },
-  });
-  let rewardGiver = claim.count === 1;
-  if (rewardGiver) {
-    const prior = await prisma.creditLot.findFirst({ where: { userId: mealGift.giverId, source: "CHALLENGE", note: GIVER_REWARD_NOTE } });
-    if (prior) rewardGiver = false;
-  }
-  if (rewardGiver) {
-    await grantCredit(prisma, {
+  // Fix round 2: the claim and the CHALLENGE credit lot in one transaction
+  // (grantCreditInTx), so the challenge is never marked complete unpaid.
+  const rewardGiver = await prisma.$transaction(async (tx) => {
+    const claim = await tx.userChallenge.updateMany({
+      where: { userId: mealGift.giverId, challengeId: challenge.id, rewardClaimed: false },
+      data: { rewardClaimed: true, completedAt: now },
+    });
+    if (claim.count !== 1) return false;
+    const prior = await tx.creditLot.findFirst({ where: { userId: mealGift.giverId, source: "CHALLENGE", note: GIVER_REWARD_NOTE } });
+    if (prior) return false;
+    await grantCreditInTx(tx, {
       userId: mealGift.giverId,
       source: "CHALLENGE",
       amountCents: MEAL_GIFT_GIVER_REWARD_CENTS,
       note: GIVER_REWARD_NOTE,
       now,
     });
-    refresh(mealGift.giverId);
-  }
+    return true;
+  });
+  if (rewardGiver) refresh(mealGift.giverId);
   return { excessCents: recipientUserId ? excessAmount : 0, giverRewarded: rewardGiver };
 }
 

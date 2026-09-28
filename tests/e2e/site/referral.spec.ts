@@ -102,6 +102,7 @@ after(async () => {
     await tryDel("mealGift", () => prisma.mealGift.deleteMany({ where: { giverId: dbUserId } }));
     await tryDel("creditEvent", () => prisma.creditEvent.deleteMany({ where: { userId: dbUserId } }));
     await tryDel("creditLot", () => prisma.creditLot.deleteMany({ where: { userId: dbUserId } }));
+    await tryDel("userChallenge", () => prisma.userChallenge.deleteMany({ where: { userId: dbUserId } }));
   }
   for (const id of friendIds) await tryDel("friend", () => prisma.user.delete({ where: { id } }));
   if (dbUserId) await tryDel("user", () => prisma.user.delete({ where: { id: dbUserId } }));
@@ -310,6 +311,9 @@ test("challenges: localized DB names, and Give a meal opens the giving page", as
       const want = ((c.i18n as Record<string, { name?: string }> | null)?.[locale]?.name) || c.name;
       assert.match(await page.locator(`[data-challenge="${c.slug}"]`).innerText(), new RegExp(want.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     }
+    // Signed out: every card offers sign-in to join (fix round 2).
+    await page.locator("[data-challenge-signin]").first().waitFor({ timeout: 60_000 });
+    assert.equal(await page.locator("[data-challenge-signin]").count(), await page.locator("[data-challenge]").count());
     if (locale === "zh-TW") assert.deepEqual(englishLeaks(await page.locator("#site-main").innerText()), [], "English on zh-TW challenges");
     await checkPage(page, `challenges ${locale}`);
     if (locale === "en") {
@@ -369,6 +373,40 @@ test("giving a meal: a verified PaymentIntent funds the gift", async () => {
   const count = await prisma.mealGift.count({ where: { stripePaymentIntentId: gift.stripePaymentIntentId } });
   assert.equal(count, 1);
   await ctx.close();
+});
+
+test("fix round 2: a member joins a challenge and the card shows progress", async () => {
+  const early = await prisma.challenge.findUnique({ where: { slug: "early-bird" } });
+  assert.ok(early, "the Early Bird challenge");
+  const counted = await prisma.challenge.create({
+    data: { slug: `${tag}-three`, name: "Three Bowls", description: "Order three bowls", rewardCents: 300, iconEmoji: "", iconKey: null, requirements: { type: "order_count", count: 3 }, isActive: true },
+  });
+  const ctx = await newContext();
+  try {
+    const page = await ctx.newPage();
+    await hideDevBadge(page);
+    await signIn(page, "/en/challenges", "[data-challenges-page]");
+    const joinEarly = page.locator(`[data-challenge-join="${early.id}"]`);
+    await joinEarly.waitFor({ timeout: 60_000 });
+    await hydrated(page, `[data-challenge-join="${early.id}"]`);
+    await joinEarly.click();
+    await page.locator('[data-challenge="early-bird"] [data-challenge-state="joined"]').waitFor({ timeout: 30_000 });
+    const enrolled = await prisma.userChallenge.findUnique({ where: { userId_challengeId: { userId: dbUserId, challengeId: early.id } } });
+    assert.ok(enrolled, "the enrollment exists");
+    assert.equal(enrolled.rewardClaimed, false);
+
+    await page.locator(`[data-challenge-join="${counted.id}"]`).click();
+    await page.locator(`[data-challenge="${counted.slug}"] [data-challenge-state="progress"]`).waitFor({ timeout: 30_000 });
+    assert.match(await page.locator(`[data-challenge="${counted.slug}"] [data-challenge-progress]`).innerText(), /0 of 3/);
+    await prisma.userChallenge.update({ where: { userId_challengeId: { userId: dbUserId, challengeId: counted.id } }, data: { progress: { current: 2 } } });
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await page.locator(`[data-challenge="${counted.slug}"] [data-challenge-progress]`).getByText("2 of 3").waitFor({ timeout: 60_000 });
+    await checkPage(page, "challenges joined");
+  } finally {
+    await ctx.close();
+    await prisma.userChallenge.deleteMany({ where: { challengeId: counted.id } });
+    await prisma.challenge.delete({ where: { id: counted.id } });
+  }
 });
 
 // ------------------------------------------------------------ fix round 1: paid but not recorded

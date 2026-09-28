@@ -2825,7 +2825,16 @@
     "empty": "No hay desafíos abiertos ahora. Vuelve pronto.",
     "error": "No pudimos cargar los desafíos.",
     "retry": "Intentar de nuevo",
-    "creditNote": "Las recompensas son crédito de la tienda Oh!, no efectivo."
+    "creditNote": "Las recompensas son crédito de la tienda Oh!, no efectivo.",
+    "join": "Unirme",
+    "joinNamed": "Unirme a {name}",
+    "joining": "Uniéndome",
+    "joinFailed": "No pudimos unirte. Intenta de nuevo.",
+    "signInToJoin": "Inicia sesión para unirte",
+    "joinedOnce": "Ya estás dentro. Cuenta desde tu próximo pedido.",
+    "progress": "{current} de {target}",
+    "done": "Listo. Se agregaron {amount} de crédito.",
+    "doneNoReward": "Listo."
   },
   "giveMeal": {
     "meta": {

@@ -5,6 +5,9 @@
  * GET /challenges?locale=). A server component.
  *
  * Rewards are Oh! store credit, never cash.
+ *
+ * Fix round 2: each card has Join (signed-in members; a sign-in button
+ * otherwise) and, once joined, the member's progress (ChallengeJoin, client).
  */
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -17,12 +20,14 @@ import { Seal } from "@/components/site/seal/Seal";
 import { SitePicture } from "@/components/site/picture/SitePicture";
 import { SITE_IMAGES } from "@/lib/site/images";
 import { formatMoney, getReferralProgram } from "@/lib/site/program";
+import { ChallengeEnrollments, ChallengeJoin } from "@/components/site/challenges/ChallengeJoin";
+import type { ChallengeRequirements } from "@/lib/site/challenges";
 
 export const dynamic = "force-dynamic";
 
 const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oh-cream";
 
-type ApiChallenge = { id: string; slug: string; name: string; description: string; rewardCents: number; iconKey?: string | null; endsAt?: string | null };
+type ApiChallenge = { id: string; slug: string; name: string; description: string; rewardCents: number; iconKey?: string | null; endsAt?: string | null; requirements?: ChallengeRequirements };
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("challengesPage.meta");
@@ -116,6 +121,7 @@ export default async function ChallengesPage() {
             {t("empty")}
           </p>
         ) : (
+          <ChallengeEnrollments>
           <ul className="m-0 mt-6 grid list-none gap-4 p-0 md:grid-cols-3 md:gap-5">
             {challenges.map((c) => (
               <li key={c.id} data-challenge={c.slug} className="flex gap-4 rounded-3xl bg-oh-ink p-5 md:flex-col">
@@ -128,10 +134,12 @@ export default async function ChallengesPage() {
                       {t("reward", { amount: formatMoney(c.rewardCents, locale) })}
                     </span>
                   ) : null}
+                  <ChallengeJoin challengeId={c.id} name={c.name} requirements={c.requirements} rewardCents={c.rewardCents} />
                 </span>
               </li>
             ))}
           </ul>
+          </ChallengeEnrollments>
         )}
         <p className="m-0 mt-5 text-sm text-oh-mute">{t("creditNote")}</p>
       </Reveal>

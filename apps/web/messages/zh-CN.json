@@ -2825,7 +2825,16 @@
     "empty": "目前没有进行中的挑战，请稍后再来看看。",
     "error": "无法加载挑战。",
     "retry": "再试一次",
-    "creditNote": "奖励为 Oh! 店内储值金，不是现金。"
+    "creditNote": "奖励为 Oh! 店内储值金，不是现金。",
+    "join": "参加",
+    "joinNamed": "参加{name}",
+    "joining": "参加中",
+    "joinFailed": "无法参加，请再试一次。",
+    "signInToJoin": "登录以参加",
+    "joinedOnce": "已参加，从下一笔订单开始计算。",
+    "progress": "{current} / {target}",
+    "done": "已完成，{amount} 储值金已到账。",
+    "doneNoReward": "已完成。"
   },
   "giveMeal": {
     "meta": {

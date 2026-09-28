@@ -5114,7 +5114,16 @@
     "empty": "No open challenges right now. Check back soon.",
     "error": "We couldn't load the challenges.",
     "retry": "Try again",
-    "creditNote": "Rewards are Oh! store credit, not cash."
+    "creditNote": "Rewards are Oh! store credit, not cash.",
+    "join": "Join",
+    "joinNamed": "Join {name}",
+    "joining": "Joining",
+    "joinFailed": "Couldn't join. Try again.",
+    "signInToJoin": "Sign in to join",
+    "joinedOnce": "You're in. It counts from your next order.",
+    "progress": "{current} of {target}",
+    "done": "Done. {amount} credit added.",
+    "doneNoReward": "Done."
   },
   "giveMeal": {
     "meta": {

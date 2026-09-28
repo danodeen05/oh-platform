@@ -87,6 +87,7 @@ import { registerTeamRoutes } from "./admin/team-routes.js";
 import { registerMembershipRoutes } from "./membership/routes.js";
 import { referralSummary } from "./membership/referral-summary.js";
 import { isTrackableChallenge, earlyOrderMet } from "./membership/challenge-rules.js";
+import { completeUserChallenge, claimChallengeReward } from "./membership/challenge-rewards.js";
 import { registerOrderRoutes } from "./orders/routes.js";
 import { registerGroupOrderRoutes } from "./orders/group-routes.js";
 import { registerGiftCardRoutes } from "./orders/gift-card-routes.js";
@@ -4473,48 +4474,10 @@ app.get("/users/:id/credits", async (req, reply) => {
   };
 });
 
-// Deduct credits from user (for meal gifts, etc.)
-app.post("/users/:id/deduct-credits", async (req, reply) => {
-  const { id } = req.params;
-  const { amountCents, description, mealGiftId } = req.body || {};
-
-  if (!amountCents || amountCents <= 0) {
-    return reply.code(400).send({ error: "Valid amountCents required" });
-  }
-
-  const user = await prisma.user.findUnique({ where: { id } });
-  if (!user) return reply.code(404).send({ error: "User not found" });
-
-  if (user.creditsCents < amountCents) {
-    return reply.code(400).send({ error: "Insufficient credits" });
-  }
-
-  // Deduct from user balance
-  await prisma.user.update({
-    where: { id },
-    data: { creditsCents: { decrement: amountCents } },
-  });
-
-  // Record the debit event
-  await prisma.creditEvent.create({
-    data: {
-      userId: id,
-      type: "CREDIT_APPLIED",
-      amountCents: -amountCents,
-      description: description || "Credits used",
-      metadata: mealGiftId ? { mealGiftId } : undefined,
-    },
-  });
-
-  // Refresh wallet pass to show updated credit balance
-  refreshUserWalletPass(id).catch(console.error);
-
-  return {
-    success: true,
-    deducted: amountCents,
-    newBalance: user.creditsCents - amountCents
-  };
-});
+// POST /users/:id/deduct-credits was removed in Task D9 fix round 2: it
+// decremented User.creditsCents directly (no lots, so the cache and the
+// ledger diverged), and meal gifts can't be paid with credit anyway (D10a).
+// Credit is spent only through the ledger (membership/credits.js).
 
 // POST /orders/:id/apply-credits moved to orders/routes.js (Task A6): a quote update, spent at PAID.
 
@@ -4809,14 +4772,21 @@ app.post("/users/:userId/challenges/:challengeId/enroll", async (req, reply) => 
   // Initialize progress based on requirements type
   const initialProgress = { current: 0 };
 
-  const userChallenge = await prisma.userChallenge.create({
-    data: {
-      userId,
-      challengeId,
-      progress: initialProgress,
-    },
-    include: { challenge: true },
-  });
+  let userChallenge;
+  try {
+    userChallenge = await prisma.userChallenge.create({
+      data: {
+        userId,
+        challengeId,
+        progress: initialProgress,
+      },
+      include: { challenge: true },
+    });
+  } catch (err) {
+    // Two taps at once: the unique (userId, challengeId) keeps one enrollment.
+    if (err?.code === "P2002") return reply.code(400).send({ error: "Already enrolled in this challenge" });
+    throw err;
+  }
 
   console.log(`🎯 User ${userId} enrolled in challenge: ${challenge.name}`);
   return { ...userChallenge, challenge: localizeChallenge(userChallenge.challenge, locale) };
@@ -4844,28 +4814,13 @@ app.post("/users/:userId/challenges/:challengeId/claim", async (req, reply) => {
     return reply.code(400).send({ error: "Reward already claimed" });
   }
 
-  // Award the reward
-  await prisma.$transaction([
-    // Update user credits
-    prisma.user.update({
-      where: { id: userId },
-      data: { creditsCents: { increment: userChallenge.challenge.rewardCents } },
-    }),
-    // Create credit event
-    prisma.creditEvent.create({
-      data: {
-        userId,
-        type: "CHALLENGE_REWARD",
-        amountCents: userChallenge.challenge.rewardCents,
-        description: `Challenge completed: ${userChallenge.challenge.name}`,
-      },
-    }),
-    // Mark reward as claimed
-    prisma.userChallenge.update({
-      where: { id: userChallenge.id },
-      data: { rewardClaimed: true },
-    }),
-  ]);
+  // Task D9 fix round 2: a CHALLENGE credit lot through the ledger (it
+  // expires like all credit), claimed once per enrollment in one transaction.
+  // Rewards are granted at completion now; this is for older completions.
+  const claim = await claimChallengeReward(prisma, { userChallenge });
+  if (!claim.claimed) {
+    return reply.code(400).send({ error: "Reward already claimed" });
+  }
 
   console.log(`🎉 User ${userId} claimed reward for challenge: ${userChallenge.challenge.name}`);
 
@@ -6377,24 +6332,23 @@ async function updateChallengeProgress(userId, orderData) {
         break;
     }
 
-    // Update progress
-    const updateData = {
-      progress: { ...progress, current: newCurrent },
-      updatedAt: new Date(),
-    };
+    const nextProgress = { ...progress, current: newCurrent };
 
     if (completed) {
-      updateData.completedAt = new Date();
+      // Task D9 fix round 2: completion and its reward (a CHALLENGE credit
+      // lot through the ledger) in one transaction, once per enrollment.
+      const done = await completeUserChallenge(prisma, { userChallenge, progress: nextProgress, now: new Date() });
+      if (done.completed) {
+        console.log(`🎯 Challenge completed: ${userChallenge.challenge.name} by user ${userId} (+${done.rewardCents}c credit)`);
+        if (done.rewardCents > 0) refreshUserWalletPass(userId).catch(console.error);
+      }
+      continue;
     }
 
     await prisma.userChallenge.update({
       where: { id: userChallenge.id },
-      data: updateData,
+      data: { progress: nextProgress, updatedAt: new Date() },
     });
-
-    if (completed) {
-      console.log(`🎯 Challenge completed: ${userChallenge.challenge.name} by user ${userId}`);
-    }
   }
 }
 
