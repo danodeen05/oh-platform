@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, use } from "react";
+import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -9,6 +9,7 @@ import { useUser, SignInButton } from "@clerk/nextjs";
 import { useSiteApi } from "@/lib/site/api";
 import { useGuest } from "@/contexts/guest-context";
 import { StripeProvider, PaymentForm, type SavedPaymentMethod } from "@/components/payments";
+import { createShopOrder, shopPaymentIntent, shopConfirmPayment, type ShopOrder } from "@/lib/site/orders";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
@@ -40,7 +41,7 @@ export default function InStoreItemPage({ params }: Props) {
   const locale = useLocale();
   const { user, isLoaded: clerkLoaded } = useUser();
   const api = useSiteApi();
-  const { guestId, isGuest, startGuestSession } = useGuest();
+  const { guest, isGuest, startGuestSession } = useGuest();
 
   // Product state
   const [product, setProduct] = useState<Product | null>(null);
@@ -59,6 +60,9 @@ export default function InStoreItemPage({ params }: Props) {
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [purchaseComplete, setPurchaseComplete] = useState(false);
+  // The server-priced order (Task D10a): created before payment, paid only
+  // after the API verifies the PaymentIntent.
+  const [shopOrder, setShopOrder] = useState<ShopOrder | null>(null);
   const [orderNumber, setOrderNumber] = useState<string | null>(null);
 
   // Fetch product by QR code
@@ -138,99 +142,59 @@ export default function InStoreItemPage({ params }: Props) {
     fetchUserData();
   }, [user?.primaryEmailAddress?.emailAddress, user?.fullName, user?.firstName]);
 
-  // Calculate totals
-  const subtotalCents = product ? product.priceCents * quantity : 0;
-  const taxCents = Math.round(subtotalCents * 0.0825);
+  // Estimate by the API's rule (packages/api/src/shop/service.js): pickup has
+  // no shipping, 8% tax on the subtotal after credits. Once the order exists,
+  // every number shown is the server's.
+  const subtotalCents = shopOrder ? shopOrder.subtotalCents : product ? product.priceCents * quantity : 0;
+  const estCredits = applyCredits && userCredits ? Math.min(userCredits.totalCredits, subtotalCents) : 0;
+  const creditsToApply = shopOrder ? shopOrder.creditsApplied : estCredits;
+  const taxCents = shopOrder ? shopOrder.taxCents : Math.round(Math.max(0, subtotalCents - creditsToApply) * 0.08);
   const totalCents = subtotalCents + taxCents;
-
-  // Credits applied (UNLIMITED for in-store)
-  const creditsToApply = applyCredits && userCredits
-    ? Math.min(userCredits.totalCredits, totalCents)
-    : 0;
-  const amountAfterCredits = totalCents - creditsToApply;
-
-  // Create PaymentIntent
-  const createPaymentIntent = useCallback(async () => {
-    if (amountAfterCredits <= 0 || !product) {
-      setClientSecret(null);
-      return;
-    }
-
-    try {
-      const res = await fetch(`${API_URL}/create-payment-intent`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amountCents: amountAfterCredits,
-          customerId: stripeCustomerId,
-          metadata: {
-            type: "shop_order_instore",
-            productId: product.id,
-            quantity: quantity.toString(),
-            creditsApplied: creditsToApply.toString(),
-          },
-        }),
-      });
-
-      if (!res.ok) throw new Error("Failed to create payment intent");
-
-      const data = await res.json();
-      setClientSecret(data.clientSecret);
-    } catch (err) {
-      console.error("Error creating payment intent:", err);
-      setError("Failed to initialize payment. Please try again.");
-    }
-  }, [amountAfterCredits, stripeCustomerId, product, quantity, creditsToApply]);
-
-  useEffect(() => {
-    if (product && (user || isGuest) && amountAfterCredits > 0) {
-      createPaymentIntent();
-    } else {
-      setClientSecret(null);
-    }
-  }, [product, user, isGuest, amountAfterCredits, createPaymentIntent]);
+  const amountAfterCredits = shopOrder ? shopOrder.totalCents : totalCents - creditsToApply;
 
   // Handle guest checkout
   const handleGuestCheckout = async () => {
     await startGuestSession();
   };
 
-  // Handle free purchase
-  const handleFreePurchase = async () => {
+  // Shop calls carry the Clerk session (api) or the guest session token.
+  const shopCall = {
+    fetcher: api,
+    baseUrl: API_URL,
+    headers: guest?.sessionToken ? { "x-guest-session": guest.sessionToken } : undefined,
+  };
+
+  const finishOrder = (number: string) => {
+    setOrderNumber(number);
+    setPurchaseComplete(true);
+  };
+
+  // Step 1 (Task D10a): the API creates and prices the order. A zero balance
+  // comes back PAID; otherwise the PaymentIntent is for the server's amount.
+  const handlePlaceOrder = async () => {
     if (!product) return;
 
     setProcessing(true);
     setError(null);
 
     try {
-      const res = await fetch(`${API_URL}/shop/orders`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: internalUserId,
-          guestId: isGuest ? guestId : undefined,
-          items: [{
-            productId: product.id,
-            quantity,
-            priceCents: product.priceCents,
-          }],
-          subtotalCents,
-          shippingCents: 0,
-          taxCents,
-          totalCents,
-          creditsApplied: creditsToApply,
-          fulfillmentType: "IN_STORE_PICKUP",
-        }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to create order");
+      let order = shopOrder;
+      if (!order) {
+        const res = await createShopOrder(
+          { items: [{ productId: product.id, quantity }], fulfillmentType: "IN_STORE_PICKUP", creditsToApply },
+          shopCall,
+        );
+        if (!res.ok) throw new Error(res.error.message || res.error.code || "Failed to create order");
+        order = res.data;
+        setShopOrder(order);
       }
-
-      const order = await res.json();
-      setOrderNumber(order.orderNumber);
-      setPurchaseComplete(true);
+      if (order.paymentStatus === "PAID") {
+        finishOrder(order.orderNumber);
+        return;
+      }
+      const pi = await shopPaymentIntent(order.id, shopCall);
+      if (!pi.ok || !pi.data.clientSecret) throw new Error(pi.error.message || "Failed to initialize payment. Please try again.");
+      setClientSecret(pi.data.clientSecret);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unexpected error occurred");
     } finally {
@@ -238,48 +202,18 @@ export default function InStoreItemPage({ params }: Props) {
     }
   };
 
-  // Handle Stripe payment success
+  // Step 2: the API verifies the PaymentIntent and marks the order PAID once.
   const handlePaymentSuccess = async (stripePaymentIntentId: string) => {
-    if (!product) return;
-
+    if (!shopOrder) return;
     setProcessing(true);
     setError(null);
-
-    try {
-      const res = await fetch(`${API_URL}/shop/orders`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: internalUserId,
-          guestId: isGuest ? guestId : undefined,
-          items: [{
-            productId: product.id,
-            quantity,
-            priceCents: product.priceCents,
-          }],
-          subtotalCents,
-          shippingCents: 0,
-          taxCents,
-          totalCents,
-          creditsApplied: creditsToApply,
-          stripePaymentId: stripePaymentIntentId,
-          fulfillmentType: "IN_STORE_PICKUP",
-        }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to create order");
-      }
-
-      const order = await res.json();
-      setOrderNumber(order.orderNumber);
-      setPurchaseComplete(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An unexpected error occurred");
-    } finally {
-      setProcessing(false);
+    const res = await shopConfirmPayment(shopOrder.id, stripePaymentIntentId, shopCall);
+    setProcessing(false);
+    if (!res.ok) {
+      setError(res.error.message || "We couldn't confirm your payment. Please contact us.");
+      return;
     }
+    finishOrder(shopOrder.orderNumber);
   };
 
   const handlePaymentError = (errorMessage: string) => {
@@ -628,6 +562,7 @@ export default function InStoreItemPage({ params }: Props) {
               <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                 <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  disabled={!!shopOrder}
                   style={{
                     width: "36px",
                     height: "36px",
@@ -646,7 +581,7 @@ export default function InStoreItemPage({ params }: Props) {
                 </span>
                 <button
                   onClick={() => setQuantity(quantity + 1)}
-                  disabled={product.stockCount !== null && quantity >= product.stockCount}
+                  disabled={!!shopOrder || (product.stockCount !== null && quantity >= product.stockCount)}
                   style={{
                     width: "36px",
                     height: "36px",
@@ -766,6 +701,7 @@ export default function InStoreItemPage({ params }: Props) {
                       type="checkbox"
                       checked={applyCredits}
                       onChange={(e) => setApplyCredits(e.target.checked)}
+                      disabled={!!shopOrder}
                       style={{ width: "18px", height: "18px", accentColor: "#7C7A67" }}
                     />
                     <div>
@@ -818,7 +754,7 @@ export default function InStoreItemPage({ params }: Props) {
             {/* Payment */}
             {amountAfterCredits <= 0 ? (
               <button
-                onClick={handleFreePurchase}
+                onClick={handlePlaceOrder}
                 disabled={processing}
                 style={{
                   width: "100%",
@@ -843,26 +779,29 @@ export default function InStoreItemPage({ params }: Props) {
                   showExpressCheckout={true}
                   showSaveCard={!!stripeCustomerId}
                   savedPaymentMethods={savedPaymentMethods}
-                  returnUrl={`${typeof window !== "undefined" ? window.location.origin : ""}/${locale}/store/item/${qrCode}?complete=true`}
+                  returnUrl={`${typeof window !== "undefined" ? window.location.origin : ""}/${locale}/store/confirmation/${shopOrder?.orderNumber ?? ""}?shopOrderId=${shopOrder?.id ?? ""}`}
                   submitButtonText={`Pay $${(amountAfterCredits / 100).toFixed(2)}`}
                   disabled={processing}
                 />
               </StripeProvider>
             ) : (
-              <div style={{ textAlign: "center", padding: "24px" }}>
-                <div
-                  style={{
-                    width: "32px",
-                    height: "32px",
-                    border: "3px solid #e5e7eb",
-                    borderTopColor: "#7C7A67",
-                    borderRadius: "50%",
-                    animation: "spin 1s linear infinite",
-                    margin: "0 auto",
-                  }}
-                />
-                <p style={{ color: "#666", marginTop: "12px", fontSize: "0.9rem" }}>Loading payment...</p>
-              </div>
+              <button
+                onClick={handlePlaceOrder}
+                disabled={processing}
+                style={{
+                  width: "100%",
+                  padding: "18px",
+                  background: processing ? "#d1d5db" : "#7C7A67",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "12px",
+                  fontSize: "1.1rem",
+                  fontWeight: "600",
+                  cursor: processing ? "not-allowed" : "pointer",
+                }}
+              >
+                {processing ? "Processing..." : "Continue to Payment"}
+              </button>
             )}
           </div>
         )}

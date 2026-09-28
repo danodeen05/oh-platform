@@ -115,7 +115,21 @@ describe("lib/site/orders", () => {
     const o = await confirmFromWebhook({ id: "pi_o", metadata: { orderId: "o1" } }, { fetcher, baseUrl: "http://api", serviceKey: "k" });
     expect(o).toMatchObject({ handled: "order", ok: true, retry: false });
     expect(calls[1].url).toBe("http://api/orders/o1/confirm-payment");
-    expect(await confirmFromWebhook({ id: "pi_x", metadata: { source: "gift_card", giftCardId: "gc" } }, { fetcher })).toMatchObject({ handled: null, retry: false });
+    expect(await confirmFromWebhook({ id: "pi_x", metadata: { source: "other" } }, { fetcher })).toMatchObject({ handled: null, retry: false });
+  });
+
+  test("confirmFromWebhook (D10a): shop PaymentIntents go to the shop confirm, gift cards to the gift card confirm, with the service key", async () => {
+    const { calls, fetcher } = fakeFetch(200, { alreadyPaid: false });
+    const s = await confirmFromWebhook({ id: "pi_s", metadata: { kind: "shop", shopOrderId: "so 1" } }, { fetcher, baseUrl: "http://api", serviceKey: "k" });
+    expect(s).toMatchObject({ handled: "shop", ok: true, retry: false });
+    expect(calls[0].url).toBe("http://api/shop/orders/so%201/confirm-payment");
+    expect(bodyOf(calls[0])).toEqual({ paymentIntentId: "pi_s" });
+    expect(new Headers(calls[0].init.headers).get("x-admin-api-key")).toBe("k");
+    const g = await confirmFromWebhook({ id: "pi_g", metadata: { type: "gift_card", amountCents: "2500" } }, { fetcher, baseUrl: "http://api", serviceKey: "k" });
+    expect(g).toMatchObject({ handled: "gift_card", ok: true });
+    expect(calls[1].url).toBe("http://api/gift-cards/confirm-payment");
+    expect(bodyOf(calls[1])).toEqual({ paymentIntentId: "pi_g" });
+    expect(String(calls[0].init.body) + String(calls[1].init.body)).not.toMatch(/paymentStatus|amountCents/);
   });
 
   test("confirmFromWebhook asks Stripe to retry on a network error or an API 5xx, not on a refusal", async () => {

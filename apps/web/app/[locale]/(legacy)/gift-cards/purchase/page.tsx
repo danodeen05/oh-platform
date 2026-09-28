@@ -9,7 +9,6 @@ import { useUser } from "@clerk/nextjs";
 import { useSiteApi } from "@/lib/site/api";
 import { useGuest } from "@/contexts/guest-context";
 import { StripeProvider, PaymentForm, type SavedPaymentMethod } from "@/components/payments";
-import { PromoCodeInput, type AppliedPromo } from "@/components/PromoCodeInput";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
@@ -41,12 +40,6 @@ const fallbackDesigns = [
 const fallbackAmounts = [25, 50, 75, 100];
 const fallbackCustomRange = { minAmountCents: 1000, maxAmountCents: 50000 };
 
-interface UserCredits {
-  referralCredits: number;
-  giftCreditsReceived: number;
-  totalCredits: number;
-}
-
 interface GiftCardPurchaseData {
   amountCents: number;
   designId: string;
@@ -64,7 +57,7 @@ export default function GiftCardPurchasePage() {
   const tCommon = useTranslations("common");
   const { user, isLoaded: clerkLoaded } = useUser();
   const api = useSiteApi();
-  const { guestId, isGuest } = useGuest();
+  const { isGuest } = useGuest();
 
   // Get initial values from URL params
   const initialAmount = searchParams.get("amount");
@@ -159,9 +152,6 @@ export default function GiftCardPurchasePage() {
   const [scheduledDate, setScheduledDate] = useState("");
 
   // Payment state
-  const [applyCredits, setApplyCredits] = useState(true);
-  const [userCredits, setUserCredits] = useState<UserCredits | null>(null);
-  const [appliedPromo, setAppliedPromo] = useState<AppliedPromo | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [savedPaymentMethods, setSavedPaymentMethods] = useState<SavedPaymentMethod[]>([]);
   const [stripeCustomerId, setStripeCustomerId] = useState<string | null>(null);
@@ -187,20 +177,10 @@ export default function GiftCardPurchasePage() {
   const minCustomAmount = customAmountRange.minAmountCents / 100;
   const maxCustomAmount = customAmountRange.maxAmountCents / 100;
 
-  // The API issues a card only for a verified payment of its full amount
-  // (Task A6), so promo codes and credits don't apply to gift card purchases
-  // until the server can price them (Task D10).
-  const DISCOUNTS_ENABLED = false;
-
-  // Promo discount applied
-  const promoDiscount = DISCOUNTS_ENABLED ? appliedPromo?.discountCents || 0 : 0;
-  const amountAfterPromo = Math.max(0, amountCents - promoDiscount);
-
-  // Credits applied (UNLIMITED for gift cards)
-  const creditsToApply = DISCOUNTS_ENABLED && applyCredits && userCredits
-    ? Math.min(userCredits.totalCredits, amountAfterPromo)
-    : 0;
-  const amountAfterCredits = amountAfterPromo - creditsToApply;
+  // No promo codes and no store credit on gift cards, ever (Task D10a ruling):
+  // store credit would become a transferable cash equivalent. The card is paid
+  // in full by card, and the API issues it only for a verified payment.
+  const amountAfterCredits = amountCents;
 
   // Internal user ID from our database
   const [internalUserId, setInternalUserId] = useState<string | null>(null);
@@ -228,11 +208,6 @@ export default function GiftCardPurchasePage() {
 
         const userData = await userRes.json();
         setInternalUserId(userData.id);
-        setUserCredits({
-          referralCredits: userData.creditsCents || 0,
-          giftCreditsReceived: 0,
-          totalCredits: userData.creditsCents || 0,
-        });
 
         // Fetch or create Stripe customer
         const customerRes = await api(`${API_URL}/users/${userData.id}/stripe-customer`, {
@@ -265,18 +240,18 @@ export default function GiftCardPurchasePage() {
     }
 
     try {
-      const res = await fetch(`${API_URL}/create-payment-intent`, {
+      // The API validates the face value ($10 to $500) and builds the
+      // PaymentIntent metadata itself (purchaser from the verified session).
+      const res = await api(`${API_URL}/create-payment-intent`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          amountCents: amountAfterCredits,
-          customerId: stripeCustomerId,
-          metadata: {
-            type: "gift_card",
-            amountCents: amountCents.toString(),
-            creditsApplied: creditsToApply.toString(),
-            recipientEmail,
-          },
+          kind: "gift_card",
+          amountCents,
+          designId: selectedDesign,
+          recipientEmail,
+          recipientName,
+          personalMessage,
         }),
       });
 
@@ -291,7 +266,7 @@ export default function GiftCardPurchasePage() {
       console.error("Error creating payment intent:", err);
       setError("Failed to initialize payment. Please try again.");
     }
-  }, [amountAfterCredits, amountCents, creditsToApply, stripeCustomerId, recipientEmail]);
+  }, [amountAfterCredits, amountCents, selectedDesign, recipientEmail, recipientName, personalMessage, api]);
 
   useEffect(() => {
     if (currentStep === "payment" && amountAfterCredits > 0) {
@@ -326,45 +301,6 @@ export default function GiftCardPurchasePage() {
     }
     setCurrentStep(step);
     setError(null);
-  };
-
-  // Handle free purchase (credits cover full amount)
-  const handleFreePurchase = async () => {
-    setProcessing(true);
-    setError(null);
-
-    try {
-      const res = await fetch(`${API_URL}/gift-cards`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amountCents,
-          designId: selectedDesign,
-          recipientEmail,
-          recipientName,
-          personalMessage,
-          purchaserId: internalUserId,
-          guestId: isGuest ? guestId : undefined,
-          creditsApplied: creditsToApply,
-          promoCodeId: appliedPromo?.id,
-          promoDiscountCents: promoDiscount,
-          // No stripePaymentId since it's free
-        }),
-      });
-
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || "Failed to purchase gift card");
-      }
-
-      const giftCard = await res.json();
-      setPurchasedGiftCard(giftCard);
-      setCurrentStep("confirmation");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An unexpected error occurred");
-    } finally {
-      setProcessing(false);
-    }
   };
 
   // Handle Stripe payment success
@@ -923,77 +859,12 @@ export default function GiftCardPurchasePage() {
                 </div>
               </div>
 
-              {/* Promo Code Section */}
-              {DISCOUNTS_ENABLED && (
-              <div style={{ marginBottom: "20px", paddingBottom: "20px", borderBottom: "1px solid #e5e7eb" }}>
-                <label style={{ display: "block", fontSize: "0.9rem", fontWeight: "500", color: "#555", marginBottom: "8px" }}>
-                  Promo Code
-                </label>
-                <PromoCodeInput
-                  scope="GIFT_CARD"
-                  subtotalCents={amountCents}
-                  userId={internalUserId || undefined}
-                  guestId={isGuest ? guestId || undefined : undefined}
-                  onApply={(promo) => setAppliedPromo(promo)}
-                  onRemove={() => setAppliedPromo(null)}
-                  appliedPromo={appliedPromo}
-                  placeholder="Enter promo code"
-                />
-              </div>
-              )}
-
-              {/* Credits Section - Only for signed-in users */}
-              {DISCOUNTS_ENABLED && user && userCredits && userCredits.totalCredits > 0 && (
-                <div style={{ marginBottom: "20px", paddingBottom: "20px", borderBottom: "1px solid #e5e7eb" }}>
-                  <label
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      cursor: "pointer",
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                      <input
-                        type="checkbox"
-                        checked={applyCredits}
-                        onChange={(e) => setApplyCredits(e.target.checked)}
-                        style={{ width: "18px", height: "18px", accentColor: "#7C7A67" }}
-                      />
-                      <div>
-                        <div style={{ fontWeight: "500", color: "#222" }}>Apply Credits</div>
-                        <div style={{ fontSize: "0.85rem", color: "#666" }}>
-                          Available: ${(userCredits.totalCredits / 100).toFixed(2)}
-                        </div>
-                      </div>
-                    </div>
-                    {applyCredits && (
-                      <div style={{ color: "#16a34a", fontWeight: "500" }}>
-                        -${(creditsToApply / 100).toFixed(2)}
-                      </div>
-                    )}
-                  </label>
-                </div>
-              )}
-
               {/* Totals Summary */}
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div style={{ fontSize: "0.95rem", color: "#666" }}>Subtotal</div>
                   <div style={{ fontWeight: "500", color: "#222" }}>${(amountCents / 100).toFixed(2)}</div>
                 </div>
-                {promoDiscount > 0 && (
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div style={{ fontSize: "0.95rem", color: "#16a34a" }}>Promo ({appliedPromo?.code})</div>
-                    <div style={{ fontWeight: "500", color: "#16a34a" }}>-${(promoDiscount / 100).toFixed(2)}</div>
-                  </div>
-                )}
-                {creditsToApply > 0 && (
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div style={{ fontSize: "0.95rem", color: "#16a34a" }}>Credits Applied</div>
-                    <div style={{ fontWeight: "500", color: "#16a34a" }}>-${(creditsToApply / 100).toFixed(2)}</div>
-                  </div>
-                )}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "8px", borderTop: "1px solid #e5e7eb" }}>
                   <div style={{ fontSize: "1.1rem", fontWeight: "600", color: "#222" }}>Total</div>
                   <div style={{ fontSize: "1.25rem", fontWeight: "700", color: "#7C7A67" }}>
@@ -1009,53 +880,7 @@ export default function GiftCardPurchasePage() {
                 Payment Method
               </h3>
 
-              {amountAfterCredits <= 0 ? (
-                // Free purchase - credits cover everything
-                <div>
-                  <div style={{ textAlign: "center", padding: "32px" }}>
-                    <div
-                      style={{
-                        width: "64px",
-                        height: "64px",
-                        borderRadius: "50%",
-                        background: "#dcfce7",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        margin: "0 auto 16px",
-                      }}
-                    >
-                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2">
-                        <path d="M5 12l5 5L20 7" />
-                      </svg>
-                    </div>
-                    <p style={{ color: "#222", fontWeight: "500", marginBottom: "8px" }}>
-                      Your credits cover the full amount!
-                    </p>
-                    <p style={{ color: "#666", fontSize: "0.9rem" }}>
-                      No additional payment needed.
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={handleFreePurchase}
-                    disabled={processing}
-                    style={{
-                      width: "100%",
-                      padding: "18px",
-                      background: processing ? "#d1d5db" : "#7C7A67",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "12px",
-                      fontSize: "1.1rem",
-                      fontWeight: "600",
-                      cursor: processing ? "not-allowed" : "pointer",
-                    }}
-                  >
-                    {processing ? "Processing..." : "Complete Purchase"}
-                  </button>
-                </div>
-              ) : clientSecret ? (
+              {clientSecret ? (
                 <StripeProvider clientSecret={clientSecret}>
                   <PaymentForm
                     amountCents={amountAfterCredits}

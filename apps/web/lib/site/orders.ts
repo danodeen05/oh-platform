@@ -185,6 +185,53 @@ export function groupConfirmPayment(groupCode: string, paymentIntentId?: string 
   return call<BatchConfirmation>(`/group-orders/${enc(groupCode)}/confirm-payment`, "POST", { paymentIntentId: paymentIntentId || undefined }, opts);
 }
 
+/** A merch shop order as the API returns it (server-priced; payment status is the server's). */
+export type ShopOrder = {
+  id: string;
+  orderNumber: string;
+  subtotalCents: number;
+  shippingCents: number;
+  taxCents: number;
+  totalCents: number;
+  creditsApplied: number;
+  giftCardApplied: number;
+  paymentStatus: string;
+  [key: string]: unknown;
+};
+
+export type ShopOrderRequest = {
+  items: { productId: string; quantity: number; variant?: string | null }[];
+  fulfillmentType: "SHIPPING" | "IN_STORE_PICKUP";
+  shipping?: Record<string, string | undefined> | null;
+  locationId?: string | null;
+  creditsToApply?: number;
+  giftCardId?: string | null;
+};
+
+/**
+ * POST /shop/orders (Task D10a): an unpaid shop order priced by the server.
+ * The owner is the verified member (Clerk fetch) or the guest session
+ * (x-guest-session in opts.headers). A zero amount due comes back PAID.
+ */
+export function createShopOrder(body: ShopOrderRequest, opts?: CallOptions) {
+  return call<ShopOrder>("/shop/orders", "POST", body, opts);
+}
+
+/** A PaymentIntent for exactly what the shop order owes; the client never sends an amount. */
+export function shopPaymentIntent(shopOrderId: string, opts?: CallOptions) {
+  return call<{ clientSecret: string | null; id: string | null; paymentIntentId: string | null; amountCents: number }>("/create-payment-intent", "POST", { kind: "shop_order", shopOrderId }, opts);
+}
+
+/** POST /shop/orders/:id/confirm-payment: the API verifies the PaymentIntent and marks the order PAID once. */
+export function shopConfirmPayment(shopOrderId: string, paymentIntentId: string, opts?: CallOptions) {
+  return call<{ alreadyPaid: boolean; id: string; orderNumber: string; paymentStatus: string; totalCents: number }>(`/shop/orders/${enc(shopOrderId)}/confirm-payment`, "POST", { paymentIntentId }, opts);
+}
+
+/** POST /gift-cards/confirm-payment (webhook only, service key): the card for a succeeded purchase PaymentIntent. */
+export function giftCardConfirmPayment(paymentIntentId: string, opts?: CallOptions) {
+  return call<{ success: boolean; giftCardId: string; created: boolean }>("/gift-cards/confirm-payment", "POST", { paymentIntentId }, opts);
+}
+
 /**
  * A confirm call that may succeed if repeated: a network failure or a 5xx
  * from the API. The Stripe webhook answers 5xx for these so Stripe retries.
@@ -199,22 +246,30 @@ export function isRetryableFailure(res: { ok: boolean; status: number; error?: O
 
 /**
  * What the Stripe webhook does with a succeeded PaymentIntent for a food
- * order or a host-paid group: ask the API to verify and settle it.
+ * order, a host-paid group, a shop order ({kind:"shop", shopOrderId}) or a
+ * gift card ({type:"gift_card"}): ask the API to verify and settle it.
  * `retry: true` means the webhook must answer 5xx so Stripe delivers again.
  * The group confirm needs no key: it is verified against Stripe; a service
- * key, when configured, is sent anyway.
+ * key, when configured, is sent anyway. The shop and gift card confirms
+ * need it (ADMIN_API_KEY).
  */
 export async function confirmFromWebhook(
   paymentIntent: { id: string; metadata?: Record<string, string> | null },
   opts: CallOptions & { serviceKey?: string | null } = {},
-): Promise<{ handled: "group" | "order" | null; ok: boolean; retry: boolean; status: number; code: string | null }> {
+): Promise<{ handled: "group" | "order" | "shop" | "gift_card" | null; ok: boolean; retry: boolean; status: number; code: string | null }> {
   const md = paymentIntent.metadata || {};
   const call = { ...opts, headers: opts.serviceKey ? { ...(opts.headers as Record<string, string>), "x-admin-api-key": opts.serviceKey } : opts.headers };
-  let handled: "group" | "order" | null = null;
+  let handled: "group" | "order" | "shop" | "gift_card" | null = null;
   let res: OrderApiResult<unknown> | null = null;
   if (md.kind === "group" && md.groupCode) {
     handled = "group";
     res = await groupConfirmPayment(md.groupCode, paymentIntent.id, call);
+  } else if (md.kind === "shop" && md.shopOrderId) {
+    handled = "shop";
+    res = await shopConfirmPayment(md.shopOrderId, paymentIntent.id, call);
+  } else if (md.type === "gift_card") {
+    handled = "gift_card";
+    res = await giftCardConfirmPayment(paymentIntent.id, call);
   } else if (md.orderId && md.source !== "shop" && md.source !== "gift_card") {
     handled = "order";
     res = await confirmPayment(md.orderId, paymentIntent.id, call);
