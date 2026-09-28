@@ -356,53 +356,72 @@ export async function pickBestPod(tx, { locationId, arrival = null, partySize = 
 const LIVE_ORDER_STATUSES = ["PENDING_PAYMENT", "PAID", "QUEUED", "PREPPING", "READY", "SERVING"];
 
 /**
- * Two orders of one party at one duo: one holds the duo, the other was seated
- * at its other half by POST /kiosk/orders/:id/seat {shareWithOrderId}, which
- * marks it podSelectionMethod "DUO_SHARED". An unrelated order that ended up
- * on that half is a conflict, not a share.
+ * The shape of a duo share: `guest` (marked DUO_SHARED by POST
+ * /kiosk/orders/:id/seat {shareWithOrderId}) sits at the other half of
+ * `host`'s duo, both kiosk orders at one location. Shape alone proves nothing.
  */
-function sharesDuo(a, b) {
-  return isPartyDuoShare(a, b) || isPartyDuoShare(b, a);
+function duoShareShape(host, guest) {
+  if (!host || !guest || host.id === guest.id) return false;
+  if (!host.isDualPod || !host.dualPartnerSeatId || guest.seatId !== host.dualPartnerSeatId) return false;
+  if (guest.podSelectionMethod !== "DUO_SHARED") return false;
+  return host.orderSource === "KIOSK" && guest.orderSource === "KIOSK" && host.locationId === guest.locationId;
+}
+
+/**
+ * Task D12 fix round 4: the pay-time proof that two orders are one kiosk
+ * party is the payment itself. A kiosk party pays through ONE batch
+ * (kioskPaymentIntent(orderIds) / markPaidBatch): `other` counts as this
+ * order's party when it is settled in this same batch (ctx.batchIds), or was
+ * already PAID by this same PaymentIntent.
+ */
+function paidInSameBatch(other, ctx) {
+  if (ctx.batchIds && ctx.batchIds.includes(other.id)) return true;
+  return Boolean(ctx.paymentIntentId && other.paymentStatus === "PAID" && other.stripePaymentId === ctx.paymentIntentId);
+}
+
+/**
+ * Does `other` pointing at one of `order`'s seats NOT count as a conflict?
+ * - `order` holds the duo and `other` merely sits on its partner half: not a
+ *   conflict for `order` (the host claimed that half itself); `other` is
+ *   checked when it pays.
+ * - `order` is the one sitting on `other`'s partner half: only with the batch proof.
+ */
+function sharesDuo(order, other, ctx) {
+  if (duoShareShape(order, other)) return true;
+  return duoShareShape(other, order) && paidInSameBatch(other, ctx);
 }
 
 export const DUO_SHARE_WINDOW_MS = 30 * 60 * 1000;
 
 /**
- * Task D12 fix round 3: a DUO_SHARED marker alone proves nothing. `guest`
- * sits legitimately at the other half of `host`'s duo only when they are one
- * kiosk party: both kiosk orders at one location, created within 30 minutes
- * of each other (the kiosk creates a party's orders back to back; orders
- * carry no party or device id), and the host is unpaid (PENDING_PAYMENT) or,
- * once both are paid, both were paid by the very same payment (one batch).
+ * Claim-time soft hold (Task D12 fix round 3), used by POST
+ * /kiosk/orders/:id/seat: the share has the duo shape, and the two orders
+ * were created within 30 minutes of each other. Orders carry no party or
+ * device id, so this is a heuristic; pay time re-checks with the batch proof.
  */
 export function isPartyDuoShare(host, guest) {
-  if (!host || !guest || host.id === guest.id) return false;
-  if (!host.isDualPod || !host.dualPartnerSeatId || guest.seatId !== host.dualPartnerSeatId) return false;
-  if (guest.podSelectionMethod !== "DUO_SHARED") return false;
-  if (host.orderSource !== "KIOSK" || guest.orderSource !== "KIOSK" || host.locationId !== guest.locationId) return false;
+  if (!duoShareShape(host, guest)) return false;
   const t = (d) => (d ? new Date(d).getTime() : NaN);
-  const gap = Math.abs(t(host.createdAt) - t(guest.createdAt));
-  if (!(gap <= DUO_SHARE_WINDOW_MS)) return false;
-  if (host.paymentStatus !== "PAID") return host.status === "PENDING_PAYMENT";
-  // Paid host, unpaid guest: the host's own check in a batch that settles the
-  // host first; the guest is re-checked when it pays.
-  if (guest.paymentStatus !== "PAID") return true;
-  // Both paid: only by one payment (the same kiosk batch settle).
-  if (host.stripePaymentId && host.stripePaymentId === guest.stripePaymentId) return true;
-  return !host.stripePaymentId && !guest.stripePaymentId && t(host.paidAt) === t(guest.paidAt);
+  return Math.abs(t(host.createdAt) - t(guest.createdAt)) <= DUO_SHARE_WINDOW_MS;
+}
+
+/** Pay context: the orders settled together and the PaymentIntent that pays them. */
+function payContext(order, ctx = {}) {
+  return { batchIds: ctx.batchIds || [order.id], paymentIntentId: ctx.paymentIntentId ?? order.stripePaymentId ?? null };
 }
 
 /**
  * Is `seatId` still this order's to keep at pay time? Yes when no other live
- * order points at it (a party sharing a duo doesn't count) and it is either
- * still RESERVED (this order's hold, even if its expiry passed before the
- * release job ran) or free and re-claimed now with the conditional claimSeat.
+ * order points at it (a proven party share doesn't count, see sharesDuo) and
+ * it is either still RESERVED (this order's hold, even if its expiry passed
+ * before the release job ran) or free and re-claimed now with claimSeat.
  */
-export async function holdSeatForOrder(tx, order, seatId) {
+export async function holdSeatForOrder(tx, order, seatId, ctx = {}) {
+  const pay = payContext(order, ctx);
   const others = await tx.order.findMany({
     where: { id: { not: order.id }, status: { in: LIVE_ORDER_STATUSES }, OR: [{ seatId }, { dualPartnerSeatId: seatId }] },
   });
-  if (others.some((o) => !sharesDuo(order, o))) return false;
+  if (others.some((o) => !sharesDuo(order, o, pay))) return false;
   const seat = await tx.seat.findUnique({ where: { id: seatId } });
   if (!seat || seat.retiredAt) return false;
   if (seat.status === "RESERVED") return true;
@@ -411,25 +430,38 @@ export async function holdSeatForOrder(tx, order, seatId) {
 }
 
 /**
- * The pod part of the PAID transition (Task D12 fix round 2). Keeps the
- * order's pod when it is still held for it, re-claims it when it was freed,
- * and otherwise assigns the next best pod with pickBestPod (same party size
- * and duo rule, same arrival). No free pod: the order stays PAID with no seat
- * and a POD_ISSUE support case tells staff. Never throws over a pod: payment
- * must not fail because of seating.
+ * The pod part of the PAID transition (Task D12 fix rounds 2 to 4). Keeps
+ * the order's pod when it is still held for it, re-claims it when it was
+ * freed, and otherwise assigns the next best pod with pickBestPod (same party
+ * size and duo rule, same arrival). No free pod: the order stays PAID with no
+ * seat and a POD_ISSUE support case tells staff. Never throws over a pod:
+ * payment must not fail because of seating.
  *
- * @returns {{ changed: boolean, noPod?: boolean, from: string|null, to?: string|null }}
+ * A duo host that moves takes its party guest (the DUO_SHARED order on its
+ * old partner half, settled in this same batch) to the new duo's other half.
+ * When the new pod is a single, the guest stays where it is and
+ * `partyLeftAt` says so.
+ *
+ * `ctx`: { batchIds, paymentIntentId } for a batch settle; defaults to this order alone.
+ * @returns {{ changed: boolean, noPod?: boolean, from: string|null, to?: string|null, partyMoved?: object[], partyLeftAt?: string|null }}
  */
-export async function holdPodAtPay(tx, order, now = new Date()) {
+export async function holdPodAtPay(tx, order, now = new Date(), ctx = {}) {
+  const pay = payContext(order, ctx);
   const seatIds = [order.seatId, ...(order.isDualPod && order.dualPartnerSeatId ? [order.dualPartnerSeatId] : [])];
   const previous = await tx.seat.findUnique({ where: { id: order.seatId } });
   const from = previous ? previous.label || previous.number || null : null;
 
   let ok = true;
   for (const id of seatIds) {
-    if (!(await holdSeatForOrder(tx, order, id))) { ok = false; break; }
+    if (!(await holdSeatForOrder(tx, order, id, pay))) { ok = false; break; }
   }
   if (ok) return { changed: false, from };
+
+  // This order's party guest on its old partner half, if any (proven by the batch).
+  const partyGuests = order.isDualPod && order.dualPartnerSeatId
+    ? (await tx.order.findMany({ where: { id: { not: order.id }, status: { in: LIVE_ORDER_STATUSES }, seatId: order.dualPartnerSeatId } }))
+        .filter((g) => duoShareShape(order, g) && paidInSameBatch(g, pay))
+    : [];
 
   // Lost at least one seat: let go of every seat of this order that no other
   // live order points at (checked for all of them, so losing the FIRST half of
@@ -456,7 +488,7 @@ export async function holdPodAtPay(tx, order, now = new Date()) {
         amountCents: null,
       },
     });
-    return { changed: true, noPod: true, from, to: null };
+    return { changed: true, noPod: true, from, to: null, ...(partyGuests.length ? { partyLeftAt: seatLabelOf(await tx.seat.findUnique({ where: { id: order.dualPartnerSeatId } })) } : {}) };
   }
   await tx.order.update({
     where: { id: order.id },
@@ -470,8 +502,24 @@ export async function holdPodAtPay(tx, order, now = new Date()) {
       podReleasedNumber: from,
     },
   });
-  return { changed: true, from, to: pod.seat.label || pod.seat.number || null };
+  const result = { changed: true, from, to: seatLabelOf(pod.seat) };
+  if (partyGuests.length) {
+    const oldHalf = await tx.seat.findUnique({ where: { id: order.dualPartnerSeatId } });
+    if (pod.partner) {
+      // Move the party guest to the new duo's other half (already claimed with the host's pick).
+      const guest = partyGuests[0];
+      await tx.order.update({ where: { id: guest.id }, data: { seatId: pod.partner.id, podAssignedAt: now, podReleasedAt: now, podReleasedNumber: seatLabelOf(oldHalf) } });
+      const stillUsed = await tx.order.count({ where: { status: { in: LIVE_ORDER_STATUSES }, OR: [{ seatId: order.dualPartnerSeatId }, { dualPartnerSeatId: order.dualPartnerSeatId }] } });
+      if (stillUsed === 0) await releaseClaim(tx, order.dualPartnerSeatId);
+      result.partyMoved = [{ orderId: guest.id, from: seatLabelOf(oldHalf), to: seatLabelOf(pod.partner) }];
+    } else {
+      result.partyLeftAt = seatLabelOf(oldHalf);
+    }
+  }
+  return result;
 }
+
+const seatLabelOf = (seat) => (seat ? seat.label || seat.number || null : null);
 
 /** Carries a preview's result out of the transaction that is being rolled back. */
 class PodPreview {
@@ -965,7 +1013,7 @@ function denverDay(date) {
  * The first write is the idempotency claim; if another confirmation already
  * won it this returns { alreadyPaid: true } having written nothing.
  */
-async function settleInTx(tx, orderId, { expectedAmountDueCents, paymentIntentId = null, card = {}, now }) {
+async function settleInTx(tx, orderId, { expectedAmountDueCents, paymentIntentId = null, card = {}, now, batchIds = null }) {
   // The claim is pinned to the amount due that was verified against Stripe:
   // a re-quote that landed after verification makes it miss.
   const claim = await tx.order.updateMany({
@@ -1039,7 +1087,7 @@ async function settleInTx(tx, orderId, { expectedAmountDueCents, paymentIntentId
   // staff note. An add-on is already at its pod and is left as it is.
   let podChange = null;
   if (order.seatId && !isAddOn) {
-    podChange = await holdPodAtPay(tx, order, now);
+    podChange = await holdPodAtPay(tx, order, now, { batchIds: batchIds || [orderId], paymentIntentId: paymentIntentId || order.stripePaymentId || null });
     if (!podChange.noPod) await tx.order.update({ where: { id: orderId }, data: { podReservationExpiry: new Date(now.getTime() + POD_HOLD_MS) } });
     if (!podChange.changed && !podChange.noPod) podChange = null;
   }
@@ -1211,7 +1259,7 @@ async function settleBatch(prisma, stripe, { ids, orders, pi, now, strict }, eff
       const out = [];
       for (const o of orders) {
         // Each claim is pinned to that order's verified amount due.
-        const r = await settleInTx(tx, o.id, { expectedAmountDueCents: o.amountDueCents, paymentIntentId: pi?.id || null, card, now });
+        const r = await settleInTx(tx, o.id, { expectedAmountDueCents: o.amountDueCents, paymentIntentId: pi?.id || null, card, now, batchIds: orders.map((x) => x.id) });
         if (strict && r.alreadyPaid) {
           const current = await tx.order.findUnique({ where: { id: o.id } });
           if (!pi || current?.stripePaymentId !== pi.id) {

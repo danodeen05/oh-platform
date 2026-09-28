@@ -151,4 +151,78 @@ describe("markPaid: the pod at pay time", () => {
     assert.equal((await seat(prisma, "s-c02")).status, "AVAILABLE", "no orphaned RESERVED half");
     assert.equal((await seat(prisma, "s-c01")).status, "RESERVED", "o2 keeps its pod");
   });
+
+  describe("fix round 4: the batch payment is the pay-time proof of a party share", () => {
+    const batch = (prisma, ids) => markPaidBatch(prisma, fakeStripe(), { orderIds: ids, locationId: "L1", now: NOW }, fakeEffects().effects);
+
+    test("a stranger's DUO_SHARED order paid separately from the host's batch doesn't keep the half and is reassigned", async () => {
+      const prisma = await withSeats([
+        order("host", { seatId: "s-c01", isDualPod: true, dualPartnerSeatId: "s-c02", podReservationExpiry: VALID }),
+        // Passed the claim-time soft hold (kiosk, same location, within 30 minutes) but is not the host's party.
+        order("stranger", { seatId: "s-c02", podSelectionMethod: "DUO_SHARED", podReservationExpiry: VALID }),
+      ], { "s-c01": "RESERVED", "s-c02": "RESERVED" });
+      // The host's party pays alone: the host keeps both halves it claimed.
+      const hostPay = await batch(prisma, ["host"]);
+      assert.equal(hostPay.podChanges, undefined);
+      assert.equal((await get(prisma, "host")).dualPartnerSeatId, "s-c02");
+      // The stranger pays in its own batch: no proof, so it goes through the normal re-claim path.
+      const strangerPay = await batch(prisma, ["stranger"]);
+      assert.equal(strangerPay.podChanges[0].from, "C-02");
+      assert.equal((await get(prisma, "stranger")).seatId, "s-a01");
+      assert.equal((await seat(prisma, "s-c02")).status, "RESERVED", "still the host's half");
+    });
+
+    test("the same stranger paid through markPaid (a web-style single payment) is reassigned too", async () => {
+      const prisma = await withSeats([
+        order("host", { seatId: "s-c01", isDualPod: true, dualPartnerSeatId: "s-c02", podReservationExpiry: VALID }),
+        order("stranger", { seatId: "s-c02", podSelectionMethod: "DUO_SHARED", podReservationExpiry: VALID }),
+      ], { "s-c01": "RESERVED", "s-c02": "RESERVED" });
+      assert.equal((await pay(prisma, "stranger")).podChange.to, "A-01");
+    });
+
+    test("a party paid in one batch keeps the share (either settle order)", async () => {
+      for (const ids of [["host", "guest"], ["guest", "host"]]) {
+        const prisma = await withSeats([
+          order("host", { seatId: "s-c01", isDualPod: true, dualPartnerSeatId: "s-c02", podReservationExpiry: VALID }),
+          order("guest", { seatId: "s-c02", podSelectionMethod: "DUO_SHARED", podReservationExpiry: VALID }),
+        ], { "s-c01": "RESERVED", "s-c02": "RESERVED" });
+        const r = await batch(prisma, ids);
+        assert.equal(r.podChanges, undefined, ids.join(","));
+        assert.equal((await get(prisma, "guest")).seatId, "s-c02");
+        assert.equal((await get(prisma, "host")).seatId, "s-c01");
+      }
+    });
+
+    test("a moved duo host takes its batch partner to the new duo's other half", async () => {
+      const prisma = await withSeats([
+        order("host", { seatId: "s-c01", isDualPod: true, dualPartnerSeatId: "s-c02", podReservationExpiry: LAPSED }),
+        order("guest", { seatId: "s-c02", podSelectionMethod: "DUO_SHARED", podReservationExpiry: LAPSED }),
+        order("taker", { seatId: "s-c01", paymentStatus: "PAID", status: "QUEUED" }),
+      ], { "s-c01": "RESERVED", "s-c02": "RESERVED" });
+      await prisma.seat.create({ data: { id: "s-d01", locationId: "L1", number: "41", label: "D-01", finger: 3, position: 1, status: "AVAILABLE", podType: "DUAL", dualPartnerId: "s-d02" } });
+      await prisma.seat.create({ data: { id: "s-d02", locationId: "L1", number: "42", label: "D-02", finger: 3, position: 2, status: "AVAILABLE", podType: "DUAL", dualPartnerId: "s-d01" } });
+      const r = await batch(prisma, ["host", "guest"]);
+      const host = await get(prisma, "host");
+      assert.equal(host.seatId, "s-d01");
+      assert.equal(host.dualPartnerSeatId, "s-d02");
+      assert.equal((await get(prisma, "guest")).seatId, "s-d02");
+      assert.equal((await seat(prisma, "s-c02")).status, "AVAILABLE", "the old half goes back");
+      const change = r.podChanges.find((c) => c.orderId === "host");
+      assert.deepEqual(change.partyMoved, [{ orderId: "guest", from: "C-02", to: "D-02" }]);
+      assert.equal(r.podChanges.find((c) => c.orderId === "guest"), undefined, "the guest was moved, not re-picked");
+    });
+
+    test("no other duo free: the host moves to a single and the payment response says where the guest was left", async () => {
+      const prisma = await withSeats([
+        order("host", { seatId: "s-c01", isDualPod: true, dualPartnerSeatId: "s-c02", podReservationExpiry: LAPSED }),
+        order("guest", { seatId: "s-c02", podSelectionMethod: "DUO_SHARED", podReservationExpiry: LAPSED }),
+        order("taker", { seatId: "s-c01", paymentStatus: "PAID", status: "QUEUED" }),
+      ], { "s-c01": "RESERVED", "s-c02": "RESERVED" });
+      const r = await batch(prisma, ["host", "guest"]);
+      const change = r.podChanges.find((c) => c.orderId === "host");
+      assert.equal(change.to, "A-01");
+      assert.equal(change.partyLeftAt, "C-02");
+      assert.equal((await get(prisma, "guest")).seatId, "s-c02");
+    });
+  });
 });
