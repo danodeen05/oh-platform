@@ -2,7 +2,7 @@
 
 import { useUser } from "@clerk/nextjs";
 import { useLocale } from "next-intl";
-import { ChappyChat } from "./ChappyChat";
+import { ChappyChat, type ChappyChatProps } from "./ChappyChat";
 import { useSiteApi } from "@/lib/site/api";
 import { useCallback, useEffect, useState } from "react";
 
@@ -10,7 +10,10 @@ import { useCallback, useEffect, useState } from "react";
 // longer accepts a raw guest or session id). Kept until Task E1 replaces this widget.
 const GUEST_TOKEN_KEY = "oh-chappy-guest-token";
 
-export function ChappyChatWrapper() {
+/** Passed through to ChappyChat; the site shell (Task C4) drives the widget with these. */
+export type ChappyChatControlProps = Pick<ChappyChatProps, "hideLauncher" | "open" | "onOpenChange" | "prefill">;
+
+export function ChappyChatWrapper(control: ChappyChatControlProps = {}) {
   const { user, isLoaded, isSignedIn } = useUser();
   const locale = useLocale();
   const api = useSiteApi();
@@ -121,6 +124,7 @@ export function ChappyChatWrapper() {
       onGuestTokenRejected={onGuestTokenRejected}
       locale={locale}
       apiUrl={apiUrl}
+      {...control}
     />
   );
 }

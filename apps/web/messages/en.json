@@ -4362,5 +4362,49 @@
     "bowlFlatlay": "An empty ceramic noodle bowl with chopsticks resting on top and a wooden spoon beside it on a linen surface.",
     "chopsticks": "Close-up of a pair of wooden chopsticks on a linen cloth, with a detail view of their tips.",
     "signPool": "The illuminated Oh! logo sculpture standing in a reflecting pool at the restaurant entrance at night, lit by paper lanterns along the path."
+  },
+  "site": {
+    "nav": {
+      "order": "Order",
+      "menu": "Menu",
+      "rewards": "Rewards",
+      "chappy": "Chappy",
+      "locations": "Locations",
+      "experience": "Experience",
+      "store": "Store",
+      "giftCards": "Gift cards",
+      "contact": "Contact",
+      "account": "My account"
+    },
+    "shell": {
+      "home": "Oh! Beef Noodle Soup home",
+      "mainNav": "Main",
+      "dock": "Quick actions",
+      "more": "More",
+      "close": "Close",
+      "language": "Language",
+      "account": "Account",
+      "signIn": "Sign in",
+      "skipToContent": "Skip to content",
+      "activeOrder": "Order {number}",
+      "activeOrderNoNumber": "Your order",
+      "viewOrder": "View order status",
+      "orderStatus": {
+        "placed": "Order placed",
+        "inQueue": "In the queue",
+        "checkedIn": "Checked in",
+        "preparing": "Cooking now",
+        "ready": "Almost ready",
+        "serving": "Enjoy your bowl",
+        "active": "In progress"
+      },
+      "footer": {
+        "tagline": "Beef noodle soup, made with care.",
+        "copyright": "Oh! Beef Noodle Soup, {year}. All rights reserved.",
+        "privacy": "Privacy",
+        "accessibility": "Accessibility",
+        "nav": "Footer links"
+      }
+    }
   }
 }

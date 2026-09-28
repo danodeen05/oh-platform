@@ -5,9 +5,6 @@ import { headers } from "next/headers";
 import { ClerkProvider } from "@clerk/nextjs";
 import { enUS, zhTW, zhCN, esES } from "@clerk/localizations";
 import { routing } from "@/i18n/routing";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
-import ActiveOrderBanner from "@/components/ActiveOrderBanner";
 import { Providers } from "@/components/Providers";
 import LanguageTracker from "@/components/LanguageTracker";
 import { LangSync } from "@/components/plan/shell/LangSync";
@@ -71,7 +68,7 @@ export default async function LocaleLayout({ children, params }: Props) {
     return (
       <ClerkProvider localization={clerkLocalization}>
         <NextIntlClientProvider messages={messages}>
-          <Providers chappy={false}>
+          <Providers>
             <LangSync locale={locale} />
             {children}
           </Providers>
@@ -92,35 +89,18 @@ export default async function LocaleLayout({ children, params }: Props) {
     );
   }
 
+  // Everything else. The chrome is no longer shared here (Task C4 layout
+  // split): the `(legacy)` group renders the old Header, ActiveOrderBanner,
+  // Footer and floating Chappy (components/legacy/LegacyChrome.tsx), and the
+  // `(site)` group renders SiteShell. Nothing here wraps {children} in
+  // `.legacy-ui`, so rebuilt routes never inherit legacy styling.
   return (
     <ClerkProvider localization={clerkLocalization}>
       <NextIntlClientProvider messages={messages}>
         <Providers>
-          {/*
-            legacy-ui (Task C1, fix round 1): Header, ActiveOrderBanner and
-            Footer are shared chrome, not a "route" that moves into
-            `(legacy)`, but they still use bare <Link>/<button> tags styled by
-            the retired global a/button rules (app/globals.css). `.legacy-ui`
-            is scoped tightly around just that chrome -- NOT around
-            `<main>{children}</main>` -- so a future `(site)` route rendered
-            through this same branch (before C4 gives it a separate SiteShell
-            branch) does not inherit legacy styling through the DOM tree.
-            Every page that still needs `.legacy-ui` for its own content gets
-            it from its own route -- the `(legacy)` group layout, or (for
-            routes that stay in place) kiosk/cny/agents's own layout.
-          */}
-          <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
-            <LangSync locale={locale} />
-            <LanguageTracker />
-            <div className="legacy-ui">
-              <Header />
-              <ActiveOrderBanner />
-            </div>
-            <main style={{ flex: 1 }}>{children}</main>
-            <div className="legacy-ui">
-              <Footer />
-            </div>
-          </div>
+          <LangSync locale={locale} />
+          <LanguageTracker />
+          {children}
         </Providers>
       </NextIntlClientProvider>
     </ClerkProvider>

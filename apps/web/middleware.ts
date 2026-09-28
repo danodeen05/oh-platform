@@ -136,8 +136,18 @@ const withClerk = clerkMiddleware(async (auth, request: NextRequest) => {
     }
   }
 
-  // An order status page embedded in the plan's phone frame renders without site chrome.
-  if (/^\/(en|zh-TW|zh-CN|es)\/order\/status$/.test(pathname) && request.nextUrl.searchParams.get("embed") === "1") {
+  // A page embedded in a frame (the plan's phone demo embeds the order status
+  // page) renders without site chrome: no header, footer, shell, dock or chat.
+  // Task C4 widened this from /order/status to any locale page, so a rebuilt
+  // `(site)` page can be embedded the same way.
+  // Kiosk, CNY and the plan have their own layouts and are left as they were.
+  if (
+    /^\/(en|zh-TW|zh-CN|es)(\/|$)/.test(pathname) &&
+    request.nextUrl.searchParams.get("embed") === "1" &&
+    !isKioskRoute(request) &&
+    !isCNYRoute(request) &&
+    !isPlanRoute(request)
+  ) {
     response.headers.set("x-embed", "1");
   }
 

@@ -4260,5 +4260,49 @@
     "bowlFlatlay": "一只空的陶瓷麵碗，筷子擱在碗上，旁邊放著一支木湯匙，置於亞麻布上。",
     "chopsticks": "亞麻布上一雙木筷的特寫，另附筷尖細節照。",
     "signPool": "夜晚餐廳入口水池中發光的 Oh! 標誌裝置，沿路的紙燈籠映照著光。"
+  },
+  "site": {
+    "nav": {
+      "order": "點餐",
+      "menu": "菜單",
+      "rewards": "會員禮遇",
+      "chappy": "Chappy",
+      "locations": "門市",
+      "experience": "用餐體驗",
+      "store": "商店",
+      "giftCards": "禮品卡",
+      "contact": "聯絡我們",
+      "account": "我的帳戶"
+    },
+    "shell": {
+      "home": "哦！牛肉麵首頁",
+      "mainNav": "主選單",
+      "dock": "快速選項",
+      "more": "更多",
+      "close": "關閉",
+      "language": "語言",
+      "account": "帳戶",
+      "signIn": "登入",
+      "skipToContent": "跳至主要內容",
+      "activeOrder": "訂單 {number}",
+      "activeOrderNoNumber": "您的訂單",
+      "viewOrder": "查看訂單狀態",
+      "orderStatus": {
+        "placed": "已下單",
+        "inQueue": "排隊中",
+        "checkedIn": "已報到",
+        "preparing": "烹煮中",
+        "ready": "即將完成",
+        "serving": "請慢用",
+        "active": "處理中"
+      },
+      "footer": {
+        "tagline": "用心熬煮的牛肉麵。",
+        "copyright": "哦！牛肉麵 {year}。保留所有權利。",
+        "privacy": "隱私政策",
+        "accessibility": "無障礙服務",
+        "nav": "頁尾連結"
+      }
+    }
   }
 }

@@ -1,84 +1,20 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { isOrderFlowPath, useActiveOrder } from "@/lib/site/active-order";
 
-const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
-
-interface ActiveOrder {
-  orderQrCode: string;
-  status: string;
-  podNumber: string | null;
-  kitchenOrderNumber: string | null;
-}
-
+// Legacy chrome. The fetch and polling now live in lib/site/active-order.ts
+// (Task C4), shared with the site shell's ActiveOrderPill.
 export default function ActiveOrderBanner() {
-  const [activeOrder, setActiveOrder] = useState<ActiveOrder | null>(null);
+  const activeOrder = useActiveOrder();
   const [dismissed, setDismissed] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const t = useTranslations("orderBanner");
 
   // Don't show on order status page or order flow pages
-  // Need to check without locale prefix (paths like /en/order/status, /zh-TW/order/status)
-  const isOrderPage = pathname?.includes("/order/status") ||
-                      pathname?.includes("/order/confirmation") ||
-                      pathname?.includes("/order/scan") ||
-                      pathname?.includes("/order/check-in") ||
-                      pathname?.includes("/pod");
-
-  useEffect(() => {
-    // Check localStorage for active order
-    const storedOrderQrCode = localStorage.getItem("activeOrderQrCode");
-    if (!storedOrderQrCode) {
-      setActiveOrder(null);
-      return;
-    }
-
-    // Fetch order status to see if it's still active
-    async function checkOrderStatus() {
-      try {
-        const response = await fetch(
-          `${BASE}/orders/status?orderQrCode=${encodeURIComponent(storedOrderQrCode)}`,
-          {
-            headers: { "x-tenant-slug": "oh" },
-          }
-        );
-
-        if (response.ok) {
-          const data = await response.json();
-          const order = data.order;
-
-          // If order is completed, clear it from localStorage
-          if (order.status === "COMPLETED") {
-            localStorage.removeItem("activeOrderQrCode");
-            setActiveOrder(null);
-            return;
-          }
-
-          // Otherwise, show the banner
-          setActiveOrder({
-            orderQrCode: storedOrderQrCode,
-            status: order.status,
-            podNumber: order.podNumber,
-            kitchenOrderNumber: order.kitchenOrderNumber,
-          });
-        } else {
-          // Order not found, clear localStorage
-          localStorage.removeItem("activeOrderQrCode");
-          setActiveOrder(null);
-        }
-      } catch (err) {
-        console.error("Failed to check order status:", err);
-      }
-    }
-
-    checkOrderStatus();
-
-    // Poll every 30 seconds to keep status updated
-    const interval = setInterval(checkOrderStatus, 30000);
-    return () => clearInterval(interval);
-  }, [pathname]);
+  const isOrderPage = isOrderFlowPath(pathname);
 
   // Don't render if no active order, dismissed, or on order pages
   if (!activeOrder || dismissed || isOrderPage) {

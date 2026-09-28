@@ -50,23 +50,67 @@ function isChildrenInsideClass(source: string, className: string): boolean {
   return false;
 }
 
-describe("app/[locale]/layout.tsx: .legacy-ui does not wrap {children}", () => {
-  const source = readFileSync(path.join(WEB_ROOT, "app/[locale]/layout.tsx"), "utf8");
+// Task C4 layout split: the chrome moved out of the shared [locale] layout
+// into components/legacy/LegacyChrome.tsx (rendered by the `(legacy)` group
+// and the two stay-in-place routes that had it), and `(site)` renders
+// SiteShell. The same invariant still holds at each level.
+const read = (rel: string) => readFileSync(path.join(WEB_ROOT, rel), "utf8");
+
+describe("app/[locale]/layout.tsx: no chrome, and .legacy-ui does not wrap {children}", () => {
+  const source = read("app/[locale]/layout.tsx");
+
+  test("no `{children}` occurrence is nested inside a `.legacy-ui` div", () => {
+    expect(isChildrenInsideClass(source, "legacy-ui")).toBe(false);
+    expect(source).not.toMatch(/className="legacy-ui"/);
+  });
+
+  test("the shared layout no longer renders the legacy chrome", () => {
+    expect(source).not.toMatch(/<Header|<Footer|<ActiveOrderBanner/);
+  });
+});
+
+describe("components/legacy/LegacyChrome.tsx: the chrome is scoped, {children} is not", () => {
+  const source = read("components/legacy/LegacyChrome.tsx");
 
   test("no `{children}` occurrence is nested inside a `.legacy-ui` div", () => {
     expect(isChildrenInsideClass(source, "legacy-ui")).toBe(false);
   });
 
-  test("the shared chrome (Header/ActiveOrderBanner/Footer) is still scoped under .legacy-ui", () => {
-    // Sanity check for the helper itself, and a regression guard: the fix
-    // must not have removed the scoping, only narrowed it.
-    expect(source).toMatch(/className="legacy-ui"[\s\S]*?<Header \/>/);
-    expect(source).toMatch(/<Footer \/>[\s\S]*?<\/div>/);
-    expect((source.match(/className="legacy-ui"/g) ?? []).length).toBeGreaterThanOrEqual(2);
+  test("Header/ActiveOrderBanner/Footer and the old Chappy are scoped under .legacy-ui", () => {
+    // Sanity check for the helper itself, and a regression guard.
+    expect(source).toMatch(/className="legacy-ui"[\s\S]*?<Header \/>[\s\S]*?<ActiveOrderBanner \/>/);
+    expect(source).toMatch(/className="legacy-ui"[\s\S]*?<Footer \/>[\s\S]*?<\/div>/);
+    expect(source).toMatch(/className="legacy-ui"[\s\S]*?<LegacyChappy \/>/);
   });
 
   test("`<main>` renders {children} directly, unscoped", () => {
     expect(source).toMatch(/<main[^>]*>\{children\}<\/main>/);
+  });
+
+  test("honors the embed contract", () => {
+    expect(source).toMatch(/x-embed/);
+  });
+});
+
+describe("stay-in-place routes that inherited the chrome keep it", () => {
+  test.each(["app/[locale]/agents/layout.tsx", "app/[locale]/kiosk-unauthorized/layout.tsx"])("%s renders LegacyChrome", (rel) => {
+    expect(read(rel)).toMatch(/<LegacyChrome>/);
+  });
+});
+
+describe("the (legacy) group scopes its pages; the (site) group never does", () => {
+  test("(legacy) wraps its pages in .legacy-ui inside the legacy chrome", () => {
+    const src = read("app/[locale]/(legacy)/layout.tsx");
+    expect(src).toMatch(/<LegacyChrome>\s*<div className="legacy-ui">\{children\}<\/div>\s*<\/LegacyChrome>/);
+  });
+
+  test("(site) renders SiteShell with no legacy-ui", () => {
+    const src = read("app/[locale]/(site)/layout.tsx");
+    expect(src).toMatch(/<SiteShell>\{children\}<\/SiteShell>/);
+    expect(src).not.toMatch(/className="legacy-ui"/);
+    const shell = read("components/site/shell/SiteShell.tsx");
+    expect(isChildrenInsideClass(shell, "legacy-ui")).toBe(false);
+    expect(shell).toMatch(/x-embed/);
   });
 });
 
