@@ -50,10 +50,15 @@ FROM "MealGift"
 WHERE "paidAt" IS NULL AND "createdAt" < '2026-09-27T22:20:00Z'
 GROUP BY status
 ORDER BY status;
-\echo '   ...of which EXPIRED after release 1 (the new code skipped the refund; backfill-mealgift-paidat returns the funded ones)'
+\echo '   ...of which EXPIRED after release 1 (all EXPIRED rows above are owed; backfill-mealgift-paidat returns the funded ones)'
 SELECT count(*) AS expired_after_release1_unpaid
 FROM "MealGift"
 WHERE "paidAt" IS NULL AND "createdAt" < '2026-09-27T22:20:00Z' AND status = 'EXPIRED' AND "expiredAt" >= '2026-09-27T22:20:00Z';
+
+\echo '   ...and funded gifts (paidAt set) still PENDING past expiry (6b second pass returns these)'
+SELECT count(*) AS funded_lapsed, coalesce(sum("amountCents"), 0) AS cents
+FROM "MealGift"
+WHERE "paidAt" IS NOT NULL AND status = 'PENDING' AND "expiresAt" <= now();
 
 \echo '== 6. Shop orders: unpaid with recorded savings (D10a: safe, settle skips legacy), and legacy SHOP- rows'
 SELECT count(*) FILTER (WHERE "paymentStatus" = 'PENDING' AND ("creditsApplied" > 0 OR "giftCardApplied" > 0)) AS unpaid_with_savings,

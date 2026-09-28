@@ -23,9 +23,11 @@
  *    too (`creditFunded`); it has no PaymentIntent.
  *
  * Then, per funded gift:
- *  - RETURN, when it expired unclaimed: status EXPIRED with `expiredAt` on or
- *    after `--before` (the new expiry code skipped the refund because
- *    `paidAt` was null), or still PENDING past `expiresAt`. In ONE
+ *  - RETURN, when it expired or lapsed unredeemed: status EXPIRED (whenever it
+ *    expired: the new expiry code skipped the refund because `paidAt` was
+ *    null, and the OLD code's "refund" wrote a nonexistent
+ *    `creditBalanceCents` field, so no giver was ever credited; fix round 2
+ *    ruling), or still PENDING past `expiresAt`. In ONE
  *    transaction: a conditional claim `updateMany({ id, paidAt: null,
  *    status in [PENDING, EXPIRED] })` sets paidAt, the PaymentIntent, status
  *    EXPIRED and expiredAt; only if the claim wins, the gift's full amount
@@ -35,8 +37,14 @@
  *    gift returns the credit that funded it. The claim is the idempotency
  *    key: a re-run, or the expire endpoint running at the same time, can
  *    never return a gift twice.
- *  - Otherwise (accepted, or expired before `--before`): a conditional
- *    `paidAt IS NULL` update only. No credit moves.
+ *  - Otherwise (accepted): a conditional `paidAt IS NULL` update only. No
+ *    credit moves.
+ *
+ * Second pass (fix round 2): a gift that IS funded (`paidAt` set, any age)
+ * but still PENDING past `expiresAt` has lapsed without the expire endpoint
+ * running. It is returned the same way, with the endpoint's own claim
+ * (`status PENDING -> EXPIRED`), so the script and `/meal-gifts/expire`
+ * can never both return it.
  *
  * Stripe calls are reads only (search, retrieve). The key's mode must match
  * the database: live for a remote DB, test for a local one.
@@ -73,10 +81,12 @@ export interface MealGiftCounts {
   unverified: number;
   /** paidAt set, no credit moved. */
   applied: number;
-  /** Returned to the giver as MEAL_GIFT credit (expired unclaimed). */
+  /** Returned to the giver as MEAL_GIFT credit (expired or lapsed unredeemed), all passes. */
   returned: number;
   returnedCents: number;
-  /** Unfunded or unprovable gifts that expired after `before`: nothing to return. */
+  /** Of `returned`: funded (paidAt set) gifts found PENDING past expiry. */
+  lapsedFundedReturned: number;
+  /** Expired or lapsed gifts whose funding can't be proven: nothing returned, listed for the owner. */
   unverifiedExpired: number;
 }
 
@@ -109,9 +119,9 @@ async function searchIntents(stripe: StripeLike, giverId: string): Promise<any[]
   return out;
 }
 
-/** Funded gift that expired unclaimed, so its giver gets the amount back. */
-export function isReturnable(gift: any, before: Date, now: Date): boolean {
-  if (gift.status === "EXPIRED") return !!gift.expiredAt && gift.expiredAt.getTime() >= before.getTime();
+/** A gift that expired or lapsed without being redeemed, so its giver is owed the amount. */
+export function isReturnable(gift: any, now: Date): boolean {
+  if (gift.status === "EXPIRED") return true;
   if (gift.status === "PENDING") return gift.expiresAt.getTime() <= now.getTime();
   return false;
 }
@@ -121,14 +131,14 @@ export async function backfillMealGiftPaidAt(
   stripe: StripeLike,
   { dryRun, before = RELEASE_1, now = new Date() }: { dryRun: boolean; before?: Date; now?: Date },
 ): Promise<MealGiftCounts> {
-  const counts: MealGiftCounts = { scanned: 0, stripeVerified: 0, creditFunded: 0, ambiguous: 0, unverified: 0, applied: 0, returned: 0, returnedCents: 0, unverifiedExpired: 0 };
+  const counts: MealGiftCounts = { scanned: 0, stripeVerified: 0, creditFunded: 0, ambiguous: 0, unverified: 0, applied: 0, returned: 0, returnedCents: 0, lapsedFundedReturned: 0, unverifiedExpired: 0 };
   const gifts = await prisma.mealGift.findMany({ where: { paidAt: null, createdAt: { lt: before } }, orderBy: { createdAt: "asc" } });
   const searchCache = new Map<string, any[]>();
   const claimedThisRun = new Set<string>();
 
   for (const gift of gifts) {
     counts.scanned++;
-    const returnable = isReturnable(gift, before, now);
+    const returnable = isReturnable(gift, now);
     // eslint-disable-next-line no-await-in-loop
     const creditCents = await creditDebitCents(prisma, gift);
     const cardCents = gift.amountCents - creditCents;
@@ -214,6 +224,29 @@ export async function backfillMealGiftPaidAt(
     // eslint-disable-next-line no-await-in-loop
     const res = await prisma.mealGift.updateMany({ where: { id: gift.id, paidAt: null }, data: { paidAt, stripePaymentIntentId: piId } });
     counts.applied += res.count;
+  }
+
+  // Second pass: funded gifts (paidAt set) still PENDING past expiry.
+  const lapsed = await prisma.mealGift.findMany({ where: { paidAt: { not: null }, status: "PENDING", expiresAt: { lte: now } }, orderBy: { createdAt: "asc" } });
+  for (const gift of lapsed) {
+    if (dryRun) {
+      counts.returned++;
+      counts.lapsedFundedReturned++;
+      counts.returnedCents += gift.amountCents;
+      continue;
+    }
+    // eslint-disable-next-line no-await-in-loop -- the expire endpoint's own claim, and the grant, in one transaction
+    const won = await prisma.$transaction(async (tx: any) => {
+      const claim = await tx.mealGift.updateMany({ where: { id: gift.id, status: "PENDING", paidAt: { not: null } }, data: { status: "EXPIRED", expiredAt: now } });
+      if (claim.count !== 1) return false;
+      await grantCreditInTx(tx, { userId: gift.giverId, source: "MEAL_GIFT", eventType: "REFUND_RESTORE", amountCents: gift.amountCents, note: RETURN_NOTE, now });
+      return true;
+    });
+    if (won) {
+      counts.returned++;
+      counts.lapsedFundedReturned++;
+      counts.returnedCents += gift.amountCents;
+    }
   }
   return counts;
 }

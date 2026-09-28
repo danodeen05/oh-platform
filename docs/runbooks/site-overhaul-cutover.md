@@ -94,7 +94,7 @@ psql "$PROD_PSQL_URL" -X -v ON_ERROR_STOP=1 -f packages/db/scripts/cutover-prefl
 | 2 | Kiosk devices | Release 1 found 0. An active device with no heartbeat may be keyless and lose member-QR check-in (step 12b). |
 | 3 | Undisbursed PendingCredit | Paid as REFERRAL lots in 6a. `non_positive` rows are never paid: list them for the owner. |
 | 4 | Legacy users without a lot / drift | Expect `legacy_users_without_lot = 0`. `drift_users > 0`: list for the owner; nothing fixes it automatically. |
-| 5 | MealGift without paidAt | Handled by 6b (backfill, and the return of funded gifts that expired unclaimed). 0 means 6b has nothing to do. |
+| 5 | MealGift without paidAt | Handled by 6b (backfill, and the return of every funded gift that expired or lapsed unredeemed, including EXPIRED rows from before release 1). 0 means the first pass has nothing to do; 6b still runs its second pass. |
 | 6 | Shop orders | `unpaid_with_savings` rows are safe (D10a). Record only. |
 | 7 | Chappy secrets | Cleaned in 11a. |
 | 8 | Phones not E.164 | Fixed in 11b. |
@@ -274,7 +274,7 @@ Check that `pendingPaid`/`pendingPaidCents` match pre-flight 3 (minus `non_posit
 **Abort:** stopping here is safe. The lots are real member credit on the same ledger release 1
 uses, so leave them.
 
-### 6b. Meal gifts: `backfill-mealgift-paidat.ts` (skip if pre-flight 5 is 0)
+### 6b. Meal gifts: `backfill-mealgift-paidat.ts` (always run: the second pass covers post-release-1 gifts)
 
 For each pre-release-1 gift without `paidAt`, funding is proven first:
 - The card part must match exactly one succeeded, unrefunded live PaymentIntent with the old
@@ -284,13 +284,19 @@ For each pre-release-1 gift without `paidAt`, funding is proven first:
 - A gift paid entirely by credit counts as funded.
 
 Then:
-- **Funded gifts that expired unclaimed** are returned to their giver. That covers gifts EXPIRED
-  after release 1 (the new expiry code skipped the refund because `paidAt` was null) and gifts
-  still PENDING past `expiresAt`. The full amount goes back as a MEAL_GIFT store-credit lot, the
+- **Every funded gift that expired or lapsed unredeemed** is returned to its giver (fix round 2
+  ruling). That covers every EXPIRED pre-release-1 gift, whenever it expired: the new expiry code
+  skipped the refund because `paidAt` was null, and the OLD code's "refund" wrote a nonexistent
+  `creditBalanceCents` field, so no giver was ever credited. It also covers gifts still PENDING
+  past `expiresAt`. The full amount goes back as a MEAL_GIFT store-credit lot, the
   same return as `POST /meal-gifts/expire`, so a credit-funded gift returns the credit that
   funded it. A conditional claim (`paidAt IS NULL`) in the same transaction returns each gift
   exactly once, even if the expire endpoint runs at the same time.
-- Other funded gifts get `paidAt` and the PaymentIntent binding only.
+- Other funded gifts (ACCEPTED) get `paidAt` and the PaymentIntent binding only.
+- A second pass returns gifts that are already funded (`paidAt` set, created after release 1)
+  but still PENDING past expiry, because nothing ran the expire endpoint. It uses the endpoint's
+  own claim (`status PENDING -> EXPIRED`) in the same transaction as the credit, so the script and
+  `POST /meal-gifts/expire` can never both return one.
 
 Stripe calls are reads. The script refuses a test key against a remote DB.
 
@@ -300,9 +306,11 @@ Stripe calls are reads. The script refuses a test key against a remote DB.
   case "$SK" in sk_live_*|rk_live_*) ;; *) echo "STOP: no live Stripe key"; exit 1;; esac
   ALLOW_NON_LOCAL=1 DATABASE_URL="$PROD_DATABASE_URL" STRIPE_SECRET_KEY="$SK" pnpm --filter @oh/db exec tsx scripts/backfill-mealgift-paidat.ts --dry-run )
 ```
-Read `returned`/`returnedCents` (credit that will go back to givers), `applied`, and
-`unverified`/`ambiguous`/`unverifiedExpired` (never written; list them for the owner). Run the
-same block without `--dry-run`, then dry-run again: expect `returned 0` and `applied 0`.
+Read `returned`/`returnedCents` (store credit going back to givers; `lapsedFundedReturned` is
+the second pass), `applied`, and `unverified`/`ambiguous`/`unverifiedExpired` (never written;
+list them for the owner, since an expired gift whose payment can't be proven is not returned
+automatically). Run the same block without `--dry-run`, then dry-run again: expect `returned 0`
+and `applied 0`. Put `returned` and `returnedCents` in the owner notes.
 **Abort:** leave what is written. Every write is a proven payment.
 
 ## 7. Deploy the API (Railway) with Vercel held
