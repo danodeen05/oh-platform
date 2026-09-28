@@ -125,8 +125,8 @@ export const SITE_IMAGES: Record<ImageKey, SiteImage> = {
   "store-interior": {
     src: { avif: "/site/store-interior-1200.avif", webp: "/site/store-interior-1200.webp" },
     srcSet: { avif: "/site/store-interior-390.avif 390w, /site/store-interior-780.avif 780w, /site/store-interior-1200.avif 1200w", webp: "/site/store-interior-390.webp 390w, /site/store-interior-780.webp 780w, /site/store-interior-1200.webp 1200w" },
-    w: 1024,
-    h: 1024,
+    w: 1200,
+    h: 900,
     alt: "siteImages.storeInterior",
   },
   "bowl-empty": {
@@ -139,8 +139,8 @@ export const SITE_IMAGES: Record<ImageKey, SiteImage> = {
   "bowl-flatlay": {
     src: { avif: "/site/bowl-flatlay-1200.avif", webp: "/site/bowl-flatlay-1200.webp" },
     srcSet: { avif: "/site/bowl-flatlay-390.avif 390w, /site/bowl-flatlay-780.avif 780w, /site/bowl-flatlay-1200.avif 1200w", webp: "/site/bowl-flatlay-390.webp 390w, /site/bowl-flatlay-780.webp 780w, /site/bowl-flatlay-1200.webp 1200w" },
-    w: 1200,
-    h: 900,
+    w: 1024,
+    h: 1024,
     alt: "siteImages.bowlFlatlay",
   },
   "chopsticks": {

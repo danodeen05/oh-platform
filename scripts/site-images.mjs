@@ -48,9 +48,9 @@ export const MAPPING = {
   "beef-macro": "Image 12.jpeg",
   "bowl-chunks-top": "Image 11.jpeg",
   "bowl-chunks-side": "Image 10.jpeg",
-  "store-interior": "Image 7 (1).jpeg",
+  "store-interior": "Image 7.jpeg",
   "bowl-empty": "Image 3 (1).jpeg",
-  "bowl-flatlay": "Image 7.jpeg",
+  "bowl-flatlay": "Image 7 (1).jpeg",
   chopsticks: "Image 6 (1).jpeg",
   "sign-pool": "Image 1.jpg",
 };
