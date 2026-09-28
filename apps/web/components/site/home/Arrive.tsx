@@ -4,7 +4,8 @@
  * The storefront at dusk, full bleed, under the translucent top bar, and it
  * is the page's LCP: eager, fetchpriority high, with `sizes` that match how
  * wide the 4:3 photo is drawn on a tall phone (it covers the height, so it
- * is about 134vh wide there). The 峨 mark writes itself in (BrushMark), the
+ * is about 134vh wide there). The photographed sign carries the mark (fix
+ * round 1: the brush reveal moved to the close of chapter 8), the
  * copy rises after it, and the Order CTA sits above the dock. Under it, the
  * live line for the nearer location (LivePill).
  *
@@ -19,7 +20,6 @@ import { Body, Display, Eyebrow } from "@/components/site/Text";
 import type { HomeLocation } from "@/lib/site/home-locations";
 import { SITE_IMAGES } from "@/lib/site/images";
 import { localizedHref } from "@/lib/site/nav";
-import { BrushMark } from "./BrushMark";
 import { LivePill } from "./LivePill";
 import "./home.css";
 
@@ -41,29 +41,28 @@ export async function Arrive({ locale, locations }: { locale: string; locations:
           sizes="(max-aspect-ratio: 4/3) 134vh, 100vw"
           priority
           alt={ti(SITE_IMAGES["storefront-dusk"].alt)}
-          className="hm-push absolute inset-0 block [&>img]:h-full [&>img]:w-full [&>img]:object-cover [&>img]:object-[46%_50%]"
+          className="hm-push absolute inset-0 block md:top-14 [&>img]:h-full [&>img]:w-full [&>img]:object-cover [&>img]:object-[46%_50%]"
         />
         {/* Legibility: the top bar's strip at the top, the copy's ground at the bottom. */}
         <div className="absolute inset-0 hidden bg-[linear-gradient(to_right,color-mix(in_oklab,var(--color-oh-charcoal)_70%,transparent)_0%,transparent_55%)] md:block" />
         <div className="absolute inset-0 bg-[linear-gradient(to_bottom,color-mix(in_oklab,var(--color-oh-charcoal)_55%,transparent)_0%,transparent_16%,transparent_34%,color-mix(in_oklab,var(--color-oh-charcoal)_78%,transparent)_58%,var(--color-oh-charcoal)_100%)] md:bg-[linear-gradient(to_bottom,color-mix(in_oklab,var(--color-oh-charcoal)_55%,transparent)_0%,transparent_18%,transparent_40%,color-mix(in_oklab,var(--color-oh-charcoal)_70%,transparent)_70%,var(--color-oh-charcoal)_100%)]" />
       </div>
 
-      <div className="mx-auto w-full max-w-6xl px-5 pb-5 pt-24 md:px-8 md:pb-14">
-        <BrushMark className="block h-auto w-14 md:w-24" />
-        <Eyebrow locale={locale} className="hm-rise mt-4 text-oh-ember-light [--hm-delay:0.5s]">
+      <div className="mx-auto w-full max-w-6xl px-5 pb-5 pt-40 md:px-8 md:pb-14">
+        <Eyebrow locale={locale} className="hm-rise text-oh-ember-light [--hm-delay:0.3s]">
           {t("eyebrow")}
         </Eyebrow>
         <Display
           id="arrive-title"
           locale={locale}
-          className="hm-rise m-0 mt-3 max-w-[14ch] text-[clamp(2.6rem,11vw,5.75rem)]! leading-[1.02]! text-oh-cream [--hm-delay:0.6s] [text-wrap:balance]"
+          className="hm-rise m-0 mt-3 max-w-[14ch] text-[clamp(2.6rem,11vw,5.75rem)]! leading-[1.02]! text-oh-cream [--hm-delay:0.4s] [text-wrap:balance]"
         >
           {t("title")}
         </Display>
-        <Body locale={locale} className="hm-rise m-0 mt-4 max-w-xl text-oh-cream/85 [--hm-delay:0.75s] md:text-lg">
+        <Body locale={locale} className="hm-rise m-0 mt-4 max-w-xl text-oh-cream/85 [--hm-delay:0.55s] md:text-lg">
           {t("lede")}
         </Body>
-        <div className="hm-rise mt-6 flex flex-wrap items-center gap-x-6 gap-y-3 [--hm-delay:0.9s]">
+        <div className="hm-rise mt-6 flex flex-wrap items-center gap-x-6 gap-y-3 [--hm-delay:0.7s]">
           <Link
             href={localizedHref(locale, "/order")}
             data-home-order

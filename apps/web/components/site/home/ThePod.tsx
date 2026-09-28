@@ -4,9 +4,10 @@
  * Task D1, chapter 3: The pod. Pinned for 3 screens.
  *
  * Three photos crossfade on --progress (pod-hatch-a, then b, then c), each
- * with its own caption. On pod-hatch-b a drawn hatch panel (wood slats and
- * the warm lip light of the real pods) starts closed over the hatch and
- * slides up out of the way: the panel opens and the bowl is there. A
+ * with its own caption. On pod-hatch-b a hatch panel starts closed over the
+ * opening and slides up out of the way. Fix round 1: the panel is a crop of
+ * the photo's own slatted panel above the hatch (not a drawn SVG), so it
+ * matches the room exactly. A
  * three-part progress rule tracks where you are.
  *
  * Reduced motion: PinnedStory's static mode, and here the three photos with
@@ -31,28 +32,6 @@ const STEPS: Array<{ key: "a" | "b" | "c"; image: ImageKey; at: number; until: n
 
 function vars(v: Record<string, string | number>) {
   return v as React.CSSProperties;
-}
-
-/** The pod's hatch panel, drawn: dark wood slats, a pull, and the warm light along its lip. */
-function HatchPanel() {
-  const slats = Array.from({ length: 35 }, (_, i) => i);
-  return (
-    <svg viewBox="0 0 140 56" preserveAspectRatio="none" aria-hidden="true" className="block h-full w-full">
-      <defs>
-        <linearGradient id="hm-hatch-shade" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" className="[stop-color:var(--color-oh-charcoal)] [stop-opacity:0.55]" />
-          <stop offset="0.55" className="[stop-color:var(--color-oh-charcoal)] [stop-opacity:0]" />
-          <stop offset="1" className="[stop-color:var(--color-oh-gold)] [stop-opacity:0.28]" />
-        </linearGradient>
-      </defs>
-      <rect width="140" height="56" className="fill-oh-charcoal" />
-      {slats.map((i) => (
-        <rect key={i} x={i * 4 + 0.35} y="0" width="3.3" height="56" className={i % 5 === 2 ? "fill-oh-clay/75" : i % 2 ? "fill-oh-clay/60" : "fill-oh-clay/68"} />
-      ))}
-      <rect width="140" height="56" fill="url(#hm-hatch-shade)" />
-      <rect x="0" y="54.6" width="140" height="1.4" className="fill-oh-gold/80" />
-    </svg>
-  );
 }
 
 export function ThePod() {
@@ -103,8 +82,13 @@ export function ThePod() {
                     <SitePicture image={s.image} sizes={COVER_SIZES} alt={ti(SITE_IMAGES[s.image].alt)} className={PICTURE} />
                     {s.key === "b" ? (
                       <div aria-hidden="true" className="absolute left-[16.9%] top-[31.2%] h-[19.4%] w-[35%] overflow-hidden">
-                        <div className="hm-ramp hm-hatch-panel absolute inset-0" style={vars({ "--at": 0.4, "--hm-k": 6 })}>
-                          <HatchPanel />
+                        {/* The panel is the photo's own slatted panel directly above the
+                            hatch (photo y 11.8% to 31.2%), shifted down over the opening, so
+                            its wood, pitch and light match exactly. It slides up to open. */}
+                        <div className="hm-ramp hm-hatch-panel absolute inset-0 shadow-[inset_0_-2px_0_color-mix(in_oklab,var(--color-oh-charcoal)_60%,transparent)]" style={vars({ "--at": 0.4, "--hm-k": 6 })}>
+                          <div className="absolute left-[-48.29%] top-[-61.34%] h-[515.46%] w-[285.71%]">
+                            <SitePicture image="pod-hatch-b" sizes={COVER_SIZES} alt="" className={PICTURE} />
+                          </div>
                         </div>
                       </div>
                     ) : null}

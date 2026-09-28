@@ -69,21 +69,26 @@ export function LivePill({ locations }: { locations: LivePillLocation[] }) {
         <p
           data-live-pill
           data-location={location.slug}
-          data-open={String(data.isOpen)}
+          data-open={data.isOpen === null ? "unknown" : String(data.isOpen)}
           className="hm-rise m-0 inline-flex max-w-full flex-wrap items-center gap-x-3 gap-y-0.5 rounded-2xl bg-oh-charcoal/75 px-4 py-2 text-sm leading-snug text-oh-cream ring-1 ring-oh-cream/15"
         >
           <span className="inline-flex items-center gap-2 whitespace-nowrap font-semibold">
-            <span
-              aria-hidden="true"
-              data-open={String(data.isOpen)}
-              className={`hm-live-dot relative inline-block size-2 shrink-0 rounded-full ${data.isOpen ? "bg-oh-olive-light" : "bg-oh-ash"}`}
-            />
+            {data.isOpen !== null ? (
+              <span
+                aria-hidden="true"
+                data-open={String(data.isOpen)}
+                className={`hm-live-dot relative inline-block size-2 shrink-0 rounded-full ${data.isOpen ? "bg-oh-olive-light" : "bg-oh-ash"}`}
+              />
+            ) : null}
             {location.name}
           </span>
-          <span className="whitespace-nowrap">
-            {!data.isOpen ? t("closed") : data.closesAt !== null ? t("openUntil", { time: formatClock(data.closesAt, locale) }) : t("open")}
-          </span>
-          {data.isOpen && data.podsFree !== null ? (
+          {/* Open/closed and the time only when the API reports real hours (live.ts). */}
+          {data.isOpen !== null ? (
+            <span data-live-status className="whitespace-nowrap">
+              {data.isOpen && data.closesAt !== null ? t("openUntil", { time: formatClock(data.closesAt, locale) }) : t("closed")}
+            </span>
+          ) : null}
+          {data.isOpen !== false && data.podsFree !== null ? (
             <span data-live-pods data-value={data.podsFree} className="whitespace-nowrap tabular-nums text-oh-gold">
               {t("podsFree", { count: data.podsFree })}
             </span>

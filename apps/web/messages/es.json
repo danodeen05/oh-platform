@@ -103,11 +103,11 @@
         },
         "b": {
           "title": "El panel se abre.",
-          "body": "Siete minutos después de pagar, tu tazón llega a través de la pared. Nunca ves una mano."
+          "body": "Minutos después de pagar, tu tazón llega a través de la pared. Nunca ves una mano."
         },
         "c": {
           "title": "Luego se cierra.",
-          "body": "Más fideos, un relleno o un acompañante están a un toque, y llegan por el mismo panel."
+          "body": "Más fideos, más bebida o un acompañante están a un toque, y llegan por el mismo panel."
         }
       }
     },
@@ -126,11 +126,11 @@
         },
         "cut": {
           "title": "Rebanadas o trozos",
-          "body": "Pecho rebanado contra la fibra, o costilla de res en trozos."
+          "body": "Pecho ahumado en rebanadas, o costilla de res ahumada en trozos."
         },
         "yours": {
-          "title": "A tu manera",
-          "body": "Intensidad del caldo, fideo y extras, elegidos en el quiosco o en tu teléfono."
+          "title": "Verdes y cítricos",
+          "body": "Bok choy y un gajo de naranja. La intensidad del caldo, el fideo y los extras los eliges tú."
         }
       },
       "macro": "La primera cucharada. Primero el caldo, luego la res que elegiste.",
@@ -144,12 +144,12 @@
         "check": "Sin cuenta.",
         "tip": "Sin propina."
       },
-      "body": "Quienes hicieron tu tazón tienen salario. El precio que ves es el precio que pagas.",
+      "body": "Aquí la propina no es parte de la comida. Sin línea de propina, sin cargo por servicio.",
       "note": "Un toque en tu teléfono dice que terminaste. Te vas cuando quieras."
     },
     "rewards": {
       "eyebrow": "Recompensas",
-      "title": "Cada tazón te hace subir.",
+      "title": "Cada tazón cuenta para el siguiente nivel.",
       "lede": "Tres niveles, devolución en cada pedido y un tazón gratis cada vez que subes.",
       "cashback": "de devolución",
       "cta": "Mira cómo se sube"

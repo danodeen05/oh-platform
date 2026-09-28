@@ -14,12 +14,13 @@ import { SitePicture } from "@/components/site/picture/SitePicture";
 import { coverProgress, useScrollVars } from "@/components/site/rewards/useScrollVars";
 import "./home.css";
 
-// Ingredient marks, in photo percentages: broth, the smoked crust, the slices, the greens.
+// Ingredient marks, in photo percentages, matching the four callouts (TheBowl):
+// 1 the broth, 2 the smoked crust, 3 the slices, 4 the bok choy (greens and citrus).
 const MARKS = [
   { n: 1, x: "31%", y: "68%" },
   { n: 2, x: "64%", y: "36%" },
   { n: 3, x: "52%", y: "58%" },
-  { n: 4, x: "35%", y: "32%" },
+  { n: 4, x: "38%", y: "36%" },
 ];
 
 export function BowlSpin({ alt }: { alt: string }) {

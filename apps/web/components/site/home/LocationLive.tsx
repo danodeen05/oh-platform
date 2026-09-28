@@ -27,7 +27,7 @@ export function LocationLive({ id, operatingHours, timeZone }: { id: string | nu
 
   return (
     <ul data-live-ready={state.status === "loading" ? "false" : "true"} className="m-0 mt-5 grid min-h-[4.5rem] list-none gap-2 p-0 text-base">
-      {data ? (
+      {data && data.isOpen !== null ? (
         <li data-location-open={String(data.isOpen)} className="flex items-center gap-2.5">
           <span
             aria-hidden="true"
@@ -43,7 +43,7 @@ export function LocationLive({ id, operatingHours, timeZone }: { id: string | nu
           {hours}
         </li>
       ) : null}
-      {data?.isOpen && data.podsFree !== null ? (
+      {data && data.isOpen !== false && data.podsFree !== null ? (
         <li className="flex items-center gap-2.5 text-oh-cream/75">
           <Icon name="pod" size={18} className="shrink-0 text-oh-gold" />
           <span data-live-pods data-value={data.podsFree} className="tabular-nums">

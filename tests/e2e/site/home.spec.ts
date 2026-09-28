@@ -172,11 +172,47 @@ test("iPhone 15: the live pill shows the API's real pods-free count for City Cre
     await pill.waitFor({ state: "visible", timeout: 30_000 });
     assert.equal(await pill.getAttribute("data-location"), "city-creek");
     const free = cc!.seats.filter((s) => s.status === "AVAILABLE").length;
-    if ((cc as any).isOpen) {
+    const api = cc as any;
+    // Fix round 1: open/closed is only shown when the API reports real hours.
+    const trusted = api.hoursBypassed !== true && typeof api.isOpen === "boolean" && Boolean(api.closesAt);
+    const open = await pill.getAttribute("data-open");
+    assert.equal(open, trusted ? String(api.isOpen) : "unknown");
+    assert.equal(await pill.locator("[data-live-status]").count(), trusted ? 1 : 0);
+    if (open !== "false") {
       assert.equal(await pill.locator("[data-live-pods]").getAttribute("data-value"), String(free));
     }
-    assert.equal(await pill.getAttribute("data-open"), String(Boolean((cc as any).isOpen)));
   });
+});
+
+test("iPhone 15: bypassed hours hide open/closed and the time, and keep pods free", async () => {
+  await withPage(
+    iphone15(),
+    "/en",
+    async (page) => {
+      const pill = page.locator("[data-chapter='arrive'] [data-live-pill]");
+      await pill.waitFor({ state: "visible", timeout: 30_000 });
+      assert.equal(await pill.getAttribute("data-open"), "unknown");
+      assert.equal(await pill.locator("[data-live-status]").count(), 0);
+      assert.equal(await pill.locator("[data-live-pods]").getAttribute("data-value"), "2");
+      const card = page.locator("[data-location-card='city-creek']");
+      assert.equal(await card.locator("[data-location-open]").count(), 0);
+      assert.equal(await card.locator("[data-live-pods]").getAttribute("data-value"), "2");
+    },
+    async (ctx) => {
+      await ctx.route(/\/locations\/[^/]+\/availability/, (r) =>
+        r.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            isOpen: true,
+            closesAt: "11pm",
+            hoursBypassed: true,
+            seats: [{ status: "AVAILABLE" }, { status: "AVAILABLE" }, { status: "OCCUPIED" }],
+          }),
+        }),
+      );
+    },
+  );
 });
 
 test("iPhone 15: with no live data, the pill is hidden, never a made-up number", async () => {
@@ -246,7 +282,13 @@ test("desktop 1440: no horizontal overflow", async () => {
   });
 });
 
-test("LCP is under 2.5 s on throttled 4G (1.6 Mbps, 150 ms RTT, CPU 4x), and it is the storefront photo", async () => {
+// KNOWN FAILURE, the G2a target (controller ruling, D1 fix round 1). Measured
+// at about 10.5 s on a production build. The storefront image itself finishes
+// by about 6 s; paint is held back by shell-wide blockers that G2a owns:
+// four render-blocking CJK next/font stylesheets on every locale, gtag and
+// Clerk, and the legacy Google Fonts CSS. Left strict on purpose: don't
+// loosen it, fix the shell and it goes green.
+test("[G2a target] LCP is under 2.5 s on throttled 4G (1.6 Mbps, 150 ms RTT, CPU 4x), and it is the storefront photo", async () => {
   const ctx = await browser.newContext(iphone15());
   try {
     const page = await ctx.newPage();

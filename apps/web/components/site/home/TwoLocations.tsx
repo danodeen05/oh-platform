@@ -4,7 +4,8 @@
  * The sign over the reflecting pool, drifting in its frame, then a card per
  * restaurant: name and neighborhood (copy, from messages), live open or
  * closed, today's hours and pods free (LocationLive), a link to its page
- * (/locations/<slug>, built by D4) and directions. The story ends on the
+ * (/locations/<slug>, built by D4) and directions. The story signs off with
+ * the 峨 mark writing itself in (BrushMark, view-triggered), then the
  * Order CTA.
  */
 import Link from "next/link";
@@ -16,6 +17,7 @@ import { Body, Eyebrow, Title } from "@/components/site/Text";
 import { directionsUrl, type HomeLocation } from "@/lib/site/home-locations";
 import { SITE_IMAGES } from "@/lib/site/images";
 import { localizedHref } from "@/lib/site/nav";
+import { BrushMark } from "./BrushMark";
 import { LocationLive } from "./LocationLive";
 import "./home.css";
 
@@ -95,6 +97,8 @@ export async function TwoLocations({ locale, locations }: { locale: string; loca
 
         <Reveal className="mt-20 flex flex-col items-start gap-5 border-0 border-t border-solid border-oh-stone pt-12 md:mt-28 md:flex-row md:items-end md:justify-between">
           <div className="max-w-xl">
+            {/* The page's sign-off: the mark writes itself in as it scrolls up (fix round 1). */}
+            <BrushMark trigger="view" id="hm-signoff" className="mb-6 block h-auto w-12 md:w-16" />
             <p className={`m-0 ${serif} text-[clamp(2rem,8vw,3.5rem)] leading-[1.05] text-oh-cream`}>{t("final.title")}</p>
             <Body locale={locale} className="m-0 mt-3 text-oh-cream/80">
               {t("final.body")}

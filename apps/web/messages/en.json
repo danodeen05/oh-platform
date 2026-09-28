@@ -103,7 +103,7 @@
         },
         "b": {
           "title": "The panel slides open.",
-          "body": "Seven minutes after you pay, your bowl arrives through the wall. You never see a hand."
+          "body": "Minutes after you pay, your bowl arrives through the wall. You never see a hand."
         },
         "c": {
           "title": "Then it slides shut.",
@@ -126,11 +126,11 @@
         },
         "cut": {
           "title": "Slices or chunks",
-          "body": "Brisket sliced across the grain, or beef rib portioned into chunks."
+          "body": "Smoked brisket, sliced. Or smoked beef rib, portioned into chunks."
         },
         "yours": {
-          "title": "Built your way",
-          "body": "Broth depth, noodle and add-ons, chosen at the kiosk or on your phone."
+          "title": "Greens and citrus",
+          "body": "Bok choy and a wedge of orange. Broth depth, noodle and add-ons are yours to choose."
         }
       },
       "macro": "First spoon. Broth first, then the beef you chose.",
@@ -144,12 +144,12 @@
         "check": "No check.",
         "tip": "No tip."
       },
-      "body": "The people who made your bowl are salaried. The price you see is the price you pay.",
+      "body": "Tipping isn't part of the meal here. No tip line, no service charge.",
       "note": "One tap on your phone says you are done. You leave when you are ready."
     },
     "rewards": {
       "eyebrow": "Rewards",
-      "title": "Every bowl moves you up.",
+      "title": "Every bowl counts toward the next tier.",
       "lede": "Three tiers, cashback on every order, and a free bowl each time you climb.",
       "cashback": "cashback",
       "cta": "See how the climb works"

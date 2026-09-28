@@ -369,3 +369,47 @@
     --hm-draw: 1;
   }
 }
+
+/* ---------------------------------------------------------------------- */
+/* The sign-off mark (fix round 1): BrushMark with trigger="view" draws     */
+/* itself as it scrolls up into view instead of on load. Without view     */
+/* timelines, or with reduced motion, it is simply the finished mark.     */
+/* ---------------------------------------------------------------------- */
+
+.hm-brush--view {
+  view-timeline: --hm-sign block;
+}
+.hm-brush--view .hm-brush-stroke {
+  animation: none;
+  stroke-dashoffset: 0;
+}
+.hm-brush--view .hm-brush-full {
+  animation: none;
+  opacity: 1;
+}
+
+@supports (animation-timeline: view()) {
+  .hm-brush--view .hm-brush-stroke {
+    stroke-dashoffset: 1;
+    animation: hm-brush-draw linear both;
+    animation-timeline: --hm-sign;
+    animation-range: cover calc(8% + var(--hm-i, 0) * 3%) cover calc(16% + var(--hm-i, 0) * 3%);
+  }
+  .hm-brush--view .hm-brush-full {
+    opacity: 0;
+    animation: hm-fade-in linear both;
+    animation-timeline: --hm-sign;
+    animation-range: cover 40% cover 48%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hm-brush--view .hm-brush-stroke {
+    animation: none !important;
+    stroke-dashoffset: 0 !important;
+  }
+  .hm-brush--view .hm-brush-full {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+}

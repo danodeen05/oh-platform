@@ -143,10 +143,47 @@ describe("POST /users/:id/moments (Task D8)", () => {
 
   test("two racing first welcomeSeen calls stamp welcomeSeenAt once (conditional write)", async () => {
     const { app, prisma } = await buildApp();
+    // Force the race: both requests read the user (welcomeSeenAt still null)
+    // before either writes, by holding the first two reads at a barrier.
+    const findUnique = prisma.user.findUnique.bind(prisma.user);
+    let arrived = 0;
+    let release;
+    const barrier = new Promise((r) => (release = r));
+    prisma.user.findUnique = async (args) => {
+      const row = await findUnique(args);
+      if (arrived < 2) {
+        arrived += 1;
+        if (arrived === 2) release();
+        await barrier;
+      }
+      return row;
+    };
+    // Count the writes that actually stamp welcomeSeenAt, and make each
+    // stamp a distinct time so a second stamp would be visible.
+    let stamps = 0;
+    let tick = Date.parse("2026-09-28T12:00:00Z");
+    const updateMany = prisma.user.updateMany.bind(prisma.user);
+    prisma.user.updateMany = async (args) => {
+      if (args?.data?.welcomeSeenAt) args = { ...args, data: { ...args.data, welcomeSeenAt: new Date((tick += 1000)) } };
+      const res = await updateMany(args);
+      if (args?.data?.welcomeSeenAt) stamps += res.count;
+      return res;
+    };
+    const update = prisma.user.update.bind(prisma.user);
+    prisma.user.update = async (args) => {
+      if (args?.data?.welcomeSeenAt) {
+        stamps += 1;
+        args = { ...args, data: { ...args.data, welcomeSeenAt: new Date((tick += 1000)) } };
+      }
+      return update(args);
+    };
+
     const [a, b] = await Promise.all([post(app, "db_me", { welcomeSeen: true }), post(app, "db_me", { welcomeSeen: true })]);
     assert.equal(a.statusCode, 200);
     assert.equal(b.statusCode, 200);
-    const row = await prisma.user.findUnique({ where: { id: "db_me" } });
+    assert.equal(arrived, 2, "both requests read before either wrote");
+    assert.equal(stamps, 1, "welcomeSeenAt is written exactly once");
+    const row = await findUnique({ where: { id: "db_me" } });
     const stamped = new Date(row.welcomeSeenAt).toISOString();
     assert.equal(a.json().welcomeSeenAt, stamped);
     assert.equal(b.json().welcomeSeenAt, stamped);

@@ -1,5 +1,7 @@
 /**
- * Task D1: the 峨 mark, written in on load.
+ * Task D1: the 峨 mark, written in. Used as the page's sign-off at the close of
+ * chapter 8 (fix round 1), drawn as it scrolls into view; `trigger="load"`
+ * writes it in on page load instead.
  *
  * The owner's `Oh_Logo_Mark_Light` artwork (public/brand/oh-mark-light-360.webp,
  * a web-sized copy of public/Oh_Logo_Mark_Light.png) sits inside an SVG,
@@ -30,10 +32,24 @@ const STROKES: Array<{ d: string; w: number }> = [
   { d: "M12 490 C 50 530, 140 520, 232 556", w: 64 },
 ];
 
-export function BrushMark({ className, id = "hm-brush" }: { className?: string; id?: string }) {
+export function BrushMark({
+  className,
+  id = "hm-brush",
+  trigger = "load",
+}: {
+  className?: string;
+  id?: string;
+  /** "load" writes the mark in on page load; "view" draws it as it scrolls into view (home.css .hm-brush--view). */
+  trigger?: "load" | "view";
+}) {
   const mask = `${id}-mask`;
   return (
-    <svg viewBox="0 0 600 594" aria-hidden="true" focusable="false" className={className}>
+    <svg
+      viewBox="0 0 600 594"
+      aria-hidden="true"
+      focusable="false"
+      className={[trigger === "view" ? "hm-brush--view" : "", className].filter(Boolean).join(" ")}
+    >
       <defs>
         <mask id={mask} maskUnits="userSpaceOnUse" x="0" y="0" width="600" height="594">
           {STROKES.map((s, i) => (

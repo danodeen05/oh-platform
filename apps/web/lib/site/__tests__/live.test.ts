@@ -67,9 +67,23 @@ describe("toLiveStatus", () => {
     expect(toLiveStatus({ isOpen: true, closesAt: "9pm", seats })).toEqual({ isOpen: true, closesAt: 1260, podsFree: 2, podsTotal: 4 });
   });
 
-  it("leaves what the API didn't send as null", () => {
-    expect(toLiveStatus({ isOpen: false, closesAt: null, seats: [] })).toEqual({ isOpen: false, closesAt: null, podsFree: null, podsTotal: null });
-    expect(toLiveStatus({ isOpen: true })).toEqual({ isOpen: true, closesAt: null, podsFree: null, podsTotal: null });
+  it("leaves what the API didn't send as null, and returns nothing when nothing is real", () => {
+    const seats = [{ status: "AVAILABLE" }];
+    expect(toLiveStatus({ isOpen: false, closesAt: "9pm", seats: [] })).toEqual({ isOpen: false, closesAt: 1260, podsFree: null, podsTotal: null });
+    expect(toLiveStatus({ isOpen: false, closesAt: null, seats: [] })).toBe(null);
+    expect(toLiveStatus({ isOpen: true })).toBe(null);
+    expect(toLiveStatus({ seats })).toEqual({ isOpen: null, closesAt: null, podsFree: 1, podsTotal: 1 });
+  });
+
+  it("fix round 1: bypassed hours or a missing closing time hide open/closed and the time, never the pods", () => {
+    const seats = [{ status: "AVAILABLE" }, { status: "OCCUPIED" }];
+    // Time restrictions bypassed: isOpen is forced true and closesAt may be a made-up default.
+    expect(toLiveStatus({ isOpen: true, closesAt: "11pm", hoursBypassed: true, seats })).toEqual({ isOpen: null, closesAt: null, podsFree: 1, podsTotal: 2 });
+    // No closing time: open/closed can't be trusted either.
+    expect(toLiveStatus({ isOpen: true, closesAt: null, seats })).toEqual({ isOpen: null, closesAt: null, podsFree: 1, podsTotal: 2 });
+    expect(toLiveStatus({ isOpen: true, seats })).toEqual({ isOpen: null, closesAt: null, podsFree: 1, podsTotal: 2 });
+    // hoursBypassed false is the normal case.
+    expect(toLiveStatus({ isOpen: true, closesAt: "9pm", hoursBypassed: false, seats })?.isOpen).toBe(true);
   });
 
   it("rejects a body that isn't an availability response", () => {

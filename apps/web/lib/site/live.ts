@@ -24,8 +24,13 @@ import { SITE_API_URL } from "./api";
 export const LIVE_POLL_MS = 60_000;
 
 export interface LiveStatus {
-  isOpen: boolean;
-  /** Minutes after midnight (location time) the location closes today, or null if the API didn't say. */
+  /**
+   * Open right now, or null when the API can't vouch for it: time
+   * restrictions are bypassed (`hoursBypassed: true`) or it sent no real
+   * closing time. Null hides the open/closed text and the time.
+   */
+  isOpen: boolean | null;
+  /** Minutes after midnight (location time) the location closes today, or null if unknown (see isOpen). */
   closesAt: number | null;
   /** Pods whose status is AVAILABLE, or null if the API sent no seat list. */
   podsFree: number | null;
@@ -74,16 +79,26 @@ export function formatClock(minutes: number, locale: string): string {
   }).format(new Date(Date.UTC(2000, 0, 1, h, m)));
 }
 
-/** The availability response as a LiveStatus, or null when it isn't one. */
+/**
+ * The availability response as a LiveStatus, or null when it isn't one.
+ *
+ * Open or closed and the closing time are only trusted when the API reports
+ * real hours (fix round 1): `hoursBypassed: true` (time restrictions off, so
+ * `isOpen` is forced true) or a missing/unparseable `closesAt` makes both
+ * unknown. Pods free still shows, since the seat states are real either way.
+ */
 export function toLiveStatus(body: unknown): LiveStatus | null {
   if (!body || typeof body !== "object") return null;
-  const b = body as { isOpen?: unknown; closesAt?: unknown; seats?: unknown };
-  if (typeof b.isOpen !== "boolean") return null;
+  const b = body as { isOpen?: unknown; closesAt?: unknown; seats?: unknown; hoursBypassed?: unknown };
   const seats = Array.isArray(b.seats) ? (b.seats as Array<{ status?: unknown }>) : null;
+  const podsFree = seats && seats.length > 0 ? seats.filter((s) => s?.status === "AVAILABLE").length : null;
+  const closesAt = parseClock(b.closesAt);
+  const trusted = b.hoursBypassed !== true && typeof b.isOpen === "boolean" && closesAt !== null;
+  if (!trusted && podsFree === null) return null;
   return {
-    isOpen: b.isOpen,
-    closesAt: parseClock(b.closesAt),
-    podsFree: seats && seats.length > 0 ? seats.filter((s) => s?.status === "AVAILABLE").length : null,
+    isOpen: trusted ? (b.isOpen as boolean) : null,
+    closesAt: trusted ? closesAt : null,
+    podsFree,
     podsTotal: seats && seats.length > 0 ? seats.length : null,
   };
 }
