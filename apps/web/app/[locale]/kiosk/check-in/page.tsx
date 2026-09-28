@@ -176,7 +176,7 @@ export default function CheckInPage() {
 
         const qrCode = token || orderQrCode;
         if (qrCode) {
-          const orderRes = await fetch(`${BASE}/orders/lookup?code=${encodeURIComponent(qrCode)}`, { headers: { "x-tenant-slug": "oh" } });
+          const orderRes = await fetch(`${BASE}/orders/lookup?code=${encodeURIComponent(qrCode)}`, { headers: { "x-tenant-slug": "oh", ...kioskAuthHeaders() } });
           if (!orderRes.ok) {
             const errData = await orderRes.json().catch(() => ({}));
             // Handle "already checked in" gracefully - not as an error

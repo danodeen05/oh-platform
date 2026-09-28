@@ -8,7 +8,7 @@
  */
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { canSeeFullOrder, safeOrderView } from "../order-view.js";
+import { canSeeFullOrder, safeOrderView, firstNameOnly } from "../order-view.js";
 import { GUEST_SESSION_HEADER } from "../group-routes.js";
 import { createAdminAuth } from "../../auth/admin.js";
 import { createKioskAuth } from "../../auth/kiosk.js";
@@ -216,5 +216,135 @@ describe("end-to-end: GET /orders/:id composition (isDemoOrderId bypass, then ca
     const req = { headers: { authorization: "Bearer kiosk_abc123" } };
     const result = await respondAs(order, req, deps);
     assert.equal("user" in result, false);
+  });
+});
+
+describe("firstNameOnly (A8b fix round 1 addendum)", () => {
+  test("splits on whitespace and takes the first word", () => {
+    assert.equal(firstNameOnly("Dan Odeen"), "Dan");
+    assert.equal(firstNameOnly("  Dan   Odeen "), "Dan");
+    assert.equal(firstNameOnly("Alex"), "Alex");
+  });
+
+  test("null/empty/non-string input gives null", () => {
+    assert.equal(firstNameOnly(null), null);
+    assert.equal(firstNameOnly(undefined), null);
+    assert.equal(firstNameOnly(""), null);
+    assert.equal(firstNameOnly("   "), null);
+    assert.equal(firstNameOnly(42), null);
+  });
+});
+
+describe("end-to-end: GET /orders/lookup composition (fix round 1 addendum)", () => {
+  // Mirrors the route in index.js.
+  async function respondAsLookup(order, req, deps) {
+    const canSeeFull = isDemoOrderId(order.id) || (await canSeeFullOrder(req, order, deps));
+    if (order.arrivedAt) {
+      return {
+        order: {
+          id: order.id,
+          orderNumber: order.orderNumber,
+          guestName: canSeeFull ? order.guestName : firstNameOnly(order.guestName),
+          user: order.user
+            ? { name: canSeeFull ? order.user.name : firstNameOnly(order.user.name), membershipTier: canSeeFull ? order.user.membershipTier : undefined }
+            : null,
+        },
+      };
+    }
+    return canSeeFull ? order : safeOrderView(order);
+  }
+
+  const baseOrder = { ...MEMBER_ORDER, orderNumber: "ORD-1", guestName: null, user: { id: "u1", name: "Dan Odeen", email: "dan@x.com", membershipTier: "NOODLE_MASTER" } };
+
+  test("anonymous gets no contact fields (not-yet-arrived order)", async () => {
+    const deps = buildDeps();
+    const result = await respondAsLookup(baseOrder, { headers: {} }, deps);
+    assert.equal("user" in result, false);
+    assert.equal(JSON.stringify(result).includes("dan@x.com"), false);
+  });
+
+  test("the owner gets the full record", async () => {
+    const deps = buildDeps({ customer: { kind: "user", userId: "u1" } });
+    const result = await respondAsLookup(baseOrder, { headers: {} }, deps);
+    assert.equal(result.user.name, "Dan Odeen");
+  });
+
+  test("staff (admin) gets the full record", async () => {
+    const deps = buildDeps();
+    const req = { headers: { "x-admin-api-key": "admin-key-123" } };
+    const result = await respondAsLookup(baseOrder, req, deps);
+    assert.equal(result.user.name, "Dan Odeen");
+  });
+
+  test("a same-location kiosk gets the full record", async () => {
+    const deps = buildDeps({ devices: { kiosk_abc123: { id: "d1", locationId: "L1", isActive: true } } });
+    const req = { headers: { authorization: "Bearer kiosk_abc123" } };
+    const result = await respondAsLookup(baseOrder, req, deps);
+    assert.equal(result.user.name, "Dan Odeen");
+  });
+
+  test("a kiosk at another location gets the safe view", async () => {
+    const deps = buildDeps({ devices: { kiosk_abc123: { id: "d1", locationId: "L2", isActive: true } } });
+    const req = { headers: { authorization: "Bearer kiosk_abc123" } };
+    const result = await respondAsLookup(baseOrder, req, deps);
+    assert.equal("user" in result, false);
+  });
+
+  test("the already-checked-in shape: anonymous gets a first name only, owner/staff get the full name", async () => {
+    const arrivedOrder = { ...baseOrder, arrivedAt: new Date(), guestName: null };
+    const anonResult = await respondAsLookup(arrivedOrder, { headers: {} }, buildDeps());
+    assert.equal(anonResult.order.user.name, "Dan");
+    assert.equal(anonResult.order.user.membershipTier, undefined);
+
+    const ownerDeps = buildDeps({ customer: { kind: "user", userId: "u1" } });
+    const ownerResult = await respondAsLookup(arrivedOrder, { headers: {} }, ownerDeps);
+    assert.equal(ownerResult.order.user.name, "Dan Odeen");
+    assert.equal(ownerResult.order.user.membershipTier, "NOODLE_MASTER");
+  });
+
+  test("a DEMO order is unchanged regardless of caller", async () => {
+    const demoOrder = { id: "demo-plan", userId: null, guestId: null, locationId: "L1", guestName: "Alex", user: null };
+    const result = await respondAsLookup(demoOrder, { headers: {} }, buildDeps());
+    assert.equal(result.guestName, "Alex");
+  });
+});
+
+describe("end-to-end: GET /orders/status composition (fix round 1 addendum)", () => {
+  // Mirrors the route in index.js: guestName is full for canSeeFull, else first-name-only.
+  async function statusGuestName(order, req, deps) {
+    const canSeeFull = isDemoOrderId(order.id) || (await canSeeFullOrder(req, order, deps));
+    const fullGuestName = order.guestName || order.guest?.name || null;
+    return canSeeFull ? fullGuestName : firstNameOnly(fullGuestName);
+  }
+
+  const guestOrder = { id: "o3", userId: null, guestId: "g1", locationId: "L1", guestName: "Jamie Rivera", guest: null };
+
+  test("anonymous gets a first name only", async () => {
+    assert.equal(await statusGuestName(guestOrder, { headers: {} }, buildDeps()), "Jamie");
+  });
+
+  test("the verified guest owner gets the full name", async () => {
+    const deps = buildDeps({ guests: { "sess-1": { id: "g1", expiresAt: new Date(NOW.getTime() + 60000) } } });
+    const req = { headers: { [GUEST_SESSION_HEADER]: "sess-1" } };
+    assert.equal(await statusGuestName(guestOrder, req, deps), "Jamie Rivera");
+  });
+
+  test("staff (admin) gets the full name", async () => {
+    const req = { headers: { "x-admin-api-key": "admin-key-123" } };
+    assert.equal(await statusGuestName(guestOrder, req, buildDeps()), "Jamie Rivera");
+  });
+
+  test("a same-location kiosk gets the full name; a different-location kiosk gets a first name only", async () => {
+    const sameLocation = buildDeps({ devices: { kiosk_abc123: { id: "d1", locationId: "L1", isActive: true } } });
+    const req = { headers: { authorization: "Bearer kiosk_abc123" } };
+    assert.equal(await statusGuestName(guestOrder, req, sameLocation), "Jamie Rivera");
+
+    const otherLocation = buildDeps({ devices: { kiosk_abc123: { id: "d1", locationId: "L2", isActive: true } } });
+    assert.equal(await statusGuestName(guestOrder, req, otherLocation), "Jamie");
+  });
+
+  test("a DEMO order's guestName is unchanged (single word, but the bypass is unconditional)", async () => {
+    const demoOrder = { id: "demo-plan", userId: null, guestId: null, locationId: "L1", guestName: "Alex", guest: null };
+    assert.equal(await statusGuestName(demoOrder, { headers: {} }, buildDeps()), "Alex");
   });
 });

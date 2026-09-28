@@ -16,6 +16,19 @@
 import { GUEST_SESSION_HEADER } from "./group-routes.js";
 
 /**
+ * Task A8b, fix round 1 addendum: `GET /orders/lookup` and `GET
+ * /orders/status` have their own, smaller hand-built shapes (a lookup
+ * summary and a status-page summary) that never returned email or phone,
+ * but did return a customer's or guest's FULL name to any caller. The
+ * ceiling for an unverified caller is a first name - `firstNameOnly` gives
+ * exactly that, or null.
+ */
+export function firstNameOnly(fullName) {
+  if (typeof fullName !== "string" || !fullName.trim()) return null;
+  return fullName.trim().split(/\s+/)[0];
+}
+
+/**
  * True when `req` may see the full order (including user/guest contact
  * fields): the verified signed-in owner, staff, or - for a guest order (no
  * `userId`) - the verified guest session matching `order.guestId`.

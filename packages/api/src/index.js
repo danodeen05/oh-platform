@@ -94,7 +94,7 @@ import { FASTIFY_OPTIONS, rateLimitKey } from "./http-config.js";
 import { createKioskAuth } from "./auth/kiosk.js";
 import { publicReferral, shopCreditSpender, registerAdminOnlyRoutes } from "./auth/hardening.js";
 import { listLocationSeats, resolveSeatViewer } from "./seats/service.js";
-import { canSeeFullOrder, safeOrderView } from "./orders/order-view.js";
+import { canSeeFullOrder, safeOrderView, firstNameOnly } from "./orders/order-view.js";
 
 // DEMO- order codes resolve to a synthetic order (see demo/status-demo.js):
 // the plan's live status-page demo reads real routes without touching the DB.
@@ -2176,6 +2176,19 @@ app.get("/orders/lookup", async (req, reply) => {
     });
   }
 
+  // Task A8b, fix round 1 addendum: this route is PUBLIC (kiosk check-in
+  // scans a QR code or types an order number - no session) and returned the
+  // full order, including `user: true` (every column), to any caller. Same
+  // rule as GET /orders/:id: full record for the verified owner, staff, or
+  // a verified guest owner; everyone else (including a kiosk device key for
+  // a DIFFERENT location) gets the safe view, at most a first name.
+  const canSeeFull = isDemoOrderId(order.id) || await canSeeFullOrder(req, order, {
+    checkAdminAuth,
+    kioskDeviceFor: kioskAuth.deviceFor,
+    resolveCustomer: customerAuth.resolve,
+    findGuestBySessionToken: (token) => prisma.guest.findUnique({ where: { sessionToken: token } }),
+  });
+
   if (order.arrivedAt) {
     return reply.code(400).send({
       error: "Order already checked in",
@@ -2189,14 +2202,16 @@ app.get("/orders/lookup", async (req, reply) => {
         seatId: order.seatId,
         seat: order.seat, // Include full seat object for display
         totalCents: order.totalCents,
-        guestName: order.guestName,
+        guestName: canSeeFull ? order.guestName : firstNameOnly(order.guestName),
         items: order.items,
-        user: order.user ? { name: order.user.name, membershipTier: order.user.membershipTier } : null,
+        user: order.user
+          ? { name: canSeeFull ? order.user.name : firstNameOnly(order.user.name), membershipTier: canSeeFull ? order.user.membershipTier : undefined }
+          : null,
       },
     });
   }
 
-  return reply.send(order);
+  return reply.send(canSeeFull ? order : safeOrderView(order));
 });
 
 // GET /orders/status - Get real-time order status by QR code
@@ -2218,8 +2233,11 @@ app.get("/orders/status", async (req, reply) => {
           menuItem: true,
         },
       },
-      user: true,
-      guest: true,
+      // Task A8b, fix round 1 addendum: this hand-built response never sent
+      // `user` or contact fields, but `guest: true` (every Guest column,
+      // including email/phone) was fetched for a name fallback that only
+      // ever needs the name. Select only that.
+      guest: { select: { name: true } },
       waitQueueEntry: true,
     },
   });
@@ -2227,6 +2245,21 @@ app.get("/orders/status", async (req, reply) => {
   if (!order) {
     return reply.code(404).send({ error: "Order not found" });
   }
+
+  // Task A8b, fix round 1 addendum: this route is PUBLIC (a link/QR code,
+  // no session) and always sent the guest's FULL name to any caller who
+  // knew the orderQrCode. Same rule as GET /orders/:id: the verified owner,
+  // staff, or a verified guest owner sees the full name; everyone else (and
+  // a kiosk device key for a DIFFERENT location) sees at most a first name.
+  // The plan's status demo keeps rendering unconditionally (it's synthetic).
+  const canSeeFull = isDemoOrderId(order.id) || await canSeeFullOrder(req, order, {
+    checkAdminAuth,
+    kioskDeviceFor: kioskAuth.deviceFor,
+    resolveCustomer: customerAuth.resolve,
+    findGuestBySessionToken: (token) => prisma.guest.findUnique({ where: { sessionToken: token } }),
+  });
+  const fullGuestName = order.guestName || order.guest?.name || null;
+  const guestName = canSeeFull ? fullGuestName : firstNameOnly(fullGuestName);
 
   // Build response with status info
   const response = {
@@ -2264,8 +2297,9 @@ app.get("/orders/status", async (req, reply) => {
         city: order.location.city,
       },
 
-      // Guest name (for non-authenticated orders) - fallback to guest record name
-      guestName: order.guestName || order.guest?.name || null,
+      // Guest name (for non-authenticated orders) - fallback to guest record name.
+      // Full name for the verified owner/staff/guest-owner; a first name otherwise.
+      guestName,
 
       // Items - localized based on user's language preference
       items: order.items.map((item) => {
@@ -6185,7 +6219,20 @@ app.patch("/kitchen/orders/:id/status", async (req, reply) => {
     }
   }
 
-  return order;
+  // Task A8b, fix round 1, final sweep: this route is MUST_STAY_OPEN (the
+  // customer status page's own "I'm done eating" PATCHes it with no
+  // session) and returned the full order, including `user: true`, to any
+  // caller. No known caller reads this response (the status page discards
+  // it and refetches GET /orders/status; kitchen-display.tsx and
+  // pods-manager.tsx discard it and refetch their own staff-gated GETs), so
+  // this only closes the leak - same rule as GET /orders/:id.
+  const canSeeFull = await canSeeFullOrder(req, order, {
+    checkAdminAuth,
+    kioskDeviceFor: kioskAuth.deviceFor,
+    resolveCustomer: customerAuth.resolve,
+    findGuestBySessionToken: (token) => prisma.guest.findUnique({ where: { sessionToken: token } }),
+  });
+  return canSeeFull ? order : safeOrderView(order);
 });
 
 // Get kitchen stats (orders by status)
