@@ -58,7 +58,7 @@ export async function Steps({ locale }: { locale: string }) {
   const progress = stepProgress(layout);
   const total = EXPERIENCE_STEPS.length;
   // Latin titles balance within about 18 characters; a CJK title is one short line, sized to fit a phone without breaking mid-phrase.
-  const titleSize = locale.startsWith("zh") ? "max-w-[16em] text-[clamp(1.6rem,7vw,3rem)]!" : "max-w-[18ch] text-[clamp(1.9rem,8.4vw,3.25rem)]! [text-wrap:balance]";
+  const titleSize = locale.startsWith("zh") ? "max-w-[16em] text-[clamp(1.45rem,6.3vw,3rem)]!" : "max-w-[18ch] text-[clamp(1.9rem,8.4vw,3.25rem)]! [text-wrap:balance]";
 
   const mapSteps = EXPERIENCE_STEPS.map((key, i) => ({
     key,
