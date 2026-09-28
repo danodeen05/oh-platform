@@ -127,7 +127,7 @@ export async function checkAndSendNearRestaurantNotification(userId, locationId)
     include: {
       stats: true,
       seats: {
-        where: { status: 'AVAILABLE' },
+        where: { status: 'AVAILABLE', retiredAt: null }, // active pods only
       },
     },
   });

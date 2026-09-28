@@ -109,6 +109,7 @@ import { createKioskAuth } from "./auth/kiosk.js";
 import { publicReferral, registerAdminOnlyRoutes } from "./auth/hardening.js";
 import { listLocationSeats, resolveSeatViewer } from "./seats/service.js";
 import { claimCheckInSeat } from "./seats/kiosk-seat.js";
+import { assignQueue, listFreePods, pickAutoPod, retiredPodInfo, POD_RETIRED } from "./seats/free-pods.js";
 import { claimSeat, holdSeatForOrder, holdPodAtPay } from "./orders/service.js";
 import { canSeeFullOrder, safeOrderView, firstNameOnly } from "./orders/order-view.js";
 
@@ -556,102 +557,9 @@ function getLabels(locale) {
 // Process queue and assign next customer to available pod
 async function processQueue(locationId) {
   console.log(`Processing queue for location ${locationId}`);
-
-  // Get available pods
-  const availablePods = await prisma.seat.findMany({
-    where: {
-      locationId,
-      status: "AVAILABLE",
-    },
-    orderBy: {
-      number: "asc",
-    },
-  });
-
-  if (availablePods.length === 0) {
-    console.log("No available pods");
-    return { assigned: 0 };
-  }
-
-  // Get queue sorted by priority (highest first)
-  const queueEntries = await prisma.waitQueue.findMany({
-    where: {
-      locationId,
-      status: "WAITING",
-    },
-    orderBy: {
-      priority: "desc",
-    },
-    take: availablePods.length, // Only get as many as we can assign
-    include: {
-      order: {
-        include: {
-          user: true,
-        },
-      },
-    },
-  });
-
-  if (queueEntries.length === 0) {
-    console.log("Queue is empty");
-    return { assigned: 0 };
-  }
-
-  const assigned = [];
-
-  // Assign pods to top N people in queue
-  for (let i = 0; i < Math.min(availablePods.length, queueEntries.length); i++) {
-    const queueEntry = queueEntries[i];
-    const pod = availablePods[i];
-
-    try {
-      // Assign pod and update statuses. The pod is taken with the conditional
-      // claimSeat (AVAILABLE -> RESERVED, one winner), never a plain write
-      // (Task D12 fix round 2): a pod a checkout claimed meanwhile is skipped.
-      const updatedOrder = await prisma.$transaction(async (tx) => {
-        if (!(await claimSeat(tx, pod.id))) return null;
-        const o = await tx.order.update({
-          where: { id: queueEntry.orderId },
-          data: {
-            seatId: pod.id,
-            podAssignedAt: new Date(),
-            podSelectionMethod: "AUTO",
-            queuePosition: null, // Remove from queue position
-          },
-          include: {
-            seat: true,
-            user: true,
-          },
-        });
-        await tx.waitQueue.update({
-          where: { id: queueEntry.id },
-          data: {
-            status: "ASSIGNED",
-            assignedAt: new Date(),
-          },
-        });
-        return o;
-      });
-      if (!updatedOrder) {
-        console.log(`[queue] Pod ${pod.number} was taken meanwhile; skipping`);
-        continue;
-      }
-
-      // Send notification to customer
-      await notifyPodReady(updatedOrder);
-
-      assigned.push({
-        orderId: updatedOrder.id,
-        podNumber: pod.number,
-      });
-
-      console.log(`Assigned order ${updatedOrder.kitchenOrderNumber || updatedOrder.orderNumber.slice(-6)} to Pod ${pod.number}`);
-    } catch (error) {
-      console.error(`Error assigning pod to queue entry ${queueEntry.id}:`, error);
-    }
-  }
-
-  return { assigned: assigned.length, assignments: assigned };
+  // Active (non-retired) pods only, best first, each taken with claimSeat
+  // (seats/free-pods.js, Task G3 fix round 1).
+  return assignQueue(prisma, locationId, { notify: notifyPodReady });
 }
 
 // Send notification when pod is ready
@@ -1612,7 +1520,7 @@ app.get("/seats/:qrCode", async (req, reply) => {
   });
 
   if (!seat) return reply.code(404).send({ error: "Seat not found" });
-  return seat;
+  return { ...seat, retired: Boolean(seat.retiredAt) };
 });
 
 // POST /seats - Create a new pod/seat
@@ -1822,15 +1730,8 @@ app.post("/orders/check-in", async (req, reply) => {
   }
 
   // CASE 2: Check for available pods at this location
-  const availablePods = await prisma.seat.findMany({
-    where: {
-      locationId: order.locationId,
-      status: "AVAILABLE",
-    },
-    orderBy: {
-      number: "asc",
-    },
-  });
+  // Active (non-retired) pods only, best first (Task G3 fix round 1).
+  const availablePods = await listFreePods(prisma, order.locationId);
 
   // Pod available: auto-assign the first one this call can actually claim
   // (conditional claimSeat, Task D12 fix round 2).
@@ -2436,6 +2337,16 @@ app.post("/pods/confirm-arrival", async (req, reply) => {
   if (!pod) {
     return reply.code(404).send({ error: "Pod not found. Please check the QR code." });
   }
+  if (pod.retiredAt) {
+    // Old sticker: release 2 never assigns a retired pod (Task G3 fix round 1).
+    const live = await prisma.order.findFirst({
+      where: { seatId: pod.id, paymentStatus: "PAID", podConfirmedAt: null, status: { notIn: ["COMPLETED", "CANCELLED"] } },
+      select: { id: true },
+    });
+    if (!live) {
+      return reply.code(410).send({ error: "This pod code is out of date.", code: POD_RETIRED, locationId: pod.locationId });
+    }
+  }
 
   // Find the order assigned to this pod that hasn't been confirmed yet
   // Priority: 1) Orders for this specific user, 2) Any order assigned to this pod
@@ -2559,6 +2470,11 @@ app.get("/pods/info", async (req, reply) => {
     },
   });
 
+  // An old sticker (retired pod, nothing live on it) is not an error: the guest
+  // page says the code is out of date and offers the kiosk or choosing a pod.
+  const retired = retiredPodInfo(pod, activeOrder);
+  if (retired) return retired;
+
   return {
     pod: {
       id: pod.id,
@@ -2615,20 +2531,12 @@ app.post("/orders/:id/assign-pod", async (req, reply) => {
       return reply.code(404).send({ error: "Pod not found" });
     }
 
-    if (seat.status !== "AVAILABLE") {
+    if (seat.status !== "AVAILABLE" || seat.retiredAt) {
       return reply.code(400).send({ error: "Pod is not available" });
     }
   } else {
-    // Auto-assign: Find first available pod at this location
-    seat = await prisma.seat.findFirst({
-      where: {
-        locationId: order.locationId,
-        status: "AVAILABLE",
-      },
-      orderBy: {
-        number: "asc",
-      },
-    });
+    // Auto-assign: the best active pod at this location, never a retired one (Task G3 fix round 1)
+    seat = await pickAutoPod(prisma, order.locationId);
 
     if (!seat) {
       return reply.code(400).send({ error: "No available pods at this location" });
@@ -5437,6 +5345,7 @@ app.get("/users/:id/wallet/apple", async (req, reply) => {
         notificationRadiusMiles: true,
         name: true,
         seats: {
+          where: { retiredAt: null }, // active pods only (retired pre-comb seats stay for history)
           select: {
             status: true,
           },

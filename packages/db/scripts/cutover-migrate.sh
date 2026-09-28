@@ -53,6 +53,10 @@ echo "[cutover-migrate] target $WHERE $HOST/$DB $MODE"
 q() { psql "$PSQL_URL" -X -q -t -A -v ON_ERROR_STOP=1 -c "$1"; }
 
 # Columns each migration adds, as "Table.column" (space separated).
+# The probe only understands ADDED COLUMNS. A future migration that adds an
+# enum value, an index or a constraint needs its own probe type here. (Enum
+# `ALTER TYPE ... ADD VALUE` does run inside --single-transaction on PG 12+,
+# as long as the same file does not also use the new value.)
 probe_columns() {
   case "$1" in
     20260929000000_comb_seats) echo "Seat.bestRank" ;;
@@ -111,12 +115,14 @@ for name in "${PENDING[@]}"; do
   cols="$(probe_columns "$name")"
   want=$(wc -w <<<"$cols")
   if [[ $DRY_RUN -eq 1 ]]; then
-    psql "$PSQL_URL" -X -q -v ON_ERROR_STOP=1 -c "BEGIN" -f "$file" -c "ROLLBACK" >/dev/null
+    psql "$PSQL_URL" -X -q -v ON_ERROR_STOP=1 -c "BEGIN" -f "$file" -c "ROLLBACK" >/dev/null \
+      || { echo "[cutover-migrate] $name: FAILED in the dry run (rolled back). Stop." >&2; exit 6; }
     # shellcheck disable=SC2086
     [[ "$(present_count $cols)" -eq 0 ]] || { echo "[cutover-migrate] $name: dry run left columns behind" >&2; exit 5; }
     echo "[cutover-migrate] $name: applies cleanly (rolled back)"
   else
-    psql "$PSQL_URL" -X -q -v ON_ERROR_STOP=1 --single-transaction -f "$file" >/dev/null
+    psql "$PSQL_URL" -X -q -v ON_ERROR_STOP=1 --single-transaction -f "$file" >/dev/null \
+      || { echo "[cutover-migrate] $name: FAILED; its transaction rolled back, earlier ones stay applied. Stop." >&2; exit 6; }
     # shellcheck disable=SC2086
     [[ "$(present_count $cols)" -eq "$want" ]] || { echo "[cutover-migrate] $name: applied but the probe disagrees" >&2; exit 5; }
     echo "[cutover-migrate] $name: APPLIED"

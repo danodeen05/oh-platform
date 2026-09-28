@@ -111,6 +111,20 @@ export function buildChecks({ api, web, chappy = true, locales = ["en", "zh-TW"]
     },
   });
   checks.push(expectStatus("web /en/tenants is gone (404)", `${W}/en/tenants`, 404));
+  checks.push({
+    name: "web Stripe webhook has its secret (bad signature is 400, not 500)",
+    async run(f) {
+      const res = await status(f, `${W}/api/webhooks/stripe`, { method: "POST", headers: { "content-type": "application/json", "stripe-signature": "t=1,v1=invalid" }, body: "{}" });
+      return { ok: res.status === 400, detail: `${res.status}${res.status === 500 ? " (STRIPE_WEBHOOK_SECRET missing?)" : ""}` };
+    },
+  });
+  checks.push({
+    name: "api Chappy SMS webhook refuses an unsigned request (403)",
+    async run(f) {
+      const res = await status(f, `${A}/chappy/sms`, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: "From=%2B10000000000&Body=smoke" });
+      return { ok: res.status === 403, detail: `${res.status}` };
+    },
+  });
 
   if (chappy) {
     checks.push({

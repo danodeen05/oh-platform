@@ -4860,5 +4860,12 @@
       "cta": "Ask Chappy",
       "prompt": "How do I reach Beef Boss fastest?"
     }
+  },
+  "podCode": {
+    "title": "This pod code is out of date",
+    "body": "We moved to new pods, so this sticker no longer checks you in.",
+    "kiosk": "Check in at the kiosk by the entrance. It gives you a pod.",
+    "choose": "Choose your pod",
+    "status": "See my order"
   }
 }

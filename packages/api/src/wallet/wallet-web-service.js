@@ -188,6 +188,7 @@ export async function getUpdatedPass(passTypeId, serialNumber) {
       notificationRadiusMiles: true,
       name: true,
       seats: {
+        where: { retiredAt: null }, // active pods only
         select: {
           status: true,
         },

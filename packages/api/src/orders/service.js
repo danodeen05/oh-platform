@@ -277,7 +277,7 @@ function quoteColumns(quote) {
  * don't have one. Within an equal `bestRank` (including "no bestRank on
  * either side"), fall back to the original finger-then-position order.
  */
-function podOrder(a, b) {
+export function podOrder(a, b) {
   const rank = (s) => (s.bestRank === null || s.bestRank === undefined ? Infinity : s.bestRank);
   const ra = rank(a);
   const rb = rank(b);

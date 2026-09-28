@@ -37,9 +37,11 @@ function healthyFetch(overrides = {}) {
       if (u.pathname === "/orders/status") return response(200, { json: { status: "PREPPING" } });
       if (u.pathname === "/chappy/guest-token") return response(200, { json: { token: "gt_secret" } });
       if (u.pathname === "/chappy/chat") return response(200, { text: ": chappy\n\nevent: text\ndata: {}\n\nevent: done\ndata: {}\n\n" });
+      if (u.pathname === "/chappy/sms") return response(403);
     }
     if (u.pathname === "/en/loyalty") return response(308, { headers: { location: `${WEB}/en/rewards` } });
     if (u.pathname === "/en/tenants") return response(404);
+    if (u.pathname === "/api/webhooks/stripe") return response(400);
     return response(200, { text: "<html></html>" });
   };
   return { fetchImpl, calls };
@@ -59,7 +61,7 @@ test("a healthy release passes every check, and the list covers the runbook's sm
   assert.equal(res.failed, 0, out.join("\n"));
   assert.ok(!out.join("\n").includes("gt_secret"), "the guest token is never printed");
   assert.ok(calls.every((c) => c.init.redirect === "manual"), "redirects are observed, not followed");
-  assert.ok(calls.every((c) => !c.init.method || c.init.method === "GET" || /\/chappy\//.test(c.url)), "only Chappy uses POST");
+  assert.ok(calls.every((c) => !c.init.method || c.init.method === "GET" || /\/chappy\/|\/api\/webhooks\/stripe/.test(c.url)), "only Chappy and the webhook probe use POST");
 });
 
 test("each broken answer fails its own check only", async () => {
@@ -68,6 +70,8 @@ test("each broken answer fails its own check only", async () => {
     [`${WEB}/en/loyalty`]: () => response(307, { headers: { location: "/en/rewards" } }),
     [`${WEB}/en/tenants`]: () => response(200),
     [`${API}/chappy/chat`]: () => response(200, { text: "event: text\ndata: {}\n\nevent: error\ndata: {}\n\n" }),
+    [`${WEB}/api/webhooks/stripe`]: () => response(500),
+    [`${API}/chappy/sms`]: () => response(500),
   };
   for (const [url, answer] of Object.entries(cases)) {
     const { fetchImpl } = healthyFetch({ [url]: answer });

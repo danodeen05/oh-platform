@@ -32,6 +32,10 @@
  *    Every location resolves before anything is written.
  *  - Seats retired by a run get that run's exact `retiredAt` (printed), so a
  *    rollback can clear just those.
+ *  - `--release-closed-slugs`: a closed duplicate holding one of the slugs
+ *    gives it up first (fix round 1); live rows are never touched by it.
+ *  - Not one transaction: each pod is its own write. A crashed run is safe to
+ *    re-run (it converges); use seat-rollback-release1 to go back.
  *  - Refuses a non-local DATABASE_URL unless ALLOW_NON_LOCAL=1.
  */
 import { PrismaClient } from "@prisma/client";
@@ -118,8 +122,11 @@ export async function seedCombSeats(prisma: Pick<PrismaClient, "seat">, { locati
       partnerByLabel.set(label, existing.dualPartnerId ?? null);
       if (SEAT_FIELDS.some((f) => !sameValue(existing[f], fields[f]))) {
         updated += 1;
+        // A retired pod coming back (e.g. after seat-rollback-release1 set it
+        // CLEANING) returns as AVAILABLE: nothing can be on a retired pod.
+        const data = existing.retiredAt ? { ...fields, status: "AVAILABLE" as const } : fields;
         // eslint-disable-next-line no-await-in-loop
-        if (!dryRun) await prisma.seat.update({ where: { id: existing.id }, data: fields });
+        if (!dryRun) await prisma.seat.update({ where: { id: existing.id }, data });
       }
     } else {
       created += 1;
@@ -171,8 +178,10 @@ export async function seedCombSeats(prisma: Pick<PrismaClient, "seat">, { locati
  * closed row, a missing row, or an override that disagrees with the row
  * already holding the slug. Never matches by name.
  */
-export async function resolveLocation(prisma: Pick<PrismaClient, "location">, entry: LocationEntry, overrideId?: string) {
-  const bySlug: any = await prisma.location.findUnique({ where: { slug: entry.slug } });
+export async function resolveLocation(prisma: Pick<PrismaClient, "location">, entry: LocationEntry, overrideId?: string, releasedIds: ReadonlySet<string> = new Set()) {
+  // A closed row whose slug a dry run of --release-closed-slugs would release counts as not holding it.
+  const found: any = await prisma.location.findUnique({ where: { slug: entry.slug } });
+  const bySlug = found && !releasedIds.has(found.id) ? found : null;
   if (bySlug) {
     if (overrideId && overrideId !== bySlug.id) {
       throw new Error(`${entry.slug}: --location-id says ${overrideId}, but row ${bySlug.id} already has this slug. Fix the slug by hand first.`);
@@ -196,10 +205,10 @@ export async function resolveLocation(prisma: Pick<PrismaClient, "location">, en
 export async function seedLocation(
   prisma: PrismaClient,
   entry: LocationEntry,
-  { dryRun = false, overrideId, now = new Date() }: { dryRun?: boolean; overrideId?: string; now?: Date } = {},
+  { dryRun = false, overrideId, now = new Date(), releasedIds = new Set<string>() }: { dryRun?: boolean; overrideId?: string; now?: Date; releasedIds?: ReadonlySet<string> } = {},
 ) {
   const options = LOCATION_LAYOUTS[entry.layoutKey];
-  const { location, via } = await resolveLocation(prisma, entry, overrideId);
+  const { location, via } = await resolveLocation(prisma, entry, overrideId, releasedIds);
   const locationData = { slug: entry.slug, layoutKey: entry.layoutKey, layoutMirror: options.mirror, podCount: options.pods };
   const locationChanges = (Object.keys(locationData) as (keyof typeof locationData)[]).filter((k) => !sameValue(location[k], locationData[k]));
   if (!dryRun && locationChanges.length) {
@@ -222,6 +231,25 @@ export async function seedLocation(
   return result;
 }
 
+/**
+ * `--release-closed-slugs` (Task G3 fix round 1): when a CLOSED duplicate row
+ * holds `city-creek` / `university-place`, clear that slug (only on the closed
+ * row, never on a live one) so the live row can take it. Returns the ids
+ * released (or, in a dry run, that would be).
+ */
+export async function releaseClosedSlugs(prisma: Pick<PrismaClient, "location">, { dryRun }: { dryRun: boolean }): Promise<string[]> {
+  const released: string[] = [];
+  for (const entry of LOCATIONS) {
+    // eslint-disable-next-line no-await-in-loop
+    const row: any = await prisma.location.findUnique({ where: { slug: entry.slug } });
+    if (!row || !row.isClosed) continue;
+    released.push(row.id);
+    // eslint-disable-next-line no-await-in-loop
+    if (!dryRun) await prisma.location.updateMany({ where: { id: row.id, isClosed: true, slug: entry.slug }, data: { slug: null } });
+  }
+  return released;
+}
+
 /** Parses repeatable `--location-id=<slug>=<id>` flags. */
 export function parseLocationOverrides(argv: string[]): Map<string, string> {
   const out = new Map<string, string>();
@@ -237,7 +265,7 @@ export function parseLocationOverrides(argv: string[]): Map<string, string> {
 
 async function main() {
   if (!process.argv.includes("--all")) {
-    console.log("Usage: tsx scripts/seed-comb-seats.ts --all [--dry-run] [--location-id=<slug>=<id>]");
+    console.log("Usage: tsx scripts/seed-comb-seats.ts --all [--dry-run] [--release-closed-slugs] [--location-id=<slug>=<id>]");
     return;
   }
   const dryRun = process.argv.includes("--dry-run");
@@ -247,14 +275,20 @@ async function main() {
   const prisma = new PrismaClient();
   const now = new Date();
   try {
+    let releasedIds = new Set<string>();
+    if (process.argv.includes("--release-closed-slugs")) {
+      const released = await releaseClosedSlugs(prisma, { dryRun });
+      releasedIds = new Set(dryRun ? released : []);
+      console.log(`[seed-comb-seats]${dryRun ? " [dry run]" : ""} closed rows ${dryRun ? "that would release" : "released"} their slug: ${released.length ? released.join(", ") : "none"}`);
+    }
     // Resolve every location before writing anything, so a bad mapping fails with no partial run.
     for (const entry of LOCATIONS) {
       // eslint-disable-next-line no-await-in-loop
-      await resolveLocation(prisma, entry, overrides.get(entry.slug));
+      await resolveLocation(prisma, entry, overrides.get(entry.slug), releasedIds);
     }
     for (const entry of LOCATIONS) {
       // eslint-disable-next-line no-await-in-loop -- locations seed sequentially for clear, ordered log output
-      await seedLocation(prisma, entry, { dryRun, overrideId: overrides.get(entry.slug), now });
+      await seedLocation(prisma, entry, { dryRun, overrideId: overrides.get(entry.slug), now, releasedIds });
     }
   } finally {
     await prisma.$disconnect();

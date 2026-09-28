@@ -86,12 +86,15 @@ async function runJob(jobName) {
 
       default:
         console.error(`[CRON] Unknown job: ${jobName}`);
-        return;
+        return false;
     }
 
     console.log(`[CRON] ${jobName} completed successfully`);
+    return true;
   } catch (error) {
     console.error(`[CRON] ${jobName} failed:`, error);
+    // `run` mode exits non-zero on this (Task G3 fix round 1), so a Railway cron shows the failure.
+    return false;
   }
 }
 
@@ -226,9 +229,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       console.log('Usage: node wallet-cron.js run <streak|challenge|credits>');
       process.exit(1);
     }
-    runJob(job).then(() => {
-      prisma.$disconnect();
-      process.exit(0);
+    runJob(job).then(async (ok) => {
+      await prisma.$disconnect();
+      process.exit(ok ? 0 : 1);
     });
   } else if (mode === 'trigger') {
     // Trigger via HTTP

@@ -2555,5 +2555,12 @@
       "cta": "Pregúntale a Chappy",
       "prompt": "¿Cómo llego a Jefe de la carne lo más rápido posible?"
     }
+  },
+  "podCode": {
+    "title": "Este código de cabina ya no es válido",
+    "body": "Cambiamos a cabinas nuevas, así que esta etiqueta ya no registra tu llegada.",
+    "kiosk": "Regístrate en el quiosco de la entrada. Te asigna una cabina.",
+    "choose": "Elige tu cabina",
+    "status": "Ver mi pedido"
   }
 }

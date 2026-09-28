@@ -38,7 +38,7 @@ const COLLECTIONS = [
   // Shop orders (Task D10a)
   "shopProduct", "shopOrder", "shopOrderItem",
   // Cutover scripts (Task G3)
-  "pendingCredit",
+  "pendingCredit", "waitQueue",
 ];
 
 /**
@@ -97,6 +97,8 @@ function matchField(val, cond) {
         return val !== undefined && val !== null && compare(val, opVal) <= 0;
       case "in":
         return opVal.some((v) => valEquals(val, v));
+      case "notIn":
+        return !opVal.some((v) => valEquals(val, v));
       default:
         throw new Error(`prisma-memory: unsupported where operator "${op}"`);
     }
@@ -325,6 +327,7 @@ export function makeMemoryPrisma(seed = {}) {
     shopOrders: "shopOrder",
     shopOrderItems: "shopOrderItem",
     pendingCredits: "pendingCredit",
+    waitQueues: "waitQueue",
   };
   for (const [seedKey, collection] of Object.entries(seedMap)) {
     for (const rec of seed[seedKey] || []) {

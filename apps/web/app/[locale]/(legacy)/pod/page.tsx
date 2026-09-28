@@ -2,10 +2,13 @@
 import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
 import { useSiteApi } from "@/lib/site/api";
+import { RetiredPodNotice } from "@/components/site/pod/RetiredPodNotice";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 interface PodInfo {
+  /** Task G3 fix round 1: an old sticker on a retired pre-comb seat. */
+  retired?: boolean;
   pod: {
     id: string;
     number: string;
@@ -16,7 +19,7 @@ interface PodInfo {
     id: string;
     name: string;
     city: string;
-  };
+  } | null;
   hasActiveOrder: boolean;
   activeOrder: {
     id: string;
@@ -200,6 +203,10 @@ function PodContent() {
     );
   }
 
+  if (podInfo?.retired) {
+    return <RetiredPodNotice locationName={podInfo.location?.name} />;
+  }
+
   if (error && !podInfo) {
     return (
       <main
@@ -336,7 +343,7 @@ function PodContent() {
           }}
         >
           <div style={{ fontSize: "0.9rem", marginBottom: 4, opacity: 0.9 }}>
-            {podInfo?.location.name}
+            {podInfo?.location?.name}
           </div>
           <div
             style={{
@@ -349,7 +356,7 @@ function PodContent() {
             POD {podInfo?.pod.number}
           </div>
           <div style={{ fontSize: "0.85rem", opacity: 0.8 }}>
-            {podInfo?.location.city}
+            {podInfo?.location?.city}
           </div>
         </div>
 

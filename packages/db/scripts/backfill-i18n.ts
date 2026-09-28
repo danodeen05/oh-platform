@@ -37,7 +37,8 @@
  * Usage:
  *   tsx scripts/backfill-i18n.ts --dry-run                 # log planned changes, write nothing
  *   tsx scripts/backfill-i18n.ts                            # apply i18n/iconKey/labelsI18n
- *   tsx scripts/backfill-i18n.ts --clear-emoji              # also null out iconEmoji (post seal-UI cutover only)
+ *   tsx scripts/backfill-i18n.ts --clear-emoji --emoji-backup=<new file>   # also null out iconEmoji (post seal-UI cutover only);
+ *                                                           # the backup (required) is written first, for emoji-backup.ts --from
  *   tsx scripts/backfill-i18n.ts --dry-run --clear-emoji    # preview both together
  *
  * Run against DATABASE_URL from the environment (e.g. via
@@ -47,6 +48,7 @@
  */
 import { PrismaClient } from "@prisma/client";
 import { requireSafeTarget, targetBanner } from "./lib/db-guard.ts";
+import { takeEmojiBackup } from "./emoji-backup.ts";
 import { BADGES } from "../prisma/seed-data/badges";
 import { CHALLENGES } from "../prisma/seed-data/challenges";
 import { LOCATION_I18N } from "../prisma/seed-data/locations";
@@ -244,10 +246,17 @@ function summarize(result: BackfillResult, dryRun: boolean): void {
 async function main() {
   const dryRun = process.argv.includes("--dry-run");
   const clearEmoji = process.argv.includes("--clear-emoji");
+  const backupFile = process.argv.find((a) => a.startsWith("--emoji-backup="))?.slice("--emoji-backup=".length);
+  // Task G3 fix round 1: a real emoji clear always takes a backup first.
+  if (clearEmoji && !dryRun && !backupFile) throw new Error("--clear-emoji needs --emoji-backup=<new file> (the restore source)");
   const target = requireSafeTarget("backfill-i18n");
   console.log(`${targetBanner("backfill-i18n", target, dryRun)}${clearEmoji ? " --clear-emoji" : ""}`);
   const prisma = new PrismaClient();
   try {
+    if (clearEmoji && !dryRun && backupFile) {
+      const backup = await takeEmojiBackup(prisma, backupFile);
+      console.log(`[backfill-i18n] emoji backup written: ${backup.badges.length} badges, ${backup.challenges.length} challenges -> ${backupFile}`);
+    }
     const result = await backfillI18n(prisma, { dryRun, clearEmoji });
     summarize(result, dryRun);
   } finally {

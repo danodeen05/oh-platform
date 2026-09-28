@@ -17,7 +17,8 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { buildLayout, LOCATION_LAYOUTS, podLabel, rankPodsByEntry } from "@oh/floor-plan";
-import { seedCombSeats, resolveLocation, parseLocationOverrides, LOCATIONS } from "../seed-comb-seats.ts";
+import { seedCombSeats, resolveLocation, parseLocationOverrides, releaseClosedSlugs, LOCATIONS } from "../seed-comb-seats.ts";
+import { makeMemoryPrisma } from "../../../api/src/__tests__/helpers/prisma-memory.js";
 import { noWrites } from "./helpers/no-writes.ts";
 
 const UNIQUE_INDEXES: readonly (readonly string[])[] = [["locationId", "number"], ["qrCode"], ["dualPartnerId"]];
@@ -287,6 +288,28 @@ describe("Task G3: dry run, idempotent re-run, live-row resolution", () => {
     await assert.rejects(resolveLocation(fakeLocations([{ id: "x", slug: "city-creek", isClosed: true }]), cc), /closed/);
     await assert.rejects(resolveLocation(fakeLocations([]), cc), /--location-id=city-creek=/);
     await assert.rejects(resolveLocation(fakeLocations([{ id: "a", slug: "city-creek", isClosed: false }]), cc, "b"), /already has this slug/);
+  });
+
+  test("releaseClosedSlugs frees a slug only from a CLOSED row; the dry run writes nothing and resolution then finds the live row", async () => {
+    const prisma = makeMemoryPrisma({
+      locations: [
+        { id: "cc_closed", slug: "city-creek", isClosed: true },
+        { id: cc.id, slug: null, isClosed: false },
+        { id: "up_live", slug: "university-place", isClosed: false },
+      ],
+    });
+    const log: string[] = [];
+    const dry = await releaseClosedSlugs(noWrites(prisma, log) as any, { dryRun: true });
+    assert.deepEqual(dry, ["cc_closed"]);
+    assert.deepEqual(log, []);
+    const viaDry = await resolveLocation(prisma as any, cc, undefined, new Set(dry));
+    assert.equal(viaDry.location.id, cc.id);
+    assert.equal(viaDry.via, "known-id");
+
+    assert.deepEqual(await releaseClosedSlugs(prisma as any, { dryRun: false }), ["cc_closed"]);
+    assert.equal((await prisma.location.findUnique({ where: { id: "cc_closed" } })).slug, null);
+    assert.equal((await prisma.location.findUnique({ where: { id: "up_live" } })).slug, "university-place", "a live row keeps its slug");
+    assert.deepEqual(await releaseClosedSlugs(prisma as any, { dryRun: false }), [], "idempotent");
   });
 
   test("parseLocationOverrides reads --location-id=<slug>=<id> and rejects unknown slugs", () => {

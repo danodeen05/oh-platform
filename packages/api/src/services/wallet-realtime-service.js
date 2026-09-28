@@ -27,6 +27,7 @@ export async function checkPodAvailabilityChanges() {
       id: true,
       name: true,
       seats: {
+        where: { retiredAt: null }, // active pods only
         select: { status: true },
       },
     },
@@ -119,6 +120,7 @@ export async function initializeAvailabilityTracking() {
     select: {
       id: true,
       seats: {
+        where: { retiredAt: null }, // active pods only
         select: { status: true },
       },
     },

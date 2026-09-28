@@ -50,7 +50,7 @@ FROM "MealGift"
 WHERE "paidAt" IS NULL AND "createdAt" < '2026-09-27T22:20:00Z'
 GROUP BY status
 ORDER BY status;
-\echo '   ...of which EXPIRED after release 1 (the new code did not refund these givers)'
+\echo '   ...of which EXPIRED after release 1 (the new code skipped the refund; backfill-mealgift-paidat returns the funded ones)'
 SELECT count(*) AS expired_after_release1_unpaid
 FROM "MealGift"
 WHERE "paidAt" IS NULL AND "createdAt" < '2026-09-27T22:20:00Z' AND status = 'EXPIRED' AND "expiredAt" >= '2026-09-27T22:20:00Z';
