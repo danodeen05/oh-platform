@@ -19,18 +19,7 @@ const API = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://lo
 
 export const PROGRAM_REVALIDATE_SECONDS = 3600;
 
-/** How a program tier key maps to the owner's tier art and the canonical `loyalty.tiers.*` names. */
-export const TIER_META = {
-  CHOPSTICK: { mark: "chopstick", msg: "chopstick" },
-  NOODLE_MASTER: { mark: "noodle-master", msg: "noodleMaster" },
-  BEEF_BOSS: { mark: "beef-boss", msg: "beefBoss" },
-} as const;
-
-export type TierKey = keyof typeof TIER_META;
-
-export function tierMeta(key: string) {
-  return TIER_META[key as TierKey] ?? TIER_META.CHOPSTICK;
-}
+export { TIER_META, tierMeta, type TierKey } from "./tier-meta";
 
 export interface CatalogCopy {
   name: string;

@@ -27,7 +27,7 @@ const isPublicRoute = createRouteMatcher([
   "/:locale/order(.*)",
   "/:locale/menu(.*)",
   "/:locale/locations(.*)",
-  "/:locale/loyalty(.*)",
+  "/:locale/rewards(.*)",
   "/:locale/gift-cards(.*)",
   "/:locale/store(.*)",
   "/:locale/contact(.*)",

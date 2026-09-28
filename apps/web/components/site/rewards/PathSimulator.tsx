@@ -16,7 +16,8 @@ import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { CountUp } from "@/components/site/motion/CountUp";
 import { TierMark } from "@/components/site/tiers/TierMark";
-import { tierMeta, type PublicProgram } from "@/lib/site/program";
+import type { PublicProgram } from "@/lib/site/program";
+import { tierMeta } from "@/lib/site/tier-meta";
 import { simulate } from "@/lib/site/simulate";
 import { formatMoney } from "./format";
 import "./rewards.css";
@@ -92,7 +93,10 @@ export function PathSimulator({ program }: { program: PublicProgram }) {
   const name = (key: string) => tiers(`${tierMeta(key).msg}.name`);
   const first = program.tiers[0];
   const top = program.tiers[program.tiers.length - 1];
-  const never = bowls === 0 || friends === 0;
+  // Every tier needs both bowls and friends: either at zero and the climb never starts.
+  const noFriends = friends === 0;
+  const noBowls = bowls === 0 && !noFriends;
+  const never = noFriends || bowls === 0;
   const friendCreditCents = friends * program.referral.referrerCents * SIM_MONTHS;
   const tierIndex = (key: string) => Math.max(0, program.tiers.findIndex((x) => x.key === key));
   const [nextDate, topDate] = [result.tierDates[0], result.tierDates[result.tierDates.length - 1]];
@@ -104,6 +108,8 @@ export function PathSimulator({ program }: { program: PublicProgram }) {
   else summary = t("summary", { first: name(nextDate.tier), firstMonth: nextDate.month, last: name(topDate.tier), lastMonth: topDate.month });
 
   const serif = cjk ? "font-display-cjk" : "font-display";
+  // Whole dollars, in the locale's own currency style ("$41", "41 $").
+  const money = (dollars: number) => formatMoney(Math.round(dollars) * 100, locale);
 
   return (
     <div
@@ -183,12 +189,17 @@ export function PathSimulator({ program }: { program: PublicProgram }) {
           })}
         </div>
 
-        {never ? (
+        {noFriends ? (
           <div data-sim-never className="mt-4 rounded-2xl border border-oh-ember/50 bg-oh-ember-deep/15 p-4">
             <p data-sim-never-title className={`${serif} m-0 text-2xl leading-tight text-oh-cream`}>
               {t("never.title")}
             </p>
             <p className="m-0 mt-1.5 text-base text-oh-cream/80">{t("never.body", { tier: name(top.key) })}</p>
+          </div>
+        ) : noBowls ? (
+          <div data-sim-no-bowls className="mt-4 rounded-2xl border border-oh-ember/50 bg-oh-ember-deep/15 p-4">
+            <p className={`${serif} m-0 text-2xl leading-tight text-oh-cream`}>{t("noBowls.title")}</p>
+            <p className="m-0 mt-1.5 text-base text-oh-cream/80">{t("noBowls.body", { tier: name(top.key) })}</p>
           </div>
         ) : null}
 
@@ -220,22 +231,22 @@ export function PathSimulator({ program }: { program: PublicProgram }) {
 
         {/* What you'd earn on the way. */}
         <dl className="m-0 mt-6 grid grid-cols-3 gap-3 border-t border-oh-stone pt-5">
-          <div className="min-w-0">
+          <div className="flex min-w-0 flex-col">
             <dt className="text-sm leading-snug text-oh-cream/70 hyphens-auto">{t("totals.freeBowls")}</dt>
-            <dd data-sim-free-bowls data-value={result.freeBowls} className={`${serif} m-0 mt-1 text-[1.75rem] leading-tight md:text-4xl text-oh-cream`}>
+            <dd data-sim-free-bowls data-value={result.freeBowls} className={`${serif} m-0 mt-auto pt-1 text-[1.75rem] leading-tight md:text-4xl text-oh-cream`}>
               <CountUp to={result.freeBowls} duration={600} />
             </dd>
           </div>
-          <div className="min-w-0">
+          <div className="flex min-w-0 flex-col">
             <dt className="text-sm leading-snug text-oh-cream/70 hyphens-auto">{t("totals.cashback")}</dt>
-            <dd data-sim-cashback data-value={result.cashbackCents} className={`${serif} m-0 mt-1 text-[1.75rem] leading-tight md:text-4xl text-oh-gold`}>
-              <CountUp to={Math.floor(result.cashbackCents / 100)} prefix="$" duration={700} />
+            <dd data-sim-cashback data-value={result.cashbackCents} className={`${serif} m-0 mt-auto pt-1 text-[1.75rem] leading-tight md:text-4xl text-oh-gold`}>
+              <CountUp to={Math.floor(result.cashbackCents / 100)} format={money} duration={700} />
             </dd>
           </div>
-          <div className="min-w-0">
+          <div className="flex min-w-0 flex-col">
             <dt className="text-sm leading-snug text-oh-cream/70 hyphens-auto">{t("totals.friendCredit")}</dt>
-            <dd data-sim-friend-credit data-value={friendCreditCents} className={`${serif} m-0 mt-1 text-[1.75rem] leading-tight md:text-4xl text-oh-cream`}>
-              <CountUp to={Math.floor(friendCreditCents / 100)} prefix="$" duration={700} />
+            <dd data-sim-friend-credit data-value={friendCreditCents} className={`${serif} m-0 mt-auto pt-1 text-[1.75rem] leading-tight md:text-4xl text-oh-cream`}>
+              <CountUp to={Math.floor(friendCreditCents / 100)} format={money} duration={700} />
             </dd>
           </div>
         </dl>

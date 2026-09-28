@@ -2121,7 +2121,7 @@
       "loading": "正在查看你的进度",
       "youAre": "你目前是{tier}。",
       "toNext": "距离{next}：{orders}/{ordersNeed} 碗，{referrals}/{referralsNeed} 位朋友。",
-      "top": "你已在最高等级。每一碗都享 {pct}% 返现。",
+      "top": "你已在最高等级。每一碗都享 {pct}% 购物金回馈。",
       "ordersLabel": "晋升{next}的碗数",
       "referralsLabel": "晋升{next}的朋友数"
     },
@@ -2131,7 +2131,7 @@
       "start": "每个人的起点。注册并点一碗即可。",
       "need": "{orders} 碗加 {referrals} 位朋友",
       "after": "从成为{tier}起计算。每升一级，进度重新开始。",
-      "cashback": "每碗 {pct}% 返现",
+      "cashback": "每碗 {pct}% 购物金回馈",
       "here": "你在这里",
       "step": "第 {step} 级，共 {total} 级"
     },
@@ -2139,18 +2139,18 @@
       "eyebrow": "会员等级",
       "title": "点一下卡片，看看福利。",
       "rail": "等级卡片",
-      "headline": "{pct}% 返现",
+      "headline": "{pct}% 购物金回馈",
       "flip": "查看{tier}福利",
-      "unflip": "返回{tier}卡片",
       "tapHint": "点一下看福利",
       "backHint": "点一下翻回",
       "perksTitle": "{tier}福利",
       "perks": {
-        "cashback": "每碗 {pct}% 返现，以购物金发放",
+        "cashback": "每碗 {pct}% 回馈，以购物金发放",
         "earlyAccess": "新品提前 {days} 天抢先享用",
-        "queue": "厨房出餐优先 +{boost}",
+        "queue": "你的面出餐顺序往前移",
+        "queueTop": "你的面出餐顺序最优先",
         "queueNone": "普通出餐顺序",
-        "freeBowl": "升级即送一碗，{days} 天内有效",
+        "freeBowl": "升级为{tier}即送一碗，{days} 天内有效",
         "quarterly": "每季度赠送一份高级加料"
       }
     },
@@ -2175,10 +2175,13 @@
       "results": "你的晋升",
       "reach": "第 {month} 个月",
       "beyond": "超过 {months} 个月",
-      "startTier": "第一天起",
       "never": {
         "title": "没有朋友，就无法晋升。",
         "body": "每个等级都需要碗数，也需要朋友。每月邀请一位朋友，{tier}就在眼前。"
+      },
+      "noBowls": {
+        "title": "没有点面，就无法晋升。",
+        "body": "每个等级都要碗数，也要朋友。每周一碗，{tier}就在眼前。"
       },
       "summary": "按这个节奏：第 {firstMonth} 个月成为{first}，第 {lastMonth} 个月成为{last}。",
       "summaryPartial": "按这个节奏：第 {firstMonth} 个月成为{first}。成为{last}需要超过 {months} 个月。",
@@ -2187,20 +2190,20 @@
       "month": "月",
       "totals": {
         "freeBowls": "免费面",
-        "cashback": "返现",
-        "friendCredit": "推荐购物金",
+        "cashback": "购物金回馈",
+        "friendCredit": "已得推荐购物金",
         "note": "按 {months} 个月计算。购物金自获得起 {days} 天后过期。"
       }
     },
     "credits": {
       "eyebrow": "购物金怎么用",
       "title": "赚到、用掉，{days} 天内。",
-      "lede": "返现和推荐奖励都会以购物金存入你的账户。",
+      "lede": "购物金回馈和推荐奖励都会存入你的账户。",
       "track": "一笔购物金的一生",
       "day": "第 {day} 天",
       "earn": {
         "title": "获得",
-        "body": "每碗享 {low}% 至 {high}% 返现；朋友吃完第一碗，你再得 {referrer}。"
+        "body": "每碗享 {low}% 至 {high}% 购物金回馈；朋友吃完第一碗，你再得 {referrer}。"
       },
       "spend": {
         "title": "使用",
@@ -2277,7 +2280,7 @@
         },
         "expiry": {
           "q": "购物金什么时候过期？",
-          "a": "获得后 {days} 天。过期前 {warn} 天会提醒你，结账时也总是先用最早的。"
+          "a": "获得后 {days} 天。过期前 {warn} 天会提醒你，结账时也总是先用最快过期的。"
         },
         "freeBowl": {
           "q": "免费面怎么用？",
@@ -2293,7 +2296,7 @@
         },
         "queue": {
           "q": "出餐优先是什么意思？",
-          "a": "高峰时段，较高等级的订单在厨房排序中领先：{secondName} +{second}，{thirdName} +{third}。"
+          "a": "高峰时段，等级越高，出餐顺序越靠前：{secondName}往前移，{thirdName}最优先。"
         }
       }
     },

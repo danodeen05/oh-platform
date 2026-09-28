@@ -95,13 +95,14 @@ test("iPhone 15: the primary CTA takes you to the simulator", async () => {
   });
 });
 
-test("iPhone 15: the simulator defaults to the plan case (Beef Boss in month 10)", async () => {
+// Fix round 1: engine parity (event-by-event upgrades) supersedes the plan's month-10 figure.
+test("iPhone 15: the simulator defaults to the plan case (Beef Boss in month 9)", async () => {
   await withPage(iphone15(), "/en/rewards", async (page) => {
     const sim = page.locator("[data-simulator]");
-    assert.equal(await sim.locator("[data-tier-date='BEEF_BOSS']").getAttribute("data-month"), "10");
+    assert.equal(await sim.locator("[data-tier-date='BEEF_BOSS']").getAttribute("data-month"), "9");
     assert.equal(await sim.locator("[data-tier-date='NOODLE_MASTER']").getAttribute("data-month"), "3");
     assert.equal(await sim.locator("[data-sim-free-bowls]").getAttribute("data-value"), "2");
-    assert.equal(await sim.locator("[data-sim-cashback]").getAttribute("data-value"), "4152");
+    assert.equal(await sim.locator("[data-sim-cashback]").getAttribute("data-value"), "4278");
   });
 });
 
@@ -192,6 +193,40 @@ test("reduced motion: every section's content is visible, the climb is fully lit
     );
     assert.equal(hidden, 0);
     assert.equal(await page.locator("[data-climb][data-static='true']").count(), 1);
+  });
+});
+
+test("reduced motion: a flipped tier card shows its perks, flat, with no 3D turn", async () => {
+  await withPage(iphone15({ reducedMotion: "reduce" }), "/en/rewards", async (page) => {
+    const card = page.locator("[data-tier-card='BEEF_BOSS']");
+    await card.scrollIntoViewIfNeeded();
+    await card.locator("[data-tier-flip]").click();
+    const back = card.locator("[data-tier-back]");
+    assert.equal(await back.getAttribute("aria-hidden"), "false");
+    const perk = back.locator("li").first();
+    await perk.scrollIntoViewIfNeeded();
+    // The perk is really painted: the back face is in the hit stack at the
+    // perk's center (under the transparent flip button), nothing is rotated,
+    // and the back is visible while the front is hidden.
+    const probe = await perk.evaluate((li) => {
+      const r = li.getBoundingClientRect();
+      const stack = document.elementsFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      const inner = li.closest(".rw-card-inner") as HTMLElement;
+      const backFace = li.closest("[data-tier-back]") as HTMLElement;
+      return {
+        area: r.width * r.height,
+        hitsBack: stack.some((el) => backFace.contains(el)),
+        innerTransform: getComputedStyle(inner).transform,
+        backTransform: getComputedStyle(backFace).transform,
+        backVisibility: getComputedStyle(backFace).visibility,
+      };
+    });
+    assert.ok(probe.area > 0, "the perk has area");
+    assert.ok(probe.hitsBack, "the back face is under the perk's center");
+    assert.equal(probe.innerTransform, "none");
+    assert.equal(probe.backTransform, "none");
+    assert.equal(probe.backVisibility, "visible");
+    assert.equal(await card.locator("[data-tier-front]").evaluate((el) => getComputedStyle(el).visibility), "hidden");
   });
 });
 

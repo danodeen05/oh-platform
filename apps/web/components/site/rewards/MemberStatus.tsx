@@ -8,7 +8,7 @@
 import { SignInButton } from "@clerk/nextjs";
 import { useTranslations } from "next-intl";
 import { TierMark } from "@/components/site/tiers/TierMark";
-import { tierMeta } from "@/lib/site/program";
+import { tierMeta } from "@/lib/site/tier-meta";
 import { useRewardsMember } from "./RewardsMember";
 
 function Meter({ label, have, need }: { label: string; have: number; need: number }) {

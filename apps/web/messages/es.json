@@ -2121,7 +2121,7 @@
       "loading": "Revisando tu ascenso",
       "youAre": "Eres {tier}.",
       "toNext": "{orders} de {ordersNeed} tazones y {referrals} de {referralsNeed} amigos para {next}.",
-      "top": "Estás en la cima. Cada tazón te devuelve {pct}%.",
+      "top": "Estás en la cima. Cada tazón te da {pct}% en crédito.",
       "ordersLabel": "Tazones hacia {next}",
       "referralsLabel": "Amigos hacia {next}"
     },
@@ -2131,7 +2131,7 @@
       "start": "Donde todos empiezan. Regístrate y pide un tazón.",
       "need": "{orders} tazones y {referrals} amigos",
       "after": "Se cuenta desde {tier}. El progreso empieza de nuevo en cada nivel.",
-      "cashback": "{pct}% de vuelta en cada tazón",
+      "cashback": "{pct}% en crédito por cada tazón",
       "here": "Estás aquí",
       "step": "Nivel {step} de {total}"
     },
@@ -2139,18 +2139,18 @@
       "eyebrow": "Los niveles",
       "title": "Toca una tarjeta para ver sus beneficios.",
       "rail": "Tarjetas de nivel",
-      "headline": "{pct}% de vuelta",
+      "headline": "{pct}% en crédito",
       "flip": "Ver beneficios de {tier}",
-      "unflip": "Ver la tarjeta de {tier}",
       "tapHint": "Toca para ver beneficios",
       "backHint": "Toca para volver",
       "perksTitle": "Beneficios de {tier}",
       "perks": {
-        "cashback": "{pct}% de vuelta en cada tazón, como crédito",
+        "cashback": "{pct}% de cada tazón vuelve como crédito",
         "earlyAccess": "Tazones nuevos {days, plural, one {# día} other {# días}} antes del lanzamiento",
-        "queue": "Prioridad en la cocina +{boost}",
+        "queue": "Tu tazón avanza en la fila de la cocina",
+        "queueTop": "Tu tazón avanza más que nadie en la fila de la cocina",
         "queueNone": "Turno normal en la cocina",
-        "freeBowl": "Un tazón gratis al llegar, válido {days} días",
+        "freeBowl": "Un tazón gratis al alcanzar {tier}, válido por {days} días",
         "quarterly": "Un extra premium por nuestra cuenta cada trimestre"
       }
     },
@@ -2175,10 +2175,13 @@
       "results": "Tu ascenso",
       "reach": "Mes {month}",
       "beyond": "Más de {months} meses",
-      "startTier": "Desde el primer día",
       "never": {
         "title": "Sin amigos, no hay ascenso.",
         "body": "Cada nivel pide amigos además de tazones. Invita a un amigo al mes y {tier} queda a tu alcance."
+      },
+      "noBowls": {
+        "title": "Sin tazones, no hay ascenso.",
+        "body": "Cada nivel cuenta tazones además de amigos. Un tazón por semana pone {tier} a tu alcance."
       },
       "summary": "A este ritmo: {first} en el mes {firstMonth}, {last} en el mes {lastMonth}.",
       "summaryPartial": "A este ritmo: {first} en el mes {firstMonth}. {last} toma más de {months} meses.",
@@ -2187,20 +2190,20 @@
       "month": "Mes",
       "totals": {
         "freeBowls": "Tazones gratis",
-        "cashback": "Reembolso",
-        "friendCredit": "Crédito por amigos",
+        "cashback": "Crédito de vuelta",
+        "friendCredit": "Crédito por amigos ganado",
         "note": "En {months} meses. Los créditos vencen {days} días después de ganarlos."
       }
     },
     "credits": {
       "eyebrow": "Cómo funcionan los créditos",
       "title": "Gánalo. Úsalo. En {days} días.",
-      "lede": "El reembolso y los créditos por amigos llegan a tu cuenta como crédito de la tienda.",
+      "lede": "El crédito de vuelta y el crédito por amigos llegan a tu cuenta como crédito de la tienda.",
       "track": "La vida de un crédito",
       "day": "Día {day}",
       "earn": {
         "title": "Ganar",
-        "body": "De {low}% a {high}% de vuelta en cada tazón, más {referrer} cuando un amigo termina su primer tazón."
+        "body": "De {low}% a {high}% de cada tazón vuelve como crédito, más {referrer} cuando un amigo termina su primer tazón."
       },
       "spend": {
         "title": "Usar",
@@ -2277,7 +2280,7 @@
         },
         "expiry": {
           "q": "¿Cuándo vencen los créditos?",
-          "a": "{days} días después de ganarlos. Te avisamos {warn} días antes, y al pagar siempre se usa primero el más antiguo."
+          "a": "{days} días después de ganarlos. Te avisamos {warn} días antes, y al pagar siempre se usa primero el que vence antes."
         },
         "freeBowl": {
           "q": "¿Cómo funciona el tazón gratis?",
@@ -2292,8 +2295,8 @@
           "a": "Los tazones nuevos se abren a los miembros antes que a todos: {third} {thirdDays, plural, one {# día} other {# días}} antes, {second} {secondDays, plural, one {# día} other {# días}}, {first} {firstDays, plural, one {# día} other {# días}}."
         },
         "queue": {
-          "q": "¿Qué significa la prioridad en la cocina?",
-          "a": "En horas de mucha demanda, los pedidos de niveles más altos avanzan en la fila de la cocina: +{second} para {secondName}, +{third} para {thirdName}."
+          "q": "¿Qué significa avanzar en la fila de la cocina?",
+          "a": "En horas de mucha demanda, los niveles más altos avanzan en la fila de la cocina. {secondName} avanza; {thirdName} avanza más."
         }
       }
     },

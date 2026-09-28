@@ -1,23 +1,32 @@
 /**
  * Task D7: the path-to-Beef-Boss simulator behind the rewards page.
  *
- * A month-by-month model of the membership engine
+ * An event-by-event replay of the membership engine
  * (packages/api/src/membership/engine.js), driven only by the public
  * program (GET /membership/program), so the page never hard-codes a tier
  * rule:
  *
- * - Each month adds `bowlsPerMonth` orders and `friendsPerMonth` referrals
- *   to the progress toward the next tier. Referrals are capped at the
- *   program's `referral.maxPaidPer30Days` a month: the engine only counts a
- *   referral toward the tier when it is paid, and it pays at most that many
- *   in any rolling 30 days.
- * - A month that ends with both needs met is an upgrade month: the tier
- *   moves up, a free bowl is earned, and both counts reset to zero. Anything
- *   beyond the requirement does not carry over (the engine writes
- *   `tierProgressOrders: 0, tierProgressReferrals: 0`), so at most one
- *   upgrade happens per month.
- * - Cashback is `floor(ticket * pct / 100)` per order, the engine's own
- *   rounding, at the tier held when the month starts.
+ * - Every order: cashback at the tier held at that moment
+ *   (`floor(ticket * pct / 100)`, the engine's rounding), then +1 order of
+ *   progress, then the upgrade check (engine `onOrderCompleted`).
+ * - Every paid referral: +1 referral of progress, then the upgrade check
+ *   (engine `payReferralIfEligible`). At most `referral.maxPaidPer30Days`
+ *   friends a month count: the engine only counts paid referrals and pays at
+ *   most that many in any rolling 30 days.
+ * - An upgrade happens the moment both needs are met: the tier moves up, a
+ *   free bowl is earned, and both counts reset to zero (engine
+ *   `evaluateAndApplyUpgrade`). The rest of that month's orders and
+ *   referrals then count toward the next tier, and those orders earn the new
+ *   tier's cashback, so two upgrades can land in one month.
+ * - Progress is only tracked toward a next tier; at the top tier both
+ *   counts read zero.
+ *
+ * Assumed order inside a month (the engine has real timestamps; the
+ * simulator doesn't): the month's orders and referrals are spread evenly
+ * across it. Order i of b sits at (i + 0.5) / b and referral j of f at
+ * (j + 0.5) / f, and events are replayed in that order. On an exact tie the
+ * order goes first (a friend's referral pays out on their own first order,
+ * so it never precedes the member's order at the same instant).
  *
  * Pure: no I/O, safe on the server and in the browser.
  */
@@ -78,24 +87,39 @@ export function simulate(program: PublicProgram, input: SimulateInput): Simulate
   let freeBowls = 0;
   let cashbackCents = 0;
 
-  for (let month = 1; month <= months; month++) {
+  // Engine evaluateAndApplyUpgrade: both needs met -> next tier, free bowl, reset.
+  const checkUpgrade = (month: number) => {
     const rule = tiers[index];
-    cashbackCents += bowls * Math.floor((ticket * rule.cashbackPct) / 100);
-
-    const nextIndex = rule.next ? tiers.findIndex((t) => t.key === rule.next) : -1;
-    if (rule.need && nextIndex > index) {
-      orders += bowls;
-      referrals += friends;
-      if (orders >= rule.need.orders && referrals >= rule.need.referrals) {
-        index = nextIndex;
-        orders = 0;
-        referrals = 0;
-        freeBowls += 1;
-        const date = tierDates.find((d) => d.tier === tiers[index].key);
-        if (date) date.month = month;
-      }
+    if (!rule.need || !rule.next) return;
+    const nextIndex = tiers.findIndex((t) => t.key === rule.next);
+    if (nextIndex <= index) return;
+    if (orders >= rule.need.orders && referrals >= rule.need.referrals) {
+      index = nextIndex;
+      orders = 0;
+      referrals = 0;
+      freeBowls += 1;
+      const date = tierDates.find((d) => d.tier === tiers[index].key);
+      if (date && date.month == null) date.month = month;
     }
+  };
+  const tracking = () => Boolean(tiers[index].need && tiers[index].next);
 
+  for (let month = 1; month <= months; month++) {
+    let i = 0; // orders placed this month
+    let j = 0; // referrals paid this month
+    while (i < bowls || j < friends) {
+      const orderAt = i < bowls ? (i + 0.5) / bowls : Infinity;
+      const referralAt = j < friends ? (j + 0.5) / friends : Infinity;
+      if (orderAt <= referralAt) {
+        cashbackCents += Math.floor((ticket * tiers[index].cashbackPct) / 100);
+        if (tracking()) orders += 1;
+        i += 1;
+      } else {
+        if (tracking()) referrals += 1;
+        j += 1;
+      }
+      checkUpgrade(month);
+    }
     timeline.push({ month, tier: tiers[index].key, orders, referrals });
   }
 

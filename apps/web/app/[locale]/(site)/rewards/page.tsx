@@ -109,9 +109,7 @@ function faqValues(program: PublicProgram, name: (key: string) => string) {
       thirdDays: c?.earlyAccessDays ?? top.earlyAccessDays,
     },
     queue: {
-      second: b?.queueBoost ?? 0,
       secondName: name(b?.key ?? a.key),
-      third: c?.queueBoost ?? top.queueBoost,
       thirdName: name(c?.key ?? top.key),
     },
   } as const;

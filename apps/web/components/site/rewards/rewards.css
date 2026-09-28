@@ -106,6 +106,16 @@
   transform: rotateY(180deg);
 }
 
+/* Reduced motion: no 3D at all. Both faces sit flat and the card swaps
+   which one is visible (TierCards toggles `invisible`), so a flipped card
+   never ends up showing a face turned away from the viewer. */
+.rw-card[data-reduced="true"] .rw-card-inner,
+.rw-card[data-reduced="true"][data-flipped="true"] .rw-card-inner,
+.rw-card[data-reduced="true"] .rw-face-back {
+  transform: none;
+  transition: none;
+}
+
 /* The foil: a thin, slow sheen whose angle follows --progress (the card's
    own trip through the viewport). Soft-light keeps it a glint on the ink,
    not a rainbow. */
@@ -253,6 +263,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .rw-card-inner,
+  .rw-face-back {
+    transform: none !important;
+  }
   .rw-card-inner,
   .rw-bar,
   .rw-faq-chevron,

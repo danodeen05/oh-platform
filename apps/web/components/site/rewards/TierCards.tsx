@@ -19,7 +19,8 @@ import { Icon } from "@/components/site/icons/Icon";
 import { SnapRail } from "@/components/site/motion/SnapRail";
 import { useReducedMotion } from "@/components/site/motion/useReducedMotion";
 import { TierMark } from "@/components/site/tiers/TierMark";
-import { tierMeta, type ProgramTier, type PublicProgram } from "@/lib/site/program";
+import type { ProgramTier, PublicProgram } from "@/lib/site/program";
+import { tierMeta } from "@/lib/site/tier-meta";
 import { coverProgress, useScrollVars } from "./useScrollVars";
 import "./rewards.css";
 
@@ -50,8 +51,8 @@ function Card({ program, tier, index }: { program: PublicProgram; tier: ProgramT
   const serif = cjk ? "font-display-cjk" : "font-display";
 
   const perks: string[] = [t("perks.cashback", { pct: tier.cashbackPct }), t("perks.earlyAccess", { days: tier.earlyAccessDays })];
-  perks.push(tier.queueBoost > 0 ? t("perks.queue", { boost: tier.queueBoost }) : t("perks.queueNone"));
-  if (index > 0) perks.push(t("perks.freeBowl", { days: program.upgradeRewardWindowDays }));
+  perks.push(tier.queueBoost > 0 ? (isTop ? t("perks.queueTop") : t("perks.queue")) : t("perks.queueNone"));
+  if (index > 0) perks.push(t("perks.freeBowl", { tier: name, days: program.upgradeRewardWindowDays }));
   if (program.quarterlyPerk?.tier === tier.key) perks.push(t("perks.quarterly"));
 
   const face = "rw-face absolute inset-0 flex flex-col overflow-hidden rounded-[1.75rem] border p-6";
@@ -60,10 +61,11 @@ function Card({ program, tier, index }: { program: PublicProgram; tier: ProgramT
     <article
       data-tier-card={tier.key}
       data-flipped={flipped ? "true" : "false"}
+      data-reduced={reduced ? "true" : "false"}
       aria-label={name}
-      className="rw-card relative h-[26rem] w-[min(78vw,20rem)] md:w-[calc((100%-3rem)/3)]"
+      className="rw-card relative h-[28rem] w-[min(80vw,20rem)] md:w-[calc((100%-3rem)/3)]"
     >
-      <div className={`rw-card-inner relative h-full w-full ${reduced ? "[transition:none]" : ""}`}>
+      <div className="rw-card-inner relative h-full w-full">
         {/* Front */}
         <div
           ref={isTop ? foilRef : undefined}
@@ -94,17 +96,17 @@ function Card({ program, tier, index }: { program: PublicProgram; tier: ProgramT
           data-tier-back
           aria-hidden={!flipped}
           inert={!flipped}
-          className={`${face} rw-face-back ${tone.ring} bg-oh-stone/95 ${reduced ? "[transform:none]" : ""} ${reduced && !flipped ? "invisible" : ""}`}
+          className={`${face} rw-face-back overflow-y-auto overscroll-contain ${tone.ring} bg-oh-stone/95 ${reduced && !flipped ? "invisible" : ""}`}
         >
           <div className="flex items-center gap-3">
             <span className={tone.mark}>
               <TierMark tier={meta.mark} tone="current" size={36} />
             </span>
-            <h3 className={`${serif} m-0 text-2xl font-normal leading-tight text-oh-cream`}>{t("perksTitle", { tier: name })}</h3>
+            <h3 className={`${serif} m-0 text-[1.375rem] font-normal leading-tight text-oh-cream`}>{t("perksTitle", { tier: name })}</h3>
           </div>
-          <ul className="m-0 mt-5 flex list-none flex-col gap-3.5 p-0">
+          <ul className="m-0 mt-4 flex list-none flex-col gap-2.5 p-0">
             {perks.map((perk) => (
-              <li key={perk} className="flex items-start gap-3 text-base leading-snug text-oh-cream">
+              <li key={perk} className="flex items-start gap-2.5 text-[0.9375rem] leading-snug text-oh-cream">
                 <Icon name="check" size={20} className={`mt-0.5 shrink-0 ${isTop ? "text-oh-gold" : "text-oh-olive-light"}`} />
                 <span className="min-w-0">{perk}</span>
               </li>
@@ -119,7 +121,7 @@ function Card({ program, tier, index }: { program: PublicProgram; tier: ProgramT
         type="button"
         data-tier-flip
         aria-pressed={flipped}
-        aria-label={flipped ? t("unflip", { tier: name }) : t("flip", { tier: name })}
+        aria-label={t("flip", { tier: name })}
         onClick={() => setFlipped((f) => !f)}
         className="absolute inset-0 z-10 cursor-pointer appearance-none rounded-[1.75rem] border-0 bg-transparent p-0 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-oh-cream"
       />

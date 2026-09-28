@@ -4324,7 +4324,7 @@
       "loading": "正在查看你的進度",
       "youAre": "你目前是{tier}。",
       "toNext": "距離{next}：{orders}/{ordersNeed} 碗，{referrals}/{referralsNeed} 位朋友。",
-      "top": "你已在最高等級。每一碗都享 {pct}% 回饋。",
+      "top": "你已在最高等級。每一碗都享 {pct}% 購物金回饋。",
       "ordersLabel": "晉升{next}的碗數",
       "referralsLabel": "晉升{next}的朋友數"
     },
@@ -4334,7 +4334,7 @@
       "start": "每個人的起點。註冊並點一碗即可。",
       "need": "{orders} 碗加 {referrals} 位朋友",
       "after": "從成為{tier}起計算。每升一級，進度重新開始。",
-      "cashback": "每碗 {pct}% 回饋",
+      "cashback": "每碗 {pct}% 購物金回饋",
       "here": "你在這裡",
       "step": "第 {step} 級，共 {total} 級"
     },
@@ -4342,18 +4342,18 @@
       "eyebrow": "會員等級",
       "title": "點一下卡片，看看福利。",
       "rail": "等級卡片",
-      "headline": "{pct}% 回饋",
+      "headline": "{pct}% 購物金回饋",
       "flip": "查看{tier}福利",
-      "unflip": "返回{tier}卡片",
       "tapHint": "點一下看福利",
       "backHint": "點一下翻回",
       "perksTitle": "{tier}福利",
       "perks": {
         "cashback": "每碗 {pct}% 回饋，以購物金發放",
         "earlyAccess": "新品提前 {days} 天搶先享用",
-        "queue": "廚房出餐優先 +{boost}",
+        "queue": "你的麵出餐順序往前移",
+        "queueTop": "你的麵出餐順序最優先",
         "queueNone": "一般出餐順序",
-        "freeBowl": "升級即送一碗，{days} 天內有效",
+        "freeBowl": "升級為{tier}即送一碗，{days} 天內有效",
         "quarterly": "每季招待一份頂級加料"
       }
     },
@@ -4378,10 +4378,13 @@
       "results": "你的晉升",
       "reach": "第 {month} 個月",
       "beyond": "超過 {months} 個月",
-      "startTier": "第一天起",
       "never": {
         "title": "沒有朋友，就無法晉升。",
         "body": "每個等級都需要碗數，也需要朋友。每月邀請一位朋友，{tier}就在眼前。"
+      },
+      "noBowls": {
+        "title": "沒有點麵，就無法晉升。",
+        "body": "每個等級都要碗數，也要朋友。每週一碗，{tier}就在眼前。"
       },
       "summary": "照這個節奏：第 {firstMonth} 個月成為{first}，第 {lastMonth} 個月成為{last}。",
       "summaryPartial": "照這個節奏：第 {firstMonth} 個月成為{first}。成為{last}需要超過 {months} 個月。",
@@ -4390,8 +4393,8 @@
       "month": "月",
       "totals": {
         "freeBowls": "免費麵",
-        "cashback": "回饋",
-        "friendCredit": "推薦購物金",
+        "cashback": "購物金回饋",
+        "friendCredit": "已得推薦購物金",
         "note": "以 {months} 個月計算。購物金自取得起 {days} 天後到期。"
       }
     },
@@ -4480,7 +4483,7 @@
         },
         "expiry": {
           "q": "購物金何時到期？",
-          "a": "取得後 {days} 天。到期前 {warn} 天會提醒你，結帳時也一律先用最舊的。"
+          "a": "取得後 {days} 天。到期前 {warn} 天會提醒你，結帳時也一律先用最快到期的。"
         },
         "freeBowl": {
           "q": "免費麵怎麼用？",
@@ -4496,7 +4499,7 @@
         },
         "queue": {
           "q": "出餐優先是什麼意思？",
-          "a": "尖峰時段，較高等級的訂單在廚房排序中領先：{secondName} +{second}，{thirdName} +{third}。"
+          "a": "尖峰時段，等級越高，出餐順序越前面：{secondName}往前移，{thirdName}最優先。"
         }
       }
     },

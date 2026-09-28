@@ -26,6 +26,8 @@ export interface CountUpProps {
   decimals?: number;
   prefix?: string;
   suffix?: string;
+  /** Formats the ticking value for display (e.g. localized money); overrides decimals/prefix/suffix. */
+  format?: (value: number) => string;
   as?: ElementType;
   className?: string;
 }
@@ -41,6 +43,7 @@ export function CountUp({
   decimals = 0,
   prefix = "",
   suffix = "",
+  format,
   as = "span",
   className,
 }: CountUpProps) {
@@ -105,7 +108,7 @@ export function CountUp({
     };
   }, [reducedMotion, to, from, duration]);
 
-  const display = `${prefix}${value.toFixed(decimals)}${suffix}`;
+  const display = format ? format(value) : `${prefix}${value.toFixed(decimals)}${suffix}`;
 
   return createElement(as, { ref, className: ["oh-count-up", className].filter(Boolean).join(" ") }, display);
 }

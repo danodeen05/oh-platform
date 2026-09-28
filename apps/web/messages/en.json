@@ -4426,7 +4426,7 @@
       "loading": "Checking your climb",
       "youAre": "You are a {tier}.",
       "toNext": "{orders} of {ordersNeed} bowls and {referrals} of {referralsNeed} friends to {next}.",
-      "top": "You are at the top. Every bowl earns {pct}% back.",
+      "top": "You are at the top. Every bowl earns {pct}% back in credit.",
       "ordersLabel": "Bowls toward {next}",
       "referralsLabel": "Friends toward {next}"
     },
@@ -4436,7 +4436,7 @@
       "start": "Where everyone starts. Sign up and order a bowl.",
       "need": "{orders} bowls and {referrals} friends",
       "after": "Counted from {tier}. Progress starts fresh at each step.",
-      "cashback": "{pct}% back on every bowl",
+      "cashback": "{pct}% back in credit on every bowl",
       "here": "You are here",
       "step": "Step {step} of {total}"
     },
@@ -4446,16 +4446,16 @@
       "rail": "Tier cards",
       "headline": "{pct}% back",
       "flip": "Show {tier} perks",
-      "unflip": "Show the {tier} card",
       "tapHint": "Tap for perks",
       "backHint": "Tap to flip back",
       "perksTitle": "{tier} perks",
       "perks": {
         "cashback": "{pct}% back on every bowl, as store credit",
         "earlyAccess": "New bowls {days, plural, one {# day} other {# days}} before release",
-        "queue": "Kitchen queue priority +{boost}",
+        "queue": "Your bowl moves up the kitchen queue",
+        "queueTop": "Your bowl moves furthest up the kitchen queue",
         "queueNone": "Standard kitchen queue",
-        "freeBowl": "A free bowl when you arrive, good for {days} days",
+        "freeBowl": "A free bowl when you reach {tier}, good for {days} days",
         "quarterly": "One premium add-on on us, every quarter"
       }
     },
@@ -4480,10 +4480,13 @@
       "results": "Your climb",
       "reach": "Month {month}",
       "beyond": "Past {months} months",
-      "startTier": "From day one",
       "never": {
         "title": "No friends, no climb.",
         "body": "Every tier asks for friends as well as bowls. Invite one friend a month and {tier} is within reach."
+      },
+      "noBowls": {
+        "title": "No bowls, no climb.",
+        "body": "Every tier counts bowls as well as friends. A bowl a week puts {tier} within reach."
       },
       "summary": "At this pace: {first} in month {firstMonth}, {last} in month {lastMonth}.",
       "summaryPartial": "At this pace: {first} in month {firstMonth}. {last} takes longer than {months} months.",
@@ -4492,15 +4495,15 @@
       "month": "Month",
       "totals": {
         "freeBowls": "Free bowls",
-        "cashback": "Cashback",
-        "friendCredit": "Friend credits",
+        "cashback": "Credit back",
+        "friendCredit": "Friend credits earned",
         "note": "Over {months} months. Credits expire {days} days after you earn them."
       }
     },
     "credits": {
       "eyebrow": "How credits work",
       "title": "Earn it. Spend it. Within {days} days.",
-      "lede": "Cashback and friend credits land in your account as store credit.",
+      "lede": "Credit back on your bowls and friend credits land in your account as store credit.",
       "track": "The life of one credit",
       "day": "Day {day}",
       "earn": {
@@ -4582,7 +4585,7 @@
         },
         "expiry": {
           "q": "When do credits expire?",
-          "a": "{days} days after you earn them. We remind you {warn} days before, and checkout always spends the oldest first."
+          "a": "{days} days after you earn them. We remind you {warn} days before, and checkout always spends the one closest to expiring first."
         },
         "freeBowl": {
           "q": "How does the free bowl work?",
@@ -4598,7 +4601,7 @@
         },
         "queue": {
           "q": "What does queue priority mean?",
-          "a": "At busy times, orders from higher tiers get a head start in the kitchen queue: +{second} for {secondName}, +{third} for {thirdName}."
+          "a": "At busy times, higher tiers move up the kitchen queue. {secondName} moves up; {thirdName} moves up the most."
         }
       }
     },
