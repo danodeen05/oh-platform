@@ -42,6 +42,7 @@
 import { APIError, AnthropicError } from "@anthropic-ai/sdk";
 import { FROZEN_SYSTEM, CHAPPY_LOCALES, buildContextBlock, neutralizeContextTags, fallbackText } from "./prompts.js";
 import { TOOL_DEFS, executeTool, validateToolInput } from "./tools.js";
+import { normalizeCart } from "./cart.js";
 
 export const CHAPPY_MODEL = process.env.CHAPPY_MODEL || "claude-opus-5";
 export const MAX_TOKENS = 16000;
@@ -205,11 +206,24 @@ export async function resetConversation(prisma, identifier, channel) {
   await prisma.chappyConversation.updateMany({ where: { identifier, channel, isActive: true }, data: { isActive: false } });
 }
 
+/** What the model sees of the server-held cart (Task B2): ids and choices, never prices. */
+export function cartContext(raw) {
+  const cart = normalizeCart(raw);
+  if (!cart.items.length && !cart.arrival && !cart.pod && !cart.lastOrderId) return null;
+  return {
+    items: cart.items.map((i) => ({ menuItemId: i.menuItemId, quantity: i.quantity, ...(i.selectedValue ? { option: i.selectedValue } : {}) })),
+    locationId: cart.locationId,
+    arrival: cart.arrival || "ASAP",
+    pod: cart.pod ? cart.pod.label || "best" : null,
+    lastOrderId: cart.lastOrderId,
+  };
+}
+
 /**
  * Server facts for this turn: the public part goes in the <context> block,
  * the rest (ids) only into the tool context. Never throws; missing data is null.
  */
-export async function loadTurnContext({ prisma, identity, channel, locale, now = new Date() }) {
+export async function loadTurnContext({ prisma, identity, channel, locale, conversation = null, now = new Date() }) {
   const out = { tenantId: null, userId: null, locationId: null, public: { tier: null, cart: null, location: null, locale, inPod: null, channel } };
   const safe = async (fn) => {
     try {
@@ -219,6 +233,7 @@ export async function loadTurnContext({ prisma, identity, channel, locale, now =
       return null;
     }
   };
+  out.public.cart = cartContext(conversation?.cart);
   const tenant = await safe(() => prisma.tenant.findUnique({ where: { slug: "oh" } }));
   out.tenantId = tenant?.id || null;
   const userId = identity?.kind === "member" || identity?.kind === "sms" ? identity.userId || null : null;
@@ -232,7 +247,8 @@ export async function loadTurnContext({ prisma, identity, channel, locale, now =
   const location = await safe(() =>
     identity?.locationId
       ? prisma.location.findUnique({ where: { id: identity.locationId } })
-      : prisma.location.findFirst({ where: { tenantId: out.tenantId }, orderBy: { name: "asc" } }),
+      : // An open restaurant location: never a closed one or a catering event's pseudo-location.
+        prisma.location.findFirst({ where: { tenantId: out.tenantId, isClosed: false, cateringEvent: { is: null } }, orderBy: { name: "asc" } }),
   );
   if (location) {
     out.locationId = location.id;
@@ -281,16 +297,6 @@ function cardsFrom(result) {
   if (!result || typeof result !== "object") return [];
   const cards = [];
   if (result.card && typeof result.card === "object") cards.push(result.card);
-  if (result.requiresApplePay && result.clientSecret) {
-    cards.push({
-      kind: "apple_pay",
-      orderId: result.orderId,
-      orderNumber: result.orderNumber,
-      clientSecret: result.clientSecret,
-      totalCents: result.totalCents,
-      locationName: result.locationName,
-    });
-  }
   return cards;
 }
 
@@ -315,16 +321,32 @@ function addUsage(total, message) {
  * @param {string} p.message       the customer's text (length already capped by the route)
  * @param {object} p.conversation  the ChappyConversation row to continue and save
  * @param {object} [p.tools]       { defs, execute(name, input, ctx) }; default TOOL_DEFS / executeTool
+ * @param {object} [p.toolDeps]    what the tools need beyond prisma: { stripe, notify: {env, log, sendSMS, sendGraphMail}, webBaseUrl }
  * @param {Date}   [p.now]
  * @param {AbortSignal} [p.signal] aborts the model stream (client went away)
  */
-export async function* runTurn({ client, prisma, identity, channel = "web", locale = "en", message, conversation, tools, now = new Date(), signal }) {
+export async function* runTurn({ client, prisma, identity, channel = "web", locale = "en", message, conversation, tools, toolDeps = {}, now = new Date(), signal }) {
   const toolset = tools || { defs: TOOL_DEFS, execute: executeTool };
   const defsByName = new Map(toolset.defs.map((d) => [d.name, d]));
   const lang = CHAPPY_LOCALES.includes(locale) ? locale : "en";
 
-  const ctx = await loadTurnContext({ prisma, identity, channel, locale: lang, now });
-  const toolCtx = { prisma, userId: ctx.userId, guestId: null, locationId: ctx.locationId, tenantId: ctx.tenantId, channel, locale: lang };
+  const ctx = await loadTurnContext({ prisma, identity, channel, locale: lang, conversation, now });
+  // The tools' view of the caller: server-verified identity only (Task B2).
+  const toolCtx = {
+    stripe: toolDeps.stripe ?? null,
+    notify: toolDeps.notify ?? {},
+    webBaseUrl: toolDeps.webBaseUrl ?? null,
+    prisma,
+    identity: identity || null,
+    userId: ctx.userId,
+    guestId: null,
+    locationId: ctx.locationId,
+    tenantId: ctx.tenantId,
+    channel,
+    locale: lang,
+    conversationId: conversation?.id || null,
+    now,
+  };
 
   const messages = [
     ...trimHistory(conversation?.messages || [], HISTORY_LIMIT),

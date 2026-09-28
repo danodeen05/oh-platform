@@ -14,8 +14,7 @@ import {
   HISTORY_LIMIT,
 } from "../agent.js";
 import { FROZEN_SYSTEM, buildContextBlock, FALLBACK_TEXT } from "../prompts.js";
-import { readFileSync } from "node:fs";
-import { TOOL_DEFS, validateToolInput, executeTool, DISABLED_MONEY_TOOLS } from "../tools.js";
+import { TOOL_DEFS, validateToolInput, executeTool } from "../tools.js";
 import { toStrictToolDefs, countOptionalParams, STRICT_TOOL_LIMIT, STRICT_OPTIONAL_PARAM_BUDGET } from "../tool-schema.js";
 
 const NOW = new Date("2026-10-01T18:00:00Z");
@@ -104,12 +103,12 @@ describe("request shape", () => {
     const strict = TOOL_DEFS.filter((t) => t.strict === true);
     assert.ok(strict.length <= STRICT_TOOL_LIMIT, `${strict.length} strict tools; the API allows ${STRICT_TOOL_LIMIT}`);
     assert.ok(strict.reduce((n, t) => n + countOptionalParams(t.input_schema), 0) <= STRICT_OPTIONAL_PARAM_BUDGET);
-    // B1 ruling: the legacy tools go non-strict (the API's grammar limit); B2 turns strict on.
-    assert.equal(strict.length, 0);
+    // B2: every tool is strict (all-required, union-free schemas keep the grammar small).
+    assert.equal(strict.length, TOOL_DEFS.length);
   });
 
-  // Fix round 1 (Critical): no tool may move money from chat. A trap prisma
-  // throws on ANY property access, so a disabled tool must return before it.
+  // B2: the legacy money tools are gone; the loop hands the real tools a
+  // server-verified context, and a guest asking to order gets a sign-in card.
   const trapPrisma = () =>
     new Proxy(
       {},
@@ -119,60 +118,65 @@ describe("request shape", () => {
         },
       },
     );
-  const MONEY_INPUTS = {
-    apply_credits: { orderId: "o_other_user", amountCents: -50000 },
-    create_and_pay_order: { locationId: "loc", items: [{ menuItemId: "m1", quantity: 1 }], paymentMethodId: "pm_1", arrivalTime: "ASAP" },
-    create_apple_pay_order: { locationId: "loc", items: [{ menuItemId: "m1", quantity: 1 }], applyCredits: true },
-    create_order: { locationId: "loc", items: [{ menuItemId: "m1", quantity: 1 }] },
-    create_payment_link: { orderId: "o_someone_else" },
-  };
 
-  test("every money tool is disabled before any database access, for members and guests", async () => {
-    assert.deepEqual(Object.keys(DISABLED_MONEY_TOOLS).sort(), Object.keys(MONEY_INPUTS).sort());
-    for (const [name, input] of Object.entries(MONEY_INPUTS)) {
-      for (const userId of ["u1", null]) {
-        const result = await executeTool(name, input, { prisma: trapPrisma(), userId, guestId: null, locationId: "loc", tenantId: "t" });
-        assert.equal(result.error, "PAYMENT_NEEDS_CUSTOMER_TAP", name);
-        assert.equal(result.charged, false, name);
-        assert.match(result.message, /ohbeef\.com\/order/, name);
-      }
+  test("the legacy money tools no longer exist", async () => {
+    for (const name of ["apply_credits", "create_and_pay_order", "create_apple_pay_order", "create_order", "create_payment_link"]) {
+      assert.ok(!TOOL_DEFS.some((t) => t.name === name), name);
+      const result = await executeTool(name, { orderId: "o1", amountCents: -5000 }, { prisma: trapPrisma(), userId: "u1" });
+      assert.equal(result.error, "UNKNOWN_TOOL", name);
     }
   });
 
-  test("apply_credits with a negative amount mints nothing (disabled, no database access)", async () => {
-    const result = await executeTool("apply_credits", { orderId: "o1", amountCents: -100000 }, { prisma: trapPrisma(), userId: "u1" });
-    assert.equal(result.error, "PAYMENT_NEEDS_CUSTOMER_TAP");
-  });
-
-  test("the loop runs a disabled money tool as a normal tool_result, never a charge", async () => {
-    const tools = { defs: TOOL_DEFS, execute: executeTool };
+  test("the loop gives tools the verified identity, conversation and deps, and streams a tool's card", async () => {
+    const seen = [];
+    const tools = {
+      defs: TOOL_DEFS,
+      async execute(name, input, ctx) {
+        seen.push(ctx);
+        return executeTool(name, input, ctx);
+      },
+    };
     const script = [
-      step({ content: [toolUse("apply_credits", { orderId: "o1", amountCents: -5000 }, "m1")], stop_reason: "tool_use" }),
-      step({ content: [text("Credit is applied on the payment page.")] }),
+      step({ content: [toolUse("cart", { op: "add", menuItemId: "m1", quantity: 1, option: "" }, "c1")], stop_reason: "tool_use" }),
+      step({ content: [text("Sign in first.")] }),
     ];
     const client = fakeClient(script);
-    const db = fakePrisma({ users: [{ id: "u1", membershipTier: "CHOPSTICK" }] });
-    const conversation = conv();
+    const db = fakePrisma();
+    const conversation = { ...conv(), identifier: "guest:g1" };
     db.convs.push(conversation);
-    await collect(runTurn({ client, prisma: db, identity: { kind: "member", userId: "u1" }, message: "use my credit", conversation, tools, now: NOW }));
-    const result = client.calls[1].params.messages.at(-1).content[0];
-    assert.equal(result.tool_use_id, "m1");
-    assert.match(result.content, /PAYMENT_NEEDS_CUSTOMER_TAP/);
+    const deps = { stripe: { marker: true }, notify: { env: { SUPPORT_NOTIFY: "off" } }, webBaseUrl: "http://localhost:3100" };
+    const events = await collect(
+      runTurn({ client, prisma: db, identity: { kind: "guest", guestKey: "g1", identifier: "guest:g1" }, message: "order a bowl", conversation, tools, toolDeps: deps, now: NOW }),
+    );
+    assert.equal(seen[0].userId, null);
+    assert.deepEqual(seen[0].identity, { kind: "guest", guestKey: "g1", identifier: "guest:g1" });
+    assert.equal(seen[0].conversationId, "conv_1");
+    assert.equal(seen[0].stripe, deps.stripe);
+    assert.equal(seen[0].webBaseUrl, "http://localhost:3100");
+    assert.equal(seen[0].now, NOW);
+    assert.deepEqual(events.find((e) => e.type === "card")?.card, { type: "sign-in" });
+    assert.match(client.calls[1].params.messages.at(-1).content[0].content, /SIGN_IN_REQUIRED/);
   });
 
-  test("scan: every legacy tool handler that writes to the database or Stripe is disabled", () => {
-    const src = readFileSync(new URL("../tools.js", import.meta.url), "utf8");
-    const body = src.slice(src.indexOf("async function executeToolByName"));
-    // Code only (comments stripped): prisma writes, transactions, Stripe calls, atomic credit math.
-    const WRITES = /\.\s*(create|createMany|update|updateMany|upsert|delete|deleteMany)\s*\(|\$transaction|\bstripe\s*\.|new\s+Stripe\b|import\(\s*["']stripe["']\s*\)|\b(decrement|increment)\s*:/;
-    const writers = [];
-    for (const m of body.matchAll(/\n {4}case "([a-z_]+)": \{([\s\S]*?)(?=\n {4}case "|\n {4}default:)/g)) {
-      const code = m[2].replace(/\/\/[^\n]*/g, "");
-      if (WRITES.test(code)) writers.push(m[1]);
-    }
-    // The regex must still see the known (now unreachable) writers, or it proves nothing.
-    for (const known of ["create_order", "apply_credits", "create_apple_pay_order"]) assert.ok(writers.includes(known), `scan missed ${known}`);
-    for (const name of writers) assert.ok(Object.hasOwn(DISABLED_MONEY_TOOLS, name), `${name} writes but is not in DISABLED_MONEY_TOOLS`);
+  test("the context block shows the server-held cart (ids and choices, no prices)", async () => {
+    const history = [];
+    const { client } = await turn({
+      script: [step()],
+      history,
+      prisma: (() => {
+        const db = fakePrisma({ users: [{ id: "u1", membershipTier: "CHOPSTICK" }] });
+        return db;
+      })(),
+    });
+    const ctx0 = JSON.parse(client.calls[0].params.messages.at(-1).content[0].text.slice(9, -10));
+    assert.equal(ctx0.cart, null, "no cart yet");
+    const client2 = fakeClient([step()]);
+    const db = fakePrisma({ users: [{ id: "u1", membershipTier: "CHOPSTICK" }] });
+    const conversation = { ...conv(), cart: { locationId: "loc_cc", items: [{ menuItemId: "m1", quantity: 2 }], pod: { best: true } } };
+    db.convs.push(conversation);
+    await collect(runTurn({ client: client2, prisma: db, identity: { kind: "member", userId: "u1" }, message: "what's in my cart", conversation, tools: fakeTools(), now: NOW }));
+    const ctx = JSON.parse(client2.calls[0].params.messages.at(-1).content[0].text.slice(9, -10));
+    assert.deepEqual(ctx.cart, { items: [{ menuItemId: "m1", quantity: 2 }], locationId: "loc_cc", arrival: "ASAP", pod: "best", lastOrderId: null });
   });
 
   test("toStrictToolDefs refuses more strict tools than the API accepts", () => {

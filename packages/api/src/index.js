@@ -88,6 +88,7 @@ import { PROGRAM, tierRule } from "./membership/program.js";
 import { onOrderCompleted, applyReferralSignup, visibleMenuItems, firstUnreleasedItem, profileForUser } from "./membership/engine.js";
 import { createCustomerAuth, registerCustomerIdentity, orderOwnerId } from "./auth/customer.js";
 import { registerChappyRoutes } from "./chappy/routes.js";
+import { createPodCall, PodCallError } from "./orders/pod-calls.js";
 import { FASTIFY_OPTIONS, rateLimitKey } from "./http-config.js";
 import { createKioskAuth } from "./auth/kiosk.js";
 import { publicReferral, shopCreditSpender, registerAdminOnlyRoutes } from "./auth/hardening.js";
@@ -98,7 +99,8 @@ import { listLocationSeats } from "./seats/service.js";
 const basePrisma = new PrismaClient();
 const { prisma, source: statusDemoSource } = withStatusDemo(basePrisma);
 // trustProxy: one hop (Railway edge / dev nginx), so req.ip is the real client. See http-config.js.
-const app = Fastify(FASTIFY_OPTIONS);
+// A copy: Fastify writes to options.logger, and FASTIFY_OPTIONS is frozen.
+const app = Fastify({ ...FASTIFY_OPTIONS });
 
 // Initialize Anthropic client (uses ANTHROPIC_API_KEY env var automatically)
 const anthropic = process.env.ANTHROPIC_API_KEY ? new Anthropic() : null;
@@ -2908,61 +2910,18 @@ app.post("/seats/unlink-dual", async (req, reply) => {
 app.post("/orders/:id/call-staff", async (req, reply) => {
   const { id } = req.params;
   const { reason } = req.body || {};
-
-  const order = await prisma.order.findUnique({
-    where: { id },
-    include: { seat: true, location: true },
-  });
-
-  if (!order) {
-    return reply.code(404).send({ error: "Order not found" });
+  // Shared with Chappy's report_issue (orders/pod-calls.js).
+  try {
+    const podCall = await createPodCall(prisma, { orderId: id, reason: reason || "GENERAL" });
+    return {
+      success: true,
+      message: "Staff has been notified. Someone will be with you shortly.",
+      call: podCall,
+    };
+  } catch (err) {
+    if (!(err instanceof PodCallError)) throw err;
+    return reply.code(err.status).send({ error: err.message, ...err.extra });
   }
-
-  if (!order.seatId) {
-    return reply.code(400).send({ error: "Order does not have a pod assigned" });
-  }
-
-  // Check if there's already a pending call for this order
-  const existingCall = await prisma.podCall.findFirst({
-    where: {
-      orderId: id,
-      status: "PENDING",
-    },
-  });
-
-  if (existingCall) {
-    return reply.code(400).send({
-      error: "You already have a pending call. Staff will be with you shortly.",
-      call: existingCall
-    });
-  }
-
-  // Create the pod call
-  const podCall = await prisma.podCall.create({
-    data: {
-      orderId: id,
-      seatId: order.seatId,
-      locationId: order.locationId,
-      reason: reason || "GENERAL",
-    },
-    include: {
-      seat: true,
-      order: {
-        select: {
-          orderNumber: true,
-          kitchenOrderNumber: true,
-        },
-      },
-    },
-  });
-
-  console.log(`[POD CALL] Pod ${order.seat.number} requesting staff - Reason: ${reason || "GENERAL"}`);
-
-  return {
-    success: true,
-    message: "Staff has been notified. Someone will be with you shortly.",
-    call: podCall,
-  };
 });
 
 // GET /pod-calls - Get all pending pod calls for a location
@@ -12915,12 +12874,15 @@ app.post("/admin/party-invitations", async (request, reply) => {
 // member session or signed guest token), POST /chappy/chat streams SSE through
 // Fastify so the CORS allowlist applies, and every Chappy handler and tool uses
 // basePrisma (never the demo-wrapped client). checkLimits is Task B3's hook.
+// Task B2: tools go through the order/support services; Chappy never charges
+// (pay card only). Support notifications honor SUPPORT_NOTIFY.
 await registerChappyRoutes(app, {
   prisma: basePrisma,
   customerAuth,
   client: anthropic,
   stripe,
-  orderEffects,
+  sendSMS,
+  sendGraphMail,
 });
 
 // ====================

@@ -280,17 +280,6 @@ export function orderOwnerId(who) {
 }
 
 /**
- * Credits Chappy's payment confirmation may deduct: only the verified caller's
- * own credits, only on that caller's own order, at most maxCents.
- */
-export function chappyCreditsToDeduct(who, order, maxCents = 500) {
-  const me = orderOwnerId(who);
-  if (!me || !order || order.userId !== me) return 0;
-  const balance = order.user?.creditsCents || 0;
-  return balance > 0 ? Math.min(maxCents, balance) : 0;
-}
-
-/**
  * Who a web Chappy request is for (Task B1). A member comes only from the
  * verified session (a database user id); a guest only from a SIGNED guest
  * token (POST /chappy/guest-token, sent as x-chappy-guest), whose random part

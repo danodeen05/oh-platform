@@ -1,2000 +1,781 @@
 /**
- * Chappy Chopstix - Tool Definitions
+ * Chappy Chopstix - tools (Task B2).
  *
- * All tools available to the Claude agent, mapped to existing Oh! APIs.
+ * Seventeen tools, each a thin handler over a shared service. Money only
+ * moves through the services, never here:
+ *  - orders/service.js: quoteOrder (every price), createOrder (the order and
+ *    its pod claim), createPaymentIntent (server amount, metadata.orderId),
+ *    pickBestPod (a dry run only, rolled back).
+ *  - support/caps.js grantGoodwill: store credit only, inside the owner's caps.
+ *  - support/routes.js createSupportCase + notifyCase (honors SUPPORT_NOTIFY).
+ *  - orders/pod-calls.js createPodCall, orders/group-routes.js createGroupOrder.
+ * The only row this file (and cart.js) writes itself is the conversation's
+ * cart. A source scan in __tests__/tools.test.js holds that line.
+ *
+ * Chappy never charges. checkout returns a pay card (web) or a payment-page
+ * link (SMS); the customer's own tap pays, and POST /orders/:id/confirm-payment
+ * verifies the PaymentIntent with Stripe before anything is PAID.
+ *
+ * Identity: ctx.userId is the verified member (null for a guest). Member
+ * tools refuse a guest with SIGN_IN_REQUIRED and a sign-in card before any
+ * database access. Orders are always looked up with userId in the where
+ * clause, so another member's order is simply NOT_FOUND.
+ *
+ * ctx: { prisma (basePrisma, never the demo-wrapped client), identity,
+ *   userId, locationId, tenantId, channel, locale, conversationId, stripe,
+ *   notify: {env, log, sendSMS, sendGraphMail}, webBaseUrl, now }
+ *
+ * Every schema is strict: closed objects, every property required, no
+ * unions ("" and 0 mean "none"), short enums. That keeps the compiled
+ * grammar small enough for all seventeen (the API caps strict tools at 20).
  */
-import { tierRule } from "../membership/program.js";
+import { quoteOrder, createOrder, createPaymentIntent, pickBestPod, OrderError, PodUnavailableError } from "../orders/service.js";
+import { createGroupOrder } from "../orders/group-routes.js";
+import { createPodCall, PodCallError } from "../orders/pod-calls.js";
+import { earlyAccessVisible, profileForUser } from "../membership/engine.js";
+import { publicProgram, PROGRAM } from "../membership/program.js";
+import { grantGoodwill } from "../support/caps.js";
+import { createSupportCase, notifyCase } from "../support/routes.js";
+import { slotsFor, canAcceptOrders } from "../utils/operating-hours.js";
+import { loadCart, saveCart, applyCartOp, replaceItems, cartLines, CartError, CART_OPS } from "./cart.js";
 import { toStrictToolDefs, validateToolInput } from "./tool-schema.js";
 
 export { validateToolInput };
 
-/**
- * Tool definitions for Claude API
- * Each tool needs: name, description (detailed!), input_schema
- */
+const MENU_CATEGORIES = ["ALL", "MAIN", "SLIDER", "ADDON", "SIDE", "DRINK", "DESSERT"];
+const DIETARY = ["any", "vegetarian", "vegan", "gluten_free"];
+const ISSUE_CATEGORIES = ["cold_food", "wrong_item", "missing_item", "pod_problem", "payment", "unwell", "other"];
+/** Problems with the food itself: the ones capped goodwill can make up for. */
+const GOODWILL_CATEGORIES = new Set(["cold_food", "wrong_item", "missing_item"]);
+/** Problems staff can fix at the pod right now. */
+const POD_CALL_CATEGORIES = new Set(["cold_food", "wrong_item", "missing_item", "pod_problem", "other"]);
+const ACTIVE_POD_STATUSES = ["PAID", "QUEUED", "PREPPING", "READY", "SERVING"];
+const IN_POD_WINDOW_MS = 4 * 60 * 60 * 1000;
+const SUMMARY_MAX = 1000;
+
+const S = (description) => ({ type: "string", description });
+const I = (description) => ({ type: "integer", description });
+const E = (values, description) => ({ type: "string", enum: values, description });
+const obj = (properties) => ({ type: "object", properties, required: Object.keys(properties), additionalProperties: false });
+
 export const CHAPPY_TOOLS = [
-  // ==========================================
-  // MENU TOOLS
-  // ==========================================
+  // ---- public ----
   {
-    name: "browse_menu",
-    description: `Get the menu with all items, prices, and dietary information. Use this when:
-- Customer wants to see what's available
-- Customer asks about specific dishes or categories
-- Customer has dietary restrictions (vegetarian, vegan, gluten-free)
-- Customer wants recommendations
-
-Returns items grouped by category with prices, descriptions, and dietary info.`,
-    input_schema: {
-      type: "object",
-      properties: {
-        category: {
-          type: "string",
-          description: "Filter by category type: MAIN, SLIDER, ADDON, SIDE, DRINK, DESSERT. Leave empty for full menu.",
-          enum: ["MAIN", "SLIDER", "ADDON", "SIDE", "DRINK", "DESSERT"],
-        },
-        dietary: {
-          type: "string",
-          description: "Filter for dietary restrictions: vegetarian, vegan, or gluten-free",
-          enum: ["vegetarian", "vegan", "gluten-free"],
-        },
-      },
-    },
+    name: "search_menu",
+    description: "Search the menu. Returns item ids, names, prices and dietary flags for what this customer can order now. Use the ids with get_menu_item and cart.",
+    input_schema: obj({
+      query: S('Words to match in the item name or description, or "" for everything.'),
+      category: E(MENU_CATEGORIES, "ALL, or one category. A bowl is one MAIN soup plus one noodle; SLIDER items are free per-bowl choices."),
+      dietary: E(DIETARY, "any, or a dietary filter."),
+    }),
   },
-
   {
     name: "get_menu_item",
-    description: `Get detailed information about a specific menu item. Use when:
-- Customer asks about a specific dish
-- You need to confirm item details before adding to order
-- Customer wants to know ingredients, allergens, or spice level`,
-    input_schema: {
-      type: "object",
-      properties: {
-        itemId: {
-          type: "string",
-          description: "The menu item ID",
-        },
-        itemName: {
-          type: "string",
-          description: "The menu item name (partial match OK)",
-        },
-      },
-    },
+    description: "Full details for one menu item: description, allergens, spice level, and the options a SLIDER item takes.",
+    input_schema: obj({ itemId: S("The menu item id from search_menu.") }),
   },
-
-  // ==========================================
-  // ORDER TOOLS
-  // ==========================================
-  {
-    name: "create_order",
-    description: `DISABLED. Do not use. Chappy never creates orders, applies credit or takes payment in chat; the customer does that with their own tap. Send them to ohbeef.com/order.`,
-    input_schema: {
-      type: "object",
-      properties: {
-        locationId: {
-          type: "string",
-          description: "Location ID for the order",
-        },
-        items: {
-          type: "array",
-          description: "Array of items to order",
-          items: {
-            type: "object",
-            properties: {
-              menuItemId: { type: "string" },
-              quantity: { type: "number" },
-              selectedValue: {
-                type: "string",
-                description: "For slider items, the selected level (e.g., 'Light', 'Medium', 'Rich')",
-              },
-            },
-            required: ["menuItemId", "quantity"],
-          },
-        },
-        estimatedArrival: {
-          type: "string",
-          description: "ISO datetime for pickup (e.g., '2024-01-15T18:00:00Z')",
-        },
-      },
-      required: ["locationId", "items"],
-    },
-  },
-
-  {
-    name: "get_order_status",
-    description: `Check the status of an existing order. Use when:
-- Customer asks "where's my order?"
-- Customer wants to know if food is ready
-- Checking pod assignment
-
-Returns: order status, pod number (if assigned), estimated wait time.`,
-    input_schema: {
-      type: "object",
-      properties: {
-        orderId: {
-          type: "string",
-          description: "The order ID",
-        },
-        orderNumber: {
-          type: "string",
-          description: "The order number (e.g., 'ORD-1234-ABCD')",
-        },
-      },
-    },
-  },
-
-  {
-    name: "add_to_order",
-    description: `Add items to an existing order (add-ons). Use when:
-- Customer wants to add more items after placing order
-- Customer requests refill or extra vegetables
-- Customer is ready for dessert
-
-Note: Some add-ons are free (refill, extra veg), others require payment.`,
-    input_schema: {
-      type: "object",
-      properties: {
-        orderId: {
-          type: "string",
-          description: "The existing order ID",
-        },
-        addOnType: {
-          type: "string",
-          description: "Type of add-on",
-          enum: ["PAID_ADDON", "REFILL", "EXTRA_VEG", "DESSERT_READY"],
-        },
-        items: {
-          type: "array",
-          description: "Items to add (for PAID_ADDON)",
-          items: {
-            type: "object",
-            properties: {
-              menuItemId: { type: "string" },
-              quantity: { type: "number" },
-            },
-          },
-        },
-      },
-      required: ["orderId", "addOnType"],
-    },
-  },
-
-  // ==========================================
-  // GROUP ORDER TOOLS
-  // ==========================================
-  {
-    name: "create_group_order",
-    description: `Start a new group order. Use when:
-- Customer says they're ordering for multiple people
-- Customer wants to split the bill
-- "We're a group of 4" or similar
-
-Returns: a 6-character code that others can use to join.`,
-    input_schema: {
-      type: "object",
-      properties: {
-        locationId: {
-          type: "string",
-          description: "Location ID",
-        },
-        estimatedArrival: {
-          type: "string",
-          description: "ISO datetime for when the group plans to arrive",
-        },
-      },
-      required: ["locationId"],
-    },
-  },
-
-  {
-    name: "join_group_order",
-    description: `Join an existing group order using a code. Use when:
-- Customer has a 6-character group code
-- "My friend started a group order" or similar`,
-    input_schema: {
-      type: "object",
-      properties: {
-        code: {
-          type: "string",
-          description: "6-character group order code",
-        },
-      },
-      required: ["code"],
-    },
-  },
-
-  {
-    name: "add_to_group_order",
-    description: `Add items to a group order for the current user. Use after joining a group order.`,
-    input_schema: {
-      type: "object",
-      properties: {
-        groupCode: {
-          type: "string",
-          description: "Group order code",
-        },
-        items: {
-          type: "array",
-          items: {
-            type: "object",
-            properties: {
-              menuItemId: { type: "string" },
-              quantity: { type: "number" },
-              selectedValue: { type: "string" },
-            },
-          },
-        },
-      },
-      required: ["groupCode", "items"],
-    },
-  },
-
-  {
-    name: "get_group_order_status",
-    description: `Get status of a group order including all members' orders. Use to see what everyone has ordered.`,
-    input_schema: {
-      type: "object",
-      properties: {
-        code: {
-          type: "string",
-          description: "Group order code",
-        },
-      },
-      required: ["code"],
-    },
-  },
-
-  // ==========================================
-  // LOCATION & POD TOOLS
-  // ==========================================
   {
     name: "get_locations",
-    description: `Get all restaurant locations with hours and availability. Use when:
-- Customer asks "where are you located?"
-- Customer wants to know if a location is open
-- Confirming which location to order from`,
-    input_schema: {
-      type: "object",
-      properties: {},
-    },
+    description: "Locations with whether online ordering is open, free pods right now, and today's arrival slots.",
+    input_schema: obj({}),
   },
-
   {
-    name: "check_location_availability",
-    description: `Check if a specific location is currently open and has available pods. Use before placing an order.`,
-    input_schema: {
-      type: "object",
-      properties: {
-        locationId: {
-          type: "string",
-          description: "Location ID to check",
-        },
-      },
-      required: ["locationId"],
-    },
+    name: "get_membership_program",
+    description: "The membership program: tiers, cashback, how to move up, referrals, early access, credit expiry.",
+    input_schema: obj({}),
   },
-
+  // ---- signed-in members ----
   {
-    name: "reserve_pod",
-    description: `Reserve a pod for an order. Usually auto-assigns, but can specify a pod number. Use after payment is confirmed.`,
-    input_schema: {
-      type: "object",
-      properties: {
-        orderId: {
-          type: "string",
-          description: "Order ID",
-        },
-        podNumber: {
-          type: "string",
-          description: "Specific pod number if customer requested one",
-        },
-      },
-      required: ["orderId"],
-    },
+    name: "get_my_profile",
+    description: "The member's tier, progress to the next tier, spendable store credit, credit expiring soon, and active rewards (with ids for apply_savings).",
+    input_schema: obj({}),
   },
-
-  // ==========================================
-  // PAYMENT TOOLS
-  // ==========================================
   {
-    name: "create_payment_link",
-    description: `DISABLED. Do not use. Chappy never creates orders, applies credit or takes payment in chat; the customer does that with their own tap. Send them to ohbeef.com/order.`,
-    input_schema: {
-      type: "object",
-      properties: {
-        orderId: {
-          type: "string",
-          description: "Order ID to create payment for",
-        },
-        applyCredits: {
-          type: "boolean",
-          description: "Whether to apply available credits to this order",
-        },
-      },
-      required: ["orderId"],
-    },
+    name: "get_my_orders",
+    description: "The member's five most recent orders.",
+    input_schema: obj({}),
   },
-
   {
-    name: "apply_credits",
-    description: `DISABLED. Do not use. Chappy never creates orders, applies credit or takes payment in chat; the customer does that with their own tap. Send them to ohbeef.com/order.`,
-    input_schema: {
-      type: "object",
-      properties: {
-        orderId: {
-          type: "string",
-          description: "Order ID",
-        },
-        amountCents: {
-          type: "number",
-          description: "Amount of credits to apply in cents (max 500)",
-        },
-      },
-      required: ["orderId"],
-    },
+    name: "get_order_status",
+    description: "Status of one of the member's own orders: kitchen status, payment, pod, arrival, items.",
+    input_schema: obj({ orderId: S('The order id, or "" for their most recent order.') }),
   },
-
-  {
-    name: "validate_promo_code",
-    description: `Check if a promo code is valid and get the discount. Use before applying to order.`,
-    input_schema: {
-      type: "object",
-      properties: {
-        code: {
-          type: "string",
-          description: "Promo code to validate",
-        },
-        subtotalCents: {
-          type: "number",
-          description: "Order subtotal for discount calculation",
-        },
-      },
-      required: ["code", "subtotalCents"],
-    },
-  },
-
-  // ==========================================
-  // ACCOUNT & LOYALTY TOOLS
-  // ==========================================
-  {
-    name: "get_user_profile",
-    description: `Get the customer's profile including tier, credits, streak, and order history summary. Use when:
-- Customer asks about their account
-- Customer asks about points/credits
-- Need to personalize recommendations
-- Checking tier progress`,
-    input_schema: {
-      type: "object",
-      properties: {},
-    },
-  },
-
-  {
-    name: "get_credits_balance",
-    description: `Get the customer's current credits balance. Use when customer asks "how many points/credits do I have?"`,
-    input_schema: {
-      type: "object",
-      properties: {},
-    },
-  },
-
-  {
-    name: "get_order_history",
-    description: `Get customer's past orders for recommendations and "reorder" functionality. Use to:
-- Suggest "your usual"
-- Make personalized recommendations
-- Show recent orders`,
-    input_schema: {
-      type: "object",
-      properties: {
-        limit: {
-          type: "number",
-          description: "Number of recent orders to return (default 5)",
-        },
-      },
-    },
-  },
-
-  {
-    name: "get_challenges",
-    description: `Get active challenges and user's progress. Use when customer asks about challenges or achievements.`,
-    input_schema: {
-      type: "object",
-      properties: {},
-    },
-  },
-
-  {
-    name: "get_tier_progress",
-    description: `Get detailed tier progression info - how many orders until next tier, what benefits they'll unlock. Use to encourage tier progression.`,
-    input_schema: {
-      type: "object",
-      properties: {},
-    },
-  },
-
-  // ==========================================
-  // RECOMMENDATION TOOLS
-  // ==========================================
-  {
-    name: "get_recommendations",
-    description: `Get personalized dish recommendations based on customer's order history and preferences. Use when:
-- Customer says "what should I get?"
-- Customer wants to try something new
-- Customer asks for suggestions`,
-    input_schema: {
-      type: "object",
-      properties: {
-        preference: {
-          type: "string",
-          description: "Optional preference hint: 'spicy', 'mild', 'new', 'popular'",
-        },
-      },
-    },
-  },
-
   {
     name: "get_usual_order",
-    description: `Get customer's most frequently ordered items (their "usual"). Use when customer says:
-- "my usual"
-- "the regular"
-- "same as last time"`,
-    input_schema: {
-      type: "object",
-      properties: {},
-    },
+    description: "The member's most frequently ordered bowl, from their paid orders.",
+    input_schema: obj({}),
   },
-
-  // ==========================================
-  // CHAPPY ORDERING FLOW TOOLS
-  // ==========================================
   {
-    name: "check_location_for_order",
-    description: `Confirm the location for an order and check if it's currently open and available. Use when:
-- Starting a new order
-- Customer asks to place an order
-- Need to verify a location is accepting orders
-
-Returns location details, operating status, available pods, and estimated wait time.`,
-    input_schema: {
-      type: "object",
-      properties: {
-        locationId: {
-          type: "string",
-          description: "Location ID to check. If not provided, uses the current context location.",
-        },
-      },
-    },
+    name: "reorder",
+    description: "Replace the cart with a past order's items. Returns the new cart and its price.",
+    input_schema: obj({ orderId: S('One of the member\'s order ids, or "" for their usual order.') }),
   },
-
   {
-    name: "get_available_arrival_times",
-    description: `Get available arrival time slots for ordering. Returns ASAP option and scheduled time windows. Use when:
-- Customer is ready to select arrival time
-- Customer asks "when can I pick up?"
-- Planning an order
-
-ASAP means arriving within 10 minutes, which allows immediate pod assignment.`,
-    input_schema: {
-      type: "object",
-      properties: {
-        locationId: {
-          type: "string",
-          description: "Location ID to check availability for",
-        },
-      },
-      required: ["locationId"],
-    },
+    name: "cart",
+    description:
+      "Change or view the member's cart. One order is one person's bowl (one MAIN soup, one noodle, options, add-ons, sides, drinks); quantity is servings of that item in it. Every result includes the server's price for the cart; quote prices only from here.",
+    input_schema: obj({
+      op: E([...CART_OPS], "add, remove, set_quantity (0 removes), clear, or view."),
+      menuItemId: S('The menu item id, or "" for clear and view.'),
+      quantity: I("Servings to add, or the new servings for set_quantity. 0 for remove, clear and view."),
+      option: S('The chosen option for a SLIDER item (from get_menu_item), or "".'),
+    }),
   },
-
   {
-    name: "get_available_pods",
-    description: `Get list of available pods/seats at a location for ASAP orders. Use when:
-- Customer selected ASAP arrival
-- Customer wants to choose their pod
-- Showing seating options`,
-    input_schema: {
-      type: "object",
-      properties: {
-        locationId: {
-          type: "string",
-          description: "Location ID to check pods for",
-        },
-      },
-      required: ["locationId"],
-    },
+    name: "set_arrival_and_pod",
+    description: "Choose the location, arrival time and pod for the cart. Checks the time against today's slots and checks the pod is free right now; the pod is only held once the order is placed.",
+    input_schema: obj({
+      locationId: S('A location id from get_locations, or "" for the current one.'),
+      arrival: S('"ASAP", or a time today as HH:MM (24 hour, location time), or an exact slot from get_locations.'),
+      pod: S('"best" (nearest free pod to the entry), a pod label like "B-07", or "none" to be seated at check-in.'),
+      partySize: I("1 to 8. Two or more get a duo pod when one is free."),
+    }),
   },
-
   {
-    name: "get_saved_payment_methods",
-    description: `Get customer's saved payment methods (credit/debit cards). Use when:
-- Ready to process payment for an order
-- Customer asks about their saved cards
-- Need to confirm payment method before charging
-
-Returns tokenized card info (last4, brand) - never raw card numbers. Only available for logged-in users.`,
-    input_schema: {
-      type: "object",
-      properties: {},
-    },
+    name: "apply_savings",
+    description: "Choose store credit, a promo code or a reward for the cart and return the new price. Nothing is spent until the customer pays.",
+    input_schema: obj({
+      useCreditsCents: I("Store credit to use, in cents. 0 for none. The order service caps it per order."),
+      promoCode: S('A promo code, or "".'),
+      rewardId: S('A reward id from get_my_profile, or "".'),
+    }),
   },
-
   {
-    name: "create_and_pay_order",
-    description: `DISABLED. Do not use. Chappy never creates orders, applies credit or takes payment in chat; the customer does that with their own tap. Send them to ohbeef.com/order.`,
-    input_schema: {
-      type: "object",
-      properties: {
-        locationId: {
-          type: "string",
-          description: "Location ID for the order",
-        },
-        items: {
-          type: "array",
-          description: "Array of items to order",
-          items: {
-            type: "object",
-            properties: {
-              menuItemId: { type: "string" },
-              quantity: { type: "number" },
-              selectedValue: { type: "string", description: "For slider items like broth richness" },
-            },
-            required: ["menuItemId", "quantity"],
-          },
-        },
-        paymentMethodId: {
-          type: "string",
-          description: "Saved payment method ID to charge",
-        },
-        seatId: {
-          type: "string",
-          description: "Selected pod/seat ID (for ASAP orders with pod selection)",
-        },
-        arrivalTime: {
-          type: "string",
-          description: "Either 'ASAP' or ISO datetime string for scheduled pickup",
-        },
-        applyCredits: {
-          type: "boolean",
-          description: "Whether to apply available credits to this order (max $5)",
-        },
-      },
-      required: ["locationId", "items", "paymentMethodId"],
-    },
+    name: "checkout",
+    description:
+      "Place the order from the cart and hand the customer a pay card. Only after you showed the items and total and the customer said yes to paying. This never charges anything: the customer pays with their own tap on the card (on SMS, a payment link).",
+    input_schema: obj({ confirmed: { type: "boolean", description: "true only if the customer explicitly agreed to this cart and total in this conversation." } }),
   },
-
   {
-    name: "reorder_previous_order",
-    description: `Quickly reorder from a previous order. Use when:
-- Customer says "reorder my last order"
-- Customer wants to duplicate a previous order
-- Customer says "same as before"
-
-Returns the previous order details for confirmation before creating new order.`,
-    input_schema: {
-      type: "object",
-      properties: {
-        orderId: {
-          type: "string",
-          description: "Specific order ID to reorder. If not provided, uses most recent completed order.",
-        },
-      },
-    },
+    name: "start_group_order",
+    description: "Start a group order the member hosts at a location, and return a link to share with the group.",
+    input_schema: obj({ locationId: S('A location id, or "" for the cart\'s or current location.') }),
   },
-
+  // ---- support ----
   {
-    name: "get_chefs_choice",
-    description: `Get the Chef's Choice quick order - a pre-configured bowl perfect for new customers or anyone wanting our recommended setup. Use when:
-- Customer asks for "Chef's Choice"
-- Customer says "chef's recommendation" or "chef's pick"
-- Customer is new and wants a suggested order
-- Customer asks "what do you recommend?" and wants to order quickly
-
-The Chef's Choice includes:
-- Classic Beef Noodle Soup ($15.99)
-- Wide noodles (our most popular)
-- Oh!'s recommended bowl configuration (medium broth richness, medium noodle texture, mild spice)
-- Standard toppings (bok choy, green onions, cilantro, sprouts)
-- Complimentary Mandarin Orange Sherbet
-
-Returns the configured items ready for ordering.`,
-    input_schema: {
-      type: "object",
-      properties: {
-        locationId: {
-          type: "string",
-          description: "Location ID. Uses context location if not provided.",
-        },
-      },
-    },
+    name: "report_issue",
+    description:
+      "Report a problem. If the customer is in their pod now, staff are called to the pod. Otherwise a support case is opened and, for a problem with a recent meal, store credit may be added automatically within fixed limits. Never promise an amount before the result says so.",
+    input_schema: obj({
+      category: E(ISSUE_CATEGORIES, "What kind of problem."),
+      summary: S("What happened, in the customer's words, briefly."),
+      orderId: S('The order it is about, or "" for their most recent order.'),
+      contact: S('For a guest: an email or phone number to reach them. "" for members.'),
+    }),
   },
-
   {
-    name: "get_order_summary",
-    description: `Build and display an order summary before payment. Use to show the customer what they're about to order with itemized prices, tax, and total.`,
-    input_schema: {
-      type: "object",
-      properties: {
-        items: {
-          type: "array",
-          description: "Array of items to summarize",
-          items: {
-            type: "object",
-            properties: {
-              menuItemId: { type: "string" },
-              quantity: { type: "number" },
-            },
-            required: ["menuItemId", "quantity"],
-          },
-        },
-        applyCredits: {
-          type: "boolean",
-          description: "Whether to show credits applied",
-        },
-      },
-      required: ["items"],
-    },
+    name: "request_refund",
+    description: "Ask staff to review a card refund for a whole order. Opens a case; staff decide. Moves no money and never names an amount.",
+    input_schema: obj({
+      orderId: S('The member\'s order id, or "" for their most recent paid order.'),
+      reason: S("Why, briefly."),
+    }),
   },
-
   {
-    name: "create_apple_pay_order",
-    description: `DISABLED. Do not use. Chappy never creates orders, applies credit or takes payment in chat; the customer does that with their own tap. Send them to ohbeef.com/order.`,
-    input_schema: {
-      type: "object",
-      properties: {
-        locationId: {
-          type: "string",
-          description: "Location ID for the order",
-        },
-        previousOrderId: {
-          type: "string",
-          description: "Order ID to reorder from. If provided, items array is ignored and items are copied from the previous order. Use this for reorders instead of constructing items array.",
-        },
-        items: {
-          type: "array",
-          description: "Array of items to order (not needed if previousOrderId is provided)",
-          items: {
-            type: "object",
-            properties: {
-              menuItemId: { type: "string" },
-              quantity: { type: "number" },
-              selectedValue: { type: "string", description: "For slider items like broth richness" },
-            },
-            required: ["menuItemId", "quantity"],
-          },
-        },
-        seatId: {
-          type: "string",
-          description: "Selected pod/seat ID (for ASAP orders with pod selection)",
-        },
-        arrivalTime: {
-          type: "string",
-          description: "Either 'ASAP' or ISO datetime string for scheduled pickup",
-        },
-        applyCredits: {
-          type: "boolean",
-          description: "Whether to apply available credits to this order (max $5)",
-        },
-      },
-      required: ["locationId"],
-    },
+    name: "escalate_to_human",
+    description: "Hand the conversation to a person now: safety, health, an upset customer, or anything you cannot fix. Opens an urgent case and alerts staff.",
+    input_schema: obj({
+      summary: S("What the customer needs, briefly."),
+      contact: S('For a guest: an email or phone number. "" for members.'),
+    }),
   },
 ];
 
-/**
- * Legacy tools that write credits, order totals or Stripe objects straight
- * from chat. The owner's rule is that Chappy never moves money without the
- * customer's own tap, so each returns PAYMENT_NEEDS_CUSTOMER_TAP before any
- * database or Stripe access (same shape as the prod hotfix 2927819).
- *  - apply_credits: decremented credits and order totals with no tap and no
- *    ownership check, and a negative amountCents minted credit.
- *  - create_and_pay_order: confirmed a PaymentIntent on a saved card.
- *  - create_order / create_apple_pay_order: wrote client-assembled order totals
- *    and credit discounts outside the order service (orders/service.js), and
- *    created Stripe customers and PaymentIntents.
- * B2 deletes these and builds the web pay card on the order service.
- */
-export const DISABLED_MONEY_TOOLS = Object.freeze({
-  apply_credits: "Chappy can't apply or spend credit. Credits are chosen on the payment page.",
-  create_and_pay_order: "Chappy can't charge a card.",
-  create_apple_pay_order: "Chappy can't create orders or payments in chat yet.",
-  create_order: "Chappy can't create orders in chat yet.",
-  // Read any order by id with no ownership check and returned a /pay/ URL that does not exist.
-  create_payment_link: "Chappy can't make payment links in chat yet.",
-});
+/** Tools that need a verified member (ctx.userId). */
+export const MEMBER_TOOLS = Object.freeze([
+  "get_my_profile",
+  "get_my_orders",
+  "get_order_status",
+  "get_usual_order",
+  "reorder",
+  "cart",
+  "set_arrival_and_pod",
+  "apply_savings",
+  "checkout",
+  "start_group_order",
+  "request_refund",
+]);
+const MEMBER_SET = new Set(MEMBER_TOOLS);
 
-const TAP_NEXT_STEP =
-  " Do not call this tool again. Send the customer to ohbeef.com/order to place the order and pay with their own tap; any credit is applied there.";
+// ---------------------------------------------------------------------------
+// Helpers
 
-export function paymentNeedsTap(name) {
-  return { error: "PAYMENT_NEEDS_CUSTOMER_TAP", charged: false, disabled: true, message: `${DISABLED_MONEY_TOOLS[name]}${TAP_NEXT_STEP}` };
+const nowOf = (ctx) => (ctx.now instanceof Date ? ctx.now : new Date());
+const clean = (v) => (typeof v === "string" ? v.trim() : "");
+const dollars = (cents) => `$${((cents || 0) / 100).toFixed(2)}`;
+
+function signInRequired() {
+  return { error: "SIGN_IN_REQUIRED", message: "This needs a signed-in account.", card: { type: "sign-in" } };
 }
 
-/**
- * Execute tools and return results
- *
- * @param {Array} toolUseBlocks - Tool use blocks from Claude response
- * @param {Object} context - Execution context with prisma, userId, etc.
- * @returns {Array} - Tool result blocks for Claude
- */
-export async function executeTools(toolUseBlocks, context) {
-  const results = [];
-
-  for (const toolUse of toolUseBlocks) {
-    const { id, name, input } = toolUse;
-
-    console.log(`[CHAPPY TOOL] Executing: ${name}`, JSON.stringify(input, null, 2));
-
-    let result;
-    let isError = false;
-
-    try {
-      result = await executeToolByName(name, input, context);
-      console.log(`[CHAPPY TOOL] ${name} succeeded:`, typeof result === 'string' ? result.substring(0, 200) : JSON.stringify(result, null, 2).substring(0, 500));
-    } catch (error) {
-      console.error(`[CHAPPY TOOL] ${name} FAILED:`, error.message, error.stack);
-      result = `Error: ${error.message}`;
-      isError = true;
-    }
-
-    results.push({
-      type: "tool_result",
-      tool_use_id: id,
-      content: typeof result === "string" ? result : JSON.stringify(result),
-      is_error: isError,
-    });
-  }
-
-  return results;
-}
-
-/**
- * Execute a specific tool by name
- */
-async function executeToolByName(name, input, context) {
-  // Money tools are disabled before anything else runs (see DISABLED_MONEY_TOOLS).
-  if (Object.hasOwn(DISABLED_MONEY_TOOLS, name)) return paymentNeedsTap(name);
-  const { prisma, userId, guestId, locationId, tenantId } = context;
-
-  switch (name) {
-    // ==========================================
-    // MENU TOOLS
-    // ==========================================
-    case "browse_menu": {
-      const where = { tenantId, isAvailable: true };
-      if (input.category) where.categoryType = input.category;
-
-      let items = await prisma.menuItem.findMany({
-        where,
-        orderBy: [{ categoryType: "asc" }, { displayOrder: "asc" }],
-      });
-
-      // Filter by dietary if specified
-      if (input.dietary) {
-        items = items.filter((item) => {
-          if (input.dietary === "vegetarian") return item.isVegetarian;
-          if (input.dietary === "vegan") return item.isVegan;
-          if (input.dietary === "gluten-free") return item.isGlutenFree;
-          return true;
-        });
-      }
-
-      // Format for readability
-      return items.map((item) => ({
-        id: item.id,
-        name: item.name,
-        price: `$${(item.basePriceCents / 100).toFixed(2)}`,
-        category: item.categoryType,
-        description: item.description,
-        spiceLevel: item.spiceLevel,
-        dietary: [
-          item.isVegetarian && "V",
-          item.isVegan && "VG",
-          item.isGlutenFree && "GF",
-        ].filter(Boolean).join(", ") || null,
-      }));
-    }
-
-    case "get_menu_item": {
-      let item;
-      if (input.itemId) {
-        item = await prisma.menuItem.findUnique({ where: { id: input.itemId } });
-      } else if (input.itemName) {
-        item = await prisma.menuItem.findFirst({
-          where: {
-            tenantId,
-            name: { contains: input.itemName, mode: "insensitive" },
-          },
-        });
-      }
-
-      if (!item) return "Item not found";
-
-      return {
-        id: item.id,
-        name: item.name,
-        price: `$${(item.basePriceCents / 100).toFixed(2)}`,
-        description: item.description,
-        category: item.categoryType,
-        spiceLevel: item.spiceLevel,
-        allergens: item.allergens,
-        isVegetarian: item.isVegetarian,
-        isVegan: item.isVegan,
-        isGlutenFree: item.isGlutenFree,
-      };
-    }
-
-    // ==========================================
-    // ORDER TOOLS
-    // ==========================================
-    case "create_order": {
-      // Unreachable: disabled in DISABLED_MONEY_TOOLS (Task B1). B2 deletes this body.
-      // Calculate total
-      let totalCents = 0;
-      const orderItems = [];
-
-      for (const item of input.items) {
-        const menuItem = await prisma.menuItem.findUnique({
-          where: { id: item.menuItemId },
-        });
-        if (!menuItem) throw new Error(`Menu item not found: ${item.menuItemId}`);
-
-        const priceCents = menuItem.basePriceCents * item.quantity;
-        totalCents += priceCents;
-
-        orderItems.push({
-          menuItemId: item.menuItemId,
-          quantity: item.quantity,
-          priceCents,
-          selectedValue: item.selectedValue,
-        });
-      }
-
-      // Generate order number
-      const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-
-      // Create order
-      const order = await prisma.order.create({
-        data: {
-          orderNumber,
-          tenantId,
-          locationId: input.locationId,
-          userId: userId || undefined,
-          guestId: guestId || undefined,
-          totalCents,
-          estimatedArrival: input.estimatedArrival ? new Date(input.estimatedArrival) : undefined,
-          items: {
-            create: orderItems,
-          },
-        },
-        include: { items: { include: { menuItem: true } } },
-      });
-
-      return {
-        orderId: order.id,
-        orderNumber: order.orderNumber,
-        total: `$${(order.totalCents / 100).toFixed(2)}`,
-        status: order.status,
-        items: order.items.map((i) => ({
-          name: i.menuItem.name,
-          quantity: i.quantity,
-          price: `$${(i.priceCents / 100).toFixed(2)}`,
-        })),
-        message: "Order created! Ready for payment.",
-      };
-    }
-
-    case "get_order_status": {
-      const where = {};
-      if (input.orderId) where.id = input.orderId;
-      if (input.orderNumber) where.orderNumber = input.orderNumber;
-
-      const order = await prisma.order.findFirst({
-        where,
-        include: { seat: true },
-      });
-
-      if (!order) return "Order not found";
-
-      return {
-        orderNumber: order.orderNumber,
-        status: order.status,
-        podNumber: order.seat?.number || "Not yet assigned",
-        estimatedWait: order.estimatedWaitMinutes ? `~${order.estimatedWaitMinutes} minutes` : "N/A",
-        total: `$${(order.totalCents / 100).toFixed(2)}`,
-      };
-    }
-
-    // ==========================================
-    // LOCATION TOOLS
-    // ==========================================
-    case "get_locations": {
-      const locations = await prisma.location.findMany({
-        where: { tenantId },
-      });
-
-      return locations.map((loc) => ({
-        id: loc.id,
-        name: loc.name,
-        city: loc.city,
-        address: loc.address,
-        isOpen: !loc.isClosed,
-        timezone: loc.timezone,
-      }));
-    }
-
-    case "check_location_availability": {
-      const location = await prisma.location.findUnique({
-        where: { id: input.locationId },
-        include: { seats: true },
-      });
-
-      if (!location) return "Location not found";
-
-      const availablePods = location.seats.filter((s) => s.status === "AVAILABLE").length;
-
-      return {
-        name: location.name,
-        isOpen: !location.isClosed,
-        availablePods,
-        totalPods: location.seats.length,
-      };
-    }
-
-    // ==========================================
-    // ACCOUNT TOOLS
-    // ==========================================
-    case "get_user_profile": {
-      if (!userId) return "No user logged in. This is a guest session.";
-
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        include: {
-          _count: { select: { orders: true } },
-        },
-      });
-
-      if (!user) return "User not found";
-
-      return {
-        name: user.name,
-        tier: user.membershipTier,
-        tierBenefits: getTierBenefits(user.membershipTier),
-        credits: `$${(user.creditsCents / 100).toFixed(2)}`,
-        currentStreak: user.currentStreak,
-        lifetimeOrders: user.lifetimeOrderCount,
-        tierProgress: getTierProgressInfo(user),
-      };
-    }
-
-    case "get_credits_balance": {
-      if (!userId) return "No user logged in. Credits are only available for registered users.";
-
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { creditsCents: true },
-      });
-
-      return {
-        balance: `$${(user.creditsCents / 100).toFixed(2)}`,
-        balanceCents: user.creditsCents,
-      };
-    }
-
-    case "get_order_history": {
-      if (!userId) return "No order history available for guest sessions.";
-
-      const limit = input.limit || 5;
-
-      const orders = await prisma.order.findMany({
-        where: { userId, status: "COMPLETED" },
-        orderBy: { createdAt: "desc" },
-        take: limit,
-        include: { items: { include: { menuItem: true } }, location: true },
-      });
-
-      return orders.map((order) => ({
-        orderId: order.id,
-        orderNumber: order.orderNumber,
-        date: order.createdAt.toISOString().split("T")[0],
-        total: `$${(order.totalCents / 100).toFixed(2)}`,
-        locationId: order.locationId,
-        locationName: order.location?.name || "Unknown",
-        itemsSummary: order.items.map((i) => `${i.quantity}x ${i.menuItem.name}`).join(", "),
-        // Include structured items for reordering
-        reorderItems: order.items.map((i) => ({
-          menuItemId: i.menuItemId,
-          quantity: i.quantity,
-          selectedValue: i.selectedValue,
-          name: i.menuItem.name,
-          priceCents: i.priceCents,
-        })),
-      }));
-    }
-
-    case "get_tier_progress": {
-      if (!userId) return "Tier progress is only available for registered users.";
-
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-      });
-
-      return getTierProgressInfo(user);
-    }
-
-    case "get_recommendations": {
-      // Get menu items
-      const items = await prisma.menuItem.findMany({
-        where: { tenantId, isAvailable: true, categoryType: "MAIN" },
-      });
-
-      // If user has history, personalize
-      if (userId) {
-        const orderHistory = await prisma.orderItem.findMany({
-          where: { order: { userId } },
-          include: { menuItem: true },
-          orderBy: { createdAt: "desc" },
-          take: 50,
-        });
-
-        // Find items they haven't tried
-        const orderedIds = new Set(orderHistory.map((o) => o.menuItemId));
-        const notTried = items.filter((i) => !orderedIds.has(i.id));
-
-        // Filter by preference
-        let recommendations = notTried.length > 0 ? notTried : items;
-
-        if (input.preference === "spicy") {
-          recommendations = recommendations.filter((i) => i.spiceLevel >= 2);
-        }
-
-        return recommendations.slice(0, 3).map((item) => ({
-          id: item.id,
-          name: item.name,
-          price: `$${(item.basePriceCents / 100).toFixed(2)}`,
-          description: item.description,
-          reason: notTried.includes(item) ? "You haven't tried this yet!" : "Popular choice",
-        }));
-      }
-
-      // For guests, return popular items
-      return items.slice(0, 3).map((item) => ({
-        id: item.id,
-        name: item.name,
-        price: `$${(item.basePriceCents / 100).toFixed(2)}`,
-        description: item.description,
-        reason: "Customer favorite",
-      }));
-    }
-
-    case "get_usual_order": {
-      if (!userId) return "No order history for guest sessions.";
-
-      // Find most frequently ordered items
-      const itemCounts = await prisma.orderItem.groupBy({
-        by: ["menuItemId"],
-        where: { order: { userId } },
-        _count: { menuItemId: true },
-        orderBy: { _count: { menuItemId: "desc" } },
-        take: 5,
-      });
-
-      if (itemCounts.length === 0) return "No order history yet - this would be your first order!";
-
-      const itemIds = itemCounts.map((c) => c.menuItemId);
-      const items = await prisma.menuItem.findMany({
-        where: { id: { in: itemIds } },
-      });
-
-      const itemMap = new Map(items.map((i) => [i.id, i]));
-
-      return {
-        usualItems: itemCounts.map((c) => {
-          const item = itemMap.get(c.menuItemId);
-          return {
-            id: item.id,
-            name: item.name,
-            price: `$${(item.basePriceCents / 100).toFixed(2)}`,
-            timesOrdered: c._count.menuItemId,
-          };
-        }),
-      };
-    }
-
-    // ==========================================
-    // PAYMENT TOOLS
-    // ==========================================
-    case "create_payment_link": {
-      // Unreachable: disabled in DISABLED_MONEY_TOOLS (Task B1). B2 deletes this body.
-      const order = await prisma.order.findUnique({
-        where: { id: input.orderId },
-      });
-
-      if (!order) return "Order not found";
-
-      // In production, this would create a Stripe checkout session
-      // For now, return a placeholder
-      const paymentUrl = `https://ohbeef.com/pay/${order.orderNumber}`;
-
-      return {
-        paymentUrl,
-        amount: `$${(order.totalCents / 100).toFixed(2)}`,
-        message: "Tap the link to complete payment",
-      };
-    }
-
-    case "apply_credits": {
-      // Unreachable: disabled in DISABLED_MONEY_TOOLS (Task B1). B2 deletes this body.
-      if (!userId) return "Credits can only be applied for logged-in users";
-
-      const user = await prisma.user.findUnique({ where: { id: userId } });
-      const order = await prisma.order.findUnique({ where: { id: input.orderId } });
-
-      if (!order) return "Order not found";
-
-      const maxCredits = Math.min(500, user.creditsCents, input.amountCents || user.creditsCents);
-
-      // Apply credits
-      await prisma.user.update({
-        where: { id: userId },
-        data: { creditsCents: { decrement: maxCredits } },
-      });
-
-      await prisma.order.update({
-        where: { id: input.orderId },
-        data: { totalCents: { decrement: maxCredits } },
-      });
-
-      return {
-        creditsApplied: `$${(maxCredits / 100).toFixed(2)}`,
-        newOrderTotal: `$${((order.totalCents - maxCredits) / 100).toFixed(2)}`,
-        remainingCredits: `$${((user.creditsCents - maxCredits) / 100).toFixed(2)}`,
-      };
-    }
-
-    case "validate_promo_code": {
-      const promo = await prisma.promoCode.findFirst({
-        where: {
-          code: input.code.toUpperCase(),
-          isActive: true,
-          OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
-        },
-      });
-
-      if (!promo) return { valid: false, message: "Invalid or expired promo code" };
-
-      if (promo.minimumOrderCents && input.subtotalCents < promo.minimumOrderCents) {
-        return {
-          valid: false,
-          message: `Minimum order of $${(promo.minimumOrderCents / 100).toFixed(2)} required`,
-        };
-      }
-
-      let discountCents;
-      if (promo.discountType === "PERCENTAGE") {
-        discountCents = Math.floor((input.subtotalCents * promo.discountValue) / 100);
-        if (promo.maxDiscountCents) {
-          discountCents = Math.min(discountCents, promo.maxDiscountCents);
-        }
-      } else {
-        discountCents = promo.discountValue;
-      }
-
-      return {
-        valid: true,
-        code: promo.code,
-        discount: `$${(discountCents / 100).toFixed(2)}`,
-        discountCents,
-        description: promo.description,
-      };
-    }
-
-    // ==========================================
-    // CHAPPY ORDERING FLOW TOOLS
-    // ==========================================
-    case "check_location_for_order": {
-      const checkLocationId = input.locationId || locationId;
-
-      if (!checkLocationId) {
-        // Get all locations
-        const locations = await prisma.location.findMany({
-          where: { tenantId },
-          include: { seats: true },
-        });
-
-        return {
-          needsSelection: true,
-          message: "Which location would you like to order from?",
-          locations: locations.map((loc) => ({
-            id: loc.id,
-            name: loc.name,
-            city: loc.city,
-            address: loc.address,
-            isOpen: !loc.isClosed,
-            availablePods: loc.seats.filter((s) => s.status === "AVAILABLE").length,
-          })),
-        };
-      }
-
-      const location = await prisma.location.findUnique({
-        where: { id: checkLocationId },
-        include: { seats: true },
-      });
-
-      if (!location) return { error: "Location not found" };
-
-      const availablePods = location.seats.filter((s) => s.status === "AVAILABLE");
-      const occupiedPods = location.seats.filter((s) => s.status === "OCCUPIED");
-
-      // Estimate wait time: ~5 min per occupied pod in queue
-      const estimatedWaitMinutes = location.isClosed ? null : Math.min(occupiedPods.length * 5, 45);
-
-      return {
-        locationId: location.id,
-        name: location.name,
-        city: location.city,
-        address: location.address,
-        isOpen: !location.isClosed,
-        canOrder: !location.isClosed,
-        availablePods: availablePods.length,
-        totalPods: location.seats.length,
-        estimatedWaitMinutes,
-        message: location.isClosed
-          ? `Sorry, ${location.name} is currently closed.`
-          : availablePods.length > 0
-          ? `${location.name} is open with ${availablePods.length} pod${availablePods.length > 1 ? "s" : ""} available!`
-          : `${location.name} is open but all pods are full. Estimated wait: ${estimatedWaitMinutes} minutes.`,
-      };
-    }
-
-    case "get_available_arrival_times": {
-      const arrivalLocationId = input.locationId || locationId;
-      if (!arrivalLocationId) return { error: "Location ID required" };
-
-      const location = await prisma.location.findUnique({
-        where: { id: arrivalLocationId },
-        include: { seats: true },
-      });
-
-      if (!location) return { error: "Location not found" };
-      if (location.isClosed) return { error: "Location is currently closed", canOrder: false };
-
-      const availablePods = location.seats.filter((s) => s.status === "AVAILABLE").length;
-      const now = new Date();
-
-      // Generate time slots for next 2 hours in 15-minute increments
-      const timeSlots = [];
-      for (let i = 0; i < 8; i++) {
-        const slotTime = new Date(now.getTime() + (i + 1) * 15 * 60 * 1000);
-        timeSlots.push({
-          time: slotTime.toISOString(),
-          display: slotTime.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
-        });
-      }
-
-      return {
-        locationId: arrivalLocationId,
-        locationName: location.name,
-        asapAvailable: availablePods > 0,
-        asapMessage: availablePods > 0
-          ? "ASAP - Arrive within 10 minutes and get a pod immediately!"
-          : "ASAP not available - all pods are currently occupied",
-        scheduledSlots: timeSlots,
-        recommendation: availablePods > 0
-          ? "I recommend ASAP if you're nearby - you can pick your pod!"
-          : `I recommend scheduling for ${timeSlots[1]?.display} to avoid waiting.`,
-      };
-    }
-
-    case "get_available_pods": {
-      const podsLocationId = input.locationId || locationId;
-      if (!podsLocationId) return { error: "Location ID required" };
-
-      const seats = await prisma.seat.findMany({
-        where: {
-          locationId: podsLocationId,
-          status: "AVAILABLE",
-        },
-        orderBy: { number: "asc" },
-      });
-
-      if (seats.length === 0) {
-        return {
-          available: false,
-          message: "No pods available right now. Would you like to schedule for later?",
-          pods: [],
-        };
-      }
-
-      return {
-        available: true,
-        message: `${seats.length} pod${seats.length > 1 ? "s" : ""} available! Which one would you like?`,
-        pods: seats.map((s) => ({
-          id: s.id,
-          number: s.number,
-          type: s.type || "standard",
-        })),
-      };
-    }
-
-    case "get_saved_payment_methods": {
-      if (!userId) {
-        return {
-          hasPaymentMethods: false,
-          applePayAvailable: true, // Frontend will check actual availability
-          message: "You need to be logged in to use saved payment methods, but you can pay with Apple Pay or Google Pay!",
-        };
-      }
-
-      const methods = await prisma.savedPaymentMethod.findMany({
-        where: { userId },
-        orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }],
-      });
-
-      if (methods.length === 0) {
-        return {
-          hasPaymentMethods: false,
-          applePayAvailable: true, // Frontend will check actual availability
-          message: "No saved cards on file, but you can pay with Apple Pay or Google Pay! Just say 'pay with Apple Pay' when you're ready.",
-        };
-      }
-
-      return {
-        hasPaymentMethods: true,
-        applePayAvailable: true, // Also available as alternative
-        methods: methods.map((m) => ({
-          id: m.id,
-          brand: m.brand ? m.brand.charAt(0).toUpperCase() + m.brand.slice(1) : "Card",
-          last4: m.last4 || "****",
-          isDefault: m.isDefault,
-          expiry: m.expiryMonth && m.expiryYear ? `${m.expiryMonth}/${m.expiryYear}` : null,
-        })),
-        defaultMethod: methods.find((m) => m.isDefault) || methods[0],
-        message: methods.length === 1
-          ? `I'll charge your ${methods[0].brand} ending in ${methods[0].last4}. Or say 'Apple Pay' to use that instead.`
-          : `Which card would you like to use? You can also say 'Apple Pay'.`,
-      };
-    }
-
-    case "reorder_previous_order": {
-      console.log("[CHAPPY] reorder_previous_order called with input:", JSON.stringify(input, null, 2));
-      console.log("[CHAPPY] userId:", userId);
-      if (!userId) return { error: "You need to be logged in to reorder." };
-
-      let previousOrder;
-      if (input.orderId) {
-        previousOrder = await prisma.order.findFirst({
-          where: { id: input.orderId, userId },
-          include: { items: { include: { menuItem: true } }, location: true },
-        });
-      } else {
-        previousOrder = await prisma.order.findFirst({
-          where: { userId, status: "COMPLETED" },
-          orderBy: { createdAt: "desc" },
-          include: { items: { include: { menuItem: true } }, location: true },
-        });
-      }
-
-      if (!previousOrder) {
-        return {
-          found: false,
-          message: "No previous orders found. Would you like to start a new order?",
-        };
-      }
-
-      // Check if all items are still available
-      const itemIds = previousOrder.items.map((i) => i.menuItemId);
-      const availableItems = await prisma.menuItem.findMany({
-        where: { id: { in: itemIds }, isAvailable: true },
-      });
-
-      const unavailableItems = previousOrder.items.filter(
-        (i) => !availableItems.find((a) => a.id === i.menuItemId)
-      );
-
-      return {
-        found: true,
-        orderId: previousOrder.id,
-        orderDate: previousOrder.createdAt.toLocaleDateString(),
-        location: previousOrder.location.name,
-        items: previousOrder.items.map((i) => ({
-          menuItemId: i.menuItemId,
-          name: i.menuItem.name,
-          quantity: i.quantity,
-          price: `$${(i.menuItem.basePriceCents / 100).toFixed(2)}`,
-          selectedValue: i.selectedValue,
-          available: !!availableItems.find((a) => a.id === i.menuItemId),
-        })),
-        hasUnavailableItems: unavailableItems.length > 0,
-        unavailableMessage: unavailableItems.length > 0
-          ? `Note: ${unavailableItems.map((i) => i.menuItem.name).join(", ")} ${unavailableItems.length === 1 ? "is" : "are"} no longer available.`
-          : null,
-        message: `Found your order from ${previousOrder.createdAt.toLocaleDateString()}. Would you like to order the same thing again?`,
-        reorderItems: previousOrder.items
-          .filter((i) => availableItems.find((a) => a.id === i.menuItemId))
-          .map((i) => ({
-            menuItemId: i.menuItemId,
-            quantity: i.quantity,
-            selectedValue: i.selectedValue,
-          })),
-      };
-    }
-
-    case "get_chefs_choice": {
-      console.log("[CHAPPY] get_chefs_choice called");
-      const chefsChoiceLocationId = input.locationId || locationId;
-
-      // Find the menu items for Chef's Choice
-      // Classic Beef Noodle Soup + Wide Noodles + recommended config + Mandarin Orange Sherbet
-      const classicSoup = await prisma.menuItem.findFirst({
-        where: { name: { contains: "Classic Beef Noodle Soup" }, isAvailable: true },
-      });
-      const wideNoodles = await prisma.menuItem.findFirst({
-        where: { name: { contains: "Wide Noodles" }, isAvailable: true },
-      });
-      const soupRichness = await prisma.menuItem.findFirst({
-        where: { name: { contains: "Soup Richness" }, isAvailable: true },
-      });
-      const noodleTexture = await prisma.menuItem.findFirst({
-        where: { name: { contains: "Noodle Texture" }, isAvailable: true },
-      });
-      const spiceLevel = await prisma.menuItem.findFirst({
-        where: { name: { contains: "Spice Level" }, isAvailable: true },
-      });
-      const bokChoy = await prisma.menuItem.findFirst({
-        where: { name: { contains: "Bok Choy" }, isAvailable: true },
-      });
-      const greenOnions = await prisma.menuItem.findFirst({
-        where: { name: { contains: "Green Onions" }, isAvailable: true },
-      });
-      const cilantro = await prisma.menuItem.findFirst({
-        where: { name: { contains: "Cilantro" }, isAvailable: true },
-      });
-      const sprouts = await prisma.menuItem.findFirst({
-        where: { name: { contains: "Sprouts" }, isAvailable: true },
-      });
-      const sherbet = await prisma.menuItem.findFirst({
-        where: { name: { contains: "Mandarin Orange Sherbet" }, isAvailable: true },
-      });
-
-      if (!classicSoup) {
-        return { error: "Chef's Choice items not available at this time." };
-      }
-
-      // Build the items array
-      const chefsChoiceItems = [
-        classicSoup && { menuItemId: classicSoup.id, name: classicSoup.name, quantity: 1, priceCents: classicSoup.basePriceCents },
-        wideNoodles && { menuItemId: wideNoodles.id, name: wideNoodles.name, quantity: 1, priceCents: 0, selectedValue: null },
-        soupRichness && { menuItemId: soupRichness.id, name: soupRichness.name, quantity: 1, priceCents: 0, selectedValue: "Medium" },
-        noodleTexture && { menuItemId: noodleTexture.id, name: noodleTexture.name, quantity: 1, priceCents: 0, selectedValue: "Medium" },
-        spiceLevel && { menuItemId: spiceLevel.id, name: spiceLevel.name, quantity: 1, priceCents: 0, selectedValue: "Mild" },
-        bokChoy && { menuItemId: bokChoy.id, name: bokChoy.name, quantity: 1, priceCents: 0 },
-        greenOnions && { menuItemId: greenOnions.id, name: greenOnions.name, quantity: 1, priceCents: 0 },
-        cilantro && { menuItemId: cilantro.id, name: cilantro.name, quantity: 1, priceCents: 0 },
-        sprouts && { menuItemId: sprouts.id, name: sprouts.name, quantity: 1, priceCents: 0 },
-        sherbet && { menuItemId: sherbet.id, name: sherbet.name, quantity: 1, priceCents: 0, note: "Complimentary" },
-      ].filter(Boolean);
-
-      const totalCents = chefsChoiceItems.reduce((sum, item) => sum + (item.priceCents || 0), 0);
-
-      return {
-        name: "Chef's Choice",
-        description: "Our recommended bowl for the perfect Oh! experience",
-        items: chefsChoiceItems,
-        totalCents,
-        totalFormatted: `$${(totalCents / 100).toFixed(2)}`,
-        includes: [
-          "Classic Beef Noodle Soup",
-          "Wide noodles (most popular)",
-          "Medium broth richness",
-          "Medium noodle texture",
-          "Mild spice level",
-          "Standard toppings (bok choy, green onions, cilantro, sprouts)",
-          "Complimentary Mandarin Orange Sherbet",
-        ],
-        readyToOrder: true,
-        message: "Chef's Choice is ready. This is our most popular configuration - $15.99 for the perfect bowl plus a complimentary sherbet. Want me to add this to your order?",
-      };
-    }
-
-    case "create_apple_pay_order": {
-      // Unreachable: disabled in DISABLED_MONEY_TOOLS (Task B1). B2 deletes this body.
-      console.log("[CHAPPY] create_apple_pay_order called with input:", JSON.stringify(input, null, 2));
-      console.log("[CHAPPY] Context - userId:", userId, "locationId:", locationId);
-
-      let { items: applePayItems, seatId: appleSeatId, arrivalTime: appleArrivalTime, applyCredits: appleApplyCredits, previousOrderId } = input;
-      const applePayLocationId = input.locationId || locationId;
-
-      console.log("[CHAPPY] Using locationId:", applePayLocationId, "previousOrderId:", previousOrderId);
-
-      // Handle location - might be ID or name
-      let resolvedLocationId = applePayLocationId;
-      if (applePayLocationId && !applePayLocationId.startsWith("cm")) {
-        // This looks like a name, not an ID - try to look it up
-        console.log("[CHAPPY] Location looks like a name, looking up:", applePayLocationId);
-        const location = await prisma.location.findFirst({
-          where: {
-            OR: [
-              { name: { contains: applePayLocationId, mode: "insensitive" } },
-              { city: { contains: applePayLocationId, mode: "insensitive" } },
-            ],
-          },
-        });
-        if (location) {
-          console.log("[CHAPPY] Found location by name:", location.name, location.id);
-          resolvedLocationId = location.id;
-        } else {
-          console.log("[CHAPPY] Could not find location by name:", applePayLocationId);
-          return { error: `Could not find location "${applePayLocationId}". Please specify a valid location.` };
-        }
-      }
-
-      if (!resolvedLocationId) {
-        console.log("[CHAPPY] ERROR: No locationId provided");
-        return { error: "Location is required for the order" };
-      }
-
-
-      // If previousOrderId provided, get items from that order
-      if (previousOrderId) {
-        console.log("[CHAPPY] Looking up previous order:", previousOrderId, "for user:", userId);
-        const previousOrder = await prisma.order.findFirst({
-          where: { id: previousOrderId, userId },
-          include: { items: true },
-        });
-        if (!previousOrder) {
-          // Check if the order exists but belongs to a different user
-          const orderExists = await prisma.order.findUnique({
-            where: { id: previousOrderId },
-            select: { id: true, userId: true },
-          });
-          if (orderExists) {
-            console.log("[CHAPPY] ERROR: Order exists but userId mismatch. Order userId:", orderExists.userId, "Request userId:", userId);
-            return { error: "Cannot access this order. Please start a new order." };
-          }
-          console.log("[CHAPPY] ERROR: Previous order not found for id:", previousOrderId);
-          return { error: "Previous order not found. Please start a new order." };
-        }
-        console.log("[CHAPPY] Found previous order with", previousOrder.items.length, "items");
-        applePayItems = previousOrder.items.map((i) => ({
-          menuItemId: i.menuItemId,
-          quantity: i.quantity,
-          selectedValue: i.selectedValue,
-        }));
-      }
-
-      console.log("[CHAPPY] Items count:", applePayItems?.length || 0);
-
-      // If still no items, try to get from most recent completed order
-      if ((!applePayItems || applePayItems.length === 0) && userId) {
-        console.log("[CHAPPY] No items provided, looking up most recent order for user:", userId);
-        const lastOrder = await prisma.order.findFirst({
-          where: { userId, status: "COMPLETED" },
-          orderBy: { createdAt: "desc" },
-          include: { items: true },
-        });
-        if (lastOrder && lastOrder.items.length > 0) {
-          console.log("[CHAPPY] Auto-using most recent order:", lastOrder.id, "with", lastOrder.items.length, "items");
-          applePayItems = lastOrder.items.map((i) => ({
-            menuItemId: i.menuItemId,
-            quantity: i.quantity,
-            selectedValue: i.selectedValue,
-          }));
-        }
-      }
-
-      if (!applePayItems || applePayItems.length === 0) {
-        console.log("[CHAPPY] ERROR: No items in order");
-        return { error: "No items in order. Please specify what you'd like to order." };
-      }
-
-      // Handle pod number string (e.g., "5", "05", or "Pod 5") by looking up the actual seat ID
-      if (appleSeatId && !appleSeatId.startsWith("cm")) {
-        // This looks like a pod number, not a seat ID - look it up
-        const rawNumber = appleSeatId.replace(/[^0-9]/g, ""); // Extract just the number
-        // Try both with and without leading zero (seats are stored as "01", "02", etc.)
-        const podNumberPadded = rawNumber.padStart(2, "0");
-        console.log("[CHAPPY] Looking up seat by pod number:", rawNumber, "or", podNumberPadded, "at location:", resolvedLocationId);
-
-        let seat = await prisma.seat.findFirst({
-          where: {
-            locationId: resolvedLocationId,
-            number: podNumberPadded,
-            status: "AVAILABLE",
-          },
-        });
-
-        // Try without padding if not found
-        if (!seat && rawNumber !== podNumberPadded) {
-          seat = await prisma.seat.findFirst({
-            where: {
-              locationId: resolvedLocationId,
-              number: rawNumber,
-              status: "AVAILABLE",
-            },
-          });
-        }
-
-        if (seat) {
-          console.log("[CHAPPY] Found seat ID:", seat.id, "for pod", seat.number);
-          appleSeatId = seat.id;
-        } else {
-          console.log("[CHAPPY] Pod", rawNumber, "not found or not available");
-          // Don't fail - just proceed without seat selection
-          appleSeatId = null;
-        }
-      }
-
-      // Get user if logged in (for credits)
-      let user = null;
-      if (userId) {
-        user = await prisma.user.findUnique({ where: { id: userId } });
-      }
-
-      // Calculate order total
-      const menuItems = await prisma.menuItem.findMany({
-        where: { id: { in: applePayItems.map((i) => i.menuItemId) } },
-      });
-
-      console.log("[CHAPPY] Found", menuItems.length, "menu items out of", applePayItems.length, "requested");
-
-      // Check for missing menu items before processing
-      const foundIds = new Set(menuItems.map((m) => m.id));
-      const missingItems = applePayItems.filter((i) => !foundIds.has(i.menuItemId));
-      if (missingItems.length > 0) {
-        console.log("[CHAPPY] Missing menu items:", missingItems.map((i) => i.menuItemId));
-
-        // Fallback: if user is logged in, try to get their most recent completed order instead
-        if (userId) {
-          console.log("[CHAPPY] Attempting fallback: using most recent completed order");
-          const fallbackOrder = await prisma.order.findFirst({
-            where: { userId, status: "COMPLETED" },
-            orderBy: { createdAt: "desc" },
-            include: { items: true },
-          });
-          if (fallbackOrder && fallbackOrder.items.length > 0) {
-            console.log("[CHAPPY] Using fallback order:", fallbackOrder.id, "with", fallbackOrder.items.length, "items");
-            applePayItems = fallbackOrder.items.map((i) => ({
-              menuItemId: i.menuItemId,
-              quantity: i.quantity,
-              selectedValue: i.selectedValue,
-            }));
-            // Re-fetch menu items for the new list
-            const fallbackMenuItems = await prisma.menuItem.findMany({
-              where: { id: { in: applePayItems.map((i) => i.menuItemId) } },
-            });
-            menuItems.length = 0;
-            menuItems.push(...fallbackMenuItems);
-          } else {
-            console.log("[CHAPPY] ERROR: Fallback failed, no completed orders found");
-            return {
-              error: `Some menu items are no longer available. Please start a new order.`,
-              missingItemIds: missingItems.map((i) => i.menuItemId),
-            };
-          }
-        } else {
-          return {
-            error: `Some menu items are no longer available. Please start a new order.`,
-            missingItemIds: missingItems.map((i) => i.menuItemId),
-          };
-        }
-      }
-
-      let totalCents = 0;
-      const itemsWithPrices = applePayItems.map((item) => {
-        const menuItem = menuItems.find((m) => m.id === item.menuItemId);
-        // This should never happen now due to the check above, but keep for safety
-        if (!menuItem) {
-          console.error("[CHAPPY] Unexpected: menu item not found after validation:", item.menuItemId);
-          return null;
-        }
-
-        const priceCents = menuItem.basePriceCents * item.quantity;
-        totalCents += priceCents;
-
-        return {
-          menuItemId: item.menuItemId,
-          quantity: item.quantity,
-          priceCents,
-          selectedValue: item.selectedValue || null,
-          name: menuItem.name,
-        };
-      }).filter(Boolean);
-
-      // Calculate tax (8.25% Utah state + local)
-      const taxRate = 0.0825;
-      const taxCents = Math.round(totalCents * taxRate);
-
-      // Apply credits if requested and user is logged in
-      let creditsApplied = 0;
-      if (appleApplyCredits && user?.creditsCents > 0) {
-        creditsApplied = Math.min(500, user.creditsCents, totalCents);
-      }
-
-      const finalTotal = totalCents + taxCents - creditsApplied;
-
-      // Import Stripe
-      const Stripe = (await import("stripe")).default;
-      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
-      // Create or get Stripe customer for the user
-      let stripeCustomerId = user?.stripeCustomerId;
-      if (!stripeCustomerId && userId && user) {
-        // Create a Stripe customer for this user
-        const customer = await stripe.customers.create({
-          email: user.email,
-          name: user.name,
-          metadata: { userId },
-        });
-        stripeCustomerId = customer.id;
-        await prisma.user.update({
-          where: { id: userId },
-          data: { stripeCustomerId: customer.id },
-        });
-      }
-
-      // Generate order numbers
-      const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
-      const orderQrCode = `ORDER-${resolvedLocationId.slice(-8)}-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
-
-      // Get kitchen order number
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-
-      const todaysOrderCount = await prisma.order.count({
-        where: {
-          locationId: resolvedLocationId,
-          paymentStatus: "PAID",
-          createdAt: { gte: today, lt: tomorrow },
-        },
-      });
-      const kitchenOrderNumber = String(todaysOrderCount + 1).padStart(4, "0");
-
-      // Determine estimated arrival
-      let estimatedArrival = null;
-      if (appleArrivalTime && appleArrivalTime !== "ASAP") {
-        estimatedArrival = new Date(appleArrivalTime);
-      } else {
-        estimatedArrival = new Date(Date.now() + 10 * 60 * 1000);
-      }
-
-      // Create pending order first
-      const pendingOrder = await prisma.order.create({
-        data: {
-          orderNumber,
-          orderQrCode,
-          kitchenOrderNumber,
-          tenantId,
-          locationId: resolvedLocationId,
-          userId: userId || undefined,
-          guestId: guestId || undefined,
-          seatId: appleSeatId || null,
-          podSelectionMethod: appleSeatId ? "CUSTOMER_SELECTED" : null,
-          totalCents: finalTotal,
-          taxCents,
-          estimatedArrival,
-          paymentStatus: "PENDING",
-          status: "PENDING_PAYMENT",
-          orderSource: "CHAPPY",
-          items: {
-            create: itemsWithPrices.map((item) => ({
-              menuItemId: item.menuItemId,
-              quantity: item.quantity,
-              priceCents: item.priceCents,
-              selectedValue: item.selectedValue,
-            })),
-          },
-        },
-        include: {
-          items: { include: { menuItem: true } },
-          location: true,
-        },
-      });
-
-      // Create Payment Intent for Apple Pay
-      const paymentIntentData = {
-        amount: finalTotal,
-        currency: "usd",
-        automatic_payment_methods: {
-          enabled: true,
-        },
-        metadata: {
-          orderId: pendingOrder.id,
-          orderNumber: pendingOrder.orderNumber,
-          locationId: resolvedLocationId,
-          source: "chappy_apple_pay",
-          userId: userId || "",
-          guestId: guestId || "",
-        },
-      };
-
-      // Attach customer if we have one
-      if (stripeCustomerId) {
-        paymentIntentData.customer = stripeCustomerId;
-      }
-
-      const paymentIntent = await stripe.paymentIntents.create(paymentIntentData);
-
-      // Update order with payment intent ID
-      await prisma.order.update({
-        where: { id: pendingOrder.id },
-        data: { stripePaymentId: paymentIntent.id },
-      });
-
-      // Get location name for display
-      const location = await prisma.location.findUnique({ where: { id: resolvedLocationId } });
-
-      return {
-        success: true,
-        requiresApplePay: true,
-        orderId: pendingOrder.id,
-        orderNumber: pendingOrder.orderNumber,
-        paymentIntentId: paymentIntent.id,
-        clientSecret: paymentIntent.client_secret,
-        total: `$${(finalTotal / 100).toFixed(2)}`,
-        totalCents: finalTotal,
-        subtotal: `$${(totalCents / 100).toFixed(2)}`,
-        tax: `$${(taxCents / 100).toFixed(2)}`,
-        creditsApplied: creditsApplied > 0 ? `$${(creditsApplied / 100).toFixed(2)}` : null,
-        items: itemsWithPrices.map((i) => ({
-          name: i.name,
-          quantity: i.quantity,
-          price: `$${(i.priceCents / 100).toFixed(2)}`,
-        })),
-        locationName: location?.name || "Oh! Beef",
-        message: "Ready for Apple Pay! Tap the Apple Pay button to complete your order.",
-      };
-    }
-
-    case "get_order_summary": {
-      const { items: summaryItems, applyCredits: showCredits } = input;
-
-      if (!summaryItems || summaryItems.length === 0) {
-        return { error: "No items to summarize" };
-      }
-
-      const menuItems = await prisma.menuItem.findMany({
-        where: { id: { in: summaryItems.map((i) => i.menuItemId) } },
-      });
-
-      let subtotal = 0;
-      const itemizedList = summaryItems.map((item) => {
-        const menuItem = menuItems.find((m) => m.id === item.menuItemId);
-        if (!menuItem) return null;
-
-        const itemTotal = menuItem.basePriceCents * item.quantity;
-        subtotal += itemTotal;
-
-        return {
-          name: menuItem.name,
-          quantity: item.quantity,
-          unitPrice: `$${(menuItem.basePriceCents / 100).toFixed(2)}`,
-          total: `$${(itemTotal / 100).toFixed(2)}`,
-        };
-      }).filter(Boolean);
-
-      const taxCents = Math.round(subtotal * 0.0825);
-      let creditsAvailable = 0;
-      let creditsToApply = 0;
-
-      if (showCredits && userId) {
-        const user = await prisma.user.findUnique({ where: { id: userId } });
-        if (user?.creditsCents > 0) {
-          creditsAvailable = user.creditsCents;
-          creditsToApply = Math.min(500, creditsAvailable, subtotal);
-        }
-      }
-
-      const total = subtotal + taxCents - creditsToApply;
-
-      return {
-        items: itemizedList,
-        subtotal: `$${(subtotal / 100).toFixed(2)}`,
-        tax: `$${(taxCents / 100).toFixed(2)}`,
-        creditsAvailable: creditsAvailable > 0 ? `$${(creditsAvailable / 100).toFixed(2)}` : null,
-        creditsApplied: creditsToApply > 0 ? `$${(creditsToApply / 100).toFixed(2)}` : null,
-        total: `$${(total / 100).toFixed(2)}`,
-        summary: `${itemizedList.length} item${itemizedList.length > 1 ? "s" : ""} - Total: $${(total / 100).toFixed(2)}`,
-      };
-    }
-
-    default:
-      return `Unknown tool: ${name}`;
+class ToolError extends Error {
+  constructor(code, message = code, extra = {}) {
+    super(message);
+    this.code = code;
+    this.extra = extra;
   }
 }
 
-/**
- * Helper: Get tier benefits text. Cashback percent comes from the
- * membership engine's PROGRAM config, not a hard-coded threshold
- * (packages/api/src/membership/program.js).
- */
-function getTierBenefits(tier) {
-  let pct = 1;
-  try {
-    pct = tierRule(tier || "CHOPSTICK").cashbackPct;
-  } catch {
-    // Unknown tier: fall back to the CHOPSTICK rate rather than throw from a text helper.
-  }
-  return tier === "BEEF_BOSS" ? `${pct}% cashback + VIP perks` : `${pct}% cashback on orders`;
+async function tenantIdOf(ctx) {
+  if (ctx.tenantId) return ctx.tenantId;
+  const tenant = await ctx.prisma.tenant.findUnique({ where: { slug: "oh" } });
+  return tenant?.id || null;
 }
 
-/**
- * Helper: Get tier progress info
- */
-function getTierProgressInfo(user) {
-  const { membershipTier, lifetimeOrderCount } = user;
+async function callerTier(ctx) {
+  if (!ctx.userId) return null;
+  const user = await ctx.prisma.user.findUnique({ where: { id: ctx.userId } });
+  return user?.membershipTier || null;
+}
 
-  const NOODLE_MASTER_THRESHOLD = 10;
-  const BEEF_BOSS_THRESHOLD = 50;
+const LOCALE_SUFFIX = { "zh-TW": "ZhTW", "zh-CN": "ZhCN", es: "Es" };
+function localized(item, field, locale) {
+  const suffix = LOCALE_SUFFIX[locale];
+  return (suffix && item[`${field}${suffix}`]) || item[field] || null;
+}
 
-  if (membershipTier === "CHOPSTICK") {
-    const remaining = NOODLE_MASTER_THRESHOLD - lifetimeOrderCount;
-    return {
-      currentTier: "CHOPSTICK",
-      currentBenefit: "1% cashback",
-      nextTier: "NOODLE_MASTER",
-      nextBenefit: "2% cashback",
-      ordersUntilNext: Math.max(0, remaining),
-      progress: `${lifetimeOrderCount}/${NOODLE_MASTER_THRESHOLD}`,
-      encouragement:
-        remaining <= 3
-          ? `Only ${remaining} more bowl${remaining === 1 ? "" : "s"} until NOODLE_MASTER!`
-          : null,
-    };
-  }
+function sliderOptions(item) {
+  const labels = item?.sliderConfig && Array.isArray(item.sliderConfig.labels) ? item.sliderConfig.labels : null;
+  return labels ? labels.filter((l) => typeof l === "string") : null;
+}
 
-  if (membershipTier === "NOODLE_MASTER") {
-    const remaining = BEEF_BOSS_THRESHOLD - lifetimeOrderCount;
-    return {
-      currentTier: "NOODLE_MASTER",
-      currentBenefit: "2% cashback",
-      nextTier: "BEEF_BOSS",
-      nextBenefit: "3% cashback + VIP perks",
-      ordersUntilNext: Math.max(0, remaining),
-      progress: `${lifetimeOrderCount}/${BEEF_BOSS_THRESHOLD}`,
-      encouragement:
-        remaining <= 5
-          ? `Only ${remaining} more bowl${remaining === 1 ? "" : "s"} until BEEF_BOSS!`
-          : null,
-    };
-  }
-
+function menuSummary(item, locale) {
   return {
-    currentTier: "BEEF_BOSS",
-    currentBenefit: "3% cashback + VIP perks",
-    nextTier: null,
-    message: "You've reached the top tier! Enjoy your VIP benefits.",
+    id: item.id,
+    name: localized(item, "name", locale),
+    price: dollars(item.basePriceCents),
+    categoryType: item.categoryType || null,
+    dietary: [item.isVegetarian && "vegetarian", item.isVegan && "vegan", item.isGlutenFree && "gluten_free"].filter(Boolean),
+    spiceLevel: item.spiceLevel ?? 0,
   };
 }
 
 /**
- * The tool interface the v3 agent loop uses (Task B1). B2 rewrites the tools
- * behind it; the loop only relies on these two exports:
- *  - TOOL_DEFS: strict, eager-streaming definitions, sorted by name so the
- *    tools prefix is byte-identical for every caller (prompt caching).
- *  - executeTool(name, input, ctx): runs one validated tool call. ctx carries
- *    { prisma (basePrisma, never the demo-wrapped client), userId, guestId,
- *    locationId, tenantId }.
+ * The member's own order, or null. Never another member's. With no id, their
+ * most recent one (most recent PAID one when `paidOnly`: a complaint or a
+ * refund is about a meal they paid for, not a checkout they just started).
  */
-/**
- * strict:false on these legacy tools (controller ruling, Task B1). The API
- * rejected them strict: at most 20 strict tools per request (31 here), and 20
- * of them still gave "The compiled grammar is too large". Every parsed input is
- * still validated client-side against its closed schema before it runs
- * (validateToolInput), which eager_input_streaming requires anyway.
- * B2 rewrites these into about 18 smaller schemas and turns strict:true on where the
- * grammar allows, at least on every tool that moves money; toStrictToolDefs
- * enforces the 20-tool cap and an optional-parameter budget when it does.
- */
-export const STRICT_TOOL_NAMES = new Set();
-
-export const TOOL_DEFS = toStrictToolDefs(CHAPPY_TOOLS, STRICT_TOOL_NAMES);
-
-export async function executeTool(name, input, ctx) {
-  return executeToolByName(name, input, ctx);
+async function ownOrder(ctx, orderId, { paidOnly = false } = {}) {
+  const id = clean(orderId);
+  if (id) return ctx.prisma.order.findFirst({ where: { id, userId: ctx.userId } });
+  return ctx.prisma.order.findFirst({ where: { userId: ctx.userId, ...(paidOnly ? { paymentStatus: "PAID" } : {}) }, orderBy: { createdAt: "desc" } });
 }
 
-export default { CHAPPY_TOOLS, TOOL_DEFS, executeTool, executeTools };
+async function namesFor(prisma, ids) {
+  const unique = [...new Set(ids)];
+  if (!unique.length) return new Map();
+  const rows = await prisma.menuItem.findMany({ where: { id: { in: unique } } });
+  return new Map(rows.map((m) => [m.id, m]));
+}
+
+async function orderLines(ctx, orderId) {
+  const items = await ctx.prisma.orderItem.findMany({ where: { orderId } });
+  const menu = await namesFor(ctx.prisma, items.map((i) => i.menuItemId));
+  return items.map((i) => ({
+    menuItemId: i.menuItemId,
+    name: menu.has(i.menuItemId) ? localized(menu.get(i.menuItemId), "name", ctx.locale) : null,
+    quantity: i.quantity,
+    selectedValue: i.selectedValue || null,
+  }));
+}
+
+/** A quote the model can read: named lines and the server's totals. */
+async function quoteView(ctx, quote) {
+  const menu = await namesFor(ctx.prisma, quote.lines.map((l) => l.menuItemId));
+  return {
+    lines: quote.lines.map((l) => ({
+      menuItemId: l.menuItemId,
+      name: menu.has(l.menuItemId) ? localized(menu.get(l.menuItemId), "name", ctx.locale) : null,
+      quantity: l.quantity,
+      selectedValue: l.selectedValue || null,
+      priceCents: l.priceCents,
+    })),
+    subtotalCents: quote.subtotalCents,
+    discounts: quote.discounts,
+    taxCents: quote.taxCents,
+    totalCents: quote.totalCents,
+    amountDueCents: quote.amountDueCents,
+    total: dollars(quote.totalCents),
+    amountDue: dollars(quote.amountDueCents),
+    warnings: quote.warnings,
+  };
+}
+
+const cartLocation = (ctx, cart) => cart.locationId || ctx.locationId || null;
+
+function quoteCart(ctx, cart) {
+  return quoteOrder(ctx.prisma, {
+    locationId: cartLocation(ctx, cart),
+    items: cartLines(cart),
+    userId: ctx.userId,
+    promoCode: cart.savings.promoCode || undefined,
+    useCreditsCents: cart.savings.useCreditsCents || undefined,
+    rewardId: cart.savings.rewardId || undefined,
+    now: nowOf(ctx),
+  });
+}
+
+/** Prices the cart first and stores it only if the order service accepts it. */
+async function commitCart(ctx, next) {
+  const quote = next.items.length ? await quoteCart(ctx, next) : null;
+  const saved = await saveCart(ctx.prisma, ctx.conversationId, next);
+  return { cart: saved, quote: quote ? await quoteView(ctx, quote) : null };
+}
+
+function localDate(now, timeZone) {
+  return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+}
+
+function localHm(date, timeZone) {
+  return new Intl.DateTimeFormat("en-GB", { timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(date);
+}
+
+function slotView(slot, timeZone) {
+  return { at: slot.toISOString(), local: localHm(slot, timeZone) };
+}
+
+async function findLocation(ctx, locationId) {
+  const id = clean(locationId) || ctx.locationId;
+  if (!id) return null;
+  const location = await ctx.prisma.location.findUnique({ where: { id }, include: { cateringEvent: true } });
+  const tenantId = await tenantIdOf(ctx);
+  // Only an open restaurant location (not closed, not a catering event's pseudo-location).
+  if (!location || location.isClosed || location.cateringEvent || (tenantId && location.tenantId !== tenantId)) return null;
+  return location;
+}
+
+/** Runs fn inside a transaction that is always rolled back, and returns its value. */
+class DryRunResult {
+  constructor(value) {
+    this.value = value;
+  }
+}
+async function dryRun(prisma, fn) {
+  try {
+    await prisma.$transaction(async (tx) => {
+      throw new DryRunResult(await fn(tx));
+    });
+  } catch (err) {
+    if (err instanceof DryRunResult) return err.value;
+    throw err;
+  }
+  return null;
+}
+
+function parseContact(raw) {
+  const v = clean(raw);
+  if (!v) return null;
+  return v.includes("@") ? { email: v } : { phone: v };
+}
+
+/** Who the support case is for, and how to reach a guest. */
+function caseWho(ctx, contactInput) {
+  if (ctx.userId) return { who: { kind: "user", userId: ctx.userId }, contact: parseContact(contactInput) };
+  const contact = parseContact(contactInput) || (ctx.identity?.kind === "sms" && ctx.identity.phone ? { phone: ctx.identity.phone } : null);
+  if (!contact) throw new ToolError("CONTACT_REQUIRED", "Ask for an email or phone number so the team can reach them.");
+  return { who: { kind: "anonymous" }, contact };
+}
+
+async function openCase(ctx, { type, summary, orderId = null, contactInput = "" }) {
+  const text = clean(summary).slice(0, SUMMARY_MAX);
+  if (!text) throw new ToolError("SUMMARY_REQUIRED", "Describe the problem briefly.");
+  const { who, contact } = caseWho(ctx, contactInput);
+  return createSupportCase(ctx.prisma, {
+    who,
+    body: { type, summary: `[Chappy] ${text}`, orderId: orderId || null, locale: ctx.locale || null, ...(contact ? { contact } : {}) },
+  });
+}
+
+async function notify(ctx, supportCase, opts) {
+  try {
+    return await notifyCase(ctx.notify || {}, supportCase, opts);
+  } catch (err) {
+    console.error("[Chappy] notifyCase failed:", err?.message);
+    return null;
+  }
+}
+
+function caseCard(c, extra = {}) {
+  return { type: "support-case", caseId: c.id, ...extra };
+}
+
+// ---------------------------------------------------------------------------
+// Handlers
+
+export const HANDLERS = {
+  async search_menu(input, ctx) {
+    const tenantId = await tenantIdOf(ctx);
+    const tier = await callerTier(ctx);
+    const now = nowOf(ctx);
+    const q = clean(input.query).toLowerCase();
+    const rows = await ctx.prisma.menuItem.findMany({ where: { tenantId, isAvailable: true }, orderBy: { displayOrder: "asc" } });
+    const items = rows
+      .filter((m) => earlyAccessVisible(m, tier, now))
+      .filter((m) => input.category === "ALL" || m.categoryType === input.category)
+      .filter((m) => input.dietary === "any" || (input.dietary === "vegetarian" && m.isVegetarian) || (input.dietary === "vegan" && m.isVegan) || (input.dietary === "gluten_free" && m.isGlutenFree))
+      .filter((m) => !q || [m.name, m.nameZhTW, m.nameZhCN, m.nameEs, m.description].some((s) => typeof s === "string" && s.toLowerCase().includes(q)))
+      .slice(0, 40)
+      .map((m) => menuSummary(m, ctx.locale));
+    return { items };
+  },
+
+  async get_menu_item(input, ctx) {
+    const tenantId = await tenantIdOf(ctx);
+    const item = clean(input.itemId) ? await ctx.prisma.menuItem.findUnique({ where: { id: clean(input.itemId) } }) : null;
+    if (!item || !item.isAvailable || item.tenantId !== tenantId || !earlyAccessVisible(item, await callerTier(ctx), nowOf(ctx))) return { error: "NOT_FOUND" };
+    return {
+      ...menuSummary(item, ctx.locale),
+      priceCents: item.basePriceCents,
+      extraServingPriceCents: item.additionalPriceCents || 0,
+      includedQuantity: item.includedQuantity || 0,
+      description: localized(item, "description", ctx.locale),
+      allergens: item.allergens || null,
+      options: sliderOptions(item),
+    };
+  },
+
+  async get_locations(_input, ctx) {
+    const tenantId = await tenantIdOf(ctx);
+    const now = nowOf(ctx);
+    const rows = await ctx.prisma.location.findMany({ where: { tenantId, isClosed: false }, include: { cateringEvent: true } });
+    const locations = [];
+    // Per-event catering pseudo-locations are never restaurant locations.
+    for (const l of rows.filter((r) => !r.cateringEvent)) {
+      const tz = l.timezone || PROGRAM.timezone;
+      const freePods = await ctx.prisma.seat.count({ where: { locationId: l.id, status: "AVAILABLE", retiredAt: null } });
+      locations.push({
+        id: l.id,
+        name: l.name,
+        city: l.city || null,
+        orderingOpen: canAcceptOrders(l, now),
+        freePods,
+        slots: slotsFor(l, localDate(now, tz), now).slice(0, 12).map((s) => slotView(s, tz)),
+      });
+    }
+    return { locations };
+  },
+
+  async get_membership_program() {
+    return publicProgram();
+  },
+
+  async get_my_profile(_input, ctx) {
+    const p = await profileForUser(ctx.prisma, ctx.userId, nowOf(ctx));
+    if (!p) return { error: "NOT_FOUND" };
+    return {
+      tier: p.tier,
+      cashbackPct: p.cashbackPct,
+      progress: p.progress,
+      creditCents: p.credits,
+      credit: dollars(p.credits),
+      expiringSoon: p.expiring,
+      rewards: p.rewards.map((r) => ({ id: r.id, type: r.type, usableUntil: r.windowEndsAt })),
+      badges: p.badges.length,
+    };
+  },
+
+  async get_my_orders(_input, ctx) {
+    const rows = await ctx.prisma.order.findMany({ where: { userId: ctx.userId }, orderBy: { createdAt: "desc" }, take: 5 });
+    return {
+      orders: rows.map((o) => ({ id: o.id, orderNumber: o.orderNumber, status: o.status, paymentStatus: o.paymentStatus, total: dollars(o.totalCents), createdAt: o.createdAt })),
+    };
+  },
+
+  async get_order_status(input, ctx) {
+    const order = await ownOrder(ctx, input.orderId);
+    if (!order) return { error: "NOT_FOUND" };
+    const seat = order.seatId ? await ctx.prisma.seat.findUnique({ where: { id: order.seatId } }) : null;
+    return {
+      id: order.id,
+      orderNumber: order.orderNumber,
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+      total: dollars(order.totalCents),
+      amountDue: order.amountDueCents === null || order.amountDueCents === undefined ? null : dollars(order.amountDueCents),
+      pod: seat ? seat.label || seat.number : null,
+      estimatedArrival: order.estimatedArrival || null,
+      items: await orderLines(ctx, order.id),
+    };
+  },
+
+  async get_usual_order(_input, ctx) {
+    const paid = await ctx.prisma.order.findMany({ where: { userId: ctx.userId, paymentStatus: "PAID" }, orderBy: { createdAt: "desc" }, take: 20 });
+    if (!paid.length) return { items: [], message: "No paid orders yet." };
+    const counts = new Map();
+    for (const o of paid) {
+      const lines = await ctx.prisma.orderItem.findMany({ where: { orderId: o.id } });
+      const key = lines.map((l) => `${l.menuItemId}:${l.quantity}:${l.selectedValue || ""}`).sort().join("|");
+      if (!key) continue;
+      const cur = counts.get(key) || { n: 0, orderId: o.id };
+      cur.n += 1;
+      counts.set(key, cur);
+    }
+    let best = null;
+    for (const v of counts.values()) if (!best || v.n > best.n) best = v;
+    if (!best) return { items: [], message: "No paid orders yet." };
+    return { orderId: best.orderId, timesOrdered: best.n, items: await orderLines(ctx, best.orderId) };
+  },
+
+  async reorder(input, ctx) {
+    let orderId = clean(input.orderId);
+    if (!orderId) {
+      const usual = await HANDLERS.get_usual_order({}, ctx);
+      if (!usual.orderId) return { error: "NO_USUAL_ORDER" };
+      orderId = usual.orderId;
+    }
+    const order = await ownOrder(ctx, orderId);
+    if (!order) return { error: "NOT_FOUND" };
+    const lines = await ctx.prisma.orderItem.findMany({ where: { orderId: order.id } });
+    const cart = await loadCart(ctx.prisma, ctx.conversationId);
+    const next = replaceItems({ ...cart, locationId: cart.locationId || order.locationId }, lines.filter((l) => l.quantity > 0).map((l) => ({ menuItemId: l.menuItemId, quantity: l.quantity, selectedValue: l.selectedValue || null })));
+    return commitCart(ctx, next);
+  },
+
+  async cart(input, ctx) {
+    const cart = await loadCart(ctx.prisma, ctx.conversationId);
+    const next = applyCartOp({ ...cart, locationId: cartLocation(ctx, cart) }, input);
+    return commitCart(ctx, next);
+  },
+
+  async set_arrival_and_pod(input, ctx) {
+    const cart = await loadCart(ctx.prisma, ctx.conversationId);
+    const location = await findLocation(ctx, clean(input.locationId) || cart.locationId);
+    if (!location) return { error: "LOCATION_NOT_FOUND" };
+    const now = nowOf(ctx);
+    const tz = location.timezone || PROGRAM.timezone;
+
+    // Arrival: ASAP, or one of today's slots (America/Denver by default).
+    const want = clean(input.arrival);
+    let arrival = null;
+    if (want && want.toUpperCase() !== "ASAP") {
+      const slots = slotsFor(location, localDate(now, tz), now);
+      const hm = /^\d{1,2}:\d{2}$/.test(want) ? want.padStart(5, "0") : null;
+      const at = hm ? null : new Date(want);
+      const match = slots.find((s) => (hm ? localHm(s, tz) === hm : at && !Number.isNaN(at.getTime()) && s.getTime() === at.getTime()));
+      if (!match) {
+        return { error: "ARRIVAL_INVALID", message: "That time is not an open arrival slot today.", slots: slots.slice(0, 12).map((s) => slotView(s, tz)) };
+      }
+      arrival = match;
+    }
+
+    const partySize = Number.isInteger(input.partySize) && input.partySize >= 1 ? Math.min(8, input.partySize) : 1;
+    const podInput = clean(input.pod);
+    let pod = null;
+    let preview = null;
+    if (podInput && podInput.toLowerCase() !== "none") {
+      pod = podInput.toLowerCase() === "best" ? { best: true } : { label: podInput.toUpperCase() };
+      try {
+        // The order service's own pick, rolled back: nothing is claimed until checkout.
+        preview = await dryRun(ctx.prisma, (tx) =>
+          pickBestPod(tx, { locationId: location.id, arrival, partySize, requestedLabel: pod.label || null }),
+        );
+      } catch (err) {
+        if (!(err instanceof PodUnavailableError)) throw err;
+        if (pod.label) return { error: "POD_UNAVAILABLE", message: `Pod ${pod.label} is not free right now.`, label: pod.label };
+        preview = null; // best with nothing free: seated at check-in
+      }
+    }
+
+    const saved = await saveCart(ctx.prisma, ctx.conversationId, { ...cart, locationId: location.id, arrival: arrival ? arrival.toISOString() : null, pod, partySize });
+    return {
+      location: { id: location.id, name: location.name },
+      arrival: arrival ? slotView(arrival, tz) : "ASAP",
+      partySize: saved.partySize,
+      pod: preview ? { label: preview.seat.label || preview.seat.number, duo: Boolean(preview.partner) } : null,
+      note: preview
+        ? "The pod is free now and is held once the order is placed."
+        : pod
+          ? "No pod is free right now; one is assigned at check-in."
+          : "A pod is assigned at check-in.",
+    };
+  },
+
+  async apply_savings(input, ctx) {
+    const cart = await loadCart(ctx.prisma, ctx.conversationId);
+    if (!cart.items.length) return { error: "CART_EMPTY" };
+    const next = {
+      ...cart,
+      locationId: cartLocation(ctx, cart),
+      savings: {
+        useCreditsCents: Number.isInteger(input.useCreditsCents) && input.useCreditsCents > 0 ? input.useCreditsCents : 0,
+        promoCode: clean(input.promoCode) || null,
+        rewardId: clean(input.rewardId) || null,
+      },
+    };
+    const result = await commitCart(ctx, next);
+    return { savings: result.cart.savings, quote: result.quote };
+  },
+
+  async checkout(input, ctx) {
+    const cart = await loadCart(ctx.prisma, ctx.conversationId);
+    if (!cart.items.length) return { error: "CART_EMPTY" };
+    const quote = await quoteCart(ctx, cart);
+    if (input.confirmed !== true) {
+      return { error: "NEEDS_CONFIRMATION", message: "Show the items and total and get a clear yes first.", quote: await quoteView(ctx, quote) };
+    }
+    const locationId = cartLocation(ctx, cart);
+    const order = await createOrder(ctx.prisma, {
+      quote,
+      locationId,
+      tenantId: await tenantIdOf(ctx),
+      userId: ctx.userId,
+      estimatedArrival: cart.arrival,
+      seatRequest: cart.pod,
+      partySize: cart.partySize,
+      source: "CHAPPY",
+      now: nowOf(ctx),
+    });
+    // The order exists now; the cart starts fresh (a retry can't place it twice).
+    await saveCart(ctx.prisma, ctx.conversationId, { ...cart, items: [], pod: null, arrival: null, savings: {}, lastOrderId: order.id });
+
+    const seat = order.seatId ? await ctx.prisma.seat.findUnique({ where: { id: order.seatId } }) : null;
+    const summary = {
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      amountDueCents: order.amountDueCents,
+      amountDue: dollars(order.amountDueCents),
+      pod: seat ? seat.label || seat.number : null,
+      charged: false,
+    };
+    const paymentLink = `${ctx.webBaseUrl || "https://www.ohbeef.com"}/${ctx.locale || "en"}/order/payment?orderId=${encodeURIComponent(order.id)}&orderNumber=${encodeURIComponent(order.orderNumber)}`;
+
+    if (ctx.channel === "sms") {
+      return { ...summary, paymentLink, message: "Send this payment link. The order is paid only when they pay on that page." };
+    }
+    let pi;
+    try {
+      pi = await createPaymentIntent(ctx.prisma, ctx.stripe, { orderId: order.id, userId: ctx.userId, now: nowOf(ctx) });
+    } catch (err) {
+      if (!(err instanceof OrderError)) throw err;
+      return { ...summary, error: err.code, message: err.message, paymentLink };
+    }
+    if (!pi.clientSecret) {
+      return { ...summary, card: { type: "confirm-zero", orderId: order.id }, message: "Nothing to pay. They tap Place order to confirm." };
+    }
+    return {
+      ...summary,
+      card: { type: "pay", orderId: order.id, clientSecret: pi.clientSecret, amountDueCents: pi.amountDueCents, currency: "usd" },
+      message: "The pay card is showing. Nothing is charged until they tap Pay.",
+    };
+  },
+
+  async start_group_order(input, ctx) {
+    const cart = await loadCart(ctx.prisma, ctx.conversationId);
+    const locationId = clean(input.locationId) || cartLocation(ctx, cart);
+    const location = await findLocation(ctx, locationId);
+    if (!location) return { error: "LOCATION_NOT_FOUND" };
+    const result = await createGroupOrder(ctx.prisma, { hostUserId: ctx.userId, locationId: location.id, estimatedArrival: cart.arrival, now: nowOf(ctx) });
+    if (result.error) return { error: "GROUP_CREATE_FAILED", message: result.error };
+    const url = `${ctx.webBaseUrl || "https://www.ohbeef.com"}/${ctx.locale || "en"}/group/${result.group.code}`;
+    return { code: result.group.code, location: location.name, card: { type: "group-share", code: result.group.code, url } };
+  },
+
+  async report_issue(input, ctx) {
+    const now = nowOf(ctx);
+    if (!clean(input.summary)) return { error: "SUMMARY_REQUIRED" };
+
+    if (ctx.userId && POD_CALL_CATEGORIES.has(input.category)) {
+      // In the pod right now: staff come to the pod. No credit.
+      const live = await ctx.prisma.order.findFirst({
+        where: { userId: ctx.userId, paymentStatus: "PAID", seatId: { not: null }, status: { in: ACTIVE_POD_STATUSES }, createdAt: { gte: new Date(now.getTime() - IN_POD_WINDOW_MS) } },
+        orderBy: { createdAt: "desc" },
+      });
+      if (live && (!clean(input.orderId) || clean(input.orderId) === live.id)) {
+        const seat = await ctx.prisma.seat.findUnique({ where: { id: live.seatId } });
+        const pod = seat ? seat.label || seat.number : null;
+        try {
+          await createPodCall(ctx.prisma, { orderId: live.id, reason: "ASSISTANCE" });
+        } catch (err) {
+          if (!(err instanceof PodCallError) || err.code !== "ALREADY_PENDING") throw err;
+          return { podCall: true, alreadyPending: true, pod, goodwillCents: 0, card: { type: "pod-call", pod }, message: "Staff were already called to the pod." };
+        }
+        return { podCall: true, pod, goodwillCents: 0, card: { type: "pod-call", pod }, message: "Staff are on their way to the pod." };
+      }
+    }
+
+    let order = null;
+    if (ctx.userId) {
+      order = await ownOrder(ctx, input.orderId, { paidOnly: true });
+      if (clean(input.orderId) && !order) return { error: "NOT_FOUND" };
+    }
+    const type = input.category === "pod_problem" ? "POD_ISSUE" : order ? "ORDER_ISSUE" : "GENERAL";
+    const summary = `${input.category}: ${clean(input.summary)}`;
+    const opened = await openCase(ctx, { type, summary, orderId: order?.id || null, contactInput: input.contact });
+
+    let goodwill = { grantedCents: 0, reason: null };
+    if (ctx.userId && order && GOODWILL_CATEGORIES.has(input.category)) {
+      // Store credit only; the caps (per order, 30 days, lifetime, order age) decide.
+      goodwill = await grantGoodwill(ctx.prisma, {
+        userId: ctx.userId,
+        orderId: order.id,
+        requestedCents: Math.min(500, PROGRAM.goodwill.perOrderCents),
+        caseId: opened.id,
+        now,
+      });
+    }
+    const supportCase = (await ctx.prisma.supportCase.findUnique({ where: { id: opened.id } })) || opened;
+    await notify(ctx, supportCase, { urgent: input.category === "unwell" });
+    const granted = goodwill.grantedCents || 0;
+    return {
+      caseId: supportCase.id,
+      goodwillCents: granted,
+      goodwill: granted ? dollars(granted) : null,
+      goodwillNote: granted ? "Added as store credit, usable on a next order." : goodwill.reason ? `No credit added (${goodwill.reason}). The team will review the case.` : "The team will review the case.",
+      card: caseCard(supportCase, { goodwillCents: granted }),
+    };
+  },
+
+  async request_refund(input, ctx) {
+    const order = await ownOrder(ctx, input.orderId, { paidOnly: true });
+    if (!order) return { error: "NOT_FOUND" };
+    const c = await openCase(ctx, { type: "REFUND_REQUEST", summary: clean(input.reason) || "Refund requested", orderId: order.id });
+    await notify(ctx, c, {});
+    return { caseId: c.id, orderNumber: order.orderNumber, message: "Staff will review it. No refund or amount is promised.", card: caseCard(c) };
+  },
+
+  async escalate_to_human(input, ctx) {
+    const c = await openCase(ctx, { type: "GENERAL", summary: `Escalated: ${clean(input.summary)}`, contactInput: input.contact });
+    await notify(ctx, c, { urgent: true });
+    return { caseId: c.id, message: "A person has been alerted and will follow up.", card: caseCard(c, { urgent: true }) };
+  },
+};
+
+// ---------------------------------------------------------------------------
+// The interface the agent loop uses
+
+/** All seventeen strict; sorted by name so the tools prefix is byte-identical for every caller. */
+export const TOOL_DEFS = toStrictToolDefs(CHAPPY_TOOLS, null);
+const DEFS_BY_NAME = new Map(TOOL_DEFS.map((d) => [d.name, d]));
+
+function errorResult(err) {
+  if (err instanceof OrderError) return { error: err.code, message: err.message, ...err.extra };
+  if (err instanceof CartError || err instanceof ToolError) return { error: err.code, message: err.message, ...(err.extra || {}) };
+  if (err instanceof PodCallError) return { error: err.code, message: err.message };
+  // createSupportCase's InputError: { code, status, message }.
+  if (err && typeof err.code === "string" && Number.isInteger(err.status) && err.status < 500) return { error: err.code, message: err.message };
+  return null;
+}
+
+/**
+ * Runs one tool call. Validates the input against the tool's schema, refuses
+ * a guest on a member tool before any database access, and turns expected
+ * service refusals into { error } results the model can explain. Anything
+ * unexpected throws (the loop sends it back as an is_error tool_result).
+ */
+export async function executeTool(name, input, ctx) {
+  const handler = Object.hasOwn(HANDLERS, name) ? HANDLERS[name] : null;
+  const def = DEFS_BY_NAME.get(name);
+  if (!handler || !def) return { error: "UNKNOWN_TOOL" };
+  const check = validateToolInput(def.input_schema, input);
+  if (!check.ok) return { error: "INVALID_INPUT", errors: check.errors };
+  if (MEMBER_SET.has(name) && !ctx?.userId) return signInRequired();
+  try {
+    return await handler(input, ctx);
+  } catch (err) {
+    const result = errorResult(err);
+    if (result) return result;
+    throw err;
+  }
+}
+
+export default { CHAPPY_TOOLS, TOOL_DEFS, HANDLERS, executeTool };

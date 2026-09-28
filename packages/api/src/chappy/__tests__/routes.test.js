@@ -298,3 +298,11 @@ describe("POST /chappy/sms (Twilio webhook)", () => {
     assert.match(res.body, /<Message>/);
   });
 });
+
+describe("payments (Task B2)", () => {
+  test("POST /chappy/confirm-payment is gone: payment is confirmed only by the order routes", async () => {
+    const { app } = await build();
+    const res = await app.inject({ method: "POST", url: "/chappy/confirm-payment", headers: { ...member, "content-type": "application/json" }, payload: { orderId: "o1", paymentIntentId: "pi_1" } });
+    assert.equal(res.statusCode, 404);
+  });
+});

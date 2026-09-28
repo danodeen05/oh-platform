@@ -33,6 +33,8 @@ const COLLECTIONS = [
   "challenge", "userChallenge",
   // Group orders (Task A7)
   "groupOrder",
+  // Chappy tools (Task B2)
+  "chappyConversation", "podCall",
 ];
 
 /**
@@ -302,6 +304,8 @@ export function makeMemoryPrisma(seed = {}) {
     challenges: "challenge",
     userChallenges: "userChallenge",
     groupOrders: "groupOrder",
+    chappyConversations: "chappyConversation",
+    podCalls: "podCall",
   };
   for (const [seedKey, collection] of Object.entries(seedMap)) {
     for (const rec of seed[seedKey] || []) {

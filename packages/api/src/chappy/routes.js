@@ -6,7 +6,6 @@
  *   GET  /chappy/history           The caller's active web conversation, for display.
  *   POST /chappy/reset             Start over (a trusted service may reset any {identifier, channel}).
  *   POST /chappy/sms               Twilio webhook (X-Twilio-Signature verified, else 403), same agent, TwiML reply.
- *   POST /chappy/confirm-payment   Server-verified Apple Pay confirmation (orders/service.js).
  *
  * Identity for chat/history/reset comes from ONE preHandler
  * (requireChappyIdentity): a verified member session, or a signed guest token
@@ -20,10 +19,14 @@
  * Every handler uses deps.prisma, which index.js sets to basePrisma (never the
  * demo-wrapped client). checkLimits is the hook Task B3 fills in: it may
  * return {status, code} to refuse a turn before any model call.
+ *
+ * Payments (Task B2): Chappy never confirms a payment. Its checkout tool
+ * returns a pay card (web) or a payment-page link (SMS), and the customer's
+ * tap pays through POST /orders/:id/confirm-payment (orders/routes.js). The
+ * old POST /chappy/confirm-payment is gone.
  */
 import { Readable } from "node:stream";
-import { resolveChappyWebIdentity, chappyCreditsToDeduct } from "../auth/customer.js";
-import { confirmOrderPayment as defaultConfirmOrderPayment, OrderError } from "../orders/service.js";
+import { resolveChappyWebIdentity } from "../auth/customer.js";
 import {
   runTurn,
   loadOrCreateConversation,
@@ -102,10 +105,17 @@ export async function registerChappyRoutes(app, deps) {
     checkLimits = async () => null,
     now = () => new Date(),
     stripe = null,
-    orderEffects,
-    confirmOrderPayment = defaultConfirmOrderPayment,
+    sendSMS = null,
+    sendGraphMail = null,
     env = process.env,
   } = deps;
+
+  // What the tools need beyond prisma. Support notifications honor SUPPORT_NOTIFY (env).
+  const toolDeps = {
+    stripe,
+    notify: { env, sendSMS, sendGraphMail },
+    webBaseUrl: String(env.WEB_BASE_URL || "https://www.ohbeef.com").replace(/\/+$/, ""),
+  };
 
   /** The one identity check for every web Chappy route: sets req.chappyIdentity or answers 401. */
   async function requireChappyIdentity(req, reply) {
@@ -151,7 +161,7 @@ export async function registerChappyRoutes(app, deps) {
     reply.raw.on("close", () => {
       if (!reply.raw.writableFinished) abort.abort();
     });
-    const events = runTurn({ client, prisma, identity, channel: "web", locale, message, conversation, tools, now: at, signal: abort.signal });
+    const events = runTurn({ client, prisma, identity, channel: "web", locale, message, conversation, tools, toolDeps, now: at, signal: abort.signal });
     return reply
       .code(200)
       .header("content-type", "text/event-stream; charset=utf-8")
@@ -226,7 +236,7 @@ export async function registerChappyRoutes(app, deps) {
       const conversation = await loadOrCreateConversation(prisma, phone, "sms", at);
       let text = "";
       let error = null;
-      for await (const event of runTurn({ client, prisma, identity, channel: "sms", locale: "en", message: Body, conversation, tools, now: at })) {
+      for await (const event of runTurn({ client, prisma, identity, channel: "sms", locale: "en", message: Body, conversation, tools, toolDeps, now: at })) {
         if (event.type === "done") text = event.text;
         else if (event.type === "error") error = event.code;
       }
@@ -237,71 +247,6 @@ export async function registerChappyRoutes(app, deps) {
     } catch (err) {
       console.error("[Chappy SMS Error]", err);
       return twiml([fallbackText("error", "en")]);
-    }
-  });
-
-  // Confirm an Apple Pay payment for a Chappy order (server-verified, Task A6).
-  app.post("/chappy/confirm-payment", async (req, reply) => {
-    try {
-      const { orderId, paymentIntentId } = req.body || {};
-      if (!orderId || !paymentIntentId) return reply.status(400).send({ error: "orderId and paymentIntentId required" });
-
-      const order = await prisma.order.findUnique({
-        where: { id: orderId },
-        include: { items: { include: { menuItem: true } }, location: true, seat: true, user: true },
-      });
-      if (!order) return reply.status(404).send({ error: "Order not found" });
-      if (order.paymentStatus === "PAID") {
-        return reply.send({ success: true, alreadyPaid: true, orderId: order.id, orderNumber: order.orderNumber, kitchenOrderNumber: order.kitchenOrderNumber });
-      }
-
-      // The PaymentIntent's status, exact amount and metadata.orderId, through
-      // the shared order service. A server-priced order goes through markPaid
-      // (idempotent, spends its savings, refunds a charge it can't apply); a
-      // legacy order needs amount === totalCents.
-      let result;
-      try {
-        result = await confirmOrderPayment(prisma, stripe, { orderId, paymentIntentId, now: now() }, orderEffects);
-      } catch (err) {
-        if (err instanceof OrderError) return reply.status(err.status).send({ error: err.code, message: err.message, ...err.extra });
-        throw err;
-      }
-
-      if (result.legacy && !result.alreadyPaid) {
-        // Legacy (pre-quote) Chappy order: its original follow-ups.
-        await prisma.order.update({ where: { id: orderId }, data: { status: "PAID", podAssignedAt: order.seatId ? now() : null } });
-        // Apply credits only for the verified caller's own order (auth/customer.js).
-        const creditsApplied = chappyCreditsToDeduct(await customerAuth.resolve(req), order);
-        if (creditsApplied > 0) {
-          await prisma.user.update({ where: { id: order.userId }, data: { creditsCents: { decrement: creditsApplied } } });
-        }
-        if (order.seatId) await prisma.seat.update({ where: { id: order.seatId }, data: { status: "OCCUPIED" } });
-      }
-
-      const updated = await prisma.order.findUnique({
-        where: { id: orderId },
-        include: { items: { include: { menuItem: true } }, location: true, seat: true },
-      });
-      return reply.send({
-        success: true,
-        orderId: updated.id,
-        orderNumber: updated.orderNumber,
-        kitchenOrderNumber: updated.kitchenOrderNumber,
-        total: `$${(updated.totalCents / 100).toFixed(2)}`,
-        location: updated.location.name,
-        podNumber: updated.seat?.number || null,
-        estimatedArrival: updated.estimatedArrival?.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
-        message: updated.seat
-          ? `Order confirmed! Head to Pod ${updated.seat.number} at ${updated.location.name}.`
-          : `Order confirmed! Head to ${updated.location.name} and check in when you arrive.`,
-        items: updated.items.map((i) => ({ name: i.menuItem.name, quantity: i.quantity })),
-      });
-    } catch (error) {
-      console.error("[Chappy Confirm Payment Error]", error);
-      if (error && error.refunded !== undefined) {
-        return reply.status(500).send({ error: "PAYMENT_NOT_APPLIED", code: "PAYMENT_NOT_APPLIED", refunded: error.refunded });
-      }
-      return reply.status(500).send({ error: "Failed to confirm payment" });
     }
   });
 }
