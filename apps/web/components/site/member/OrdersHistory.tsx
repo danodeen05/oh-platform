@@ -5,7 +5,8 @@
  * newest first) as receipts: the date in the locale and America/Denver, a
  * translated status, the kitchen number and pod, the bowls and paid add-ons
  * in the reader's language (the menu item's per-locale name columns), and
- * the total. An order still in the kitchen links to its live status page.
+ * the total. An order still in the kitchen links to its live status page
+ * (or, before it has a QR code, to its confirmation page by id).
  * "Order again" opens the order builder.
  */
 import Link from "next/link";
@@ -56,6 +57,19 @@ export function itemName(item: MenuItemRow | null, locale: string): string {
   return byLocale[locale] || item.name;
 }
 
+/**
+ * Where "Track it" goes for a live (unfinished) order, or null once it's
+ * done. The status page is keyed by the order's QR code; a live order
+ * without one yet is tracked on the confirmation page, which looks the
+ * order up by id. A live order never offers "Order again".
+ */
+export function orderTrackHref(order: Pick<OrderRow, "id" | "status" | "orderQrCode">, locale: string): string | null {
+  if (!LIVE.has(order.status)) return null;
+  return order.orderQrCode
+    ? `${localizedHref(locale, "/order/status")}?orderQrCode=${encodeURIComponent(order.orderQrCode)}`
+    : `${localizedHref(locale, "/order/confirmation")}?orderId=${encodeURIComponent(order.id)}`;
+}
+
 function locationName(loc: OrderRow["location"], locale: string): string {
   if (!loc) return "";
   return loc.i18n?.[locale]?.name || loc.name;
@@ -72,7 +86,8 @@ function Receipt({ order, index }: { order: OrderRow; index: number }) {
     ...(order.childOrders ?? []).filter((c) => c.addOnType === "PAID_ADDON").flatMap((c) => c.items),
   ].filter((i) => i.priceCents > 0 && i.menuItem);
   const shown = lines.slice(0, 3);
-  const live = LIVE.has(order.status) && order.orderQrCode;
+  const trackHref = orderTrackHref(order, locale);
+  const live = trackHref !== null;
 
   return (
     <Reveal as="li" delay={Math.min(index, 4) * 60} data-order-card className="min-w-0 rounded-2xl bg-oh-linen p-5 text-oh-ink">
@@ -113,7 +128,8 @@ function Receipt({ order, index }: { order: OrderRow; index: number }) {
         </p>
         {live ? (
           <Link
-            href={`${localizedHref(locale, "/order/status")}?orderQrCode=${encodeURIComponent(order.orderQrCode!)}`}
+            href={trackHref!}
+            data-order-track
             className="inline-flex min-h-11 items-center gap-2 rounded-full bg-oh-ink px-4 text-sm font-semibold text-oh-cream no-underline hover:bg-oh-charcoal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oh-ink"
           >
             {t("track")}

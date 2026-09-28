@@ -32,7 +32,7 @@ export function Dock() {
     <nav
       data-site-dock
       aria-label={t("shell.dock")}
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-oh-stone/70 bg-oh-ink pb-[env(safe-area-inset-bottom,0px)] backdrop-blur-md md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-oh-stone/70 bg-oh-ink pb-[env(safe-area-inset-bottom,0px)] md:hidden"
     >
       <ul className="m-0 mx-auto grid h-16 list-none py-0 max-w-md grid-cols-4 items-center gap-0.5 px-[max(0.25rem,env(safe-area-inset-left,0px))]">
         {DOCK_ITEMS.map((item) => {

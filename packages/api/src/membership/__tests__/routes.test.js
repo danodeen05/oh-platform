@@ -141,6 +141,17 @@ describe("POST /users/:id/moments (Task D8)", () => {
     assert.equal(new Date(row.welcomeSeenAt).toISOString(), seenAt);
   });
 
+  test("two racing first welcomeSeen calls stamp welcomeSeenAt once (conditional write)", async () => {
+    const { app, prisma } = await buildApp();
+    const [a, b] = await Promise.all([post(app, "db_me", { welcomeSeen: true }), post(app, "db_me", { welcomeSeen: true })]);
+    assert.equal(a.statusCode, 200);
+    assert.equal(b.statusCode, 200);
+    const row = await prisma.user.findUnique({ where: { id: "db_me" } });
+    const stamped = new Date(row.welcomeSeenAt).toISOString();
+    assert.equal(a.json().welcomeSeenAt, stamped);
+    assert.equal(b.json().welcomeSeenAt, stamped);
+  });
+
   test("tierCelebrated records a program tier, and repeating it changes nothing", async () => {
     const { app, prisma } = await buildApp();
     const res = await post(app, "db_me", { tierCelebrated: "NOODLE_MASTER" });

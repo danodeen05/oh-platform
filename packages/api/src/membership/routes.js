@@ -68,13 +68,19 @@ export async function registerMembershipRoutes(app, { prisma }) {
     const user = await prisma.user.findUnique({ where: { id } });
     if (!user) return reply.code(404).send({ error: "User not found" });
 
-    const data = {};
-    // First sighting wins: a repeat (another tab, a retry) keeps the original time.
-    if (parsed.value.welcomeSeen && !user.welcomeSeenAt) data.welcomeSeenAt = new Date();
-    if (parsed.value.tierCelebrated && user.lastTierCelebrated !== parsed.value.tierCelebrated) {
-      data.lastTierCelebrated = parsed.value.tierCelebrated;
+    let changed = false;
+    // First sighting wins: a repeat (another tab, a retry) keeps the original
+    // time. The write is conditional on the column still being null, so two
+    // racing first calls can't both stamp it.
+    if (parsed.value.welcomeSeen && !user.welcomeSeenAt) {
+      await prisma.user.updateMany({ where: { id, welcomeSeenAt: null }, data: { welcomeSeenAt: new Date() } });
+      changed = true;
     }
-    const row = Object.keys(data).length ? await prisma.user.update({ where: { id }, data }) : user;
+    if (parsed.value.tierCelebrated && user.lastTierCelebrated !== parsed.value.tierCelebrated) {
+      await prisma.user.update({ where: { id }, data: { lastTierCelebrated: parsed.value.tierCelebrated } });
+      changed = true;
+    }
+    const row = changed ? await prisma.user.findUnique({ where: { id } }) : user;
     return {
       welcomeSeenAt: row.welcomeSeenAt ? new Date(row.welcomeSeenAt).toISOString() : null,
       lastTierCelebrated: row.lastTierCelebrated || null,
