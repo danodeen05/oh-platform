@@ -5,7 +5,9 @@
  * cache disabled), the same profile as the home e2e LCP test, and reports:
  *
  *   - LCP (median of RUNS), and the LCP element
- *   - gzipped (transferred) first-party JS, as "before load / total": the
+ *   - gzipped (transferred) first-party JS: "first-load" is the chunks the
+ *     HTML document references (Next's definition; the budget number), then
+ *     "before load" adds route chunks prefetched for links in view, and
  *     /_next/static/**.js requested before the load event (the budget
  *     number), and everything fetched by the load event plus 2 s of idle
  *   - first-party CSS, fonts, the HTML document, the RSC payload inlined in it
@@ -115,6 +117,14 @@ async function probe(browser, url) {
     const rsc = await page.evaluate(() =>
       [...document.scripts].reduce((n, s) => n + (s.textContent?.startsWith("self.__next_f.push") ? s.textContent.length : 0), 0),
     );
+    // First-load JS, Next's own definition: the chunks the HTML document
+    // itself references (script src and preloads). Excludes route chunks the
+    // router prefetches for links in view, which can land before `load`.
+    const html = await page.evaluate(async () => (await fetch(location.href, { credentials: "include" })).text());
+    const referenced = new Set([...html.matchAll(/\/_next\/static\/chunks\/[^"'\s]+?\.js/g)].map((m) => decodeURIComponent(m[0])));
+    totals.jsFirstLoad = files
+      .filter((f) => f.k === "js" && referenced.has(decodeURIComponent(new URL(f.url).pathname)))
+      .reduce((n, f) => n + f.bytes, 0);
     return { lcp, totals, rsc, files };
   } finally {
     await ctx.close();
@@ -151,6 +161,7 @@ try {
         lcpEl: last.lcp ? `${last.lcp.tag} ${last.lcp.url.replace(origin, "").slice(0, 60) || last.lcp.text}` : "none",
         jsKB: kb(last.totals.js),
         jsBeforeLoadKB: kb(last.totals.jsBeforeLoad),
+        jsFirstLoadKB: kb(last.totals.jsFirstLoad),
         cssKB: kb(last.totals.css),
         fontKB: kb(last.totals.font),
         htmlKB: kb(last.totals.html),
@@ -160,7 +171,7 @@ try {
       };
       out.push(row);
       console.log(
-        `${row.route.padEnd(18)} LCP ${String(row.lcpMs).padStart(6)} ms [${row.lcpRuns.join(", ")}]  JS ${row.jsBeforeLoadKB}/${row.jsKB} KB  CSS ${row.cssKB} KB  font ${row.fontKB} KB  HTML ${row.htmlKB} KB  RSC ${row.rscChars} ch  3p ${row.thirdPartyKB} KB  (${row.lcpEl})`,
+        `${row.route.padEnd(18)} LCP ${String(row.lcpMs).padStart(6)} ms [${row.lcpRuns.join(", ")}]  JS first-load ${row.jsFirstLoadKB} (before load ${row.jsBeforeLoadKB}, all ${row.jsKB}) KB  CSS ${row.cssKB} KB  font ${row.fontKB} KB  HTML ${row.htmlKB} KB  RSC ${row.rscChars} ch  3p ${row.thirdPartyKB} KB  (${row.lcpEl})`,
       );
     }
   }

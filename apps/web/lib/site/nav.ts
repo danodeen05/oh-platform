@@ -55,7 +55,8 @@ export function isNavLink(item: NavItem): item is NavLink {
 }
 
 /** Chappy's face, cropped round in the dock (96px source covers 24px at 3x and 32px at 2x). */
-export const CHAPPY_AVATAR = "/plan/chappy-96.webp";
+// A site copy (G2a fix round 1): /plan/ is the private plan's asset folder.
+export const CHAPPY_AVATAR = "/brand/chappy-96.webp";
 
 /** The phone dock: four thumb-reach actions. */
 export const DOCK_ITEMS: readonly NavItem[] = [

@@ -17,9 +17,11 @@
  */
 import { Instrument_Serif, Raleway } from "next/font/google";
 
+// Normal style only (G2a fix round 1): nothing on the site sets italic, and
+// every style defined here is a preloaded font file on every page.
 export const siteDisplayFont = Instrument_Serif({
   weight: "400",
-  style: ["normal", "italic"],
+  style: ["normal"],
   subsets: ["latin"],
   variable: "--font-instrument-serif",
   display: "swap",
@@ -39,7 +41,7 @@ const SYSTEM_SANS = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans
 
 /**
  * Custom properties the site's font utilities read (app/globals.css
- * `@theme inline`), set on <html> by SiteFontVars while a (site) page is
+ * `@theme inline`), set on <html> by the inline <style> SiteShell renders while a (site) page is
  * mounted, so portals (sheets, dialogs, toasts) resolve them too.
  *
  * The CJK names only resolve where their stylesheet loaded (zh pages) or the

@@ -34,6 +34,9 @@ export default async function RootLayout({
   // and needs only the Raleway body face from Google Fonts.
   const isPlan = /\/plan(\/|$)/.test(pathname);
   // Kiosk and CNY keep the full legacy Google Fonts set from here, as before.
+  // Chosen on the first request only (this layout never re-renders), so a
+  // client navigation from a site page into /kiosk or /cny would arrive
+  // without it. Rare: both are opened directly (kiosk device, CNY subdomain).
   const isKioskOrCny = pathname.includes("/kiosk") || pathname.includes("/cny");
   // Task G2a: nothing else gets a font stylesheet from the root any more.
   // This layout is never re-rendered on a client navigation, so a per-route

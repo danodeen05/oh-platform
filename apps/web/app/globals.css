@@ -38,7 +38,8 @@
   --color-oh-clay: #8C5A3C;
 }
 
-/* Fonts come from next/font in components/site/fonts.ts; inline so the variable resolves on the element. */
+/* The font variables are set by next/font: components/site/site-fonts.ts for (site) pages (on <html>, see SiteShell),
+   components/site/fonts.ts for the plan. `inline` so the variable resolves on the element. */
 @theme inline {
   --font-display: var(--font-instrument-serif), Georgia, "Times New Roman", serif;
   --font-display-cjk: var(--font-noto-serif-tc), var(--font-noto-serif-sc), serif;

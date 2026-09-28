@@ -135,6 +135,35 @@ describe("DeferredClerk (Task G2a)", () => {
     expect(snap.openSignIn).toHaveBeenCalledTimes(1);
   });
 
+  it("shows the trigger as busy while the modal waits for Clerk, and clears it once open", async () => {
+    await mount(false, <SignInTrigger><button id="si">Sign in</button></SignInTrigger>);
+    await act(async () => {
+      (host.querySelector("#si") as HTMLButtonElement).click();
+    });
+    await flush();
+    const btn = host.querySelector("#si")!;
+    expect(btn.getAttribute("aria-busy")).toBe("true");
+    const snap = clerkSnapshot({ isSignedIn: false, userId: null });
+    await act(async () => bridge.report!(snap));
+    await flush();
+    expect(snap.openSignIn).toHaveBeenCalledTimes(1);
+    expect(btn.hasAttribute("aria-busy")).toBe(false);
+  });
+
+  it("a signed-in token request gives up (null) if Clerk never loads", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout"] });
+    try {
+      await mount(true);
+      const pending = seen!.getToken();
+      await act(async () => {
+        vi.advanceTimersByTime(15_000);
+      });
+      await expect(pending).resolves.toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("server-renders the right variant from the server's answer (no flash on hydration)", () => {
     const tree = (signedIn: boolean) =>
       renderToString(

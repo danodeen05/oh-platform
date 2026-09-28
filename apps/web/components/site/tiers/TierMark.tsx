@@ -11,6 +11,9 @@
  * the same tier-paths.ts) drawn with <use href>, so they cost one cached
  * file instead of 27 KB in the shared JS and twice that in each page's HTML.
  * The small chopstick mark (the dock's) stays inline so the dock never waits.
+ * Sprite marks paint once marks.svg arrives (one cached request), and an
+ * external <use> doesn't render outside a browser (OG images, email,
+ * Wallet passes): use the inline paths from tier-paths.ts there.
  */
 import type { Tier } from "./tier-paths";
 import { TIER_INLINE_PATHS, TIER_SPRITE_URL, TIER_VIEWBOX } from "./tier-sprite";

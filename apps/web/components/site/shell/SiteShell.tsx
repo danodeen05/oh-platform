@@ -82,7 +82,7 @@ export async function SiteShell({ children }: { children: ReactNode }) {
         <main id="site-main" tabIndex={-1} className="flex-1 outline-none">
           {children}
         </main>
-        <Footer />
+        <Footer year={new Date().getFullYear()} />
         <ActiveOrderPill />
         <Dock />
       </div>

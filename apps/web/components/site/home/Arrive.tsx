@@ -9,8 +9,10 @@
  * copy rises after it, and the Order CTA sits above the dock. Under it, the
  * live line for the nearer location (LivePill).
  *
- * Task G2a: phones get at most the 780w AVIF (about 33 KB against 69 KB for
- * the 1200w), and a preload link starts it with the document.
+ * Task G2a: phones held upright get an art-directed portrait crop around the
+ * sign (SITE_IMAGES portrait: 780w for 2x, 1170w for 3x, sizes 100vw), so
+ * they download only pixels they show; 768px and up keep the landscape art.
+ * A media-matched preload link starts it with the document.
  *
  * The hero fills the first screen above the dock (100svh minus --dock-h),
  * so the CTA is always above the fold at 390 x 844.
@@ -43,9 +45,8 @@ export async function Arrive({ locale, locations }: { locale: string; locations:
           image="storefront-dusk"
           sizes="(max-aspect-ratio: 4/3) 134vh, 100vw"
           priority
-          phoneMaxWidth={780}
           alt={ti(SITE_IMAGES["storefront-dusk"].alt)}
-          className="hm-push absolute inset-0 block md:top-14 [&>img]:h-full [&>img]:w-full [&>img]:object-cover [&>img]:object-[46%_50%]"
+          className="hm-push absolute inset-0 block md:top-14 [&>img]:h-full [&>img]:w-full [&>img]:object-cover [&>img]:object-[46%_50%] max-md:portrait:[&>img]:object-top"
         />
         {/* Legibility: the top bar's strip at the top, the copy's ground at the bottom. */}
         <div className="absolute inset-0 hidden bg-[linear-gradient(to_right,color-mix(in_oklab,var(--color-oh-charcoal)_70%,transparent)_0%,transparent_55%)] md:block" />

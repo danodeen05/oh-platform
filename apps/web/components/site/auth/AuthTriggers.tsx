@@ -12,15 +12,22 @@ import { cloneElement, type MouseEvent, type ReactElement, type SyntheticEvent }
 import { useSiteAuth } from "@/lib/site/auth";
 
 type TriggerChild = ReactElement<{
+  "aria-busy"?: boolean;
+  "data-auth-pending"?: string;
+  style?: React.CSSProperties;
   onClick?: (e: MouseEvent<HTMLElement>) => void;
   onPointerEnter?: (e: SyntheticEvent) => void;
   onTouchStart?: (e: SyntheticEvent) => void;
   onFocus?: (e: SyntheticEvent) => void;
 }>;
 
-function withTrigger(children: TriggerChild, open: () => void, preload: () => void) {
+function withTrigger(children: TriggerChild, open: () => void, preload: () => void, pending = false) {
   const own = children.props;
   return cloneElement(children, {
+    // Feedback while the modal waits for Clerk (G2a fix round 1).
+    "aria-busy": pending || undefined,
+    "data-auth-pending": pending ? "true" : undefined,
+    style: pending ? { ...own.style, opacity: 0.7, cursor: "progress" } : own.style,
     onClick: (e: MouseEvent<HTMLElement>) => {
       own.onClick?.(e);
       open();
@@ -42,12 +49,12 @@ function withTrigger(children: TriggerChild, open: () => void, preload: () => vo
 
 export function SignInTrigger({ children }: { children: TriggerChild }) {
   const auth = useSiteAuth();
-  return withTrigger(children, auth.openSignIn, auth.preload);
+  return withTrigger(children, auth.openSignIn, auth.preload, auth.pending);
 }
 
 export function SignUpTrigger({ children }: { children: TriggerChild }) {
   const auth = useSiteAuth();
-  return withTrigger(children, auth.openSignUp, auth.preload);
+  return withTrigger(children, auth.openSignUp, auth.preload, auth.pending);
 }
 
 /** Clerk's <SignedIn> / <SignedOut>, from SiteAuth. */

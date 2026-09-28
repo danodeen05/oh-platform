@@ -33,6 +33,8 @@ export interface SiteAuth {
   openSignUp: () => void;
   /** Starts loading Clerk early (on intent). A no-op where it's already loaded. */
   preload: () => void;
+  /** A sign-in or sign-up modal was asked for and is waiting for Clerk to load. */
+  pending?: boolean;
 }
 
 export const SiteAuthContext = createContext<SiteAuth | null>(null);

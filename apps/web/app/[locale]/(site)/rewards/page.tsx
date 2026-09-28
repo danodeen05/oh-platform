@@ -155,13 +155,13 @@ export default async function RewardsPage() {
         {/* Hero */}
         <section aria-labelledby="rewards-title" className="relative isolate overflow-hidden">
           {/* Atmosphere only: the photo sits behind the copy, so it is decorative (alt="").
-              Task G2a: at half opacity under a dark gradient, phones get the 780w file (50 KB, not 108 KB). */}
+              Task G2a: at half opacity under a dark gradient, phones get the 390w file (13 KB, not 108 KB; G2a fix round 1). */}
           <div aria-hidden="true" className="absolute inset-0 -z-10">
             <SitePicture
               image="bowl-slices-top"
               sizes="100vw"
               priority
-              phoneMaxWidth={780}
+              phoneMaxWidth={390}
               alt=""
               className="absolute inset-0 block opacity-50 [&>img]:h-full [&>img]:w-full [&>img]:object-cover"
             />

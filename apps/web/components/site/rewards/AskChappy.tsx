@@ -8,7 +8,7 @@
 import { useTranslations } from "next-intl";
 import { useChappy } from "@/components/site/chappy/ChappyLauncher";
 // 64px at up to 3x: the 192px copy of the avatar (Task G2a dropped next/image here).
-const CHAPPY_AVATAR_LARGE = "/plan/chappy-192.webp";
+const CHAPPY_AVATAR_LARGE = "/brand/chappy-192.webp";
 
 export function AskChappy() {
   const t = useTranslations("rewards.chappy");

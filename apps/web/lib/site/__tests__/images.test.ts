@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 // generator script. Importing them here (rather than re-declaring them)
 // means this test fails loudly if the script's config ever drifts from
 // what actually got written to disk.
-import { MAPPING, DENY_LIST, WIDTHS, buildSrcSet } from "../../../../../scripts/site-images.mjs";
+import { MAPPING, DENY_LIST, WIDTHS, PORTRAIT, buildSrcSet, buildPortraitSrcSet } from "../../../../../scripts/site-images.mjs";
 import { SITE_IMAGES } from "../images";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -65,6 +65,37 @@ describe("SITE_IMAGES", () => {
         expect(url).toMatch(new RegExp(`^/site/${key}-\\d+\\.${format}$`));
         const onDisk = path.join(PUBLIC_DIR, path.basename(url));
         expect(fs.existsSync(onDisk), `missing ${onDisk} (from srcSet: ${url})`).toBe(true);
+      }
+    }
+  });
+});
+
+// Task G2a fix round 1: art-directed portrait crops for phones.
+describe("portrait crops", () => {
+  const portraitKeys = Object.keys(PORTRAIT);
+
+  it("the home hero has one", () => {
+    expect(portraitKeys).toContain("storefront-dusk");
+  });
+
+  it("exactly the PORTRAIT keys carry a portrait entry", () => {
+    const withPortrait = Object.entries(SITE_IMAGES)
+      .filter(([, e]) => e.portrait)
+      .map(([k]) => k);
+    expect(withPortrait.sort()).toEqual([...portraitKeys].sort());
+  });
+
+  it.each(portraitKeys)("%s portrait srcSet matches the script, is portrait, and every file exists", (key) => {
+    const entry = SITE_IMAGES[key as keyof typeof SITE_IMAGES];
+    const p = entry.portrait!;
+    expect(p.h).toBeGreaterThan(p.w);
+    for (const format of ["avif", "webp"] as const) {
+      expect(p.srcSet[format]).toBe(buildPortraitSrcSet(key, format));
+      const parsed = parseSrcSet(p.srcSet[format]);
+      expect(parsed.map((x) => x.width)).toEqual([780, 1170]);
+      for (const { url } of parsed) {
+        expect(url).toMatch(new RegExp(`^/site/${key}-portrait-\\d+\\.${format}$`));
+        expect(fs.existsSync(path.join(PUBLIC_DIR, path.basename(url))), url).toBe(true);
       }
     }
   });

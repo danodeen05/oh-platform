@@ -1,19 +1,26 @@
+"use client";
+
 /**
- * Site footer (Task C4): quiet, server-rendered, no client JS. The dock
- * covers the main routes on phones, so this carries the brand line, the
- * secondary routes and the legal links.
+ * Site footer (Task C4): quiet. The dock covers the main routes on phones,
+ * so this carries the brand line, the secondary routes and the legal links.
+ *
+ * A client component since G2a fix round 1, for a bundling reason: a
+ * server-rendered <Link> here made every (site) page resolve next/link's
+ * client reference through the home page's chunks, so /member downloaded
+ * the home page's 9 KB of JS. Rendered from client code, Link comes from the
+ * shell's own chunk. `year` comes from the server so it never differs on
+ * hydration.
  */
 import Link from "next/link";
-import { getLocale, getTranslations } from "next-intl/server";
+import { useLocale, useTranslations } from "next-intl";
 import { MORE_ITEMS, localizedHref } from "@/lib/site/nav";
 
 const LINK =
   "inline-flex min-h-11 items-center text-sm no-underline text-oh-cream/70 transition-colors hover:text-oh-cream focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oh-cream";
 
-export async function Footer() {
-  const t = await getTranslations("site");
-  const locale = await getLocale();
-  const year = new Date().getFullYear();
+export function Footer({ year }: { year: number }) {
+  const t = useTranslations("site");
+  const locale = useLocale();
 
   return (
     <footer data-site-footer className="border-t border-oh-stone/60 bg-oh-charcoal">

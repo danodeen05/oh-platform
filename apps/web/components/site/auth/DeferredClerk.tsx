@@ -26,6 +26,9 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { SiteAuthContext, type SiteAuth } from "@/lib/site/auth";
 import type { ClerkSnapshot } from "./ClerkBridge";
 
+/** How long a signed-in token request waits for Clerk before going out anonymous. */
+const TOKEN_WAIT_MS = 15_000;
+
 const ClerkBridge = dynamic(() => import("./ClerkBridge").then((m) => m.ClerkBridge), { ssr: false });
 
 export function DeferredClerk({
@@ -89,10 +92,28 @@ export function DeferredClerk({
     if (current?.isLoaded) return current.getToken();
     // Signed out per the server and Clerk not loaded yet: there is no token.
     if (!signedInRef.current) return null;
-    return (await ready()).getToken();
+    // If Clerk never arrives (blocked, offline), give up after a while and
+    // let the call go out anonymous rather than hang the page forever.
+    const snapshot = await Promise.race([
+      ready(),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), TOKEN_WAIT_MS)),
+    ]);
+    return snapshot ? snapshot.getToken() : null;
   }, [ready]);
-  const openSignIn = useCallback(() => void ready().then((s) => s.openSignIn()), [ready]);
-  const openSignUp = useCallback(() => void ready().then((s) => s.openSignUp()), [ready]);
+  // While a modal waits for Clerk, `pending` is true, so the trigger can show it.
+  const [pending, setPending] = useState(false);
+  const openModal = useCallback(
+    (which: "openSignIn" | "openSignUp") => {
+      if (!snapRef.current?.isLoaded) setPending(true);
+      void ready().then((s) => {
+        setPending(false);
+        s[which]();
+      });
+    },
+    [ready],
+  );
+  const openSignIn = useCallback(() => openModal("openSignIn"), [openModal]);
+  const openSignUp = useCallback(() => openModal("openSignUp"), [openModal]);
   const preload = useCallback(() => setLoad(true), []);
 
   const value = useMemo<SiteAuth>(() => {
@@ -107,8 +128,9 @@ export function DeferredClerk({
       openSignIn,
       openSignUp,
       preload,
+      pending,
     };
-  }, [snap, initialSignedIn, getToken, openSignIn, openSignUp, preload]);
+  }, [snap, initialSignedIn, getToken, openSignIn, openSignUp, preload, pending]);
 
   return (
     <SiteAuthContext.Provider value={value}>

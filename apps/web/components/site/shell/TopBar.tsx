@@ -29,6 +29,9 @@ export function TopBar() {
   const t = useTranslations("site.shell");
   const locale = useLocale();
   const [scrolled, setScrolled] = useState(false);
+  // Marks the bar interactive (tests wait for it before the first tap).
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
   const [moreOpen, setMoreOpen] = useState(false);
   // Mounted on first open and kept, so its close animation still plays.
   const [moreMounted, setMoreMounted] = useState(false);
@@ -55,6 +58,7 @@ export function TopBar() {
       <header
         data-site-topbar
         data-scrolled={scrolled ? "true" : "false"}
+        data-hydrated={hydrated ? "true" : undefined}
         className="sticky top-0 z-40 pt-[env(safe-area-inset-top,0px)] transition-[background-color,box-shadow,backdrop-filter] duration-300 data-[scrolled=true]:shadow-[inset_0_-1px_0_var(--color-oh-stone)] data-[scrolled=true]:bg-oh-charcoal/85 data-[scrolled=true]:backdrop-blur-md"
       >
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-2 pl-[max(1rem,env(safe-area-inset-left,0px))] pr-[max(0.5rem,env(safe-area-inset-right,0px))] md:pr-[max(1rem,env(safe-area-inset-right,0px))]">
