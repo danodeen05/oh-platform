@@ -7,13 +7,21 @@
  *
  * Limits (defaults, overridable with CHAPPY_LIMITS_JSON below):
  *   - 20 messages per 10 minutes per identity, 200 per day.
- *   - 300,000 output tokens per identity per day (recorded from each turn's
- *     `done` event; routes.js calls recordUsage after streaming ends).
+ *   - 300,000 output tokens per identity per day, recorded from each turn's
+ *     terminal event (`done`, or `error` on a refusal/failed request: those
+ *     still spent tokens on whatever rounds completed). routes.js calls
+ *     recordUsage after streaming ends, Task B3 fix round 1.
  *   - 300 messages per day per IP, for guests only (so rotating guest tokens
  *     cannot get around the per-identity cap).
- *   - report_issue / request_refund / escalate_to_human: 3 SupportCases per
- *     identity per day, EACH (tracked per tool name), checked by tools.js
- *     around case creation.
+ *   - report_issue / request_refund / escalate_to_human SHARE one cap: 3
+ *     SupportCases per identity per day IN TOTAL (controller ruling, Task B3
+ *     fix round 1 -- NOT 3 per tool), checked by tools.js around case
+ *     creation. Like the message/token checks above, checkCaseLimit-then-
+ *     recordCase is a check-then-act: two concurrent calls from the same
+ *     identity could both pass the check and both record, occasionally
+ *     allowing one case over the cap. Left as-is (controller ruling): it's a
+ *     soft limit, not a security boundary, and every case it creates is
+ *     visible to staff regardless.
  *
  * Storage is a plain in-memory Map, following the plan-routes.js failed-login
  * limiter pattern: fixed windows that start on first use, not calendar days.
@@ -214,19 +222,25 @@ export function createChappyLimits({ env = process.env } = {}) {
     dailyTokens.add(identityKey, now(nowArg), tokens);
   }
 
-  /** May this identity open one more `tool` case today? */
+  /**
+   * May this identity open one more support case today? The cap is SHARED
+   * across report_issue/request_refund/escalate_to_human (controller
+   * ruling, Task B3 fix round 1): 3 total per identity per day, not 3 per
+   * tool. `tool` is accepted (tools.js passes the calling tool's name) but
+   * no longer part of the key.
+   */
   function checkCaseLimit({ identity, tool, now: nowArg } = {}) {
     const identityKey = identityKeyFor(identity);
     if (!identityKey || !tool) return { ok: true };
-    const { blocked } = caseWindows.check(`${identityKey}:${tool}`, now(nowArg));
+    const { blocked } = caseWindows.check(identityKey, now(nowArg));
     return blocked ? { ok: false, code: "CASE_LIMIT" } : { ok: true };
   }
 
-  /** Records that this identity opened one `tool` case (call only after a successful create). */
+  /** Records that this identity opened one support case (call only after a successful create). */
   function recordCase({ identity, tool, now: nowArg } = {}) {
     const identityKey = identityKeyFor(identity);
     if (!identityKey || !tool) return;
-    caseWindows.commit(`${identityKey}:${tool}`, now(nowArg));
+    caseWindows.commit(identityKey, now(nowArg));
   }
 
   return { checkLimits, recordUsage, checkCaseLimit, recordCase, config };

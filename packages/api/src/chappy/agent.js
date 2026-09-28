@@ -5,7 +5,11 @@
  * manual tool loop and yields transport-neutral events:
  *
  *   {type:"text", delta} | {type:"tool_start", name} | {type:"card", card}
- *   | {type:"done", usage, text} | {type:"error", code}
+ *   | {type:"done", usage, text} | {type:"error", code, usage}
+ *
+ * error events carry `usage` too (Task B3 fix round 1): a refusal or a failed
+ * model request still spent tokens on whatever rounds DID complete, and those
+ * must count against the identity's daily budget the same as a `done` turn.
  *
  * Request shape (every round, see buildRequest):
  *   client.beta.messages.stream({ model: CHAPPY_MODEL, max_tokens: 16000,
@@ -418,7 +422,10 @@ export async function* runTurn({ client, prisma, identity, channel = "web", loca
         }
         console.error("[Chappy] model request failed:", err?.status || "", err?.message);
         await saveCompletedRounds();
-        yield { type: "error", code: errorCode(err) };
+        // usage already reflects every round that DID complete this turn (addUsage
+        // runs at the end of each successful round, before the next one starts) so
+        // those tokens still count against the daily budget (Task B3 fix round 1).
+        yield { type: "error", code: errorCode(err), usage };
         return;
       }
     }
@@ -429,7 +436,9 @@ export async function* runTurn({ client, prisma, identity, channel = "web", loca
     // stop_reason first, content second.
     if (final.stop_reason === "refusal") {
       await saveCompletedRounds();
-      yield { type: "error", code: "REFUSAL" };
+      // The refused round's usage was already added to `usage` above: it still
+      // counts against the daily budget (Task B3 fix round 1).
+      yield { type: "error", code: "REFUSAL", usage };
       return;
     }
 

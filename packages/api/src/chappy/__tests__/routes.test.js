@@ -14,7 +14,7 @@ import { FASTIFY_OPTIONS, rateLimitKey } from "../../http-config.js";
 import { createCustomerAuth, registerCustomerIdentity } from "../../auth/customer.js";
 import { registerChappyRoutes, GUEST_TOKEN_RATE_LIMIT } from "../routes.js";
 import { createChappyLimits } from "../limits.js";
-import { fakeClient, fakePrisma, step, text } from "./fakes.js";
+import { fakeClient, fakePrisma, step, text, apiError } from "./fakes.js";
 
 const ENV = { CLERK_SECRET_KEY: "sk_test_x", CHAPPY_GUEST_SECRET: "guest-secret-for-tests", ADMIN_API_KEY: "svc-key" };
 const ALLOWED = "http://localhost:3100";
@@ -170,6 +170,49 @@ describe("Task B3: real limiter wiring (chappy/limits.js)", () => {
     assert.equal(second.statusCode, 429);
     assert.equal(second.json().error, "BUDGET");
     assert.equal(client.calls.length, 1, "the refused turn never reached the model");
+  });
+
+  test("fix round 1: recordUsage also fires on a refusal (error event), not just done", async () => {
+    const limiter = createChappyLimits({ env: { CHAPPY_LIMITS_JSON: JSON.stringify({ dailyOutputTokens: { max: 1000 } }) } });
+    const { app, client } = await build({
+      checkLimits: limiter.checkLimits,
+      recordUsage: limiter.recordUsage,
+      script: [step({ content: [text("no")], stop_reason: "refusal", usage: { output_tokens: 1000 } })],
+    });
+    const first = await chat(app, member, { message: "hi" });
+    assert.equal(first.statusCode, 200, "the turn itself streams normally; only the SSE payload carries the refusal");
+    assert.equal(sseEvents(first.body).at(-1).event, "error");
+    assert.equal(client.calls.length, 1);
+    // The refused turn still spent its tokens: the next turn is over budget.
+    const second = await chat(app, member, { message: "hi again" });
+    assert.equal(second.statusCode, 429);
+    assert.equal(second.json().error, "BUDGET");
+    assert.equal(client.calls.length, 1, "the budget-refused turn never reached the model");
+  });
+
+  test("fix round 1: recordUsage also fires when the model request fails after one completed round", async () => {
+    const limiter = createChappyLimits({ env: { CHAPPY_LIMITS_JSON: JSON.stringify({ dailyOutputTokens: { max: 1000 } }) } });
+    const { TOOL_DEFS, executeTool } = await import("../tools.js");
+    const script = [
+      step({ content: [{ type: "tool_use", id: "t1", name: "escalate_to_human", input: { summary: "help", contact: "" } }], stop_reason: "tool_use", usage: { output_tokens: 1000 } }),
+      step({ throws: apiError(529) }),
+    ];
+    const { app, client } = await build({
+      checkLimits: limiter.checkLimits,
+      recordUsage: limiter.recordUsage,
+      tools: { defs: TOOL_DEFS, execute: executeTool },
+      script,
+      prisma: fakePrisma({ users: [{ id: "db_me", name: "Me", membershipTier: "CHOPSTICK", phone: "8015550100" }] }),
+    });
+    const first = await chat(app, member, { message: "help me" });
+    assert.equal(first.statusCode, 200);
+    assert.equal(sseEvents(first.body).at(-1).event, "error");
+    assert.equal(client.calls.length, 2);
+    // The one round that DID complete before the API error still spent its tokens.
+    const second = await chat(app, member, { message: "hi again" });
+    assert.equal(second.statusCode, 429);
+    assert.equal(second.json().error, "BUDGET");
+    assert.equal(client.calls.length, 2, "the budget-refused turn never reached the model");
   });
 
   test("SMS gets a short polite reply, not a JSON body, when rate limited", async () => {

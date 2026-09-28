@@ -167,7 +167,7 @@ describe("checkLimits + recordUsage: daily output-token budget", () => {
   });
 });
 
-describe("checkCaseLimit / recordCase: case-spam cap (carried from B2)", () => {
+describe("checkCaseLimit / recordCase: case-spam cap (carried from B2; fix round 1: shared, not per tool)", () => {
   test("3 opens of one tool are allowed; the 4th is blocked", () => {
     const { checkCaseLimit, recordCase } = createChappyLimits({ env: {} });
     for (let i = 0; i < 3; i++) {
@@ -179,17 +179,22 @@ describe("checkCaseLimit / recordCase: case-spam cap (carried from B2)", () => {
     assert.equal(blocked.code, "CASE_LIMIT");
   });
 
-  test("each tool has its own cap: request_refund isn't blocked by report_issue's cases", () => {
+  test("the cap is SHARED across tools, not per tool (controller ruling, fix round 1): 2 report_issue + 1 request_refund hits it", () => {
     const { checkCaseLimit, recordCase } = createChappyLimits({ env: {} });
-    for (let i = 0; i < 3; i++) recordCase({ identity: MEMBER, tool: "report_issue", now: T0 });
+    recordCase({ identity: MEMBER, tool: "report_issue", now: T0 });
+    recordCase({ identity: MEMBER, tool: "report_issue", now: T0 });
+    recordCase({ identity: MEMBER, tool: "request_refund", now: T0 });
+    // 3 total cases opened (2 + 1): a 4th, from any of the three tools, is blocked.
+    assert.equal(checkCaseLimit({ identity: MEMBER, tool: "escalate_to_human", now: T0 }).ok, false);
     assert.equal(checkCaseLimit({ identity: MEMBER, tool: "report_issue", now: T0 }).ok, false);
-    assert.equal(checkCaseLimit({ identity: MEMBER, tool: "request_refund", now: T0 }).ok, true);
-    assert.equal(checkCaseLimit({ identity: MEMBER, tool: "escalate_to_human", now: T0 }).ok, true);
+    assert.equal(checkCaseLimit({ identity: MEMBER, tool: "request_refund", now: T0 }).ok, false);
   });
 
   test("the cap is per identity: a guest's cases don't affect a member's", () => {
     const { checkCaseLimit, recordCase } = createChappyLimits({ env: {} });
-    for (let i = 0; i < 3; i++) recordCase({ identity: GUEST("g1"), tool: "escalate_to_human", now: T0 });
+    recordCase({ identity: GUEST("g1"), tool: "escalate_to_human", now: T0 });
+    recordCase({ identity: GUEST("g1"), tool: "report_issue", now: T0 });
+    recordCase({ identity: GUEST("g1"), tool: "request_refund", now: T0 });
     assert.equal(checkCaseLimit({ identity: GUEST("g1"), tool: "escalate_to_human", now: T0 }).ok, false);
     assert.equal(checkCaseLimit({ identity: MEMBER, tool: "escalate_to_human", now: T0 }).ok, true);
   });

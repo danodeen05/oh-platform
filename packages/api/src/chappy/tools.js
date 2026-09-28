@@ -396,11 +396,13 @@ function caseWho(ctx, contactInput) {
 }
 
 /**
- * Case-spam cap (Task B3, carried from the B2 review): report_issue,
- * request_refund and escalate_to_human may each open at most 3 SupportCases
- * per identity per day. `tool` is the calling tool's name, so the three caps
- * are tracked independently. ctx.checkCaseLimit/recordCase are optional (a
- * caller without them, e.g. an older test fixture, sees no cap).
+ * Case-spam cap (Task B3, carried from the B2 review; fix round 1 made the
+ * cap SHARED rather than per tool, per the controller ruling): report_issue,
+ * request_refund and escalate_to_human together may open at most 3
+ * SupportCases per identity per day, IN TOTAL. `tool` is the calling tool's
+ * name (passed through for logging/limits.js's signature; it's no longer
+ * part of the cap key). ctx.checkCaseLimit/recordCase are optional (a caller
+ * without them, e.g. an older test fixture, sees no cap).
  */
 async function openCase(ctx, { type, tool, summary, orderId = null, contactInput = "" }) {
   const text = clean(summary).slice(0, SUMMARY_MAX);

@@ -538,13 +538,19 @@ describe("case-spam cap (Task B3, carried from the B2 review)", () => {
     assert.equal((await executeTool("report_issue", { category: "other", summary: "over", orderId: "", contact: "" }, ctx2)).error, "CASE_LIMIT");
   });
 
-  test("each tool has its own cap: exhausting escalate_to_human leaves request_refund untouched", async () => {
+  test("the cap is SHARED across the three tools (controller ruling, fix round 1): 2 report_issue + 1 request_refund hits it, so escalate_to_human is next blocked", async () => {
     const w = world({ orders: [paidOrder()] });
     const ctx = withLimiter(w);
-    for (let i = 0; i < 3; i++) await executeTool("escalate_to_human", { summary: `x${i}`, contact: "" }, ctx);
-    assert.equal((await executeTool("escalate_to_human", { summary: "over", contact: "" }, ctx)).error, "CASE_LIMIT");
-    const refund = await executeTool("request_refund", { orderId: "o_paid", reason: "still fine" }, ctx);
-    assert.ok(refund.caseId, "request_refund has its own cap, unaffected by escalate_to_human's");
+    assert.ok((await executeTool("report_issue", { category: "other", summary: "r1", orderId: "", contact: "" }, ctx)).caseId);
+    assert.ok((await executeTool("report_issue", { category: "other", summary: "r2", orderId: "", contact: "" }, ctx)).caseId);
+    assert.ok((await executeTool("request_refund", { orderId: "o_paid", reason: "r3" }, ctx)).caseId);
+    // 3 cases opened across two different tools: escalate_to_human (a fourth, from a third tool) is blocked too.
+    const blocked = await executeTool("escalate_to_human", { summary: "one more", contact: "" }, ctx);
+    assert.equal(blocked.error, "CASE_LIMIT");
+    assert.equal((await w.db.supportCase.findMany({})).length, 3, "the blocked call opened no new case");
+    // report_issue and request_refund are blocked too: this is one shared budget, not three separate ones.
+    assert.equal((await executeTool("report_issue", { category: "other", summary: "over", orderId: "", contact: "" }, ctx)).error, "CASE_LIMIT");
+    assert.equal((await executeTool("request_refund", { orderId: "o_paid", reason: "over" }, ctx)).error, "CASE_LIMIT");
   });
 
   test("the cap is per identity: a guest's cases never count against a member's", async () => {

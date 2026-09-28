@@ -147,10 +147,15 @@ export async function registerChappyRoutes(app, deps) {
     }
   }
 
-  /** Wraps a runTurn() event stream so the `done` event's usage is recorded once the turn ends. */
+  /**
+   * Wraps a runTurn() event stream so the terminal event's usage is recorded
+   * once the turn ends, whether it ends in `done` or `error` (Task B3 fix
+   * round 1: a refusal or a failed model request still spent tokens on
+   * whatever rounds completed, and those must count against the budget too).
+   */
   async function* withUsageRecording(events, identity) {
     for await (const event of events) {
-      if (event.type === "done") await noteUsage(identity, event.usage);
+      if (event.type === "done" || event.type === "error") await noteUsage(identity, event.usage);
       yield event;
     }
   }
@@ -282,7 +287,12 @@ export async function registerChappyRoutes(app, deps) {
         if (event.type === "done") {
           text = event.text;
           await noteUsage(identity, event.usage);
-        } else if (event.type === "error") error = event.code;
+        } else if (event.type === "error") {
+          error = event.code;
+          // Fix round 1: a refusal or a failed model request still spent
+          // tokens on whatever rounds completed; count them too.
+          await noteUsage(identity, event.usage);
+        }
       }
       if (error) text = fallbackText(error === "REFUSAL" ? "refusal" : "error", "en");
       const { messages } = formatForSMS(text || fallbackText("empty", "en"));

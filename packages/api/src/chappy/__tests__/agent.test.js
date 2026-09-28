@@ -290,22 +290,31 @@ describe("loop", () => {
   });
 
   test("a refusal yields the REFUSAL error event, runs no tools and saves nothing", async () => {
-    const script = [step({ content: [toolUse("zeta_lookup", { q: "partial" })], stop_reason: "refusal" })];
+    const script = [step({ content: [toolUse("zeta_lookup", { q: "partial" })], stop_reason: "refusal", usage: { output_tokens: 42 } })];
     const { events, tools, db } = await turn({ script });
-    assert.deepEqual(events.at(-1), { type: "error", code: "REFUSAL" });
+    const last = events.at(-1);
+    assert.equal(last.type, "error");
+    assert.equal(last.code, "REFUSAL");
+    // Fix round 1: the refused round still spent tokens, so `usage` rides on
+    // the error event too (routes.js's recordUsage runs on error, not just done).
+    assert.equal(last.usage.output_tokens, 42);
     assert.ok(!events.some((e) => e.type === "done"));
     assert.equal(tools.executed.length, 0);
     assert.equal(db.updates.length, 0);
   });
 
-  test("a refusal AFTER tool rounds saves the completed rounds, never the refused content", async () => {
+  test("a refusal AFTER tool rounds saves the completed rounds, never the refused content, and charges the whole turn's usage", async () => {
     const script = [
-      step({ content: [text("Checking."), toolUse("zeta_lookup", { q: "made-an-order" }, "r1")], stop_reason: "tool_use" }),
-      step({ content: [toolUse("zeta_lookup", { q: "second" }, "r2")], stop_reason: "tool_use" }),
-      step({ content: [text("REFUSED PARTIAL")], stop_reason: "refusal" }),
+      step({ content: [text("Checking."), toolUse("zeta_lookup", { q: "made-an-order" }, "r1")], stop_reason: "tool_use", usage: { output_tokens: 20 } }),
+      step({ content: [toolUse("zeta_lookup", { q: "second" }, "r2")], stop_reason: "tool_use", usage: { output_tokens: 15 } }),
+      step({ content: [text("REFUSED PARTIAL")], stop_reason: "refusal", usage: { output_tokens: 7 } }),
     ];
     const { events, tools, db } = await turn({ script, message: "order me a bowl" });
-    assert.deepEqual(events.at(-1), { type: "error", code: "REFUSAL" });
+    const last = events.at(-1);
+    assert.equal(last.type, "error");
+    assert.equal(last.code, "REFUSAL");
+    // Every round's output tokens (20 + 15 + 7), including the refused one (fix round 1).
+    assert.equal(last.usage.output_tokens, 42);
     assert.equal(tools.executed.length, 2);
     assert.equal(db.updates.length, 1, "completed rounds saved once");
     const saved = db.updates[0].data.messages;
@@ -322,10 +331,14 @@ describe("loop", () => {
     assert.ok(JSON.stringify(sent).includes('"tool_use_id":"r1"'), "the side effect is still visible next turn");
   });
 
-  test("an API error after tool rounds also keeps the completed rounds", async () => {
-    const script = [step({ content: [toolUse("zeta_lookup", { q: "x" }, "e1")], stop_reason: "tool_use" }), step({ throws: apiError(529) })];
+  test("an API error after tool rounds also keeps the completed rounds and still charges their usage", async () => {
+    const script = [step({ content: [toolUse("zeta_lookup", { q: "x" }, "e1")], stop_reason: "tool_use", usage: { output_tokens: 30 } }), step({ throws: apiError(529) })];
     const { events, db } = await turn({ script });
-    assert.equal(events.at(-1).code, "BUSY");
+    const last = events.at(-1);
+    assert.equal(last.code, "BUSY");
+    // Fix round 1: the one round that DID complete still spent tokens, and
+    // they're charged even though the request that follows it fails.
+    assert.equal(last.usage.output_tokens, 30);
     assert.equal(db.updates.length, 1);
     assert.equal(db.updates[0].data.messages.at(-1).content[0].tool_use_id, "e1");
   });
