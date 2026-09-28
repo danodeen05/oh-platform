@@ -37,6 +37,7 @@ import {
   type OrderStepKey,
 } from "@/lib/site/order-draft";
 import { formatCents, orderErrorCode } from "@/lib/site/order-flow";
+import { translatedSteps } from "@/lib/site/menu";
 import { useGuest } from "@/contexts/guest-context";
 import type { CombLayoutKey } from "@/components/site/floor-plan/useSeats";
 import { Icon } from "@/components/site/icons/Icon";
@@ -110,7 +111,8 @@ export function OrderFlow({ location, dineInEnabled, groupCode = null, reorderId
       const res = await api(`${SITE_API_URL}/menu/steps?locale=${encodeURIComponent(locale)}`, { headers: TENANT, cache: "no-store" });
       if (!res.ok) throw new Error(String(res.status));
       const data = await res.json();
-      setMenu(Array.isArray(data?.steps) ? data.steps : []);
+      // Task F1: only fully translated items, the same rule as the menu page (D3).
+      setMenu(Array.isArray(data?.steps) ? translatedSteps(data.steps as MenuStep[]) : []);
     } catch {
       setMenuError(true);
     }

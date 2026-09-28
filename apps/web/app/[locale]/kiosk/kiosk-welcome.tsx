@@ -56,7 +56,7 @@ function KioskBrand({ size: requested = "normal" }: { size?: "small" | "normal" 
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: sz.gap }}>
       <img
         src="/Oh_Logo_Large.png"
-        alt="Oh! Logo"
+        alt="Oh!"
         style={{ width: sz.logo, height: sz.logo, objectFit: "contain" }}
       />
       <div style={{ display: "flex", alignItems: "center", gap: scale(3), fontSize: sz.english, lineHeight: 1 }}>
@@ -995,7 +995,7 @@ function QRScanView({ location, onBack }: { location: Location; onBack: () => vo
                 fontFamily: '"Bebas Neue", sans-serif',
               }}
             >
-              CAMERA
+              {t("checkIn.camera")}
             </span>
           </div>
         </div>
@@ -1029,7 +1029,7 @@ function QRScanView({ location, onBack }: { location: Location; onBack: () => vo
           zIndex: 1,
         }}
       >
-        Online Order Check-In
+        {t("checkIn.scanHeading")}
       </h1>
       <p
         className="kiosk-body"
@@ -1041,7 +1041,7 @@ function QRScanView({ location, onBack }: { location: Location; onBack: () => vo
           lineHeight: 1.5,
         }}
       >
-        Scan your member QR code or order QR code
+        {t("checkIn.scanBody")}
       </p>
 
       {/* Real QR Scanner with camera */}

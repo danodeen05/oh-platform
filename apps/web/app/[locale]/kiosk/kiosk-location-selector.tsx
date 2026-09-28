@@ -57,7 +57,7 @@ export default function KioskLocationSelector({
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <img
             src="/Oh_Logo_Large.png"
-            alt="Oh! Logo"
+            alt="Oh!"
             style={{ width: 48, height: 48 }}
           />
           <div>

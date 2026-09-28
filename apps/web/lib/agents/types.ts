@@ -106,16 +106,16 @@ export const PHASE_INFO: Record<Phase, { label: string; description: string }> =
 };
 
 // Agent display info
-export const AGENT_INFO: Record<AgentType, { label: string; color: string; emoji: string }> = {
-  ceo: { label: 'CEO', color: 'agent-ceo', emoji: '👔' },
-  cto: { label: 'CTO', color: 'agent-cto', emoji: '💻' },
-  cpo: { label: 'CPO', color: 'agent-cpo', emoji: '📊' },
-  ciso: { label: 'CISO', color: 'agent-ciso', emoji: '🔒' },
-  architect: { label: 'Architect', color: 'agent-architect', emoji: '🏗️' },
-  engineer: { label: 'Engineer', color: 'agent-engineer', emoji: '⚙️' },
-  qa: { label: 'QA', color: 'agent-qa', emoji: '🧪' },
-  devops: { label: 'DevOps', color: 'agent-devops', emoji: '🚀' },
-  tech_writer: { label: 'Tech Writer', color: 'agent-writer', emoji: '📝' },
+export const AGENT_INFO: Record<AgentType, { label: string; color: string }> = {
+  ceo: { label: 'CEO', color: 'agent-ceo' },
+  cto: { label: 'CTO', color: 'agent-cto' },
+  cpo: { label: 'CPO', color: 'agent-cpo' },
+  ciso: { label: 'CISO', color: 'agent-ciso' },
+  architect: { label: 'Architect', color: 'agent-architect' },
+  engineer: { label: 'Engineer', color: 'agent-engineer' },
+  qa: { label: 'QA', color: 'agent-qa' },
+  devops: { label: 'DevOps', color: 'agent-devops' },
+  tech_writer: { label: 'Tech Writer', color: 'agent-writer' },
 };
 
 // Status display info

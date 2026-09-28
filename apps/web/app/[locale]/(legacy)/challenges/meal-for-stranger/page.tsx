@@ -9,6 +9,7 @@ import { loadStripe } from "@stripe/stripe-js";
 import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { API_URL } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
+import { Icon } from "@/components/site/icons/Icon";
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
@@ -167,8 +168,8 @@ function PaymentForm({
       });
 
       if (!mealGiftResponse.ok) {
-        const errorData = await mealGiftResponse.json();
-        throw new Error(errorData.error || t("errors.createGift"));
+        // Task F1: the API's own error text is English; the visitor sees our translated line.
+        throw new Error(t("errors.createGift"));
       }
 
       const mealGift = await mealGiftResponse.json();
@@ -361,7 +362,9 @@ export default function MealForStrangerPage() {
   return (
     <div style={{ maxWidth: 600, margin: "0 auto", padding: "40px 20px" }}>
       <div style={{ textAlign: "center", marginBottom: 32 }}>
-        <div style={{ fontSize: "3rem", marginBottom: 8 }}>🎁</div>
+        <div style={{ marginBottom: 8, display: "flex", justifyContent: "center" }}>
+          <Icon name="gift" size={48} />
+        </div>
         <h1 style={{ fontSize: "2rem", fontWeight: "bold", marginBottom: 8 }}>
           {t("title")}
         </h1>

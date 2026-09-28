@@ -357,7 +357,6 @@ export default function RunDetailPage() {
           {pendingQuestions.map((question) => (
             <div key={question.id} style={{ marginBottom: '24px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                <span>{AGENT_INFO[question.agent]?.emoji}</span>
                 <span style={{ fontWeight: 500 }}>{AGENT_INFO[question.agent]?.label}</span>
               </div>
               <p style={{ marginBottom: '16px' }}>{question.question}</p>
@@ -388,7 +387,6 @@ export default function RunDetailPage() {
               <div key={index} style={{ padding: '24px 32px', borderBottom: index < run.phases.length - 1 ? '1px solid var(--color-border)' : 'none' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span>{AGENT_INFO[result.agent]?.emoji}</span>
                     <span style={{ fontWeight: 500 }}>{AGENT_INFO[result.agent]?.label}</span>
                     <span style={{ color: 'var(--color-text-light)' }}>•</span>
                     <span style={{ color: 'var(--color-text-light)' }}>{PHASE_INFO[result.phase]?.label}</span>

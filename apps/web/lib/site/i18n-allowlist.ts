@@ -25,9 +25,21 @@ export const I18N_ALLOWLIST_TERMS = [
   "Google",
   "Oh!",
   "Wagyu",
+  // The brand's one-character mark (the 哦 in the logo), drawn as text in a few legacy spots.
+  "哦",
+  // The two malls the restaurants sit in (Task F1). Chinese copy names them in
+  // Chinese and keeps the English in parentheses, the name a reader types
+  // into a map app (the same convention as the Location rows' i18n, F1a).
+  "City Creek Center",
+  "City Creek Mall",
+  "City Creek",
+  "University Place",
   "Chappy",
   "Stripe",
   "QR",
+  // SMS keywords the carrier acts on (Task F1): a reader must text these exact words.
+  "STOP",
+  "HELP",
   "oz",
   "mi",
   // The locale switcher's own language names (endonyms, see i18n/config.ts).
@@ -39,6 +51,8 @@ export const I18N_ALLOWLIST_TERMS = [
 export const I18N_ALLOWLIST_PATTERNS: readonly RegExp[] = [
   // Pod labels: finger letter A/B/C and the 2-digit position, e.g. B-07.
   /\b[A-C]-\d{2}\b/g,
+  // Email addresses (Task F1): orders@..., hello@... are addresses, not words.
+  /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g,
 ];
 
 function escapeRegExp(s: string): string {

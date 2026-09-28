@@ -87,7 +87,7 @@ export function formatForSMS(text) {
   smsText = smsText.replace(/`/g, "");
 
   // Remove bullet points and replace with dashes
-  smsText = smsText.replace(/^[•●◦▪]/gm, "-");
+  smsText = smsText.replace(/^[\u2022\u25CF\u25E6\u25AA]/gm, "-");
 
   // Target ~300 chars per message (leaves room for segment indicators)
   const MAX_SEGMENT_LENGTH = 300;

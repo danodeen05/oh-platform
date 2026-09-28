@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 
 // Kiosk color system
 const COLORS = {
@@ -47,6 +48,8 @@ export function VirtualKeyboard({
   showInput = true,
   scale = 1,
 }: VirtualKeyboardProps) {
+  const t = useTranslations('kiosk.keyboard');
+  const tCommon = useTranslations('common');
   // Scale helper for sizing
   const s = (px: number) => Math.round(px * scale);
   const handleKeyPress = useCallback((key: string) => {
@@ -167,10 +170,10 @@ export function VirtualKeyboard({
         {/* Bottom row - space bar and actions */}
         <div style={{ display: 'flex', justifyContent: 'center', gap: s(8), marginTop: s(4) }}>
           <KeyButton onClick={handleClear} width={s(100)} scale={scale}>
-            Clear
+            {t('clear')}
           </KeyButton>
           <KeyButton onClick={handleSpace} width={s(400)} scale={scale}>
-            Space
+            {t('space')}
           </KeyButton>
           {onSubmit && (
             <KeyButton
@@ -180,7 +183,7 @@ export function VirtualKeyboard({
               primary
               disabled={!value.trim()}
             >
-              Continue
+              {tCommon('continue')}
             </KeyButton>
           )}
         </div>

@@ -1,23 +1,15 @@
 /**
  * Shared plumbing for the Task C5 translation guards (not a test file).
  *
- * The guards are `it.fails` until F1, like C2's emoji guard: a known-red
- * guard that doesn't block the suite. Because an expected failure hides
- * its own output, each guard also prints its worklist:
+ * Task F1 made the guards ordinary tests (they were `it.fails` from C5
+ * until the translations were complete). A failing guard names every gap
+ * in its assertion message; each also prints a summary line:
  *
- *   pnpm --filter @oh/web test                       -> one summary line per guard
+ *   pnpm --filter @oh/web test                       -> one summary line per failing guard
  *   I18N_WORKLIST=1 pnpm --filter @oh/web test       -> the full worklist, grouped
- *   I18N_STRICT=1 pnpm --filter @oh/web test         -> guards run as normal tests and
- *                                                       fail with the worklist (F1 flips
- *                                                       this on by deleting `.fails`)
  */
-import { it } from "vitest";
 
-export const STRICT = Boolean(process.env.I18N_STRICT);
-export const SHOW_WORKLIST = Boolean(process.env.I18N_WORKLIST) || STRICT;
-
-/** `it.fails` until F1; a normal `it` under I18N_STRICT=1. */
-export const guard: typeof it.fails = STRICT ? (it as unknown as typeof it.fails) : it.fails;
+export const SHOW_WORKLIST = Boolean(process.env.I18N_WORKLIST);
 
 /** Group `items` by `groupOf`, as "group (n)\n  item\n  item" blocks. */
 export function formatWorklist<T>(title: string, items: T[], groupOf: (t: T) => string, line: (t: T) => string): string {

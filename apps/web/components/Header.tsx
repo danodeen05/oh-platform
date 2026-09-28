@@ -200,7 +200,7 @@ export default function Header() {
               padding: "8px",
             }}
             className="mobile-menu-btn"
-            aria-label="Toggle menu"
+            aria-label={t("menu")}
           >
             {mobileMenuOpen ? "✕" : "☰"}
           </button>
@@ -219,7 +219,7 @@ export default function Header() {
           >
             <Image
               src="/Oh_Logo_Mark_Web.png"
-              alt="Oh Logo"
+              alt="Oh!"
               width={60}
               height={60}
               style={{ display: "block" }}

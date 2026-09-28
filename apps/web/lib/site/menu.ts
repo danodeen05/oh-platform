@@ -11,8 +11,9 @@
  *    English description on a zh or es page (the sheet uses a translated
  *    group line instead).
  *  - An item is listed only when it has a name in every site locale, so no
- *    page ever shows an untranslated English name. (Today that hides one
- *    stale row, "Thin/Flat Noodles", which has no translations.)
+ *    page ever shows an untranslated English name. (It hid "Thin/Flat
+ *    Noodles" until Task F1's backfill gave that row its names.) The order
+ *    flow applies the same rule through translatedSteps().
  *  - Slider rows show `sliderConfig.displayLabels` (F1a), never `labels`.
  *  - Early access: /menu/steps already filters by the caller's tier, so an
  *    item whose `releaseAt` is still ahead was sent only because this
@@ -122,7 +123,10 @@ const SECTION_GROUP: Record<string, MenuGroupKey> = {
   desserts: "desserts",
 };
 
-function englishOf(item: ApiMenuItem): string {
+/** Just the name columns (the kiosk check-in reads these off an order line, Task F1). */
+export type NamedMenuItem = Pick<ApiMenuItem, "name" | "nameEn" | "nameZhTW" | "nameZhCN" | "nameEs">;
+
+function englishOf(item: NamedMenuItem): string {
   return item.nameEn || item.name;
 }
 
@@ -132,7 +136,7 @@ function trimmed(v: string | null | undefined): string | null {
 }
 
 /** The item's name in `locale` from its own column, or null when that column is empty. */
-export function localName(item: ApiMenuItem, locale: string): string | null {
+export function localName(item: NamedMenuItem, locale: string): string | null {
   switch (locale) {
     case "zh-TW":
       return trimmed(item.nameZhTW);
@@ -162,6 +166,25 @@ export function localDescription(item: ApiMenuItem, locale: string): string | nu
 /** Translated in every site locale, so it can be listed on any page. */
 export function fullyNamed(item: ApiMenuItem): boolean {
   return ["en", "zh-TW", "zh-CN", "es"].every((l) => localName(item, l) !== null);
+}
+
+/**
+ * The order flow's copy of the same rule (Task F1): GET /menu/steps with every
+ * item that lacks a name in some site locale removed, so the bowl builder
+ * never offers an untranslated English name on a zh or es page. A slider
+ * section whose item isn't fully named is dropped too.
+ */
+export function translatedSteps<Step extends { sections: Array<{ items?: unknown[]; item?: unknown }> }>(steps: Step[]): Step[] {
+  const named = (i: unknown) => fullyNamed(i as ApiMenuItem);
+  return steps.map(
+    (step) =>
+      ({
+        ...step,
+        sections: step.sections
+          .filter((s) => !s.item || named(s.item))
+          .map((s) => (Array.isArray(s.items) ? { ...s, items: s.items.filter(named) } : s)),
+      }) as Step,
+  );
 }
 
 /** Sent to us before its release date: this member's tier sees it early. */

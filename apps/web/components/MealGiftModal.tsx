@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { API_URL } from "@/lib/api";
 import { useToast } from "@/components/ui/Toast";
+import { Icon } from "@/components/site/icons/Icon";
 
 type MealGift = {
   id: string;
@@ -110,7 +111,9 @@ export function MealGiftModal({
         {action === "view" && (
           <>
             <div style={{ textAlign: "center", marginBottom: 24 }}>
-              <div style={{ fontSize: "4rem", marginBottom: 8 }}>🎁</div>
+              <div style={{ marginBottom: 8, display: "flex", justifyContent: "center" }}>
+                <Icon name="gift" size={64} />
+              </div>
               <h2 style={{ fontSize: "1.5rem", fontWeight: "bold", marginBottom: 8 }}>
                 {t("modal.title")}
               </h2>
@@ -130,7 +133,7 @@ export function MealGiftModal({
                   color: "#666",
                 }}
               >
-                &quot;{mealGift.messageFromGiver}&quot;
+                {t("quotedMessage", { message: mealGift.messageFromGiver })}
                 <div style={{ marginTop: 8, fontSize: "0.875rem", textAlign: "right" }}>
                   - {mealGift.giver.name}
                 </div>
@@ -191,7 +194,9 @@ export function MealGiftModal({
         {action === "accept" && (
           <>
             <div style={{ textAlign: "center", marginBottom: 24 }}>
-              <div style={{ fontSize: "3rem", marginBottom: 8 }}>✨</div>
+              <div style={{ marginBottom: 8, display: "flex", justifyContent: "center" }}>
+                <Icon name="spark" size={48} />
+              </div>
               <h2 style={{ fontSize: "1.5rem", fontWeight: "bold", marginBottom: 8 }}>
                 {t("modal.acceptTitle")}
               </h2>
@@ -263,7 +268,9 @@ export function MealGiftModal({
         {action === "pay-forward" && (
           <>
             <div style={{ textAlign: "center", marginBottom: 24 }}>
-              <div style={{ fontSize: "3rem", marginBottom: 8 }}>💝</div>
+              <div style={{ marginBottom: 8, display: "flex", justifyContent: "center" }}>
+                <Icon name="gift" size={48} />
+              </div>
               <h2 style={{ fontSize: "1.5rem", fontWeight: "bold", marginBottom: 8 }}>
                 {t("modal.forwardTitle")}
               </h2>

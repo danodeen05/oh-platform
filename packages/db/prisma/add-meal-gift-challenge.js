@@ -13,7 +13,9 @@ async function main() {
       name: "Meal for a Stranger",
       description: "Gift a meal to the next solo diner at your location",
       rewardCents: 500, // $5 reward
-      iconEmoji: "🎁",
+      // Task F1: schema-required column, kept empty; the icon is the in-house seal.
+      iconEmoji: "",
+      iconKey: "meal-for-stranger",
       requirements: JSON.stringify({
         type: "meal_gift",
         action: "gift_accepted",

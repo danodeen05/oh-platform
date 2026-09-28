@@ -3507,10 +3507,10 @@ app.post("/cron/cny-sms-reminder", async (req, reply) => {
 
       const result = await sendSMS({
         to: phone,
-        body: `🎉 Tonight's the night! We are so excited to spend the evening with you at our CNY Party!
+        body: `Tonight's the night! We are so excited to spend the evening with you at our CNY Party!
 
-📍 Venue: https://maps.apple/r/goY408wKInW625
-🅿️ No covered parking - feel free to park at Weave: https://maps.apple/p/St56ZVvDYggGQ5
+Venue: https://maps.apple/r/goY408wKInW625
+Parking: there is no covered parking, so feel free to park at Weave: https://maps.apple/p/St56ZVvDYggGQ5
 
 See you soon!`,
       });
@@ -3563,7 +3563,7 @@ app.post("/cron/cny-sms-order-link", async (req, reply) => {
 
       const result = await sendSMS({
         to: phone,
-        body: `🍜 Time to order, ${rsvp.name?.split(" ")[0] || "friend"}! Place your beef noodle soup order now:
+        body: `Time to order, ${rsvp.name?.split(" ")[0] || "friend"}! Place your beef noodle soup order now:
 
 ${orderUrl}
 
@@ -3602,7 +3602,7 @@ app.post("/cron/cny-sms-test", async (req, reply) => {
       const orderUrl = `https://ohbeef.com/en/cny/order?name=${encodeURIComponent(testName)}&phone=${encodeURIComponent(testPhone.replace(/\D/g, ""))}`;
       result = await sendSMS({
         to: testPhone,
-        body: `🍜 Time to order, ${testName}! Place your beef noodle soup order now:
+        body: `Time to order, ${testName}! Place your beef noodle soup order now:
 
 ${orderUrl}
 
@@ -3612,10 +3612,10 @@ Customize your bowl - we'll bring it right to you!`,
       // Default to reminder
       result = await sendSMS({
         to: testPhone,
-        body: `🎉 Tonight's the night! We are so excited to spend the evening with you at our CNY Party!
+        body: `Tonight's the night! We are so excited to spend the evening with you at our CNY Party!
 
-📍 Venue: https://maps.apple/r/goY408wKInW625
-🅿️ No covered parking - feel free to park at Weave: https://maps.apple/p/St56ZVvDYggGQ5
+Venue: https://maps.apple/r/goY408wKInW625
+Parking: there is no covered parking, so feel free to park at Weave: https://maps.apple/p/St56ZVvDYggGQ5
 
 See you soon!`,
       });
@@ -3807,13 +3807,13 @@ app.get("/orders/zodiac-insights", async (req, reply) => {
   }
 });
 
-// Helper to get emoji for zodiac
+// The zodiac's own character (no emoji; the field keeps its old name for the CNY page).
 function getZodiacEmoji(zodiac) {
-  const emojis = {
-    Rat: "🐀", Ox: "🐂", Tiger: "🐅", Rabbit: "🐇", Dragon: "🐉", Snake: "🐍",
-    Horse: "🐴", Goat: "🐐", Monkey: "🐒", Rooster: "🐓", Dog: "🐕", Pig: "🐷"
+  const glyphs = {
+    Rat: "鼠", Ox: "牛", Tiger: "虎", Rabbit: "兔", Dragon: "龍", Snake: "蛇",
+    Horse: "馬", Goat: "羊", Monkey: "猴", Rooster: "雞", Dog: "狗", Pig: "豬"
   };
-  return emojis[zodiac] || "✨";
+  return glyphs[zodiac] || "";
 }
 
 // PATCH /orders/:id moved to orders/routes.js (Task A6): payment and price fields are no longer client input.
@@ -9167,7 +9167,7 @@ app.get("/analytics/upselling", async (req, reply) => {
       {
         type: "PAID_ADDON",
         label: "Paid Add-Ons",
-        emoji: "🛒",
+        emoji: "",
         count: byType.PAID_ADDON.count,
         revenue: byType.PAID_ADDON.revenue,
         revenueFormatted: `$${(byType.PAID_ADDON.revenue / 100).toFixed(2)}`,
@@ -9175,7 +9175,7 @@ app.get("/analytics/upselling", async (req, reply) => {
       {
         type: "REFILL",
         label: "Drink Refills",
-        emoji: "🥤",
+        emoji: "",
         count: byType.REFILL.count,
         revenue: byType.REFILL.revenue,
         revenueFormatted: `$${(byType.REFILL.revenue / 100).toFixed(2)}`,
@@ -9183,7 +9183,7 @@ app.get("/analytics/upselling", async (req, reply) => {
       {
         type: "EXTRA_VEG",
         label: "Extra Vegetables",
-        emoji: "🥬",
+        emoji: "",
         count: byType.EXTRA_VEG.count,
         revenue: byType.EXTRA_VEG.revenue,
         revenueFormatted: `$${(byType.EXTRA_VEG.revenue / 100).toFixed(2)}`,
@@ -9191,7 +9191,7 @@ app.get("/analytics/upselling", async (req, reply) => {
       {
         type: "DESSERT_READY",
         label: "Dessert Deliveries",
-        emoji: "🍨",
+        emoji: "",
         count: byType.DESSERT_READY.count,
         revenue: byType.DESSERT_READY.revenue,
         revenueFormatted: `$${(byType.DESSERT_READY.revenue / 100).toFixed(2)}`,
@@ -10235,7 +10235,7 @@ app.get("/analytics/badges", async (req, reply) => {
         return {
           id: ub.id,
           badgeName: badge?.name || "Unknown",
-          badgeEmoji: badge?.iconEmoji || "🏅",
+          badgeEmoji: badge?.iconEmoji || "",
           userName: ub.user?.name || "Unknown",
           earnedAt: ub.earnedAt,
         };

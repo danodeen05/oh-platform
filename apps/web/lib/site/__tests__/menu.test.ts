@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fullyNamed, isEarly, localDescription, localName, marksOf, menuView, orderHref, photoOf, type ApiMenuItem, type ApiMenuStep } from "../menu";
+import { fullyNamed, isEarly, localDescription, localName, marksOf, menuView, orderHref, photoOf, translatedSteps, type ApiMenuItem, type ApiMenuStep } from "../menu";
 import { emptyDraft, withPreselectedItem, type MenuStep } from "../order-draft";
 
 const NOW = new Date("2026-09-28T18:00:00Z");
@@ -147,6 +147,24 @@ describe("menu view (Task D3)", () => {
 
   it("Order this links to the order flow with the item", () => {
     expect(orderHref("zh-TW", "abc 1")).toBe("/zh-TW/order?item=abc%201");
+  });
+});
+
+describe("translatedSteps (Task F1: the bowl builder's copy of the rule)", () => {
+  it("drops items without a name in every locale and keeps everything else in place", () => {
+    const out = translatedSteps(STEPS);
+    const ids = out.flatMap((s) => s.sections.flatMap((sec) => (sec.items ?? []).map((i) => i.id)));
+    expect(ids).not.toContain("thin");
+    expect(ids).toEqual(["classic", "wagyu", "wide", "gf", "none", "marrow", "cukes", "off", "pepsi"]);
+    expect(out.map((s) => s.sections.map((sec) => sec.id))).toEqual(STEPS.map((s) => s.sections.map((sec) => sec.id)));
+    // The input isn't mutated.
+    expect(STEPS[2].sections[1].items!.map((i) => i.id)).toContain("thin");
+  });
+
+  it("drops a slider section whose item isn't fully named", () => {
+    const bare = { ...STEPS[1], sections: [{ ...STEPS[1].sections[0], item: { ...STEPS[1].sections[0].item!, nameEs: null } }] };
+    expect(translatedSteps([bare])[0].sections).toEqual([]);
+    expect(translatedSteps([STEPS[1]])[0].sections).toHaveLength(1);
   });
 });
 

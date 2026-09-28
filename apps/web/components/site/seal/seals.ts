@@ -52,6 +52,16 @@ export const SEALS: Record<string, SealDef> = {
 
   // MENU (Task D3): an item a member sees before its release date.
   "early-access": { glyph: "先", border: "round" }, // "first/ahead"
+
+  // Task F1: badges and the challenge that one-off scripts added to prod
+  // (packages/db/prisma/seed-data/legacy-badges.ts), so none shows the default seal.
+  "lunch-regular": { glyph: "午", border: "round" }, // "noon"
+  "night-owl": { glyph: "夜", border: "round" }, // "night"
+  "big-spender": { glyph: "豪", border: "double" }, // "lavish"
+  "generous-soul": { glyph: "善", border: "round" }, // "kindness"
+  "pod-explorer": { glyph: "遊", border: "round" }, // "wander"
+  "quick-return": { glyph: "回", border: "square" }, // "return"
+  "meal-for-stranger": { glyph: "贈", border: "round" }, // "gift"
 };
 
 /** Used for a badge slug not (yet) present in SEALS. */

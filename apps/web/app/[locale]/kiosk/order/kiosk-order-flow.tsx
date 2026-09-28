@@ -12,6 +12,7 @@ import { adaptKioskSeats } from "@/lib/pod-selection/adapt-seats";
 import { KioskCombPicker } from "@/components/kiosk/KioskCombPicker";
 import { kioskCombFrom, podNames, readSeatClaim, seatClaimRequest, seatsForPick, type KioskComb } from "@/lib/kiosk/comb-pick";
 import { create as createOrder, kioskConfirmPayment } from "@/lib/site/orders";
+import { Icon } from "@/components/site/icons/Icon";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -102,7 +103,7 @@ function KioskBrand({ size: requested = "normal" }: { size?: "small" | "normal" 
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: sz.gap }}>
       <img
         src="/Oh_Logo_Large.png"
-        alt="Oh! Logo"
+        alt="Oh!"
         style={{ width: sz.logo, height: sz.logo, objectFit: "contain" }}
       />
       <div style={{ display: "flex", alignItems: "center", gap: scale(3), fontSize: sz.english, lineHeight: 1 }}>
@@ -200,7 +201,7 @@ function DietaryBadges({
           }}
         >
           {Array.from({ length: spiceLevel }).map((_, i) => (
-            <span key={i}>🌶️</span>
+            <Icon key={i} name="flame" size={14} />
           ))}
         </span>
       )}
@@ -978,7 +979,7 @@ export default function KioskOrderFlow({
         {/* Animated Oh! logo loader */}
         <img
           src="/Oh_Logo_Mark_Web.png"
-          alt="Loading..."
+          alt="Oh!"
           style={{
             width: 200,
             height: 200,
@@ -1760,7 +1761,7 @@ function MenuView({
                                       position: "relative",
                                     }}
                                   >
-                                    <span style={{ fontSize: "3rem" }}>🍜</span>
+                                    <Icon name="bowl" size={48} />
                                     {/* Dietary badges - top left */}
                                     <div style={{ position: "absolute", top: 6, left: 6 }}>
                                       <DietaryBadges
@@ -1832,7 +1833,7 @@ function MenuView({
                               }}
                             >
                               <span style={{ fontSize: "1.2rem", color: COLORS.textOnPrimary, fontWeight: 700 }}>
-                                {noNoodlesItem.name} 🚫
+                                {noNoodlesItem.name}
                               </span>
                             </button>
                           </div>
@@ -1930,7 +1931,7 @@ function MenuView({
                                   style={{ width: "100%", height: "100%", objectFit: "cover" }}
                                 />
                               ) : (
-                                <span style={{ fontSize: "3rem" }}>🍽️</span>
+                                <Icon name="bowl" size={48} />
                               )}
                               <div style={{ position: "absolute", top: 6, left: 6 }}>
                                 <DietaryBadges
@@ -1948,7 +1949,7 @@ function MenuView({
                                 <div style={{ fontWeight: 700, fontSize: "1rem", color: COLORS.text }}>{item.name}</div>
                                 {item.basePriceCents > 0 && (
                                   <div style={{ color: COLORS.primary, fontSize: "1.1rem", marginTop: 2, fontWeight: 700 }}>
-                                    ${(item.basePriceCents / 100).toFixed(2)} <span style={{ fontWeight: 500, fontSize: "0.85rem" }}>each</span>
+                                    ${(item.basePriceCents / 100).toFixed(2)} <span style={{ fontWeight: 500, fontSize: "0.85rem" }}>{tKiosk("orderFlow.each")}</span>
                                   </div>
                                 )}
                               </div>
@@ -2050,7 +2051,7 @@ function MenuView({
                                   style={{ width: "100%", height: "100%", objectFit: "cover" }}
                                 />
                               ) : (
-                                <span style={{ fontSize: "3rem" }}>🍽️</span>
+                                <Icon name="bowl" size={48} />
                               )}
                               <div style={{ position: "absolute", top: 6, left: 6 }}>
                                 <DietaryBadges
@@ -2068,7 +2069,7 @@ function MenuView({
                                 <div style={{ fontWeight: 700, fontSize: "1rem", color: COLORS.text }}>{item.name}</div>
                                 {item.basePriceCents > 0 && (
                                   <div style={{ color: COLORS.primary, fontSize: "1.1rem", marginTop: 2, fontWeight: 700 }}>
-                                    ${(item.basePriceCents / 100).toFixed(2)} <span style={{ fontWeight: 500, fontSize: "0.85rem" }}>each</span>
+                                    ${(item.basePriceCents / 100).toFixed(2)} <span style={{ fontWeight: 500, fontSize: "0.85rem" }}>{tKiosk("orderFlow.each")}</span>
                                   </div>
                                 )}
                               </div>
@@ -2200,7 +2201,7 @@ function MenuView({
                                   style={{ width: "100%", height: "100%", objectFit: "cover" }}
                                 />
                               ) : (
-                                <span style={{ fontSize: "3rem" }}>🥤</span>
+                                <Icon name="cup" size={48} />
                               )}
                               <div style={{ position: "absolute", top: 6, left: 6 }}>
                                 <DietaryBadges
@@ -2318,7 +2319,7 @@ function MenuView({
                                   style={{ width: "100%", height: "100%", objectFit: "cover" }}
                                 />
                               ) : (
-                                <span style={{ fontSize: "3rem" }}>🍨</span>
+                                <Icon name="spark" size={48} />
                               )}
                               <div style={{ position: "absolute", top: 6, left: 6 }}>
                                 <DietaryBadges
@@ -2756,7 +2757,7 @@ function MenuView({
                             }}
                           >
                             <span style={{ fontSize: "1.8rem", color: "#fff", fontWeight: 700, textAlign: "center" }}>
-                              {tKiosk("orderFlow.noNoodles")} 🚫
+                              {tKiosk("orderFlow.noNoodles")}
                             </span>
                           </div>
                         ) : (
@@ -2771,7 +2772,7 @@ function MenuView({
                               position: "relative",
                             }}
                           >
-                            <span style={{ fontSize: "4rem" }}>🍜</span>
+                            <Icon name="bowl" size={64} />
                             {/* Dietary badges - top left */}
                             <div style={{ position: "absolute", top: 8, left: 8 }}>
                               <DietaryBadges
@@ -2915,7 +2916,7 @@ function MenuView({
                                   position: "relative",
                                 }}
                               >
-                                <span style={{ fontSize: "4rem" }}>🍽️</span>
+                                <Icon name="bowl" size={64} />
                                 <div style={{ position: "absolute", top: 8, left: 8 }}>
                                   <DietaryBadges
                                     isVegetarian={item.isVegetarian}
@@ -3085,9 +3086,7 @@ function MenuView({
                               }}
                             >
                               <span style={{ fontSize: "4rem" }}>
-                                {(item.name.toLowerCase().includes("drink") || item.name.toLowerCase().includes("bebida") || item.name.includes("飲") || item.name.includes("饮")) ? "🥤" :
-                                 (item.name.toLowerCase().includes("tea") || item.name.toLowerCase().includes("té") || item.name.includes("茶")) ? "🍵" :
-                                 (item.name.toLowerCase().includes("water") || item.name.toLowerCase().includes("agua") || item.name.includes("水")) ? "💧" : "🍽️"}
+                                <Icon name="cup" size={64} />
                               </span>
                               {/* Dietary badges - top left (for items without images) */}
                               <div style={{ position: "absolute", top: 8, left: 8 }}>
@@ -3115,12 +3114,12 @@ function MenuView({
                               {isDrinksAndDessertStep || item.basePriceCents > 0 || item.additionalPriceCents > 0 ? (
                                 <div style={{ color: isDessert && isComplimentary ? COLORS.success : COLORS.primary, fontSize: "0.85rem", fontWeight: 600, marginTop: 2 }}>
                                   {isDessert && isComplimentary ? (
-                                    "Complimentary - $0.00"
+                                    `${tKiosk("orderFlow.complimentary")} · $0.00`
                                   ) : item.includedQuantity > 0 ? (
                                     <>
-                                      <span style={{ color: COLORS.success }}>{item.includedQuantity} included</span>
+                                      <span style={{ color: COLORS.success }}>{tKiosk("orderFlow.includedCount", { count: item.includedQuantity })}</span>
                                       {item.additionalPriceCents > 0 && (
-                                        <span style={{ color: COLORS.textMuted }}> • +${(item.additionalPriceCents / 100).toFixed(2)} each extra</span>
+                                        <span style={{ color: COLORS.textMuted }}> • +${(item.additionalPriceCents / 100).toFixed(2)} {tKiosk("orderFlow.eachExtra")}</span>
                                       )}
                                     </>
                                   ) : (
@@ -3575,7 +3574,7 @@ function MenuView({
             textDecoration: "underline",
           }}
         >
-          ⚠️ {tKiosk("orderFlow.ohAllergenInfo")}
+          <Icon name="alert" size={18} /> {tKiosk("orderFlow.ohAllergenInfo")}
         </button>
 
         <div style={{ display: "flex", justifyContent: "center", gap: 16 }}>
@@ -3699,7 +3698,7 @@ function MenuView({
                 style={{ width: 48, height: 48, objectFit: "contain" }}
               />
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ fontSize: "1.3rem" }}>⚠️</span>
+                <Icon name="alert" size={20} />
                 <h2 style={{ fontSize: "1.4rem", fontWeight: 700, color: COLORS.text, margin: 0 }}>
                   {tKiosk("orderFlow.ohAllergenInformation")}
                 </h2>
@@ -3740,7 +3739,9 @@ function MenuView({
                   background: "#fecaca",
                   color: "#dc2626",
                 }}>
-                  🌶️🌶️🌶️
+                  <Icon name="flame" size={14} />
+                  <Icon name="flame" size={14} />
+                  <Icon name="flame" size={14} />
                 </span>
                 <span style={{ fontSize: "1rem", color: COLORS.text }}>{tKiosk("orderFlow.spicyDescription")}</span>
               </div>
@@ -4122,7 +4123,7 @@ function ReviewView({
                   />
                 ) : (
                   <div style={{ width: 36, height: 36, borderRadius: 6, background: "#f0f0f0", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <span style={{ fontSize: "1.1rem" }}>🍜</span>
+                    <Icon name="bowl" size={18} />
                   </div>
                 )}
                 <div style={{ flex: 1 }}>
@@ -4187,12 +4188,12 @@ function ReviewView({
                   />
                 ) : (
                   <div style={{ width: 36, height: 36, borderRadius: 6, background: "#f0f0f0", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <span style={{ fontSize: "1.1rem" }}>🍽️</span>
+                    <Icon name="bowl" size={18} />
                   </div>
                 )}
                 <div style={{ flex: 1 }}>
                   <span style={{ fontWeight: 500, fontSize: "0.95rem" }}>{item.name}</span>
-                  {item.quantity > 1 && <span style={{ color: COLORS.textMuted, fontSize: "0.9rem" }}> x{item.quantity}</span>}
+                  {item.quantity > 1 && <span style={{ color: COLORS.textMuted, fontSize: "0.9rem" }}> ×{item.quantity}</span>}
                 </div>
                 <span style={{ color: COLORS.primary, fontWeight: 600, fontSize: "0.95rem" }}>
                   {item.price > 0 ? `$${(item.price / 100).toFixed(2)}` : tKiosk("orderFlow.included")}
@@ -4219,12 +4220,12 @@ function ReviewView({
                   />
                 ) : (
                   <div style={{ width: 36, height: 36, borderRadius: 6, background: "#f0f0f0", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <span style={{ fontSize: "1.1rem" }}>🥤</span>
+                    <Icon name="cup" size={18} />
                   </div>
                 )}
                 <div style={{ flex: 1 }}>
                   <span style={{ fontWeight: 500, fontSize: "0.95rem" }}>{item.name}</span>
-                  {item.quantity > 1 && <span style={{ color: COLORS.textMuted, fontSize: "0.9rem" }}> x{item.quantity}</span>}
+                  {item.quantity > 1 && <span style={{ color: COLORS.textMuted, fontSize: "0.9rem" }}> ×{item.quantity}</span>}
                 </div>
                 <span style={{ color: COLORS.primary, fontWeight: 600, fontSize: "0.95rem" }}>
                   {item.price > 0 ? `$${(item.price / 100).toFixed(2)}` : tKiosk("orderFlow.free")}
@@ -4251,12 +4252,12 @@ function ReviewView({
                   />
                 ) : (
                   <div style={{ width: 36, height: 36, borderRadius: 6, background: "#f0f0f0", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <span style={{ fontSize: "1.1rem" }}>🍨</span>
+                    <Icon name="spark" size={18} />
                   </div>
                 )}
                 <div style={{ flex: 1 }}>
                   <span style={{ fontWeight: 500, fontSize: "0.95rem" }}>{item.name}</span>
-                  {item.quantity > 1 && <span style={{ color: COLORS.textMuted, fontSize: "0.9rem" }}> x{item.quantity}</span>}
+                  {item.quantity > 1 && <span style={{ color: COLORS.textMuted, fontSize: "0.9rem" }}> ×{item.quantity}</span>}
                 </div>
                 <span style={{ color: item.price === 0 ? COLORS.success : COLORS.primary, fontWeight: 600, fontSize: "0.95rem" }}>
                   {item.price === 0 ? tKiosk("orderFlow.free") : `$${(item.price / 100).toFixed(2)}`}

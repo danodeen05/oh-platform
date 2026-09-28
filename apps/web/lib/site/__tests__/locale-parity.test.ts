@@ -1,8 +1,8 @@
 /**
  * Task C5: locale parity and em-dash guards.
  *
- * The whole-file guards are `it.fails` until F1 (see ./i18n-worklist.ts for
- * how to print the worklist or run them strict). The `site.*` namespace and
+ * Every guard here is an ordinary test since Task F1 (see ./i18n-worklist.ts
+ * for printing a worklist). The `site.*` namespace and
  * the new site code are clean today, so those guards are ordinary tests
  * and must stay green.
  */
@@ -15,7 +15,7 @@ import en from "@/messages/en.json";
 import es from "@/messages/es.json";
 import zhCN from "@/messages/zh-CN.json";
 import zhTW from "@/messages/zh-TW.json";
-import { formatWorklist, guard, report } from "./i18n-worklist";
+import { formatWorklist, report } from "./i18n-worklist";
 
 type Tree = Record<string, unknown>;
 
@@ -50,7 +50,7 @@ function emDashValues(o: Tree, p = ""): Array<{ key: string; text: string }> {
 }
 
 describe("locale parity (non-plan keys)", () => {
-  guard.each(LOCALES)("%s has every non-plan key", (name, m) => {
+  it.each(LOCALES)("%s has every non-plan key", (name, m) => {
     const missing = missingKeys(m);
     const worklist = formatWorklist(
       `keys missing in ${name}`,
@@ -76,7 +76,7 @@ describe("locale parity (non-plan keys)", () => {
 });
 
 describe("em dashes", () => {
-  guard("no em dashes in any locale file", () => {
+  it("no em dashes in any locale file", () => {
     const hits = (
       [["en", en], ...LOCALES] as Array<[string, Tree]>
     ).flatMap(([name, m]) => emDashValues(m).map((h) => ({ ...h, locale: name })));

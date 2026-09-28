@@ -39,7 +39,9 @@ export type IconName =
   | "mail"
   | "bell"
   | "plus"
-  | "qr";
+  | "qr"
+  | "cup"
+  | "card";
 
 export interface IconDef {
   /** One or more filled outline paths (fill-rule evenodd), no stroke. */
@@ -376,6 +378,33 @@ export const ICON_PATHS: Record<IconName, IconDef> = {
       roundedRectPath(17.9, 17.9, 2.6, 2.6, 0.5),
       roundedRectPath(13.8, 18.2, 2.2, 2.2, 0.4),
       roundedRectPath(18.2, 13.8, 2.2, 2.2, 0.4),
+    ],
+  },
+
+  // Task F1: drinks (the kiosk's drink and dessert rows, replacing emoji).
+  // A tapered glass with a rim and a straw.
+  cup: {
+    paths: [
+      midPeakChain(
+        [
+          { kind: "line", a: { x: 6.2, y: 7.2 }, b: { x: 7.9, y: 20.2 } },
+          { kind: "line", a: { x: 7.9, y: 20.2 }, b: { x: 16.1, y: 20.2 } },
+          { kind: "line", a: { x: 16.1, y: 20.2 }, b: { x: 17.8, y: 7.2 } },
+        ],
+        1.5,
+        0.5,
+      ),
+      taperLine({ x: 4.8, y: 7.2 }, { x: 19.2, y: 7.2 }, 1.6, 0.6, { capStart: true }),
+      taperLine({ x: 12.6, y: 7.2 }, { x: 15.4, y: 2.8 }, 1.3, 0.5, { capStart: true }),
+    ],
+  },
+
+  // Task F1: a payment card (the kiosk's card reader screen, replacing emoji).
+  card: {
+    paths: [
+      ringRect(3.2, 6, 17.6, 12, 1.6, 1.3),
+      taperLine({ x: 3.6, y: 10.2 }, { x: 20.4, y: 10.2 }, 1.8, 1.2),
+      roundedRectPath(6, 13.8, 4.2, 1.8, 0.5),
     ],
   },
 };

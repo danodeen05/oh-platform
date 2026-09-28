@@ -7,6 +7,7 @@ import { kioskAuthHeaders } from "@/components/kiosk/KioskDeviceProvider";
 import { adaptKioskSeats } from "@/lib/pod-selection/adapt-seats";
 import { KioskCombPicker } from "@/components/kiosk/KioskCombPicker";
 import { kioskCombFrom, podNames, type KioskComb } from "@/lib/kiosk/comb-pick";
+import { localName } from "@/lib/site/menu";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "";
 
@@ -80,7 +81,7 @@ function KioskBrand({ size = "normal" }: { size?: "small" | "normal" | "large" |
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: sz.gap }}>
-      <img src="/Oh_Logo_Large.png" alt="Oh! Logo" style={{ width: sz.logo, height: sz.logo, objectFit: "contain" }} />
+      <img src="/Oh_Logo_Large.png" alt="Oh!" style={{ width: sz.logo, height: sz.logo, objectFit: "contain" }} />
       <div style={{ display: "flex", alignItems: "center", gap: 3, fontSize: sz.english, lineHeight: 1 }}>
         {tHome.rich("brandName", {
           oh: () => <span style={{ fontFamily: '"Ma Shan Zheng", cursive', fontSize: sz.chinese, color: "#C7A878" }}>哦</span>,
@@ -230,7 +231,7 @@ export default function CheckInPage() {
               setLoading(false);
               return;
             }
-            setError(errData.error === "No active orders found" ? (errData.memberName ? t("errors.noActiveOrdersForMember", { name: errData.memberName }) : t("errors.noActiveOrders")) : errData.error === "Member not found" ? t("errors.memberNotFound") : errData.error || t("errors.memberNotFound"));
+            setError(errData.error === "No active orders found" ? (errData.memberName ? t("errors.noActiveOrdersForMember", { name: errData.memberName }) : t("errors.noActiveOrders")) : errData.error === "Member not found" ? t("errors.memberNotFound") : t("errors.memberNotFound"));
             setStep("error");
             setLoading(false);
             return;
@@ -309,7 +310,7 @@ export default function CheckInPage() {
   if (step === "loading" || loading) {
     return (
       <main className="kiosk-screen" style={{ display: "flex", alignItems: "center", justifyContent: "center", background: COLORS.surface }}>
-        <img src="/Oh_Logo_Mark_Web.png" alt="Loading..." style={{ width: 200, height: 200, objectFit: "contain", animation: "spin-pulse 2s ease-in-out infinite" }} />
+        <img src="/Oh_Logo_Mark_Web.png" alt="Oh!" style={{ width: 200, height: 200, objectFit: "contain", animation: "spin-pulse 2s ease-in-out infinite" }} />
       </main>
     );
   }
@@ -331,7 +332,7 @@ export default function CheckInPage() {
 
   // Already checked in - friendly info state (not an error) - compact layout
   if (step === "already-checked-in") {
-    const customerName = order?.user?.name || order?.guestName || "Guest";
+    const customerName = order?.user?.name || order?.guestName || t("checkIn.guest");
     return (
       <main className="kiosk-screen" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: COLORS.surface, padding: "24px 48px", textAlign: "center" }}>
         <div style={{ width: 70, height: 70, borderRadius: 35, background: COLORS.primaryLight, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12 }}>
@@ -356,8 +357,8 @@ export default function CheckInPage() {
           <div style={{ background: COLORS.surfaceElevated, borderRadius: 14, padding: "14px 20px", border: `1px solid ${COLORS.border}`, marginBottom: 12, minWidth: 260 }}>
             <div style={{ fontWeight: 600, marginBottom: 6, fontSize: "1rem" }}>{t("pod.orderNumber", { number: order.orderNumber })}</div>
             <div style={{ color: COLORS.textMuted, fontSize: "0.95rem" }}>
-              {order.items?.slice(0, 3).map((item) => <div key={item.id}>{item.quantity}x {item.menuItem.name}</div>)}
-              {(order.items?.length || 0) > 3 && <div style={{ fontStyle: "italic" }}>+{(order.items?.length || 0) - 3} more items</div>}
+              {order.items?.slice(0, 3).map((item) => <div key={item.id}>{item.quantity}× {localName(item.menuItem, locale) ?? item.menuItem.name}</div>)}
+              {(order.items?.length || 0) > 3 && <div style={{ fontStyle: "italic" }}>{t("checkIn.moreItems", { count: (order.items?.length || 0) - 3 })}</div>}
             </div>
           </div>
         )}
@@ -395,8 +396,8 @@ export default function CheckInPage() {
               <div>
                 <div style={{ fontWeight: 600, fontSize: "1.25rem", marginBottom: 8 }}>{t("pod.orderNumber", { number: ord.orderNumber })}</div>
                 <div style={{ color: COLORS.textMuted, fontSize: "1rem" }}>
-                  {ord.items.slice(0, 3).map((item, i) => <span key={item.id}>{item.quantity}x {item.menuItem.name}{i < Math.min(ord.items.length, 3) - 1 ? ", " : ""}</span>)}
-                  {ord.items.length > 3 && ` +${ord.items.length - 3} more`}
+                  {ord.items.slice(0, 3).map((item, i) => <span key={item.id}>{item.quantity}× {localName(item.menuItem, locale) ?? item.menuItem.name}{i < Math.min(ord.items.length, 3) - 1 ? ", " : ""}</span>)}
+                  {ord.items.length > 3 && ` ${t("checkIn.moreItems", { count: ord.items.length - 3 })}`}
                 </div>
               </div>
               <div style={{ background: COLORS.primary, color: COLORS.textOnPrimary, padding: "8px 16px", borderRadius: 8, fontWeight: 600, fontSize: "1.1rem" }}>${(ord.totalCents / 100).toFixed(2)}</div>
@@ -415,7 +416,7 @@ export default function CheckInPage() {
         <div style={{ width: 80, height: 80, borderRadius: 40, background: COLORS.successLight, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke={COLORS.success} strokeWidth="2.5"><path d="M20 6L9 17l-5-5" /></svg>
         </div>
-        <h1 className="kiosk-title" style={{ marginBottom: 8, fontSize: "2rem" }}>{t("pod.welcome", { name: order?.user?.name || order?.guestName || "Guest" })}</h1>
+        <h1 className="kiosk-title" style={{ marginBottom: 8, fontSize: "2rem" }}>{t("pod.welcome", { name: order?.user?.name || order?.guestName || t("checkIn.guest") })}</h1>
         {assignedSeat && (
           <div style={{ background: COLORS.primary, borderRadius: 20, padding: "24px 48px", marginTop: 16, marginBottom: 16, color: COLORS.textOnPrimary }}>
             <div style={{ fontSize: "1rem", opacity: 0.85, marginBottom: 6 }}>{t("pod.proceedTo")}</div>
@@ -425,8 +426,8 @@ export default function CheckInPage() {
         <div style={{ background: COLORS.surfaceElevated, borderRadius: 16, padding: "16px 24px", border: `1px solid ${COLORS.border}`, marginBottom: 16, minWidth: 280 }}>
           <div style={{ fontWeight: 600, marginBottom: 8, fontSize: "1.1rem" }}>{t("pod.orderNumber", { number: order?.orderNumber })}</div>
           <div style={{ color: COLORS.textMuted, fontSize: "1rem" }}>
-            {order?.items.slice(0, 3).map((item) => <div key={item.id}>{item.quantity}x {item.menuItem.name}</div>)}
-            {(order?.items.length || 0) > 3 && <div style={{ fontStyle: "italic" }}>+{(order?.items.length || 0) - 3} more items</div>}
+            {order?.items.slice(0, 3).map((item) => <div key={item.id}>{item.quantity}× {localName(item.menuItem, locale) ?? item.menuItem.name}</div>)}
+            {(order?.items.length || 0) > 3 && <div style={{ fontStyle: "italic" }}>{t("checkIn.moreItems", { count: (order?.items.length || 0) - 3 })}</div>}
           </div>
         </div>
         <p style={{ color: COLORS.textMuted, marginBottom: 12, fontSize: "1rem" }}>{t("pod.foodBeingPrepared")}</p>
@@ -444,7 +445,7 @@ export default function CheckInPage() {
   }
 
   // Pod selection - EXACT layout from kiosk-order-flow.tsx
-  const customerName = order?.user?.name || order?.guestName || "Guest";
+  const customerName = order?.user?.name || order?.guestName || t("checkIn.guest");
   const selectedPod = podNames(comb.seats, selectedPodId);
 
   return (

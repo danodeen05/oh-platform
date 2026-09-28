@@ -8,6 +8,13 @@
  * (Badge, Challenge, Location) or by `category` (the slider MenuItem rows,
  * which have no slug column). It never creates or deletes a row.
  *
+ * Task F1 adds two sections with the same rules: the badges and challenge
+ * that one-off scripts added to prod (prisma/seed-data/legacy-badges.ts,
+ * matched by slug), and menu names and descriptions in all four locales
+ * (prisma/seed-data/menu-copy.ts, matched by English name). For menu rows
+ * the only English ever written replaces a known catering-era description
+ * (or an empty one); the per-locale columns are filled only when empty.
+ *
  * Fix round 1 (review, Critical 2 + Important 1 + Important 3): the row's
  * own English columns (name, description, and for a slider MenuItem,
  * `sliderConfig.labels`) are the single source of truth for English, and
@@ -53,6 +60,8 @@ import { BADGES } from "../prisma/seed-data/badges";
 import { CHALLENGES } from "../prisma/seed-data/challenges";
 import { LOCATION_I18N } from "../prisma/seed-data/locations";
 import { SLIDER_LABELS_I18N } from "../prisma/seed-data/slider-labels";
+import { LEGACY_BADGES, LEGACY_CHALLENGES } from "../prisma/seed-data/legacy-badges";
+import { MENU_COPY, type MenuLocale } from "../prisma/seed-data/menu-copy";
 
 export interface BackfillSection {
   updated: string[];
@@ -66,6 +75,10 @@ export interface BackfillResult {
   challenges: BackfillSection;
   locations: BackfillSection;
   menuItems: BackfillSection;
+  /** Task F1: badges/challenge added by one-off scripts (prisma/seed-data/legacy-badges.ts). */
+  legacy: BackfillSection;
+  /** Task F1: menu names and descriptions (prisma/seed-data/menu-copy.ts). */
+  menuCopy: BackfillSection;
 }
 
 export interface BackfillOptions {
@@ -113,6 +126,8 @@ export async function backfillI18n(prisma: PrismaClient, opts: BackfillOptions =
     challenges: emptySection(),
     locations: emptySection(),
     menuItems: emptySection(),
+    legacy: emptySection(),
+    menuCopy: emptySection(),
   };
 
   // ---- Badges (match by slug) ----
@@ -226,18 +241,93 @@ export async function backfillI18n(prisma: PrismaClient, opts: BackfillOptions =
     }
   }
 
+  // ---- Task F1: badges and the challenge added by one-off scripts (match by
+  // slug; same English rule as above; iconEmoji only with --clear-emoji) ----
+  const legacyRows: Array<{ model: "badge" | "challenge"; seed: (typeof LEGACY_BADGES)[number] }> = [
+    ...LEGACY_BADGES.map((seed) => ({ model: "badge" as const, seed })),
+    ...LEGACY_CHALLENGES.map((seed) => ({ model: "challenge" as const, seed })),
+  ];
+  for (const { model, seed } of legacyRows) {
+    const delegate = (model === "badge" ? prisma.badge : prisma.challenge) as any;
+    const existing = await delegate.findUnique({ where: { slug: seed.slug } });
+    if (!existing) {
+      result.legacy.missing.push(seed.slug);
+      continue;
+    }
+    if (!sameText(existing.name, seed.i18n.en.name) || !sameText(existing.description, seed.i18n.en.description)) {
+      console.log(`SKIP ${model} ${seed.slug}: prod text differs (name: "${existing.name}")`);
+      result.legacy.mismatched.push(seed.slug);
+      continue;
+    }
+    const clearedEmoji = model === "badge" ? null : "";
+    const emojiUpToDate = !clearEmoji || existing.iconEmoji === clearedEmoji;
+    if (existing.iconKey === seed.iconKey && sameJson(existing.i18n, seed.i18n) && emojiUpToDate) {
+      result.legacy.skipped.push(seed.slug);
+      continue;
+    }
+    const data: Record<string, unknown> = { iconKey: seed.iconKey, i18n: seed.i18n as any };
+    if (clearEmoji) data.iconEmoji = clearedEmoji;
+    console.log(`${prefix}${model} "${seed.slug}": set iconKey="${seed.iconKey}", i18n${clearEmoji ? ", iconEmoji cleared" : ""}`);
+    if (!dryRun) {
+      await delegate.update({ where: { slug: seed.slug }, data });
+    }
+    result.legacy.updated.push(seed.slug);
+  }
+
+  // ---- Task F1: menu names and descriptions (match by English name). English
+  // is only written to replace a known catering-era string or an empty one;
+  // per-locale columns are only filled when empty. ----
+  const NAME_COL: Record<MenuLocale, string> = { "zh-TW": "nameZhTW", "zh-CN": "nameZhCN", es: "nameEs" };
+  const DESC_COL: Record<MenuLocale, string> = { "zh-TW": "descriptionZhTW", "zh-CN": "descriptionZhCN", es: "descriptionEs" };
+  const blank = (v: unknown) => typeof v !== "string" || v.trim() === "";
+  for (const seed of MENU_COPY) {
+    const rows = (await prisma.menuItem.findMany({ where: { name: seed.name } })) as any[];
+    if (!rows.length) {
+      result.menuCopy.missing.push(seed.name);
+      continue;
+    }
+    for (const row of rows) {
+      const key = `${seed.name}:${row.id}`;
+      const data: Record<string, string> = {};
+      if (seed.en && !sameText(row.description, seed.en)) {
+        const stale = blank(row.description) || (seed.replacesEn ?? []).some((old) => sameText(row.description, old));
+        if (!stale) {
+          console.log(`SKIP menu item "${seed.name}" (${row.id}): description differs from the seed and is not a known catering-era text`);
+          result.menuCopy.mismatched.push(key);
+          continue;
+        }
+        data.description = seed.en;
+      }
+      for (const [loc, value] of Object.entries(seed.names ?? {}) as Array<[MenuLocale, string]>) {
+        if (blank(row[NAME_COL[loc]])) data[NAME_COL[loc]] = value;
+      }
+      for (const [loc, value] of Object.entries(seed.descriptions ?? {}) as Array<[MenuLocale, string]>) {
+        if (blank(row[DESC_COL[loc]])) data[DESC_COL[loc]] = value;
+      }
+      if (Object.keys(data).length === 0) {
+        result.menuCopy.skipped.push(key);
+        continue;
+      }
+      console.log(`${prefix}menu item "${seed.name}" (${row.id}): set ${Object.keys(data).join(", ")}`);
+      if (!dryRun) {
+        await prisma.menuItem.update({ where: { id: row.id }, data });
+      }
+      result.menuCopy.updated.push(key);
+    }
+  }
+
   return result;
 }
 
 function summarize(result: BackfillResult, dryRun: boolean): void {
   const label = dryRun ? "Would update" : "Updated";
-  console.log(`\n${label}: ${result.badges.updated.length} badges, ${result.challenges.updated.length} challenges, ${result.locations.updated.length} locations, ${result.menuItems.updated.length} slider menu items`);
-  console.log(`Already up to date: ${result.badges.skipped.length} badges, ${result.challenges.skipped.length} challenges, ${result.locations.skipped.length} locations, ${result.menuItems.skipped.length} slider menu items`);
-  const mismatched = [...result.badges.mismatched, ...result.challenges.mismatched, ...result.locations.mismatched, ...result.menuItems.mismatched];
+  console.log(`\n${label}: ${result.badges.updated.length} badges, ${result.challenges.updated.length} challenges, ${result.locations.updated.length} locations, ${result.menuItems.updated.length} slider menu items, ${result.legacy.updated.length} script-added badges/challenges, ${result.menuCopy.updated.length} menu item copy rows`);
+  console.log(`Already up to date: ${result.badges.skipped.length} badges, ${result.challenges.skipped.length} challenges, ${result.locations.skipped.length} locations, ${result.menuItems.skipped.length} slider menu items, ${result.legacy.skipped.length} script-added badges/challenges, ${result.menuCopy.skipped.length} menu item copy rows`);
+  const mismatched = [...result.badges.mismatched, ...result.challenges.mismatched, ...result.locations.mismatched, ...result.menuItems.mismatched, ...result.legacy.mismatched, ...result.menuCopy.mismatched];
   if (mismatched.length) {
     console.log(`Skipped, prod text differs from the seed (see SKIP lines above, never overwritten): ${mismatched.join(", ")}`);
   }
-  const missing = [...result.badges.missing, ...result.challenges.missing, ...result.locations.missing, ...result.menuItems.missing];
+  const missing = [...result.badges.missing, ...result.challenges.missing, ...result.locations.missing, ...result.menuItems.missing, ...result.legacy.missing, ...result.menuCopy.missing];
   if (missing.length) {
     console.log(`No matching row (never created, skipped): ${missing.join(", ")}`);
   }

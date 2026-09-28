@@ -88,6 +88,9 @@ describe("Icon", () => {
       "bell",
       "plus",
       "qr",
+      // Task F1: the kiosk's drink rows and card reader (emoji replaced).
+      "cup",
+      "card",
     ];
     expect([...ICON_NAMES].sort()).toEqual([...expected].sort());
   });

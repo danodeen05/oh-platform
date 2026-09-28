@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { QRCodeSVG } from "qrcode.react";
+import { useTranslations } from "next-intl";
+import { Icon } from "@/components/site/icons/Icon";
 
 type AnimatedOrderQRProps = {
   locationId: string;
@@ -20,6 +22,7 @@ export default function AnimatedOrderQR({
   size = 180,
   showVideo = false,
 }: AnimatedOrderQRProps) {
+  const t = useTranslations("kiosk.qr");
   const [isHovered, setIsHovered] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -228,8 +231,10 @@ export default function AnimatedOrderQR({
           animation: "qr-label-bounce 2s ease-in-out infinite",
         }}
       >
-        <span style={{ marginRight: 4 }}>📱</span>
-        Scan to Order Online
+        <span style={{ marginRight: 4, display: "inline-flex", verticalAlign: "middle" }}>
+          <Icon name="qr" size={16} />
+        </span>
+        {t("scanToOrder")}
       </div>
 
       {/* CSS Animations - using global style tag */}

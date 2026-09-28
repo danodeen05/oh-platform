@@ -6,6 +6,7 @@ import { event } from "@/lib/analytics";
 import { useSiteApi, useMemberId } from "@/lib/site/api";
 import { QRCodeSVG } from "qrcode.react";
 import Image from "next/image";
+import { Icon } from "@/components/site/icons/Icon";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -121,7 +122,7 @@ export default function ReferralDashboard() {
         </p>
         <input
           type="email"
-          placeholder="your@email.com"
+          placeholder={t("emailPlaceholder")}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           style={{
@@ -190,7 +191,7 @@ export default function ReferralDashboard() {
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-            <div style={{ fontSize: "1.5rem" }}>⏳</div>
+            <Icon name="clock" size={24} />
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: "bold", color: "#222", fontSize: "1.1rem" }}>
                 {t("pendingCredits")}

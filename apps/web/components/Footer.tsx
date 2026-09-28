@@ -126,7 +126,7 @@ export default function Footer() {
           >
             <img
               src="/redsock-icon.png"
-              alt="One Red Step Foundation"
+              alt=""
               style={{
                 height: "32px",
                 width: "auto",
@@ -248,6 +248,7 @@ export default function Footer() {
               letterSpacing: "0.5px",
             }}
           >
+            {"\u00A9 "}
             {t("copyright", { year: new Date().getFullYear() })}
           </div>
         </div>

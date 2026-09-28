@@ -3,6 +3,8 @@
 import React, { useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
+import { Icon } from "@/components/site/icons/Icon";
+import type { IconName } from "@/components/site/icons/paths";
 
 export interface DialogProps {
   open: boolean;
@@ -192,11 +194,11 @@ export interface AlertDialogProps {
   confirmLabel?: string;
 }
 
-const typeStyles = {
-  info: { icon: "ℹ️", color: "#3b82f6", bgColor: "#eff6ff" },
-  success: { icon: "✓", color: "#22c55e", bgColor: "#f0fdf4" },
-  warning: { icon: "⚠️", color: "#f59e0b", bgColor: "#fffbeb" },
-  error: { icon: "✕", color: "#ef4444", bgColor: "#fef2f2" },
+const typeStyles: Record<"info" | "success" | "warning" | "error", { icon: IconName; color: string; bgColor: string }> = {
+  info: { icon: "bell", color: "#3b82f6", bgColor: "#eff6ff" },
+  success: { icon: "check", color: "#22c55e", bgColor: "#f0fdf4" },
+  warning: { icon: "alert", color: "#f59e0b", bgColor: "#fffbeb" },
+  error: { icon: "close", color: "#ef4444", bgColor: "#fef2f2" },
 };
 
 export function AlertDialog({
@@ -247,7 +249,7 @@ export function AlertDialog({
             fontWeight: type === "success" || type === "error" ? "bold" : "normal",
           }}
         >
-          {styles.icon}
+          <Icon name={styles.icon} size={24} />
         </div>
 
         {/* Title */}

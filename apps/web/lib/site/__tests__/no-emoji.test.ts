@@ -37,12 +37,12 @@ function scan(roots: string[]): string[] {
 // messages, the API and the prisma seeds. It fails today (~272 emoji lines,
 // mostly badge/challenge iconEmoji seed data and a handful of API log
 // strings that don't use `console.`). Phase D drives the count to zero, and
-// Task F1 Step 5 removes the `.fails` marker.
+// Task F1 Step 5 removed the `.fails` marker: the scan is clean and must stay clean.
 describe("no emoji", () => {
   const ROOTS = ["app", "components", "lib", "messages"].map((d) => `${__dirname}/../../../${d}`);
   const EXTRA = ["../../packages/api/src", "../../packages/db/prisma"].map((p) => `${__dirname}/../../../${p}`);
 
-  it.fails("customer code, messages, API and seeds contain no emoji", () => {
+  it("customer code, messages, API and seeds contain no emoji", () => {
     const hits = scan([...ROOTS, ...EXTRA]);
     expect(hits).toEqual([]);
   });

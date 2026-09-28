@@ -13,7 +13,7 @@
  * agents and the dev-only (site)/lab routes; components/site/**; and the
  * top-level components/*.tsx. Tests are skipped.
  *
- * The whole-tree guard is `it.fails` until F1; the new site code (the
+ * The whole-tree guard is an ordinary test since Task F1; the new site code (the
  * shell, components/site) is clean today and must stay clean.
  */
 import { readFileSync } from "node:fs";
@@ -23,7 +23,7 @@ import path from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import { stripAllowlisted } from "../i18n-allowlist";
-import { formatWorklist, guard, report } from "./i18n-worklist";
+import { formatWorklist, report } from "./i18n-worklist";
 
 const WEB = path.resolve(__dirname, "../../..");
 const CHECKED_ATTRS = new Set(["aria-label", "alt", "title", "placeholder"]);
@@ -125,7 +125,7 @@ describe("the scanner itself", () => {
 });
 
 describe("no literal JSX text", () => {
-  guard("customer pages and components render no literal text", () => {
+  it("customer pages and components render no literal text", () => {
     const hits = scan(customerTsxFiles());
     const worklist = formatWorklist(
       "literal JSX",

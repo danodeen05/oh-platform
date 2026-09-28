@@ -1870,7 +1870,7 @@ export async function registerCateringRoutes(app) {
           const dashboardUrl = `${WEB_BASE_URL}/en/catering/dashboard/${updatedBooking.bookingToken}`;
           const first = (event.contactName || "").split(" ")[0];
           const body =
-            `Hi${first ? " " + first : ""}! Your Oh! Beef Noodle Soup catering for ${event.clientCompany} is booked. 🎉\n\n` +
+            `Hi${first ? " " + first : ""}! Your Oh! Beef Noodle Soup catering for ${event.clientCompany} is booked.\n\n` +
             `Open your event dashboard to share the RSVP link and QR code with your group and track who's coming:\n${dashboardUrl}`;
           await sendSMS({ to: event.contactPhone, body });
         }

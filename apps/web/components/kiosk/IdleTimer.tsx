@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import { Icon } from '@/components/site/icons/Icon';
 
 // Default idle timeout: 45 seconds
 const DEFAULT_IDLE_TIMEOUT = 45000;
@@ -36,6 +38,7 @@ export function IdleTimer({
   onIdle,
   preserveParams = ['locationId'],
 }: IdleTimerProps) {
+  const t = useTranslations('kiosk.idle');
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -194,7 +197,7 @@ export function IdleTimer({
             fontSize: '3rem',
           }}
         >
-          ⏰
+          <Icon name="clock" size={48} />
         </div>
 
         <h2
@@ -205,7 +208,7 @@ export function IdleTimer({
             marginBottom: 16,
           }}
         >
-          Are you still there?
+          {t('title')}
         </h2>
 
         <p
@@ -215,11 +218,10 @@ export function IdleTimer({
             marginBottom: 32,
           }}
         >
-          Returning to start in{' '}
-          <span style={{ fontWeight: 700, color: '#f59e0b', fontSize: '1.5rem' }}>
-            {countdown}
-          </span>{' '}
-          seconds
+          {t.rich('countdown', {
+            seconds: countdown,
+            num: (chunks) => <span style={{ fontWeight: 700, color: '#f59e0b', fontSize: '1.5rem' }}>{chunks}</span>,
+          })}
         </p>
 
         <button
@@ -231,7 +233,7 @@ export function IdleTimer({
             fontSize: '1.25rem',
           }}
         >
-          I'm Still Here
+          {t('stillHere')}
         </button>
       </div>
     </div>

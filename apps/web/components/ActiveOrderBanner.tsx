@@ -3,6 +3,7 @@ import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { isOrderFlowPath, useActiveOrder } from "@/lib/site/active-order";
+import { Icon } from "@/components/site/icons/Icon";
 
 // Legacy chrome. The fetch and polling now live in lib/site/active-order.ts
 // (Task C4), shared with the site shell's ActiveOrderPill.
@@ -12,6 +13,7 @@ export default function ActiveOrderBanner() {
   const pathname = usePathname();
   const router = useRouter();
   const t = useTranslations("orderBanner");
+  const tCommon = useTranslations("common");
 
   // Don't show on order status page or order flow pages
   const isOrderPage = isOrderFlowPath(pathname);
@@ -64,14 +66,14 @@ export default function ActiveOrderBanner() {
           )
         }
       >
-        <div style={{ fontSize: "1.5rem" }}>🍜</div>
+        <Icon name="bowl" size={24} />
         <div>
           <div style={{ fontWeight: "bold", fontSize: "0.9rem" }}>
             {t("orderNumber", { number: activeOrder.kitchenOrderNumber || t("active") })}{" "}
             {activeOrder.podNumber && `• ${t("pod", { number: activeOrder.podNumber })}`}
           </div>
           <div style={{ fontSize: "0.75rem", opacity: 0.9 }}>
-            {getStatusText()} — {t("tapToView")}
+            {getStatusText()} · {t("tapToView")}
           </div>
         </div>
       </div>
@@ -94,7 +96,7 @@ export default function ActiveOrderBanner() {
           color: "white",
           fontSize: "1rem",
         }}
-        aria-label="Dismiss"
+        aria-label={tCommon("dismiss")}
       >
         ×
       </button>

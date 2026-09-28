@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { API_URL } from "@/lib/api";
 import { useSiteApi } from "@/lib/site/api";
+import { Icon } from "@/components/site/icons/Icon";
 
 type PhoneCollectionModalProps = {
   userId: string;
@@ -98,7 +99,9 @@ export function PhoneCollectionModal({
             textAlign: "center",
           }}
         >
-          <div style={{ fontSize: 32, marginBottom: 8 }}>📱</div>
+          <div style={{ marginBottom: 8, display: "flex", justifyContent: "center" }}>
+            <Icon name="bell" size={32} />
+          </div>
           <h2 style={{ margin: 0, fontSize: "1.3rem", fontWeight: 600 }}>
             {t("title")}
           </h2>

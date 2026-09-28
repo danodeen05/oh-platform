@@ -42,7 +42,8 @@ async function main() {
       isVegetarian: false,
       isVegan: false,
       isGlutenFree: false,
-      description: "Thirty years in the making. Tender beef brisket, slow-braised until it falls apart, ladled into a rich broth we simmer for a full 48 hours with star anise, ginger, and warm spices. Our signature bowl, made fresh at your event.",
+      // Task F1: the same English as prisma/seed-data/menu-copy.ts (the catering-era copy is retired).
+      description: "Sliced USDA Prime brisket, smoked low and slow, over our two-phase bone broth.",
     },
     {
       // The exact "(no beef)" substring triggers the kitchen red glow — do not change it
@@ -58,7 +59,7 @@ async function main() {
       isVegetarian: true,
       isVegan: true,
       isGlutenFree: false,
-      description: "All the warmth and aroma of our signature bowl, prepared without beef. A satisfying, vegan-friendly option so every guest can share in the same comforting bowl.",
+      description: "Our classic bowl and broth, made without the beef.",
     },
 
     // ----- Noodles (SIDE category) -----
@@ -86,7 +87,7 @@ async function main() {
       displayOrder: 11,
       spiceLevel: 0,
       isGlutenFree: true,
-      description: "The same broad, chewy noodle your guests love, made from rice and certified gluten free. No one has to sit this bowl out.",
+      description: "The same broad, chewy noodle, made from rice and certified gluten free.",
     },
     {
       name: "Thin/Flat Noodles",
@@ -99,7 +100,7 @@ async function main() {
       displayOrder: 12,
       spiceLevel: 0,
       isGlutenFree: false,
-      description: "Silky, delicate ribbons that drink up the broth and cook in moments. A lighter, elegant pick for guests who prefer a softer bite.",
+      description: "Thin, flat ribbons that soak up the broth and cook in moments. A lighter, softer bite.",
     },
     {
       name: "No Noodles",
@@ -112,7 +113,7 @@ async function main() {
       displayOrder: 13,
       spiceLevel: 0,
       isGlutenFree: false,
-      description: "Just the good stuff. A full bowl of our signature broth and toppings with the noodles left out, perfect for low-carb guests or anyone who came for the broth.",
+      description: "A full bowl of broth and toppings, with the noodles left out.",
     },
 
     // ----- Sliders (SLIDER category) -----

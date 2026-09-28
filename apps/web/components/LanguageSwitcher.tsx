@@ -1,6 +1,7 @@
 "use client";
 
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { Icon } from "@/components/site/icons/Icon";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 import { locales, localeNames, type Locale } from "@/i18n/config";
@@ -11,6 +12,7 @@ type LanguageSwitcherProps = {
 
 export default function LanguageSwitcher({ size = "normal" }: LanguageSwitcherProps) {
   const locale = useLocale();
+  const t = useTranslations("common");
   const router = useRouter();
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
@@ -63,9 +65,11 @@ export default function LanguageSwitcher({ size = "normal" }: LanguageSwitcherPr
           e.currentTarget.style.background = "transparent";
           e.currentTarget.style.color = isSmall ? "#999" : "#4a4a4a";
         }}
-        aria-label="Select language"
+        aria-label={t("selectLanguage")}
       >
-        <span style={{ fontSize: isSmall ? "0.75rem" : "1rem", marginRight: isSmall ? "2px" : "4px" }}>文A</span>
+        <span aria-hidden="true" style={{ display: "inline-flex", marginRight: isSmall ? "2px" : "4px" }}>
+          <Icon name="globe" size={isSmall ? 12 : 16} />
+        </span>
         <span>{localeNames[locale as Locale]}</span>
         <span style={{ fontSize: isSmall ? "0.55rem" : "0.7rem", marginLeft: isSmall ? "2px" : "4px" }}>▼</span>
       </button>

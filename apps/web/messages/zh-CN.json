@@ -42,12 +42,6 @@
     "successTitle": "成功",
     "warningTitle": "警告"
   },
-  "toast": {
-    "success": "成功",
-    "error": "错误",
-    "warning": "警告",
-    "info": "信息"
-  },
   "navigation": {
     "menu": "菜单",
     "locations": "门店地点",
@@ -72,7 +66,7 @@
     "signature": {
       "label": "我们的招牌",
       "title": "美国和牛牛肉面",
-      "description": "美国和牛与 USDA Prime 牛肉，低温慢熏，配上两段式牛骨高汤：先长时间熬煮，再为风味收尾。在您专属的私人包厢享用，永远不收小费。",
+      "description": "美国和牛与美国农业部极佳级牛肉，低温慢熏，配上两段式牛骨高汤：先长时间熬煮，再为风味收尾。在您专属的私人包厢享用，永远不收小费。",
       "stats": {
         "pods": "私人包厢",
         "grade": "牛肉等级",
@@ -91,7 +85,7 @@
       },
       "beef": {
         "title": "顶级牛肉",
-        "description": "美国和牛与 USDA Prime，低温慢熏，可选牛胸肉切片或牛肋肉块"
+        "description": "美国和牛与美国农业部极佳级牛肉，低温慢熏，可选牛胸肉切片或牛肋肉块"
       },
       "tech": {
         "title": "科技化体验",
@@ -129,7 +123,7 @@
       },
       "giveBack": {
         "title": "想要回馈社会？",
-        "description": "一双红袜子究竟蕴含多大的力量？让我们一起来发现。Walk with Us™，支持心理健康。",
+        "description": "一双红袜子究竟蕴含多大的力量？让我们一起来发现。与我们同行，支持心理健康。",
         "button": "与我们同行"
       }
     },
@@ -152,13 +146,13 @@
     },
     "meta": {
       "title": "Oh! 牛肉面：只为您而建的餐厅",
-      "description": "顶级美国牛肉面，在私人座舱里享用。无领位、无服务员、没有账单、不给小费。犹他州城溪中心与大学广场。"
+      "description": "顶级美国牛肉面，在私人包厢里享用。无领位、无服务员、没有账单、不给小费。犹他州城溪购物中心与大学广场。"
     },
     "chapters": "八个章节的故事",
     "arrive": {
-      "eyebrow": "牛肉面，在属于您的座舱里",
+      "eyebrow": "牛肉面，在属于您的包厢里",
       "title": "只为您而建的餐厅。",
-      "lede": "顶级美国牛肉配上两阶段汤头，从安静座舱的墙后送到您面前。无领位、无服务员、没有账单、不给小费。",
+      "lede": "顶级美国牛肉配上两阶段汤头，从安静包厢的墙后送到您面前。无领位、无服务员、没有账单、不给小费。",
       "order": "点一碗",
       "story": "看看到访流程"
     },
@@ -167,19 +161,19 @@
       "closed": "暂未营业",
       "until": "营业至 {time}",
       "openUntil": "营业至 {time}",
-      "podsFree": "{count, plural, =0 {暂无空座舱} other {# 个空座舱}}"
+      "podsFree": "{count, plural, =0 {暂无空包厢} other {# 个空包厢}}"
     },
     "walkIn": {
       "eyebrow": "走进来",
       "lines": {
         "one": "您走进来，没有人招呼您。",
         "two": "这是刻意的设计。",
-        "three": "空间安静，光线昏暗。一排又一排，座舱逐一映入眼帘。",
-        "four": "在点餐机上大约四十秒完成点餐，屏幕给您一个座舱号码。"
+        "three": "空间安静，光线昏暗。一排又一排，包厢逐一映入眼帘。",
+        "four": "在点餐机上大约四十秒完成点餐，屏幕给您一个包厢号码。"
       }
     },
     "pod": {
-      "eyebrow": "座舱",
+      "eyebrow": "包厢",
       "steps": {
         "a": {
           "title": "您坐下，整个空间消失了。",
@@ -249,10 +243,10 @@
     "locations": {
       "eyebrow": "两家分店",
       "title": "盐湖城市中心与奥勒姆。",
-      "lede": "同样的空间，同样的一碗。实时座舱与营业时间，直接来自厨房。",
+      "lede": "同样的空间，同样的一碗。实时包厢与营业时间，直接来自厨房。",
       "cards": {
         "cityCreek": {
-          "name": "城溪中心",
+          "name": "城溪购物中心",
           "area": "盐湖城市中心"
         },
         "universityPlace": {
@@ -266,14 +260,14 @@
       "directionsLabel": "前往{name}的路线，打开地图应用",
       "visit": "前往{name}",
       "final": {
-        "title": "您的座舱在等您。",
-        "body": "提前点餐，走进来，直接前往您的座舱。",
+        "title": "您的包厢在等您。",
+        "body": "提前点餐，走进来，直接前往您的包厢。",
         "order": "点一碗"
       }
     }
   },
   "footer": {
-    "copyright": "© {year} 哦！牛肉面。保留所有权利。",
+    "copyright": "{year} 哦！牛肉面。保留所有权利。",
     "links": {
       "accessibility": "无障碍服务",
       "contact": "联系我们",
@@ -281,7 +275,7 @@
     },
     "foundation": {
       "giveBack": "回馈社会",
-      "tagline": "支持我们的501(c)(3)慈善基金会 — One Red Step At A Time"
+      "tagline": "支持我们的 501(c)(3) 基金会：ONE RED STEP AT A TIME"
     }
   },
   "languages": {
@@ -291,173 +285,9 @@
     "es": "Español",
     "selectLanguage": "语言"
   },
-  "menu": {
-    "title": "我们的菜单",
-    "description": "探索我们精选的顶级牛肉面和配菜",
-    "loading": "加载菜单中...",
-    "error": {
-      "title": "无法加载菜单",
-      "tryAgain": "重试"
-    },
-    "categories": {
-      "soups": "汤品",
-      "noodles": "面条",
-      "addons": "加购",
-      "sides": "配菜",
-      "drinks": "饮品",
-      "desserts": "甜点"
-    },
-    "tags": {
-      "premium": "顶级",
-      "included": "已包含",
-      "signature": "招牌",
-      "complimentary": "免费",
-      "unlimitedRefills": "无限续杯"
-    },
-    "sections": {
-      "soup": {
-        "subtitle": "从我们的招牌汤底开始",
-        "description": "浓郁的两段式牛骨高汤：先长时间熬煮，再为风味收尾"
-      },
-      "noodles": {
-        "subtitle": "选择您的面条",
-        "description": "每日新鲜手工制作的面条"
-      },
-      "premiumAddons": {
-        "subtitle": "升级您的面碗",
-        "description": "顶级蛋白质和配料"
-      },
-      "sideDishes": {
-        "subtitle": "完善您的餐点",
-        "description": "传统配菜"
-      },
-      "dessert": {
-        "subtitle": "甜蜜结尾",
-        "description": "传统甜点为您的餐点画上句点"
-      }
-    },
-    "hero": {
-      "title": "我们的菜单",
-      "description": "用顶级美国牛肉与我们的两段式高汤，打造您完美的一碗",
-      "orderNow": "立即订购"
-    },
-    "difference": {
-      "title": "哦！的独特之处",
-      "description": "我们不只是另一家面店。我们正在重新定义用餐体验。",
-      "techFirst": {
-        "title": "科技优先体验",
-        "description": "提前点餐、跳过排队，享受无缝用餐体验"
-      },
-      "privatePods": {
-        "title": "私人用餐包厢",
-        "description": "在您专属的私人空间享用美食，远离干扰"
-      },
-      "seamlessService": {
-        "title": "无缝服务",
-        "description": "从点餐到付款，一切设计都为了方便"
-      },
-      "loyalty": {
-        "title": "回馈忠诚会员",
-        "description": "赚取积分、解锁奖励，每次光临都能升级"
-      }
-    },
-    "cta": {
-      "title": "准备好品尝最棒的一碗面了吗？",
-      "description": "提前点餐，跳过等待。完美的一碗面只需轻轻几点。",
-      "button": "开始点餐"
-    },
-    "dietary": {
-      "vegetarian": "素食",
-      "vegan": "纯素",
-      "glutenFree": "无麸质",
-      "spice": {
-        "level1": "微辣",
-        "level2": "中辣",
-        "level3": "特辣"
-      }
-    },
-    "allergen": {
-      "title": "过敏原信息",
-      "description": "我们的菜品在处理常见过敏原（包括小麦、大豆和鸡蛋）的厨房中制作。点餐时请告知我们的员工您的任何过敏或饮食限制。",
-      "spicyIndicator": "辣",
-      "contactUs": "如需详细的过敏原信息，请在点餐前联系我们。"
-    }
-  },
   "locations": {
     "title": "门店地点",
     "description": "寻找您附近的哦!门店",
-    "hours": "营业时间",
-    "weekday": "工作日",
-    "weekend": "周末",
-    "openNow": "营业中",
-    "upcomingCities": "即将进驻您的城市",
-    "loading": "加载门店中...",
-    "hero": {
-      "findUs": "找到我们",
-      "title": "门店地点",
-      "description": "在我们独特的门店体验哦！牛肉面"
-    },
-    "cityCreek": {
-      "tagline": "盐湖城市中心",
-      "description": "我们位于盐湖城市中心的旗舰店，提供独特的用餐体验，配备私人包厢和科技化点餐。",
-      "mallDescription": "City Creek Center是犹他州首屈一指的购物目的地，拥有超过100家商店和餐厅，在令人惊叹的露天环境中配备可伸缩的玻璃屋顶。",
-      "nearbyLandmarks": [
-        "圣殿广场",
-        "盐宫会议中心",
-        "犹他州议会大厦",
-        "Gateway购物中心"
-      ],
-      "parking": "在City Creek停车场免费停车，需验证"
-    },
-    "universityPlace": {
-      "tagline": "犹他谷",
-      "description": "为犹他谷社区提供同样卓越的品质和创新的用餐体验。",
-      "mallDescription": "University Place是奥勒姆充满活力的购物和娱乐中心，汇集全国连锁店和当地最爱，靠近犹他谷大学。",
-      "nearbyLandmarks": [
-        "犹他谷大学",
-        "普若佛峡谷",
-        "天波诺高斯洞穴",
-        "杨百翰大学"
-      ],
-      "parking": "University Place全区提供充足免费停车位"
-    },
-    "details": {
-      "address": "地址",
-      "hours": "营业时间",
-      "hoursWeekday": "周一至周六：上午11点 - 晚上9点",
-      "hoursSunday": "周日：休息",
-      "parking": "停车信息"
-    },
-    "about": {
-      "title": "关于",
-      "nearby": "附近景点"
-    },
-    "buttons": {
-      "orderAhead": "提前点餐",
-      "getDirections": "获取路线"
-    },
-    "features": {
-      "privatePods": "私人包厢",
-      "orderAhead": "提前点餐",
-      "noTipping": "免小费",
-      "accessible": "无障碍设施"
-    },
-    "ohWay": {
-      "label": "哦！风格",
-      "title": "不一样的用餐体验",
-      "kiosk": {
-        "title": "随心点餐",
-        "description": "使用我们的手机应用程序或店内自助点餐机跳过排队。您准备好时，餐点就准备好了。"
-      },
-      "pod": {
-        "title": "私人用餐包厢",
-        "description": "在您专属的私人空间享用美食。没有拥挤的餐桌，没有噪音——只有您和完美的一碗面。"
-      },
-      "noTips": {
-        "title": "无需小费",
-        "description": "您看到的价格就是您支付的价格。我们为团队支付具竞争力的薪资，让您无需担心小费。"
-      }
-    },
     "comingSoon": {
       "title": "即将开业",
       "description": "更多门店正在路上。",
@@ -469,14 +299,9 @@
         "丹佛"
       ]
     },
-    "cta": {
-      "title": "准备好品尝最棒的一碗面了吗？",
-      "description": "提前点餐，跳过等待。完美的一碗面只需几次点击。",
-      "button": "开始点餐"
-    },
     "meta": {
       "title": "门店位置",
-      "description": "Oh! 在犹他州的两家门店：盐湖城的 City Creek 和奥勒姆的 University Place。实时包厢、营业时间和路线。"
+      "description": "Oh! 在犹他州的两家门店：盐湖城的城溪购物中心（City Creek）和奥勒姆的大学广场（University Place）。实时包厢、营业时间和路线。"
     },
     "index": {
       "eyebrow": "找到我们",
@@ -529,8 +354,8 @@
     "places": {
       "cityCreek": {
         "tagline": "盐湖城市中心",
-        "intro": "我们的旗舰店，位于 City Creek Center 内。{pods} 个私人包厢分布在三排通道两侧，厨房就在后方。",
-        "parking": "City Creek 停车场免费停车，需盖章验证。",
+        "intro": "我们的旗舰店，位于城溪购物中心（City Creek Center）内。{pods} 个私人包厢分布在三排通道两侧，厨房就在后方。",
+        "parking": "城溪购物中心停车场免费停车，需盖章验证。",
         "nearby": [
           "圣殿广场",
           "盐宫会议中心",
@@ -540,8 +365,8 @@
       },
       "universityPlace": {
         "tagline": "犹他谷",
-        "intro": "位于奥勒姆的 University Place 内。{pods} 个私人包厢，同样的厨房，同样的汤头。",
-        "parking": "University Place 各处都有充足的免费停车位。",
+        "intro": "位于奥勒姆的大学广场（University Place）内。{pods} 个私人包厢，同样的厨房，同样的汤头。",
+        "parking": "大学广场各处都有充足的免费停车位。",
         "nearby": [
           "犹他谷大学",
           "杨百翰大学",
@@ -594,7 +419,7 @@
           "freePremiumBowl": "升级送免费顶级招牌面",
           "merchDrops": "会员价周边商品抢先购",
           "premiumAddons": "每季一份免费顶级加料",
-          "vipGift": "年度VIP礼物与表彰",
+          "vipGift": "年度贵宾礼物与表彰",
           "wallOfFame": "照片及签名订单上Oh!名人墙"
         }
       }
@@ -1027,7 +852,7 @@
         "freePremiumBowl": "升级送免费高级面",
         "merchDrops": "会员价周边商品抢先购",
         "premiumAddons": "每季一份免费顶级加料",
-        "vipGift": "年度 VIP 礼物与表彰",
+        "vipGift": "年度贵宾礼物与表彰",
         "wallOfFame": "照片和签名订单上 Oh! 名人墙"
       }
     },
@@ -1042,7 +867,7 @@
       "freeBowlUpgrade": "升级送免费招牌面",
       "merchandiseDrops": "会员价周边商品抢先购",
       "premiumAddons": "每季一份免费顶级加料",
-      "vipGift": "年度 VIP 礼物与表彰"
+      "vipGift": "年度贵宾礼物与表彰"
     },
     "badges": {
       "first-order": {
@@ -1098,7 +923,7 @@
         "description": "盛大开幕时加入的会员"
       },
       "vip": {
-        "name": "VIP",
+        "name": "贵宾",
         "description": "达到牛肉达人等级"
       },
       "lunch-regular": {
@@ -1261,7 +1086,6 @@
       "deliveryNote": "你付款后，我们会立即发出卡片。",
       "summaryTitle": "你的礼物",
       "to": "给 {name}",
-      "giftCard": "礼品卡",
       "giftCardFace": "礼品卡，{face}",
       "editAmount": "更改 {amount}",
       "total": "合计",
@@ -1279,7 +1103,6 @@
       "cardGeneric": "卡片",
       "secure": "付款由 Stripe 处理，我们看不到你的卡号。",
       "loading": "加载中",
-      "finishing": "正在完成你的礼品卡",
       "required": "必填",
       "invalidEmail": "请输入完整的电子邮件地址。",
       "fixFields": "请填写标出的字段。",
@@ -1714,7 +1537,8 @@
       "creditEvents": {
         "cashback": "订单 {percent}% 返现",
         "appliedToOrder": "已用于订单 {orderId}"
-      }
+      },
+      "emailPlaceholder": "电子邮箱地址"
     }
   },
   "contact": {
@@ -1785,9 +1609,9 @@
           "title": "自动收集的信息",
           "items": [
             "设备信息（类型、操作系统、浏览器）",
-            "IP地址和位置数据",
+            "IP 地址和位置数据",
             "使用数据（浏览的页面、使用的功能）",
-            "Cookie和类似跟踪技术"
+            "小型数据文件和类似的跟踪技术"
           ]
         }
       },
@@ -1826,8 +1650,8 @@
         ]
       },
       "cookies": {
-        "title": "Cookie",
-        "content": "我们使用Cookie和类似技术来增强您的体验、分析使用情况并协助我们的营销工作。您可以通过浏览器控制Cookie设置。"
+        "title": "小型数据文件",
+        "content": "我们使用小型数据文件和类似技术来改善您的体验、分析使用情况，并协助我们的营销工作。您可以在浏览器中管理这些设置。"
       },
       "children": {
         "title": "儿童隐私",
@@ -1846,7 +1670,7 @@
         "intro": "我们会通过短信发送与您订单相关的交易通知：",
         "messageTypes": [
           "订单确认，包含订单号和二维码",
-          "包间准备好时的通知",
+          "包厢准备好时的通知",
           "等候期间的排队位置更新",
           "外带订单完成时的取餐通知"
         ],
@@ -1866,7 +1690,7 @@
     },
     "website": {
       "title": "网站无障碍",
-      "intro": "我们努力确保网站符合WCAG 2.1 AA级标准。我们持续的无障碍工作包括：",
+      "intro": "我们努力让网站符合《网页内容无障碍指南》2.1 版 AA 级标准。我们持续开展的无障碍工作包括：",
       "items": [
         "所有互动元素支持键盘导航",
         "清晰一致的标题结构",
@@ -1880,10 +1704,10 @@
       "title": "餐厅无障碍",
       "intro": "我们的实体店面在设计时考虑了无障碍需求：",
       "items": [
-        "轮椅可进入的入口和用餐区",
-        "符合ADA标准的洗手间设施",
+        "轮椅可通行的入口和用餐区",
+        "符合《美国残疾人法案》标准的洗手间",
         "无障碍私人用餐包厢",
-        "清晰的标志和指引",
+        "清晰的标识和指引",
         "可应要求提供协助"
       ]
     },
@@ -1903,7 +1727,7 @@
   "orderBanner": {
     "orderNumber": "订单 #{number}",
     "active": "进行中",
-    "pod": "包间 {number}",
+    "pod": "包厢 {number}",
     "tapToView": "点击查看状态",
     "status": {
       "placed": "订单已下",
@@ -1914,128 +1738,7 @@
       "enjoy": "请享用！"
     }
   },
-  "auth": {
-    "loading": "加载中...",
-    "readyToOrder": "准备好点餐了吗？",
-    "createAccount": "创建免费账户，立即开始赚取奖励。",
-    "signInButton": "登录 / 注册",
-    "or": "或",
-    "continueAsGuest": "以访客身份继续",
-    "guestWarning": "访客结账快速，但您无法赚取忠诚积分或保存收藏。",
-    "benefits": {
-      "cashback": "1% 现金返还",
-      "cashbackSubtitle": "包含此订单！",
-      "referral": "$5 推荐奖励",
-      "referralSubtitle": "您和朋友都能获得",
-      "earlyAccess": "抢先体验",
-      "earlyAccessSubtitle": "新菜品"
-    }
-  },
   "orderStatus": {
-    "pageTitle": "订单状态",
-    "loading": "加载订单状态中...",
-    "noOrderCode": "未提供订单代码",
-    "orderNotFound": "找不到订单",
-    "placeNewOrder": "新增订单",
-    "statusUpdates": "状态每5秒自动更新",
-    "orderNumber": "订单 #{number}",
-    "status": {
-      "pending": "待付款",
-      "paid": "已付款",
-      "queued": "排队中",
-      "prepping": "准备中",
-      "ready": "准备送餐",
-      "serving": "请享用！",
-      "completed": "已完成",
-      "doneEating": "用餐完毕？"
-    },
-    "pod": {
-      "yourPod": "您的包间",
-      "podNumber": "包间 {number}",
-      "confirmArrival": "前往您的包间并确认到达",
-      "checkedIn": "您已报到！",
-      "staffNotified": "已通知服务人员",
-      "calling": "呼叫中..."
-    },
-    "queue": {
-      "position": "排队位置",
-      "estimatedWait": "预计等待：{minutes} 分钟",
-      "notifyWhenReady": "包间准备好时我们会通知您！"
-    },
-    "timeline": {
-      "title": "订单时间线",
-      "paid": "已付款",
-      "checkedIn": "已报到",
-      "orderStarted": "开始制作",
-      "qualityCheck": "品质检查",
-      "delivered": "已送达",
-      "totalTime": "总时间"
-    },
-    "sections": {
-      "theBowl": "汤面",
-      "addOnsExtras": "加料与配菜",
-      "location": "地点"
-    },
-    "buttons": {
-      "viewProfile": "查看我的档案",
-      "orderAgain": "再次订购",
-      "doneEating": "我吃完了",
-      "addToOrder": "加点",
-      "callStaff": "呼叫服务员",
-      "addItems": "加点",
-      "confirmAtPod": "确认我已到包间"
-    },
-    "location": "地点",
-    "confirmations": {
-      "finishedEating": "您用餐完毕了吗？这将通知服务人员清理您的包间。"
-    },
-    "errors": {
-      "markDone": "无法标记完成，请重试。"
-    },
-    "doneEating": {
-      "confirmPrompt": "您用餐完毕了吗？这将通知服务人员清理您的包间。",
-      "failedToUpdate": "更新失败，请重试。"
-    },
-    "dessert": {
-      "readyForDessert": "准备享用甜点",
-      "onItsWay": "甜点已在路上！",
-      "notifying": "通知中..."
-    },
-    "addItems": {
-      "title": "加点",
-      "loading": "加载可选项目中...",
-      "drinkRefills": "饮料续杯",
-      "requestRefill": "要求续杯 →",
-      "request": "要求 →",
-      "requesting": "要求中...",
-      "waterRefill": "水续杯",
-      "extrasAndAddons": "加料与配菜",
-      "requestExtras": "要求 {count} 份加料",
-      "paidAddons": "加料与配菜",
-      "orderTotal": "订单总计",
-      "checkout": "结账 →",
-      "demoMode": "演示模式：不会实际收费",
-      "cancel": "取消",
-      "pay": "支付 {amount}",
-      "processing": "处理中...",
-      "free": "免费",
-      "paid": "付费",
-      "add": "添加",
-      "noAddons": "此订单无可加点项目。",
-      "callStaffInstead": "改为呼叫服务员",
-      "failedToLoad": "加载加点项目失败，请重试或呼叫服务员。"
-    },
-    "autoRefresh": "状态每 10 秒自动更新",
-    "mentalHealth": {
-      "label": "心理健康很重要",
-      "loading": "加载心理健康信息中...",
-      "skipTip": "不用给小费，改为做点好事。",
-      "supportCause": "支持公益",
-      "foundation": "One Red Step at a Time 基金会 • 501(c)(3)"
-    },
-    "demo": {
-      "banner": "实时演示 · 非真实订单"
-    },
     "lines": {
       "feed": {
         "label": "厨房实时动态",
@@ -2078,105 +1781,6 @@
       }
     }
   },
-  "features": {
-    "fortuneCookie": {
-      "title": "您的数字幸运饼干",
-      "subtitle": "等待时，打开您的个性化运势",
-      "crackOpen": "打开它",
-      "loading": "解读您的运势中...",
-      "luckyNumbers": "幸运数字",
-      "thisDay": "历史上的今天 ({year})",
-      "learnChinese": "学中文",
-      "unavailable": "运势暂时无法显示 - 但您的餐点一定很棒！"
-    },
-    "roast": {
-      "title": "吐槽区",
-      "subtitle": "想听听我们对您点餐选择的（搞笑）真实评论吗？",
-      "button": "吐槽我的订单",
-      "loading": "分析您的人生选择中...",
-      "highlights": "我们注意到的：",
-      "unavailable": "吐槽师傅休息中。您的订单应该没问题。应该吧。"
-    },
-    "backstory": {
-      "title": "幕后故事",
-      "subtitle": "想知道您食材的秘密生活吗？",
-      "button": "告诉我一切",
-      "loading": "挖掘八卦中...",
-      "heading": "不为人知的故事",
-      "unavailable": "食材们选择保持匿名。神秘的一群。"
-    },
-    "kitchen": {
-      "label": "厨房直播",
-      "listening": "聆听厨房中...",
-      "quiet": "厨房异常安静。他们在策划什么。"
-    }
-  },
-  "payment": {
-    "pageTitle": "完成您的订单",
-    "orderNumber": "订单 #{number}",
-    "invalidOrder": "无效订单",
-    "missingInformation": "缺少订单信息",
-    "orderNotFound": "找不到订单",
-    "couldNotFind": "我们找不到此订单",
-    "startNewOrder": "开始新订单",
-    "readyBy": "预计完成时间",
-    "total": "总计",
-    "processing": "处理中...",
-    "payNow": "立即付款",
-    "testMode": "测试模式 - 不会实际收费",
-    "theBowl": "面碗",
-    "addOnsExtras": "加购与配菜",
-    "qty": "数量：{count}",
-    "loading": "加载中...",
-    "subtotal": "小计",
-    "tax": "税金",
-    "creditsApplied": "已使用积分",
-    "payAmount": "支付 ${amount}",
-    "processingPayment": "付款处理中...",
-    "secureCheckout": "安全结账由 Stripe 提供",
-    "paymentMethod": "付款方式",
-    "testPayment": "测试付款",
-    "demoMode": "演示模式 - 不会实际收费",
-    "demoWarning": "这是演示付款。真正的 Stripe 集成即将推出！",
-    "availableCredits": "可用积分",
-    "youHaveCredits": "您有 <bold>${amount}</bold> 积分",
-    "maxCreditsNote": "每笔订单最多可使用 $5 积分",
-    "applyToOrder": "使用 ${amount} 于此订单",
-    "welcomeReferred": "欢迎！您已被推荐",
-    "referralCreditsNote": "您获得 ${amount} 积分可用于此订单",
-    "referralAlreadyUsed": "推荐积分已使用",
-    "referralAlreadyUsedNote": "感谢您再次光临！推荐积分仅适用于您的首次订单。您仍可通过您的个人推荐链接推荐朋友来赚取积分。",
-    "loadingAccount": "正在加载您的账户和奖励...",
-    "signInToComplete": "登录以完成订单",
-    "signInDescription": "您需要登录以追踪订单、赚取奖励和使用推荐积分。",
-    "referralDiscountWaiting": "您有推荐折扣等待使用！",
-    "signInSignUp": "登录 / 注册",
-    "guestCheckout": "访客结账",
-    "guestCheckoutDescription": "请输入您的姓名以便我们准备您的订单。",
-    "name": "姓名",
-    "phone": "电话",
-    "email": "电子邮件",
-    "optional": "选填",
-    "yourName": "您的姓名",
-    "forOrderUpdates": "用于订单更新",
-    "invalidPhone": "请输入有效的电话号码，或留空",
-    "forReceipt": "用于收据",
-    "enterYourName": "请输入您的姓名",
-    "wantToEarnRewards": "想要赚取奖励并追踪订单吗？",
-    "signInInstead": "改为登录",
-    "waitLoadingAccount": "请稍候，正在加载您的账户...",
-    "errorCodes": {
-      "CREDIT_SHORT": "你的积分余额已变更，请确认总额后再试一次。",
-      "GIFT_CARD_SHORT": "你的礼品卡余额已变更，请确认总额后再试一次。",
-      "MEAL_GIFT_UNAVAILABLE": "这份爱心餐已无法使用。",
-      "REWARD_UNAVAILABLE": "这项奖励已无法使用。",
-      "PAYMENT_NOT_VERIFIED": "我们尚未确认你的付款。若已扣款，请向店员出示此画面。",
-      "ORDER_FAILED": "无法完成订单，请再试一次。",
-      "QUOTE_CHANGED": "你的订单总额已变更，请确认后再试一次。",
-      "REFUNDED": "我们无法使用你的付款，款项已全额退回你的卡。请再试一次。",
-      "GROUP_CHANGED": "本组部分订单已付款或有变动。请查看小组后重试。"
-    }
-  },
   "groupOrder": {
     "notFound": "找不到群组",
     "notFoundMessage": "群组代码「{code}」不存在或已过期。",
@@ -2206,103 +1810,6 @@
       "refunded": "我们无法使用这笔付款，已全额退回您的银行卡。请重试。",
       "failed": "无法完成团体付款。请重试。"
     }
-  },
-  "social": {
-    "instagram": "Instagram",
-    "twitter": "X (Twitter)",
-    "facebook": "Facebook",
-    "tiktok": "TikTok",
-    "yelp": "Yelp",
-    "tripadvisor": "TripAdvisor",
-    "youtube": "YouTube",
-    "linkedin": "LinkedIn",
-    "email": "电子邮件"
-  },
-  "checkIn": {
-    "title": "自助报到机",
-    "subtitle": "扫描或输入您的订单二维码以获取座位分配",
-    "howToTitle": "如何报到：",
-    "step1": "找到您的订单二维码（在订单确认页面上）",
-    "step2": "使用报到机扫描或在下方输入代码",
-    "step3": "获取座位分配或排队位置",
-    "qrCodeLabel": "订单二维码：",
-    "qrCodePlaceholder": "ORDER-xxpmm5hf-1234567890-ABC123",
-    "checkInButton": "报到",
-    "checkingIn": "报到中...",
-    "needHelp": "需要帮助？",
-    "helpTip1": "您的二维码在订单确认页面上",
-    "helpTip2": "它以「ORDER-」开头，后面是数字和字母",
-    "helpTip3": "如需协助，请询问工作人员",
-    "loading": "加载中..."
-  },
-  "scan": {
-    "title": "确认抵达包间",
-    "subtitle": "在您的指定包间扫描或输入订单二维码",
-    "assignedPod": "您的指定包间",
-    "podNumber": "包间 {number}",
-    "qrCodeLabel": "您的订单二维码：",
-    "qrCodeHint": "与订单确认页上的二维码相同",
-    "qrCodePlaceholder": "ORDER-xxpmm5hf-1234567890-ABC123",
-    "enterQrCodeError": "请扫描或输入您的订单二维码",
-    "confirmFailed": "确认包间抵达失败",
-    "networkError": "网络错误，请重试。",
-    "confirming": "确认中...",
-    "confirmButton": "确认我已到达包间",
-    "whatThisDoes": "这会做什么",
-    "helpList": {
-      "confirms": "确认您已抵达指定包间",
-      "notifies": "通知厨房开始准备您的餐点",
-      "realtime": "您将在屏幕上看到实时状态更新"
-    },
-    "backToStatus": "返回订单状态",
-    "success": {
-      "title": "包间已确认！",
-      "message": "您的餐点正在准备中"
-    },
-    "loading": "加载中..."
-  },
-  "confirmation": {
-    "title": "订单已确认！",
-    "orderNumber": "订单 #{number}",
-    "thankYou": "感谢您的订购",
-    "whatNext": "接下来呢？",
-    "checkInInstructions": "前往餐厅，在自助机报到或扫描指定包间的 QR 码。",
-    "viewStatus": "查看订单状态",
-    "simulateCheckIn": "模拟报到（演示）",
-    "checkingIn": "报到中...",
-    "groupOrderNote": "这是包含 {count} 份订单的群组订单。",
-    "paidStatus": "付款完成",
-    "paymentSuccessful": "付款成功",
-    "paymentConfirmed": "您的 {amount} 付款已确认",
-    "paymentPending": "付款处理中",
-    "paymentProcessing": "您的付款正在处理中",
-    "yourOrderQrCode": "您的订单二维码",
-    "scanAtKiosk": "到达时请在自助机扫描此码以获取包间分配",
-    "expectedArrival": "预计到达时间：{time}",
-    "host": "主揪",
-    "guest": "宾客 {number}",
-    "podNumber": "包间 {number}",
-    "noPodYet": "尚未分配包间",
-    "checkInThisOrder": "此订单报到",
-    "assignedToPod": "已分配至包间 {number} - 等待到达",
-    "checkedInAtPod": "已在包间 {number} 报到",
-    "orderLabel": "订单",
-    "subtotal": "小计",
-    "tax": "税金",
-    "total": "总计",
-    "qty": "数量：{count}",
-    "trackOrderStatus": "追踪订单状态",
-    "shareYourOrder": "分享您的订单！",
-    "spreadTheWord": "分享给朋友并赚取奖励",
-    "copied": "已复制！",
-    "copy": "复制",
-    "shareVia": "分享至...",
-    "twitter": "推特",
-    "facebook": "脸书",
-    "linkedin": "领英",
-    "referralNote": "已包含您的推荐链接！朋友首次订购可享 $5 折扣。当他们完成 $20 以上订单时，您即刻获得 $5。",
-    "backToHome": "返回首页",
-    "loadingOrder": "加载订单中..."
   },
   "mealGift": {
     "title": "请陌生人吃饭",
@@ -2395,7 +1902,8 @@
     "payment": {
       "giftApplied": "餐食礼物已应用",
       "giftExcess": "礼物余额 → 您的积分"
-    }
+    },
+    "quotedMessage": "“{message}”"
   },
   "challenges": {
     "mealForStranger": {
@@ -2424,13 +1932,22 @@
       "title": "在线订单签到",
       "subtitle": "扫描订单二维码或输入订单号",
       "manualEntry": "手动输入订单号",
-      "placeholder": "输入订单号（如 ORD-1234...）",
+      "placeholder": "输入订单号",
       "findOrder": "查找订单",
       "lookingUp": "正在查找...",
       "backToScanner": "返回扫描",
       "orderNotFound": "未找到订单，请检查订单号。",
       "somethingWrong": "出现错误，请重试。",
-      "unableToConnect": "无法连接，请重试。"
+      "unableToConnect": "无法连接，请重试。",
+      "selectOrder": "您有多个进行中的订单。要为哪一单签到？",
+      "redirectingIn": "{seconds} 秒后返回首页...",
+      "alreadyCheckedInTitle": "{name}，您已完成签到。",
+      "alreadyCheckedInMessage": "这个订单已完成签到。请前往您的包厢，餐点很快就会送到。",
+      "moreItems": "还有 {count} 项",
+      "guest": "贵宾",
+      "camera": "摄像头",
+      "scanHeading": "在线订单签到",
+      "scanBody": "请扫描会员二维码或订单二维码。"
     },
     "qrScanner": {
       "cameraNotAvailable": "摄像头不可用",
@@ -2439,6 +1956,7 @@
     },
     "pod": {
       "proceedTo": "请前往",
+      "yourPod": "您的包厢",
       "podNumber": "{number}号包厢",
       "foodBeingPrepared": "您的餐食正在准备中，稍后将送至您的包厢。",
       "welcome": "欢迎，{name}！",
@@ -2486,8 +2004,8 @@
     },
     "staff": {
       "staffAccess": "员工入口",
-      "enterPin": "输入PIN码退出自助点餐模式",
-      "incorrectPin": "PIN码错误，请重试。",
+      "enterPin": "输入员工密码以退出自助点餐模式",
+      "incorrectPin": "密码错误，请重试。",
       "clear": "清除"
     },
     "setup": {
@@ -2508,6 +2026,13 @@
       "orderNotFound": "未找到订单",
       "failedToLoad": "加载订单详情失败",
       "oops": "哎呀！",
+      "alreadyCheckedIn": "这个订单已完成签到。",
+      "orderNotPaid": "这个订单还没有付款。",
+      "noActiveOrders": "您的账户在这家门店没有进行中的订单。",
+      "noActiveOrdersForMember": "{name}，您好。我们在这家门店没有找到您进行中的订单。",
+      "memberNotFound": "未找到会员信息，请重新扫码。",
+      "tryAgain": "重试",
+      "scanDifferentCode": "扫描其他码",
       "deviceNotAuthorized": "此自助机尚未设置会员签到。请向工作人员寻求帮助。"
     },
     "loading": "正在加载您的订单...",
@@ -2589,7 +2114,39 @@
       "autoAssignPod": "自动分配包厢",
       "restrooms": "洗手间",
       "store": "商店",
-      "tapRowThenPod": "先点一排，再点您的座位。"
+      "tapRowThenPod": "先点一排，再点您的座位。",
+      "complimentary": "免费赠送",
+      "includedCount": "含 {count} 份",
+      "eachExtra": "每加一份"
+    },
+    "paymentScreen": {
+      "totalAmount": "合计",
+      "preparing": "正在准备付款",
+      "pleaseWait": "请稍候。",
+      "tapInsertSwipe": "请挥卡、插卡或刷卡",
+      "demoHint": "点击下方按钮，用演示卡付款。",
+      "demoTap": "挥卡付款",
+      "demoNote": "仅供演示，不会实际扣款。",
+      "useReader": "请使用下方的读卡器。",
+      "processing": "正在处理付款",
+      "keepCard": "请稍候，先不要拔出卡片。",
+      "success": "付款完成",
+      "redirecting": "正在前往下一步。",
+      "failed": "付款没有成功",
+      "failedBody": "请重试，或换一张卡。",
+      "cancel": "取消并返回"
+    },
+    "idle": {
+      "title": "您还在吗？",
+      "countdown": "<num>{seconds}</num> 秒后返回开始页面。",
+      "stillHere": "我还在"
+    },
+    "qr": {
+      "scanToOrder": "扫码在线点餐"
+    },
+    "keyboard": {
+      "clear": "清除",
+      "space": "空格"
     },
     "signUp": {
       "title": "本单即可赚取奖励！",
@@ -2599,7 +2156,7 @@
       "benefit3": "解锁徽章并完成挑战",
       "benefit4": "获得会员专属奖励和福利",
       "button": "注册并赚取奖励",
-      "modalTitle": "加入 Oh! Rewards",
+      "modalTitle": "加入 Oh! 会员",
       "modalSubtitle": "将此订单关联到您的新账户",
       "thisOrder": "此订单",
       "willBeLinked": "将关联到您的账户",
@@ -2846,8 +2403,8 @@
         "label": "为你的订单付款",
         "amountLabel": "应付金额",
         "order": "订单 #{number}",
-        "pod": "座舱 {pod}",
-        "podLater": "签到时安排座舱",
+        "pod": "包厢 {pod}",
+        "podLater": "签到时安排包厢",
         "or": "或用银行卡付款",
         "payButton": "付款 {amount}",
         "paying": "付款中",
@@ -2855,8 +2412,8 @@
         "loading": "正在加载安全支付",
         "secure": "卡片信息直接交给 Stripe，Chappy 看不到。",
         "paidTitle": "已付款",
-        "paidNote": "已付款。订单 #{number}，座舱 {pod}。",
-        "paidNoteNoPod": "已付款。订单 #{number}。签到时会安排座舱。",
+        "paidNote": "已付款。订单 #{number}，包厢 {pod}。",
+        "paidNoteNoPod": "已付款。订单 #{number}。签到时会安排包厢。",
         "failed": "这笔付款没有成功，你的卡没有被扣款。",
         "confirmFailed": "付款已完成，但订单还没确认。请再试一次。",
         "refunded": "订单无法成立，款项已全额退回。",
@@ -2889,8 +2446,8 @@
         "title": "店员正在过去",
         "body": "有人正前往你的座位。",
         "label": "呼叫服务人员",
-        "bodyPod": "服务人员正前往座舱 {pod}。",
-        "again": "服务人员已经知道了，正前往座舱 {pod}。",
+        "bodyPod": "服务人员正前往包厢 {pod}。",
+        "again": "服务人员已经知道了，正前往包厢 {pod}。",
         "againNoPod": "服务人员已经知道了，正在路上。"
       },
       "supportCase": {
@@ -2920,9 +2477,9 @@
         "due": "应付",
         "arrival": "{time} 到店",
         "asap": "尽快到店",
-        "pod": "座舱 {pod}",
-        "podBest": "最佳空座舱",
-        "podCheckIn": "签到时安排座舱",
+        "pod": "包厢 {pod}",
+        "podBest": "最佳空包厢",
+        "podCheckIn": "签到时安排包厢",
         "party": "{count} 位",
         "item": "餐品",
         "included": "已含"
@@ -2942,7 +2499,7 @@
         "label": "订单状态",
         "title": "订单 #{number}",
         "titleNoNumber": "你的订单",
-        "pod": "座舱 {pod}",
+        "pod": "包厢 {pod}",
         "open": "查看订单状态",
         "progress": "第 {step} 步，共 {total} 步",
         "stages": {
@@ -3659,7 +3216,7 @@
     "language": {
       "title": "同意文字原文",
       "intro": "以下文字会显示在同意复选框旁：",
-      "quote": "我同意接收 Oh Beef Noodle Soup 发送的订单相关短信（订单确认和取餐通知）。短信频率不定，可能产生短信和流量费用。回复 STOP 即可退订。"
+      "quote": "我同意接收 Oh! Beef Noodle Soup 发送的订单相关短信（订单确认和取餐通知）。短信频率不定，可能产生短信和流量费用。回复 STOP 即可退订。"
     },
     "types": {
       "title": "短信类型（仅限交易通知）",
@@ -3881,7 +3438,7 @@
       "location": "门店",
       "bowl": "面碗",
       "arrival": "到达",
-      "pod": "座舱",
+      "pod": "包厢",
       "savings": "优惠",
       "pay": "付款"
     },
@@ -3897,7 +3454,7 @@
     "alreadyPaidNotice": "这笔订单已付款，正在带您前往。",
     "location": {
       "title": "您要在哪里用餐？",
-      "lede": "选择门店，您的座舱将为您准备好。",
+      "lede": "选择门店，您的包厢将为您准备好。",
       "open": "营业中",
       "closedNow": "目前休息",
       "orderingPaused": "暂停在线点餐",
@@ -3951,31 +3508,31 @@
       "change": "选择时间"
     },
     "pod": {
-      "title": "您的座舱",
-      "lede": "属于您的安静座舱，餐点从专属窗口送上。",
+      "title": "您的包厢",
+      "lede": "属于您的安静包厢，餐点从专属窗口送上。",
       "party": "几位用餐？",
       "partyOne": "只有我",
       "partyTwo": "我们两位",
-      "partyTwoNote": "两位将并肩共用双人座舱。",
-      "best": "为您挑选最佳座舱",
-      "bestNote": "结账时我们会为您挑选离入口最近的空座舱。",
+      "partyTwoNote": "两位将并肩共用双人包厢。",
+      "best": "为您挑选最佳包厢",
+      "bestNote": "结账时我们会为您挑选离入口最近的空包厢。",
       "pick": "自己选择",
-      "pickNote": "在地图上选择座舱。",
-      "picked": "座舱 {label}",
+      "pickNote": "在地图上选择包厢。",
+      "picked": "包厢 {label}",
       "change": "点一下即可更换。",
-      "sheetTitle": "选择座舱",
+      "sheetTitle": "选择包厢",
       "close": "关闭",
-      "freeCount": "{count} 个座舱空着",
-      "noPods": "目前没有空座舱。选择最佳座舱，我们会按排队顺序为您安排。",
-      "mapError": "无法加载座舱，请再试一次。",
-      "loadingMap": "正在加载座舱",
-      "taken": "座舱 {label} 刚被选走，请选择其他座舱。",
-      "confirm": "使用座舱 {label}",
-      "confirmNone": "点选座舱即可选择"
+      "freeCount": "{count} 个包厢空着",
+      "noPods": "目前没有空包厢。选择最佳包厢，我们会按排队顺序为您安排。",
+      "mapError": "无法加载包厢，请再试一次。",
+      "loadingMap": "正在加载包厢",
+      "taken": "包厢 {label} 刚被选走，请选择其他包厢。",
+      "confirm": "使用包厢 {label}",
+      "confirmNone": "点选包厢即可选择"
     },
     "signIn": {
       "title": "登录后点餐",
-      "body": "您的订单、座舱与奖励都保存在账户中。登录期间，您的面碗会保留着。",
+      "body": "您的订单、包厢与奖励都保存在账户中。登录期间，您的面碗会保留着。",
       "cta": "登录",
       "create": "第一次来？创建账户"
     },
@@ -4024,18 +3581,18 @@
     "pay": {
       "title": "付款",
       "lede": "订单尾号 {number}",
-      "podTitle": "您的座舱",
-      "podLabel": "座舱 {label}",
+      "podTitle": "您的包厢",
+      "podLabel": "包厢 {label}",
       "podSteps": "距离入口 {steps} 步",
       "podNearest": "最靠近入口",
-      "podLater": "您到达后，我们会按排队顺序安排座舱。",
+      "podLater": "您到达后，我们会按排队顺序安排包厢。",
       "refunded": "已全额退款至您的卡。",
       "retry": "再试一次",
       "payCta": "支付 {amount}",
       "free": "提交订单",
       "freeTitle": "无需付款",
       "cardTitle": "付款方式",
-      "freeNote": "您的优惠已抵扣整笔订单。提交后我们会为您保留座舱。",
+      "freeNote": "您的优惠已抵扣整笔订单。提交后我们会为您保留包厢。",
       "processing": "处理中",
       "orPayWithCard": "或使用银行卡付款",
       "savedCards": "已保存的卡",
@@ -4055,7 +3612,7 @@
       "DINE_IN_DISABLED": "在线点餐暂停中，欢迎亲自到店。",
       "ORDERING_CLOSED": "目前不接受在线点餐。",
       "ARRIVAL_INVALID": "这个到达时间已无法选择。",
-      "POD_UNAVAILABLE": "该座舱刚被选走，已为您改为最佳空座舱。准备好后请继续。",
+      "POD_UNAVAILABLE": "该包厢刚被选走，已为您改为最佳空包厢。准备好后请继续。",
       "ITEM_UNAVAILABLE": "您选的品项刚售完，请重新确认。",
       "ITEM_NOT_RELEASED": "您选的某个品项尚未开放点餐。",
       "INVALID_QUANTITY": "某个数量不符合规定。",
@@ -4295,7 +3852,7 @@
     "description": "添加手机号码，即可通过短信收到订单状态通知，包括餐点完成时。",
     "phoneLabel": "手机号码",
     "phonePlaceholder": "(555) 555-5555",
-    "smsConsent": "我同意接收 Oh Beef Noodle Soup 关于我的订单的短信（订单确认与餐点完成通知）。发送频率不定，可能产生短信与流量费用。回复 STOP 即可退订。",
+    "smsConsent": "我同意接收 Oh! Beef Noodle Soup 关于我的订单的短信（订单确认与餐点完成通知）。发送频率不定，可能产生短信与流量费用。回复 STOP 即可退订。",
     "privacyPolicy": "隐私政策",
     "savePhone": "保存并接收通知",
     "saving": "保存中...",
@@ -4308,8 +3865,8 @@
   "afterOrder": {
     "common": {
       "orderNumber": "订单 {number}",
-      "podNumber": "座舱 {label}",
-      "yourPod": "你的座舱",
+      "podNumber": "包厢 {label}",
+      "yourPod": "你的包厢",
       "loading": "正在加载你的订单",
       "notFound": "找不到这笔订单",
       "notFoundLede": "请检查链接，或开始新订单。",
@@ -4318,9 +3875,9 @@
       "retry": "再试一次",
       "newOrder": "开始点餐",
       "demo": "实时演示，并非真实订单。",
-      "podMoved": "你的座舱已改为 {to}。",
-      "podMovedLede": "{from} 在你完成付款前已被占用，所以我们为你保留了下一个最佳座舱。",
-      "podNone": "你付款时没有空座舱。到店后请报到，我们会为你安排座位。",
+      "podMoved": "你的包厢已改为 {to}。",
+      "podMovedLede": "{from} 在你完成付款前已被占用，所以我们为你保留了下一个最佳包厢。",
+      "podNone": "你付款时没有空包厢。到店后请报到，我们会为你安排座位。",
       "qty": "x {count}",
       "needHelp": "需要帮助吗？",
       "askChappy": "问问 Chappy",
@@ -4351,7 +3908,7 @@
         },
         "READY": {
           "title": "快好了",
-          "lede": "你的面通过最后检查，正送往你的座舱。"
+          "lede": "你的面通过最后检查，正送往你的包厢。"
         },
         "SERVING": {
           "title": "请慢用",
@@ -4376,14 +3933,14 @@
         "QUEUED": "已报到",
         "PREPPING": "烹调中",
         "READY": "最后检查",
-        "SERVING": "已送达座舱",
+        "SERVING": "已送达包厢",
         "COMPLETED": "已完成",
         "now": "当前",
         "totalTime": "从付款到上面：{minutes} 分钟"
       },
       "pod": {
-        "goTo": "请前往你的座舱，到了再告诉我们。",
-        "confirm": "我已到座舱",
+        "goTo": "请前往你的包厢，到了再告诉我们。",
+        "confirm": "我已到包厢",
         "checkedIn": "已报到",
         "callStaff": "呼叫服务人员",
         "calling": "呼叫中",
@@ -4398,14 +3955,14 @@
         "dessertFailed": "没有发送成功，请再试一次。"
       },
       "queue": {
-        "title": "等待座舱",
+        "title": "等待包厢",
         "position": "第 {position} 位",
         "wait": "约 {minutes} 分钟",
-        "note": "有空座舱时我们会通知你。"
+        "note": "有空包厢时我们会通知你。"
       },
       "done": {
         "cta": "我吃完了",
-        "prompt": "吃完了吗？我们会通知服务人员清理你的座舱。",
+        "prompt": "吃完了吗？我们会通知服务人员清理你的包厢。",
         "confirm": "是的，吃完了",
         "cancel": "还没",
         "failed": "没有发送成功，请再试一次。"
@@ -4478,8 +4035,8 @@
         "title": "{count, plural, other {你的团体，共 # 笔订单}}",
         "host": "发起人",
         "guest": "来宾 {number}",
-        "noPod": "尚未分配座舱",
-        "checkedIn": "已在座舱",
+        "noPod": "尚未分配包厢",
+        "checkedIn": "已在包厢",
         "arrived": "已报到",
         "waiting": "尚未到店",
         "checkIn": "报到",
@@ -4507,11 +4064,11 @@
       "metaTitle": "报到",
       "eyebrow": "在餐厅",
       "title": "报到",
-      "lede": "到了吗？报到后我们会引导你到座舱。",
+      "lede": "到了吗？报到后我们会引导你到包厢。",
       "steps": {
         "one": "在确认页找到你的订单代码。",
         "two": "在下方输入，或在自助机扫描。",
-        "three": "前往座舱，你到了厨房就开始烹调。"
+        "three": "前往包厢，你到了厨房就开始烹调。"
       },
       "codeLabel": "订单代码",
       "codeHint": "在确认页的 QR 码下方。",
@@ -4520,21 +4077,21 @@
       "required": "请输入你的订单代码。",
       "notFound": "找不到这个代码，请确认后再试一次。",
       "notPaid": "这笔订单尚未付款。",
-      "noPod": "这笔订单尚未分配座舱。",
+      "noPod": "这笔订单尚未分配包厢。",
       "failed": "报到没有成功，请再试一次或询问服务人员。",
       "help": "遇到问题？任何一位服务人员都能帮你报到。"
     },
     "scan": {
-      "metaTitle": "确认座舱",
-      "eyebrow": "在你的座舱",
-      "title": "确认座舱",
-      "lede": "到座舱了吗？确认后厨房就开始煮你的面。",
+      "metaTitle": "确认包厢",
+      "eyebrow": "在你的包厢",
+      "title": "确认包厢",
+      "lede": "到包厢了吗？确认后厨房就开始煮你的面。",
       "podNote": "请在这里坐下，然后在下方确认。",
       "notFound": "找不到这笔订单。",
-      "noPod": "这笔订单尚未分配座舱，请先报到。",
+      "noPod": "这笔订单尚未分配包厢，请先报到。",
       "codeLabel": "订单代码",
       "codeHint": "与确认页上的代码相同。",
-      "submit": "我已到座舱",
+      "submit": "我已到包厢",
       "confirming": "确认中",
       "required": "请输入你的订单代码。",
       "notPaid": "这笔订单尚未付款。",
@@ -4545,37 +4102,37 @@
       "successLede": "厨房正在开始煮你的面。"
     },
     "pod": {
-      "metaTitle": "你的座舱",
-      "title": "座舱 {label}",
-      "error": "无法读取此座舱的代码",
+      "metaTitle": "你的包厢",
+      "title": "包厢 {label}",
+      "error": "无法读取此包厢的代码",
       "errorLede": "请询问任何一位服务人员，我们会为你安排座位。",
-      "noCode": "扫描座舱上的二维码",
-      "noCodeLede": "每个座舱的桌上都有二维码。",
-      "confirmed": "欢迎来到座舱 {label}",
+      "noCode": "扫描包厢上的二维码",
+      "noCodeLede": "每个包厢的桌上都有二维码。",
+      "confirmed": "欢迎来到包厢 {label}",
       "confirmedLede": "你的面正要送进厨房。",
       "waiting": "你的订单在这里等你",
-      "waitingLede": "这个座舱保留了一笔订单。如果是你的，告诉厨房你已到店。",
+      "waitingLede": "这个包厢保留了一笔订单。如果是你的，告诉厨房你已到店。",
       "confirm": "我到了",
       "confirming": "正在通知厨房",
       "failed": "没有发送成功，请再试一次或询问服务人员。",
-      "free": "这个座舱目前空着",
+      "free": "这个包厢目前空着",
       "freeSteps": {
-        "one": "在线点餐并选择这个座舱。",
+        "one": "在线点餐并选择这个包厢。",
         "two": "快到到店时间时再过来。",
         "three": "再次扫描这个二维码即可报到。"
       },
       "mapTitle": "你的位置",
-      "mapHint": "已标出座舱 {label}",
-      "mapError": "地图没有加载，但座舱仍为你保留。",
+      "mapHint": "已标出包厢 {label}",
+      "mapError": "地图没有加载，但包厢仍为你保留。",
       "account": "我的账户",
       "codeTitle": "输入你的订单代码",
       "codeLede": "代码在你的确认页、收据或短信上。只需要输入一次。",
       "codeLabel": "订单代码",
       "codeSubmit": "帮我报到",
       "codeRequired": "请输入你的订单代码。",
-      "codeNotFound": "这个代码与此座舱的订单不符，请确认后再试一次。",
-      "wrongPod": "这笔订单保留在其他座舱。",
-      "checkedIn": "这个座舱已报到",
+      "codeNotFound": "这个代码与此包厢的订单不符，请确认后再试一次。",
+      "wrongPod": "这笔订单保留在其他包厢。",
+      "checkedIn": "这个包厢已报到",
       "checkedInLede": "如果是你的订单，请从确认页打开。",
       "openOrder": "打开我的订单"
     },
@@ -4656,7 +4213,7 @@
     "empty": "菜单正在更新，请稍后再来看看。",
     "cta": {
       "title": "饿了吗？",
-      "body": "先点餐，再选到达时间和您的座舱。",
+      "body": "先点餐，再选到达时间和您的包厢。",
       "button": "开始点餐"
     }
   }

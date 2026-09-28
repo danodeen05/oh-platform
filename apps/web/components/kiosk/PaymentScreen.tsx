@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { kioskAuthHeaders } from './KioskDeviceProvider';
+import { useTranslations } from 'next-intl';
+import { Icon } from '@/components/site/icons/Icon';
 
 // Kiosk color system
 const COLORS = {
@@ -57,6 +59,8 @@ export function PaymentScreen({
   onCancel,
   onError,
 }: PaymentScreenProps) {
+  const t = useTranslations('kiosk.paymentScreen');
+  const tCommon = useTranslations('common');
   const [status, setStatus] = useState<PaymentStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
@@ -230,7 +234,7 @@ export function PaymentScreen({
       {/* Amount display */}
       <div style={{ textAlign: 'center', marginBottom: 48 }}>
         <p style={{ color: COLORS.textMuted, fontSize: '1.25rem', marginBottom: 8 }}>
-          Total Amount
+          {t('totalAmount')}
         </p>
         <p style={{ fontSize: '4rem', fontWeight: 700, color: COLORS.text, lineHeight: 1 }}>
           {formattedAmount}
@@ -256,10 +260,10 @@ export function PaymentScreen({
               ...
             </div>
             <h2 style={{ fontSize: '1.75rem', fontWeight: 600, color: COLORS.text, marginBottom: 12 }}>
-              Preparing Payment
+              {t('preparing')}
             </h2>
             <p style={{ color: COLORS.textMuted, fontSize: '1.125rem' }}>
-              Please wait...
+              {t('pleaseWait')}
             </p>
           </>
         )}
@@ -268,27 +272,27 @@ export function PaymentScreen({
         {status === 'waiting_for_card' && (
           <>
             <div style={{ fontSize: '5rem', marginBottom: 24 }}>
-              💳
+              <Icon name="card" size={80} />
             </div>
             <h2 style={{ fontSize: '1.75rem', fontWeight: 600, color: COLORS.text, marginBottom: 12 }}>
-              Tap, Insert, or Swipe
+              {t('tapInsertSwipe')}
             </h2>
             {demo ? (
               <>
                 <p style={{ color: COLORS.textMuted, fontSize: '1.125rem', marginBottom: 24 }}>
-                  Tap below to pay with a demo card
+                  {t('demoHint')}
                 </p>
                 <button onClick={demoTap} className="kiosk-btn kiosk-btn-primary">
-                  Tap to Pay
+                  {t('demoTap')}
                 </button>
                 <p style={{ color: COLORS.textMuted, fontSize: '0.95rem', marginTop: 16, marginBottom: 0 }}>
-                  Demo only. No card is charged.
+                  {t('demoNote')}
                 </p>
               </>
             ) : (
               <>
                 <p style={{ color: COLORS.textMuted, fontSize: '1.125rem', marginBottom: 24 }}>
-                  Use the card reader below
+                  {t('useReader')}
                 </p>
                 <div style={{ fontSize: '3rem' }} className="kiosk-bounce">
                   ↓
@@ -302,13 +306,13 @@ export function PaymentScreen({
         {status === 'processing' && (
           <>
             <div style={{ fontSize: '5rem', marginBottom: 24 }} className="kiosk-pulse">
-              ⏳
+              <Icon name="clock" size={80} />
             </div>
             <h2 style={{ fontSize: '1.75rem', fontWeight: 600, color: COLORS.text, marginBottom: 12 }}>
-              Processing Payment
+              {t('processing')}
             </h2>
             <p style={{ color: COLORS.textMuted, fontSize: '1.125rem' }}>
-              Please wait, do not remove your card...
+              {t('keepCard')}
             </p>
           </>
         )}
@@ -333,10 +337,10 @@ export function PaymentScreen({
               </svg>
             </div>
             <h2 style={{ fontSize: '1.75rem', fontWeight: 600, color: COLORS.success, marginBottom: 12 }}>
-              Payment Successful!
+              {t('success')}
             </h2>
             <p style={{ color: COLORS.textMuted, fontSize: '1.125rem' }}>
-              Redirecting...
+              {t('redirecting')}
             </p>
           </>
         )}
@@ -363,17 +367,17 @@ export function PaymentScreen({
               </svg>
             </div>
             <h2 style={{ fontSize: '1.75rem', fontWeight: 600, color: COLORS.error, marginBottom: 12 }}>
-              Payment Failed
+              {t('failed')}
             </h2>
             <p style={{ color: COLORS.textMuted, fontSize: '1.125rem', marginBottom: 24 }}>
-              {error || 'Please try again'}
+              {t('failedBody')}
             </p>
             <button
               onClick={() => initiatePayment(true)}
               className="kiosk-btn kiosk-btn-primary"
               style={{ marginBottom: 12 }}
             >
-              Try Again
+              {tCommon('retry')}
             </button>
           </>
         )}
@@ -386,7 +390,7 @@ export function PaymentScreen({
           className="kiosk-btn kiosk-btn-ghost"
           style={{ marginTop: 32 }}
         >
-          Cancel and Go Back
+          {t('cancel')}
         </button>
       )}
     </div>
