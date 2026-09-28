@@ -28,7 +28,7 @@ export async function deliverNda(ndaId, deps) {
   const now = deps.now || (() => new Date());
   const only = deps.only || "all";
 
-  const nda = await prisma.planNda.findUnique({ where: { id: ndaId }, include: { accessCode: { select: { id: true, label: true, audience: true } } } });
+  const nda = await prisma.planNda.findUnique({ where: { id: ndaId }, include: { accessCode: { select: { id: true, label: true, audience: true, inviteSentAt: true } } } });
   if (!nda || nda.status !== "SIGNED" || !nda.pdfEnc) return { skipped: true };
 
   const d = openDetails(pii, nda);
@@ -68,6 +68,8 @@ export async function deliverNda(ndaId, deps) {
         documentSha256: nda.documentSha256,
         hasAvatar: Boolean(chappy),
         hasLogo: Boolean(mark),
+        // Chappy introduced himself in the invitation email; don't do it twice.
+        introduced: Boolean(nda.accessCode.inviteSentAt),
       }),
       inlineImages,
       attachments: [pdf],

@@ -1,5 +1,6 @@
 "use client";
 import { use, useState } from "react";
+import { InvitePanel } from "../_components/InvitePanel";
 import { NdaPanel } from "../_components/NdaPanel";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -132,6 +133,7 @@ export default function PlanCodeDetailPage({ params }: { params: Promise<{ codeI
       </div>
 
       <div className="space-y-5">
+        <InvitePanel code={code} onChanged={res.reload} />
         <NdaPanel codeId={codeId} />
 
         <div className="grid gap-5 lg:grid-cols-2 lg:items-start">

@@ -154,20 +154,23 @@ export function PodStep({ locationId, layoutKey, pod, partySize, onPod, onPartyS
           <p className="m-0 mb-3 text-sm text-oh-mute" aria-live="polite">
             {seats.status === "ready" ? (free > 0 ? t("freeCount", { count: free }) : t("noPods")) : seats.status === "error" ? t("mapError") : t("loadingMap")}
           </p>
-          {mapKey ? (
-            <CombMap
-              layoutKey={mapKey}
-              mode="pick"
-              labels={combLabels}
-              seats={seats.seats}
-              selected={pending}
-              onSelect={(label) => setPending(label)}
-              partySize={partySize}
-              tone="night"
-            />
-          ) : (
-            <MapPlaceholder />
-          )}
+          {/* Sized to fit the sheet (order.css), so the map and its controls show without scrolling. */}
+          <div className="oh-pod-map">
+            {mapKey ? (
+              <CombMap
+                layoutKey={mapKey}
+                mode="pick"
+                labels={combLabels}
+                seats={seats.seats}
+                selected={pending}
+                onSelect={(label) => setPending(label)}
+                partySize={partySize}
+                tone="night"
+              />
+            ) : (
+              <MapPlaceholder />
+            )}
+          </div>
           <div className="sticky bottom-0 -mx-4 mt-3 border-t border-oh-stone/70 bg-oh-ink/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] backdrop-blur-md">
             {pendingTaken ? <p className="m-0 mb-2 text-sm text-oh-ember-light">{t("taken", { label: pending! })}</p> : null}
             <button

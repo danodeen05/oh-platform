@@ -2005,6 +2005,16 @@ model PlanAccessCode {
   createdByUserId String?
   ndaRequired     Boolean      @default(false) // Recipient must sign the NDA before any plan content. Admin modal defaults new codes to true.
 
+  // Who the code is for (optional; all three are required to email the
+  // invitation). AES-256-GCM under PLAN_PII_KEY, like the PlanNda *Enc columns.
+  // Prefills the NDA form and lets Chappy greet them by first name.
+  recipientFirstNameEnc String?
+  recipientLastNameEnc  String?
+  recipientEmailEnc     String?
+  inviteSentAt          DateTime? // Last time the invitation email went out (or was logged, in dev)
+  inviteSentToEnc       String? // The address it went to, sealed
+  inviteSendCount       Int       @default(0)
+
   sessions     PlanViewSession[]
   questions    PlanQuestion[]
   chatMessages PlanChatMessage[]

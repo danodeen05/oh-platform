@@ -5,18 +5,22 @@
  * exclamation points (the only "!" is the brand name).
  */
 
-const esc = (s) =>
+export const esc = (s) =>
   String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
-const C = { page: "#f4ede3", card: "#fffdf9", ink: "#2b2622", mute: "#6b625a", head: "#1f1b18", gold: "#E0C38C", ember: "#C9542B", rule: "#eee4d8" };
+export const C = { page: "#f4ede3", card: "#fffdf9", ink: "#2b2622", mute: "#6b625a", head: "#1f1b18", gold: "#E0C38C", ember: "#C9542B", rule: "#eee4d8" };
 
 export function denverDateTime(d) {
   return new Intl.DateTimeFormat("en-US", { timeZone: "America/Denver", dateStyle: "long", timeStyle: "short" }).format(new Date(d)) + " MT";
 }
 
-function shell({ eyebrow, title, body, footer, hasLogo }) {
+export function shell({ eyebrow, title, body, footer, hasLogo, preheader = "" }) {
   const logo = hasLogo ? `<img src="cid:ohmark" width="44" height="44" alt="Oh!" style="display:block">` : "";
-  return `<!doctype html><html><body style="margin:0;padding:0;background:${C.page};font-family:Georgia,'Times New Roman',serif">
+  // The invitation adds a preview line (hidden in the message) and a mobile
+  // viewport; the NDA emails render exactly as before.
+  const head = preheader ? `<head><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"></head>` : "";
+  const pre = preheader ? `<div style="display:none;max-height:0;overflow:hidden;mso-hide:all">${esc(preheader)}</div>` : "";
+  return `<!doctype html><html>${head}<body style="margin:0;padding:0;background:${C.page};font-family:Georgia,'Times New Roman',serif">${pre}
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.page};padding:28px 12px"><tr><td align="center">
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:${C.card};border-radius:16px;overflow:hidden;border:1px solid ${C.rule}">
 <tr><td style="background:${C.head};padding:22px 28px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
@@ -36,8 +40,12 @@ ${rows.map(([k, v]) => `<tr><td style="padding:7px 14px;color:${C.mute};width:13
 </table>`;
 }
 
-/** Chappy's email to the person who just signed. */
-export function renderSignerEmail({ firstName, legalName, signedAt, ndaId, version, documentSha256, hasAvatar, hasLogo }) {
+/**
+ * Chappy's email to the person who just signed. `introduced`: the code's
+ * invitation email already went out, and Chappy introduced himself there, so
+ * this one skips the introduction.
+ */
+export function renderSignerEmail({ firstName, legalName, signedAt, ndaId, version, documentSha256, hasAvatar, hasLogo, introduced = false }) {
   const avatar = hasAvatar ? `<img src="cid:chappy" width="56" height="56" alt="Chappy Chopstix" style="display:block;border-radius:28px;background:${C.page}">` : "";
   const p = (t) => `<p style="margin:0 0 14px;font-size:16px;line-height:1.6;color:${C.ink}">${t}</p>`;
   const body = `<tr><td style="padding:26px 28px 6px">
@@ -46,7 +54,7 @@ export function renderSignerEmail({ firstName, legalName, signedAt, ndaId, versi
 <td style="vertical-align:middle;font-family:Helvetica,Arial,sans-serif"><div style="font-size:14px;font-weight:bold;color:${C.ink}">Chappy Chopstix</div><div style="font-size:12px;color:${C.mute}">Head of Paperwork, Oh! Beef Noodle Soup</div></td>
 </tr></table>
 ${p(`Hi ${esc(firstName)},`)}
-${p("Chappy Chopstix here, the chopsticks in charge of paperwork at Oh! Beef Noodle Soup. Your NDA is signed, countersigned, and attached for your records. File it somewhere safe. I keep mine next to the broth recipe, which, per Section 3, I'm not allowed to tell you about.")}
+${p(`${introduced ? "" : "Chappy Chopstix here, the chopsticks in charge of paperwork at Oh! Beef Noodle Soup. "}Your NDA is signed, countersigned, and attached for your records. File it somewhere safe. I keep mine next to the broth recipe, which, per Section 3, I'm not allowed to tell you about.`)}
 ${p("The business plan is open to you now. If a number catches your eye, ask me about it right there in the plan.")}
 ${p("Thanks for your interest in what we're building.")}
 <p style="margin:0 0 4px;font-size:16px;line-height:1.5;color:${C.ink}">Chappy Chopstix</p>

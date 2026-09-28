@@ -69,7 +69,10 @@ export function makePrismaStub() {
       },
       async update({ where, data }) {
         const rec = codes.get(where.id);
-        Object.assign(rec, data);
+        for (const [k, v] of Object.entries(data)) {
+          if (v && typeof v === "object" && "increment" in v) rec[k] = (rec[k] || 0) + v.increment;
+          else rec[k] = v;
+        }
         return rec;
       },
       async findMany() {
