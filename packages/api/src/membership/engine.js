@@ -10,7 +10,7 @@
  * up in the member's favor beyond what's configured).
  */
 import { PROGRAM, tierRule, evaluateProgress } from "./program.js";
-import { grantCredit, grantCreditInTx, availableCredit, expiringSoon, stripExpiryWarnedMarker } from "./credits.js";
+import { grantCreditInTx, availableCredit, expiringSoon, stripExpiryWarnedMarker } from "./credits.js";
 import { spendBaseCents } from "../orders/pricing.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -390,14 +390,27 @@ export async function applyReferralSignup(prisma, { userId, referralCode, now = 
     return { applied: false, reason: "SELF_REFERRAL", message: "You can't refer yourself." };
   }
 
-  await prisma.user.update({ where: { id: userId }, data: { referredById: referrer.id } });
-  await grantCredit(prisma, {
-    userId,
-    source: "WELCOME",
-    amountCents: PROGRAM.referral.refereeCents,
-    note: "Welcome bonus - referred by a friend",
-    now,
+  // Final review I1: the claim is a conditional update on `referredById: null`
+  // with the WELCOME grant in the same transaction, so N concurrent signups
+  // for one user grant exactly one lot (the losers see count 0 and stop).
+  const claimed = await prisma.$transaction(async (tx) => {
+    const { count } = await tx.user.updateMany({
+      where: { id: userId, referredById: null },
+      data: { referredById: referrer.id },
+    });
+    if (count !== 1) return false;
+    await grantCreditInTx(tx, {
+      userId,
+      source: "WELCOME",
+      amountCents: PROGRAM.referral.refereeCents,
+      note: "Welcome bonus - referred by a friend",
+      now,
+    });
+    return true;
   });
+  if (!claimed) {
+    return { applied: false, reason: "ALREADY_REFERRED", message: REFERRAL_NOT_FOR_YOU_MESSAGE };
+  }
 
   return { applied: true, referrerId: referrer.id };
 }

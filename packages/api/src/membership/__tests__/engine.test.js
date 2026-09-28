@@ -566,3 +566,26 @@ test("sweepUnprocessedCompletedOrders pays COMPLETED+PAID orders older than 5 mi
   assert.equal((await prisma.creditLot.findMany({ where: { source: "CASHBACK" } })).length, 1);
   assert.equal(await sweepUnprocessedCompletedOrders(prisma, NOW), 0, "idempotent");
 });
+
+// Final review I1: concurrent POST /users {referredByCode} for the same
+// member must mint exactly one WELCOME lot (conditional claim + grant in one tx).
+test("applyReferralSignup: 5 concurrent signups for one user grant exactly one WELCOME lot", async () => {
+  const prisma = makeMemoryPrisma({
+    users: [
+      { id: "referrer", referralCode: "FRIEND1", creditsCents: 0 },
+      { id: "referee", creditsCents: 0, referredById: null },
+    ],
+  });
+
+  const results = await Promise.all(
+    Array.from({ length: 5 }, () => applyReferralSignup(prisma, { userId: "referee", referralCode: "FRIEND1", now: NOW })),
+  );
+
+  assert.equal(results.filter((r) => r.applied).length, 1);
+  for (const r of results.filter((r) => !r.applied)) assert.equal(r.reason, "ALREADY_REFERRED");
+  const lots = await prisma.creditLot.findMany({ where: { userId: "referee", source: "WELCOME" } });
+  assert.equal(lots.length, 1);
+  const referee = await prisma.user.findUnique({ where: { id: "referee" } });
+  assert.equal(referee.creditsCents, PROGRAM.referral.refereeCents);
+  assert.equal(referee.referredById, "referrer");
+});
