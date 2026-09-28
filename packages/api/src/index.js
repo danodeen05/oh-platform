@@ -821,6 +821,8 @@ app.get("/locations", async (req, reply) => {
         },
         availability: {
           isOpen: availability.isOpen,
+          openNow: availability.openNow,
+          hoursBypassed: availability.hoursBypassed,
           canOrder: availability.canOrder,
           statusMessage: availability.statusMessage,
           closesAt: availability.closesAt,

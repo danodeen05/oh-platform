@@ -352,14 +352,14 @@ export function getLocationStatus(location, date = new Date()) {
     const closeMinutes = parseTimeToMinutes(dayHours.close);
     closesAt = formatMinutesToDisplay(closeMinutes);
     orderingClosesAt = formatMinutesToDisplay(closeMinutes + ORDER_CLOSE_OFFSET_MINUTES);
-  } else if (bypassActive) {
-    // For bypassed locations without hours, show default times
-    closesAt = "11pm";
-    orderingClosesAt = "10:45pm";
   }
+  // No invented close time under the testing bypass: customers see real hours
+  // or none (Task D1 review). hoursBypassed tells the site to hide open/closed.
 
   return {
     isOpen,
+    openNow: isLocationOpen(location, date),
+    hoursBypassed: bypassActive,
     canOrder,
     validArrivalTimes: validTimes,
     preOrderMessage,
