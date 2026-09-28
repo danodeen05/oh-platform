@@ -6,7 +6,6 @@ import { routing } from "@/i18n/routing";
 import { Providers } from "@/components/Providers";
 import { IntlClientProvider } from "@/components/site/IntlClientProvider";
 import { SERVER_ONLY_NAMESPACES, omitNamespaces } from "@/lib/site/client-messages";
-import LanguageTracker from "@/components/LanguageTracker";
 import { LangSync } from "@/components/plan/shell/LangSync";
 
 type Props = {
@@ -97,7 +96,9 @@ export default async function LocaleLayout({ children, params }: Props) {
   // (site) and legacy pages and is not re-rendered on a client navigation
   // between them, so each group's layout provides its own set (ScopedIntl in
   // (site)/layout.tsx and LegacyChrome); the client components rendered
-  // here (Providers, LanguageTracker, LangSync) read none.
+  // here (Providers, LangSync) read none. LanguageTracker (which reads the
+  // member through SiteAuth since F2) is rendered by SiteShell and
+  // LegacyChrome, inside their SiteAuth providers (G2b).
   //
   // Clerk is scoped the same way: legacy pages get Clerk's <ClerkProvider>
   // from LegacyChrome, and (site) pages load Clerk after first paint
@@ -108,7 +109,6 @@ export default async function LocaleLayout({ children, params }: Props) {
       <IntlClientProvider>
         <Providers>
           <LangSync locale={locale} />
-          <LanguageTracker />
           {children}
         </Providers>
       </IntlClientProvider>

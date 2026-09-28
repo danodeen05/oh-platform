@@ -27,6 +27,7 @@ import { CjkFonts } from "./CjkFonts";
 import { ChappyProvider } from "@/components/site/chappy/ChappyLauncher";
 import { ActiveOrderPill } from "./ActiveOrderPill";
 import { Dock } from "./Dock";
+import LanguageTracker from "@/components/LanguageTracker";
 import { Footer } from "./Footer";
 import { SkipLink } from "./SkipLink";
 import { TopBar } from "./TopBar";
@@ -79,6 +80,7 @@ export async function SiteShell({ children }: { children: ReactNode }) {
         ].join(" ")}
       >
         {fonts}
+        <LanguageTracker />
         <SkipLink />
         <TopBar />
         <main id="site-main" tabIndex={-1} className="flex-1 outline-none">

@@ -26,6 +26,7 @@ import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import { ScopedIntl } from "@/components/site/ScopedIntl";
 import { ClerkSiteAuth } from "./ClerkSiteAuth";
+import LanguageTracker from "@/components/LanguageTracker";
 import { LegacyChappy } from "./LegacyChappy";
 import { LegacyFonts } from "./LegacyFonts";
 import { WithClerk } from "./WithClerk";
@@ -63,6 +64,7 @@ export async function LegacyChrome({ children }: { children: ReactNode }) {
       {/* Task E1: the site's Chappy (built on site utilities, so NOT under
           .legacy-ui), opened from a floating launcher. */}
       <LegacyChappy />
+      <LanguageTracker />
     </LegacyScope>
   );
 }

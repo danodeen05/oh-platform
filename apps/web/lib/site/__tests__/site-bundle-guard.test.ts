@@ -66,6 +66,17 @@ describe("(site) first-load bundle guard (Task G2a/G2b)", () => {
     expect(offenders([...SHELL, path.join(SITE_DIR, page)], allowed)).toEqual([]);
   });
 
+  // G2b: F2 put a SiteAuth reader (LanguageTracker) in the shared [locale]
+  // layout, above the group providers, and every page 500ed. Readers belong
+  // under SiteShell or LegacyChrome.
+  it("the shared root and [locale] layouts render nothing that reads SiteAuth (it has no provider there)", () => {
+    const shared = [path.join(WEB, "app/[locale]/layout.tsx"), path.join(WEB, "app/layout.tsx")];
+    const readers = [...graphFrom(shared, { followDynamic: true }).values()]
+      .filter((n) => n.client && /\buse(SiteAuth|SiteApi|MemberId)\(/.test(n.src))
+      .map((n) => n.rel);
+    expect(readers).toEqual([]);
+  });
+
   it("keeps the (site) layouts free of Clerk's client provider (server `auth()` is fine)", () => {
     for (const file of SHELL) {
       const node = graphFrom([file], { followDynamic: false }).get(file)!;
