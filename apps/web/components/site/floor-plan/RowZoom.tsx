@@ -149,7 +149,7 @@ export function rowPanBox(vb: Box, ends: RowEnds, dir: "earlier" | "later", full
   return clampBox(alongX ? { ...vb, x: start } : { ...vb, y: start }, full);
 }
 
-const easeInOut =(t: number): number => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const easeInOut = (t: number): number => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const lerpBox = (a: Box, b: Box, t: number): Box => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, w: a.w + (b.w - a.w) * t, h: a.h + (b.h - a.h) * t });
 
 interface Gesture {

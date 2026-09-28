@@ -241,6 +241,18 @@ export function podTapAction({
   return selectable ? "select" : "none";
 }
 
+/**
+ * Coarse (touch-sized targets) or fine, decided per interaction from the
+ * pointerdown that started it: touch and pen are coarse, a mouse is fine.
+ * `(pointer: coarse)` is only the default before any pointer event, so a
+ * touchscreen laptop switches back to mouse rules on the next click.
+ */
+export function coarseFor({ pointerType, mediaCoarse }: { pointerType: string | null; mediaCoarse: boolean }): boolean {
+  if (pointerType === "touch" || pointerType === "pen") return true;
+  if (pointerType === "mouse") return false;
+  return mediaCoarse;
+}
+
 const DIRS: Record<Exclude<NavKey, "Home" | "End">, Point> = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] };
 
 /** The nearest pod in a screen direction: distance along the direction plus twice the sideways offset. */
@@ -323,8 +335,10 @@ export function CombMap({
   const reducedMotion = useSyncExternalStore(subReduced, readReduced, () => false);
   // Touch-target rules follow the pointer: a coarse primary pointer, or any touch event on the map, means 44px; a mouse means 24px.
   const coarseMedia = useSyncExternalStore(subCoarse, readCoarse, () => true);
-  const [touchSeen, setTouchSeen] = useState(false);
-  const coarse = coarseMedia || touchSeen;
+  // The last pointerdown's type (null before any). A ref for the click that same press produces, state for the hint.
+  const lastPointer = useRef<string | null>(null);
+  const [lastPointerType, setLastPointerType] = useState<string | null>(null);
+  const coarse = coarseFor({ pointerType: lastPointerType, mediaCoarse: coarseMedia });
   const resolved: Orientation = orientation === "auto" ? (narrow ? "portrait" : "landscape") : orientation;
 
   const layout = useMemo(() => buildLayout(LOCATION_LAYOUTS[layoutKey]), [layoutKey]);
@@ -413,8 +427,8 @@ export function CombMap({
   const rowByKey = useMemo(() => new Map(o.rows.map((r) => [r.key, r])), [o.rows]);
 
   // Pod callbacks read the latest render through a ref, so they keep one identity and the memoized PodCells skip re-rendering.
-  const latest = useRef({ zoom, o, podByLabel, rowByKey, statusOf, mode, podPx, onSelect, coarse });
-  latest.current = { zoom, o, podByLabel, rowByKey, statusOf, mode, podPx, onSelect, coarse };
+  const latest = useRef({ zoom, o, podByLabel, rowByKey, statusOf, mode, podPx, onSelect, coarseMedia });
+  latest.current = { zoom, o, podByLabel, rowByKey, statusOf, mode, podPx, onSelect, coarseMedia };
 
   const zoomToPod = useCallback((label: string) => {
     const { zoom: z, o: view, podByLabel: pods, rowByKey: rows } = latest.current;
@@ -422,7 +436,7 @@ export function CombMap({
     const row = pv ? rows.get(pv.row) : undefined;
     if (!pv || !row) return;
     setZoomedRow(row.key);
-    z.zoomTo(rowZoomBox(row.rect, view.box, z.elementPx, pv.center, { coarse: latest.current.coarse }));
+    z.zoomTo(rowZoomBox(row.rect, view.box, z.elementPx, pv.center, { coarse: coarseFor({ pointerType: lastPointer.current, mediaCoarse: latest.current.coarseMedia }) }));
   }, []);
 
   const onActivate = useCallback(
@@ -430,7 +444,8 @@ export function CombMap({
       const { zoom: z, podByLabel: pods, statusOf: status, mode: m, podPx: px, onSelect: select } = latest.current;
       if (via === "pointer" && z.consumeGesture()) return;
       setFocusLabel(label);
-      const action = podTapAction({ mode: m, via, podPx: px, selectable: m === "pick" && status(label) === "AVAILABLE", coarse: latest.current.coarse });
+      const coarseNow = coarseFor({ pointerType: lastPointer.current, mediaCoarse: latest.current.coarseMedia });
+      const action = podTapAction({ mode: m, via, podPx: px, selectable: m === "pick" && status(label) === "AVAILABLE", coarse: coarseNow });
       if (action === "zoom") {
         const pv = pods.get(label);
         if (m === "live" && z.isZoomed && pv && zoomedRow.current === pv.row) {
@@ -549,11 +564,9 @@ export function CombMap({
           data-journey-target={mode === "journey" ? o.journeyTarget : undefined}
           {...zoom.handlers}
           onPointerDown={(e) => {
-            if (e.pointerType === "touch") {
-              // The ref makes the click this very tap produces use the touch rule, before the re-render lands.
-              latest.current.coarse = true;
-              if (!touchSeen) setTouchSeen(true);
-            }
+            // Recorded before the click this press produces, so that click uses this pointer's rule.
+            lastPointer.current = e.pointerType || null;
+            if (lastPointerType !== lastPointer.current) setLastPointerType(lastPointer.current);
             zoom.handlers.onPointerDown(e);
           }}
         >

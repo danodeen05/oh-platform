@@ -17,7 +17,7 @@ import en from "../../../../messages/en.json";
 import es from "../../../../messages/es.json";
 import zhCN from "../../../../messages/zh-CN.json";
 import zhTW from "../../../../messages/zh-TW.json";
-import { CombMap, orientLayout, podTapAction, podScreenPx, type CombSeat, type CombMapLabels } from "../CombMap";
+import { CombMap, coarseFor, orientLayout, podTapAction, podScreenPx, type CombSeat, type CombMapLabels } from "../CombMap";
 import { rowZoomBox, rowPanBox, rowPanState, minTargetPx, zoomDuration, fitBox, ZOOM_MS, MIN_TOUCH_PX } from "../RowZoom";
 import { toCombSeats, layoutKeyOf } from "../useSeats";
 
@@ -224,6 +224,79 @@ describe("CombMap interaction (jsdom)", () => {
     expect(podEl(h, "B-07").getAttribute("tabindex")).toBe("-1");
     act(() => podEl(h, "B-08").dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true })));
     expect((document.activeElement as Element | null)?.getAttribute("data-label")).toBe("B-07");
+  });
+
+  it("hybrid device: decides coarse or fine per interaction (touch zooms first, then a mouse selects a ~35px pod directly, then touch zooms again)", () => {
+    // A touchscreen laptop: the primary pointer is fine, the map is 1100px wide in landscape (pods ~35px on the short side).
+    const g = globalThis as unknown as { ResizeObserver?: unknown };
+    const savedRO = g.ResizeObserver;
+    const savedMM = window.matchMedia;
+    g.ResizeObserver = class {
+      cb: (e: { contentRect: { width: number } }[]) => void;
+      constructor(cb: (e: { contentRect: { width: number } }[]) => void) {
+        this.cb = cb;
+      }
+      observe() {
+        this.cb([{ contentRect: { width: 1100 } }]);
+      }
+      disconnect() {}
+    };
+    window.matchMedia = ((q: string) => ({ matches: q.includes("reduced-motion"), addEventListener() {}, removeEventListener() {} })) as unknown as typeof window.matchMedia;
+    const pointer = (el: Element, type: string, pointerType: string) => {
+      const e = new MouseEvent(type, { bubbles: true, cancelable: true, button: 0, clientX: 10, clientY: 10 });
+      Object.defineProperty(e, "pointerType", { value: pointerType });
+      Object.defineProperty(e, "pointerId", { value: pointerType === "mouse" ? 1 : 2 });
+      el.dispatchEvent(e);
+    };
+    const tap = (el: Element, pointerType: "touch" | "mouse" | "pen") =>
+      act(() => {
+        pointer(el, "pointerdown", pointerType);
+        pointer(el, "pointerup", pointerType);
+        el.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      });
+    try {
+      const onSelect = vi.fn();
+      const h = mount(<CombMap layoutKey="comb-75" mode="pick" labels={labels} seats={seatsFor("comb-75")} onSelect={onSelect} orientation="landscape" />);
+      const svg = h.querySelector("svg[data-layout]") as SVGSVGElement;
+      const vbW = () => Number(svg.getAttribute("viewBox")!.split(" ")[2]);
+      const fullW = vbW();
+      const wholeFloor = () => [...h.querySelectorAll("button")].find((b) => b.textContent === labels.zoom.wholeFloor) as HTMLButtonElement;
+
+      // 1. Touch: ~35px is under 44, so it zooms first.
+      tap(podEl(h, "B-07"), "touch");
+      expect(onSelect).not.toHaveBeenCalled();
+      expect(vbW()).toBeLessThan(fullW);
+      act(() => wholeFloor().click());
+      expect(vbW()).toBeCloseTo(fullW);
+
+      // 2. Mouse on the same device: ~35px clears 24, so it selects directly (no sticky touch mode).
+      tap(podEl(h, "B-07"), "mouse");
+      expect(onSelect).toHaveBeenCalledWith("B-07");
+      expect(vbW()).toBeCloseTo(fullW);
+
+      // 3. Touch again: back to zoom first.
+      tap(podEl(h, "B-08"), "touch");
+      expect(onSelect).toHaveBeenCalledTimes(1);
+      expect(vbW()).toBeLessThan(fullW);
+      act(() => wholeFloor().click());
+
+      // Pen counts as coarse too; the keyboard stays exempt and always selects.
+      tap(podEl(h, "B-09"), "pen");
+      expect(onSelect).toHaveBeenCalledTimes(1);
+      act(() => podEl(h, "B-10").dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })));
+      expect(onSelect).toHaveBeenLastCalledWith("B-10");
+    } finally {
+      g.ResizeObserver = savedRO;
+      window.matchMedia = savedMM;
+    }
+  });
+
+  it("coarseFor: the event's pointer type wins; the media query is only the default before any pointer event", () => {
+    expect(coarseFor({ pointerType: "touch", mediaCoarse: false })).toBe(true);
+    expect(coarseFor({ pointerType: "pen", mediaCoarse: false })).toBe(true);
+    expect(coarseFor({ pointerType: "mouse", mediaCoarse: true })).toBe(false);
+    expect(coarseFor({ pointerType: null, mediaCoarse: true })).toBe(true);
+    expect(coarseFor({ pointerType: null, mediaCoarse: false })).toBe(false);
   });
 
   it("on a 390px phone, a tap zooms to part of the row and the named pan chevrons walk to both ends", () => {
