@@ -132,6 +132,12 @@ async function processOne(key, sourceFile) {
   return dims;
 }
 
+// Builds a standard `srcset` attribute string ("/site/key-390.avif 390w, ...")
+// from WIDTHS, the single source of truth for which widths were generated.
+export function buildSrcSet(key, ext) {
+  return WIDTHS.map((width) => `/site/${key}-${width}.${ext} ${width}w`).join(", ");
+}
+
 function generateImagesTs(dimsByKey) {
   const keys = Object.keys(MAPPING);
   const typeUnion = keys.map((k) => `  | "${k}"`).join("\n");
@@ -140,6 +146,7 @@ function generateImagesTs(dimsByKey) {
       const { w, h } = dimsByKey[k][1200];
       return `  "${k}": {
     src: { avif: "/site/${k}-1200.avif", webp: "/site/${k}-1200.webp" },
+    srcSet: { avif: "${buildSrcSet(k, "avif")}", webp: "${buildSrcSet(k, "webp")}" },
     w: ${w},
     h: ${h},
     alt: "${ALT_KEYS[k]}",
@@ -158,7 +165,13 @@ ${typeUnion};
 export type MessageKey = \`siteImages.\${string}\`;
 
 export interface SiteImage {
+  // The largest (1200w) file in each format. Used as the <img> fallback's
+  // base and as a plain single-image src for callers that don't need a
+  // <picture>.
   src: { avif: string; webp: string };
+  // A full \`srcset\` attribute string ("/site/key-390.avif 390w, ...") built
+  // from every generated width (390/780/1200), for responsive <source> tags.
+  srcSet: { avif: string; webp: string };
   w: number;
   h: number;
   alt: MessageKey;

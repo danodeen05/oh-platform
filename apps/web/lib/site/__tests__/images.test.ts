@@ -7,11 +7,21 @@ import { fileURLToPath } from "node:url";
 // generator script. Importing them here (rather than re-declaring them)
 // means this test fails loudly if the script's config ever drifts from
 // what actually got written to disk.
-import { MAPPING, DENY_LIST, WIDTHS } from "../../../../../scripts/site-images.mjs";
+import { MAPPING, DENY_LIST, WIDTHS, buildSrcSet } from "../../../../../scripts/site-images.mjs";
 import { SITE_IMAGES } from "../images";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.resolve(__dirname, "../../../public/site");
+
+// Parses a `srcset` attribute string ("/site/key-390.avif 390w, ...") into
+// {url, width} pairs.
+function parseSrcSet(srcSet: string): Array<{ url: string; width: number }> {
+  return srcSet.split(",").map((part) => {
+    const trimmed = part.trim();
+    const [url, widthToken] = trimmed.split(" ");
+    return { url, width: Number(widthToken.replace("w", "")) };
+  });
+}
 
 describe("SITE_IMAGES", () => {
   const keys = Object.keys(SITE_IMAGES);
@@ -37,6 +47,25 @@ describe("SITE_IMAGES", () => {
       expect(entry.src.webp).toMatch(/^\/site\/.+\.webp$/);
       expect(entry.w).toBeGreaterThan(0);
       expect(entry.h).toBeGreaterThan(0);
+    }
+  });
+
+  it.each(keys)("%s srcSet matches buildSrcSet(key, format) from the generator script", (key) => {
+    const entry = SITE_IMAGES[key as keyof typeof SITE_IMAGES];
+    expect(entry.srcSet.avif).toBe(buildSrcSet(key, "avif"));
+    expect(entry.srcSet.webp).toBe(buildSrcSet(key, "webp"));
+  });
+
+  it.each(keys)("%s srcSet lists all 3 widths and every referenced file exists on disk", (key) => {
+    const entry = SITE_IMAGES[key as keyof typeof SITE_IMAGES];
+    for (const format of ["avif", "webp"] as const) {
+      const parsed = parseSrcSet(entry.srcSet[format]);
+      expect(parsed.map((p) => p.width).sort((a, b) => a - b)).toEqual([...WIDTHS].sort((a, b) => a - b));
+      for (const { url } of parsed) {
+        expect(url).toMatch(new RegExp(`^/site/${key}-\\d+\\.${format}$`));
+        const onDisk = path.join(PUBLIC_DIR, path.basename(url));
+        expect(fs.existsSync(onDisk), `missing ${onDisk} (from srcSet: ${url})`).toBe(true);
+      }
     }
   });
 });
