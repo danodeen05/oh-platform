@@ -4,7 +4,7 @@ import en from "../templates/en.js";
 import zhTW from "../templates/zh-TW.js";
 import zhCN from "../templates/zh-CN.js";
 import es from "../templates/es.js";
-import { orderConfirmationText } from "../../notifications.js";
+import { orderConfirmationText, formatExpiryDate } from "../../notifications.js";
 
 const TEMPLATES = { en, "zh-TW": zhTW, "zh-CN": zhCN, es };
 
@@ -80,6 +80,45 @@ test("en tierUp and en creditExpiring translate the tier key and stay short", ()
   assert.match(en.tierUp({ tierKey: "CHOPSTICK", link: "https://x/en/member" }), /Chopstick/);
   const sms = en.orderConfirmed(SAMPLE_VARS.orderConfirmed);
   assert.ok(sms.length <= 220, `${sms.length} chars (has a long test URL; real QR codes are shorter)`);
+});
+
+test("fix round 1: en tierUp has an article, and a colon before the link", () => {
+  assert.equal(en.tierUp({ tierKey: "NOODLE_MASTER", link: "https://x/en/member" }), "Oh! You're now a Noodle Master. Your free bowl is waiting: https://x/en/member");
+});
+
+test("fix round 1: zh-TW/zh-CN say pod (包廂/包厢) and credit (點數/积分), matching the site's own copy, not 座位/余额", () => {
+  const vars = { podNumber: "07", link: "https://x" };
+  assert.match(zhTW.podReady(vars), /包廂/);
+  assert.doesNotMatch(zhTW.podReady(vars), /座位/);
+  assert.match(zhTW.podReadyNoLink({ ...vars, orderNumber: "0042" }), /包廂/);
+  assert.match(zhTW.queueUpdate({ orderNumber: "0042", position: 3, minutes: 12 }), /包廂/);
+  assert.match(zhTW.creditExpiring({ amount: "$5.00", date: "12月31日", link: "https://x" }), /點數/);
+  assert.doesNotMatch(zhTW.creditExpiring({ amount: "$5.00", date: "12月31日", link: "https://x" }), /購物金/);
+
+  assert.match(zhCN.podReady(vars), /包厢/);
+  assert.doesNotMatch(zhCN.podReady(vars), /座位/);
+  assert.match(zhCN.podReadyNoLink({ ...vars, orderNumber: "0042" }), /包厢/);
+  assert.match(zhCN.queueUpdate({ orderNumber: "0042", position: 3, minutes: 12 }), /包厢/);
+  assert.match(zhCN.creditExpiring({ amount: "$5.00", date: "12月31日", link: "https://x" }), /积分/);
+  assert.doesNotMatch(zhCN.creditExpiring({ amount: "$5.00", date: "12月31日", link: "https://x" }), /余额/);
+});
+
+test("fix round 1: es says cabina (matching messages/es.json's yourPod), not mesa, and tier names are sentence case", () => {
+  const vars = { podNumber: "07", link: "https://x" };
+  assert.match(es.podReady(vars), /cabina/);
+  assert.doesNotMatch(es.podReady(vars), /mesa/);
+  assert.match(es.podReadyNoLink({ ...vars, orderNumber: "0042" }), /cabina/);
+  assert.match(es.queueUpdate({ orderNumber: "0042", position: 3, minutes: 12 }), /cabina/);
+  assert.equal(es.tierUp({ tierKey: "NOODLE_MASTER", link: "https://x" }), "Oh! Ahora eres Maestro de fideos. Tu tazón gratis te espera: https://x");
+  assert.equal(es.tierUp({ tierKey: "BEEF_BOSS", link: "https://x" }), "Oh! Ahora eres Jefe de la carne. Tu tazón gratis te espera: https://x");
+});
+
+test("formatExpiryDate: locale-appropriate, not always US MM/DD", () => {
+  const date = new Date("2026-12-31T20:00:00Z"); // 2026-12-31 in America/Denver (MST, UTC-7)
+  assert.equal(formatExpiryDate("en", date), "Dec 31");
+  assert.equal(formatExpiryDate("zh-TW", date), "12月31日");
+  assert.equal(formatExpiryDate("zh-CN", date), "12月31日");
+  assert.equal(formatExpiryDate("es", date), "31/12"); // day-first, numeric (not "31 dic")
 });
 
 test("a zh-TW user's order confirmation uses the zh-TW template with a /zh-TW/ status link", () => {

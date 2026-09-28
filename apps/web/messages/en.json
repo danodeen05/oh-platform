@@ -1624,6 +1624,7 @@
     "optional": "optional",
     "yourName": "Your name",
     "forOrderUpdates": "For order updates",
+    "invalidPhone": "Please enter a valid phone number, or leave it blank",
     "forReceipt": "For receipt",
     "smsConsent": "I agree to receive SMS text messages from Oh Beef Noodle Soup regarding my order (confirmation & ready-for-pickup alerts). Message frequency varies. Msg & data rates may apply. Reply STOP to unsubscribe.",
     "privacyPolicy": "Privacy Policy",

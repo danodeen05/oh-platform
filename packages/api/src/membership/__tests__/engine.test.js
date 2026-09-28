@@ -427,6 +427,9 @@ test("profileForUser returns tier, progress, credits, expiring, rewards, badges 
     ],
   });
   await prisma.creditLot.create({ data: { userId: "u1", source: "CASHBACK", amountCents: 200, remainingCents: 200, expiresAt: new Date(NOW.getTime() + DAY_MS) } });
+  // A lot the daily cron already warned about (Task F2): the internal marker
+  // must never reach this customer-facing response (fix round 1, review minor).
+  await prisma.creditLot.create({ data: { userId: "u1", source: "WELCOME", amountCents: 50, remainingCents: 50, expiresAt: new Date(NOW.getTime() + 2 * DAY_MS), note: "Welcome bonus [expiry-warned]" } });
 
   const profile = await profileForUser(prisma, "u1", NOW);
 
@@ -434,8 +437,10 @@ test("profileForUser returns tier, progress, credits, expiring, rewards, badges 
   assert.equal(profile.cashbackPct, 1);
   assert.equal(profile.progress.orders.have, 3);
   assert.equal(profile.progress.referrals.have, 1);
-  assert.equal(profile.credits, 200);
-  assert.deepEqual(profile.expiring.map((l) => l.id), (await prisma.creditLot.findMany({ where: { userId: "u1" } })).map((l) => l.id));
+  assert.equal(profile.credits, 250);
+  assert.deepEqual(profile.expiring.map((l) => l.id).sort(), (await prisma.creditLot.findMany({ where: { userId: "u1" } })).map((l) => l.id).sort());
+  assert.ok(profile.expiring.every((l) => !String(l.note || "").includes("[expiry-warned]")), "no lot note leaks the internal marker");
+  assert.equal(profile.expiring.find((l) => l.source === "WELCOME").note, "Welcome bonus"); // marker stripped, rest of the note kept
   assert.deepEqual(profile.rewards, []);
   assert.deepEqual(profile.badges, []);
   assert.deepEqual(profile.flags, { welcomeSeenAt: null, lastTierCelebrated: null });

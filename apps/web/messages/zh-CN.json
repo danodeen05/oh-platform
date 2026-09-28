@@ -1535,6 +1535,7 @@
     "optional": "选填",
     "yourName": "您的姓名",
     "forOrderUpdates": "用于订单更新",
+    "invalidPhone": "请输入有效的电话号码，或留空",
     "forReceipt": "用于收据",
     "enterYourName": "请输入您的姓名",
     "wantToEarnRewards": "想要赚取奖励并追踪订单吗？",

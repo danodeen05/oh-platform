@@ -969,9 +969,12 @@ async function runPaidEffects(prisma, order, effects, now) {
   if (order.status === "COMPLETED") {
     const complete = effects.onOrderCompleted || engineOnOrderCompleted;
     const membershipResult = await run("onOrderCompleted", () => complete(prisma, { orderId: order.id, now }));
-    // Task F2: tier-up SMS, sent after the membership transaction has
-    // committed (never from inside it) - fire-and-forget, same as the other
-    // wallet notifications below.
+    // Task F2 (fix round 1: corrected this comment - it's awaited, not
+    // fire-and-forget, same as every other effect `run()` wraps in this
+    // function; markPaid's own caller already waits on all of them,
+    // including sendOrderConfirmation's Twilio call above). Sent after the
+    // membership transaction has committed - never from inside it - and a
+    // failure here is caught by `run()` and never fails the request.
     if (membershipResult?.upgradedTo) {
       await run("notifyTierUp", () => notifyTierUpIfNeeded(prisma, { userId: order.userId, upgradedTo: membershipResult.upgradedTo }));
     }

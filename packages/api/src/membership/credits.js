@@ -218,41 +218,75 @@ export async function markExpiryWarned(prisma, lotId) {
 }
 
 /**
- * Sends the `creditExpiring` SMS for every lot `lotsNeedingExpiryWarning`
- * returns, then marks each one warned so a later run (the cron calls this
- * daily, right after `expireLots`) never double-sends. Honors
- * `notifications.js`'s SUPPORT_NOTIFY gate (off | log | live) the same way
- * every other customer-SMS code path does (R3): "off" does nothing at all
- * (not even a lookup), "log" looks the lots up and logs what it would have
- * sent without calling Twilio, "live" actually sends (still subject to
+ * Strips the internal `[expiry-warned]` marker from `lot.note` (Task F2 fix
+ * round 1, review minor). Nothing parses `note` today, but `profileForUser`
+ * (membership/engine.js) returns raw `expiringSoon` lots - including
+ * `note` - to the customer over `GET /users/:id/profile`, and those are
+ * exactly the ones the marker gets attached to. Returns `lot` unchanged if
+ * it has no marker (so callers can map over a mixed list safely).
+ */
+export function stripExpiryWarnedMarker(lot) {
+  if (!isExpiryWarned(lot)) return lot;
+  const note = lot.note.replace(`[${EXPIRY_WARNED_MARKER}]`, "").trim() || null;
+  return { ...lot, note };
+}
+
+/**
+ * Sends AT MOST ONE `creditExpiring` SMS per user per run (Task F2 fix round
+ * 1, controller ruling: one text per small cashback lot is spam). Every
+ * unwarned lot `lotsNeedingExpiryWarning` returns is grouped by `userId`;
+ * the group's `remainingCents` are summed and its soonest `expiresAt` is
+ * used. A text is sent only if that total reaches `PROGRAM.expiryWarningMinCents`
+ * (100 cents) - below it, nothing is sent, but every lot in the group is
+ * still marked warned (see `markExpiryWarned`), so a lot is only ever
+ * considered once, whether or not it crossed the floor with its group.
+ *
+ * Honors `notifications.js`'s SUPPORT_NOTIFY gate (off | log | live) the
+ * same way every other customer-SMS code path does (R3): "off" does nothing
+ * at all (not even a lookup), "log" looks the lots up and logs what it would
+ * have sent without calling Twilio, "live" actually sends (still subject to
  * `canSendSMS`/opt-in inside `sendCreditExpiryWarning`, and to Twilio simply
- * not being configured in dev/test). A lot is marked warned in every mode but
- * "off", including "log" and an opted-out user, so it's a one-time
- * consideration per lot rather than a guaranteed delivery. Never throws.
+ * not being configured in dev/test). Never throws.
  */
 export async function sendExpiryWarnings(prisma, { now = new Date(), env = process.env, log = console.log } = {}) {
   const mode = notifyMode(env);
   if (mode === "off") return { sent: 0, warned: 0 };
 
   const lots = await lotsNeedingExpiryWarning(prisma, now);
-  let sent = 0;
+  const byUser = new Map(); // userId -> lot[]
   for (const lot of lots) {
-    try {
-      if (mode === "log") {
-        log(`[cron] SUPPORT_NOTIFY=log: would send credit-expiry warning for lot ${lot.id} (user ${lot.userId})`);
-      } else {
-        const user = await prisma.user.findUnique({ where: { id: lot.userId } });
-        if (user) {
-          const result = await sendCreditExpiryWarning(user, lot);
-          if (result?.success) sent++;
-        }
-      }
-    } catch (err) {
-      console.error(`[cron] sendExpiryWarnings failed for lot ${lot.id}:`, err?.message || err);
-    }
-    await markExpiryWarned(prisma, lot.id);
+    if (!byUser.has(lot.userId)) byUser.set(lot.userId, []);
+    byUser.get(lot.userId).push(lot);
   }
-  return { sent, warned: lots.length };
+
+  let sent = 0;
+  let warned = 0;
+  for (const [userId, userLots] of byUser) {
+    const totalCents = userLots.reduce((sum, l) => sum + l.remainingCents, 0);
+    const soonestExpiresAt = userLots.reduce((min, l) => (l.expiresAt < min ? l.expiresAt : min), userLots[0].expiresAt);
+
+    if (totalCents >= PROGRAM.expiryWarningMinCents) {
+      try {
+        if (mode === "log") {
+          log(`[cron] SUPPORT_NOTIFY=log: would send credit-expiry warning to user ${userId} for ${userLots.length} lot(s), $${(totalCents / 100).toFixed(2)}`);
+        } else {
+          const user = await prisma.user.findUnique({ where: { id: userId } });
+          if (user) {
+            const result = await sendCreditExpiryWarning(user, { totalCents, soonestExpiresAt });
+            if (result?.success) sent++;
+          }
+        }
+      } catch (err) {
+        console.error(`[cron] sendExpiryWarnings failed for user ${userId}:`, err?.message || err);
+      }
+    }
+
+    for (const lot of userLots) {
+      await markExpiryWarned(prisma, lot.id);
+      warned++;
+    }
+  }
+  return { sent, warned };
 }
 
 /**

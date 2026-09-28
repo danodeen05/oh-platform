@@ -8,11 +8,14 @@
  * to a plausible E.164 number is logged and left as-is - this script never
  * guesses or drops data.
  *
- * `normalizePhoneE164` below is a deliberate copy of
- * packages/api/src/utils/phone.js's function of the same name: this script
- * lives in @oh/db, which has no dependency on @oh/api, and a one-off backfill
- * isn't worth a new cross-package dependency for. Keep the two in sync if the
- * rule ever changes.
+ * `normalizePhoneE164` is imported directly from @oh/api's source (Task F2
+ * fix round 1, controller ruling 2): this used to be a local copy that had
+ * drifted from Chappy's (stricter) rule, so a number this script "fixed"
+ * could then fail Chappy's exact-match identity check. There's no package.json
+ * dependency from @oh/db on @oh/api - this is a plain relative-path import
+ * of one pure, dependency-free function, which `tsx`/Node resolve at the
+ * filesystem level regardless of package boundaries. Keep this path in sync
+ * if packages/api/src/utils/phone.js ever moves.
  *
  * Usage (run from packages/db):
  *   pnpm exec tsx scripts/backfill-phone-e164.ts --dry-run
@@ -24,26 +27,7 @@
  * against anything else unless ALLOW_NON_LOCAL_BACKFILL=1 is set.
  */
 import { PrismaClient } from "@prisma/client";
-
-const MIN_E164_DIGITS = 8;
-const MAX_E164_DIGITS = 15;
-
-function normalizePhoneE164(input: string | null | undefined): string | null {
-  if (input === null || input === undefined) return null;
-  const raw = String(input).trim();
-  if (!raw) return null;
-
-  if (raw.startsWith("+")) {
-    const digits = raw.slice(1).replace(/\D/g, "");
-    if (digits.length < MIN_E164_DIGITS || digits.length > MAX_E164_DIGITS) return null;
-    return `+${digits}`;
-  }
-
-  const digits = raw.replace(/\D/g, "");
-  if (digits.length === 10) return `+1${digits}`;
-  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
-  return null;
-}
+import { normalizePhoneE164 } from "../../api/src/utils/phone.js";
 
 function last4(phone: string | null | undefined): string {
   if (!phone) return "----";
@@ -77,6 +61,12 @@ async function backfillTable(
 ): Promise<Counts> {
   const counts = emptyCounts();
   const rows = await findMany();
+  // Tracks normalized values claimed earlier IN THIS RUN, so two rows that
+  // collide with each other (not just with something already in the DB) are
+  // both caught, even in --dry-run before either write actually happens.
+  // Only meaningful where `findConflict` is given (User.phone is @unique);
+  // Guest.phone isn't unique, so guests sharing a number is never a conflict.
+  const claimedThisRun = new Map<string, string>(); // normalized phone -> row id
   for (const row of rows) {
     if (!row.phone) continue;
     counts.total++;
@@ -87,16 +77,19 @@ async function backfillTable(
       continue;
     }
     if (normalized === row.phone) {
+      if (findConflict) claimedThisRun.set(normalized, row.id);
       counts.alreadyOk++;
       continue;
     }
     if (findConflict) {
-      const conflict = await findConflict(normalized, row.id);
+      const claimedBy = claimedThisRun.get(normalized);
+      const conflict = claimedBy ? { id: claimedBy } : await findConflict(normalized, row.id);
       if (conflict) {
         counts.conflicts++;
         console.log(`[backfill-phone] ${label} ${row.id}: normalizing to ...${last4(normalized)} would collide with ${label} ${conflict.id} - left unchanged, needs manual review`);
         continue;
       }
+      claimedThisRun.set(normalized, row.id);
     }
     counts.updated++;
     console.log(`[backfill-phone]${dryRun ? " (dry-run)" : ""} ${label} ${row.id}: ...${last4(row.phone)} -> E.164 ...${last4(normalized)}`);

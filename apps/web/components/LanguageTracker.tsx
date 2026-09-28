@@ -88,9 +88,11 @@ export default function LanguageTracker() {
     (async () => {
       try {
         const me = await api(`${SITE_API_URL}/users/me`);
-        if (!me.ok) return;
+        if (cancelled || !me.ok) return;
         const { locale } = await me.json();
-        if (cancelled || locale === currentLocale) {
+        if (cancelled) return; // Task F2 fix round 1: never mark a cancelled attempt as synced,
+        // or switching back to `currentLocale` later would wrongly skip the retry.
+        if (locale === currentLocale) {
           lastSyncedLocale.current = currentLocale;
           return;
         }

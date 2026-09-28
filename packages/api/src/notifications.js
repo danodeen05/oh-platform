@@ -108,10 +108,13 @@ export async function sendSMS({ to, body }) {
       to: normalizedPhone,
     });
 
-    console.log(`[SMS] Sent to ${normalizedPhone}: ${message.sid}`);
+    // Task F2 fix round 1: logs show only the last 4 digits of any phone, never the full number.
+    console.log(`[SMS] Sent to ...${normalizedPhone.slice(-4)}: ${message.sid}`);
     return { success: true, sid: message.sid };
   } catch (error) {
-    console.error("[SMS] Failed to send:", error);
+    // Twilio error messages/codes can echo the `to` number back; log only
+    // the code/message, never the error object itself, and no phone.
+    console.error(`[SMS] Failed to send to ...${normalizedPhone.slice(-4)}:`, error?.code, error?.message);
     return { success: false, error: error.message };
   }
 }
@@ -280,20 +283,35 @@ export async function notifyTierUpIfNeeded(prisma, { userId, upgradedTo }, { env
   }
 }
 
+// Task F2 fix round 1: a date reads naturally per locale, not always US
+// MM/DD (a Spanish reader would misread "12/31" as day 12 of a 31st month).
+// "short" gives most locales a natural short form, including Chinese, whose
+// ICU short-month pattern is exactly the "M月D日" reviewers asked for; es
+// wants day-first numeric ("31/12"), not a Latin month abbreviation ("dic").
+const DATE_INTL_LOCALE = { en: "en-US", "zh-TW": "zh-TW", "zh-CN": "zh-CN", es: "es" };
+const DATE_FORMAT_OPTIONS = { en: { month: "short", day: "numeric" }, "zh-TW": { month: "short", day: "numeric" }, "zh-CN": { month: "short", day: "numeric" }, es: { month: "numeric", day: "numeric" } };
+
+/** `date` formatted the way `locale`'s readers expect, always in America/Denver. */
+export function formatExpiryDate(locale, date) {
+  const key = normalizeLocale(locale);
+  return new Intl.DateTimeFormat(DATE_INTL_LOCALE[key], { timeZone: "America/Denver", ...DATE_FORMAT_OPTIONS[key] }).format(date);
+}
+
 /**
- * Send a credit-expiry-warning SMS (Task F2): membership/credits.js's
- * `lotsNeedingExpiryWarning` finds lots inside PROGRAM.expiryWarningDays of
- * expiring that haven't been warned about yet; the daily cron
- * (cron/wallet-cron.js) calls this once per lot, then marks it warned.
+ * Send a credit-expiry-warning SMS (Task F2, fix round 1: one text per user
+ * per day, not one per lot - membership/credits.js's `sendExpiryWarnings`
+ * groups every unwarned lot inside PROGRAM.expiryWarningDays by user and
+ * sums them before calling this, so `totalCents` and `soonestExpiresAt`
+ * cover the whole group, not a single lot).
  */
-export async function sendCreditExpiryWarning(user, lot) {
+export async function sendCreditExpiryWarning(user, { totalCents, soonestExpiresAt }) {
   if (!user?.phone || !canSendSMS(user, null)) {
     return { success: false, reason: user?.phone ? "not_opted_in" : "no_phone" };
   }
   const locale = resolveLocale(user, null, null);
   const t = templateFor(locale);
-  const amount = `$${(lot.remainingCents / 100).toFixed(2)}`;
-  const date = new Intl.DateTimeFormat("en-US", { timeZone: "America/Denver", month: "2-digit", day: "2-digit" }).format(lot.expiresAt);
+  const amount = `$${(totalCents / 100).toFixed(2)}`;
+  const date = formatExpiryDate(locale, soonestExpiresAt);
   const link = (() => {
     const base = (process.env.WEB_APP_URL || "https://www.ohbeef.com").replace(/\/+$/, "");
     return `${base}/${locale}/member/credits`;

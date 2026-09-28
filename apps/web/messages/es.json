@@ -1535,6 +1535,7 @@
     "optional": "opcional",
     "yourName": "Tu nombre",
     "forOrderUpdates": "Para actualizaciones del pedido",
+    "invalidPhone": "Ingresa un número de teléfono válido, o déjalo en blanco",
     "forReceipt": "Para el recibo",
     "enterYourName": "Por favor ingresa tu nombre",
     "wantToEarnRewards": "¿Quieres ganar recompensas y rastrear tus pedidos?",

@@ -9,6 +9,7 @@ import { trackBeginCheckout, trackReferralCodeUsed } from "@/lib/analytics";
 import { useTranslations } from "next-intl";
 import { StripeProvider, PaymentForm, SavedPaymentMethod } from "@/components/payments";
 import { PromoCodeInput, type AppliedPromo } from "@/components/PromoCodeInput";
+import { isValidOptionalPhone } from "@/lib/site/phone";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -80,6 +81,10 @@ export default function OrderPaymentForm({
   const [guestEmail, setGuestEmail] = useState(guest?.email || "");
   const [guestSmsOptIn, setGuestSmsOptIn] = useState(guest?.smsOptIn || false);
   const [guestFormError, setGuestFormError] = useState("");
+  // Task F2 fix round 1: validate the optional phone BEFORE any charge runs
+  // (same rule the server enforces, via lib/site/phone.ts), so an invalid
+  // phone never lets a guest get charged and then blocked while saving it.
+  const guestPhoneInvalid = !isValidOptionalPhone(guestPhone);
 
   // Totals come from the server's quote (POST /orders/:id/payment-intent).
   // The browser never computes what is charged; it only shows it.
@@ -402,15 +407,27 @@ export default function OrderPaymentForm({
     }
   }
 
-  // Handle guest payment success (Stripe) or a guest's fully covered order (no PaymentIntent)
+  // Handle guest payment success (Stripe) or a guest's fully covered order (no PaymentIntent).
+  // Task F2 fix round 1, controller ruling: when this runs after a real Stripe
+  // charge (stripePaymentIntentId set), the card has ALREADY been charged, so
+  // confirmPaid (which marks the order PAID) must run first and must not be
+  // blocked by anything else. saveGuestDetails only updates contact details
+  // (name/phone/email/opt-in) and links the guestId to the order - neither is
+  // worth losing a paid-but-unconfirmed order over, so it runs after, as
+  // best-effort: log a failure and keep going to the redirect either way.
   async function handleGuestPaymentSuccess(stripePaymentIntentId?: string) {
     setProcessing(true);
     setError("");
 
     try {
-      await saveGuestDetails();
       const updatedOrder = await confirmPaid(stripePaymentIntentId);
       localStorage.removeItem("mealGiftMessage");
+
+      try {
+        await saveGuestDetails();
+      } catch (err) {
+        console.error("Failed to save guest details after payment (non-fatal):", err);
+      }
 
       router.push(
         `/order/confirmation?orderId=${orderId}&orderNumber=${orderNumber}&total=${updatedOrder.totalCents}&paid=true`
@@ -494,12 +511,15 @@ export default function OrderPaymentForm({
                   style={{
                     width: "100%",
                     padding: "12px 16px",
-                    border: "1px solid #d1d5db",
+                    border: guestPhoneInvalid ? "2px solid #ef4444" : "1px solid #d1d5db",
                     borderRadius: 8,
                     fontSize: "1rem",
                     boxSizing: "border-box",
                   }}
                 />
+                {guestPhoneInvalid && (
+                  <p style={{ color: "#ef4444", fontSize: "0.85rem", marginTop: 4 }}>{t("invalidPhone")}</p>
+                )}
               </div>
 
               <div>
@@ -676,17 +696,17 @@ export default function OrderPaymentForm({
                 </div>
                 <button
                   onClick={() => handleGuestPaymentSuccess()}
-                  disabled={processing || !guestName.trim()}
+                  disabled={processing || !guestName.trim() || guestPhoneInvalid}
                   style={{
                     width: "100%",
                     padding: 16,
-                    background: processing || !guestName.trim() ? "#d1d5db" : "#22c55e",
+                    background: processing || !guestName.trim() || guestPhoneInvalid ? "#d1d5db" : "#22c55e",
                     color: "white",
                     border: "none",
                     borderRadius: 12,
                     fontSize: "1.1rem",
                     fontWeight: "bold",
-                    cursor: processing || !guestName.trim() ? "not-allowed" : "pointer",
+                    cursor: processing || !guestName.trim() || guestPhoneInvalid ? "not-allowed" : "pointer",
                   }}
                 >
                   {processing ? "Processing..." : "Complete Order"}
@@ -702,7 +722,7 @@ export default function OrderPaymentForm({
                   showExpressCheckout={true}
                   showSaveCard={false}
                   returnUrl={`${typeof window !== 'undefined' ? window.location.origin : ''}/order/confirmation?orderId=${orderId}&orderNumber=${orderNumber}&paid=true`}
-                  disabled={processing || !guestName.trim()}
+                  disabled={processing || !guestName.trim() || guestPhoneInvalid}
                 />
               </StripeProvider>
             ) : (

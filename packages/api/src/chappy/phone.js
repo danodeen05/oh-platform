@@ -7,25 +7,13 @@
  * identity: "5550100" must not become someone whose number ends in it.
  */
 
-/**
- * E.164 for a phone number, or null. US numbers without a country code are
- * +1: "(801) 555-0100" and "801-555-0100" -> "+18015550100",
- * "18015550100" -> "+18015550100". "+44 20 7946 0958" -> "+442079460958".
- */
-export function toE164(raw, defaultCountryCode = "1") {
-  if (typeof raw !== "string" && typeof raw !== "number") return null;
-  const s = String(raw).trim();
-  if (!s) return null;
-  const digits = s.replace(/\D/g, "");
-  if (s.startsWith("+")) return digits.length >= 8 && digits.length <= 15 && digits[0] !== "0" ? `+${digits}` : null;
-  if (s.startsWith("00")) return toE164(`+${digits.slice(2)}`);
-  if (defaultCountryCode === "1") {
-    if (digits.length === 10 && /^[2-9]/.test(digits)) return `+1${digits}`;
-    if (digits.length === 11 && digits.startsWith("1") && /^[2-9]/.test(digits.slice(1))) return `+${digits}`;
-    return null;
-  }
-  return digits.length >= 8 && digits.length <= 15 ? `+${defaultCountryCode}${digits}` : null;
-}
+// Task F2 fix round 1: this used to be its own copy of the E.164 rule, which
+// had drifted from utils/phone.js's (looser) copy - a number F2 stored could
+// then fail Chappy's exact match. `utils/phone.js` is now the one helper;
+// `toE164` re-exports it under this module's original name so every existing
+// caller/test here is unaffected.
+import { normalizePhoneE164 as toE164 } from "../utils/phone.js";
+export { toE164 };
 
 /**
  * Users whose stored phone normalizes to exactly `e164`. Stored numbers are

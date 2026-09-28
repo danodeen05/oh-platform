@@ -40,6 +40,9 @@ export async function applyUserLocaleUpdate(prisma, { id, locale }) {
   if (!SUPPORTED_LOCALES.includes(locale)) {
     return { status: 400, body: { error: "Unsupported locale", code: "INVALID_LOCALE" } };
   }
-  const user = await prisma.user.update({ where: { id }, data: { locale } });
+  // Task F2 fix round 1 (review minor): return only what changed, not the
+  // whole User row (PATCH /users/:id/phone does the same today, but that's
+  // not a reason to add a second over-broad response).
+  const user = await prisma.user.update({ where: { id }, data: { locale }, select: { id: true, locale: true } });
   return { status: 200, body: user };
 }

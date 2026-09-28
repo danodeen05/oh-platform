@@ -1,7 +1,9 @@
 /**
- * English SMS copy (Task F2). Every key here must also exist, with the same
- * name, in every other locale file (see notifications/__tests__/templates.test.js).
- * Each value is `(vars) => string`. No emoji, no em dashes (U+2014).
+ * English SMS copy (Task F2, fix round 1: tierUp got its missing article -
+ * "a Noodle Master", not "Noodle Master"). Every key here must also exist,
+ * with the same name, in every other locale file (see
+ * notifications/__tests__/templates.test.js). Each value is
+ * `(vars) => string`. No emoji, no em dashes (U+2014).
  */
 
 // Program tier display names (packages/api/src/membership/program.js PROGRAM.tiers
@@ -28,7 +30,7 @@ export default {
   orderReady: ({ orderNumber }) => `Oh! Your order #${orderNumber} is ready! Head over to pick it up. Enjoy!`,
 
   tierUp: ({ tierKey, link }) =>
-    `Oh! You're now ${TIER_NAMES[tierKey] || tierKey}. Your free bowl is waiting. ${link}`,
+    `Oh! You're now a ${TIER_NAMES[tierKey] || tierKey}. Your free bowl is waiting: ${link}`,
 
   creditExpiring: ({ amount, date, link }) =>
     `Oh! ${amount} in credit expires ${date}. Use it before it's gone: ${link}`,

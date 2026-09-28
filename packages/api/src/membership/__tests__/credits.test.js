@@ -13,6 +13,7 @@ import {
   lotsNeedingExpiryWarning,
   markExpiryWarned,
   sendExpiryWarnings,
+  stripExpiryWarnedMarker,
 } from "../credits.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -299,31 +300,97 @@ test("markExpiryWarned is idempotent and preserves an existing note", async () =
   assert.equal(twice.note, once.note); // no double-append
 });
 
-test("sendExpiryWarnings: the warning is sent once per lot across two cron runs", async () => {
+test("stripExpiryWarnedMarker removes the marker and leaves an unwarned lot untouched", () => {
+  const warned = { id: "l1", note: "1% cashback on order [expiry-warned]" };
+  assert.equal(stripExpiryWarnedMarker(warned).note, "1% cashback on order");
+
+  const warnedNoOtherNote = { id: "l2", note: "[expiry-warned]" };
+  assert.equal(stripExpiryWarnedMarker(warnedNoOtherNote).note, null);
+
+  const unwarned = { id: "l3", note: "Referral bonus" };
+  assert.equal(stripExpiryWarnedMarker(unwarned), unwarned); // same reference, not even copied
+
+  const noNote = { id: "l4", note: null };
+  assert.equal(stripExpiryWarnedMarker(noNote), noNote);
+});
+
+test("sendExpiryWarnings: 3 small lots for one user produce ONE text (grouped, not per-lot)", async () => {
   const now = new Date("2026-10-01T12:00:00-06:00");
   const prisma = makeMemoryPrisma({
-    users: [{ id: "u1", creditsCents: 50, phone: "+18015551234", smsOptIn: true, locale: "en" }],
+    users: [{ id: "u1", creditsCents: 150, phone: "+18015551234", smsOptIn: true, locale: "en" }],
     creditLots: [
       { id: "l1", userId: "u1", source: "CASHBACK", amountCents: 50, remainingCents: 50, expiresAt: new Date(now.getTime() + 3 * DAY_MS) },
+      { id: "l2", userId: "u1", source: "CASHBACK", amountCents: 50, remainingCents: 50, expiresAt: new Date(now.getTime() + 5 * DAY_MS) },
+      { id: "l3", userId: "u1", source: "CASHBACK", amountCents: 50, remainingCents: 50, expiresAt: new Date(now.getTime() + 1 * DAY_MS) }, // soonest
     ],
   });
   const logs = [];
   const first = await sendExpiryWarnings(prisma, { now, env: { SUPPORT_NOTIFY: "log" }, log: (l) => logs.push(l) });
-  assert.equal(first.warned, 1);
-  assert.equal(logs.length, 1);
-  assert.match(logs[0], /would send credit-expiry warning for lot l1/);
+  assert.equal(first.warned, 3); // every lot in the group is marked
+  assert.equal(logs.length, 1); // ONE text for the group, not 3
+  assert.match(logs[0], /would send credit-expiry warning to user u1 for 3 lot\(s\), \$1\.50/);
 
-  const second = await sendExpiryWarnings(prisma, { now, env: { SUPPORT_NOTIFY: "log" }, log: (l) => logs.push(l) });
-  assert.equal(second.warned, 0); // already marked - not considered again
+  for (const id of ["l1", "l2", "l3"]) {
+    const lot = await prisma.creditLot.findUnique({ where: { id } });
+    assert.match(lot.note || "", /\[expiry-warned\]/);
+  }
+
+  // Next day, no new lots: nothing left unwarned, so nothing happens.
+  const second = await sendExpiryWarnings(prisma, { now: new Date(now.getTime() + DAY_MS), env: { SUPPORT_NOTIFY: "log" }, log: (l) => logs.push(l) });
+  assert.deepEqual(second, { sent: 0, warned: 0 });
   assert.equal(logs.length, 1); // no new log line
 });
 
-test("sendExpiryWarnings: SUPPORT_NOTIFY=off does nothing at all, not even marking the lot", async () => {
+test("sendExpiryWarnings: a group total under the $1.00 floor sends nothing, but still marks the lots", async () => {
   const now = new Date("2026-10-01T12:00:00-06:00");
   const prisma = makeMemoryPrisma({
-    users: [{ id: "u1", creditsCents: 50, phone: "+18015551234", smsOptIn: true }],
+    users: [{ id: "u1", creditsCents: 60, phone: "+18015551234", smsOptIn: true, locale: "en" }],
     creditLots: [
-      { id: "l1", userId: "u1", source: "CASHBACK", amountCents: 50, remainingCents: 50, expiresAt: new Date(now.getTime() + 3 * DAY_MS) },
+      { id: "l1", userId: "u1", source: "CASHBACK", amountCents: 30, remainingCents: 30, expiresAt: new Date(now.getTime() + 3 * DAY_MS) },
+      { id: "l2", userId: "u1", source: "CASHBACK", amountCents: 30, remainingCents: 30, expiresAt: new Date(now.getTime() + 4 * DAY_MS) },
+    ],
+  });
+  const logs = [];
+  const result = await sendExpiryWarnings(prisma, { now, env: { SUPPORT_NOTIFY: "log" }, log: (l) => logs.push(l) });
+  assert.equal(result.sent, 0);
+  assert.equal(result.warned, 2); // both lots considered and marked
+  assert.equal(logs.length, 0); // no text, and no "would send" preview either
+
+  for (const id of ["l1", "l2"]) {
+    const lot = await prisma.creditLot.findUnique({ where: { id } });
+    assert.match(lot.note || "", /\[expiry-warned\]/);
+  }
+
+  // The next day, with no new lots, still nothing.
+  const second = await sendExpiryWarnings(prisma, { now: new Date(now.getTime() + DAY_MS), env: { SUPPORT_NOTIFY: "log" }, log: (l) => logs.push(l) });
+  assert.deepEqual(second, { sent: 0, warned: 0 });
+});
+
+test("sendExpiryWarnings: two different users each get their own text, grouped independently", async () => {
+  const now = new Date("2026-10-01T12:00:00-06:00");
+  const prisma = makeMemoryPrisma({
+    users: [
+      { id: "u1", creditsCents: 150, phone: "+18015551111", smsOptIn: true, locale: "en" },
+      { id: "u2", creditsCents: 50, phone: "+18015552222", smsOptIn: true, locale: "en" },
+    ],
+    creditLots: [
+      { id: "l1", userId: "u1", source: "CASHBACK", amountCents: 150, remainingCents: 150, expiresAt: new Date(now.getTime() + 3 * DAY_MS) },
+      { id: "l2", userId: "u2", source: "CASHBACK", amountCents: 50, remainingCents: 50, expiresAt: new Date(now.getTime() + 3 * DAY_MS) },
+    ],
+  });
+  const logs = [];
+  const result = await sendExpiryWarnings(prisma, { now, env: { SUPPORT_NOTIFY: "log" }, log: (l) => logs.push(l) });
+  assert.equal(result.warned, 2);
+  assert.equal(logs.length, 1); // only u1 crosses the floor
+  assert.match(logs[0], /user u1/);
+});
+
+test("sendExpiryWarnings: SUPPORT_NOTIFY=off does nothing at all, not even marking a lot", async () => {
+  const now = new Date("2026-10-01T12:00:00-06:00");
+  const prisma = makeMemoryPrisma({
+    users: [{ id: "u1", creditsCents: 150, phone: "+18015551234", smsOptIn: true }],
+    creditLots: [
+      { id: "l1", userId: "u1", source: "CASHBACK", amountCents: 150, remainingCents: 150, expiresAt: new Date(now.getTime() + 3 * DAY_MS) },
     ],
   });
   const result = await sendExpiryWarnings(prisma, { now, env: { SUPPORT_NOTIFY: "off" } });
