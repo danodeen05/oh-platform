@@ -4438,5 +4438,210 @@
         "body": "這一步的詳細資訊會顯示在這裡。"
       }
     }
+  },
+  "rewards": {
+    "meta": {
+      "title": "會員獎勵",
+      "description": "每一碗、每一位朋友，都讓你更上一層。看清楚如何成為牛肉達人。"
+    },
+    "unavailable": "目前無法取得會員獎勵資訊，請稍後再試。",
+    "hero": {
+      "eyebrow": "Oh! 會員獎勵",
+      "title": "三個等級，一條晉升之路。",
+      "lede": "每一碗、每一位朋友，都讓你更上一層。以下告訴你如何成為{tier}。",
+      "cta": "規劃你的晉升",
+      "order": "點一碗"
+    },
+    "member": {
+      "signedOut": "登入即可查看你目前的位置。",
+      "signIn": "登入",
+      "loading": "正在查看你的進度",
+      "youAre": "你目前是{tier}。",
+      "toNext": "距離{next}：{orders}/{ordersNeed} 碗，{referrals}/{referralsNeed} 位朋友。",
+      "top": "你已在最高等級。每一碗都享 {pct}% 購物金回饋。",
+      "ordersLabel": "晉升{next}的碗數",
+      "referralsLabel": "晉升{next}的朋友數"
+    },
+    "climb": {
+      "eyebrow": "晉升之路",
+      "title": "從{first}開始，成為{last}。",
+      "start": "每個人的起點。註冊並點一碗即可。",
+      "need": "{orders} 碗加 {referrals} 位朋友",
+      "after": "從成為{tier}起計算。每升一級，進度重新開始。",
+      "cashback": "每碗 {pct}% 購物金回饋",
+      "here": "你在這裡",
+      "step": "第 {step} 級，共 {total} 級"
+    },
+    "tiers": {
+      "eyebrow": "會員等級",
+      "title": "點一下卡片，看看福利。",
+      "rail": "等級卡片",
+      "headline": "{pct}% 購物金回饋",
+      "flip": "查看{tier}福利",
+      "tapHint": "點一下看福利",
+      "backHint": "點一下翻回",
+      "perksTitle": "{tier}福利",
+      "perks": {
+        "cashback": "每碗 {pct}% 回饋，以購物金發放",
+        "earlyAccess": "新品提前 {days} 天搶先享用",
+        "queue": "你的麵出餐順序往前移",
+        "queueTop": "你的麵出餐順序最優先",
+        "queueNone": "一般出餐順序",
+        "freeBowl": "升級為{tier}即送一碗，{days} 天內有效",
+        "quarterly": "每季招待一份頂級加料"
+      }
+    },
+    "simulator": {
+      "eyebrow": "牛肉達人之路",
+      "title": "你能多快晉升？",
+      "lede": "拖動滑桿，數字依照真實規則計算。",
+      "controls": "你的節奏",
+      "bowls": {
+        "label": "每月碗數",
+        "value": "每月 {count} 碗"
+      },
+      "friends": {
+        "label": "每月推薦朋友",
+        "value": "每月 {count} 位朋友",
+        "cap": "每月最多計入 {cap} 位朋友。"
+      },
+      "ticket": {
+        "label": "平均每單金額（未稅）",
+        "value": "每單 {amount}"
+      },
+      "results": "你的晉升",
+      "reach": "第 {month} 個月",
+      "beyond": "超過 {months} 個月",
+      "never": {
+        "title": "沒有朋友，就無法晉升。",
+        "body": "每個等級都需要碗數，也需要朋友。每月邀請一位朋友，{tier}就在眼前。"
+      },
+      "noBowls": {
+        "title": "沒有點麵，就無法晉升。",
+        "body": "每個等級都要碗數，也要朋友。每週一碗，{tier}就在眼前。"
+      },
+      "summary": "照這個節奏：第 {firstMonth} 個月成為{first}，第 {lastMonth} 個月成為{last}。",
+      "summaryPartial": "照這個節奏：第 {firstMonth} 個月成為{first}。成為{last}需要超過 {months} 個月。",
+      "summaryNone": "照這個節奏，你在 {months} 個月內都會是{tier}。",
+      "timeline": "你的前 {months} 個月",
+      "month": "月",
+      "totals": {
+        "freeBowls": "免費麵",
+        "cashback": "購物金回饋",
+        "friendCredit": "已得推薦購物金",
+        "note": "以 {months} 個月計算。購物金自取得起 {days} 天後到期。"
+      }
+    },
+    "credits": {
+      "eyebrow": "購物金怎麼運作",
+      "title": "賺到、用掉，{days} 天內。",
+      "lede": "回饋與推薦獎勵都會以購物金存入你的帳戶。",
+      "track": "一筆購物金的一生",
+      "day": "第 {day} 天",
+      "earn": {
+        "title": "賺取",
+        "body": "每碗享 {low}% 至 {high}% 回饋；朋友完成第一碗，你再得 {referrer}。"
+      },
+      "spend": {
+        "title": "使用",
+        "body": "結帳時自動折抵，最快到期的先用。"
+      },
+      "remind": {
+        "title": "提醒",
+        "body": "購物金到期前 {days} 天，我們會通知你。"
+      },
+      "expire": {
+        "title": "到期",
+        "body": "每筆購物金自取得當天起有效 {days} 天。"
+      },
+      "wallet": "錢包裡的三筆購物金",
+      "daysLeft": "剩 {days} 天",
+      "spentFirst": "優先使用"
+    },
+    "referrals": {
+      "eyebrow": "朋友",
+      "title": "你得 {referrer}，朋友得 {referee}。",
+      "body": "朋友用你的連結註冊即得 {referee}。朋友完成第一碗後，你得 {referrer}。",
+      "cap": "每 30 天最多 {max} 筆推薦獎勵。每一位也會計入你的下一個等級。",
+      "yourLink": "你的連結",
+      "share": "分享你的連結",
+      "copy": "複製連結",
+      "copied": "已複製連結",
+      "copyFailed": "無法複製，請選取連結後自行複製。",
+      "shareTitle": "Oh! 牛肉麵",
+      "shareText": "送你 {amount}，用在你在 Oh! 的第一碗。",
+      "signedOut": "登入即可取得你的連結。",
+      "signIn": "登入",
+      "loading": "正在取得你的連結",
+      "unavailable": "目前無法取得你的連結。"
+    },
+    "seals": {
+      "eyebrow": "印章",
+      "title": "你可以收集的印章。",
+      "lede": "每一枚都是一方印，達成時為你蓋上。點一下印章，看看如何取得。",
+      "earned": "已取得",
+      "notEarned": "尚未取得",
+      "howTo": "取得方式",
+      "close": "關閉",
+      "empty": "印章即將推出。",
+      "count": "已取得 {earned}/{total}",
+      "categories": {
+        "MILESTONE": "里程碑",
+        "CHALLENGE": "挑戰",
+        "REFERRAL": "朋友",
+        "SPECIAL": "特別",
+        "STREAK": "連續"
+      }
+    },
+    "challenges": {
+      "eyebrow": "挑戰",
+      "title": "完成挑戰，賺取購物金。",
+      "reward": "{amount} 購物金",
+      "empty": "新挑戰即將推出。"
+    },
+    "faq": {
+      "eyebrow": "常見問題",
+      "title": "你可能想知道。",
+      "items": {
+        "climb": {
+          "q": "如何晉升等級？",
+          "a": "點麵，並邀請朋友。從{first}到{second}需要 {firstOrders} 碗和 {firstReferrals} 位朋友。從{second}到{third}需要再 {secondOrders} 碗和 {secondReferrals} 位朋友。"
+        },
+        "reset": {
+          "q": "多出來的進度會保留嗎？",
+          "a": "不會。每次晉升後，兩項進度都從零開始。"
+        },
+        "referral": {
+          "q": "怎樣才算一位朋友？",
+          "a": "用你的連結註冊並完成第一碗的朋友。任何 30 天內最多計入 {max} 位。"
+        },
+        "expiry": {
+          "q": "購物金何時到期？",
+          "a": "取得後 {days} 天。到期前 {warn} 天會提醒你，結帳時也一律先用最快到期的。"
+        },
+        "freeBowl": {
+          "q": "免費麵怎麼用？",
+          "a": "每次晉升，帳戶會收到一碗免費麵，請在 {days} 天內使用。"
+        },
+        "quarterly": {
+          "q": "每季加料是什麼？",
+          "a": "成為{tier}後，每季招待一份頂級加料。季度以山區時間計算。"
+        },
+        "earlyAccess": {
+          "q": "什麼是搶先享用？",
+          "a": "新品會先開放給會員：{third}提前 {thirdDays} 天，{second}提前 {secondDays} 天，{first}提前 {firstDays} 天。"
+        },
+        "queue": {
+          "q": "出餐優先是什麼意思？",
+          "a": "尖峰時段，等級越高，出餐順序越前面：{secondName}往前移，{thirdName}最優先。"
+        }
+      }
+    },
+    "chappy": {
+      "title": "還有疑問？",
+      "body": "Chappy 熟悉所有規則，也能陪你一起看你的進度。",
+      "cta": "問問 Chappy",
+      "prompt": "怎樣最快成為牛肉達人？"
+    }
   }
 }

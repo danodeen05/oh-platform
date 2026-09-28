@@ -1,37 +1,14 @@
 import { getRequestConfig } from 'next-intl/server';
 import { routing } from './routing';
-import en from '../messages/en.json';
+import { withPlanFallback } from './plan-fallback';
+import { createIntlErrorHandlers } from '../lib/site/i18n-errors';
 
 type Messages = Record<string, unknown>;
 
-/**
- * The interactive business plan (`plan.*`) ships complete in en and zh-TW.
- * Other locales fall back to English key by key so a missing translation
- * never renders a raw key or throws in front of an investor.
- */
-function withPlanFallback(messages: Messages): Messages {
-  const enPlan = (en as Messages).plan as Messages | undefined;
-  const localePlan = (messages.plan as Messages | undefined) ?? {};
-  if (!enPlan) return messages;
-  return { ...messages, plan: deepMerge(enPlan, localePlan) };
-}
-
-function deepMerge(base: Messages, override: Messages): Messages {
-  const out: Messages = { ...base };
-  for (const [key, value] of Object.entries(override)) {
-    const current = out[key];
-    if (isRecord(value) && isRecord(current)) {
-      out[key] = deepMerge(current, value);
-    } else {
-      out[key] = value;
-    }
-  }
-  return out;
-}
-
-function isRecord(value: unknown): value is Messages {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
+// One set of handlers per server process, so the production "log once per
+// key" set is shared across requests. Client components get the same
+// behavior from components/site/IntlClientProvider.tsx.
+const intlErrors = createIntlErrorHandlers();
 
 export default getRequestConfig(async ({ requestLocale }) => {
   let locale = await requestLocale;
@@ -46,5 +23,10 @@ export default getRequestConfig(async ({ requestLocale }) => {
   return {
     locale,
     messages: withPlanFallback(messages),
+    // Task C5: throw in tests; in dev show the key path and log once per key;
+    // in production an empty string plus a once-per-key log. Never logged for
+    // plan.* (see withPlanFallback).
+    onError: intlErrors.onError,
+    getMessageFallback: intlErrors.getMessageFallback,
   };
 });

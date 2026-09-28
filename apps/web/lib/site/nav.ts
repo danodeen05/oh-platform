@@ -61,8 +61,7 @@ export const CHAPPY_AVATAR = "/plan/chappy-96.webp";
 export const DOCK_ITEMS: readonly NavItem[] = [
   { key: "order", href: "/order", icon: "bowl", primary: true },
   { key: "menu", href: "/menu", icon: "chopsticks" },
-  // TODO(D7): /rewards replaces the legacy loyalty page.
-  { key: "rewards", href: "/loyalty", icon: "seal" },
+  { key: "rewards", href: "/rewards", icon: "seal" },
   { key: "chappy", action: "openChappy", avatar: CHAPPY_AVATAR },
 ];
 

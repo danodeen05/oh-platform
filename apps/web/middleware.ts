@@ -27,7 +27,7 @@ const isPublicRoute = createRouteMatcher([
   "/:locale/order(.*)",
   "/:locale/menu(.*)",
   "/:locale/locations(.*)",
-  "/:locale/loyalty(.*)",
+  "/:locale/rewards(.*)",
   "/:locale/gift-cards(.*)",
   "/:locale/store(.*)",
   "/:locale/contact(.*)",
@@ -177,7 +177,7 @@ export default async function middleware(request: NextRequest, event: NextFetchE
 export const config = {
   matcher: [
     // Match all paths except static files and most API routes
-    "/((?!_next|api|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest|mp4|webm|ogg|mov|txt|xml)).*)",
+    "/((?!_next|api|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|avif|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest|mp4|webm|ogg|mov|txt|xml)).*)",
     // Include agents API routes for authentication
     "/api/agents/:path*",
   ],
