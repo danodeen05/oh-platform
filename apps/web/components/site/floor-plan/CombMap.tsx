@@ -26,11 +26,11 @@
  * `const t = useTranslations(); <CombMap labels={t.raw("combMap")} ... />`;
  * from a server component, `(await getTranslations()).raw("combMap")`.
  */
-import { useCallback, useId, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { buildLayout, LOCATION_LAYOUTS, POD, type Layout, type Pod, type Rect, type Door } from "@oh/floor-plan";
 import { PodCell, StatusPatterns, TONES, type NavKey, type PodStatus, type PodView, type Point, type SeatStatus, type Tone } from "./PodCell";
 import { Legend, type LegendLabels } from "./Legend";
-import { MIN_TOUCH_PX, ZOOM_MIN_VIEW_FT, ZoomControls, boxString, rowZoomBox, useRowZoom, type Box, type ZoomControlLabels } from "./RowZoom";
+import { MIN_TOUCH_PX, ZOOM_MIN_VIEW_FT, ZoomControls, boxString, rowAxis, rowPanBox, rowPanState, rowZoomBox, useRowZoom, type Box, type RowEnds, type ZoomControlLabels } from "./RowZoom";
 
 export type CombLayoutKey = keyof typeof LOCATION_LAYOUTS;
 export type CombMapMode = "live" | "pick" | "journey";
@@ -57,6 +57,8 @@ export interface CombMapLabels {
   legend: LegendLabels;
   zones: { kitchen: string; restrooms: string; store: string; lobby: string; entry: string; exit: string };
   zoom: ZoomControlLabels;
+  /** Pan chevrons for a partial-row zoom: toward position 1 (the kitchen end) and away from it. */
+  pan: { earlier: string; later: string };
   marker: { guest: string; bowl: string };
 }
 
@@ -209,6 +211,15 @@ export function orientLayout(layout: Layout, orientation: Orientation): Oriented
 
 /* ------------------------------------------------------------ behavior */
 
+/**
+ * A pod's on-screen size in CSS px at a zoom. Pods are 2.35 ft wide along the
+ * row and 4.5 ft deep. Portrait rows run across the screen, so width is the
+ * 2.35 ft side; landscape rows run down it, so height is.
+ */
+export function podScreenPx(pxPerFt: number, orientation: Orientation): { w: number; h: number } {
+  return orientation === "portrait" ? { w: POD.w * pxPerFt, h: POD.d * pxPerFt } : { w: POD.d * pxPerFt, h: POD.w * pxPerFt };
+}
+
 /** What a tap or key press on a pod does. Pointer taps on pods too small to hit reliably zoom to the row first. */
 export function podTapAction({ mode, via, podPx, selectable }: { mode: CombMapMode; via: "pointer" | "keyboard"; podPx: number; selectable: boolean }): "select" | "zoom" | "none" {
   if (mode === "journey") return "none";
@@ -352,9 +363,32 @@ export function CombMap({
   const [focusLabel, setFocusLabel] = useState<string | null>(null);
   const tabLabel = focusLabel && podLabels.includes(focusLabel) ? focusLabel : selected && podLabels.includes(selected) ? selected : podLabels[0];
 
-  const podPx = zoom.pxPerFt * POD.d;
+  // Axis-correct: the smaller of the pod's on-screen width and height (its 2.35 ft seat width, whichever way the row runs).
+  const podSize = podScreenPx(zoom.pxPerFt, resolved);
+  const podPx = Math.min(podSize.w, podSize.h);
   const showText = zoom.pxPerFt >= 8.5;
+  // The row a row zoom went to: a ref for the callbacks, state for the pan chevrons.
   const zoomedRow = useRef<number | null>(null);
+  const [panRow, setPanRow] = useState<number | null>(null);
+  const setZoomedRow = (key: number | null) => {
+    zoomedRow.current = key;
+    setPanRow(key);
+  };
+  // Zooming all the way out (button, pinch or wheel) forgets the row, so stale chevrons never come back on a later pinch.
+  useEffect(() => {
+    if (!zoom.isZoomed) {
+      zoomedRow.current = null;
+      setPanRow(null);
+    }
+  }, [zoom.isZoomed]);
+  const rowEnds = useMemo(() => {
+    const m = new Map<number, RowEnds>();
+    for (const r of o.rows) {
+      const pods = o.pods.filter((p) => p.row === r.key).sort((a, b) => a.pod.position - b.pod.position);
+      if (pods.length) m.set(r.key, { first: (pods[0] as (typeof pods)[number]).rect, last: (pods[pods.length - 1] as (typeof pods)[number]).rect });
+    }
+    return m;
+  }, [o]);
   const podByLabel = useMemo(() => new Map(o.pods.map((p) => [p.label, p])), [o.pods]);
   const rowByKey = useMemo(() => new Map(o.rows.map((r) => [r.key, r])), [o.rows]);
 
@@ -367,7 +401,7 @@ export function CombMap({
     const pv = pods.get(label);
     const row = pv ? rows.get(pv.row) : undefined;
     if (!pv || !row) return;
-    zoomedRow.current = row.key;
+    setZoomedRow(row.key);
     z.zoomTo(rowZoomBox(row.rect, view.box, z.elementPx, pv.center));
   }, []);
 
@@ -380,7 +414,7 @@ export function CombMap({
       if (action === "zoom") {
         const pv = pods.get(label);
         if (m === "live" && z.isZoomed && pv && zoomedRow.current === pv.row) {
-          zoomedRow.current = null;
+          setZoomedRow(null);
           z.reset();
         } else zoomToPod(label);
       } else if (action === "select") select?.(label);
@@ -396,7 +430,7 @@ export function CombMap({
   }, []);
 
   const onEscape = useCallback(() => {
-    zoomedRow.current = null;
+    setZoomedRow(null);
     latest.current.zoom.reset();
   }, []);
 
@@ -420,6 +454,20 @@ export function CombMap({
     const partner = podByLabel.get(label)?.duo ? partnerOf(label) : undefined;
     return partner ? fill(labels.podNameDuo, { label, partner, status: statusText }) : fill(labels.podName, { label, status: statusText });
   };
+
+  // Pan chevrons, shown while a row zoom leaves part of the row off screen.
+  const ends = zoom.isZoomed && panRow !== null ? rowEnds.get(panRow) : undefined;
+  const panState = ends ? rowPanState(zoom.viewBox, ends) : null;
+  const pan =
+    ends && panState && (panState.canEarlier || panState.canLater)
+      ? {
+          labels: labels.pan,
+          later: rowAxis(ends).later,
+          canEarlier: panState.canEarlier,
+          canLater: panState.canLater,
+          onPan: (dir: "earlier" | "later") => zoom.zoomTo(rowPanBox(zoom.current(), ends, dir, o.box)),
+        }
+      : null;
 
   const progress = Math.min(1, Math.max(0, journeyProgress));
   const markers = mode === "journey" ? o.markers(progress) : null;
@@ -601,7 +649,7 @@ export function CombMap({
           <p id={hintId} className={`m-0 min-w-0 flex-1 basis-48 text-base ${tone === "night" ? "text-oh-mute" : "text-oh-stone"}`} aria-live="polite">
             {hint}
           </p>
-          <ZoomControls api={zoom} labels={labels.zoom} maxedIn={zoom.viewBox.w <= ZOOM_MIN_VIEW_FT + 0.01} tone={tone} />
+          <ZoomControls api={zoom} labels={labels.zoom} maxedIn={zoom.viewBox.w <= ZOOM_MIN_VIEW_FT + 0.01} tone={tone} pan={pan} />
         </div>
       ) : null}
       {showLegend ? <Legend labels={labels.legend} tone={tone} items={legendItems} duoLit={partySize === 2} className="relative mt-5" /> : null}

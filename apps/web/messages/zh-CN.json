@@ -2097,6 +2097,10 @@
       "zoomOut": "缩小",
       "wholeFloor": "查看全场"
     },
+    "pan": {
+      "earlier": "前面的包厢",
+      "later": "后面的包厢"
+    },
     "marker": {
       "guest": "您",
       "bowl": "您的面"

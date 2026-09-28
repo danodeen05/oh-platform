@@ -4402,6 +4402,10 @@
       "zoomOut": "Zoom out",
       "wholeFloor": "Whole floor"
     },
+    "pan": {
+      "earlier": "Earlier pods",
+      "later": "Later pods"
+    },
     "marker": {
       "guest": "You",
       "bowl": "Your bowl"

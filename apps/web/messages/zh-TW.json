@@ -4300,6 +4300,10 @@
       "zoomOut": "縮小",
       "wholeFloor": "查看全場"
     },
+    "pan": {
+      "earlier": "前面的包廂",
+      "later": "後面的包廂"
+    },
     "marker": {
       "guest": "您",
       "bowl": "您的麵"

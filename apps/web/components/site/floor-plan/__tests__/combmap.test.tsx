@@ -17,8 +17,8 @@ import en from "../../../../messages/en.json";
 import es from "../../../../messages/es.json";
 import zhCN from "../../../../messages/zh-CN.json";
 import zhTW from "../../../../messages/zh-TW.json";
-import { CombMap, orientLayout, podTapAction, type CombSeat, type CombMapLabels } from "../CombMap";
-import { rowZoomBox, zoomDuration, fitBox, ZOOM_MS, MIN_TOUCH_PX } from "../RowZoom";
+import { CombMap, orientLayout, podTapAction, podScreenPx, type CombSeat, type CombMapLabels } from "../CombMap";
+import { rowZoomBox, rowPanBox, rowPanState, zoomDuration, fitBox, ZOOM_MS, MIN_TOUCH_PX } from "../RowZoom";
 import { toCombSeats, layoutKeyOf } from "../useSeats";
 
 // React 19 act() environment flag for a hand-rolled root.
@@ -225,6 +225,61 @@ describe("CombMap interaction (jsdom)", () => {
     act(() => podEl(h, "B-08").dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true })));
     expect((document.activeElement as Element | null)?.getAttribute("data-label")).toBe("B-07");
   });
+
+  it("on a 390px phone, a tap zooms to part of the row and the named pan chevrons walk to both ends", () => {
+    // jsdom has no layout: report a 358px-wide map (390 minus gutters) and prefer reduced motion so zooms land instantly.
+    const g = globalThis as unknown as { ResizeObserver?: unknown; matchMedia?: unknown };
+    const savedRO = g.ResizeObserver;
+    const savedMM = window.matchMedia;
+    g.ResizeObserver = class {
+      cb: (e: { contentRect: { width: number } }[]) => void;
+      constructor(cb: (e: { contentRect: { width: number } }[]) => void) {
+        this.cb = cb;
+      }
+      observe() {
+        this.cb([{ contentRect: { width: 358 } }]);
+      }
+      disconnect() {}
+    };
+    window.matchMedia = ((q: string) => ({ matches: q.includes("reduced-motion"), addEventListener() {}, removeEventListener() {} })) as unknown as typeof window.matchMedia;
+    try {
+      const onSelect = vi.fn();
+      const h = mount(<CombMap layoutKey="comb-75" mode="pick" labels={labels} seats={seatsFor("comb-75")} onSelect={onSelect} orientation="portrait" />);
+      const svg = h.querySelector("svg[data-layout]") as SVGSVGElement;
+      const vb = () => svg.getAttribute("viewBox")!.split(" ").map(Number) as [number, number, number, number];
+      const fullW = vb()[2];
+
+      // First tap: pods are too small, so it zooms instead of selecting.
+      act(() => podEl(h, "B-07").dispatchEvent(new MouseEvent("click", { bubbles: true })));
+      expect(onSelect).not.toHaveBeenCalled();
+      const [, , w] = vb();
+      expect(w).toBeLessThan(fullW);
+      expect(Math.min(2.35, 4.5) * (358 / w)).toBeGreaterThanOrEqual(44);
+
+      const earlier = h.querySelector(`button[aria-label="${labels.pan.earlier}"]`) as HTMLButtonElement;
+      const later = h.querySelector(`button[aria-label="${labels.pan.later}"]`) as HTMLButtonElement;
+      expect(earlier).toBeTruthy();
+      expect(later).toBeTruthy();
+
+      // Walk to each end: the chevron disables once that end pod is fully in view.
+      for (const btn of [earlier, later]) {
+        let n = 0;
+        while (!btn.disabled && n < 20) {
+          act(() => btn.click());
+          n += 1;
+        }
+        expect(btn.disabled).toBe(true);
+      }
+      expect(vb()[2]).toBeCloseTo(w); // panning never changes the zoom
+
+      // Second tap, now at 44px or more: it selects.
+      act(() => podEl(h, "B-07").dispatchEvent(new MouseEvent("click", { bubbles: true })));
+      expect(onSelect).toHaveBeenCalledWith("B-07");
+    } finally {
+      g.ResizeObserver = savedRO;
+      window.matchMedia = savedMM;
+    }
+  });
 });
 
 describe("RowZoom", () => {
@@ -243,17 +298,78 @@ describe("RowZoom", () => {
     expect(box.y + box.h).toBeGreaterThanOrEqual(40);
   });
 
-  it("zooms every row of both layouts so a pod is at least 44px tall on a 390px phone (portrait) and at 1440 (landscape)", () => {
+  /** Pods whose rect overlaps the viewBox, with their on-screen width and height in CSS px (element width / viewBox width). */
+  function visiblePodPx(o: ReturnType<typeof orientLayout>, vb: { x: number; y: number; w: number; h: number }, elementPx: number) {
+    const pxPerFt = elementPx / vb.w;
+    return o.pods
+      .filter((p) => p.rect.x < vb.x + vb.w && p.rect.x + p.rect.w > vb.x && p.rect.y < vb.y + vb.h && p.rect.y + p.rect.h > vb.y)
+      .map((p) => ({ label: p.label, w: p.rect.w * pxPerFt, h: p.rect.h * pxPerFt }));
+  }
+
+  it("after zooming row B on a 390x844 portrait comb-75, every visible pod is at least 44px wide AND tall", () => {
     expect(MIN_TOUCH_PX).toBe(44);
+    const elementPx = 390 - 32; // 16px gutters
+    const o = orientLayout(layoutOf("comb-75"), "portrait");
+    const b07 = o.pods.find((p) => p.label === "B-07")!;
+    const row = o.rows.find((r) => r.key === b07.row)!;
+    const vb = rowZoomBox(row.rect, o.box, elementPx, b07.center);
+    const visible = visiblePodPx(o, vb, elementPx);
+    expect(visible.map((p) => p.label)).toContain("B-07");
+    for (const p of visible) {
+      expect(p.w, `${p.label} width`).toBeGreaterThanOrEqual(44);
+      expect(p.h, `${p.label} height`).toBeGreaterThanOrEqual(44);
+    }
+  });
+
+  it("every row of both layouts, zoomed on any of its pods, keeps min(width, height) >= 44px at 390 (portrait) and 1440 (landscape)", () => {
     for (const key of ["comb-75", "comb-70-mirrored"] as const) {
       for (const [orientation, elementPx] of [["portrait", 390 - 32], ["landscape", 1440 - 64]] as const) {
         const o = orientLayout(layoutOf(key), orientation);
-        for (const row of o.rows) {
-          const vb = rowZoomBox(row.rect, o.box, elementPx);
-          const pxPerFt = elementPx / vb.w;
-          const podDepthFt = 4.5;
-          expect(podDepthFt * pxPerFt, `${key} ${orientation} row ${row.key}`).toBeGreaterThanOrEqual(44);
+        for (const pod of o.pods) {
+          const row = o.rows.find((r) => r.key === pod.row)!;
+          const vb = rowZoomBox(row.rect, o.box, elementPx, pod.center);
           expect(vb.w / vb.h).toBeCloseTo(o.box.w / o.box.h);
+          const size = podScreenPx(elementPx / vb.w, orientation);
+          expect(Math.min(size.w, size.h), `${key} ${orientation} ${pod.label}`).toBeGreaterThanOrEqual(44);
+          // The tapped pod is fully in view.
+          expect(pod.rect.x >= vb.x - 1e-6 && pod.rect.x + pod.rect.w <= vb.x + vb.w + 1e-6, `${pod.label} x in view`).toBe(true);
+          expect(pod.rect.y >= vb.y - 1e-6 && pod.rect.y + pod.rect.h <= vb.y + vb.h + 1e-6, `${pod.label} y in view`).toBe(true);
+        }
+      }
+    }
+  });
+
+  it("measures pods on the right axes: portrait rows run across the screen (pod width 2.35 ft), landscape rows run down it", () => {
+    const p = podScreenPx(10, "portrait");
+    const l = podScreenPx(10, "landscape");
+    expect(p.w).toBeCloseTo(23.5);
+    expect(p.h).toBeCloseTo(45);
+    expect(l.w).toBeCloseTo(45);
+    expect(l.h).toBeCloseTo(23.5);
+  });
+
+  it("panning a partial row zoom reaches the first and the last pod of the row", () => {
+    const elementPx = 390 - 32;
+    for (const key of ["comb-75", "comb-70-mirrored"] as const) {
+      const o = orientLayout(layoutOf(key), "portrait");
+      for (const row of o.rows) {
+        const pods = o.pods.filter((p) => p.row === row.key).sort((a, b) => a.pod.position - b.pod.position);
+        const ends = { first: pods[0]!.rect, last: pods[pods.length - 1]!.rect };
+        const mid = pods[Math.floor(pods.length / 2)]!;
+        let vb = rowZoomBox(row.rect, o.box, elementPx, mid.center);
+        // A partial row: the ends start out of view.
+        expect(rowPanState(vb, ends).canEarlier || rowPanState(vb, ends).canLater).toBe(true);
+        for (const dir of ["earlier", "later"] as const) {
+          let guard = 0;
+          while (rowPanState(vb, ends)[dir === "earlier" ? "canEarlier" : "canLater"] && guard < 20) {
+            vb = rowPanBox(vb, ends, dir, o.box);
+            guard += 1;
+          }
+          expect(guard, `${key} row ${row.key} ${dir} did not converge`).toBeLessThan(20);
+          const end = dir === "earlier" ? ends.first : ends.last;
+          expect(end.x >= vb.x - 1e-6 && end.x + end.w <= vb.x + vb.w + 1e-6 && end.y >= vb.y - 1e-6 && end.y + end.h <= vb.y + vb.h + 1e-6).toBe(true);
+          // Panning never zooms: pods stay at 44px or more.
+          expect(Math.min(...Object.values(podScreenPx(elementPx / vb.w, "portrait")))).toBeGreaterThanOrEqual(44);
         }
       }
     }

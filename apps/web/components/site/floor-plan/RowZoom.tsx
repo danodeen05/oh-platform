@@ -61,12 +61,18 @@ export function clampBox(b: Box, full: Box): Box {
   return { x, y, w: b.w, h: b.h };
 }
 
+/** A pod's short side (its 2.35 ft seat width along the row). A pod meets the touch rule when THIS side is 44px or more. */
+export const POD_MIN_FT = Math.min(POD.w, POD.d);
+/** What a partial-row zoom aims for: a little over 44px so browser rounding never lands under it. About 7 pods on a 390px phone. */
+export const TARGET_POD_PX = 48;
+
 /**
  * The viewBox for a row zoom. The row plus the two guest aisles beside it,
- * fitted to the drawing's aspect (so the SVG never letterboxes). When the map
- * is narrow enough that the whole row would leave pods under 44px deep, the
- * box tightens further and centers on `focus` (the tapped pod), and one
- * finger pans along the rest of the row.
+ * fitted to the drawing's aspect (so the SVG never letterboxes). When the
+ * whole row would leave a pod's SHORT side (its width along the row) under
+ * 44px, as it does on a phone, the box tightens to a partial row sized for
+ * 48px pods, centered on `focus` (the tapped pod); the rest of the row is a
+ * swipe or a chevron away (`rowPanBox`).
  */
 export function rowZoomBox(row: Box, full: Box, elementPx: number, focus?: readonly [number, number]): Box {
   const aspect = full.w / full.h;
@@ -78,9 +84,9 @@ export function rowZoomBox(row: Box, full: Box, elementPx: number, focus?: reado
     : { x: row.x - along, y: row.y - across, w: row.w + 2 * along, h: row.h + 2 * across };
   let box = fitBox(padded, aspect);
   if (elementPx > 0) {
-    // 2% headroom so rounding in the browser never lands at 43.9px.
-    const maxW = (elementPx * POD.d) / (MIN_TOUCH_PX * 1.02);
-    if (box.w > maxW) {
+    const fits = (POD_MIN_FT * elementPx) / box.w >= MIN_TOUCH_PX;
+    const maxW = (elementPx * POD_MIN_FT) / TARGET_POD_PX;
+    if (!fits) {
       const w = maxW;
       const h = w / aspect;
       const [cx, cy] = focus ?? [box.x + box.w / 2, box.y + box.h / 2];
@@ -90,7 +96,48 @@ export function rowZoomBox(row: Box, full: Box, elementPx: number, focus?: reado
   return clampBox(box, full);
 }
 
-const easeInOut = (t: number): number => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+/** The first (position 1, nearest the kitchen) and last pod of a row, in view coordinates. */
+export interface RowEnds {
+  first: Box;
+  last: Box;
+}
+
+const EPS = 1e-6;
+const contains = (vb: Box, r: Box): boolean => r.x >= vb.x - EPS && r.y >= vb.y - EPS && r.x + r.w <= vb.x + vb.w + EPS && r.y + r.h <= vb.y + vb.h + EPS;
+const centerOf = (r: Box): [number, number] => [r.x + r.w / 2, r.y + r.h / 2];
+
+/** The row's axis on screen: whether it runs along x, and the unit direction from its first pod to its last. */
+export function rowAxis(ends: RowEnds): { alongX: boolean; later: [number, number] } {
+  const [fx, fy] = centerOf(ends.first);
+  const [lx, ly] = centerOf(ends.last);
+  const alongX = Math.abs(lx - fx) >= Math.abs(ly - fy);
+  const s = (alongX ? lx - fx : ly - fy) >= 0 ? 1 : -1;
+  return { alongX, later: alongX ? [s, 0] : [0, s] };
+}
+
+/** Whether the chevrons have anywhere to go: an end pod not fully in view. */
+export function rowPanState(vb: Box, ends: RowEnds): { canEarlier: boolean; canLater: boolean } {
+  return { canEarlier: !contains(vb, ends.first), canLater: !contains(vb, ends.last) };
+}
+
+/**
+ * Pan a zoomed box along its row by three quarters of a screen, toward the
+ * earlier (kitchen) or later end, stopping with the end pod just in view.
+ * Never changes the zoom, so pods stay at their 44px-plus size.
+ */
+export function rowPanBox(vb: Box, ends: RowEnds, dir: "earlier" | "later", full: Box): Box {
+  const { alongX, later } = rowAxis(ends);
+  const sign = (alongX ? later[0] : later[1]) * (dir === "later" ? 1 : -1);
+  const ext = alongX ? vb.w : vb.h;
+  const pad = 0.4;
+  const lo = Math.min(alongX ? ends.first.x : ends.first.y, alongX ? ends.last.x : ends.last.y) - pad;
+  const hi = Math.max(alongX ? ends.first.x + ends.first.w : ends.first.y + ends.first.h, alongX ? ends.last.x + ends.last.w : ends.last.y + ends.last.h) + pad;
+  const current = alongX ? vb.x : vb.y;
+  const start = ext >= hi - lo ? (lo + hi) / 2 - ext / 2 : Math.min(Math.max(current + sign * ext * 0.75, lo), hi - ext);
+  return clampBox(alongX ? { ...vb, x: start } : { ...vb, y: start }, full);
+}
+
+const easeInOut =(t: number): number => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const lerpBox = (a: Box, b: Box, t: number): Box => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, w: a.w + (b.w - a.w) * t, h: a.h + (b.h - a.h) * t });
 
 interface Gesture {
@@ -112,6 +159,8 @@ export interface RowZoomApi {
   pxPerFt: number;
   zoomTo(target: Box): void;
   zoomBy(factor: number): void;
+  /** The box on screen right now (mid-animation or mid-gesture included). */
+  current(): Box;
   reset(): void;
   /** True once if the pointer sequence that just ended was a drag or pinch (so the click it produces is ignored). */
   consumeGesture(): boolean;
@@ -342,6 +391,7 @@ export function useRowZoom({ full, svgRef, reducedMotion }: { full: Box; svgRef:
     zoomBy,
     reset,
     consumeGesture,
+    current: () => live.current,
     // Plain functions over refs: fresh each render, no stale closures.
     handlers: { onPointerDown, onPointerMove, onPointerUp: end, onPointerCancel: end },
   };
@@ -376,10 +426,45 @@ const CONTROL_TONE = {
  * Zoom buttons under the map (never over it, so they can't cover a pod):
  * the keyboard and one-handed alternative to pinching. 44px targets.
  */
-export function ZoomControls({ api, labels, maxedIn, tone = "night" }: { api: RowZoomApi; labels: ZoomControlLabels; maxedIn: boolean; tone?: "night" | "linen" }) {
-  const cls = `${CONTROL_BASE} ${CONTROL_TONE[tone]}`;
+export interface RowPanControl {
+  labels: { earlier: string; later: string };
+  /** Screen direction from the row's first pod toward its last (a unit vector along x or y). */
+  later: readonly [number, number];
+  canEarlier: boolean;
+  canLater: boolean;
+  onPan(dir: "earlier" | "later"): void;
+}
+
+/** A filled arrowhead pointing along `dir` (no strokes and no rotate transform, in line with the in-house icons). */
+function Chevron({ dir }: { dir: readonly [number, number] }) {
+  const [ux, uy] = dir;
+  const [px, py] = [-uy, ux];
+  const pt = (a: number, b: number) => `${12 + ux * a + px * b},${12 + uy * a + py * b}`;
   return (
-    <div className="flex shrink-0 items-center gap-2">
+    <svg viewBox="0 0 24 24" width={20} height={20} aria-hidden="true">
+      <polygon points={`${pt(5, 0)} ${pt(-4, 6)} ${pt(-1.5, 0)} ${pt(-4, -6)}`} fill="currentColor" />
+    </svg>
+  );
+}
+
+export function ZoomControls({ api, labels, maxedIn, tone = "night", pan }: { api: RowZoomApi; labels: ZoomControlLabels; maxedIn: boolean; tone?: "night" | "linen"; pan?: RowPanControl | null }) {
+  const cls = `${CONTROL_BASE} ${CONTROL_TONE[tone]}`;
+  const earlierDir: [number, number] = pan ? [-pan.later[0], -pan.later[1]] : [0, 0];
+  // Keep the two chevrons in screen order (the earlier one first when it points left or up).
+  const earlierFirst = earlierDir[0] < 0 || earlierDir[1] < 0;
+  const panButtons = pan
+    ? [
+        <button key="earlier" type="button" aria-label={pan.labels.earlier} onClick={() => pan.onPan("earlier")} disabled={!pan.canEarlier} className={cls}>
+          <Chevron dir={earlierDir} />
+        </button>,
+        <button key="later" type="button" aria-label={pan.labels.later} onClick={() => pan.onPan("later")} disabled={!pan.canLater} className={cls}>
+          <Chevron dir={pan.later} />
+        </button>,
+      ]
+    : [];
+  return (
+    <div className="flex shrink-0 flex-wrap items-center gap-2">
+      {pan ? <div className="flex gap-2">{earlierFirst ? panButtons : [...panButtons].reverse()}</div> : null}
       {api.isZoomed ? (
         <button type="button" onClick={api.reset} className={`${cls} px-4 text-base`}>
           {labels.wholeFloor}

@@ -2097,6 +2097,10 @@
       "zoomOut": "Alejar",
       "wholeFloor": "Todo el local"
     },
+    "pan": {
+      "earlier": "Pods anteriores",
+      "later": "Pods siguientes"
+    },
     "marker": {
       "guest": "Tú",
       "bowl": "Tu tazón"
