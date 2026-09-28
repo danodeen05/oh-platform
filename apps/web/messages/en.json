@@ -149,6 +149,127 @@
       "title": "Ready to Experience Something Different?",
       "description": "Step into your private pod, savor premium beef noodle soup, and discover why dining at Oh! is unlike anything else.",
       "button": "START YOUR ORDER"
+    },
+    "meta": {
+      "title": "Oh! Beef Noodle Soup: the only restaurant built around you",
+      "description": "Premium American beef noodle soup, served in a private pod. No host, no server, no check, no tip. City Creek and University Place, Utah."
+    },
+    "chapters": "The story, in eight chapters",
+    "arrive": {
+      "eyebrow": "Beef noodle soup, in a pod of your own",
+      "title": "The only restaurant built around you.",
+      "lede": "Premium American beef over a two-phase broth, served through the wall of a quiet pod. No host, no server, no check, no tip.",
+      "order": "Order a bowl",
+      "story": "See how a visit works"
+    },
+    "live": {
+      "open": "Open now",
+      "closed": "Closed now",
+      "until": "Until {time}",
+      "openUntil": "Open until {time}",
+      "podsFree": "{count, plural, =0 {No pods free} one {# pod free} other {# pods free}}"
+    },
+    "walkIn": {
+      "eyebrow": "Walk in",
+      "lines": {
+        "one": "You walk in and nobody greets you.",
+        "two": "That is the design.",
+        "three": "The room is quiet and the light is low. Row by row, the pods come into view.",
+        "four": "You order at a kiosk in about forty seconds, and the screen gives you a pod number."
+      }
+    },
+    "pod": {
+      "eyebrow": "The pod",
+      "steps": {
+        "a": {
+          "title": "You sit, and the room disappears.",
+          "body": "A hook for your bag, a shelf for your phone, water within reach. One tap tells the kitchen you are in."
+        },
+        "b": {
+          "title": "The panel slides open.",
+          "body": "Minutes after you pay, your bowl arrives through the wall. You never see a hand."
+        },
+        "c": {
+          "title": "Then it slides shut.",
+          "body": "Extra noodles, a refill or a side are a tap away, and they come through the same panel."
+        }
+      }
+    },
+    "bowl": {
+      "eyebrow": "The bowl",
+      "title": "Everything here is in service of this bowl.",
+      "lede": "A premium fusion interpretation of Taiwanese beef noodle soup. It does not pretend to be a grandmother's recipe.",
+      "callouts": {
+        "broth": {
+          "title": "Two-phase broth",
+          "body": "A long bone simmer, then a finish built for flavor."
+        },
+        "beef": {
+          "title": "Smoked American beef",
+          "body": "American Wagyu or USDA Prime, smoked low and slow. Nothing below it."
+        },
+        "cut": {
+          "title": "Slices or chunks",
+          "body": "Smoked brisket, sliced. Or smoked beef rib, portioned into chunks."
+        },
+        "yours": {
+          "title": "Greens and citrus",
+          "body": "Bok choy and a wedge of orange. Broth depth, noodle and add-ons are yours to choose."
+        }
+      },
+      "macro": "First spoon. Broth first, then the beef you chose.",
+      "menu": "See the menu"
+    },
+    "noTip": {
+      "eyebrow": "No check, no tip",
+      "words": {
+        "host": "No host.",
+        "server": "No server.",
+        "check": "No check.",
+        "tip": "No tip."
+      },
+      "body": "Tipping isn't part of the meal here. No tip line, no service charge.",
+      "note": "One tap on your phone says you are done. You leave when you are ready."
+    },
+    "rewards": {
+      "eyebrow": "Rewards",
+      "title": "Every bowl counts toward the next tier.",
+      "lede": "Three tiers, cashback on every order, and a free bowl each time you climb.",
+      "cashback": "cashback",
+      "cta": "See how the climb works"
+    },
+    "redStep": {
+      "eyebrow": "One Red Step",
+      "title": "Every visit is one more step.",
+      "body": "Oh! gives 1% of revenue from every company restaurant to ONE RED STEP AT A TIME, a Utah mental health nonprofit.",
+      "vision": "A great bowl, a space of your own, and every visit helping someone take one more step toward better mental health.",
+      "link": "Visit the foundation",
+      "newTab": "opens in a new tab"
+    },
+    "locations": {
+      "eyebrow": "Two locations",
+      "title": "Downtown Salt Lake City and Orem.",
+      "lede": "Same room, same bowl. Live pods and hours, straight from the kitchen.",
+      "cards": {
+        "cityCreek": {
+          "name": "City Creek",
+          "area": "Downtown Salt Lake City"
+        },
+        "universityPlace": {
+          "name": "University Place",
+          "area": "Orem"
+        }
+      },
+      "hours": "Today {open} to {close}",
+      "closedToday": "Closed today",
+      "directions": "Directions",
+      "directionsLabel": "Directions to {name}, opens your maps app",
+      "visit": "Visit {name}",
+      "final": {
+        "title": "Your pod is waiting.",
+        "body": "Order ahead, walk in, and go straight to your pod.",
+        "order": "Order a bowl"
+      }
     }
   },
   "footer": {
@@ -5769,6 +5890,205 @@
       "GIFT_CARD_INVALID": "That gift card code isn't valid or has no balance.",
       "CREDITS_REQUIRE_SIGN_IN": "Sign in to use your credit.",
       "MEAL_GIFT_UNAVAILABLE": "That meal gift is no longer available."
+    }
+  },
+  "passport": {
+    "meta": {
+      "title": "Your passport",
+      "description": "Your Oh! membership: your tier, your climb, your rewards, your credit and your seals."
+    },
+    "loading": "Opening your passport",
+    "back": "Passport",
+    "error": {
+      "title": "We couldn't open your passport.",
+      "body": "Check your connection and try again.",
+      "retry": "Try again"
+    },
+    "signedOut": {
+      "eyebrow": "Member passport",
+      "title": "Your passport lives here.",
+      "body": "Sign in to see your tier, your climb, your rewards and your credit.",
+      "signIn": "Sign in",
+      "join": "Create an account",
+      "learn": "How the rewards work"
+    },
+    "cover": {
+      "eyebrow": "Oh! member passport",
+      "number": "No. {code}",
+      "tierLabel": "Member tier",
+      "since": "Member since {date}",
+      "cashback": "Credit back",
+      "streak": "Day streak, best {best}",
+      "bowls": "Bowls so far",
+      "lead": "{pct}% of every order comes back to you as credit. Here is where you stand.",
+      "leadFreeBowl": "A free bowl is waiting for you. Any bowl on the menu, on us."
+    },
+    "cta": {
+      "order": "Order a bowl",
+      "freeBowl": "Use your free bowl"
+    },
+    "climb": {
+      "eyebrow": "The climb",
+      "title": "{next} is next.",
+      "titleTop": "You're at the top.",
+      "orders": "Bowls",
+      "referrals": "Friends",
+      "ordersA11y": "{have} of {need} bowls toward {next}",
+      "referralsA11y": "{have} of {need} friends toward {next}",
+      "ready": "Both done. You move up with your next order.",
+      "remaining": "{orders, plural, =0 {No more bowls} one {# more bowl} other {# more bowls}} and {referrals, plural, =0 {no more friends} one {# more friend} other {# more friends}} to go.",
+      "topBody": "{pct}% of every order comes back as credit, your order moves furthest up the kitchen queue, and a premium add-on is yours each quarter.",
+      "guide": "How the climb works"
+    },
+    "next": {
+      "title": "At {next}",
+      "cashback": "{pct}% of every order back in credit",
+      "freeBowl": "A free bowl the day you arrive",
+      "earlyAccess": "New bowls {days, plural, one {# day} other {# days}} before everyone else",
+      "queue": "Your order moves up the kitchen queue",
+      "addon": "One premium add-on each quarter"
+    },
+    "rewards": {
+      "eyebrow": "Rewards",
+      "title": "Ready when you are.",
+      "empty": "No rewards waiting. Your next free bowl comes when you reach {next}.",
+      "emptyTop": "No rewards waiting right now. Your premium add-on arrives each quarter.",
+      "FREE_BOWL": {
+        "name": "Free bowl",
+        "body": "Any bowl on the menu, on us."
+      },
+      "PREMIUM_ADDON": {
+        "name": "Premium add-on",
+        "body": "One premium add-on, on us."
+      },
+      "days": "{count, plural, one {# day left} other {# days left}}",
+      "hours": "{count, plural, one {# hour left} other {# hours left}}",
+      "ended": "Ended",
+      "useBy": "Use by {date}",
+      "use": "Use it"
+    },
+    "credits": {
+      "eyebrow": "Credit",
+      "title": "Your credit",
+      "balanceLabel": "Available credit",
+      "earn": "{pct}% of every order comes back as credit.",
+      "lasts": "Credit lasts {days} days and is spent closest to expiring first.",
+      "history": "Credit history",
+      "expiring": "{amount} expires on {date}. It goes first on your next order."
+    },
+    "seals": {
+      "eyebrow": "Seals",
+      "title": "Your seal collection",
+      "count": "{earned} of {total} earned",
+      "earned": "Earned",
+      "notEarned": "Not earned yet",
+      "new": "New",
+      "guide": "How to earn seals"
+    },
+    "wallet": {
+      "eyebrow": "Wallet",
+      "title": "Carry it on your phone.",
+      "body": "Your passport in your phone's wallet, updated as you climb.",
+      "apple": "Add to Apple Wallet",
+      "google": "Add to Google Wallet",
+      "unavailable": "Wallet passes are unavailable right now. Please try again later.",
+      "soon": "Wallet passes are almost ready."
+    },
+    "links": {
+      "label": "More in your passport",
+      "orders": "Order history",
+      "credits": "Credit history",
+      "referral": "Invite a friend",
+      "rewards": "How rewards work"
+    },
+    "welcome": {
+      "label": "Welcome to your passport",
+      "skip": "Skip",
+      "next": "Next",
+      "back": "Back",
+      "finish": "Open my passport",
+      "step": "{current} of {total}",
+      "s1": {
+        "title": "You're a {tier}.",
+        "body": "{pct}% of every order comes back to you as credit. It starts with your first bowl."
+      },
+      "s2": {
+        "title": "Climb to {top}.",
+        "body": "{orders} bowls and {referrals} friends take you to {next}. Every step up brings a free bowl.",
+        "bodyTop": "You're already at the top. Enjoy every perk."
+      },
+      "s3": {
+        "sealName": "Friend seal",
+        "title": "Bring a friend. You both eat.",
+        "body": "Friends who join with your link get {referee} in credit. You get {referrer} when they order.",
+        "titleReferred": "Your {amount} welcome credit is waiting.",
+        "bodyReferred": "A friend brought you here, so it's already in your credit. It lasts {days} days."
+      },
+      "s4": {
+        "title": "Keep it on your phone.",
+        "body": "Add your passport to your wallet. It updates as you climb."
+      }
+    },
+    "tierUp": {
+      "eyebrow": "New tier",
+      "title": "You're a {tier}.",
+      "body": "{pct}% of every order now comes back as credit.",
+      "bowlEyebrow": "Your reward",
+      "bowlTitle": "A free bowl, on us.",
+      "bowlBody": "Any bowl on the menu. Use it by {date}.",
+      "bowlNoDate": "Any bowl on the menu.",
+      "order": "Order my free bowl",
+      "later": "Later",
+      "close": "Close"
+    },
+    "orders": {
+      "eyebrow": "Passport",
+      "title": "Your orders",
+      "count": "{count, plural, =0 {No orders yet} one {# order} other {# orders}}",
+      "empty": "No orders yet. Your first bowl starts the climb.",
+      "emptyCta": "Order a bowl",
+      "number": "Order {number}",
+      "total": "Total",
+      "again": "Order again",
+      "track": "Track it",
+      "more": "{count, plural, one {# more item} other {# more items}}",
+      "status": {
+        "PENDING_PAYMENT": "Awaiting payment",
+        "PAID": "Paid",
+        "QUEUED": "In line",
+        "PREPPING": "In the kitchen",
+        "READY": "Ready",
+        "SERVING": "At your pod",
+        "COMPLETED": "Enjoyed",
+        "CANCELLED": "Cancelled"
+      }
+    },
+    "creditsPage": {
+      "eyebrow": "Passport",
+      "title": "Your credit",
+      "balance": "Available credit",
+      "howTitle": "How credit works",
+      "how1": "Credit lasts {days} days from the day you earn it.",
+      "how2": "It's spent closest to expiring first.",
+      "how3": "We remind you before any of it expires.",
+      "history": "History",
+      "empty": "No credit activity yet.",
+      "events": {
+        "REFERRAL_SIGNUP": "A friend joined",
+        "REFERRAL_ORDER": "A friend's first order",
+        "REFERRAL_ORDER_PENDING": "Friend credit on the way",
+        "CASHBACK": "Credit back on an order",
+        "CREDIT_APPLIED": "Spent on an order",
+        "CREDIT_EXPIRED": "Expired",
+        "ADMIN_ADJUSTMENT": "Adjustment",
+        "CHALLENGE_REWARD": "Challenge reward",
+        "GIFT_EXCESS": "Meal gift balance",
+        "GOODWILL": "From our team",
+        "WELCOME": "Welcome credit",
+        "REWARD_REDEEMED": "Reward used",
+        "REFUND_RESTORE": "Returned after a refund",
+        "OTHER": "Credit"
+      }
     }
   }
 }

@@ -100,6 +100,7 @@ describe("i18n allowlist", () => {
     expect(englishLeaks("座位 B-07，12 oz，3 mi，QR")).toEqual([]);
     expect(englishLeaks("English Español 繁體中文")).toEqual([]);
     expect(englishLeaks("Wagyu 和牛")).toEqual([]);
+    expect(englishLeaks("加入 Apple 錢包，新增至 Google 錢包，Apple Wallet")).toEqual([]);
     // "mi" is a unit, not a prefix: "minutes" is still English.
     expect(englishLeaks("5 minutes")).toEqual(["minutes"]);
     expect(stripAllowlisted("Chappyness")).toContain("Chappyness");

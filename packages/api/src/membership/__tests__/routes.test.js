@@ -108,3 +108,129 @@ describe("GET /users/:id/rewards", () => {
     assert.equal(res.statusCode, 200);
   });
 });
+
+describe("POST /users/:id/moments (Task D8)", () => {
+  const post = (app, id, payload, headers = { authorization: "Bearer clerk:user_me" }) =>
+    app.inject({ method: "POST", url: `/users/${id}/moments`, headers, payload });
+
+  test("401s an unauthenticated caller", async () => {
+    const { app } = await buildApp();
+    const res = await post(app, "db_me", { welcomeSeen: true }, {});
+    assert.equal(res.statusCode, 401);
+  });
+
+  test("403s a signed-in caller writing someone else's moments", async () => {
+    const { app, prisma } = await buildApp();
+    const res = await post(app, "db_me", { welcomeSeen: true }, { authorization: "Bearer clerk:user_other" });
+    assert.equal(res.statusCode, 403);
+    const me = await prisma.user.findUnique({ where: { id: "db_me" } });
+    assert.equal(me.welcomeSeenAt ?? null, null, "nothing written");
+  });
+
+  test("welcomeSeen sets welcomeSeenAt once; a repeat keeps the first time (idempotent)", async () => {
+    const { app, prisma } = await buildApp();
+    const first = await post(app, "db_me", { welcomeSeen: true });
+    assert.equal(first.statusCode, 200);
+    const seenAt = first.json().welcomeSeenAt;
+    assert.ok(seenAt, "welcomeSeenAt returned");
+    await new Promise((r) => setTimeout(r, 5));
+    const again = await post(app, "db_me", { welcomeSeen: true });
+    assert.equal(again.statusCode, 200);
+    assert.equal(again.json().welcomeSeenAt, seenAt, "the first time is kept");
+    const row = await prisma.user.findUnique({ where: { id: "db_me" } });
+    assert.equal(new Date(row.welcomeSeenAt).toISOString(), seenAt);
+  });
+
+  test("two racing first welcomeSeen calls stamp welcomeSeenAt once (conditional write)", async () => {
+    const { app, prisma } = await buildApp();
+    // Force the race: both requests read the user (welcomeSeenAt still null)
+    // before either writes, by holding the first two reads at a barrier.
+    const findUnique = prisma.user.findUnique.bind(prisma.user);
+    let arrived = 0;
+    let release;
+    const barrier = new Promise((r) => (release = r));
+    prisma.user.findUnique = async (args) => {
+      const row = await findUnique(args);
+      if (arrived < 2) {
+        arrived += 1;
+        if (arrived === 2) release();
+        await barrier;
+      }
+      return row;
+    };
+    // Count the writes that actually stamp welcomeSeenAt, and make each
+    // stamp a distinct time so a second stamp would be visible.
+    let stamps = 0;
+    let tick = Date.parse("2026-09-28T12:00:00Z");
+    const updateMany = prisma.user.updateMany.bind(prisma.user);
+    prisma.user.updateMany = async (args) => {
+      if (args?.data?.welcomeSeenAt) args = { ...args, data: { ...args.data, welcomeSeenAt: new Date((tick += 1000)) } };
+      const res = await updateMany(args);
+      if (args?.data?.welcomeSeenAt) stamps += res.count;
+      return res;
+    };
+    const update = prisma.user.update.bind(prisma.user);
+    prisma.user.update = async (args) => {
+      if (args?.data?.welcomeSeenAt) {
+        stamps += 1;
+        args = { ...args, data: { ...args.data, welcomeSeenAt: new Date((tick += 1000)) } };
+      }
+      return update(args);
+    };
+
+    const [a, b] = await Promise.all([post(app, "db_me", { welcomeSeen: true }), post(app, "db_me", { welcomeSeen: true })]);
+    assert.equal(a.statusCode, 200);
+    assert.equal(b.statusCode, 200);
+    assert.equal(arrived, 2, "both requests read before either wrote");
+    assert.equal(stamps, 1, "welcomeSeenAt is written exactly once");
+    const row = await findUnique({ where: { id: "db_me" } });
+    const stamped = new Date(row.welcomeSeenAt).toISOString();
+    assert.equal(a.json().welcomeSeenAt, stamped);
+    assert.equal(b.json().welcomeSeenAt, stamped);
+  });
+
+  test("tierCelebrated records a program tier, and repeating it changes nothing", async () => {
+    const { app, prisma } = await buildApp();
+    const res = await post(app, "db_me", { tierCelebrated: "NOODLE_MASTER" });
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.json().lastTierCelebrated, "NOODLE_MASTER");
+    const again = await post(app, "db_me", { tierCelebrated: "NOODLE_MASTER" });
+    assert.equal(again.statusCode, 200);
+    assert.equal(again.json().lastTierCelebrated, "NOODLE_MASTER");
+    const row = await prisma.user.findUnique({ where: { id: "db_me" } });
+    assert.equal(row.lastTierCelebrated, "NOODLE_MASTER");
+    assert.equal(row.welcomeSeenAt ?? null, null, "welcome untouched");
+  });
+
+  test("both flags in one call", async () => {
+    const { app } = await buildApp();
+    const res = await post(app, "db_me", { welcomeSeen: true, tierCelebrated: "CHOPSTICK" });
+    assert.equal(res.statusCode, 200);
+    assert.ok(res.json().welcomeSeenAt);
+    assert.equal(res.json().lastTierCelebrated, "CHOPSTICK");
+  });
+
+  test("400s a tier that isn't in the program", async () => {
+    const { app, prisma } = await buildApp();
+    for (const tierCelebrated of ["GOLD", "beef_boss", 3, null, ""]) {
+      const res = await post(app, "db_me", { tierCelebrated });
+      assert.equal(res.statusCode, 400, `tier ${JSON.stringify(tierCelebrated)}`);
+    }
+    const row = await prisma.user.findUnique({ where: { id: "db_me" } });
+    assert.equal(row.lastTierCelebrated ?? null, null, "nothing written");
+  });
+
+  test("400s an empty body, welcomeSeen other than true, and unknown keys", async () => {
+    const { app } = await buildApp();
+    for (const payload of [{}, { welcomeSeen: false }, { welcomeSeen: "yes" }, { welcomeSeen: true, membershipTier: "BEEF_BOSS" }]) {
+      const res = await post(app, "db_me", payload);
+      assert.equal(res.statusCode, 400, JSON.stringify(payload));
+    }
+  });
+
+  test("404s a trusted service call for a user that doesn't exist", async () => {
+    const { app } = await buildApp();
+    const res = await post(app, "db_nobody", { welcomeSeen: true }, { "x-admin-api-key": "key-123" });
+    assert.equal(res.statusCode, 404);
+  });
+});

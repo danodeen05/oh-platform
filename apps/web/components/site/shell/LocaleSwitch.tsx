@@ -12,10 +12,19 @@
  */
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/site/icons/Icon";
 import { localeNames, locales, type Locale } from "@/i18n/config";
 import { swapLocalePath } from "@/lib/site/locale-path";
+
+/**
+ * The compact menu's id. A fixed string, not React's useId: useId encodes the
+ * component's tree position, so any server/client drift above the shell
+ * (providers, Clerk, dev-only wrappers) made `aria-controls` differ between
+ * the server HTML and hydration (the dev warning seen in D7). The top bar
+ * renders exactly one compact menu per page.
+ */
+export const LOCALE_MENU_ID = "site-locale-menu";
 
 function useSwitchLocale(onDone?: () => void) {
   const router = useRouter();
@@ -65,7 +74,7 @@ function LocaleMenu() {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const menuId = useId();
+  const menuId = LOCALE_MENU_ID;
   const switchTo = useSwitchLocale(() => setOpen(false));
 
   useEffect(() => {

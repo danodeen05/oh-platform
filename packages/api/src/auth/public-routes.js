@@ -111,6 +111,7 @@ export const PUBLIC_ROUTES = Object.freeze([
   p("GET", "/users/:id/badge-progress", "customer"),
   p("GET", "/users/:id/pending-credits", "customer"),
   p("GET", "/users/:id/rewards", "customer"),
+  p("POST", "/users/:id/moments", "customer"),
 
   // Membership engine (packages/api/src/membership/routes.js)
   p("GET", "/membership/program", "public-read"),

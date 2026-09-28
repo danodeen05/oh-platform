@@ -149,6 +149,127 @@
       "title": "准备好体验不一样的用餐了吗？",
       "description": "走进您的私人包厢，品尝顶级牛肉面，发现为什么在哦！用餐与众不同。",
       "button": "开始点餐"
+    },
+    "meta": {
+      "title": "Oh! 牛肉面：只为您而建的餐厅",
+      "description": "顶级美国牛肉面，在私人座舱里享用。无领位、无服务员、没有账单、不给小费。犹他州城溪中心与大学广场。"
+    },
+    "chapters": "八个章节的故事",
+    "arrive": {
+      "eyebrow": "牛肉面，在属于您的座舱里",
+      "title": "只为您而建的餐厅。",
+      "lede": "顶级美国牛肉配上两阶段汤头，从安静座舱的墙后送到您面前。无领位、无服务员、没有账单、不给小费。",
+      "order": "点一碗",
+      "story": "看看到访流程"
+    },
+    "live": {
+      "open": "营业中",
+      "closed": "暂未营业",
+      "until": "营业至 {time}",
+      "openUntil": "营业至 {time}",
+      "podsFree": "{count, plural, =0 {暂无空座舱} other {# 个空座舱}}"
+    },
+    "walkIn": {
+      "eyebrow": "走进来",
+      "lines": {
+        "one": "您走进来，没有人招呼您。",
+        "two": "这是刻意的设计。",
+        "three": "空间安静，光线昏暗。一排又一排，座舱逐一映入眼帘。",
+        "four": "在点餐机上大约四十秒完成点餐，屏幕给您一个座舱号码。"
+      }
+    },
+    "pod": {
+      "eyebrow": "座舱",
+      "steps": {
+        "a": {
+          "title": "您坐下，整个空间消失了。",
+          "body": "挂包的钩子、放手机的架子、伸手可及的水。轻点一下，厨房就知道您已入座。"
+        },
+        "b": {
+          "title": "推拉门滑开。",
+          "body": "付款后几分钟，您的面穿墙而来。您始终没看见一只手。"
+        },
+        "c": {
+          "title": "然后门滑上。",
+          "body": "加面、续杯或一份小菜只要轻点一下，从同一扇门送进来。"
+        }
+      }
+    },
+    "bowl": {
+      "eyebrow": "这碗面",
+      "title": "这里的一切，都为了这一碗。",
+      "lede": "台湾牛肉面的高级融合诠释。它不假装是奶奶的食谱。",
+      "callouts": {
+        "broth": {
+          "title": "两阶段汤头",
+          "body": "长时间熬煮的骨汤，再以风味收尾。"
+        },
+        "beef": {
+          "title": "烟熏美国牛肉",
+          "body": "美国和牛或美国农业部特选级牛肉，低温慢熏。绝不低于这个等级。"
+        },
+        "cut": {
+          "title": "切片或肉块",
+          "body": "烟熏牛胸肉切片，或烟熏牛肋肉块。"
+        },
+        "yours": {
+          "title": "青菜与柑橘",
+          "body": "青江菜与一瓣橙子。汤头浓度、面条与加料，由您选择。"
+        }
+      },
+      "macro": "第一口。先是汤，再是您选的牛肉。",
+      "menu": "查看菜单"
+    },
+    "noTip": {
+      "eyebrow": "没有账单，不给小费",
+      "words": {
+        "host": "无领位。",
+        "server": "无服务员。",
+        "check": "没有账单。",
+        "tip": "不给小费。"
+      },
+      "body": "在这里用餐，不需要给小费。没有小费栏，也没有服务费。",
+      "note": "在手机上轻点一下，表示用餐完毕。准备好了再离开。"
+    },
+    "rewards": {
+      "eyebrow": "会员回馈",
+      "title": "每一碗都算数，带您迈向下一级。",
+      "lede": "三个等级，每笔订单都有现金回馈，每升一级送您一碗面。",
+      "cashback": "现金回馈",
+      "cta": "看看如何升级"
+    },
+    "redStep": {
+      "eyebrow": "红色的一步",
+      "title": "每一次光临，都是再多一步。",
+      "body": "Oh! 将每家直营店营收的 1% 捐给犹他州的心理健康非营利组织 ONE RED STEP AT A TIME。",
+      "vision": "一碗好面、属于自己的空间，而每一次光临，都帮助一个人朝更好的心理健康再迈出一步。",
+      "link": "前往基金会",
+      "newTab": "在新标签页打开"
+    },
+    "locations": {
+      "eyebrow": "两家分店",
+      "title": "盐湖城市中心与奥勒姆。",
+      "lede": "同样的空间，同样的一碗。实时座舱与营业时间，直接来自厨房。",
+      "cards": {
+        "cityCreek": {
+          "name": "城溪中心",
+          "area": "盐湖城市中心"
+        },
+        "universityPlace": {
+          "name": "大学广场",
+          "area": "奥勒姆"
+        }
+      },
+      "hours": "今日 {open} 至 {close}",
+      "closedToday": "今日休息",
+      "directions": "路线",
+      "directionsLabel": "前往{name}的路线，打开地图应用",
+      "visit": "前往{name}",
+      "final": {
+        "title": "您的座舱在等您。",
+        "body": "提前点餐，走进来，直接前往您的座舱。",
+        "order": "点一碗"
+      }
     }
   },
   "footer": {
@@ -3478,6 +3599,205 @@
       "GIFT_CARD_INVALID": "礼品卡代码无效或已无余额。",
       "CREDITS_REQUIRE_SIGN_IN": "请登录以使用储值金。",
       "MEAL_GIFT_UNAVAILABLE": "这份爱心餐已无法使用。"
+    }
+  },
+  "passport": {
+    "meta": {
+      "title": "会员护照",
+      "description": "您的 Oh! 会员信息：等级、晋升进度、奖励、购物金与印章。"
+    },
+    "loading": "正在打开您的护照",
+    "back": "护照",
+    "error": {
+      "title": "暂时无法打开您的护照。",
+      "body": "请检查网络连接后再试一次。",
+      "retry": "再试一次"
+    },
+    "signedOut": {
+      "eyebrow": "会员护照",
+      "title": "您的护照在这里。",
+      "body": "登录即可查看您的等级、晋升进度、奖励与购物金。",
+      "signIn": "登录",
+      "join": "创建账号",
+      "learn": "了解会员奖励"
+    },
+    "cover": {
+      "eyebrow": "Oh! 会员护照",
+      "number": "编号 {code}",
+      "tierLabel": "会员等级",
+      "since": "{date}加入",
+      "cashback": "购物金回馈",
+      "streak": "连续天数，最高 {best} 天",
+      "bowls": "累计碗数",
+      "lead": "每笔订单的 {pct}% 都会以购物金回馈给您。这是您目前的进度。",
+      "leadFreeBowl": "您有一碗免费的面在等着您。菜单上任选一碗，我们请客。"
+    },
+    "cta": {
+      "order": "点一碗面",
+      "freeBowl": "使用免费一碗"
+    },
+    "climb": {
+      "eyebrow": "晋升之路",
+      "title": "下一站：{next}。",
+      "titleTop": "您已登上最高等级。",
+      "orders": "碗数",
+      "referrals": "好友",
+      "ordersA11y": "晋升{next}：已完成 {have} 碗，共需 {need} 碗",
+      "referralsA11y": "晋升{next}：已邀请 {have} 位好友，共需 {need} 位",
+      "ready": "两项都已达成。下一笔订单就会升级。",
+      "remaining": "还差 {orders} 碗和 {referrals} 位好友。",
+      "topBody": "每笔订单的 {pct}% 以购物金回馈，您的订单在厨房排最前面，每季还有一份顶级加料。",
+      "guide": "了解晋升方式"
+    },
+    "next": {
+      "title": "升上{next}后",
+      "cashback": "每笔订单 {pct}% 购物金回馈",
+      "freeBowl": "升级当天送您一碗",
+      "earlyAccess": "新品比大家早 {days} 天享用",
+      "queue": "您的订单在厨房排得更前面",
+      "addon": "每季一份顶级加料"
+    },
+    "rewards": {
+      "eyebrow": "奖励",
+      "title": "随时为您准备好。",
+      "empty": "目前没有待使用的奖励。升上{next}时会再送您一碗。",
+      "emptyTop": "目前没有待使用的奖励。每季都会送上一份顶级加料。",
+      "FREE_BOWL": {
+        "name": "免费一碗",
+        "body": "菜单任选一碗，我们请客。"
+      },
+      "PREMIUM_ADDON": {
+        "name": "顶级加料",
+        "body": "一份顶级加料，我们请客。"
+      },
+      "days": "{count, plural, other {剩 # 天}}",
+      "hours": "{count, plural, other {剩 # 小时}}",
+      "ended": "已结束",
+      "useBy": "请于{date}前使用",
+      "use": "立即使用"
+    },
+    "credits": {
+      "eyebrow": "购物金",
+      "title": "您的购物金",
+      "balanceLabel": "可用购物金",
+      "earn": "每笔订单的 {pct}% 都会以购物金回馈。",
+      "lasts": "购物金有效期为 {days} 天，并优先使用最早到期的部分。",
+      "history": "购物金记录",
+      "expiring": "{amount} 将于{date}到期，下一笔订单会优先使用。"
+    },
+    "seals": {
+      "eyebrow": "印章",
+      "title": "您的印章收藏",
+      "count": "已获得 {earned} / {total}",
+      "earned": "已获得",
+      "notEarned": "尚未获得",
+      "new": "新",
+      "guide": "如何获得印章"
+    },
+    "wallet": {
+      "eyebrow": "电子钱包",
+      "title": "把护照放进手机。",
+      "body": "把会员护照加入手机钱包，随着您晋升自动更新。",
+      "apple": "添加到 Apple 钱包",
+      "google": "添加到 Google 钱包",
+      "unavailable": "目前无法使用电子钱包卡券，请稍后再试。",
+      "soon": "电子钱包卡券即将推出。"
+    },
+    "links": {
+      "label": "护照的更多内容",
+      "orders": "订单记录",
+      "credits": "购物金记录",
+      "referral": "邀请好友",
+      "rewards": "了解会员奖励"
+    },
+    "welcome": {
+      "label": "欢迎使用您的护照",
+      "skip": "跳过",
+      "next": "下一步",
+      "back": "上一步",
+      "finish": "打开我的护照",
+      "step": "第 {current} 步，共 {total} 步",
+      "s1": {
+        "title": "您是{tier}。",
+        "body": "每笔订单的 {pct}% 都会以购物金回馈给您，从第一碗就开始。"
+      },
+      "s2": {
+        "title": "一路晋升到{top}。",
+        "body": "{orders} 碗面加上 {referrals} 位好友，就能升上{next}。每升一级都送您一碗。",
+        "bodyTop": "您已经是最高等级，尽情享受所有福利。"
+      },
+      "s3": {
+        "sealName": "好友印章",
+        "title": "邀请好友，一起享用。",
+        "body": "好友通过您的链接加入可得 {referee} 购物金；他们下单后，您可得 {referrer}。",
+        "titleReferred": "您的 {amount} 欢迎购物金已经到账。",
+        "bodyReferred": "您是好友邀请来的，购物金已加入您的账户，有效期为 {days} 天。"
+      },
+      "s4": {
+        "title": "把护照带在身上。",
+        "body": "将护照加入手机钱包，随着您晋升自动更新。"
+      }
+    },
+    "tierUp": {
+      "eyebrow": "等级提升",
+      "title": "您升上{tier}了。",
+      "body": "从现在起，每笔订单的 {pct}% 都会以购物金回馈。",
+      "bowlEyebrow": "您的奖励",
+      "bowlTitle": "送您一碗，我们请客。",
+      "bowlBody": "菜单任选一碗，请于{date}前使用。",
+      "bowlNoDate": "菜单任选一碗。",
+      "order": "点我的免费一碗",
+      "later": "稍后再说",
+      "close": "关闭"
+    },
+    "orders": {
+      "eyebrow": "护照",
+      "title": "您的订单",
+      "count": "{count, plural, =0 {尚无订单} other {共 # 笔订单}}",
+      "empty": "尚无订单。第一碗面就是晋升的起点。",
+      "emptyCta": "点一碗面",
+      "number": "订单 {number}",
+      "total": "总计",
+      "again": "再点一次",
+      "track": "查看进度",
+      "more": "{count, plural, other {另有 # 项}}",
+      "status": {
+        "PENDING_PAYMENT": "等待付款",
+        "PAID": "已付款",
+        "QUEUED": "排队中",
+        "PREPPING": "制作中",
+        "READY": "已完成",
+        "SERVING": "已送达座位",
+        "COMPLETED": "已享用",
+        "CANCELLED": "已取消"
+      }
+    },
+    "creditsPage": {
+      "eyebrow": "护照",
+      "title": "您的购物金",
+      "balance": "可用购物金",
+      "howTitle": "购物金怎么用",
+      "how1": "购物金自获得当天起 {days} 天内有效。",
+      "how2": "结账时优先使用最早到期的购物金。",
+      "how3": "购物金到期前，我们会提醒您。",
+      "history": "记录",
+      "empty": "目前还没有购物金记录。",
+      "events": {
+        "REFERRAL_SIGNUP": "好友加入",
+        "REFERRAL_ORDER": "好友首次下单",
+        "REFERRAL_ORDER_PENDING": "好友奖励处理中",
+        "CASHBACK": "订单购物金回馈",
+        "CREDIT_APPLIED": "用于订单",
+        "CREDIT_EXPIRED": "已到期",
+        "ADMIN_ADJUSTMENT": "调整",
+        "CHALLENGE_REWARD": "挑战奖励",
+        "GIFT_EXCESS": "请客余额",
+        "GOODWILL": "团队致意",
+        "WELCOME": "欢迎购物金",
+        "REWARD_REDEEMED": "已使用奖励",
+        "REFUND_RESTORE": "退款后退回",
+        "OTHER": "购物金"
+      }
     }
   }
 }

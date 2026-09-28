@@ -1,0 +1,415 @@
+/*
+ * Task D1: the home story's motion.
+ *
+ * Native-first, like components/site/motion/motion.css: the pinned chapters
+ * read the motion kit's --progress (PinnedStory drives it); the rest run on
+ * CSS view timelines, with a small JS fallback only where noted
+ * (TheBowl's spin, via useScrollVars). Only transform, opacity and color
+ * move. Reduced motion shows every chapter's final state: the pinned
+ * chapters switch to a static layout in JS (PinnedStory's own static mode),
+ * and every rule below is pinned to its end value.
+ */
+
+@property --hm-lit {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 1;
+}
+
+@property --hm-draw {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 1;
+}
+
+@keyframes hm-progress {
+  from {
+    --progress: 0;
+  }
+  to {
+    --progress: 1;
+  }
+}
+
+@keyframes hm-lit {
+  from {
+    --hm-lit: 0;
+  }
+  to {
+    --hm-lit: 1;
+  }
+}
+
+@keyframes hm-draw {
+  from {
+    --hm-draw: 0;
+  }
+  to {
+    --hm-draw: 1;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+/* 1. Arrive: brush mark, a slow push on the storefront, the copy rising   */
+/* ---------------------------------------------------------------------- */
+
+.hm-brush-stroke {
+  stroke-dasharray: 1 1;
+  stroke-dashoffset: 1;
+  animation: hm-brush-draw 0.55s cubic-bezier(0.55, 0, 0.3, 1) forwards;
+  animation-delay: calc(0.25s + var(--hm-i, 0) * 0.11s);
+}
+
+@keyframes hm-brush-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* The unmasked mark settles in at the end, so any ink the brush paths
+   missed is there in the final state. */
+.hm-brush-full {
+  opacity: 0;
+  animation: hm-fade-in 0.7s ease-out 1.55s forwards;
+}
+
+@keyframes hm-fade-in {
+  to {
+    opacity: 1;
+  }
+}
+
+.hm-push > img {
+  transform-origin: 50% 40%;
+  animation: hm-push 9s cubic-bezier(0.2, 0.6, 0.2, 1) both;
+}
+
+@keyframes hm-push {
+  from {
+    transform: scale(1.08);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+.hm-rise {
+  animation: hm-rise 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation-delay: var(--hm-delay, 0s);
+}
+
+@keyframes hm-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.hm-live-dot[data-open="true"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: inherit;
+  animation: hm-ping 2.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes hm-ping {
+  75%,
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
+.hm-scroll-cue {
+  transform-origin: top;
+  animation: hm-cue 2.6s cubic-bezier(0.6, 0, 0.3, 1) 2s infinite both;
+}
+
+@keyframes hm-cue {
+  0% {
+    transform: scaleY(0);
+    opacity: 1;
+  }
+  55% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scaleY(1);
+    opacity: 0;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Pinned stages (2. Walk in, 3. The pod)                                  */
+/* ---------------------------------------------------------------------- */
+
+/* A box with the photos' 4:3 ratio that covers the pinned stage, so the
+   overlays drawn in photo percentages stay on the photo at any viewport.
+   --hm-fx is the photo's horizontal anchor (50% centers it). */
+.hm-cover {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: max(100%, calc(100svh * 4 / 3));
+  height: max(100%, calc(100vw * 3 / 4));
+  translate: calc(var(--hm-fx, 50%) * -1) -50%;
+}
+
+/* A value that ramps 0 -> 1 as --progress passes --at (over 1/--hm-k of it). */
+.hm-ramp {
+  --hm-ramp: clamp(0, calc((var(--progress) - var(--at, 0)) * var(--hm-k, 6)), 1);
+}
+
+.hm-walk-zoom {
+  transform: scale(calc(1 + var(--progress) * 0.08));
+  transform-origin: 50% 45%;
+}
+
+.hm-fade {
+  opacity: var(--hm-ramp);
+}
+
+.hm-row-light {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: var(--w);
+  height: var(--h);
+  translate: -50% 0;
+  background: radial-gradient(
+    ellipse 55% 75% at 50% 8%,
+    color-mix(in oklab, color-mix(in oklab, var(--color-oh-gold) 55%, var(--color-oh-cream)) 90%, transparent),
+    color-mix(in oklab, var(--color-oh-ember-light) 30%, transparent) 50%,
+    transparent 78%
+  );
+  mix-blend-mode: screen;
+  opacity: var(--hm-ramp);
+}
+
+.hm-line {
+  opacity: var(--hm-ramp);
+  transform: translateY(calc((1 - var(--hm-ramp)) * 14px));
+}
+
+/* A caption shown only between --at and --until. */
+.hm-window {
+  --hm-in: clamp(0, calc((var(--progress) - var(--at)) * 10), 1);
+  --hm-out: clamp(0, calc((var(--until, 2) - var(--progress)) * 10), 1);
+  opacity: min(var(--hm-in), var(--hm-out));
+  transform: translateY(calc((1 - var(--hm-in)) * 12px));
+}
+
+.hm-hatch-panel {
+  translate: 0 calc(var(--hm-ramp) * -101%);
+}
+
+.hm-seg-fill {
+  transform-origin: left;
+  transform: scaleX(clamp(0, calc((var(--progress) - var(--at)) / var(--span)), 1));
+}
+
+/* ---------------------------------------------------------------------- */
+/* 4. The bowl                                                             */
+/* ---------------------------------------------------------------------- */
+
+.hm-bowl {
+  view-timeline: --hm-bowl block;
+}
+
+/* The bowl turns 40 degrees across its pass through the viewport:
+   rotate: calc(var(--progress) * 40deg), centered on upright. */
+.hm-bowl-spin {
+  rotate: calc((var(--progress) - 0.5) * 40deg);
+}
+
+@supports (animation-timeline: view()) {
+  .hm-bowl-spin {
+    animation: hm-progress linear both;
+    animation-timeline: --hm-bowl;
+    animation-range: cover 0% cover 100%;
+  }
+}
+
+.hm-drift-frame {
+  view-timeline: --hm-drift block;
+}
+
+@supports (animation-timeline: view()) {
+  .hm-drift {
+    animation: hm-drift linear both;
+    animation-timeline: --hm-drift;
+    animation-range: cover 0% cover 100%;
+  }
+}
+
+@keyframes hm-drift {
+  from {
+    transform: translateY(-6%) scale(1.14);
+  }
+  to {
+    transform: translateY(6%) scale(1.14);
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+/* 5. No check, no tip: each line lights as it crosses the viewport         */
+/* ---------------------------------------------------------------------- */
+
+.hm-word {
+  color: color-mix(in oklab, var(--hm-word-on, var(--color-oh-cream)) calc(var(--hm-lit) * 100%), var(--color-oh-ash));
+}
+
+@supports (animation-timeline: view()) {
+  .hm-word {
+    animation: hm-lit linear both;
+    animation-timeline: view();
+    animation-range: entry 70% cover 48%;
+  }
+  .hm-rule {
+    animation: hm-draw linear both;
+    animation-timeline: view();
+    animation-range: entry 80% cover 55%;
+  }
+}
+
+.hm-rule {
+  transform-origin: left;
+  transform: scaleX(var(--hm-draw));
+}
+
+/* ---------------------------------------------------------------------- */
+/* 6. Rewards teaser: the pedestals rise                                  */
+/* ---------------------------------------------------------------------- */
+
+.hm-pedestal {
+  transform-origin: bottom;
+  transform: scaleY(var(--hm-draw));
+}
+
+@supports (animation-timeline: view()) {
+  .hm-pedestal {
+    animation: hm-draw linear both;
+    animation-timeline: view();
+    animation-range: entry 10% cover 45%;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+/* 7. One Red Step: the red thread draws itself                           */
+/* ---------------------------------------------------------------------- */
+
+.hm-thread {
+  view-timeline: --hm-thread block;
+}
+
+.hm-thread-path {
+  stroke-dasharray: 1 1;
+  stroke-dashoffset: calc(1 - var(--hm-draw));
+}
+
+@supports (animation-timeline: view()) {
+  .hm-thread-path {
+    animation: hm-draw linear both;
+    animation-timeline: --hm-thread;
+    animation-range: entry 15% exit 35%;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Reduced motion: every chapter at its final state                       */
+/* ---------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .hm-brush-stroke,
+  .hm-brush-full,
+  .hm-push > img,
+  .hm-rise,
+  .hm-scroll-cue,
+  .hm-live-dot::after,
+  .hm-bowl-spin,
+  .hm-drift,
+  .hm-word,
+  .hm-rule,
+  .hm-pedestal,
+  .hm-thread-path {
+    animation: none !important;
+  }
+  .hm-brush-stroke {
+    stroke-dashoffset: 0;
+  }
+  .hm-brush-full,
+  .hm-rise {
+    opacity: 1;
+    transform: none;
+  }
+  .hm-push > img,
+  .hm-drift {
+    transform: none;
+  }
+  .hm-scroll-cue,
+  .hm-live-dot::after {
+    display: none;
+  }
+  .hm-bowl-spin {
+    rotate: none;
+  }
+  .hm-word {
+    --hm-lit: 1;
+  }
+  .hm-rule,
+  .hm-pedestal,
+  .hm-thread-path {
+    --hm-draw: 1;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+/* The sign-off mark (fix round 1): BrushMark with trigger="view" draws     */
+/* itself as it scrolls up into view instead of on load. Without view     */
+/* timelines, or with reduced motion, it is simply the finished mark.     */
+/* ---------------------------------------------------------------------- */
+
+.hm-brush--view {
+  view-timeline: --hm-sign block;
+}
+.hm-brush--view .hm-brush-stroke {
+  animation: none;
+  stroke-dashoffset: 0;
+}
+.hm-brush--view .hm-brush-full {
+  animation: none;
+  opacity: 1;
+}
+
+@supports (animation-timeline: view()) {
+  .hm-brush--view .hm-brush-stroke {
+    stroke-dashoffset: 1;
+    animation: hm-brush-draw linear both;
+    animation-timeline: --hm-sign;
+    animation-range: cover calc(8% + var(--hm-i, 0) * 3%) cover calc(16% + var(--hm-i, 0) * 3%);
+  }
+  .hm-brush--view .hm-brush-full {
+    opacity: 0;
+    animation: hm-fade-in linear both;
+    animation-timeline: --hm-sign;
+    animation-range: cover 40% cover 48%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hm-brush--view .hm-brush-stroke {
+    animation: none !important;
+    stroke-dashoffset: 0 !important;
+  }
+  .hm-brush--view .hm-brush-full {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+}
