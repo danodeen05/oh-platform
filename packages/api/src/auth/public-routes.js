@@ -92,9 +92,8 @@ export const PUBLIC_ROUTES = Object.freeze([
   p("GET", "/users/:id/payment-methods", "customer"),
   p("POST", "/users/:id/payment-methods", "customer"),
   p("DELETE", "/users/:id/payment-methods/:methodId", "customer"),
-  // Verified-identity helpers (auth/customer.js): the caller's own row, and a short-lived Chappy stream ticket.
+  // Verified-identity helper (auth/customer.js): the caller's own row.
   p("GET", "/users/me", "customer"),
-  p("POST", "/chappy/stream-ticket", "customer"),
 
   // Badges and challenges
   p("GET", "/badges", "customer"),
@@ -160,10 +159,11 @@ export const PUBLIC_ROUTES = Object.freeze([
   p("GET", "/party-invitations/:code", "customer"),
   p("POST", "/party-invitations/:code/rsvp", "customer"),
 
-  // Chappy
+  // Chappy (packages/api/src/chappy/routes.js). chat/history/reset need a verified
+  // member or a signed guest token (one preHandler); guest-token is public and rate limited.
   p("POST", "/chappy/sms", "webhook"),
+  p("POST", "/chappy/guest-token", "customer"),
   p("POST", "/chappy/chat", "customer"),
-  p("GET", "/chappy/chat/stream", "customer"),
   p("GET", "/chappy/history", "customer"),
   p("POST", "/chappy/reset", "customer"),
   p("POST", "/chappy/confirm-payment", "customer"),

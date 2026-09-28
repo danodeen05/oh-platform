@@ -4,6 +4,9 @@
  * All tools available to the Claude agent, mapped to existing Oh! APIs.
  */
 import { tierRule } from "../membership/program.js";
+import { toStrictToolDefs, validateToolInput } from "./tool-schema.js";
+
+export { validateToolInput };
 
 /**
  * Tool definitions for Claude API
@@ -526,13 +529,7 @@ Returns tokenized card info (last4, brand) - never raw card numbers. Only availa
 
   {
     name: "create_and_pay_order",
-    description: `Create an order and process payment using saved payment method. This is the final step in the ordering flow. Use when:
-- Customer has confirmed their items, location, arrival time
-- Customer has selected a payment method
-- Ready to submit the order
-
-IMPORTANT: Always confirm the order details with the customer before calling this tool.
-This will charge their card and create a confirmed order.`,
+    description: `DISABLED. Do not use. Chappy never charges a card; the customer pays with their own tap. To take payment, create the order with create_apple_pay_order and give the customer the payment step from its result.`,
     input_schema: {
       type: "object",
       properties: {
@@ -1341,199 +1338,17 @@ async function executeToolByName(name, input, context) {
     }
 
     case "create_and_pay_order": {
-      if (!userId) {
-        return { error: "You need to be logged in to place an order through Chappy. Would you like to continue on the website?" };
-      }
-
-      const { items: orderItems, paymentMethodId, seatId, arrivalTime, applyCredits } = input;
-      const orderLocationId = input.locationId || locationId;
-
-      if (!orderLocationId) return { error: "Location is required for the order" };
-      if (!orderItems || orderItems.length === 0) return { error: "No items in order" };
-      if (!paymentMethodId) return { error: "Payment method is required" };
-
-      // Verify payment method belongs to user
-      const paymentMethod = await prisma.savedPaymentMethod.findFirst({
-        where: { id: paymentMethodId, userId },
-      });
-      if (!paymentMethod) return { error: "Invalid payment method" };
-
-      // Get user's Stripe customer ID
-      const user = await prisma.user.findUnique({ where: { id: userId } });
-      if (!user?.stripeCustomerId) return { error: "Payment setup incomplete. Please add a card on the website first." };
-
-      // Calculate order total
-      const menuItems = await prisma.menuItem.findMany({
-        where: { id: { in: orderItems.map((i) => i.menuItemId) } },
-      });
-
-      let totalCents = 0;
-      const itemsWithPrices = orderItems.map((item) => {
-        const menuItem = menuItems.find((m) => m.id === item.menuItemId);
-        if (!menuItem) throw new Error(`Menu item not found: ${item.menuItemId}`);
-
-        const priceCents = menuItem.basePriceCents * item.quantity;
-        totalCents += priceCents;
-
-        return {
-          menuItemId: item.menuItemId,
-          quantity: item.quantity,
-          priceCents,
-          selectedValue: item.selectedValue || null,
-          name: menuItem.name,
-        };
-      });
-
-      // Calculate tax (8.25% Utah state + local)
-      const taxRate = 0.0825;
-      const taxCents = Math.round(totalCents * taxRate);
-
-      // Apply credits if requested
-      let creditsApplied = 0;
-      if (applyCredits && user.creditsCents > 0) {
-        creditsApplied = Math.min(500, user.creditsCents, totalCents); // Max $5 credits
-      }
-
-      const finalTotal = totalCents + taxCents - creditsApplied;
-
-      // Import Stripe (it should be available in the context)
-      const Stripe = (await import("stripe")).default;
-      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
-      // Create payment intent and charge
-      let paymentIntent;
-      try {
-        paymentIntent = await stripe.paymentIntents.create({
-          amount: finalTotal,
-          currency: "usd",
-          customer: user.stripeCustomerId,
-          payment_method: paymentMethod.stripePaymentMethodId,
-          confirm: true,
-          automatic_payment_methods: {
-            enabled: true,
-            allow_redirects: "never",
-          },
-          metadata: {
-            userId,
-            locationId: orderLocationId,
-            source: "chappy",
-          },
-        });
-      } catch (stripeError) {
-        return {
-          error: "Payment failed",
-          message: stripeError.message || "Your card was declined. Please try a different payment method.",
-        };
-      }
-
-      if (paymentIntent.status !== "succeeded") {
-        return {
-          error: "Payment not completed",
-          message: "Payment requires additional action. Please complete payment on the website.",
-        };
-      }
-
-      // Generate order numbers
-      const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
-      const orderQrCode = `ORDER-${orderLocationId.slice(-8)}-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
-
-      // Get kitchen order number
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-
-      const todaysOrderCount = await prisma.order.count({
-        where: {
-          locationId: orderLocationId,
-          paymentStatus: "PAID",
-          createdAt: { gte: today, lt: tomorrow },
-        },
-      });
-      const kitchenOrderNumber = String(todaysOrderCount + 1).padStart(4, "0");
-
-      // Determine estimated arrival
-      let estimatedArrival = null;
-      if (arrivalTime && arrivalTime !== "ASAP") {
-        estimatedArrival = new Date(arrivalTime);
-      } else {
-        // ASAP = 10 minutes from now
-        estimatedArrival = new Date(Date.now() + 10 * 60 * 1000);
-      }
-
-      // Create the order
-      const order = await prisma.order.create({
-        data: {
-          orderNumber,
-          orderQrCode,
-          kitchenOrderNumber,
-          tenantId,
-          locationId: orderLocationId,
-          userId,
-          seatId: seatId || null,
-          podSelectionMethod: seatId ? "CUSTOMER_SELECTED" : null,
-          podAssignedAt: seatId ? new Date() : null,
-          totalCents: finalTotal,
-          taxCents,
-          estimatedArrival,
-          paymentStatus: "PAID",
-          stripePaymentId: paymentIntent.id,
-          paymentMethodLast4: paymentMethod.last4,
-          paymentMethodBrand: paymentMethod.brand,
-          status: "PAID",
-          orderSource: "CHAPPY",
-          items: {
-            create: itemsWithPrices.map((item) => ({
-              menuItemId: item.menuItemId,
-              quantity: item.quantity,
-              priceCents: item.priceCents,
-              selectedValue: item.selectedValue,
-            })),
-          },
-        },
-        include: {
-          items: { include: { menuItem: true } },
-          seat: true,
-          location: true,
-        },
-      });
-
-      // Deduct credits if applied
-      if (creditsApplied > 0) {
-        await prisma.user.update({
-          where: { id: userId },
-          data: { creditsCents: { decrement: creditsApplied } },
-        });
-      }
-
-      // Mark seat as occupied if selected
-      if (seatId) {
-        await prisma.seat.update({
-          where: { id: seatId },
-          data: { status: "OCCUPIED" },
-        });
-      }
-
+      // DISABLED (controller ruling, Task B1). This tool used to create and
+      // confirm a PaymentIntent on a saved card after a verbal yes, which breaks
+      // the owner's rule that Chappy never moves money without the customer's
+      // own tap. It now charges nothing and points the model at the payment
+      // step. B2 deletes it (web: B2's pay card; SMS: the order payment link).
       return {
-        success: true,
-        orderId: order.id,
-        orderNumber: order.orderNumber,
-        kitchenOrderNumber: order.kitchenOrderNumber,
-        total: `$${(finalTotal / 100).toFixed(2)}`,
-        subtotal: `$${(totalCents / 100).toFixed(2)}`,
-        tax: `$${(taxCents / 100).toFixed(2)}`,
-        creditsApplied: creditsApplied > 0 ? `$${(creditsApplied / 100).toFixed(2)}` : null,
-        items: itemsWithPrices.map((i) => ({
-          name: i.name,
-          quantity: i.quantity,
-          price: `$${(i.priceCents / 100).toFixed(2)}`,
-        })),
-        location: order.location.name,
-        podNumber: order.seat?.number || null,
-        estimatedArrival: order.estimatedArrival?.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
-        message: order.seat
-          ? `Order confirmed! Head to Pod ${order.seat.number} at ${order.location.name}. Your order number is ${order.kitchenOrderNumber}.`
-          : `Order confirmed! Head to ${order.location.name} and check in when you arrive. Your order number is ${order.kitchenOrderNumber}.`,
+        charged: false,
+        disabled: true,
+        error: "PAYMENT_NEEDS_CUSTOMER_TAP",
+        instruction:
+          "Chappy cannot charge cards and this tool is disabled; do not call it again. Create the order with create_apple_pay_order, then let the customer pay with their own tap: on the web the payment card appears in the chat; by SMS send ohbeef.com/order/payment?orderId={orderId}&orderNumber={orderNumber} using the values from that tool's result.",
       };
     }
 
@@ -2149,4 +1964,31 @@ function getTierProgressInfo(user) {
   };
 }
 
-export default { CHAPPY_TOOLS, executeTools };
+/**
+ * The tool interface the v3 agent loop uses (Task B1). B2 rewrites the tools
+ * behind it; the loop only relies on these two exports:
+ *  - TOOL_DEFS: strict, eager-streaming definitions, sorted by name so the
+ *    tools prefix is byte-identical for every caller (prompt caching).
+ *  - executeTool(name, input, ctx): runs one validated tool call. ctx carries
+ *    { prisma (basePrisma, never the demo-wrapped client), userId, guestId,
+ *    locationId, tenantId }.
+ */
+/**
+ * strict:false on these legacy tools (controller ruling, Task B1). The API
+ * rejected them strict: at most 20 strict tools per request (31 here), and 20
+ * of them still gave "The compiled grammar is too large". Every parsed input is
+ * still validated client-side against its closed schema before it runs
+ * (validateToolInput), which eager_input_streaming requires anyway.
+ * B2 rewrites these into about 18 smaller schemas and turns strict:true on where the
+ * grammar allows, at least on every tool that moves money; toStrictToolDefs
+ * enforces the 20-tool cap and an optional-parameter budget when it does.
+ */
+export const STRICT_TOOL_NAMES = new Set();
+
+export const TOOL_DEFS = toStrictToolDefs(CHAPPY_TOOLS, STRICT_TOOL_NAMES);
+
+export async function executeTool(name, input, ctx) {
+  return executeToolByName(name, input, ctx);
+}
+
+export default { CHAPPY_TOOLS, TOOL_DEFS, executeTool, executeTools };

@@ -320,21 +320,29 @@ describe("order ownership and Chappy credits", () => {
   });
 });
 
-describe("resolveChappyWebIdentity", () => {
-  const isMemberId = async (id) => id === "db_me" || id === "db_other";
-  test("a member comes from the ticket or the session", async () => {
-    assert.deepEqual(await resolveChappyWebIdentity({ who: { kind: "anonymous" }, ticketUserId: "db_me", sessionId: "s1", isMemberId }), { userId: "db_me", guestId: null, identifier: "db_me" });
-    assert.deepEqual(await resolveChappyWebIdentity({ who: { kind: "user", userId: "db_me", email: "me@x.com" }, guestId: "g1", isMemberId }), { userId: "db_me", guestId: null, identifier: "db_me" });
+describe("resolveChappyWebIdentity (Task B1: signed guest tokens only)", () => {
+  test("a member comes only from the verified session", () => {
+    const { auth } = build();
+    const id = resolveChappyWebIdentity({ who: { kind: "user", userId: "db_me", email: "me@x.com" }, guestToken: auth.issueGuestToken(), verifyGuestToken: auth.verifyGuestToken });
+    assert.deepEqual(id, { kind: "member", userId: "db_me", identifier: "db_me" });
   });
-  test("unidentified requests get no identifier: no shared fallback, no reserved key, no member id", async () => {
+  test("a guest needs a valid signed token; the conversation key is derived from it", () => {
+    const { auth } = build();
+    const token = auth.issueGuestToken();
+    const id = resolveChappyWebIdentity({ who: { kind: "anonymous" }, guestToken: token, verifyGuestToken: auth.verifyGuestToken });
+    assert.equal(id.kind, "guest");
+    assert.equal(id.identifier, `guest:${token.split(".")[1]}`);
+  });
+  test("raw ids, forged tokens and a signed-in person with no row are unidentified", () => {
+    const { auth } = build();
+    const v = auth.verifyGuestToken;
     const anon = { kind: "anonymous" };
-    for (const input of [{}, { sessionId: "anonymous" }, { sessionId: "ANONYMOUS" }, { guestId: "db_other" }, { sessionId: "db_me" }, { guestId: "", sessionId: "" }]) {
-      assert.deepEqual(await resolveChappyWebIdentity({ who: anon, isMemberId, ...input }), { userId: null, guestId: null, identifier: null }, JSON.stringify(input));
+    const real = auth.issueGuestToken();
+    const tampered = real.slice(0, -1) + (real.endsWith("Z") ? "Y" : "Z");
+    for (const guestToken of [undefined, "", "guest_1", "anonymous", "g1.x.y", tampered]) {
+      assert.equal(resolveChappyWebIdentity({ who: anon, guestToken, verifyGuestToken: v }), null, String(guestToken));
     }
-  });
-  test("guests keep their own guest or session id", async () => {
-    assert.deepEqual(await resolveChappyWebIdentity({ who: { kind: "anonymous" }, guestId: "guest_1", isMemberId }), { userId: null, guestId: "guest_1", identifier: "guest_1" });
-    assert.deepEqual(await resolveChappyWebIdentity({ who: { kind: "anonymous" }, sessionId: "chappy-1-abc", isMemberId }), { userId: null, guestId: null, identifier: "chappy-1-abc" });
+    assert.equal(resolveChappyWebIdentity({ who: { kind: "user", userId: null, email: "new@x.com" }, verifyGuestToken: v }), null);
   });
 });
 
@@ -354,18 +362,6 @@ describe("integration: identity wiring as index.js uses it (Fastify inject)", ()
       const { guestId } = req.body || {};
       return { userId: orderOwnerId(await auth.resolve(req)), guestId: guestId || null };
     });
-    f.post("/chappy/stream-ticket", async (req, reply) => {
-      const who = await auth.requireUser(req, reply);
-      if (!who) return reply;
-      return { uid: who.userId, ...auth.signLink("chappy-stream", who.userId, 120000) };
-    });
-    f.get("/chappy/chat/stream", async (req, reply) => {
-      const { uid, exp, sig } = req.query;
-      const ticketUserId = uid && auth.verifyLink("chappy-stream", uid, exp, sig) ? uid : null;
-      const id = await resolveChappyWebIdentity({ who: await auth.resolve(req), ticketUserId, ...req.query, isMemberId: async (x) => x.startsWith("db_") });
-      if (!id.identifier) return reply.status(401).send({ error: "unidentified" });
-      return id;
-    });
     await f.ready();
     return f;
   }
@@ -383,18 +379,5 @@ describe("integration: identity wiring as index.js uses it (Fastify inject)", ()
     assert.equal(member.json().userId, "db_me");
     const anon = await f.inject({ method: "POST", url: "/orders", payload: { userId: "db_other", guestId: "guest_1" } });
     assert.deepEqual(anon.json(), { userId: null, guestId: "guest_1" });
-  });
-
-  test("Chappy stream: a member ticket works; a missing or invalid ticket gives no stream and no shared identity", async () => {
-    const f = await app();
-    const ticket = (await f.inject({ method: "POST", url: "/chappy/stream-ticket", headers: { authorization: "Bearer clerk:user_me" } })).json();
-    const ok = await f.inject({ method: "GET", url: `/chappy/chat/stream?message=hi&uid=${ticket.uid}&exp=${ticket.exp}&sig=${encodeURIComponent(ticket.sig)}` });
-    assert.equal(ok.json().identifier, "db_me");
-    const forgedUid = await f.inject({ method: "GET", url: `/chappy/chat/stream?message=hi&uid=db_other&exp=${ticket.exp}&sig=${encodeURIComponent(ticket.sig)}` });
-    assert.equal(forgedUid.statusCode, 401);
-    assert.equal((await f.inject({ method: "GET", url: "/chappy/chat/stream?message=hi" })).statusCode, 401);
-    assert.equal((await f.inject({ method: "GET", url: "/chappy/chat/stream?message=hi&userId=db_me" })).statusCode, 401);
-    assert.equal((await f.inject({ method: "GET", url: "/chappy/chat/stream?message=hi&sessionId=anonymous" })).statusCode, 401);
-    assert.equal((await f.inject({ method: "POST", url: "/chappy/stream-ticket" })).statusCode, 401);
   });
 });

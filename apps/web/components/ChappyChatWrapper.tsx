@@ -1,37 +1,66 @@
 "use client";
 
-import { useUser, useAuth } from "@clerk/nextjs";
+import { useUser } from "@clerk/nextjs";
+import { useLocale } from "next-intl";
 import { ChappyChat } from "./ChappyChat";
 import { useSiteApi } from "@/lib/site/api";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+
+// Guests chat with a SIGNED token from POST /chappy/guest-token (the API no
+// longer accepts a raw guest or session id). Kept until Task E1 replaces this widget.
+const GUEST_TOKEN_KEY = "oh-chappy-guest-token";
 
 export function ChappyChatWrapper() {
   const { user, isLoaded, isSignedIn } = useUser();
+  const locale = useLocale();
   const api = useSiteApi();
-  const [guestId, setGuestId] = useState<string | null>(null);
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [guestToken, setGuestToken] = useState<string | null>(null);
   const [dbUserId, setDbUserId] = useState<string | null>(null);
 
-  // Get or create guest/session ID for non-logged-in users
+  const fetchGuestToken = useCallback(async (apiBase: string) => {
+    try {
+      const res = await fetch(`${apiBase}/chappy/guest-token`, { method: "POST" });
+      const token = res.ok ? (await res.json())?.token : null;
+      if (typeof token === "string" && token) {
+        try {
+          localStorage.setItem(GUEST_TOKEN_KEY, token);
+        } catch {
+          /* storage unavailable: keep it in memory */
+        }
+        setGuestToken(token);
+      }
+    } catch {
+      setGuestToken(null);
+    }
+  }, []);
+
+  // Get or create a signed guest token for non-logged-in users
   useEffect(() => {
     if (isLoaded && !isSignedIn) {
-      // Check for existing guest ID in localStorage
-      let storedGuestId = localStorage.getItem("oh-guest-id");
-      if (!storedGuestId) {
-        // Check if there's a session ID from a previous order
-        storedGuestId = localStorage.getItem("oh-session-id");
+      let stored: string | null = null;
+      try {
+        stored = localStorage.getItem(GUEST_TOKEN_KEY);
+      } catch {
+        stored = null;
       }
-
-      if (storedGuestId) {
-        setGuestId(storedGuestId);
-      } else {
-        // Generate a session ID for anonymous users
-        const newSessionId = `chappy-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-        setSessionId(newSessionId);
-      }
+      if (stored) setGuestToken(stored);
+      else fetchGuestToken(getApiUrl());
       setDbUserId(null);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded, isSignedIn]);
+
+  // The API refused the stored token (expired or rotated secret): get a fresh one.
+  const onGuestTokenRejected = useCallback(() => {
+    try {
+      localStorage.removeItem(GUEST_TOKEN_KEY);
+    } catch {
+      /* ignore */
+    }
+    setGuestToken(null);
+    fetchGuestToken(getApiUrl());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchGuestToken]);
 
   // Fetch database user ID when logged in (maps Clerk ID to DB ID)
   useEffect(() => {
@@ -88,8 +117,9 @@ export function ChappyChatWrapper() {
   return (
     <ChappyChat
       userId={isSignedIn && dbUserId ? dbUserId : undefined}
-      guestId={guestId || undefined}
-      sessionId={sessionId || undefined}
+      guestToken={!isSignedIn && guestToken ? guestToken : undefined}
+      onGuestTokenRejected={onGuestTokenRejected}
+      locale={locale}
       apiUrl={apiUrl}
     />
   );

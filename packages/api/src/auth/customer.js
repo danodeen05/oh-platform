@@ -13,6 +13,8 @@
  *    primary email -> prisma.user by email. Both lookups are cached 5 minutes.
  *  - A guest token "g1.<random>.<hmac>" (HMAC-SHA256 with CHAPPY_GUEST_SECRET,
  *    30-day expiry encoded in <random>), sent as a Bearer or x-guest-token.
+ *    Chappy issues these at POST /chappy/guest-token and reads them only from
+ *    the x-chappy-guest header (resolveChappyWebIdentity below).
  *  - x-admin-api-key equal to ADMIN_API_KEY counts as a trusted service call
  *    for requireSelf/requireEmail (server-to-server).
  *
@@ -63,7 +65,7 @@ export function createCustomerAuth(options = {}) {
   /** Misconfigurations the server should announce at startup. */
   const warnings = [];
   if (isProduction && !guestSecret) {
-    warnings.push("CHAPPY_GUEST_SECRET is not set: guest tokens, wallet pass links and Chappy stream tickets are disabled.");
+    warnings.push("CHAPPY_GUEST_SECRET is not set: Chappy guest tokens and wallet pass links are disabled.");
   }
   if (isProduction && env.CLERK_SECRET_KEY_DEV) {
     warnings.push("CLERK_SECRET_KEY_DEV is set but ignored for customer identity in production.");
@@ -228,7 +230,7 @@ export function createCustomerAuth(options = {}) {
     return who;
   }
 
-  /** Short-lived HMAC link for requests that cannot carry a header (downloads, EventSource). */
+  /** Short-lived HMAC link for requests that cannot carry a header (downloads, wallet passes). */
   function signLink(purpose, subject, ttlMs = LINK_TTL_MS) {
     if (!linkKey) throw new Error("CHAPPY_GUEST_SECRET is not configured");
     const exp = String(now() + ttlMs);
@@ -288,23 +290,23 @@ export function chappyCreditsToDeduct(who, order, maxCents = 500) {
   return balance > 0 ? Math.min(maxCents, balance) : 0;
 }
 
-/** Conversation keys no client may claim (the pre-2026-09-27 shared fallback). */
-const RESERVED_CHAPPY_IDS = new Set(["anonymous"]);
-
 /**
- * Who a web Chappy request is for. A member comes only from the verified
- * session or a verified stream ticket (ticketUserId); a client userId is never
- * consulted. A guest keeps its client guestId/sessionId unless that id is a
- * member's id or a reserved shared key. Returns identifier null when the
- * request cannot be identified: callers must refuse it (no shared fallback).
+ * Who a web Chappy request is for (Task B1). A member comes only from the
+ * verified session (a database user id); a guest only from a SIGNED guest
+ * token (POST /chappy/guest-token, sent as x-chappy-guest), whose random part
+ * becomes the conversation key. Raw guestId/sessionId/userId values from the
+ * client are never consulted, so one guest cannot claim another's
+ * conversation. Returns null when the request cannot be identified: callers
+ * answer 401 (there is no shared fallback conversation).
  */
-export async function resolveChappyWebIdentity({ who, ticketUserId = null, guestId, sessionId, isMemberId }) {
-  const userId = ticketUserId || orderOwnerId(who);
-  if (userId) return { userId, guestId: null, identifier: userId };
-  const claimed = (typeof guestId === "string" && guestId) || (typeof sessionId === "string" && sessionId) || null;
-  if (!claimed || RESERVED_CHAPPY_IDS.has(claimed.toLowerCase())) return { userId: null, guestId: null, identifier: null };
-  if (await isMemberId(claimed)) return { userId: null, guestId: null, identifier: null };
-  return { userId: null, guestId: typeof guestId === "string" && guestId ? guestId : null, identifier: claimed };
+export function resolveChappyWebIdentity({ who, guestToken, verifyGuestToken }) {
+  const userId = orderOwnerId(who);
+  if (userId) return { kind: "member", userId, identifier: userId };
+  const guest = typeof guestToken === "string" && guestToken ? verifyGuestToken(guestToken) : null;
+  if (guest && guest.kind === "guest" && guest.guestKey) {
+    return { kind: "guest", guestKey: guest.guestKey, identifier: `guest:${guest.guestKey}` };
+  }
+  return null;
 }
 
 const USER_ID_ROUTE = /^\/users\/:(id|userId)(\/|$)/;
