@@ -1065,219 +1065,380 @@
     }
   },
   "giftCards": {
-    "title": "Gift Cards",
-    "description": "Share the gift of Oh! with friends and family",
-    "buyNow": "Buy Now",
-    "checkBalance": "Check Balance",
-    "tagline": "Give the Gift of Deliciousness",
-    "digitalCard": "DIGITAL GIFT CARD",
-    "continue": "Continue",
-    "purchaseComingSoon": "Online purchase coming soon!",
+    "meta": {
+      "title": "Gift cards | Oh! Beef Noodle Soup",
+      "description": "Send an Oh! gift card by email. Any amount from $10 to $500."
+    },
+    "hero": {
+      "eyebrow": "Oh! gift cards",
+      "title": "Give someone a bowl.",
+      "lede": "Any amount from $10 to $500. Sent by email in minutes. Good at every Oh! and in our store.",
+      "buy": "Send a gift card",
+      "balance": "Check a balance"
+    },
+    "card": {
+      "label": "Gift card",
+      "brand": "Oh! Beef Noodle Soup",
+      "faceAlt": "An Oh! gift card worth {amount}"
+    },
+    "amounts": {
+      "title": "Pick an amount",
+      "lede": "Start with a bowl, or cover a month of lunches.",
+      "presetsLabel": "Gift card amounts",
+      "other": "Other amount",
+      "customLabel": "Amount in dollars",
+      "customHint": "Whole dollars, {min} to {max}.",
+      "invalid": "Enter a whole dollar amount from {min} to {max}.",
+      "choose": "Continue with {amount}"
+    },
     "designs": {
-      "classic": "Classic",
-      "dark": "Dark",
+      "title": "Pick a card",
+      "classic": "Linen",
+      "dark": "Night",
       "gold": "Gold"
     },
-    "chooseAmount": {
-      "tagline": "Step 1",
-      "title": "Choose Your Amount",
-      "customLabel": "Or enter a custom amount ($10-$500)",
-      "customPlaceholder": "Enter amount"
-    },
     "why": {
-      "title": "Why Oh! Gift Cards",
-      "subtitle": "The Perfect Gift for Any Occasion",
-      "instantDelivery": {
-        "title": "Instant Delivery",
-        "description": "Send via email instantly or schedule for a special date"
+      "title": "Easy to give",
+      "instant": {
+        "title": "Sent in minutes",
+        "body": "The card arrives by email right after you pay."
       },
-      "beautifulDesign": {
-        "title": "Beautiful Designs",
-        "description": "Choose from our collection of elegant card designs"
+      "note": {
+        "title": "Your note on it",
+        "body": "Add a few words. They go out with the card."
       },
-      "neverExpires": {
-        "title": "Never Expires",
-        "description": "Our gift cards never expire and hold their full value"
+      "anywhere": {
+        "title": "Good everywhere",
+        "body": "Use it for a bowl at any Oh!, or in our store."
       },
-      "addMessage": {
-        "title": "Add a Message",
-        "description": "Include a personalized note to make it extra special"
+      "lasts": {
+        "title": "It keeps",
+        "body": "The balance stays on the card until it's spent."
       }
     },
-    "corporate": {
-      "tagline": "For Business",
-      "title": "Corporate Gift Cards",
-      "description": "Reward employees, thank clients, or celebrate milestones with Oh! gift cards. Perfect for any corporate gifting occasion.",
-      "contactSales": "Contact Sales",
-      "bulkDiscounts": "Bulk Discounts",
-      "tenPlus": "10+ cards",
-      "customBranding": "Custom Branding",
-      "addLogo": "Add your logo",
-      "dedicatedSupport": "Dedicated Support",
-      "priorityService": "Priority service",
-      "flexibleDelivery": "Flexible Delivery",
-      "scheduleSends": "Schedule sends"
-    },
     "faq": {
-      "tagline": "Questions?",
-      "title": "Frequently Asked Questions",
-      "questions": {
-        "delivery": {
-          "q": "How are digital gift cards delivered?",
-          "a": "Digital gift cards are sent via email to the recipient. You can choose to send immediately or schedule for a specific date."
-        },
-        "multiple": {
-          "q": "Can I use multiple gift cards on one order?",
-          "a": "Yes! You can combine multiple gift cards on a single order. Any remaining balance stays on your cards."
-        },
-        "expire": {
-          "q": "Do gift cards expire?",
-          "a": "No, Oh! gift cards never expire. Your balance will always be available whenever you're ready for your next bowl."
-        },
-        "balance": {
-          "q": "How do I check my gift card balance?",
-          "a": "You can check your balance at any Oh! location or by signing into your account online."
-        }
+      "title": "Questions",
+      "delivery": {
+        "q": "How is it delivered?",
+        "a": "By email, to the address you enter, right after you pay. You also see the card code on screen."
+      },
+      "spend": {
+        "q": "Where can it be used?",
+        "a": "At checkout when you order a bowl, and in the Oh! store. What isn't spent stays on the card."
+      },
+      "discounts": {
+        "q": "Can I use a promo code or Oh! credit to buy one?",
+        "a": "No. Gift cards are paid in full by card, so promo codes and credit don't apply."
+      },
+      "balance": {
+        "q": "How do I check what's left?",
+        "a": "Enter the card code on the balance page."
       }
     },
     "cta": {
-      "title": "Ready to Give the Gift of Oh?",
-      "description": "A perfect bowl of beef noodle soup is always a welcome surprise.",
-      "button": "Get Started"
+      "title": "Ready when you are.",
+      "body": "Pick an amount and write a note. It takes a minute."
     },
     "purchase": {
-      "title": "Purchase Gift Card",
-      "backToGiftCards": "Back to Gift Cards",
+      "meta": "Send a gift card",
+      "title": "Send a gift card",
+      "back": "Gift cards",
+      "stepOf": "Step {current} of {total}",
       "steps": {
         "amount": "Amount",
         "recipient": "Recipient",
-        "payment": "Payment",
-        "confirmation": "Confirmation"
+        "pay": "Pay"
       },
-      "chooseDesign": "Choose Design",
-      "selectAmount": "Select Amount",
-      "customAmountLabel": "Or enter custom amount ($10-$500)",
-      "minimumAmount": "Minimum amount is $10",
-      "recipient": {
-        "title": "Recipient Information",
-        "email": "Recipient Email",
-        "emailPlaceholder": "email@example.com",
-        "name": "Recipient Name",
-        "namePlaceholder": "John Doe",
-        "message": "Personal Message (optional)",
-        "messagePlaceholder": "Add a personal message to your gift card..."
-      },
-      "delivery": {
-        "title": "Delivery",
-        "sendImmediately": "Send immediately",
-        "sendImmediatelyDesc": "Recipient will receive the gift card via email right after purchase",
-        "scheduleLater": "Schedule for later",
-        "scheduleLaterDesc": "Choose a date for the gift card to be delivered"
-      },
-      "orderSummary": "Order Summary",
-      "applyCredits": "Apply Credits",
-      "availableCredits": "Available: ${amount}",
-      "paymentMethod": "Payment Method",
-      "creditsFullyCover": "Your credits cover the full amount!",
-      "noPaymentNeeded": "No additional payment needed.",
-      "loadingPayment": "Loading payment options...",
-      "completePurchase": "Complete Purchase",
-      "processing": "Processing...",
-      "confirmation": {
-        "title": "Gift Card Purchased!",
-        "willBeSent": "A ${amount} gift card will be sent to",
-        "buyAnother": "Buy Another Gift Card",
-        "returnHome": "Return Home"
+      "next": "Continue",
+      "edit": "Edit",
+      "recipientTitle": "Who it's for",
+      "recipientName": "Their name",
+      "recipientEmail": "Their email",
+      "recipientEmailHint": "We send the card here.",
+      "message": "A note (optional)",
+      "messageCount": "{count} of {max}",
+      "deliveryNote": "We email the card as soon as you pay.",
+      "summaryTitle": "Your gift",
+      "to": "To {name}",
+      "giftCard": "Gift card",
+      "giftCardFace": "Gift card, {face}",
+      "editAmount": "Change {amount}",
+      "total": "Total",
+      "noDiscounts": "Gift cards are paid in full. Promo codes and Oh! credit don't apply.",
+      "payTitle": "Pay",
+      "payCta": "Pay {amount}",
+      "processing": "Paying",
+      "orPayWithCard": "Or pay with a card",
+      "savedCards": "Saved cards",
+      "useNewCard": "Use a new card",
+      "cardEnding": "{brand} ending {last4}",
+      "defaultCard": "Default",
+      "saveCard": "Save this card for next time",
+      "failed": "The payment didn't go through. Try again or use another card.",
+      "cardGeneric": "Card",
+      "secure": "Stripe handles the payment. We never see your card number.",
+      "loading": "Loading",
+      "finishing": "Finishing your gift card",
+      "required": "Required",
+      "invalidEmail": "Enter a full email address.",
+      "fixFields": "Fill in the highlighted fields.",
+      "retry": "Try again",
+      "done": {
+        "eyebrow": "Sent",
+        "title": "Your gift is on its way.",
+        "body": "A {amount} gift card is on its way to {email}.",
+        "code": "Card code",
+        "codeNote": "Keep this code in case the email goes astray.",
+        "another": "Send another",
+        "home": "Back to home"
       }
+    },
+    "errors": {
+      "AMOUNT_TOO_LOW": "The smallest gift card is $10.",
+      "AMOUNT_TOO_HIGH": "The largest gift card is $500.",
+      "INVALID_AMOUNT": "Pick a whole dollar amount.",
+      "NOT_ALLOWED_FOR_GIFT_CARDS": "Promo codes and Oh! credit can't be used on gift cards.",
+      "PAYMENT_REQUIRED": "The payment didn't finish. Nothing was issued. Try again.",
+      "PAYMENT_ALREADY_USED": "That payment already bought a gift card. Check your email, or contact us.",
+      "PAYMENT_NOT_VERIFIED": "We couldn't confirm the payment. If you were charged, we'll email the card or return the charge.",
+      "NETWORK_ERROR": "We couldn't reach our system. Check your connection and try again.",
+      "RATE_LIMITED": "Too many tries at once. Wait a moment, then try again.",
+      "GENERIC": "Something went wrong. Try again in a moment."
+    },
+    "balance": {
+      "meta": "Gift card balance",
+      "eyebrow": "Gift cards",
+      "title": "Check a balance.",
+      "lede": "Enter the 16 character code from the card or the email.",
+      "codeLabel": "Card code",
+      "check": "Check balance",
+      "checking": "Checking",
+      "balance": "Balance",
+      "notFound": "We couldn't find a card with a balance for that code.",
+      "incomplete": "The code has 16 characters.",
+      "error": "We couldn't check right now. Try again in a moment.",
+      "spendStore": "Spend it in the store",
+      "spendBowl": "Order a bowl",
+      "note": "Enter this code at checkout. What isn't spent stays on the card.",
+      "back": "Gift cards"
     }
   },
   "store": {
-    "title": "Oh! Store",
-    "description": "Take a piece of Oh! home with you",
-    "merchandise": "Merchandise",
-    "comingSoon": "Coming Soon",
-    "tagline": "From Our Kitchen to Yours",
-    "launchingSoon": "Online store launching soon! Sign up to be notified.",
-    "products": {
-      "homeKit": {
-        "name": "Oh! Home Kit",
-        "description": "Everything you need to make authentic Oh! beef noodle soup at home"
-      },
-      "chiliOil": {
-        "name": "Signature Chili Oil",
-        "description": "Our house-made chili oil with Sichuan peppercorns"
-      },
-      "brothConcentrate": {
-        "name": "Beef Bone Broth Concentrate",
-        "description": "Rich, collagen-packed broth base for soups and stews"
-      },
-      "ceramicBowl": {
-        "name": "Ceramic Noodle Bowl",
-        "description": "Traditional style bowl, perfect for noodles and soups"
-      },
-      "chopsticks": {
-        "name": "Bamboo Chopsticks Set",
-        "description": "Premium bamboo chopsticks with custom Oh! engraving"
-      },
-      "tshirt": {
-        "name": "Oh! Classic T-Shirt",
-        "description": "Soft cotton tee with minimalist Oh! logo"
-      },
-      "hoodie": {
-        "name": "Comfort Hoodie",
-        "description": "Cozy fleece hoodie with embroidered logo"
-      },
-      "apron": {
-        "name": "Chef's Apron",
-        "description": "Professional grade apron for the home chef"
-      },
-      "woodenBowl": {
-        "name": "Artisan Wooden Soup Bowl",
-        "description": "Hand-crafted from reclaimed wood, each piece is unique"
-      }
+    "meta": {
+      "title": "Store | Oh! Beef Noodle Soup",
+      "description": "Broth, chili oil, bowls and chopsticks from the Oh! kitchen. Shipped, or picked up at the restaurant."
+    },
+    "hero": {
+      "eyebrow": "The Oh! store",
+      "title": "Take the bowl home.",
+      "lede": "Broth, chili oil, bowls and chopsticks from our kitchen. We ship them, or you pick them up at the counter.",
+      "shop": "Shop the shelf",
+      "scan": "In the restaurant? Scan a tag"
+    },
+    "shelf": {
+      "title": "The shelf",
+      "filterLabel": "Filter by category",
+      "count": "{count, plural, one {# item} other {# items}}"
     },
     "categories": {
       "all": "All",
-      "food": "Food",
-      "condiments": "Condiments",
-      "merchandise": "Merchandise",
-      "apparel": "Apparel",
-      "limitedEdition": "Limited Edition"
+      "FOOD": "Pantry",
+      "CONDIMENTS": "Condiments",
+      "MERCHANDISE": "For the table",
+      "APPAREL": "Apparel",
+      "LIMITED_EDITION": "Limited"
     },
-    "badges": {
-      "bestSeller": "Best Seller",
-      "new": "New",
-      "limited": "Limited"
+    "product": {
+      "add": "Add",
+      "addNamed": "Add {name} to your bag",
+      "open": "Details for {name}",
+      "inBag": "{count} in your bag",
+      "soldOut": "Sold out",
+      "fewLeft": "Only {count} left",
+      "limited": "Limited",
+      "size": "Size",
+      "sizeSoldOut": "{size}, sold out",
+      "pickSize": "Pick a size first.",
+      "quantity": "Quantity",
+      "fewer": "One fewer",
+      "more": "One more",
+      "addToBag": "Add to bag",
+      "addToBagAmount": "Add to bag, {amount}",
+      "added": "Added to your bag",
+      "close": "Close"
     },
-    "whyShop": {
-      "title": "Why Shop Oh!",
-      "subtitle": "The Oh! Experience, Delivered",
-      "freeShipping": {
-        "title": "Free Shipping",
-        "description": "On orders over $50"
-      },
-      "useCredit": {
-        "title": "Use Your Credit",
-        "description": "Apply Oh! Rewards to purchases"
-      },
-      "memberRewards": {
-        "title": "Member Rewards",
-        "description": "Earn points on every purchase"
-      },
-      "easyReturns": {
-        "title": "Easy Returns",
-        "description": "30-day hassle-free returns"
-      }
+    "empty": {
+      "title": "The shelf is being restocked.",
+      "body": "Check back soon, or ask at the counter next visit."
     },
-    "newsletter": {
-      "tagline": "Be the First to Know",
-      "title": "Get Early Access",
-      "description": "Sign up for exclusive drops, member-only deals, and first access to new products.",
-      "placeholder": "Enter your email"
+    "loadError": "We couldn't reach the shelf just now. Try again in a moment.",
+    "retry": "Try again",
+    "bag": {
+      "view": "View bag",
+      "summary": "{count, plural, one {# item} other {# items}}, {amount}",
+      "title": "Your bag",
+      "lede": "Shipping and tax are worked out at checkout.",
+      "back": "Store",
+      "emptyTitle": "Your bag is empty.",
+      "emptyBody": "Add something from the shelf and it waits here.",
+      "browse": "Back to the shelf",
+      "remove": "Remove {name}",
+      "removeShort": "Remove",
+      "size": "Size {size}",
+      "each": "{amount} each",
+      "itemsTotal": "Items",
+      "freeShippingGap": "{amount} more and shipping is free.",
+      "freeShippingReached": "Shipping is free on this bag.",
+      "checkout": "Checkout",
+      "limit": "Up to {max} of each item per order."
     },
-    "cta": {
-      "title": "Can't Wait?",
-      "description": "Visit one of our locations to shop in person and enjoy a bowl while you're at it."
+    "gift": {
+      "eyebrow": "Gift cards",
+      "title": "Give someone a bowl.",
+      "body": "Any amount from $10 to $500, sent by email.",
+      "cta": "Send a gift card"
+    },
+    "checkout": {
+      "title": "Checkout",
+      "back": "Bag",
+      "howTitle": "How you get it",
+      "ship": "Ship it to me",
+      "shipBody": "Free over {amount}. Tracking by email.",
+      "pickup": "Pick up at a restaurant",
+      "pickupBody": "No shipping. Ready at the counter.",
+      "pickupWhere": "Which restaurant",
+      "contactTitle": "Contact",
+      "name": "Full name",
+      "email": "Email",
+      "emailHint": "Your receipt and updates go here.",
+      "addressTitle": "Shipping address",
+      "address1": "Street address",
+      "address2": "Apartment or suite (optional)",
+      "city": "City",
+      "state": "State",
+      "zip": "ZIP code",
+      "savingsTitle": "Savings",
+      "credits": "Use my Oh! credit",
+      "creditsAvailable": "{amount} available",
+      "creditsNone": "No credit to use right now.",
+      "creditsSignIn": "Members can put Oh! credit toward the store.",
+      "signIn": "Sign in",
+      "giftCard": "Gift card",
+      "giftCardLabel": "Gift card code",
+      "giftCardHint": "16 characters, as printed on the card.",
+      "giftCardApply": "Apply",
+      "giftCardApplied": "Card applied. Balance {amount}.",
+      "giftCardRemove": "Remove card",
+      "giftCardInvalid": "That card can't be used. Check the code.",
+      "giftCardChecking": "Checking the card",
+      "noPromo": "The store doesn't take promo codes.",
+      "summaryTitle": "Order summary",
+      "items": "Items",
+      "shipping": "Shipping",
+      "shippingFree": "Free",
+      "pickupLine": "Pickup",
+      "tax": "Tax",
+      "creditLine": "Oh! credit",
+      "giftCardLine": "Gift card",
+      "total": "Total",
+      "due": "Due now",
+      "beforeReview": "Shipping, tax and savings are priced by our system when you review.",
+      "reviewCta": "Review order",
+      "reviewing": "Pricing your order",
+      "edit": "Edit order",
+      "locked": "Priced and held for you. Edit to change anything.",
+      "payTitle": "Pay",
+      "payCta": "Pay {amount}",
+      "placeCta": "Place order",
+      "processing": "Paying",
+      "orPayWithCard": "Or pay with a card",
+      "savedCards": "Saved cards",
+      "useNewCard": "Use a new card",
+      "cardEnding": "{brand} ending {last4}",
+      "defaultCard": "Default",
+      "saveCard": "Save this card for next time",
+      "failed": "The payment didn't go through. Try again or use another card.",
+      "cardGeneric": "Card",
+      "freeTitle": "Nothing left to pay",
+      "freeNote": "Your savings cover this order.",
+      "secure": "Stripe handles the payment. We never see your card number.",
+      "loading": "Loading",
+      "fixFields": "Fill in the highlighted fields.",
+      "required": "Required",
+      "invalidEmail": "Enter a full email address.",
+      "invalidZip": "Enter a 5 digit ZIP code.",
+      "guestNote": "No account needed.",
+      "retry": "Try again"
+    },
+    "notCharged": {
+      "CREDIT_SHORT": "You were not charged. Your credit changed, please review and pay again.",
+      "GIFT_CARD_CHANGED": "You were not charged. Your gift card balance changed, please review and pay again.",
+      "OUT_OF_STOCK": "You were not charged. Something in your bag just sold out, please review and pay again.",
+      "GENERIC": "You were not charged. Your order changed, please review and pay again."
+    },
+    "errors": {
+      "CREDIT_SHORT": "Your credit changed. Please review and pay again.",
+      "GIFT_CARD_CHANGED": "Your gift card balance changed. Please review and pay again.",
+      "OUT_OF_STOCK": "Something in your bag just sold out. Lower the quantity or remove it.",
+      "ORDER_CHANGED": "Your order just changed. Please review and pay again.",
+      "ORDER_NOT_PENDING": "This order is already paid or closed. Review to start a fresh one.",
+      "PAYMENT_REFUNDED": "That payment was returned. Review and pay again.",
+      "GIFT_CARD_INVALID": "That gift card can't be used. Check the code or remove it.",
+      "PRODUCT_NOT_FOUND": "An item in your bag is no longer sold. Remove it to continue.",
+      "PRODUCT_UNAVAILABLE": "An item in your bag is unavailable right now. Remove it to continue.",
+      "INVALID_QUANTITY": "Each item can be 1 to 20 per order.",
+      "ITEMS_REQUIRED": "Your bag is empty.",
+      "TOO_MANY_ITEMS": "That's more lines than one order holds. Split it into two orders.",
+      "AMOUNT_BELOW_MINIMUM": "Card payments start at $0.50. Use less credit or add an item.",
+      "SIGN_IN_REQUIRED": "Your session ended. Please try again.",
+      "PAYMENTS_UNAVAILABLE": "Payments are offline for a moment. Nothing was charged. Try again soon.",
+      "PAYMENT_NOT_VERIFIED": "We couldn't confirm that payment. If you see a charge, it will be returned.",
+      "LEGACY_ORDER": "This order is from our old checkout. Review to start a fresh one.",
+      "FORBIDDEN": "This order belongs to another session. Review to start a fresh one.",
+      "NETWORK_ERROR": "We couldn't reach our system. Check your connection and try again.",
+      "RATE_LIMITED": "Too many tries at once. Wait a moment, then try again.",
+      "NEEDS_REVIEW": "We're checking this payment by hand and will email you. Please don't pay again.",
+      "HELD": "We couldn't finish your order. If you see a charge, it will be returned in full, and our team has been told.",
+      "GENERIC": "Something went wrong. Nothing more was charged. Try again."
+    },
+    "confirmation": {
+      "meta": "Order placed",
+      "eyebrow": "Order placed",
+      "title": "Thank you. It's in hand.",
+      "number": "Order number",
+      "emailNote": "A receipt is on its way to your email.",
+      "nextTitle": "What happens next",
+      "shipStep": "Shipping: we pack it within two business days and email the tracking.",
+      "pickupStep": "Pickup: we email you when it's waiting at the counter.",
+      "helpStep": "Questions? Reply to the receipt, or ask Chappy.",
+      "keepShopping": "Back to the store",
+      "order": "Order a bowl",
+      "confirming": "Confirming your payment",
+      "failedTitle": "We couldn't finish this order.",
+      "backToCheckout": "Back to checkout"
+    },
+    "scan": {
+      "meta": "Scan a tag",
+      "eyebrow": "In the restaurant",
+      "title": "Scan a shelf tag.",
+      "lede": "Point your camera at the QR code on the tag, or type the code under it.",
+      "start": "Use the camera",
+      "stop": "Stop the camera",
+      "scanning": "Looking for a QR code",
+      "denied": "Camera access is off. Type the code instead.",
+      "noCamera": "No camera here. Type the code instead.",
+      "unsupported": "This browser can't read QR codes. Type the code instead.",
+      "codeLabel": "Tag code",
+      "find": "Find it",
+      "back": "Store"
+    },
+    "item": {
+      "eyebrow": "On the shelf here",
+      "pickupNote": "Pay on your phone and take it from the shelf. Show the receipt at the counter.",
+      "buyNow": "Buy now, pick up here",
+      "notFoundTitle": "We couldn't find that tag.",
+      "notFoundBody": "Check the code, or ask at the counter.",
+      "scanAgain": "Scan again"
     }
   },
   "referral": {

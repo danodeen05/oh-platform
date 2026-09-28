@@ -1052,174 +1052,380 @@
     }
   },
   "giftCards": {
-    "title": "禮品卡",
-    "description": "與親朋好友分享哦!的美味",
-    "buyNow": "立即購買",
-    "checkBalance": "查詢餘額",
-    "tagline": "送出美味的禮物",
-    "digitalCard": "數位禮品卡",
-    "continue": "繼續",
-    "purchaseComingSoon": "線上購買即將推出！",
+    "meta": {
+      "title": "禮物卡 | Oh! Beef Noodle Soup",
+      "description": "以電子郵件寄送 Oh! 禮物卡，金額從 $10 到 $500。"
+    },
+    "hero": {
+      "eyebrow": "Oh! 禮物卡",
+      "title": "送一碗給重要的人。",
+      "lede": "金額從 $10 到 $500，幾分鐘內以電子郵件送達。每一家 Oh! 與我們的商店都能使用。",
+      "buy": "寄送禮物卡",
+      "balance": "查詢餘額"
+    },
+    "card": {
+      "label": "禮物卡",
+      "brand": "Oh! 牛肉麵",
+      "faceAlt": "面額 {amount} 的 Oh! 禮物卡"
+    },
+    "amounts": {
+      "title": "選擇金額",
+      "lede": "從一碗麵開始，或請一整個月的午餐。",
+      "presetsLabel": "禮物卡金額",
+      "other": "其他金額",
+      "customLabel": "金額（美元）",
+      "customHint": "整數金額，{min} 到 {max}。",
+      "invalid": "請輸入 {min} 到 {max} 之間的整數金額。",
+      "choose": "以 {amount} 繼續"
+    },
     "designs": {
-      "classic": "經典",
-      "dark": "深色",
+      "title": "選擇卡面",
+      "classic": "亞麻",
+      "dark": "夜色",
       "gold": "金色"
     },
-    "chooseAmount": {
-      "tagline": "步驟 1",
-      "title": "選擇金額",
-      "customLabel": "或輸入自訂金額（$10-$500）",
-      "customPlaceholder": "輸入金額"
-    },
     "why": {
-      "title": "為什麼選擇哦！禮品卡",
-      "subtitle": "適合任何場合的完美禮物",
-      "instantDelivery": {
-        "title": "即時送達",
-        "description": "透過電子郵件即時發送或預約特定日期"
+      "title": "送禮很簡單",
+      "instant": {
+        "title": "幾分鐘內送達",
+        "body": "付款後，卡片立即以電子郵件寄出。"
       },
-      "beautifulDesign": {
-        "title": "精美設計",
-        "description": "從我們優雅的卡片設計系列中選擇"
+      "note": {
+        "title": "附上你的話",
+        "body": "寫幾句話，會隨卡片一起寄出。"
       },
-      "neverExpires": {
-        "title": "永不過期",
-        "description": "我們的禮品卡永不過期，保持其全部價值"
+      "anywhere": {
+        "title": "處處可用",
+        "body": "可在任何一家 Oh! 點一碗麵，也可在我們的商店使用。"
       },
-      "addMessage": {
-        "title": "附加訊息",
-        "description": "加入個人化留言，讓禮物更加特別"
+      "lasts": {
+        "title": "餘額保留",
+        "body": "餘額會一直留在卡上，直到用完為止。"
       }
     },
-    "corporate": {
-      "tagline": "企業專案",
-      "title": "企業禮品卡",
-      "description": "用哦！禮品卡獎勵員工、感謝客戶或慶祝里程碑。完美適合任何企業送禮場合。",
-      "contactSales": "聯繫業務",
-      "bulkDiscounts": "大量折扣",
-      "tenPlus": "10張以上",
-      "customBranding": "客製品牌",
-      "addLogo": "加入您的標誌",
-      "dedicatedSupport": "專屬支援",
-      "priorityService": "優先服務",
-      "flexibleDelivery": "彈性配送",
-      "scheduleSends": "預約發送"
-    },
     "faq": {
-      "tagline": "有問題嗎？",
       "title": "常見問題",
-      "questions": {
-        "delivery": {
-          "q": "數位禮品卡如何配送？",
-          "a": "數位禮品卡會透過電子郵件發送給收件人。您可以選擇立即發送或預約特定日期。"
-        },
-        "multiple": {
-          "q": "我可以在一筆訂單中使用多張禮品卡嗎？",
-          "a": "可以！您可以在單筆訂單中合併使用多張禮品卡。剩餘餘額會保留在您的卡片中。"
-        },
-        "expire": {
-          "q": "禮品卡會過期嗎？",
-          "a": "不會，哦！禮品卡永不過期。您的餘額會一直保留，等您準備好享用下一碗麵時隨時可用。"
-        },
-        "balance": {
-          "q": "如何查詢禮品卡餘額？",
-          "a": "您可以在任何哦！門市查詢餘額，或登入線上帳戶查看。"
-        }
+      "delivery": {
+        "q": "禮物卡如何寄送？",
+        "a": "付款後立即以電子郵件寄到你輸入的地址，畫面上也會顯示卡片代碼。"
+      },
+      "spend": {
+        "q": "可以在哪裡使用？",
+        "a": "點麵結帳時與 Oh! 商店都可以使用。沒用完的金額會留在卡上。"
+      },
+      "discounts": {
+        "q": "可以用優惠碼或 Oh! 點數購買嗎？",
+        "a": "不行。禮物卡須以信用卡全額付款，優惠碼與點數不適用。"
+      },
+      "balance": {
+        "q": "如何查詢剩餘金額？",
+        "a": "在餘額查詢頁輸入卡片代碼即可。"
       }
     },
     "cta": {
-      "title": "準備好送出哦！禮物了嗎？",
-      "description": "一碗完美的牛肉麵永遠是令人驚喜的禮物。",
-      "button": "開始選購"
+      "title": "隨時為你準備好。",
+      "body": "選個金額，寫幾句話，只要一分鐘。"
+    },
+    "purchase": {
+      "meta": "寄送禮物卡",
+      "title": "寄送禮物卡",
+      "back": "禮物卡",
+      "stepOf": "第 {current} 步，共 {total} 步",
+      "steps": {
+        "amount": "金額",
+        "recipient": "收件人",
+        "pay": "付款"
+      },
+      "next": "繼續",
+      "edit": "修改",
+      "recipientTitle": "送給誰",
+      "recipientName": "對方的名字",
+      "recipientEmail": "對方的電子郵件",
+      "recipientEmailHint": "我們會把卡片寄到這裡。",
+      "message": "附言（選填）",
+      "messageCount": "{count} / {max}",
+      "deliveryNote": "你付款後，我們會立即寄出卡片。",
+      "summaryTitle": "你的禮物",
+      "to": "給 {name}",
+      "giftCard": "禮物卡",
+      "giftCardFace": "禮物卡，{face}",
+      "editAmount": "更改 {amount}",
+      "total": "總計",
+      "noDiscounts": "禮物卡須全額付款，優惠碼與 Oh! 點數不適用。",
+      "payTitle": "付款",
+      "payCta": "支付 {amount}",
+      "processing": "付款中",
+      "orPayWithCard": "或使用信用卡付款",
+      "savedCards": "已儲存的卡片",
+      "useNewCard": "使用新卡片",
+      "cardEnding": "{brand} 末四碼 {last4}",
+      "defaultCard": "預設",
+      "saveCard": "儲存這張卡片以便下次使用",
+      "failed": "付款未成功，請再試一次或改用其他卡片。",
+      "cardGeneric": "卡片",
+      "secure": "付款由 Stripe 處理，我們不會看到你的卡號。",
+      "loading": "載入中",
+      "finishing": "正在完成你的禮物卡",
+      "required": "必填",
+      "invalidEmail": "請輸入完整的電子郵件地址。",
+      "fixFields": "請填寫標示的欄位。",
+      "retry": "再試一次",
+      "done": {
+        "eyebrow": "已寄出",
+        "title": "你的禮物正在路上。",
+        "body": "一張 {amount} 的禮物卡正寄往 {email}。",
+        "code": "卡片代碼",
+        "codeNote": "請保留這組代碼，以防郵件遺失。",
+        "another": "再送一張",
+        "home": "回到首頁"
+      }
+    },
+    "errors": {
+      "AMOUNT_TOO_LOW": "禮物卡最低金額為 $10。",
+      "AMOUNT_TOO_HIGH": "禮物卡最高金額為 $500。",
+      "INVALID_AMOUNT": "請選擇整數金額。",
+      "NOT_ALLOWED_FOR_GIFT_CARDS": "禮物卡不能使用優惠碼或 Oh! 點數。",
+      "PAYMENT_REQUIRED": "付款沒有完成，也沒有發出卡片，請再試一次。",
+      "PAYMENT_ALREADY_USED": "這筆付款已經購買了一張禮物卡。請查看你的電子郵件，或與我們聯絡。",
+      "PAYMENT_NOT_VERIFIED": "我們無法確認這筆付款。如有扣款，我們會寄出卡片或退還款項。",
+      "NETWORK_ERROR": "無法連線到我們的系統，請檢查網路後再試。",
+      "RATE_LIMITED": "嘗試次數太多，請稍等一下再試。",
+      "GENERIC": "發生了一些問題，請稍後再試。"
+    },
+    "balance": {
+      "meta": "禮物卡餘額",
+      "eyebrow": "禮物卡",
+      "title": "查詢餘額。",
+      "lede": "輸入卡片或郵件上的 16 字元代碼。",
+      "codeLabel": "卡片代碼",
+      "check": "查詢餘額",
+      "checking": "查詢中",
+      "balance": "餘額",
+      "notFound": "找不到這組代碼對應且有餘額的卡片。",
+      "incomplete": "代碼共有 16 個字元。",
+      "error": "目前無法查詢，請稍後再試。",
+      "spendStore": "到商店使用",
+      "spendBowl": "點一碗麵",
+      "note": "結帳時輸入這組代碼。沒用完的金額會留在卡上。",
+      "back": "禮物卡"
     }
   },
   "store": {
-    "title": "哦！商店",
-    "description": "把哦!帶回家",
-    "merchandise": "週邊商品",
-    "comingSoon": "即將推出",
-    "tagline": "從我們的廚房到您家",
-    "launchingSoon": "線上商店即將推出！訂閱以獲得通知。",
-    "products": {
-      "homeKit": {
-        "name": "哦！家庭套裝",
-        "description": "在家製作正宗哦！牛肉麵所需的一切"
-      },
-      "chiliOil": {
-        "name": "招牌辣椒油",
-        "description": "我們自製的四川花椒辣椒油"
-      },
-      "brothConcentrate": {
-        "name": "牛骨濃湯濃縮液",
-        "description": "富含膠原蛋白的濃郁湯底，適用於湯品和燉菜"
-      },
-      "ceramicBowl": {
-        "name": "陶瓷麵碗",
-        "description": "傳統風格碗，最適合麵條和湯品"
-      },
-      "chopsticks": {
-        "name": "竹筷套組",
-        "description": "高級竹筷，帶有客製哦！雕刻"
-      },
-      "tshirt": {
-        "name": "哦！經典T恤",
-        "description": "柔軟棉質T恤，極簡哦！標誌"
-      },
-      "hoodie": {
-        "name": "舒適連帽衫",
-        "description": "舒適刷毛連帽衫，刺繡標誌"
-      },
-      "apron": {
-        "name": "主廚圍裙",
-        "description": "專業級圍裙，適合家庭主廚"
-      },
-      "woodenBowl": {
-        "name": "手工木製湯碗",
-        "description": "以再生木材手工製作，每件都是獨一無二"
-      }
+    "meta": {
+      "title": "商店 | Oh! Beef Noodle Soup",
+      "description": "Oh! 廚房的湯底、辣油、麵碗與筷子。可宅配，也可到餐廳自取。"
+    },
+    "hero": {
+      "eyebrow": "Oh! 商店",
+      "title": "把這碗帶回家。",
+      "lede": "我們廚房的湯底、辣油、麵碗與筷子。可以寄給你，也可以到櫃檯自取。",
+      "shop": "逛逛貨架",
+      "scan": "在餐廳裡？掃描標籤"
+    },
+    "shelf": {
+      "title": "貨架",
+      "filterLabel": "依類別篩選",
+      "count": "{count, plural, other {# 件商品}}"
     },
     "categories": {
       "all": "全部",
-      "food": "食品",
-      "condiments": "調味品",
-      "merchandise": "週邊商品",
-      "apparel": "服飾",
-      "limitedEdition": "限量版"
+      "FOOD": "食品",
+      "CONDIMENTS": "調味料",
+      "MERCHANDISE": "餐桌用品",
+      "APPAREL": "服飾",
+      "LIMITED_EDITION": "限量"
     },
-    "badges": {
-      "bestSeller": "暢銷",
-      "new": "新品",
-      "limited": "限量"
+    "product": {
+      "add": "加入",
+      "addNamed": "將{name}加入購物袋",
+      "open": "查看{name}",
+      "inBag": "購物袋裡有 {count} 件",
+      "soldOut": "已售完",
+      "fewLeft": "僅剩 {count} 件",
+      "limited": "限量",
+      "size": "尺寸",
+      "sizeSoldOut": "{size}，已售完",
+      "pickSize": "請先選擇尺寸。",
+      "quantity": "數量",
+      "fewer": "減少一件",
+      "more": "增加一件",
+      "addToBag": "加入購物袋",
+      "addToBagAmount": "加入購物袋，{amount}",
+      "added": "已加入購物袋",
+      "close": "關閉"
     },
-    "whyShop": {
-      "title": "為什麼在哦！購物",
-      "subtitle": "哦！體驗，送貨到府",
-      "freeShipping": {
-        "title": "免運費",
-        "description": "訂單滿$50享免運"
-      },
-      "useCredit": {
-        "title": "使用您的點數",
-        "description": "將哦！獎勵應用於購物"
-      },
-      "memberRewards": {
-        "title": "會員獎勵",
-        "description": "每次購物都能賺取積分"
-      },
-      "easyReturns": {
-        "title": "輕鬆退貨",
-        "description": "30天無憂退貨"
-      }
+    "empty": {
+      "title": "貨架正在補貨。",
+      "body": "請稍後再來看看，或下次來店時詢問櫃檯。"
     },
-    "newsletter": {
-      "tagline": "搶先知道",
-      "title": "獲得優先權限",
-      "description": "訂閱獨家發布、會員專屬優惠，以及新產品的優先取得權。",
-      "placeholder": "輸入您的電子郵件"
+    "loadError": "目前無法載入貨架，請稍後再試。",
+    "retry": "再試一次",
+    "bag": {
+      "view": "查看購物袋",
+      "summary": "{count, plural, other {# 件}}，{amount}",
+      "title": "你的購物袋",
+      "lede": "運費與稅金會在結帳時計算。",
+      "back": "商店",
+      "emptyTitle": "購物袋是空的。",
+      "emptyBody": "從貨架挑選商品，它會在這裡等你。",
+      "browse": "回到貨架",
+      "remove": "移除{name}",
+      "removeShort": "移除",
+      "size": "尺寸 {size}",
+      "each": "每件 {amount}",
+      "itemsTotal": "商品",
+      "freeShippingGap": "再買 {amount} 即可免運。",
+      "freeShippingReached": "這袋商品免運費。",
+      "checkout": "結帳",
+      "limit": "每項商品每筆訂單最多 {max} 件。"
     },
-    "cta": {
-      "title": "等不及了？",
-      "description": "親自到訪我們的門市購物，順便享用一碗美味。"
+    "gift": {
+      "eyebrow": "禮物卡",
+      "title": "送一碗給重要的人。",
+      "body": "金額從 $10 到 $500，以電子郵件寄送。",
+      "cta": "寄送禮物卡"
+    },
+    "checkout": {
+      "title": "結帳",
+      "back": "購物袋",
+      "howTitle": "取貨方式",
+      "ship": "寄送給我",
+      "shipBody": "滿 {amount} 免運，追蹤資訊以電子郵件寄送。",
+      "pickup": "到餐廳自取",
+      "pickupBody": "免運費，在櫃檯取貨。",
+      "pickupWhere": "哪一家餐廳",
+      "contactTitle": "聯絡資料",
+      "name": "姓名",
+      "email": "電子郵件",
+      "emailHint": "收據與通知會寄到這裡。",
+      "addressTitle": "寄送地址",
+      "address1": "街道地址",
+      "address2": "公寓或室號（選填）",
+      "city": "城市",
+      "state": "州",
+      "zip": "郵遞區號",
+      "savingsTitle": "優惠",
+      "credits": "使用我的 Oh! 點數",
+      "creditsAvailable": "可用 {amount}",
+      "creditsNone": "目前沒有可用的點數。",
+      "creditsSignIn": "會員可以用 Oh! 點數購買商店商品。",
+      "signIn": "登入",
+      "giftCard": "禮物卡",
+      "giftCardLabel": "禮物卡代碼",
+      "giftCardHint": "16 個字元，與卡片上印的相同。",
+      "giftCardApply": "使用",
+      "giftCardApplied": "已套用禮物卡，餘額 {amount}。",
+      "giftCardRemove": "移除禮物卡",
+      "giftCardInvalid": "這張卡無法使用，請確認代碼。",
+      "giftCardChecking": "正在確認卡片",
+      "noPromo": "商店不接受優惠碼。",
+      "summaryTitle": "訂單摘要",
+      "items": "商品",
+      "shipping": "運費",
+      "shippingFree": "免費",
+      "pickupLine": "自取",
+      "tax": "稅金",
+      "creditLine": "Oh! 點數",
+      "giftCardLine": "禮物卡",
+      "total": "總計",
+      "due": "應付金額",
+      "beforeReview": "運費、稅金與優惠會在你確認訂單時由系統計算。",
+      "reviewCta": "確認訂單",
+      "reviewing": "正在計算訂單金額",
+      "edit": "修改訂單",
+      "locked": "金額已計算並為你保留。若要更改，請點修改。",
+      "payTitle": "付款",
+      "payCta": "支付 {amount}",
+      "placeCta": "送出訂單",
+      "processing": "付款中",
+      "orPayWithCard": "或使用信用卡付款",
+      "savedCards": "已儲存的卡片",
+      "useNewCard": "使用新卡片",
+      "cardEnding": "{brand} 末四碼 {last4}",
+      "defaultCard": "預設",
+      "saveCard": "儲存這張卡片以便下次使用",
+      "failed": "付款未成功，請再試一次或改用其他卡片。",
+      "cardGeneric": "卡片",
+      "freeTitle": "無需付款",
+      "freeNote": "你的優惠已涵蓋這筆訂單。",
+      "secure": "付款由 Stripe 處理，我們不會看到你的卡號。",
+      "loading": "載入中",
+      "fixFields": "請填寫標示的欄位。",
+      "required": "必填",
+      "invalidEmail": "請輸入完整的電子郵件地址。",
+      "invalidZip": "請輸入 5 位數郵遞區號。",
+      "guestNote": "不需要帳號。",
+      "retry": "再試一次"
+    },
+    "notCharged": {
+      "CREDIT_SHORT": "你沒有被扣款。你的點數有變動，請重新確認並付款。",
+      "GIFT_CARD_CHANGED": "你沒有被扣款。你的禮物卡餘額有變動，請重新確認並付款。",
+      "OUT_OF_STOCK": "你沒有被扣款。購物袋裡有商品剛剛售完，請重新確認並付款。",
+      "GENERIC": "你沒有被扣款。你的訂單有變動，請重新確認並付款。"
+    },
+    "errors": {
+      "CREDIT_SHORT": "你的點數有變動，請重新確認並付款。",
+      "GIFT_CARD_CHANGED": "你的禮物卡餘額有變動，請重新確認並付款。",
+      "OUT_OF_STOCK": "購物袋裡有商品剛剛售完，請減少數量或移除。",
+      "ORDER_CHANGED": "你的訂單剛剛有變動，請重新確認並付款。",
+      "ORDER_NOT_PENDING": "這筆訂單已付款或已關閉，請重新確認以建立新訂單。",
+      "PAYMENT_REFUNDED": "這筆付款已退回，請重新確認並付款。",
+      "GIFT_CARD_INVALID": "這張禮物卡無法使用，請確認代碼或將它移除。",
+      "PRODUCT_NOT_FOUND": "購物袋裡有商品已不再販售，請移除後繼續。",
+      "PRODUCT_UNAVAILABLE": "購物袋裡有商品目前無法購買，請移除後繼續。",
+      "INVALID_QUANTITY": "每項商品每筆訂單可買 1 到 20 件。",
+      "ITEMS_REQUIRED": "你的購物袋是空的。",
+      "TOO_MANY_ITEMS": "品項超過一筆訂單的上限，請分成兩筆訂單。",
+      "AMOUNT_BELOW_MINIMUM": "刷卡金額至少 $0.50，請少用一些點數或加購商品。",
+      "SIGN_IN_REQUIRED": "你的工作階段已結束，請再試一次。",
+      "PAYMENTS_UNAVAILABLE": "付款功能暫時無法使用，沒有任何扣款，請稍後再試。",
+      "PAYMENT_NOT_VERIFIED": "我們無法確認這筆付款。如有扣款，將會退還。",
+      "LEGACY_ORDER": "這是舊結帳系統的訂單，請重新確認以建立新訂單。",
+      "FORBIDDEN": "這筆訂單屬於另一個工作階段，請重新確認以建立新訂單。",
+      "NETWORK_ERROR": "無法連線到我們的系統，請檢查網路後再試。",
+      "RATE_LIMITED": "嘗試次數太多，請稍等一下再試。",
+      "NEEDS_REVIEW": "我們正在人工確認這筆付款，並會以電子郵件通知你。請不要重複付款。",
+      "HELD": "我們無法完成你的訂單。如有扣款，將全額退還，我們的團隊已收到通知。",
+      "GENERIC": "發生了一些問題，沒有額外扣款，請再試一次。"
+    },
+    "confirmation": {
+      "meta": "訂單已送出",
+      "eyebrow": "訂單已送出",
+      "title": "謝謝你，我們收到了。",
+      "number": "訂單編號",
+      "emailNote": "收據正寄往你的電子郵件。",
+      "nextTitle": "接下來",
+      "shipStep": "宅配：我們會在兩個工作天內包裝出貨，並以電子郵件寄送追蹤資訊。",
+      "pickupStep": "自取：商品在櫃檯備妥時，我們會寄電子郵件通知你。",
+      "helpStep": "有問題嗎？回覆收據郵件，或問問 Chappy。",
+      "keepShopping": "回到商店",
+      "order": "點一碗麵",
+      "confirming": "正在確認你的付款",
+      "failedTitle": "我們無法完成這筆訂單。",
+      "backToCheckout": "回到結帳"
+    },
+    "scan": {
+      "meta": "掃描標籤",
+      "eyebrow": "在餐廳裡",
+      "title": "掃描貨架標籤。",
+      "lede": "把相機對準標籤上的 QR 碼，或輸入下方的代碼。",
+      "start": "使用相機",
+      "stop": "關閉相機",
+      "scanning": "正在尋找 QR 碼",
+      "denied": "相機權限已關閉，請改為輸入代碼。",
+      "noCamera": "這裡沒有相機，請改為輸入代碼。",
+      "unsupported": "這個瀏覽器無法讀取 QR 碼，請改為輸入代碼。",
+      "codeLabel": "標籤代碼",
+      "find": "查詢",
+      "back": "商店"
+    },
+    "item": {
+      "eyebrow": "就在這裡的貨架上",
+      "pickupNote": "用手機付款，直接從貨架拿取，在櫃檯出示收據即可。",
+      "buyNow": "立即購買，在此自取",
+      "notFoundTitle": "找不到這個標籤。",
+      "notFoundBody": "請確認代碼，或詢問櫃檯。",
+      "scanAgain": "重新掃描"
     }
   },
   "referral": {

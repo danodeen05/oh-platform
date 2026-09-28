@@ -1052,174 +1052,380 @@
     }
   },
   "giftCards": {
-    "title": "Tarjetas de regalo",
-    "description": "Comparte el regalo de Oh! con amigos y familiares",
-    "buyNow": "Comprar ahora",
-    "checkBalance": "Consultar saldo",
-    "tagline": "Regala el Sabor de lo Delicioso",
-    "digitalCard": "TARJETA DE REGALO DIGITAL",
-    "continue": "Continuar",
-    "purchaseComingSoon": "¡Compra en línea próximamente!",
-    "designs": {
-      "classic": "Clásico",
-      "dark": "Oscuro",
-      "gold": "Dorado"
+    "meta": {
+      "title": "Tarjetas de regalo | Oh! Beef Noodle Soup",
+      "description": "Envía una tarjeta de regalo Oh! por correo electrónico. Cualquier monto de $10 a $500."
     },
-    "chooseAmount": {
-      "tagline": "Paso 1",
-      "title": "Elige Tu Monto",
-      "customLabel": "O ingresa un monto personalizado ($10-$500)",
-      "customPlaceholder": "Ingresa el monto"
+    "hero": {
+      "eyebrow": "Tarjetas de regalo Oh!",
+      "title": "Regala un tazón.",
+      "lede": "Cualquier monto de $10 a $500. Llega por correo en minutos. Vale en cualquier Oh! y en nuestra tienda.",
+      "buy": "Enviar una tarjeta de regalo",
+      "balance": "Consultar saldo"
+    },
+    "card": {
+      "label": "Tarjeta de regalo",
+      "brand": "Oh! Beef Noodle Soup",
+      "faceAlt": "Una tarjeta de regalo Oh! de {amount}"
+    },
+    "amounts": {
+      "title": "Elige un monto",
+      "lede": "Empieza con un tazón, o cubre un mes de almuerzos.",
+      "presetsLabel": "Montos de la tarjeta de regalo",
+      "other": "Otro monto",
+      "customLabel": "Monto en dólares",
+      "customHint": "Dólares enteros, de {min} a {max}.",
+      "invalid": "Escribe un monto entero de {min} a {max}.",
+      "choose": "Continuar con {amount}"
+    },
+    "designs": {
+      "title": "Elige una tarjeta",
+      "classic": "Lino",
+      "dark": "Noche",
+      "gold": "Oro"
     },
     "why": {
-      "title": "Por Qué Tarjetas Oh!",
-      "subtitle": "El Regalo Perfecto para Cualquier Ocasión",
-      "instantDelivery": {
-        "title": "Entrega Instantánea",
-        "description": "Envía por correo al instante o programa para una fecha especial"
+      "title": "Fácil de regalar",
+      "instant": {
+        "title": "Llega en minutos",
+        "body": "La tarjeta llega por correo justo después de pagar."
       },
-      "beautifulDesign": {
-        "title": "Diseños Hermosos",
-        "description": "Elige de nuestra colección de elegantes diseños de tarjetas"
+      "note": {
+        "title": "Con tu mensaje",
+        "body": "Escribe unas palabras. Van junto con la tarjeta."
       },
-      "neverExpires": {
-        "title": "Nunca Expira",
-        "description": "Nuestras tarjetas nunca expiran y mantienen su valor total"
+      "anywhere": {
+        "title": "Vale en todas partes",
+        "body": "Úsala para un tazón en cualquier Oh!, o en nuestra tienda."
       },
-      "addMessage": {
-        "title": "Agrega un Mensaje",
-        "description": "Incluye una nota personalizada para hacerlo extra especial"
+      "lasts": {
+        "title": "No se pierde",
+        "body": "El saldo se queda en la tarjeta hasta que se gaste."
       }
     },
-    "corporate": {
-      "tagline": "Para Empresas",
-      "title": "Tarjetas Corporativas",
-      "description": "Recompensa empleados, agradece a clientes o celebra logros con tarjetas Oh!. Perfectas para cualquier ocasión de regalo corporativo.",
-      "contactSales": "Contactar Ventas",
-      "bulkDiscounts": "Descuentos por Volumen",
-      "tenPlus": "10+ tarjetas",
-      "customBranding": "Marca Personalizada",
-      "addLogo": "Agrega tu logo",
-      "dedicatedSupport": "Soporte Dedicado",
-      "priorityService": "Servicio prioritario",
-      "flexibleDelivery": "Entrega Flexible",
-      "scheduleSends": "Programa envíos"
-    },
     "faq": {
-      "tagline": "¿Preguntas?",
-      "title": "Preguntas Frecuentes",
-      "questions": {
-        "delivery": {
-          "q": "¿Cómo se entregan las tarjetas digitales?",
-          "a": "Las tarjetas digitales se envían por correo al destinatario. Puedes elegir enviar inmediatamente o programar para una fecha específica."
-        },
-        "multiple": {
-          "q": "¿Puedo usar múltiples tarjetas en un pedido?",
-          "a": "¡Sí! Puedes combinar múltiples tarjetas en un solo pedido. El saldo restante se mantiene en tus tarjetas."
-        },
-        "expire": {
-          "q": "¿Las tarjetas expiran?",
-          "a": "No, las tarjetas Oh! nunca expiran. Tu saldo siempre estará disponible cuando estés listo para tu próximo tazón."
-        },
-        "balance": {
-          "q": "¿Cómo verifico el saldo de mi tarjeta?",
-          "a": "Puedes verificar tu saldo en cualquier ubicación Oh! o iniciando sesión en tu cuenta en línea."
-        }
+      "title": "Preguntas",
+      "delivery": {
+        "q": "¿Cómo se entrega?",
+        "a": "Por correo electrónico, a la dirección que escribas, justo después de pagar. También ves el código de la tarjeta en pantalla."
+      },
+      "spend": {
+        "q": "¿Dónde se puede usar?",
+        "a": "Al pagar cuando pides un tazón, y en la tienda Oh!. Lo que no se gaste se queda en la tarjeta."
+      },
+      "discounts": {
+        "q": "¿Puedo usar un código promocional o crédito Oh! para comprarla?",
+        "a": "No. Las tarjetas de regalo se pagan completas con tarjeta, así que los códigos promocionales y el crédito no aplican."
+      },
+      "balance": {
+        "q": "¿Cómo veo lo que queda?",
+        "a": "Escribe el código de la tarjeta en la página de saldo."
       }
     },
     "cta": {
-      "title": "¿Listo para Regalar Oh!?",
-      "description": "Un tazón perfecto de sopa de fideos con carne siempre es una sorpresa bienvenida.",
-      "button": "Comenzar"
+      "title": "Lista cuando tú lo estés.",
+      "body": "Elige un monto y escribe un mensaje. Toma un minuto."
+    },
+    "purchase": {
+      "meta": "Enviar una tarjeta de regalo",
+      "title": "Enviar una tarjeta de regalo",
+      "back": "Tarjetas de regalo",
+      "stepOf": "Paso {current} de {total}",
+      "steps": {
+        "amount": "Monto",
+        "recipient": "Destinatario",
+        "pay": "Pago"
+      },
+      "next": "Continuar",
+      "edit": "Editar",
+      "recipientTitle": "Para quién es",
+      "recipientName": "Su nombre",
+      "recipientEmail": "Su correo electrónico",
+      "recipientEmailHint": "Enviamos la tarjeta aquí.",
+      "message": "Un mensaje (opcional)",
+      "messageCount": "{count} de {max}",
+      "deliveryNote": "Enviamos la tarjeta por correo en cuanto pagues.",
+      "summaryTitle": "Tu regalo",
+      "to": "Para {name}",
+      "giftCard": "Tarjeta de regalo",
+      "giftCardFace": "Tarjeta de regalo, {face}",
+      "editAmount": "Cambiar {amount}",
+      "total": "Total",
+      "noDiscounts": "Las tarjetas de regalo se pagan completas. Los códigos promocionales y el crédito Oh! no aplican.",
+      "payTitle": "Pagar",
+      "payCta": "Pagar {amount}",
+      "processing": "Pagando",
+      "orPayWithCard": "O paga con tarjeta",
+      "savedCards": "Tarjetas guardadas",
+      "useNewCard": "Usar una tarjeta nueva",
+      "cardEnding": "{brand} terminada en {last4}",
+      "defaultCard": "Predeterminada",
+      "saveCard": "Guardar esta tarjeta para la próxima vez",
+      "failed": "El pago no se completó. Inténtalo de nuevo o usa otra tarjeta.",
+      "cardGeneric": "Tarjeta",
+      "secure": "Stripe procesa el pago. Nunca vemos el número de tu tarjeta.",
+      "loading": "Cargando",
+      "finishing": "Terminando tu tarjeta de regalo",
+      "required": "Obligatorio",
+      "invalidEmail": "Escribe un correo electrónico completo.",
+      "fixFields": "Completa los campos marcados.",
+      "retry": "Intentar de nuevo",
+      "done": {
+        "eyebrow": "Enviada",
+        "title": "Tu regalo va en camino.",
+        "body": "Una tarjeta de regalo de {amount} va en camino a {email}.",
+        "code": "Código de la tarjeta",
+        "codeNote": "Guarda este código por si el correo se pierde.",
+        "another": "Enviar otra",
+        "home": "Volver al inicio"
+      }
+    },
+    "errors": {
+      "AMOUNT_TOO_LOW": "La tarjeta de regalo mínima es de $10.",
+      "AMOUNT_TOO_HIGH": "La tarjeta de regalo máxima es de $500.",
+      "INVALID_AMOUNT": "Elige un monto en dólares enteros.",
+      "NOT_ALLOWED_FOR_GIFT_CARDS": "Los códigos promocionales y el crédito Oh! no se pueden usar en tarjetas de regalo.",
+      "PAYMENT_REQUIRED": "El pago no terminó. No se emitió nada. Inténtalo de nuevo.",
+      "PAYMENT_ALREADY_USED": "Ese pago ya compró una tarjeta de regalo. Revisa tu correo, o contáctanos.",
+      "PAYMENT_NOT_VERIFIED": "No pudimos confirmar el pago. Si se te cobró, te enviaremos la tarjeta o devolveremos el cargo.",
+      "NETWORK_ERROR": "No pudimos conectar con nuestro sistema. Revisa tu conexión e inténtalo de nuevo.",
+      "RATE_LIMITED": "Demasiados intentos a la vez. Espera un momento y vuelve a intentarlo.",
+      "GENERIC": "Algo salió mal. Inténtalo de nuevo en un momento."
+    },
+    "balance": {
+      "meta": "Saldo de tarjeta de regalo",
+      "eyebrow": "Tarjetas de regalo",
+      "title": "Consulta un saldo.",
+      "lede": "Escribe el código de 16 caracteres de la tarjeta o del correo.",
+      "codeLabel": "Código de la tarjeta",
+      "check": "Consultar saldo",
+      "checking": "Consultando",
+      "balance": "Saldo",
+      "notFound": "No encontramos una tarjeta con saldo para ese código.",
+      "incomplete": "El código tiene 16 caracteres.",
+      "error": "No pudimos consultar ahora. Inténtalo de nuevo en un momento.",
+      "spendStore": "Úsala en la tienda",
+      "spendBowl": "Pedir un tazón",
+      "note": "Escribe este código al pagar. Lo que no se gaste se queda en la tarjeta.",
+      "back": "Tarjetas de regalo"
     }
   },
   "store": {
-    "title": "Tienda Oh!",
-    "description": "Llévate un pedacito de Oh! a casa",
-    "merchandise": "Mercancía",
-    "comingSoon": "Próximamente",
-    "tagline": "De nuestra cocina a la tuya",
-    "launchingSoon": "¡Tienda online próximamente! Regístrate para ser notificado.",
-    "products": {
-      "homeKit": {
-        "name": "Kit Oh! para casa",
-        "description": "Todo lo que necesitas para preparar auténtica sopa de fideos Oh! en casa"
-      },
-      "chiliOil": {
-        "name": "Aceite de chile signature",
-        "description": "Nuestro aceite de chile casero con pimienta de Sichuan"
-      },
-      "brothConcentrate": {
-        "name": "Concentrado de caldo de hueso",
-        "description": "Base de caldo rica en colágeno para sopas y guisos"
-      },
-      "ceramicBowl": {
-        "name": "Tazón de cerámica para fideos",
-        "description": "Tazón de estilo tradicional, perfecto para fideos y sopas"
-      },
-      "chopsticks": {
-        "name": "Set de palillos de bambú",
-        "description": "Palillos de bambú premium con grabado Oh! personalizado"
-      },
-      "tshirt": {
-        "name": "Camiseta clásica Oh!",
-        "description": "Camiseta de algodón suave con logo Oh! minimalista"
-      },
-      "hoodie": {
-        "name": "Sudadera comfort",
-        "description": "Sudadera de polar acogedora con logo bordado"
-      },
-      "apron": {
-        "name": "Delantal de chef",
-        "description": "Delantal de grado profesional para el chef casero"
-      },
-      "woodenBowl": {
-        "name": "Tazón de madera artesanal",
-        "description": "Elaborado a mano con madera recuperada, cada pieza es única"
-      }
+    "meta": {
+      "title": "Tienda | Oh! Beef Noodle Soup",
+      "description": "Caldo, aceite de chile, tazones y palillos de la cocina de Oh!. Con envío, o para recoger en el restaurante."
+    },
+    "hero": {
+      "eyebrow": "La tienda Oh!",
+      "title": "Llévate el tazón a casa.",
+      "lede": "Caldo, aceite de chile, tazones y palillos de nuestra cocina. Te los enviamos, o los recoges en el mostrador.",
+      "shop": "Ver la tienda",
+      "scan": "¿En el restaurante? Escanea una etiqueta"
+    },
+    "shelf": {
+      "title": "El estante",
+      "filterLabel": "Filtrar por categoría",
+      "count": "{count, plural, one {# artículo} other {# artículos}}"
     },
     "categories": {
-      "all": "Todos",
-      "food": "Comida",
-      "condiments": "Condimentos",
-      "merchandise": "Mercancía",
-      "apparel": "Ropa",
-      "limitedEdition": "Edición limitada"
+      "all": "Todo",
+      "FOOD": "Despensa",
+      "CONDIMENTS": "Condimentos",
+      "MERCHANDISE": "Para la mesa",
+      "APPAREL": "Ropa",
+      "LIMITED_EDITION": "Edición limitada"
     },
-    "badges": {
-      "bestSeller": "Más vendido",
-      "new": "Nuevo",
-      "limited": "Limitado"
+    "product": {
+      "add": "Agregar",
+      "addNamed": "Agregar {name} a tu bolsa",
+      "open": "Detalles de {name}",
+      "inBag": "{count} en tu bolsa",
+      "soldOut": "Agotado",
+      "fewLeft": "Solo quedan {count}",
+      "limited": "Limitado",
+      "size": "Talla",
+      "sizeSoldOut": "{size}, agotada",
+      "pickSize": "Primero elige una talla.",
+      "quantity": "Cantidad",
+      "fewer": "Uno menos",
+      "more": "Uno más",
+      "addToBag": "Agregar a la bolsa",
+      "addToBagAmount": "Agregar a la bolsa, {amount}",
+      "added": "Agregado a tu bolsa",
+      "close": "Cerrar"
     },
-    "whyShop": {
-      "title": "¿Por qué comprar en Oh!",
-      "subtitle": "La experiencia Oh!, entregada",
-      "freeShipping": {
-        "title": "Envío gratis",
-        "description": "En pedidos mayores a $50"
-      },
-      "useCredit": {
-        "title": "Usa tu crédito",
-        "description": "Aplica Recompensas Oh! a tus compras"
-      },
-      "memberRewards": {
-        "title": "Recompensas de miembro",
-        "description": "Gana puntos en cada compra"
-      },
-      "easyReturns": {
-        "title": "Devoluciones fáciles",
-        "description": "Devoluciones sin complicaciones por 30 días"
-      }
+    "empty": {
+      "title": "Estamos reponiendo el estante.",
+      "body": "Vuelve pronto, o pregunta en el mostrador en tu próxima visita."
     },
-    "newsletter": {
-      "tagline": "Sé el primero en saber",
-      "title": "Acceso anticipado",
-      "description": "Regístrate para lanzamientos exclusivos, ofertas solo para miembros y primer acceso a nuevos productos.",
-      "placeholder": "Ingresa tu correo"
+    "loadError": "No pudimos cargar el estante. Inténtalo de nuevo en un momento.",
+    "retry": "Intentar de nuevo",
+    "bag": {
+      "view": "Ver bolsa",
+      "summary": "{count, plural, one {# artículo} other {# artículos}}, {amount}",
+      "title": "Tu bolsa",
+      "lede": "El envío y los impuestos se calculan al pagar.",
+      "back": "Tienda",
+      "emptyTitle": "Tu bolsa está vacía.",
+      "emptyBody": "Agrega algo del estante y te espera aquí.",
+      "browse": "Volver al estante",
+      "remove": "Quitar {name}",
+      "removeShort": "Quitar",
+      "size": "Talla {size}",
+      "each": "{amount} c/u",
+      "itemsTotal": "Artículos",
+      "freeShippingGap": "Te faltan {amount} para el envío gratis.",
+      "freeShippingReached": "El envío de esta bolsa es gratis.",
+      "checkout": "Pagar",
+      "limit": "Hasta {max} de cada artículo por pedido."
     },
-    "cta": {
-      "title": "¿No puedes esperar?",
-      "description": "Visita una de nuestras ubicaciones para comprar en persona y disfruta un tazón mientras estás ahí."
+    "gift": {
+      "eyebrow": "Tarjetas de regalo",
+      "title": "Regala un tazón.",
+      "body": "Cualquier monto de $10 a $500, enviado por correo electrónico.",
+      "cta": "Enviar una tarjeta de regalo"
+    },
+    "checkout": {
+      "title": "Pago",
+      "back": "Bolsa",
+      "howTitle": "Cómo lo recibes",
+      "ship": "Envíamelo",
+      "shipBody": "Gratis desde {amount}. Seguimiento por correo.",
+      "pickup": "Recoger en un restaurante",
+      "pickupBody": "Sin envío. Listo en el mostrador.",
+      "pickupWhere": "Qué restaurante",
+      "contactTitle": "Contacto",
+      "name": "Nombre completo",
+      "email": "Correo electrónico",
+      "emailHint": "Aquí llegan tu recibo y los avisos.",
+      "addressTitle": "Dirección de envío",
+      "address1": "Dirección",
+      "address2": "Apartamento o suite (opcional)",
+      "city": "Ciudad",
+      "state": "Estado",
+      "zip": "Código postal",
+      "savingsTitle": "Ahorros",
+      "credits": "Usar mi crédito Oh!",
+      "creditsAvailable": "{amount} disponible",
+      "creditsNone": "No tienes crédito para usar ahora.",
+      "creditsSignIn": "Los miembros pueden usar su crédito Oh! en la tienda.",
+      "signIn": "Iniciar sesión",
+      "giftCard": "Tarjeta de regalo",
+      "giftCardLabel": "Código de la tarjeta de regalo",
+      "giftCardHint": "16 caracteres, tal como están impresos en la tarjeta.",
+      "giftCardApply": "Aplicar",
+      "giftCardApplied": "Tarjeta aplicada. Saldo {amount}.",
+      "giftCardRemove": "Quitar tarjeta",
+      "giftCardInvalid": "Esa tarjeta no se puede usar. Revisa el código.",
+      "giftCardChecking": "Revisando la tarjeta",
+      "noPromo": "La tienda no acepta códigos promocionales.",
+      "summaryTitle": "Resumen del pedido",
+      "items": "Artículos",
+      "shipping": "Envío",
+      "shippingFree": "Gratis",
+      "pickupLine": "Recogida",
+      "tax": "Impuestos",
+      "creditLine": "Crédito Oh!",
+      "giftCardLine": "Tarjeta de regalo",
+      "total": "Total",
+      "due": "A pagar",
+      "beforeReview": "Nuestro sistema calcula el envío, los impuestos y los ahorros cuando revisas el pedido.",
+      "reviewCta": "Revisar pedido",
+      "reviewing": "Calculando tu pedido",
+      "edit": "Editar pedido",
+      "locked": "Precio calculado y reservado para ti. Edita para cambiar algo.",
+      "payTitle": "Pagar",
+      "payCta": "Pagar {amount}",
+      "placeCta": "Hacer pedido",
+      "processing": "Pagando",
+      "orPayWithCard": "O paga con tarjeta",
+      "savedCards": "Tarjetas guardadas",
+      "useNewCard": "Usar una tarjeta nueva",
+      "cardEnding": "{brand} terminada en {last4}",
+      "defaultCard": "Predeterminada",
+      "saveCard": "Guardar esta tarjeta para la próxima vez",
+      "failed": "El pago no se completó. Inténtalo de nuevo o usa otra tarjeta.",
+      "cardGeneric": "Tarjeta",
+      "freeTitle": "No hay nada que pagar",
+      "freeNote": "Tus ahorros cubren este pedido.",
+      "secure": "Stripe procesa el pago. Nunca vemos el número de tu tarjeta.",
+      "loading": "Cargando",
+      "fixFields": "Completa los campos marcados.",
+      "required": "Obligatorio",
+      "invalidEmail": "Escribe un correo electrónico completo.",
+      "invalidZip": "Escribe un código postal de 5 dígitos.",
+      "guestNote": "No necesitas cuenta.",
+      "retry": "Intentar de nuevo"
+    },
+    "notCharged": {
+      "CREDIT_SHORT": "No se te cobró. Tu crédito cambió, revisa el pedido y paga de nuevo.",
+      "GIFT_CARD_CHANGED": "No se te cobró. El saldo de tu tarjeta de regalo cambió, revisa el pedido y paga de nuevo.",
+      "OUT_OF_STOCK": "No se te cobró. Algo de tu bolsa se acaba de agotar, revisa el pedido y paga de nuevo.",
+      "GENERIC": "No se te cobró. Tu pedido cambió, revísalo y paga de nuevo."
+    },
+    "errors": {
+      "CREDIT_SHORT": "Tu crédito cambió. Revisa el pedido y paga de nuevo.",
+      "GIFT_CARD_CHANGED": "El saldo de tu tarjeta de regalo cambió. Revisa el pedido y paga de nuevo.",
+      "OUT_OF_STOCK": "Algo de tu bolsa se acaba de agotar. Baja la cantidad o quítalo.",
+      "ORDER_CHANGED": "Tu pedido acaba de cambiar. Revísalo y paga de nuevo.",
+      "ORDER_NOT_PENDING": "Este pedido ya está pagado o cerrado. Revisa para empezar uno nuevo.",
+      "PAYMENT_REFUNDED": "Ese pago fue devuelto. Revisa el pedido y paga de nuevo.",
+      "GIFT_CARD_INVALID": "Esa tarjeta de regalo no se puede usar. Revisa el código o quítala.",
+      "PRODUCT_NOT_FOUND": "Un artículo de tu bolsa ya no se vende. Quítalo para continuar.",
+      "PRODUCT_UNAVAILABLE": "Un artículo de tu bolsa no está disponible ahora. Quítalo para continuar.",
+      "INVALID_QUANTITY": "Cada artículo puede ser de 1 a 20 por pedido.",
+      "ITEMS_REQUIRED": "Tu bolsa está vacía.",
+      "TOO_MANY_ITEMS": "Son más líneas de las que caben en un pedido. Divídelo en dos.",
+      "AMOUNT_BELOW_MINIMUM": "Los pagos con tarjeta empiezan en $0.50. Usa menos crédito o agrega un artículo.",
+      "SIGN_IN_REQUIRED": "Tu sesión terminó. Inténtalo de nuevo.",
+      "PAYMENTS_UNAVAILABLE": "Los pagos no están disponibles por un momento. No se cobró nada. Inténtalo pronto.",
+      "PAYMENT_NOT_VERIFIED": "No pudimos confirmar ese pago. Si ves un cargo, se te devolverá.",
+      "LEGACY_ORDER": "Este pedido es de nuestro sistema anterior. Revisa para empezar uno nuevo.",
+      "FORBIDDEN": "Este pedido pertenece a otra sesión. Revisa para empezar uno nuevo.",
+      "NETWORK_ERROR": "No pudimos conectar con nuestro sistema. Revisa tu conexión e inténtalo de nuevo.",
+      "RATE_LIMITED": "Demasiados intentos a la vez. Espera un momento y vuelve a intentarlo.",
+      "NEEDS_REVIEW": "Estamos revisando este pago a mano y te escribiremos. Por favor no pagues de nuevo.",
+      "HELD": "No pudimos completar tu pedido. Si ves un cargo, se te devolverá completo, y nuestro equipo ya está avisado.",
+      "GENERIC": "Algo salió mal. No se cobró nada más. Inténtalo de nuevo."
+    },
+    "confirmation": {
+      "meta": "Pedido realizado",
+      "eyebrow": "Pedido realizado",
+      "title": "Gracias. Ya lo tenemos.",
+      "number": "Número de pedido",
+      "emailNote": "Tu recibo va en camino a tu correo.",
+      "nextTitle": "Lo que sigue",
+      "shipStep": "Envío: lo empacamos en dos días hábiles y te enviamos el seguimiento por correo.",
+      "pickupStep": "Recogida: te escribimos cuando esté esperando en el mostrador.",
+      "helpStep": "¿Preguntas? Responde al recibo, o pregúntale a Chappy.",
+      "keepShopping": "Volver a la tienda",
+      "order": "Pedir un tazón",
+      "confirming": "Confirmando tu pago",
+      "failedTitle": "No pudimos completar este pedido.",
+      "backToCheckout": "Volver al pago"
+    },
+    "scan": {
+      "meta": "Escanear una etiqueta",
+      "eyebrow": "En el restaurante",
+      "title": "Escanea una etiqueta del estante.",
+      "lede": "Apunta la cámara al código QR de la etiqueta, o escribe el código que aparece debajo.",
+      "start": "Usar la cámara",
+      "stop": "Detener la cámara",
+      "scanning": "Buscando un código QR",
+      "denied": "El acceso a la cámara está desactivado. Escribe el código.",
+      "noCamera": "No hay cámara disponible. Escribe el código.",
+      "unsupported": "Este navegador no puede leer códigos QR. Escribe el código.",
+      "codeLabel": "Código de la etiqueta",
+      "find": "Buscar",
+      "back": "Tienda"
+    },
+    "item": {
+      "eyebrow": "En el estante de aquí",
+      "pickupNote": "Paga en tu teléfono y tómalo del estante. Muestra el recibo en el mostrador.",
+      "buyNow": "Comprar ahora, recoger aquí",
+      "notFoundTitle": "No encontramos esa etiqueta.",
+      "notFoundBody": "Revisa el código, o pregunta en el mostrador.",
+      "scanAgain": "Escanear de nuevo"
     }
   },
   "referral": {
