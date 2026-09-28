@@ -48,6 +48,7 @@ import {
   getLocationStatus,
   validateArrivalTime,
   DEFAULT_HOURS,
+  weeklyHours,
 } from "./utils/operating-hours.js";
 import { parseModelJson } from "./utils/model-json.js";
 import {
@@ -804,8 +805,10 @@ app.get("/locations", async (req, reply) => {
   // Calculate real-time pod availability and wait times for each location
   const locationsWithRealTimeStats = await Promise.all(
     locations.map(async (location) => {
-      const totalSeats = location.seats.length;
-      const availableSeats = location.seats.filter(s => s.status === 'AVAILABLE').length;
+      // Task D4: retired pre-comb seats don't count toward the pods shown on the site.
+      const liveSeats = location.seats.filter(s => !s.retiredAt);
+      const totalSeats = liveSeats.length;
+      const availableSeats = liveSeats.filter(s => s.status === 'AVAILABLE').length;
 
       // Calculate average wait time based on current queue
       let queuedOrders = 0;
@@ -840,6 +843,9 @@ app.get("/locations", async (req, reply) => {
           statusMessage: availability.statusMessage,
           closesAt: availability.closesAt,
         },
+
+        // Task D4: the week's real hours for the location pages (read-only).
+        hours: weeklyHours(location),
       };
     })
   );

@@ -263,84 +263,25 @@
     }
   },
   "locations": {
-    "title": "Nuestras ubicaciones",
-    "description": "Encuentra un Oh! cerca de ti",
-    "hours": "Horario",
-    "weekday": "Entre semana",
-    "weekend": "Fin de semana",
-    "openNow": "Abierto ahora",
-    "upcomingCities": "Llegando a tu ciudad",
-    "loading": "Cargando ubicaciones...",
-    "hero": {
-      "findUs": "Encuéntranos",
-      "title": "Nuestras ubicaciones",
-      "description": "Experimenta Oh! Beef Noodle Soup en una de nuestras ubicaciones únicas"
+    "meta": {
+      "title": "Ubicaciones",
+      "description": "Dos locales de Oh! en Utah: City Creek en Salt Lake City y University Place en Orem. Pods en vivo, horarios y cómo llegar."
     },
-    "cityCreek": {
-      "tagline": "Centro de Salt Lake City",
-      "description": "Nuestra ubicación principal en el corazón del centro de Salt Lake City, ofreciendo una experiencia gastronómica única con cabinas privadas y pedidos tecnológicos.",
-      "mallDescription": "City Creek Center es el principal destino de compras de Utah, con más de 100 tiendas y restaurantes en un impresionante entorno al aire libre con techo de vidrio retráctil.",
-      "nearbyLandmarks": [
-        "Temple Square",
-        "Salt Palace Convention Center",
-        "Capitolio de Utah",
-        "Gateway Mall"
-      ],
-      "parking": "Estacionamiento gratis en la estructura de City Creek con validación"
+    "index": {
+      "eyebrow": "Encuéntranos",
+      "title": "Dos locales en Utah.",
+      "lede": "Pods privados, una cocina detrás de la pared y tu tazón por una ventanilla. Elige un local y míralo en vivo.",
+      "cardCta": "Ver el local"
     },
-    "universityPlace": {
-      "tagline": "Valle de Utah",
-      "description": "Sirviendo a la comunidad del Valle de Utah con la misma calidad excepcional y experiencia gastronómica innovadora.",
-      "mallDescription": "University Place es el vibrante centro de compras y entretenimiento de Orem, con una mezcla de tiendas nacionales y favoritos locales cerca de Utah Valley University.",
-      "nearbyLandmarks": [
-        "Utah Valley University",
-        "Provo Canyon",
-        "Cueva Timpanogos",
-        "Campus de BYU"
-      ],
-      "parking": "Amplio estacionamiento gratuito disponible en todo University Place"
-    },
-    "details": {
-      "address": "Dirección",
-      "hours": "Horario",
-      "hoursWeekday": "Lun-Sáb: 11am - 9pm",
-      "hoursSunday": "Domingo: Cerrado",
-      "parking": "Estacionamiento"
-    },
-    "about": {
-      "title": "Acerca de",
-      "nearby": "Puntos de interés cercanos"
-    },
-    "buttons": {
-      "orderAhead": "Ordenar con anticipación",
-      "getDirections": "Obtener direcciones"
-    },
-    "features": {
-      "privatePods": "Cabinas privadas",
-      "orderAhead": "Ordenar anticipado",
-      "noTipping": "Sin propinas",
-      "accessible": "Accesible"
-    },
-    "ohWay": {
-      "label": "El estilo Oh!",
-      "title": "Una experiencia gastronómica diferente",
-      "kiosk": {
-        "title": "Ordena a tu manera",
-        "description": "Salta la fila con nuestra app móvil o usa nuestros quioscos en la tienda. Tu comida está lista cuando tú lo estés."
-      },
-      "pod": {
-        "title": "Cabinas de comedor privadas",
-        "description": "Disfruta tu comida en tu propio espacio privado. Sin mesas abarrotadas, sin ruido — solo tú y tu tazón perfecto."
-      },
-      "noTips": {
-        "title": "Sin propinas necesarias",
-        "description": "El precio que ves es el precio que pagas. Pagamos a nuestro equipo salarios competitivos para que nunca tengas que preocuparte por las propinas."
-      }
+    "status": {
+      "open": "Abierto ahora",
+      "closed": "Cerrado ahora",
+      "podsFree": "{free} de {total} pods libres",
+      "pods": "{total} pods"
     },
     "comingSoon": {
       "title": "Próximamente",
-      "description": "¡Nos estamos expandiendo! Mantente atento a nuevas ubicaciones en estas ciudades.",
-      "label": "Próximamente",
+      "description": "Vienen más locales en camino.",
       "cities": [
         "San Francisco",
         "Los Ángeles",
@@ -348,10 +289,64 @@
         "Denver"
       ]
     },
-    "cta": {
-      "title": "¿Listo para el mejor tazón?",
-      "description": "Ordena con anticipación y salta la espera. Tu tazón perfecto está a solo unos toques.",
-      "button": "Comienza tu pedido"
+    "detail": {
+      "back": "Todas las ubicaciones",
+      "order": "Ordena aquí",
+      "directions": "Cómo llegar",
+      "directionsLabel": "Cómo llegar a {name}. Abre tu app de mapas.",
+      "mapTitle": "El local, en vivo",
+      "mapLede": "Cada pod tal como está ahora mismo. Toca una fila para verla de cerca.",
+      "mapLoading": "Cargando los pods",
+      "mapError": "Los pods en vivo no están disponibles ahora.",
+      "threeD": "Verlo en 3D",
+      "threeDHint": "Un modelo 3D del local. Se carga cuando lo tocas.",
+      "threeDClose": "Volver al mapa",
+      "threeDUnavailable": "El 3D no está disponible en este dispositivo. El mapa de arriba muestra todos los pods.",
+      "threeDAria": "Un modelo 3D del comedor de {name}",
+      "threeDLoading": "Construyendo el local",
+      "iso": {
+        "corridor": "Pasillo del personal",
+        "aisle": "Pasillo"
+      },
+      "hoursTitle": "Horario",
+      "today": "Hoy",
+      "closedDay": "Cerrado",
+      "hoursRange": "{open} a {close}",
+      "hoursNone": "El horario aún no está publicado.",
+      "timezone": "Hora de la montaña",
+      "visitTitle": "Cómo llegar",
+      "address": "Dirección",
+      "parking": "Estacionamiento",
+      "nearby": "Cerca",
+      "orderTitle": "Tu pod te espera.",
+      "orderLede": "Ordena con anticipación, elige un pod y entra directo.",
+      "loadErrorTitle": "No pudimos cargar esta ubicación.",
+      "loadErrorBody": "Revisa tu conexión e inténtalo de nuevo.",
+      "retry": "Intentar de nuevo"
+    },
+    "places": {
+      "cityCreek": {
+        "tagline": "Centro de Salt Lake City",
+        "intro": "Nuestro local principal, dentro de City Creek Center. {pods} pods privados en tres filas, con la cocina justo detrás.",
+        "parking": "Estacionamiento gratis en la estructura de City Creek con validación.",
+        "nearby": [
+          "Temple Square",
+          "Salt Palace Convention Center",
+          "The Gateway",
+          "Capitolio de Utah"
+        ]
+      },
+      "universityPlace": {
+        "tagline": "Valle de Utah",
+        "intro": "Dentro de University Place en Orem. {pods} pods privados, la misma cocina y el mismo caldo.",
+        "parking": "Amplio estacionamiento gratis en todo University Place.",
+        "nearby": [
+          "Utah Valley University",
+          "Campus de BYU",
+          "Provo Canyon",
+          "Cueva Timpanogos"
+        ]
+      }
     }
   },
   "loyalty": {

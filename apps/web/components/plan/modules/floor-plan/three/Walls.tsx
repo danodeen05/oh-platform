@@ -1,5 +1,6 @@
 import { useMemo } from "react";
-import { BUILDING, DIMS, DOORS, HEIGHTS, KIOSKS, PASS, WALLS, ZONES, type LayerKey, type Point, type Rect, type Wall } from "../layout";
+import { BUILDING, DIMS, HEIGHTS, type Door, type LayerKey, type Layout, type Point, type Rect, type Wall } from "../layout";
+import { mirrorRect, useSceneLayout } from "./layout-context";
 import { P, dim } from "./palette";
 import type { IsoFocus } from "./types";
 
@@ -12,10 +13,10 @@ interface Seg {
 }
 
 /** Remove the door spans from a wall segment so doors read as gaps. */
-function cutDoors(w: Wall): Wall[] {
+function cutDoors(w: Wall, doors: readonly Door[]): Wall[] {
   const [a, b] = w;
   const horizontal = a[1] === b[1];
-  const spans = DOORS.filter((d) => (horizontal ? d.axis === "x" && d.y === a[1] : d.axis === "y" && d.x === a[0]));
+  const spans = doors.filter((d) => (horizontal ? d.axis === "x" && d.y === a[1] : d.axis === "y" && d.x === a[0]));
   let pieces: Wall[] = [[a, b]];
   for (const d of spans) {
     const lo = horizontal ? d.x : d.y;
@@ -66,14 +67,23 @@ function Block({ r, height, color, y = 0 }: { r: Rect; height: number; color: st
   );
 }
 
-const kitchen = ZONES.find((z) => z.key === "kitchen")!;
-const store = ZONES.find((z) => z.key === "store")!;
 /** Four stations along the kitchen back wall: broth, noodles, plating, dish-side prep. */
 const STATIONS: readonly Rect[] = [4, 15, 26, 37].map((x) => ({ x, y: 1, w: 7, h: 3 }));
-const SHELVES: readonly Rect[] = [
-  { x: store.x + 0.6, y: store.y + 1, w: 1.2, h: store.h - 2 },
-  { x: store.x + store.w - 1.8, y: store.y + 1, w: 1.2, h: store.h - 5 },
-];
+
+/** The fixtures that depend on the layout (the store shelves follow its store zone). */
+function fixtures(layout: Layout) {
+  const store = layout.zones.find((z) => z.key === "store")!;
+  const kitchen = layout.zones.find((z) => z.key === "kitchen")!;
+  const shelves: readonly Rect[] = [
+    { x: store.x + 0.6, y: store.y + 1, w: 1.2, h: store.h - 2 },
+    { x: store.x + store.w - 1.8, y: store.y + 1, w: 1.2, h: store.h - 5 },
+  ];
+  const pass: Rect = { ...layout.pass, x: layout.pass.x + 0.5, w: kitchen.w - 1 };
+  const closures: readonly Rect[] = [0, 1, 2].map((i) =>
+    mirrorRect(layout, { x: DIMS.aisleW + i * (2 * DIMS.podDepth + DIMS.corridorW + DIMS.aisleW) + DIMS.podDepth, y: DIMS.rear + DIMS.fingerLen - 0.25, w: DIMS.corridorW, h: 0.5 }),
+  );
+  return { stations: STATIONS.map((r) => mirrorRect(layout, r)), shelves, pass, closures };
+}
 
 interface Props {
   layers: Record<LayerKey, boolean>;
@@ -82,7 +92,9 @@ interface Props {
 
 /** Walls with door gaps, plus the few fixtures that make each zone legible. */
 export function Walls({ layers, focus }: Props) {
-  const segs = useMemo<Seg[]>(() => WALLS.flatMap((w) => cutDoors(w).map((p) => ({ a: p[0], b: p[1], height: heightFor(w) }))), []);
+  const layout = useSceneLayout();
+  const segs = useMemo<Seg[]>(() => layout.walls.flatMap((w) => cutDoors(w, layout.doors).map((p) => ({ a: p[0], b: p[1], height: heightFor(w) }))), [layout]);
+  const fx = useMemo(() => fixtures(layout), [layout]);
   const staffOn = focus === "all" || focus === "staff";
   const guestOn = focus === "all" || focus === "guest";
   const tone = (hex: string, on: boolean): string => (on ? hex : `#${dim(hex).getHexString()}`);
@@ -93,28 +105,25 @@ export function Walls({ layers, focus }: Props) {
       ))}
       {layers.kitchen ? (
         <group>
-          {STATIONS.map((r, i) => (
+          {fx.stations.map((r, i) => (
             <Block key={i} r={r} height={HEIGHTS.counter} color={tone(P.equipment, staffOn)} />
           ))}
-          <Block r={{ ...PASS, x: PASS.x + 0.5, w: kitchen.w - 1 }} height={HEIGHTS.counter} color={tone(P.pass, staffOn)} />
+          <Block r={fx.pass} height={HEIGHTS.counter} color={tone(P.pass, staffOn)} />
         </group>
       ) : null}
       {layers.store
-        ? SHELVES.map((r, i) => <Block key={i} r={r} height={HEIGHTS.counter * 2} color={tone(P.shelf, guestOn)} />)
+        ? fx.shelves.map((r, i) => <Block key={i} r={r} height={HEIGHTS.counter * 2} color={tone(P.shelf, guestOn)} />)
         : null}
       {layers.entry
-        ? KIOSKS.map((k, i) => <Block key={i} r={k} height={HEIGHTS.kiosk} color={tone(P.kiosk, guestOn)} />)
+        ? layout.kiosks.map((k, i) => <Block key={i} r={k} height={HEIGHTS.kiosk} color={tone(P.kiosk, guestOn)} />)
         : null}
-      {DOORS.filter((d) => d.swing !== "none").map((d) => {
+      {layout.doors.filter((d) => d.swing !== "none").map((d) => {
         const r: Rect = d.axis === "x" ? { x: d.x, y: d.y - 0.3, w: d.len, h: 0.6 } : { x: d.x - 0.3, y: d.y, w: 0.6, h: d.len };
         return <Block key={d.key} r={r} height={0.12} color={tone(P.door, d.territory === "staff" ? staffOn : guestOn)} y={HEIGHTS.floor} />;
       })}
       {/* corridor closures rise to partition height so the fingers read as sealed */}
       {layers.corridors
-        ? [0, 1, 2].map((i) => {
-            const x = DIMS.aisleW + i * (2 * DIMS.podDepth + DIMS.corridorW + DIMS.aisleW) + DIMS.podDepth;
-            return <Block key={i} r={{ x, y: DIMS.rear + DIMS.fingerLen - 0.25, w: DIMS.corridorW, h: 0.5 }} height={HEIGHTS.podPartition} color={tone(P.wall, staffOn)} />;
-          })
+        ? fx.closures.map((r, i) => <Block key={i} r={r} height={HEIGHTS.podPartition} color={tone(P.wall, staffOn)} />)
         : null}
     </group>
   );

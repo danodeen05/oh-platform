@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, type MutableRefObject } from "react";
 import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import { BufferGeometry, Float32BufferAttribute, InstancedMesh, Matrix4, Object3D, Vector3 } from "three";
-import { HEIGHTS, JOURNEY_POD, PHASES, POD, PODS, type Pod } from "../layout";
+import { HEIGHTS, PHASES, POD, type Pod } from "../layout";
+import { useSceneLayout } from "./layout-context";
 import { P, color, dim } from "./palette";
 import type { IsoFocus, Journey } from "./types";
 
@@ -39,10 +40,10 @@ function seatMatrix(p: Pod, out: Matrix4): Matrix4 {
 }
 
 /** Every pod's twelve box edges in one line set: one draw call for the blueprint look. */
-function edgeGeometry(): BufferGeometry {
+function edgeGeometry(pods: readonly Pod[]): BufferGeometry {
   const pts: number[] = [];
   const h = HEIGHTS.podPartition;
-  for (const p of PODS) {
+  for (const p of pods) {
     const x0 = p.x;
     const x1 = p.x + p.w;
     const z0 = p.y;
@@ -82,7 +83,10 @@ export function Pods({ focus, activePod, journey, onPodEnter, onPodLeave, onPodA
   const hover = useRef<Pod | null>(null);
   const lastSlide = useRef(-1);
   const { invalidate, gl } = useThree();
-  const edges = useMemo(edgeGeometry, []);
+  const layout = useSceneLayout();
+  const PODS = layout.pods;
+  const journeyPod = layout.journeyTarget?.number;
+  const edges = useMemo(() => edgeGeometry(PODS), [PODS]);
   useEffect(() => () => edges.dispose(), [edges]);
 
   // Instance matrices once.
@@ -95,7 +99,7 @@ export function Pods({ focus, activePod, journey, onPodEnter, onPodLeave, onPodA
     });
     for (const ref of [shell, hatch, seat]) if (ref.current) ref.current.instanceMatrix.needsUpdate = true;
     invalidate();
-  }, [invalidate]);
+  }, [PODS, invalidate]);
 
   // Colors: territory focus and the active pod.
   useLayoutEffect(() => {
@@ -110,14 +114,14 @@ export function Pods({ focus, activePod, journey, onPodEnter, onPodLeave, onPodA
     });
     for (const ref of [shell, hatch, seat]) if (ref.current?.instanceColor) ref.current.instanceColor.needsUpdate = true;
     invalidate();
-  }, [focus, activePod, invalidate]);
+  }, [PODS, focus, activePod, invalidate]);
 
   // The journey pod's hatch slides open at delivery.
   useFrame(() => {
     const slide = openness(journey.current.progress) * HATCH_W * 0.9;
     if (Math.abs(slide - lastSlide.current) < 1e-4 || !hatch.current) return;
     lastSlide.current = slide;
-    const i = PODS.findIndex((p) => p.number === JOURNEY_POD);
+    const i = PODS.findIndex((p) => p.number === journeyPod);
     const p = PODS[i];
     if (!p) return;
     const m = new Matrix4();

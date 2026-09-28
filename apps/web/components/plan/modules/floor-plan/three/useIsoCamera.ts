@@ -1,8 +1,8 @@
-import { useEffect, useRef, type ComponentRef, type RefObject } from "react";
+import { useEffect, useMemo, useRef, type ComponentRef, type RefObject } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import type { OrbitControls } from "@react-three/drei";
 import { OrthographicCamera, Vector3 } from "three";
-import { BUILDING, DIMS, FINGERS, ZONES } from "../layout";
+import { presetViews, PLAN_LAYOUT, useSceneLayout, type PresetView } from "./layout-context";
 import type { IsoPreset } from "./types";
 
 /** drei's controls instance type, without depending on three-stdlib directly. */
@@ -17,20 +17,9 @@ export function isoOffset(az = ISO_AZ, el = ISO_EL, dist = DIST): Vector3 {
   return new Vector3(dist * Math.cos(el) * Math.sin(az), dist * Math.sin(el), dist * Math.cos(el) * Math.cos(az));
 }
 
-interface PresetView {
-  x: number;
-  z: number;
-  /** How many feet of plan fit across the viewport. */
-  viewFt: number;
-}
-const lobby = ZONES.find((z) => z.key === "lobby")!;
-const finger2 = FINGERS[1]!;
-export const PRESET_VIEWS: Record<IsoPreset, PresetView> = {
-  overview: { x: BUILDING.w / 2 + 4, z: BUILDING.h / 2 - 2, viewFt: 122 },
-  kitchen: { x: DIMS.kitchenW / 2, z: DIMS.rear / 2 + 3, viewFt: 62 },
-  finger: { x: finger2.x + finger2.w / 2, z: finger2.y + finger2.h / 2, viewFt: 42 },
-  lobby: { x: lobby.x + lobby.w / 2, z: lobby.y + lobby.h / 2, viewFt: 38 },
-};
+export type { PresetView };
+/** The plan layout's presets (kept for existing imports). */
+export const PRESET_VIEWS: Record<IsoPreset, PresetView> = presetViews(PLAN_LAYOUT);
 
 /**
  * Frames a preset: the orbit target and the orthographic zoom (pixels per
@@ -38,12 +27,14 @@ export const PRESET_VIEWS: Record<IsoPreset, PresetView> = {
  */
 export function useIsoCamera(preset: IsoPreset, reduce: boolean, controls: RefObject<Controls | null>): void {
   const { camera, size, invalidate } = useThree();
+  const layout = useSceneLayout();
+  const views = useMemo(() => (layout === PLAN_LAYOUT ? PRESET_VIEWS : presetViews(layout)), [layout]);
   const goal = useRef<{ target: Vector3; zoom: number }>({ target: new Vector3(), zoom: 8 });
   const settled = useRef(false);
   const first = useRef(true);
 
   useEffect(() => {
-    const v = PRESET_VIEWS[preset];
+    const v = views[preset];
     goal.current = { target: new Vector3(v.x, 0, v.z), zoom: size.width / v.viewFt };
     // First frame and reduced motion: snap. Otherwise the frame loop eases there.
     if (reduce || first.current) {
@@ -60,7 +51,7 @@ export function useIsoCamera(preset: IsoPreset, reduce: boolean, controls: RefOb
       settled.current = false;
     }
     invalidate();
-  }, [preset, size.width, reduce, camera, controls, invalidate]);
+  }, [preset, views, size.width, reduce, camera, controls, invalidate]);
 
   useFrame((_, dt) => {
     if (reduce || settled.current || !controls.current) return;

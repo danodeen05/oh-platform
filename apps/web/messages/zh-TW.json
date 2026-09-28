@@ -263,84 +263,25 @@
     }
   },
   "locations": {
-    "title": "門市地點",
-    "description": "尋找您附近的哦!門市",
-    "hours": "營業時間",
-    "weekday": "平日",
-    "weekend": "週末",
-    "openNow": "營業中",
-    "upcomingCities": "即將進駐您的城市",
-    "loading": "載入門市中...",
-    "hero": {
-      "findUs": "找到我們",
-      "title": "門市地點",
-      "description": "在我們獨特的門市體驗哦！牛肉麵"
+    "meta": {
+      "title": "門市據點",
+      "description": "Oh! 在猶他州的兩間門市：鹽湖城的 City Creek 與奧勒姆的 University Place。即時包廂、營業時間與路線。"
     },
-    "cityCreek": {
-      "tagline": "鹽湖城市中心",
-      "description": "我們位於鹽湖城市中心的旗艦店，提供獨特的用餐體驗，配備私人包廂和科技化點餐。",
-      "mallDescription": "City Creek Center是猶他州首屈一指的購物目的地，擁有超過100家商店和餐廳，在令人驚嘆的露天環境中配備可伸縮的玻璃屋頂。",
-      "nearbyLandmarks": [
-        "聖殿廣場",
-        "鹽宮會議中心",
-        "猶他州議會大廈",
-        "Gateway購物中心"
-      ],
-      "parking": "在City Creek停車場免費停車，需驗證"
+    "index": {
+      "eyebrow": "找到我們",
+      "title": "猶他州的兩間店。",
+      "lede": "私人包廂、牆後的廚房，麵從小窗送到你面前。選一間店，看看現場。",
+      "cardCta": "看看店內"
     },
-    "universityPlace": {
-      "tagline": "猶他谷",
-      "description": "為猶他谷社區提供同樣卓越的品質和創新的用餐體驗。",
-      "mallDescription": "University Place是奧勒姆充滿活力的購物和娛樂中心，匯集全國連鎖店和當地最愛，靠近猶他谷大學。",
-      "nearbyLandmarks": [
-        "猶他谷大學",
-        "普若佛峽谷",
-        "天波諾高斯洞穴",
-        "楊百翰大學"
-      ],
-      "parking": "University Place全區提供充足免費停車位"
-    },
-    "details": {
-      "address": "地址",
-      "hours": "營業時間",
-      "hoursWeekday": "週一至週六：上午11點 - 晚上9點",
-      "hoursSunday": "週日：休息",
-      "parking": "停車資訊"
-    },
-    "about": {
-      "title": "關於",
-      "nearby": "附近景點"
-    },
-    "buttons": {
-      "orderAhead": "提前點餐",
-      "getDirections": "取得路線"
-    },
-    "features": {
-      "privatePods": "私人包廂",
-      "orderAhead": "提前點餐",
-      "noTipping": "免小費",
-      "accessible": "無障礙設施"
-    },
-    "ohWay": {
-      "label": "哦！風格",
-      "title": "不一樣的用餐體驗",
-      "kiosk": {
-        "title": "隨心點餐",
-        "description": "使用我們的手機應用程式或店內自助點餐機跳過排隊。您準備好時，餐點就準備好了。"
-      },
-      "pod": {
-        "title": "私人用餐包廂",
-        "description": "在您專屬的私人空間享用美食。沒有擁擠的餐桌，沒有噪音——只有您和完美的一碗麵。"
-      },
-      "noTips": {
-        "title": "無需小費",
-        "description": "您看到的價格就是您支付的價格。我們為團隊支付具競爭力的薪資，讓您無需擔心小費。"
-      }
+    "status": {
+      "open": "營業中",
+      "closed": "休息中",
+      "podsFree": "{total} 個包廂中有 {free} 個空位",
+      "pods": "{total} 個包廂"
     },
     "comingSoon": {
       "title": "即將開幕",
-      "description": "我們正在擴展！敬請期待這些城市的新門市。",
-      "label": "即將開幕",
+      "description": "更多門市正在路上。",
       "cities": [
         "舊金山",
         "洛杉磯",
@@ -348,10 +289,64 @@
         "丹佛"
       ]
     },
-    "cta": {
-      "title": "準備好品嚐最棒的一碗麵了嗎？",
-      "description": "提前點餐，跳過等待。完美的一碗麵只需幾次點擊。",
-      "button": "開始點餐"
+    "detail": {
+      "back": "所有門市",
+      "order": "在這裡點餐",
+      "directions": "路線",
+      "directionsLabel": "前往{name}的路線。會開啟地圖應用程式。",
+      "mapTitle": "店內即時狀況",
+      "mapLede": "每個包廂此刻的狀態。點一排可以放大查看。",
+      "mapLoading": "正在載入包廂",
+      "mapError": "目前無法顯示即時包廂。",
+      "threeD": "以 3D 查看",
+      "threeDHint": "店內的 3D 模型，點了才會載入。",
+      "threeDClose": "回到平面圖",
+      "threeDUnavailable": "這部裝置無法顯示 3D。上方的平面圖列出了所有包廂。",
+      "threeDAria": "{name}用餐區的 3D 模型",
+      "threeDLoading": "正在建構店內模型",
+      "iso": {
+        "corridor": "員工走道",
+        "aisle": "走道"
+      },
+      "hoursTitle": "營業時間",
+      "today": "今天",
+      "closedDay": "公休",
+      "hoursRange": "{open} 至 {close}",
+      "hoursNone": "營業時間尚未公布。",
+      "timezone": "山區時間",
+      "visitTitle": "交通資訊",
+      "address": "地址",
+      "parking": "停車",
+      "nearby": "附近地標",
+      "orderTitle": "你的包廂在等你。",
+      "orderLede": "先點餐、選包廂，到了直接入座。",
+      "loadErrorTitle": "無法載入這間門市。",
+      "loadErrorBody": "請檢查網路連線後再試一次。",
+      "retry": "再試一次"
+    },
+    "places": {
+      "cityCreek": {
+        "tagline": "鹽湖城市中心",
+        "intro": "我們的旗艦店，位於 City Creek Center 內。{pods} 個私人包廂分布在三排走道兩側，廚房就在後方。",
+        "parking": "City Creek 停車場免費停車，需蓋章驗證。",
+        "nearby": [
+          "聖殿廣場",
+          "鹽宮會議中心",
+          "蓋特威購物中心",
+          "猶他州議會大廈"
+        ]
+      },
+      "universityPlace": {
+        "tagline": "猶他谷",
+        "intro": "位於奧勒姆的 University Place 內。{pods} 個私人包廂，同樣的廚房，同樣的湯頭。",
+        "parking": "University Place 各處都有充足的免費停車位。",
+        "nearby": [
+          "猶他谷大學",
+          "楊百翰大學",
+          "普若佛峽谷",
+          "天波諾高斯洞穴"
+        ]
+      }
     }
   },
   "loyalty": {

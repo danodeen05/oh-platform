@@ -263,84 +263,25 @@
     }
   },
   "locations": {
-    "title": "门店地点",
-    "description": "寻找您附近的哦!门店",
-    "hours": "营业时间",
-    "weekday": "工作日",
-    "weekend": "周末",
-    "openNow": "营业中",
-    "upcomingCities": "即将进驻您的城市",
-    "loading": "加载门店中...",
-    "hero": {
-      "findUs": "找到我们",
-      "title": "门店地点",
-      "description": "在我们独特的门店体验哦！牛肉面"
+    "meta": {
+      "title": "门店位置",
+      "description": "Oh! 在犹他州的两家门店：盐湖城的 City Creek 和奥勒姆的 University Place。实时包厢、营业时间和路线。"
     },
-    "cityCreek": {
-      "tagline": "盐湖城市中心",
-      "description": "我们位于盐湖城市中心的旗舰店，提供独特的用餐体验，配备私人包厢和科技化点餐。",
-      "mallDescription": "City Creek Center是犹他州首屈一指的购物目的地，拥有超过100家商店和餐厅，在令人惊叹的露天环境中配备可伸缩的玻璃屋顶。",
-      "nearbyLandmarks": [
-        "圣殿广场",
-        "盐宫会议中心",
-        "犹他州议会大厦",
-        "Gateway购物中心"
-      ],
-      "parking": "在City Creek停车场免费停车，需验证"
+    "index": {
+      "eyebrow": "找到我们",
+      "title": "犹他州的两家店。",
+      "lede": "私人包厢、墙后的厨房，面从小窗送到你面前。选一家店，看看现场。",
+      "cardCta": "看看店内"
     },
-    "universityPlace": {
-      "tagline": "犹他谷",
-      "description": "为犹他谷社区提供同样卓越的品质和创新的用餐体验。",
-      "mallDescription": "University Place是奥勒姆充满活力的购物和娱乐中心，汇集全国连锁店和当地最爱，靠近犹他谷大学。",
-      "nearbyLandmarks": [
-        "犹他谷大学",
-        "普若佛峡谷",
-        "天波诺高斯洞穴",
-        "杨百翰大学"
-      ],
-      "parking": "University Place全区提供充足免费停车位"
-    },
-    "details": {
-      "address": "地址",
-      "hours": "营业时间",
-      "hoursWeekday": "周一至周六：上午11点 - 晚上9点",
-      "hoursSunday": "周日：休息",
-      "parking": "停车信息"
-    },
-    "about": {
-      "title": "关于",
-      "nearby": "附近景点"
-    },
-    "buttons": {
-      "orderAhead": "提前点餐",
-      "getDirections": "获取路线"
-    },
-    "features": {
-      "privatePods": "私人包厢",
-      "orderAhead": "提前点餐",
-      "noTipping": "免小费",
-      "accessible": "无障碍设施"
-    },
-    "ohWay": {
-      "label": "哦！风格",
-      "title": "不一样的用餐体验",
-      "kiosk": {
-        "title": "随心点餐",
-        "description": "使用我们的手机应用程序或店内自助点餐机跳过排队。您准备好时，餐点就准备好了。"
-      },
-      "pod": {
-        "title": "私人用餐包厢",
-        "description": "在您专属的私人空间享用美食。没有拥挤的餐桌，没有噪音——只有您和完美的一碗面。"
-      },
-      "noTips": {
-        "title": "无需小费",
-        "description": "您看到的价格就是您支付的价格。我们为团队支付具竞争力的薪资，让您无需担心小费。"
-      }
+    "status": {
+      "open": "营业中",
+      "closed": "休息中",
+      "podsFree": "{total} 个包厢中有 {free} 个空位",
+      "pods": "{total} 个包厢"
     },
     "comingSoon": {
       "title": "即将开业",
-      "description": "我们正在扩展！敬请期待这些城市的新门店。",
-      "label": "即将开业",
+      "description": "更多门店正在路上。",
       "cities": [
         "旧金山",
         "洛杉矶",
@@ -348,10 +289,64 @@
         "丹佛"
       ]
     },
-    "cta": {
-      "title": "准备好品尝最棒的一碗面了吗？",
-      "description": "提前点餐，跳过等待。完美的一碗面只需几次点击。",
-      "button": "开始点餐"
+    "detail": {
+      "back": "所有门店",
+      "order": "在这里点餐",
+      "directions": "路线",
+      "directionsLabel": "前往{name}的路线。会打开地图应用。",
+      "mapTitle": "店内实时状况",
+      "mapLede": "每个包厢此刻的状态。点一排可以放大查看。",
+      "mapLoading": "正在加载包厢",
+      "mapError": "目前无法显示实时包厢。",
+      "threeD": "以 3D 查看",
+      "threeDHint": "店内的 3D 模型，点了才会加载。",
+      "threeDClose": "回到平面图",
+      "threeDUnavailable": "这台设备无法显示 3D。上方的平面图列出了所有包厢。",
+      "threeDAria": "{name}用餐区的 3D 模型",
+      "threeDLoading": "正在构建店内模型",
+      "iso": {
+        "corridor": "员工通道",
+        "aisle": "过道"
+      },
+      "hoursTitle": "营业时间",
+      "today": "今天",
+      "closedDay": "休息",
+      "hoursRange": "{open} 至 {close}",
+      "hoursNone": "营业时间尚未公布。",
+      "timezone": "山地时间",
+      "visitTitle": "交通信息",
+      "address": "地址",
+      "parking": "停车",
+      "nearby": "附近地标",
+      "orderTitle": "你的包厢在等你。",
+      "orderLede": "先点餐、选包厢，到了直接入座。",
+      "loadErrorTitle": "无法加载这家门店。",
+      "loadErrorBody": "请检查网络连接后再试一次。",
+      "retry": "再试一次"
+    },
+    "places": {
+      "cityCreek": {
+        "tagline": "盐湖城市中心",
+        "intro": "我们的旗舰店，位于 City Creek Center 内。{pods} 个私人包厢分布在三排通道两侧，厨房就在后方。",
+        "parking": "City Creek 停车场免费停车，需盖章验证。",
+        "nearby": [
+          "圣殿广场",
+          "盐宫会议中心",
+          "盖特威购物中心",
+          "犹他州议会大厦"
+        ]
+      },
+      "universityPlace": {
+        "tagline": "犹他谷",
+        "intro": "位于奥勒姆的 University Place 内。{pods} 个私人包厢，同样的厨房，同样的汤头。",
+        "parking": "University Place 各处都有充足的免费停车位。",
+        "nearby": [
+          "犹他谷大学",
+          "杨百翰大学",
+          "普若佛峡谷",
+          "天波诺高斯洞穴"
+        ]
+      }
     }
   },
   "loyalty": {

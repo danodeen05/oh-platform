@@ -1,4 +1,4 @@
-import type { LayerKey, Pod } from "../layout";
+import type { LayerKey, Layout, Pod } from "../layout";
 
 export type IsoPreset = "overview" | "kitchen" | "finger" | "lobby";
 export type IsoFocus = "all" | "guest" | "staff";
@@ -28,6 +28,8 @@ export interface FloorPlan3DProps {
   onPodLeave: () => void;
   onPodActivate: (pod: Pod) => void;
   onUnavailable: () => void;
+  /** Which comb layout to draw (Task D4). Omitted, it is the business plan's own layout. */
+  layout?: Layout;
 }
 
 /** What the scene reads every frame; the module writes it, the canvas never re-renders for it. */
