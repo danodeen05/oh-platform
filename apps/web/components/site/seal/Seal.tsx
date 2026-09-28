@@ -13,9 +13,9 @@ export interface SealProps {
   earned?: boolean;
   /**
    * 白文 (filled) or 朱文 (outline). Defaults from `earned`: earned -> filled
-   * (a solid cinnabar field with the glyph carved/knocked out in paper
-   * color), not earned -> outline (a muted cinnabar glyph and border, no
-   * field). Pass explicitly to override the default.
+   * (a solid cinnabar field with the glyph drawn on top in paper color),
+   * not earned -> outline (a muted cinnabar glyph and border, no field).
+   * Pass explicitly to override the default.
    */
   variant?: SealVariant;
   className?: string;
@@ -43,14 +43,25 @@ function hashString(s: string): number {
 
 /**
  * Chop seal (印章) badge mark (Task C2, Fix round 1: authentic 白文/朱文
- * styles). The glyph is decorative (`aria-hidden`); the accessible name
- * always comes from the `name` prop (the translated badge name from the
- * API/DB), never from the glyph or the slug.
+ * styles; Fix round 2: filled-variant rendering bug). The glyph is
+ * decorative (`aria-hidden`); the accessible name always comes from the
+ * `name` prop (the translated badge name from the API/DB), never from the
+ * glyph or the slug.
  *
  * Both variants get a subtle, deterministic stamped-edge texture via an SVG
- * filter (`feTurbulence` + `feDisplacementMap`); the filter/mask ids are
- * derived from `iconKey` + `variant`, not `useId`, so server and client
- * markup always match.
+ * filter (`feTurbulence` + `feDisplacementMap`); the filter id is derived
+ * from `iconKey` + `variant`, not `useId`, so server and client markup
+ * always match.
+ *
+ * Fix round 2: the filled (白文) variant used to punch the glyph out of a
+ * paper-colored backing rect via an SVG `<mask>`. That's wrong: a mask
+ * applies to the WHOLE group it's attached to, so masking the glyph out of
+ * a group containing both the paper rect and the cinnabar field made both
+ * transparent in the glyph's shape -- on the dark site that showed as a
+ * charcoal hole straight through to the page background, not a cream
+ * glyph. Fixed by not knocking anything out at all: the cinnabar field is
+ * drawn solid, and the glyph is drawn ON TOP of it in paper color, both
+ * under the same stamped-edge filter so they share one printed texture.
  *
  * Server-safe (no hooks): renders identically under `renderToString`.
  */
@@ -60,7 +71,6 @@ export function Seal({ iconKey, name, size = 56, earned = true, variant, classNa
 
   const idBase = `seal-${sanitizeId(iconKey)}-${resolvedVariant}`;
   const filterId = `${idBase}-edge`;
-  const maskId = `${idBase}-mask`;
 
   const h = hashString(iconKey);
   const seed = h % 100;
@@ -86,36 +96,28 @@ export function Seal({ iconKey, name, size = 56, earned = true, variant, classNa
           <feTurbulence type="fractalNoise" baseFrequency={baseFrequency} numOctaves={2} seed={seed} result="oh-seal-noise" />
           <feDisplacementMap in="SourceGraphic" in2="oh-seal-noise" scale="1.6" xChannelSelector="R" yChannelSelector="G" />
         </filter>
-        {resolvedVariant === "filled" ? (
-          <mask id={maskId} maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
-            {/* White = visible (the cinnabar field), black = knocked out
-                (the glyph reads as carved through to the paper beneath). */}
-            <rect x="0" y="0" width="64" height="64" fill="#fff" />
-            <text
-              x="32"
-              y="33"
-              textAnchor="middle"
-              dominantBaseline="central"
-              fontSize="28"
-              fontFamily={GLYPH_FONT}
-              fill="#000"
-              aria-hidden="true"
-            >
-              {def.glyph}
-            </text>
-          </mask>
-        ) : null}
       </defs>
 
       {resolvedVariant === "filled" ? (
+        // No mask/knockout: a round seal must stay transparent outside its
+        // circle, and a masked group can't do that (see the note above), so
+        // the field is drawn solid and the glyph sits on top of it in paper
+        // color -- one filter group, one shared texture, no full-bleed rect.
         <g filter={`url(#${filterId})`}>
-          {/* Paper backing (inside the mask, below the cinnabar field) so the
-              knocked-out glyph reads as cream, not transparent. */}
-          <g mask={`url(#${maskId})`}>
-            <rect x="0" y="0" width="64" height="64" fill={PAPER} />
-            {isRound ? <circle cx="32" cy="32" r="27" fill={CINNABAR} /> : <rect x="5" y="5" width="54" height="54" rx="3" fill={CINNABAR} />}
-          </g>
+          {isRound ? <circle cx="32" cy="32" r="27" fill={CINNABAR} /> : <rect x="5" y="5" width="54" height="54" rx="3" fill={CINNABAR} />}
           {isDouble ? <rect x="11" y="11" width="42" height="42" rx="2" fill="none" stroke={PAPER} strokeWidth="1.4" opacity={0.85} /> : null}
+          <text
+            x="32"
+            y="33"
+            textAnchor="middle"
+            dominantBaseline="central"
+            fontSize="28"
+            fontFamily={GLYPH_FONT}
+            fill={PAPER}
+            aria-hidden="true"
+          >
+            {def.glyph}
+          </text>
         </g>
       ) : (
         <g filter={`url(#${filterId})`}>
