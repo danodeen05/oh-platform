@@ -785,6 +785,23 @@ export async function createPaymentIntent(prisma, stripe, { orderId, userId = nu
   await assertSavingsStillAvailable(prisma, order, now);
   if (amount < STRIPE_MIN_CHARGE_CENTS) throw new OrderError("AMOUNT_BELOW_MINIMUM", 400, "Card payments must be at least $0.50.", { amountDueCents: amount });
 
+  // One live payment per order (final web review follow-up): a second tab, a
+  // reload or cleared storage must never start a second charge. A stored intent
+  // that already took (or is taking) money is refused; one still waiting for a
+  // card is handed back as is; anything else is cancelled before a new one.
+  if (order.stripePaymentIntentId) {
+    const prev = await stripe.paymentIntents.retrieve(order.stripePaymentIntentId).catch(() => null);
+    if (prev && prev.metadata?.orderId === orderId) {
+      if (["succeeded", "processing", "requires_capture"].includes(prev.status)) {
+        throw new OrderError("PAYMENT_ALREADY_MADE", 409, "This order already has a payment. Refresh to see its status.", { paymentIntentId: prev.id });
+      }
+      if (prev.amount === amount && ["requires_payment_method", "requires_confirmation", "requires_action"].includes(prev.status)) {
+        return { clientSecret: prev.client_secret, paymentIntentId: prev.id, amountDueCents: amount, reused: true };
+      }
+      if (prev.status !== "canceled") await stripe.paymentIntents.cancel(prev.id).catch(() => null);
+    }
+  }
+
   let customer;
   if (order.userId && userId && order.userId === userId) {
     const user = await prisma.user.findUnique({ where: { id: order.userId } });

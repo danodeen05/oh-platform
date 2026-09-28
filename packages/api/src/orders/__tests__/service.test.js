@@ -238,6 +238,40 @@ describe("createPaymentIntent", () => {
     assert.equal(res.clientSecret, null);
     assert.equal(stripe.created.length, 0);
   });
+
+  test("one live payment per order: a second call reuses the waiting intent instead of starting a second charge", async () => {
+    const prisma = seed();
+    const stripe = fakeStripe();
+    const { order } = await placeOrder(prisma);
+    const first = await createPaymentIntent(prisma, stripe, { orderId: order.id, userId: "u1", now: NOW });
+    const second = await createPaymentIntent(prisma, stripe, { orderId: order.id, userId: "u1", now: NOW });
+    assert.equal(second.paymentIntentId, first.paymentIntentId);
+    assert.equal(second.reused, true);
+    assert.equal(stripe.created.length, 1);
+  });
+
+  test("an order whose stored intent already took money is refused (409), never charged twice", async () => {
+    const prisma = seed();
+    const stripe = fakeStripe();
+    const { order } = await placeOrder(prisma);
+    const first = await createPaymentIntent(prisma, stripe, { orderId: order.id, userId: "u1", now: NOW });
+    for (const status of ["succeeded", "processing"]) {
+      stripe.intents[first.paymentIntentId].status = status;
+      await assert.rejects(createPaymentIntent(prisma, stripe, { orderId: order.id, userId: "u1", now: NOW }), (e) => e.code === "PAYMENT_ALREADY_MADE" && e.status === 409);
+    }
+    assert.equal(stripe.created.length, 1);
+  });
+
+  test("a waiting intent for an old amount is cancelled before the new one is made", async () => {
+    const prisma = seed();
+    const stripe = fakeStripe();
+    const { order } = await placeOrder(prisma);
+    const first = await createPaymentIntent(prisma, stripe, { orderId: order.id, userId: "u1", now: NOW });
+    stripe.intents[first.paymentIntentId].amount = 999;
+    const second = await createPaymentIntent(prisma, stripe, { orderId: order.id, userId: "u1", now: NOW });
+    assert.notEqual(second.paymentIntentId, first.paymentIntentId);
+    assert.deepEqual(stripe.cancelled, [first.paymentIntentId]);
+  });
 });
 
 describe("markPaid", () => {
