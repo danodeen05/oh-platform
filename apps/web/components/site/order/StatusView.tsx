@@ -34,8 +34,13 @@ import { useOrderStatus, usePendingOrderLink, TENANT, type StatusOrder } from ".
 import { StatusTimeline } from "./StatusTimeline";
 import { ActionButton, PodCard, PRIMARY, SECONDARY, type ActionState } from "./PodCard";
 import { BackstoryLine, FortuneLine, KitchenFeed, RedStepLine, RoastLine } from "./AiLines";
-import { AddOnSheet } from "./AddOnSheet";
-import { JoinPrompt } from "./JoinPrompt";
+import dynamic from "next/dynamic";
+
+// Task G2b: the add-on sheet (and the menu model it builds from) loads when
+// the guest first taps "Add items", not with the status page.
+const AddOnSheet = dynamic(() => import("./AddOnSheet").then((m) => m.AddOnSheet), { ssr: false });
+// The join prompt shows only to a signed-out guest once the page has settled.
+const JoinPrompt = dynamic(() => import("./JoinPrompt").then((m) => m.JoinPrompt), { ssr: false });
 import { Spinner } from "./StepSheet";
 import "./after-order.css";
 
@@ -84,6 +89,11 @@ export function StatusView({ code, embedded, followParent, demoStage: demoStageP
   const [staff, setStaff] = useState<ActionState>("idle");
   const [dessert, setDessert] = useState<ActionState>("idle");
   const [addOns, setAddOns] = useState(false);
+  // Mounted on first open and kept, so the sheet's close animation plays.
+  const [addOnsMounted, setAddOnsMounted] = useState(false);
+  useEffect(() => {
+    if (addOns) setAddOnsMounted(true);
+  }, [addOns]);
   const [confirmDone, setConfirmDone] = useState(false);
   const [doneBusy, setDoneBusy] = useState(false);
 
@@ -444,7 +454,7 @@ export function StatusView({ code, embedded, followParent, demoStage: demoStageP
         ) : null}
       </div>
 
-      {order ? (
+      {order && addOnsMounted ? (
         <AddOnSheet
           open={addOns}
           onClose={() => setAddOns(false)}

@@ -35,7 +35,10 @@ import { toOrderApiError } from "@/lib/site/orders";
 import { NIGHT_APPEARANCE, STRIPE_FONTS } from "@/lib/site/stripe-night";
 import { GIFT_DESIGNS, GIFT_MAX_DOLLARS, GIFT_MIN_DOLLARS, GIFT_PRESETS, giftAmountValid, giftDesign, giftErrorCode, parseGiftDollars, type GiftDesign } from "@/lib/site/store";
 import { GiftCardFace } from "./GiftCardFace";
-import { PaymentReceived, type ReceivedState } from "@/components/site/store/PaymentReceived";
+import type { ReceivedState } from "@/components/site/store/PaymentReceived";
+
+// Task G2b: the after-payment panel loads when a payment has gone through.
+const PaymentReceived = dynamic(() => import("@/components/site/store/PaymentReceived").then((m) => m.PaymentReceived), { ssr: false });
 import { clearPending, finishWithRetry, isPendingGift, loadPending, PENDING_GIFT_KEY, retryable, savePending, type FinishResult, type PendingGift } from "@/lib/site/paid-recovery";
 
 const FORM_ID = "oh-gift-pay-form";
