@@ -238,7 +238,7 @@ describe("firstNameOnly (A8b fix round 1 addendum)", () => {
 describe("end-to-end: GET /orders/lookup composition (fix round 1 addendum)", () => {
   // Mirrors the route in index.js.
   async function respondAsLookup(order, req, deps) {
-    const canSeeFull = isDemoOrderId(order.id) || (await canSeeFullOrder(req, order, deps));
+    const canSeeFull = isDemoOrderId(order.id) || (await canSeeFullOrder(req, order, deps, () => NOW));
     if (order.arrivedAt) return arrivedLookupSummary(order, canSeeFull);
     return canSeeFull ? order : safeOrderView(order);
   }
@@ -322,7 +322,7 @@ describe("end-to-end: GET /orders/lookup composition (fix round 1 addendum)", ()
 describe("end-to-end: GET /orders/status composition (fix round 1 addendum)", () => {
   // Mirrors the route in index.js: guestName is full for canSeeFull, else first-name-only.
   async function statusGuestName(order, req, deps) {
-    const canSeeFull = isDemoOrderId(order.id) || (await canSeeFullOrder(req, order, deps));
+    const canSeeFull = isDemoOrderId(order.id) || (await canSeeFullOrder(req, order, deps, () => NOW));
     const fullGuestName = order.guestName || order.guest?.name || null;
     return canSeeFull ? fullGuestName : firstNameOnly(fullGuestName);
   }
