@@ -10,10 +10,11 @@
  *    English, so the page reads the locale's own column and never shows an
  *    English description on a zh or es page (the sheet uses a translated
  *    group line instead).
- *  - An item is listed only when it has a name in every site locale, so no
- *    page ever shows an untranslated English name. (It hid "Thin/Flat
- *    Noodles" until Task F1's backfill gave that row its names.) The order
- *    flow applies the same rule through translatedSteps().
+ *  - Final review I2: an available item is listed whenever it has any name:
+ *    the locale's own name when it has one, else the English name. English
+ *    on a zh or es page is better than an item missing from the menu and
+ *    the order flow (an untranslated soup used to vanish for everyone).
+ *    The order flow applies the same rule through translatedSteps().
  *  - Slider rows show `sliderConfig.displayLabels` (F1a), never `labels`.
  *  - Early access: /menu/steps already filters by the caller's tier, so an
  *    item whose `releaseAt` is still ahead was sent only because this
@@ -163,19 +164,33 @@ export function localDescription(item: ApiMenuItem, locale: string): string | nu
   }
 }
 
-/** Translated in every site locale, so it can be listed on any page. */
+/** Translated in every site locale (the admin can warn about the rest; nothing is hidden for it any more). */
 export function fullyNamed(item: ApiMenuItem): boolean {
   return ["en", "zh-TW", "zh-CN", "es"].every((l) => localName(item, l) !== null);
 }
 
 /**
- * The order flow's copy of the same rule (Task F1): GET /menu/steps with every
- * item that lacks a name in some site locale removed, so the bowl builder
- * never offers an untranslated English name on a zh or es page. A slider
- * section whose item isn't fully named is dropped too.
+ * The name to show on a `locale` page (final review I2): the locale's own
+ * column, else English, else any other name. Null only when the row has no
+ * name at all.
+ */
+export function displayName(item: NamedMenuItem, locale: string): string | null {
+  return localName(item, locale) ?? trimmed(englishOf(item)) ?? localName(item, "zh-TW") ?? localName(item, "zh-CN") ?? localName(item, "es");
+}
+
+/** Has a name to show in some language, so it can be listed (English where the locale has none). */
+export function hasName(item: NamedMenuItem): boolean {
+  return displayName(item, "en") !== null;
+}
+
+/**
+ * The order flow's copy of the same rule (Task F1, final review I2): GET
+ * /menu/steps with only the nameless rows removed. The API's `name` already
+ * falls back to English when the locale's column is empty, so an item that
+ * isn't translated yet is still offered (in English) rather than hidden.
  */
 export function translatedSteps<Step extends { sections: Array<{ items?: unknown[]; item?: unknown }> }>(steps: Step[]): Step[] {
-  const named = (i: unknown) => fullyNamed(i as ApiMenuItem);
+  const named = (i: unknown) => hasName(i as NamedMenuItem);
   return steps.map(
     (step) =>
       ({
@@ -213,11 +228,12 @@ export function photoOf(nameEn: string): MenuPhoto | null {
 function card(item: ApiMenuItem, group: MenuGroupKey, locale: string, now: Date): MenuCard | null {
   if (item.isAvailable === false) return null;
   const nameEn = englishOf(item);
-  if (HIDDEN.has(nameEn) || !fullyNamed(item)) return null;
+  const name = displayName(item, locale);
+  if (HIDDEN.has(nameEn) || !name) return null;
   return {
     id: item.id,
     group,
-    name: localName(item, locale) as string,
+    name,
     nameEn,
     description: localDescription(item, locale),
     priceCents: Math.max(0, Number(item.basePriceCents) || 0),
@@ -236,13 +252,13 @@ export function menuView(steps: ApiMenuStep[], locale: string, now: Date = new D
     for (const section of step.sections || []) {
       if (section.selectionMode === "SLIDER") {
         const item = section.item;
-        if (!item || item.isAvailable === false || !fullyNamed(item) || seen.has(item.id)) continue;
+        if (!item || item.isAvailable === false || !hasName(item) || seen.has(item.id)) continue;
         const config = section.sliderConfig || item.sliderConfig || null;
         const options = (config?.displayLabels || []).filter((o): o is string => typeof o === "string" && o.length > 0);
         if (!options.length) continue;
         seen.add(item.id);
         const d = Number(config?.default ?? 0);
-        sliders.push({ id: item.id, name: localName(item, locale) as string, options, defaultIndex: Number.isInteger(d) && d >= 0 && d < options.length ? d : 0 });
+        sliders.push({ id: item.id, name: displayName(item, locale) as string, options, defaultIndex: Number.isInteger(d) && d >= 0 && d < options.length ? d : 0 });
         continue;
       }
       const group = SECTION_GROUP[section.id];

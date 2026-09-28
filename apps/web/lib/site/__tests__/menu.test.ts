@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fullyNamed, isEarly, localDescription, localName, marksOf, menuView, orderHref, photoOf, translatedSteps, type ApiMenuItem, type ApiMenuStep } from "../menu";
+import { displayName, fullyNamed, hasName, isEarly, localDescription, localName, marksOf, menuView, orderHref, photoOf, translatedSteps, type ApiMenuItem, type ApiMenuStep } from "../menu";
 import { emptyDraft, withPreselectedItem, type MenuStep } from "../order-draft";
 
 const NOW = new Date("2026-09-28T18:00:00Z");
@@ -108,13 +108,27 @@ describe("menu view (Task D3)", () => {
     expect(menuView(STEPS, "zh-TW", NOW).groups[0].items[0].description).toBeNull();
   });
 
-  it("hides No Noodles, unavailable items and items without a name in every locale", () => {
+  it("hides No Noodles and unavailable items", () => {
     const ids = menuView(STEPS, "en", NOW).groups.flatMap((g) => g.items.map((i) => i.id));
     expect(ids).not.toContain("none");
     expect(ids).not.toContain("off");
-    expect(ids).not.toContain("thin");
-    expect(fullyNamed(STEPS[2].sections[1].items![1])).toBe(false);
-    expect(localName(STEPS[2].sections[1].items![1], "zh-TW")).toBeNull();
+  });
+
+  it("final review I2: an untranslated item is still listed, in English, on every page", () => {
+    const thin = STEPS[2].sections[1].items![1];
+    expect(fullyNamed(thin)).toBe(false);
+    expect(localName(thin, "zh-TW")).toBeNull();
+    for (const locale of ["en", "zh-TW", "zh-CN", "es"]) {
+      const card = menuView(STEPS, locale, NOW).groups.flatMap((g) => g.items).find((i) => i.id === "thin");
+      expect(card?.name, locale).toBe("Thin/Flat Noodles");
+    }
+    // The locale's own name still wins where there is one.
+    expect(displayName({ ...thin, nameEs: "Fideos finos" }, "es")).toBe("Fideos finos");
+    expect(displayName({ ...thin, nameEs: "Fideos finos" }, "zh-TW")).toBe("Thin/Flat Noodles");
+    // Only a row with no name at all is left out.
+    const nameless = { id: "x", name: "  ", nameEn: null, nameZhTW: null, nameZhCN: null, nameEs: null };
+    expect(hasName(nameless as never)).toBe(false);
+    expect(displayName({ ...nameless, nameZhTW: "只有中文" } as never, "en")).toBe("只有中文");
   });
 
   it("slider rows show displayLabels, never labels", () => {
@@ -151,20 +165,21 @@ describe("menu view (Task D3)", () => {
 });
 
 describe("translatedSteps (Task F1: the bowl builder's copy of the rule)", () => {
-  it("drops items without a name in every locale and keeps everything else in place", () => {
+  it("final review I2: keeps an item that isn't translated everywhere (the API names it in English)", () => {
     const out = translatedSteps(STEPS);
     const ids = out.flatMap((s) => s.sections.flatMap((sec) => (sec.items ?? []).map((i) => i.id)));
-    expect(ids).not.toContain("thin");
-    expect(ids).toEqual(["classic", "wagyu", "wide", "gf", "none", "marrow", "cukes", "off", "pepsi"]);
+    expect(ids).toContain("thin");
     expect(out.map((s) => s.sections.map((sec) => sec.id))).toEqual(STEPS.map((s) => s.sections.map((sec) => sec.id)));
-    // The input isn't mutated.
-    expect(STEPS[2].sections[1].items!.map((i) => i.id)).toContain("thin");
   });
 
-  it("drops a slider section whose item isn't fully named", () => {
+  it("keeps a slider section whose item lacks one locale, and drops only nameless rows", () => {
     const bare = { ...STEPS[1], sections: [{ ...STEPS[1].sections[0], item: { ...STEPS[1].sections[0].item!, nameEs: null } }] };
-    expect(translatedSteps([bare])[0].sections).toEqual([]);
-    expect(translatedSteps([STEPS[1]])[0].sections).toHaveLength(1);
+    expect(translatedSteps([bare])[0].sections).toHaveLength(1);
+    const nameless = { ...STEPS[1], sections: [{ ...STEPS[1].sections[0], item: { ...STEPS[1].sections[0].item!, name: "", nameEn: null, nameZhTW: null, nameZhCN: null, nameEs: null } }] };
+    expect(translatedSteps([nameless])[0].sections).toEqual([]);
+    const input = STEPS[2].sections[1].items!.length;
+    translatedSteps(STEPS);
+    expect(STEPS[2].sections[1].items!.length).toBe(input); // not mutated
   });
 });
 
