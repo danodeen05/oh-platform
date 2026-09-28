@@ -144,8 +144,8 @@ function ConfirmationContent() {
     if (redirectHandledRef.current && order) {
       // Still need to fetch group orders if applicable
       if ((order.groupOrderId || groupCode) && groupOrders.length === 0) {
-        fetch(`${BASE}/group-orders/${groupCode || order.groupOrderId}`, {
-          headers: { "x-tenant-slug": "oh" },
+        api(`${BASE}/group-orders/${groupCode || order.groupOrderId}`, {
+          headers: { "x-tenant-slug": "oh", ...groupIdentityHeaders(guest) },
         })
           .then(res => res.ok ? res.json() : null)
           .then(data => data?.orders && setGroupOrders(data.orders))
@@ -173,8 +173,8 @@ function ConfirmationContent() {
 
           // If this is a group order, fetch all orders in the group
           if (data.groupOrderId || groupCode) {
-            const groupResponse = await fetch(`${BASE}/group-orders/${groupCode || data.groupOrderId}`, {
-              headers: { "x-tenant-slug": "oh" },
+            const groupResponse = await api(`${BASE}/group-orders/${groupCode || data.groupOrderId}`, {
+              headers: { "x-tenant-slug": "oh", ...groupIdentityHeaders(guest) },
             });
             if (groupResponse.ok) {
               const groupData = await groupResponse.json();
@@ -703,7 +703,7 @@ function ConfirmationContent() {
                     </span>
                   </div>
                   <div style={{ fontSize: "0.85rem", color: "#666", marginBottom: 12 }}>
-                    {groupOrder.user?.name || groupOrder.guest?.name || `${t("orderLabel")} #${groupOrder.orderNumber.slice(-6)}`}
+                    {groupOrder.user?.name || groupOrder.guest?.name || (groupOrder.orderNumber ? `${t("orderLabel")} #${groupOrder.orderNumber.slice(-6)}` : t("orderLabel"))}
                     {" • "}${(groupOrder.totalCents / 100).toFixed(2)}
                   </div>
 

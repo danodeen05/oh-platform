@@ -109,7 +109,7 @@ export default async function GroupPaymentPage({ searchParams }: { searchParams:
         <section aria-label={t("payment.title")} className="min-w-0 rounded-[1.75rem] border border-oh-stone/70 bg-oh-ink p-5 md:p-7">
           {hostOrder ? (
             <Suspense fallback={null}>
-              <GroupPayForm groupCode={group.code} hostOrderId={hostOrder.id} hostOrderNumber={hostOrder.orderNumber} />
+              <GroupPayForm groupCode={group.code} hostOrderId={hostOrder.id} hostOrderNumber={hostOrder.orderNumber ?? null} />
             </Suspense>
           ) : (
             <Body locale={locale} className="m-0 text-oh-cream/80">

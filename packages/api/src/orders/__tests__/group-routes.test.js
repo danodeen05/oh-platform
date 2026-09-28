@@ -55,7 +55,7 @@ async function buildApp({ stripe = fakeStripe(), dineIn = true, orders = [], gro
   });
   const { calls, effects } = fakeEffects();
   const app = Fastify({ logger: false });
-  await registerGroupOrderRoutes(app, { prisma, stripe, customerAuth: fakeCustomerAuth, isDineInOrdersEnabled: () => dineIn, effects, now: () => NOW });
+  await registerGroupOrderRoutes(app, { prisma, stripe, customerAuth: fakeCustomerAuth, isDineInOrdersEnabled: () => dineIn, effects, now: () => NOW, isStaff: async (req) => req.headers["x-admin-api-key"] === "staff-key" });
   await app.ready();
   return { app, prisma, stripe, calls };
 }
@@ -542,5 +542,152 @@ describe("host pays for the group", () => {
     assert.equal(hook.json().refunded, true);
     assert.deepEqual(stripe.refundCalls.map((c) => c[0]), [{ payment_intent: pi.paymentIntentId }]);
     assert.equal((await prisma.order.findUnique({ where: { id: a.id } })).paymentStatus, "PENDING");
+  });
+});
+
+describe("Task D11b: order credentials only on the viewer's own order", () => {
+  const secretOrder = (id, extra) => ({
+    id,
+    groupOrderId: "g1",
+    orderNumber: `ORD-${id.toUpperCase()}-NUM`,
+    kitchenOrderNumber: "0042",
+    orderQrCode: `qr-${id}-secret`,
+    status: "PENDING_PAYMENT",
+    paymentStatus: "PENDING",
+    totalCents: 1599,
+    amountDueCents: 1599,
+    isGroupHost: false,
+    stripePaymentIntentId: `pi_${id}_secret`,
+    stripePaymentId: `ch_${id}_secret`,
+    guestPhone: "555-0199",
+    guestName: "Full Guest Name",
+    giftCardId: `gc_${id}`,
+    createdAt: NOW,
+    seat: { id: "s1", number: "7", label: "B-07", status: "RESERVED", locationId: "L1" },
+    items: [{ id: `i-${id}`, orderId: id, menuItemId: "classic", quantity: 1, priceCents: 1599, selectedValue: null, menuItem: { id: "classic", name: "Classic Beef Noodle Soup", category: "main01" } }],
+    user: null,
+    guest: null,
+    ...extra,
+  });
+  const HOST_ORDER = secretOrder("oh", { userId: "u1", guestId: null, isGroupHost: true, user: { id: "u1", name: "Dana Kim", email: "u1@x.com" } });
+  const MEMBER_ORDER = secretOrder("om", { userId: "u2", guestId: null, user: { id: "u2", name: "Jordan Rivera", email: "u2@x.com" } });
+  const GUEST_ORDER = secretOrder("og", { userId: null, guestId: "guest2", guest: { id: "guest2", name: "Sam Lee", sessionToken: "gs_sam" } });
+  const group = () => ({ ...GROUP, paymentIntentId: "pi_group_secret", paymentMethod: "HOST_PAYS_ALL", orders: [HOST_ORDER, MEMBER_ORDER, GUEST_ORDER].map((o) => ({ ...o })) });
+  const CREDENTIALS = /ORD-O[HMG]-NUM|qr-o[hmg]-secret|0042/;
+  const SECRETS = /pi_o[hmg]_secret|ch_o[hmg]_secret|pi_group_secret|555-0199|gs_sam|u1@x\.com|u2@x\.com/;
+
+  test("a non-member code holder gets no order number or QR code for anyone, and no secret", async () => {
+    const { app } = await buildApp({ groups: [group()] });
+    const res = await app.inject({ method: "GET", url: "/group-orders/ABC234" });
+    assert.equal(res.statusCode, 200);
+    assert.doesNotMatch(res.body, CREDENTIALS);
+    assert.doesNotMatch(res.body, SECRETS);
+    const body = res.json();
+    for (const o of body.orders) {
+      assert.equal("orderNumber" in o, false);
+      assert.equal("orderQrCode" in o, false);
+      assert.equal("giftCardId" in o, false);
+      assert.equal("guestName" in o, false);
+    }
+    // Still enough for the lobby: status, money, items, pod, safe names, whose order is whose.
+    const host = body.orders.find((o) => o.id === "oh");
+    assert.equal(host.paymentStatus, "PENDING");
+    assert.equal(host.totalCents, 1599);
+    assert.equal(host.amountDueCents, 1599);
+    assert.equal(host.isGroupHost, true);
+    assert.equal(host.userId, "u1");
+    assert.equal(host.user.name, "Dana K.");
+    assert.deepEqual(host.seat, { id: "s1", number: "7", label: "B-07" });
+    assert.equal(host.items[0].menuItem.name, "Classic Beef Noodle Soup");
+    assert.equal(host.items[0].priceCents, 1599);
+    assert.equal(body.orders.find((o) => o.id === "og").guest.name, "Sam L.");
+  });
+
+  test("a signed-in stranger (not in the group) sees no one's credentials", async () => {
+    const { app } = await buildApp({ groups: [group()] });
+    const res = await app.inject({ method: "GET", url: "/group-orders/ABC234", headers: user("u9") });
+    assert.doesNotMatch(res.body, CREDENTIALS);
+    assert.doesNotMatch(res.body, SECRETS);
+  });
+
+  test("a member sees only their own order number and QR code; secrets stay stripped from their own order", async () => {
+    const { app } = await buildApp({ groups: [group()] });
+    const body = (await app.inject({ method: "GET", url: "/group-orders/ABC234", headers: user("u2") })).json();
+    const mine = body.orders.find((o) => o.id === "om");
+    assert.equal(mine.orderNumber, "ORD-OM-NUM");
+    assert.equal(mine.orderQrCode, "qr-om-secret");
+    assert.equal(mine.user.name, "Jordan Rivera");
+    for (const o of body.orders.filter((x) => x.id !== "om")) {
+      assert.equal("orderNumber" in o, false);
+      assert.equal("orderQrCode" in o, false);
+    }
+    assert.doesNotMatch(JSON.stringify(body), SECRETS);
+  });
+
+  test("a verified guest sees only their own; a bare guestId on /join unlocks nothing", async () => {
+    const { app } = await buildApp({ groups: [group()] });
+    const body = (await app.inject({ method: "GET", url: "/group-orders/ABC234", headers: guestSession("gs_sam") })).json();
+    assert.equal(body.orders.find((o) => o.id === "og").orderQrCode, "qr-og-secret");
+    assert.equal("orderQrCode" in body.orders.find((o) => o.id === "oh"), false);
+
+    const joined = await app.inject({ method: "POST", url: "/group-orders/ABC234/join", payload: { guestId: "guest2" } });
+    assert.equal(joined.statusCode, 200);
+    assert.doesNotMatch(joined.body, CREDENTIALS);
+  });
+
+  test("a guest session never unlocks a MEMBER's order that also carries that guest id", async () => {
+    const linked = secretOrder("om", { userId: "u2", guestId: "guest2" });
+    const { app } = await buildApp({ groups: [{ ...group(), orders: [linked] }] });
+    const body = (await app.inject({ method: "GET", url: "/group-orders/ABC234", headers: guestSession("gs_sam") })).json();
+    assert.equal("orderQrCode" in body.orders[0], false);
+  });
+
+  test("the host (the payment page's server read forwards their session) gets their own order number", async () => {
+    const { app } = await buildApp({ groups: [group()] });
+    const body = (await app.inject({ method: "GET", url: "/group-orders/ABC234", headers: user("u1") })).json();
+    const hostOrder = body.orders.find((o) => o.isGroupHost);
+    assert.equal(hostOrder.orderNumber, "ORD-OH-NUM");
+    assert.equal("orderNumber" in body.orders.find((o) => o.id === "om"), false);
+    assert.equal("paymentIntentId" in body, false);
+  });
+
+  test("staff see the full view", async () => {
+    const { app } = await buildApp({ groups: [group()] });
+    const body = (await app.inject({ method: "GET", url: "/group-orders/ABC234", headers: { "x-admin-api-key": "staff-key" } })).json();
+    for (const id of ["oh", "om", "og"]) {
+      const o = body.orders.find((x) => x.id === id);
+      assert.equal(o.orderNumber, `ORD-${id.toUpperCase()}-NUM`);
+      assert.equal(o.orderQrCode, `qr-${id}-secret`);
+    }
+    assert.equal(body.orders.find((x) => x.id === "oh").user.name, "Dana Kim");
+    assert.equal(body.paymentIntentId, "pi_group_secret");
+    assert.doesNotMatch(JSON.stringify(body), /gs_sam|u1@x\.com/);
+  });
+
+  test("host pays end to end: the host's confirm carries only the host's own credentials; the anonymous webhook confirm carries none", async () => {
+    const { app, stripe } = await buildApp();
+    const a = (await addOrder(app, "ABC234", user("u1"))).json();
+    const b = (await addOrder(app, "ABC234", guestSession("gs_sam"), [{ menuItemId: "wagyu", quantity: 1 }])).json();
+    assert.ok(a.orderNumber && a.orderQrCode, "the adder gets their own order's number and code back");
+    assert.ok(b.orderNumber && b.orderQrCode);
+    const pi = (await app.inject({ method: "POST", url: "/group-orders/ABC234/payment-intent", headers: user("u1") })).json();
+    stripe.intents[pi.paymentIntentId].status = "succeeded";
+    const ok = await app.inject({ method: "POST", url: "/group-orders/ABC234/confirm-payment", headers: user("u1"), payload: { paymentIntentId: pi.paymentIntentId } });
+    assert.equal(ok.statusCode, 200);
+    const orders = ok.json().orders;
+    const hostOrder = orders.find((o) => o.id === a.id);
+    const guestOrder = orders.find((o) => o.id === b.id);
+    assert.equal(hostOrder.orderNumber, a.orderNumber);
+    assert.equal(guestOrder.paymentStatus, "PAID");
+    assert.equal("orderNumber" in guestOrder, false);
+    assert.equal("orderQrCode" in guestOrder, false);
+    assert.equal(ok.body.includes(b.orderQrCode), false);
+    assert.equal(ok.body.includes(pi.paymentIntentId), false, "no Stripe reference comes back");
+
+    const hook = await app.inject({ method: "POST", url: "/group-orders/ABC234/confirm-payment", payload: { paymentIntentId: pi.paymentIntentId } });
+    assert.equal(hook.statusCode, 200);
+    assert.equal(hook.body.includes(a.orderQrCode), false);
+    assert.equal(hook.body.includes(b.orderQrCode), false);
+    assert.equal(hook.body.includes(a.orderNumber), false);
   });
 });

@@ -112,7 +112,7 @@ import { listLocationSeats, resolveSeatViewer } from "./seats/service.js";
 import { claimCheckInSeat } from "./seats/kiosk-seat.js";
 import { assignQueue, listFreePods, pickAutoPod, retiredPodInfo, POD_RETIRED } from "./seats/free-pods.js";
 import { claimSeat, holdSeatForOrder, holdPodAtPay } from "./orders/service.js";
-import { canSeeFullOrder, safeOrderView, firstNameOnly } from "./orders/order-view.js";
+import { canSeeFullOrder, safeOrderView, firstNameOnly, arrivedLookupSummary } from "./orders/order-view.js";
 import { registerKitchenStatusRoutes } from "./orders/kitchen-status.js";
 import { publicMealGift, nextMealGiftFor } from "./orders/meal-gift-view.js";
 import { registerMealGiftPayForward } from "./orders/meal-gift-routes.js";
@@ -348,6 +348,8 @@ await registerGroupOrderRoutes(app, {
   customerAuth,
   isDineInOrdersEnabled,
   effects: orderEffects,
+  // D11b: verified staff read the full group (every order's number and QR code).
+  isStaff: async (req) => Boolean(await checkAdminAuth(req)),
 });
 // Support cases (Task A9): public create (contact form, Chappy), staff list and
 // resolve (store credit, full-order card refund, decline). /admin/support/* is
@@ -2075,25 +2077,8 @@ app.get("/orders/lookup", async (req, reply) => {
   });
 
   if (order.arrivedAt) {
-    return reply.code(400).send({
-      error: "Order already checked in",
-      arrivedAt: order.arrivedAt,
-      seatNumber: order.seat?.number,
-      order: {
-        id: order.id,
-        orderNumber: order.orderNumber,
-        orderQrCode: order.orderQrCode,
-        status: order.status,
-        seatId: order.seatId,
-        seat: order.seat, // Include full seat object for display
-        totalCents: order.totalCents,
-        guestName: canSeeFull ? order.guestName : firstNameOnly(order.guestName),
-        items: order.items,
-        user: order.user
-          ? { name: canSeeFull ? order.user.name : firstNameOnly(order.user.name), membershipTier: canSeeFull ? order.user.membershipTier : undefined }
-          : null,
-      },
-    });
+    // D11b: the QR code only for the owner, staff or a same-location kiosk.
+    return reply.code(400).send(arrivedLookupSummary(order, canSeeFull));
   }
 
   return reply.send(canSeeFull ? order : safeOrderView(order));

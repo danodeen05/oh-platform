@@ -40,7 +40,7 @@ const primary =
 
 type Phase = "loading" | "ready" | "paying" | "confirming" | "seating" | "failed" | "unfinished" | "processing" | "error";
 
-export function GroupPayForm({ groupCode, hostOrderId, hostOrderNumber }: { groupCode: string; hostOrderId: string; hostOrderNumber: string }) {
+export function GroupPayForm({ groupCode, hostOrderId, hostOrderNumber }: { groupCode: string; hostOrderId: string; hostOrderNumber: string | null }) {
   const t = useTranslations("groupLobby.payment");
   const th = useTranslations("groupOrder.hostPay");
   const locale = useLocale();
@@ -93,7 +93,7 @@ export function GroupPayForm({ groupCode, hostOrderId, hostOrderNumber }: { grou
       } catch {
         /* seating is retried by staff at arrival; the payment stands */
       }
-      router.push(localizedHref(locale, `/order/confirmation?orderId=${hostOrderId}&orderNumber=${hostOrderNumber}&groupCode=${groupCode}&orderCount=${orderCount}&paid=true`));
+      router.push(localizedHref(locale, `/order/confirmation?orderId=${hostOrderId}${hostOrderNumber ? `&orderNumber=${encodeURIComponent(hostOrderNumber)}` : ""}&groupCode=${groupCode}&orderCount=${orderCount}&paid=true`));
     },
     [api, groupCode, hostOrderId, hostOrderNumber, locale, picks, router],
   );

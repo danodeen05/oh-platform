@@ -294,7 +294,7 @@ export function GroupLobby({ initialGroup }: { initialGroup: Group }) {
                   <h2 id="group-mine" className="m-0 text-xl font-semibold text-oh-cream">
                     {t("mine.title")}
                   </h2>
-                  <p className="m-0 mt-1 text-sm text-oh-mute">{t("mine.number", { number: myOrder.orderNumber })}</p>
+                  {myOrder.orderNumber ? <p className="m-0 mt-1 text-sm text-oh-mute">{t("mine.number", { number: myOrder.orderNumber })}</p> : null}
                 </div>
                 <p className="m-0 shrink-0 text-xl font-semibold tabular-nums text-oh-cream">{money(myOrder.totalCents)}</p>
               </div>
@@ -319,7 +319,7 @@ export function GroupLobby({ initialGroup }: { initialGroup: Group }) {
                   <p className="m-0 text-lg font-semibold text-oh-cream">{t("mine.payTitle")}</p>
                   <p className="m-0 mt-1 text-base text-oh-cream/75">{t("mine.payBody")}</p>
                   <Link
-                    href={href(`/order/payment?orderId=${myOrder.id}&orderNumber=${myOrder.orderNumber}&total=${myOrder.totalCents}`)}
+                    href={href(`/order/payment?orderId=${myOrder.id}&orderNumber=${myOrder.orderNumber ?? ""}&total=${myOrder.totalCents}`)}
                     className={`${primary} mt-4`}
                     data-group-pay-own
                   >
@@ -595,7 +595,7 @@ function DonePanel({ group, podLabels, soon, myOrder }: { group: Group; podLabel
       )}
       {myOrder ? (
         <Link
-          href={localizedHref(locale, `/order/confirmation?orderId=${myOrder.id}&orderNumber=${myOrder.orderNumber}&groupCode=${group.code}&total=${myOrder.totalCents}&paid=true`)}
+          href={localizedHref(locale, `/order/confirmation?orderId=${myOrder.id}&orderNumber=${myOrder.orderNumber ?? ""}&groupCode=${group.code}&total=${myOrder.totalCents}&paid=true`)}
           className={`${quiet} mt-6`}
         >
           {t("view")}

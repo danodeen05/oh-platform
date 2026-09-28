@@ -8,7 +8,7 @@
  */
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { canSeeFullOrder, safeOrderView, firstNameOnly } from "../order-view.js";
+import { canSeeFullOrder, safeOrderView, firstNameOnly, arrivedLookupSummary } from "../order-view.js";
 import { GUEST_SESSION_HEADER } from "../group-routes.js";
 import { createAdminAuth } from "../../auth/admin.js";
 import { createKioskAuth } from "../../auth/kiosk.js";
@@ -239,20 +239,30 @@ describe("end-to-end: GET /orders/lookup composition (fix round 1 addendum)", ()
   // Mirrors the route in index.js.
   async function respondAsLookup(order, req, deps) {
     const canSeeFull = isDemoOrderId(order.id) || (await canSeeFullOrder(req, order, deps));
-    if (order.arrivedAt) {
-      return {
-        order: {
-          id: order.id,
-          orderNumber: order.orderNumber,
-          guestName: canSeeFull ? order.guestName : firstNameOnly(order.guestName),
-          user: order.user
-            ? { name: canSeeFull ? order.user.name : firstNameOnly(order.user.name), membershipTier: canSeeFull ? order.user.membershipTier : undefined }
-            : null,
-        },
-      };
-    }
+    if (order.arrivedAt) return arrivedLookupSummary(order, canSeeFull);
     return canSeeFull ? order : safeOrderView(order);
   }
+
+  test("D11b: an arrived order's QR code goes only to the owner, staff or a same-location kiosk", async () => {
+    const arrived = { ...baseOrder, arrivedAt: new Date(), orderQrCode: "qr-secret-1" };
+    const anon = await respondAsLookup(arrived, { headers: {} }, buildDeps());
+    assert.equal("orderQrCode" in anon.order, false);
+    assert.equal(JSON.stringify(anon).includes("qr-secret-1"), false);
+    assert.equal(anon.order.orderNumber, "ORD-1");
+    assert.equal(anon.error, "Order already checked in");
+
+    const other = await respondAsLookup(arrived, { headers: {} }, buildDeps({ customer: { kind: "user", userId: "u-other" } }));
+    assert.equal("orderQrCode" in other.order, false);
+    const farKiosk = await respondAsLookup(arrived, { headers: { authorization: "Bearer kiosk_abc123" } }, buildDeps({ devices: { kiosk_abc123: { id: "d1", locationId: "L2", isActive: true } } }));
+    assert.equal("orderQrCode" in farKiosk.order, false);
+
+    const owner = await respondAsLookup(arrived, { headers: {} }, buildDeps({ customer: { kind: "user", userId: "u1" } }));
+    assert.equal(owner.order.orderQrCode, "qr-secret-1");
+    const staff = await respondAsLookup(arrived, { headers: { "x-admin-api-key": "admin-key-123" } }, buildDeps());
+    assert.equal(staff.order.orderQrCode, "qr-secret-1");
+    const kiosk = await respondAsLookup(arrived, { headers: { authorization: "Bearer kiosk_abc123" } }, buildDeps({ devices: { kiosk_abc123: { id: "d1", locationId: "L1", isActive: true } } }));
+    assert.equal(kiosk.order.orderQrCode, "qr-secret-1");
+  });
 
   const baseOrder = { ...MEMBER_ORDER, orderNumber: "ORD-1", guestName: null, user: { id: "u1", name: "Dan Odeen", email: "dan@x.com", membershipTier: "NOODLE_MASTER" } };
 

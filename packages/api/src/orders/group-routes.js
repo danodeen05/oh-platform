@@ -2,7 +2,9 @@
  * Group order routes (Task A7; moved out of index.js).
  *
  *   POST   /group-orders                           create; the host is the verified caller
- *   GET    /group-orders/:code                     read (no guest session tokens, no member PII)
+ *   GET    /group-orders/:code                     read (no guest session tokens, no member PII; an
+ *                                                  order's number and QR code only to its own
+ *                                                  verified member or guest, or to staff: D11b)
  *   POST   /group-orders/:code/join                join as the verified caller
  *   PATCH  /group-orders/:code                     host: close, cancel, choose who pays
  *   POST   /group-orders/:code/orders              add the caller's order (quoteOrder + createOrder)
@@ -80,7 +82,7 @@ function emailDerivedFirstName(email) {
  */
 function safeUser(u, viewer = null) {
   if (!u || typeof u !== "object") return u;
-  if (viewer?.userId && u.id === viewer.userId) return { id: u.id, name: u.name ?? null };
+  if (viewer?.staff || (viewer?.userId && u.id === viewer.userId)) return { id: u.id, name: u.name ?? null };
   const name = displayName(u.name) ?? emailDerivedFirstName(u.email);
   return { id: u.id, name };
 }
@@ -88,13 +90,64 @@ function safeUser(u, viewer = null) {
 /** Same display rule as `safeUser`: "First L.", or "Guest" when there's no name at all. */
 function safeGuest(g, viewer = null) {
   if (!g || typeof g !== "object") return g;
-  if (viewer?.guestId && g.id === viewer.guestId) return { id: g.id, name: g.name ?? null };
+  if (viewer?.staff || (viewer?.guestId && g.id === viewer.guestId)) return { id: g.id, name: g.name ?? null };
   return { id: g.id, name: displayName(g.name, "Guest") };
+}
+
+/**
+ * Task D11b: what a group code holder may see of SOMEONE ELSE'S order, as an
+ * explicit allowlist: enough for the lobby, the host payment summary and the
+ * confirmation's member list. Never the order's credentials: `orderQrCode`
+ * checks the order in, starts its kitchen ticket, calls staff to its pod and
+ * links an unlinked guest order to an account; `orderNumber` finds it at the
+ * kiosk lookup. Those stay on the viewer's OWN order only.
+ */
+const MEMBER_ORDER_FIELDS = [
+  "id",
+  "groupOrderId",
+  "status",
+  "paymentStatus",
+  "totalCents",
+  "amountDueCents",
+  "userId",
+  "guestId",
+  "isGroupHost",
+  "createdAt",
+  "arrivedAt",
+  "podConfirmedAt",
+];
+const MEMBER_ITEM_FIELDS = ["id", "menuItemId", "quantity", "priceCents", "selectedValue", "menuItem"];
+/** Stripped from the viewer's own order too: payment references and contact fields. Staff keep them. */
+const SECRET_ORDER_FIELDS = ["stripePaymentIntentId", "stripePaymentId", "guestPhone", "guestEmail", "sessionToken"];
+
+function pickFields(obj, keys) {
+  const out = {};
+  for (const k of keys) if (k in obj) out[k] = obj[k];
+  return out;
+}
+
+/** The viewer's own order: the verified member's, or the verified guest's guest order (the same "own" as DELETE). */
+function isViewersOrder(o, viewer) {
+  if (viewer?.userId) return o.userId === viewer.userId;
+  if (viewer?.guestId) return o.guestId === viewer.guestId && !o.userId;
+  return false;
 }
 
 function publicOrder(o, viewer = null) {
   if (!o || typeof o !== "object") return o;
-  const out = { ...o };
+  let out;
+  if (viewer?.staff) {
+    out = { ...o };
+  } else if (isViewersOrder(o, viewer)) {
+    out = { ...o };
+    for (const k of SECRET_ORDER_FIELDS) delete out[k];
+  } else {
+    out = pickFields(o, MEMBER_ORDER_FIELDS);
+    if (Array.isArray(o.items)) out.items = o.items.map((it) => (it && typeof it === "object" ? pickFields(it, MEMBER_ITEM_FIELDS) : it));
+    if ("seat" in o) out.seat = o.seat ? { id: o.seat.id, number: o.seat.number ?? null, label: o.seat.label ?? null } : null;
+    if ("user" in o) out.user = o.user;
+    if ("guest" in o) out.guest = o.guest;
+  }
   if ("user" in out) out.user = safeUser(out.user, viewer);
   if ("guest" in out) out.guest = safeGuest(out.guest, viewer);
   return out;
@@ -118,10 +171,17 @@ export function localizeGroup(group, locale = "en") {
   return out;
 }
 
-/** What any holder of the group code may see: no guest session tokens, no member contact details. */
+/**
+ * What any holder of the group code may see: no guest session tokens, no
+ * member contact details, no Stripe reference, and (Task D11b) only the
+ * viewer's own order carries its order number and QR code. `viewer` is
+ * `{ userId, guestId }` from resolveViewer, or `{ staff: true }` for
+ * verified staff (the full view).
+ */
 export function publicGroup(g, viewer = null) {
   if (!g) return g;
   const out = { ...g };
+  if (!viewer?.staff) delete out.paymentIntentId;
   if ("hostUser" in out) out.hostUser = safeUser(out.hostUser, viewer);
   if ("hostGuest" in out) out.hostGuest = safeGuest(out.hostGuest, viewer);
   if (Array.isArray(out.memberUsers)) out.memberUsers = out.memberUsers.map((u) => safeUser(u, viewer));
@@ -192,6 +252,7 @@ export async function registerGroupOrderRoutes(app, {
   isDineInOrdersEnabled = () => true,
   effects,
   now = () => new Date(),
+  isStaff = null,
 }) {
   /**
    * `{ userId, guestId }` (at most one set), the verified caller's own
@@ -202,6 +263,7 @@ export async function registerGroupOrderRoutes(app, {
    * as `x-guest-session` - never a client-sent guestId.
    */
   async function resolveViewer(req) {
+    if (isStaff && (await Promise.resolve(isStaff(req)).catch(() => false))) return { userId: null, guestId: null, staff: true };
     const who = await customerAuth.resolve(req);
     const userId = orderOwnerId(who);
     if (userId) return { userId, guestId: null };
@@ -304,7 +366,9 @@ export async function registerGroupOrderRoutes(app, {
     if (a.userId && !ids(group.memberUsers).includes(a.userId)) data.memberUsers = { connect: { id: a.userId } };
     if (!a.userId && a.guestId && !ids(group.memberGuests).includes(a.guestId)) data.memberGuests = { connect: { id: a.guestId } };
     if (Object.keys(data).length) await prisma.groupOrder.update({ where: { id: group.id }, data });
-    return fullGroup(group.id, { userId: a.userId, guestId: a.guestId });
+    // D11b: a bare body guestId may join, but it is not proof of identity: it
+    // never unlocks that guest's own order (its number and QR code) in the reply.
+    return fullGroup(group.id, a.verified ? { userId: a.userId, guestId: a.guestId } : null);
   });
 
   app.patch("/group-orders/:code", async (req, reply) => {

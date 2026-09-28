@@ -107,3 +107,33 @@ export function safeOrderView(order) {
     completedTime: order.completedTime ?? null,
   };
 }
+
+/**
+ * GET /orders/lookup's "already checked in" summary (Task D11b). The order's
+ * QR code is a credential (it checks the order in, starts its kitchen
+ * ticket, calls staff to its pod, links a guest order to an account), and the
+ * lookup is public by order number - so the code goes only to a caller who
+ * `canSeeFull` (the verified owner, staff, or a kiosk at the order's own
+ * location). Everyone else gets the rest of the summary with no code.
+ */
+export function arrivedLookupSummary(order, canSeeFull) {
+  return {
+    error: "Order already checked in",
+    arrivedAt: order.arrivedAt,
+    seatNumber: order.seat?.number,
+    order: {
+      id: order.id,
+      orderNumber: order.orderNumber,
+      ...(canSeeFull ? { orderQrCode: order.orderQrCode } : {}),
+      status: order.status,
+      seatId: order.seatId,
+      seat: order.seat, // Include full seat object for display
+      totalCents: order.totalCents,
+      guestName: canSeeFull ? order.guestName : firstNameOnly(order.guestName),
+      items: order.items,
+      user: order.user
+        ? { name: canSeeFull ? order.user.name : firstNameOnly(order.user.name), membershipTier: canSeeFull ? order.user.membershipTier : undefined }
+        : null,
+    },
+  };
+}

@@ -10,7 +10,8 @@ export type GroupStatus = "GATHERING" | "CLOSED" | "PAYING" | "PAID" | "PARTIALL
 
 export interface GroupMemberOrder {
   id: string;
-  orderNumber: string;
+  /** Task D11b: on the reader's OWN order only (the API strips it from everyone else's). */
+  orderNumber?: string;
   status: string;
   paymentStatus: string;
   totalCents: number;
