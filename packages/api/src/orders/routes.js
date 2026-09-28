@@ -259,7 +259,8 @@ export async function registerOrderRoutes(app, {
       const result = await markPaid(prisma, stripe, { orderId: id, paymentIntentId, now: now() }, effects);
       const full = await fullOrder(id);
       const view = (await viewerCanSeeFull(req, full)) ? full : safeOrderView(full);
-      return { ...view, alreadyPaid: result.alreadyPaid };
+      // podChange: the pod moved at pay time (its hold lapsed and another order took it), or none was free.
+      return { ...view, alreadyPaid: result.alreadyPaid, ...(result.podChange ? { podChange: result.podChange } : {}) };
     } catch (err) {
       return sendOrderError(reply, err);
     }

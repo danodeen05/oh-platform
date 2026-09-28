@@ -77,7 +77,8 @@ export async function assignKioskSeat(prisma, { locationId, orderId, request, no
         await releaseOwnHolds(tx, order);
         await tx.order.update({
           where: { id: order.id },
-          data: { seatId: host.dualPartnerSeatId, isDualPod: false, dualPartnerSeatId: null, podSelectionMethod: host.podSelectionMethod || "AUTO", ...hold },
+          // DUO_SHARED marks this seat as the other half of the host order's duo (orders/service.js sharesDuo).
+          data: { seatId: host.dualPartnerSeatId, isDualPod: false, dualPartnerSeatId: null, podSelectionMethod: "DUO_SHARED", ...hold },
         });
         const seat = await tx.seat.findUnique({ where: { id: host.dualPartnerSeatId } });
         return { ok: true, seatId: seat?.id ?? host.dualPartnerSeatId, label: seatName(seat), partnerLabel: null, fallback: false };

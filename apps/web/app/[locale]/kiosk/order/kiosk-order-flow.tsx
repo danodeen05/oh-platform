@@ -889,6 +889,15 @@ export default function KioskOrderFlow({
   async function confirmKioskPayment(orderIds: string[], paymentIntentId: string) {
     const res = await kioskConfirmPayment(orderIds, paymentIntentId || null, { baseUrl: BASE, headers: kioskAuthHeaders() });
     if (!res.ok) throw new Error("Failed to confirm payment");
+    // A hold that lapsed before payment may have moved to another pod (D12 fix
+    // round 2): show the pod each order actually has.
+    const paidOrders = (res.data as { orders?: Array<{ id: string; seatId?: string | null }> } | null)?.orders;
+    if (Array.isArray(paidOrders)) {
+      setGuestOrders((prev) => prev.map((g) => {
+        const o = paidOrders.find((p) => p && p.id === g.orderId);
+        return o && "seatId" in o ? { ...g, selectedPodId: o.seatId ?? undefined } : g;
+      }));
+    }
   }
 
   // Called when Stripe Terminal payment succeeds

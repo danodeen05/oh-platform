@@ -353,6 +353,97 @@ export async function pickBestPod(tx, { locationId, arrival = null, partySize = 
   throw new PodUnavailableError();
 }
 
+const LIVE_ORDER_STATUSES = ["PENDING_PAYMENT", "PAID", "QUEUED", "PREPPING", "READY", "SERVING"];
+
+/**
+ * Two orders of one party at one duo: one holds the duo, the other was seated
+ * at its other half by POST /kiosk/orders/:id/seat {shareWithOrderId}, which
+ * marks it podSelectionMethod "DUO_SHARED". An unrelated order that ended up
+ * on that half is a conflict, not a share.
+ */
+function sharesDuo(a, b) {
+  const sits = (host, guest) => Boolean(host.isDualPod && host.dualPartnerSeatId && guest.seatId === host.dualPartnerSeatId && guest.podSelectionMethod === "DUO_SHARED");
+  return sits(a, b) || sits(b, a);
+}
+
+/**
+ * Is `seatId` still this order's to keep at pay time? Yes when no other live
+ * order points at it (a party sharing a duo doesn't count) and it is either
+ * still RESERVED (this order's hold, even if its expiry passed before the
+ * release job ran) or free and re-claimed now with the conditional claimSeat.
+ */
+export async function holdSeatForOrder(tx, order, seatId) {
+  const others = await tx.order.findMany({
+    where: { id: { not: order.id }, status: { in: LIVE_ORDER_STATUSES }, OR: [{ seatId }, { dualPartnerSeatId: seatId }] },
+  });
+  if (others.some((o) => !sharesDuo(order, o))) return false;
+  const seat = await tx.seat.findUnique({ where: { id: seatId } });
+  if (!seat || seat.retiredAt) return false;
+  if (seat.status === "RESERVED") return true;
+  if (seat.status === "AVAILABLE") return claimSeat(tx, seatId);
+  return false; // OCCUPIED or CLEANING: someone is at it
+}
+
+/**
+ * The pod part of the PAID transition (Task D12 fix round 2). Keeps the
+ * order's pod when it is still held for it, re-claims it when it was freed,
+ * and otherwise assigns the next best pod with pickBestPod (same party size
+ * and duo rule, same arrival). No free pod: the order stays PAID with no seat
+ * and a POD_ISSUE support case tells staff. Never throws over a pod: payment
+ * must not fail because of seating.
+ *
+ * @returns {{ changed: boolean, noPod?: boolean, from: string|null, to?: string|null }}
+ */
+export async function holdPodAtPay(tx, order, now = new Date()) {
+  const seatIds = [order.seatId, ...(order.isDualPod && order.dualPartnerSeatId ? [order.dualPartnerSeatId] : [])];
+  const previous = await tx.seat.findUnique({ where: { id: order.seatId } });
+  const from = previous ? previous.label || previous.number || null : null;
+
+  const kept = [];
+  let ok = true;
+  for (const id of seatIds) {
+    if (await holdSeatForOrder(tx, order, id)) kept.push(id);
+    else { ok = false; break; }
+  }
+  if (ok) return { changed: false, from };
+
+  // Lost at least one seat: let go of what this order still held, then pick again.
+  for (const id of kept) await releaseClaim(tx, id);
+  let pod = null;
+  try {
+    pod = await pickBestPod(tx, { locationId: order.locationId, arrival: order.estimatedArrival || null, partySize: order.isDualPod ? 2 : 1 });
+  } catch (err) {
+    if (!(err instanceof PodUnavailableError)) throw err;
+  }
+  if (!pod) {
+    await tx.order.update({ where: { id: order.id }, data: { seatId: null, isDualPod: false, dualPartnerSeatId: null, podReservationExpiry: null, podReleasedAt: now, podReleasedNumber: from } });
+    await tx.supportCase.create({
+      data: {
+        type: "POD_ISSUE",
+        status: "OPEN",
+        summary: `No pod available at pay time for order #${order.orderNumber || order.id}${from ? ` (its hold on Pod ${from} had lapsed)` : ""}. Seat the guest when they arrive.`,
+        userId: order.userId || null,
+        orderId: order.id,
+        amountCents: null,
+      },
+    });
+    return { changed: true, noPod: true, from, to: null };
+  }
+  await tx.order.update({
+    where: { id: order.id },
+    data: {
+      seatId: pod.seat.id,
+      isDualPod: Boolean(pod.partner),
+      dualPartnerSeatId: pod.partner ? pod.partner.id : null,
+      podSelectionMethod: "AUTO",
+      podAssignedAt: now,
+      podReleasedAt: now,
+      podReleasedNumber: from,
+    },
+  });
+  return { changed: true, from, to: pod.seat.label || pod.seat.number || null };
+}
+
 /** Carries a preview's result out of the transaction that is being rolled back. */
 class PodPreview {
   constructor(value) {
@@ -912,12 +1003,16 @@ async function settleInTx(tx, orderId, { expectedAmountDueCents, paymentIntentId
     await tx.promoCode.update({ where: { id: order.promoCodeId }, data: { currentUsageCount: { increment: 1 } } });
   }
 
-  // Hold the pod for 15 minutes from payment (a pod already OCCUPIED, e.g.
-  // an add-on at the table, is left as it is).
+  // Hold the pod for 15 minutes from payment. Never an unconditional reserve
+  // (Task D12 fix round 2): a pod still held for this order is kept, a free
+  // one is re-claimed with claimSeat, and one another order took is replaced
+  // by the next best pod. No free pod leaves the order PAID with no seat and a
+  // staff note. An add-on is already at its pod and is left as it is.
+  let podChange = null;
   if (order.seatId && !isAddOn) {
-    const seats = [order.seatId, ...(order.isDualPod && order.dualPartnerSeatId ? [order.dualPartnerSeatId] : [])];
-    await tx.seat.updateMany({ where: { id: { in: seats }, status: { in: ["AVAILABLE", "RESERVED"] } }, data: { status: "RESERVED" } });
-    await tx.order.update({ where: { id: orderId }, data: { podReservationExpiry: new Date(now.getTime() + POD_HOLD_MS) } });
+    podChange = await holdPodAtPay(tx, order, now);
+    if (!podChange.noPod) await tx.order.update({ where: { id: orderId }, data: { podReservationExpiry: new Date(now.getTime() + POD_HOLD_MS) } });
+    if (!podChange.changed && !podChange.noPod) podChange = null;
   }
 
   // Streak and lifetime stats. Tier progress and cashback are NOT touched:
@@ -944,7 +1039,7 @@ async function settleInTx(tx, orderId, { expectedAmountDueCents, paymentIntentId
     }
   }
 
-  return { alreadyPaid: false, order: await tx.order.findUnique({ where: { id: orderId } }) };
+  return { alreadyPaid: false, order: await tx.order.findUnique({ where: { id: orderId } }), podChange };
 }
 
 /** Side effects after a PAID commit. Each is isolated: the payment is already recorded. */
@@ -1026,7 +1121,7 @@ export async function markPaid(prisma, stripe, { orderId, paymentIntentId = null
   if (result.alreadyPaid) return { alreadyPaid: true, order: await prisma.order.findUnique({ where: { id: orderId } }) };
 
   await runPaidEffects(prisma, result.order, effects, now);
-  return { alreadyPaid: false, order: result.order };
+  return { alreadyPaid: false, order: result.order, ...(result.podChange ? { podChange: result.podChange } : {}) };
 }
 
 /**
@@ -1116,7 +1211,9 @@ async function settleBatch(prisma, stripe, { ids, orders, pi, now, strict }, eff
   }
   const fresh = [];
   for (const id of ids) fresh.push(await prisma.order.findUnique({ where: { id } }));
-  return { alreadyPaid: paid.length === 0, orders: fresh };
+  // Pods that moved at pay time (a lapsed hold another order took), so the kiosk shows the real pod.
+  const podChanges = settled.map((r, i) => (r.podChange ? { orderId: orders[i].id, ...r.podChange } : null)).filter(Boolean);
+  return { alreadyPaid: paid.length === 0, orders: fresh, ...(podChanges.length ? { podChanges } : {}) };
 }
 
 /**

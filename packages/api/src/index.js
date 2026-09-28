@@ -101,6 +101,7 @@ import { createKioskAuth } from "./auth/kiosk.js";
 import { publicReferral, shopCreditSpender, registerAdminOnlyRoutes } from "./auth/hardening.js";
 import { listLocationSeats, resolveSeatViewer } from "./seats/service.js";
 import { claimCheckInSeat } from "./seats/kiosk-seat.js";
+import { claimSeat, holdSeatForOrder, holdPodAtPay } from "./orders/service.js";
 import { canSeeFullOrder, safeOrderView, firstNameOnly } from "./orders/order-view.js";
 
 // DEMO- order codes resolve to a synthetic order (see demo/status-demo.js):
@@ -579,9 +580,12 @@ async function processQueue(locationId) {
     const pod = availablePods[i];
 
     try {
-      // Assign pod and update statuses
-      const [updatedOrder, updatedSeat, updatedQueue] = await prisma.$transaction([
-        prisma.order.update({
+      // Assign pod and update statuses. The pod is taken with the conditional
+      // claimSeat (AVAILABLE -> RESERVED, one winner), never a plain write
+      // (Task D12 fix round 2): a pod a checkout claimed meanwhile is skipped.
+      const updatedOrder = await prisma.$transaction(async (tx) => {
+        if (!(await claimSeat(tx, pod.id))) return null;
+        const o = await tx.order.update({
           where: { id: queueEntry.orderId },
           data: {
             seatId: pod.id,
@@ -593,19 +597,20 @@ async function processQueue(locationId) {
             seat: true,
             user: true,
           },
-        }),
-        prisma.seat.update({
-          where: { id: pod.id },
-          data: { status: "RESERVED" },
-        }),
-        prisma.waitQueue.update({
+        });
+        await tx.waitQueue.update({
           where: { id: queueEntry.id },
           data: {
             status: "ASSIGNED",
             assignedAt: new Date(),
           },
-        }),
-      ]);
+        });
+        return o;
+      });
+      if (!updatedOrder) {
+        console.log(`[queue] Pod ${pod.number} was taken meanwhile; skipping`);
+        continue;
+      }
 
       // Send notification to customer
       await notifyPodReady(updatedOrder);
@@ -1751,42 +1756,33 @@ app.post("/orders/check-in", async (req, reply) => {
   }
 
   // CASE 1: Customer pre-selected a seat during online ordering
-  if (order.seatId && order.podSelectionMethod === "CUSTOMER_SELECTED") {
+  if (order.seatId && (order.podSelectionMethod === "CUSTOMER_SELECTED" || order.podSelectionMethod === "DUO_SHARED")) {
     // Check if their pre-selected pod is still available or reserved (for them)
     const preSelectedPod = await prisma.seat.findUnique({
       where: { id: order.seatId },
     });
 
-    // Pod is valid if it's AVAILABLE or RESERVED (reserved for this customer on payment)
-    if (preSelectedPod && (preSelectedPod.status === "AVAILABLE" || preSelectedPod.status === "RESERVED")) {
-      // Honor the customer's selection
-      const [updatedOrder, updatedSeat] = await prisma.$transaction([
-        prisma.order.update({
-          where: { id: order.id },
-          data: {
-            arrivedAt: now,
-            arrivalDeviation,
-            podAssignedAt: now,
-            status: "QUEUED",
-            queuedAt: now, // Track when order entered kitchen queue
-            paidAt: order.paidAt || now,
-          },
-          include: {
-            seat: true,
-            location: true,
-            items: {
-              include: {
-                menuItem: true,
-              },
+    // Honor the pre-selected pod only while it is still this order's: its own
+    // hold, or free and re-claimed now with claimSeat. A pod another order holds
+    // falls through to normal assignment (Task D12 fix round 2).
+    const updatedOrder = preSelectedPod
+      ? await prisma.$transaction(async (tx) => {
+          if (!(await holdSeatForOrder(tx, order, order.seatId))) return null;
+          return tx.order.update({
+            where: { id: order.id },
+            data: {
+              arrivedAt: now,
+              arrivalDeviation,
+              podAssignedAt: now,
+              status: "QUEUED",
+              queuedAt: now, // Track when order entered kitchen queue
+              paidAt: order.paidAt || now,
             },
-          },
-        }),
-        prisma.seat.update({
-          where: { id: order.seatId },
-          data: { status: "RESERVED" },
-        }),
-      ]);
-
+            include: { seat: true, location: true, items: { include: { menuItem: true } } },
+          });
+        })
+      : null;
+    if (updatedOrder) {
       return {
         status: "ASSIGNED",
         message: `Go to your selected Pod ${preSelectedPod.number}`,
@@ -1809,43 +1805,39 @@ app.post("/orders/check-in", async (req, reply) => {
     },
   });
 
-  if (availablePods.length > 0) {
-    // Pod available! Auto-assign immediately
-    const pod = availablePods[0];
-
-    const [updatedOrder, updatedSeat] = await prisma.$transaction([
-      prisma.order.update({
+  // Pod available: auto-assign the first one this call can actually claim
+  // (conditional claimSeat, Task D12 fix round 2).
+  let pod = null;
+  let autoOrder = null;
+  for (const candidate of availablePods) {
+    autoOrder = await prisma.$transaction(async (tx) => {
+      if (!(await claimSeat(tx, candidate.id))) return null;
+      return tx.order.update({
         where: { id: order.id },
         data: {
           arrivedAt: now,
           arrivalDeviation,
-          seatId: pod.id,
+          seatId: candidate.id,
           podAssignedAt: now,
           podSelectionMethod: "AUTO",
           status: "QUEUED",
           queuedAt: now, // Track when order entered kitchen queue
           paidAt: order.paidAt || now, // Set paidAt if not already set
         },
-        include: {
-          seat: true,
-          location: true,
-          items: {
-            include: {
-              menuItem: true,
-            },
-          },
-        },
-      }),
-      prisma.seat.update({
-        where: { id: pod.id },
-        data: { status: "RESERVED" },
-      }),
-    ]);
+        include: { seat: true, location: true, items: { include: { menuItem: true } } },
+      });
+    });
+    if (autoOrder) {
+      pod = candidate;
+      break;
+    }
+  }
 
+  if (pod && autoOrder) {
     return {
       status: "ASSIGNED",
       message: `Go to Pod ${pod.number}`,
-      order: updatedOrder,
+      order: autoOrder,
       podNumber: pod.number,
     };
   }
@@ -2616,31 +2608,20 @@ app.post("/orders/:id/assign-pod", async (req, reply) => {
     }
   }
 
-  // Assign pod and mark as RESERVED
-  const [updatedOrder, updatedSeat] = await prisma.$transaction([
-    prisma.order.update({
+  // Assign pod with the conditional claim (Task D12 fix round 2): a pod taken
+  // since the lookup above is a 409, never a double booking.
+  const updatedOrder = await prisma.$transaction(async (tx) => {
+    if (!(await claimSeat(tx, seat.id))) return null;
+    return tx.order.update({
       where: { id },
       data: {
         seatId: seat.id,
         podAssignedAt: new Date(),
       },
-      include: {
-        seat: true,
-        location: true,
-        items: {
-          include: {
-            menuItem: true,
-          },
-        },
-      },
-    }),
-    prisma.seat.update({
-      where: { id: seat.id },
-      data: {
-        status: "RESERVED",
-      },
-    }),
-  ]);
+      include: { seat: true, location: true, items: { include: { menuItem: true } } },
+    });
+  });
+  if (!updatedOrder) return reply.code(409).send({ error: "Pod is not available" });
 
   return updatedOrder;
 });
@@ -4545,13 +4526,11 @@ app.post("/payments/confirm", async (req, reply) => {
       data: updateData,
     });
 
-    // Reserve the seat if ASAP + pod selected
+    // Hold the seat if ASAP + pod selected: kept, re-claimed or replaced by the
+    // next best pod, never an unconditional reserve (Task D12 fix round 2).
     if (orderStatus === "QUEUED" && hasPodSelected) {
-      await prisma.seat.update({
-        where: { id: order.seatId },
-        data: { status: "RESERVED" },
-      });
-      console.log(`[Payment Confirmed] Pod ${order.seat?.number} reserved for order ${orderNumber}`);
+      const pod = await prisma.$transaction((tx) => holdPodAtPay(tx, { ...order, ...updatedOrder }, new Date()));
+      console.log(`[Payment Confirmed] Pod for order ${orderNumber}: ${pod.noPod ? "none free" : pod.changed ? `moved ${pod.from} -> ${pod.to}` : `kept ${pod.from}`}`);
     }
 
     console.log(`[Payment Confirmed] Order ${orderNumber} paid via payment link, status: ${orderStatus}`);
