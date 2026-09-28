@@ -108,7 +108,7 @@ import { createCustomerAuth, registerCustomerIdentity, orderOwnerId } from "./au
 import { registerChappyRoutes } from "./chappy/routes.js";
 import { createChappyLimits } from "./chappy/limits.js";
 import { createPodCall, PodCallError } from "./orders/pod-calls.js";
-import { FASTIFY_OPTIONS, globalRateLimitOptions } from "./http-config.js";
+import { FASTIFY_OPTIONS, createServerFactory, globalRateLimitOptions } from "./http-config.js";
 import { createKioskAuth } from "./auth/kiosk.js";
 import { publicReferral, registerAdminOnlyRoutes } from "./auth/hardening.js";
 import { listLocationSeats, resolveSeatViewer } from "./seats/service.js";
@@ -129,7 +129,8 @@ const basePrisma = new PrismaClient();
 const { prisma, source: statusDemoSource } = withStatusDemo(basePrisma);
 // trustProxy: one hop (Railway edge / dev nginx), so req.ip is the real client. See http-config.js.
 // A copy: Fastify writes to options.logger, and FASTIFY_OPTIONS is frozen.
-const app = Fastify({ ...FASTIFY_OPTIONS });
+// On Railway the client IP comes from X-Real-IP (createServerFactory, see http-config.js).
+const app = Fastify({ ...FASTIFY_OPTIONS, serverFactory: createServerFactory() });
 
 // Initialize Anthropic client (uses ANTHROPIC_API_KEY env var automatically)
 const anthropic = process.env.ANTHROPIC_API_KEY ? new Anthropic() : null;

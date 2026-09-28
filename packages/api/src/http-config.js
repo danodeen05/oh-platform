@@ -27,8 +27,40 @@
  * `config.rateLimit` settings and are unchanged.
  */
 import crypto from "node:crypto";
+import http from "node:http";
+import net from "node:net";
 
 export const TRUSTED_PROXY_HOPS = 1;
+
+/**
+ * Release 2 smoke finding: on Railway the rightmost X-Forwarded-For entry is
+ * an internal edge hop (152.233.47.x, rotating), not the visitor, so
+ * trustProxy: 1 alone still gave every client a proxy address. Railway
+ * documents X-Real-IP as the client's remote IP, set by its edge. On Railway
+ * only, a valid X-Real-IP replaces X-Forwarded-For before Fastify sees the
+ * request, so req.ip, the logs, the rate limits and clientIpOf all get the
+ * visitor. Off Railway (dev nginx, tests) nothing changes.
+ */
+export function isRailway(env = process.env) {
+  return Boolean(env.RAILWAY_ENVIRONMENT_ID || env.RAILWAY_ENVIRONMENT_NAME || env.RAILWAY_ENVIRONMENT);
+}
+
+export function normalizeClientIpHeaders(headers, env = process.env) {
+  if (!headers || !isRailway(env)) return;
+  const real = headers["x-real-ip"];
+  if (typeof real !== "string") return;
+  const ip = real.trim();
+  if (net.isIP(ip)) headers["x-forwarded-for"] = ip;
+}
+
+/** Fastify serverFactory that applies normalizeClientIpHeaders to every request. */
+export function createServerFactory(env = process.env) {
+  return (handler) =>
+    http.createServer((req, res) => {
+      normalizeClientIpHeaders(req.headers, env);
+      handler(req, res);
+    });
+}
 
 export const FASTIFY_OPTIONS = Object.freeze({ logger: true, trustProxy: TRUSTED_PROXY_HOPS });
 
