@@ -388,7 +388,7 @@ export function StatusView({ code, embedded, followParent, demoStage: demoStageP
               <FortuneLine orderQrCode={o.orderQrCode} />
               <RoastLine orderQrCode={o.orderQrCode} />
               {BACKSTORY_STAGES.includes(status) ? <BackstoryLine orderId={o.id} /> : null}
-              <RedStepLine name={firstName} />
+              <RedStepLine name={firstName} embedded={embedded} />
             </>
           ) : null}
 

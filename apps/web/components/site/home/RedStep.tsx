@@ -1,21 +1,23 @@
 /**
- * Task D1, chapter 7: One Red Step. The giving pledge, in the plan's words:
- * 1% of revenue from every company restaurant to ONE RED STEP AT A TIME,
- * the Utah mental health nonprofit.
+ * Task D1, chapter 6 (moved beside the no-tip promise on 2026-09-28, the
+ * plan's "Give Back block"): One Red Step. The giving pledge, in the plan's
+ * words: 1% of revenue from every company restaurant to ONE RED STEP AT A
+ * TIME, the Utah mental health nonprofit. The primary link goes to /giving;
+ * the foundation's own site is the secondary one.
  *
  * A single red thread sweeps in from the top and runs down the chapter's
  * left gutter beside the copy, drawing itself as you scroll through (a view
  * timeline on stroke-dashoffset, home.css). It never crosses the text.
  * Reduced motion shows it drawn.
  */
+import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { Icon } from "@/components/site/icons/Icon";
 import { Reveal } from "@/components/site/motion/Reveal";
 import { Body, Eyebrow, Title } from "@/components/site/Text";
+import { FOUNDATION } from "@/lib/site/foundation";
+import { localizedHref } from "@/lib/site/nav";
 import "./home.css";
-
-// Same site the footer and the business plan link to.
-const FOUNDATION_URL = "https://www.oneredstepatatime.org";
 
 export async function RedStep({ locale }: { locale: string }) {
   const t = await getTranslations("home.redStep");
@@ -50,17 +52,27 @@ export async function RedStep({ locale }: { locale: string }) {
         </Reveal>
         <Reveal className="mt-12 max-w-2xl md:ml-24">
           <p className={`m-0 ${serif} text-[clamp(1.35rem,5.2vw,2rem)] leading-snug text-oh-cream/90`}>{t("vision")}</p>
-          <a
-            href={FOUNDATION_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            data-red-step-link
-            className="mt-6 inline-flex min-h-11 items-center gap-2 text-base font-semibold text-oh-ember-light no-underline underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oh-cream"
-          >
-            {t("link")}
-            <span className="sr-only">{` (${t("newTab")})`}</span>
-            <Icon name="arrow" size={18} />
-          </a>
+          <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-3">
+            <Link
+              href={localizedHref(locale, "/giving")}
+              data-red-step-giving
+              className="inline-flex min-h-12 items-center gap-2 rounded-full border border-oh-ember-light/60 px-6 text-base font-semibold text-oh-cream no-underline transition-colors hover:border-oh-ember-light hover:bg-oh-ember-light/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oh-cream"
+            >
+              {t("giving")}
+              <Icon name="arrow" size={18} />
+            </Link>
+            <a
+              href={FOUNDATION.website}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-red-step-link
+              className="inline-flex min-h-11 items-center gap-2 text-base font-semibold text-oh-ember-light no-underline underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oh-cream"
+            >
+              {t("link")}
+              <span className="sr-only">{` (${t("newTab")})`}</span>
+              <Icon name="arrow" size={18} />
+            </a>
+          </div>
         </Reveal>
       </div>
     </section>

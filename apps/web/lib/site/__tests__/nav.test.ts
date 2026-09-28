@@ -48,8 +48,8 @@ describe("DOCK_ITEMS", () => {
 });
 
 describe("MORE_ITEMS", () => {
-  test("is locations, experience, store, gift cards, contact", () => {
-    expect(MORE_ITEMS.map((i) => i.key)).toEqual(["locations", "experience", "store", "giftCards", "contact"]);
+  test("is locations, experience, giving, store, gift cards, contact", () => {
+    expect(MORE_ITEMS.map((i) => i.key)).toEqual(["locations", "experience", "giving", "store", "giftCards", "contact"]);
   });
 
   test("every item is a locale-free absolute path", () => {

@@ -6,8 +6,9 @@
  *   3. The pod         pinned: three photos and the hatch panel opening
  *   4. The bowl        linen: the bowl turning, the callouts, the beef macro
  *   5. No check, no tip  typographic
- *   6. Rewards         the tier marks rising, cashback counting up
- *   7. One Red Step    the giving pledge and its red thread
+ *   6. One Red Step    the giving pledge and its red thread, beside the
+ *                      no-tip promise (moved up 2026-09-28; links to /giving)
+ *   7. Rewards         the tier marks rising, cashback counting up
  *   8. Two locations   live cards, and the close
  *
  * Server-rendered; the only client islands are the pinned chapters, the
@@ -47,8 +48,8 @@ export default async function HomePage() {
       <ThePod />
       <TheBowl locale={locale} />
       <NoTip locale={locale} />
-      <RewardsTeaser locale={locale} program={program} />
       <RedStep locale={locale} />
+      <RewardsTeaser locale={locale} program={program} />
       <TwoLocations locale={locale} locations={locations} />
     </div>
     </RouteIntl>

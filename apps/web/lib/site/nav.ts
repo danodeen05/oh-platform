@@ -18,6 +18,7 @@ export const SITE_NAV_KEYS = [
   "chappy",
   "locations",
   "experience",
+  "giving",
   "store",
   "giftCards",
   "contact",
@@ -70,6 +71,7 @@ export const DOCK_ITEMS: readonly NavItem[] = [
 export const MORE_ITEMS: readonly NavIconLink[] = [
   { key: "locations", href: "/locations", icon: "pin" },
   { key: "experience", href: "/experience", icon: "pod" },
+  { key: "giving", href: "/giving", icon: "thread" },
   { key: "store", href: "/store", icon: "store" },
   { key: "giftCards", href: "/gift-cards", icon: "gift" },
   { key: "contact", href: "/contact", icon: "mail" },

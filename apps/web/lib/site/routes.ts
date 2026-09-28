@@ -41,6 +41,7 @@ export const SITE_ROUTES: readonly SiteRoute[] = [
   { path: "/locations/:slug", group: "site", file: "(site)/locations/[slug]/page.tsx", params: { slug: "city-creek" } },
   { path: "/rewards", group: "site", file: "(site)/rewards/page.tsx" },
   { path: "/experience", group: "site", file: "(site)/experience/page.tsx" },
+  { path: "/giving", group: "site", file: "(site)/giving/page.tsx" },
   { path: "/referral", group: "site", file: "(site)/referral/page.tsx", auth: true },
   { path: "/member", group: "site", file: "(site)/member/page.tsx", auth: true },
   { path: "/member/orders", group: "site", file: "(site)/member/orders/page.tsx", auth: true },

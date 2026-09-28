@@ -19,6 +19,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Eyebrow } from "@/components/site/Text";
 import { Icon, type IconName } from "@/components/site/icons/Icon";
 import { SITE_API_URL } from "@/lib/site/api";
+import { localizedHref } from "@/lib/site/nav";
 import { Spinner } from "./StepSheet";
 import { SECONDARY } from "./PodCard";
 import { TENANT, type FeedLine } from "./useOrderStatus";
@@ -263,7 +264,12 @@ export function BackstoryLine({ orderId }: { orderId: string }) {
 
 /* ------------------------------------------------------------ One Red Step */
 
-export function RedStepLine({ name }: { name: string }) {
+/**
+ * `embedded` (the plan's phone frame, `embed=1`): the quiet "How we give"
+ * link opens /giving in a new tab, so the plan's demo phone never navigates
+ * away inside its frame.
+ */
+export function RedStepLine({ name, embedded = false }: { name: string; embedded?: boolean }) {
   const t = useTranslations("orderStatus.lines.redStep");
   const locale = useLocale();
   const [fact, setFact] = useState<{ question: string; fact: string; source: string } | null>(null);
@@ -304,6 +310,17 @@ export function RedStepLine({ name }: { name: string }) {
             <span className="sr-only">{t("newTab")}</span>
           </a>
           <p className="m-0 mt-3 text-xs uppercase tracking-[0.14em] text-oh-mute">{t("foundation")}</p>
+          {/* 2026-09-28: a quiet way to the site's own giving page. */}
+          <a
+            href={localizedHref(locale, "/giving")}
+            data-red-step-giving
+            {...(embedded ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+            className="mt-1 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-oh-cream/80 no-underline underline-offset-4 hover:text-oh-cream hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oh-cream"
+          >
+            <Icon name="thread" size={18} className="text-oh-ember-light" />
+            {t("howWeGive")}
+            {embedded ? <span className="sr-only">{t("newTab")}</span> : null}
+          </a>
         </>
       )}
     </section>

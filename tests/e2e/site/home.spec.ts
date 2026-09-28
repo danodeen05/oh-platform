@@ -33,7 +33,7 @@ const WEB = path.resolve(HERE, "../../../apps/web");
 const requireFromWeb = createRequire(path.join(WEB, "package.json"));
 const AXE_SOURCE = readFileSync(requireFromWeb.resolve("axe-core/axe.min.js"), "utf8");
 
-const CHAPTERS = ["arrive", "walk-in", "the-pod", "the-bowl", "no-tip", "rewards", "red-step", "locations"];
+const CHAPTERS = ["arrive", "walk-in", "the-pod", "the-bowl", "no-tip", "red-step", "rewards", "locations"];
 
 type Messages = { home: Record<string, any> };
 function messages(locale: string): Messages {
@@ -158,9 +158,15 @@ test("iPhone 15: the rewards teaser and the location cards link to their pages",
       const directions = await card.locator("a[data-location-directions]").getAttribute("href");
       assert.match(directions ?? "", /^https:\/\/www\.google\.com\/maps\/dir\/\?api=1&destination=/);
     }
+    // 2026-09-28: One Red Step's primary link is the site's /giving page; the foundation's own site is secondary.
+    const giving = page.locator("[data-chapter='red-step'] a[data-red-step-giving]");
+    assert.equal(await giving.getAttribute("href"), "/en/giving");
     const foundation = page.locator("[data-chapter='red-step'] a[data-red-step-link]");
     assert.match((await foundation.getAttribute("href")) ?? "", /^https:\/\/www\.oneredstepatatime\.org/);
     assert.equal(await foundation.getAttribute("target"), "_blank");
+    assert.equal(await foundation.getAttribute("rel"), "noopener noreferrer");
+    // The no-tip chapter bridges into it with the give-back line.
+    assert.equal((await page.locator("[data-chapter='no-tip'] [data-no-tip-give-back]").innerText()).trim(), messages("en").home.noTip.giveBack);
   });
 });
 

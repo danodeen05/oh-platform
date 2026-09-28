@@ -223,7 +223,8 @@
         "tip": "Sin propina."
       },
       "body": "Aquí la propina no es parte de la comida. Sin línea de propina, sin cargo por servicio.",
-      "note": "Un toque en tu teléfono dice que terminaste. Te vas cuando quieras."
+      "note": "Un toque en tu teléfono dice que terminaste. Te vas cuando quieras.",
+      "giveBack": "Sin propina. Y el 1% de los ingresos de cada tazón se dona."
     },
     "rewards": {
       "eyebrow": "Recompensas",
@@ -238,7 +239,8 @@
       "body": "Oh! dona el 1% de los ingresos de cada restaurante propio a ONE RED STEP AT A TIME, una organización sin fines de lucro de salud mental en Utah.",
       "vision": "Un gran tazón, un espacio propio, y cada visita ayudando a alguien a dar un paso más hacia una mejor salud mental.",
       "link": "Visita la fundación",
-      "newTab": "se abre en una pestaña nueva"
+      "newTab": "se abre en una pestaña nueva",
+      "giving": "Cómo damos"
     },
     "locations": {
       "eyebrow": "Dos ubicaciones",
@@ -1729,7 +1731,8 @@
         "lede": "{name}, aquí no hay propina porque los salarios justos ya están en cada tazón. Si quieres donar, aquí es donde lo enviaríamos.",
         "cta": "Apoya la causa",
         "newTab": "(se abre en una pestaña nueva)",
-        "foundation": "Fundación One Red Step at a Time, una 501(c)(3)"
+        "foundation": "Fundación One Red Step at a Time, una 501(c)(3)",
+        "howWeGive": "Cómo damos"
       }
     }
   },
@@ -2160,6 +2163,7 @@
       "chappy": "Chappy",
       "locations": "Ubicaciones",
       "experience": "Experiencia",
+      "giving": "Solidaridad",
       "store": "Tienda",
       "giftCards": "Tarjetas de regalo",
       "contact": "Contacto",
@@ -2192,7 +2196,13 @@
         "copyright": "Oh! Beef Noodle Soup, {year}. Todos los derechos reservados.",
         "privacy": "Privacidad",
         "accessibility": "Accesibilidad",
-        "nav": "Enlaces del pie de página"
+        "nav": "Enlaces del pie de página",
+        "foundation": {
+          "label": "Solidaridad",
+          "line": "El 1% de los ingresos de cada restaurante propio va a ONE RED STEP AT A TIME, una organización sin fines de lucro de salud mental en Utah.",
+          "link": "Cómo damos",
+          "markAlt": "Un calcetín rojo, el símbolo de ONE RED STEP AT A TIME"
+        }
       }
     }
   },
@@ -3048,6 +3058,71 @@
         "description": "Cómo Oh! Beef Noodle Soup trabaja para ser accesible para todos, en línea y en el restaurante."
       }
     }
+  },
+  "giving": {
+    "meta": {
+      "title": "Solidaridad: Oh! y ONE RED STEP AT A TIME",
+      "description": "Oh! dona el 1% de los ingresos de cada restaurante propio a ONE RED STEP AT A TIME, una organización sin fines de lucro de salud mental en Utah."
+    },
+    "hero": {
+      "eyebrow": "Un paso rojo",
+      "title": "Cada visita es un paso más.",
+      "visionLabel": "Nuestra visión",
+      "vision": "Un mundo donde un gran tazón de sopa de fideos con res trae espacio para respirar: comida de primera, un espacio propio, y cada visita ayudando a alguien a dar un paso más hacia una mejor salud mental."
+    },
+    "pledge": {
+      "eyebrow": "El compromiso",
+      "figure": "1%",
+      "lede": "de los ingresos de cada restaurante propio, en cualquier escenario.",
+      "body": "Figura como una partida propia del presupuesto. Nunca una promesa sin presupuesto."
+    },
+    "foundation": {
+      "eyebrow": "La fundación",
+      "kind": "Una organización sin fines de lucro de salud mental en Utah.",
+      "missionSource": "La misión de la fundación",
+      "mission": "Fomentar conversaciones abiertas y solidarias sobre la salud mental uniendo comunidades, rompiendo el estigma y promoviendo la educación y la empatía: una persona, una historia a la vez.",
+      "identity": "Una organización sin fines de lucro 501(c)(3), EIN {ein}. Las donaciones son deducibles de impuestos."
+    },
+    "visit": {
+      "eyebrow": "Tu visita",
+      "title": "Cómo ayuda tu visita.",
+      "items": {
+        "noTip": {
+          "title": "Sin propina. Salarios justos incluidos.",
+          "body": "Aquí la propina no es parte de la comida. El pago justo ya está en el precio de cada tazón."
+        },
+        "status": {
+          "title": "Un dato, y una forma de dar.",
+          "body": "Cuando te acomodas en tu cabina, la pantalla de estado de tu pedido muestra un dato breve sobre salud mental y un enlace para apoyar la causa."
+        },
+        "gifts": {
+          "title": "Tu donación va directo a ellos.",
+          "body": "Las donaciones de los clientes van directo a la fundación y nunca cuentan como ingresos de Oh!."
+        }
+      }
+    },
+    "socks": {
+      "eyebrow": "Calcetines rojos",
+      "title": "Una forma fácil de sumarse.",
+      "body": "Los calcetines rojos son el símbolo de la fundación. Dan a clientes y personal una forma fácil y visible de sumarse.",
+      "store": "Compra calcetines rojos"
+    },
+    "actions": {
+      "eyebrow": "Da un paso",
+      "title": "Dona, visita o pregunta.",
+      "donate": "Donar",
+      "donateNote": "En el sitio de la propia fundación. Las donaciones son deducibles de impuestos.",
+      "visit": "Visita la fundación",
+      "chappy": "Pregúntale a Chappy",
+      "chappyPrompt": "¿Cómo ayuda Oh! a la comunidad?"
+    },
+    "contact": {
+      "title": "Contacta a la fundación",
+      "website": "Sitio web",
+      "mail": "Correo postal",
+      "social": "Redes sociales"
+    },
+    "newTab": "se abre en una pestaña nueva"
   },
   "smsConsent": {
     "meta": {

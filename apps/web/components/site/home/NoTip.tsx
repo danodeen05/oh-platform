@@ -45,6 +45,10 @@ export async function NoTip({ locale }: { locale: string }) {
           <Body locale={locale} className="m-0 mt-4 text-oh-cream/70">
             {t("note")}
           </Body>
+          {/* The bridge into the One Red Step chapter, which follows directly (2026-09-28). */}
+          <Body locale={locale} data-no-tip-give-back className="m-0 mt-6 text-lg font-semibold text-oh-ember-light md:text-xl">
+            {t("giveBack")}
+          </Body>
         </Reveal>
       </div>
     </section>

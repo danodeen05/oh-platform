@@ -41,7 +41,8 @@ export type IconName =
   | "plus"
   | "qr"
   | "cup"
-  | "card";
+  | "card"
+  | "thread";
 
 export interface IconDef {
   /** One or more filled outline paths (fill-rule evenodd), no stroke. */
@@ -405,6 +406,27 @@ export const ICON_PATHS: Record<IconName, IconDef> = {
       ringRect(3.2, 6, 17.6, 12, 1.6, 1.3),
       taperLine({ x: 3.6, y: 10.2 }, { x: 20.4, y: 10.2 }, 1.8, 1.2),
       roundedRectPath(6, 13.8, 4.2, 1.8, 0.5),
+    ],
+  },
+
+  // Site follow-up 2026-09-28: giving (One Red Step). The home chapter's red
+  // thread tied into a loop, the way an awareness ribbon crosses itself: one
+  // stroke climbs from the lower left, turns over the top and comes back to
+  // the crossing; a second carries on down to the right. Two paths, so the
+  // crossing stays solid under fill-rule evenodd.
+  thread: {
+    paths: [
+      midPeakChain(
+        [
+          { kind: "cubic", p0: { x: 6.8, y: 20.8 }, p1: { x: 8.8, y: 17.2 }, p2: { x: 11.4, y: 13.6 }, p3: { x: 12.8, y: 10.6 } },
+          { kind: "cubic", p0: { x: 12.8, y: 10.6 }, p1: { x: 15, y: 6.4 }, p2: { x: 14.6, y: 3 }, p3: { x: 12, y: 3 } },
+          { kind: "cubic", p0: { x: 12, y: 3 }, p1: { x: 9.4, y: 3 }, p2: { x: 9, y: 6.4 }, p3: { x: 11.2, y: 10.6 } },
+        ],
+        1.9,
+        0.45,
+        { capStart: true, stepsPerSeg: 16 },
+      ),
+      taperLine({ x: 11.2, y: 10.6 }, { x: 17.2, y: 20.8 }, 1.8, 0.4),
     ],
   },
 };

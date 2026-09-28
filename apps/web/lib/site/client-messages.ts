@@ -33,6 +33,7 @@ export const ROUTE_NAMESPACES = {
   "challenges": ["challengesPage", "giveMeal", "orderFlow"],
   "contact": ["contactPage"],
   "experience": [],
+  "giving": [],
   "gift-cards": ["giftCards", "store"],
   "group": ["groupLobby", "combMap"],
   "locations": [],
