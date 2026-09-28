@@ -69,7 +69,7 @@ import { registerCateringRoutes, isDineInOrdersEnabled } from "./catering/routes
 import { registerPlanRoutes } from "./plan/routes.js";
 import { registerAdminConsoleRoutes } from "./admin/console-routes.js";
 import { menuPatchData } from "./admin/menu-fields.js";
-import { withStatusDemo, registerStatusDemoGuard } from "./demo/status-demo.js";
+import { withStatusDemo, registerStatusDemoGuard, isDemoOrderId } from "./demo/status-demo.js";
 import { createClerkClient } from "@clerk/backend";
 import { createAdminAuth, parseAdminEmails } from "./auth/admin.js";
 import { registerAdminAuthHooks } from "./auth/admin-hook.js";
@@ -94,6 +94,7 @@ import { FASTIFY_OPTIONS, rateLimitKey } from "./http-config.js";
 import { createKioskAuth } from "./auth/kiosk.js";
 import { publicReferral, shopCreditSpender, registerAdminOnlyRoutes } from "./auth/hardening.js";
 import { listLocationSeats, resolveSeatViewer } from "./seats/service.js";
+import { canSeeFullOrder, safeOrderView } from "./orders/order-view.js";
 
 // DEMO- order codes resolve to a synthetic order (see demo/status-demo.js):
 // the plan's live status-page demo reads real routes without touching the DB.
@@ -3571,6 +3572,9 @@ app.get("/orders/by-number/:orderNumber", async (req, reply) => {
   };
 });
 
+// Task A8b, fix round 1: this route is PUBLIC and had no ownership check -
+// see orders/order-view.js for who gets the full order (with user/guest
+// contact fields) versus the safe status-only view.
 app.get("/orders/:id", async (req, reply) => {
   const { id } = req.params;
   const locale = getLocale(req);
@@ -3610,7 +3614,18 @@ app.get("/orders/:id", async (req, reply) => {
     })),
   };
 
-  return localizedOrder;
+  // The plan's status demo is synthetic (no real user/guest) and public by
+  // design - it always keeps its full demo shape.
+  if (isDemoOrderId(order.id)) return localizedOrder;
+
+  const canSeeFull = await canSeeFullOrder(req, order, {
+    checkAdminAuth,
+    kioskDeviceFor: kioskAuth.deviceFor,
+    resolveCustomer: customerAuth.resolve,
+    findGuestBySessionToken: (token) => prisma.guest.findUnique({ where: { sessionToken: token } }),
+  });
+
+  return canSeeFull ? localizedOrder : safeOrderView(localizedOrder);
 });
 
 // POST /orders, /orders/quote, /orders/:id/payment-intent and /orders/:id/confirm-payment live in

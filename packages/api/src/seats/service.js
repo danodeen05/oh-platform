@@ -172,10 +172,12 @@ export async function listLocationSeats(prisma, locationId, location = undefined
  * Task A8b: who's asking, resolved without ever failing the request - these
  * seat routes are public, so an optional auth check must never turn into a
  * 401. `isStaff` is true for an admin (session or `x-admin-api-key`, see
- * `auth/admin.js` `checkAdminAuth`) or a kiosk device key scoped to THIS
+ * `auth/admin.js` `checkAdminAuth`) OR a kiosk device key scoped to THIS
  * `locationId` (see `auth/kiosk.js` `deviceFor`) - a kiosk key for a
- * different location does not count. `userId` is the caller's verified
- * database user id (see `auth/customer.js` `resolve`), or null.
+ * different location does not count on its own, but (fix round 1) never
+ * overrides a valid admin credential sent alongside it: the two grants are
+ * independent, not an either/or. `userId` is the caller's verified database
+ * user id (see `auth/customer.js` `resolve`), or null.
  *
  * `deps`: `{ checkAdminAuth(req), kioskDeviceFor(req), resolveCustomer(req) }`,
  * each already bound to the live auth instances the route registers.
@@ -186,7 +188,7 @@ export async function resolveSeatViewer(req, locationId, deps) {
     deps.kioskDeviceFor ? deps.kioskDeviceFor(req) : null,
     deps.resolveCustomer ? deps.resolveCustomer(req) : null,
   ]);
-  const isStaff = kioskDevice ? kioskDevice.locationId === locationId : Boolean(admin);
+  const isStaff = Boolean(admin) || Boolean(kioskDevice && kioskDevice.locationId === locationId);
   const userId = customer && customer.kind === "user" ? (customer.userId ?? null) : null;
   return { isStaff, userId };
 }

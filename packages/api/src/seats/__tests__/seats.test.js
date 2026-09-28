@@ -311,6 +311,16 @@ describe("resolveSeatViewer (A8b): optional, non-failing staff/isMine resolution
     assert.equal(viewer.isStaff, false);
   });
 
+  test("fix round 1: a valid admin credential plus a kiosk key for a DIFFERENT location is still staff (admin doesn't lose to the mismatched kiosk key)", async () => {
+    const { deps } = buildDeps({ devices: { kiosk_abc123: { id: "d1", locationId: "L2", isActive: true } } });
+    const viewer = await resolveSeatViewer(
+      { headers: { "x-admin-api-key": "admin-key-123", authorization: "Bearer kiosk_abc123" } },
+      "L1",
+      deps
+    );
+    assert.equal(viewer.isStaff, true);
+  });
+
   test("a signed-in customer's verified Clerk session resolves to their database userId", async () => {
     const { deps } = buildDeps({
       clerkUsers: { user_dan: { primaryEmailAddressId: "e1", emailAddresses: [{ id: "e1", emailAddress: "dan@x.com", verification: { status: "verified" } }] } },

@@ -8,7 +8,8 @@ import Image from "next/image";
 import { PhoneCollectionModal } from "@/components/PhoneCollectionModal";
 import { useUser } from "@clerk/nextjs";
 import { useSiteApi } from "@/lib/site/api";
-import { confirmPayment, paymentIntentIdFromClientSecret } from "@/lib/site/orders";
+import { confirmPayment, paymentIntentIdFromClientSecret, groupIdentityHeaders } from "@/lib/site/orders";
+import { useGuest } from "@/contexts/guest-context";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -22,6 +23,7 @@ function ConfirmationContent() {
   const locale = useLocale();
   const { user: clerkUser, isLoaded: clerkLoaded, isSignedIn } = useUser();
   const api = useSiteApi();
+  const { guest } = useGuest();
   const orderNumber = searchParams.get("orderNumber");
   const orderId = searchParams.get("orderId");
   const total = searchParams.get("total");
@@ -57,9 +59,13 @@ function ConfirmationContent() {
       console.log("Handling Stripe redirect for order:", orderId);
 
       try {
-        // First, get the current order to check if it needs updating
-        const orderResponse = await fetch(`${BASE}/orders/${orderId}?locale=${locale}`, {
-          headers: { "x-tenant-slug": "oh" },
+        // First, get the current order to check if it needs updating.
+        // A8b fix round 1: use `api` (Clerk Bearer attached) so a signed-in
+        // owner is verified server-side and still gets order.user's phone/
+        // smsOptIn for the SMS-consent check below; a guest owner is proven
+        // the same way by their server-issued guest session token.
+        const orderResponse = await api(`${BASE}/orders/${orderId}?locale=${locale}`, {
+          headers: { "x-tenant-slug": "oh", ...groupIdentityHeaders(guest) },
         });
 
         if (!orderResponse.ok) {
@@ -153,8 +159,10 @@ function ConfirmationContent() {
 
     async function fetchOrder() {
       try {
-        const response = await fetch(`${BASE}/orders/${orderId}?locale=${locale}`, {
-          headers: { "x-tenant-slug": "oh" },
+        // A8b fix round 1: same as above - owner or guest-owner identity so
+        // the QR code, order.user and guest fields keep rendering here.
+        const response = await api(`${BASE}/orders/${orderId}?locale=${locale}`, {
+          headers: { "x-tenant-slug": "oh", ...groupIdentityHeaders(guest) },
         });
         if (response.ok) {
           const data = await response.json();
@@ -179,7 +187,10 @@ function ConfirmationContent() {
     }
 
     fetchOrder();
-  }, [orderId, groupCode, locale, paymentIntentClientSecret, redirectStatus, order, groupOrders.length]);
+    // A8b fix round 1: refetch once the guest session (if any) has loaded, so a
+    // guest checkout's owner view (QR code, etc.) isn't stuck on the SAFE shape.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderId, groupCode, locale, paymentIntentClientSecret, redirectStatus, order, groupOrders.length, guest?.sessionToken]);
 
   // Store active order QR code in localStorage for the banner
   useEffect(() => {

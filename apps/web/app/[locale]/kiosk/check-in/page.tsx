@@ -164,7 +164,7 @@ export default function CheckInPage() {
         if (seatsRes.ok) setSeats(adaptKioskSeats(await seatsRes.json()));
 
         if (orderId) {
-          const orderRes = await fetch(`${BASE}/orders/${orderId}`, { headers: { "x-tenant-slug": "oh" } });
+          const orderRes = await fetch(`${BASE}/orders/${orderId}`, { headers: { "x-tenant-slug": "oh", ...kioskAuthHeaders() } });
           if (!orderRes.ok) { setError(t("errors.orderNotFound")); setStep("error"); setLoading(false); return; }
           const orderData = await orderRes.json();
           setOrder(orderData);
