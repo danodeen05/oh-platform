@@ -1,0 +1,26 @@
+# The wallet-cron Railway service (runbook 4d). Same build as packages/api/railway.toml
+# (the @oh/api service); only the deploy section differs. Config-as-code wins over the
+# dashboard, so without this file the service would pick up the root railway.toml and
+# start the API server instead of the jobs.
+[build]
+builder = "NIXPACKS"
+watchPatterns = ["/packages/api/**", "/packages/db/**"]
+
+[build.nixpacksPlan]
+phases.setup.nixPkgs = ["nodejs_20", "pnpm-9_x"]
+
+phases.install.cmds = [
+  "cd /app",
+  "pnpm install --filter @oh/db --filter @oh/api --frozen-lockfile"
+]
+
+phases.build.cmds = [
+  "cd /app/packages/db && pnpm prisma generate",
+  "echo 'Prisma client generated successfully'"
+]
+
+[deploy]
+# 10:10 UTC = 03:10 MST / 04:10 MDT. Each job exits non-zero on failure, and && stops the chain.
+cronSchedule = "10 10 * * *"
+startCommand = "sh -c 'cd /app/packages/api && node src/cron/wallet-cron.js run expire-credits && node src/cron/wallet-cron.js run quarterly-perk && node src/cron/wallet-cron.js run membership-sweep && node src/cron/wallet-cron.js run expire-meal-gifts'"
+restartPolicyType = "NEVER"
