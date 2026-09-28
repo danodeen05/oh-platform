@@ -25,6 +25,8 @@ import type { CombMapLabels } from "@/components/site/floor-plan/CombMap";
 import { useSiteApi, SITE_API_URL } from "@/lib/site/api";
 import { groupIdentityHeaders } from "@/lib/site/orders";
 import { useGuest } from "@/contexts/guest-context";
+import { useUser } from "@clerk/nextjs";
+import { arrivalAttempts, classifyArrival, shouldForgetSaved, tryNext, type ArrivalOutcome } from "@/lib/site/pod-arrival";
 import { PRIMARY, SECONDARY } from "./PodCard";
 import { Spinner } from "./StepSheet";
 import { TENANT } from "./useOrderStatus";
@@ -60,9 +62,11 @@ function rememberCode(code: string) {
     /* storage blocked */
   }
 }
-function forgetCode() {
+/** Drops a saved code this device no longer needs (its order is finished or unknown), from both places it can live. */
+function forgetCode(stale: string) {
   try {
-    sessionStorage.removeItem(CODE_KEY);
+    if (sessionStorage.getItem(CODE_KEY) === stale) sessionStorage.removeItem(CODE_KEY);
+    if (localStorage.getItem("activeOrderQrCode") === stale) localStorage.removeItem("activeOrderQrCode");
   } catch {
     /* storage blocked */
   }
@@ -76,6 +80,7 @@ export function PodView({ qr }: { qr: string | null }) {
   const router = useRouter();
   const api = useSiteApi();
   const { guest } = useGuest();
+  const { isSignedIn } = useUser();
   const [info, setInfo] = useState<PodInfo | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "error" | "none">(qr ? "loading" : "none");
   const [busy, setBusy] = useState(false);
@@ -113,54 +118,71 @@ export function PodView({ qr }: { qr: string | null }) {
     };
   }, [qr, locale]);
 
-  /** POST /pods/confirm-arrival: the signed-in or guest-session owner, or whoever holds the order's code. */
-  async function confirmArrival(orderCode: string | null) {
+  /** One POST /pods/confirm-arrival: `orderCode` null matches the signed-in or guest-session owner. */
+  async function attempt(orderCode: string | null): Promise<{ outcome: ArrivalOutcome; own: string | null }> {
+    const res = await api(`${SITE_API_URL}/pods/confirm-arrival`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...TENANT, ...groupIdentityHeaders(guest) },
+      body: JSON.stringify(orderCode ? { podQrCode: qr, orderQrCode: orderCode } : { podQrCode: qr }),
+    });
+    const data = await res.json().catch(() => ({}));
+    return { outcome: classifyArrival(res.status, data, orderCode), own: (data?.order?.orderQrCode as string | undefined) || orderCode };
+  }
+
+  function arrived(outcome: ArrivalOutcome, own: string | null) {
+    if (own) rememberCode(own);
+    if (outcome === "ok") setConfirmed(true);
+    setTimeout(() => (own ? router.push(statusHref(own)) : undefined), outcome === "ok" ? 1500 : 0);
+  }
+
+  /**
+   * "I'm here" (fix round 2): the session match first (a member or guest session sends no code), then a saved
+   * code; a saved code from a finished order is dropped and never blocks. Nothing matched: ask for the code.
+   */
+  async function imHere() {
     if (!qr || busy) return;
     setBusy(true);
     setError(null);
     try {
-      const res = await api(`${SITE_API_URL}/pods/confirm-arrival`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...TENANT, ...groupIdentityHeaders(guest) },
-        body: JSON.stringify(orderCode ? { podQrCode: qr, orderQrCode: orderCode } : { podQrCode: qr }),
-      });
-      const data = await res.json().catch(() => ({}));
-      const own = (data?.order?.orderQrCode as string | undefined) || orderCode;
-      if (res.ok || data?.code === "ALREADY_CONFIRMED") {
-        if (own) rememberCode(own);
-        if (res.ok) setConfirmed(true);
-        setTimeout(() => (own ? router.push(statusHref(own)) : undefined), res.ok ? 1500 : 0);
-        return;
+      for (const c of arrivalAttempts({ hasSession: Boolean(isSignedIn || guest?.sessionToken), saved })) {
+        const { outcome, own } = await attempt(c);
+        if (outcome === "ok" || outcome === "already") return arrived(outcome, own);
+        if (c && shouldForgetSaved(outcome)) {
+          forgetCode(c);
+          setSaved(null);
+        }
+        if (!tryNext(outcome)) {
+          setError(t("failed"));
+          setBusy(false);
+          return;
+        }
       }
-      if (data?.code === "ORDER_CODE_REQUIRED") {
-        // Not matched to this visitor's session: ask for the order code (the saved one wasn't it, or there was none).
-        setAskCode(true);
-        if (orderCode) setError(t("codeNotFound"));
-      } else if (data?.code === "WRONG_POD") {
-        if (orderCode === saved) forgetCode();
-        setAskCode(true);
-        setError(t("wrongPod"));
-      } else if (res.status === 404 && orderCode) {
-        if (orderCode === saved) forgetCode();
-        setAskCode(true);
-        setError(t("codeNotFound"));
-      } else {
-        setError(t("failed"));
-      }
+      setAskCode(true);
     } catch {
       setError(tc("networkError"));
     }
     setBusy(false);
   }
 
-  function submitCode(e: FormEvent) {
+  /** The code the guest typed in. */
+  async function submitCode(e: FormEvent) {
     e.preventDefault();
     const c = code.trim();
     if (!c) {
       setError(t("codeRequired"));
       return;
     }
-    void confirmArrival(c);
+    if (!qr || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const { outcome, own } = await attempt(c);
+      if (outcome === "ok" || outcome === "already") return arrived(outcome, own);
+      setError(outcome === "wrongPod" ? t("wrongPod") : outcome === "stale" || outcome === "needCode" ? t("codeNotFound") : t("failed"));
+    } catch {
+      setError(tc("networkError"));
+    }
+    setBusy(false);
   }
 
   const label = info?.pod.label || "";
@@ -265,7 +287,7 @@ export function PodView({ qr }: { qr: string | null }) {
               ) : (
                 <>
                   {alert}
-                  <button type="button" data-pod-confirm-arrival onClick={() => confirmArrival(saved)} disabled={busy} aria-busy={busy ? "true" : "false"} className={`${PRIMARY} mt-4 h-14`}>
+                  <button type="button" data-pod-confirm-arrival onClick={imHere} disabled={busy} aria-busy={busy ? "true" : "false"} className={`${PRIMARY} mt-4 h-14`}>
                     {busy ? <Spinner /> : <Icon name="check" size={20} />}
                     {busy ? t("confirming") : t("confirm")}
                   </button>

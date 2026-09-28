@@ -474,10 +474,12 @@ test("fix round 1: an anonymous pod scan leaks no order; a stranger can't confir
   assert.ok(!(await page.content()).includes(order.orderQrCode!), "the page holds no order code");
 
   // "I'm here" without proof: nothing is confirmed, and the page asks for the order code.
-  const refused = page.waitForResponse((r) => r.url().endsWith("/pods/confirm-arrival"), { timeout: 60_000 });
+  // (Fix round 2: with no session and no saved code there's nothing to try, so it goes straight to the code form.)
+  let arrivalCalls = 0;
+  page.on("request", (r) => void (r.url().endsWith("/pods/confirm-arrival") && arrivalCalls++));
   await page.locator("[data-pod-confirm-arrival]").click();
-  assert.equal((await refused).status(), 403);
   await page.locator("[data-pod-code-form]").waitFor({ timeout: 30_000 });
+  assert.equal(arrivalCalls, 0, "no session, no saved code: no request");
   assert.equal((await prisma.order.findUnique({ where: { id: order.id } }))?.podConfirmedAt ?? null, null);
   await checkPage(page, "pod-code");
 
