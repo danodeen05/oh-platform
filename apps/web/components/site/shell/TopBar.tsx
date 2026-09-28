@@ -1,7 +1,8 @@
 "use client";
 
 /**
- * Slim top bar (at most 56px tall, plus the top safe-area inset). It sits on
+ * Top bar (76px tall, plus the top safe-area inset; the Oh! mark is 68px,
+ * doubled at the owner's request on 2026-09-28, from 34px). It sits on
  * the page's own background at the top and picks up a translucent charcoal
  * background, a blur and a hairline once the page scrolls.
  *
@@ -63,7 +64,7 @@ export function TopBar() {
         data-hydrated={hydrated ? "true" : undefined}
         className="sticky top-0 z-40 pt-[env(safe-area-inset-top,0px)] transition-[background-color,box-shadow,backdrop-filter] duration-300 data-[scrolled=true]:shadow-[inset_0_-1px_0_var(--color-oh-stone)] data-[scrolled=true]:bg-oh-charcoal/85 data-[scrolled=true]:backdrop-blur-md"
       >
-        <div className="mx-auto flex h-14 max-w-6xl items-center gap-2 pl-[max(1rem,env(safe-area-inset-left,0px))] pr-[max(0.5rem,env(safe-area-inset-right,0px))] md:pr-[max(1rem,env(safe-area-inset-right,0px))]">
+        <div className="mx-auto flex h-[4.75rem] max-w-6xl items-center gap-2 pl-[max(1rem,env(safe-area-inset-left,0px))] pr-[max(0.5rem,env(safe-area-inset-right,0px))] md:pr-[max(1rem,env(safe-area-inset-right,0px))]">
           {/* Task D5: the order flow's steps publish a Back target (lib/site/order-back.ts). */}
           {back ? (
             <Link
@@ -78,10 +79,11 @@ export function TopBar() {
           <Link
             href={`/${locale}`}
             aria-label={t("home")}
-            className="-ml-1 flex h-11 w-11 shrink-0 no-underline items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oh-cream"
+            data-site-logo
+            className="-ml-1 flex h-[4.25rem] w-[4.25rem] shrink-0 no-underline items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oh-cream"
           >
             {/* eslint-disable-next-line @next/next/no-img-element -- G2a: a pre-sized static file; next/image's client code cost every page 5 KB of JS */}
-            <img src="/brand/oh-mark-light-104.webp" alt="" width={34} height={34} decoding="async" className="h-[34px] w-[34px] object-contain" />
+            <img src="/brand/oh-mark-light-204.webp" alt="" width={68} height={68} decoding="async" className="h-[68px] w-[68px] object-contain" />
           </Link>
 
           <DesktopNav onOpenMore={openMore} onPreloadMore={preloadMore} moreOpen={moreOpen} />

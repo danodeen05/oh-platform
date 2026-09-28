@@ -93,12 +93,16 @@ test("iPhone 15: the dock is visible with 4 targets of at least 44x44", async ()
   });
 });
 
-test("iPhone 15: the top bar is at most 56px tall and gains a background on scroll", async () => {
+// 2026-09-28: the owner doubled the Oh! mark (34 -> 68px), so the bar grew from 56 to 76px.
+test("iPhone 15: the top bar is at most 76px tall with the 68px mark inside it, and gains a background on scroll", async () => {
   await withPage(iphone15(), LAB, async (page) => {
     const bar = page.locator("[data-site-topbar]");
     await bar.waitFor({ state: "visible" });
     const box = await bar.boundingBox();
-    assert.ok(box && box.height <= 56, `top bar height ${box?.height}`);
+    assert.ok(box && box.height <= 76, `top bar height ${box?.height}`);
+    const logo = await page.locator("[data-site-logo] img").boundingBox();
+    assert.ok(logo && logo.width === 68 && logo.height === 68, `logo ${logo?.width}x${logo?.height}`);
+    assert.ok(logo.y >= box.y && logo.y + logo.height <= box.y + box.height, "the mark sits inside the bar");
     assert.equal(await bar.getAttribute("data-scrolled"), "false");
     await page.mouse.wheel(0, 800);
     await page.waitForFunction(() => document.querySelector("[data-site-topbar]")?.getAttribute("data-scrolled") === "true");
@@ -168,12 +172,42 @@ test("1440: no dock, and a desktop nav with the same items", async () => {
     const keys = await nav.locator("[data-nav-item]").evaluateAll((els) =>
       els.filter((e) => (e as HTMLElement).offsetParent !== null).map((e) => e.getAttribute("data-nav-item")),
     );
-    for (const k of ["order", "menu", "rewards", "chappy", "locations", "experience", "store", "giftCards", "contact"]) {
+    for (const k of ["order", "menu", "rewards", "chappy", "locations", "experience", "giving", "store", "giftCards", "contact"]) {
       assert.ok(keys.includes(k), `desktop nav shows ${k} (got ${keys.join(",")})`);
     }
     assert.equal(await page.locator("[data-site-more-trigger]").isVisible(), false);
   });
 });
+
+// 2026-09-28: with the 68px mark, no two top-bar controls may overlap at any
+// width, in any language. Where the inline More items don't fit beside Order
+// (Spanish at 1280 and up), the list collapses to the More button instead.
+for (const locale of ["en", "es", "zh-TW"]) {
+  test(`${locale}: top-bar controls never overlap from 360 to 1536px`, async () => {
+    await withPage({ viewport: { width: 1440, height: 900 } }, `/${locale}/lab/shell`, async (page) => {
+      await page.locator("[data-site-topbar][data-hydrated='true']").waitFor({ state: "attached", timeout: 60_000 });
+      await page.evaluate(() => document.fonts.ready);
+      for (const width of [360, 390, 768, 1024, 1279, 1280, 1440, 1536]) {
+        await page.setViewportSize({ width, height: 900 });
+        await page.waitForTimeout(300);
+        const r = await page.evaluate(() => {
+          const row = document.querySelector("[data-site-topbar]")!.firstElementChild!;
+          const boxes = [...row.querySelectorAll("a, button")]
+            .map((el) => ({ el, b: el.getBoundingClientRect() }))
+            .filter(({ el, b }) => b.width > 0 && getComputedStyle(el).visibility !== "hidden")
+            .map(({ el, b }) => ({ name: (el.getAttribute("aria-label") || el.textContent || "").trim(), l: b.left, r: b.right }));
+          const overlaps: string[] = [];
+          for (let i = 0; i < boxes.length; i++)
+            for (let j = i + 1; j < boxes.length; j++)
+              if (boxes[i].r > boxes[j].l + 0.5 && boxes[j].r > boxes[i].l + 0.5) overlaps.push(`${boxes[i].name} / ${boxes[j].name}`);
+          return { overlaps, scrollWidth: document.documentElement.scrollWidth };
+        });
+        assert.deepEqual(r.overlaps, [], `${locale} at ${width}px`);
+        assert.ok(r.scrollWidth <= width, `${locale} at ${width}px: scrollWidth ${r.scrollWidth}`);
+      }
+    });
+  });
+}
 
 test("?embed=1 on a site route: no chrome, but the site fonts and palette stay", async () => {
   await withPage(iphone15(), `${LAB}?embed=1`, async (page) => {
