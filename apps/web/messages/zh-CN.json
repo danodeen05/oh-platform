@@ -2239,7 +2239,9 @@
         "processing": "银行还在处理这笔付款，完成后订单会自动更新。",
         "returnFailed": "这笔付款没有成功。跟我说一声，我再给你新的付款卡。",
         "unavailable": "目前无法付款，请稍后再试。",
-        "unfinished": "这笔付款没有完成，请再试一次。"
+        "unfinished": "这笔付款没有完成，请再试一次。",
+        "returnUnknown": "我在这里查不到这笔付款的状态。你的订单页面会显示最新进度。",
+        "ordersLink": "我的订单"
       },
       "confirmZero": {
         "title": "无需付款",

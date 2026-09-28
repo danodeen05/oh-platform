@@ -141,9 +141,12 @@ export default function ChappyWidget({ open, onClose, onOpen, prefill, prefillKe
         confirm: (orderId, paymentIntentId) => confirmPayment(orderId, paymentIntentId, { fetcher: api }),
       });
       if (outcome.kind === "paid") onPaid(outcome.order as Order);
-      else addNote(t(outcome.kind === "refunded" ? "cards.pay.refunded" : outcome.kind === "processing" ? "cards.pay.processing" : "cards.pay.returnFailed"), [], { alert: true });
+      else if (outcome.kind === "unknown") {
+        // Couldn't check it from here (e.g. signed out): never claim it failed. The webhook settles a real payment.
+        addNote(t("cards.pay.returnUnknown"), [], { link: { href: `/${locale}/member/orders`, label: t("cards.pay.ordersLink") } });
+      } else addNote(t(outcome.kind === "refunded" ? "cards.pay.refunded" : outcome.kind === "processing" ? "cards.pay.processing" : "cards.pay.returnFailed"), [], { alert: true });
     })();
-  }, [resume, chat.status, addNote, api, onPaid, t]);
+  }, [resume, chat.status, addNote, api, onPaid, t, locale]);
 
   const cardContext = useMemo<ChappyCardContext>(
     () => ({ locale, cjk, onSignIn: signIn, send: chat.send, onPaid, api, busy: chat.status !== "idle" }),

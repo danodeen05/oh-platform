@@ -4544,7 +4544,9 @@
         "processing": "Your bank is still processing the payment. Your order updates when it clears.",
         "returnFailed": "That payment didn't go through. Ask me for a new pay card.",
         "unavailable": "Payment isn't available right now. Try again in a moment.",
-        "unfinished": "That payment didn't finish. Try again."
+        "unfinished": "That payment didn't finish. Try again.",
+        "returnUnknown": "I couldn't check that payment from here. Your orders page shows where it stands.",
+        "ordersLink": "Your orders"
       },
       "confirmZero": {
         "title": "Nothing to pay",

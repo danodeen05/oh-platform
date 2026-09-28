@@ -68,7 +68,14 @@ export function readChappyReturn(href: string): { ret: ChappyPayReturn; cleanUrl
 type ApiResult<T> = { ok: boolean; status: number; data: T; error: { code: string | null; refunded?: boolean } };
 type OrderLike = { id: string; userId?: string | null; paymentStatus?: string; [k: string]: unknown };
 
-export type PayReturnOutcome = { kind: "paid"; order: OrderLike } | { kind: "notPaid" } | { kind: "refunded" } | { kind: "processing" };
+/**
+ * paid: verified PAID for this caller. notPaid: Stripe said the redirect
+ * failed (or there's no PaymentIntent). unknown: it couldn't be checked here
+ * (not the caller's own order as far as this session can tell, signed out,
+ * or the confirm was refused), so the widget says nothing about success or
+ * failure and points to the orders page (fix round 2).
+ */
+export type PayReturnOutcome = { kind: "paid"; order: OrderLike } | { kind: "notPaid" } | { kind: "unknown" } | { kind: "refunded" } | { kind: "processing" };
 
 /**
  * What the return means, decided by the server for this caller.
@@ -82,10 +89,10 @@ export async function resolvePayReturn(
   if (!ret.paymentIntentId || ret.status === "failed") return { kind: "notPaid" };
   const own = await deps.getOrder(ret.orderId).catch(() => null);
   // Only the owner gets the full order (with userId); anyone else gets the safe view or a refusal.
-  if (!own || !own.ok || !own.data || !own.data.userId) return { kind: "notPaid" };
+  if (!own || !own.ok || !own.data || !own.data.userId) return { kind: "unknown" };
   if (own.data.paymentStatus === "PAID") return { kind: "paid", order: own.data };
   const res = await deps.confirm(ret.orderId, ret.paymentIntentId);
   if (res.ok && res.data) return { kind: "paid", order: res.data };
   if (res.error?.refunded) return { kind: "refunded" };
-  return ret.status === "processing" ? { kind: "processing" } : { kind: "notPaid" };
+  return ret.status === "processing" ? { kind: "processing" } : { kind: "unknown" };
 }

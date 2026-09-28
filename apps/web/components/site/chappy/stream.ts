@@ -105,6 +105,8 @@ export type ChatMessage = {
   pending?: boolean;
   /** A note that reports a problem (an alert mark instead of the paid check). */
   alert?: boolean;
+  /** A same-site link under a note (e.g. the member's orders page). */
+  link?: { href: string; label: string };
   /** The tool Chappy is running right now (cleared when text arrives). */
   tool?: string;
   error?: ChatError;

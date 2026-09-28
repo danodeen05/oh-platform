@@ -41,7 +41,7 @@ export interface ChappyStream {
   /** Re-sends the last message after a retryable error. */
   retry: () => void;
   /** Posts a system note (and its cards) into the conversation on screen (Task E2: a pay card settled). */
-  addNote: (text: string, cards?: ChatMessage["cards"], opts?: { alert?: boolean }) => void;
+  addNote: (text: string, cards?: ChatMessage["cards"], opts?: { alert?: boolean; link?: { href: string; label: string } }) => void;
   signedIn: boolean;
 }
 
@@ -252,8 +252,8 @@ export function useChappyStream({ locale, apiBase = SITE_API_URL }: { locale: st
     request("/chappy/reset", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }, { mint: false }).catch(() => {});
   }, [request]);
 
-  const addNote = useCallback((text: string, cards: ChatMessage["cards"] = [], opts: { alert?: boolean } = {}) => {
-    setMessages((list) => [...list, { id: newId("n"), role: "note", text, cards, ...(opts.alert ? { alert: true } : {}) }]);
+  const addNote = useCallback((text: string, cards: ChatMessage["cards"] = [], opts: { alert?: boolean; link?: { href: string; label: string } } = {}) => {
+    setMessages((list) => [...list, { id: newId("n"), role: "note", text, cards, ...(opts.alert ? { alert: true } : {}), ...(opts.link ? { link: opts.link } : {}) }]);
   }, []);
 
   return { messages, status, send, reset, retry, addNote, signedIn: !!identityKey?.startsWith("member:") };

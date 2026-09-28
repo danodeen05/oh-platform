@@ -850,6 +850,32 @@ describe("web cards (Task E2): display-only outputs, no new inputs", () => {
     assert.match(zero.paymentLink, /\/en\/order\/payment\?orderId=/);
   });
 
+  test("fix round 2: get_order_status and get_my_orders give an unpaid own order's payment link, never a paid or cancelled one's", async () => {
+    const w = world({
+      orders: [
+        paidOrder(),
+        paidOrder({ id: "o_pending", orderNumber: "ORD-9", status: "PENDING_PAYMENT", paymentStatus: "PENDING", createdAt: new Date(NOW.getTime() - 60_000) }),
+        paidOrder({ id: "o_cancel", orderNumber: "ORD-8", status: "CANCELLED", paymentStatus: "PENDING", createdAt: new Date(NOW.getTime() - 120_000) }),
+      ],
+    });
+    const pending = await executeTool("get_order_status", { orderId: "o_pending" }, memberCtx(w));
+    assert.equal(pending.paymentLink, "http://localhost:3100/en/order/payment?orderId=o_pending&orderNumber=ORD-9");
+    assert.equal((await executeTool("get_order_status", { orderId: "o_paid" }, memberCtx(w))).paymentLink, undefined);
+    assert.equal((await executeTool("get_order_status", { orderId: "o_cancel" }, memberCtx(w))).paymentLink, undefined);
+    const list = await executeTool("get_my_orders", {}, memberCtx(w));
+    assert.deepEqual(list.orders.filter((o) => o.paymentLink).map((o) => o.id), ["o_pending"]);
+    assert.deepEqual(list.unpaid.map((o) => [o.id, o.paymentLink]), [["o_pending", "http://localhost:3100/en/order/payment?orderId=o_pending&orderNumber=ORD-9"]]);
+  });
+
+  test("fix round 2: an unpaid order behind five newer paid ones is still in get_my_orders' unpaid list", async () => {
+    const newer = [1, 2, 3, 4, 5, 6].map((i) => paidOrder({ id: `o_new${i}`, orderNumber: `ORD-N${i}`, createdAt: new Date(NOW.getTime() - i * 60_000) }));
+    const old = paidOrder({ id: "o_old_pending", orderNumber: "ORD-OLD", status: "PENDING_PAYMENT", paymentStatus: "PENDING", createdAt: new Date(NOW.getTime() - 5 * HOUR_MS) });
+    const w = world({ orders: [...newer, old] });
+    const list = await executeTool("get_my_orders", {}, memberCtx(w));
+    assert.ok(!list.orders.some((o) => o.id === "o_old_pending"), "not among the five newest");
+    assert.deepEqual(list.unpaid.map((o) => o.id), ["o_old_pending"]);
+  });
+
   test("the tool input schemas are unchanged by the cards (strict size budget)", () => {
     for (const def of TOOL_DEFS) assert.ok(!JSON.stringify(def.input_schema).includes('"card"'), `${def.name} takes no card input`);
   });

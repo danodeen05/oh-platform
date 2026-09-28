@@ -224,6 +224,16 @@ function NoteTurn({ message }: { message: ChatMessage }) {
         <p role="status" className="m-0 pt-0.5 text-[0.95rem] font-semibold leading-snug text-oh-cream">
           {message.text}
         </p>
+        {message.link && message.link.href.startsWith("/") && !message.link.href.startsWith("//") ? (
+          <a
+            href={message.link.href}
+            data-note-link
+            className="mt-2 inline-flex min-h-11 items-center gap-2 rounded-full border border-solid border-oh-stone px-4 text-sm font-semibold text-oh-cream no-underline hover:border-oh-ash hover:bg-oh-stone/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oh-cream"
+          >
+            {message.link.label}
+            <Icon name="arrow" size={16} className="text-oh-ember-light" />
+          </a>
+        ) : null}
         {message.cards.length > 0 ? <Cards cards={message.cards} spaced /> : null}
       </div>
     </div>

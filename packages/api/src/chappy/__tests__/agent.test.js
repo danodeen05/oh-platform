@@ -13,6 +13,7 @@ import {
   MAX_TOOL_ROUNDS,
   HISTORY_LIMIT,
   forModel,
+  FINAL_ROUND_NUDGE,
 } from "../agent.js";
 import { FROZEN_SYSTEM, buildContextBlock, FALLBACK_TEXT } from "../prompts.js";
 import { TOOL_DEFS, validateToolInput, executeTool } from "../tools.js";
@@ -332,6 +333,30 @@ describe("loop", () => {
     assert.equal(out, "Here is the summary.");
     assert.ok(!out.includes(FALLBACK_TEXT.roundCap.en));
     assert.equal(events.at(-1).text, "Here is the summary.");
+  });
+
+  test("E2 fix round 2: the capped final round is told to reply, and an empty reply becomes the translated round-cap line", async () => {
+    const script = (n) => (n <= MAX_TOOL_ROUNDS ? step({ content: [toolUse("zeta_lookup", { q: String(n) })], stop_reason: "tool_use" }) : step({ content: [] }));
+    const { events, client, db } = await turn({ script, locale: "es" });
+    const finalReq = client.calls.at(-1).params;
+    const lastMsg = finalReq.messages.at(-1);
+    assert.equal(lastMsg.role, "user");
+    assert.equal(lastMsg.content.at(-1).text, FINAL_ROUND_NUDGE, "the nudge rides after the tool results");
+    assert.ok(lastMsg.content.slice(0, -1).every((b) => b.type === "tool_result"));
+    for (const c of client.calls.slice(0, MAX_TOOL_ROUNDS)) assert.ok(!JSON.stringify(c.params.messages).includes(FINAL_ROUND_NUDGE), "only on the final round");
+    const out = events.filter((e) => e.type === "text").map((e) => e.delta).join("");
+    assert.equal(out, FALLBACK_TEXT.roundCap.es);
+    assert.ok(!out.includes(FALLBACK_TEXT.empty.es));
+    assert.ok(!JSON.stringify(db.updates.at(-1).data.messages).includes(FINAL_ROUND_NUDGE), "the nudge is never saved");
+  });
+
+  test("E2 fix round 2: dates in a tool result reach the model as ISO strings, not {}", () => {
+    const at = new Date("2026-09-28T18:30:00Z");
+    const seen = JSON.parse(JSON.stringify(forModel({ orders: [{ createdAt: at }], rewards: [{ usableUntil: at }], estimatedArrival: at, card: { type: "cart", x: 1 } })));
+    assert.equal(seen.orders[0].createdAt, "2026-09-28T18:30:00.000Z");
+    assert.equal(seen.rewards[0].usableUntil, "2026-09-28T18:30:00.000Z");
+    assert.equal(seen.estimatedArrival, "2026-09-28T18:30:00.000Z");
+    assert.deepEqual(seen.card, { type: "cart" });
   });
 
   test("a refusal yields the REFUSAL error event, runs no tools and saves nothing", async () => {

@@ -2239,7 +2239,9 @@
         "processing": "Tu banco aún está procesando el pago. Tu pedido se actualiza cuando se complete.",
         "returnFailed": "El pago no se completó. Pídeme una nueva tarjeta de pago.",
         "unavailable": "El pago no está disponible ahora. Inténtalo en un momento.",
-        "unfinished": "El pago no terminó. Inténtalo de nuevo."
+        "unfinished": "El pago no terminó. Inténtalo de nuevo.",
+        "returnUnknown": "No pude revisar ese pago desde aquí. Tu página de pedidos muestra cómo va.",
+        "ordersLink": "Tus pedidos"
       },
       "confirmZero": {
         "title": "Nada que pagar",

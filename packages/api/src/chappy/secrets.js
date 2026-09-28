@@ -26,6 +26,9 @@ export const REDACTED = "[redacted]";
 export function scrubSecrets(value) {
   if (typeof value === "string") return SECRET_STRING_TEST.test(value) ? value.replace(SECRET_STRING, REDACTED) : value;
   if (Array.isArray(value)) return value.map(scrubSecrets);
+  // A Date (or anything with its own JSON form) is serialized the way
+  // JSON.stringify would, not walked as an object: a Date has no own keys.
+  if (value && typeof value === "object" && typeof value.toJSON === "function") return scrubSecrets(value.toJSON());
   if (value && typeof value === "object") {
     const out = {};
     for (const [k, v] of Object.entries(value)) {
@@ -40,6 +43,7 @@ export function scrubSecrets(value) {
 /** A card payload beyond its type, a secret key, or a secret-shaped string anywhere in `value`. */
 export function hasSecrets(value) {
   if (typeof value === "string") return SECRET_STRING_TEST.test(value);
+  if (value && typeof value === "object" && typeof value.toJSON === "function") return hasSecrets(value.toJSON());
   if (Array.isArray(value)) return value.some(hasSecrets);
   if (value && typeof value === "object") {
     for (const [k, v] of Object.entries(value)) {

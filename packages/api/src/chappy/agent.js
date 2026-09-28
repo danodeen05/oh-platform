@@ -85,6 +85,9 @@ const ACTIVE_ORDER_STATUSES = ["PAID", "QUEUED", "PREPPING", "READY", "SERVING"]
 
 const byName = (a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
 
+/** Appended to the capped final round (never saved to the conversation). */
+export const FINAL_ROUND_NUDGE = "Tool steps for this turn are used up. Reply now: say what is done (cart, pod, price) and what you need from the customer.";
+
 /** The exact request body for one round. Deterministic for equal inputs. */
 export function buildRequest({ messages, toolDefs = TOOL_DEFS, finalRound = false }) {
   const req = {
@@ -98,8 +101,18 @@ export function buildRequest({ messages, toolDefs = TOOL_DEFS, finalRound = fals
     tools: [...toolDefs].sort(byName),
     messages,
   };
-  // The round after the last tool round: answer in text, no more tools.
-  if (finalRound) req.tool_choice = { type: "none" };
+  // The round after the last tool round: answer in text, no more tools. The
+  // instruction rides on a copy of the last (tool results) message, after
+  // the cached prefix, so a turn that did real work always ends in words
+  // (E2 fix round 2: with no instruction the model can return thinking only).
+  if (finalRound) {
+    req.tool_choice = { type: "none" };
+    const last = messages.at(-1);
+    if (last && last.role === "user") {
+      const content = Array.isArray(last.content) ? last.content : [{ type: "text", text: String(last.content ?? "") }];
+      req.messages = [...messages.slice(0, -1), { ...last, content: [...content, { type: "text", text: FINAL_ROUND_NUDGE }] }];
+    }
+  }
   return req;
 }
 
@@ -543,7 +556,9 @@ export async function* runTurn({ client, prisma, identity, channel = "web", loca
       yield* say(note);
       finalContent = [...finalContent, { type: "text", text: note }];
     } else if (!textOf(finalContent) && !emittedText) {
-      const note = fallbackText("empty", lang);
+      // The capped final round came back with no words: say the steps ran out
+      // (translated), not that Chappy lost the thread.
+      const note = fallbackText(finalRound ? "roundCap" : "empty", lang);
       yield* say(note);
       finalContent = [...finalContent, { type: "text", text: note }];
     }

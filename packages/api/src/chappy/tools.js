@@ -95,12 +95,12 @@ export const CHAPPY_TOOLS = [
   },
   {
     name: "get_my_orders",
-    description: "The member's five most recent orders.",
+    description: "The member's five most recent orders, plus `unpaid`: their orders still waiting to be paid (any age, newest first), each with its paymentLink.",
     input_schema: obj({}),
   },
   {
     name: "get_order_status",
-    description: "Status of one of the member's own orders: kitchen status, payment, pod, arrival, items.",
+    description: "Status of one of the member's own orders: kitchen status, payment, pod, arrival, items. An unpaid order includes its paymentLink (the page where they pay it).",
     input_schema: obj({ orderId: S('The order id, or "" for their most recent order.') }),
   },
   {
@@ -110,7 +110,7 @@ export const CHAPPY_TOOLS = [
   },
   {
     name: "reorder",
-    description: "Replace the cart with a past order's items. Returns the new cart and its price.",
+    description: 'Replace the cart with a past order\'s items. Returns the new cart and its price. orderId "" means their usual order: no need to call get_usual_order first.',
     input_schema: obj({ orderId: S('One of the member\'s order ids, or "" for their usual order.') }),
   },
   {
@@ -126,7 +126,8 @@ export const CHAPPY_TOOLS = [
   },
   {
     name: "set_arrival_and_pod",
-    description: "Choose the location, arrival time and pod for the cart. Checks the time against today's slots and checks the pod is free right now; the pod is only held once the order is placed.",
+    description:
+      'Choose the location, arrival time and pod for the cart. Checks the time against today\'s slots and checks the pod is free right now; the pod is only held once the order is placed. locationId "" keeps the cart\'s location, arrival "ASAP" and pod "best" need no get_locations call first.',
     input_schema: obj({
       locationId: S('A location id from get_locations, or "" for the current one.'),
       arrival: S('"ASAP", or a time today as HH:MM (24 hour, location time), or an exact slot from get_locations.'),
@@ -392,6 +393,14 @@ async function quoteView(ctx, quote) {
 
 const cartLocation = (ctx, cart) => cart.locationId || ctx.locationId || null;
 
+/** The order's own payment page (not a secret; the page checks who pays). */
+function paymentLinkFor(ctx, order) {
+  return `${ctx.webBaseUrl || "https://www.ohbeef.com"}/${ctx.locale || "en"}/order/payment?orderId=${encodeURIComponent(order.id)}&orderNumber=${encodeURIComponent(order.orderNumber)}`;
+}
+
+/** Still waiting to be paid: not paid, not cancelled, and a server-quoted amount (a legacy order can't be paid). */
+const payable = (o) => o.paymentStatus !== "PAID" && o.status !== "CANCELLED" && o.amountDueCents !== null && o.amountDueCents !== undefined;
+
 function quoteCart(ctx, cart) {
   return quoteOrder(ctx.prisma, {
     locationId: cartLocation(ctx, cart),
@@ -604,8 +613,21 @@ export const HANDLERS = {
 
   async get_my_orders(_input, ctx) {
     const rows = await ctx.prisma.order.findMany({ where: { userId: ctx.userId }, orderBy: { createdAt: "desc" }, take: 5 });
+    // An unpaid order can sit behind newer paid ones: list those separately so "pay my pending order" is one step.
+    const pending = (await ctx.prisma.order.findMany({ where: { userId: ctx.userId, paymentStatus: { not: "PAID" } }, orderBy: { createdAt: "desc" }, take: 10 }))
+      .filter(payable)
+      .slice(0, 3);
     return {
-      orders: rows.map((o) => ({ id: o.id, orderNumber: o.orderNumber, status: o.status, paymentStatus: o.paymentStatus, total: dollars(o.totalCents), createdAt: o.createdAt })),
+      unpaid: pending.map((o) => ({ id: o.id, orderNumber: o.orderNumber, total: dollars(o.totalCents), createdAt: o.createdAt, paymentLink: paymentLinkFor(ctx, o) })),
+      orders: rows.map((o) => ({
+        id: o.id,
+        orderNumber: o.orderNumber,
+        status: o.status,
+        paymentStatus: o.paymentStatus,
+        total: dollars(o.totalCents),
+        createdAt: o.createdAt,
+        ...(payable(o) ? { paymentLink: paymentLinkFor(ctx, o) } : {}),
+      })),
     };
   },
 
@@ -635,6 +657,7 @@ export const HANDLERS = {
       amountDue: order.amountDueCents === null || order.amountDueCents === undefined ? null : dollars(order.amountDueCents),
       pod,
       estimatedArrival: order.estimatedArrival || null,
+      ...(payable(order) ? { paymentLink: paymentLinkFor(ctx, order) } : {}),
       items: await orderLines(ctx, order.id),
     };
   },
@@ -795,7 +818,7 @@ export const HANDLERS = {
     };
     // What the pay card shows beside the amount (Task E2): the kitchen number and the held pod.
     const payInfo = { kitchenNumber: order.kitchenOrderNumber || null, pod: summary.pod };
-    const paymentLink = `${ctx.webBaseUrl || "https://www.ohbeef.com"}/${ctx.locale || "en"}/order/payment?orderId=${encodeURIComponent(order.id)}&orderNumber=${encodeURIComponent(order.orderNumber)}`;
+    const paymentLink = paymentLinkFor(ctx, order);
 
     if (ctx.channel === "sms") {
       return { ...summary, paymentLink, message: "Send this payment link. The order is paid only when they pay on that page." };

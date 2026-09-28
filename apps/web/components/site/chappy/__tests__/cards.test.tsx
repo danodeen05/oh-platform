@@ -203,7 +203,7 @@ describe("Stripe return path", () => {
     // The API gives a non-owner the safe view (no userId), or a refusal.
     for (const getOrder of [async () => ok({ id: "o1", paymentStatus: "PENDING" }), async () => fail(404)]) {
       const outcome = await resolvePayReturn({ orderId: "o1", paymentIntentId: "pi_theirs", status: "succeeded" }, { getOrder, confirm });
-      expect(outcome).toEqual({ kind: "notPaid" });
+      expect(outcome).toEqual({ kind: "unknown" });
     }
     expect(confirm).not.toHaveBeenCalled();
   });
@@ -223,7 +223,7 @@ describe("Stripe return path", () => {
     expect(await resolvePayReturn({ orderId: "o1", paymentIntentId: "pi_1", status: "succeeded" }, { getOrder: async () => ok(mine), confirm })).toMatchObject({ kind: "paid" });
     expect(confirm).toHaveBeenCalledWith("o1", "pi_1");
     const refused = vi.fn(async () => fail(402));
-    expect(await resolvePayReturn({ orderId: "o1", paymentIntentId: "pi_1", status: "succeeded" }, { getOrder: async () => ok(mine), confirm: refused })).toEqual({ kind: "notPaid" });
+    expect(await resolvePayReturn({ orderId: "o1", paymentIntentId: "pi_1", status: "succeeded" }, { getOrder: async () => ok(mine), confirm: refused })).toEqual({ kind: "unknown" });
     const refunded = vi.fn(async () => fail(409, { refunded: true }));
     expect(await resolvePayReturn({ orderId: "o1", paymentIntentId: "pi_1", status: "succeeded" }, { getOrder: async () => ok(mine), confirm: refunded })).toEqual({ kind: "refunded" });
   });

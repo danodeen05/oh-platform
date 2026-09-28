@@ -4442,7 +4442,9 @@
         "processing": "銀行還在處理這筆付款，完成後訂單會自動更新。",
         "returnFailed": "這筆付款沒有成功。跟我說一聲，我再給你新的付款卡。",
         "unavailable": "目前無法付款，請稍後再試。",
-        "unfinished": "這筆付款沒有完成，請再試一次。"
+        "unfinished": "這筆付款沒有完成，請再試一次。",
+        "returnUnknown": "我在這裡查不到這筆付款的狀態。你的訂單頁面會顯示最新進度。",
+        "ordersLink": "我的訂單"
       },
       "confirmZero": {
         "title": "不需付款",

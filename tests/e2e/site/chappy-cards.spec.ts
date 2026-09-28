@@ -526,3 +526,39 @@ test("@live-reload fix round 1: after a reload, a pending chat order gets its pa
     console.log(`[live-reload] model turns used: ${turns}`);
   });
 });
+
+test("@live-r2 fix round 2: 'pay my pending order' gets its payment link; 'order my usual' ends in words and a cart (2 turns)", { skip: !LIVE || !CAN_SIGN_IN }, async () => {
+  let turns = 0;
+  await withPage(iphone15(), async (page) => {
+    await go(page, `/en${LAB}`);
+    await signInAsMember(page);
+    await openFromDock(page);
+    await page.locator("#chappy-input").waitFor();
+    await page.waitForFunction(() => !document.querySelector("[data-chappy-messages] [role=status]"), null, { timeout: 30_000 });
+    if (await page.locator("[data-chappy-reset]").count()) {
+      await page.locator("[data-chappy-reset]").click(); // a fresh conversation: the link must come from the server, not history
+      await page.locator("[data-chappy-welcome]").waitFor();
+    }
+    const settle = () => page.waitForFunction(() => !document.querySelector('[data-chappy-turn="assistant"][aria-busy="true"]'), null, { timeout: 150_000 });
+    const ask = async (text: string) => {
+      assert.ok(turns < 2, "at most 2 live turns");
+      turns++;
+      await send(page, text);
+      await page.waitForTimeout(400);
+      await settle();
+      const reply = await page.locator('[data-chappy-turn="assistant"]').last().innerText();
+      console.log(`[live-r2 ${turns}] ${text} ->`, reply.replace(/\s+/g, " ").slice(0, 600));
+      return reply;
+    };
+    // E2E_LIVE_SKIP_PAY=1 runs only the usual step (fix round 2 spent its first turn on this step).
+    if (process.env.E2E_LIVE_SKIP_PAY !== "1") {
+      const pay = await ask("Pay my pending order.");
+      assert.match(pay, /\/order\/payment\?orderId=/, "the pending order's payment link");
+      if (SHOTS) await shot(page, "e2-390-en-live-pending-link.png");
+    }
+    const usual = await ask("Order my usual at University Place, as soon as possible, any pod.");
+    assert.doesNotMatch(usual, /lost my train of thought|more steps than I'm allowed/i, "the turn ends in real words");
+    assert.ok(await page.locator('[data-chappy-card="cart"]').count(), "the cart card");
+    if (SHOTS) await shot(page, "e2-390-en-live-usual.png");
+  });
+});
