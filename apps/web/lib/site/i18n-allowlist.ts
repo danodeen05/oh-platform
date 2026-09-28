@@ -14,6 +14,12 @@ export const I18N_ALLOWLIST_TERMS = [
   "Oh! Beef Noodle Soup",
   "Apple Pay",
   "Google Pay",
+  // Wallet brands as Apple and Google localize them (Task D8): "加入 Apple 錢包",
+  // "新增至 Google 錢包", "Añadir a Apple Wallet".
+  "Apple Wallet",
+  "Google Wallet",
+  "Apple",
+  "Google",
   "Oh!",
   "Wagyu",
   "Chappy",

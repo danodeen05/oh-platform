@@ -4509,5 +4509,204 @@
       "cta": "問問 Chappy",
       "prompt": "怎樣最快成為牛肉達人？"
     }
+  },
+  "passport": {
+    "meta": {
+      "title": "會員護照",
+      "description": "您的 Oh! 會員資訊：等級、晉升進度、獎勵、購物金與印章。"
+    },
+    "loading": "正在開啟您的護照",
+    "back": "護照",
+    "error": {
+      "title": "暫時無法開啟您的護照。",
+      "body": "請檢查網路連線後再試一次。",
+      "retry": "再試一次"
+    },
+    "signedOut": {
+      "eyebrow": "會員護照",
+      "title": "您的護照在這裡。",
+      "body": "登入即可查看您的等級、晉升進度、獎勵與購物金。",
+      "signIn": "登入",
+      "join": "建立帳號",
+      "learn": "了解會員獎勵"
+    },
+    "cover": {
+      "eyebrow": "Oh! 會員護照",
+      "number": "編號 {code}",
+      "tierLabel": "會員等級",
+      "since": "{date}加入",
+      "cashback": "購物金回饋",
+      "streak": "連續天數，最高 {best} 天",
+      "bowls": "累計碗數",
+      "lead": "每筆訂單的 {pct}% 都會以購物金回饋給您。這是您目前的進度。",
+      "leadFreeBowl": "您有一碗免費的麵在等著您。菜單上任選一碗，我們請客。"
+    },
+    "cta": {
+      "order": "點一碗麵",
+      "freeBowl": "使用免費一碗"
+    },
+    "climb": {
+      "eyebrow": "晉升之路",
+      "title": "下一站：{next}。",
+      "titleTop": "您已登上最高等級。",
+      "orders": "碗數",
+      "referrals": "好友",
+      "ordersA11y": "晉升{next}：已完成 {have} 碗，共需 {need} 碗",
+      "referralsA11y": "晉升{next}：已邀請 {have} 位好友，共需 {need} 位",
+      "ready": "兩項都已達成。下一筆訂單就會升級。",
+      "remaining": "還差 {orders} 碗和 {referrals} 位好友。",
+      "topBody": "每筆訂單的 {pct}% 以購物金回饋，您的訂單在廚房排最前面，每季還有一份頂級加料。",
+      "guide": "了解晉升方式"
+    },
+    "next": {
+      "title": "升上{next}後",
+      "cashback": "每筆訂單 {pct}% 購物金回饋",
+      "freeBowl": "升級當天送您一碗",
+      "earlyAccess": "新品比大家早 {days} 天享用",
+      "queue": "您的訂單在廚房排得更前面",
+      "addon": "每季一份頂級加料"
+    },
+    "rewards": {
+      "eyebrow": "獎勵",
+      "title": "隨時為您準備好。",
+      "empty": "目前沒有待使用的獎勵。升上{next}時會再送您一碗。",
+      "emptyTop": "目前沒有待使用的獎勵。每季都會送上一份頂級加料。",
+      "FREE_BOWL": {
+        "name": "免費一碗",
+        "body": "菜單任選一碗，我們請客。"
+      },
+      "PREMIUM_ADDON": {
+        "name": "頂級加料",
+        "body": "一份頂級加料，我們請客。"
+      },
+      "days": "{count, plural, other {剩 # 天}}",
+      "hours": "{count, plural, other {剩 # 小時}}",
+      "ended": "已結束",
+      "useBy": "請於{date}前使用",
+      "use": "立即使用"
+    },
+    "credits": {
+      "eyebrow": "購物金",
+      "title": "您的購物金",
+      "balanceLabel": "可用購物金",
+      "earn": "每筆訂單的 {pct}% 都會以購物金回饋。",
+      "lasts": "購物金有效期為 {days} 天，並優先使用最早到期的部分。",
+      "history": "購物金紀錄",
+      "expiring": "{amount} 將於{date}到期，下一筆訂單會優先使用。"
+    },
+    "seals": {
+      "eyebrow": "印章",
+      "title": "您的印章收藏",
+      "count": "已獲得 {earned} / {total}",
+      "earned": "已獲得",
+      "notEarned": "尚未獲得",
+      "new": "新",
+      "guide": "如何獲得印章"
+    },
+    "wallet": {
+      "eyebrow": "電子錢包",
+      "title": "把護照放進手機。",
+      "body": "把會員護照加入手機錢包，隨著您晉升自動更新。",
+      "apple": "加入 Apple 錢包",
+      "google": "新增至 Google 錢包",
+      "unavailable": "目前無法使用電子錢包票卡，請稍後再試。",
+      "soon": "電子錢包票卡即將推出。"
+    },
+    "links": {
+      "label": "護照的更多內容",
+      "orders": "訂單紀錄",
+      "credits": "購物金紀錄",
+      "referral": "邀請好友",
+      "rewards": "了解會員獎勵"
+    },
+    "welcome": {
+      "label": "歡迎使用您的護照",
+      "skip": "略過",
+      "next": "下一步",
+      "back": "上一步",
+      "finish": "打開我的護照",
+      "step": "第 {current} 步，共 {total} 步",
+      "s1": {
+        "title": "您是{tier}。",
+        "body": "每筆訂單的 {pct}% 都會以購物金回饋給您，從第一碗就開始。"
+      },
+      "s2": {
+        "title": "一路晉升到{top}。",
+        "body": "{orders} 碗麵加上 {referrals} 位好友，就能升上{next}。每升一級都送您一碗。",
+        "bodyTop": "您已經是最高等級，盡情享受所有福利。"
+      },
+      "s3": {
+        "sealName": "好友印章",
+        "title": "邀請好友，一起享用。",
+        "body": "好友透過您的連結加入可得 {referee} 購物金；他們下單後，您可得 {referrer}。",
+        "titleReferred": "您的 {amount} 歡迎購物金已經入帳。",
+        "bodyReferred": "您是好友邀請來的，購物金已加入您的帳戶，有效期為 {days} 天。"
+      },
+      "s4": {
+        "title": "把護照帶在身上。",
+        "body": "將護照加入手機錢包，隨著您晉升自動更新。"
+      }
+    },
+    "tierUp": {
+      "eyebrow": "等級提升",
+      "title": "您升上{tier}了。",
+      "body": "從現在起，每筆訂單的 {pct}% 都會以購物金回饋。",
+      "bowlEyebrow": "您的獎勵",
+      "bowlTitle": "送您一碗，我們請客。",
+      "bowlBody": "菜單任選一碗，請於{date}前使用。",
+      "bowlNoDate": "菜單任選一碗。",
+      "order": "點我的免費一碗",
+      "later": "稍後再說",
+      "close": "關閉"
+    },
+    "orders": {
+      "eyebrow": "護照",
+      "title": "您的訂單",
+      "count": "{count, plural, =0 {尚無訂單} other {共 # 筆訂單}}",
+      "empty": "尚無訂單。第一碗麵就是晉升的起點。",
+      "emptyCta": "點一碗麵",
+      "number": "訂單 {number}",
+      "total": "總計",
+      "again": "再點一次",
+      "track": "查看進度",
+      "more": "{count, plural, other {另有 # 項}}",
+      "status": {
+        "PENDING_PAYMENT": "等待付款",
+        "PAID": "已付款",
+        "QUEUED": "排隊中",
+        "PREPPING": "製作中",
+        "READY": "已完成",
+        "SERVING": "已送達座位",
+        "COMPLETED": "已享用",
+        "CANCELLED": "已取消"
+      }
+    },
+    "creditsPage": {
+      "eyebrow": "護照",
+      "title": "您的購物金",
+      "balance": "可用購物金",
+      "howTitle": "購物金怎麼用",
+      "how1": "購物金自獲得當天起 {days} 天內有效。",
+      "how2": "結帳時優先使用最早到期的購物金。",
+      "how3": "購物金到期前，我們會提醒您。",
+      "history": "紀錄",
+      "empty": "目前還沒有購物金紀錄。",
+      "events": {
+        "REFERRAL_SIGNUP": "好友加入",
+        "REFERRAL_ORDER": "好友首次下單",
+        "REFERRAL_ORDER_PENDING": "好友獎勵處理中",
+        "CASHBACK": "訂單購物金回饋",
+        "CREDIT_APPLIED": "用於訂單",
+        "CREDIT_EXPIRED": "已到期",
+        "ADMIN_ADJUSTMENT": "調整",
+        "CHALLENGE_REWARD": "挑戰獎勵",
+        "GIFT_EXCESS": "請客餘額",
+        "GOODWILL": "團隊致意",
+        "WELCOME": "歡迎購物金",
+        "REWARD_REDEEMED": "已使用獎勵",
+        "REFUND_RESTORE": "退款後退回",
+        "OTHER": "購物金"
+      }
+    }
   }
 }

@@ -12,8 +12,9 @@ const intlMiddleware = createIntlMiddleware(routing);
 const CNY_HOSTNAMES = ["cny.ohbeef.com", "cny.localhost"];
 
 // Protected routes that require authentication (with locale prefix)
+// /member is not here (Task D8): signed out, the passport page shows its own
+// translated sign-in state; the API still answers only the member (requireSelf).
 const isProtectedRoute = createRouteMatcher([
-  "/:locale/member(.*)",
   "/:locale/referral(.*)",
   "/:locale/agents(.*)",
   "/api/agents(.*)",
@@ -28,6 +29,7 @@ const isPublicRoute = createRouteMatcher([
   "/:locale/menu(.*)",
   "/:locale/locations(.*)",
   "/:locale/rewards(.*)",
+  "/:locale/member(.*)",
   "/:locale/gift-cards(.*)",
   "/:locale/store(.*)",
   "/:locale/contact(.*)",

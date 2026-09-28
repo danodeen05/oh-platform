@@ -2306,5 +2306,204 @@
       "cta": "Pregúntale a Chappy",
       "prompt": "¿Cómo llego a Jefe de la carne lo más rápido posible?"
     }
+  },
+  "passport": {
+    "meta": {
+      "title": "Tu pasaporte",
+      "description": "Tu membresía Oh!: tu nivel, tu ascenso, tus recompensas, tu crédito y tus sellos."
+    },
+    "loading": "Abriendo tu pasaporte",
+    "back": "Pasaporte",
+    "error": {
+      "title": "No pudimos abrir tu pasaporte.",
+      "body": "Revisa tu conexión e inténtalo de nuevo.",
+      "retry": "Intentar de nuevo"
+    },
+    "signedOut": {
+      "eyebrow": "Pasaporte de miembro",
+      "title": "Tu pasaporte vive aquí.",
+      "body": "Inicia sesión para ver tu nivel, tu ascenso, tus recompensas y tu crédito.",
+      "signIn": "Iniciar sesión",
+      "join": "Crear una cuenta",
+      "learn": "Cómo funcionan las recompensas"
+    },
+    "cover": {
+      "eyebrow": "Pasaporte de miembro Oh!",
+      "number": "N.º {code}",
+      "tierLabel": "Nivel de miembro",
+      "since": "Miembro desde {date}",
+      "cashback": "Crédito de vuelta",
+      "streak": "Días seguidos, récord {best}",
+      "bowls": "Tazones hasta hoy",
+      "lead": "El {pct}% de cada pedido vuelve a ti como crédito. Así vas.",
+      "leadFreeBowl": "Te espera un tazón gratis. Cualquier tazón del menú, invita la casa."
+    },
+    "cta": {
+      "order": "Pedir un tazón",
+      "freeBowl": "Usar tu tazón gratis"
+    },
+    "climb": {
+      "eyebrow": "El ascenso",
+      "title": "Lo siguiente: {next}.",
+      "titleTop": "Estás en la cima.",
+      "orders": "Tazones",
+      "referrals": "Amigos",
+      "ordersA11y": "{have} de {need} tazones para {next}",
+      "referralsA11y": "{have} de {need} amigos para {next}",
+      "ready": "Ambos listos. Subes con tu próximo pedido.",
+      "remaining": "{orders, plural, =0 {Ningún tazón más} one {# tazón más} other {# tazones más}} y {referrals, plural, =0 {ningún amigo más} one {# amigo más} other {# amigos más}} por delante.",
+      "topBody": "El {pct}% de cada pedido vuelve como crédito, tu pedido sube más que nadie en la fila de la cocina y cada trimestre tienes un complemento premium.",
+      "guide": "Cómo funciona el ascenso"
+    },
+    "next": {
+      "title": "Con {next}",
+      "cashback": "El {pct}% de cada pedido vuelve en crédito",
+      "freeBowl": "Un tazón gratis el día que llegas",
+      "earlyAccess": "Los tazones nuevos {days, plural, one {# día} other {# días}} antes que nadie",
+      "queue": "Tu pedido sube en la fila de la cocina",
+      "addon": "Un complemento premium cada trimestre"
+    },
+    "rewards": {
+      "eyebrow": "Recompensas",
+      "title": "Listas cuando tú lo estés.",
+      "empty": "No tienes recompensas pendientes. Tu próximo tazón gratis llega al alcanzar {next}.",
+      "emptyTop": "No tienes recompensas pendientes ahora. Tu complemento premium llega cada trimestre.",
+      "FREE_BOWL": {
+        "name": "Tazón gratis",
+        "body": "Cualquier tazón del menú, invita la casa."
+      },
+      "PREMIUM_ADDON": {
+        "name": "Complemento premium",
+        "body": "Un complemento premium, invita la casa."
+      },
+      "days": "{count, plural, one {Queda # día} other {Quedan # días}}",
+      "hours": "{count, plural, one {Queda # hora} other {Quedan # horas}}",
+      "ended": "Terminó",
+      "useBy": "Úsalo antes del {date}",
+      "use": "Usarlo"
+    },
+    "credits": {
+      "eyebrow": "Crédito",
+      "title": "Tu crédito",
+      "balanceLabel": "Crédito disponible",
+      "earn": "El {pct}% de cada pedido vuelve como crédito.",
+      "lasts": "El crédito dura {days} días y se usa primero el que vence antes.",
+      "history": "Historial de crédito",
+      "expiring": "{amount} vence el {date}. Se usa primero en tu próximo pedido."
+    },
+    "seals": {
+      "eyebrow": "Sellos",
+      "title": "Tu colección de sellos",
+      "count": "{earned} de {total} conseguidos",
+      "earned": "Conseguido",
+      "notEarned": "Aún no conseguido",
+      "new": "Nuevo",
+      "guide": "Cómo conseguir sellos"
+    },
+    "wallet": {
+      "eyebrow": "Billetera",
+      "title": "Llévalo en tu teléfono.",
+      "body": "Tu pasaporte en la billetera de tu teléfono, al día mientras asciendes.",
+      "apple": "Añadir a Apple Wallet",
+      "google": "Añadir a Google Wallet",
+      "unavailable": "Los pases de billetera no están disponibles ahora. Inténtalo más tarde.",
+      "soon": "Los pases de billetera están casi listos."
+    },
+    "links": {
+      "label": "Más en tu pasaporte",
+      "orders": "Historial de pedidos",
+      "credits": "Historial de crédito",
+      "referral": "Invita a un amigo",
+      "rewards": "Cómo funcionan las recompensas"
+    },
+    "welcome": {
+      "label": "Bienvenida a tu pasaporte",
+      "skip": "Omitir",
+      "next": "Siguiente",
+      "back": "Atrás",
+      "finish": "Abrir mi pasaporte",
+      "step": "{current} de {total}",
+      "s1": {
+        "title": "Eres {tier}.",
+        "body": "El {pct}% de cada pedido vuelve a ti como crédito. Empieza con tu primer tazón."
+      },
+      "s2": {
+        "title": "Asciende hasta {top}.",
+        "body": "{orders} tazones y {referrals} amigos te llevan a {next}. Cada nivel trae un tazón gratis.",
+        "bodyTop": "Ya estás en la cima. Disfruta cada beneficio."
+      },
+      "s3": {
+        "sealName": "Sello de amistad",
+        "title": "Trae a un amigo. Comen los dos.",
+        "body": "Quien se une con tu enlace recibe {referee} en crédito. Tú recibes {referrer} cuando hace su pedido.",
+        "titleReferred": "Tu crédito de bienvenida de {amount} te espera.",
+        "bodyReferred": "Llegaste por un amigo, así que ya está en tu crédito. Dura {days} días."
+      },
+      "s4": {
+        "title": "Llévalo en tu teléfono.",
+        "body": "Añade tu pasaporte a tu billetera. Se actualiza mientras asciendes."
+      }
+    },
+    "tierUp": {
+      "eyebrow": "Nuevo nivel",
+      "title": "Ahora eres {tier}.",
+      "body": "Desde hoy, el {pct}% de cada pedido vuelve como crédito.",
+      "bowlEyebrow": "Tu recompensa",
+      "bowlTitle": "Un tazón gratis, invita la casa.",
+      "bowlBody": "Cualquier tazón del menú. Úsalo antes del {date}.",
+      "bowlNoDate": "Cualquier tazón del menú.",
+      "order": "Pedir mi tazón gratis",
+      "later": "Más tarde",
+      "close": "Cerrar"
+    },
+    "orders": {
+      "eyebrow": "Pasaporte",
+      "title": "Tus pedidos",
+      "count": "{count, plural, =0 {Aún no hay pedidos} one {# pedido} other {# pedidos}}",
+      "empty": "Aún no hay pedidos. Tu primer tazón empieza el ascenso.",
+      "emptyCta": "Pedir un tazón",
+      "number": "Pedido {number}",
+      "total": "Total",
+      "again": "Pedir de nuevo",
+      "track": "Seguirlo",
+      "more": "{count, plural, one {# artículo más} other {# artículos más}}",
+      "status": {
+        "PENDING_PAYMENT": "Pendiente de pago",
+        "PAID": "Pagado",
+        "QUEUED": "En fila",
+        "PREPPING": "En la cocina",
+        "READY": "Listo",
+        "SERVING": "En tu cápsula",
+        "COMPLETED": "Disfrutado",
+        "CANCELLED": "Cancelado"
+      }
+    },
+    "creditsPage": {
+      "eyebrow": "Pasaporte",
+      "title": "Tu crédito",
+      "balance": "Crédito disponible",
+      "howTitle": "Cómo funciona el crédito",
+      "how1": "El crédito dura {days} días desde el día en que lo ganas.",
+      "how2": "Se usa primero el que vence antes.",
+      "how3": "Te avisamos antes de que venza.",
+      "history": "Historial",
+      "empty": "Aún no hay movimientos de crédito.",
+      "events": {
+        "REFERRAL_SIGNUP": "Se unió un amigo",
+        "REFERRAL_ORDER": "Primer pedido de un amigo",
+        "REFERRAL_ORDER_PENDING": "Crédito de amigo en camino",
+        "CASHBACK": "Crédito de vuelta de un pedido",
+        "CREDIT_APPLIED": "Usado en un pedido",
+        "CREDIT_EXPIRED": "Vencido",
+        "ADMIN_ADJUSTMENT": "Ajuste",
+        "CHALLENGE_REWARD": "Recompensa de reto",
+        "GIFT_EXCESS": "Saldo de comida regalada",
+        "GOODWILL": "De parte de nuestro equipo",
+        "WELCOME": "Crédito de bienvenida",
+        "REWARD_REDEEMED": "Recompensa usada",
+        "REFUND_RESTORE": "Devuelto tras un reembolso",
+        "OTHER": "Crédito"
+      }
+    }
   }
 }

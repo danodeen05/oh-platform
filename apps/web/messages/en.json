@@ -4611,5 +4611,204 @@
       "cta": "Ask Chappy",
       "prompt": "How do I reach Beef Boss fastest?"
     }
+  },
+  "passport": {
+    "meta": {
+      "title": "Your passport",
+      "description": "Your Oh! membership: your tier, your climb, your rewards, your credit and your seals."
+    },
+    "loading": "Opening your passport",
+    "back": "Passport",
+    "error": {
+      "title": "We couldn't open your passport.",
+      "body": "Check your connection and try again.",
+      "retry": "Try again"
+    },
+    "signedOut": {
+      "eyebrow": "Member passport",
+      "title": "Your passport lives here.",
+      "body": "Sign in to see your tier, your climb, your rewards and your credit.",
+      "signIn": "Sign in",
+      "join": "Create an account",
+      "learn": "How the rewards work"
+    },
+    "cover": {
+      "eyebrow": "Oh! member passport",
+      "number": "No. {code}",
+      "tierLabel": "Member tier",
+      "since": "Member since {date}",
+      "cashback": "Credit back",
+      "streak": "Day streak, best {best}",
+      "bowls": "Bowls so far",
+      "lead": "{pct}% of every order comes back to you as credit. Here is where you stand.",
+      "leadFreeBowl": "A free bowl is waiting for you. Any bowl on the menu, on us."
+    },
+    "cta": {
+      "order": "Order a bowl",
+      "freeBowl": "Use your free bowl"
+    },
+    "climb": {
+      "eyebrow": "The climb",
+      "title": "{next} is next.",
+      "titleTop": "You're at the top.",
+      "orders": "Bowls",
+      "referrals": "Friends",
+      "ordersA11y": "{have} of {need} bowls toward {next}",
+      "referralsA11y": "{have} of {need} friends toward {next}",
+      "ready": "Both done. You move up with your next order.",
+      "remaining": "{orders, plural, =0 {No more bowls} one {# more bowl} other {# more bowls}} and {referrals, plural, =0 {no more friends} one {# more friend} other {# more friends}} to go.",
+      "topBody": "{pct}% of every order comes back as credit, your order moves furthest up the kitchen queue, and a premium add-on is yours each quarter.",
+      "guide": "How the climb works"
+    },
+    "next": {
+      "title": "At {next}",
+      "cashback": "{pct}% of every order back in credit",
+      "freeBowl": "A free bowl the day you arrive",
+      "earlyAccess": "New bowls {days, plural, one {# day} other {# days}} before everyone else",
+      "queue": "Your order moves up the kitchen queue",
+      "addon": "One premium add-on each quarter"
+    },
+    "rewards": {
+      "eyebrow": "Rewards",
+      "title": "Ready when you are.",
+      "empty": "No rewards waiting. Your next free bowl comes when you reach {next}.",
+      "emptyTop": "No rewards waiting right now. Your premium add-on arrives each quarter.",
+      "FREE_BOWL": {
+        "name": "Free bowl",
+        "body": "Any bowl on the menu, on us."
+      },
+      "PREMIUM_ADDON": {
+        "name": "Premium add-on",
+        "body": "One premium add-on, on us."
+      },
+      "days": "{count, plural, one {# day left} other {# days left}}",
+      "hours": "{count, plural, one {# hour left} other {# hours left}}",
+      "ended": "Ended",
+      "useBy": "Use by {date}",
+      "use": "Use it"
+    },
+    "credits": {
+      "eyebrow": "Credit",
+      "title": "Your credit",
+      "balanceLabel": "Available credit",
+      "earn": "{pct}% of every order comes back as credit.",
+      "lasts": "Credit lasts {days} days and is spent closest to expiring first.",
+      "history": "Credit history",
+      "expiring": "{amount} expires on {date}. It goes first on your next order."
+    },
+    "seals": {
+      "eyebrow": "Seals",
+      "title": "Your seal collection",
+      "count": "{earned} of {total} earned",
+      "earned": "Earned",
+      "notEarned": "Not earned yet",
+      "new": "New",
+      "guide": "How to earn seals"
+    },
+    "wallet": {
+      "eyebrow": "Wallet",
+      "title": "Carry it on your phone.",
+      "body": "Your passport in your phone's wallet, updated as you climb.",
+      "apple": "Add to Apple Wallet",
+      "google": "Add to Google Wallet",
+      "unavailable": "Wallet passes are unavailable right now. Please try again later.",
+      "soon": "Wallet passes are almost ready."
+    },
+    "links": {
+      "label": "More in your passport",
+      "orders": "Order history",
+      "credits": "Credit history",
+      "referral": "Invite a friend",
+      "rewards": "How rewards work"
+    },
+    "welcome": {
+      "label": "Welcome to your passport",
+      "skip": "Skip",
+      "next": "Next",
+      "back": "Back",
+      "finish": "Open my passport",
+      "step": "{current} of {total}",
+      "s1": {
+        "title": "You're a {tier}.",
+        "body": "{pct}% of every order comes back to you as credit. It starts with your first bowl."
+      },
+      "s2": {
+        "title": "Climb to {top}.",
+        "body": "{orders} bowls and {referrals} friends take you to {next}. Every step up brings a free bowl.",
+        "bodyTop": "You're already at the top. Enjoy every perk."
+      },
+      "s3": {
+        "sealName": "Friend seal",
+        "title": "Bring a friend. You both eat.",
+        "body": "Friends who join with your link get {referee} in credit. You get {referrer} when they order.",
+        "titleReferred": "Your {amount} welcome credit is waiting.",
+        "bodyReferred": "A friend brought you here, so it's already in your credit. It lasts {days} days."
+      },
+      "s4": {
+        "title": "Keep it on your phone.",
+        "body": "Add your passport to your wallet. It updates as you climb."
+      }
+    },
+    "tierUp": {
+      "eyebrow": "New tier",
+      "title": "You're a {tier}.",
+      "body": "{pct}% of every order now comes back as credit.",
+      "bowlEyebrow": "Your reward",
+      "bowlTitle": "A free bowl, on us.",
+      "bowlBody": "Any bowl on the menu. Use it by {date}.",
+      "bowlNoDate": "Any bowl on the menu.",
+      "order": "Order my free bowl",
+      "later": "Later",
+      "close": "Close"
+    },
+    "orders": {
+      "eyebrow": "Passport",
+      "title": "Your orders",
+      "count": "{count, plural, =0 {No orders yet} one {# order} other {# orders}}",
+      "empty": "No orders yet. Your first bowl starts the climb.",
+      "emptyCta": "Order a bowl",
+      "number": "Order {number}",
+      "total": "Total",
+      "again": "Order again",
+      "track": "Track it",
+      "more": "{count, plural, one {# more item} other {# more items}}",
+      "status": {
+        "PENDING_PAYMENT": "Awaiting payment",
+        "PAID": "Paid",
+        "QUEUED": "In line",
+        "PREPPING": "In the kitchen",
+        "READY": "Ready",
+        "SERVING": "At your pod",
+        "COMPLETED": "Enjoyed",
+        "CANCELLED": "Cancelled"
+      }
+    },
+    "creditsPage": {
+      "eyebrow": "Passport",
+      "title": "Your credit",
+      "balance": "Available credit",
+      "howTitle": "How credit works",
+      "how1": "Credit lasts {days} days from the day you earn it.",
+      "how2": "It's spent closest to expiring first.",
+      "how3": "We remind you before any of it expires.",
+      "history": "History",
+      "empty": "No credit activity yet.",
+      "events": {
+        "REFERRAL_SIGNUP": "A friend joined",
+        "REFERRAL_ORDER": "A friend's first order",
+        "REFERRAL_ORDER_PENDING": "Friend credit on the way",
+        "CASHBACK": "Credit back on an order",
+        "CREDIT_APPLIED": "Spent on an order",
+        "CREDIT_EXPIRED": "Expired",
+        "ADMIN_ADJUSTMENT": "Adjustment",
+        "CHALLENGE_REWARD": "Challenge reward",
+        "GIFT_EXCESS": "Meal gift balance",
+        "GOODWILL": "From our team",
+        "WELCOME": "Welcome credit",
+        "REWARD_REDEEMED": "Reward used",
+        "REFUND_RESTORE": "Returned after a refund",
+        "OTHER": "Credit"
+      }
+    }
   }
 }
