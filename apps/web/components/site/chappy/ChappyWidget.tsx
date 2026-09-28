@@ -22,7 +22,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { siteDisplayFont } from "@/components/site/site-fonts";
 import { Icon } from "@/components/site/icons/Icon";
 import { CHAPPY_AVATAR } from "@/lib/site/nav";
-import { PHONE_STAGES } from "@oh/floor-plan";
+import { PHONE_STAGES } from "@oh/floor-plan/stages";
 import { SITE_API_URL, useSiteApi } from "@/lib/site/api";
 import { confirmPayment, type Order } from "@/lib/site/orders";
 import { ChappyCardProvider, resolvePayReturn, type ChappyCardContext, type ChappyPayReturn } from "./cards";

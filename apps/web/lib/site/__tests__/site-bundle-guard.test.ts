@@ -26,6 +26,7 @@ const DEFERRED: Record<string, string> = {
   "@stripe/stripe-js": "Stripe loads only on the pay steps",
   "@stripe/react-stripe-js": "Stripe loads only on the pay steps",
   "next/image": "about 5 KB of client JS; the shell uses pre-sized static <img>s",
+  "@oh/floor-plan": "the geometry reads the plan model (about 40 KB gzipped): load CombMap lazily, and take PHONE_STAGES from @oh/floor-plan/stages",
 };
 
 const STRIPE = ["@stripe/stripe-js", "@stripe/react-stripe-js"];

@@ -522,9 +522,9 @@ export const JOURNEY_STEPS: readonly JourneyStep[] = [
   { key: "reset", actor: "kitchen", realSeconds: SEATED_AT + DWELL + TURNOVER, at: null },
 ];
 
-/** Order status page stages, as the guest's phone shows them during the journey. */
-export const PHONE_STAGES = ["PAID", "QUEUED", "PREPPING", "READY", "SERVING", "COMPLETED"] as const;
-export type PhoneStage = (typeof PHONE_STAGES)[number];
+/** Order status page stages, as the guest's phone shows them during the journey (./stages.ts). */
+import type { PhoneStage } from "./stages";
+export { PHONE_STAGES, type PhoneStage } from "./stages";
 /** The stage on the guest's phone at a journey progress: checked in when seated, ready while the runner carries it, done when they tap "I'm done eating". */
 export function statusStageAt(progress: number): PhoneStage {
   if (progress < 0.2) return "PAID";

@@ -25,7 +25,6 @@ import { confirmPayment, groupIdentityHeaders, paymentIntent, type PaymentIntent
 import { statusPath } from "@/lib/site/order-status";
 import { clearDraft } from "@/lib/site/order-draft";
 import { formatCents, orderErrorCode, stripeLocale } from "@/lib/site/order-flow";
-import { podWalkSteps } from "@/lib/site/pod-walk";
 import { useGuest } from "@/contexts/guest-context";
 import { StepSheet, TotalSummary, Spinner } from "./StepSheet";
 import { Receipt, type ReceiptLine, type ReceiptTotals } from "./Receipt";
@@ -237,6 +236,22 @@ export function PayStep({ orderId, orderNumber }: { orderId: string | null; orde
   // ------------------------------------------------------------ render
   // Back to savings when this order came from the draft on this tab; otherwise to the start.
   const backHref = draft.locationId && draft.order?.id === orderId ? `/${locale}/order/location/${encodeURIComponent(draft.locationId)}?step=savings` : `/${locale}/order`;
+  // Task G2b: the floor-plan geometry (and the plan model behind it) loads
+  // after the page, just for the walk line; it reads "nearest the entrance"
+  // until then (the same as an unknown pod). Above the early returns: a hook.
+  const walkLayout = order?.location?.layoutKey;
+  const walkLabel = order?.seat?.label || order?.seat?.number || null;
+  const [steps, setSteps] = useState<number | null>(null);
+  useEffect(() => {
+    let live = true;
+    import("@/lib/site/pod-walk").then((m) => {
+      if (live) setSteps(m.podWalkSteps(walkLayout, walkLabel));
+    });
+    return () => {
+      live = false;
+    };
+  }, [walkLayout, walkLabel]);
+
   if (!orderId) return <Missing />;
   if (member.ready && !member.signedIn && !guest) {
     return (
@@ -263,7 +278,7 @@ export function PayStep({ orderId, orderNumber }: { orderId: string | null; orde
   const due = pi ? pi.amountDueCents : null;
   const free = due === 0;
   const label = order?.seat?.label || order?.seat?.number || null;
-  const steps = podWalkSteps(order?.location?.layoutKey, label);
+
   const lines = order ? receiptFromOrder(order, totals?.rewardCents || 0) : [];
 
   const cta = !pi

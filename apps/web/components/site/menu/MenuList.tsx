@@ -10,7 +10,7 @@
  * tier, so a member whose tier reaches an item before its release date gets
  * it here, marked "Early for members".
  */
-import Image from "next/image";
+import { OptimizedImg } from "@/components/site/picture/OptimizedImg";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useSiteAuth } from "@/lib/site/auth";
@@ -176,7 +176,7 @@ function Thumb({ item, size, priority = false }: { item: MenuCard; size: "sm" | 
       </span>
     );
   }
-  return <Image src={item.photo.src} alt="" fill sizes={size === "sm" ? "64px" : "(min-width: 1024px) 360px, (min-width: 640px) 45vw, 90vw"} className="object-cover" />;
+  return <OptimizedImg src={item.photo.src} alt="" sizes={size === "sm" ? "64px" : "(min-width: 1024px) 360px, (min-width: 640px) 45vw, 90vw"} priority={priority} className="absolute inset-0 h-full w-full object-cover" />;
 }
 
 function FeatureCard({ item, onOpen, priority }: { item: MenuCard; onOpen: (i: MenuCard) => void; priority: boolean }) {

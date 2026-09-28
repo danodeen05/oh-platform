@@ -17,7 +17,7 @@
  *     origin only) and says `{ type: "oh-status-demo-ready" }` when it
  *     listens; without it the demo plays by itself.
  */
-import { PHONE_STAGES, type PhoneStage } from "@oh/floor-plan";
+import { PHONE_STAGES, type PhoneStage } from "@oh/floor-plan/stages";
 
 export { PHONE_STAGES };
 export type { PhoneStage };

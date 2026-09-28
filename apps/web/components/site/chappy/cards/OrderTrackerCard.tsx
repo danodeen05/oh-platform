@@ -7,7 +7,7 @@
  * full status page. Shown for get_order_status and right after a pay card
  * settles.
  */
-import { PHONE_STAGES } from "@oh/floor-plan";
+import { PHONE_STAGES } from "@oh/floor-plan/stages";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { Icon } from "@/components/site/icons/Icon";

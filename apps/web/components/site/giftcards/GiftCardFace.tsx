@@ -5,7 +5,6 @@
  * for the chosen face (Linen, Night, Gold), the Oh! mark and the amount.
  * Card proportions (ISO/IEC 7810 ID-1, 85.6 x 54 mm).
  */
-import Image from "next/image";
 import { useLocale, useTranslations } from "next-intl";
 import { SitePicture } from "@/components/site/picture/SitePicture";
 import { formatCents } from "@/lib/site/order-flow";
@@ -33,7 +32,8 @@ export function GiftCardFace({ design, amount, className = "" }: { design: GiftD
       <div aria-hidden="true" className={`absolute inset-0 -z-10 transition-[background] duration-500 motion-reduce:transition-none ${TINT[design]}`} />
       <div aria-hidden="true" className="flex h-full flex-col justify-between p-[6%] text-oh-cream">
         <div className="flex items-start justify-between gap-3">
-          <Image src="/Oh_Logo_Mark_Light.png" alt="" width={48} height={48} className="h-[clamp(2rem,9vw,3rem)] w-auto object-contain" />
+          {/* eslint-disable-next-line @next/next/no-img-element -- G2b: a pre-sized static file, not next/image's client JS */}
+          <img src="/brand/oh-mark-light-132.webp" alt="" width={48} height={48} decoding="async" className="h-[clamp(2rem,9vw,3rem)] w-auto object-contain" />
           <span className="text-[clamp(0.65rem,2.6vw,0.8rem)] font-semibold uppercase tracking-[0.2em] text-oh-cream/90">{t("label")}</span>
         </div>
         <div className="flex items-end justify-between gap-3">

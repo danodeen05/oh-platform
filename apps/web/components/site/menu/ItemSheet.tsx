@@ -8,7 +8,7 @@
  * spice marks, and "Order this", which starts the order flow with the item
  * preselected (/{locale}/order?item=<id>).
  */
-import Image from "next/image";
+import { OptimizedImg } from "@/components/site/picture/OptimizedImg";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 // Task G2b: framer-motion loads on first open.
@@ -41,7 +41,7 @@ export function ItemSheet({ item, open, onClose }: { item: MenuCard | null; open
             </div>
           ) : item.photo?.kind === "file" ? (
             <div className="absolute inset-0">
-              <Image src={item.photo.src} alt={item.name} fill sizes="(min-width: 640px) 600px, 100vw" className="object-cover" />
+              <OptimizedImg src={item.photo.src} alt={item.name} sizes="(min-width: 640px) 600px, 100vw" className="absolute inset-0 h-full w-full object-cover" />
             </div>
           ) : (
             <div className="absolute inset-0 flex items-center justify-center text-oh-clay/60">

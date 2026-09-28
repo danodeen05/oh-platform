@@ -8,11 +8,20 @@
  */
 import { useCallback, useState } from "react";
 import dynamic from "next/dynamic";
-import { CombMap, type CombMapLabels } from "./CombMap";
+import type { CombMapLabels } from "./CombMap";
 import { useSeats, type CombLayoutKey } from "./useSeats";
 import { useReducedMotion } from "@/components/site/motion/useReducedMotion";
 import { SITE_API_URL } from "@/lib/site/api";
 import type { IsoLabels } from "@/components/plan/modules/floor-plan/three/types";
+
+// Task G2b: the live map sits below the hero, so CombMap and the floor-plan
+// geometry behind it (@oh/floor-plan, which reads the plan model: about
+// 40 KB gzipped) load right after hydration instead of with the page. The
+// placeholder is the map's own box (portrait under 768px), so nothing shifts.
+const CombMap = dynamic(() => import("./CombMap").then((m) => m.CombMap), {
+  ssr: false,
+  loading: () => <div aria-hidden="true" data-location-map-placeholder className="aspect-[53/73] w-full rounded-2xl bg-oh-ink md:aspect-[73/53]" />,
+});
 
 const LocationFloor3D = dynamic(() => import("./LocationFloor3D"), {
   ssr: false,

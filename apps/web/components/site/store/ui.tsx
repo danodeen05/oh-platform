@@ -3,7 +3,7 @@
  * the product photo, form field styles, button styles and a money line.
  * Server-safe (no hooks), so server pages and client components share it.
  */
-import Image from "next/image";
+import { OptimizedImg } from "@/components/site/picture/OptimizedImg";
 import type { ReactNode } from "react";
 import { SitePicture } from "@/components/site/picture/SitePicture";
 import type { ProductImage } from "@/lib/site/store";
@@ -21,14 +21,14 @@ export const TEXT_LINK =
 export const PANEL = "rounded-3xl border border-oh-stone/70 bg-oh-ink p-4 md:p-5";
 export const PANEL_TITLE = "m-0 mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-oh-cream/85";
 
-/** A product photo: the site's photography (SitePicture) or a /public/store file through next/image. Square; full width unless `className` sets one. */
+/** A product photo: the site's photography (SitePicture) or a /public/store file through Next's optimizer (OptimizedImg, no client JS). Square; full width unless `className` sets one. */
 export function ProductPhoto({ image, alt, sizes, priority = false, className = "" }: { image: ProductImage; alt: string; sizes: string; priority?: boolean; className?: string }) {
   return (
     <div className={`relative aspect-square overflow-hidden bg-oh-linen ${className || "w-full"}`}>
       {image.kind === "site" ? (
         <SitePicture image={image.key} sizes={sizes} alt={alt} priority={priority} className="absolute inset-0 block h-full w-full [&>img]:h-full [&>img]:w-full [&>img]:object-cover" />
       ) : (
-        <Image src={image.src} alt={alt} fill sizes={sizes} priority={priority} className="object-cover" />
+        <OptimizedImg src={image.src} alt={alt} sizes={sizes} priority={priority} className="absolute inset-0 h-full w-full object-cover" />
       )}
     </div>
   );

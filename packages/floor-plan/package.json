@@ -5,7 +5,8 @@
   "type": "module",
   "description": "Pure TypeScript comb floor plan geometry, shared by the business plan and the customer site.",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./stages": "./src/stages.ts"
   },
   "types": "./src/index.ts",
   "scripts": {

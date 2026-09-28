@@ -22,7 +22,8 @@ import { SignInTrigger } from "@/components/site/auth/AuthTriggers";
 import { useSiteAuth } from "@/lib/site/auth";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { CombMap, type CombMapLabels } from "@/components/site/floor-plan/CombMap";
+import dynamic from "next/dynamic";
+import type { CombMapLabels } from "@/components/site/floor-plan/CombMap";
 import { useSeats } from "@/components/site/floor-plan/useSeats";
 import { Icon } from "@/components/site/icons/Icon";
 import { Reveal } from "@/components/site/motion/Reveal";
@@ -48,6 +49,15 @@ import {
 import { localizedHref } from "@/lib/site/nav";
 import { groupIdentityHeaders } from "@/lib/site/orders";
 import { GroupPodPicker } from "./GroupPodPicker";
+
+// Task G2b: CombMap and the floor-plan geometry behind it (@oh/floor-plan
+// reads the plan model: about 40 KB gzipped) load after the page, not with
+// it. The placeholder is the map's own box, so nothing shifts.
+const CombMap = dynamic(() => import("@/components/site/floor-plan/CombMap").then((m) => m.CombMap), {
+  ssr: false,
+  loading: () => <div aria-hidden="true" data-comb-placeholder className="aspect-[53/73] w-full rounded-2xl bg-oh-ink md:aspect-[73/53]" />,
+});
+
 
 const MAX_MEMBERS = 8;
 const POLL_MS = 5000;
