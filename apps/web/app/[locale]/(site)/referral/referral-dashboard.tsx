@@ -219,7 +219,7 @@ export default function ReferralDashboard({ program }: { program: ReferralProgra
         </h2>
         <dl className="m-0 mt-4 grid grid-cols-3 gap-3">
           <Stat label={t("earned")} data="earned">
-            <CountUp to={(s?.earnedCents ?? 0) / 100} decimals={(s?.earnedCents ?? 0) % 100 ? 2 : 0} prefix="$" />
+            <CountUp to={(s?.earnedCents ?? 0) / 100} format={earnedFormat((s?.earnedCents ?? 0) % 100 ? 2 : 0, locale)} />
           </Stat>
           <Stat label={t("joined")} data="joined">
             <CountUp to={s?.friendsJoined ?? 0} />
@@ -283,4 +283,10 @@ function Stat({ label, data, children }: { label: string; data: string; children
 
 function shortDate(iso: string, locale: string): string {
   return new Date(iso).toLocaleDateString(locale, { month: "short", day: "numeric", timeZone: "America/Denver" });
+}
+
+/** Locale money for the counting "earned" stat, with the final value's decimals held steady while it ticks (Task G1). */
+function earnedFormat(decimals: number, locale: string): (dollars: number) => string {
+  const f = new Intl.NumberFormat(locale, { style: "currency", currency: "USD", currencyDisplay: "narrowSymbol", minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  return (dollars) => f.format(dollars);
 }
