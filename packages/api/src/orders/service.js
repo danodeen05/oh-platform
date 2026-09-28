@@ -123,9 +123,19 @@ async function resolveGiftCard(prisma, { giftCardCode, giftCardId, now }) {
   return usable ? card : false;
 }
 
-async function resolveMealGift(prisma, { mealGiftId, locationId, now }) {
+/**
+ * Task D5 fix round 3: a giver can never redeem their own gift. Unlike an
+ * ordinary unavailable gift (which just drops the saving with a warning -
+ * MEAL_GIFT_UNAVAILABLE), trying to use your own gift is a hard refusal: the
+ * quote/order attempt is refused outright with 400 OWN_GIFT, so the client
+ * shows a clear message rather than silently proceeding at full price.
+ */
+async function resolveMealGift(prisma, { mealGiftId, locationId, userId, now }) {
   if (!mealGiftId) return null;
   const gift = await prisma.mealGift.findUnique({ where: { id: mealGiftId } });
+  if (gift && userId && gift.giverId === userId) {
+    throw new OrderError("OWN_GIFT", 400, "You can't redeem your own gift.");
+  }
   // Only a gift whose giver's payment was verified server-side (paidAt) is a tender.
   const usable = gift && gift.paidAt && gift.status === "PENDING" && gift.expiresAt > now && gift.locationId === locationId;
   return usable ? gift : false;
@@ -168,7 +178,7 @@ async function buildQuote(prisma, { location, lines, menuItems, userId, promoCod
     else warnings.push("CREDITS_REQUIRE_SIGN_IN");
   }
 
-  const gift = await resolveMealGift(prisma, { mealGiftId, locationId: location.id, now });
+  const gift = await resolveMealGift(prisma, { mealGiftId, locationId: location.id, userId, now });
   if (gift === false) warnings.push("MEAL_GIFT_UNAVAILABLE");
   const card = await resolveGiftCard(prisma, { giftCardCode, giftCardId, now });
   if (card === false) warnings.push("GIFT_CARD_INVALID");
@@ -1069,8 +1079,12 @@ async function settleInTx(tx, orderId, { expectedAmountDueCents, paymentIntentId
   }
 
   if (order.mealGiftId && order.mealGiftAppliedCents > 0) {
+    // Defense in depth: resolveMealGift already refuses this at quote time
+    // (OWN_GIFT), but the gift is re-checked again here, at the moment it is
+    // actually spent, in case the giver's own id ended up on the order some
+    // other way.
     const taken = await tx.mealGift.updateMany({
-      where: { id: order.mealGiftId, status: "PENDING", paidAt: { not: null }, expiresAt: { gt: now } },
+      where: { id: order.mealGiftId, status: "PENDING", paidAt: { not: null }, expiresAt: { gt: now }, ...(order.userId ? { giverId: { not: order.userId } } : {}) },
       data: { status: "ACCEPTED", acceptedById: order.userId || null, orderId, acceptedAt: now },
     });
     if (taken.count !== 1) throw new OrderError("MEAL_GIFT_UNAVAILABLE", 409, "That meal gift is no longer available.");

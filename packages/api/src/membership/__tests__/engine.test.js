@@ -391,8 +391,69 @@ test("applyReferralSignup grants a WELCOME lot to the referee and sets referredB
   // Applying again (e.g. a retried signup) must not double-grant.
   const again = await applyReferralSignup(prisma, { userId: "referee", referralCode: "FRIEND1", now: NOW });
   assert.equal(again.applied, false);
+  assert.equal(again.reason, "ALREADY_REFERRED");
   const refereeAfter = await prisma.user.findUnique({ where: { id: "referee" } });
   assert.equal(refereeAfter.creditsCents, PROGRAM.referral.refereeCents);
+});
+
+// Task D5 fix round 3: a referral code is only for a genuinely new member -
+// no referrer on file AND no completed order - never an error, always a
+// clear { applied: false, reason, message }.
+test("applyReferralSignup refuses an existing member with a completed order, even with no referrer on file", async () => {
+  const prisma = makeMemoryPrisma({
+    users: [
+      { id: "referrer", referralCode: "FRIEND1", creditsCents: 0 },
+      { id: "veteran", creditsCents: 0, referredById: null },
+    ],
+    orders: [{ id: "o1", userId: "veteran", totalCents: 1799, status: "COMPLETED", paymentStatus: "PAID" }],
+  });
+
+  const result = await applyReferralSignup(prisma, { userId: "veteran", referralCode: "FRIEND1", now: NOW });
+  assert.equal(result.applied, false);
+  assert.equal(result.reason, "NOT_NEW_MEMBER");
+  assert.match(result.message, /new members/i);
+
+  const veteran = await prisma.user.findUnique({ where: { id: "veteran" } });
+  assert.equal(veteran.referredById, null);
+  assert.equal(veteran.creditsCents, 0);
+});
+
+test("applyReferralSignup refuses self-referral with a clear reason, not an error", async () => {
+  const prisma = makeMemoryPrisma({
+    users: [{ id: "u1", referralCode: "MYCODE", creditsCents: 0, referredById: null }],
+  });
+
+  const result = await applyReferralSignup(prisma, { userId: "u1", referralCode: "MYCODE", now: NOW });
+  assert.equal(result.applied, false);
+  assert.equal(result.reason, "SELF_REFERRAL");
+
+  const u1 = await prisma.user.findUnique({ where: { id: "u1" } });
+  assert.equal(u1.referredById, null);
+  assert.equal(u1.creditsCents, 0);
+});
+
+test("applyReferralSignup refuses an unknown code with a clear reason", async () => {
+  const prisma = makeMemoryPrisma({
+    users: [{ id: "u1", creditsCents: 0, referredById: null }],
+  });
+
+  const result = await applyReferralSignup(prisma, { userId: "u1", referralCode: "NOPE", now: NOW });
+  assert.equal(result.applied, false);
+  assert.equal(result.reason, "INVALID_CODE");
+});
+
+test("applyReferralSignup still works for a genuinely new member (no orders, no referrer)", async () => {
+  const prisma = makeMemoryPrisma({
+    users: [
+      { id: "referrer", referralCode: "FRIEND1", creditsCents: 0 },
+      { id: "newbie", creditsCents: 0, referredById: null },
+    ],
+  });
+
+  const result = await applyReferralSignup(prisma, { userId: "newbie", referralCode: "FRIEND1", now: NOW });
+  assert.equal(result.applied, true);
+  const newbie = await prisma.user.findUnique({ where: { id: "newbie" } });
+  assert.equal(newbie.referredById, "referrer");
 });
 
 test("redeemReward marks redeemed, and rejects an already-redeemed or expired reward", async () => {

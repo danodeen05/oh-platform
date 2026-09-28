@@ -21,6 +21,7 @@ import { onOrderCompleted as engineOnOrderCompleted } from "../membership/engine
 import { notifyTierUpIfNeeded } from "../notifications.js";
 import { canSeeFullOrder, safeOrderView } from "./order-view.js";
 import { assignKioskSeat, parseSeatRequest } from "../seats/kiosk-seat.js";
+import { GUEST_SESSION_HEADER } from "./group-routes.js";
 import {
   quoteOrder,
   createOrder,
@@ -47,6 +48,15 @@ const ORDER_INCLUDE = {
  * podReservationExpiry) are refused too since Task D12 fix round 1: a pod is
  * only ever taken through a conditional claim (POST /orders with seat, POST
  * /kiosk/orders/:id/seat, the group route, check-in), never a plain write.
+ *
+ * Task D5 fix round 3: every field here other than `status` (which has its
+ * own authority rule below) is guarded the same way: only the verified
+ * owner, staff, or a kiosk device at the order's own location may write
+ * `guestId`, `estimatedArrival`, `podConfirmedAt` or `orderSource`. An
+ * anonymous caller (no credential at all) gets 401; a credentialed caller
+ * who isn't the owner, staff, or that location's kiosk gets 403. Before
+ * this, an anonymous caller could set `podConfirmedAt` (which occupies the
+ * pod's seats) with no auth at all.
  */
 const PATCHABLE = new Set([
   "status",
@@ -56,6 +66,9 @@ const PATCHABLE = new Set([
   "podConfirmedAt",
   "orderSource",
 ]);
+
+/** PATCHABLE fields other than `status` and `userId` (each has its own rule below). */
+const OTHER_GUARDED_FIELDS = ["guestId", "estimatedArrival", "podConfirmedAt", "orderSource"];
 
 const SAVINGS_KEYS = ["useCreditsCents", "promoCode", "giftCardCode", "mealGiftId", "rewardId"];
 
@@ -76,6 +89,11 @@ function sendOrderError(reply, err) {
 function bearerOf(req) {
   const h = req.headers?.authorization;
   return typeof h === "string" && h.startsWith("Bearer ") ? h.slice(7).trim() : null;
+}
+
+/** Any credential at all (a session/kiosk bearer, an admin key, or a guest session) - 401 vs 403. */
+function hasCredential(req) {
+  return Boolean(req.headers?.authorization || req.headers?.["x-admin-api-key"] || req.headers?.[GUEST_SESSION_HEADER]);
 }
 
 function seatRequestFrom(body) {
@@ -319,6 +337,17 @@ export async function registerOrderRoutes(app, {
         if (!staff && !(await viewerCanSeeFull(req, current))) return reply.code(403).send({ error: "FORBIDDEN", message: "Only the order's owner can cancel it." });
       } else if (!staff) {
         return reply.code(403).send({ error: "FORBIDDEN", message: "Only staff can change an order's status." });
+      }
+    }
+    // Task D5 fix round 3: guestId, estimatedArrival, podConfirmedAt and
+    // orderSource are otherwise unguarded - only the verified owner, staff,
+    // or a same-location kiosk may write them. Anonymous (no credential) is
+    // 401; a credentialed but unauthorized caller is 403.
+    if (OTHER_GUARDED_FIELDS.some((k) => Object.prototype.hasOwnProperty.call(body, k))) {
+      if (!(await viewerCanSeeFull(req, current))) {
+        return reply
+          .code(hasCredential(req) ? 403 : 401)
+          .send({ error: hasCredential(req) ? "FORBIDDEN" : "UNAUTHORIZED", message: "Only the order's owner, staff or a same-location kiosk can update this order." });
       }
     }
     // An order can only be claimed by the verified caller, and only if it has no owner yet.

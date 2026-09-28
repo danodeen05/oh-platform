@@ -4259,15 +4259,26 @@ app.post("/users", async (req, reply) => {
     console.log("  - existing.referredById:", existing.referredById);
     console.log("  - NEW referredByCode param:", referredByCode);
 
-    // If existing user has NO referrer but a referral code is provided, apply it
-    // (membership/engine.js: sets referredById and grants a WELCOME credit lot).
-    if (!existing.referredById && referredByCode) {
+    // A referral code is only ever applied to a genuinely new member - no
+    // referrer on file yet AND no completed order (membership/engine.js
+    // applyReferralSignup, Task D5 fix round 3). Always go through the
+    // engine rather than pre-filtering on `existing.referredById` here, so
+    // every ineligible case (already referred, already ordered, unknown
+    // code, self-referral) gets the same clear, non-error response.
+    if (referredByCode) {
       const result = await applyReferralSignup(prisma, { userId: existing.id, referralCode: referredByCode, now: new Date() });
       if (result.applied) {
         const updatedUser = await prisma.user.findUnique({ where: { id: existing.id } });
         return { ...updatedUser, referralJustApplied: true };
       }
-      console.log("❌ Referral code not applied for existing user:", referredByCode);
+      console.log("❌ Referral code not applied for existing user:", referredByCode, result.reason);
+      // Nothing was applied; still a 200 with the reason so the client can
+      // show it without treating this as an error.
+      if (name && name !== existing.name) {
+        const updatedUser = await prisma.user.update({ where: { id: existing.id }, data: { name } });
+        return { ...updatedUser, referralJustApplied: false, referralReason: result.reason, referralMessage: result.message };
+      }
+      return { ...existing, referralJustApplied: false, referralReason: result.reason, referralMessage: result.message };
     }
 
     // Update name if it changed in Clerk
@@ -4300,7 +4311,8 @@ app.post("/users", async (req, reply) => {
       const updatedUser = await prisma.user.findUnique({ where: { id: user.id } });
       return { ...updatedUser, referralJustApplied: true };
     }
-    console.log("❌ Referral code not applied for new user:", referredByCode);
+    console.log("❌ Referral code not applied for new user:", referredByCode, result.reason);
+    return { ...user, referralJustApplied: false, referralReason: result.reason, referralMessage: result.message };
   }
 
   return user;
@@ -10227,6 +10239,12 @@ app.get("/meal-gifts/:id", async (req, reply) => {
 // GET /users/:userId/meal-gifts - Get user's meal gift transactions (given and received)
 app.get("/users/:userId/meal-gifts", async (req, reply) => {
   const { userId } = req.params;
+  // Task D5 fix round 3: this returned any member's full given/received gift
+  // history (a giver's messages, a recipient's name) to anonymous callers.
+  // registerCustomerIdentity's onRoute hook already guards every
+  // /users/:userId/* route with requireSelf; this explicit call is
+  // defense in depth and documents the rule right where the data leaves.
+  if (!(await customerAuth.requireSelf(req, reply, userId))) return reply;
 
   // Get gifts given by user (with recipient messages from chain)
   const giftsGiven = await prisma.mealGift.findMany({
