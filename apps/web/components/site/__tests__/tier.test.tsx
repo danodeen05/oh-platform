@@ -44,4 +44,22 @@ describe("TierMark", () => {
     expect(labeled).toContain("<title");
     expect(labeled).toContain("Noodle Master tier");
   });
+
+  it("renders the traced compound path with an evenodd fill rule (holes from the source PNG)", () => {
+    for (const tier of TIERS) {
+      const html = renderToString(<TierMark tier={tier} />);
+      expect(html, `${tier} missing fill-rule="evenodd"`).toContain('fill-rule="evenodd"');
+    }
+  });
+
+  it("uses a non-default viewBox taken from the trace, not a fixed grid", () => {
+    // Each tier's source PNG has different pixel dimensions, so a real
+    // trace produces a different viewBox per tier -- a hand-drawn stand-in
+    // on a shared 0 0 100 100 grid would not.
+    const viewBoxes = TIERS.map((tier) => {
+      const html = renderToString(<TierMark tier={tier} />);
+      return html.match(/viewBox="([^"]+)"/)?.[1];
+    });
+    expect(new Set(viewBoxes).size).toBe(TIERS.length);
+  });
 });

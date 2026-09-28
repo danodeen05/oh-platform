@@ -17,10 +17,11 @@ export interface IconProps {
 }
 
 /**
- * In-house icon (Task C2). No icon library: every glyph is a hand-drawn SVG
- * on a 24x24 grid, 1.5px stroke, round caps/joins, with one tapered accent
- * path per icon to echo the calligraphy-brush look used across the brand
- * (see the tier marks and chop seals in this same directory tree).
+ * In-house icon (Task C2, Fix round 1). No icon library, and no uniform-
+ * width `stroke` -- every icon is a set of FILLED, tapered brush-stroke
+ * outlines (see ./brush.ts and ./paths.ts), which is what keeps this from
+ * reading as a generic Lucide/Feather-style outline set. There is no
+ * `stroke` or `stroke-width` attribute anywhere in this component.
  *
  * Server-safe (no hooks): renders identically under `renderToString` with
  * no providers, matching SitePicture's pattern.
@@ -30,20 +31,11 @@ export function Icon({ name, size = 24, className, title }: IconProps) {
   const labelled = Boolean(title);
 
   return (
-    <svg
-      viewBox="0 0 24 24"
-      width={size}
-      height={size}
-      fill="none"
-      className={className}
-      role={labelled ? "img" : undefined}
-      aria-hidden={labelled ? undefined : true}
-    >
+    <svg viewBox="0 0 24 24" width={size} height={size} className={className} role={labelled ? "img" : undefined} aria-hidden={labelled ? undefined : true}>
       {title ? <title>{title}</title> : null}
-      {def.strokes.map((d, i) => (
-        <path key={i} d={d} stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+      {def.paths.map((d, i) => (
+        <path key={i} d={d} fill="currentColor" fillRule="evenodd" />
       ))}
-      <path d={def.taper} fill="currentColor" stroke="none" />
     </svg>
   );
 }
