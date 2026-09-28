@@ -140,6 +140,11 @@ export function PaymentForm({
         });
 
         if (error) {
+          // Final review M1: "already succeeded" is a success (a second tap, a race): finish it, never report a failure.
+          if (error.payment_intent?.status === 'succeeded' && error.payment_intent.id) {
+            onSuccess(error.payment_intent.id);
+            return;
+          }
           throw new Error(error.message || failedText);
         }
 
@@ -166,6 +171,11 @@ export function PaymentForm({
       });
 
       if (error) {
+        // Final review M1: "already succeeded" is a success (a second tap, a race): finish it, never report a failure.
+        if (error.payment_intent?.status === 'succeeded' && error.payment_intent.id) {
+          onSuccess(error.payment_intent.id);
+          return;
+        }
         throw new Error(error.message || failedText);
       }
 
@@ -205,6 +215,11 @@ export function PaymentForm({
         });
 
         if (error) {
+          // Final review M1: "already succeeded" is a success (a second tap, a race): finish it, never report a failure.
+          if (error.payment_intent?.status === 'succeeded' && error.payment_intent.id) {
+            onSuccess(error.payment_intent.id);
+            return;
+          }
           throw new Error(error.message || failedText);
         }
 

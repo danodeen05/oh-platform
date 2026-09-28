@@ -104,3 +104,90 @@ export function shopFinishOutcome(r: FinishResult, recreateCodes: readonly strin
   if (r.error?.code && recreateCodes.includes(r.error.code) && r.error.refunded !== false) return "reprice";
   return "stuck";
 }
+
+// ------------------------------------------------------------ food orders and groups (final review C1, I1)
+
+/**
+ * The order pay step (PayStep) and the group host's pay form (GroupPayForm)
+ * follow the same rule: once Stripe says a PaymentIntent succeeded, it is
+ * saved here (per order or group), the confirm is retried with that SAME id,
+ * and no new PaymentIntent is fetched while it is pending. Only the server
+ * saying the charge was refunded, or that the order changed (with the charge
+ * refunded), clears it and allows a fresh PaymentIntent.
+ */
+export const PENDING_ORDER_KEY = "oh-order-paid";
+export const PENDING_GROUP_KEY = "oh-group-paid";
+
+export type PendingOrder = { orderId: string; paymentIntentId: string };
+export type PendingGroup = { groupCode: string; paymentIntentId: string };
+
+const isPi = (v: unknown) => typeof v === "string" && v.startsWith("pi_");
+
+export function isPendingOrder(v: unknown): v is PendingOrder {
+  const o = v as PendingOrder | null;
+  return Boolean(o && typeof o.orderId === "string" && o.orderId && isPi(o.paymentIntentId));
+}
+
+export function isPendingGroup(v: unknown): v is PendingGroup {
+  const o = v as PendingGroup | null;
+  return Boolean(o && typeof o.groupCode === "string" && o.groupCode && isPi(o.paymentIntentId));
+}
+
+/** The pending payment of THIS order (a pending one for another order is left alone). */
+export function pendingOrderFor(storage: Storage | null | undefined, orderId: string | null | undefined): PendingOrder | null {
+  const p = loadPending(storage, PENDING_ORDER_KEY, isPendingOrder);
+  return p && orderId && p.orderId === orderId ? p : null;
+}
+
+/** The pending payment of THIS group (codes compare case-insensitively). */
+export function pendingGroupFor(storage: Storage | null | undefined, groupCode: string | null | undefined): PendingGroup | null {
+  const p = loadPending(storage, PENDING_GROUP_KEY, isPendingGroup);
+  return p && groupCode && p.groupCode.toUpperCase() === groupCode.toUpperCase() ? p : null;
+}
+
+/** Order confirm codes that mean "this charge can't pay for this order" (with the charge refunded): pay again. */
+export const ORDER_RECREATE_CODES = [
+  "PAYMENT_REFUNDED",
+  "QUOTE_CHANGED",
+  "QUOTE_MISMATCH",
+  "CREDIT_SHORT",
+  "GIFT_CARD_SHORT",
+  "MEAL_GIFT_UNAVAILABLE",
+  "REWARD_UNAVAILABLE",
+  "PROMO_EXHAUSTED",
+  "ORDER_CANCELLED",
+  "ORDER_NOT_FOUND",
+  "LEGACY_ORDER",
+] as const;
+
+/** Group confirm codes that mean the same for the host's batch PaymentIntent. */
+export const GROUP_RECREATE_CODES = [
+  "PAYMENT_REFUNDED",
+  "GROUP_CHANGED",
+  "QUOTE_CHANGED",
+  "CREDIT_SHORT",
+  "GIFT_CARD_SHORT",
+  "MEAL_GIFT_UNAVAILABLE",
+  "REWARD_UNAVAILABLE",
+] as const;
+
+/**
+ * Saves `pending` under `key`, then confirms it with the same PaymentIntent
+ * (retried with backoff on network errors, 5xx and 429). "done" and
+ * "reprice" clear it; "stuck" and "review" keep it, so a reload resumes the
+ * confirm and never pays again.
+ */
+export async function settlePaid<R extends FinishResult>(
+  storage: Storage | null | undefined,
+  key: string,
+  pending: unknown,
+  attempt: () => Promise<R>,
+  recreateCodes: readonly string[],
+  opts?: Parameters<typeof finishWithRetry>[1],
+): Promise<{ outcome: FinishOutcome; result: R }> {
+  savePending(storage, key, pending);
+  const result = await finishWithRetry(attempt, opts);
+  const outcome = shopFinishOutcome(result, recreateCodes);
+  if (outcome === "done" || outcome === "reprice") clearPending(storage, key);
+  return { outcome, result };
+}

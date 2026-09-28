@@ -19,6 +19,13 @@
  *
  * Only the signed-in host can pay (the API checks). Styling and the Stripe
  * appearance and locale are shared with Chappy's pay card.
+ *
+ * Final review I1: once Stripe says the PaymentIntent succeeded, the card
+ * form is gone for good. The id is kept in sessionStorage
+ * (lib/site/paid-recovery), the confirm is retried with that SAME id (with
+ * backoff), then "Payment received" offers Retry and support. A reload or a
+ * 3DS return resumes it. Only a refunded charge (or a changed group, with
+ * the charge refunded) fetches a fresh group PaymentIntent.
  */
 import { SignInTrigger } from "@/components/site/auth/AuthTriggers";
 import { useSiteAuth } from "@/lib/site/auth";
@@ -34,12 +41,22 @@ import { SITE_API_URL, useSiteApi } from "@/lib/site/api";
 import { decodePods, encodePods, type Picks } from "@/lib/site/group";
 import { localizedHref } from "@/lib/site/nav";
 import { groupConfirmPayment, groupPaymentIntent, type OrderApiError } from "@/lib/site/orders";
+import { GROUP_RECREATE_CODES, PENDING_GROUP_KEY, pendingGroupFor, settlePaid, type FinishResult, type PendingGroup } from "@/lib/site/paid-recovery";
+import type { ReceivedState } from "@/components/site/store/PaymentReceived";
 
 const FONTS = [{ cssSrc: "https://fonts.googleapis.com/css2?family=Raleway:wght@400;600&display=swap" }];
 const primary =
   "inline-flex min-h-12 w-full cursor-pointer appearance-none items-center justify-center gap-2 rounded-full border-0 bg-oh-ember-deep px-6 font-[inherit] text-base font-semibold text-oh-cream no-underline shadow-[0_10px_30px_-12px] shadow-oh-ember-deep transition-colors hover:bg-oh-ember focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oh-cream disabled:cursor-wait disabled:opacity-70";
 
 type Phase = "loading" | "ready" | "paying" | "confirming" | "seating" | "failed" | "unfinished" | "processing" | "error";
+
+function sessionStorageOrNull(): Storage | null {
+  try {
+    return typeof window === "undefined" ? null : window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
 
 export function GroupPayForm({ groupCode, hostOrderId, hostOrderNumber }: { groupCode: string; hostOrderId: string; hostOrderNumber: string | null }) {
   const t = useTranslations("groupLobby.payment");
@@ -53,6 +70,10 @@ export function GroupPayForm({ groupCode, hostOrderId, hostOrderNumber }: { grou
   const [message, setMessage] = useState<string | null>(null);
   const [intent, setIntent] = useState<{ clientSecret: string | null; amountCents: number; orderCount: number } | null>(null);
   const started = useRef(false);
+  const settling = useRef(false);
+  // I1: a PaymentIntent Stripe said succeeded, being confirmed (the card form never comes back for it).
+  const [paid, setPaid] = useState<PendingGroup | null>(null);
+  const [paidState, setPaidState] = useState<ReceivedState>("finishing");
   const picks: Picks = useMemo(() => decodePods(params.get("pods")), [params]);
   const stripe = useMemo(() => lazyStripe(), []);
   const appearance = useMemo(() => stripeAppearance(), []);
@@ -99,37 +120,13 @@ export function GroupPayForm({ groupCode, hostOrderId, hostOrderNumber }: { grou
     [api, groupCode, hostOrderId, hostOrderNumber, locale, picks, router],
   );
 
-  const confirm = useCallback(
-    async (paymentIntentId: string | null, orderCount: number) => {
-      setPhase("confirming");
-      setMessage(null);
-      const res = await groupConfirmPayment(groupCode, paymentIntentId, { fetcher: api, baseUrl: SITE_API_URL });
-      if (!res.ok) {
-        setMessage(messageFor(res.error, res.status));
-        setPhase("error");
-        return;
-      }
-      await finish(res.data.orders?.length || orderCount);
-    },
-    [api, finish, groupCode, messageFor],
-  );
-
-  // Back from a redirect (3D Secure, a wallet): confirm THAT PaymentIntent, never start a new one.
-  const returned = params.get("payment_intent");
-  const returnedStatus = params.get("redirect_status");
-
-  useEffect(() => {
-    if (!isLoaded || !isSignedIn || started.current) return;
-    started.current = true;
-    if (returned) {
-      if (returnedStatus === "succeeded" || returnedStatus === "processing") void confirm(returned, 1);
-      else {
-        setMessage(th("failed"));
-        setPhase("error");
-      }
-      return;
-    }
-    (async () => {
+  /** The group's PaymentIntent (the server reuses an open one). Never while a succeeded one is pending. */
+  const loadIntent = useCallback(
+    async (keepMessage = false) => {
+      if (pendingGroupFor(sessionStorageOrNull(), groupCode)) return;
+      setIntent(null);
+      setPhase("loading");
+      if (!keepMessage) setMessage(null);
       const res = await groupPaymentIntent(groupCode, { fetcher: api, baseUrl: SITE_API_URL });
       if (!res.ok) {
         setMessage(messageFor(res.error, res.status));
@@ -141,9 +138,98 @@ export function GroupPayForm({ groupCode, hostOrderId, hostOrderNumber }: { grou
         return;
       }
       setIntent({ clientSecret: res.data.clientSecret, amountCents: res.data.amountCents, orderCount: res.data.orderIds?.length || 1 });
-      setPhase("ready");
-    })();
-  }, [isLoaded, isSignedIn, returned, returnedStatus, groupCode, api, confirm, finish, messageFor, th]);
+      setPhase(keepMessage ? "error" : "ready");
+    },
+    [api, finish, groupCode, messageFor],
+  );
+
+  // Back from a redirect (3D Secure, a wallet): confirm THAT PaymentIntent, never start a new one.
+  const returned = params.get("payment_intent");
+  const returnedStatus = params.get("redirect_status");
+  const cleanPath = useCallback(() => {
+    const pods = Object.keys(picks).length ? `&pods=${encodeURIComponent(encodePods(picks))}` : "";
+    return `${window.location.pathname}?groupCode=${encodeURIComponent(groupCode)}${pods}`;
+  }, [groupCode, picks]);
+
+  /**
+   * I1: Stripe said this PaymentIntent succeeded. Confirm it with the same id
+   * (retried with backoff): "done" seats the group, "stuck" and "review" stay
+   * on Payment received (Retry, support), and only a refunded charge or a
+   * changed group drops it and fetches a fresh PaymentIntent.
+   */
+  const settle = useCallback(
+    async (p: PendingGroup, orderCount: number) => {
+      if (settling.current) return;
+      settling.current = true;
+      setPaid(p);
+      setPaidState("finishing");
+      setMessage(null);
+      try {
+        const { outcome, result: res } = await settlePaid(
+          sessionStorageOrNull(),
+          PENDING_GROUP_KEY,
+          p,
+          () => groupConfirmPayment(p.groupCode, p.paymentIntentId, { fetcher: api, baseUrl: SITE_API_URL }) as Promise<Awaited<ReturnType<typeof groupConfirmPayment>> & FinishResult>,
+          GROUP_RECREATE_CODES,
+        );
+        if (outcome === "done") {
+          await finish(res.data?.orders?.length || orderCount);
+          return;
+        }
+        if (outcome === "stuck" || outcome === "review") {
+          setPaidState(outcome);
+          return;
+        }
+        // reprice: the charge was refunded (or the group changed). A fresh PaymentIntent, with the reason shown.
+        setPaid(null);
+        setMessage(messageFor(res.error, res.status));
+        if (returned) router.replace(cleanPath());
+        await loadIntent(true);
+      } finally {
+        settling.current = false;
+      }
+    },
+    [api, finish, messageFor, returned, router, cleanPath, loadIntent],
+  );
+
+  /** A zero balance: confirm with no PaymentIntent (nothing was charged). */
+  const confirmFree = useCallback(
+    async (orderCount: number) => {
+      setPhase("confirming");
+      setMessage(null);
+      const res = await groupConfirmPayment(groupCode, null, { fetcher: api, baseUrl: SITE_API_URL });
+      if (!res.ok) {
+        setMessage(messageFor(res.error, res.status));
+        setPhase("error");
+        return;
+      }
+      await finish(res.data.orders?.length || orderCount);
+    },
+    [api, finish, groupCode, messageFor],
+  );
+
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn || started.current) return;
+    started.current = true;
+    // A PaymentIntent that already succeeded on this tab comes first (a reload, or a 3DS return).
+    const pending = pendingGroupFor(sessionStorageOrNull(), groupCode);
+    if (pending) {
+      void settle(pending, 1);
+      return;
+    }
+    if (returned) {
+      if (returnedStatus === "succeeded" || returnedStatus === "processing") void settle({ groupCode, paymentIntentId: returned }, 1);
+      else {
+        // Not charged (M2): say so, and offer the form again on the group's PaymentIntent.
+        setMessage(th("failed"));
+        router.replace(cleanPath());
+        void loadIntent(true);
+      }
+      return;
+    }
+    void loadIntent();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded, isSignedIn]);
 
   if (!isLoaded) {
     return (
@@ -172,6 +258,10 @@ export function GroupPayForm({ groupCode, hostOrderId, hostOrderNumber }: { grou
       ? `${window.location.origin}${window.location.pathname}?groupCode=${encodeURIComponent(groupCode)}${Object.keys(picks).length ? `&pods=${encodeURIComponent(encodePods(picks))}` : ""}`
       : "";
 
+  if (paid) {
+    return <GroupPaid state={paidState} onRetry={() => void settle(paid, intent?.orderCount || 1)} />;
+  }
+
   return (
     <div data-group-pay-form>
       {phase === "error" && message ? (
@@ -194,16 +284,53 @@ export function GroupPayForm({ groupCode, hostOrderId, hostOrderNumber }: { grou
             returnUrl={returnUrl}
             phase={phase}
             setPhase={setPhase}
-            onSucceeded={(id) => void confirm(id, intent.orderCount)}
+            onSucceeded={(id) => void settle({ groupCode, paymentIntentId: id }, intent.orderCount)}
           />
         </Elements>
       ) : null}
 
-      {intent && intent.amountCents === 0 && phase === "ready" ? (
-        <button type="button" className={primary} onClick={() => void confirm(null, intent.orderCount)}>
+      {intent && intent.amountCents === 0 && (phase === "ready" || phase === "error") ? (
+        <button type="button" className={primary} onClick={() => void confirmFree(intent.orderCount)}>
           {th("confirmFree")}
         </button>
       ) : null}
+    </div>
+  );
+}
+
+/** I1: Payment received (store D10's copy): finishing, then Retry with the same PaymentIntent and support. Never the card form. */
+function GroupPaid({ state, onRetry }: { state: ReceivedState; onRetry: () => void }) {
+  const t = useTranslations("store.checkout.received");
+  const te = useTranslations("store.errors");
+  const locale = useLocale();
+  return (
+    <div data-group-pay-form data-payment-received={state}>
+      <p className="m-0 flex items-center gap-2 text-lg font-semibold text-oh-cream">
+        <Icon name="check" size={20} className="shrink-0 text-oh-olive-light" />
+        {t("title")}
+      </p>
+      {state === "finishing" ? (
+        <p role="status" className="m-0 mt-3 flex items-center gap-3 text-base text-oh-cream/85">
+          <span aria-hidden="true" className="inline-block h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-current border-r-transparent motion-reduce:animate-none" />
+          {t("finishing")}
+        </p>
+      ) : (
+        <>
+          <p role="alert" data-received-note className="m-0 mt-3 text-base leading-relaxed text-oh-cream/85">
+            {state === "review" ? te("NEEDS_REVIEW") : t("stuck")}
+          </p>
+          <div className="mt-5 flex flex-col gap-3">
+            {state === "stuck" ? (
+              <button type="button" onClick={onRetry} className={primary} data-finish-retry>
+                {t("retry")}
+              </button>
+            ) : null}
+            <a href={localizedHref(locale, "/contact")} className="inline-flex min-h-12 items-center justify-center rounded-full border border-oh-stone px-6 text-base font-semibold text-oh-cream no-underline">
+              {t("contact")}
+            </a>
+          </div>
+        </>
+      )}
     </div>
   );
 }

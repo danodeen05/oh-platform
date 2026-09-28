@@ -38,7 +38,8 @@ export const ROUTE_NAMESPACES = {
   "locations": [],
   "member": ["loyalty", "passport"],
   "menu": ["menuPage"],
-  "order": ["orderFlow", "afterOrder", "orderStatus", "groupLobby", "groupOrder", "mealGiftSheet", "phoneCollection", "combMap"],
+  // "store": the "Payment received" copy (store.checkout.received, store.errors.NEEDS_REVIEW) PayStep and GroupPayForm reuse (final review C1/I1).
+  "order": ["orderFlow", "afterOrder", "orderStatus", "groupLobby", "groupOrder", "mealGiftSheet", "phoneCollection", "combMap", "store"],
   "pod": ["afterOrder", "orderFlow", "podCode", "combMap"],
   "privacy": [],
   "referral": ["referralPage"],

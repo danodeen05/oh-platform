@@ -12,8 +12,17 @@
  * A zero balance confirms with no PaymentIntent (server-verified). A 3DS
  * redirect returns here (the return URL keeps the locale) and is confirmed
  * the same way.
+ *
+ * Final review C1: once Stripe says a PaymentIntent succeeded, the page
+ * never shows Pay again and never asks for a new PaymentIntent for this
+ * order. The id is kept in sessionStorage (lib/site/paid-recovery), the
+ * confirm is retried with that SAME id (with backoff), and then "Payment
+ * received" offers Retry and support. A reload or a 3DS return resumes it.
+ * Only the server saying the charge was refunded (or the order changed)
+ * lets the page fetch a fresh PaymentIntent.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { StripeProvider, PaymentForm, type SavedPaymentMethod } from "@/components/payments";
@@ -31,12 +40,25 @@ import { Receipt, type ReceiptLine, type ReceiptTotals } from "./Receipt";
 import { SignInGate } from "./SignInGate";
 import { useOrderDraft } from "./useOrderDraft";
 import { NIGHT_APPEARANCE, STRIPE_FONTS } from "@/lib/site/stripe-night";
+import { clearPending, ORDER_RECREATE_CODES, PENDING_ORDER_KEY, pendingOrderFor, settlePaid, type FinishResult, type PendingOrder } from "@/lib/site/paid-recovery";
+import type { ReceivedState } from "@/components/site/store/PaymentReceived";
 import "./order.css";
 
 /** D12: the pod moved at payment (POST /orders/:id/confirm-payment returns it). */
 type PodChange = { changed?: boolean; from?: string | null; to?: string | null; noPod?: boolean };
 
 const FORM_ID = "oh-pay-form";
+
+// The paid view loads only when a payment needs finishing (store D10's shared view).
+const PaymentReceived = dynamic(() => import("@/components/site/store/PaymentReceived").then((m) => m.PaymentReceived), { ssr: false });
+
+function sessionStorageOrNull(): Storage | null {
+  try {
+    return typeof window === "undefined" ? null : window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
 
 type OrderView = {
   id: string;
@@ -57,6 +79,8 @@ export function PayStep({ orderId, orderNumber }: { orderId: string | null; orde
   const tf = useTranslations("orderFlow");
   const te = useTranslations("orderFlow.errors");
   const tRoot = useTranslations();
+  const tr = useTranslations("store.checkout.received");
+  const tse = useTranslations("store.errors");
   const locale = useLocale();
   const router = useRouter();
   const search = useSearchParams();
@@ -78,7 +102,16 @@ export function PayStep({ orderId, orderNumber }: { orderId: string | null; orde
   const [saved, setSaved] = useState<SavedPaymentMethod[]>([]);
   const [customerReady, setCustomerReady] = useState(false);
   const returning = search.get("payment_intent");
+  const redirectStatus = search.get("redirect_status");
   const done = useRef(false);
+  // C1: a PaymentIntent Stripe said succeeded, being confirmed (never paid again).
+  const [paid, setPaid] = useState<PendingOrder | null>(null);
+  const [paidState, setPaidState] = useState<ReceivedState>("finishing");
+  // Why the page is paying again (a refunded charge, a declined 3DS): survives loadIntent clearing `error`.
+  const [notice, setNotice] = useState<string | null>(null);
+  const [returnHandled, setReturnHandled] = useState(false);
+  const resumed = useRef(false);
+  const payPath = `/${locale}/order/payment?orderId=${encodeURIComponent(orderId || "")}&orderNumber=${encodeURIComponent(orderNumber || "")}`;
 
   // Task D6: a pod that moved at payment (D12's podChange) rides along, so the next page says "Your pod is now B-07".
   const statusHref = useCallback(
@@ -92,6 +125,7 @@ export function PayStep({ orderId, orderNumber }: { orderId: string | null; orde
   const finish = useCallback(
     (qr: string | null | undefined, change?: PodChange | null) => {
       done.current = true;
+      if (pendingOrderFor(sessionStorageOrNull(), orderId)) clearPending(sessionStorageOrNull(), PENDING_ORDER_KEY);
       try {
         if (qr) localStorage.setItem("activeOrderQrCode", qr);
       } catch {
@@ -104,7 +138,7 @@ export function PayStep({ orderId, orderNumber }: { orderId: string | null; orde
       }
       router.replace(statusHref(qr, change));
     },
-    [router, statusHref],
+    [router, statusHref, orderId],
   );
 
   const canAct = member.ready && (member.signedIn || Boolean(guest));
@@ -164,6 +198,8 @@ export function PayStep({ orderId, orderNumber }: { orderId: string | null; orde
   // The PaymentIntent for exactly what the server says is due (again when "Save this card" changes).
   const loadIntent = useCallback(async () => {
     if (!orderId) return;
+    // C1: a succeeded PaymentIntent is still being confirmed: never make another one.
+    if (pendingOrderFor(sessionStorageOrNull(), orderId)) return;
     setError(null);
     const res = await paymentIntent(orderId, { savePaymentMethod: saveCard }, { fetcher: api, baseUrl: SITE_API_URL, headers: identity });
     if (!res.ok) {
@@ -185,51 +221,127 @@ export function PayStep({ orderId, orderNumber }: { orderId: string | null; orde
   }, [orderId, saveCard, api, identity, finish, order?.orderQrCode, te, update]);
 
   useEffect(() => {
-    if (!canAct || !customerReady || loadState !== "ready" || returning || done.current) return;
+    if (!canAct || !customerReady || loadState !== "ready" || (returning && !returnHandled) || done.current || paid) return;
     if (order?.paymentStatus === "PAID") return;
     loadIntent();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canAct, customerReady, loadState, saveCard, returning]);
+  }, [canAct, customerReady, loadState, saveCard, returning, returnHandled, paid]);
 
-  // Back from a 3DS or wallet redirect: the server verifies the PaymentIntent.
-  useEffect(() => {
-    if (!returning || !orderId || !canAct || done.current) return;
-    (async () => {
-      setProcessing(true);
-      const res = await confirmPayment(orderId, returning, { fetcher: api, baseUrl: SITE_API_URL, headers: identity });
-      if (res.ok) finish((res.data.orderQrCode as string | undefined) ?? order?.orderQrCode, (res.data as { podChange?: PodChange }).podChange);
-      else {
-        setProcessing(false);
-        setError({ text: res.error.refunded ? `${te(orderErrorCode(res.error.code, res.status))} ${t("refunded")}` : te(orderErrorCode(res.error.code, res.status)), retry: true });
-        router.replace(`/${locale}/order/payment?orderId=${encodeURIComponent(orderId)}&orderNumber=${encodeURIComponent(orderNumber || "")}`);
+  /**
+   * C1: Stripe said this PaymentIntent succeeded. Confirm it with the same id
+   * (retried with backoff); "done" goes on, "stuck" and "review" stay on
+   * Payment received (Retry, support), and only a refunded charge or a
+   * changed order drops it and lets the page pay again.
+   */
+  const finishPaid = useCallback(
+    async (p: PendingOrder) => {
+      if (confirming.current || done.current) return;
+      confirming.current = true;
+      setPaid(p);
+      setPaidState("finishing");
+      setError(null);
+      setNotice(null);
+      try {
+        const { outcome, result: res } = await settlePaid(
+          sessionStorageOrNull(),
+          PENDING_ORDER_KEY,
+          p,
+          () => confirmPayment(p.orderId, p.paymentIntentId, { fetcher: api, baseUrl: SITE_API_URL, headers: identity }) as Promise<Awaited<ReturnType<typeof confirmPayment>> & FinishResult>,
+          ORDER_RECREATE_CODES,
+        );
+        if (outcome === "done") {
+          finish((res.data?.orderQrCode as string | undefined) ?? order?.orderQrCode, (res.data as { podChange?: PodChange } | null)?.podChange);
+          return;
+        }
+        if (outcome === "stuck" || outcome === "review") {
+          setPaidState(outcome);
+          return;
+        }
+        // reprice: the server refunded the charge (or the order changed). Pay again, or start over.
+        const code = orderErrorCode(res.error.code, res.status);
+        const text = res.error.refunded ? `${te(code)} ${t("refunded")}` : te(code);
+        setPi(null);
+        if (code === "ORDER_CANCELLED" || code === "ORDER_NOT_FOUND" || code === "LEGACY_ORDER") {
+          update((d) => (d.order?.id === p.orderId ? { ...d, order: null } : d));
+          setError({ text, restart: true });
+        } else {
+          // The intent effect fetches a fresh PaymentIntent once `paid` is cleared.
+          setNotice(text);
+        }
+        setReturnHandled(true);
+        if (returning) router.replace(payPath);
+        setPaid(null);
+      } finally {
+        confirming.current = false;
       }
-    })();
+    },
+    [api, identity, finish, order?.orderQrCode, te, t, update, returning, router, payPath],
+  );
+
+  const paymentSucceeded = useCallback(
+    (paymentIntentId: string) => {
+      if (!orderId) return;
+      void finishPaid({ orderId, paymentIntentId });
+    },
+    [orderId, finishPaid],
+  );
+
+  // A reload after Stripe succeeded resumes the confirm (same PaymentIntent) instead of paying again.
+  useEffect(() => {
+    if (!orderId || !canAct || resumed.current || returning) return;
+    resumed.current = true;
+    const p = pendingOrderFor(sessionStorageOrNull(), orderId);
+    if (p) void finishPaid(p);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderId, canAct, returning]);
+
+  // Back from a 3DS or wallet redirect: confirm THAT PaymentIntent (the server verifies it with Stripe).
+  useEffect(() => {
+    if (!returning || !orderId || !canAct || done.current || resumed.current) return;
+    resumed.current = true;
+    // A PaymentIntent that already succeeded here comes first (the URL may still name an older one).
+    const pending = pendingOrderFor(sessionStorageOrNull(), orderId);
+    if (pending) {
+      setReturnHandled(true);
+      void finishPaid(pending);
+      return;
+    }
+    if (redirectStatus === "failed" || redirectStatus === "requires_payment_method" || redirectStatus === "canceled") {
+      // Not charged: say so and pay again (a fresh PaymentIntent is safe here).
+      setNotice(t("failed"));
+      setReturnHandled(true);
+      router.replace(payPath);
+      return;
+    }
+    setReturnHandled(true);
+    paymentSucceeded(returning);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [returning, orderId, canAct]);
 
-  async function confirmPaid(paymentIntentId: string | null) {
+  /** A zero balance: confirm with no PaymentIntent (nothing was charged, so a fresh try is safe). */
+  async function confirmFree() {
     if (!orderId || confirming.current) return;
     confirming.current = true;
     try {
-      await confirmPaidOnce(paymentIntentId);
+      await confirmFreeOnce();
     } finally {
       confirming.current = false;
     }
   }
 
-  async function confirmPaidOnce(paymentIntentId: string | null) {
+  async function confirmFreeOnce() {
     if (!orderId) return;
     setProcessing(true);
     setError(null);
-    const res = await confirmPayment(orderId, paymentIntentId, { fetcher: api, baseUrl: SITE_API_URL, headers: identity });
+    const res = await confirmPayment(orderId, null, { fetcher: api, baseUrl: SITE_API_URL, headers: identity });
     if (res.ok) {
       finish((res.data.orderQrCode as string | undefined) ?? order?.orderQrCode, (res.data as { podChange?: PodChange }).podChange);
       return;
     }
     setProcessing(false);
     const code = orderErrorCode(res.error.code, res.status);
-    setError({ text: res.error.refunded ? `${te(code)} ${t("refunded")}` : te(code), retry: true });
-    // A refunded or refused charge needs a fresh PaymentIntent before another try.
+    setError({ text: te(code), retry: true });
+    // The total may have changed: fetch what is due now.
     loadIntent();
   }
 
@@ -260,6 +372,18 @@ export function PayStep({ orderId, orderNumber }: { orderId: string | null; orde
       </StepSheet>
     );
   }
+  if (paid) {
+    return (
+      <PaymentReceived
+        state={paidState}
+        finishingText={tr("finishing")}
+        stuckText={tr("stuck")}
+        reviewText={tse("NEEDS_REVIEW")}
+        reference={orderNumber ? { label: tr("number"), value: orderNumber.slice(-6) } : null}
+        onRetry={() => void finishPaid(paid)}
+      />
+    );
+  }
   if (loadState === "missing") return <Missing restartHref={draft.locationId ? `/${locale}/order/location/${encodeURIComponent(draft.locationId)}?step=arrival` : null} />;
 
   const totals: ReceiptTotals | null = pi
@@ -284,7 +408,7 @@ export function PayStep({ orderId, orderNumber }: { orderId: string | null; orde
   const cta = !pi
     ? { label: t("payCta", { amount: "" }).trim(), disabled: true, busy: !error }
     : free
-      ? { label: t("free"), onClick: () => confirmPaid(null), busy: processing, dataAttr: "data-pay-free" }
+      ? { label: t("free"), onClick: () => confirmFree(), busy: processing, dataAttr: "data-pay-free" }
       : { label: t("payCta", { amount: money(due!) }), type: "submit" as const, form: FORM_ID, busy: processing, dataAttr: "data-pay-submit" };
 
   return (
@@ -295,7 +419,9 @@ export function PayStep({ orderId, orderNumber }: { orderId: string | null; orde
       backHref={backHref}
       wide
       alert={
-        error ? (
+        !error && notice ? (
+          notice
+        ) : error ? (
           <>
             {error.text}
             {error.restart ? (
@@ -391,7 +517,7 @@ export function PayStep({ orderId, orderNumber }: { orderId: string | null; orde
                 onSaveCardChange={setSaveCard}
                 savedPaymentMethods={saved}
                 returnUrl={`${typeof window !== "undefined" ? window.location.origin : ""}/${locale}/order/payment?orderId=${encodeURIComponent(orderId)}&orderNumber=${encodeURIComponent(orderNumber || "")}`}
-                onSuccess={(id) => confirmPaid(id)}
+                onSuccess={(id) => paymentSucceeded(id)}
                 onError={(message) => setError({ text: message || te("GENERIC") })}
                 onProcessingChange={setProcessing}
                 labels={{

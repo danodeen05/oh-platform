@@ -11,6 +11,13 @@ import {
   savePending,
   shopFinishOutcome,
   type FinishResult,
+  GROUP_RECREATE_CODES,
+  ORDER_RECREATE_CODES,
+  PENDING_GROUP_KEY,
+  PENDING_ORDER_KEY,
+  pendingGroupFor,
+  pendingOrderFor,
+  settlePaid,
 } from "../paid-recovery";
 import { RECREATE_CODES } from "../store";
 
@@ -90,5 +97,50 @@ describe("after Stripe succeeds (Task D10 fix round 1)", () => {
     expect(loadPending(storage, PENDING_GIFT_KEY, isPendingGift)).toBeNull();
     storage.setItem(PENDING_SHOP_KEY, JSON.stringify({ orderId: "x", orderNumber: "y", paymentIntentId: "not-a-pi" }));
     expect(loadPending(storage, PENDING_SHOP_KEY, isPendingShop)).toBeNull();
+  });
+});
+
+describe("food orders and groups after Stripe succeeds (final review C1, I1)", () => {
+  const sleep = async (_ms: number) => undefined;
+
+  it("a confirm failure then a retry success settles the SAME PaymentIntent and clears the pending entry", async () => {
+    const storage = memoryStorage();
+    const confirm = vi.fn<(pi: string) => Promise<FinishResult>>().mockResolvedValueOnce(netDown).mockResolvedValueOnce(ok);
+    const { outcome } = await settlePaid(storage, PENDING_ORDER_KEY, { orderId: "o1", paymentIntentId: "pi_1" }, () => confirm("pi_1"), ORDER_RECREATE_CODES, { sleep });
+    expect(outcome).toBe("done");
+    expect(confirm.mock.calls.every(([pi]) => pi === "pi_1")).toBe(true);
+    expect(pendingOrderFor(storage, "o1")).toBeNull();
+  });
+
+  it("stuck keeps the pending PaymentIntent (a reload resumes it); only this order's entry is resumed", async () => {
+    const storage = memoryStorage();
+    const { outcome } = await settlePaid(storage, PENDING_ORDER_KEY, { orderId: "o1", paymentIntentId: "pi_1" }, async () => server500, ORDER_RECREATE_CODES, { sleep });
+    expect(outcome).toBe("stuck");
+    expect(pendingOrderFor(storage, "o1")).toEqual({ orderId: "o1", paymentIntentId: "pi_1" });
+    expect(pendingOrderFor(storage, "o2")).toBeNull();
+    const v = await settlePaid(storage, PENDING_ORDER_KEY, { orderId: "o1", paymentIntentId: "pi_1" }, async () => ({ ok: false, status: 402, error: { code: "PAYMENT_NOT_VERIFIED" } }), ORDER_RECREATE_CODES, { sleep });
+    expect(v.outcome).toBe("stuck");
+  });
+
+  it("only a refunded charge (or a changed order with the charge refunded) allows a fresh PaymentIntent", async () => {
+    const storage = memoryStorage();
+    const refunded = await settlePaid(storage, PENDING_ORDER_KEY, { orderId: "o1", paymentIntentId: "pi_1" }, async () => ({ ok: false, status: 409, error: { code: "PAYMENT_REFUNDED" } }), ORDER_RECREATE_CODES, { sleep });
+    expect(refunded.outcome).toBe("reprice");
+    expect(pendingOrderFor(storage, "o1")).toBeNull();
+    const notRefunded = await settlePaid(storage, PENDING_ORDER_KEY, { orderId: "o1", paymentIntentId: "pi_1" }, async () => ({ ok: false, status: 409, error: { code: "QUOTE_CHANGED", refunded: false } }), ORDER_RECREATE_CODES, { sleep });
+    expect(notRefunded.outcome).toBe("stuck");
+    expect(pendingOrderFor(storage, "o1")).not.toBeNull();
+    const review = await settlePaid(storage, PENDING_ORDER_KEY, { orderId: "o1", paymentIntentId: "pi_1" }, async () => ({ ok: false, status: 409, error: { code: "QUOTE_CHANGED", needsReview: true } }), ORDER_RECREATE_CODES, { sleep });
+    expect(review.outcome).toBe("review");
+  });
+
+  it("group entries match the code case-insensitively and reprice on GROUP_CHANGED with a refund", async () => {
+    const storage = memoryStorage();
+    savePending(storage, PENDING_GROUP_KEY, { groupCode: "ABC123", paymentIntentId: "pi_g" });
+    expect(pendingGroupFor(storage, "abc123")?.paymentIntentId).toBe("pi_g");
+    expect(pendingGroupFor(storage, "XYZ")).toBeNull();
+    const r = await settlePaid(storage, PENDING_GROUP_KEY, { groupCode: "ABC123", paymentIntentId: "pi_g" }, async () => ({ ok: false, status: 409, error: { code: "GROUP_CHANGED", refunded: true } }), GROUP_RECREATE_CODES, { sleep });
+    expect(r.outcome).toBe("reprice");
+    expect(pendingGroupFor(storage, "ABC123")).toBeNull();
   });
 });
