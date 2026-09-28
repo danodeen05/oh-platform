@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { GateForm } from "./GateForm";
-import { planFontVariables } from "@/lib/plan/fonts";
+import { planFontVariables } from "@/components/site/fonts";
 
 /**
  * Plan gate. Reachable without a session; everything else under /plan is

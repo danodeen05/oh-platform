@@ -15,7 +15,14 @@ export function Providers({ children, chappy = true }: { children: React.ReactNo
     <CartProvider>
       <ToastProvider>
         {children}
-        {chappy ? <ChappyChatWrapper /> : null}
+        {/* legacy-ui: the old Chappy widget stays mounted (R6) and still uses
+            bare button/input/a/h1-h3 tags, so it needs the scoped rules too
+            until Task E1 replaces it. */}
+        {chappy ? (
+          <div className="legacy-ui">
+            <ChappyChatWrapper />
+          </div>
+        ) : null}
       </ToastProvider>
     </CartProvider>
   );

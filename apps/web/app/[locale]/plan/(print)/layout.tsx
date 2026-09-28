@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getPlanAccess } from "@/lib/plan/session.server";
-import { planFontVariables } from "@/lib/plan/fonts";
+import { planFontVariables } from "@/components/site/fonts";
 
 /**
  * Print route group: same session gate as the interactive shell, no nav,

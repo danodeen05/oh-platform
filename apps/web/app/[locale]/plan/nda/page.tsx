@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 import { planApi } from "@/lib/plan/api";
-import { planFontVariables } from "@/lib/plan/fonts";
+import { planFontVariables } from "@/components/site/fonts";
 import { getPlanAccess } from "@/lib/plan/session.server";
 import { signatureFont } from "@/lib/plan/nda/signatureFont";
 import type { NdaState } from "@/lib/plan/nda/types";
