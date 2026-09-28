@@ -6,6 +6,12 @@
  * imported directly from tests; see packages/api/src/orders/__tests__/
  * pricing.test.js for the same reasoning applied to seed-prod.ts).
  *
+ * Fix round 1 (review, Critical 1 + Important 1): `labels` is never
+ * overwritten (a separate `displayLabels` field carries the localized
+ * slider labels), and the row's own name/description/address columns are
+ * the source of English -- `i18n.en` is documentation only and is never
+ * read by any localizer, even for `locale === "en"`.
+ *
  * Run with: pnpm --filter @oh/api test
  */
 import { test, describe } from "node:test";
@@ -24,10 +30,13 @@ const badge = {
   description: "Ordered your first bowl of noodles",
   iconKey: "first-order",
   i18n: {
-    en: { name: "First Bowl", description: "Ordered your first bowl of noodles" },
+    // Deliberately stale/different from the row's own columns above, to
+    // prove en never reads this -- an admin edit to name/description must
+    // show up in English immediately, without touching i18n.
+    en: { name: "STALE English (must never be read)", description: "STALE description" },
     "zh-TW": { name: "第一碗", description: "點了你的第一碗麵" },
     "zh-CN": { name: "第一碗", description: "点了你的第一碗面" },
-    es: { name: "Primer Tazón", description: "Pediste tu primer tazón de fideos" },
+    es: { name: "Primer tazón", description: "Pediste tu primer tazón de fideos" },
   },
 };
 
@@ -38,7 +47,7 @@ const challenge = {
   description: "Order before 11am",
   iconKey: "early-bird",
   i18n: {
-    en: { name: "Early Bird", description: "Order before 11am" },
+    en: { name: "STALE (must never be read)", description: "STALE" },
     "zh-TW": { name: "早起的鳥兒", description: "上午 11 點前完成點餐" },
     "zh-CN": { name: "早起的鸟儿", description: "上午 11 点前完成点餐" },
     es: { name: "Madrugador", description: "Ordena antes de las 11 a.m." },
@@ -51,9 +60,9 @@ const location = {
   name: "City Creek Mall",
   address: "50 S Main St, Salt Lake City, UT 84101",
   i18n: {
-    en: { name: "City Creek Mall", address: "50 S Main St, Salt Lake City, UT 84101", landmarks: "Near Temple Square" },
-    "zh-TW": { name: "城溪購物中心（City Creek Mall）", address: "50 S Main St, Salt Lake City, UT 84101", landmarks: "鄰近天普廣場" },
-    "zh-CN": { name: "城溪购物中心（City Creek Mall）", address: "50 S Main St, Salt Lake City, UT 84101", landmarks: "邻近天普广场" },
+    en: { name: "STALE (must never be read)", address: "STALE", landmarks: "STALE" },
+    "zh-TW": { name: "城溪購物中心（City Creek Mall）", address: "50 S Main St, Salt Lake City, UT 84101", landmarks: "鄰近聖殿廣場" },
+    "zh-CN": { name: "城溪购物中心（City Creek Mall）", address: "50 S Main St, Salt Lake City, UT 84101", landmarks: "邻近圣殿广场" },
     es: { name: "City Creek Mall", address: "50 S Main St, Salt Lake City, UT 84101", landmarks: "Cerca de Temple Square" },
   },
 };
@@ -66,13 +75,19 @@ describe("localizeBadge", () => {
     assert.equal(result.iconKey, "first-order");
   });
 
-  test("falls back to en when locale is missing", () => {
+  test("uses the row's own columns for en, never i18n.en", () => {
+    const result = localizeBadge(badge, "en");
+    assert.equal(result.name, "First Bowl");
+    assert.equal(result.description, "Ordered your first bowl of noodles");
+  });
+
+  test("falls back to the row's own columns when locale is missing", () => {
     const result = localizeBadge(badge, undefined);
     assert.equal(result.name, "First Bowl");
     assert.equal(result.description, "Ordered your first bowl of noodles");
   });
 
-  test("falls back to en when locale is unknown", () => {
+  test("falls back to the row's own columns when locale is unknown", () => {
     const result = localizeBadge(badge, "fr");
     assert.equal(result.name, "First Bowl");
   });
@@ -97,7 +112,13 @@ describe("localizeChallenge", () => {
     assert.equal(result.iconKey, "early-bird");
   });
 
-  test("falls back to en when locale is missing", () => {
+  test("uses the row's own columns for en, never i18n.en", () => {
+    const result = localizeChallenge(challenge, "en");
+    assert.equal(result.name, "Early Bird");
+    assert.equal(result.description, "Order before 11am");
+  });
+
+  test("falls back to the row's own columns when locale is missing", () => {
     const result = localizeChallenge(challenge, undefined);
     assert.equal(result.name, "Early Bird");
   });
@@ -107,10 +128,16 @@ describe("localizeLocation", () => {
   test("returns zh-TW name and address when asked", () => {
     const result = localizeLocation(location, "zh-TW");
     assert.equal(result.name, "城溪購物中心（City Creek Mall）");
-    assert.equal(result.landmarks, "鄰近天普廣場");
+    assert.equal(result.landmarks, "鄰近聖殿廣場");
   });
 
-  test("falls back to en when locale is missing", () => {
+  test("uses the row's own columns for en, never i18n.en", () => {
+    const result = localizeLocation(location, "en");
+    assert.equal(result.name, "City Creek Mall");
+    assert.equal(result.address, "50 S Main St, Salt Lake City, UT 84101");
+  });
+
+  test("falls back to the row's own columns when locale is missing", () => {
     const result = localizeLocation(location, undefined);
     assert.equal(result.name, "City Creek Mall");
   });
@@ -142,24 +169,31 @@ describe("localizeMenuItem slider labels", () => {
     },
   };
 
-  test("replaces sliderConfig.labels with the zh-TW labelsI18n", () => {
+  test("Critical 1: sliderConfig.labels is unchanged for zh-TW (it is canonical order data, not display text)", () => {
     const result = localizeMenuItem(sliderItem, "zh-TW");
-    assert.deepEqual(result.sliderConfig.labels, ["清淡", "中等", "濃郁", "特濃"]);
+    assert.deepEqual(result.sliderConfig.labels, ["Light", "Medium", "Rich", "Extra Rich"]);
+  });
+
+  test("adds sliderConfig.displayLabels with the zh-TW translation", () => {
+    const result = localizeMenuItem(sliderItem, "zh-TW");
+    assert.deepEqual(result.sliderConfig.displayLabels, ["清淡", "中等", "濃郁", "特濃"]);
     // Other sliderConfig fields must survive untouched.
     assert.equal(result.sliderConfig.min, 0);
     assert.equal(result.sliderConfig.max, 3);
     assert.equal(result.sliderConfig.default, 1);
   });
 
-  test("keeps the English labels when locale is missing", () => {
+  test("displayLabels falls back to the English labelsI18n when locale is missing", () => {
     const result = localizeMenuItem(sliderItem, undefined);
+    assert.deepEqual(result.sliderConfig.displayLabels, ["Light", "Medium", "Rich", "Extra Rich"]);
     assert.deepEqual(result.sliderConfig.labels, ["Light", "Medium", "Rich", "Extra Rich"]);
   });
 
-  test("leaves sliderConfig alone when there is no labelsI18n (backward compatible)", () => {
+  test("displayLabels falls back to labels when there is no labelsI18n (backward compatible)", () => {
     const oldItem = { id: "m2", name: "Old Slider", sliderConfig: { min: 0, max: 2, labels: ["A", "B", "C"] } };
     const result = localizeMenuItem(oldItem, "zh-TW");
     assert.deepEqual(result.sliderConfig.labels, ["A", "B", "C"]);
+    assert.deepEqual(result.sliderConfig.displayLabels, ["A", "B", "C"]);
   });
 
   test("still localizes name/description for a non-slider item", () => {

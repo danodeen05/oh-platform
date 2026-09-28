@@ -4802,6 +4802,12 @@ app.get("/users/:id/profile", async (req, reply) => {
   const locale = getLocale(req);
   user.badges = user.badges.map((ub) => ({ ...ub, badge: localizeBadge(ub.badge, locale) }));
   user.challenges = user.challenges.map((uc) => ({ ...uc, challenge: localizeChallenge(uc.challenge, locale) }));
+  // Fix round 1 (review, Important 2): the new UI reads `membership.badges`
+  // directly (see the comment above), so it needs localizing too, not just
+  // the back-compat `user.badges` shim.
+  if (membership) {
+    membership.badges = membership.badges.map((ub) => ({ ...ub, badge: localizeBadge(ub.badge, locale) }));
+  }
 
   return {
     ...user,
@@ -5010,6 +5016,7 @@ app.get("/challenges/:idOrSlug", async (req, reply) => {
 // Enroll a user in a challenge
 app.post("/users/:userId/challenges/:challengeId/enroll", async (req, reply) => {
   const { userId, challengeId } = req.params;
+  const locale = getLocale(req);
 
   // Check if challenge exists and is active
   const challenge = await prisma.challenge.findUnique({
@@ -5042,12 +5049,13 @@ app.post("/users/:userId/challenges/:challengeId/enroll", async (req, reply) => 
   });
 
   console.log(`🎯 User ${userId} enrolled in challenge: ${challenge.name}`);
-  return userChallenge;
+  return { ...userChallenge, challenge: localizeChallenge(userChallenge.challenge, locale) };
 });
 
 // Claim challenge reward
 app.post("/users/:userId/challenges/:challengeId/claim", async (req, reply) => {
   const { userId, challengeId } = req.params;
+  const locale = getLocale(req);
 
   const userChallenge = await prisma.userChallenge.findUnique({
     where: { userId_challengeId: { userId, challengeId } },
@@ -5094,12 +5102,17 @@ app.post("/users/:userId/challenges/:challengeId/claim", async (req, reply) => {
   // Refresh wallet pass to show updated credit balance
   refreshUserWalletPass(userId).catch(console.error);
 
-  return { success: true, rewardCents: userChallenge.challenge.rewardCents };
+  return {
+    success: true,
+    rewardCents: userChallenge.challenge.rewardCents,
+    challenge: localizeChallenge(userChallenge.challenge, locale),
+  };
 });
 
 // Get user's badge progress
 app.get("/users/:id/badge-progress", async (req, reply) => {
   const { id } = req.params;
+  const locale = getLocale(req);
 
   const user = await prisma.user.findUnique({
     where: { id },
@@ -5339,7 +5352,7 @@ app.get("/users/:id/badge-progress", async (req, reply) => {
     totalMenuItems,
     earnedBadges: user.badges.map((ub) => ({
       slug: ub.badge.slug,
-      name: ub.badge.name,
+      name: localizeBadge(ub.badge, locale).name,
       awardedAt: ub.awardedAt,
     })),
     progress,

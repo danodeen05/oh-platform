@@ -63,7 +63,7 @@ export const BADGES: BadgeSeed[] = [
       en: { name: "Noodle Enthusiast", description: "Completed 10 orders" },
       "zh-TW": { name: "麵食愛好者", description: "完成了 10 次點餐" },
       "zh-CN": { name: "面食爱好者", description: "完成了 10 次点餐" },
-      es: { name: "Entusiasta de los Fideos", description: "Completaste 10 pedidos" },
+      es: { name: "Entusiasta de los fideos", description: "Completaste 10 pedidos" },
     },
   },
   {
@@ -75,7 +75,8 @@ export const BADGES: BadgeSeed[] = [
       en: { name: "Beef Devotee", description: "Completed 50 orders" },
       "zh-TW": { name: "牛肉粉絲", description: "完成了 50 次點餐" },
       "zh-CN": { name: "牛肉粉丝", description: "完成了 50 次点餐" },
-      es: { name: "Devoto de la Res", description: "Completaste 50 pedidos" },
+      // "Devoto de la carne" to match the tier name "Jefe de la Carne".
+      es: { name: "Devoto de la carne", description: "Completaste 50 pedidos" },
     },
   },
   {
@@ -87,7 +88,7 @@ export const BADGES: BadgeSeed[] = [
       en: { name: "Century Club", description: "Completed 100 orders" },
       "zh-TW": { name: "百碗俱樂部", description: "完成了 100 次點餐" },
       "zh-CN": { name: "百碗俱乐部", description: "完成了 100 次点餐" },
-      es: { name: "Club del Centenar", description: "Completaste 100 pedidos" },
+      es: { name: "Club de los cien", description: "Completaste 100 pedidos" },
     },
   },
   {
@@ -99,7 +100,7 @@ export const BADGES: BadgeSeed[] = [
       en: { name: "Share the Love", description: "Referred your first friend" },
       "zh-TW": { name: "分享好味道", description: "邀請了第一位朋友" },
       "zh-CN": { name: "分享好味道", description: "邀请了第一位朋友" },
-      es: { name: "Comparte el Cariño", description: "Invitaste a tu primer amigo" },
+      es: { name: "Comparte el cariño", description: "Invitaste a tu primer amigo" },
     },
   },
   {
@@ -108,12 +109,15 @@ export const BADGES: BadgeSeed[] = [
     category: "REFERRAL",
     iconKey: "10-referrals",
     i18n: {
-      // TW "人氣推手" (a word-of-mouth booster) and CN "带货达人" (a livestream/
-      // group-buy influencer, mainland e-commerce slang) are genuinely
-      // different words, not a character-set conversion of each other.
+      // Fix round 1 (review, Important 5): "带货达人" means a livestream
+      // merchandise seller and read as commercial selling, not referring
+      // friends. "人气推荐官" (a popularity-driven recommender) is the
+      // mainland word for this; TW "人氣推手" (a word-of-mouth booster) was
+      // already fine and is unchanged. Still genuinely different words, not
+      // a character-set conversion of each other.
       en: { name: "Influencer", description: "Referred 10 friends" },
       "zh-TW": { name: "人氣推手", description: "邀請了 10 位朋友" },
-      "zh-CN": { name: "带货达人", description: "邀请了 10 位朋友" },
+      "zh-CN": { name: "人气推荐官", description: "邀请了 10 位朋友" },
       es: { name: "Influencer", description: "Invitaste a 10 amigos" },
     },
   },
@@ -135,10 +139,13 @@ export const BADGES: BadgeSeed[] = [
     category: "STREAK",
     iconKey: "3-day-streak",
     i18n: {
+      // Fix round 1 (review, Important 5): 手氣 means gambling or game
+      // luck, wrong connotation for an ordering habit streak. 熱度不減 /
+      // 热度不减 ("the heat hasn't faded") reads naturally for both.
       en: { name: "Hot Streak", description: "Ordered 3 days in a row" },
-      "zh-TW": { name: "手氣正旺", description: "連續 3 天點餐" },
-      "zh-CN": { name: "手气火热", description: "连续 3 天点餐" },
-      es: { name: "Racha Ganadora", description: "Pediste 3 días seguidos" },
+      "zh-TW": { name: "熱度不減", description: "連續 3 天點餐" },
+      "zh-CN": { name: "热度不减", description: "连续 3 天点餐" },
+      es: { name: "Racha ganadora", description: "Pediste 3 días seguidos" },
     },
   },
   {
@@ -150,7 +157,7 @@ export const BADGES: BadgeSeed[] = [
       en: { name: "Weekly Warrior", description: "Ordered 7 days in a row" },
       "zh-TW": { name: "一週戰士", description: "連續 7 天點餐" },
       "zh-CN": { name: "一周战士", description: "连续 7 天点餐" },
-      es: { name: "Guerrero Semanal", description: "Pediste 7 días seguidos" },
+      es: { name: "Guerrero semanal", description: "Pediste 7 días seguidos" },
     },
   },
   {
@@ -174,9 +181,9 @@ export const BADGES: BadgeSeed[] = [
       // TW "達人" and CN "大师" both translate as "master/expert" but are
       // distinct, commonly-used words in each region.
       en: { name: "Menu Master", description: "Tried every item on the menu" },
-      "zh-TW": { name: "菜單達人", description: "吃遍了菜單上的每一樣" },
-      "zh-CN": { name: "菜单大师", description: "吃遍了菜单上的每一样" },
-      es: { name: "Maestro del Menú", description: "Probaste todo el menú" },
+      "zh-TW": { name: "菜單達人", description: "吃遍菜單上每一道" },
+      "zh-CN": { name: "菜单大师", description: "吃遍菜单上的每一道菜" },
+      es: { name: "Maestro del menú", description: "Probaste todo el menú" },
     },
   },
   {
@@ -191,7 +198,7 @@ export const BADGES: BadgeSeed[] = [
       en: { name: "Heat Seeker", description: "Ordered max spice level" },
       "zh-TW": { name: "無辣不歡", description: "點了最高辣度" },
       "zh-CN": { name: "嗜辣达人", description: "点了最高辣度" },
-      es: { name: "Buscador de Picante", description: "Pediste el nivel de picante máximo" },
+      es: { name: "Amante del picante", description: "Pediste el nivel de picante máximo" },
     },
   },
   {
@@ -203,9 +210,9 @@ export const BADGES: BadgeSeed[] = [
       // TW "開幕" (grand-opening ceremony) vs CN "开业" (starting business) --
       // both mean "opened", but they are the words each region actually uses.
       en: { name: "OG Member", description: "Member since grand opening" },
-      "zh-TW": { name: "元老會員", description: "開幕當時就加入的會員" },
-      "zh-CN": { name: "创始会员", description: "开业当时就加入的会员" },
-      es: { name: "Miembro Fundador", description: "Miembro desde la gran apertura" },
+      "zh-TW": { name: "元老會員", description: "開幕時就加入的會員" },
+      "zh-CN": { name: "创始会员", description: "开业之初就加入的会员" },
+      es: { name: "Miembro fundador", description: "Miembro desde la gran apertura" },
     },
   },
   {

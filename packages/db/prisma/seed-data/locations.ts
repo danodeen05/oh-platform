@@ -33,12 +33,15 @@ export const LOCATION_I18N: Record<string, LocationI18nEntry> = {
     "zh-TW": {
       name: "城溪購物中心（City Creek Mall）",
       address: "50 S Main St, Salt Lake City, UT 84101",
-      landmarks: "鄰近天普廣場",
+      // Fix round 1 (review, Important 6): 天普廣場 was an ad hoc
+      // transliteration. The Church's own Chinese name for Temple Square
+      // is 聖殿廣場 / 圣殿广场.
+      landmarks: "鄰近聖殿廣場",
     },
     "zh-CN": {
       name: "城溪购物中心（City Creek Mall）",
       address: "50 S Main St, Salt Lake City, UT 84101",
-      landmarks: "邻近天普广场",
+      landmarks: "邻近圣殿广场",
     },
     es: {
       name: "City Creek Mall",

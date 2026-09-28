@@ -1,4 +1,12 @@
 import { PrismaClient } from "@prisma/client";
+import { BADGES } from "./seed-data/badges";
+import { CHALLENGES } from "./seed-data/challenges";
+import {
+  DEV_BADGE_DESCRIPTION,
+  DEV_BADGE_I18N_OVERRIDE,
+  DEV_CHALLENGE_DESCRIPTION,
+  DEV_CHALLENGE_REQUIREMENTS,
+} from "./seed-data/dev-overrides";
 
 const prisma = new PrismaClient();
 
@@ -318,295 +326,57 @@ async function main() {
 
   console.log("Creating badges...");
 
-  // iconKey matches SEALS (apps/web/components/site/seal/seals.ts, Task C2);
-  // i18n gives real zh-TW/zh-CN/es copy (see packages/db/prisma/seed-data/
-  // badges.ts for the production catalog and its localization notes -- this
-  // dev fixture uses its own slightly different English text, so it keeps
-  // its own i18n rather than importing that module).
+  // Fix round 1 (review, Minor 1): badges now import their catalog from
+  // seed-data/badges.ts instead of keeping a second, hand-written copy --
+  // that duplication was exactly how the "vip" badge's dev-only zh-TW/zh-CN
+  // text drifted to the wrong tier name (Important 4) without being
+  // caught. Only the English `description` differs for a few dev fixtures
+  // (this dev seed's story text doesn't match seed-prod.ts's), so those are
+  // overridden via DEV_BADGE_DESCRIPTION; "vip" and "spicy-challenge" change
+  // meaning, not just English wording, so they get their own full i18n
+  // override instead (see seed-data/dev-overrides.ts).
   await prisma.badge.createMany({
-    data: [
-      // Milestone badges
-      {
-        slug: "first-order",
-        name: "First Bowl",
-        description: "Completed your first order",
+    data: BADGES.map((b) => {
+      const description = DEV_BADGE_DESCRIPTION[b.slug] ?? b.i18n.en.description;
+      const i18n = DEV_BADGE_I18N_OVERRIDE[b.slug] ?? { ...b.i18n, en: { ...b.i18n.en, description } };
+      return {
+        slug: b.slug,
+        name: i18n.en.name,
+        description: i18n.en.description,
         iconEmoji: null,
-        iconKey: "first-order",
-        category: "MILESTONE",
-        i18n: {
-          en: { name: "First Bowl", description: "Completed your first order" },
-          "zh-TW": { name: "第一碗", description: "完成了你的第一筆訂單" },
-          "zh-CN": { name: "第一碗", description: "完成了你的第一笔订单" },
-          es: { name: "Primer Tazón", description: "Completaste tu primer pedido" },
-        },
-      },
-      {
-        slug: "10-orders",
-        name: "Noodle Enthusiast",
-        description: "Completed 10 orders",
-        iconEmoji: null,
-        iconKey: "10-orders",
-        category: "MILESTONE",
-        i18n: {
-          en: { name: "Noodle Enthusiast", description: "Completed 10 orders" },
-          "zh-TW": { name: "麵食愛好者", description: "完成了 10 次點餐" },
-          "zh-CN": { name: "面食爱好者", description: "完成了 10 次点餐" },
-          es: { name: "Entusiasta de los Fideos", description: "Completaste 10 pedidos" },
-        },
-      },
-      {
-        slug: "50-orders",
-        name: "Beef Devotee",
-        description: "Completed 50 orders",
-        iconEmoji: null,
-        iconKey: "50-orders",
-        category: "MILESTONE",
-        i18n: {
-          en: { name: "Beef Devotee", description: "Completed 50 orders" },
-          "zh-TW": { name: "牛肉粉絲", description: "完成了 50 次點餐" },
-          "zh-CN": { name: "牛肉粉丝", description: "完成了 50 次点餐" },
-          es: { name: "Devoto de la Res", description: "Completaste 50 pedidos" },
-        },
-      },
-      {
-        slug: "100-orders",
-        name: "Century Club",
-        description: "Completed 100 orders",
-        iconEmoji: null,
-        iconKey: "100-orders",
-        category: "MILESTONE",
-        i18n: {
-          en: { name: "Century Club", description: "Completed 100 orders" },
-          "zh-TW": { name: "百碗俱樂部", description: "完成了 100 次點餐" },
-          "zh-CN": { name: "百碗俱乐部", description: "完成了 100 次点餐" },
-          es: { name: "Club del Centenar", description: "Completaste 100 pedidos" },
-        },
-      },
-
-      // Referral badges
-      {
-        slug: "first-referral",
-        name: "Share the Love",
-        description: "Referred your first friend",
-        iconEmoji: null,
-        iconKey: "first-referral",
-        category: "REFERRAL",
-        i18n: {
-          en: { name: "Share the Love", description: "Referred your first friend" },
-          "zh-TW": { name: "分享好味道", description: "邀請了第一位朋友" },
-          "zh-CN": { name: "分享好味道", description: "邀请了第一位朋友" },
-          es: { name: "Comparte el Cariño", description: "Invitaste a tu primer amigo" },
-        },
-      },
-      {
-        slug: "10-referrals",
-        name: "Influencer",
-        description: "Referred 10 friends",
-        iconEmoji: null,
-        iconKey: "10-referrals",
-        category: "REFERRAL",
-        i18n: {
-          en: { name: "Influencer", description: "Referred 10 friends" },
-          "zh-TW": { name: "人氣推手", description: "邀請了 10 位朋友" },
-          "zh-CN": { name: "带货达人", description: "邀请了 10 位朋友" },
-          es: { name: "Influencer", description: "Invitaste a 10 amigos" },
-        },
-      },
-      {
-        slug: "50-referrals",
-        name: "Ambassador",
-        description: "Referred 50 friends",
-        iconEmoji: null,
-        iconKey: "50-referrals",
-        category: "REFERRAL",
-        i18n: {
-          en: { name: "Ambassador", description: "Referred 50 friends" },
-          "zh-TW": { name: "品牌大使", description: "邀請了 50 位朋友" },
-          "zh-CN": { name: "品牌大使", description: "邀请了 50 位朋友" },
-          es: { name: "Embajador", description: "Invitaste a 50 amigos" },
-        },
-      },
-
-      // Streak badges
-      {
-        slug: "3-day-streak",
-        name: "Hot Streak",
-        description: "Ordered 3 days in a row",
-        iconEmoji: null,
-        iconKey: "3-day-streak",
-        category: "STREAK",
-        i18n: {
-          en: { name: "Hot Streak", description: "Ordered 3 days in a row" },
-          "zh-TW": { name: "手氣正旺", description: "連續 3 天點餐" },
-          "zh-CN": { name: "手气火热", description: "连续 3 天点餐" },
-          es: { name: "Racha Ganadora", description: "Pediste 3 días seguidos" },
-        },
-      },
-      {
-        slug: "7-day-streak",
-        name: "Weekly Warrior",
-        description: "Ordered 7 days in a row",
-        iconEmoji: null,
-        iconKey: "7-day-streak",
-        category: "STREAK",
-        i18n: {
-          en: { name: "Weekly Warrior", description: "Ordered 7 days in a row" },
-          "zh-TW": { name: "一週戰士", description: "連續 7 天點餐" },
-          "zh-CN": { name: "一周战士", description: "连续 7 天点餐" },
-          es: { name: "Guerrero Semanal", description: "Pediste 7 días seguidos" },
-        },
-      },
-      {
-        slug: "30-day-streak",
-        name: "Legend",
-        description: "Ordered 30 days in a row",
-        iconEmoji: null,
-        iconKey: "30-day-streak",
-        category: "STREAK",
-        i18n: {
-          en: { name: "Legend", description: "Ordered 30 days in a row" },
-          "zh-TW": { name: "傳奇人物", description: "連續 30 天點餐" },
-          "zh-CN": { name: "传奇人物", description: "连续 30 天点餐" },
-          es: { name: "Leyenda", description: "Pediste 30 días seguidos" },
-        },
-      },
-
-      // Challenge badges
-      {
-        slug: "tried-all-items",
-        name: "Menu Master",
-        description: "Tried every item on the menu",
-        iconEmoji: null,
-        iconKey: "tried-all-items",
-        category: "CHALLENGE",
-        i18n: {
-          en: { name: "Menu Master", description: "Tried every item on the menu" },
-          "zh-TW": { name: "菜單達人", description: "吃遍了菜單上的每一樣" },
-          "zh-CN": { name: "菜单大师", description: "吃遍了菜单上的每一样" },
-          es: { name: "Maestro del Menú", description: "Probaste todo el menú" },
-        },
-      },
-      {
-        slug: "spicy-challenge",
-        name: "Heat Seeker",
-        description: "Ordered spicy 10 times",
-        iconEmoji: null,
-        iconKey: "spicy-challenge",
-        category: "CHALLENGE",
-        i18n: {
-          en: { name: "Heat Seeker", description: "Ordered spicy 10 times" },
-          "zh-TW": { name: "無辣不歡", description: "點了 10 次辣味餐點" },
-          "zh-CN": { name: "嗜辣达人", description: "点了 10 次辣味餐点" },
-          es: { name: "Buscador de Picante", description: "Pediste picante 10 veces" },
-        },
-      },
-
-      // Special badges
-      {
-        slug: "grand-opening",
-        name: "OG Member",
-        description: "Member since grand opening",
-        iconEmoji: null,
-        iconKey: "grand-opening",
-        category: "SPECIAL",
-        i18n: {
-          en: { name: "OG Member", description: "Member since grand opening" },
-          "zh-TW": { name: "元老會員", description: "開幕當時就加入的會員" },
-          "zh-CN": { name: "创始会员", description: "开业当时就加入的会员" },
-          es: { name: "Miembro Fundador", description: "Miembro desde la gran apertura" },
-        },
-      },
-      {
-        slug: "vip",
-        name: "VIP",
-        description: "Reached Beef Boss tier",
-        iconEmoji: null,
-        iconKey: "vip",
-        category: "SPECIAL",
-        i18n: {
-          en: { name: "VIP", description: "Reached Beef Boss tier" },
-          "zh-TW": { name: "貴賓", description: "達到牛霸主等級" },
-          "zh-CN": { name: "尊享会员", description: "达到牛霸主等级" },
-          es: { name: "VIP", description: "Alcanzaste el nivel Beef Boss" },
-        },
-      },
-    ],
+        iconKey: b.iconKey,
+        category: b.category,
+        i18n: i18n as any,
+      };
+    }),
   });
 
   console.log("Created 14 badges");
 
   console.log("Creating challenges...");
 
-  // Challenge.iconEmoji is still schema-required (frozen migration from
-  // Task A2); this writes "" instead of an emoji. iconKey/i18n follow the
-  // same conventions as the badges above.
+  // Fix round 1 (review, Minor 1): same single-source approach as the
+  // badges above. `requirements` stays dev-specific (this fixture's
+  // referenced item slugs don't exist in seed-prod.ts's catalog), so it
+  // comes from seed-data/dev-overrides.ts rather than seed-prod.ts's
+  // module. Challenge.iconEmoji is still schema-required (frozen migration
+  // from Task A2); this writes "" instead of an emoji.
   await prisma.challenge.createMany({
-    data: [
-      {
-        slug: "try-all-bases",
-        name: "Noodle Explorer",
-        description: "Order all 4 base noodle dishes",
-        rewardCents: 500,
+    data: CHALLENGES.map((c) => {
+      const description = DEV_CHALLENGE_DESCRIPTION[c.slug] ?? c.i18n.en.description;
+      const i18n = { ...c.i18n, en: { ...c.i18n.en, description } };
+      return {
+        slug: c.slug,
+        name: c.i18n.en.name,
+        description,
+        rewardCents: c.rewardCents,
         iconEmoji: "",
-        iconKey: "try-all-bases",
-        i18n: {
-          en: { name: "Noodle Explorer", description: "Order all 4 base noodle dishes" },
-          "zh-TW": { name: "麵條探險家", description: "點過所有 4 種基底麵食" },
-          "zh-CN": { name: "面条探险家", description: "点过所有 4 种基底面食" },
-          es: { name: "Explorador de Fideos", description: "Ordena los 4 platillos base de fideos" },
-        },
-        requirements: JSON.stringify({
-          type: "order_all_items",
-          itemSlugs: [
-            "classic-beef",
-            "spicy-beef",
-            "dry-noodles",
-            "wagyu-upgrade",
-          ],
-        }),
+        iconKey: c.iconKey,
+        i18n: i18n as any,
+        requirements: DEV_CHALLENGE_REQUIREMENTS[c.slug] as any,
         isActive: true,
-      },
-      {
-        slug: "bring-5-friends",
-        name: "Party Host",
-        description: "Refer 5 friends this month",
-        rewardCents: 1000,
-        iconEmoji: "",
-        iconKey: "bring-5-friends",
-        i18n: {
-          en: { name: "Party Host", description: "Refer 5 friends this month" },
-          "zh-TW": { name: "揪團高手", description: "這個月邀請 5 位朋友" },
-          "zh-CN": { name: "拼单达人", description: "本月邀请 5 位朋友" },
-          es: { name: "Anfitrión de la Fiesta", description: "Invita a 5 amigos este mes" },
-        },
-        requirements: JSON.stringify({
-          type: "referrals",
-          count: 5,
-          timeframe: "month",
-        }),
-        isActive: true,
-      },
-      {
-        slug: "early-bird",
-        name: "Early Bird",
-        description: "Order before 11am five times",
-        rewardCents: 400,
-        iconEmoji: "",
-        iconKey: "early-bird",
-        i18n: {
-          en: { name: "Early Bird", description: "Order before 11am five times" },
-          "zh-TW": { name: "早起的鳥兒", description: "上午 11 點前完成點餐 5 次" },
-          "zh-CN": { name: "早起的鸟儿", description: "上午 11 点前完成点餐 5 次" },
-          es: { name: "Madrugador", description: "Ordena antes de las 11 a.m. cinco veces" },
-        },
-        requirements: JSON.stringify({
-          type: "order_time",
-          before: "11:00",
-          count: 5,
-        }),
-        isActive: true,
-      },
-    ],
+      };
+    }),
   });
 
   console.log("Created 4 challenges");

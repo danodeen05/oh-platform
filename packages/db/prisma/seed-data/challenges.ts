@@ -31,7 +31,7 @@ export const CHALLENGES: ChallengeSeed[] = [
       en: { name: "Noodle Explorer", description: "Try all noodle types" },
       "zh-TW": { name: "麵條探險家", description: "嘗試所有麵條種類" },
       "zh-CN": { name: "面条探险家", description: "尝试所有面条种类" },
-      es: { name: "Explorador de Fideos", description: "Prueba todos los tipos de fideos" },
+      es: { name: "Explorador de fideos", description: "Prueba todos los tipos de fideos" },
     },
   },
   {
@@ -41,13 +41,15 @@ export const CHALLENGES: ChallengeSeed[] = [
     rewardCents: 1000,
     requirements: { type: "referrals", count: 5 },
     i18n: {
-      // TW "揪團" (rally a group -- everyday Taiwan usage for organizing
-      // friends) vs CN "拼单" (mainland group-buy/split-order slang) --
-      // genuinely different words, not a conversion.
+      // Fix round 1 (review, Important 5): "拼单" means a group-buy
+      // order-splitter (Pinduoduo-style) and implies discount hunting, not
+      // bringing friends. "组局达人" (someone who organizes a gathering) is
+      // the mainland word for this challenge. TW "揪團高手" (rally-a-group,
+      // everyday Taiwan usage) was already fine and is unchanged.
       en: { name: "Party Host", description: "Refer 5 friends who make a purchase" },
       "zh-TW": { name: "揪團高手", description: "邀請 5 位朋友完成消費" },
-      "zh-CN": { name: "拼单达人", description: "邀请 5 位朋友完成消费" },
-      es: { name: "Anfitrión de la Fiesta", description: "Invita a 5 amigos que hagan una compra" },
+      "zh-CN": { name: "组局达人", description: "邀请 5 位朋友完成消费" },
+      es: { name: "Anfitrión de la fiesta", description: "Invita a 5 amigos que hagan una compra" },
     },
   },
   {
@@ -60,7 +62,7 @@ export const CHALLENGES: ChallengeSeed[] = [
       en: { name: "Early Bird", description: "Order before 11am" },
       "zh-TW": { name: "早起的鳥兒", description: "上午 11 點前完成點餐" },
       "zh-CN": { name: "早起的鸟儿", description: "上午 11 点前完成点餐" },
-      es: { name: "Madrugador", description: "Ordena antes de las 11 a.m." },
+      es: { name: "Madrugador", description: "Pide antes de las 11 a. m." },
     },
   },
 ];
