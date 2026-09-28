@@ -13,6 +13,7 @@ import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { Icon } from "@/components/site/icons/Icon";
+import { useOrderBack } from "@/lib/site/order-back";
 import { AccountButton } from "./AccountButton";
 import { DesktopNav } from "./DesktopNav";
 import { LocaleSwitch } from "./LocaleSwitch";
@@ -25,6 +26,7 @@ export function TopBar() {
   const locale = useLocale();
   const [scrolled, setScrolled] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const back = useOrderBack();
 
   useEffect(() => {
     const onScroll = () => {
@@ -46,6 +48,17 @@ export function TopBar() {
         className="sticky top-0 z-40 pt-[env(safe-area-inset-top,0px)] transition-[background-color,box-shadow,backdrop-filter] duration-300 data-[scrolled=true]:shadow-[inset_0_-1px_0_var(--color-oh-stone)] data-[scrolled=true]:bg-oh-charcoal/85 data-[scrolled=true]:backdrop-blur-md"
       >
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-2 pl-[max(1rem,env(safe-area-inset-left,0px))] pr-[max(0.5rem,env(safe-area-inset-right,0px))] md:pr-[max(1rem,env(safe-area-inset-right,0px))]">
+          {/* Task D5: the order flow's steps publish a Back target (lib/site/order-back.ts). */}
+          {back ? (
+            <Link
+              data-order-back
+              href={back.href}
+              aria-label={back.label}
+              className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-oh-cream no-underline transition-colors hover:bg-oh-stone/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oh-cream"
+            >
+              <Icon name="chevron" size={24} className="rotate-180" />
+            </Link>
+          ) : null}
           <Link
             href={`/${locale}`}
             aria-label={t("home")}

@@ -13,6 +13,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useChappy } from "@/components/site/chappy/ChappyLauncher";
 import { NavGlyph } from "./NavGlyph";
 import { DOCK_ITEMS, isNavActive, isNavLink, localizedHref } from "@/lib/site/nav";
+import { isOrderBuildPath } from "@/lib/site/order-routes";
 
 const ITEM =
   "group relative flex h-12 min-h-11 w-full min-w-11 cursor-pointer appearance-none flex-col border-0 font-[inherit] no-underline items-center justify-center gap-0.5 rounded-2xl px-0.5 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oh-cream";
@@ -27,6 +28,9 @@ export function Dock() {
   const locale = useLocale();
   const pathname = usePathname();
   const chappy = useChappy();
+
+  // Task D5: the order flow keeps the thumb zone for its own call to action.
+  if (isOrderBuildPath(pathname)) return null;
 
   return (
     <nav
