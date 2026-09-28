@@ -1,27 +1,58 @@
 /**
- * Which message namespaces reach the browser (Task G2a).
+ * Which message namespaces reach the browser (Task G2a; per route since G2b).
  *
  * NextIntlClientProvider serializes every message it is given into the page
- * (the RSC payload inlined in the HTML). The [locale] layout used to hand it
- * the whole catalog, about 180 KB of JSON in English, more than half of it
- * the business plan's `plan.*`, on every page. Now:
+ * (the RSC payload inlined in the HTML). The whole catalog is about 260 KB of
+ * JSON in English, so no page gets it:
  *
- * - `(site)` pages get only SITE_CLIENT_NAMESPACES, the namespaces their
- *   client components read. `client-messages.test.ts` walks the import graph
- *   of app/[locale]/(site) and fails if a client component there uses a
- *   namespace missing from this list, so a new one can't silently render
- *   blank (production shows "" for a missing key).
- * - legacy pages (and kiosk, CNY, agents) get everything except
- *   SERVER_ONLY_NAMESPACES.
- * - the plan keeps its full catalog (its own branch in the [locale] layout).
+ * - The (site) layout (ScopedIntl scope="site") provides SITE_BASE_NAMESPACES:
+ *   what the shell and the Chappy widget read on every page.
+ * - Each top-level (site) route adds its own set: its segment layout renders
+ *   <RouteIntl route="…">, which provides the base plus ROUTE_NAMESPACES[route]
+ *   to that route's pages. (A nested provider replaces the messages it
+ *   inherits, hence base plus route.) The home page wraps itself, since it
+ *   has no segment of its own.
+ * - Legacy pages (and kiosk, CNY, agents) get everything except
+ *   SERVER_ONLY_NAMESPACES. The plan keeps its full catalog.
  *
- * Server components are unaffected: getTranslations reads the full catalog
- * from i18n/request.ts on the server.
+ * `client-messages.test.ts` walks the import graph of the (site) layout and
+ * of each route, including lazy chunks, and fails if a client component uses
+ * a namespace its provider doesn't carry: production would render "" for it.
+ *
+ * Server components are unaffected: getTranslations reads the full catalog.
  */
 
 type Messages = Record<string, unknown>;
 
-export const SITE_CLIENT_NAMESPACES = ["site", "siteImages", "home", "rewards", "loyalty", "passport"] as const;
+/** The shell (top bar, dock, More sheet, footer, active-order pill) and the Chappy widget. */
+export const SITE_BASE_NAMESPACES = ["site", "siteImages", "chappyWeb"] as const;
+
+/** Per top-level (site) route segment ("home" is the / page). The guard test keeps these honest. */
+export const ROUTE_NAMESPACES = {
+  "accessibility": [],
+  "challenges": ["challengesPage", "giveMeal", "orderFlow"],
+  "contact": ["contactPage"],
+  "experience": [],
+  "gift-cards": ["giftCards", "store"],
+  "group": ["groupLobby", "combMap"],
+  "locations": [],
+  "member": ["loyalty", "passport"],
+  "menu": ["menuPage"],
+  "order": ["orderFlow", "afterOrder", "orderStatus", "groupLobby", "groupOrder", "mealGiftSheet", "phoneCollection", "combMap"],
+  "pod": ["afterOrder", "orderFlow", "podCode", "combMap"],
+  "privacy": [],
+  "referral": ["referralPage"],
+  "rewards": ["rewards", "loyalty"],
+  "sms-consent": [],
+  "store": ["store", "giftCards"],
+  "home": ["home"],
+} as const satisfies Record<string, readonly string[]>;
+
+export type SiteRoute = keyof typeof ROUTE_NAMESPACES;
+
+export function routeNamespaces(route: SiteRoute): readonly string[] {
+  return [...SITE_BASE_NAMESPACES, ...(ROUTE_NAMESPACES[route] as readonly string[])];
+}
 
 /** Never needed by a client component outside the plan. */
 export const SERVER_ONLY_NAMESPACES = ["plan"] as const;

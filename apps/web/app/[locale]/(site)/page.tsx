@@ -27,6 +27,7 @@ import { TwoLocations } from "@/components/site/home/TwoLocations";
 import { WalkIn } from "@/components/site/home/WalkIn";
 import { getHomeLocations } from "@/lib/site/home-locations";
 import { getProgram } from "@/lib/site/program";
+import { RouteIntl } from "@/components/site/ScopedIntl";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("home.meta");
@@ -38,6 +39,8 @@ export default async function HomePage() {
   const [locations, program] = await Promise.all([getHomeLocations(), getProgram()]);
 
   return (
+    // Task G2b: the home page has no route segment, so it scopes its own messages.
+    <RouteIntl route="home">
     <div data-home className="overflow-x-clip">
       <Arrive locale={locale} locations={locations} />
       <WalkIn />
@@ -48,5 +51,6 @@ export default async function HomePage() {
       <RedStep locale={locale} />
       <TwoLocations locale={locale} locations={locations} />
     </div>
+    </RouteIntl>
   );
 }

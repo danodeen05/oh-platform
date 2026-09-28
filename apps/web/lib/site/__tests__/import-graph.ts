@@ -19,7 +19,7 @@ export interface GraphNode {
   packages: string[];
 }
 
-function walk(dir: string): string[] {
+export function walk(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
     e.isDirectory() ? walk(path.join(dir, e.name)) : [path.join(dir, e.name)],
   );
@@ -54,6 +54,11 @@ export function siteGraph({ followDynamic, skipLab = false }: { followDynamic: b
     path.join(WEB, "app/[locale]/layout.tsx"),
     path.join(WEB, "app/layout.tsx"),
   ];
+  return graphFrom(starts, { followDynamic });
+}
+
+/** The graph reachable from `starts` (absolute paths). Same rules as siteGraph. */
+export function graphFrom(starts: string[], { followDynamic }: { followDynamic: boolean }): Map<string, GraphNode> {
   const nodes = new Map<string, GraphNode>();
   const seen = new Set<string>();
   const visit = (file: string, inClient: boolean) => {
