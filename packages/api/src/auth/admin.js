@@ -110,24 +110,33 @@ export function createAdminAuth(options = {}) {
 
   const devRole = ADMIN_ROLES.includes(env.DEV_ADMIN_ROLE) ? env.DEV_ADMIN_ROLE : "owner";
 
-  async function requireAdminAuth(req, reply) {
+  /**
+   * Same resolution `requireAdminAuth` uses, but never touches `reply`:
+   * `{ role, userId? }` or `null`. Safe for an optional, non-failing staff
+   * check on a route that must stay public either way (Task A8b).
+   */
+  async function checkAdminAuth(req) {
     if (!isProduction && !apiKey) {
-      req.adminRole = devRole;
-      return;
+      return { role: devRole };
     }
     const headerKey = req.headers["x-admin-api-key"];
     if (apiKey && timingSafeEqual(typeof headerKey === "string" ? headerKey : "", apiKey)) {
-      req.adminRole = "owner";
-      return;
+      return { role: "owner" };
     }
     const authHeader = req.headers.authorization;
     if (typeof authHeader === "string" && authHeader.startsWith("Bearer ")) {
       const who = await resolveBearer(authHeader.slice(7).trim());
-      if (who) {
-        req.adminRole = who.role;
-        req.adminUserId = who.userId;
-        return;
-      }
+      if (who) return who;
+    }
+    return null;
+  }
+
+  async function requireAdminAuth(req, reply) {
+    const who = await checkAdminAuth(req);
+    if (who) {
+      req.adminRole = who.role;
+      if (who.userId) req.adminUserId = who.userId;
+      return;
     }
     return reply.code(401).send({ error: "Unauthorized - Admin authentication required" });
   }
@@ -138,5 +147,5 @@ export function createAdminAuth(options = {}) {
     };
   }
 
-  return { requireAdminAuth, requireRole, resolveBearer, isAdminBearer, forget, adminEmails };
+  return { requireAdminAuth, requireRole, resolveBearer, isAdminBearer, checkAdminAuth, forget, adminEmails };
 }

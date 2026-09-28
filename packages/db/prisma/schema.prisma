@@ -1596,6 +1596,9 @@ model ChappyConversation {
   messages Json    @default("[]") // Array of message objects
   isActive Boolean @default(true)
 
+  // Server-held cart (Task B2): items, location, arrival, pod request, savings. Only Chappy's tools write it.
+  cart Json?
+
   // Context tracking
   currentOrderId String? // Active order being discussed
   locationId     String? // Location context

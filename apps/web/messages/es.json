@@ -2038,5 +2038,24 @@
         ]
       }
     }
+  },
+  "siteImages": {
+    "storefrontDusk": "Fachada de Oh! Beef Noodle Soup al atardecer, con un letrero retroiluminado, un pasillo de bambu y clientes haciendo fila.",
+    "storefrontQueue": "Clientes haciendo fila afuera de la entrada al anochecer, con el comedor y un quiosco de autoservicio visibles por la puerta abierta.",
+    "hallRows": "Filas de cabinas de madera dentro del restaurante, con clientes comiendo tazones de sopa de fideos bajo el letrero retroiluminado de Oh!.",
+    "hallRowsAlt": "Vista en penumbra del pasillo central entre las cabinas de madera, con el letrero de Oh! Beef Noodle Soup iluminado en la pared del fondo.",
+    "podHatchA": "Un cliente comiendo un tazon de sopa de fideos con res dentro de una cabina de madera privada, con una ventanilla de cocina cerrada sobre la mesa.",
+    "podHatchB": "Un cliente sentado en una cabina sosteniendo un tazon de sopa de fideos con res, con la ventanilla de cocina y una tableta que muestra el logo de Oh! en el mostrador.",
+    "podHatchC": "Un cliente comiendo sopa de fideos en una cabina, con una tableta en el mostrador que muestra un mensaje de bienvenida.",
+    "bowlSlicesTop": "Vista superior de un tazon de sopa de fideos con res cubierto de rebanadas de pecho de res, bok choy y una rodaja de naranja, con palillos apoyados sobre el borde.",
+    "bowlSlicesSide": "Primer plano de rebanadas de pecho de res con costra de pimienta en un tazon de sopa de fideos con bok choy.",
+    "beefMacro": "Primer plano macro de dos rebanadas de pecho de res con costra de pimienta, mostrando la corteza dorada y el centro rosado.",
+    "bowlChunksTop": "Vista superior de un tazon de sopa de fideos con res cubierto de trozos de res sellados, bok choy y una rodaja de naranja, con palillos apoyados sobre el borde.",
+    "bowlChunksSide": "Primer plano de trozos de res sellados en un tazon de sopa de fideos con bok choy.",
+    "storeInterior": "Estantes de la tienda dentro del restaurante con salsas embotelladas, cajas de regalo, tazones, palillos, camisetas y gorras, junto a un mostrador de pago con un aviso de codigo QR.",
+    "bowlEmpty": "Un tazon de ceramica vacio con el logo de Oh! grabado en el interior, visto desde arriba.",
+    "bowlFlatlay": "Un tazon de ceramica vacio con palillos apoyados encima y una cuchara de madera al lado, sobre una superficie de lino.",
+    "chopsticks": "Primer plano de un par de palillos de madera sobre un mantel de lino, con un detalle de sus puntas.",
+    "signPool": "La escultura iluminada del logo de Oh! en un estanque reflectante frente al restaurante por la noche, iluminada por farolillos de papel a lo largo del camino."
   }
 }

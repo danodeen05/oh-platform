@@ -69,7 +69,7 @@ import { registerCateringRoutes, isDineInOrdersEnabled } from "./catering/routes
 import { registerPlanRoutes } from "./plan/routes.js";
 import { registerAdminConsoleRoutes } from "./admin/console-routes.js";
 import { menuPatchData } from "./admin/menu-fields.js";
-import { withStatusDemo, registerStatusDemoGuard } from "./demo/status-demo.js";
+import { withStatusDemo, registerStatusDemoGuard, isDemoOrderId } from "./demo/status-demo.js";
 import { createClerkClient } from "@clerk/backend";
 import { createAdminAuth, parseAdminEmails } from "./auth/admin.js";
 import { registerAdminAuthHooks } from "./auth/admin-hook.js";
@@ -86,16 +86,23 @@ import { grantCredit } from "./membership/credits.js";
 import { taxCents, spendBaseCents } from "./orders/pricing.js";
 import { PROGRAM, tierRule } from "./membership/program.js";
 import { onOrderCompleted, applyReferralSignup, visibleMenuItems, firstUnreleasedItem, profileForUser } from "./membership/engine.js";
-import { createCustomerAuth, registerCustomerIdentity, orderOwnerId, chappyCreditsToDeduct, resolveChappyWebIdentity } from "./auth/customer.js";
+import { createCustomerAuth, registerCustomerIdentity, orderOwnerId } from "./auth/customer.js";
+import { registerChappyRoutes } from "./chappy/routes.js";
+import { createChappyLimits } from "./chappy/limits.js";
+import { createPodCall, PodCallError } from "./orders/pod-calls.js";
+import { FASTIFY_OPTIONS, rateLimitKey } from "./http-config.js";
 import { createKioskAuth } from "./auth/kiosk.js";
 import { publicReferral, shopCreditSpender, registerAdminOnlyRoutes } from "./auth/hardening.js";
-import { listLocationSeats } from "./seats/service.js";
+import { listLocationSeats, resolveSeatViewer } from "./seats/service.js";
+import { canSeeFullOrder, safeOrderView, firstNameOnly } from "./orders/order-view.js";
 
 // DEMO- order codes resolve to a synthetic order (see demo/status-demo.js):
 // the plan's live status-page demo reads real routes without touching the DB.
 const basePrisma = new PrismaClient();
 const { prisma, source: statusDemoSource } = withStatusDemo(basePrisma);
-const app = Fastify({ logger: true });
+// trustProxy: one hop (Railway edge / dev nginx), so req.ip is the real client. See http-config.js.
+// A copy: Fastify writes to options.logger, and FASTIFY_OPTIONS is frozen.
+const app = Fastify({ ...FASTIFY_OPTIONS });
 
 // Initialize Anthropic client (uses ANTHROPIC_API_KEY env var automatically)
 const anthropic = process.env.ANTHROPIC_API_KEY ? new Anthropic() : null;
@@ -147,7 +154,8 @@ const allowedOrigins = [
     'http://localhost:3100',
     'http://localhost:3101',
     'http://localhost:3200',
-    'http://localhost:3201'
+    'http://localhost:3201',
+    'http://localhost:3300'
   ] : [])
 ];
 
@@ -174,8 +182,8 @@ await app.register(rateLimit, {
   timeWindow: '1 minute',
   // Higher limits for certain routes
   keyGenerator: (req) => {
-    // Use IP address as the key
-    return req.ip || req.headers['x-forwarded-for'] || 'unknown';
+    // The real client IP (trustProxy: 1), never a client-supplied header
+    return rateLimitKey(req);
   },
   errorResponseBuilder: (req, context) => ({
     error: 'Too Many Requests',
@@ -190,7 +198,7 @@ await app.register(rateLimit, {
 // tokens are verified server-side and set req.adminRole (owner, manager or
 // station); an allowlisted email (ADMIN_EMAILS) is always owner.
 // x-admin-api-key remains for server-to-server callers (owner).
-const { requireAdminAuth, requireRole, forget: forgetAdminRole } = createAdminAuth({ log: (...args) => app.log.warn({ args }, "admin auth") });
+const { requireAdminAuth, requireRole, forget: forgetAdminRole, checkAdminAuth } = createAdminAuth({ log: (...args) => app.log.warn({ args }, "admin auth") });
 
 // All admin auth wiring: /admin/* role checks and the console-only routes
 // outside /admin (see auth/admin-hook.js). Must run before routes are declared.
@@ -314,9 +322,10 @@ await registerGroupOrderRoutes(app, {
 });
 // Support cases (Task A9): public create (contact form, Chappy), staff list and
 // resolve (store credit, full-order card refund, decline). /admin/support/* is
-// behind the admin path hook above. Notifications honor SUPPORT_NOTIFY.
-// TODO(roles): pass requireOwner: requireRole("owner") once admin-overhaul merges.
-await registerSupportRoutes(app, { prisma: basePrisma, stripe, customerAuth, requireAdminAuth, sendSMS, sendGraphMail });
+// behind the admin path hook above, at the STAFF default (adminPathRoles); a
+// full_refund additionally requires the owner role (Task A9b).
+// Notifications honor SUPPORT_NOTIFY.
+await registerSupportRoutes(app, { prisma: basePrisma, stripe, customerAuth, requireAdminAuth, requireOwner: requireRole("owner"), sendSMS, sendGraphMail });
 
 const PORT = process.env.PORT || process.env.API_PORT || 4000;
 
@@ -829,7 +838,13 @@ app.get("/locations/:id/availability", async (req, reply) => {
   const status = getLocationStatus(location);
   // Task A8: fold the comb-seat layout (retired seats excluded) into the
   // same response the ordering flow already polls for operating hours.
-  const { layoutKey, layoutMirror, seats } = await listLocationSeats(prisma, id, location);
+  // Task A8b: same public/staff viewer split as GET /locations/:id/seats.
+  const viewer = await resolveSeatViewer(req, id, {
+    checkAdminAuth,
+    kioskDeviceFor: kioskAuth.deviceFor,
+    resolveCustomer: customerAuth.resolve,
+  });
+  const { layoutKey, layoutMirror, seats } = await listLocationSeats(prisma, id, location, viewer);
 
   return {
     locationId: location.id,
@@ -1658,9 +1673,17 @@ app.delete("/seats/:id", async (req, reply) => {
 
 // GET /locations/:id/seats - Active comb pods for a location (Task A8: the
 // documented public shape, retired pods excluded - see seats/service.js).
+// Task A8b: this route is PUBLIC and must never require auth (no 401) - but
+// staff (admin, or a kiosk device key scoped to this location) get the
+// per-seat orders, and a signed-in customer sees isMine on their own seat.
 app.get("/locations/:id/seats", async (req, reply) => {
   const { id } = req.params;
-  return listLocationSeats(prisma, id);
+  const viewer = await resolveSeatViewer(req, id, {
+    checkAdminAuth,
+    kioskDeviceFor: kioskAuth.deviceFor,
+    resolveCustomer: customerAuth.resolve,
+  });
+  return listLocationSeats(prisma, id, undefined, viewer);
 });
 
 // POST /orders/check-in - Customer arrives and scans order QR at kiosk
@@ -2153,6 +2176,19 @@ app.get("/orders/lookup", async (req, reply) => {
     });
   }
 
+  // Task A8b, fix round 1 addendum: this route is PUBLIC (kiosk check-in
+  // scans a QR code or types an order number - no session) and returned the
+  // full order, including `user: true` (every column), to any caller. Same
+  // rule as GET /orders/:id: full record for the verified owner, staff, or
+  // a verified guest owner; everyone else (including a kiosk device key for
+  // a DIFFERENT location) gets the safe view, at most a first name.
+  const canSeeFull = isDemoOrderId(order.id) || await canSeeFullOrder(req, order, {
+    checkAdminAuth,
+    kioskDeviceFor: kioskAuth.deviceFor,
+    resolveCustomer: customerAuth.resolve,
+    findGuestBySessionToken: (token) => prisma.guest.findUnique({ where: { sessionToken: token } }),
+  });
+
   if (order.arrivedAt) {
     return reply.code(400).send({
       error: "Order already checked in",
@@ -2166,14 +2202,16 @@ app.get("/orders/lookup", async (req, reply) => {
         seatId: order.seatId,
         seat: order.seat, // Include full seat object for display
         totalCents: order.totalCents,
-        guestName: order.guestName,
+        guestName: canSeeFull ? order.guestName : firstNameOnly(order.guestName),
         items: order.items,
-        user: order.user ? { name: order.user.name, membershipTier: order.user.membershipTier } : null,
+        user: order.user
+          ? { name: canSeeFull ? order.user.name : firstNameOnly(order.user.name), membershipTier: canSeeFull ? order.user.membershipTier : undefined }
+          : null,
       },
     });
   }
 
-  return reply.send(order);
+  return reply.send(canSeeFull ? order : safeOrderView(order));
 });
 
 // GET /orders/status - Get real-time order status by QR code
@@ -2195,8 +2233,11 @@ app.get("/orders/status", async (req, reply) => {
           menuItem: true,
         },
       },
-      user: true,
-      guest: true,
+      // Task A8b, fix round 1 addendum: this hand-built response never sent
+      // `user` or contact fields, but `guest: true` (every Guest column,
+      // including email/phone) was fetched for a name fallback that only
+      // ever needs the name. Select only that.
+      guest: { select: { name: true } },
       waitQueueEntry: true,
     },
   });
@@ -2204,6 +2245,21 @@ app.get("/orders/status", async (req, reply) => {
   if (!order) {
     return reply.code(404).send({ error: "Order not found" });
   }
+
+  // Task A8b, fix round 1 addendum: this route is PUBLIC (a link/QR code,
+  // no session) and always sent the guest's FULL name to any caller who
+  // knew the orderQrCode. Same rule as GET /orders/:id: the verified owner,
+  // staff, or a verified guest owner sees the full name; everyone else (and
+  // a kiosk device key for a DIFFERENT location) sees at most a first name.
+  // The plan's status demo keeps rendering unconditionally (it's synthetic).
+  const canSeeFull = isDemoOrderId(order.id) || await canSeeFullOrder(req, order, {
+    checkAdminAuth,
+    kioskDeviceFor: kioskAuth.deviceFor,
+    resolveCustomer: customerAuth.resolve,
+    findGuestBySessionToken: (token) => prisma.guest.findUnique({ where: { sessionToken: token } }),
+  });
+  const fullGuestName = order.guestName || order.guest?.name || null;
+  const guestName = canSeeFull ? fullGuestName : firstNameOnly(fullGuestName);
 
   // Build response with status info
   const response = {
@@ -2241,8 +2297,9 @@ app.get("/orders/status", async (req, reply) => {
         city: order.location.city,
       },
 
-      // Guest name (for non-authenticated orders) - fallback to guest record name
-      guestName: order.guestName || order.guest?.name || null,
+      // Guest name (for non-authenticated orders) - fallback to guest record name.
+      // Full name for the verified owner/staff/guest-owner; a first name otherwise.
+      guestName,
 
       // Items - localized based on user's language preference
       items: order.items.map((item) => {
@@ -2903,61 +2960,18 @@ app.post("/seats/unlink-dual", async (req, reply) => {
 app.post("/orders/:id/call-staff", async (req, reply) => {
   const { id } = req.params;
   const { reason } = req.body || {};
-
-  const order = await prisma.order.findUnique({
-    where: { id },
-    include: { seat: true, location: true },
-  });
-
-  if (!order) {
-    return reply.code(404).send({ error: "Order not found" });
+  // Shared with Chappy's report_issue (orders/pod-calls.js).
+  try {
+    const podCall = await createPodCall(prisma, { orderId: id, reason: reason || "GENERAL" });
+    return {
+      success: true,
+      message: "Staff has been notified. Someone will be with you shortly.",
+      call: podCall,
+    };
+  } catch (err) {
+    if (!(err instanceof PodCallError)) throw err;
+    return reply.code(err.status).send({ error: err.message, ...err.extra });
   }
-
-  if (!order.seatId) {
-    return reply.code(400).send({ error: "Order does not have a pod assigned" });
-  }
-
-  // Check if there's already a pending call for this order
-  const existingCall = await prisma.podCall.findFirst({
-    where: {
-      orderId: id,
-      status: "PENDING",
-    },
-  });
-
-  if (existingCall) {
-    return reply.code(400).send({
-      error: "You already have a pending call. Staff will be with you shortly.",
-      call: existingCall
-    });
-  }
-
-  // Create the pod call
-  const podCall = await prisma.podCall.create({
-    data: {
-      orderId: id,
-      seatId: order.seatId,
-      locationId: order.locationId,
-      reason: reason || "GENERAL",
-    },
-    include: {
-      seat: true,
-      order: {
-        select: {
-          orderNumber: true,
-          kitchenOrderNumber: true,
-        },
-      },
-    },
-  });
-
-  console.log(`[POD CALL] Pod ${order.seat.number} requesting staff - Reason: ${reason || "GENERAL"}`);
-
-  return {
-    success: true,
-    message: "Staff has been notified. Someone will be with you shortly.",
-    call: podCall,
-  };
 });
 
 // GET /pod-calls - Get all pending pod calls for a location
@@ -3592,6 +3606,9 @@ app.get("/orders/by-number/:orderNumber", async (req, reply) => {
   };
 });
 
+// Task A8b, fix round 1: this route is PUBLIC and had no ownership check -
+// see orders/order-view.js for who gets the full order (with user/guest
+// contact fields) versus the safe status-only view.
 app.get("/orders/:id", async (req, reply) => {
   const { id } = req.params;
   const locale = getLocale(req);
@@ -3631,7 +3648,18 @@ app.get("/orders/:id", async (req, reply) => {
     })),
   };
 
-  return localizedOrder;
+  // The plan's status demo is synthetic (no real user/guest) and public by
+  // design - it always keeps its full demo shape.
+  if (isDemoOrderId(order.id)) return localizedOrder;
+
+  const canSeeFull = await canSeeFullOrder(req, order, {
+    checkAdminAuth,
+    kioskDeviceFor: kioskAuth.deviceFor,
+    resolveCustomer: customerAuth.resolve,
+    findGuestBySessionToken: (token) => prisma.guest.findUnique({ where: { sessionToken: token } }),
+  });
+
+  return canSeeFull ? localizedOrder : safeOrderView(localizedOrder);
 });
 
 // POST /orders, /orders/quote, /orders/:id/payment-intent and /orders/:id/confirm-payment live in
@@ -6191,7 +6219,20 @@ app.patch("/kitchen/orders/:id/status", async (req, reply) => {
     }
   }
 
-  return order;
+  // Task A8b, fix round 1, final sweep: this route is MUST_STAY_OPEN (the
+  // customer status page's own "I'm done eating" PATCHes it with no
+  // session) and returned the full order, including `user: true`, to any
+  // caller. No known caller reads this response (the status page discards
+  // it and refetches GET /orders/status; kitchen-display.tsx and
+  // pods-manager.tsx discard it and refetch their own staff-gated GETs), so
+  // this only closes the leak - same rule as GET /orders/:id.
+  const canSeeFull = await canSeeFullOrder(req, order, {
+    checkAdminAuth,
+    kioskDeviceFor: kioskAuth.deviceFor,
+    resolveCustomer: customerAuth.resolve,
+    findGuestBySessionToken: (token) => prisma.guest.findUnique({ where: { sessionToken: token } }),
+  });
+  return canSeeFull ? order : safeOrderView(order);
 });
 
 // Get kitchen stats (orders by status)
@@ -12906,483 +12947,27 @@ app.post("/admin/party-invitations", async (request, reply) => {
 // ====================
 // CHAPPY CHOPSTIX - AI ASSISTANT
 // ====================
-
-import {
-  handleChappyConversation,
-  handleChappyConversationStream,
-  resetConversation,
-  handleSpecialKeywords,
-} from "./chappy/agent.js";
-import { formatForRCS, formatForSMS, buildTwilioRCSMessage } from "./chappy/formatters/rcs.js";
-
-// Helper to escape XML special characters for TwiML
-function escapeXml(text) {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
-}
-
-// SMS/RCS Webhook - Receives inbound messages from Twilio
-app.post("/chappy/sms", async (req, reply) => {
-  try {
-    const { From, Body, To, MessageSid } = req.body;
-
-    if (!From || !Body) {
-      return reply.status(400).send({ error: "Missing required fields" });
-    }
-
-    // Normalize phone number
-    const phone = From.replace(/\D/g, "");
-
-    // Check for special keywords (STOP, HELP, START)
-    const specialKeyword = handleSpecialKeywords(Body);
-    if (specialKeyword.handled) {
-      // Handle opt-out/opt-in in database
-      if (specialKeyword.action === "UNSUBSCRIBE") {
-        await prisma.user.updateMany({
-          where: { phone: { contains: phone } },
-          data: { smsOptIn: false },
-        });
-      } else if (specialKeyword.action === "RESUBSCRIBE") {
-        await prisma.user.updateMany({
-          where: { phone: { contains: phone } },
-          data: { smsOptIn: true, smsOptInDate: new Date() },
-        });
-      }
-
-      // Send response via Twilio
-      return reply
-        .type("text/xml")
-        .send(`<?xml version="1.0" encoding="UTF-8"?><Response><Message>${specialKeyword.response}</Message></Response>`);
-    }
-
-    // Get tenant
-    const tenant = await prisma.tenant.findUnique({
-      where: { slug: "oh" },
-    });
-
-    // Find user by phone
-    const user = await prisma.user.findFirst({
-      where: { phone: { contains: phone } },
-    });
-
-    // Get default location
-    const location = await prisma.location.findFirst({
-      where: { tenantId: tenant.id },
-    });
-
-    // Handle conversation with Chappy
-    const response = await handleChappyConversation({
-      channel: "sms", // Will upgrade to RCS when detected
-      identifier: phone,
-      message: Body,
-      context: {
-        user,
-        location,
-        tenantId: tenant.id,
-      },
-      prisma: basePrisma,
-    });
-
-    // Get messages array (supports multi-message responses)
-    const messages = response.messages || [response.text || "Sorry, I couldn't process that. Try again?"];
-
-    // Log the conversation
-    console.log(`[Chappy SMS] ${phone}: "${Body}" -> ${messages.length} message(s), first: "${messages[0]?.substring(0, 50)}..."`);
-
-    // Build TwiML with multiple messages if needed
-    // Twilio sends them in order with slight delays
-    const messageElements = messages
-      .map((msg) => `<Message>${escapeXml(msg)}</Message>`)
-      .join("");
-
-    // Return TwiML response
-    return reply
-      .type("text/xml")
-      .send(`<?xml version="1.0" encoding="UTF-8"?><Response>${messageElements}</Response>`);
-  } catch (error) {
-    console.error("[Chappy SMS Error]", error);
-    return reply
-      .type("text/xml")
-      .send(`<?xml version="1.0" encoding="UTF-8"?><Response><Message>Oops! Something went wrong. Try again in a moment. - Chappy</Message></Response>`);
-  }
-});
-
-/**
- * Who a web Chappy request is for (decision logic: resolveChappyWebIdentity in
- * auth/customer.js). identifier is null for an unidentified request; routes
- * answer 401 rather than falling back to a shared conversation key.
- */
-async function chappyWebIdentity(req, { guestId, sessionId, verifiedUserId = null }) {
-  return resolveChappyWebIdentity({
-    who: await customerAuth.resolve(req),
-    ticketUserId: verifiedUserId,
-    guestId,
-    sessionId,
-    isMemberId: async (id) => Boolean(await basePrisma.user.findUnique({ where: { id }, select: { id: true } })),
-  });
-}
-const CHAPPY_UNIDENTIFIED = { error: "Sign in, or start a guest chat session, to talk to Chappy" };
-
-// Short-lived ticket so EventSource (which cannot send headers) can stream as the signed-in member.
-app.post("/chappy/stream-ticket", async (req, reply) => {
-  const who = await customerAuth.requireUser(req, reply);
-  if (!who) return reply;
-  try {
-    const { exp, sig } = customerAuth.signLink("chappy-stream", who.userId, 2 * 60 * 1000);
-    return { uid: who.userId, exp, sig };
-  } catch {
-    return reply.code(503).send({ error: "Streaming tickets are not configured" });
-  }
-});
-
-// Web Chat API - For in-app chat widget
-app.post("/chappy/chat", async (req, reply) => {
-  try {
-    const { message, locationId } = req.body;
-
-    if (!message) {
-      return reply.status(400).send({ error: "Message is required" });
-    }
-
-    const { userId, guestId, identifier } = await chappyWebIdentity(req, req.body);
-    if (!identifier) return reply.status(401).send(CHAPPY_UNIDENTIFIED);
-
-    // Get user context if logged in
-    let user = null;
-    let guest = null;
-
-    if (userId) {
-      user = await prisma.user.findUnique({
-        where: { id: userId },
-      });
-    } else if (guestId) {
-      guest = await prisma.guest.findUnique({
-        where: { id: guestId },
-      });
-    }
-
-    // Get tenant
-    const tenant = await prisma.tenant.findUnique({
-      where: { slug: "oh" },
-    });
-
-    // Get location context
-    let location = null;
-    if (locationId) {
-      location = await prisma.location.findUnique({
-        where: { id: locationId },
-      });
-    } else {
-      // Default to first location
-      location = await prisma.location.findFirst({
-        where: { tenantId: tenant.id },
-      });
-    }
-
-    // Handle conversation with Chappy
-    const response = await handleChappyConversation({
-      channel: "web",
-      identifier,
-      message,
-      context: {
-        user,
-        guest,
-        location,
-        tenantId: tenant.id,
-      },
-      prisma: basePrisma,
-    });
-
-    return reply.send({
-      success: true,
-      message: response,
-    });
-  } catch (error) {
-    console.error("[Chappy Web Error]", error);
-    return reply.status(500).send({
-      success: false,
-      error: "Failed to process message",
-      message: {
-        type: "web",
-        text: "Hmm, something went wrong on my end. Let me try again... - Chappy",
-        sender: "chappy",
-        timestamp: new Date().toISOString(),
-      },
-    });
-  }
-});
-
-// Web Chat Streaming API - Server-Sent Events for real-time responses
-app.get("/chappy/chat/stream", async (req, reply) => {
-  try {
-    const { message, locationId, uid, exp, sig } = req.query;
-
-    if (!message) {
-      return reply.status(400).send({ error: "Message is required" });
-    }
-
-    // Members stream with a signed ticket from POST /chappy/stream-ticket (EventSource has no headers).
-    const ticketUserId = uid && customerAuth.verifyLink("chappy-stream", uid, exp, sig) ? uid : null;
-    const { userId, guestId, identifier } = await chappyWebIdentity(req, { ...req.query, verifiedUserId: ticketUserId });
-    // No shared fallback conversation: an unidentified stream is refused before any SSE headers.
-    if (!identifier) return reply.status(401).send(CHAPPY_UNIDENTIFIED);
-
-    // Get user context if logged in
-    let user = null;
-    let guest = null;
-
-    if (userId) {
-      user = await prisma.user.findUnique({
-        where: { id: userId },
-      });
-    } else if (guestId) {
-      guest = await prisma.guest.findUnique({
-        where: { id: guestId },
-      });
-    }
-
-    // Get tenant
-    const tenant = await prisma.tenant.findUnique({
-      where: { slug: "oh" },
-    });
-
-    // Get location context
-    let location = null;
-    if (locationId) {
-      location = await prisma.location.findUnique({
-        where: { id: locationId },
-      });
-    } else {
-      location = await prisma.location.findFirst({
-        where: { tenantId: tenant.id },
-      });
-    }
-
-    // Set up SSE headers (X-Accel-Buffering disables nginx proxy buffering)
-    reply.raw.writeHead(200, {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache, no-transform",
-      "Connection": "keep-alive",
-      "X-Accel-Buffering": "no",
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Headers": "Content-Type",
-    });
-
-    // Helper to send SSE events with immediate flush
-    const sendEvent = (type, data) => {
-      reply.raw.write(`event: ${type}\ndata: ${JSON.stringify(data)}\n\n`);
-      if (reply.raw.flush) reply.raw.flush();
-    };
-
-    // Stream the response
-    const streamGenerator = handleChappyConversationStream({
-      channel: "web",
-      identifier,
-      message: decodeURIComponent(message),
-      context: {
-        user,
-        guest,
-        location,
-        tenantId: tenant.id,
-      },
-      prisma: basePrisma,
-    });
-
-    for await (const chunk of streamGenerator) {
-      sendEvent(chunk.type, chunk.data);
-    }
-
-    // Close the connection
-    reply.raw.end();
-  } catch (error) {
-    console.error("[Chappy Stream Error]", error);
-
-    // Try to send error event if connection is still open
-    try {
-      reply.raw.write(`event: error\ndata: ${JSON.stringify({ message: "Something went wrong. Please try again." })}\n\n`);
-      reply.raw.end();
-    } catch (e) {
-      // Connection already closed
-    }
-  }
-});
-
-// Get conversation history (for web chat)
-app.get("/chappy/history", async (req, reply) => {
-  try {
-    const { identifier } = await chappyWebIdentity(req, req.query);
-
-    if (!identifier) {
-      return reply.status(401).send(CHAPPY_UNIDENTIFIED);
-    }
-
-    const conversation = await prisma.chappyConversation.findFirst({
-      where: {
-        identifier,
-        channel: "web",
-        isActive: true,
-      },
-      orderBy: { updatedAt: "desc" },
-    });
-
-    if (!conversation) {
-      return reply.send({
-        messages: [],
-        isNew: true,
-      });
-    }
-
-    // Format messages for display
-    const messages = (conversation.messages || []).map((msg) => ({
-      role: msg.role,
-      content: typeof msg.content === "string" ? msg.content : msg.content?.[0]?.text || "",
-      timestamp: msg.timestamp,
-    }));
-
-    return reply.send({
-      messages,
-      isNew: false,
-    });
-  } catch (error) {
-    console.error("[Chappy History Error]", error);
-    return reply.status(500).send({ error: "Failed to get history" });
-  }
-});
-
-// Clear conversation (start fresh)
-app.post("/chappy/reset", async (req, reply) => {
-  try {
-    const body = req.body || {};
-    // Only trusted services may reset another channel (an SMS conversation is keyed by phone number).
-    const channel = customerAuth.isServiceCall(req) ? body.channel || "web" : "web";
-    const { identifier } = await chappyWebIdentity(req, body);
-
-    if (!identifier) {
-      return reply.status(401).send(CHAPPY_UNIDENTIFIED);
-    }
-
-    await resetConversation(basePrisma, identifier, channel);
-
-    return reply.send({
-      success: true,
-      message: "Conversation reset. Ready for a fresh start!",
-    });
-  } catch (error) {
-    console.error("[Chappy Reset Error]", error);
-    return reply.status(500).send({ error: "Failed to reset conversation" });
-  }
-});
-
-// Confirm Apple Pay payment and complete order
-app.post("/chappy/confirm-payment", async (req, reply) => {
-  try {
-    const { orderId, paymentIntentId } = req.body;
-
-    if (!orderId || !paymentIntentId) {
-      return reply.status(400).send({ error: "orderId and paymentIntentId required" });
-    }
-
-    // Find the pending order
-    const order = await prisma.order.findUnique({
-      where: { id: orderId },
-      include: {
-        items: { include: { menuItem: true } },
-        location: true,
-        seat: true,
-        user: true,
-      },
-    });
-
-    if (!order) {
-      return reply.status(404).send({ error: "Order not found" });
-    }
-
-    if (order.paymentStatus === "PAID") {
-      // Already paid, return success
-      return reply.send({
-        success: true,
-        alreadyPaid: true,
-        orderId: order.id,
-        orderNumber: order.orderNumber,
-        kitchenOrderNumber: order.kitchenOrderNumber,
-      });
-    }
-
-    // Server-verified payment (Task A6): the PaymentIntent's status, exact
-    // amount and metadata.orderId, through the shared order service. A
-    // server-priced order goes through markPaid (idempotent, spends its
-    // savings, refunds a charge it can't apply); a legacy order needs
-    // amount === totalCents.
-    let result;
-    try {
-      result = await confirmOrderPayment(prisma, stripe, { orderId, paymentIntentId, now: new Date() }, orderEffects);
-    } catch (err) {
-      if (err instanceof OrderError) return reply.status(err.status).send({ error: err.code, message: err.message, ...err.extra });
-      throw err;
-    }
-
-    if (result.legacy && !result.alreadyPaid) {
-      // Legacy (pre-quote) Chappy order: its original follow-ups.
-      await prisma.order.update({
-        where: { id: orderId },
-        data: { status: "PAID", podAssignedAt: order.seatId ? new Date() : null },
-      });
-
-      // Apply credits only for the verified caller's own order (auth/customer.js).
-      const creditsApplied = chappyCreditsToDeduct(await customerAuth.resolve(req), order);
-      if (creditsApplied > 0) {
-        await prisma.user.update({
-          where: { id: order.userId },
-          data: { creditsCents: { decrement: creditsApplied } },
-        });
-      }
-
-      // Mark seat as occupied if one was selected
-      if (order.seatId) {
-        await prisma.seat.update({
-          where: { id: order.seatId },
-          data: { status: "OCCUPIED" },
-        });
-      }
-    }
-
-    const updatedOrder = await prisma.order.findUnique({
-      where: { id: orderId },
-      include: {
-        items: { include: { menuItem: true } },
-        location: true,
-        seat: true,
-      },
-    });
-
-    return reply.send({
-      success: true,
-      orderId: updatedOrder.id,
-      orderNumber: updatedOrder.orderNumber,
-      kitchenOrderNumber: updatedOrder.kitchenOrderNumber,
-      total: `$${(updatedOrder.totalCents / 100).toFixed(2)}`,
-      location: updatedOrder.location.name,
-      podNumber: updatedOrder.seat?.number || null,
-      estimatedArrival: updatedOrder.estimatedArrival?.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
-      message: updatedOrder.seat
-        ? `Order confirmed! Head to Pod ${updatedOrder.seat.number} at ${updatedOrder.location.name}.`
-        : `Order confirmed! Head to ${updatedOrder.location.name} and check in when you arrive.`,
-      items: updatedOrder.items.map((i) => ({
-        name: i.menuItem.name,
-        quantity: i.quantity,
-      })),
-    });
-  } catch (error) {
-    console.error("[Chappy Confirm Payment Error]", error);
-    if (error && error.refunded !== undefined) {
-      return reply.status(500).send({ error: "PAYMENT_NOT_APPLIED", code: "PAYMENT_NOT_APPLIED", refunded: error.refunded });
-    }
-    return reply.status(500).send({ error: "Failed to confirm payment" });
-  }
+// Routes: src/chappy/routes.js (Task B1). One identity preHandler (verified
+// member session or signed guest token), POST /chappy/chat streams SSE through
+// Fastify so the CORS allowlist applies, and every Chappy handler and tool uses
+// basePrisma (never the demo-wrapped client).
+// Task B2: tools go through the order/support services; Chappy never charges
+// (pay card only). Support notifications honor SUPPORT_NOTIFY.
+// Task B3: chappyLimits is one in-memory limiter for the whole process (see
+// chappy/limits.js): per-identity rate/token limits, the guest per-IP cap,
+// and the report_issue/request_refund/escalate_to_human case-spam cap.
+const chappyLimits = createChappyLimits({ env: process.env });
+await registerChappyRoutes(app, {
+  prisma: basePrisma,
+  customerAuth,
+  client: anthropic,
+  stripe,
+  sendSMS,
+  sendGraphMail,
+  checkLimits: chappyLimits.checkLimits,
+  recordUsage: chappyLimits.recordUsage,
+  checkCaseLimit: chappyLimits.checkCaseLimit,
+  recordCase: chappyLimits.recordCase,
 });
 
 // ====================

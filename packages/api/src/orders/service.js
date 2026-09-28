@@ -353,6 +353,31 @@ export async function pickBestPod(tx, { locationId, arrival = null, partySize = 
   throw new PodUnavailableError();
 }
 
+/** Carries a preview's result out of the transaction that is being rolled back. */
+class PodPreview {
+  constructor(value) {
+    this.value = value;
+  }
+}
+
+/**
+ * What pickBestPod WOULD pick right now, with nothing claimed: the pick runs
+ * inside a transaction that is always rolled back (Chappy's
+ * set_arrival_and_pod, Task B2). Same arguments as pickBestPod; throws
+ * PodUnavailableError the same way. The real claim happens in createOrder.
+ */
+export async function previewPod(prisma, args) {
+  try {
+    await prisma.$transaction(async (tx) => {
+      throw new PodPreview(await pickBestPod(tx, args));
+    });
+  } catch (err) {
+    if (err instanceof PodPreview) return err.value;
+    throw err;
+  }
+  return null;
+}
+
 // ---------------------------------------------------------------------------
 // Create
 // ---------------------------------------------------------------------------
@@ -692,17 +717,25 @@ export async function refundFullPayment(stripe, pi, { idempotencyKey = null } = 
 export async function refundUnappliedPayment(prisma, stripe, { pi, orderId, userId = null, code }) {
   let refundId = null;
   let refunded = false;
+  let partialElsewhere = null;
   try {
     const r = await refundFullPayment(stripe, pi);
     if (r.alreadyRefunded) return { refunded: true, refundId: r.refundId, alreadyRefunded: true };
     refundId = r.refundId;
     refunded = true;
   } catch (err) {
+    if (err instanceof PartialRefundError) partialElsewhere = err;
     console.error(`[orders] refund FAILED for ${pi.id} (order ${orderId}):`, err?.message || err);
   }
+  // A partial-prior-refund is not a generic failure: the card must NOT be
+  // touched again in Stripe (a second refund would be a partial one, the
+  // owner's rule forbids it), so staff are told to give store credit or
+  // escalate instead of being pointed at a manual card refund.
   const summary = refunded
     ? `Payment ${pi.id} for order ${orderId} could not be applied (${code}); refunded in full, refund ${refundId}.`
-    : `Payment ${pi.id} for order ${orderId} could not be applied (${code}); REFUND FAILED, refund it manually.`;
+    : partialElsewhere
+      ? `Payment ${pi.id} for order ${orderId} could not be applied (${code}); it was already partly refunded outside the app (${partialElsewhere.refundedCents} of ${partialElsewhere.amountCents} cents). Do not refund it again in Stripe. Give the customer store credit, or escalate to the owner.`
+      : `Payment ${pi.id} for order ${orderId} could not be applied (${code}); the refund attempt failed. Give the customer store credit, or escalate to the owner.`;
   try {
     await prisma.supportCase.create({ data: { type: "ORDER_ISSUE", orderId, userId, summary, amountCents: pi.amount ?? null } });
   } catch (err) {
@@ -1088,7 +1121,9 @@ async function settleBatch(prisma, stripe, { ids, orders, pi, now, strict }, eff
 
 /**
  * Payment confirmation for callers that may still see legacy (pre-quote)
- * orders, e.g. /chappy/confirm-payment. A server-priced order goes through
+ * orders. Its last route caller, /chappy/confirm-payment, was removed in Task
+ * B2 (customers pay through POST /orders/:id/confirm-payment, which calls
+ * markPaid); it is kept for the legacy-order path. A server-priced order goes through
  * markPaid. A legacy order (null amountDueCents) is PAID only for a
  * succeeded PaymentIntent with metadata.orderId === orderId and
  * amount === order.totalCents, through a conditional claim.

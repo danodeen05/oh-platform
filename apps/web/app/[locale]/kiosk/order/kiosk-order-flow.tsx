@@ -513,7 +513,7 @@ export default function KioskOrderFlow({
             headers: { "x-tenant-slug": "oh" },
           }),
           fetch(`${BASE}/locations/${location.id}/seats`, {
-            headers: { "x-tenant-slug": "oh" },
+            headers: { "x-tenant-slug": "oh", ...kioskAuthHeaders() },
           }),
         ]);
 
@@ -566,7 +566,7 @@ export default function KioskOrderFlow({
     const pollSeats = async () => {
       try {
         const res = await fetch(`${BASE}/locations/${location.id}/seats`, {
-          headers: { "x-tenant-slug": "oh" },
+          headers: { "x-tenant-slug": "oh", ...kioskAuthHeaders() },
         });
         if (res.ok) {
           const seatsData = await res.json();

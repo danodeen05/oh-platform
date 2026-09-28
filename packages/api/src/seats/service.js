@@ -77,13 +77,41 @@ async function activeOrderBySeatId(prisma, seatIds) {
 }
 
 /**
- * Active (non-retired) comb seats for a location, in the documented public
- * shape used by `GET /locations/:id/seats` and folded into
- * `GET /locations/:id/availability`:
- *   { layoutKey, layoutMirror, seats: [{ id, label, finger, rowSide,
- *     position, status, podType, dualPartnerId, orders }] }
- * `orders` is an array of the seat's current active order (0 or 1 entries;
- * same shape as the pre-A8 endpoint - see `activeOrderBySeatId` above).
+ * Task A8b: seatId -> the order's userId (or null), for the most recent
+ * active order per seat - the same "most recent, take 1" semantics as
+ * `activeOrderBySeatId`, but without the items/user/guest enrichment. Used
+ * for the public shape's `isMine`, and as the first step of the staff shape
+ * (which enriches from here - see `activeOrderBySeatId`).
+ */
+async function latestActiveOrdersBySeatId(prisma, seatIds) {
+  const latestBySeatId = new Map();
+  if (!seatIds.length) return latestBySeatId;
+  const orders = await prisma.order.findMany({
+    where: { seatId: { in: seatIds }, status: { in: ACTIVE_ORDER_STATUSES }, podCleanedAt: null },
+    orderBy: { createdAt: "desc" },
+  });
+  for (const order of orders) {
+    if (!latestBySeatId.has(order.seatId)) latestBySeatId.set(order.seatId, order);
+  }
+  return latestBySeatId;
+}
+
+/**
+ * Active (non-retired) comb seats for a location, used by
+ * `GET /locations/:id/seats` and folded into `GET /locations/:id/availability`.
+ *
+ * Task A8b: these routes are PUBLIC, so the shape depends on `viewer`:
+ *   - Anonymous or customer callers (default; `viewer.isStaff` falsy) get
+ *     `{ layoutKey, layoutMirror, seats: [{ id, label, finger, rowSide,
+ *     position, status, podType, dualPartnerId, bestRank }] }` - no
+ *     `orders`, no names, no tier, no items. A signed-in customer
+ *     (`viewer.userId` set) additionally sees `isMine: true` on the one
+ *     seat whose active order they own, and nothing else.
+ *   - Staff callers (`viewer.isStaff: true` - see `resolveSeatViewer` below)
+ *     get the same seat fields plus the per-seat `orders`, restored exactly
+ *     as A8 had them: an array of the seat's current active order (0 or 1
+ *     entries), with items+menuItem and a user/guest select (see
+ *     `activeOrderBySeatId` above).
  *
  * `location` may be passed in already-fetched (as `/availability` does, for
  * its own operating-hours query) to avoid a second lookup; otherwise it's
@@ -91,29 +119,76 @@ async function activeOrderBySeatId(prisma, seatIds) {
  * layoutMirror: false, seats: []` rather than throwing - this matches the
  * endpoint's pre-A8 behavior of never 404ing on the seats list.
  */
-export async function listLocationSeats(prisma, locationId, location = undefined) {
+export async function listLocationSeats(prisma, locationId, location = undefined, viewer = {}) {
+  const { isStaff = false, userId = null } = viewer;
   const loc = location !== undefined ? location : await prisma.location.findUnique({ where: { id: locationId } });
 
   const seats = await prisma.seat.findMany({
     where: { locationId, retiredAt: null },
     orderBy: { number: "asc" },
   });
+  const seatIds = seats.map((s) => s.id);
 
-  const ordersBySeatId = await activeOrderBySeatId(prisma, seats.map((s) => s.id));
+  const baseSeat = (s) => ({
+    id: s.id,
+    label: s.label,
+    finger: s.finger,
+    rowSide: s.rowSide,
+    position: s.position,
+    status: s.status,
+    podType: s.podType,
+    dualPartnerId: s.dualPartnerId ?? null,
+    bestRank: s.bestRank ?? null,
+  });
 
+  if (isStaff) {
+    const ordersBySeatId = await activeOrderBySeatId(prisma, seatIds);
+    return {
+      layoutKey: loc?.layoutKey ?? null,
+      layoutMirror: loc?.layoutMirror ?? false,
+      seats: seats.map((s) => ({
+        ...baseSeat(s),
+        orders: ordersBySeatId.has(s.id) ? [ordersBySeatId.get(s.id)] : [],
+      })),
+    };
+  }
+
+  // Public/customer shape: no orders, no PII. Only look up order ownership
+  // (for `isMine`) when the caller is a signed-in customer at all.
+  const latestBySeatId = userId ? await latestActiveOrdersBySeatId(prisma, seatIds) : new Map();
   return {
     layoutKey: loc?.layoutKey ?? null,
     layoutMirror: loc?.layoutMirror ?? false,
-    seats: seats.map((s) => ({
-      id: s.id,
-      label: s.label,
-      finger: s.finger,
-      rowSide: s.rowSide,
-      position: s.position,
-      status: s.status,
-      podType: s.podType,
-      dualPartnerId: s.dualPartnerId ?? null,
-      orders: ordersBySeatId.has(s.id) ? [ordersBySeatId.get(s.id)] : [],
-    })),
+    seats: seats.map((s) => {
+      const seat = baseSeat(s);
+      const order = latestBySeatId.get(s.id);
+      if (order && order.userId && order.userId === userId) seat.isMine = true;
+      return seat;
+    }),
   };
+}
+
+/**
+ * Task A8b: who's asking, resolved without ever failing the request - these
+ * seat routes are public, so an optional auth check must never turn into a
+ * 401. `isStaff` is true for an admin (session or `x-admin-api-key`, see
+ * `auth/admin.js` `checkAdminAuth`) OR a kiosk device key scoped to THIS
+ * `locationId` (see `auth/kiosk.js` `deviceFor`) - a kiosk key for a
+ * different location does not count on its own, but (fix round 1) never
+ * overrides a valid admin credential sent alongside it: the two grants are
+ * independent, not an either/or. `userId` is the caller's verified database
+ * user id (see `auth/customer.js` `resolve`), or null.
+ *
+ * `deps`: `{ checkAdminAuth(req), kioskDeviceFor(req), resolveCustomer(req) }`,
+ * each already bound to the live auth instances the route registers.
+ */
+export async function resolveSeatViewer(req, locationId, deps) {
+  const [admin, kioskDevice, customer] = await Promise.all([
+    deps.checkAdminAuth ? deps.checkAdminAuth(req) : null,
+    deps.kioskDeviceFor ? deps.kioskDeviceFor(req) : null,
+    deps.resolveCustomer ? deps.resolveCustomer(req) : null,
+  ]);
+  const isStaff = Boolean(admin) || Boolean(kioskDevice && kioskDevice.locationId === locationId);
+  const userId = customer && customer.kind === "user" ? (customer.userId ?? null) : null;
+  return { isStaff, userId };
 }

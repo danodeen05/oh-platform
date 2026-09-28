@@ -113,11 +113,23 @@ const POD_HOLDING_STATUSES = ["PENDING_PAYMENT", "PAID", ...ACTIVE_ORDER_STATUSE
 /**
  * A refunded order still in the kitchen is cancelled and its pod (and dual
  * partner) freed, unless another live order has since taken that pod.
+ *
+ * `order` is a snapshot read before the Stripe call: it may be stale (e.g. the
+ * order moved PAID -> QUEUED while Stripe was refunding it). The conditional
+ * `updateMany` below is the real guard and always runs against the CURRENT
+ * row, so a status that only became active during the Stripe call is still
+ * cancelled; there is no early return on the stale `order.status`.
  */
 async function cancelActiveOrder(tx, order) {
-  if (!ACTIVE_ORDER_STATUSES.includes(order.status)) return { order: order.status, seatsReleased: 0 };
   const cancelled = await tx.order.updateMany({ where: { id: order.id, status: { in: [...ACTIVE_ORDER_STATUSES] } }, data: { status: "CANCELLED" } });
-  if (cancelled.count !== 1) return { order: "NOT_CANCELLED", seatsReleased: 0 };
+  if (cancelled.count !== 1) {
+    const current = await tx.order.findUnique({ where: { id: order.id } });
+    const status = current ? current.status : order.status;
+    // Genuinely not applicable (already COMPLETED/CANCELLED/etc): not a
+    // warning. Still active but the updateMany still missed it (another
+    // concurrent change) IS a warning: NOT_CANCELLED.
+    return { order: ACTIVE_ORDER_STATUSES.includes(status) ? "NOT_CANCELLED" : status, seatsReleased: 0 };
+  }
   let seatsReleased = 0;
   for (const seatId of [order.seatId, order.dualPartnerSeatId].filter(Boolean)) {
     const holder = await tx.order.findFirst({
@@ -158,6 +170,17 @@ async function reverseOrderLots(tx, order, source, description) {
   return reversed;
 }
 
+// restoreTenders' meal-gift outcomes that mean "did not go back to PENDING",
+// each with its own staff-readable warning suffix ("" for the plain, no
+// further detail case). Any future outcome that merely contains
+// "NOT_RESTORED" still warns, with no suffix, so a forgotten mapping entry
+// fails safe (a warning, not silence).
+const MEAL_GIFT_NOT_RESTORED_SUFFIXES = {
+  NOT_RESTORED: "",
+  EXPIRED_NOT_RESTORED: ":EXPIRED",
+  EXCESS_PAID_NOT_RESTORED: ":EXCESS_PAID",
+};
+
 /** Restores that did not happen and staff should know about. */
 function warningsFor(restores) {
   const warnings = [];
@@ -165,6 +188,10 @@ function warningsFor(restores) {
     warnings.push(`GIFT_CARD_NOT_RESTORED:${restores.giftCard.slice("NOT_RESTORED:".length)}`);
   }
   if (restores.reward === "NOT_RESTORED") warnings.push("REWARD_NOT_RESTORED");
+  if (typeof restores.mealGift === "string" && restores.mealGift.includes("NOT_RESTORED")) {
+    const suffix = MEAL_GIFT_NOT_RESTORED_SUFFIXES[restores.mealGift] ?? "";
+    warnings.push(`MEAL_GIFT_NOT_RESTORED${suffix}`);
+  }
   if (restores.order === "NOT_CANCELLED") warnings.push("ORDER_NOT_CANCELLED");
   return warnings;
 }
@@ -270,23 +297,52 @@ export async function fullRefundCase(prisma, stripe, { supportCase, resolvedBy, 
 
   // 4. The card is refunded: finish, whatever else happened meanwhile.
   return prisma.$transaction(async (tx) => {
-    const warnings = [];
     let restores = { order: null, seatsReleased: 0, cashbackReversed: 0, goodwillReversed: 0, credit: null, giftCard: null, reward: null, mealGift: null };
+    let warnings = [];
+    let resolution = "FULL_REFUND";
+    let amountCents = refundedCents;
+    let resolutionNote = reason;
     const orderClaim = await tx.order.updateMany({ where: { id: order.id, paymentStatus: "PAID" }, data: { paymentStatus: "REFUNDED" } });
     if (orderClaim.count === 1) {
       const cancel = await cancelActiveOrder(tx, order);
       const cashbackReversed = await reverseOrderLots(tx, order, "CASHBACK", "cashback reversed on refund");
       const goodwillReversed = await reverseOrderLots(tx, order, "GOODWILL", "goodwill reversed on refund");
       restores = { ...cancel, cashbackReversed, goodwillReversed, ...(await restoreTenders(tx, order, now)) };
-      warnings.push(...warningsFor(restores));
+      warnings = warningsFor(restores);
     } else {
-      warnings.push("ORDER_ALREADY_REFUNDED");
+      // Another case's actor won the race: the Stripe call above was
+      // idempotent (same PaymentIntent, same refund), so no card was ever
+      // charged or refunded twice, but this case never claims that money or
+      // re-runs the restores. It is informational only.
+      warnings = ["ORDER_ALREADY_REFUNDED"];
+      const other = await tx.supportCase.findFirst({ where: { orderId: order.id, resolution: "FULL_REFUND", id: { not: id } } });
+      resolution = "INFO";
+      amountCents = null;
+      resolutionNote = `order already refunded by case ${other ? other.id : "unknown"}`;
     }
     const detail = { refundId, paymentIntentId: order.stripePaymentId || null, refundedCents, restores, warnings };
-    const updated = await tx.supportCase.update({
-      where: { id },
-      data: { status: "RESOLVED", resolution: "FULL_REFUND", resolvedBy, resolvedAt: now, amountCents: refundedCents, resolutionNote: reason, resolutionDetail: detail },
+    // Conditional on this actor's own claim (resolvedAt still equals the
+    // lease timestamp it claimed with): a slower actor whose lease was taken
+    // over by a retry while this Stripe call was in flight must not clobber
+    // the newer claim's identity or resolutionDetail.
+    const finalize = await tx.supportCase.updateMany({
+      where: { id, status: "OPEN", resolution: "FULL_REFUND", resolvedAt: now },
+      data: {
+        status: "RESOLVED",
+        resolution,
+        resolvedBy,
+        resolvedAt: now,
+        resolutionNote,
+        resolutionDetail: detail,
+        ...(amountCents === null ? {} : { amountCents }),
+      },
     });
+    const updated = await tx.supportCase.findUnique({ where: { id } });
+    if (finalize.count !== 1) {
+      // Someone else's retry already took over (or finished) this case's
+      // claim while our Stripe call was in flight: leave their record alone.
+      return { alreadyResolved: true, case: updated, refundId, restores: null, warnings: [] };
+    }
     return { alreadyResolved: false, case: updated, refundId, restores, warnings };
   });
 }

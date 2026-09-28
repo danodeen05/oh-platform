@@ -7,6 +7,7 @@ import { loadStripe, Stripe, PaymentRequest } from "@stripe/stripe-js";
 import { StripeProvider } from "./payments/StripeProvider";
 import { PaymentForm } from "./payments/PaymentForm";
 import { useSiteApi } from "@/lib/site/api";
+import { splitSseFrames, finalChatText, limitErrorText } from "@/lib/site/chappy-stream";
 
 // Singleton Stripe promise
 let stripePromise: Promise<Stripe | null> | null = null;
@@ -81,8 +82,10 @@ interface Card {
 
 interface ChappyChatProps {
   userId?: string;
-  guestId?: string;
-  sessionId?: string;
+  /** Signed guest token from POST /chappy/guest-token (sent as x-chappy-guest). */
+  guestToken?: string;
+  onGuestTokenRejected?: () => void;
+  locale?: string;
   locationId?: string;
   apiUrl?: string;
   position?: "bottom-right" | "bottom-left";
@@ -91,8 +94,9 @@ interface ChappyChatProps {
 
 export function ChappyChat({
   userId,
-  guestId,
-  sessionId,
+  guestToken,
+  onGuestTokenRejected,
+  locale = "en",
   locationId,
   apiUrl = "",
   position = "bottom-right",
@@ -120,7 +124,7 @@ export function ChappyChat({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const eventSourceRef = useRef<EventSource | null>(null);
+  const streamAbortRef = useRef<AbortController | null>(null);
   const userScrolledUpRef = useRef(false);
 
   // Track if component is mounted (for SSR hydration)
@@ -129,8 +133,11 @@ export function ChappyChat({
     setIsMounted(true);
   }, []);
 
-  // Generate session ID if not provided
-  const effectiveSessionId = sessionId || `chappy-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  // Identity headers: members are identified by the Bearer token (useSiteApi), guests by the signed token.
+  const identityHeaders = useCallback(
+    (): Record<string, string> => (!userId && guestToken ? { "x-chappy-guest": guestToken } : {}),
+    [userId, guestToken]
+  );
 
   // Auto-scroll to bottom on new messages (only if user hasn't scrolled up)
   const scrollToBottom = useCallback(() => {
@@ -175,16 +182,11 @@ export function ChappyChat({
   useEffect(() => {
     const loadHistory = async () => {
       try {
-        const identifier = userId || guestId || effectiveSessionId;
-        if (!identifier) return;
+        if (!userId && !guestToken) return;
 
-        const params = new URLSearchParams();
-        if (userId) params.set("userId", userId);
-        else if (guestId) params.set("guestId", guestId);
-        else params.set("sessionId", effectiveSessionId);
-
-        // Members are identified by the Bearer token (the API ignores a client userId).
-        const res = await api(`${apiUrl}/chappy/history?${params}`);
+        // Members are identified by the Bearer token, guests by the signed token.
+        const res = await api(`${apiUrl}/chappy/history`, { headers: identityHeaders() });
+        if (!res.ok) return;
         const data = await res.json();
 
         if (data.messages && data.messages.length > 0) {
@@ -203,13 +205,13 @@ export function ChappyChat({
     };
 
     loadHistory();
-  }, [userId, guestId, effectiveSessionId, apiUrl]);
+  }, [userId, guestToken, apiUrl]);
 
-  // Cleanup EventSource on unmount
+  // Abort an in-flight chat stream on unmount
   useEffect(() => {
     return () => {
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
+      if (streamAbortRef.current) {
+        streamAbortRef.current.abort();
       }
     };
   }, []);
@@ -423,179 +425,123 @@ export function ChappyChat({
       setStreamingText("");
       setStreamingStatus(null);
 
-      // Close any existing connection
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
+      // Abort any in-flight stream
+      if (streamAbortRef.current) {
+        streamAbortRef.current.abort();
       }
-
-      // Build query params
-      const params = new URLSearchParams({
-        message: encodeURIComponent(text.trim()),
-      });
-      if (userId) {
-        // EventSource cannot send headers: exchange the session for a short-lived signed ticket.
-        // Without a ticket we do not stream at all (never as an unidentified or shared session).
-        let ticket: { uid?: string; exp?: string; sig?: string } | null = null;
-        try {
-          const ticketRes = await api(`${apiUrl}/chappy/stream-ticket`, { method: "POST" });
-          if (ticketRes.ok) ticket = await ticketRes.json();
-        } catch {
-          ticket = null;
-        }
-        if (!ticket?.uid || !ticket.exp || !ticket.sig) {
-          setMessages((prev) => [
-            ...prev,
-            {
-              role: "assistant",
-              content: "Oops! Something went wrong. Please try again. - Chappy",
-              timestamp: new Date().toISOString(),
-            },
-          ]);
-          setIsStreaming(false);
-          setStreamingText("");
-          setStreamingStatus(null);
-          setIsLoading(false);
-          return;
-        }
-        params.set("uid", ticket.uid);
-        params.set("exp", ticket.exp);
-        params.set("sig", ticket.sig);
-      } else if (guestId) params.set("guestId", guestId);
-      else params.set("sessionId", effectiveSessionId);
-      if (locationId) params.set("locationId", locationId);
-
-      // Connect to streaming endpoint
-      const eventSource = new EventSource(`${apiUrl}/chappy/chat/stream?${params}`);
-      eventSourceRef.current = eventSource;
+      const abort = new AbortController();
+      streamAbortRef.current = abort;
 
       let accumulatedText = "";
+      let finished = false;
+      let pendingApplePay: ApplePayOrder | null = null;
 
-      eventSource.addEventListener("thinking", () => {
-        setStreamingStatus("Chappy is thinking...");
-      });
+      const toolNames: Record<string, string> = {
+        browse_menu: "Checking the menu",
+        get_user_profile: "Looking up your account",
+        get_points_balance: "Checking your points",
+        get_order_history: "Reviewing your order history",
+        suggest_dishes: "Finding recommendations",
+        create_order: "Creating your order",
+        get_locations: "Finding nearby locations",
+        get_tier_progress: "Checking your tier progress",
+        get_challenges: "Looking at your challenges",
+      };
 
-      eventSource.addEventListener("text", (e) => {
-        const data = JSON.parse(e.data);
-        accumulatedText += data.text;
-        setStreamingText(accumulatedText);
-        setStreamingStatus(null);
-        setIsLoading(false);
-      });
-
-      eventSource.addEventListener("tool_start", (e) => {
-        const data = JSON.parse(e.data);
-        const toolNames: Record<string, string> = {
-          browse_menu: "Checking the menu",
-          get_user_profile: "Looking up your account",
-          get_points_balance: "Checking your points",
-          get_order_history: "Reviewing your order history",
-          suggest_dishes: "Finding recommendations",
-          create_order: "Creating your order",
-          get_locations: "Finding nearby locations",
-          get_tier_progress: "Checking your tier progress",
-          get_challenges: "Looking at your challenges",
-        };
-        setStreamingStatus(toolNames[data.toolName] || `Working on it...`);
-      });
-
-      eventSource.addEventListener("tool_executing", (e) => {
-        const data = JSON.parse(e.data);
-        const toolNames: Record<string, string> = {
-          browse_menu: "Loading menu items",
-          get_user_profile: "Getting your details",
-          get_points_balance: "Calculating points",
-          get_order_history: "Fetching orders",
-          suggest_dishes: "Picking perfect dishes",
-          create_order: "Processing order",
-          get_locations: "Loading locations",
-          get_tier_progress: "Calculating progress",
-          get_challenges: "Loading challenges",
-        };
-        setStreamingStatus(toolNames[data.toolName] || "Processing...");
-      });
-
-      eventSource.addEventListener("tool_complete", () => {
-        setStreamingStatus("Almost done...");
-      });
-
-      eventSource.addEventListener("done", (e) => {
-        const data = JSON.parse(e.data);
-
-        const assistantMessage: Message = {
-          role: "assistant",
-          content: data.text || data.formattedText || accumulatedText,
-          timestamp: new Date().toISOString(),
-          actions: data.actions,
-          cards: data.cards,
-          images: data.images,
-        };
-
-        setMessages((prev) => [...prev, assistantMessage]);
+      const finish = (content: string, extras: Partial<Message> = {}) => {
+        if (finished) return;
+        finished = true;
+        if (content) {
+          setMessages((prev) => [...prev, { role: "assistant", content, timestamp: new Date().toISOString(), ...extras }]);
+        }
         setIsStreaming(false);
         setStreamingText("");
         setStreamingStatus(null);
         setIsLoading(false);
+      };
+      // Keep whatever text already arrived; otherwise show the generic error.
+      const fail = () => finish(finalChatText(null, accumulatedText));
 
-        // Reset scroll tracking so the useEffect will scroll to show the response
-        userScrolledUpRef.current = false;
-
-        // Check if Apple Pay is required for this order
-        if (data.applePayOrder) {
-          setApplePayOrder({
-            orderId: data.applePayOrder.orderId,
-            orderNumber: data.applePayOrder.orderNumber,
-            clientSecret: data.applePayOrder.clientSecret,
-            totalCents: data.applePayOrder.totalCents,
-            locationName: data.applePayOrder.locationName,
-          });
+      // POST /chappy/chat streams server-sent events: text {delta}, tool_start {name},
+      // card {card}, done {usage, text, actions, cards}, error {code}.
+      const handleEvent = (event: string, data: Record<string, any>) => {
+        switch (event) {
+          case "text":
+            accumulatedText += data.delta || "";
+            setStreamingText(accumulatedText);
+            setStreamingStatus(null);
+            setIsLoading(false);
+            break;
+          case "tool_start":
+            setStreamingStatus(toolNames[data.name] || "Working on it...");
+            break;
+          case "card":
+            if (data.card?.kind === "apple_pay" && data.card.clientSecret) {
+              pendingApplePay = {
+                orderId: data.card.orderId,
+                orderNumber: data.card.orderNumber,
+                clientSecret: data.card.clientSecret,
+                totalCents: data.card.totalCents,
+                locationName: data.card.locationName,
+              };
+            }
+            break;
+          case "done":
+            finish(finalChatText({ event, data }, accumulatedText), { actions: data.actions, cards: data.cards });
+            // Reset scroll tracking so the useEffect will scroll to show the response
+            userScrolledUpRef.current = false;
+            if (pendingApplePay) setApplePayOrder(pendingApplePay);
+            if (!isOpen) setHasNewMessage(true);
+            break;
+          case "error":
+            // A REFUSAL drops any partial text that streamed before it.
+            finish(finalChatText({ event, data }, accumulatedText));
+            break;
         }
+      };
 
-        // Check if order was created
-        if (data.order && onOrderCreated) {
-          onOrderCreated(data.order);
+      setStreamingStatus("Chappy is thinking...");
+      try {
+        const res = await api(`${apiUrl}/chappy/chat`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "text/event-stream", ...identityHeaders() },
+          body: JSON.stringify({ message: text.trim(), locale, channel: "web" }),
+          signal: abort.signal,
+        });
+        if (res.status === 401 && !userId && onGuestTokenRejected) onGuestTokenRejected();
+        if (!res.ok || !res.body) {
+          // Task B3: RATE / BUDGET arrive as a JSON body (no SSE stream at all).
+          // Any other or unreadable body falls back to the generic error.
+          let friendly: string | null = null;
+          try {
+            const body = await res.clone().json();
+            friendly = limitErrorText(body?.error, body?.retryAfterSeconds);
+          } catch {
+            // not JSON, or already consumed: fall through to the generic error
+          }
+          if (friendly) finish(friendly);
+          else fail();
+          return;
         }
-
-        // Show notification if chat is closed
-        if (!isOpen) {
-          setHasNewMessage(true);
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        for (;;) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const { frames, rest } = splitSseFrames(buffer);
+          buffer = rest;
+          for (const frame of frames) handleEvent(frame.event, frame.data);
         }
-
-        eventSource.close();
-      });
-
-      eventSource.addEventListener("error", (e) => {
-        console.error("Stream error:", e);
-        eventSource.close();
-
-        // Only show error if we haven't received any text
-        if (!accumulatedText) {
-          setMessages((prev) => [
-            ...prev,
-            {
-              role: "assistant",
-              content: "Oops! Something went wrong. Please try again. - Chappy",
-              timestamp: new Date().toISOString(),
-            },
-          ]);
-        } else {
-          // If we have text, use what we got
-          setMessages((prev) => [
-            ...prev,
-            {
-              role: "assistant",
-              content: accumulatedText,
-              timestamp: new Date().toISOString(),
-            },
-          ]);
-        }
-
-        setIsStreaming(false);
-        setStreamingText("");
-        setStreamingStatus(null);
-        setIsLoading(false);
-      });
+        if (!finished) fail();
+      } catch (error) {
+        if (abort.signal.aborted) return;
+        console.error("Stream error:", error);
+        fail();
+      }
     },
-    [userId, guestId, effectiveSessionId, locationId, apiUrl, api, isLoading, isStreaming, isOpen, onOrderCreated, resetScrollTracking]
+    [userId, guestToken, onGuestTokenRejected, locale, identityHeaders, apiUrl, api, isLoading, isStreaming, isOpen, resetScrollTracking]
   );
 
   // Handle action button clicks

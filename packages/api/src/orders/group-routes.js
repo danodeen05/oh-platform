@@ -98,6 +98,39 @@ function sendOrderError(reply, err) {
   return reply.code(err.status).send({ error: err.code, message: err.message, ...err.extra });
 }
 
+/**
+ * Creates a GATHERING group hosted by an already-verified member or guest
+ * (POST /group-orders and Chappy's start_group_order). Moves no money.
+ * Returns { group } or { status, error }.
+ */
+export async function createGroupOrder(prisma, { hostUserId = null, hostGuestId = null, locationId, estimatedArrival = null, now = new Date() }) {
+  if (!locationId || typeof locationId !== "string") return { status: 400, error: "locationId required" };
+  const location = await prisma.location.findUnique({ where: { id: locationId } });
+  if (!location) return { status: 404, error: "Location not found" };
+
+  let code = null;
+  for (let attempts = 0; !code && attempts < 10; attempts++) {
+    const candidate = generateGroupCode();
+    if (!(await prisma.groupOrder.findUnique({ where: { code: candidate } }))) code = candidate;
+  }
+  if (!code) return { status: 500, error: "Failed to generate unique group code" };
+
+  const arrival = estimatedArrival ? new Date(estimatedArrival) : null;
+  const group = await prisma.groupOrder.create({
+    data: {
+      code,
+      locationId,
+      tenantId: location.tenantId,
+      hostUserId,
+      hostGuestId,
+      estimatedArrival: arrival && !Number.isNaN(arrival.getTime()) ? arrival : null,
+      expiresAt: new Date(now.getTime() + GROUP_TTL_MS),
+      status: "GATHERING",
+    },
+  });
+  return { group };
+}
+
 export async function registerGroupOrderRoutes(app, {
   prisma,
   stripe,
@@ -168,31 +201,9 @@ export async function registerGroupOrderRoutes(app, {
     const a = await verifiedActor(req, reply);
     if (!a) return reply;
     const { locationId, estimatedArrival } = req.body || {};
-    if (!locationId || typeof locationId !== "string") return reply.code(400).send({ error: "locationId required" });
-    const location = await prisma.location.findUnique({ where: { id: locationId } });
-    if (!location) return reply.code(404).send({ error: "Location not found" });
-
-    let code = null;
-    for (let attempts = 0; !code && attempts < 10; attempts++) {
-      const candidate = generateGroupCode();
-      if (!(await prisma.groupOrder.findUnique({ where: { code: candidate } }))) code = candidate;
-    }
-    if (!code) return reply.code(500).send({ error: "Failed to generate unique group code" });
-
-    const arrival = estimatedArrival ? new Date(estimatedArrival) : null;
-    const group = await prisma.groupOrder.create({
-      data: {
-        code,
-        locationId,
-        tenantId: location.tenantId,
-        hostUserId: a.userId,
-        hostGuestId: a.guestId,
-        estimatedArrival: arrival && !Number.isNaN(arrival.getTime()) ? arrival : null,
-        expiresAt: new Date(now().getTime() + GROUP_TTL_MS),
-        status: "GATHERING",
-      },
-    });
-    return fullGroup(group.id);
+    const result = await createGroupOrder(prisma, { hostUserId: a.userId, hostGuestId: a.guestId, locationId, estimatedArrival, now: now() });
+    if (result.error) return reply.code(result.status).send({ error: result.error });
+    return fullGroup(result.group.id);
   });
 
   app.get("/group-orders/:code", async (req, reply) => {

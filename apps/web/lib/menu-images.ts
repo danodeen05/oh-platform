@@ -1,11 +1,15 @@
 // Menu item image mapping
-// Maps menu item names to their corresponding image files in /public/menu images/
+// Maps menu item names to their corresponding image files. Most come from
+// /public/menu images/; the two updated in Task C6 come from the site image
+// pipeline (/public/site/, see lib/site/images.ts).
 
 const menuImageMap: Record<string, string> = {
   // Main bowls
-  "Classic Beef Noodle Soup": "/menu images/Classic Bowl.png",
+  "Classic Beef Noodle Soup": "/site/bowl-slices-top-1200.webp",
   "Classic Beef Noodle Soup (no beef)": "/menu images/Classic Bowl No Beef.png",
-  "A5 Wagyu Beef Noodle Soup": "/menu images/A5 Wagyu Bowl.png",
+  // DB name is "American Wagyu Beef Noodle Soup" (MenuItem.name); the old
+  // "A5 Wagyu Beef Noodle Soup" key never matched it.
+  "American Wagyu Beef Noodle Soup": "/site/bowl-chunks-top-1200.webp",
 
   // Noodle types
   "Shaved Noodles": "/menu images/Shaved Noodles.png",
