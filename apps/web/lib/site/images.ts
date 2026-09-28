@@ -10,6 +10,7 @@ export type ImageKey =
   | "pod-hatch-a"
   | "pod-hatch-b"
   | "pod-hatch-c"
+  | "pod-hatch-open"
   | "bowl-slices-top"
   | "bowl-slices-side"
   | "beef-macro"
@@ -94,6 +95,13 @@ export const SITE_IMAGES: Record<ImageKey, SiteImage> = {
     w: 1200,
     h: 900,
     alt: "siteImages.podHatchC",
+  },
+  "pod-hatch-open": {
+    src: { avif: "/site/pod-hatch-open-1200.avif", webp: "/site/pod-hatch-open-1200.webp" },
+    srcSet: { avif: "/site/pod-hatch-open-390.avif 390w, /site/pod-hatch-open-780.avif 780w, /site/pod-hatch-open-1200.avif 1200w", webp: "/site/pod-hatch-open-390.webp 390w, /site/pod-hatch-open-780.webp 780w, /site/pod-hatch-open-1200.webp 1200w" },
+    w: 1200,
+    h: 900,
+    alt: "siteImages.podHatchOpen",
   },
   "bowl-slices-top": {
     src: { avif: "/site/bowl-slices-top-1200.avif", webp: "/site/bowl-slices-top-1200.webp" },

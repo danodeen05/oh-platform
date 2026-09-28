@@ -48,9 +48,10 @@ export const MAPPING = {
   "storefront-queue": "Image 3.jpeg",
   "hall-rows": "Image 1.jpeg",
   "hall-rows-alt": "Image.jpeg",
-  "pod-hatch-a": "Image 6.jpeg",
+  "pod-hatch-a": "MaleClosedPod.jpg",
   "pod-hatch-b": "Image 5.jpeg",
   "pod-hatch-c": "Image 2.jpeg",
+  "pod-hatch-open": "OpenPod.jpg",
   "bowl-slices-top": "Image 9.jpeg",
   "bowl-slices-side": "Image 8.jpeg",
   "beef-macro": "Image 12.jpeg",
@@ -60,7 +61,7 @@ export const MAPPING = {
   "bowl-empty": "Image 3 (1).jpeg",
   "bowl-flatlay": "Image 7 (1).jpeg",
   chopsticks: "Image 6 (1).jpeg",
-  "sign-pool": "Image 1.jpg",
+  "sign-pool": "1.jpeg",
 };
 
 // Portrait crops: `aspect` is width / height of the crop (full source
@@ -98,6 +99,7 @@ export const ALT_KEYS = {
   "pod-hatch-a": "siteImages.podHatchA",
   "pod-hatch-b": "siteImages.podHatchB",
   "pod-hatch-c": "siteImages.podHatchC",
+  "pod-hatch-open": "siteImages.podHatchOpen",
   "bowl-slices-top": "siteImages.bowlSlicesTop",
   "bowl-slices-side": "siteImages.bowlSlicesSide",
   "beef-macro": "siteImages.beefMacro",
