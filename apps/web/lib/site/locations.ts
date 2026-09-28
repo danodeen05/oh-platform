@@ -157,6 +157,15 @@ export function formatHour(hhmm: string, locale: string): string {
   return new Intl.DateTimeFormat(locale, { hour: "numeric", minute: "2-digit", timeZone: "UTC" }).format(d);
 }
 
+/**
+ * Where "Order here" goes, or null when ordering is paused at this location
+ * (`availability.canOrder === false`): the page then shows the paused state
+ * instead of a link, so no one walks into an order flow that will refuse them.
+ */
+export function orderHref(loc: Pick<SiteLocation, "id" | "canOrder">, locale: string): string | null {
+  return loc.canOrder ? `/${locale}/order/location/${encodeURIComponent(loc.id)}` : null;
+}
+
 /** A maps search for the place (opens the maps app on a phone). No API key. */
 export function mapsHref(name: string, address: string | null): string {
   const q = address ? `${name}, ${address}` : name;

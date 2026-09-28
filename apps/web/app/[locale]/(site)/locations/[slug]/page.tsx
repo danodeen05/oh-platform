@@ -17,7 +17,7 @@ import { Reveal } from "@/components/site/motion/Reveal";
 import { LocationFloor } from "@/components/site/floor-plan/LocationFloor";
 import type { CombMapLabels } from "@/components/site/floor-plan/CombMap";
 import { SITE_IMAGES } from "@/lib/site/images";
-import { PLACE_KEY, formatHour, isLocationSlug, mapsHref, weekRows, type SiteLocation } from "@/lib/site/locations";
+import { PLACE_KEY, formatHour, isLocationSlug, mapsHref, orderHref as orderLink, weekRows, type SiteLocation } from "@/lib/site/locations";
 import { getSiteLocations } from "../data";
 
 export const dynamic = "force-dynamic";
@@ -64,7 +64,7 @@ export default async function LocationPage({ params }: Params) {
 
   const place = PLACE_KEY[slug];
   const pods = buildLayout(LOCATION_LAYOUTS[loc.layoutKey]).pods.length;
-  const orderHref = `/${locale}/order/location/${encodeURIComponent(loc.id)}`;
+  const orderHref = orderLink(loc, locale);
   const combLabels = tRoot.raw("combMap") as CombMapLabels;
   const nearby = t.raw(`places.${place}.nearby`) as string[];
 
@@ -167,10 +167,14 @@ export default async function LocationPage({ params }: Params) {
               {t("detail.orderLede")}
             </Body>
           </div>
-          <Link href={orderHref} data-location-order className={`${PRIMARY} shrink-0`}>
-            <Icon name="bowl" size={20} />
-            {t("detail.order")}
-          </Link>
+          {orderHref ? (
+            <Link href={orderHref} data-location-order className={`${PRIMARY} shrink-0`}>
+              <Icon name="bowl" size={20} />
+              {t("detail.order")}
+            </Link>
+          ) : (
+            <Paused text={t("status.paused")} />
+          )}
         </Reveal>
 
         <Link href={`/${locale}/locations`} className={`inline-flex min-h-11 items-center gap-2 self-start text-[15px] text-oh-cream/80 no-underline hover:text-oh-cream ${FOCUS}`}>
@@ -186,7 +190,7 @@ export default async function LocationPage({ params }: Params) {
 
 type T = Awaited<ReturnType<typeof getTranslations>>;
 
-function Hero({ loc, locale, alt, tagline, t, orderHref }: { loc: SiteLocation; locale: string; alt: string; tagline: string; t: T; orderHref: string }) {
+function Hero({ loc, locale, alt, tagline, t, orderHref }: { loc: SiteLocation; locale: string; alt: string; tagline: string; t: T; orderHref: string | null }) {
   return (
     <section data-location-hero className="relative isolate flex min-h-[min(86svh,760px)] flex-col justify-end overflow-hidden md:min-h-[min(78svh,720px)]">
       <div className="absolute inset-0 -z-10 [&_img]:h-full [&_img]:w-full [&_img]:object-cover">
@@ -216,10 +220,14 @@ function Hero({ loc, locale, alt, tagline, t, orderHref }: { loc: SiteLocation; 
           ) : null}
         </div>
         <div className="mt-3 flex flex-col gap-3 sm:flex-row">
-          <Link href={orderHref} data-location-order className={PRIMARY}>
-            <Icon name="bowl" size={20} />
-            {t("detail.order")}
-          </Link>
+          {orderHref ? (
+            <Link href={orderHref} data-location-order className={PRIMARY}>
+              <Icon name="bowl" size={20} />
+              {t("detail.order")}
+            </Link>
+          ) : (
+            <Paused text={t("status.paused")} />
+          )}
           {loc.address ? (
             <a href={mapsHref(loc.name, loc.address)} target="_blank" rel="noopener noreferrer" aria-label={t("detail.directionsLabel", { name: loc.name })} className={SECONDARY}>
               <Icon name="pin" size={18} />
@@ -229,6 +237,16 @@ function Hero({ loc, locale, alt, tagline, t, orderHref }: { loc: SiteLocation; 
         </div>
       </div>
     </section>
+  );
+}
+
+/** Ordering is off at this location: a plain status in place of the Order CTA, never a link. */
+function Paused({ text }: { text: string }) {
+  return (
+    <p data-location-paused role="status" className="m-0 inline-flex min-h-12 items-center gap-2 rounded-full border border-oh-stone bg-oh-charcoal/80 px-5 text-base text-oh-cream">
+      <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full bg-oh-ember-light" />
+      {text}
+    </p>
   );
 }
 

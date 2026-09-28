@@ -276,6 +276,7 @@
     "status": {
       "open": "Open now",
       "closed": "Closed now",
+      "paused": "Ordering is paused here right now.",
       "podsFree": "{free} of {total} pods free",
       "pods": "{total} pods"
     },

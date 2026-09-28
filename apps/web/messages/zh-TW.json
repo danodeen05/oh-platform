@@ -276,6 +276,7 @@
     "status": {
       "open": "營業中",
       "closed": "休息中",
+      "paused": "這間店目前暫停點餐。",
       "podsFree": "{total} 個包廂中有 {free} 個空位",
       "pods": "{total} 個包廂"
     },

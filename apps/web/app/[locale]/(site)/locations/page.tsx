@@ -106,11 +106,17 @@ function LocationCard({ loc, locale, priority, alt, t }: { loc: SiteLocation; lo
         <span className={`text-xs font-medium uppercase tracking-[0.2em] text-oh-gold ${locale.startsWith("zh") ? "font-cjk" : "font-body"}`}>{t(`places.${place}.tagline`)}</span>
         <span className={`text-[1.75rem] leading-tight [overflow-wrap:anywhere] ${locale.startsWith("zh") ? "font-display-cjk" : "font-display"}`}>{loc.name}</span>
         {loc.address ? <span className="text-[15px] text-oh-cream/80">{loc.address}</span> : null}
-        <span className="mt-auto flex items-center justify-between gap-3 pt-3">
+        <span className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-3">
           <span className="flex items-center gap-2 text-[15px] text-oh-cream">
             <Icon name="pod" size={18} className="shrink-0 text-oh-gold" />
             {loc.podsFree !== null && loc.podsTotal !== null ? t("status.podsFree", { free: loc.podsFree, total: loc.podsTotal }) : null}
           </span>
+          {!loc.canOrder ? (
+            <span data-location-paused className="flex basis-full items-center gap-2 text-[15px] text-oh-cream order-first">
+              <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full bg-oh-ember-light" />
+              {t("status.paused")}
+            </span>
+          ) : null}
           <span className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full bg-oh-ember-deep pl-4 pr-3 text-[15px] font-semibold text-oh-cream transition-transform duration-300 group-hover:translate-x-0.5 motion-reduce:transition-none">
             {t("index.cardCta")}
             <Icon name="chevron" size={18} />

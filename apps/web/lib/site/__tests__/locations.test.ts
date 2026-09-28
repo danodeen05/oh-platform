@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildLayout, LOCATION_LAYOUTS } from "@oh/floor-plan";
-import { LOCATION_SLUGS, formatHour, heroFor, mapsHref, openState, toSiteLocation, weekRows, type ApiLocation } from "../locations";
+import { LOCATION_SLUGS, formatHour, orderHref, heroFor, mapsHref, openState, toSiteLocation, weekRows, type ApiLocation } from "../locations";
 import { PLAN_LAYOUT, mirrorRect, presetViews } from "@/components/plan/modules/floor-plan/three/layout-context";
 
 const base: ApiLocation = {
@@ -54,6 +54,15 @@ describe("location pages: data", () => {
     expect(toSiteLocation({ ...base, stats: undefined })!.podsFree).toBeNull();
     // English landmarks live only in i18n.en (the API localizes non-English rows only).
     expect(toSiteLocation({ ...base, landmarks: null, i18n: { en: { landmarks: "Near Temple Square" } } }, "en")!.landmarks).toBe("Near Temple Square");
+  });
+
+  it("ordering paused (canOrder false) gives no order link", () => {
+    expect(toSiteLocation(base)!.canOrder).toBe(true);
+    expect(orderHref(toSiteLocation(base)!, "en")).toBe("/en/order/location/loc-cc");
+    const paused = toSiteLocation({ ...base, availability: { isOpen: true, canOrder: false } })!;
+    expect(paused.canOrder).toBe(false);
+    expect(orderHref(paused, "zh-TW")).toBeNull();
+    expect(toSiteLocation({ ...base, availability: null })!.canOrder).toBe(true); // unknown: the order flow still enforces it
   });
 
   it("never invents hours: none from the API means no rows", () => {
