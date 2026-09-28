@@ -160,11 +160,11 @@ export default function CheckInPage() {
       }
 
       try {
-        const seatsRes = await fetch(`${BASE}/locations/${locationId}/seats`, { headers: { "x-tenant-slug": "oh" } });
+        const seatsRes = await fetch(`${BASE}/locations/${locationId}/seats`, { headers: { "x-tenant-slug": "oh", ...kioskAuthHeaders() } });
         if (seatsRes.ok) setSeats(adaptKioskSeats(await seatsRes.json()));
 
         if (orderId) {
-          const orderRes = await fetch(`${BASE}/orders/${orderId}`, { headers: { "x-tenant-slug": "oh" } });
+          const orderRes = await fetch(`${BASE}/orders/${orderId}`, { headers: { "x-tenant-slug": "oh", ...kioskAuthHeaders() } });
           if (!orderRes.ok) { setError(t("errors.orderNotFound")); setStep("error"); setLoading(false); return; }
           const orderData = await orderRes.json();
           setOrder(orderData);
@@ -176,7 +176,7 @@ export default function CheckInPage() {
 
         const qrCode = token || orderQrCode;
         if (qrCode) {
-          const orderRes = await fetch(`${BASE}/orders/lookup?code=${encodeURIComponent(qrCode)}`, { headers: { "x-tenant-slug": "oh" } });
+          const orderRes = await fetch(`${BASE}/orders/lookup?code=${encodeURIComponent(qrCode)}`, { headers: { "x-tenant-slug": "oh", ...kioskAuthHeaders() } });
           if (!orderRes.ok) {
             const errData = await orderRes.json().catch(() => ({}));
             // Handle "already checked in" gracefully - not as an error

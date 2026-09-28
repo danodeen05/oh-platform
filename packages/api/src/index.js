@@ -75,7 +75,7 @@ import { registerCateringRoutes, isDineInOrdersEnabled } from "./catering/routes
 import { registerPlanRoutes } from "./plan/routes.js";
 import { registerAdminConsoleRoutes } from "./admin/console-routes.js";
 import { menuPatchData } from "./admin/menu-fields.js";
-import { withStatusDemo, registerStatusDemoGuard } from "./demo/status-demo.js";
+import { withStatusDemo, registerStatusDemoGuard, isDemoOrderId } from "./demo/status-demo.js";
 import { createClerkClient } from "@clerk/backend";
 import { createAdminAuth, parseAdminEmails } from "./auth/admin.js";
 import { registerAdminAuthHooks } from "./auth/admin-hook.js";
@@ -94,15 +94,21 @@ import { PROGRAM, tierRule } from "./membership/program.js";
 import { onOrderCompleted, applyReferralSignup, visibleMenuItems, firstUnreleasedItem, profileForUser } from "./membership/engine.js";
 import { createCustomerAuth, registerCustomerIdentity, orderOwnerId } from "./auth/customer.js";
 import { registerChappyRoutes } from "./chappy/routes.js";
+import { createChappyLimits } from "./chappy/limits.js";
+import { createPodCall, PodCallError } from "./orders/pod-calls.js";
+import { FASTIFY_OPTIONS, rateLimitKey } from "./http-config.js";
 import { createKioskAuth } from "./auth/kiosk.js";
 import { publicReferral, shopCreditSpender, registerAdminOnlyRoutes } from "./auth/hardening.js";
-import { listLocationSeats } from "./seats/service.js";
+import { listLocationSeats, resolveSeatViewer } from "./seats/service.js";
+import { canSeeFullOrder, safeOrderView, firstNameOnly } from "./orders/order-view.js";
 
 // DEMO- order codes resolve to a synthetic order (see demo/status-demo.js):
 // the plan's live status-page demo reads real routes without touching the DB.
 const basePrisma = new PrismaClient();
 const { prisma, source: statusDemoSource } = withStatusDemo(basePrisma);
-const app = Fastify({ logger: true });
+// trustProxy: one hop (Railway edge / dev nginx), so req.ip is the real client. See http-config.js.
+// A copy: Fastify writes to options.logger, and FASTIFY_OPTIONS is frozen.
+const app = Fastify({ ...FASTIFY_OPTIONS });
 
 // Initialize Anthropic client (uses ANTHROPIC_API_KEY env var automatically)
 const anthropic = process.env.ANTHROPIC_API_KEY ? new Anthropic() : null;
@@ -182,8 +188,8 @@ await app.register(rateLimit, {
   timeWindow: '1 minute',
   // Higher limits for certain routes
   keyGenerator: (req) => {
-    // Use IP address as the key
-    return req.ip || req.headers['x-forwarded-for'] || 'unknown';
+    // The real client IP (trustProxy: 1), never a client-supplied header
+    return rateLimitKey(req);
   },
   errorResponseBuilder: (req, context) => ({
     error: 'Too Many Requests',
@@ -198,7 +204,7 @@ await app.register(rateLimit, {
 // tokens are verified server-side and set req.adminRole (owner, manager or
 // station); an allowlisted email (ADMIN_EMAILS) is always owner.
 // x-admin-api-key remains for server-to-server callers (owner).
-const { requireAdminAuth, requireRole, forget: forgetAdminRole } = createAdminAuth({ log: (...args) => app.log.warn({ args }, "admin auth") });
+const { requireAdminAuth, requireRole, forget: forgetAdminRole, checkAdminAuth } = createAdminAuth({ log: (...args) => app.log.warn({ args }, "admin auth") });
 
 // All admin auth wiring: /admin/* role checks and the console-only routes
 // outside /admin (see auth/admin-hook.js). Must run before routes are declared.
@@ -306,6 +312,7 @@ await registerOrderRoutes(app, {
   stripe,
   customerAuth,
   kioskAuth,
+  checkAdminAuth,
   isDineInOrdersEnabled,
   effects: orderEffects,
   onOrderCompleted,
@@ -817,7 +824,13 @@ app.get("/locations/:id/availability", async (req, reply) => {
   const status = getLocationStatus(location);
   // Task A8: fold the comb-seat layout (retired seats excluded) into the
   // same response the ordering flow already polls for operating hours.
-  const { layoutKey, layoutMirror, seats } = await listLocationSeats(prisma, id, location);
+  // Task A8b: same public/staff viewer split as GET /locations/:id/seats.
+  const viewer = await resolveSeatViewer(req, id, {
+    checkAdminAuth,
+    kioskDeviceFor: kioskAuth.deviceFor,
+    resolveCustomer: customerAuth.resolve,
+  });
+  const { layoutKey, layoutMirror, seats } = await listLocationSeats(prisma, id, location, viewer);
   const localizedLocation = localizeLocation(location, getLocale(req));
 
   return {
@@ -1647,9 +1660,17 @@ app.delete("/seats/:id", async (req, reply) => {
 
 // GET /locations/:id/seats - Active comb pods for a location (Task A8: the
 // documented public shape, retired pods excluded - see seats/service.js).
+// Task A8b: this route is PUBLIC and must never require auth (no 401) - but
+// staff (admin, or a kiosk device key scoped to this location) get the
+// per-seat orders, and a signed-in customer sees isMine on their own seat.
 app.get("/locations/:id/seats", async (req, reply) => {
   const { id } = req.params;
-  return listLocationSeats(prisma, id);
+  const viewer = await resolveSeatViewer(req, id, {
+    checkAdminAuth,
+    kioskDeviceFor: kioskAuth.deviceFor,
+    resolveCustomer: customerAuth.resolve,
+  });
+  return listLocationSeats(prisma, id, undefined, viewer);
 });
 
 // POST /orders/check-in - Customer arrives and scans order QR at kiosk
@@ -2142,6 +2163,19 @@ app.get("/orders/lookup", async (req, reply) => {
     });
   }
 
+  // Task A8b, fix round 1 addendum: this route is PUBLIC (kiosk check-in
+  // scans a QR code or types an order number - no session) and returned the
+  // full order, including `user: true` (every column), to any caller. Same
+  // rule as GET /orders/:id: full record for the verified owner, staff, or
+  // a verified guest owner; everyone else (including a kiosk device key for
+  // a DIFFERENT location) gets the safe view, at most a first name.
+  const canSeeFull = isDemoOrderId(order.id) || await canSeeFullOrder(req, order, {
+    checkAdminAuth,
+    kioskDeviceFor: kioskAuth.deviceFor,
+    resolveCustomer: customerAuth.resolve,
+    findGuestBySessionToken: (token) => prisma.guest.findUnique({ where: { sessionToken: token } }),
+  });
+
   if (order.arrivedAt) {
     return reply.code(400).send({
       error: "Order already checked in",
@@ -2155,14 +2189,16 @@ app.get("/orders/lookup", async (req, reply) => {
         seatId: order.seatId,
         seat: order.seat, // Include full seat object for display
         totalCents: order.totalCents,
-        guestName: order.guestName,
+        guestName: canSeeFull ? order.guestName : firstNameOnly(order.guestName),
         items: order.items,
-        user: order.user ? { name: order.user.name, membershipTier: order.user.membershipTier } : null,
+        user: order.user
+          ? { name: canSeeFull ? order.user.name : firstNameOnly(order.user.name), membershipTier: canSeeFull ? order.user.membershipTier : undefined }
+          : null,
       },
     });
   }
 
-  return reply.send(order);
+  return reply.send(canSeeFull ? order : safeOrderView(order));
 });
 
 // GET /orders/status - Get real-time order status by QR code
@@ -2184,8 +2220,11 @@ app.get("/orders/status", async (req, reply) => {
           menuItem: true,
         },
       },
-      user: true,
-      guest: true,
+      // Task A8b, fix round 1 addendum: this hand-built response never sent
+      // `user` or contact fields, but `guest: true` (every Guest column,
+      // including email/phone) was fetched for a name fallback that only
+      // ever needs the name. Select only that.
+      guest: { select: { name: true } },
       waitQueueEntry: true,
     },
   });
@@ -2193,6 +2232,21 @@ app.get("/orders/status", async (req, reply) => {
   if (!order) {
     return reply.code(404).send({ error: "Order not found" });
   }
+
+  // Task A8b, fix round 1 addendum: this route is PUBLIC (a link/QR code,
+  // no session) and always sent the guest's FULL name to any caller who
+  // knew the orderQrCode. Same rule as GET /orders/:id: the verified owner,
+  // staff, or a verified guest owner sees the full name; everyone else (and
+  // a kiosk device key for a DIFFERENT location) sees at most a first name.
+  // The plan's status demo keeps rendering unconditionally (it's synthetic).
+  const canSeeFull = isDemoOrderId(order.id) || await canSeeFullOrder(req, order, {
+    checkAdminAuth,
+    kioskDeviceFor: kioskAuth.deviceFor,
+    resolveCustomer: customerAuth.resolve,
+    findGuestBySessionToken: (token) => prisma.guest.findUnique({ where: { sessionToken: token } }),
+  });
+  const fullGuestName = order.guestName || order.guest?.name || null;
+  const guestName = canSeeFull ? fullGuestName : firstNameOnly(fullGuestName);
 
   // Build response with status info
   const response = {
@@ -2230,8 +2284,9 @@ app.get("/orders/status", async (req, reply) => {
         city: order.location.city,
       },
 
-      // Guest name (for non-authenticated orders) - fallback to guest record name
-      guestName: order.guestName || order.guest?.name || null,
+      // Guest name (for non-authenticated orders) - fallback to guest record name.
+      // Full name for the verified owner/staff/guest-owner; a first name otherwise.
+      guestName,
 
       // Items - localized based on user's language preference
       items: order.items.map((item) => {
@@ -2892,61 +2947,18 @@ app.post("/seats/unlink-dual", async (req, reply) => {
 app.post("/orders/:id/call-staff", async (req, reply) => {
   const { id } = req.params;
   const { reason } = req.body || {};
-
-  const order = await prisma.order.findUnique({
-    where: { id },
-    include: { seat: true, location: true },
-  });
-
-  if (!order) {
-    return reply.code(404).send({ error: "Order not found" });
+  // Shared with Chappy's report_issue (orders/pod-calls.js).
+  try {
+    const podCall = await createPodCall(prisma, { orderId: id, reason: reason || "GENERAL" });
+    return {
+      success: true,
+      message: "Staff has been notified. Someone will be with you shortly.",
+      call: podCall,
+    };
+  } catch (err) {
+    if (!(err instanceof PodCallError)) throw err;
+    return reply.code(err.status).send({ error: err.message, ...err.extra });
   }
-
-  if (!order.seatId) {
-    return reply.code(400).send({ error: "Order does not have a pod assigned" });
-  }
-
-  // Check if there's already a pending call for this order
-  const existingCall = await prisma.podCall.findFirst({
-    where: {
-      orderId: id,
-      status: "PENDING",
-    },
-  });
-
-  if (existingCall) {
-    return reply.code(400).send({
-      error: "You already have a pending call. Staff will be with you shortly.",
-      call: existingCall
-    });
-  }
-
-  // Create the pod call
-  const podCall = await prisma.podCall.create({
-    data: {
-      orderId: id,
-      seatId: order.seatId,
-      locationId: order.locationId,
-      reason: reason || "GENERAL",
-    },
-    include: {
-      seat: true,
-      order: {
-        select: {
-          orderNumber: true,
-          kitchenOrderNumber: true,
-        },
-      },
-    },
-  });
-
-  console.log(`[POD CALL] Pod ${order.seat.number} requesting staff - Reason: ${reason || "GENERAL"}`);
-
-  return {
-    success: true,
-    message: "Staff has been notified. Someone will be with you shortly.",
-    call: podCall,
-  };
 });
 
 // GET /pod-calls - Get all pending pod calls for a location
@@ -3581,6 +3593,9 @@ app.get("/orders/by-number/:orderNumber", async (req, reply) => {
   };
 });
 
+// Task A8b, fix round 1: this route is PUBLIC and had no ownership check -
+// see orders/order-view.js for who gets the full order (with user/guest
+// contact fields) versus the safe status-only view.
 app.get("/orders/:id", async (req, reply) => {
   const { id } = req.params;
   const locale = getLocale(req);
@@ -3620,7 +3635,18 @@ app.get("/orders/:id", async (req, reply) => {
     })),
   };
 
-  return localizedOrder;
+  // The plan's status demo is synthetic (no real user/guest) and public by
+  // design - it always keeps its full demo shape.
+  if (isDemoOrderId(order.id)) return localizedOrder;
+
+  const canSeeFull = await canSeeFullOrder(req, order, {
+    checkAdminAuth,
+    kioskDeviceFor: kioskAuth.deviceFor,
+    resolveCustomer: customerAuth.resolve,
+    findGuestBySessionToken: (token) => prisma.guest.findUnique({ where: { sessionToken: token } }),
+  });
+
+  return canSeeFull ? localizedOrder : safeOrderView(localizedOrder);
 });
 
 // POST /orders, /orders/quote, /orders/:id/payment-intent and /orders/:id/confirm-payment live in
@@ -6202,7 +6228,20 @@ app.patch("/kitchen/orders/:id/status", async (req, reply) => {
     }
   }
 
-  return order;
+  // Task A8b, fix round 1, final sweep: this route is MUST_STAY_OPEN (the
+  // customer status page's own "I'm done eating" PATCHes it with no
+  // session) and returned the full order, including `user: true`, to any
+  // caller. No known caller reads this response (the status page discards
+  // it and refetches GET /orders/status; kitchen-display.tsx and
+  // pods-manager.tsx discard it and refetch their own staff-gated GETs), so
+  // this only closes the leak - same rule as GET /orders/:id.
+  const canSeeFull = await canSeeFullOrder(req, order, {
+    checkAdminAuth,
+    kioskDeviceFor: kioskAuth.deviceFor,
+    resolveCustomer: customerAuth.resolve,
+    findGuestBySessionToken: (token) => prisma.guest.findUnique({ where: { sessionToken: token } }),
+  });
+  return canSeeFull ? order : safeOrderView(order);
 });
 
 // Get kitchen stats (orders by status)
@@ -12920,13 +12959,24 @@ app.post("/admin/party-invitations", async (request, reply) => {
 // Routes: src/chappy/routes.js (Task B1). One identity preHandler (verified
 // member session or signed guest token), POST /chappy/chat streams SSE through
 // Fastify so the CORS allowlist applies, and every Chappy handler and tool uses
-// basePrisma (never the demo-wrapped client). checkLimits is Task B3's hook.
+// basePrisma (never the demo-wrapped client).
+// Task B2: tools go through the order/support services; Chappy never charges
+// (pay card only). Support notifications honor SUPPORT_NOTIFY.
+// Task B3: chappyLimits is one in-memory limiter for the whole process (see
+// chappy/limits.js): per-identity rate/token limits, the guest per-IP cap,
+// and the report_issue/request_refund/escalate_to_human case-spam cap.
+const chappyLimits = createChappyLimits({ env: process.env });
 await registerChappyRoutes(app, {
   prisma: basePrisma,
   customerAuth,
   client: anthropic,
   stripe,
-  orderEffects,
+  sendSMS,
+  sendGraphMail,
+  checkLimits: chappyLimits.checkLimits,
+  recordUsage: chappyLimits.recordUsage,
+  checkCaseLimit: chappyLimits.checkCaseLimit,
+  recordCase: chappyLimits.recordCase,
 });
 
 // ====================

@@ -6,7 +6,6 @@
  *   GET  /chappy/history           The caller's active web conversation, for display.
  *   POST /chappy/reset             Start over (a trusted service may reset any {identifier, channel}).
  *   POST /chappy/sms               Twilio webhook (X-Twilio-Signature verified, else 403), same agent, TwiML reply.
- *   POST /chappy/confirm-payment   Server-verified Apple Pay confirmation (orders/service.js).
  *
  * Identity for chat/history/reset comes from ONE preHandler
  * (requireChappyIdentity): a verified member session, or a signed guest token
@@ -18,12 +17,25 @@
  * Access-Control-Allow-Origin: * header.
  *
  * Every handler uses deps.prisma, which index.js sets to basePrisma (never the
- * demo-wrapped client). checkLimits is the hook Task B3 fills in: it may
- * return {status, code} to refuse a turn before any model call.
+ * demo-wrapped client).
+ *
+ * Payments (Task B2): Chappy never confirms a payment. Its checkout tool
+ * returns a pay card (web) or a payment-page link (SMS), and the customer's
+ * tap pays through POST /orders/:id/confirm-payment (orders/routes.js). The
+ * old POST /chappy/confirm-payment is gone.
+ *
+ * Limits (Task B3, chappy/limits.js): checkLimits refuses a turn before any
+ * model call with {status, code:"RATE"|"BUDGET", body:{retryAfterSeconds?},
+ * message?} (message is the short SMS reply; the web JSON body is
+ * {error: code, ...body}). recordUsage tallies each turn's total output
+ * tokens (every round) against its identity's daily budget once the turn's
+ * `done` event arrives. checkCaseLimit/recordCase (passed through toolDeps)
+ * are the case-spam cap for report_issue/request_refund/escalate_to_human.
+ * All four default to no-ops so a caller that doesn't wire a limiter sees no
+ * limit at all (e.g. index.js always wires one; tests may not).
  */
 import { Readable } from "node:stream";
-import { resolveChappyWebIdentity, chappyCreditsToDeduct } from "../auth/customer.js";
-import { confirmOrderPayment as defaultConfirmOrderPayment, OrderError } from "../orders/service.js";
+import { resolveChappyWebIdentity } from "../auth/customer.js";
 import {
   runTurn,
   loadOrCreateConversation,
@@ -35,6 +47,7 @@ import {
 } from "./agent.js";
 import { fallbackText } from "./prompts.js";
 import { checkTwilioSignature } from "./twilio-signature.js";
+import { toE164, usersWithPhone, smsMemberFor } from "./phone.js";
 import { formatForSMS } from "./formatters/rcs.js";
 import { formatForWeb } from "./formatters/web.js";
 
@@ -100,12 +113,52 @@ export async function registerChappyRoutes(app, deps) {
     client,
     tools,
     checkLimits = async () => null,
+    // Task B3: recordUsage tallies output tokens after each turn's `done`
+    // event; checkCaseLimit/recordCase are the case-spam cap for
+    // report_issue/request_refund/escalate_to_human. All default to no-ops
+    // so callers (and older tests) that don't pass a limiter see no limit.
+    recordUsage = () => {},
+    checkCaseLimit = () => ({ ok: true }),
+    recordCase = () => {},
     now = () => new Date(),
     stripe = null,
-    orderEffects,
-    confirmOrderPayment = defaultConfirmOrderPayment,
+    sendSMS = null,
+    sendGraphMail = null,
     env = process.env,
   } = deps;
+
+  // What the tools need beyond prisma. Support notifications honor SUPPORT_NOTIFY (env).
+  const toolDeps = {
+    stripe,
+    notify: { env, sendSMS, sendGraphMail },
+    webBaseUrl: String(env.WEB_BASE_URL || "https://www.ohbeef.com").replace(/\/+$/, ""),
+    checkCaseLimit,
+    recordCase,
+  };
+
+  /** Tally a turn's total output tokens (every round) against its identity's daily budget. Never throws. */
+  async function noteUsage(identity, usage) {
+    const tokens = usage?.output_tokens;
+    if (!Number.isFinite(tokens) || tokens <= 0) return;
+    try {
+      await recordUsage({ identity, tokens, now: now() });
+    } catch (err) {
+      console.error("[Chappy] recordUsage failed:", err?.message);
+    }
+  }
+
+  /**
+   * Wraps a runTurn() event stream so the terminal event's usage is recorded
+   * once the turn ends, whether it ends in `done` or `error` (Task B3 fix
+   * round 1: a refusal or a failed model request still spent tokens on
+   * whatever rounds completed, and those must count against the budget too).
+   */
+  async function* withUsageRecording(events, identity) {
+    for await (const event of events) {
+      if (event.type === "done" || event.type === "error") await noteUsage(identity, event.usage);
+      yield event;
+    }
+  }
 
   /** The one identity check for every web Chappy route: sets req.chappyIdentity or answers 401. */
   async function requireChappyIdentity(req, reply) {
@@ -142,7 +195,7 @@ export async function registerChappyRoutes(app, deps) {
     const identity = req.chappyIdentity;
     const message = body.message.trim();
 
-    if (await limited(reply, { identity, channel: "web", message, req })) return reply;
+    if (await limited(reply, { identity, channel: "web", message, req, now: now() })) return reply;
     if (!client) return reply.code(503).send({ error: "CHAPPY_UNAVAILABLE" });
 
     const at = now();
@@ -151,13 +204,13 @@ export async function registerChappyRoutes(app, deps) {
     reply.raw.on("close", () => {
       if (!reply.raw.writableFinished) abort.abort();
     });
-    const events = runTurn({ client, prisma, identity, channel: "web", locale, message, conversation, tools, now: at, signal: abort.signal });
+    const events = runTurn({ client, prisma, identity, channel: "web", locale, message, conversation, tools, toolDeps, now: at, signal: abort.signal });
     return reply
       .code(200)
       .header("content-type", "text/event-stream; charset=utf-8")
       .header("cache-control", "no-cache, no-transform")
       .header("x-accel-buffering", "no")
-      .send(Readable.from(toSse(events)));
+      .send(Readable.from(toSse(withUsageRecording(events, identity))));
   });
 
   app.get("/chappy/history", { preHandler: requireChappyIdentity }, async (req) => {
@@ -207,28 +260,39 @@ export async function registerChappyRoutes(app, deps) {
     try {
       const keyword = handleSpecialKeywords(Body);
       if (keyword.handled) {
-        if (keyword.action === "UNSUBSCRIBE") {
-          await prisma.user.updateMany({ where: { phone: { contains: phone } }, data: { smsOptIn: false } });
-        } else if (keyword.action === "RESUBSCRIBE") {
-          await prisma.user.updateMany({ where: { phone: { contains: phone } }, data: { smsOptIn: true, smsOptInDate: now() } });
+        // Exact E.164 match only: a partial number never changes someone else's consent.
+        if (keyword.action === "UNSUBSCRIBE" || keyword.action === "RESUBSCRIBE") {
+          const ids = (await usersWithPhone(prisma, toE164(From))).map((u) => u.id);
+          if (ids.length) {
+            const data = keyword.action === "UNSUBSCRIBE" ? { smsOptIn: false } : { smsOptIn: true, smsOptInDate: now() };
+            await prisma.user.updateMany({ where: { id: { in: ids } }, data });
+          }
         }
         return twiml([keyword.response]);
       }
       if (String(Body).length > MESSAGE_MAX_CHARS) return twiml([fallbackText("tooLong", "en")]);
       if (!client) return twiml([fallbackText("error", "en")]);
 
-      const user = await prisma.user.findFirst({ where: { phone: { contains: phone } } });
+      // A member only on an exact E.164 match with SMS opted in (chappy/phone.js).
+      const user = await smsMemberFor(prisma, From);
       const identity = { kind: "sms", phone, userId: user?.id || null };
-      const limit = await checkLimits({ identity, channel: "sms", message: Body, req });
+      const limit = await checkLimits({ identity, channel: "sms", message: Body, req, now: now() });
       if (limit) return twiml([limit.message || fallbackText("error", "en")]);
 
       const at = now();
       const conversation = await loadOrCreateConversation(prisma, phone, "sms", at);
       let text = "";
       let error = null;
-      for await (const event of runTurn({ client, prisma, identity, channel: "sms", locale: "en", message: Body, conversation, tools, now: at })) {
-        if (event.type === "done") text = event.text;
-        else if (event.type === "error") error = event.code;
+      for await (const event of runTurn({ client, prisma, identity, channel: "sms", locale: "en", message: Body, conversation, tools, toolDeps, now: at })) {
+        if (event.type === "done") {
+          text = event.text;
+          await noteUsage(identity, event.usage);
+        } else if (event.type === "error") {
+          error = event.code;
+          // Fix round 1: a refusal or a failed model request still spent
+          // tokens on whatever rounds completed; count them too.
+          await noteUsage(identity, event.usage);
+        }
       }
       if (error) text = fallbackText(error === "REFUSAL" ? "refusal" : "error", "en");
       const { messages } = formatForSMS(text || fallbackText("empty", "en"));
@@ -237,71 +301,6 @@ export async function registerChappyRoutes(app, deps) {
     } catch (err) {
       console.error("[Chappy SMS Error]", err);
       return twiml([fallbackText("error", "en")]);
-    }
-  });
-
-  // Confirm an Apple Pay payment for a Chappy order (server-verified, Task A6).
-  app.post("/chappy/confirm-payment", async (req, reply) => {
-    try {
-      const { orderId, paymentIntentId } = req.body || {};
-      if (!orderId || !paymentIntentId) return reply.status(400).send({ error: "orderId and paymentIntentId required" });
-
-      const order = await prisma.order.findUnique({
-        where: { id: orderId },
-        include: { items: { include: { menuItem: true } }, location: true, seat: true, user: true },
-      });
-      if (!order) return reply.status(404).send({ error: "Order not found" });
-      if (order.paymentStatus === "PAID") {
-        return reply.send({ success: true, alreadyPaid: true, orderId: order.id, orderNumber: order.orderNumber, kitchenOrderNumber: order.kitchenOrderNumber });
-      }
-
-      // The PaymentIntent's status, exact amount and metadata.orderId, through
-      // the shared order service. A server-priced order goes through markPaid
-      // (idempotent, spends its savings, refunds a charge it can't apply); a
-      // legacy order needs amount === totalCents.
-      let result;
-      try {
-        result = await confirmOrderPayment(prisma, stripe, { orderId, paymentIntentId, now: now() }, orderEffects);
-      } catch (err) {
-        if (err instanceof OrderError) return reply.status(err.status).send({ error: err.code, message: err.message, ...err.extra });
-        throw err;
-      }
-
-      if (result.legacy && !result.alreadyPaid) {
-        // Legacy (pre-quote) Chappy order: its original follow-ups.
-        await prisma.order.update({ where: { id: orderId }, data: { status: "PAID", podAssignedAt: order.seatId ? now() : null } });
-        // Apply credits only for the verified caller's own order (auth/customer.js).
-        const creditsApplied = chappyCreditsToDeduct(await customerAuth.resolve(req), order);
-        if (creditsApplied > 0) {
-          await prisma.user.update({ where: { id: order.userId }, data: { creditsCents: { decrement: creditsApplied } } });
-        }
-        if (order.seatId) await prisma.seat.update({ where: { id: order.seatId }, data: { status: "OCCUPIED" } });
-      }
-
-      const updated = await prisma.order.findUnique({
-        where: { id: orderId },
-        include: { items: { include: { menuItem: true } }, location: true, seat: true },
-      });
-      return reply.send({
-        success: true,
-        orderId: updated.id,
-        orderNumber: updated.orderNumber,
-        kitchenOrderNumber: updated.kitchenOrderNumber,
-        total: `$${(updated.totalCents / 100).toFixed(2)}`,
-        location: updated.location.name,
-        podNumber: updated.seat?.number || null,
-        estimatedArrival: updated.estimatedArrival?.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
-        message: updated.seat
-          ? `Order confirmed! Head to Pod ${updated.seat.number} at ${updated.location.name}.`
-          : `Order confirmed! Head to ${updated.location.name} and check in when you arrive.`,
-        items: updated.items.map((i) => ({ name: i.menuItem.name, quantity: i.quantity })),
-      });
-    } catch (error) {
-      console.error("[Chappy Confirm Payment Error]", error);
-      if (error && error.refunded !== undefined) {
-        return reply.status(500).send({ error: "PAYMENT_NOT_APPLIED", code: "PAYMENT_NOT_APPLIED", refunded: error.refunded });
-      }
-      return reply.status(500).send({ error: "Failed to confirm payment" });
     }
   });
 }

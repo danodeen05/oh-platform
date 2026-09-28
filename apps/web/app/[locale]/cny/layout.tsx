@@ -39,7 +39,9 @@ export default function CNYLayout({
   children: React.ReactNode;
 }) {
   return (
+    // legacy-ui: CNY keeps the retired global button/input/a/h1-h6/p rules (Task C1).
     <div
+      className="legacy-ui"
       style={{
         minHeight: "100dvh",
         width: "100%",

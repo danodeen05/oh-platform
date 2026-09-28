@@ -10,9 +10,11 @@ import cors from "@fastify/cors";
 import formbody from "@fastify/formbody";
 import rateLimit from "@fastify/rate-limit";
 import twilio from "twilio";
+import { FASTIFY_OPTIONS, rateLimitKey } from "../../http-config.js";
 import { createCustomerAuth, registerCustomerIdentity } from "../../auth/customer.js";
 import { registerChappyRoutes, GUEST_TOKEN_RATE_LIMIT } from "../routes.js";
-import { fakeClient, fakePrisma, step, text } from "./fakes.js";
+import { createChappyLimits } from "../limits.js";
+import { fakeClient, fakePrisma, step, text, apiError } from "./fakes.js";
 
 const ENV = { CLERK_SECRET_KEY: "sk_test_x", CHAPPY_GUEST_SECRET: "guest-secret-for-tests", ADMIN_API_KEY: "svc-key" };
 const ALLOWED = "http://localhost:3100";
@@ -30,11 +32,23 @@ function customerAuth() {
   });
 }
 
-async function build({ script = [step({ content: [text("Hi from Chappy")] })], checkLimits, prisma, withRateLimit = false, env = SMS_ENV } = {}) {
-  const app = Fastify();
+async function build({
+  script = [step({ content: [text("Hi from Chappy")] })],
+  checkLimits,
+  recordUsage,
+  checkCaseLimit,
+  recordCase,
+  prisma,
+  tools,
+  withRateLimit = false,
+  env = SMS_ENV,
+  fastifyOptions = {},
+  now = () => new Date("2026-10-01T18:00:00Z"),
+} = {}) {
+  const app = Fastify(fastifyOptions);
   await app.register(cors, { origin: (origin, cb) => cb(null, !origin || origin === ALLOWED), credentials: true });
   await app.register(formbody);
-  if (withRateLimit) await app.register(rateLimit, { max: 1000, timeWindow: "1 minute" });
+  if (withRateLimit) await app.register(rateLimit, { max: 1000, timeWindow: "1 minute", keyGenerator: rateLimitKey });
   const auth = customerAuth();
   registerCustomerIdentity(app, auth);
   const client = fakeClient(script);
@@ -44,9 +58,12 @@ async function build({ script = [step({ content: [text("Hi from Chappy")] })], c
     prisma: db,
     customerAuth: auth,
     client,
-    tools: { defs: [], execute: async (n) => executed.push(n) },
+    tools: tools || { defs: [], execute: async (n) => executed.push(n) },
     checkLimits,
-    now: () => new Date("2026-10-01T18:00:00Z"),
+    recordUsage,
+    checkCaseLimit,
+    recordCase,
+    now,
     env,
   });
   await app.ready();
@@ -122,6 +139,119 @@ describe("POST /chappy/chat", () => {
     assert.equal(client.calls.length, 0);
     assert.equal(seen[0].identity.kind, "member");
     assert.equal(seen[0].channel, "web");
+  });
+});
+
+describe("Task B3: real limiter wiring (chappy/limits.js)", () => {
+  test("the real limiter's 21st web message in 10 minutes is 429 RATE with retryAfterSeconds", async () => {
+    const limiter = createChappyLimits({ env: {} });
+    const { app, client } = await build({ checkLimits: limiter.checkLimits });
+    let last;
+    for (let i = 0; i < 20; i++) last = await chat(app, member, { message: `hi ${i}` });
+    assert.equal(last.statusCode, 200);
+    const blocked = await chat(app, member, { message: "one more" });
+    assert.equal(blocked.statusCode, 429);
+    assert.equal(blocked.json().error, "RATE");
+    assert.ok(blocked.json().retryAfterSeconds > 0);
+    assert.equal(client.calls.length, 20, "the blocked message never reached the model");
+  });
+
+  test("recordUsage tallies the done event's output tokens; the next turn is refused once the daily budget is spent", async () => {
+    const limiter = createChappyLimits({ env: { CHAPPY_LIMITS_JSON: JSON.stringify({ dailyOutputTokens: { max: 1000 } }) } });
+    const { app, client } = await build({
+      checkLimits: limiter.checkLimits,
+      recordUsage: limiter.recordUsage,
+      script: [step({ content: [text("Big answer")], usage: { output_tokens: 1000 } })],
+    });
+    const first = await chat(app, member, { message: "hi" });
+    assert.equal(first.statusCode, 200);
+    assert.equal(client.calls.length, 1);
+    const second = await chat(app, member, { message: "hi again" });
+    assert.equal(second.statusCode, 429);
+    assert.equal(second.json().error, "BUDGET");
+    assert.equal(client.calls.length, 1, "the refused turn never reached the model");
+  });
+
+  test("fix round 1: recordUsage also fires on a refusal (error event), not just done", async () => {
+    const limiter = createChappyLimits({ env: { CHAPPY_LIMITS_JSON: JSON.stringify({ dailyOutputTokens: { max: 1000 } }) } });
+    const { app, client } = await build({
+      checkLimits: limiter.checkLimits,
+      recordUsage: limiter.recordUsage,
+      script: [step({ content: [text("no")], stop_reason: "refusal", usage: { output_tokens: 1000 } })],
+    });
+    const first = await chat(app, member, { message: "hi" });
+    assert.equal(first.statusCode, 200, "the turn itself streams normally; only the SSE payload carries the refusal");
+    assert.equal(sseEvents(first.body).at(-1).event, "error");
+    assert.equal(client.calls.length, 1);
+    // The refused turn still spent its tokens: the next turn is over budget.
+    const second = await chat(app, member, { message: "hi again" });
+    assert.equal(second.statusCode, 429);
+    assert.equal(second.json().error, "BUDGET");
+    assert.equal(client.calls.length, 1, "the budget-refused turn never reached the model");
+  });
+
+  test("fix round 1: recordUsage also fires when the model request fails after one completed round", async () => {
+    const limiter = createChappyLimits({ env: { CHAPPY_LIMITS_JSON: JSON.stringify({ dailyOutputTokens: { max: 1000 } }) } });
+    const { TOOL_DEFS, executeTool } = await import("../tools.js");
+    const script = [
+      step({ content: [{ type: "tool_use", id: "t1", name: "escalate_to_human", input: { summary: "help", contact: "" } }], stop_reason: "tool_use", usage: { output_tokens: 1000 } }),
+      step({ throws: apiError(529) }),
+    ];
+    const { app, client } = await build({
+      checkLimits: limiter.checkLimits,
+      recordUsage: limiter.recordUsage,
+      tools: { defs: TOOL_DEFS, execute: executeTool },
+      script,
+      prisma: fakePrisma({ users: [{ id: "db_me", name: "Me", membershipTier: "CHOPSTICK", phone: "8015550100" }] }),
+    });
+    const first = await chat(app, member, { message: "help me" });
+    assert.equal(first.statusCode, 200);
+    assert.equal(sseEvents(first.body).at(-1).event, "error");
+    assert.equal(client.calls.length, 2);
+    // The one round that DID complete before the API error still spent its tokens.
+    const second = await chat(app, member, { message: "hi again" });
+    assert.equal(second.statusCode, 429);
+    assert.equal(second.json().error, "BUDGET");
+    assert.equal(client.calls.length, 2, "the budget-refused turn never reached the model");
+  });
+
+  test("SMS gets a short polite reply, not a JSON body, when rate limited", async () => {
+    const limiter = createChappyLimits({ env: { CHAPPY_LIMITS_JSON: JSON.stringify({ messages: { max: 1 } }) } });
+    const { app } = await build({ checkLimits: limiter.checkLimits });
+    const url = `${SMS_ENV.API_PUBLIC_URL}/chappy/sms`;
+    const sign = (params) => twilio.getExpectedTwilioSignature(SMS_ENV.TWILIO_AUTH_TOKEN, url, params);
+    const params = { From: "+18015550100", Body: "hi", To: "+18015550000", MessageSid: "SM1" };
+    const send = () => app.inject({ method: "POST", url: "/chappy/sms", headers: { "content-type": "application/x-www-form-urlencoded", "x-twilio-signature": sign(params) }, payload: new URLSearchParams(params).toString() });
+    const first = await send();
+    assert.equal(first.statusCode, 200);
+    const second = await send();
+    assert.equal(second.statusCode, 200, "Twilio always gets 200 with a TwiML body, never a raw 429");
+    assert.match(second.headers["content-type"], /text\/xml/);
+    assert.doesNotMatch(second.body, /\{"code"|\{"error"/, "no JSON leaks into the SMS reply");
+    assert.match(second.body, /<Message>/);
+  });
+
+  test("checkCaseLimit/recordCase deps reach the tool context (toolDeps -> agent.js's toolCtx -> executeTool)", async () => {
+    const limiter = createChappyLimits({ env: {} });
+    const seenCtx = [];
+    const toolDefs = [{ name: "escalate_to_human", description: "d", input_schema: { type: "object", properties: {}, required: [], additionalProperties: false } }];
+    const { app } = await build({
+      checkCaseLimit: limiter.checkCaseLimit,
+      recordCase: limiter.recordCase,
+      tools: {
+        defs: toolDefs,
+        execute: async (name, input, ctx) => {
+          seenCtx.push(ctx);
+          return { ok: true };
+        },
+      },
+      script: [step({ content: [{ type: "tool_use", id: "t1", name: "escalate_to_human", input: {} }], stop_reason: "tool_use" }), step({ content: [text("Done.")] })],
+    });
+    const res = await chat(app, member, { message: "help" });
+    assert.equal(res.statusCode, 200);
+    assert.equal(seenCtx.length, 1);
+    assert.equal(seenCtx[0].checkCaseLimit, limiter.checkCaseLimit);
+    assert.equal(seenCtx[0].recordCase, limiter.recordCase);
   });
 });
 
@@ -202,6 +332,26 @@ describe("POST /chappy/guest-token", () => {
     for (let i = 1; i <= GUEST_TOKEN_RATE_LIMIT.max; i++) last = await app.inject({ method: "POST", url: "/chappy/guest-token" });
     assert.equal(last.statusCode, 429);
   });
+
+  test("behind the proxy (index.js server options), each real client IP gets its own bucket", async () => {
+    assert.equal(FASTIFY_OPTIONS.trustProxy, 1);
+    const { app } = await build({ withRateLimit: true, fastifyOptions: { ...FASTIFY_OPTIONS, logger: false } });
+    // Railway appends the address it saw: "<whatever the client sent>, <real ip>".
+    const from = (xff) => app.inject({ method: "POST", url: "/chappy/guest-token", headers: { "x-forwarded-for": xff } });
+    for (let i = 0; i < GUEST_TOKEN_RATE_LIMIT.max; i++) assert.equal((await from("203.0.113.10")).statusCode, 200);
+    assert.equal((await from("203.0.113.10")).statusCode, 429, "client A is out");
+    assert.equal((await from("198.51.100.20")).statusCode, 200, "client B has its own bucket");
+    // A client cannot pick a fresh bucket by forging the leftmost entry.
+    assert.equal((await from("1.2.3.4, 203.0.113.10")).statusCode, 429);
+    assert.equal((await from("5.6.7.8, 203.0.113.10")).statusCode, 429);
+  });
+
+  test("without trustProxy every client shares the proxy's bucket (the bug this fixes)", async () => {
+    const { app } = await build({ withRateLimit: true });
+    const from = (xff) => app.inject({ method: "POST", url: "/chappy/guest-token", headers: { "x-forwarded-for": xff } });
+    for (let i = 0; i < GUEST_TOKEN_RATE_LIMIT.max; i++) await from("203.0.113.10");
+    assert.equal((await from("198.51.100.20")).statusCode, 429);
+  });
 });
 
 describe("POST /chappy/sms (Twilio webhook)", () => {
@@ -275,5 +425,55 @@ describe("POST /chappy/sms (Twilio webhook)", () => {
     assert.equal(res.statusCode, 200);
     assert.equal(client.calls.length, 0);
     assert.match(res.body, /<Message>/);
+  });
+});
+
+describe("SMS identity (Task B2 fix round 1)", () => {
+  const URL_SMS = `${SMS_ENV.API_PUBLIC_URL}/chappy/sms`;
+  const signedSms = (app, params) =>
+    app.inject({
+      method: "POST",
+      url: "/chappy/sms",
+      headers: { "content-type": "application/x-www-form-urlencoded", "x-twilio-signature": twilio.getExpectedTwilioSignature(SMS_ENV.TWILIO_AUTH_TOKEN, URL_SMS, params) },
+      payload: new URLSearchParams(params).toString(),
+    });
+  const tierSeen = (client) => JSON.parse(client.calls[0].params.messages.at(-1).content[0].text.slice(9, -10)).tier;
+  const withUsers = (users) => fakePrisma({ users });
+
+  test("an exact E.164 match with smsOptIn is the member", async () => {
+    const { app, client } = await build({ prisma: withUsers([{ id: "u1", membershipTier: "BEEF_BOSS", phone: "(801) 555-0100", smsOptIn: true }]) });
+    await signedSms(app, { From: "+18015550100", Body: "hi" });
+    assert.equal(tierSeen(client), "BEEF_BOSS");
+  });
+
+  test("a partial (contains) phone match is not a member", async () => {
+    const { app, client } = await build({ prisma: withUsers([{ id: "u1", membershipTier: "BEEF_BOSS", phone: "+1 385 801 555 0100", smsOptIn: true }]) });
+    await signedSms(app, { From: "+18015550100", Body: "hi" });
+    assert.equal(tierSeen(client), null);
+  });
+
+  test("a member without smsOptIn is a guest on SMS", async () => {
+    const { app, client } = await build({ prisma: withUsers([{ id: "u1", membershipTier: "BEEF_BOSS", phone: "8015550100", smsOptIn: false }]) });
+    await signedSms(app, { From: "+18015550100", Body: "hi" });
+    assert.equal(tierSeen(client), null);
+  });
+
+  test("STOP opts out only the exact number, never a partial match", async () => {
+    const users = [
+      { id: "me", phone: "801-555-0100", smsOptIn: true },
+      { id: "not_me", phone: "+1 385 801 555 0100", smsOptIn: true },
+    ];
+    const { app } = await build({ prisma: withUsers(users) });
+    await signedSms(app, { From: "+18015550100", Body: "STOP" });
+    assert.equal(users[0].smsOptIn, false);
+    assert.equal(users[1].smsOptIn, true);
+  });
+});
+
+describe("payments (Task B2)", () => {
+  test("POST /chappy/confirm-payment is gone: payment is confirmed only by the order routes", async () => {
+    const { app } = await build();
+    const res = await app.inject({ method: "POST", url: "/chappy/confirm-payment", headers: { ...member, "content-type": "application/json" }, payload: { orderId: "o1", paymentIntentId: "pi_1" } });
+    assert.equal(res.statusCode, 404);
   });
 });

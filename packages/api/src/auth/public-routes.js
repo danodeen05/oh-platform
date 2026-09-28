@@ -166,7 +166,6 @@ export const PUBLIC_ROUTES = Object.freeze([
   p("POST", "/chappy/chat", "customer"),
   p("GET", "/chappy/history", "customer"),
   p("POST", "/chappy/reset", "customer"),
-  p("POST", "/chappy/confirm-payment", "customer"),
 
   // Catering: public catering/* (404s unless CATERING_PUBLIC_ENABLED, except the two admin-console reads)
   p("GET", "/catering/site-config/order-now", "catering-public"),

@@ -353,6 +353,31 @@ export async function pickBestPod(tx, { locationId, arrival = null, partySize = 
   throw new PodUnavailableError();
 }
 
+/** Carries a preview's result out of the transaction that is being rolled back. */
+class PodPreview {
+  constructor(value) {
+    this.value = value;
+  }
+}
+
+/**
+ * What pickBestPod WOULD pick right now, with nothing claimed: the pick runs
+ * inside a transaction that is always rolled back (Chappy's
+ * set_arrival_and_pod, Task B2). Same arguments as pickBestPod; throws
+ * PodUnavailableError the same way. The real claim happens in createOrder.
+ */
+export async function previewPod(prisma, args) {
+  try {
+    await prisma.$transaction(async (tx) => {
+      throw new PodPreview(await pickBestPod(tx, args));
+    });
+  } catch (err) {
+    if (err instanceof PodPreview) return err.value;
+    throw err;
+  }
+  return null;
+}
+
 // ---------------------------------------------------------------------------
 // Create
 // ---------------------------------------------------------------------------
@@ -1096,7 +1121,9 @@ async function settleBatch(prisma, stripe, { ids, orders, pi, now, strict }, eff
 
 /**
  * Payment confirmation for callers that may still see legacy (pre-quote)
- * orders, e.g. /chappy/confirm-payment. A server-priced order goes through
+ * orders. Its last route caller, /chappy/confirm-payment, was removed in Task
+ * B2 (customers pay through POST /orders/:id/confirm-payment, which calls
+ * markPaid); it is kept for the legacy-order path. A server-priced order goes through
  * markPaid. A legacy order (null amountDueCents) is PAID only for a
  * succeeded PaymentIntent with metadata.orderId === orderId and
  * amount === order.totalCents, through a conditional claim.

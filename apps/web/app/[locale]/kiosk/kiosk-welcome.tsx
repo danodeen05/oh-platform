@@ -3,6 +3,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { QRScanner, parseKioskQR, LanguageSelector, AnimatedOrderQR, useKioskMode, useKioskScale, useKioskNarrow } from "@/components/kiosk";
+import { kioskAuthHeaders } from "@/components/kiosk/KioskDeviceProvider";
 
 // Welcome messages in different languages for cycling animation
 const WELCOME_MESSAGES = [
@@ -815,7 +816,7 @@ function QRScanView({ location, onBack }: { location: Location; onBack: () => vo
     try {
       const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
       const res = await fetch(`${API_URL}/orders/lookup?code=${encodeURIComponent(orderCode.trim())}`, {
-        headers: { "x-tenant-slug": "oh" },
+        headers: { "x-tenant-slug": "oh", ...kioskAuthHeaders() },
       });
 
       if (!res.ok) {

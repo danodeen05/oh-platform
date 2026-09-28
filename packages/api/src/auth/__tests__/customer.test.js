@@ -2,7 +2,7 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import Fastify from "fastify";
-import { createCustomerAuth, registerCustomerIdentity, GUEST_TOKEN_TTL_MS, orderOwnerId, chappyCreditsToDeduct, resolveChappyWebIdentity } from "../customer.js";
+import { createCustomerAuth, registerCustomerIdentity, GUEST_TOKEN_TTL_MS, orderOwnerId, resolveChappyWebIdentity } from "../customer.js";
 
 const ENV = { CLERK_SECRET_KEY: "sk_test_x", CLERK_SECRET_KEY_DEV: "sk_dev_y", CHAPPY_GUEST_SECRET: "guest-secret-for-tests", ADMIN_API_KEY: "key-123" };
 
@@ -309,14 +309,6 @@ describe("order ownership and Chappy credits", () => {
     assert.equal(orderOwnerId({ kind: "guest", guestKey: "k" }), null);
     assert.equal(orderOwnerId({ kind: "anonymous" }), null);
     assert.equal(orderOwnerId({ kind: "service" }), null);
-  });
-  test("chappyCreditsToDeduct: only the verified caller's own order, capped at $5", () => {
-    const me = { kind: "user", userId: "db_me", email: "me@x.com" };
-    assert.equal(chappyCreditsToDeduct(me, { userId: "db_me", user: { creditsCents: 1200 } }), 500);
-    assert.equal(chappyCreditsToDeduct(me, { userId: "db_me", user: { creditsCents: 300 } }), 300);
-    assert.equal(chappyCreditsToDeduct(me, { userId: "db_victim", user: { creditsCents: 1200 } }), 0);
-    assert.equal(chappyCreditsToDeduct({ kind: "anonymous" }, { userId: "db_victim", user: { creditsCents: 1200 } }), 0);
-    assert.equal(chappyCreditsToDeduct(me, { userId: "db_me", user: { creditsCents: 0 } }), 0);
   });
 });
 
