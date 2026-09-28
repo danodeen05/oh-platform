@@ -7,7 +7,7 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import Fastify from "fastify";
 import { registerMealGiftPayForward } from "../meal-gift-routes.js";
-import { publicMealGift } from "../meal-gift-view.js";
+import { publicMealGift, nextMealGiftFor } from "../meal-gift-view.js";
 import { seed, NOW } from "./fixtures.js";
 
 const fakeCustomerAuth = {
@@ -73,6 +73,40 @@ describe("POST /meal-gifts/:id/pay-forward", () => {
   test("a gift that's no longer pending can't be passed on", async () => {
     const { app } = await buildApp([gift({ status: "ACCEPTED" })]);
     assert.equal((await payForward(app, auth("u1"))).statusCode, 400);
+  });
+});
+
+describe("D5 fix round 3 (follow-up): nextMealGiftFor never offers the caller their own gift", () => {
+  const EXPIRES = new Date(NOW.getTime() + 3600_000);
+
+  test("no excludeGiverId (anonymous): the plain FIFO gift, even if it's the only one and self-given", async () => {
+    const prisma = seed({ mealGifts: [gift({ id: "mg1", giverId: "u2", createdAt: NOW })], mealGiftChains: [] });
+    const found = await nextMealGiftFor(prisma, { locationId: "L1", excludeGiverId: null, now: NOW });
+    assert.equal(found?.id, "mg1");
+  });
+
+  test("the caller's own oldest gift is skipped for the next PENDING gift at the location", async () => {
+    const prisma = seed({
+      mealGifts: [
+        gift({ id: "mg1", giverId: "u1", createdAt: NOW }),
+        gift({ id: "mg2", giverId: "u2", createdAt: new Date(NOW.getTime() + 1000) }),
+      ],
+      mealGiftChains: [],
+    });
+    const found = await nextMealGiftFor(prisma, { locationId: "L1", excludeGiverId: "u1", now: NOW });
+    assert.equal(found?.id, "mg2");
+  });
+
+  test("if every pending gift at the location is the caller's own, there's none to offer", async () => {
+    const prisma = seed({ mealGifts: [gift({ id: "mg1", giverId: "u1", createdAt: NOW })], mealGiftChains: [] });
+    const found = await nextMealGiftFor(prisma, { locationId: "L1", excludeGiverId: "u1", now: NOW });
+    assert.equal(found, null);
+  });
+
+  test("a different member still sees the gift the caller was excluded from", async () => {
+    const prisma = seed({ mealGifts: [gift({ id: "mg1", giverId: "u1", createdAt: NOW })], mealGiftChains: [] });
+    const found = await nextMealGiftFor(prisma, { locationId: "L1", excludeGiverId: "u3", now: NOW });
+    assert.equal(found?.id, "mg1");
   });
 });
 

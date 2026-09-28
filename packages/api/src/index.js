@@ -112,7 +112,7 @@ import { claimCheckInSeat } from "./seats/kiosk-seat.js";
 import { claimSeat, holdSeatForOrder, holdPodAtPay } from "./orders/service.js";
 import { canSeeFullOrder, safeOrderView, firstNameOnly } from "./orders/order-view.js";
 import { registerKitchenStatusRoutes } from "./orders/kitchen-status.js";
-import { publicMealGift } from "./orders/meal-gift-view.js";
+import { publicMealGift, nextMealGiftFor } from "./orders/meal-gift-view.js";
 import { registerMealGiftPayForward } from "./orders/meal-gift-routes.js";
 
 // DEMO- order codes resolve to a synthetic order (see demo/status-demo.js):
@@ -10121,28 +10121,18 @@ app.post("/meal-gifts", async (req, reply) => {
 app.get("/meal-gifts/next/:locationId", async (req, reply) => {
   const { locationId } = req.params;
 
-  // Find the oldest pending gift at this location that hasn't expired
-  const mealGift = await prisma.mealGift.findFirst({
-    where: {
-      locationId,
-      status: "PENDING",
-      paidAt: { not: null }, // Funded gifts only (Task A6)
-      expiresAt: { gt: new Date() }, // Not expired
-    },
-    orderBy: {
-      createdAt: "asc", // FIFO order
-    },
-    include: {
-      giver: { select: { id: true, name: true } },
-      location: { select: { id: true, name: true, city: true } },
-      chain: {
-        include: {
-          recipient: { select: { id: true, name: true } },
-        },
-        orderBy: { createdAt: "asc" },
-      },
-    },
-  });
+  // Task D5 fix round 3 (follow-up): a verified caller is never offered
+  // their own gift back - resolveMealGift already refuses to let a giver
+  // redeem their own gift (400 OWN_GIFT), but leaving this FIFO suggestion
+  // pointed at it meant a giver's own checkout would fail until they
+  // noticed and cleared it. nextMealGiftFor (orders/meal-gift-view.js) skips
+  // straight to the next PENDING gift instead. Anonymous callers (no
+  // verified session) still see the plain FIFO gift - there's no identity
+  // to exclude.
+  const who = await customerAuth.resolve(req);
+  const excludeGiverId = who && who.kind === "user" && who.userId ? who.userId : null;
+
+  const mealGift = await nextMealGiftFor(prisma, { locationId, excludeGiverId });
 
   if (!mealGift) {
     return reply.code(404).send({ error: "No meal gifts available" });

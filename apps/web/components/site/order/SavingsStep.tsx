@@ -18,6 +18,7 @@ import { SITE_API_URL, type SiteFetch } from "@/lib/site/api";
 import type { DraftSavings } from "@/lib/site/order-draft";
 import { formatCents } from "@/lib/site/order-flow";
 import type { OrderApiError } from "@/lib/site/orders";
+import { fetchNextMealGift, type MealGift } from "@/lib/site/meal-gift";
 import { Receipt, type ReceiptLine, type ReceiptTotals } from "./Receipt";
 import type { ServerQuote } from "./useQuote";
 
@@ -28,7 +29,6 @@ const SMALL_BTN = `h-12 shrink-0 cursor-pointer appearance-none rounded-2xl bord
 
 type Reward = { id: string; type: "FREE_BOWL" | "PREMIUM_ADDON" | string; windowEndsAt: string; active?: boolean };
 type Lot = { remainingCents: number; expiresAt: string };
-type MealGift = { id: string; amountCents: number; messageFromGiver?: string | null; giver?: { name?: string | null } | null };
 
 export interface SavingsStepProps {
   locationId: string;
@@ -54,20 +54,20 @@ export function SavingsStep({ locationId, userId, api, savings, onSavings, quote
   const [giftInput, setGiftInput] = useState(savings.giftCardCode || "");
   const [mealGift, setMealGift] = useState<MealGift | null>(null);
 
-  // A meal someone paid forward at this location (oldest first, funded, unexpired). It is a
-  // tender the server quotes and spends at PAID, exactly as the old checkout did.
+  // A meal someone paid forward at this location (fetchNextMealGift,
+  // lib/site/meal-gift.ts - Task D5 fix round 3 follow-up: uses the
+  // authenticated `api` fetch, never a bare `fetch`, so the server can
+  // exclude the signed-in caller's own gift).
   useEffect(() => {
     let cancelled = false;
-    fetch(`${SITE_API_URL}/meal-gifts/next/${encodeURIComponent(locationId)}`, { headers: { "x-tenant-slug": "oh" }, cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((g) => {
-        if (!cancelled) setMealGift(g && typeof g.id === "string" && typeof g.amountCents === "number" ? g : null);
-      })
-      .catch(() => undefined);
+    fetchNextMealGift(api, SITE_API_URL, locationId).then((g) => {
+      if (!cancelled) setMealGift(g);
+    });
     return () => {
       cancelled = true;
     };
-  }, [locationId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locationId, userId]);
 
   useEffect(() => {
     if (!userId) return;
