@@ -1,11 +1,14 @@
 "use client";
 
-import dynamic from "next/dynamic";
+import { ChappyLauncher, ChappyProvider } from "@/components/site/chappy/ChappyLauncher";
 
-// The floating legacy Chappy widget, client-only (it reads localStorage and
-// portals into <body>). Moved here from components/Providers.tsx in Task C4.
-const ChappyChatWrapper = dynamic(() => import("@/components/ChappyChatWrapper"), { ssr: false });
-
+// Chappy on the pre-overhaul pages (Task E1): the same widget as the site
+// shell's (one Chappy site-wide), opened from a floating launcher because
+// these pages have no dock. The widget chunk loads on the first tap.
 export function LegacyChappy() {
-  return <ChappyChatWrapper />;
+  return (
+    <ChappyProvider>
+      <ChappyLauncher />
+    </ChappyProvider>
+  );
 }

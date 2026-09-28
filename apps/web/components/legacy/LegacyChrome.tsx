@@ -1,6 +1,6 @@
 /**
  * The pre-overhaul site chrome (Task C4 layout split): Header,
- * ActiveOrderBanner, Footer and the floating Chappy widget, around routes
+ * ActiveOrderBanner, Footer and a floating Chappy launcher, around routes
  * that have not been rebuilt yet. It used to live in app/[locale]/layout.tsx
  * and was inherited by every route; now only the `(legacy)` group (and the
  * two stay-in-place routes that had it, agents and kiosk-unauthorized)
@@ -36,11 +36,9 @@ export async function LegacyChrome({ children }: { children: ReactNode }) {
           <Footer />
         </div>
       </div>
-      {/* legacy-ui: the old Chappy widget still uses bare button/input/a/h1-h3
-          tags, so it needs the scoped rules too until Task E1 replaces it. */}
-      <div className="legacy-ui">
-        <LegacyChappy />
-      </div>
+      {/* Task E1: the site's Chappy (built on site utilities, so NOT under
+          .legacy-ui), opened from a floating launcher. */}
+      <LegacyChappy />
     </>
   );
 }

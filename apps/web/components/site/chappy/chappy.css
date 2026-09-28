@@ -1,0 +1,90 @@
+/*
+ * Chappy web chat (Task E1). Only what utilities can't say cleanly: the
+ * phone sheet's full-screen, keyboard-aware geometry on top of the C3 Sheet,
+ * and the working-state brush stroke.
+ */
+
+/* Phone: the C3 Sheet, full screen. Its root follows the VISUAL viewport
+   (ChappySheet sets --chappy-vvh/--chappy-vvt from window.visualViewport),
+   so when the on-screen keyboard opens the whole sheet shrinks above it and
+   the composer, pinned to the sheet's bottom, stays in view. */
+.chappy-sheet.oh-sheet-root {
+  top: var(--chappy-vvt, 0px);
+  bottom: auto;
+  height: var(--chappy-vvh, 100svh);
+  align-items: stretch;
+}
+
+.chappy-sheet .oh-sheet-panel {
+  display: flex;
+  flex-direction: column;
+  max-width: none;
+  max-height: none;
+  height: 100%;
+  overflow: hidden;
+  padding: env(safe-area-inset-top, 0px) 0 0;
+  border-radius: 0;
+  background: var(--color-oh-ink);
+  color: var(--color-oh-cream);
+  box-shadow: none;
+}
+
+.chappy-sheet .oh-sheet-grab-zone {
+  flex-shrink: 0;
+  height: 20px;
+}
+
+.chappy-sheet .oh-sheet-grabber {
+  background: var(--color-oh-stone);
+}
+
+/* The working state: a short ember brush stroke with a slow sheen passing
+   along it, beside the translated tool status. No typing dots. */
+.chappy-brush {
+  position: relative;
+  display: block;
+  width: 44px;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 2px 3px 3px 1px / 2px 2px 2px 2px;
+  background: color-mix(in srgb, var(--color-oh-ember) 55%, transparent);
+  clip-path: polygon(0 35%, 12% 0, 100% 30%, 96% 100%, 8% 85%);
+}
+
+.chappy-brush::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, var(--color-oh-ember-light), transparent);
+  transform: translateX(-100%);
+  animation: chappy-sheen 1.6s ease-in-out infinite;
+}
+
+@keyframes chappy-sheen {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* A new turn settles in gently. */
+.chappy-enter {
+  animation: chappy-enter 240ms ease-out both;
+}
+
+@keyframes chappy-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chappy-brush::after,
+  .chappy-enter {
+    animation: none;
+  }
+  .chappy-brush::after {
+    transform: none;
+    opacity: 0.35;
+  }
+}

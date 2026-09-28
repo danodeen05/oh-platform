@@ -2150,5 +2150,90 @@
         "nav": "Enlaces del pie de página"
       }
     }
+  },
+  "chappyWeb": {
+    "dialogLabel": "Chatea con Chappy",
+    "name": "Chappy",
+    "tagline": "Preguntas, pedidos y cualquier problema.",
+    "open": "Pregúntale a Chappy",
+    "close": "Cerrar",
+    "reset": "Empezar de nuevo",
+    "welcome": "Hola, soy Chappy. Puedo responder preguntas, pedir tu tazón o resolver un problema con un pedido. ¿Qué necesitas?",
+    "quickTitle": "Prueba a preguntar",
+    "quick": {
+      "usual": "Pide lo de siempre",
+      "today": "¿Qué está bueno hoy?",
+      "where": "¿Dónde está mi pedido?",
+      "problem": "Tengo un problema con mi pedido"
+    },
+    "placeholder": "Escríbele a Chappy",
+    "inputLabel": "Tu mensaje para Chappy",
+    "send": "Enviar",
+    "you": "Tú",
+    "loading": "Cargando tu conversación",
+    "note": "Chappy es un asistente de IA. No se cobra nada hasta que toques para pagar.",
+    "retry": "Intentar de nuevo",
+    "signIn": "Iniciar sesión",
+    "tools": {
+      "search_menu": "Revisando el menú",
+      "get_menu_item": "Mirando ese plato",
+      "get_locations": "Revisando nuestros locales",
+      "get_membership_program": "Revisando el programa de recompensas",
+      "get_my_profile": "Buscando tu cuenta",
+      "get_my_orders": "Buscando tus pedidos",
+      "get_order_status": "Revisando tu pedido",
+      "get_usual_order": "Buscando lo de siempre",
+      "reorder": "Preparando lo de siempre",
+      "cart": "Actualizando tu pedido",
+      "set_arrival_and_pod": "Eligiendo hora y cabina",
+      "apply_savings": "Aplicando tus ahorros",
+      "checkout": "Preparando el pago",
+      "start_group_order": "Iniciando un pedido en grupo",
+      "report_issue": "Anotando el problema",
+      "request_refund": "Enviando esto al equipo",
+      "escalate_to_human": "Buscando a una persona",
+      "working": "Pensándolo"
+    },
+    "errors": {
+      "RATE": "Estás enviando mensajes muy rápido. Inténtalo de nuevo en {minutes, plural, one {# minuto} other {# minutos}}.",
+      "RATE_SOON": "Estás enviando mensajes muy rápido. Inténtalo de nuevo en un momento.",
+      "BUDGET": "Chappy ya habló mucho hoy. Inténtalo mañana o pide desde el menú.",
+      "REFUSAL": "No puedo ayudarte con eso. Pregúntame por el menú, tu pedido o tu membresía.",
+      "SIGN_IN_REQUIRED": "Inicia sesión y Chappy puede continuar.",
+      "OFFLINE": "No tienes conexión. Revísala e inténtalo de nuevo.",
+      "TOO_LONG": "Ese mensaje es demasiado largo. Usa menos de {max} caracteres.",
+      "BUSY": "Chappy está ocupado ahora. Inténtalo de nuevo en un minuto.",
+      "INTERNAL": "Algo salió mal. Inténtalo de nuevo."
+    },
+    "cards": {
+      "signIn": {
+        "title": "Inicia sesión para continuar",
+        "body": "Inicia sesión y Chappy lo termina por ti."
+      },
+      "pay": {
+        "title": "Listo para pagar",
+        "body": "Tu pedido está guardado. El pago se abre aquí."
+      },
+      "confirmZero": {
+        "title": "Nada que pagar",
+        "body": "Tus ahorros cubren este pedido."
+      },
+      "groupShare": {
+        "title": "Pedido en grupo",
+        "body": "Comparte el código para que tu mesa agregue sus tazones."
+      },
+      "podCall": {
+        "title": "El personal va en camino",
+        "body": "Alguien va hacia tu cabina."
+      },
+      "supportCase": {
+        "title": "Caso abierto",
+        "body": "El equipo lo revisará y te responderá."
+      },
+      "unknown": {
+        "title": "De Chappy",
+        "body": "Los detalles de este paso aparecen aquí."
+      }
+    }
   }
 }

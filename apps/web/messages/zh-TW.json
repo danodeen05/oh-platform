@@ -4353,5 +4353,90 @@
         "nav": "頁尾連結"
       }
     }
+  },
+  "chappyWeb": {
+    "dialogLabel": "與 Chappy 聊天",
+    "name": "Chappy",
+    "tagline": "問問題、點餐，或處理任何問題。",
+    "open": "問問 Chappy",
+    "close": "關閉",
+    "reset": "重新開始",
+    "welcome": "你好，我是 Chappy。我可以回答問題、幫你點一碗麵，或處理訂單的問題。需要什麼呢？",
+    "quickTitle": "試著問問",
+    "quick": {
+      "usual": "點我的老樣子",
+      "today": "今天有什麼推薦？",
+      "where": "我的訂單在哪裡？",
+      "problem": "我的訂單有問題"
+    },
+    "placeholder": "傳訊息給 Chappy",
+    "inputLabel": "給 Chappy 的訊息",
+    "send": "傳送",
+    "you": "你",
+    "loading": "正在載入對話",
+    "note": "Chappy 是 AI 助理。在你點選付款之前，不會收取任何費用。",
+    "retry": "再試一次",
+    "signIn": "登入",
+    "tools": {
+      "search_menu": "正在查看菜單",
+      "get_menu_item": "正在查看這道菜",
+      "get_locations": "正在查看門市",
+      "get_membership_program": "正在查看會員回饋",
+      "get_my_profile": "正在查詢你的帳戶",
+      "get_my_orders": "正在查詢你的訂單",
+      "get_order_status": "正在確認你的訂單",
+      "get_usual_order": "正在找你的老樣子",
+      "reorder": "正在準備你的老樣子",
+      "cart": "正在更新你的訂單",
+      "set_arrival_and_pod": "正在安排時間和座位",
+      "apply_savings": "正在套用你的優惠",
+      "checkout": "正在準備結帳",
+      "start_group_order": "正在建立團體訂單",
+      "report_issue": "正在記錄問題",
+      "request_refund": "正在轉交團隊",
+      "escalate_to_human": "正在請專人處理",
+      "working": "正在想一想"
+    },
+    "errors": {
+      "RATE": "你傳訊息的速度有點快。請在 {minutes} 分鐘後再試。",
+      "RATE_SOON": "你傳訊息的速度有點快。請稍後再試。",
+      "BUDGET": "Chappy 今天聊了很多。請明天再試，或直接從菜單點餐。",
+      "REFUSAL": "這個我幫不上忙。可以問我菜單、訂單或會員的事。",
+      "SIGN_IN_REQUIRED": "登入後，Chappy 就能接著處理。",
+      "OFFLINE": "你目前離線。請檢查網路連線後再試。",
+      "TOO_LONG": "訊息太長了。請少於 {max} 個字。",
+      "BUSY": "Chappy 現在有點忙。請一分鐘後再試。",
+      "INTERNAL": "發生錯誤。請再試一次。"
+    },
+    "cards": {
+      "signIn": {
+        "title": "登入以繼續",
+        "body": "登入後，Chappy 就能幫你完成。"
+      },
+      "pay": {
+        "title": "可以付款了",
+        "body": "你的訂單已儲存。付款會在這裡開啟。"
+      },
+      "confirmZero": {
+        "title": "不需付款",
+        "body": "你的優惠已涵蓋這筆訂單。"
+      },
+      "groupShare": {
+        "title": "團體訂單",
+        "body": "分享代碼，讓同桌的人加點自己的麵。"
+      },
+      "podCall": {
+        "title": "店員正在過去",
+        "body": "有人正前往你的座位。"
+      },
+      "supportCase": {
+        "title": "已建立案件",
+        "body": "團隊會審查並與你聯絡。"
+      },
+      "unknown": {
+        "title": "來自 Chappy",
+        "body": "這一步的詳細資訊會顯示在這裡。"
+      }
+    }
   }
 }

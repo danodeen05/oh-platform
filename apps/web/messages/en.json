@@ -4455,5 +4455,90 @@
         "nav": "Footer links"
       }
     }
+  },
+  "chappyWeb": {
+    "dialogLabel": "Chat with Chappy",
+    "name": "Chappy",
+    "tagline": "Questions, orders and anything that went wrong.",
+    "open": "Ask Chappy",
+    "close": "Close",
+    "reset": "Start over",
+    "welcome": "Hi, I'm Chappy. I can answer questions, order your bowl, or fix a problem with an order. What do you need?",
+    "quickTitle": "Try asking",
+    "quick": {
+      "usual": "Order my usual",
+      "today": "What's good today?",
+      "where": "Where's my order?",
+      "problem": "I have a problem with my order"
+    },
+    "placeholder": "Message Chappy",
+    "inputLabel": "Your message to Chappy",
+    "send": "Send",
+    "you": "You",
+    "loading": "Loading your conversation",
+    "note": "Chappy is an AI helper. Nothing is charged until you tap to pay.",
+    "retry": "Try again",
+    "signIn": "Sign in",
+    "tools": {
+      "search_menu": "Checking the menu",
+      "get_menu_item": "Looking at that dish",
+      "get_locations": "Checking our locations",
+      "get_membership_program": "Checking the rewards program",
+      "get_my_profile": "Looking up your account",
+      "get_my_orders": "Looking up your orders",
+      "get_order_status": "Checking on your order",
+      "get_usual_order": "Finding your usual",
+      "reorder": "Setting up your usual",
+      "cart": "Updating your order",
+      "set_arrival_and_pod": "Picking a time and a pod",
+      "apply_savings": "Applying your savings",
+      "checkout": "Getting checkout ready",
+      "start_group_order": "Starting a group order",
+      "report_issue": "Writing up the problem",
+      "request_refund": "Sending this to the team",
+      "escalate_to_human": "Getting a person on this",
+      "working": "Thinking it over"
+    },
+    "errors": {
+      "RATE": "You're sending messages quickly. Try again in {minutes, plural, one {# minute} other {# minutes}}.",
+      "RATE_SOON": "You're sending messages quickly. Try again in a moment.",
+      "BUDGET": "Chappy has talked a lot today. Try again tomorrow, or order from the menu.",
+      "REFUSAL": "I can't help with that one. Ask me about the menu, your order or your membership.",
+      "SIGN_IN_REQUIRED": "Sign in and Chappy can pick this up.",
+      "OFFLINE": "You're offline. Check your connection and try again.",
+      "TOO_LONG": "That message is too long. Keep it under {max} characters.",
+      "BUSY": "Chappy is busy right now. Try again in a minute.",
+      "INTERNAL": "Something went wrong. Try again."
+    },
+    "cards": {
+      "signIn": {
+        "title": "Sign in to continue",
+        "body": "Sign in and Chappy can finish this for you."
+      },
+      "pay": {
+        "title": "Ready to pay",
+        "body": "Your order is saved. Payment opens here."
+      },
+      "confirmZero": {
+        "title": "Nothing to pay",
+        "body": "Your savings cover this order."
+      },
+      "groupShare": {
+        "title": "Group order",
+        "body": "Share the code so your table can add their bowls."
+      },
+      "podCall": {
+        "title": "Staff are on the way",
+        "body": "Someone is headed to your pod."
+      },
+      "supportCase": {
+        "title": "Case opened",
+        "body": "The team will review it and follow up."
+      },
+      "unknown": {
+        "title": "From Chappy",
+        "body": "Details for this step appear here."
+      }
+    }
   }
 }

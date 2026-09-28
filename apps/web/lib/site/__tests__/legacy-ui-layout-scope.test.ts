@@ -76,11 +76,12 @@ describe("components/legacy/LegacyChrome.tsx: the chrome is scoped, {children} i
     expect(isChildrenInsideClass(source, "legacy-ui")).toBe(false);
   });
 
-  test("Header/ActiveOrderBanner/Footer and the old Chappy are scoped under .legacy-ui", () => {
+  test("Header/ActiveOrderBanner/Footer are scoped under .legacy-ui; the site Chappy is not (Task E1)", () => {
     // Sanity check for the helper itself, and a regression guard.
     expect(source).toMatch(/className="legacy-ui"[\s\S]*?<Header \/>[\s\S]*?<ActiveOrderBanner \/>/);
     expect(source).toMatch(/className="legacy-ui"[\s\S]*?<Footer \/>[\s\S]*?<\/div>/);
-    expect(source).toMatch(/className="legacy-ui"[\s\S]*?<LegacyChappy \/>/);
+    expect(source).toMatch(/<LegacyChappy \/>/);
+    expect(source).not.toMatch(/className="legacy-ui">\s*<LegacyChappy \/>/);
   });
 
   test("`<main>` renders {children} directly, unscoped", () => {

@@ -12,6 +12,7 @@ import { getLocale } from "next-intl/server";
 import { Body, Display, Eyebrow, Title } from "@/components/site/Text";
 import { Icon } from "@/components/site/icons/Icon";
 import { TierMark } from "@/components/site/tiers/TierMark";
+import { AskChappyProbe } from "./AskChappyProbe";
 
 const SECTIONS = Array.from({ length: 8 }, (_, i) => i + 1);
 
@@ -33,6 +34,7 @@ export default async function ShellLabPage() {
         Scroll to watch the top bar pick up its background. On a phone the dock sits at the bottom and this page pads
         itself by --dock-h, so the last line below stays readable above it.
       </Body>
+      <AskChappyProbe />
 
       {/* The dock's brand marks and the redrawn seal icon, large, for review. */}
       <div data-testid="shell-lab-marks" className="mt-10 flex flex-wrap items-center gap-8 rounded-2xl bg-oh-ink p-6">

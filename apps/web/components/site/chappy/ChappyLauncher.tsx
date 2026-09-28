@@ -1,71 +1,36 @@
 "use client";
 
 /**
- * Chappy for the site shell (Task C4). The dock (and any page) opens the
- * chat through `useChappy().openChappy(prefill?)`.
+ * Chappy's entry points (Task C4 API, Task E1 widget).
  *
- * Until Task E1: the implementation behind this API is the legacy ChappyChat
- * widget, mounted with its floating launcher hidden and its open state
- * driven from here (ChappyChat takes `hideLauncher`/`open`/`onOpenChange`/
- * `prefill` for exactly this). E1 swaps in the new widget behind the same
- * `useChappy()` API, so callers don't change.
+ * `useChappy()` / `ChappyProvider` are re-exported from ChappyProvider.tsx so
+ * the dock, the desktop nav and the site shell keep importing them from
+ * here unchanged.
+ *
+ * `ChappyLauncher` is the floating button for pages that have no dock: the
+ * `(legacy)` routes (components/legacy/LegacyChappy.tsx). Chappy's own face,
+ * bottom right above the safe area, hidden while the chat is open.
  */
-import dynamic from "next/dynamic";
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
+import { CHAPPY_AVATAR } from "@/lib/site/nav";
+import { useChappy } from "./ChappyProvider";
 
-// Same lazy, client-only load the legacy mount uses: the widget is large and
-// nothing about it belongs in the first paint.
-const ChappyChatWrapper = dynamic(() => import("@/components/ChappyChatWrapper"), { ssr: false });
+export { ChappyProvider, useChappy, type ChappyApi } from "./ChappyProvider";
 
-export interface ChappyApi {
-  isOpen: boolean;
-  openChappy: (prefill?: string) => void;
-  closeChappy: () => void;
-}
-
-const ChappyContext = createContext<ChappyApi | null>(null);
-
-export function useChappy(): ChappyApi {
-  const ctx = useContext(ChappyContext);
-  if (!ctx) throw new Error("useChappy must be used inside <ChappyProvider> (the site shell)");
-  return ctx;
-}
-
-export function ChappyProvider({ children }: { children: ReactNode }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [prefill, setPrefill] = useState<string | undefined>(undefined);
-  // The widget mounts on first open, not on page load: it fetches history
-  // and a guest token as soon as it mounts.
-  const [mounted, setMounted] = useState(false);
-
-  const openChappy = useCallback((text?: string) => {
-    setPrefill(text);
-    setMounted(true);
-    setIsOpen(true);
-  }, []);
-
-  const closeChappy = useCallback(() => {
-    setIsOpen(false);
-    setPrefill(undefined);
-  }, []);
-
-  const onOpenChange = useCallback((next: boolean) => {
-    setIsOpen(next);
-    if (!next) setPrefill(undefined);
-  }, []);
-
-  const api = useMemo(() => ({ isOpen, openChappy, closeChappy }), [isOpen, openChappy, closeChappy]);
-
+export function ChappyLauncher() {
+  const t = useTranslations("chappyWeb");
+  const chappy = useChappy();
+  if (chappy.isOpen) return null;
   return (
-    <ChappyContext.Provider value={api}>
-      {children}
-      {mounted ? (
-        // legacy-ui: the old widget still uses bare button/input/a/h1-h3
-        // tags (same scoping as its legacy mount).
-        <div className="legacy-ui" data-chappy-legacy>
-          <ChappyChatWrapper hideLauncher open={isOpen} onOpenChange={onOpenChange} prefill={prefill} />
-        </div>
-      ) : null}
-    </ChappyContext.Provider>
+    <button
+      type="button"
+      data-chappy-launcher
+      aria-haspopup="dialog"
+      aria-label={t("open")}
+      onClick={() => chappy.openChappy()}
+      className="fixed bottom-[max(1rem,env(safe-area-inset-bottom,0px))] right-4 z-50 flex h-14 w-14 cursor-pointer appearance-none items-center justify-center rounded-full border-2 border-solid border-oh-cream/25 bg-oh-ink p-0 shadow-[0_10px_30px_-8px_rgba(0,0,0,0.55)] transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oh-ember motion-reduce:transition-none motion-reduce:hover:scale-100"
+    >
+      <img src={CHAPPY_AVATAR} alt="" width={48} height={48} className="h-12 w-12 rounded-full" />
+    </button>
   );
 }

@@ -2150,5 +2150,90 @@
         "nav": "页脚链接"
       }
     }
+  },
+  "chappyWeb": {
+    "dialogLabel": "与 Chappy 聊天",
+    "name": "Chappy",
+    "tagline": "问问题、点餐，或处理任何问题。",
+    "open": "问问 Chappy",
+    "close": "关闭",
+    "reset": "重新开始",
+    "welcome": "你好，我是 Chappy。我可以回答问题、帮你点一碗面，或处理订单的问题。需要什么呢？",
+    "quickTitle": "试着问问",
+    "quick": {
+      "usual": "点我的老样子",
+      "today": "今天有什么推荐？",
+      "where": "我的订单在哪里？",
+      "problem": "我的订单有问题"
+    },
+    "placeholder": "给 Chappy 发消息",
+    "inputLabel": "给 Chappy 的消息",
+    "send": "发送",
+    "you": "你",
+    "loading": "正在加载对话",
+    "note": "Chappy 是 AI 助手。在你点击付款之前，不会收取任何费用。",
+    "retry": "再试一次",
+    "signIn": "登录",
+    "tools": {
+      "search_menu": "正在查看菜单",
+      "get_menu_item": "正在查看这道菜",
+      "get_locations": "正在查看门店",
+      "get_membership_program": "正在查看会员回馈",
+      "get_my_profile": "正在查询你的账户",
+      "get_my_orders": "正在查询你的订单",
+      "get_order_status": "正在确认你的订单",
+      "get_usual_order": "正在找你的老样子",
+      "reorder": "正在准备你的老样子",
+      "cart": "正在更新你的订单",
+      "set_arrival_and_pod": "正在安排时间和座位",
+      "apply_savings": "正在使用你的优惠",
+      "checkout": "正在准备结账",
+      "start_group_order": "正在创建团体订单",
+      "report_issue": "正在记录问题",
+      "request_refund": "正在转交团队",
+      "escalate_to_human": "正在请专人处理",
+      "working": "正在想一想"
+    },
+    "errors": {
+      "RATE": "你发消息的速度有点快。请在 {minutes} 分钟后再试。",
+      "RATE_SOON": "你发消息的速度有点快。请稍后再试。",
+      "BUDGET": "Chappy 今天聊了很多。请明天再试，或直接从菜单点餐。",
+      "REFUSAL": "这个我帮不上忙。可以问我菜单、订单或会员的事。",
+      "SIGN_IN_REQUIRED": "登录后，Chappy 就能接着处理。",
+      "OFFLINE": "你当前离线。请检查网络连接后再试。",
+      "TOO_LONG": "消息太长了。请少于 {max} 个字。",
+      "BUSY": "Chappy 现在有点忙。请一分钟后再试。",
+      "INTERNAL": "出错了。请再试一次。"
+    },
+    "cards": {
+      "signIn": {
+        "title": "登录以继续",
+        "body": "登录后，Chappy 就能帮你完成。"
+      },
+      "pay": {
+        "title": "可以付款了",
+        "body": "你的订单已保存。付款会在这里打开。"
+      },
+      "confirmZero": {
+        "title": "无需付款",
+        "body": "你的优惠已覆盖这笔订单。"
+      },
+      "groupShare": {
+        "title": "团体订单",
+        "body": "分享代码，让同桌的人加点自己的面。"
+      },
+      "podCall": {
+        "title": "店员正在过去",
+        "body": "有人正前往你的座位。"
+      },
+      "supportCase": {
+        "title": "已创建工单",
+        "body": "团队会审核并与你联系。"
+      },
+      "unknown": {
+        "title": "来自 Chappy",
+        "body": "这一步的详细信息会显示在这里。"
+      }
+    }
   }
 }
