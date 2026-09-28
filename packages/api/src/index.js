@@ -111,7 +111,7 @@ import { createKioskAuth } from "./auth/kiosk.js";
 import { publicReferral, registerAdminOnlyRoutes } from "./auth/hardening.js";
 import { listLocationSeats, resolveSeatViewer } from "./seats/service.js";
 import { claimCheckInSeat } from "./seats/kiosk-seat.js";
-import { assignQueue, listFreePods, pickAutoPod, retiredPodInfo, POD_RETIRED } from "./seats/free-pods.js";
+import { assignQueue, listFreePods, pickAutoPod } from "./seats/free-pods.js";
 import { claimSeat, holdSeatForOrder, holdPodAtPay } from "./orders/service.js";
 import { canSeeFullOrder, safeOrderView, firstNameOnly, arrivedLookupSummary } from "./orders/order-view.js";
 import { buildStatusView } from "./orders/status-view.js";

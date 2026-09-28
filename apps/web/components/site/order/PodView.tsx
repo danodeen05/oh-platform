@@ -31,6 +31,7 @@ import { PRIMARY, SECONDARY } from "./PodCard";
 import { Spinner } from "./StepSheet";
 import { TENANT } from "./useOrderStatus";
 import { INPUT_CLASS } from "./CheckInView";
+import { RetiredPodNotice } from "@/components/site/pod/RetiredPodNotice";
 import "./after-order.css";
 
 // The map is the page's centerpiece but not its first paint: load it on the client, after the words.
@@ -44,6 +45,9 @@ interface PodInfo {
   location: { id: string; name: string; city?: string | null } | null;
   hasActiveOrder: boolean;
   alreadyConfirmed: boolean;
+  // An old sticker: a retired pod with nothing live on it (Task G3 fix round 1).
+  retired?: boolean;
+  code?: string;
 }
 
 /** The order code this visitor already proved on this device (their confirmation set it), kept for the session. */
@@ -213,6 +217,11 @@ export function PodView({ qr }: { qr: string | null }) {
         {tc("loading")}
       </div>
     );
+  }
+
+  if (info.retired) {
+    // The scan itself carries no order code, so there is never one to offer here.
+    return <RetiredPodNotice locationName={info.location?.name} />;
   }
 
   if (confirmed) {

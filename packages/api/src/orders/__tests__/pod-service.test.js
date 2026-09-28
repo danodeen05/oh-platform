@@ -10,6 +10,7 @@ import Fastify from "fastify";
 import { registerOrderServiceGuard, registerPodServiceRoutes, SERVICE_ROUTES } from "../pod-service.js";
 import { registerStatusDemoGuard } from "../../demo/status-demo.js";
 import { createAdminAuth } from "../../auth/admin.js";
+import { POD_RETIRED } from "../../seats/free-pods.js";
 import { seed, NOW } from "./fixtures.js";
 
 const fakeCustomerAuth = {
@@ -64,6 +65,8 @@ async function buildApp(orders = [order()]) {
   });
   // Pod B-07 has its table code; the order is held there.
   prisma.seat.update && (await prisma.seat.update({ where: { id: "s-b07" }, data: { qrCode: "POD-L1-B-07" } }));
+  // A-00 (fixtures.js) is retired: the old sticker from before the release-2 cutover.
+  prisma.seat.update && (await prisma.seat.update({ where: { id: "s-old" }, data: { qrCode: "POD-L1-A-00" } }));
   const withGuests = { ...deps, findGuestBySessionToken: (token) => prisma.guest.findUnique({ where: { sessionToken: token } }) };
   const app = Fastify({ logger: false });
   registerStatusDemoGuard(app, { source: { menuItems: async () => [] } });
@@ -79,7 +82,9 @@ async function buildApp(orders = [order()]) {
 }
 
 const info = (app) => app.inject({ method: "GET", url: "/pods/info?qrCode=POD-L1-B-07" });
+const retiredInfo = (app) => app.inject({ method: "GET", url: "/pods/info?qrCode=POD-L1-A-00" });
 const arrive = (app, headers = {}, body = {}) => app.inject({ method: "POST", url: "/pods/confirm-arrival", headers, payload: { podQrCode: "POD-L1-B-07", ...body } });
+const arriveRetired = (app, headers = {}, body = {}) => app.inject({ method: "POST", url: "/pods/confirm-arrival", headers, payload: { podQrCode: "POD-L1-A-00", ...body } });
 const service = (app, path, headers = {}) => app.inject({ method: "POST", url: `/orders/o1/${path}`, headers, payload: {} });
 const link = (app, headers = {}, body = {}) => app.inject({ method: "POST", url: "/orders/link-to-account", headers, payload: body });
 
@@ -103,6 +108,30 @@ describe("GET /pods/info (anonymous pod scan)", () => {
     const { app } = await buildApp([]);
     assert.equal((await info(app)).json().hasActiveOrder, false);
     assert.equal((await app.inject({ method: "GET", url: "/pods/info?qrCode=POD-nope" })).statusCode, 404);
+  });
+
+  test("an old sticker (retired pod, nothing live on it) is a 200 retired marker, no order data", async () => {
+    const { app } = await buildApp([]);
+    const res = await retiredInfo(app);
+    assert.equal(res.statusCode, 200);
+    const body = res.json();
+    assert.equal(body.retired, true);
+    assert.equal(body.code, POD_RETIRED);
+    assert.deepEqual(body.pod, { label: "A-00", status: "RETIRED" });
+    assert.equal(body.location.id, "L1");
+    assert.equal(body.hasActiveOrder, false);
+    assert.equal(body.alreadyConfirmed, false);
+    for (const secret of [CODE, "o1", "u1", "ORD-1", "activeOrder", "orderQrCode", "userId"]) {
+      assert.ok(!res.body.includes(secret), `leaks ${secret}`);
+    }
+  });
+
+  test("a retired pod with a live legacy order still on it is not treated as retired", async () => {
+    const { app } = await buildApp([order({ seatId: "s-old" })]);
+    const res = await retiredInfo(app);
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.json().retired, undefined);
+    assert.equal(res.json().hasActiveOrder, true);
   });
 });
 
@@ -152,6 +181,23 @@ describe("POST /pods/confirm-arrival", () => {
   test("an order code for an order held at another pod is refused", async () => {
     const { app } = await buildApp([order({ seatId: "s-a01" })]);
     assert.equal((await arrive(app, {}, { orderQrCode: CODE })).json().code, "WRONG_POD");
+  });
+
+  test("an old sticker (retired pod, nothing live on it) is a 410, before any order lookup", async () => {
+    const { app, prisma } = await buildApp([]);
+    const res = await arriveRetired(app, auth("u1"));
+    assert.equal(res.statusCode, 410);
+    assert.equal(res.json().code, POD_RETIRED);
+    assert.equal((await prisma.seat.findUnique({ where: { id: "s-old" } })).status, "AVAILABLE");
+  });
+
+  test("a retired pod with a live legacy order still on it confirms normally", async () => {
+    const { app, prisma } = await buildApp([order({ seatId: "s-old" })]);
+    const res = await arriveRetired(app, auth("u1"));
+    assert.equal(res.statusCode, 200, JSON.stringify(res.json()));
+    const o = await prisma.order.findUnique({ where: { id: "o1" } });
+    assert.ok(o.podConfirmedAt);
+    assert.equal((await prisma.seat.findUnique({ where: { id: "s-old" } })).status, "OCCUPIED");
   });
 });
 

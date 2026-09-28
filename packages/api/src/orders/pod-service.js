@@ -11,11 +11,18 @@
  *
  *   GET  /pods/info              pod label and status, whether an order is
  *                                waiting and whether it's confirmed. No order
- *                                code, id or user id, ever.
+ *                                code, id or user id, ever. An old sticker
+ *                                (a retired pod with nothing live on it, Task
+ *                                G3 fix round 1) is not an error: 200 with
+ *                                `retired: true, code: POD_RETIRED` and the
+ *                                pod's label/location only, same as any other
+ *                                answer here.
  *   POST /pods/confirm-arrival   { podQrCode, orderQrCode? } confirms only the
  *                                caller's own order at that pod (owner, or the
  *                                matching order code). No "any order here"
- *                                fallback.
+ *                                fallback. A retired pod with no live legacy
+ *                                order still on it answers 410 POD_RETIRED
+ *                                before any order lookup runs.
  *   POST /orders/link-to-account { orderQrCode } a signed-in member claims an
  *                                UNLINKED order, with the order code as proof
  *                                (never the order id).
@@ -31,6 +38,7 @@
 import { canSeeFullOrder } from "./order-view.js";
 import { GUEST_SESSION_HEADER } from "./group-routes.js";
 import { localizeLocation } from "../i18n/localize.js";
+import { retiredPodInfo, POD_RETIRED } from "../seats/free-pods.js";
 
 export const ORDER_CODE_HEADER = "x-order-code";
 const CLOSED = ["COMPLETED", "CANCELLED"];
@@ -92,10 +100,25 @@ export function registerPodServiceRoutes(app, { prisma, deps, getLocale = () => 
     const location = pod.locationId ? await prisma.location.findUnique({ where: { id: pod.locationId } }) : null;
     const active = await prisma.order.findFirst({ where: { seatId: pod.id, paymentStatus: "PAID", status: { not: { in: CLOSED } } } });
     const named = location ? localizeLocation(location, getLocale(req)) : null;
+    const namedLocation = location ? { id: location.id, name: named.name, city: location.city ?? null } : null;
+
+    // Old sticker: a retired pod with nothing live on it (Task G3 fix round
+    // 1). Still no order data, ever -- just the retired marker.
+    if (retiredPodInfo(pod, active)) {
+      return {
+        retired: true,
+        code: POD_RETIRED,
+        pod: { label: pod.label || pod.number, status: "RETIRED" },
+        location: namedLocation,
+        hasActiveOrder: false,
+        alreadyConfirmed: false,
+      };
+    }
+
     return {
       pod: { label: pod.label || pod.number, status: pod.status },
       // Where the pod is (for the map); nothing about any order.
-      location: location ? { id: location.id, name: named.name, city: location.city ?? null } : null,
+      location: namedLocation,
       hasActiveOrder: Boolean(active),
       alreadyConfirmed: Boolean(active?.podConfirmedAt),
     };
@@ -106,6 +129,19 @@ export function registerPodServiceRoutes(app, { prisma, deps, getLocale = () => 
     if (!podQrCode) return reply.code(400).send({ error: "podQrCode required", code: "POD_CODE_REQUIRED" });
     const pod = await prisma.seat.findFirst({ where: { qrCode: String(podQrCode) } });
     if (!pod) return reply.code(404).send({ error: "Pod not found. Please check the QR code.", code: "POD_NOT_FOUND" });
+
+    if (pod.retiredAt) {
+      // Old sticker: release 2 never assigns a retired pod, but a legacy
+      // order already checked in on one before the cutover still finishes
+      // here (Task G3 fix round 1). Nothing live on it means the sticker's
+      // just out of date.
+      const live = await prisma.order.findFirst({
+        where: { seatId: pod.id, paymentStatus: "PAID", podConfirmedAt: null, status: { not: { in: CLOSED } } },
+      });
+      if (!live) {
+        return reply.code(410).send({ error: "This pod code is out of date.", code: POD_RETIRED, locationId: pod.locationId });
+      }
+    }
 
     // The caller's own order only: the matching order code, or the verified owner.
     let order = null;
