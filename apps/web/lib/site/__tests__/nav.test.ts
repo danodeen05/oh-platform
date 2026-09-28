@@ -1,10 +1,12 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, test } from "vitest";
 import { ICON_NAMES } from "@/components/site/icons/Icon";
+import { TIERS } from "@/components/site/tiers/TierMark";
 import { locales } from "@/i18n/config";
 import {
   ACCOUNT_ITEM,
+  CHAPPY_AVATAR,
   DOCK_ITEMS,
   MORE_ITEMS,
   SITE_NAV_KEYS,
@@ -35,8 +37,13 @@ describe("DOCK_ITEMS", () => {
     expect("href" in chappy).toBe(false);
   });
 
-  test("rewards points at the legacy loyalty page until D7 builds /rewards", () => {
-    expect(DOCK_ITEMS[2]).toMatchObject({ key: "rewards", href: "/loyalty" });
+  test("rewards points at the legacy loyalty page until D7 builds /rewards, with the chopstick tier mark", () => {
+    expect(DOCK_ITEMS[2]).toMatchObject({ key: "rewards", href: "/loyalty", icon: "seal" });
+  });
+
+  test("chappy shows Chappy's own face, not a generic chat icon", () => {
+    expect(DOCK_ITEMS[3]).toMatchObject({ avatar: CHAPPY_AVATAR });
+    expect(ICON_NAMES as string[]).not.toContain("chat");
   });
 });
 
@@ -55,9 +62,13 @@ describe("MORE_ITEMS", () => {
 describe("every nav item", () => {
   const all = [...DOCK_ITEMS, ...MORE_ITEMS, ACCOUNT_ITEM];
 
-  test("uses an icon that exists in the in-house set", () => {
+  test("has exactly one glyph: an existing icon, a tier mark, or an existing avatar image", () => {
     for (const item of all) {
-      expect(ICON_NAMES, `${item.key} -> ${item.icon}`).toContain(item.icon);
+      const kinds = ["icon", "tier", "avatar"].filter((k) => k in item);
+      expect(kinds, item.key).toHaveLength(1);
+      if ("icon" in item) expect(ICON_NAMES, `${item.key} -> ${item.icon}`).toContain(item.icon);
+      if ("tier" in item) expect(TIERS).toContain(item.tier);
+      if ("avatar" in item) expect(existsSync(path.resolve(__dirname, "../../../public", `.${item.avatar}`)), item.avatar).toBe(true);
     }
   });
 
@@ -87,6 +98,11 @@ describe("isNavActive", () => {
     expect(isNavActive("/en/locations", "/loyalty")).toBe(false);
     expect(isNavActive("/en", "/menu")).toBe(false);
     expect(isNavActive(null, "/menu")).toBe(false);
+  });
+
+  test("only real locales are stripped (a 2-letter route like /go is not a locale)", () => {
+    expect(isNavActive("/go/menu", "/menu")).toBe(false);
+    expect(isNavActive("/zh/menu", "/menu")).toBe(false);
   });
 });
 

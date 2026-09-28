@@ -8,6 +8,8 @@
  * Labels come from `site.nav.<key>` in messages/*.json.
  */
 import type { IconName } from "@/components/site/icons/paths";
+import type { Tier } from "@/components/site/tiers/tier-paths";
+import { locales } from "@/i18n/config";
 
 export const SITE_NAV_KEYS = [
   "order",
@@ -24,25 +26,36 @@ export const SITE_NAV_KEYS = [
 
 export type NavKey = (typeof SITE_NAV_KEYS)[number];
 
-export interface NavLink {
+/**
+ * What a dock item shows above its label: an in-house brush icon, the
+ * owner's traced tier mark (Rewards), or an image (Chappy's own face).
+ * C4 fix round 1: brand marks over generic glyphs where one exists.
+ */
+export type NavGlyph = { icon: IconName } | { tier: Tier } | { avatar: string };
+
+export type NavLink = {
   key: NavKey;
   href: string;
-  icon: IconName;
   /** The one filled call to action (ember-deep with cream text). */
   primary?: boolean;
-}
+} & NavGlyph;
 
-export interface NavAction {
+export type NavAction = {
   key: NavKey;
   action: "openChappy";
-  icon: IconName;
-}
+} & NavGlyph;
 
 export type NavItem = NavLink | NavAction;
+
+/** A link drawn with an in-house icon (the More list, the account row). */
+export type NavIconLink = NavLink & { icon: IconName };
 
 export function isNavLink(item: NavItem): item is NavLink {
   return "href" in item;
 }
+
+/** Chappy's face, cropped round in the dock (96px source covers 24px at 3x and 32px at 2x). */
+export const CHAPPY_AVATAR = "/plan/chappy-96.webp";
 
 /** The phone dock: four thumb-reach actions. */
 export const DOCK_ITEMS: readonly NavItem[] = [
@@ -50,11 +63,11 @@ export const DOCK_ITEMS: readonly NavItem[] = [
   { key: "menu", href: "/menu", icon: "chopsticks" },
   // TODO(D7): /rewards replaces the legacy loyalty page.
   { key: "rewards", href: "/loyalty", icon: "seal" },
-  { key: "chappy", action: "openChappy", icon: "chat" },
+  { key: "chappy", action: "openChappy", avatar: CHAPPY_AVATAR },
 ];
 
 /** Everything else: the More sheet on phones, inline in the desktop nav. */
-export const MORE_ITEMS: readonly NavLink[] = [
+export const MORE_ITEMS: readonly NavIconLink[] = [
   { key: "locations", href: "/locations", icon: "pin" },
   // TODO(D2): /experience is built in D2; until then this link 404s.
   { key: "experience", href: "/experience", icon: "pod" },
@@ -64,15 +77,17 @@ export const MORE_ITEMS: readonly NavLink[] = [
 ];
 
 /** Signed-in members go here; signed-out visitors get the Clerk sign-in modal instead. */
-export const ACCOUNT_ITEM: NavLink = { key: "account", href: "/member", icon: "user" };
+export const ACCOUNT_ITEM: NavIconLink = { key: "account", href: "/member", icon: "user" };
 
 export function localizedHref(locale: string, href: string): string {
   return href === "/" ? `/${locale}` : `/${locale}${href}`;
 }
 
-/** Strip a leading locale segment ("/zh-TW/menu" -> "/menu"). Any first segment shaped like a locale counts. */
+/** Strip a leading locale segment ("/zh-TW/menu" -> "/menu"). Only the real locales count. */
 function withoutLocale(pathname: string): string {
-  const rest = pathname.replace(/^\/[a-z]{2}(?:-[A-Z]{2})?(?=\/|$)/, "");
+  const segments = pathname.split("/");
+  if ((locales as readonly string[]).includes(segments[1] ?? "")) segments.splice(1, 1);
+  const rest = segments.join("/");
   return rest === "" ? "/" : rest;
 }
 

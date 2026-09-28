@@ -139,7 +139,9 @@ const withClerk = clerkMiddleware(async (auth, request: NextRequest) => {
   // A page embedded in a frame (the plan's phone demo embeds the order status
   // page) renders without site chrome: no header, footer, shell, dock or chat.
   // Task C4 widened this from /order/status to any locale page, so a rebuilt
-  // `(site)` page can be embedded the same way.
+  // `(site)` page can be embedded the same way. Embedding only strips chrome
+  // (LegacyChrome and SiteShell honor it); it does not change framing policy.
+  // Known embedders: the business plan's PhoneFrame (/order/status).
   // Kiosk, CNY and the plan have their own layouts and are left as they were.
   if (
     /^\/(en|zh-TW|zh-CN|es)(\/|$)/.test(pathname) &&

@@ -10,6 +10,8 @@
 import { notFound } from "next/navigation";
 import { getLocale } from "next-intl/server";
 import { Body, Display, Eyebrow, Title } from "@/components/site/Text";
+import { Icon } from "@/components/site/icons/Icon";
+import { TierMark } from "@/components/site/tiers/TierMark";
 
 const SECTIONS = Array.from({ length: 8 }, (_, i) => i + 1);
 
@@ -31,6 +33,25 @@ export default async function ShellLabPage() {
         Scroll to watch the top bar pick up its background. On a phone the dock sits at the bottom and this page pads
         itself by --dock-h, so the last line below stays readable above it.
       </Body>
+
+      {/* The dock's brand marks and the redrawn seal icon, large, for review. */}
+      <div data-testid="shell-lab-marks" className="mt-10 flex flex-wrap items-center gap-8 rounded-2xl bg-oh-ink p-6">
+        <span className="text-oh-cream">
+          <Icon name="seal" size={72} />
+        </span>
+        <span className="text-oh-ember-light">
+          <Icon name="seal" size={24} />
+        </span>
+        <span className="text-oh-cream">
+          <TierMark tier="chopstick" tone="current" size={72} />
+        </span>
+        <span className="text-oh-mute">
+          <TierMark tier="chopstick" tone="current" size={24} />
+        </span>
+        <span className="text-oh-cream">
+          <TierMark tier="chopstick" tone="current" size={24} />
+        </span>
+      </div>
 
       {SECTIONS.map((n) => (
         <section key={n} className="mt-14 border-t border-oh-stone/60 pt-10">

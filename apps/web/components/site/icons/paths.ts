@@ -35,7 +35,6 @@ export type IconName =
   | "share"
   | "wallet"
   | "arrow"
-  | "chat"
   | "globe"
   | "mail";
 
@@ -228,11 +227,25 @@ export const ICON_PATHS: Record<IconName, IconDef> = {
     ],
   },
 
+  // A chop seal impression (C4 fix round 1 redraw; the first pass was a
+  // crossed square that read as "add"). A heavy rounded-square border, like
+  // the rim of a carved stone seal, around a simple stamped glyph: a
+  // tapered top bar, a descending stroke that hooks left at its foot, and a
+  // short falling dot on the right, all in the set's brush-tapered style.
   seal: {
     paths: [
-      ringRect(5.5, 5.5, 13, 13, 1, 1.4),
-      taperLine({ x: 9, y: 12 }, { x: 15, y: 12 }, 1.3, 0.4, { capStart: true }),
-      taperLine({ x: 12, y: 9 }, { x: 12, y: 15 }, 1.3, 0.4, { capStart: true }),
+      ringRect(4.2, 4.2, 15.6, 15.6, 2.4, 1.7),
+      taperLine({ x: 8, y: 9 }, { x: 16.1, y: 8.5 }, 1.9, 0.6, { capStart: true }),
+      taperChain(
+        [
+          { kind: "line", a: { x: 12, y: 8.8 }, b: { x: 12, y: 15.6 } },
+          { kind: "line", a: { x: 12, y: 15.6 }, b: { x: 9.3, y: 14.2 } },
+        ],
+        1.9,
+        0.45,
+        { capStart: true },
+      ),
+      taperLine({ x: 14.5, y: 11.4 }, { x: 16, y: 14.3 }, 1.8, 0.5, { capStart: true }),
     ],
   },
 
@@ -290,18 +303,6 @@ export const ICON_PATHS: Record<IconName, IconDef> = {
       taperLine({ x: 4, y: 12 }, { x: 16.5, y: 12 }, 1.6, 0.5, { capStart: true }),
       taperLine({ x: 12.5, y: 6.5 }, { x: 18.5, y: 12 }, 0.3, 1.3),
       taperLine({ x: 12.5, y: 17.5 }, { x: 18.5, y: 12 }, 0.3, 1.3),
-    ],
-  },
-
-  // Task C4 (shell): Chappy's speech bubble, with three ink dots. The tail is
-  // a tapered stroke off the bubble's lower left, not a notched outline.
-  chat: {
-    paths: [
-      ringRect(3.4, 4.2, 17.2, 12.2, 4.2, 1.4),
-      taperLine({ x: 8.6, y: 16 }, { x: 5.6, y: 20.6 }, 1.5, 0.3, { capStart: true }),
-      circlePath(8.3, 10.3, 1.05),
-      circlePath(12, 10.3, 1.05),
-      circlePath(15.7, 10.3, 1.05),
     ],
   },
 

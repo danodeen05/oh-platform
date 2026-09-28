@@ -69,6 +69,18 @@ test("iPhone 15: the dock is visible with 4 targets of at least 44x44", async ()
       getComputedStyle(document.querySelector("[data-site-shell]")!).getPropertyValue("--dock-h").trim(),
     );
     assert.ok(dockH.length > 0, "--dock-h is set on the shell");
+    // --dock-h covers the whole dock, hairline included (fix round 1: it was 1px short).
+    const measured = await page.evaluate(() => {
+      const probe = document.createElement("div");
+      probe.style.height = "var(--dock-h)";
+      document.querySelector("[data-site-shell]")!.appendChild(probe);
+      const h = probe.getBoundingClientRect().height;
+      probe.remove();
+      return { varH: h, dockH: document.querySelector("[data-site-dock]")!.getBoundingClientRect().height };
+    });
+    assert.equal(measured.varH, measured.dockH);
+    // Chappy's dock item is his own face, not a generic chat glyph.
+    assert.equal(await page.locator('[data-dock-item="chappy"] [data-nav-avatar] img').count(), 1);
   });
 });
 
@@ -156,14 +168,36 @@ test("1440: no dock, and a desktop nav with the same items", async () => {
   });
 });
 
-test("?embed=1 on a site route: children only, no top bar, dock or Chappy", async () => {
+test("?embed=1 on a site route: no chrome, but the site fonts and palette stay", async () => {
   await withPage(iphone15(), `${LAB}?embed=1`, async (page) => {
     await page.locator("[data-testid=shell-lab]").waitFor({ state: "attached" });
     await page.waitForTimeout(1500);
     assert.equal(await page.locator("[data-site-dock]").count(), 0);
     assert.equal(await page.locator("[data-site-topbar]").count(), 0);
-    assert.equal(await page.locator("[data-site-shell]").count(), 0);
+    assert.equal(await page.locator("[data-site-footer]").count(), 0);
+    assert.equal(await page.locator('[data-site-shell="full"]').count(), 0);
     assert.equal(await page.locator(".chappy-button, .chappy-panel").count(), 0);
+
+    // The wrapper survives embedding (C4 fix round 1): the next/font
+    // variable classes resolve the display face, and the night background
+    // and text-rendering are still on.
+    const wrapper = page.locator('[data-site-shell="embed"]');
+    assert.equal(await wrapper.count(), 1);
+    const info = await wrapper.evaluate((el) => {
+      const cs = getComputedStyle(el);
+      return {
+        className: el.className,
+        fontVar: cs.getPropertyValue("--font-instrument-serif").trim(),
+        background: cs.backgroundColor,
+        textRendering: cs.textRendering,
+        dockH: cs.getPropertyValue("--dock-h").trim(),
+      };
+    });
+    assert.match(info.className, /bg-oh-charcoal/);
+    assert.ok(info.fontVar.length > 0, "the font-variable class is on the embed wrapper");
+    assert.equal(info.background, "rgb(28, 27, 25)");
+    assert.equal(info.textRendering, "geometricprecision");
+    assert.equal(info.dockH, "0px");
   });
 });
 

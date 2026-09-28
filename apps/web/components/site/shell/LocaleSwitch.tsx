@@ -64,6 +64,7 @@ function LocaleMenu() {
   const current = useLocale() as Locale;
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const menuId = useId();
   const switchTo = useSwitchLocale(() => setOpen(false));
 
@@ -73,7 +74,10 @@ function LocaleMenu() {
       if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") {
+        setOpen(false);
+        buttonRef.current?.focus();
+      }
     };
     document.addEventListener("pointerdown", onPointer);
     document.addEventListener("keydown", onKey);
@@ -86,6 +90,7 @@ function LocaleMenu() {
   return (
     <div ref={rootRef} className="relative">
       <button
+        ref={buttonRef}
         type="button"
         aria-expanded={open}
         aria-controls={menuId}

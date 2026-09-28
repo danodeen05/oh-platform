@@ -82,8 +82,7 @@ describe("Icon", () => {
       "share",
       "wallet",
       "arrow",
-      // Task C4 (shell): Chappy, the language switch and contact.
-      "chat",
+      // Task C4 (shell): the language switch and contact.
       "globe",
       "mail",
     ];

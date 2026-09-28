@@ -89,7 +89,7 @@ export function DesktopNav({ onOpenMore, moreOpen }: { onOpenMore: () => void; m
           aria-current={isNavActive(pathname, order.href) ? "page" : undefined}
           className="ml-auto inline-flex h-11 shrink-0 items-center gap-2 rounded-full bg-oh-ember-deep no-underline px-5 text-sm font-semibold tracking-wide text-oh-cream shadow-[0_6px_20px_-8px] shadow-oh-ember-deep transition-colors hover:bg-oh-ember focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oh-cream"
         >
-          <Icon name={order.icon} size={20} />
+          {"icon" in order ? <Icon name={order.icon} size={20} /> : null}
           {t(`nav.${order.key}`)}
         </Link>
       ) : null}
