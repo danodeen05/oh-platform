@@ -1271,6 +1271,20 @@
       "contactUs": {
         "title": "Contáctanos",
         "intro": "Si tienes preguntas sobre esta Política de Privacidad o nuestras prácticas, contáctanos:"
+      },
+      "smsNotifications": {
+        "title": "Notificaciones por SMS",
+        "intro": "Usamos SMS para enviarte notificaciones sobre tus pedidos:",
+        "messageTypes": [
+          "Confirmación del pedido con tu número de pedido y código QR",
+          "Aviso cuando tu cabina está lista",
+          "Actualizaciones de tu lugar en la fila mientras esperas",
+          "Aviso cuando tu pedido para llevar está listo"
+        ],
+        "frequency": "La frecuencia de los mensajes depende de tus pedidos. Normalmente de 1 a 4 mensajes por visita.",
+        "consent": "Puedes aceptar recibir notificaciones por SMS al pagar, ingresando tu número de teléfono y marcando la casilla de consentimiento. Puedes darte de baja en cualquier momento enviando STOP a nuestro número o contactándonos.",
+        "carriers": "Pueden aplicarse tarifas de mensajes y datos. Los operadores no son responsables de mensajes retrasados o no entregados.",
+        "help": "Para obtener ayuda, envía HELP o escríbenos a orders@ohbeefnoodlesoup.com."
       }
     }
   },
