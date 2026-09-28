@@ -11,6 +11,15 @@
  * exist in the stylesheet at once without fighting: only one `@supports`
  * block is ever active in a given browser.
  *
+ * The fallback's hidden starting state (`opacity: 0`) only ever applies
+ * once `data-reveal-armed="true"` is present, which this component sets
+ * itself right when its effect first runs. Server-rendered (or hydration-
+ * never-happens) HTML never gets that attribute, so if JS doesn't execute
+ * at all, the element is never hidden in the first place: there'd be
+ * nothing left to un-hide it. Only a browser that both lacks native
+ * `animation-timeline` support *and* has successfully run this component's
+ * effect gets the hide-then-reveal treatment.
+ *
  * Reduced motion renders the final static state directly (no animation
  * class, no observer): opacity 1, no transform.
  */
@@ -32,9 +41,14 @@ export function Reveal({ as = "div", delay = 0, from = "up", children, className
   const reducedMotion = useReducedMotion();
   const ref = useRef<HTMLElement | null>(null);
   const [inView, setInView] = useState(false);
+  // Only true once this effect has actually run on the client. Gates the
+  // fallback CSS's hidden starting state, so SSR/no-JS output is never
+  // stuck invisible (see file header comment).
+  const [armed, setArmed] = useState(false);
 
   useEffect(() => {
     if (reducedMotion) return;
+    setArmed(true);
     const node = ref.current;
     if (!node || typeof IntersectionObserver === "undefined") {
       setInView(true);
@@ -70,6 +84,7 @@ export function Reveal({ as = "div", delay = 0, from = "up", children, className
       ref,
       className: ["oh-reveal", `oh-reveal--${from}`, className].filter(Boolean).join(" "),
       "data-in": inView ? "true" : "false",
+      "data-reveal-armed": armed ? "true" : undefined,
       style: { ...style, ["--oh-reveal-delay" as string]: `${delay}ms` },
     },
     children

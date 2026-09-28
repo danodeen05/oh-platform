@@ -67,6 +67,10 @@ describe("Sheet accessibility", () => {
   beforeEach(() => {
     mockReducedMotion();
     polyfillRaf();
+    // The body-scroll-lock cleanup (Sheet.tsx) calls window.scrollTo on
+    // close/unmount; jsdom doesn't implement it and logs a console error
+    // otherwise. These tests aren't about the lock, so just stub it quiet.
+    window.scrollTo = vi.fn() as unknown as typeof window.scrollTo;
     container = document.createElement("div");
     document.body.appendChild(container);
     root = createRoot(container);
@@ -75,6 +79,8 @@ describe("Sheet accessibility", () => {
   afterEach(() => {
     act(() => root.unmount());
     container.remove();
+    document.body.style.position = "";
+    document.body.style.top = "";
     vi.restoreAllMocks();
   });
 
@@ -171,5 +177,100 @@ describe("Sheet accessibility", () => {
 
     expect(document.querySelector('[role="dialog"]')).toBeNull();
     expect(document.activeElement).toBe(document.getElementById("opener"));
+  });
+});
+
+// Fix round 1: iOS has no reliable "overflow: hidden on body" scroll lock,
+// so Sheet pins the body with position: fixed at its negated scrollY and
+// restores that scroll position on close. The lock is ref-counted at
+// module scope so a still-open (e.g. nested) sheet keeps the page pinned
+// even after another sheet closes.
+describe("Sheet body scroll lock", () => {
+  let container: HTMLDivElement;
+  let root: Root;
+  let scrollToSpy: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    mockReducedMotion();
+    polyfillRaf();
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+    document.body.style.position = "";
+    document.body.style.top = "";
+    scrollToSpy = vi.fn();
+    window.scrollTo = scrollToSpy as unknown as typeof window.scrollTo;
+  });
+
+  afterEach(() => {
+    act(() => root.unmount());
+    container.remove();
+    document.body.style.position = "";
+    document.body.style.top = "";
+    vi.restoreAllMocks();
+  });
+
+  function sheet(open: boolean, label: string) {
+    return createElement(Sheet, { open, onClose: () => {}, label, children: createElement("p", null, "content") });
+  }
+
+  it("locks the body while open", () => {
+    vi.spyOn(window, "scrollY", "get").mockReturnValue(240);
+
+    act(() => {
+      root.render(sheet(true, "One"));
+    });
+
+    expect(document.body.style.position).toBe("fixed");
+    expect(document.body.style.top).toBe("-240px");
+  });
+
+  it("restores the saved scroll position on close", () => {
+    vi.spyOn(window, "scrollY", "get").mockReturnValue(240);
+
+    act(() => {
+      root.render(sheet(true, "One"));
+    });
+    act(() => {
+      root.render(sheet(false, "One"));
+    });
+
+    expect(document.body.style.position).toBe("");
+    expect(scrollToSpy).toHaveBeenCalledWith(0, 240);
+  });
+
+  it("keeps the lock when two sheets are open and only one closes", () => {
+    function TwoSheets({ innerOpen }: { innerOpen: boolean }) {
+      return createElement(
+        "div",
+        null,
+        sheet(true, "Outer"),
+        createElement(Sheet, {
+          open: innerOpen,
+          onClose: () => {},
+          label: "Inner",
+          children: createElement("p", null, "inner"),
+        })
+      );
+    }
+
+    act(() => {
+      root.render(createElement(TwoSheets, { innerOpen: true }));
+    });
+    expect(document.body.style.position).toBe("fixed");
+
+    // Close only the inner sheet -- the outer one is still open, so the
+    // lock must not be released yet.
+    act(() => {
+      root.render(createElement(TwoSheets, { innerOpen: false }));
+    });
+    expect(document.body.style.position).toBe("fixed");
+    expect(scrollToSpy).not.toHaveBeenCalled();
+
+    // Now close (unmount) the outer one too: the lock releases.
+    act(() => {
+      root.render(createElement("div"));
+    });
+    expect(document.body.style.position).toBe("");
   });
 });

@@ -65,13 +65,22 @@
 }
 
 /* IntersectionObserver fallback: only wired up where native support (or
-   reduced motion) isn't already handling it, see Reveal.tsx. */
+   reduced motion) isn't already handling it, see Reveal.tsx.
+
+   The hidden starting state is scoped to [data-reveal-armed="true"],
+   which Reveal.tsx only ever sets from its own effect -- i.e. once this
+   component has actually mounted and run on the client. A bare
+   `.oh-reveal { opacity: 0 }` here would hide server-rendered content
+   forever if JS never executes (blocked/failed script, no hydration):
+   there'd be nothing left to ever set opacity back to 1. */
 @supports not (animation-timeline: view()) {
-  .oh-reveal {
-    opacity: 0;
-    transform: var(--oh-reveal-transform, none);
+  .oh-reveal[data-reveal-armed="true"] {
     transition: opacity 0.6s ease-out, transform 0.6s ease-out;
     transition-delay: var(--oh-reveal-delay, 0ms);
+  }
+  .oh-reveal[data-reveal-armed="true"]:not([data-in="true"]) {
+    opacity: 0;
+    transform: var(--oh-reveal-transform, none);
   }
   .oh-reveal[data-in="true"] {
     opacity: 1;
@@ -155,6 +164,10 @@
   position: absolute;
   inset: 0;
   background: color-mix(in srgb, var(--color-oh-charcoal) 55%, transparent);
+  /* Belt-and-suspenders: the body-scroll lock (Sheet.tsx) is what actually
+     stops the page behind it from scrolling, but this keeps a touch drag
+     that starts on the backdrop itself from rubber-banding too. */
+  touch-action: none;
 }
 
 .oh-sheet-panel {
@@ -163,6 +176,11 @@
   max-width: 640px;
   max-height: min(var(--oh-sheet-max-height, 90svh), 90svh);
   overflow-y: auto;
+  /* This is the sheet's own scroll area: contain overscroll here so
+     scrolling past its top/bottom edge doesn't chain into a rubber-band
+     scroll of whatever's behind it (the body is also locked in Sheet.tsx,
+     but this also matters for a scrollable ancestor that isn't body). */
+  overscroll-behavior: contain;
   background: var(--color-oh-paper);
   color: var(--color-oh-ink);
   border-radius: 20px 20px 0 0;

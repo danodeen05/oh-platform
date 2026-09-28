@@ -26,11 +26,50 @@
  * Reduced motion: no enter/exit animation and no drag -- the sheet still
  * opens and closes (via the open/onClose contract), it just does so
  * instantly rather than sliding.
+ *
+ * Body scroll lock (iOS): `overflow: hidden` on body alone doesn't stop
+ * rubber-band scrolling on iOS Safari, so while any sheet is open the body
+ * is pinned with `position: fixed` at its negated `scrollY` (the
+ * documented iOS-safe technique), and released back to that same scroll
+ * position on close via `window.scrollTo`. The lock is ref-counted at
+ * module scope so a nested sheet opening/closing over an already-open one
+ * doesn't unlock the page out from under the outer sheet.
  */
 import { AnimatePresence, motion, useDragControls, type PanInfo } from "framer-motion";
 import { useEffect, useRef, type ReactNode } from "react";
 import "./motion.css";
 import { useReducedMotion } from "./useReducedMotion";
+
+let bodyScrollLockCount = 0;
+let bodyScrollLockSavedY = 0;
+
+function lockBodyScroll() {
+  if (typeof document === "undefined") return;
+  if (bodyScrollLockCount === 0) {
+    bodyScrollLockSavedY = window.scrollY;
+    const { style } = document.body;
+    style.position = "fixed";
+    style.top = `-${bodyScrollLockSavedY}px`;
+    style.left = "0";
+    style.right = "0";
+    style.width = "100%";
+  }
+  bodyScrollLockCount += 1;
+}
+
+function unlockBodyScroll() {
+  if (typeof document === "undefined") return;
+  bodyScrollLockCount = Math.max(0, bodyScrollLockCount - 1);
+  if (bodyScrollLockCount === 0) {
+    const { style } = document.body;
+    style.position = "";
+    style.top = "";
+    style.left = "";
+    style.right = "";
+    style.width = "";
+    window.scrollTo(0, bodyScrollLockSavedY);
+  }
+}
 
 export interface SheetProps {
   open: boolean;
@@ -71,6 +110,14 @@ export function Sheet({ open, onClose, snapPoints = [1], label, children, classN
       openerRef.current.focus();
       openerRef.current = null;
     }
+  }, [open]);
+
+  // Lock body scroll (iOS-safe) while open; ref-counted so a nested sheet
+  // doesn't release the lock an outer sheet still needs.
+  useEffect(() => {
+    if (!open) return;
+    lockBodyScroll();
+    return () => unlockBodyScroll();
   }, [open]);
 
   // Focus trap + Esc, only while open.
