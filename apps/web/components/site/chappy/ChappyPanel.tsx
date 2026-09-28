@@ -58,7 +58,7 @@ export function ChappyPanel({
           animate={{ opacity: 1, x: 0 }}
           exit={reduced ? undefined : { opacity: 0, x: 24 }}
           transition={reduced ? { duration: 0 } : { type: "spring", damping: 34, stiffness: 340 }}
-          className="fixed bottom-4 right-4 top-16 z-[60] flex w-[420px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-3xl border border-solid border-oh-stone bg-oh-ink text-oh-cream shadow-[0_24px_64px_-16px_rgba(0,0,0,0.6)]"
+          className="fixed bottom-4 right-4 top-16 z-[200] flex w-[420px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-3xl border border-solid border-oh-stone bg-oh-ink text-oh-cream shadow-[0_24px_64px_-16px_rgba(0,0,0,0.6)]"
         >
           {children}
         </motion.div>

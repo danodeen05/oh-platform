@@ -186,7 +186,8 @@ export function errorMessage(code?: string, retryAfterSeconds?: number): { key: 
 
 /** Errors worth a "Try again" button (the same message may well work a moment later). */
 export function isRetryable(code?: string): boolean {
-  return code === "BUSY" || code === "UPSTREAM" || code === "OFFLINE" || code === "INTERNAL" || code === "ABORTED" || code === "BAD_REQUEST";
+  // Not BAD_REQUEST: the same request would fail the same way.
+  return code === "BUSY" || code === "UPSTREAM" || code === "OFFLINE" || code === "INTERNAL" || code === "ABORTED";
 }
 
 /** Chappy's tools (packages/api/src/chappy/tools.js), each with a chappyWeb.tools label. */

@@ -9,6 +9,8 @@
    so when the on-screen keyboard opens the whole sheet shrinks above it and
    the composer, pinned to the sheet's bottom, stays in view. */
 .chappy-sheet.oh-sheet-root {
+  /* Above the legacy pages' sticky bars and header (z-index 100). */
+  z-index: 200;
   top: var(--chappy-vvt, 0px);
   bottom: auto;
   height: var(--chappy-vvh, 100svh);
@@ -29,9 +31,9 @@
   box-shadow: none;
 }
 
+/* The C3 grab zone keeps its 44px drag target; the header below starts flush with it. */
 .chappy-sheet .oh-sheet-grab-zone {
   flex-shrink: 0;
-  height: 20px;
 }
 
 .chappy-sheet .oh-sheet-grabber {

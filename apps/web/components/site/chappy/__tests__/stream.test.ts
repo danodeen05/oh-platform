@@ -7,6 +7,7 @@ import {
   applyEvent,
   errorFromResponse,
   errorMessage,
+  isRetryable,
   toolStatusKey,
   CHAPPY_ERROR_CODES,
   CHAPPY_TOOL_KEYS,
@@ -167,6 +168,11 @@ describe("error code mapping", () => {
     expect(errorMessage("RATE", 30)).toEqual({ key: "RATE", values: { minutes: 1 } });
     expect(errorMessage("RATE")).toEqual({ key: "RATE_SOON" });
     expect(errorMessage("RATE", -5)).toEqual({ key: "RATE_SOON" });
+  });
+
+  test("Try again is offered only where a retry can help", () => {
+    for (const code of ["BUSY", "UPSTREAM", "OFFLINE", "INTERNAL"]) expect(isRetryable(code), code).toBe(true);
+    for (const code of ["BAD_REQUEST", "REFUSAL", "RATE", "BUDGET", "TOO_LONG", "SIGN_IN_REQUIRED"]) expect(isRetryable(code), code).toBe(false);
   });
 
   test("tool names map to a status label, unknown tools to a generic one", () => {

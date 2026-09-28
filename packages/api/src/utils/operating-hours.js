@@ -370,6 +370,40 @@ export function getLocationStatus(location, date = new Date()) {
   };
 }
 
+const WEEK_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+
+/**
+ * A location's opening hours as a customer would ask about them (Task E1 fix
+ * round 1, for Chappy's get_locations). Same source and semantics ordering
+ * enforces: Location.operatingHours when set, else DEFAULT_HOURS
+ * (getHoursForDay), a missing day is closed, and isClosed closes everything.
+ * Computed in the location's timezone (America/Denver by default). Ignores
+ * the DISABLE_TIME_RESTRICTIONS testing bypass: these are the real hours.
+ *
+ * Returns { timezone, hoursSource: "location"|"default", temporarilyClosed,
+ *   openNow, today: {day, open, close} | {day, closed: true},
+ *   week: [{day, open, close} | {day, closed: true}] x7, Monday first }.
+ * open/close are "HH:MM" 24-hour local times; close is exclusive (21:00
+ * means the doors close at 9 pm).
+ */
+export function weeklyHours(location, date = new Date()) {
+  const timezone = location?.timezone || "America/Denver";
+  const temporarilyClosed = !!location?.isClosed;
+  const view = (day) => {
+    const h = temporarilyClosed ? null : getHoursForDay(location, day);
+    return h && h.open && h.close ? { day, open: h.open, close: h.close } : { day, closed: true };
+  };
+  const { weekday } = getLocationTime(timezone, date);
+  return {
+    timezone,
+    hoursSource: location?.operatingHours ? "location" : "default",
+    temporarilyClosed,
+    openNow: isLocationOpen({ ...location, timezone }, date),
+    today: view(weekday),
+    week: WEEK_KEYS.map(view),
+  };
+}
+
 const SLOT_MS = 15 * 60 * 1000;
 
 /** Offset (ms) of `timeZone` from UTC at instant `ms` (e.g. -6h for MDT). */

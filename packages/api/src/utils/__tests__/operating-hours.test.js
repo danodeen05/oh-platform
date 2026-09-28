@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { slotsFor } from "../operating-hours.js";
+import { slotsFor, weeklyHours } from "../operating-hours.js";
 
 const DENVER = { id: "L1", timezone: "America/Denver", isClosed: false };
 const QUARTER_MS = 15 * 60 * 1000;
@@ -48,4 +48,42 @@ test("a closed day or a closed location has no slots", () => {
 test("past slots are dropped", () => {
   const slots = slotsFor({ ...DENVER }, "2026-10-01", new Date("2026-10-01T20:40:00-06:00"));
   assert.deepEqual(slots.map(denverClock), ["20:45"]);
+});
+
+// Task E1 fix round 1: the hours Chappy tells customers (get_locations).
+test("weeklyHours: default hours at the Denver close edge, 20:59 open and 21:00 closed (MDT)", () => {
+  // 2026-10-01 is a Thursday. With operatingHours null the defaults apply (Mon-Sat 11:00-21:00).
+  const at = (hhmm) => weeklyHours({ ...DENVER, operatingHours: null }, new Date(`2026-10-01T${hhmm}:00-06:00`));
+  const before = at("20:59");
+  assert.equal(before.openNow, true);
+  assert.equal(before.hoursSource, "default");
+  assert.equal(before.timezone, "America/Denver");
+  assert.deepEqual(before.today, { day: "thu", open: "11:00", close: "21:00" });
+  assert.equal(at("21:00").openNow, false);
+  assert.equal(at("10:59").openNow, false);
+  assert.equal(at("11:00").openNow, true);
+  // 21:00 in Denver is already Friday in UTC: "today" follows Denver, not UTC or the server clock.
+  assert.equal(at("21:00").today.day, "thu");
+  assert.deepEqual(before.week.map((d) => d.day), ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]);
+  assert.deepEqual(before.week[6], { day: "sun", closed: true });
+});
+
+test("weeklyHours: Sunday is closed by default; a location's own hours win and say so", () => {
+  const sunday = new Date("2026-10-04T13:00:00-06:00");
+  const d = weeklyHours({ ...DENVER }, sunday);
+  assert.equal(d.openNow, false);
+  assert.deepEqual(d.today, { day: "sun", closed: true });
+  const own = weeklyHours({ ...DENVER, operatingHours: { sun: { open: "12:00", close: "20:00" }, mon: { open: "11:00", close: "21:00" } } }, sunday);
+  assert.equal(own.hoursSource, "location");
+  assert.equal(own.openNow, true);
+  assert.deepEqual(own.today, { day: "sun", open: "12:00", close: "20:00" });
+  assert.deepEqual(own.week[1], { day: "tue", closed: true }, "a day missing from operatingHours is closed, as ordering treats it");
+});
+
+test("weeklyHours: isClosed closes today and the whole week, whatever the hours say", () => {
+  const r = weeklyHours({ ...DENVER, isClosed: true }, new Date("2026-10-01T12:00:00-06:00"));
+  assert.equal(r.temporarilyClosed, true);
+  assert.equal(r.openNow, false);
+  assert.deepEqual(r.today, { day: "thu", closed: true });
+  assert.ok(r.week.every((day) => day.closed === true));
 });

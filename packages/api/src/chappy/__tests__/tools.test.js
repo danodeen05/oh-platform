@@ -217,6 +217,14 @@ describe("menu (public, early access)", () => {
     assert.equal(r.locations.length, 1);
     assert.equal(r.locations[0].freePods, 5, "retired pods are not counted");
     assert.ok(r.locations[0].slots.length > 0);
+    // Task E1 fix round 1: hours, from the same source ordering enforces (defaults when unset).
+    const l = r.locations[0];
+    assert.equal(l.timezone, "America/Denver");
+    assert.equal(l.hoursSource, "default");
+    assert.equal(l.openNow, true, "noon on a Thursday");
+    assert.deepEqual(l.today, { day: "thu", open: "11:00", close: "21:00" });
+    assert.equal(l.week.length, 7);
+    assert.match(TOOL_DEFS.find((t) => t.name === "get_locations").description, /hours/);
   });
 });
 
@@ -694,7 +702,7 @@ describe("source scan: money only moves through the services", () => {
       "../membership/program.js": ["publicProgram", "PROGRAM"],
       "../support/caps.js": ["grantGoodwill"],
       "../support/routes.js": ["createSupportCase", "notifyCase"],
-      "../utils/operating-hours.js": ["slotsFor", "canAcceptOrders"],
+      "../utils/operating-hours.js": ["slotsFor", "canAcceptOrders", "weeklyHours"],
       "./cart.js": ["loadCart", "saveCart", "applyCartOp", "replaceItems", "cartLines", "CartError", "CART_OPS"],
       "./tool-schema.js": ["toStrictToolDefs", "validateToolInput"],
     },

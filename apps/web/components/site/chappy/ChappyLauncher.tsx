@@ -28,7 +28,7 @@ export function ChappyLauncher() {
       aria-haspopup="dialog"
       aria-label={t("open")}
       onClick={() => chappy.openChappy()}
-      className="fixed bottom-[max(1rem,env(safe-area-inset-bottom,0px))] right-4 z-50 flex h-14 w-14 cursor-pointer appearance-none items-center justify-center rounded-full border-2 border-solid border-oh-cream/25 bg-oh-ink p-0 shadow-[0_10px_30px_-8px_rgba(0,0,0,0.55)] transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oh-ember motion-reduce:transition-none motion-reduce:hover:scale-100"
+      className="fixed bottom-[max(1rem,env(safe-area-inset-bottom,0px))] right-4 z-[150] flex h-14 w-14 cursor-pointer appearance-none items-center justify-center rounded-full border-2 border-solid border-oh-cream/25 bg-oh-ink p-0 shadow-[0_10px_30px_-8px_rgba(0,0,0,0.55)] transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oh-ember motion-reduce:transition-none motion-reduce:hover:scale-100"
     >
       <img src={CHAPPY_AVATAR} alt="" width={48} height={48} className="h-12 w-12 rounded-full" />
     </button>

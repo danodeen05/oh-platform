@@ -4,7 +4,7 @@
  */
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { fakeClient, fakePrisma, step, text, toolUse, collect, jsonParseError, apiError } from "./fakes.js";
+import { fakeClient, fakePrisma, step, text, toolUse, collect, jsonParseError, apiError, midStreamOverload } from "./fakes.js";
 import {
   runTurn,
   trimHistory,
@@ -62,8 +62,11 @@ async function turn({ script, identity = { kind: "member", userId: "u1" }, messa
   const db = prisma || fakePrisma({ users: [{ id: "u1", name: "Ana", membershipTier: "NOODLE_MASTER" }, { id: "u2", name: "Bo", membershipTier: "BEEF_BOSS" }] });
   const conversation = conv(history);
   db.convs.push(conversation);
-  const events = await collect(runTurn({ client, prisma: db, identity, channel, locale, message, conversation, tools, now: NOW }));
-  return { client, db, events, tools };
+  // Overload backoff is recorded, not slept (Task E1 fix round 1).
+  const sleeps = [];
+  const sleep = async (ms) => void sleeps.push(ms);
+  const events = await collect(runTurn({ client, prisma: db, identity, channel, locale, message, conversation, tools, now: NOW, sleep, random: () => 0.5 }));
+  return { client, db, events, tools, sleeps };
 }
 
 describe("request shape", () => {
@@ -375,13 +378,44 @@ describe("loop", () => {
     assert.ok(!last.content.some((b) => b.type === "tool_use"), "no orphaned tool_use saved");
   });
 
-  test("an API error ends the turn with an error event and is not retried", async () => {
-    const script = [step({ throws: apiError(529) })];
-    const { events, client, db } = await turn({ script });
+  test("an overload after text has streamed ends the turn with BUSY and is not retried (the customer already saw text)", async () => {
+    const script = [step({ throws: apiError(529) })]; // throws after the "ok" text delta
+    const { events, client, db, sleeps } = await turn({ script });
     assert.equal(client.calls.length, 1);
+    assert.equal(sleeps.length, 0);
     assert.equal(events.at(-1).type, "error");
     assert.equal(events.at(-1).code, "BUSY");
     assert.equal(db.updates.length, 0);
+  });
+
+  test("Task E1 fix round 1: a mid-stream overloaded_error before anything streamed is retried quietly, then succeeds", async () => {
+    const script = (n) => (n === 1 ? step({ throwsEarly: midStreamOverload() }) : step({ content: [text("We close at 9 pm.")] }));
+    const { events, client, sleeps } = await turn({ script });
+    assert.equal(client.calls.length, 2);
+    assert.deepEqual(sleeps, [600], "one jittered backoff (random fixed at 0.5 -> the base delay)");
+    assert.deepEqual(events.filter((e) => e.type === "text").map((e) => e.delta), ["We close at 9 pm."], "no error, no duplicate text");
+    assert.equal(events.at(-1).type, "done");
+    assert.ok(!events.some((e) => e.type === "error"));
+  });
+
+  test("Task E1 fix round 1: an overload that never clears gives up after 2 retries (3 attempts) with BUSY", async () => {
+    for (const err of [midStreamOverload, () => apiError(529), () => apiError(429), () => apiError(503)]) {
+      const { events, client, sleeps } = await turn({ script: () => step({ throwsEarly: err() }) });
+      assert.equal(client.calls.length, 3, "first try + 2 retries");
+      assert.deepEqual(sleeps, [600, 1500]);
+      assert.equal(events.at(-1).type, "error");
+      assert.equal(events.at(-1).code, "BUSY", "an overload is BUSY, not UPSTREAM");
+      assert.equal(events.filter((e) => e.type === "text").length, 0);
+    }
+  });
+
+  test("Task E1 fix round 1: no quiet retry once a tool status has streamed, and other API errors are never retried", async () => {
+    const afterTool = await turn({ script: [step({ content: [toolUse("zeta_lookup", { q: "x" }, "t1")], stop_reason: "tool_use" }), step({ throwsEarly: midStreamOverload() })] });
+    assert.equal(afterTool.client.calls.length, 2, "no retry after the customer saw a tool status");
+    assert.equal(afterTool.events.at(-1).code, "BUSY");
+    const bad = await turn({ script: () => step({ throwsEarly: apiError(400, "invalid_request_error") }) });
+    assert.equal(bad.client.calls.length, 1);
+    assert.equal(bad.events.at(-1).code, "BAD_REQUEST");
   });
 
   test("tool JSON the SDK cannot parse at all re-issues the request (capped)", async () => {

@@ -28,7 +28,7 @@
 import { useAuth } from "@clerk/nextjs";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SITE_API_URL } from "@/lib/site/api";
-import { ensureGuestToken, readGuestToken } from "./guest";
+import { clearGuestToken, ensureGuestToken, readGuestToken } from "./guest";
 import { CHAPPY_MESSAGE_MAX, applyEvent, errorFromResponse, readSse, type ChatError, type ChatMessage } from "./stream";
 
 export type ChappyStatus = "loading" | "idle" | "streaming";
@@ -43,6 +43,8 @@ export interface ChappyStream {
   signedIn: boolean;
 }
 
+const CLERK_GRACE_MS = 8000;
+
 let seq = 0;
 const newId = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${(seq++).toString(36)}`;
 
@@ -50,7 +52,15 @@ type Headers = Record<string, string>;
 
 export function useChappyStream({ locale, apiBase = SITE_API_URL }: { locale: string; apiBase?: string }): ChappyStream {
   const { isLoaded, isSignedIn, userId, getToken } = useAuth();
-  const identityKey = !isLoaded ? null : isSignedIn && userId ? `member:${userId}` : "guest";
+  // If Clerk never loads (a blocked script), chat as a guest after a grace
+  // period instead of a spinner forever; a later load still switches over.
+  const [clerkTimedOut, setClerkTimedOut] = useState(false);
+  useEffect(() => {
+    if (isLoaded) return;
+    const t = setTimeout(() => setClerkTimedOut(true), CLERK_GRACE_MS);
+    return () => clearTimeout(t);
+  }, [isLoaded]);
+  const identityKey = isLoaded ? (isSignedIn && userId ? `member:${userId}` : "guest") : clerkTimedOut ? "guest" : null;
 
   const identityRef = useRef(identityKey);
   const getTokenRef = useRef(getToken);
@@ -111,6 +121,9 @@ export function useChappyStream({ locale, apiBase = SITE_API_URL }: { locale: st
   const loadedKeyRef = useRef<string | null>(null);
   useEffect(() => {
     if (!identityKey || loadedKeyRef.current === identityKey) return;
+    // Guest -> member: forget the guest token, so signing out later (a shared
+    // phone) starts a fresh guest chat instead of reopening the earlier one.
+    if (loadedKeyRef.current === "guest" && identityKey.startsWith("member:")) clearGuestToken();
     loadedKeyRef.current = identityKey;
     const gen = ++genRef.current;
     abortRef.current?.abort();

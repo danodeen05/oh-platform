@@ -57,6 +57,27 @@ export const CHAPPY_BETAS = Object.freeze(["server-side-fallback-2026-07-01"]);
 export { CHAPPY_LOCALES };
 
 const JSON_RETRY_LIMIT = 2;
+/**
+ * Transient upstream trouble (overloaded_error, 429/503/529), including an
+ * overload that arrives mid-stream as an SSE error event, which the SDK's own
+ * retries never see. Re-issued up to this many times with jittered backoff,
+ * but only while nothing has streamed to the customer yet (Task E1 fix round 1).
+ */
+export const OVERLOAD_RETRY_LIMIT = 2;
+const OVERLOAD_BACKOFF_MS = [600, 1500];
+const defaultSleep = (ms, signal) =>
+  new Promise((resolve) => {
+    if (signal?.aborted) return resolve();
+    const t = setTimeout(resolve, ms);
+    signal?.addEventListener?.(
+      "abort",
+      () => {
+        clearTimeout(t);
+        resolve();
+      },
+      { once: true },
+    );
+  });
 const CONVERSATION_IDLE_MS = 30 * 60 * 1000;
 const IN_POD_WINDOW_MS = 4 * 60 * 60 * 1000;
 const ACTIVE_ORDER_STATUSES = ["PAID", "QUEUED", "PREPPING", "READY", "SERVING"];
@@ -280,10 +301,18 @@ export async function loadTurnContext({ prisma, identity, channel, locale, conve
 // ---------------------------------------------------------------------------
 // The loop
 
+/** An overload or rate limit: worth a quiet retry, and BUSY to the customer (web and SMS). */
+export function isTransientUpstream(err) {
+  if (!(err instanceof APIError)) return false;
+  if (err.name === "APIUserAbortError" || err.constructor?.name === "APIUserAbortError") return false;
+  const type = err.type ?? err.error?.error?.type ?? err.error?.type;
+  return type === "overloaded_error" || err.status === 429 || err.status === 503 || err.status === 529;
+}
+
 function errorCode(err) {
   if (err instanceof APIError) {
     if (err.name === "APIUserAbortError" || err.constructor?.name === "APIUserAbortError") return "ABORTED";
-    if (err.status === 429 || err.status === 529 || err.status === 503) return "BUSY";
+    if (isTransientUpstream(err)) return "BUSY";
     if (err.status === 400) return "BAD_REQUEST";
     return "UPSTREAM";
   }
@@ -330,7 +359,7 @@ function addUsage(total, message) {
  * @param {Date}   [p.now]
  * @param {AbortSignal} [p.signal] aborts the model stream (client went away)
  */
-export async function* runTurn({ client, prisma, identity, channel = "web", locale = "en", message, conversation, tools, toolDeps = {}, now = new Date(), signal }) {
+export async function* runTurn({ client, prisma, identity, channel = "web", locale = "en", message, conversation, tools, toolDeps = {}, now = new Date(), signal, sleep = defaultSleep, random = Math.random }) {
   const toolset = tools || { defs: TOOL_DEFS, execute: executeTool };
   const defsByName = new Map(toolset.defs.map((d) => [d.name, d]));
   const lang = CHAPPY_LOCALES.includes(locale) ? locale : "en";
@@ -363,6 +392,9 @@ export async function* runTurn({ client, prisma, identity, channel = "web", loca
 
   const usage = { input_tokens: 0, output_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0, rounds: 0, model: null, fallback: false };
   let emittedText = false;
+  // Anything the customer has seen this turn (text or a tool status): after that, no quiet overload retry.
+  let streamedAny = false;
+  let overloadRetries = 0;
   let finalText = "";
 
   function* say(textToSay) {
@@ -401,6 +433,7 @@ export async function* runTurn({ client, prisma, identity, channel = "web", loca
         const stream = client.beta.messages.stream(buildRequest({ messages, toolDefs: toolset.defs, finalRound }), signal ? { signal } : undefined);
         for await (const event of stream) {
           if (event.type === "content_block_start" && event.content_block?.type === "tool_use") {
+            streamedAny = true;
             yield { type: "tool_start", name: event.content_block.name };
           } else if (event.type === "content_block_delta" && event.delta?.type === "text_delta" && event.delta.text && !suppressText) {
             if (needsBreak) {
@@ -408,6 +441,7 @@ export async function* runTurn({ client, prisma, identity, channel = "web", loca
               needsBreak = false;
             }
             emittedText = true;
+            streamedAny = true;
             sentThisAttempt = true;
             yield { type: "text", delta: event.delta.text };
           }
@@ -419,6 +453,13 @@ export async function* runTurn({ client, prisma, identity, channel = "web", loca
           console.warn(`[Chappy] tool input JSON unparseable, re-issuing (attempt ${attempt + 1})`);
           if (sentThisAttempt) suppressText = true;
           continue;
+        }
+        if (isTransientUpstream(err) && !streamedAny && overloadRetries < OVERLOAD_RETRY_LIMIT && !signal?.aborted) {
+          const base = OVERLOAD_BACKOFF_MS[Math.min(overloadRetries, OVERLOAD_BACKOFF_MS.length - 1)];
+          overloadRetries++;
+          console.warn(`[Chappy] upstream busy (${err?.status || "overloaded"}), retry ${overloadRetries}/${OVERLOAD_RETRY_LIMIT}`);
+          await sleep(Math.round(base * (0.7 + 0.6 * random())), signal);
+          if (!signal?.aborted) continue;
         }
         console.error("[Chappy] model request failed:", err?.status || "", err?.message);
         await saveCompletedRounds();

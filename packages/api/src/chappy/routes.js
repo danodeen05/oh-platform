@@ -49,7 +49,6 @@ import { fallbackText } from "./prompts.js";
 import { checkTwilioSignature } from "./twilio-signature.js";
 import { toE164, usersWithPhone, smsMemberFor } from "./phone.js";
 import { formatForSMS } from "./formatters/rcs.js";
-import { formatForWeb } from "./formatters/web.js";
 
 export const GUEST_TOKEN_RATE_LIMIT = Object.freeze({ max: 10, timeWindow: "1 hour" });
 export const CHAPPY_UNIDENTIFIED = Object.freeze({ error: "Sign in, or start a guest chat session, to talk to Chappy" });
@@ -87,17 +86,16 @@ function displayMessages(messages) {
   return out;
 }
 
-/** Turn runTurn events into SSE frames. The done frame also carries the legacy widget's quick actions. */
+/**
+ * Turn runTurn events into SSE frames. (Task E1 fix round 1: the done frame
+ * no longer carries formatForWeb's regex quick actions and item cards; the
+ * retired widget was their only reader. Cards come from tools as `card` events.)
+ */
 async function* toSse(events) {
   yield ": chappy\n\n";
   try {
     for await (const event of events) {
       const { type, ...data } = event;
-      if (type === "done") {
-        const web = formatForWeb(data.text || "", []);
-        data.actions = web.actions;
-        data.cards = web.cards;
-      }
       yield `event: ${type}\ndata: ${JSON.stringify(data)}\n\n`;
     }
   } catch (err) {

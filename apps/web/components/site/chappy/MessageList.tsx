@@ -66,6 +66,8 @@ export function MessageList({ messages, status, cjk, onQuick, onRetry, onSignIn 
   }, []);
 
   const empty = messages.length === 0;
+  const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
+  const lastReply = lastAssistant && !lastAssistant.pending && !lastAssistant.id.startsWith("h-") ? lastAssistant.text : "";
   const display = cjk ? "font-display-cjk" : "font-display";
 
   return (
@@ -104,8 +106,15 @@ export function MessageList({ messages, status, cjk, onQuick, onRetry, onSignIn 
         </div>
       ) : null}
 
+      {/* Screen readers hear each reply once, when it has finished streaming,
+          not every delta (the list itself is not live). Restored history is
+          not announced; errors announce themselves (role="alert"). */}
+      <p aria-live="polite" className="sr-only">
+        {lastReply}
+      </p>
+
       {!empty ? (
-        <ol aria-live="polite" aria-relevant="additions text" className="m-0 grid list-none gap-5 p-0 pt-3">
+        <ol className="m-0 grid list-none gap-5 p-0 pt-3">
           {messages.map((m) => (
             <li key={m.id} className="chappy-enter min-w-0">
               {m.role === "user" ? (
@@ -239,15 +248,31 @@ function inline(text: string): ReactNode[] {
   return out;
 }
 
-const BULLET = /^\s*(?:[-*•]|\d+[.)])\s+/;
+const BULLET = /^\s*[-*•]\s+/;
+const NUMBERED = /^\s*(\d{1,2})[.)]\s+/;
 
-/** Paragraphs on blank lines, "- " / "1. " lines as a list, single newlines kept as line breaks. */
+/** Paragraphs on blank lines, "- " lines as a list, "1. " lines as a numbered list, single newlines kept as line breaks. */
 export function SafeText({ text }: { text: string }) {
   const blocks = text.replace(/\r\n?/g, "\n").trim().split(/\n{2,}/);
   return (
     <div data-chappy-text className="grid gap-3 break-words text-base leading-relaxed text-oh-cream/95">
       {blocks.map((block, bi) => {
         const lines = block.split("\n");
+        if (lines.every((l) => NUMBERED.test(l))) {
+          // Chappy's steps keep their numbers (the model's own, so "3." stays 3).
+          return (
+            <ol key={bi} className="m-0 grid list-none gap-1.5 p-0">
+              {lines.map((l, li) => (
+                <li key={li} className="flex gap-2.5">
+                  <span className="min-w-[1.25em] shrink-0 text-right font-semibold tabular-nums text-oh-ember-light">
+                    {l.match(NUMBERED)?.[1]}.
+                  </span>
+                  <span className="min-w-0">{inline(l.replace(NUMBERED, ""))}</span>
+                </li>
+              ))}
+            </ol>
+          );
+        }
         if (lines.every((l) => BULLET.test(l))) {
           return (
             <ul key={bi} className="m-0 grid list-none gap-1.5 p-0">

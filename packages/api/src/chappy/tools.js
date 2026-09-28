@@ -36,7 +36,7 @@ import { earlyAccessVisible, profileForUser } from "../membership/engine.js";
 import { publicProgram, PROGRAM } from "../membership/program.js";
 import { grantGoodwill } from "../support/caps.js";
 import { createSupportCase, notifyCase } from "../support/routes.js";
-import { slotsFor, canAcceptOrders } from "../utils/operating-hours.js";
+import { slotsFor, canAcceptOrders, weeklyHours } from "../utils/operating-hours.js";
 import { loadCart, saveCart, applyCartOp, replaceItems, cartLines, CartError, CART_OPS } from "./cart.js";
 import { toStrictToolDefs, validateToolInput } from "./tool-schema.js";
 
@@ -76,7 +76,8 @@ export const CHAPPY_TOOLS = [
   },
   {
     name: "get_locations",
-    description: "Locations with whether online ordering is open, free pods right now, and today's arrival slots.",
+    description:
+      "Locations with their opening hours (open now, today's open and close, the whole week; 24-hour local times in their timezone, close is when the doors close, a closed day says closed), whether online ordering is open, free pods right now, and today's arrival slots. Use it for any question about hours, closing time or whether a location is open.",
     input_schema: obj({}),
   },
   {
@@ -483,6 +484,7 @@ export const HANDLERS = {
         id: l.id,
         name: l.name,
         city: l.city || null,
+        ...weeklyHours({ ...l, timezone: tz }, now),
         orderingOpen: canAcceptOrders(l, now),
         freePods,
         slots: slotsFor(l, localDate(now, tz), now).slice(0, 12).map((s) => slotView(s, tz)),

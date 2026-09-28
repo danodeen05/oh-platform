@@ -2212,7 +2212,7 @@
       },
       "pay": {
         "title": "Listo para pagar",
-        "body": "Tu pedido está guardado. El pago se abre aquí."
+        "body": "Tu pedido está guardado y listo para pagar."
       },
       "confirmZero": {
         "title": "Nada que pagar",

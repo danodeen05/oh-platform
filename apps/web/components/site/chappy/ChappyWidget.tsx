@@ -68,6 +68,11 @@ export default function ChappyWidget({ open, onClose, onOpen, prefill, prefillKe
       onOpen();
     }
   }, [awaitingSignIn, chat.signedIn, onOpen]);
+  // The customer dismissed Clerk and opened Chappy by hand: stop waiting, so a
+  // sign-in much later (elsewhere on the site) doesn't pop Chappy open.
+  useEffect(() => {
+    if (open) setAwaitingSignIn(false);
+  }, [open]);
 
   // With a prefill, put the cursor in the box (the phone sheet otherwise
   // focuses its first control, so the keyboard doesn't jump up uninvited).
@@ -79,7 +84,7 @@ export default function ChappyWidget({ open, onClose, onOpen, prefill, prefillKe
 
   const body = (
     <div data-chappy className={`${siteFontVariables} ${cjk ? "font-cjk" : "font-body"} flex min-h-0 flex-1 flex-col antialiased`}>
-      <header className="flex shrink-0 items-center gap-3 border-0 border-b border-solid border-oh-stone/70 px-4 pb-3 pt-1 md:pt-3">
+      <header className="flex shrink-0 items-center gap-3 border-0 border-b border-solid border-oh-stone/70 px-4 pb-3 pt-0 md:pt-3">
         <img src={CHAPPY_AVATAR} alt="" width={40} height={40} className="h-10 w-10 shrink-0 rounded-full bg-oh-cream/10" />
         <div className="min-w-0 flex-1">
           <h2 className={`${cjk ? "font-display-cjk" : "font-display"} m-0 text-2xl font-normal leading-tight text-oh-cream`}>{t("name")}</h2>

@@ -4517,7 +4517,7 @@
       },
       "pay": {
         "title": "Ready to pay",
-        "body": "Your order is saved. Payment opens here."
+        "body": "Your order is saved and ready to pay."
       },
       "confirmZero": {
         "title": "Nothing to pay",

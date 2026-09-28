@@ -59,11 +59,27 @@ async function go(page: Page, p: string) {
   await page.goto(BASE + p, { waitUntil: "domcontentloaded", timeout: 180_000 });
 }
 
-async function openFromDock(page: Page) {
-  const item = page.locator('[data-dock-item="chappy"]');
+/**
+ * Clicks until `target` shows. A tap that lands before React hydrates the
+ * trigger does nothing (dev compiles make that window long), so retry a few times.
+ */
+async function clickUntil(page: Page, trigger: string, target: string) {
+  const item = page.locator(trigger);
   await item.waitFor({ state: "visible", timeout: 60_000 });
-  await item.click();
-  await page.locator("[data-chappy]").waitFor({ state: "visible", timeout: 60_000 });
+  for (let i = 0; i < 4; i++) {
+    // Already open (the lazy widget chunk is still compiling): wait, don't toggle it shut.
+    if ((await item.getAttribute("aria-expanded")) !== "true") await item.click();
+    try {
+      await page.locator(target).waitFor({ state: "visible", timeout: i < 3 ? 8_000 : 60_000 });
+      return;
+    } catch (e) {
+      if (i === 3) throw e;
+    }
+  }
+}
+
+async function openFromDock(page: Page) {
+  await clickUntil(page, '[data-dock-item="chappy"]', "[data-chappy]");
 }
 
 const sse = (events: Array<[string, unknown]>) => ": chappy\n\n" + events.map(([e, d]) => `event: ${e}\ndata: ${JSON.stringify(d)}\n\n`).join("");
@@ -277,7 +293,9 @@ test("errors are translated: RATE before the stream (es), REFUSAL drops partial 
     await send(page, "hello");
     await page.locator('[data-chappy-error="BUSY"]').waitFor();
     await page.getByRole("button", { name: messages("en").retry }).click();
-    await page.locator("text=Back now.").waitFor();
+    await page.locator("[data-chappy-text]", { hasText: "Back now." }).waitFor();
+    // The finished reply is announced once through the polite live region (not per delta).
+    assert.equal(await page.locator("p[aria-live=polite].sr-only").innerText(), "Back now.");
     assert.equal(calls, 2);
     assert.equal(await page.locator('[data-chappy-turn="user"]').count(), 1, "the retried question is not duplicated");
     assert.equal(await page.locator("[data-chappy-error]").count(), 0);
@@ -334,7 +352,7 @@ test("a guest token the API refuses is replaced once, and the message goes throu
     await openFromDock(page);
     await page.locator("[data-chappy-welcome]").waitFor();
     await send(page, "hello");
-    await page.locator("text=Fresh token, fresh start.").waitFor();
+    await page.locator("[data-chappy-text]", { hasText: "Fresh token, fresh start." }).waitFor();
     assert.deepEqual(tokens, ["expired-guest-token-000000000000000000", STUB_GUEST_TOKEN]);
     assert.equal(seen.length, 2);
     assert.equal(await page.evaluate(() => localStorage.getItem("oh-chappy-guest")), STUB_GUEST_TOKEN);
@@ -344,9 +362,7 @@ test("a guest token the API refuses is replaced once, and the message goes throu
 test("1440: the desktop nav opens a 420px side panel, and the page stays usable", async () => {
   await withPage({ viewport: { width: 1440, height: 900 } }, async (page) => {
     await go(page, `/en${LAB}`);
-    const trigger = page.locator('[data-site-desktop-nav] [data-nav-item="chappy"]');
-    await trigger.waitFor({ state: "visible", timeout: 60_000 });
-    await trigger.click();
+    await clickUntil(page, '[data-site-desktop-nav] [data-nav-item="chappy"]', '[data-chappy-surface="panel"]');
     const panel = page.locator('[data-chappy-surface="panel"]');
     await panel.waitFor({ state: "visible" });
     await page.waitForTimeout(500);
@@ -369,7 +385,7 @@ test("legacy pages: a floating launcher opens the same widget; the old one is go
     const b = await launcher.boundingBox();
     assert.ok(b && b.width >= 44 && b.height >= 44);
     assert.equal(await page.locator(".chappy-button, .chappy-panel").count(), 0);
-    await launcher.click();
+    await clickUntil(page, "[data-chappy-launcher]", "[data-chappy]");
     await page.locator("[data-chappy-welcome]").waitFor({ timeout: 60_000 });
     assert.equal(await page.locator(".legacy-ui [data-chappy]").count(), 0, "the widget is not under the legacy element rules");
     assert.equal(await launcher.count(), 0, "the launcher hides while Chappy is open");
@@ -446,18 +462,28 @@ test("@live signed-in member: 'order my usual' shows a pay card", { skip: !LIVE 
     await page.locator("#chappy-input").waitFor();
     await page.waitForFunction(() => !document.querySelector("[data-chappy-messages] [role=status]"), null, { timeout: 30_000 });
     const settle = () => page.waitForFunction(() => !document.querySelector('[data-chappy-turn="assistant"][aria-busy="true"]'), null, { timeout: 150_000 });
+    const payCards = () => page.locator('[data-chappy-card="pay"], [data-chappy-card="confirm-zero"]').count();
+
+    // Start from a clean conversation (reset costs no model call).
+    if (await page.locator("[data-chappy-reset]").count()) {
+      await page.locator("[data-chappy-reset]").click();
+      await page.locator("[data-chappy-welcome]").waitFor();
+    }
 
     await send(page, "order my usual");
     await page.locator('[data-chappy-turn="assistant"]').last().waitFor();
     await settle();
     console.log("[live] member turn 1:", await page.locator('[data-chappy-turn="assistant"]').last().innerText());
     if (process.env.E2E_SHOT_DIR) await page.screenshot({ path: path.join(process.env.E2E_SHOT_DIR, "e1-390-en-reply.png") });
-    // Chappy confirms the cart and total before checkout (B2's confirmation gate): one "yes".
-    if ((await page.locator('[data-chappy-card="pay"], [data-chappy-card="confirm-zero"]').count()) === 0) {
-      await send(page, "Yes, that's right. Put it through.");
+    // Chappy confirms the cart, place and total before checkout (B2's confirmation gate):
+    // at most two follow-ups, each answering everything it could ask.
+    const followUps = ["Yes, exactly that, at the same location as last time, as soon as possible, any pod. Put it through.", "Yes. Put it through now."];
+    for (const reply of followUps) {
+      if ((await payCards()) > 0) break;
+      await send(page, reply);
       await page.waitForTimeout(500);
       await settle();
-      console.log("[live] member turn 2:", await page.locator('[data-chappy-turn="assistant"]').last().innerText());
+      console.log("[live] member follow-up:", await page.locator('[data-chappy-turn="assistant"]').last().innerText());
     }
     if (process.env.E2E_SHOT_DIR) await page.screenshot({ path: path.join(process.env.E2E_SHOT_DIR, "e1-390-en-paycard.png") });
     assert.ok(bearer.length >= 1 && bearer.every((h) => /^Bearer .{20,}/.test(h)), "every chat call carries the Clerk bearer");

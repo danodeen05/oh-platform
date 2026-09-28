@@ -13,8 +13,8 @@ export const text = (t) => ({ type: "text", text: t });
  * stream events are derived from it (text deltas, tool_use starts).
  * `throws` makes the stream reject (e.g. an SDK JSON parse error).
  */
-export function step({ content = [text("ok")], stop_reason = "end_turn", usage = {}, model = "claude-opus-5", throws = null } = {}) {
-  return { content, stop_reason, usage, model, throws };
+export function step({ content = [text("ok")], stop_reason = "end_turn", usage = {}, model = "claude-opus-5", throws = null, throwsEarly = null } = {}) {
+  return { content, stop_reason, usage, model, throws, throwsEarly };
 }
 
 function makeStream(s) {
@@ -45,6 +45,12 @@ function makeStream(s) {
   events.push({ type: "message_stop" });
   return {
     async *[Symbol.asyncIterator]() {
+      // throwsEarly: the stream fails right after message_start, before any content
+      // (e.g. an overloaded_error SSE event mid-stream, which the SDK does not retry).
+      if (s.throwsEarly) {
+        yield events[0];
+        throw s.throwsEarly;
+      }
       for (const e of events) {
         if (s.throws && e.type === "content_block_stop") throw s.throws;
         yield e;
@@ -76,7 +82,9 @@ export function fakeClient(script) {
 }
 
 export const jsonParseError = () => new AnthropicError("Unable to parse tool parameter JSON from model. JSON: {\"a\":");
-export const apiError = (status = 529) => APIError.generate(status, { type: "error", error: { type: "overloaded_error", message: "Overloaded" } }, "Overloaded", new Headers());
+/** An overloaded_error as the SDK throws it from a mid-stream SSE error event: no HTTP status. */
+export const midStreamOverload = () => new APIError(undefined, { type: "error", error: { type: "overloaded_error", message: "Overloaded" } }, undefined, new Headers());
+export const apiError = (status = 529, type = "overloaded_error") => APIError.generate(status, { type: "error", error: { type, message: type } }, type, new Headers());
 
 /** Minimal prisma for Chappy: conversations, users, tenant, locations, orders. */
 export function fakePrisma({ users = [], conversations = [], orders = [] } = {}) {
