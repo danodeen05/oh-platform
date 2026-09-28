@@ -13,6 +13,7 @@ import twilio from "twilio";
 import { FASTIFY_OPTIONS, rateLimitKey } from "../../http-config.js";
 import { createCustomerAuth, registerCustomerIdentity } from "../../auth/customer.js";
 import { registerChappyRoutes, GUEST_TOKEN_RATE_LIMIT } from "../routes.js";
+import { createChappyLimits } from "../limits.js";
 import { fakeClient, fakePrisma, step, text } from "./fakes.js";
 
 const ENV = { CLERK_SECRET_KEY: "sk_test_x", CHAPPY_GUEST_SECRET: "guest-secret-for-tests", ADMIN_API_KEY: "svc-key" };
@@ -31,7 +32,19 @@ function customerAuth() {
   });
 }
 
-async function build({ script = [step({ content: [text("Hi from Chappy")] })], checkLimits, prisma, withRateLimit = false, env = SMS_ENV, fastifyOptions = {} } = {}) {
+async function build({
+  script = [step({ content: [text("Hi from Chappy")] })],
+  checkLimits,
+  recordUsage,
+  checkCaseLimit,
+  recordCase,
+  prisma,
+  tools,
+  withRateLimit = false,
+  env = SMS_ENV,
+  fastifyOptions = {},
+  now = () => new Date("2026-10-01T18:00:00Z"),
+} = {}) {
   const app = Fastify(fastifyOptions);
   await app.register(cors, { origin: (origin, cb) => cb(null, !origin || origin === ALLOWED), credentials: true });
   await app.register(formbody);
@@ -45,9 +58,12 @@ async function build({ script = [step({ content: [text("Hi from Chappy")] })], c
     prisma: db,
     customerAuth: auth,
     client,
-    tools: { defs: [], execute: async (n) => executed.push(n) },
+    tools: tools || { defs: [], execute: async (n) => executed.push(n) },
     checkLimits,
-    now: () => new Date("2026-10-01T18:00:00Z"),
+    recordUsage,
+    checkCaseLimit,
+    recordCase,
+    now,
     env,
   });
   await app.ready();
@@ -123,6 +139,76 @@ describe("POST /chappy/chat", () => {
     assert.equal(client.calls.length, 0);
     assert.equal(seen[0].identity.kind, "member");
     assert.equal(seen[0].channel, "web");
+  });
+});
+
+describe("Task B3: real limiter wiring (chappy/limits.js)", () => {
+  test("the real limiter's 21st web message in 10 minutes is 429 RATE with retryAfterSeconds", async () => {
+    const limiter = createChappyLimits({ env: {} });
+    const { app, client } = await build({ checkLimits: limiter.checkLimits });
+    let last;
+    for (let i = 0; i < 20; i++) last = await chat(app, member, { message: `hi ${i}` });
+    assert.equal(last.statusCode, 200);
+    const blocked = await chat(app, member, { message: "one more" });
+    assert.equal(blocked.statusCode, 429);
+    assert.equal(blocked.json().error, "RATE");
+    assert.ok(blocked.json().retryAfterSeconds > 0);
+    assert.equal(client.calls.length, 20, "the blocked message never reached the model");
+  });
+
+  test("recordUsage tallies the done event's output tokens; the next turn is refused once the daily budget is spent", async () => {
+    const limiter = createChappyLimits({ env: { CHAPPY_LIMITS_JSON: JSON.stringify({ dailyOutputTokens: { max: 1000 } }) } });
+    const { app, client } = await build({
+      checkLimits: limiter.checkLimits,
+      recordUsage: limiter.recordUsage,
+      script: [step({ content: [text("Big answer")], usage: { output_tokens: 1000 } })],
+    });
+    const first = await chat(app, member, { message: "hi" });
+    assert.equal(first.statusCode, 200);
+    assert.equal(client.calls.length, 1);
+    const second = await chat(app, member, { message: "hi again" });
+    assert.equal(second.statusCode, 429);
+    assert.equal(second.json().error, "BUDGET");
+    assert.equal(client.calls.length, 1, "the refused turn never reached the model");
+  });
+
+  test("SMS gets a short polite reply, not a JSON body, when rate limited", async () => {
+    const limiter = createChappyLimits({ env: { CHAPPY_LIMITS_JSON: JSON.stringify({ messages: { max: 1 } }) } });
+    const { app } = await build({ checkLimits: limiter.checkLimits });
+    const url = `${SMS_ENV.API_PUBLIC_URL}/chappy/sms`;
+    const sign = (params) => twilio.getExpectedTwilioSignature(SMS_ENV.TWILIO_AUTH_TOKEN, url, params);
+    const params = { From: "+18015550100", Body: "hi", To: "+18015550000", MessageSid: "SM1" };
+    const send = () => app.inject({ method: "POST", url: "/chappy/sms", headers: { "content-type": "application/x-www-form-urlencoded", "x-twilio-signature": sign(params) }, payload: new URLSearchParams(params).toString() });
+    const first = await send();
+    assert.equal(first.statusCode, 200);
+    const second = await send();
+    assert.equal(second.statusCode, 200, "Twilio always gets 200 with a TwiML body, never a raw 429");
+    assert.match(second.headers["content-type"], /text\/xml/);
+    assert.doesNotMatch(second.body, /\{"code"|\{"error"/, "no JSON leaks into the SMS reply");
+    assert.match(second.body, /<Message>/);
+  });
+
+  test("checkCaseLimit/recordCase deps reach the tool context (toolDeps -> agent.js's toolCtx -> executeTool)", async () => {
+    const limiter = createChappyLimits({ env: {} });
+    const seenCtx = [];
+    const toolDefs = [{ name: "escalate_to_human", description: "d", input_schema: { type: "object", properties: {}, required: [], additionalProperties: false } }];
+    const { app } = await build({
+      checkCaseLimit: limiter.checkCaseLimit,
+      recordCase: limiter.recordCase,
+      tools: {
+        defs: toolDefs,
+        execute: async (name, input, ctx) => {
+          seenCtx.push(ctx);
+          return { ok: true };
+        },
+      },
+      script: [step({ content: [{ type: "tool_use", id: "t1", name: "escalate_to_human", input: {} }], stop_reason: "tool_use" }), step({ content: [text("Done.")] })],
+    });
+    const res = await chat(app, member, { message: "help" });
+    assert.equal(res.statusCode, 200);
+    assert.equal(seenCtx.length, 1);
+    assert.equal(seenCtx[0].checkCaseLimit, limiter.checkCaseLimit);
+    assert.equal(seenCtx[0].recordCase, limiter.recordCase);
   });
 });
 

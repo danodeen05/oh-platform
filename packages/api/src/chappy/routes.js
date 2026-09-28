@@ -17,13 +17,22 @@
  * Access-Control-Allow-Origin: * header.
  *
  * Every handler uses deps.prisma, which index.js sets to basePrisma (never the
- * demo-wrapped client). checkLimits is the hook Task B3 fills in: it may
- * return {status, code} to refuse a turn before any model call.
+ * demo-wrapped client).
  *
  * Payments (Task B2): Chappy never confirms a payment. Its checkout tool
  * returns a pay card (web) or a payment-page link (SMS), and the customer's
  * tap pays through POST /orders/:id/confirm-payment (orders/routes.js). The
  * old POST /chappy/confirm-payment is gone.
+ *
+ * Limits (Task B3, chappy/limits.js): checkLimits refuses a turn before any
+ * model call with {status, code:"RATE"|"BUDGET", body:{retryAfterSeconds?},
+ * message?} (message is the short SMS reply; the web JSON body is
+ * {error: code, ...body}). recordUsage tallies each turn's total output
+ * tokens (every round) against its identity's daily budget once the turn's
+ * `done` event arrives. checkCaseLimit/recordCase (passed through toolDeps)
+ * are the case-spam cap for report_issue/request_refund/escalate_to_human.
+ * All four default to no-ops so a caller that doesn't wire a limiter sees no
+ * limit at all (e.g. index.js always wires one; tests may not).
  */
 import { Readable } from "node:stream";
 import { resolveChappyWebIdentity } from "../auth/customer.js";
@@ -104,6 +113,13 @@ export async function registerChappyRoutes(app, deps) {
     client,
     tools,
     checkLimits = async () => null,
+    // Task B3: recordUsage tallies output tokens after each turn's `done`
+    // event; checkCaseLimit/recordCase are the case-spam cap for
+    // report_issue/request_refund/escalate_to_human. All default to no-ops
+    // so callers (and older tests) that don't pass a limiter see no limit.
+    recordUsage = () => {},
+    checkCaseLimit = () => ({ ok: true }),
+    recordCase = () => {},
     now = () => new Date(),
     stripe = null,
     sendSMS = null,
@@ -116,7 +132,28 @@ export async function registerChappyRoutes(app, deps) {
     stripe,
     notify: { env, sendSMS, sendGraphMail },
     webBaseUrl: String(env.WEB_BASE_URL || "https://www.ohbeef.com").replace(/\/+$/, ""),
+    checkCaseLimit,
+    recordCase,
   };
+
+  /** Tally a turn's total output tokens (every round) against its identity's daily budget. Never throws. */
+  async function noteUsage(identity, usage) {
+    const tokens = usage?.output_tokens;
+    if (!Number.isFinite(tokens) || tokens <= 0) return;
+    try {
+      await recordUsage({ identity, tokens, now: now() });
+    } catch (err) {
+      console.error("[Chappy] recordUsage failed:", err?.message);
+    }
+  }
+
+  /** Wraps a runTurn() event stream so the `done` event's usage is recorded once the turn ends. */
+  async function* withUsageRecording(events, identity) {
+    for await (const event of events) {
+      if (event.type === "done") await noteUsage(identity, event.usage);
+      yield event;
+    }
+  }
 
   /** The one identity check for every web Chappy route: sets req.chappyIdentity or answers 401. */
   async function requireChappyIdentity(req, reply) {
@@ -153,7 +190,7 @@ export async function registerChappyRoutes(app, deps) {
     const identity = req.chappyIdentity;
     const message = body.message.trim();
 
-    if (await limited(reply, { identity, channel: "web", message, req })) return reply;
+    if (await limited(reply, { identity, channel: "web", message, req, now: now() })) return reply;
     if (!client) return reply.code(503).send({ error: "CHAPPY_UNAVAILABLE" });
 
     const at = now();
@@ -168,7 +205,7 @@ export async function registerChappyRoutes(app, deps) {
       .header("content-type", "text/event-stream; charset=utf-8")
       .header("cache-control", "no-cache, no-transform")
       .header("x-accel-buffering", "no")
-      .send(Readable.from(toSse(events)));
+      .send(Readable.from(toSse(withUsageRecording(events, identity))));
   });
 
   app.get("/chappy/history", { preHandler: requireChappyIdentity }, async (req) => {
@@ -234,7 +271,7 @@ export async function registerChappyRoutes(app, deps) {
       // A member only on an exact E.164 match with SMS opted in (chappy/phone.js).
       const user = await smsMemberFor(prisma, From);
       const identity = { kind: "sms", phone, userId: user?.id || null };
-      const limit = await checkLimits({ identity, channel: "sms", message: Body, req });
+      const limit = await checkLimits({ identity, channel: "sms", message: Body, req, now: now() });
       if (limit) return twiml([limit.message || fallbackText("error", "en")]);
 
       const at = now();
@@ -242,8 +279,10 @@ export async function registerChappyRoutes(app, deps) {
       let text = "";
       let error = null;
       for await (const event of runTurn({ client, prisma, identity, channel: "sms", locale: "en", message: Body, conversation, tools, toolDeps, now: at })) {
-        if (event.type === "done") text = event.text;
-        else if (event.type === "error") error = event.code;
+        if (event.type === "done") {
+          text = event.text;
+          await noteUsage(identity, event.usage);
+        } else if (event.type === "error") error = event.code;
       }
       if (error) text = fallbackText(error === "REFUSAL" ? "refusal" : "error", "en");
       const { messages } = formatForSMS(text || fallbackText("empty", "en"));

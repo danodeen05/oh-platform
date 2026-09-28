@@ -12,6 +12,7 @@ import { readFileSync } from "node:fs";
 import { TOOL_DEFS, HANDLERS, MEMBER_TOOLS, SMS_TOOLS, executeTool } from "../tools.js";
 import { countOptionalParams, STRICT_TOOL_LIMIT } from "../tool-schema.js";
 import { loadCart } from "../cart.js";
+import { createChappyLimits } from "../limits.js";
 import { seed, fakeStripe, NOW, DAY_MS, HOUR_MS, CLASSIC_BOWL } from "../../orders/__tests__/fixtures.js";
 
 const CONV = { id: "conv1", identifier: "u1", channel: "web", messages: [], isActive: true, updatedAt: NOW };
@@ -503,6 +504,66 @@ describe("support: store credit within caps, PodCall in the pod, never a card re
     assert.equal(c.type, "GENERAL");
     assert.equal(r.card.caseId, c.id);
     assert.ok(w.logs.some((l) => /would text/.test(l)), "urgent: SMS logged");
+  });
+});
+
+describe("case-spam cap (Task B3, carried from the B2 review)", () => {
+  const withLimiter = (w, over = {}) => {
+    const limiter = createChappyLimits({ env: {} });
+    return memberCtx(w, { checkCaseLimit: limiter.checkCaseLimit, recordCase: limiter.recordCase, ...over });
+  };
+
+  test("the 4th escalate_to_human from one identity in a day is CASE_LIMIT, not a new case", async () => {
+    const w = world();
+    const ctx = withLimiter(w);
+    for (let i = 0; i < 3; i++) {
+      const r = await executeTool("escalate_to_human", { summary: `issue ${i}`, contact: "" }, ctx);
+      assert.ok(r.caseId, `open ${i + 1} should succeed`);
+    }
+    const blocked = await executeTool("escalate_to_human", { summary: "one more", contact: "" }, ctx);
+    assert.deepEqual(Object.keys(blocked).sort(), ["error", "message"]);
+    assert.equal(blocked.error, "CASE_LIMIT");
+    assert.equal((await w.db.supportCase.findMany({})).length, 3, "the blocked call opened no new case");
+  });
+
+  test("report_issue and request_refund are capped the same way", async () => {
+    const w = world({ orders: [paidOrder()] });
+    const ctx = withLimiter(w);
+    for (let i = 0; i < 3; i++) assert.ok((await executeTool("request_refund", { orderId: "o_paid", reason: `r${i}` }, ctx)).caseId);
+    assert.equal((await executeTool("request_refund", { orderId: "o_paid", reason: "over" }, ctx)).error, "CASE_LIMIT");
+
+    const w2 = world({ orders: [paidOrder()] });
+    const ctx2 = withLimiter(w2);
+    for (let i = 0; i < 3; i++) assert.ok((await executeTool("report_issue", { category: "other", summary: `r${i}`, orderId: "", contact: "" }, ctx2)).caseId);
+    assert.equal((await executeTool("report_issue", { category: "other", summary: "over", orderId: "", contact: "" }, ctx2)).error, "CASE_LIMIT");
+  });
+
+  test("each tool has its own cap: exhausting escalate_to_human leaves request_refund untouched", async () => {
+    const w = world({ orders: [paidOrder()] });
+    const ctx = withLimiter(w);
+    for (let i = 0; i < 3; i++) await executeTool("escalate_to_human", { summary: `x${i}`, contact: "" }, ctx);
+    assert.equal((await executeTool("escalate_to_human", { summary: "over", contact: "" }, ctx)).error, "CASE_LIMIT");
+    const refund = await executeTool("request_refund", { orderId: "o_paid", reason: "still fine" }, ctx);
+    assert.ok(refund.caseId, "request_refund has its own cap, unaffected by escalate_to_human's");
+  });
+
+  test("the cap is per identity: a guest's cases never count against a member's", async () => {
+    const w = world();
+    const limiter = createChappyLimits({ env: {} });
+    const memberSide = memberCtx(w, { checkCaseLimit: limiter.checkCaseLimit, recordCase: limiter.recordCase });
+    const guestSide = guestCtx(w, { checkCaseLimit: limiter.checkCaseLimit, recordCase: limiter.recordCase });
+    for (let i = 0; i < 3; i++) await executeTool("escalate_to_human", { summary: `g${i}`, contact: "ana@example.com" }, guestSide);
+    assert.equal((await executeTool("escalate_to_human", { summary: "over", contact: "ana@example.com" }, guestSide)).error, "CASE_LIMIT");
+    assert.ok((await executeTool("escalate_to_human", { summary: "member's own", contact: "" }, memberSide)).caseId);
+  });
+
+  test("a caller with no limiter wired (e.g. an older fixture) sees no cap", async () => {
+    const w = world();
+    const ctx = memberCtx(w); // no checkCaseLimit/recordCase
+    for (let i = 0; i < 5; i++) {
+      const r = await executeTool("escalate_to_human", { summary: `x${i}`, contact: "" }, ctx);
+      assert.ok(r.caseId);
+    }
   });
 });
 

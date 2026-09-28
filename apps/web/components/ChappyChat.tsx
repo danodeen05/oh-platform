@@ -7,7 +7,7 @@ import { loadStripe, Stripe, PaymentRequest } from "@stripe/stripe-js";
 import { StripeProvider } from "./payments/StripeProvider";
 import { PaymentForm } from "./payments/PaymentForm";
 import { useSiteApi } from "@/lib/site/api";
-import { splitSseFrames, finalChatText } from "@/lib/site/chappy-stream";
+import { splitSseFrames, finalChatText, limitErrorText } from "@/lib/site/chappy-stream";
 
 // Singleton Stripe promise
 let stripePromise: Promise<Stripe | null> | null = null;
@@ -510,7 +510,17 @@ export function ChappyChat({
         });
         if (res.status === 401 && !userId && onGuestTokenRejected) onGuestTokenRejected();
         if (!res.ok || !res.body) {
-          fail();
+          // Task B3: RATE / BUDGET arrive as a JSON body (no SSE stream at all).
+          // Any other or unreadable body falls back to the generic error.
+          let friendly: string | null = null;
+          try {
+            const body = await res.clone().json();
+            friendly = limitErrorText(body?.error, body?.retryAfterSeconds);
+          } catch {
+            // not JSON, or already consumed: fall through to the generic error
+          }
+          if (friendly) finish(friendly);
+          else fail();
           return;
         }
         const reader = res.body.getReader();

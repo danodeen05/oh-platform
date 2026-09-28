@@ -37,6 +37,24 @@ export const CHAPPY_REFUSAL_TEXT = "I can't help with that one. Ask me about the
 export const CHAPPY_ERROR_TEXT = "Oops! Something went wrong. Please try again. - Chappy";
 
 /**
+ * A friendly message for the Task B3 limiter's error codes on a non-OK
+ * POST /chappy/chat response ({error: "RATE", retryAfterSeconds} or
+ * {error: "BUDGET"}, sent before the SSE stream even starts). Returns null
+ * for any other/unknown code, so the caller falls back to the generic error.
+ */
+export function limitErrorText(code?: string | null, retryAfterSeconds?: number | null): string | null {
+  if (code === "RATE") {
+    const seconds = Number.isFinite(retryAfterSeconds) && (retryAfterSeconds as number) > 0 ? (retryAfterSeconds as number) : null;
+    const wait = seconds ? ` Please try again in about ${Math.max(1, Math.ceil(seconds / 60))} minute${Math.ceil(seconds / 60) === 1 ? "" : "s"}.` : " Please wait a bit and try again.";
+    return `You're sending messages a little fast.${wait}`;
+  }
+  if (code === "BUDGET") {
+    return "Chappy has reached today's chat limit. Please try again tomorrow, or visit ohbeef.com to order.";
+  }
+  return null;
+}
+
+/**
  * The message to show when the stream ends. A REFUSAL discards any partial
  * text that already streamed (the refused answer must not be shown); other
  * errors keep what arrived, else show the generic error.

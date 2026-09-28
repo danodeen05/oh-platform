@@ -321,7 +321,8 @@ function addUsage(total, message) {
  * @param {string} p.message       the customer's text (length already capped by the route)
  * @param {object} p.conversation  the ChappyConversation row to continue and save
  * @param {object} [p.tools]       { defs, execute(name, input, ctx) }; default TOOL_DEFS / executeTool
- * @param {object} [p.toolDeps]    what the tools need beyond prisma: { stripe, notify: {env, log, sendSMS, sendGraphMail}, webBaseUrl }
+ * @param {object} [p.toolDeps]    what the tools need beyond prisma: { stripe, notify: {env, log, sendSMS, sendGraphMail}, webBaseUrl,
+ *                                 checkCaseLimit, recordCase } (Task B3's case-spam cap for report_issue/request_refund/escalate_to_human)
  * @param {Date}   [p.now]
  * @param {AbortSignal} [p.signal] aborts the model stream (client went away)
  */
@@ -336,6 +337,9 @@ export async function* runTurn({ client, prisma, identity, channel = "web", loca
     stripe: toolDeps.stripe ?? null,
     notify: toolDeps.notify ?? {},
     webBaseUrl: toolDeps.webBaseUrl ?? null,
+    // Task B3 case-spam cap (report_issue / request_refund / escalate_to_human).
+    checkCaseLimit: toolDeps.checkCaseLimit ?? null,
+    recordCase: toolDeps.recordCase ?? null,
     prisma,
     identity: identity || null,
     userId: ctx.userId,

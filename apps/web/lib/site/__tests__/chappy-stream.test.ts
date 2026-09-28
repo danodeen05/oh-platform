@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { splitSseFrames, finalChatText, CHAPPY_REFUSAL_TEXT, CHAPPY_ERROR_TEXT } from "../chappy-stream";
+import { splitSseFrames, finalChatText, limitErrorText, CHAPPY_REFUSAL_TEXT, CHAPPY_ERROR_TEXT } from "../chappy-stream";
 
 describe("splitSseFrames", () => {
   test("parses complete frames, skips comments, keeps the unfinished rest", () => {
@@ -33,5 +33,28 @@ describe("finalChatText", () => {
   test("done shows the streamed text, falling back to the server's text", () => {
     expect(finalChatText({ event: "done", data: { text: "server" } }, "streamed")).toBe("streamed");
     expect(finalChatText({ event: "done", data: { text: "server" } }, "")).toBe("server");
+  });
+});
+
+describe("limitErrorText (Task B3: RATE / BUDGET on a non-OK POST /chappy/chat)", () => {
+  test("RATE mentions retryAfterSeconds when given, in minutes", () => {
+    expect(limitErrorText("RATE", 90)).toMatch(/2 minutes/);
+    expect(limitErrorText("RATE", 45)).toMatch(/1 minute\b/);
+  });
+
+  test("RATE without a usable retryAfterSeconds still gives a friendly message", () => {
+    expect(limitErrorText("RATE")).toMatch(/wait a bit/i);
+    expect(limitErrorText("RATE", 0)).toMatch(/wait a bit/i);
+    expect(limitErrorText("RATE", -5)).toMatch(/wait a bit/i);
+  });
+
+  test("BUDGET is a friendly message with no minutes math", () => {
+    expect(limitErrorText("BUDGET")).toMatch(/today's chat limit/i);
+  });
+
+  test("any other or missing code is not a limit message", () => {
+    expect(limitErrorText("CHAPPY_UNAVAILABLE")).toBeNull();
+    expect(limitErrorText(undefined)).toBeNull();
+    expect(limitErrorText(null)).toBeNull();
   });
 });

@@ -88,6 +88,7 @@ import { PROGRAM, tierRule } from "./membership/program.js";
 import { onOrderCompleted, applyReferralSignup, visibleMenuItems, firstUnreleasedItem, profileForUser } from "./membership/engine.js";
 import { createCustomerAuth, registerCustomerIdentity, orderOwnerId } from "./auth/customer.js";
 import { registerChappyRoutes } from "./chappy/routes.js";
+import { createChappyLimits } from "./chappy/limits.js";
 import { createPodCall, PodCallError } from "./orders/pod-calls.js";
 import { FASTIFY_OPTIONS, rateLimitKey } from "./http-config.js";
 import { createKioskAuth } from "./auth/kiosk.js";
@@ -12873,9 +12874,13 @@ app.post("/admin/party-invitations", async (request, reply) => {
 // Routes: src/chappy/routes.js (Task B1). One identity preHandler (verified
 // member session or signed guest token), POST /chappy/chat streams SSE through
 // Fastify so the CORS allowlist applies, and every Chappy handler and tool uses
-// basePrisma (never the demo-wrapped client). checkLimits is Task B3's hook.
+// basePrisma (never the demo-wrapped client).
 // Task B2: tools go through the order/support services; Chappy never charges
 // (pay card only). Support notifications honor SUPPORT_NOTIFY.
+// Task B3: chappyLimits is one in-memory limiter for the whole process (see
+// chappy/limits.js): per-identity rate/token limits, the guest per-IP cap,
+// and the report_issue/request_refund/escalate_to_human case-spam cap.
+const chappyLimits = createChappyLimits({ env: process.env });
 await registerChappyRoutes(app, {
   prisma: basePrisma,
   customerAuth,
@@ -12883,6 +12888,10 @@ await registerChappyRoutes(app, {
   stripe,
   sendSMS,
   sendGraphMail,
+  checkLimits: chappyLimits.checkLimits,
+  recordUsage: chappyLimits.recordUsage,
+  checkCaseLimit: chappyLimits.checkCaseLimit,
+  recordCase: chappyLimits.recordCase,
 });
 
 // ====================

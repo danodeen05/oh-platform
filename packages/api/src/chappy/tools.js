@@ -395,14 +395,29 @@ function caseWho(ctx, contactInput) {
   return { who: { kind: "anonymous" }, contact };
 }
 
-async function openCase(ctx, { type, summary, orderId = null, contactInput = "" }) {
+/**
+ * Case-spam cap (Task B3, carried from the B2 review): report_issue,
+ * request_refund and escalate_to_human may each open at most 3 SupportCases
+ * per identity per day. `tool` is the calling tool's name, so the three caps
+ * are tracked independently. ctx.checkCaseLimit/recordCase are optional (a
+ * caller without them, e.g. an older test fixture, sees no cap).
+ */
+async function openCase(ctx, { type, tool, summary, orderId = null, contactInput = "" }) {
   const text = clean(summary).slice(0, SUMMARY_MAX);
   if (!text) throw new ToolError("SUMMARY_REQUIRED", "Describe the problem briefly.");
+  if (ctx.checkCaseLimit) {
+    const allowed = ctx.checkCaseLimit({ identity: ctx.identity, tool, now: nowOf(ctx) });
+    if (!allowed.ok) {
+      throw new ToolError("CASE_LIMIT", "Staff already have your earlier case today and will follow up. No need to send another.");
+    }
+  }
   const { who, contact } = caseWho(ctx, contactInput);
-  return createSupportCase(ctx.prisma, {
+  const created = await createSupportCase(ctx.prisma, {
     who,
     body: { type, summary: `[Chappy] ${text}`, orderId: orderId || null, locale: ctx.locale || null, ...(contact ? { contact } : {}) },
   });
+  ctx.recordCase?.({ identity: ctx.identity, tool, now: nowOf(ctx) });
+  return created;
 }
 
 async function notify(ctx, supportCase, opts) {
@@ -732,7 +747,7 @@ export const HANDLERS = {
     }
     const type = input.category === "pod_problem" ? "POD_ISSUE" : order ? "ORDER_ISSUE" : "GENERAL";
     const summary = `${input.category}: ${clean(input.summary)}`;
-    const opened = await openCase(ctx, { type, summary, orderId: order?.id || null, contactInput: input.contact });
+    const opened = await openCase(ctx, { type, tool: "report_issue", summary, orderId: order?.id || null, contactInput: input.contact });
 
     let goodwill = { grantedCents: 0, reason: null };
     // Never automatic on SMS: staff decide from the case (controller ruling).
@@ -761,13 +776,13 @@ export const HANDLERS = {
   async request_refund(input, ctx) {
     const order = await ownOrder(ctx, input.orderId, { paidOnly: true });
     if (!order) return { error: "NOT_FOUND" };
-    const c = await openCase(ctx, { type: "REFUND_REQUEST", summary: clean(input.reason) || "Refund requested", orderId: order.id });
+    const c = await openCase(ctx, { type: "REFUND_REQUEST", tool: "request_refund", summary: clean(input.reason) || "Refund requested", orderId: order.id });
     await notify(ctx, c, {});
     return { caseId: c.id, orderNumber: order.orderNumber, message: "Staff will review it. No refund or amount is promised.", card: caseCard(c) };
   },
 
   async escalate_to_human(input, ctx) {
-    const c = await openCase(ctx, { type: "GENERAL", summary: `Escalated: ${clean(input.summary)}`, contactInput: input.contact });
+    const c = await openCase(ctx, { type: "GENERAL", tool: "escalate_to_human", summary: `Escalated: ${clean(input.summary)}`, contactInput: input.contact });
     await notify(ctx, c, { urgent: true });
     return { caseId: c.id, message: "A person has been alerted and will follow up.", card: caseCard(c, { urgent: true }) };
   },
