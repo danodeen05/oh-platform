@@ -353,11 +353,29 @@ describe("Task D12: admin Support tab reads", () => {
     prisma.supportCase.findMany = async (args) => { calls.push(args); return findMany(args); };
     const { app } = await buildApp({ prisma });
     const body = (await app.inject({ url: "/admin/support/cases?limit=5000" })).json();
-    assert.equal(calls[0].take, 200);
+    assert.equal(calls[0].take, 201, "the 200 cap plus one row to know whether another page exists");
     const c1 = body.cases.find((c) => c.id === "c1");
     assert.deepEqual(c1.customer, { name: null, email: "u1@x.com" });
     assert.equal(c1.order.totalCents, 1924);
     assert.equal(body.cases.find((c) => c.id === "c2").customer, null);
+  });
+
+  test("fix round 1: list rows leave out the transcript and resolution detail, flag a refund in progress, and an exact page has no next cursor", async () => {
+    const prisma = seedDb({
+      supportCases: [
+        { id: "c1", type: "REFUND_REQUEST", status: "OPEN", summary: "a", transcript: [{ role: "user", content: "x".repeat(1000) }], resolution: "FULL_REFUND", resolutionDetail: { refundPending: true }, createdAt: new Date(NOW.getTime() - HOUR) },
+        { id: "c2", type: "GENERAL", status: "OPEN", summary: "b", createdAt: new Date(NOW.getTime() - 2 * HOUR) },
+      ],
+    });
+    const { app } = await buildApp({ prisma });
+    const body = (await app.inject({ url: "/admin/support/cases?limit=2" })).json();
+    assert.equal(body.nextCursor, null, "two cases, limit 2: no empty extra page");
+    const c1 = body.cases.find((c) => c.id === "c1");
+    assert.equal("transcript" in c1, false);
+    assert.equal("resolutionDetail" in c1, false);
+    assert.equal(c1.refundInProgress, true);
+    assert.equal(body.cases.find((c) => c.id === "c2").refundInProgress, false);
+    assert.equal((await app.inject({ url: "/admin/support/cases?limit=1" })).json().nextCursor, "c1");
   });
 
   function detailFixture() {
@@ -398,7 +416,7 @@ describe("Task D12: admin Support tab reads", () => {
     assert.equal(body.customer.tier, "NOODLE_MASTER");
     assert.equal(body.customer.creditBalanceCents, 500);
     assert.equal(body.customer.goodwillLifetimeCents, 500);
-    assert.deepEqual(body.limits, { staffCreditMaxCents: 50000, goodwillLifetimeCapCents: 4500 });
+    assert.deepEqual(body.limits, { staffCreditMaxCents: 50000, goodwillLifetimeCapCents: 4500, refundLeaseMs: 5 * 60 * 1000 });
   });
 
   test("detail: an order with no card payment says so; the prior resolution detail comes back", async () => {

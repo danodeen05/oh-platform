@@ -455,60 +455,55 @@ export default function CheckInPage() {
       </div>
 
       {/* Large Brand Header - top left */}
-      <div style={{ position: "absolute", top: 48, left: 48, zIndex: 1 }}>
-        <KioskBrand size="xlarge" />
+      <div style={{ position: "absolute", top: 20, left: 40, zIndex: 1 }}>
+        <KioskBrand size="large" />
       </div>
 
-      {/* Fixed Header with color */}
-      <div style={{ textAlign: "center", paddingTop: 32, paddingBottom: 20, background: COLORS.primaryLight, borderBottom: `1px solid ${COLORS.primaryBorder}`, zIndex: 1 }}>
-        <h1 className="kiosk-title" style={{ fontSize: "3.5rem", fontWeight: 700, marginBottom: 8 }}>{t("orderFlow.chooseYourPod")}</h1>
+      {/* Compact header on the pod step so the whole comb fits (D12 fix round 1) */}
+      <div style={{ textAlign: "center", paddingTop: 20, paddingBottom: 14, background: COLORS.primaryLight, borderBottom: `1px solid ${COLORS.primaryBorder}`, zIndex: 1 }}>
+        <h1 className="kiosk-title" style={{ fontSize: "2.75rem", fontWeight: 700, marginBottom: 4 }}>{t("orderFlow.chooseYourPod")}</h1>
         <p style={{ color: COLORS.textMuted, margin: 0, fontSize: "1.25rem" }}>
           <strong style={{ color: COLORS.text }}>{customerName}</strong>, {t("orderFlow.pickPrivatePod")}
         </p>
       </div>
 
-      {/* Scrollable Content */}
-      <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", alignItems: "center", padding: "16px 48px", paddingBottom: 100 }}>
-        {/* Pod Map (Centered): the comb floor plan (Task D12) */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, width: "100%" }}>
-          {comb.layoutKey ? (
-            <div className="mx-auto w-full max-w-[1040px] self-stretch">
-              <KioskCombPicker
-                layoutKey={comb.layoutKey}
-                seats={comb.seats}
-                selectedPodId={selectedPodId}
-                canSelectDualPod={canSelectDualPod}
-                onSelectPod={handlePodSelection}
-                onDualBlocked={() => setShowDualPodRules(true)}
-              />
-            </div>
-          ) : null}
-
-          {/* Selection Info Card */}
-          <div style={{ background: COLORS.primaryLight, border: `2px solid ${COLORS.primary}`, borderRadius: 10, padding: 12, textAlign: "center", marginTop: 8 }}>
-            {selectedPod ? (
-              <>
-                <div style={{ fontSize: "1rem", fontWeight: 600 }}>
-                  {selectedPod.duo ? t("pod.dualPodSelected", { numbers: selectedPod.label }) : t("pod.podSelected", { number: selectedPod.label })}
-                </div>
-                <div style={{ color: COLORS.textMuted, fontSize: "0.8rem" }}>{selectedPod.duo ? t("pod.dualPod") : t("pod.singlePod")}</div>
-              </>
-            ) : (
-              <>
-                <div style={{ fontWeight: 600, marginBottom: 8, color: COLORS.text, fontSize: "0.9rem" }}>{t("orderFlow.noPreferenceTitle")}</div>
-                <button onClick={() => handlePodSelection("auto")} style={{ padding: "8px 16px", background: COLORS.primary, border: "none", borderRadius: 8, color: COLORS.textOnPrimary, fontSize: "0.85rem", fontWeight: 600, cursor: "pointer" }}>
-                  {t("orderFlow.autoAssignPod")}
-                </button>
-              </>
-            )}
-          </div>
-
+      {/* Content: the choice line first, then the comb sized to the height that is left */}
+      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", display: "flex", flexDirection: "column", alignItems: "center", gap: 10, padding: "12px 40px", paddingBottom: 104 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, flexWrap: "wrap", background: COLORS.primaryLight, border: `2px solid ${COLORS.primary}`, borderRadius: 10, padding: "8px 16px", minHeight: 60 }}>
+          {selectedPod ? (
+            <>
+              <span style={{ fontSize: "1.1rem", fontWeight: 600 }}>
+                {selectedPod.duo ? t("pod.dualPodSelected", { numbers: selectedPod.label }) : t("pod.podSelected", { number: selectedPod.label })}
+              </span>
+              <span style={{ color: COLORS.textMuted, fontSize: "0.95rem" }}>{selectedPod.duo ? t("pod.dualPod") : t("pod.singlePod")}</span>
+            </>
+          ) : (
+            <>
+              <span style={{ fontWeight: 600, color: COLORS.text, fontSize: "1.05rem" }}>{t("orderFlow.noPreferenceTitle")}</span>
+              <button onClick={() => handlePodSelection("auto")} style={{ minHeight: 44, padding: "8px 20px", background: COLORS.primary, border: "none", borderRadius: 8, color: COLORS.textOnPrimary, fontSize: "1rem", fontWeight: 600, cursor: "pointer" }}>
+                {t("orderFlow.autoAssignPod")}
+              </button>
+            </>
+          )}
         </div>
+
+        {comb.layoutKey ? (
+          <div className="mx-auto self-center" style={{ width: "min(100%, 1040px, calc((var(--kvh, 1vh) * 100 - 460px) * 1.36))" }}>
+            <KioskCombPicker
+              layoutKey={comb.layoutKey}
+              seats={comb.seats}
+              selectedPodId={selectedPodId}
+              canSelectDualPod={canSelectDualPod}
+              onSelectPod={handlePodSelection}
+              onDualBlocked={() => setShowDualPodRules(true)}
+            />
+          </div>
+        ) : null}
       </div>
 
       {/* Fixed Bottom Navigation with color */}
-      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, padding: "16px 24px", background: COLORS.primaryLight, borderTop: `1px solid ${COLORS.primaryBorder}`, display: "flex", justifyContent: "center", gap: 16, zIndex: 10 }}>
-        <button onClick={handleBackToHome} style={{ padding: "16px 32px", background: "transparent", border: `2px solid ${COLORS.border}`, borderRadius: 12, color: COLORS.textMuted, fontSize: "1.1rem", cursor: "pointer" }}>
+      <div style={{ position: "fixed", bottom: 0, left: 0, right: 0, padding: "14px 24px", background: "#F1F0EC", borderTop: `1px solid ${COLORS.primaryBorder}`, boxShadow: "0 -4px 16px rgba(0,0,0,0.06)", display: "flex", justifyContent: "center", gap: 16, zIndex: 10 }}>
+        <button onClick={handleBackToHome} style={{ padding: "16px 32px", background: COLORS.surface, border: `2px solid ${COLORS.primary}`, borderRadius: 12, color: COLORS.text, fontSize: "1.1rem", fontWeight: 600, cursor: "pointer" }}>
           {t("orderFlow.back")}
         </button>
         <button onClick={handleCheckIn} disabled={checkingIn} style={{ padding: "16px 48px", background: checkingIn ? "#ccc" : COLORS.primary, border: "none", borderRadius: 12, color: COLORS.textOnPrimary, fontSize: "1.1rem", fontWeight: 600, cursor: checkingIn ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 8 }}>

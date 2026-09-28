@@ -287,12 +287,12 @@ function podOrder(a, b) {
   return af - bf || ap - bp || an.localeCompare(bn, undefined, { numeric: true });
 }
 
-async function claimSeat(tx, seatId) {
+export async function claimSeat(tx, seatId) {
   const res = await tx.seat.updateMany({ where: { id: seatId, status: "AVAILABLE", retiredAt: null }, data: { status: "RESERVED" } });
   return res.count === 1;
 }
 
-async function releaseClaim(tx, seatId) {
+export async function releaseClaim(tx, seatId) {
   await tx.seat.updateMany({ where: { id: seatId, status: "RESERVED" }, data: { status: "AVAILABLE" } });
 }
 

@@ -10,7 +10,7 @@ import { STATUS_DEMO_CODE } from "@/lib/plan/statusDemo";
 import { kioskAuthHeaders } from "@/components/kiosk/KioskDeviceProvider";
 import { adaptKioskSeats } from "@/lib/pod-selection/adapt-seats";
 import { KioskCombPicker } from "@/components/kiosk/KioskCombPicker";
-import { kioskCombFrom, podNames, podPatchBody, type KioskComb } from "@/lib/kiosk/comb-pick";
+import { kioskCombFrom, podNames, readSeatClaim, seatClaimRequest, seatsForPick, type KioskComb } from "@/lib/kiosk/comb-pick";
 import { create as createOrder, kioskConfirmPayment } from "@/lib/site/orders";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -504,6 +504,9 @@ export default function KioskOrderFlow({
 
   // Processing state
   const [submitting, setSubmitting] = useState(false);
+  // Pod claim (fix round 1): the pod is held on the server before payment.
+  const [claiming, setClaiming] = useState(false);
+  const [podNotice, setPodNotice] = useState<string | null>(null);
 
   // Current guest's working state
   const currentGuest = guestOrders[currentGuestIndex];
@@ -568,26 +571,27 @@ export default function KioskOrderFlow({
   useEffect(() => {
     if (view !== "pod-selection") return;
 
-    const pollSeats = async () => {
-      try {
-        const res = await fetch(`${BASE}/locations/${location.id}/seats`, {
-          headers: { "x-tenant-slug": "oh", ...kioskAuthHeaders() },
-        });
-        if (res.ok) {
-          const seatsData = await res.json();
-          setSeats(adaptKioskSeats(seatsData));
-          setComb(kioskCombFrom(seatsData));
-        }
-      } catch (error) {
-        console.error("Failed to poll seats:", error);
-      }
-    };
-
     // Poll every 5 seconds
-    const interval = setInterval(pollSeats, 5000);
+    const interval = setInterval(refreshSeats, 5000);
 
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, location.id]);
+
+  async function refreshSeats() {
+    try {
+      const res = await fetch(`${BASE}/locations/${location.id}/seats`, {
+        headers: { "x-tenant-slug": "oh", ...kioskAuthHeaders() },
+      });
+      if (res.ok) {
+        const seatsData = await res.json();
+        setSeats(adaptKioskSeats(seatsData));
+        setComb(kioskCombFrom(seatsData));
+      }
+    } catch (error) {
+      console.warn("Failed to poll seats:", error);
+    }
+  }
 
   // Calculate running total for current guest
   const calculateRunningTotal = useCallback(() => {
@@ -676,118 +680,108 @@ export default function KioskOrderFlow({
     updateCurrentGuest({ selectedPodId: podId });
   }
 
-  // Auto-assign a pod based on availability and party configuration
-  function autoAssignPod(): string | null {
-    // Get pods already selected by other guests in this party
-    const takenPodIds = guestOrders
-      .filter((_, i) => i !== currentGuestIndex)
-      .map((g) => g.selectedPodId)
-      .filter((id) => id && id !== "auto") as string[];
-
-    // Can use dual pods only if party >= 2 AND single payment
-    const canUseDualPod = partySize >= 2 && paymentType === "single";
-
-    // Helper to check if a seat is part of a dual pod
-    const isDualPodSeat = (seat: Seat) => {
-      if (seat.podType !== "DUAL") return false;
-      if (seat.dualPartnerId) return true;
-      return seats.some(s => s.dualPartnerId === seat.id);
-    };
-
-    // Find available pods based on configuration
-    const availablePods = seats.filter((s) => {
-      if (s.status !== "AVAILABLE") return false;
-      if (takenPodIds.includes(s.id)) return false;
-      const isDual = isDualPodSeat(s);
-      // If can't use dual pods, filter them out
-      if (isDual && !canUseDualPod) return false;
-      return true;
+  /**
+   * Holds the current guest's pod on the server BEFORE payment (Task D12 fix
+   * round 1): POST /kiosk/orders/:id/seat with the tapped label, or the best
+   * free pod for "no preference". The server's claim is conditional, so two
+   * checkouts can never hold one pod. When the tapped pod was just taken it
+   * holds the next best one instead; the guest sees the new pod here and taps
+   * Continue again. A party paying together that lands on a duo seats the
+   * next guest at its other half.
+   */
+  async function claimPod(orderId: string, body: object) {
+    const res = await fetch(`${BASE}/kiosk/orders/${orderId}/seat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-tenant-slug": "oh", ...kioskAuthHeaders() },
+      body: JSON.stringify(body),
     });
-
-    if (availablePods.length === 0) return null;
-
-    // Prefer dual pods when available and allowed (for parties of 2+ on single payment)
-    if (canUseDualPod) {
-      const dualPod = availablePods.find((s) => isDualPodSeat(s));
-      if (dualPod) return dualPod.id;
-    }
-
-    // Otherwise, return the first available single pod
-    return availablePods[0]?.id || null;
+    return readSeatClaim(res.status, await res.json().catch(() => null));
   }
 
-  // Helper to check if a seat is a dual pod
-  function isDualPodSeat(seatId: string): boolean {
-    const seat = seats.find(s => s.id === seatId);
-    if (!seat) return false;
-    if (seat.podType !== "DUAL") return false;
-    if (seat.dualPartnerId) return true;
-    return seats.some(s => s.dualPartnerId === seat.id);
-  }
+  async function handlePodConfirm() {
+    if (claiming) return;
+    const guest = guestOrders[currentGuestIndex];
+    if (!guest) return;
+    const choice = guest.selectedPodId;
+    const auto = !choice || choice === "auto";
+    const canUseDualPod = partySize >= 2 && paymentType === "single";
+    const takenByParty = guestOrders.filter((_, i) => i !== currentGuestIndex).map((g) => g.selectedPodId).filter((id): id is string => Boolean(id) && id !== "auto");
 
-  function handlePodConfirm() {
-    let currentPodId = guestOrders[currentGuestIndex]?.selectedPodId;
-    let isAutoAssigned = false;
+    let seatId: string;
+    let duoPartnerId: string | null = null;
+    setPodNotice(null);
 
-    // Handle "auto" selection - perform actual pod assignment
-    if (currentPodId === "auto") {
-      const assignedPodId = autoAssignPod();
-      if (!assignedPodId) {
-        // No pods available - should not happen in practice
-        console.error("No pods available for auto-assignment");
-        return;
+    if (demo || !guest.orderId) {
+      // Demo: nothing is held on the server; pick locally.
+      const free = seatsForPick(comb.seats, takenByParty, choice).filter((s) => s.status === "AVAILABLE");
+      const picked = auto
+        ? (canUseDualPod && free.find((s) => s.podType === "DUAL" && s.dualPartnerLabel)) || free.find((s) => s.podType !== "DUAL") || free[0]
+        : comb.seats.find((s) => s.id === choice);
+      if (!picked) { setPodNotice(tKiosk("pod.noPodsLeft")); return; }
+      seatId = picked.id;
+      if (canUseDualPod && picked.podType === "DUAL" && picked.dualPartnerLabel) {
+        duoPartnerId = comb.seats.find((s) => s.label === picked.dualPartnerLabel)?.id ?? null;
       }
-      currentPodId = assignedPodId;
-      isAutoAssigned = true;
-      // Update the guest order with the actual pod ID and mark as auto-assigned
-      setGuestOrders(prev => {
-        const updated = [...prev];
-        updated[currentGuestIndex] = {
-          ...updated[currentGuestIndex],
-          selectedPodId: assignedPodId,
-          podAutoAssigned: true,
-        };
-        return updated;
-      });
+    } else {
+      setClaiming(true);
+      try {
+        const claim = await claimPod(guest.orderId, seatClaimRequest(comb.seats, choice, { canUseDual: canUseDualPod }));
+        if (claim.ok === false) {
+          setPodNotice(tKiosk(claim.code === "NO_POD_AVAILABLE" ? "pod.noPodsLeft" : "pod.claimFailed"));
+          void refreshSeats();
+          return;
+        }
+        if (claim.takenLabel) {
+          // Lost the tapped pod: show the one we hold instead, before any payment.
+          updateCurrentGuest({ selectedPodId: claim.seatId, podAutoAssigned: true });
+          setPodNotice(tKiosk("pod.podTaken", { requested: claim.takenLabel, label: claim.label }));
+          void refreshSeats();
+          return;
+        }
+        seatId = claim.seatId;
+        if (claim.partnerLabel) duoPartnerId = comb.seats.find((s) => s.label === claim.partnerLabel)?.id ?? null;
+      } catch (error) {
+        console.warn("Pod claim failed:", error);
+        setPodNotice(tKiosk("pod.claimFailed"));
+        return;
+      } finally {
+        setClaiming(false);
+      }
     }
+
+    updateCurrentGuest({ selectedPodId: seatId, podAutoAssigned: auto });
 
     if (paymentType === "single" && currentGuestIndex < partySize - 1) {
-      // Check if current guest selected a dual pod
-      if (currentPodId && isDualPodSeat(currentPodId)) {
-        // Dual pod selected - auto-assign remaining guests (up to 1 more for dual pod)
-        // and skip their pod selection
+      if (duoPartnerId) {
+        // A duo: the next guest sits at its other half and skips the pod step.
         const nextGuestIndex = currentGuestIndex + 1;
-
-        // Assign the same dual pod to the next guest
-        setGuestOrders(prev => {
-          const updated = [...prev];
-          if (updated[nextGuestIndex]) {
-            updated[nextGuestIndex] = {
-              ...updated[nextGuestIndex],
-              selectedPodId: currentPodId,
-              podAutoAssigned: isAutoAssigned, // Inherit auto-assigned status
-            };
-          }
-          return updated;
-        });
-
-        // If there are only 2 guests total, go straight to payment
-        // If more than 2 guests, continue pod selection for remaining guests
-        if (partySize === 2) {
-          setView("payment");
-        } else {
-          // Skip the next guest (already assigned) and continue with guest after that
-          setCurrentGuestIndex(nextGuestIndex + 1);
-          if (nextGuestIndex + 1 >= partySize) {
-            setView("payment");
+        const next = guestOrders[nextGuestIndex];
+        if (next && !demo && next.orderId && guest.orderId) {
+          setClaiming(true);
+          try {
+            const shared = await claimPod(next.orderId, { shareWithOrderId: guest.orderId });
+            if (shared.ok) duoPartnerId = shared.seatId;
+          } catch (error) {
+            console.warn("Duo share failed:", error);
+          } finally {
+            setClaiming(false);
           }
         }
+        const partnerId = duoPartnerId;
+        setGuestOrders((prev) => {
+          const updated = [...prev];
+          if (updated[nextGuestIndex]) updated[nextGuestIndex] = { ...updated[nextGuestIndex], selectedPodId: partnerId ?? undefined, podAutoAssigned: auto };
+          return updated;
+        });
+        if (nextGuestIndex + 1 >= partySize) {
+          setView("payment");
+        } else {
+          setCurrentGuestIndex(nextGuestIndex + 1);
+        }
       } else {
-        // Single pod selected - continue to next guest's pod selection
         setCurrentGuestIndex((prev) => prev + 1);
       }
     } else {
-      // Move to payment after all pod selections
       setView("payment");
     }
   }
@@ -890,18 +884,6 @@ export default function KioskOrderFlow({
     setView("processing-payment");
   }
 
-  // Pod choice for one guest's order (PATCH takes pod fields, never payment fields).
-  async function assignPod(orderId: string, guestState: { selectedPodId?: string | null; podAutoAssigned?: boolean }) {
-    // The seat id of the pod label the guest tapped on the comb map (see lib/kiosk/comb-pick).
-    const body = podPatchBody(guestState);
-    if (!body) return;
-    await fetch(`${BASE}/orders/${orderId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-  }
-
   // The API verifies the Terminal PaymentIntent (succeeded, amount = these
   // orders' sum, metadata.orderIds) and marks them PAID (Task A6).
   async function confirmKioskPayment(orderIds: string[], paymentIntentId: string) {
@@ -928,7 +910,6 @@ export default function KioskOrderFlow({
       if (paymentType === "separate") {
         // Pay only current guest's order and assign pod
         if (!currentGuest.orderId) throw new Error("Missing order");
-        await assignPod(currentGuest.orderId, currentGuest);
         await confirmKioskPayment([currentGuest.orderId], paymentIntentId);
 
         updateCurrentGuest({ paid: true });
@@ -942,9 +923,6 @@ export default function KioskOrderFlow({
       } else {
         // Single check - one payment covers every guest's order
         const orderIds = guestOrders.map((g) => g.orderId).filter((id): id is string => Boolean(id));
-        for (const guest of guestOrders) {
-          if (guest.orderId) await assignPod(guest.orderId, guest);
-        }
         await confirmKioskPayment(orderIds, paymentIntentId);
 
         // Mark all as paid
@@ -1128,7 +1106,9 @@ export default function KioskOrderFlow({
         selectedPodId={currentGuest.selectedPodId}
         onSelectPod={handlePodSelection}
         onConfirm={handlePodConfirm}
-        onBack={() => setView("review")}
+        onBack={() => { setPodNotice(null); setView("review"); }}
+        claiming={claiming}
+        notice={podNotice}
       />
     );
   }
@@ -4462,6 +4442,8 @@ function PodSelectionView({
   onSelectPod,
   onConfirm,
   onBack,
+  claiming,
+  notice,
 }: {
   comb: KioskComb;
   guestOrders: GuestOrder[];
@@ -4472,6 +4454,8 @@ function PodSelectionView({
   onSelectPod: (podId: string) => void;
   onConfirm: () => void;
   onBack: () => void;
+  claiming: boolean;
+  notice: string | null;
 }) {
   const tKiosk = useTranslations("kiosk");
   const [showDualPodRules, setShowDualPodRules] = useState(false);
@@ -4531,15 +4515,15 @@ function PodSelectionView({
       </div>
 
       {/* Large Brand Header - top left */}
-      <div style={{ position: "absolute", top: 48, left: 48, zIndex: 1 }}>
-        <KioskBrand size="xlarge" />
+      <div style={{ position: "absolute", top: 20, left: 40, zIndex: 1 }}>
+        <KioskBrand size="large" />
       </div>
 
       {/* Fixed Header with color */}
       <div style={{
         textAlign: "center",
-        paddingTop: 32,
-        paddingBottom: 20,
+        paddingTop: 20,
+        paddingBottom: 14,
         background: COLORS.primaryLight,
         borderBottom: `1px solid ${COLORS.primaryBorder}`,
         zIndex: 1,
@@ -4549,7 +4533,7 @@ function PodSelectionView({
             {tKiosk("orderFlow.guestOf", { current: currentGuestIndex + 1, total: partySize })}
           </div>
         )}
-        <h1 className="kiosk-title" style={{ fontSize: "3.5rem", fontWeight: 700, marginBottom: 8 }}>
+        <h1 className="kiosk-title" style={{ fontSize: "2.75rem", fontWeight: 700, marginBottom: 4 }}>
           {tKiosk("orderFlow.chooseYourPod")}
         </h1>
         <p style={{ color: COLORS.textMuted, margin: 0, fontSize: "1.25rem" }}>
@@ -4557,30 +4541,66 @@ function PodSelectionView({
         </p>
       </div>
 
-      {/* Scrollable Content */}
+      {/* Content: the choice line first, then the comb sized to the height that is left (fix round 1) */}
       <div style={{
         flex: 1,
+        minHeight: 0,
         overflowY: "auto",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        padding: "16px 48px",
-        paddingBottom: 100,
+        gap: 10,
+        padding: "12px 40px",
+        paddingBottom: 104,
       }}>
+        {notice && (
+          <div role="status" style={{ background: COLORS.warningLight, border: `2px solid ${COLORS.warning}`, borderRadius: 10, padding: "10px 16px", fontSize: "1.05rem", fontWeight: 600, color: COLORS.text, textAlign: "center" }}>
+            {notice}
+          </div>
+        )}
 
-      {/* Pod Map (Centered) */}
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 12,
-          width: "100%",
-        }}
-      >
-        {/* Comb floor plan (Task D12): tap a pod; duo rules and party picks handled in KioskCombPicker. */}
+        {/* Selection line: "No preference" or the chosen pod */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 16, flexWrap: "wrap", background: COLORS.primaryLight, border: `2px solid ${COLORS.primary}`, borderRadius: 10, padding: "8px 16px", minHeight: 60 }}>
+          {selectedPod ? (
+            <>
+              <span style={{ fontSize: "1.1rem", fontWeight: 600 }}>
+                {selectedPod.duo
+                  ? tKiosk("pod.dualPodSelected", { numbers: selectedPod.label })
+                  : tKiosk("pod.podSelected", { number: selectedPod.label })}
+              </span>
+              <span style={{ color: COLORS.textLight, fontSize: "0.95rem" }}>
+                {selectedPod.duo ? tKiosk("pod.dualPod") : tKiosk("pod.singlePod")}
+              </span>
+            </>
+          ) : (
+            <>
+              <span style={{ fontWeight: 600, color: COLORS.text, fontSize: "1.05rem" }}>
+                {tKiosk("orderFlow.noPreferenceTitle")}
+              </span>
+              <button
+                onClick={() => onSelectPod("auto")}
+                aria-pressed={selectedPodId === "auto"}
+                style={{
+                  minHeight: 44,
+                  padding: "8px 20px",
+                  background: selectedPodId === "auto" ? COLORS.primaryDark : COLORS.primary,
+                  border: "none",
+                  borderRadius: 8,
+                  color: COLORS.textOnPrimary,
+                  fontSize: "1rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                {tKiosk("orderFlow.autoAssignPod")}
+              </button>
+            </>
+          )}
+        </div>
+
+        {/* Comb floor plan (Task D12): tap a row, then a pod; duo rules and party picks in KioskCombPicker. */}
         {comb.layoutKey ? (
-          <div className="mx-auto w-full max-w-[1040px] self-stretch">
+          <div className="mx-auto self-center" style={{ width: "min(100%, 1040px, calc((var(--kvh, 1vh) * 100 - 460px) * 1.36))" }}>
             <KioskCombPicker
               layoutKey={comb.layoutKey}
               seats={comb.seats}
@@ -4592,55 +4612,7 @@ function PodSelectionView({
             />
           </div>
         ) : null}
-
-        {/* Selection Info Card - shows either "No Preference" or "Pod Selected" */}
-        <div
-          style={{
-            background: COLORS.primaryLight,
-            border: `2px solid ${COLORS.primary}`,
-            borderRadius: 10,
-            padding: 12,
-            textAlign: "center",
-            marginTop: 8,
-          }}
-        >
-          {selectedPod ? (
-            <>
-              <div style={{ fontSize: "1rem", fontWeight: 600 }}>
-                {selectedPod.duo
-                  ? tKiosk("pod.dualPodSelected", { numbers: selectedPod.label })
-                  : tKiosk("pod.podSelected", { number: selectedPod.label })}
-              </div>
-              <div style={{ color: COLORS.textMuted, fontSize: "0.8rem" }}>
-                {selectedPod.duo ? tKiosk("pod.dualPod") : tKiosk("pod.singlePod")}
-              </div>
-            </>
-          ) : (
-            <>
-              <div style={{ fontWeight: 600, marginBottom: 8, color: COLORS.text, fontSize: "0.9rem" }}>
-                {tKiosk("orderFlow.noPreferenceTitle")}
-              </div>
-              <button
-                onClick={() => onSelectPod("auto")}
-                style={{
-                  padding: "8px 16px",
-                  background: COLORS.primary,
-                  border: "none",
-                  borderRadius: 8,
-                  color: COLORS.textOnPrimary,
-                  fontSize: "0.85rem",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                }}
-              >
-                {tKiosk("orderFlow.autoAssignPod")}
-              </button>
-            </>
-          )}
-        </div>
-
-      </div>{/* Close Pod Map Container */}
-      </div>{/* Close Scrollable Content */}
+      </div>
 
       {/* Fixed Bottom Navigation with color */}
       <div
@@ -4649,9 +4621,10 @@ function PodSelectionView({
           bottom: 0,
           left: 0,
           right: 0,
-          padding: "16px 24px",
-          background: COLORS.primaryLight,
+          padding: "14px 24px",
+          background: "#F1F0EC", // opaque: the map must not show through
           borderTop: `1px solid ${COLORS.primaryBorder}`,
+          boxShadow: "0 -4px 16px rgba(0,0,0,0.06)",
           display: "flex",
           justifyContent: "center",
           gap: 16,
@@ -4662,11 +4635,12 @@ function PodSelectionView({
           onClick={onBack}
           style={{
             padding: "16px 32px",
-            background: "transparent",
-            border: `2px solid ${COLORS.border}`,
+            background: COLORS.surface,
+            border: `2px solid ${COLORS.primary}`,
             borderRadius: 12,
-            color: COLORS.textMuted,
+            color: COLORS.text,
             fontSize: "1.1rem",
+            fontWeight: 600,
             cursor: "pointer",
           }}
         >
@@ -4674,23 +4648,24 @@ function PodSelectionView({
         </button>
         <button
           onClick={onConfirm}
-          disabled={!selectedPodId}
+          disabled={!selectedPodId || claiming}
+          aria-busy={claiming || undefined}
           style={{
             padding: "16px 48px",
-            background: selectedPodId ? COLORS.primary : "#ccc",
+            background: selectedPodId && !claiming ? COLORS.primary : "#ccc",
             border: "none",
             borderRadius: 12,
             color: COLORS.textOnPrimary,
             fontSize: "1.1rem",
             fontWeight: 600,
-            cursor: selectedPodId ? "pointer" : "not-allowed",
+            cursor: selectedPodId && !claiming ? "pointer" : "not-allowed",
             display: "flex",
             alignItems: "center",
             gap: 8,
           }}
         >
-          <strong>{tKiosk("orderFlow.continueToPayment")}</strong>
-          {selectedPodId && (
+          <strong>{claiming ? tKiosk("pod.savingPod") : tKiosk("orderFlow.continueToPayment")}</strong>
+          {selectedPodId && !claiming && (
             <span style={{
               display: "inline-block",
               animation: "chevronBounceHorizontal 1s ease-in-out infinite",

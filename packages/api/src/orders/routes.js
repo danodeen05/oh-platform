@@ -6,10 +6,11 @@
  *   POST /orders/:id/payment-intent      {clientSecret} for order.amountDueCents
  *                                        (optional savings in the body re-quote the unpaid order first)
  *   POST /orders/:id/confirm-payment     {paymentIntentId?} -> order, PAID only once verified
- *   PATCH /orders/:id                    status / arrival / pod fields only; payment fields are refused
+ *   PATCH /orders/:id                    status / arrival / podConfirmedAt only; payment and seat fields are refused
  *   POST /orders/:id/apply-credits       sets the owner's credits on the quote (spent at PAID)
  *   POST /kiosk/orders/payment-intent    kiosk device: one Terminal PaymentIntent for its orders
  *   POST /kiosk/orders/confirm-payment   kiosk device: {paymentIntentId?, orderIds} -> orders
+ *   POST /kiosk/orders/:id/seat          kiosk device: claim a pod before payment (seats/kiosk-seat.js)
  *
  * Registered after withStatusDemo() wraps prisma and after
  * registerStatusDemoGuard(), so every write naming a demo order is answered
@@ -18,6 +19,7 @@
 import { orderOwnerId } from "../auth/customer.js";
 import { onOrderCompleted as engineOnOrderCompleted } from "../membership/engine.js";
 import { canSeeFullOrder, safeOrderView } from "./order-view.js";
+import { assignKioskSeat, parseSeatRequest } from "../seats/kiosk-seat.js";
 import {
   quoteOrder,
   createOrder,
@@ -38,17 +40,19 @@ const ORDER_INCLUDE = {
   guest: true,
 };
 
-/** Fields PATCH /orders/:id accepts. Anything else, notably payment and price fields, is a 400. */
+/**
+ * Fields PATCH /orders/:id accepts. Anything else, notably payment and price
+ * fields, is a 400. Seat fields (seatId, podSelectionMethod, podAssignedAt,
+ * podReservationExpiry) are refused too since Task D12 fix round 1: a pod is
+ * only ever taken through a conditional claim (POST /orders with seat, POST
+ * /kiosk/orders/:id/seat, the group route, check-in), never a plain write.
+ */
 const PATCHABLE = new Set([
   "status",
   "userId",
   "guestId",
   "estimatedArrival",
-  "seatId",
-  "podSelectionMethod",
-  "podAssignedAt",
   "podConfirmedAt",
-  "podReservationExpiry",
   "orderSource",
 ]);
 
@@ -285,7 +289,7 @@ export async function registerOrderRoutes(app, {
       // server's alone (POST /orders/:id/confirm-payment); never client input.
       return reply.code(400).send({ error: `unknown field: ${unknown.join(", ")}` });
     }
-    const { status, userId, guestId, estimatedArrival, seatId, podSelectionMethod, podAssignedAt, podConfirmedAt, podReservationExpiry, orderSource } = body;
+    const { status, userId, guestId, estimatedArrival, podConfirmedAt, orderSource } = body;
 
     const current = await prisma.order.findUnique({ where: { id } });
     if (!current) return reply.code(404).send({ error: "Order not found" });
@@ -305,14 +309,10 @@ export async function registerOrderRoutes(app, {
     if (userId) data.userId = userId;
     if (guestId) data.guestId = guestId;
     if (estimatedArrival) data.estimatedArrival = new Date(estimatedArrival);
-    if (seatId) data.seatId = seatId;
-    if (podSelectionMethod) data.podSelectionMethod = podSelectionMethod;
-    if (podAssignedAt) data.podAssignedAt = new Date(podAssignedAt);
     if (podConfirmedAt) data.podConfirmedAt = new Date(podConfirmedAt);
-    if (podReservationExpiry) data.podReservationExpiry = new Date(podReservationExpiry);
     if (orderSource) data.orderSource = orderSource;
     if (!Object.keys(data).length) {
-      return reply.code(400).send({ error: "status, userId, guestId, estimatedArrival, seatId or a pod field required" });
+      return reply.code(400).send({ error: "status, userId, guestId, estimatedArrival, podConfirmedAt or orderSource required" });
     }
 
     await prisma.order.update({ where: { id }, data });
@@ -346,6 +346,18 @@ export async function registerOrderRoutes(app, {
     } catch (err) {
       return sendOrderError(reply, err);
     }
+  });
+
+  // Claims a pod for an unpaid kiosk order at this device's location, BEFORE
+  // payment. A lost label falls back to the next best pod: 200 with
+  // {code: "POD_TAKEN", label: <new>} so the kiosk shows it before the guest pays.
+  app.post("/kiosk/orders/:id/seat", async (req, reply) => {
+    const device = await requireDevice(req, reply);
+    if (!device) return reply;
+    const request = parseSeatRequest(req.body);
+    if (!request) return reply.code(400).send({ error: "Send {label}, {best: true} or {shareWithOrderId}.", code: "INVALID_SEAT_REQUEST" });
+    const r = await assignKioskSeat(prisma, { locationId: device.locationId, orderId: req.params.id, request, now: now() });
+    return reply.code(r.status).send(r.body);
   });
 
   app.post("/kiosk/orders/confirm-payment", async (req, reply) => {

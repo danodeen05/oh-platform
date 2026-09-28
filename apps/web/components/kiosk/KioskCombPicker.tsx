@@ -27,7 +27,9 @@ export interface KioskCombPickerProps {
 
 export function KioskCombPicker(props: KioskCombPickerProps) {
   const t = useTranslations();
-  const labels = props.labels ?? (t.raw("combMap") as CombMapLabels);
+  // On the touch kiosk the first tap on a small pod zooms its row, so the hint says so.
+  const tapHint = t("kiosk.orderFlow.tapRowThenPod");
+  const labels = props.labels ?? { ...(t.raw("combMap") as CombMapLabels), hintTapRow: tapHint, hintTapPod: tapHint };
   return <KioskCombPickerView {...props} labels={labels} />;
 }
 

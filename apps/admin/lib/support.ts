@@ -24,7 +24,9 @@ export type SupportCase = {
   resolutionNote: string | null; resolutionDetail: Record<string, unknown> | null;
   createdAt: string;
 };
-export type CaseListItem = SupportCase & {
+/** List rows leave out the transcript and resolution detail (the detail route has them). */
+export type CaseListItem = Omit<SupportCase, "transcript" | "resolutionDetail"> & {
+  refundInProgress?: boolean;
   customer: { name: string | null; email: string | null } | null;
   order: { orderNumber: string | null; kitchenOrderNumber: string | null; totalCents: number | null; paymentStatus: string | null } | null;
 };
@@ -41,7 +43,7 @@ export type CaseCustomer = {
 };
 export type CaseDetail = {
   case: SupportCase; order: CaseOrder | null; customer: CaseCustomer | null;
-  limits: { staffCreditMaxCents: number; goodwillLifetimeCapCents: number };
+  limits: { staffCreditMaxCents: number; goodwillLifetimeCapCents: number; refundLeaseMs?: number };
 };
 
 export const STATUS_LABEL: Record<CaseStatus, string> = { OPEN: "Open", RESOLVED: "Resolved", DECLINED: "Declined" };
@@ -73,6 +75,24 @@ export function caseAge(createdAt: string, now = new Date()): { label: string; s
 
 export function customerName(c: Pick<CaseListItem, "customer" | "contact">): string {
   return c.customer?.name || c.customer?.email || c.contact?.name || c.contact?.email || c.contact?.phone || "Guest";
+}
+
+export const REFUND_LEASE_MS_DEFAULT = 5 * 60 * 1000;
+
+export type RefundState = { pending: false } | { pending: true; stale: boolean; startedAt: string | null; startedBy: string | null };
+
+/**
+ * A card refund someone started on this case and that hasn't finished: the
+ * case is still OPEN but holds a FULL_REFUND claim (resolutionDetail.refundPending).
+ * While the claim's lease runs, credit and decline are refused by the API
+ * (REFUND_IN_PROGRESS); only a full-refund retry may touch the case. Once the
+ * lease is stale, decline and close work again (credit still doesn't).
+ */
+export function refundState(c: Pick<SupportCase, "status" | "resolution" | "resolvedAt" | "resolvedBy"> & { resolutionDetail?: Record<string, unknown> | null }, leaseMs = REFUND_LEASE_MS_DEFAULT, now = new Date()): RefundState {
+  if (c.status !== "OPEN" || c.resolution !== "FULL_REFUND") return { pending: false };
+  const at = c.resolvedAt ? new Date(c.resolvedAt).getTime() : NaN;
+  const stale = !Number.isFinite(at) || now.getTime() - at >= leaseMs;
+  return { pending: true, stale, startedAt: c.resolvedAt, startedBy: c.resolvedBy };
 }
 
 /** Owner only, and only when the order was paid by card (a PaymentIntent exists). */

@@ -31,7 +31,12 @@ function Age({ c }: { c: CaseListItem }) {
 }
 
 function Urgent({ c }: { c: CaseListItem }) {
-  return isUrgent(c) ? <Badge tone="alert">Urgent</Badge> : null;
+  return (
+    <>
+      {isUrgent(c) && <Badge tone="alert">Urgent</Badge>}
+      {c.refundInProgress && <Badge tone="pending">Refund in progress</Badge>}
+    </>
+  );
 }
 
 const orderText = (c: CaseListItem) => (c.order?.orderNumber ? `#${c.order.orderNumber}` : null);

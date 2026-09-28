@@ -100,6 +100,7 @@ import { FASTIFY_OPTIONS, rateLimitKey } from "./http-config.js";
 import { createKioskAuth } from "./auth/kiosk.js";
 import { publicReferral, shopCreditSpender, registerAdminOnlyRoutes } from "./auth/hardening.js";
 import { listLocationSeats, resolveSeatViewer } from "./seats/service.js";
+import { claimCheckInSeat } from "./seats/kiosk-seat.js";
 import { canSeeFullOrder, safeOrderView, firstNameOnly } from "./orders/order-view.js";
 
 // DEMO- order codes resolve to a synthetic order (see demo/status-demo.js):
@@ -1719,47 +1720,30 @@ app.post("/orders/check-in", async (req, reply) => {
   // CASE 0: Customer selected a pod at kiosk during check-in
   console.log("[check-in] Checking selectedSeatId:", selectedSeatId, "type:", typeof selectedSeatId);
   if (selectedSeatId) {
-    const selectedPod = await prisma.seat.findUnique({
-      where: { id: selectedSeatId },
+    // Task D12 fix round 1: a conditional claim (AVAILABLE -> RESERVED, one
+    // winner) in the same transaction as the order update, so check-in can
+    // never take a pod another order already holds.
+    const claimed = await claimCheckInSeat(prisma, {
+      order,
+      seatId: selectedSeatId,
+      data: {
+        arrivedAt: now,
+        arrivalDeviation,
+        podAssignedAt: now,
+        podSelectionMethod: "CUSTOMER_SELECTED",
+        status: "QUEUED",
+        queuedAt: now,
+        paidAt: order.paidAt || now,
+      },
+      include: { seat: true, location: true, items: { include: { menuItem: true } } },
     });
-    console.log("[check-in] Found selectedPod:", selectedPod?.number, "status:", selectedPod?.status);
-
-    if (selectedPod && selectedPod.status === "AVAILABLE") {
-      console.log("[check-in] Using customer-selected pod:", selectedPod.number);
-      const [updatedOrder, updatedSeat] = await prisma.$transaction([
-        prisma.order.update({
-          where: { id: order.id },
-          data: {
-            arrivedAt: now,
-            arrivalDeviation,
-            seatId: selectedSeatId,
-            podAssignedAt: now,
-            podSelectionMethod: "CUSTOMER_SELECTED",
-            status: "QUEUED",
-            queuedAt: now,
-            paidAt: order.paidAt || now,
-          },
-          include: {
-            seat: true,
-            location: true,
-            items: {
-              include: {
-                menuItem: true,
-              },
-            },
-          },
-        }),
-        prisma.seat.update({
-          where: { id: selectedSeatId },
-          data: { status: "RESERVED" },
-        }),
-      ]);
-
+    if (claimed) {
+      const podName = claimed.seat.label || claimed.seat.number;
       return {
         status: "ASSIGNED",
-        message: `Go to Pod ${selectedPod.number}`,
-        order: updatedOrder,
-        podNumber: selectedPod.number,
+        message: `Go to Pod ${podName}`,
+        order: claimed.order,
+        podNumber: podName,
         customerSelected: true,
       };
     }

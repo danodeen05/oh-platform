@@ -1839,7 +1839,11 @@
       "dualPodRulesMessage": "双人包厢专为两位宾客共同用餐设计。要选择双人包厢：",
       "dualPodRule1": "您的团队必须有2位或更多宾客",
       "dualPodRule2": "必须使用单一账单付款（非分开付款）",
-      "gotIt": "知道了"
+      "gotIt": "知道了",
+      "podTaken": "{requested} 号座位刚被选走。我们为您保留了 {label} 号座位。",
+      "noPodsLeft": "目前所有座位都已占用，请联系店员。",
+      "claimFailed": "未能保留您的座位，请重试。",
+      "savingPod": "正在保留您的座位..."
     },
     "status": {
       "available": "可用",
@@ -1959,7 +1963,8 @@
       "noPreferenceTitle": "没有偏好？我们来为您选择！",
       "autoAssignPod": "自动分配包厢",
       "restrooms": "洗手间",
-      "store": "商店"
+      "store": "商店",
+      "tapRowThenPod": "先点一排，再点您的座位。"
     },
     "signUp": {
       "title": "本单即可赚取奖励！",

@@ -4,8 +4,9 @@
  * The kiosk's order and check-in pages keep their own flow (ids in guest
  * state, dual-pod rules, auto-assign); only the map changed. These pure
  * helpers bridge the two: CombMap speaks pod labels ("B-07"), the kiosk flow
- * speaks seat ids, and the order PATCH takes the seat id of the label the
- * guest tapped.
+ * keeps seat ids, and the pod is claimed BEFORE payment through
+ * POST /kiosk/orders/:id/seat with the label the guest tapped (fix round 1:
+ * a conditional claim on the server, never a plain seat write).
  */
 import { layoutKeyOf, toCombSeats, type CombLayoutKey, type MapSeat, type SeatsResponse } from "@/components/site/floor-plan/useSeats";
 
@@ -17,10 +18,21 @@ export function kioskCombFrom(data: unknown): KioskComb {
   return { layoutKey: layoutKeyOf(data), seats };
 }
 
-/** Pods another guest in this party already chose read as reserved, so nobody picks them twice. */
+/**
+ * Pods another guest in this party already chose read as reserved, so nobody
+ * picks them twice. The other half of a duo the party holds counts as taken
+ * too (two guests share it; a third must not take the free-looking half).
+ */
 export function seatsForPick(seats: MapSeat[], takenIds: readonly string[], selectedId?: string | null): MapSeat[] {
   const taken = new Set(takenIds.filter((id) => id && id !== selectedId));
-  return seats.map((s) => (taken.has(s.id) && s.status === "AVAILABLE" ? { ...s, status: "RESERVED" as const } : s));
+  const takenLabels = new Set<string>();
+  for (const s of seats) {
+    if (!taken.has(s.id)) continue;
+    takenLabels.add(s.label);
+    if (s.podType === "DUAL" && s.dualPartnerLabel) takenLabels.add(s.dualPartnerLabel);
+  }
+  const selectedLabel = seatById(seats, selectedId)?.label;
+  return seats.map((s) => (takenLabels.has(s.label) && s.label !== selectedLabel && s.status === "AVAILABLE" ? { ...s, status: "RESERVED" as const } : s));
 }
 
 const byLabel = (seats: MapSeat[], label: string) => seats.find((s) => s.label === label);
@@ -52,18 +64,34 @@ export function podNames(seats: MapSeat[], id?: string | null): { label: string;
   return { label: seat.label, duo: false };
 }
 
+export type SeatClaim = { label: string; dual: boolean } | { best: true; dual: boolean };
+
 /**
- * Body for PATCH /orders/:id once the guest has chosen (the kiosk creates
- * orders before the pod step, so the pod rides on the PATCH): the seat id
- * of the label they tapped, how it was chosen, and a 15 minute hold.
+ * Body for POST /kiosk/orders/:id/seat: the tapped pod's label, or the best
+ * free pod when the guest has no preference ("auto" or nothing chosen). A
+ * party paying together asks for both halves of a duo.
  */
-export function podPatchBody(guest: { selectedPodId?: string | null; podAutoAssigned?: boolean }, now = new Date()) {
-  if (!guest.selectedPodId || guest.selectedPodId === "auto") return null;
+export function seatClaimRequest(seats: MapSeat[], selectedId: string | null | undefined, opts: { canUseDual: boolean }): SeatClaim {
+  const seat = selectedId && selectedId !== "auto" ? seatById(seats, selectedId) : undefined;
+  if (!seat) return { best: true, dual: opts.canUseDual };
+  return { label: seat.label, dual: opts.canUseDual && seat.podType === "DUAL" && Boolean(seat.dualPartnerLabel) };
+}
+
+export type SeatClaimResult =
+  | { ok: true; seatId: string; label: string; partnerLabel: string | null; takenLabel: string | null }
+  | { ok: false; code: string };
+
+/** Reads the claim response: `takenLabel` is set when the requested pod was lost and a new one was held instead. */
+export function readSeatClaim(status: number, body: unknown): SeatClaimResult {
+  const b = (body && typeof body === "object" ? body : {}) as Record<string, unknown>;
+  if (status !== 200 || typeof b.seatId !== "string" || typeof b.label !== "string") {
+    return { ok: false, code: typeof b.code === "string" ? b.code : "CLAIM_FAILED" };
+  }
   return {
-    seatId: guest.selectedPodId,
-    podSelectionMethod: guest.podAutoAssigned ? "AUTO_ASSIGNED" : "CUSTOMER_SELECTED",
-    podAssignedAt: now.toISOString(),
-    // podConfirmedAt is NOT set here: the guest confirms at the pod with its QR code.
-    podReservationExpiry: new Date(now.getTime() + 15 * 60 * 1000).toISOString(),
+    ok: true,
+    seatId: b.seatId,
+    label: b.label,
+    partnerLabel: typeof b.partnerLabel === "string" ? b.partnerLabel : null,
+    takenLabel: b.code === "POD_TAKEN" && typeof b.requested === "string" ? b.requested : null,
   };
 }

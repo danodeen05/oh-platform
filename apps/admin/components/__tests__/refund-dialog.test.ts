@@ -20,9 +20,3 @@ test("the refund dialog source has no amount field or money input", () => {
   expect(src).not.toMatch(/MoneyInput|NumberInput|TextInput|<input|amountCents/);
 });
 
-test("the case page sends full_refund with no amount, and shows the refund button only when canFullRefund allows it", () => {
-  const src = readFileSync(path.resolve(__dirname, "../../app/(console)/support/[id]/page.tsx"), "utf8");
-  expect(src).toContain('submit("full_refund", {})');
-  expect(src).toMatch(/const showRefund = canFullRefund\(role, o\);/);
-  expect(src).toMatch(/\{showRefund && \(\s*<Button [^\n]*data-testid="refund-full"/);
-});

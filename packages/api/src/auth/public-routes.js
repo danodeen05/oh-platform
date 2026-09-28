@@ -25,6 +25,7 @@ export const PUBLIC_ROUTES = Object.freeze([
   p("GET", "/orders/lookup", "kiosk"),
   p("POST", "/kiosk/orders/payment-intent", "kiosk"),
   p("POST", "/kiosk/orders/confirm-payment", "kiosk"),
+  p("POST", "/kiosk/orders/:id/seat", "kiosk"), // Task D12 fix 1: device-authenticated pod claim before payment
 
   // Customer ordering flow
   p("POST", "/orders/check-in", "customer"),

@@ -34,6 +34,16 @@ export const SMS_AMOUNT_THRESHOLD_CENTS = 2000;
 export const CASE_RATE_LIMIT = Object.freeze({ max: 5, windowMs: 60 * 60 * 1000 });
 const SUMMARY_MAX = 2000;
 const LIST_MAX = 200;
+const LIST_FIELDS = ["id", "type", "status", "summary", "userId", "orderId", "contact", "locale", "resolution", "amountCents", "resolvedBy", "resolvedAt", "resolutionNote", "createdAt"];
+const LIST_SELECT = Object.fromEntries(LIST_FIELDS.map((f) => [f, true]));
+/**
+ * A list row: the listed fields only, plus `refundInProgress` (an open case
+ * holding a full-refund claim; the detail route says whether its lease is stale).
+ */
+const listRow = (c) => ({
+  ...Object.fromEntries(LIST_FIELDS.map((f) => [f, c[f] ?? null])),
+  refundInProgress: c.status === "OPEN" && c.resolution === "FULL_REFUND",
+});
 const TRANSCRIPT_MAX_CHARS = 60000;
 const REASON_MAX = 1000;
 const EMAIL_RE = /^[^\s@<>]{1,64}@[^\s@<>]{1,255}\.[A-Za-z]{2,}$/;
@@ -321,7 +331,11 @@ export async function registerSupportRoutes(app, deps) {
       if (!cur) return reply.code(400).send({ error: "Unknown cursor.", code: "INVALID_CURSOR" });
       where.OR = [{ createdAt: { lt: cur.createdAt } }, { createdAt: cur.createdAt, id: { lt: cur.id } }];
     }
-    const cases = await prisma.supportCase.findMany({ where, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take });
+    // One extra row tells whether another page exists. The list leaves out the
+    // transcript and resolution detail (up to 60k chars each); the detail route has them.
+    const rows = await prisma.supportCase.findMany({ where, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: take + 1, select: LIST_SELECT });
+    const hasMore = rows.length > take;
+    const cases = hasMore ? rows.slice(0, take).map(listRow) : rows.map(listRow);
 
     const userIds = [...new Set(cases.map((c) => c.userId).filter(Boolean))];
     const orderIds = [...new Set(cases.map((c) => c.orderId).filter(Boolean))];
@@ -333,7 +347,7 @@ export async function registerSupportRoutes(app, deps) {
     const orderById = new Map(orders.map((o) => [o.id, { orderNumber: o.orderNumber ?? null, kitchenOrderNumber: o.kitchenOrderNumber ?? null, totalCents: o.totalCents ?? null, paymentStatus: o.paymentStatus ?? null }]));
     return {
       cases: cases.map((c) => ({ ...c, customer: c.userId ? userById.get(c.userId) || null : null, order: c.orderId ? orderById.get(c.orderId) || null : null })),
-      nextCursor: cases.length === take ? cases[cases.length - 1].id : null,
+      nextCursor: hasMore ? cases[cases.length - 1].id : null,
     };
   });
 
@@ -392,7 +406,7 @@ export async function registerSupportRoutes(app, deps) {
       case: supportCase,
       order,
       customer,
-      limits: { staffCreditMaxCents: STAFF_CREDIT_MAX_CENTS, goodwillLifetimeCapCents: PROGRAM.goodwill.lifetimeCents },
+      limits: { staffCreditMaxCents: STAFF_CREDIT_MAX_CENTS, goodwillLifetimeCapCents: PROGRAM.goodwill.lifetimeCents, refundLeaseMs: REFUND_LEASE_MS },
     };
   });
 

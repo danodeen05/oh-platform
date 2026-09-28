@@ -3,6 +3,7 @@ import Link from "next/link";
 import { use, useRef, useState } from "react";
 import { useRole } from "@/components/providers/RoleProvider";
 import { RefundDialog } from "@/components/support/RefundDialog";
+import { ResolveActions } from "@/components/support/ResolveActions";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -18,7 +19,7 @@ import { api, ApiError } from "@/lib/api";
 import { denverDateTime, money } from "@/lib/format";
 import { paymentLabel, paymentTone } from "@/lib/orders";
 import {
-  canFullRefund, caseAge, customerName, isUrgent, normalizeTranscript, resolveBody, resolveErrorMessage,
+  canFullRefund, caseAge, customerName, isUrgent, normalizeTranscript, refundState, resolveBody, resolveErrorMessage,
   RESOLUTION_LABEL, STATUS_LABEL, STATUS_TONE, TIER_LABEL, typeLabel,
   type CaseDetail, type ResolveAction, type ResolveInput,
 } from "@/lib/support";
@@ -62,7 +63,8 @@ export default function SupportCasePage({ params }: { params: Promise<{ id: stri
   const { id } = use(params);
   const role = useRole();
   const { show } = useToast();
-  const res = useResource(`support:${id}`, (signal) => api<CaseDetail>(`/admin/support/cases/${encodeURIComponent(id)}`, { signal }));
+  // Polls so a card refund someone else started shows up and clears on its own.
+  const res = useResource(`support:${id}`, (signal) => api<CaseDetail>(`/admin/support/cases/${encodeURIComponent(id)}`, { signal }), { refreshMs: 15_000 });
   const d = res.data;
 
   const [open, setOpen] = useState<OpenSheet>(null);
@@ -118,6 +120,7 @@ export default function SupportCasePage({ params }: { params: Promise<{ id: stri
   const m = d.customer;
   const isOpen = c.status === "OPEN";
   const showRefund = canFullRefund(role, o);
+  const refund = refundState(c, d.limits.refundLeaseMs);
   const age = caseAge(c.createdAt);
   const contact = [c.contact?.name, c.contact?.email, c.contact?.phone].filter(Boolean).join(", ");
   const maxDollars = (d.limits.staffCreditMaxCents / 100).toFixed(2);
@@ -129,6 +132,7 @@ export default function SupportCasePage({ params }: { params: Promise<{ id: stri
           <span className="flex flex-wrap items-center gap-2">
             <Badge tone={STATUS_TONE[c.status]}>{STATUS_LABEL[c.status]}</Badge>
             {isUrgent(c) && <Badge tone="alert">Urgent</Badge>}
+            {refund.pending && <Badge tone="pending">{refund.stale ? "Refund stalled" : "Refund in progress"}</Badge>}
             <span>{[denverDateTime(c.createdAt), isOpen ? `waiting ${age.label}` : null, c.locale && c.locale !== "en" ? `Language: ${c.locale}` : null].filter(Boolean).join(" · ")}</span>
           </span>
         } />
@@ -154,16 +158,8 @@ export default function SupportCasePage({ params }: { params: Promise<{ id: stri
 
         <div className="space-y-4 lg:space-y-6">
           {isOpen && (
-            <Card title="Resolve">
-              <div className="flex flex-col gap-2">
-                <Button variant="primary" icon="money" onClick={() => openSheet("credit")} disabled={busy || !m} data-testid="give-credit">Give store credit</Button>
-                {!m && <p className="text-sm text-oh-stone/70">No member account, so store credit can't be given. Reach them at the contact below.</p>}
-                {showRefund && (
-                  <Button variant="danger" icon="undo" onClick={() => openSheet("refund")} disabled={busy} data-testid="refund-full">Refund full order</Button>
-                )}
-                <Button onClick={() => openSheet("decline")} disabled={busy} data-testid="decline">Decline or close</Button>
-              </div>
-            </Card>
+            <ResolveActions role={role} order={o} hasMember={Boolean(m)} busy={busy} refund={refund}
+              onCredit={() => openSheet("credit")} onRefund={() => openSheet("refund")} onDecline={() => openSheet("decline")} />
           )}
 
           <Card title="Guest">
@@ -242,7 +238,7 @@ export default function SupportCasePage({ params }: { params: Promise<{ id: stri
       </Sheet>
 
       {showRefund && o && (
-        <RefundDialog open={open === "refund"} onClose={closeSheet} busy={busy} retry={retry} error={error}
+        <RefundDialog open={open === "refund"} onClose={closeSheet} busy={busy} retry={retry || refund.pending} error={error}
           totalCents={o.totalCents} orderNumber={o.orderNumber}
           onConfirm={() => submit("full_refund", {})} />
       )}
