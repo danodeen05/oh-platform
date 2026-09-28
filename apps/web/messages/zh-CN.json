@@ -2058,5 +2058,53 @@
     "bowlFlatlay": "一只空的陶瓷面碗，筷子搁在碗上，旁边放着一支木汤勺，置于亚麻布上。",
     "chopsticks": "亚麻布上一双木筷的特写，另附筷尖细节照。",
     "signPool": "夜晚餐厅入口水池中发光的 Oh! 标志装置，沿路的纸灯笼映照着光。"
+  },
+  "combMap": {
+    "title": "包厢平面图",
+    "summary": "厨房沿后墙布置。包厢排列在三条员工通道的两侧，顾客走在包厢之间的走道上。入口在正面。",
+    "hintTapRow": "轻点一排放大，再轻点一个包厢。双指捏合可缩放。",
+    "hintTapPod": "轻点包厢即可选择。",
+    "hintLive": "轻点一排放大。双指捏合可缩放。",
+    "podName": "包厢 {label}，{status}",
+    "podNameDuo": "包厢 {label}，与 {partner} 组成双人包厢，{status}",
+    "journeySummary": "在平面图上走一遍用餐流程。您从入口走到 {label} 号包厢，您的面沿员工通道送到您的传菜窗口。",
+    "status": {
+      "available": "可预订",
+      "reserved": "已预订",
+      "occupied": "使用中",
+      "cleaning": "清洁中",
+      "unknown": "不可预订"
+    },
+    "legend": {
+      "title": "图例",
+      "available": "可预订",
+      "reserved": "已预订",
+      "occupied": "使用中",
+      "cleaning": "清洁中",
+      "duo": "双人包厢",
+      "selected": "您的包厢",
+      "hatch": "传菜窗口"
+    },
+    "zones": {
+      "kitchen": "厨房",
+      "restrooms": "洗手间",
+      "store": "商店",
+      "lobby": "大厅",
+      "entry": "入口",
+      "exit": "出口"
+    },
+    "zoom": {
+      "zoomIn": "放大",
+      "zoomOut": "缩小",
+      "wholeFloor": "查看全场"
+    },
+    "pan": {
+      "earlier": "前面的包厢",
+      "later": "后面的包厢"
+    },
+    "marker": {
+      "guest": "您",
+      "bowl": "您的面"
+    }
   }
 }

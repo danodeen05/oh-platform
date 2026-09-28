@@ -1,4 +1,13 @@
 import { PrismaClient } from "@prisma/client";
+import { BADGES } from "./seed-data/badges";
+import { CHALLENGES } from "./seed-data/challenges";
+import {
+  DEV_BADGE_DESCRIPTION,
+  DEV_BADGE_I18N_OVERRIDE,
+  DEV_CHALLENGE_DESCRIPTION,
+  DEV_CHALLENGE_I18N_OVERRIDE,
+  DEV_CHALLENGE_REQUIREMENTS,
+} from "./seed-data/dev-overrides";
 
 const prisma = new PrismaClient();
 
@@ -318,168 +327,57 @@ async function main() {
 
   console.log("Creating badges...");
 
+  // Fix round 1 (review, Minor 1): badges now import their catalog from
+  // seed-data/badges.ts instead of keeping a second, hand-written copy --
+  // that duplication was exactly how the "vip" badge's dev-only zh-TW/zh-CN
+  // text drifted to the wrong tier name (Important 4) without being
+  // caught. Only the English `description` differs for a few dev fixtures
+  // (this dev seed's story text doesn't match seed-prod.ts's), so those are
+  // overridden via DEV_BADGE_DESCRIPTION; "vip" and "spicy-challenge" change
+  // meaning, not just English wording, so they get their own full i18n
+  // override instead (see seed-data/dev-overrides.ts).
   await prisma.badge.createMany({
-    data: [
-      // Milestone badges
-      {
-        slug: "first-order",
-        name: "First Bowl",
-        description: "Completed your first order",
-        iconEmoji: "🍜",
-        category: "MILESTONE",
-      },
-      {
-        slug: "10-orders",
-        name: "Noodle Enthusiast",
-        description: "Completed 10 orders",
-        iconEmoji: "🥢",
-        category: "MILESTONE",
-      },
-      {
-        slug: "50-orders",
-        name: "Beef Devotee",
-        description: "Completed 50 orders",
-        iconEmoji: "🐂",
-        category: "MILESTONE",
-      },
-      {
-        slug: "100-orders",
-        name: "Century Club",
-        description: "Completed 100 orders",
-        iconEmoji: "💯",
-        category: "MILESTONE",
-      },
-
-      // Referral badges
-      {
-        slug: "first-referral",
-        name: "Share the Love",
-        description: "Referred your first friend",
-        iconEmoji: "🤝",
-        category: "REFERRAL",
-      },
-      {
-        slug: "10-referrals",
-        name: "Influencer",
-        description: "Referred 10 friends",
-        iconEmoji: "⭐",
-        category: "REFERRAL",
-      },
-      {
-        slug: "50-referrals",
-        name: "Ambassador",
-        description: "Referred 50 friends",
-        iconEmoji: "👑",
-        category: "REFERRAL",
-      },
-
-      // Streak badges
-      {
-        slug: "3-day-streak",
-        name: "Hot Streak",
-        description: "Ordered 3 days in a row",
-        iconEmoji: "🔥",
-        category: "STREAK",
-      },
-      {
-        slug: "7-day-streak",
-        name: "Weekly Warrior",
-        description: "Ordered 7 days in a row",
-        iconEmoji: "⚡",
-        category: "STREAK",
-      },
-      {
-        slug: "30-day-streak",
-        name: "Legend",
-        description: "Ordered 30 days in a row",
-        iconEmoji: "🏆",
-        category: "STREAK",
-      },
-
-      // Challenge badges
-      {
-        slug: "tried-all-items",
-        name: "Menu Master",
-        description: "Tried every item on the menu",
-        iconEmoji: "📋",
-        category: "CHALLENGE",
-      },
-      {
-        slug: "spicy-challenge",
-        name: "Heat Seeker",
-        description: "Ordered spicy 10 times",
-        iconEmoji: "🌶️",
-        category: "CHALLENGE",
-      },
-
-      // Special badges
-      {
-        slug: "grand-opening",
-        name: "OG Member",
-        description: "Member since grand opening",
-        iconEmoji: "🎉",
-        category: "SPECIAL",
-      },
-      {
-        slug: "vip",
-        name: "VIP",
-        description: "Reached Beef Boss tier",
-        iconEmoji: "💎",
-        category: "SPECIAL",
-      },
-    ],
+    data: BADGES.map((b) => {
+      const description = DEV_BADGE_DESCRIPTION[b.slug] ?? b.i18n.en.description;
+      const i18n = DEV_BADGE_I18N_OVERRIDE[b.slug] ?? { ...b.i18n, en: { ...b.i18n.en, description } };
+      return {
+        slug: b.slug,
+        name: i18n.en.name,
+        description: i18n.en.description,
+        iconEmoji: null,
+        iconKey: b.iconKey,
+        category: b.category,
+        i18n: i18n as any,
+      };
+    }),
   });
 
   console.log("Created 14 badges");
 
   console.log("Creating challenges...");
 
+  // Fix round 1 (review, Minor 1): same single-source approach as the
+  // badges above. `requirements` stays dev-specific (this fixture's
+  // referenced item slugs don't exist in seed-prod.ts's catalog), so it
+  // comes from seed-data/dev-overrides.ts rather than seed-prod.ts's
+  // module. Challenge.iconEmoji is still schema-required (frozen migration
+  // from Task A2); this writes "" instead of an emoji.
   await prisma.challenge.createMany({
-    data: [
-      {
-        slug: "try-all-bases",
-        name: "Noodle Explorer",
-        description: "Order all 4 base noodle dishes",
-        rewardCents: 500,
-        iconEmoji: "🗺️",
-        requirements: JSON.stringify({
-          type: "order_all_items",
-          itemSlugs: [
-            "classic-beef",
-            "spicy-beef",
-            "dry-noodles",
-            "wagyu-upgrade",
-          ],
-        }),
+    data: CHALLENGES.map((c) => {
+      const description = DEV_CHALLENGE_DESCRIPTION[c.slug] ?? c.i18n.en.description;
+      const i18n = DEV_CHALLENGE_I18N_OVERRIDE[c.slug] ?? { ...c.i18n, en: { ...c.i18n.en, description } };
+      return {
+        slug: c.slug,
+        name: i18n.en.name,
+        description: i18n.en.description,
+        rewardCents: c.rewardCents,
+        iconEmoji: "",
+        iconKey: c.iconKey,
+        i18n: i18n as any,
+        requirements: DEV_CHALLENGE_REQUIREMENTS[c.slug] as any,
         isActive: true,
-      },
-      {
-        slug: "bring-5-friends",
-        name: "Party Host",
-        description: "Refer 5 friends this month",
-        rewardCents: 1000,
-        iconEmoji: "🎊",
-        requirements: JSON.stringify({
-          type: "referrals",
-          count: 5,
-          timeframe: "month",
-        }),
-        isActive: true,
-      },
-      {
-        slug: "early-bird",
-        name: "Early Bird",
-        description: "Order before 11am five times",
-        rewardCents: 400,
-        iconEmoji: "🌅",
-        requirements: JSON.stringify({
-          type: "order_time",
-          before: "11:00",
-          count: 5,
-        }),
-        isActive: true,
-      },
-    ],
+      };
+    }),
   });
 
   console.log("Created 4 challenges");

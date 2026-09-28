@@ -1,5 +1,9 @@
 import { PrismaClient } from '@prisma/client';
 import { seedLocation, LOCATIONS } from '../scripts/seed-comb-seats';
+import { BADGES } from './seed-data/badges';
+import { CHALLENGES } from './seed-data/challenges';
+import { LOCATION_I18N } from './seed-data/locations';
+import { SLIDER_LABELS_I18N } from './seed-data/slider-labels';
 
 const prisma = new PrismaClient({
   datasourceUrl: process.env.RAILWAY_DATABASE_URL
@@ -113,6 +117,13 @@ async function seedCoreData() {
   // ==========================================
   console.log('\nCreating locations...');
 
+  // Cast once here: Prisma's InputJsonObject wants an index signature our
+  // hand-authored LocationCopy/I18nCopy interfaces don't (and shouldn't)
+  // carry, since they're plain, fully JSON-serializable data (see
+  // seed-data/locations.ts).
+  const cityCreekI18n = LOCATION_I18N['city-creek'] as any;
+  const universityPlaceI18n = LOCATION_I18N['university-place'] as any;
+
   const cityCreek = await prisma.location.upsert({
     where: { id: 'cmip6jbz700022nnnxxpmm5hf' },
     update: {
@@ -122,6 +133,7 @@ async function seedCoreData() {
       lat: 40.7679773,
       lng: -111.89162,
       taxRate: 0.0945, // Salt Lake City: 8.45% base + 1% restaurant tax = 9.45%
+      i18n: cityCreekI18n,
     },
     create: {
       id: 'cmip6jbz700022nnnxxpmm5hf',
@@ -132,6 +144,7 @@ async function seedCoreData() {
       lat: 40.7679773,
       lng: -111.89162,
       taxRate: 0.0945, // Salt Lake City: 8.45% base + 1% restaurant tax = 9.45%
+      i18n: cityCreekI18n,
     }
   });
   console.log('✓ Location:', cityCreek.name, `(${cityCreek.city}, tax: ${(cityCreek.taxRate * 100).toFixed(2)}%)`);
@@ -145,6 +158,7 @@ async function seedCoreData() {
       lat: 40.2338,
       lng: -111.6585,
       taxRate: 0.0845, // Orem: 7.45% base + 1% restaurant tax = 8.45%
+      i18n: universityPlaceI18n,
     },
     create: {
       id: 'cmip6jbza00042nnnf4nc0dvh',
@@ -155,6 +169,7 @@ async function seedCoreData() {
       lat: 40.2338,
       lng: -111.6585,
       taxRate: 0.0845, // Orem: 7.45% base + 1% restaurant tax = 8.45%
+      i18n: universityPlaceI18n,
     }
   });
   console.log('✓ Location:', universityPlace.name, `(${universityPlace.city}, tax: ${(universityPlace.taxRate * 100).toFixed(2)}%)`);
@@ -178,14 +193,14 @@ async function seedCoreData() {
     { id: 'cmip6jbze000i2nnnsjjcpifd', name: 'No Noodles', nameZhTW: '無麵', nameZhCN: '无面', nameEs: 'Sin Fideos', basePriceCents: 0, category: 'main02', categoryType: 'MAIN', selectionMode: 'SINGLE', displayOrder: 5, isVegetarian: true, isVegan: true, isGlutenFree: true },
 
     // SLIDERS
-    { id: 'cmip6jbzf000k2nnnmy81pbsx', name: 'Soup Richness', nameZhTW: '湯頭濃度', nameZhCN: '汤头浓度', nameEs: 'Intensidad del Caldo', basePriceCents: 0, category: 'slider01', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 1, sliderConfig: { max: 3, min: 0, step: 1, labels: ['Light', 'Medium', 'Rich', 'Extra Rich'], default: 1, description: 'How rich do you want your soup?' } },
-    { id: 'cmip6jbzf000m2nnn3pkux3rw', name: 'Noodle Texture', nameZhTW: '麵條口感', nameZhCN: '面条口感', nameEs: 'Textura de Fideos', basePriceCents: 0, category: 'slider02', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 2, sliderConfig: { max: 2, min: 0, step: 1, labels: ['Firm', 'Medium', 'Soft'], default: 1, description: 'How firm do you want your noodles?' } },
-    { id: 'cmip6jbza00062z01skz6ndd5', name: 'Spice Level', nameZhTW: '辣度', nameZhCN: '辣度', nameEs: 'Nivel de Picante', basePriceCents: 0, category: 'slider03', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 3, sliderConfig: { max: 4, min: 0, step: 1, labels: ['None', 'Mild', 'Medium', 'Spicy', 'Extra Spicy'], default: 1, description: 'How spicy do you like it?' } },
-    { id: 'cmip6jc0200272nnnmx2bv246', name: 'Baby Bok Choy', nameZhTW: '青江菜', nameZhCN: '小白菜', nameEs: 'Bok Choy', basePriceCents: 0, category: 'slider04', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 4, sliderConfig: { max: 3, min: 0, step: 1, labels: ['None', 'Light', 'Normal', 'Extra'], default: 2, description: 'How much do you want?' }, isVegetarian: true, isVegan: true, isGlutenFree: true },
-    { id: 'cmip6jc0g00292nnnwsr3nsiq', name: 'Green Onions', nameZhTW: '蔥花', nameZhCN: '葱花', nameEs: 'Cebollín', basePriceCents: 0, category: 'slider05', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 5, sliderConfig: { max: 3, min: 0, step: 1, labels: ['None', 'Light', 'Normal', 'Extra'], default: 2, description: 'How much do you want?' }, isVegetarian: true, isVegan: true, isGlutenFree: true },
-    { id: 'cmip6jc0h002b2nnnedxu3hy6', name: 'Cilantro', nameZhTW: '香菜', nameZhCN: '香菜', nameEs: 'Cilantro', basePriceCents: 0, category: 'slider06', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 6, sliderConfig: { max: 3, min: 0, step: 1, labels: ['None', 'Light', 'Normal', 'Extra'], default: 1, description: 'How much do you want?' }, isVegetarian: true, isVegan: true, isGlutenFree: true },
-    { id: 'cmip6jc0h002d2nnn4zrbfozw', name: 'Sprouts', nameZhTW: '豆芽菜', nameZhCN: '豆芽菜', nameEs: 'Brotes de Soja', basePriceCents: 0, category: 'slider07', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 7, sliderConfig: { max: 3, min: 0, step: 1, labels: ['None', 'Light', 'Normal', 'Extra'], default: 2, description: 'How much do you want?' }, isVegetarian: true, isVegan: true, isGlutenFree: true },
-    { id: 'cmip6jc0i002f2nnnpv38o0iq', name: 'Pickled Greens', nameZhTW: '酸菜', nameZhCN: '酸菜', nameEs: 'Verduras en Escabeche', basePriceCents: 0, category: 'slider08', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 8, sliderConfig: { max: 3, min: 0, step: 1, labels: ['None', 'Light', 'Normal', 'Extra'], default: 1, description: 'How much do you want?' }, isVegetarian: true, isVegan: true, isGlutenFree: true },
+    { id: 'cmip6jbzf000k2nnnmy81pbsx', name: 'Soup Richness', nameZhTW: '湯頭濃度', nameZhCN: '汤头浓度', nameEs: 'Intensidad del Caldo', basePriceCents: 0, category: 'slider01', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 1, sliderConfig: { max: 3, min: 0, step: 1, labels: ['Light', 'Medium', 'Rich', 'Extra Rich'], labelsI18n: SLIDER_LABELS_I18N.slider01, default: 1, description: 'How rich do you want your soup?' } },
+    { id: 'cmip6jbzf000m2nnn3pkux3rw', name: 'Noodle Texture', nameZhTW: '麵條口感', nameZhCN: '面条口感', nameEs: 'Textura de Fideos', basePriceCents: 0, category: 'slider02', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 2, sliderConfig: { max: 2, min: 0, step: 1, labels: ['Firm', 'Medium', 'Soft'], labelsI18n: SLIDER_LABELS_I18N.slider02, default: 1, description: 'How firm do you want your noodles?' } },
+    { id: 'cmip6jbza00062z01skz6ndd5', name: 'Spice Level', nameZhTW: '辣度', nameZhCN: '辣度', nameEs: 'Nivel de Picante', basePriceCents: 0, category: 'slider03', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 3, sliderConfig: { max: 4, min: 0, step: 1, labels: ['None', 'Mild', 'Medium', 'Spicy', 'Extra Spicy'], labelsI18n: SLIDER_LABELS_I18N.slider03, default: 1, description: 'How spicy do you like it?' } },
+    { id: 'cmip6jc0200272nnnmx2bv246', name: 'Baby Bok Choy', nameZhTW: '青江菜', nameZhCN: '小白菜', nameEs: 'Bok Choy', basePriceCents: 0, category: 'slider04', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 4, sliderConfig: { max: 3, min: 0, step: 1, labels: ['None', 'Light', 'Normal', 'Extra'], labelsI18n: SLIDER_LABELS_I18N.slider04, default: 2, description: 'How much do you want?' }, isVegetarian: true, isVegan: true, isGlutenFree: true },
+    { id: 'cmip6jc0g00292nnnwsr3nsiq', name: 'Green Onions', nameZhTW: '蔥花', nameZhCN: '葱花', nameEs: 'Cebollín', basePriceCents: 0, category: 'slider05', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 5, sliderConfig: { max: 3, min: 0, step: 1, labels: ['None', 'Light', 'Normal', 'Extra'], labelsI18n: SLIDER_LABELS_I18N.slider05, default: 2, description: 'How much do you want?' }, isVegetarian: true, isVegan: true, isGlutenFree: true },
+    { id: 'cmip6jc0h002b2nnnedxu3hy6', name: 'Cilantro', nameZhTW: '香菜', nameZhCN: '香菜', nameEs: 'Cilantro', basePriceCents: 0, category: 'slider06', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 6, sliderConfig: { max: 3, min: 0, step: 1, labels: ['None', 'Light', 'Normal', 'Extra'], labelsI18n: SLIDER_LABELS_I18N.slider06, default: 1, description: 'How much do you want?' }, isVegetarian: true, isVegan: true, isGlutenFree: true },
+    { id: 'cmip6jc0h002d2nnn4zrbfozw', name: 'Sprouts', nameZhTW: '豆芽菜', nameZhCN: '豆芽菜', nameEs: 'Brotes de Soja', basePriceCents: 0, category: 'slider07', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 7, sliderConfig: { max: 3, min: 0, step: 1, labels: ['None', 'Light', 'Normal', 'Extra'], labelsI18n: SLIDER_LABELS_I18N.slider07, default: 2, description: 'How much do you want?' }, isVegetarian: true, isVegan: true, isGlutenFree: true },
+    { id: 'cmip6jc0i002f2nnnpv38o0iq', name: 'Pickled Greens', nameZhTW: '酸菜', nameZhCN: '酸菜', nameEs: 'Verduras en Escabeche', basePriceCents: 0, category: 'slider08', categoryType: 'SLIDER', selectionMode: 'SLIDER', displayOrder: 8, sliderConfig: { max: 3, min: 0, step: 1, labels: ['None', 'Light', 'Normal', 'Extra'], labelsI18n: SLIDER_LABELS_I18N.slider08, default: 1, description: 'How much do you want?' }, isVegetarian: true, isVegan: true, isGlutenFree: true },
 
     // ADD-ONS
     { id: 'cmip6jc0i002f2nnnqv38o0ir', name: 'Bone Marrow', nameZhTW: '牛骨髓', nameZhCN: '牛骨髓', nameEs: 'Tuétano de Res', basePriceCents: 399, category: 'add-on01', categoryType: 'ADDON', selectionMode: 'MULTIPLE', displayOrder: 1, isGlutenFree: true },
@@ -259,22 +274,20 @@ async function seedCoreData() {
   // ==========================================
   console.log('\nCreating badges...');
 
-  const badges = [
-    { id: 'cmip6jc1f00362nnnnbmu4xdk', slug: 'first-order', name: 'First Bowl', iconEmoji: '🍜', category: 'MILESTONE', description: 'Ordered your first bowl of noodles' },
-    { id: 'cmip6jc1f00372nnnvjx2b00h', slug: '10-orders', name: 'Noodle Enthusiast', iconEmoji: '🥢', category: 'MILESTONE', description: 'Completed 10 orders' },
-    { id: 'cmip6jc1f00382nnn5pq8tnau', slug: '50-orders', name: 'Beef Devotee', iconEmoji: '🐂', category: 'MILESTONE', description: 'Completed 50 orders' },
-    { id: 'cmip6jc1f00392nnnhzmay5y0', slug: '100-orders', name: 'Century Club', iconEmoji: '💯', category: 'MILESTONE', description: 'Completed 100 orders' },
-    { id: 'cmip6jc1f003a2nnnabck2fc3', slug: 'first-referral', name: 'Share the Love', iconEmoji: '🤝', category: 'REFERRAL', description: 'Referred your first friend' },
-    { id: 'cmip6jc1f003b2nnnqit3ocm3', slug: '10-referrals', name: 'Influencer', iconEmoji: '⭐', category: 'REFERRAL', description: 'Referred 10 friends' },
-    { id: 'cmip6jc1f003c2nnn2qovjr1w', slug: '50-referrals', name: 'Ambassador', iconEmoji: '👑', category: 'REFERRAL', description: 'Referred 50 friends' },
-    { id: 'cmip6jc1f003d2nnnj5lhrdap', slug: '3-day-streak', name: 'Hot Streak', iconEmoji: '🔥', category: 'STREAK', description: 'Ordered 3 days in a row' },
-    { id: 'cmip6jc1f003e2nnnmsaafisv', slug: '7-day-streak', name: 'Weekly Warrior', iconEmoji: '⚡', category: 'STREAK', description: 'Ordered 7 days in a row' },
-    { id: 'cmip6jc1f003f2nnnwuv9pa4k', slug: '30-day-streak', name: 'Legend', iconEmoji: '🏆', category: 'STREAK', description: 'Ordered 30 days in a row' },
-    { id: 'cmip6jc1f003g2nnnpciz90gx', slug: 'tried-all-items', name: 'Menu Master', iconEmoji: '📋', category: 'CHALLENGE', description: 'Tried every item on the menu' },
-    { id: 'cmip6jc1f003h2nnn3116tr0v', slug: 'spicy-challenge', name: 'Heat Seeker', iconEmoji: '🌶️', category: 'CHALLENGE', description: 'Ordered max spice level' },
-    { id: 'cmip6jc1f003i2nnn2tcyznmn', slug: 'grand-opening', name: 'OG Member', iconEmoji: '🎉', category: 'SPECIAL', description: 'Member since grand opening' },
-    { id: 'cmip6jc1f003j2nnn963gxsan', slug: 'vip', name: 'VIP', iconEmoji: '💎', category: 'SPECIAL', description: 'VIP member status' },
-  ];
+  // Content (name/description/i18n/iconKey) comes from ./seed-data/badges.ts,
+  // the single source of truth shared with the backfill script and the
+  // i18n-seed test. iconEmoji is nullable on Badge and is dropped in favor
+  // of iconKey (an in-house SVG glyph, see apps/web/components/site/seal).
+  const badges = BADGES.map((b) => ({
+    id: b.id,
+    slug: b.slug,
+    name: b.i18n.en.name,
+    description: b.i18n.en.description,
+    category: b.category,
+    iconKey: b.iconKey,
+    // Cast: see the LOCATION_I18N cast note above.
+    i18n: b.i18n as any,
+  }));
 
   for (const badge of badges) {
     await prisma.badge.upsert({
@@ -283,7 +296,9 @@ async function seedCoreData() {
         slug: badge.slug,
         name: badge.name,
         description: badge.description,
-        iconEmoji: badge.iconEmoji,
+        iconEmoji: null,
+        iconKey: badge.iconKey,
+        i18n: badge.i18n,
         category: badge.category as any,
         isActive: true,
       },
@@ -292,7 +307,9 @@ async function seedCoreData() {
         slug: badge.slug,
         name: badge.name,
         description: badge.description,
-        iconEmoji: badge.iconEmoji,
+        iconEmoji: null,
+        iconKey: badge.iconKey,
+        i18n: badge.i18n,
         category: badge.category as any,
         isActive: true,
       }
@@ -305,11 +322,20 @@ async function seedCoreData() {
   // ==========================================
   console.log('\nCreating challenges...');
 
-  const challenges = [
-    { id: 'cmip6jc1l003k2nnnoc7o1uve', slug: 'try-all-bases', name: 'Noodle Explorer', iconEmoji: '🗺️', rewardCents: 500, description: 'Try all noodle types', requirements: { type: 'try_all_noodles', count: 4 } },
-    { id: 'cmip6jc1l003m2nnnbgkfv7ff', slug: 'bring-5-friends', name: 'Party Host', iconEmoji: '🎊', rewardCents: 1000, description: 'Refer 5 friends who make a purchase', requirements: { type: 'referrals', count: 5 } },
-    { id: 'cmip6jc1l003n2nnns34wpuds', slug: 'early-bird', name: 'Early Bird', iconEmoji: '🌅', rewardCents: 400, description: 'Order before 11am', requirements: { type: 'early_order', beforeHour: 11 } },
-  ];
+  // Content comes from ./seed-data/challenges.ts. Challenge.iconEmoji is
+  // still schema-required (frozen migration from Task A2), so the seed
+  // writes '' there instead of an emoji; iconKey carries the real icon.
+  const challenges = CHALLENGES.map((c) => ({
+    id: c.id,
+    slug: c.slug,
+    name: c.i18n.en.name,
+    description: c.i18n.en.description,
+    iconKey: c.iconKey,
+    // Cast: see the LOCATION_I18N cast note above.
+    i18n: c.i18n as any,
+    rewardCents: c.rewardCents,
+    requirements: c.requirements as any,
+  }));
 
   for (const challenge of challenges) {
     await prisma.challenge.upsert({
@@ -317,7 +343,9 @@ async function seedCoreData() {
       update: {
         slug: challenge.slug,
         name: challenge.name,
-        iconEmoji: challenge.iconEmoji,
+        iconEmoji: '',
+        iconKey: challenge.iconKey,
+        i18n: challenge.i18n,
         rewardCents: challenge.rewardCents,
         description: challenge.description,
         requirements: challenge.requirements,
@@ -327,7 +355,9 @@ async function seedCoreData() {
         id: challenge.id,
         slug: challenge.slug,
         name: challenge.name,
-        iconEmoji: challenge.iconEmoji,
+        iconEmoji: '',
+        iconKey: challenge.iconKey,
+        i18n: challenge.i18n,
         rewardCents: challenge.rewardCents,
         description: challenge.description,
         requirements: challenge.requirements,

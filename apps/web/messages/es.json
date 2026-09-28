@@ -2058,5 +2058,53 @@
     "bowlFlatlay": "Un tazon de ceramica vacio con palillos apoyados encima y una cuchara de madera al lado, sobre una superficie de lino.",
     "chopsticks": "Primer plano de un par de palillos de madera sobre un mantel de lino, con un detalle de sus puntas.",
     "signPool": "La escultura iluminada del logo de Oh! en un estanque reflectante frente al restaurante por la noche, iluminada por farolillos de papel a lo largo del camino."
+  },
+  "combMap": {
+    "title": "Mapa de pods",
+    "summary": "La cocina ocupa la pared del fondo. Los pods bordean los dos lados de tres pasillos del personal, y los clientes caminan por los pasillos entre ellos. La entrada está al frente.",
+    "hintTapRow": "Toca una fila para acercarte y luego toca un pod. Pellizca para hacer zoom.",
+    "hintTapPod": "Toca un pod para elegirlo.",
+    "hintLive": "Toca una fila para acercarte. Pellizca para hacer zoom.",
+    "podName": "Pod {label}: {status}",
+    "podNameDuo": "Pod {label}, dúo con {partner}: {status}",
+    "journeySummary": "Una visita en el plano. Caminas desde la entrada hasta el pod {label}, y tu tazón llega por el pasillo del personal hasta tu ventanilla.",
+    "status": {
+      "available": "disponible",
+      "reserved": "reservado",
+      "occupied": "ocupado",
+      "cleaning": "en limpieza",
+      "unknown": "no reservable"
+    },
+    "legend": {
+      "title": "Leyenda",
+      "available": "Disponible",
+      "reserved": "Reservado",
+      "occupied": "Ocupado",
+      "cleaning": "En limpieza",
+      "duo": "Pod dúo para dos",
+      "selected": "Tu pod",
+      "hatch": "Ventanilla de comida"
+    },
+    "zones": {
+      "kitchen": "Cocina",
+      "restrooms": "Baños",
+      "store": "Tienda",
+      "lobby": "Vestíbulo",
+      "entry": "Entrada",
+      "exit": "Salida"
+    },
+    "zoom": {
+      "zoomIn": "Acercar",
+      "zoomOut": "Alejar",
+      "wholeFloor": "Todo el local"
+    },
+    "pan": {
+      "earlier": "Pods anteriores",
+      "later": "Pods siguientes"
+    },
+    "marker": {
+      "guest": "Tú",
+      "bowl": "Tu tazón"
+    }
   }
 }

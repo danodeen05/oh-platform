@@ -4261,5 +4261,53 @@
     "bowlFlatlay": "一只空的陶瓷麵碗，筷子擱在碗上，旁邊放著一支木湯匙，置於亞麻布上。",
     "chopsticks": "亞麻布上一雙木筷的特寫，另附筷尖細節照。",
     "signPool": "夜晚餐廳入口水池中發光的 Oh! 標誌裝置，沿路的紙燈籠映照著光。"
+  },
+  "combMap": {
+    "title": "包廂平面圖",
+    "summary": "廚房沿後牆配置。包廂排列在三條員工通道的兩側，顧客走在包廂之間的走道上。入口在正面。",
+    "hintTapRow": "輕點一排放大，再輕點一個包廂。雙指縮放可調整大小。",
+    "hintTapPod": "輕點包廂即可選擇。",
+    "hintLive": "輕點一排放大。雙指縮放可調整大小。",
+    "podName": "包廂 {label}，{status}",
+    "podNameDuo": "包廂 {label}，與 {partner} 組成雙人包廂，{status}",
+    "journeySummary": "在平面圖上走一遍用餐流程。您從入口走到 {label} 號包廂，您的麵沿員工通道送到您的出餐窗口。",
+    "status": {
+      "available": "可預訂",
+      "reserved": "已預訂",
+      "occupied": "使用中",
+      "cleaning": "清潔中",
+      "unknown": "不可預訂"
+    },
+    "legend": {
+      "title": "圖例",
+      "available": "可預訂",
+      "reserved": "已預訂",
+      "occupied": "使用中",
+      "cleaning": "清潔中",
+      "duo": "雙人包廂",
+      "selected": "您的包廂",
+      "hatch": "出餐窗口"
+    },
+    "zones": {
+      "kitchen": "廚房",
+      "restrooms": "洗手間",
+      "store": "商店",
+      "lobby": "大廳",
+      "entry": "入口",
+      "exit": "出口"
+    },
+    "zoom": {
+      "zoomIn": "放大",
+      "zoomOut": "縮小",
+      "wholeFloor": "查看全場"
+    },
+    "pan": {
+      "earlier": "前面的包廂",
+      "later": "後面的包廂"
+    },
+    "marker": {
+      "guest": "您",
+      "bowl": "您的麵"
+    }
   }
 }
