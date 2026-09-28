@@ -101,7 +101,6 @@ import { registerSupportRoutes } from "./support/routes.js";
 import { sendGraphMail } from "./email/graph.js";
 import { configureOrderService, markPaid, confirmOrderPayment, intentHasRefund, OrderError } from "./orders/service.js";
 import { createMealGift, finishMealGiftAcceptance } from "./orders/tenders.js";
-import { grantCredit } from "./membership/credits.js";
 import { taxCents, spendBaseCents } from "./orders/pricing.js";
 import { PROGRAM, tierRule } from "./membership/program.js";
 import { onOrderCompleted, applyReferralSignup, visibleMenuItems, firstUnreleasedItem, profileForUser } from "./membership/engine.js";
@@ -122,6 +121,7 @@ import { registerOrderServiceGuard, registerPodServiceRoutes } from "./orders/po
 import { registerKitchenStatusRoutes } from "./orders/kitchen-status.js";
 import { publicMealGift, nextMealGiftFor } from "./orders/meal-gift-view.js";
 import { registerMealGiftPayForward, registerMealGiftConfirm, mealGiftExpiresAt } from "./orders/meal-gift-routes.js";
+import { expireMealGifts } from "./orders/meal-gift-expire.js";
 
 // DEMO- order codes resolve to a synthetic order (see demo/status-demo.js):
 // the plan's live status-page demo reads real routes without touching the DB.
@@ -3466,7 +3466,7 @@ app.get("/cny/rsvps", async (req, reply) => {
   const { secret } = req.query;
 
   // Protect with secret
-  if (secret !== process.env.CRON_SECRET) {
+  if (!process.env.CRON_SECRET || secret !== process.env.CRON_SECRET) { // M5: fail closed when unset
     return reply.code(401).send({ error: "Unauthorized" });
   }
 
@@ -3483,7 +3483,7 @@ app.get("/cny/rsvps", async (req, reply) => {
 // POST /cron/cny-sms-reminder - Send 5pm party reminder SMS
 app.post("/cron/cny-sms-reminder", async (req, reply) => {
   const cronSecret = req.headers["x-cron-secret"];
-  if (cronSecret !== process.env.CRON_SECRET) {
+  if (!process.env.CRON_SECRET || cronSecret !== process.env.CRON_SECRET) { // M5: fail closed when unset
     return reply.code(401).send({ error: "Unauthorized" });
   }
 
@@ -3536,7 +3536,7 @@ See you soon!`,
 // POST /cron/cny-sms-order-link - Send 5:45pm ordering link SMS
 app.post("/cron/cny-sms-order-link", async (req, reply) => {
   const cronSecret = req.headers["x-cron-secret"];
-  if (cronSecret !== process.env.CRON_SECRET) {
+  if (!process.env.CRON_SECRET || cronSecret !== process.env.CRON_SECRET) { // M5: fail closed when unset
     return reply.code(401).send({ error: "Unauthorized" });
   }
 
@@ -3591,7 +3591,7 @@ Customize your bowl - we'll bring it right to you!`,
 // POST /cron/cny-sms-test - Send test SMS directly (bypasses Google Sheet)
 app.post("/cron/cny-sms-test", async (req, reply) => {
   const cronSecret = req.headers["x-cron-secret"];
-  if (cronSecret !== process.env.CRON_SECRET) {
+  if (!process.env.CRON_SECRET || cronSecret !== process.env.CRON_SECRET) { // M5: fail closed when unset
     return reply.code(401).send({ error: "Unauthorized" });
   }
 
@@ -9720,49 +9720,11 @@ await registerMealGiftPayForward(app, { prisma, customerAuth });
 // POST /meal-gifts/confirm-payment: the Stripe webhook records a paid gift (Task D9 fix round 1).
 await registerMealGiftConfirm(app, { prisma, stripe, customerAuth });
 
-// POST /meal-gifts/expire - Expire and refund unclaimed gifts (cron job)
+// POST /meal-gifts/expire - Expire and refund unclaimed gifts (owner-only; the
+// scheduled path is the `expire-meal-gifts` job in cron/wallet-cron.js). The claim
+// and the MEAL_GIFT return are one transaction (final review I2/M6, orders/meal-gift-expire.js).
 app.post("/meal-gifts/expire", async (req, reply) => {
-  const now = new Date();
-
-  // Find all expired pending gifts
-  const expiredGifts = await prisma.mealGift.findMany({
-    where: {
-      status: "PENDING",
-      expiresAt: { lte: now },
-    },
-  });
-
-  const results = [];
-
-  for (const gift of expiredGifts) {
-    // Conditional: a gift accepted meanwhile is left alone.
-    const expired = await prisma.mealGift.updateMany({
-      where: { id: gift.id, status: "PENDING" },
-      data: { status: "EXPIRED", expiredAt: now },
-    });
-    if (expired.count !== 1) continue;
-
-    // Only a gift the giver actually paid for (Task A6: paidAt) is returned,
-    // as credit through the ledger.
-    const refunded = Boolean(gift.paidAt);
-    if (refunded) {
-      await grantCredit(prisma, {
-        userId: gift.giverId,
-        source: "MEAL_GIFT",
-        eventType: "REFUND_RESTORE",
-        amountCents: gift.amountCents,
-        note: "Meal gift expired and refunded",
-      });
-    }
-
-    results.push({
-      id: gift.id,
-      giverId: gift.giverId,
-      amountCents: gift.amountCents,
-      refunded,
-    });
-  }
-
+  const results = await expireMealGifts(prisma, new Date());
   return {
     expired: results.length,
     gifts: results,

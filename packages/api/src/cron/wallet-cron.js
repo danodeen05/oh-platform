@@ -14,6 +14,8 @@
  * - Membership Sweep: Daily at 3:10am (membership/engine.js sweepUnprocessedCompletedOrders)
  * - Quarterly Perk: Daily at 3:05am, idempotent per quarter
  *   (membership/engine.js issueQuarterlyPerks)
+ * - Expire Meal Gifts: every 15 minutes, idempotent (orders/meal-gift-expire.js):
+ *   funded gifts not taken by 9pm go back to the giver as MEAL_GIFT credit
  *
  * USAGE:
  * - As a service: node src/cron/wallet-cron.js
@@ -29,6 +31,7 @@ import {
 } from '../wallet/wallet-notification-service.js';
 import { expireLots, sendExpiryWarnings } from '../membership/credits.js';
 import { issueQuarterlyPerks, sweepUnprocessedCompletedOrders } from '../membership/engine.js';
+import { expireMealGifts } from '../orders/meal-gift-expire.js';
 
 const prisma = new PrismaClient();
 
@@ -84,6 +87,14 @@ async function runJob(jobName) {
         console.log(`[CRON] Membership sweep processed ${result} completed order(s)`);
         break;
 
+      case 'expire-meal-gifts':
+        // Final review I2: claim + MEAL_GIFT return in one transaction per gift.
+        result = await expireMealGifts(prisma);
+        console.log(
+          `[CRON] Expired ${result.length} meal gift(s), returned ${result.filter((g) => g.refunded).length} to their givers`,
+        );
+        break;
+
       default:
         console.error(`[CRON] Unknown job: ${jobName}`);
         return false;
@@ -133,6 +144,11 @@ function shouldRunJob(jobName) {
       // Daily at 3:10am, after expire-credits; idempotent via onOrderCompleted's claim.
       return hour === 3 && minute >= 10 && minute < 15;
 
+    case 'expire-meal-gifts':
+      // Every 15 minutes: gifts lapse at 9pm Denver, which is a different server
+      // hour across DST, so poll instead of pinning an hour. Idempotent (the claim).
+      return minute % 15 === 0;
+
     default:
       return false;
   }
@@ -151,6 +167,7 @@ async function startCronService() {
   console.log('  - Expire Credits: Daily at 3am');
   console.log('  - Quarterly Perk: Daily at 3:05am (idempotent per quarter)');
   console.log('  - Membership Sweep: Daily at 3:10am (idempotent)');
+  console.log('  - Expire Meal Gifts: every 15 minutes (idempotent)');
 
   // Run immediately on startup for testing
   if (process.env.RUN_ON_STARTUP === 'true') {
@@ -160,6 +177,7 @@ async function startCronService() {
     await runJob('credits');
     await runJob('expire-credits');
     await runJob('quarterly-perk');
+    await runJob('expire-meal-gifts');
   }
 
   // Check every minute
@@ -181,6 +199,9 @@ async function startCronService() {
     }
     if (shouldRunJob('membership-sweep')) {
       await runJob('membership-sweep');
+    }
+    if (shouldRunJob('expire-meal-gifts')) {
+      await runJob('expire-meal-gifts');
     }
   }, 60000); // Check every minute
 }
@@ -226,7 +247,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     // Run specific job immediately
     const job = process.argv[3];
     if (!job) {
-      console.log('Usage: node wallet-cron.js run <streak|challenge|credits>');
+      console.log('Usage: node wallet-cron.js run <streak|challenge|credits|expire-credits|quarterly-perk|membership-sweep|expire-meal-gifts>');
       process.exit(1);
     }
     runJob(job).then(async (ok) => {
@@ -254,7 +275,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     console.log('  node wallet-cron.js run <job>            Run a specific job immediately');
     console.log('  node wallet-cron.js trigger <endpoint>   Trigger job via HTTP');
     console.log('');
-    console.log('Jobs: streak, challenge, credits, expire-credits, quarterly-perk, membership-sweep');
+    console.log('Jobs: streak, challenge, credits, expire-credits, quarterly-perk, membership-sweep, expire-meal-gifts');
     console.log('');
     console.log('Environment variables:');
     console.log('  API_URL          API base URL (default: http://localhost:3001)');

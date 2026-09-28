@@ -13,6 +13,7 @@ const RULES = {
   TWILIO_AUTH_TOKEN: { re: /^[0-9a-f]{32}$/, hint: "the 32-hex-character Twilio ACCOUNT auth token" },
   API_PUBLIC_URL: { re: /^https:\/\/[a-z0-9.-]+$/, hint: "https://host with no path and no trailing slash (https://api.ohbeef.com)" },
   SUPPORT_NOTIFY: { re: /^(live|log|off)$/, hint: "live, log or off" },
+  NODE_ENV: { re: /^production$/, hint: "exactly production" },
   CHAPPY_MODEL: { re: /^claude-[a-z0-9.-]+$/, hint: "a claude-* model id" },
   CHAPPY_GUEST_SECRET: { re: /^\S{32,}$/, hint: "32+ characters" },
   ADMIN_PHONE_NUMBER: { re: /^\+[1-9][0-9]{7,14}$/, hint: "E.164 (+1...)" },

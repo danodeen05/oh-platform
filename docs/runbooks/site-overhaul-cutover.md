@@ -141,13 +141,25 @@ Values never appear in argv or output.
 
 ```bash
 railway variable list --service "@oh/api" --json | jq -r 'keys[]' | sort > "$CUT/railway-vars.txt"
-( for v in TWILIO_AUTH_TOKEN API_PUBLIC_URL SUPPORT_NOTIFY RATE_LIMIT_MAX RATE_LIMIT_WINDOW ADMIN_API_KEY STRIPE_SECRET_KEY CHAPPY_GUEST_SECRET CHAPPY_LIMITS_JSON CHAPPY_MODEL \
+( for v in NODE_ENV WALLET_AUTH_SECRET TWILIO_AUTH_TOKEN API_PUBLIC_URL SUPPORT_NOTIFY RATE_LIMIT_MAX RATE_LIMIT_WINDOW ADMIN_API_KEY STRIPE_SECRET_KEY CHAPPY_GUEST_SECRET CHAPPY_LIMITS_JSON CHAPPY_MODEL \
            ADMIN_PHONE_NUMBER TWILIO_ACCOUNT_SID TWILIO_PHONE_NUMBER ANTHROPIC_API_KEY CRON_SECRET WEB_APP_URL PLAN_VISIT_SUMMARIES \
            CHAPPY_SMS_SKIP_SIGNATURE MS_TENANT_ID MS_CLIENT_ID MS_CLIENT_SECRET MS_SENDER_EMAIL OWNER_EMAIL PLAN_NOTIFY_EMAIL; do
     grep -qx "$v" "$CUT/railway-vars.txt" && echo "set      $v" || echo "MISSING  $v"; done )
 ```
 (If `railway variable list --json` is not a flat `{KEY: value}` object on your CLI version,
 stop: `cutover-env.mjs --from-railway` and the webhook script depend on that shape.)
+
+**`NODE_ENV` must be `production`** (final review M3). It is not secret, so print it:
+```bash
+railway variable list --service "@oh/api" --json | jq -r '"NODE_ENV=" + (.NODE_ENV // "MISSING")'
+```
+- `NODE_ENV=production`: go on.
+- Anything else, or `MISSING` (Nixpacks usually sets it in the image, but nothing in the repo
+  guarantees it): first confirm `CRON_SECRET` and `WALLET_AUTH_SECRET` are `set` in the list above
+  (production refuses to run without them), then pin it in 4b:
+  `printf %s production | pnpm --filter @oh/api exec node scripts/cutover-env.mjs --target=railway --key=NODE_ENV --dry-run`,
+  then the same without `--dry-run` (the validator accepts only `production`). Without it the
+  admin guard's dev bypass, the dev CORS origins and the Twilio signature skip are all live.
 
 ### 4b. Railway `@oh/api`
 
@@ -216,14 +228,19 @@ pnpm --filter @oh/api exec node scripts/cutover-stripe-webhook.mjs --dry-run
   ```
 Both variables take effect on the web build in step 10.
 
-### 4d. The wallet cron (expiry, expiry warnings, quarterly perk, membership sweep)
+### 4d. The wallet cron (expiry, expiry warnings, quarterly perk, membership sweep, meal-gift returns)
 
 Check for a Railway service that runs `packages/api/src/cron/wallet-cron.js` (dashboard, or
 the Railway MCP `list-services` tool). If none, add one:
 
 - New service from the same repo, name `wallet-cron`, same builder as `@oh/api`.
 - **Cron schedule** `10 10 * * *` (UTC; 03:10 MST / 04:10 MDT).
-- **Start command:** `sh -c 'cd packages/api && node src/cron/wallet-cron.js run expire-credits && node src/cron/wallet-cron.js run quarterly-perk && node src/cron/wallet-cron.js run membership-sweep'`.
+- **Start command:** `sh -c 'cd packages/api && node src/cron/wallet-cron.js run expire-credits && node src/cron/wallet-cron.js run quarterly-perk && node src/cron/wallet-cron.js run membership-sweep && node src/cron/wallet-cron.js run expire-meal-gifts'`.
+  `expire-meal-gifts` (final review I2) returns every funded meal gift not taken by 9pm to its
+  giver as MEAL_GIFT store credit, with the claim and the credit in one transaction, so it is
+  idempotent and returns each gift exactly once (also against `POST /meal-gifts/expire` and the
+  6b backfill). Gifts lapse at 9pm Denver and are returned at the 03:10 run.
+  If the service already exists, update its start command to this one.
   `run` exits non-zero when a job fails (fix round 1), so a failed run shows as failed in Railway.
 - **Variables:** reference ALL of `@oh/api`'s variables rather than picking some (expiry
   warnings refresh wallet passes, which need `WALLET_AUTH_SECRET` and the APNS variables, and
@@ -235,7 +252,7 @@ the Railway MCP `list-services` tool). If none, add one:
   minute with 5-minute windows, so each job can run up to 5 times per window.
 
 Verify after its first run: the log shows `[CRON] expire-credits completed successfully` and
-the other two, and the run is green.
+the other three (`quarterly-perk`, `membership-sweep`, `expire-meal-gifts`), and the run is green.
 
 ## 5. Migrations (additive only)
 
