@@ -122,7 +122,7 @@ async function testPaymentIntent(amount: number): Promise<string | null> {
   const res = await fetch("https://api.stripe.com/v1/payment_intents", {
     method: "POST",
     headers: { Authorization: `Bearer ${STRIPE_SK}`, "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ amount: String(amount), currency: "usd", "automatic_payment_methods[enabled]": "true", "metadata[purpose]": "e2e-screenshot" }).toString(),
+    body: new URLSearchParams({ amount: String(amount), currency: "usd", "automatic_payment_methods[enabled]": "true", "automatic_payment_methods[allow_redirects]": "never", "metadata[purpose]": "e2e-screenshot" }).toString(),
   });
   if (!res.ok) return null;
   return (await res.json()).client_secret as string;
@@ -379,11 +379,14 @@ test("a Stripe redirect return reopens Chappy, is verified by the API, and clean
     const { order, clientSecret } = await placeUnpaidOrder(page);
     const pi = clientSecret.split("_secret_")[0];
 
-    // A failed redirect first: Chappy says so and offers the same pay card again; nothing is paid.
+    // A failed redirect first (fix round 1): Chappy says so and asks the customer to
+    // ask for a new pay card. The link's client secret never becomes a pay card.
     await go(page, `/en${LAB}?chappyPay=${order.id}&payment_intent=${pi}&payment_intent_client_secret=${clientSecret}&redirect_status=failed`);
     await page.locator('[data-chappy-turn="note"]').waitFor({ timeout: 60_000 });
-    assert.match(await page.locator('[data-chappy-turn="note"]').innerText(), new RegExp(messages("en").cards.pay.returnFailed.slice(0, 20)));
-    await page.locator('[data-chappy-turn="note"] [data-chappy-card="pay"]').waitFor();
+    assert.equal(await page.locator('[data-chappy-turn="note"]').innerText(), messages("en").cards.pay.returnFailed);
+    assert.equal(await page.locator('[data-chappy-turn="note"]').getAttribute("data-note-alert"), "true");
+    assert.equal(await page.locator('[data-chappy-card="pay"]').count(), 0, "no pay card from a URL");
+    assert.equal(await page.locator('iframe[name^="__privateStripeFrame"]').count(), 0, "Stripe never loaded");
     assert.equal(new URL(page.url()).search, "", "the return parameters are gone from the address bar");
     assert.equal((await memberApi(page, `/orders/${order.id}`)).json.paymentStatus, "PENDING");
 
@@ -396,6 +399,7 @@ test("a Stripe redirect return reopens Chappy, is verified by the API, and clean
     assert.equal((await confirm.json()).status, "succeeded");
 
     await go(page, `/en${LAB}?chappyPay=${order.id}&payment_intent=${pi}&payment_intent_client_secret=${clientSecret}&redirect_status=succeeded`);
+    // Succeeded, on the member's own order: the server verifies it and says PAID.
     const paid = page.locator('[data-chappy-turn="note"]').filter({ hasText: /^Paid\./ });
     await paid.waitFor({ timeout: 60_000 });
     await page.locator('[data-chappy-turn="note"] [data-chappy-card="order-status"]').waitFor();
@@ -464,12 +468,61 @@ test("@live chat order to PAID through the pay card, then 'my bowl was cold' giv
       caseCard = page.locator('[data-chappy-card="support-case"]');
     }
     assert.ok(await caseCard.count(), "a support case card");
-    const credit = await caseCard.last().getAttribute("data-goodwill-cents").catch(() => null);
+    const credit = await caseCard.last().locator("[data-goodwill-cents]").first().getAttribute("data-goodwill-cents", { timeout: 2_000 }).catch(() => null);
     const text = await caseCard.last().innerText();
     console.log("[live] case:", text.replace(/\s+/g, " "), "credit:", credit);
     if (credit) assert.ok(Number(credit) > 0 && Number(credit) <= 500, "goodwill at most $5");
     assert.doesNotMatch(text, /refund/i, "store credit, never a card refund");
     if (SHOTS) await shot(page, "e2-390-en-live-support.png");
     console.log(`[live] model turns used: ${turns}`);
+  });
+});
+
+test("@live-reload fix round 1: after a reload, a pending chat order gets its payment link; a cold bowl gets store credit only (at most 3 turns)", { skip: !LIVE || !CAN_SIGN_IN }, async () => {
+  let turns = 0;
+  await withPage(iphone15(), async (page) => {
+    await go(page, `/en${LAB}`);
+    await signInAsMember(page);
+    await openFromDock(page);
+    await page.locator("#chappy-input").waitFor();
+    await page.waitForFunction(() => !document.querySelector("[data-chappy-messages] [role=status]"), null, { timeout: 30_000 });
+    if (await page.locator("[data-chappy-reset]").count()) {
+      await page.locator("[data-chappy-reset]").click();
+      await page.locator("[data-chappy-welcome]").waitFor();
+    }
+    const settle = () => page.waitForFunction(() => !document.querySelector('[data-chappy-turn="assistant"][aria-busy="true"]'), null, { timeout: 150_000 });
+    const ask = async (text: string) => {
+      assert.ok(turns < 3, "at most 3 live turns");
+      turns++;
+      await send(page, text);
+      await page.waitForTimeout(400);
+      await settle();
+      const reply = await page.locator('[data-chappy-turn="assistant"]').last().innerText();
+      console.log(`[live-reload ${turns}] ${text} ->`, reply.replace(/\s+/g, " ").slice(0, 500));
+      return reply;
+    };
+    await ask("One more Classic Beef Noodle Soup with wide noodles at University Place, as soon as possible, any pod. I confirm the item and total in advance; put it through now.");
+    const gotCard = (await page.locator('[data-chappy-card="pay"]').count()) > 0;
+    console.log("[live-reload] pay card:", gotCard);
+    if (gotCard) {
+      // The customer leaves before paying and comes back: the card is gone (history holds no cards).
+      await page.reload({ waitUntil: "domcontentloaded" });
+      await openFromDock(page);
+      await page.locator('[data-chappy-turn="assistant"]').first().waitFor({ timeout: 60_000 });
+      assert.equal(await page.locator('[data-chappy-card="pay"]').count(), 0);
+      const reply = await ask("I closed the page before paying. How do I pay for that order?");
+      assert.match(reply, /\/order\/payment\?orderId=/, "Chappy gives the order's payment link");
+    }
+    const credit = await ask("Separately: my bowl was cold on the most recent order I already paid for. Please open a case for it.");
+    const caseCard = page.locator('[data-chappy-card="support-case"]');
+    if (await caseCard.count()) {
+      const text = await caseCard.last().innerText();
+      const cents = await caseCard.last().locator("[data-goodwill-cents]").first().getAttribute("data-goodwill-cents", { timeout: 2_000 }).catch(() => null);
+      console.log("[live-reload] case:", text.replace(/\s+/g, " "), "credit:", cents);
+      if (cents) assert.ok(Number(cents) > 0 && Number(cents) <= 500);
+      assert.doesNotMatch(text, /refund/i);
+      if (SHOTS) await shot(page, "e2-390-en-live-support.png");
+    } else console.log("[live-reload] no case card:", credit.slice(0, 200));
+    console.log(`[live-reload] model turns used: ${turns}`);
   });
 });

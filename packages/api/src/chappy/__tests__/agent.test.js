@@ -171,6 +171,36 @@ describe("request shape", () => {
     assert.equal(result.card.clientSecret, "pi_1_secret_x", "the widget's copy is untouched");
     assert.deepEqual(forModel({ ok: true }), { ok: true });
     assert.equal(forModel(null), null);
+    // The retired agent's Apple Pay tool returned a bare clientSecret: dropped too.
+    assert.deepEqual(forModel({ orderId: "o1", clientSecret: "pi_2_secret_y", nested: { client_secret: "pi_2_secret_y" } }), { orderId: "o1", nested: {} });
+  });
+
+  test("E2 fix round 1: a legacy stored row with client secrets is scrubbed before the model sees it and when it is saved again", async () => {
+    const legacy = [
+      { role: "user", content: "pay with apple pay" },
+      { role: "assistant", content: [{ type: "tool_use", id: "t1", name: "checkout", input: { confirmed: true } }] },
+      {
+        role: "user",
+        content: [
+          {
+            type: "tool_result",
+            tool_use_id: "t1",
+            content: JSON.stringify({ orderId: "o1", clientSecret: "pi_3LIVE_secret_abc", card: { type: "pay", orderId: "o1", clientSecret: "pi_3LIVE_secret_abc", amountDueCents: 656 } }),
+          },
+        ],
+      },
+      { role: "assistant", content: [{ type: "text", text: "Done, pay card below. (ref pi_3LIVE_secret_abc)" }] },
+    ];
+    const { client, db } = await turn({ script: [step()], history: legacy });
+    const sent = JSON.stringify(client.calls[0].params.messages);
+    assert.ok(!sent.includes("_secret_"), "no client secret in the prompt");
+    assert.ok(!sent.includes("amountDueCents"), "the card payload is reduced to its type");
+    assert.match(sent, /\\"card\\":\{\\"type\\":\\"pay\\"\}/);
+    const saved = JSON.stringify(db.convs[0].messages);
+    assert.ok(!saved.includes("_secret_"), "and never saved again");
+    // Clean history passes through byte-identical (the cached prefix stays stable).
+    const clean = [{ role: "user", content: [{ type: "tool_result", tool_use_id: "t1", content: '{"ok": true}' }] }];
+    assert.equal(trimHistory([{ role: "user", content: "hi" }, { role: "assistant", content: [{ type: "tool_use", id: "t1", name: "cart", input: {} }] }, ...clean]).at(-1).content[0].content, '{"ok": true}');
   });
 
   test("the context block shows the server-held cart (ids and choices, no prices)", async () => {

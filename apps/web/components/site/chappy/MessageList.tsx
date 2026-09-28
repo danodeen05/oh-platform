@@ -216,9 +216,9 @@ function Cards({ cards, spaced }: { cards: ChatMessage["cards"]; spaced: boolean
 /** The widget's own line (Task E2): a pay card settled. A quiet check, not a speech turn. */
 function NoteTurn({ message }: { message: ChatMessage }) {
   return (
-    <div data-chappy-turn="note" className="flex min-w-0 gap-3">
-      <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-oh-olive text-oh-cream" aria-hidden="true">
-        <Icon name="check" size={16} />
+    <div data-chappy-turn="note" data-note-alert={message.alert || undefined} className="flex min-w-0 gap-3">
+      <span className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${message.alert ? "bg-oh-stone text-oh-ember-light" : "bg-oh-olive text-oh-cream"}`} aria-hidden="true">
+        <Icon name={message.alert ? "alert" : "check"} size={16} />
       </span>
       <div className="min-w-0 flex-1">
         <p role="status" className="m-0 pt-0.5 text-[0.95rem] font-semibold leading-snug text-oh-cream">

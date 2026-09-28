@@ -21,10 +21,11 @@ import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { siteFontVariables } from "@/components/site/fonts";
 import { Icon } from "@/components/site/icons/Icon";
-import { useSiteApi } from "@/lib/site/api";
 import { CHAPPY_AVATAR } from "@/lib/site/nav";
+import { PHONE_STAGES } from "@oh/floor-plan";
+import { SITE_API_URL, useSiteApi } from "@/lib/site/api";
 import { confirmPayment, type Order } from "@/lib/site/orders";
-import { ChappyCardProvider, type ChappyCardContext, type ChappyPayReturn } from "./cards";
+import { ChappyCardProvider, resolvePayReturn, type ChappyCardContext, type ChappyPayReturn } from "./cards";
 import { ChappyPanel } from "./ChappyPanel";
 import { ChappySheet } from "./ChappySheet";
 import { Composer, type ComposerHandle } from "./Composer";
@@ -68,7 +69,8 @@ function paidStatusCard(order: Order, locale: string) {
     kitchenNumber: typeof order.kitchenOrderNumber === "string" ? order.kitchenOrderNumber : null,
     status: order.status || "PAID",
     paid: true,
-    stage: "PAID",
+    // PAID at the moment of payment; a return that finds the order further along shows where it is.
+    stage: (PHONE_STAGES as readonly string[]).includes(String(order.status)) ? String(order.status) : "PAID",
     pod: seat?.label || seat?.number || null,
     totalCents: order.totalCents,
     statusPath: qr ? `/${locale}/order/status?orderQrCode=${encodeURIComponent(qr)}` : null,
@@ -122,21 +124,24 @@ export default function ChappyWidget({ open, onClose, onOpen, prefill, prefillKe
     [addNote, locale, t],
   );
 
-  // A Stripe redirect return: verify it once the conversation has loaded (so the note lands after the history).
+  // A Stripe redirect return (fix round 1): the URL is never trusted and never
+  // becomes a pay card. The server decides, for this caller: the order must
+  // be their own, and PAID comes only from the verified confirm. Waits for
+  // the conversation to load, so the note lands after the history.
   const resumed = useRef<ChappyPayReturn | null>(null);
   useEffect(() => {
     if (!resume || resumed.current === resume || chat.status === "loading") return;
     resumed.current = resume;
     (async () => {
-      if (resume.status === "failed" || !resume.paymentIntentId) {
-        // Not paid: the same pay card again (its PaymentIntent still stands), nothing charged.
-        const cards = resume.clientSecret ? [{ type: "pay", orderId: resume.orderId, clientSecret: resume.clientSecret, amountDueCents: null }] : [];
-        addNote(t("cards.pay.returnFailed"), cards);
-        return;
-      }
-      const res = await confirmPayment(resume.orderId, resume.paymentIntentId, { fetcher: api });
-      if (res.ok) onPaid(res.data);
-      else addNote(res.error.refunded ? t("cards.pay.refunded") : resume.status === "processing" ? t("cards.pay.processing") : t("cards.pay.confirmFailed"));
+      const outcome = await resolvePayReturn(resume, {
+        getOrder: async (orderId) => {
+          const res = await api(`${SITE_API_URL}/orders/${encodeURIComponent(orderId)}`);
+          return { ok: res.ok, status: res.status, data: res.ok ? await res.json().catch(() => null) : null, error: { code: null } };
+        },
+        confirm: (orderId, paymentIntentId) => confirmPayment(orderId, paymentIntentId, { fetcher: api }),
+      });
+      if (outcome.kind === "paid") onPaid(outcome.order as Order);
+      else addNote(t(outcome.kind === "refunded" ? "cards.pay.refunded" : outcome.kind === "processing" ? "cards.pay.processing" : "cards.pay.returnFailed"), [], { alert: true });
     })();
   }, [resume, chat.status, addNote, api, onPaid, t]);
 

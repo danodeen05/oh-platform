@@ -15,14 +15,11 @@ import { stripAllowlisted } from "@/lib/site/i18n-allowlist";
 
 // Stripe's React bindings render placeholders here (the real Elements are iframes).
 vi.mock("@stripe/react-stripe-js", () => ({
+  Elements: ({ children }: { children: React.ReactNode }) => <div data-stripe="provider">{children}</div>,
   PaymentElement: () => <div data-stripe="payment" />,
   ExpressCheckoutElement: () => <div data-stripe="express" />,
   useStripe: () => null,
   useElements: () => null,
-}));
-vi.mock("@/components/payments/StripeProvider", () => ({
-  StripeProvider: ({ children }: { children: React.ReactNode }) => <div data-stripe="provider">{children}</div>,
-  stripeLocale: (l: string) => l,
 }));
 vi.mock("next/link", () => ({
   default: ({ href, children, prefetch: _p, ...rest }: { href: string; children: React.ReactNode; prefetch?: boolean }) => (
@@ -32,7 +29,7 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-import { ChappyCardProvider, parseCard, renderCard, visibleCards, chappyReturnUrl, readChappyReturn } from "../cards";
+import { ChappyCardProvider, parseCard, renderCard, visibleCards, chappyReturnUrl, readChappyReturn, resolvePayReturn } from "../cards";
 import type { ChappyCard } from "../stream";
 
 const MESSAGES = { en, es, "zh-TW": zhTW, "zh-CN": zhCN } as const;
@@ -191,9 +188,43 @@ describe("Stripe return path", () => {
 
   it("reads Stripe's return and gives the address without it", () => {
     const found = readChappyReturn("https://www.ohbeef.com/es/menu?x=1&chappyPay=o1&payment_intent=pi_9&payment_intent_client_secret=pi_9_secret_z&redirect_status=succeeded");
-    expect(found?.ret).toEqual({ orderId: "o1", paymentIntentId: "pi_9", clientSecret: "pi_9_secret_z", status: "succeeded" });
+    // The client secret in the link is dropped, never read.
+    expect(found?.ret).toEqual({ orderId: "o1", paymentIntentId: "pi_9", status: "succeeded" });
     expect(found?.cleanUrl).toBe("/es/menu?x=1");
     expect(readChappyReturn("https://www.ohbeef.com/es/menu?payment_intent=pi_9")).toBeNull();
     expect(readChappyReturn("https://www.ohbeef.com/es/menu?chappyPay=o1&payment_intent=evil")?.ret.paymentIntentId).toBeNull();
+  });
+
+  const ok = <T,>(data: T) => ({ ok: true, status: 200, data, error: { code: null } });
+  const fail = (status: number, extra: Record<string, unknown> = {}) => ({ ok: false, status, data: null as any, error: { code: "X", ...extra } });
+
+  it("a crafted link for someone else's order: not the caller's own, so nothing is confirmed and no pay card", async () => {
+    const confirm = vi.fn();
+    // The API gives a non-owner the safe view (no userId), or a refusal.
+    for (const getOrder of [async () => ok({ id: "o1", paymentStatus: "PENDING" }), async () => fail(404)]) {
+      const outcome = await resolvePayReturn({ orderId: "o1", paymentIntentId: "pi_theirs", status: "succeeded" }, { getOrder, confirm });
+      expect(outcome).toEqual({ kind: "notPaid" });
+    }
+    expect(confirm).not.toHaveBeenCalled();
+  });
+
+  it("a failed or id-less return asks the server nothing and pays nothing", async () => {
+    const getOrder = vi.fn();
+    const confirm = vi.fn();
+    expect(await resolvePayReturn({ orderId: "o1", paymentIntentId: "pi_1", status: "failed" }, { getOrder, confirm })).toEqual({ kind: "notPaid" });
+    expect(await resolvePayReturn({ orderId: "o1", paymentIntentId: null, status: "succeeded" }, { getOrder, confirm })).toEqual({ kind: "notPaid" });
+    expect(getOrder).not.toHaveBeenCalled();
+    expect(confirm).not.toHaveBeenCalled();
+  });
+
+  it("the caller's own order: PAID only through the server's verified confirm", async () => {
+    const mine = { id: "o1", userId: "u1", paymentStatus: "PENDING" };
+    const confirm = vi.fn(async () => ok({ ...mine, paymentStatus: "PAID" }));
+    expect(await resolvePayReturn({ orderId: "o1", paymentIntentId: "pi_1", status: "succeeded" }, { getOrder: async () => ok(mine), confirm })).toMatchObject({ kind: "paid" });
+    expect(confirm).toHaveBeenCalledWith("o1", "pi_1");
+    const refused = vi.fn(async () => fail(402));
+    expect(await resolvePayReturn({ orderId: "o1", paymentIntentId: "pi_1", status: "succeeded" }, { getOrder: async () => ok(mine), confirm: refused })).toEqual({ kind: "notPaid" });
+    const refunded = vi.fn(async () => fail(409, { refunded: true }));
+    expect(await resolvePayReturn({ orderId: "o1", paymentIntentId: "pi_1", status: "succeeded" }, { getOrder: async () => ok(mine), confirm: refunded })).toEqual({ kind: "refunded" });
   });
 });

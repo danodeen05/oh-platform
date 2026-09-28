@@ -4542,8 +4542,9 @@
         "confirmFailed": "Your payment went through, but the order isn't confirmed yet. Try again.",
         "refunded": "We couldn't place the order, so the payment was refunded in full.",
         "processing": "Your bank is still processing the payment. Your order updates when it clears.",
-        "returnFailed": "That payment didn't go through. You can try again below.",
-        "unavailable": "Payment isn't available right now. Try again in a moment."
+        "returnFailed": "That payment didn't go through. Ask me for a new pay card.",
+        "unavailable": "Payment isn't available right now. Try again in a moment.",
+        "unfinished": "That payment didn't finish. Try again."
       },
       "confirmZero": {
         "title": "Nothing to pay",
@@ -4602,7 +4603,8 @@
         "podBest": "Best free pod",
         "podCheckIn": "Pod at check-in",
         "party": "{count, plural, one {# guest} other {# guests}}",
-        "item": "Menu item"
+        "item": "Menu item",
+        "included": "Included"
       },
       "menuItem": {
         "label": "Menu item: {name}",

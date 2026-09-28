@@ -21,6 +21,7 @@ const h = vi.hoisted(() => ({
 vi.mock("@stripe/react-stripe-js", async () => {
   const { useEffect } = await import("react");
   return {
+    Elements: ({ children }: { children: React.ReactNode }) => <>{children}</>,
     PaymentElement: ({ onReady }: { onReady?: () => void }) => {
       useEffect(() => onReady?.(), [onReady]);
       return <div data-stripe="payment" />;
@@ -30,10 +31,6 @@ vi.mock("@stripe/react-stripe-js", async () => {
     useElements: () => ({ marker: "elements" }),
   };
 });
-vi.mock("@/components/payments/StripeProvider", () => ({
-  StripeProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  stripeLocale: (l: string) => l,
-}));
 vi.mock("@/lib/site/orders", () => ({ confirmPayment: h.confirm }));
 
 import { ChappyCardProvider, renderCard } from "../cards";
@@ -110,6 +107,16 @@ describe("PayCard", () => {
     expect(h.confirm.mock.calls[0].slice(0, 2)).toEqual(["o1", "pi_1"]);
     expect(onPaid).toHaveBeenCalledWith(PAID_ORDER);
     expect(host.querySelector("[data-pay-form]")).toBeNull(); // paid: the form is gone
+  });
+
+  it("a network error mid-charge says it didn't finish, not that the card wasn't charged", async () => {
+    mount(PAY);
+    h.stripe.confirmPayment.mockRejectedValueOnce(new Error("network"));
+    await act(async () => submit().click());
+    await flush();
+    expect(h.confirm).not.toHaveBeenCalled();
+    expect(host.querySelector('[data-pay-status="unfinished"]')?.textContent).toContain(en.chappyWeb.cards.pay.unfinished);
+    expect(host.textContent).not.toContain(en.chappyWeb.cards.pay.failed);
   });
 
   it("a status other than succeeded (processing, requires_payment_method) is not confirmed", async () => {

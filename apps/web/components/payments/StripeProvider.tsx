@@ -1,6 +1,6 @@
 'use client';
 
-import { loadStripe, Stripe, type CssFontSource, type CustomFontSource, type StripeElementLocale } from '@stripe/stripe-js';
+import { loadStripe, Stripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
 import { ReactNode, useMemo } from 'react';
 
@@ -27,18 +27,6 @@ export interface StripeProviderProps {
     variables?: Record<string, string>;
     rules?: Record<string, Record<string, string>>;
   };
-  /** The page locale for Stripe's own labels and errors (Task E2); Stripe's default is the browser's. */
-  locale?: StripeElementLocale;
-  /** Fonts the Elements iframes may load (Task E2: the site's Raleway). */
-  fonts?: Array<CssFontSource | CustomFontSource>;
-}
-
-/** A site locale (en, es, zh-TW, zh-CN) as a Stripe Elements locale. */
-export function stripeLocale(locale: string | undefined): StripeElementLocale {
-  if (locale === 'zh-TW') return 'zh-TW';
-  if (locale === 'zh-CN') return 'zh';
-  if (locale === 'es') return 'es';
-  return 'en';
 }
 
 /**
@@ -55,7 +43,7 @@ export function stripeLocale(locale: string | undefined): StripeElementLocale {
  *   <PaymentElement />
  * </StripeProvider>
  */
-export function StripeProvider({ children, clientSecret, appearance, locale, fonts }: StripeProviderProps) {
+export function StripeProvider({ children, clientSecret, appearance }: StripeProviderProps) {
   const stripePromiseValue = useMemo(() => getStripe(), []);
 
   // Default appearance matching the site's aesthetic
@@ -103,8 +91,6 @@ export function StripeProvider({ children, clientSecret, appearance, locale, fon
           clientSecret,
           appearance: finalAppearance,
           loader: 'auto',
-          ...(locale ? { locale } : {}),
-          ...(fonts ? { fonts } : {}),
         }}
       >
         {children}

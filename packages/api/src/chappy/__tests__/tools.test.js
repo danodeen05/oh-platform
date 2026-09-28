@@ -835,6 +835,21 @@ describe("web cards (Task E2): display-only outputs, no new inputs", () => {
     assert.equal(refund.card.goodwillCents, undefined, "a refund request names no amount");
   });
 
+  test("fix round 1: the chat PaymentIntent offers no redirect methods, and the web results carry the payment link", async () => {
+    const w = world();
+    const ctx = memberCtx(w);
+    for (const l of CLASSIC_BOWL) await addToCart(w, ctx, l.menuItemId, l.quantity);
+    const r = await executeTool("checkout", { confirmed: true }, ctx);
+    assert.deepEqual(w.stripe.created[0].automatic_payment_methods, { enabled: true, allow_redirects: "never" });
+    assert.equal(r.paymentLink, `http://localhost:3100/en/order/payment?orderId=${r.orderId}&orderNumber=${encodeURIComponent(r.orderNumber)}`);
+    const w0 = world();
+    const ctx0 = memberCtx(w0);
+    await addToCart(w0, ctx0, "wide");
+    const zero = await executeTool("checkout", { confirmed: true }, ctx0);
+    assert.equal(zero.card.type, "confirm-zero");
+    assert.match(zero.paymentLink, /\/en\/order\/payment\?orderId=/);
+  });
+
   test("the tool input schemas are unchanged by the cards (strict size budget)", () => {
     for (const def of TOOL_DEFS) assert.ok(!JSON.stringify(def.input_schema).includes('"card"'), `${def.name} takes no card input`);
   });

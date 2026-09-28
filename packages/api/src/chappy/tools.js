@@ -594,7 +594,6 @@ export const HANDLERS = {
         cashbackPct: p.cashbackPct,
         creditCents: p.credits || 0,
         expiringCents: (p.expiring || []).reduce((sum, lot) => sum + (lot.remainingCents || 0), 0),
-        expiringAt: p.expiring && p.expiring[0] ? p.expiring[0].expiresAt : null,
         next: p.progress?.next || null,
         orders: p.progress?.orders ? { have: p.progress.orders.have, need: p.progress.orders.need } : null,
         referrals: p.progress?.referrals ? { have: p.progress.referrals.have, need: p.progress.referrals.need } : null,
@@ -803,7 +802,8 @@ export const HANDLERS = {
     }
     let pi;
     try {
-      pi = await createPaymentIntent(ctx.prisma, ctx.stripe, { orderId: order.id, userId: ctx.userId, now: nowOf(ctx) });
+      // Card, Apple Pay and Google Pay only: the chat pay card never sends the customer off the page.
+      pi = await createPaymentIntent(ctx.prisma, ctx.stripe, { orderId: order.id, userId: ctx.userId, noRedirects: true, now: nowOf(ctx) });
     } catch (err) {
       // The order exists either way: give the customer the payment page so they can still pay.
       if (err instanceof OrderError) return { ...summary, error: err.code, message: err.message, paymentLink };
@@ -811,10 +811,12 @@ export const HANDLERS = {
       return { ...summary, error: "PAYMENT_SETUP_FAILED", message: "The pay card could not be prepared. Send the payment link instead.", paymentLink };
     }
     if (!pi.clientSecret) {
-      return { ...summary, card: { type: "confirm-zero", orderId: order.id, ...payInfo }, message: "Nothing to pay. They tap Place order to confirm." };
+      return { ...summary, paymentLink, card: { type: "confirm-zero", orderId: order.id, ...payInfo }, message: "Nothing to pay. They tap Place order to confirm." };
     }
     return {
       ...summary,
+      // Not a secret: the order's own payment page, for when the card is no longer on screen (a reload).
+      paymentLink,
       card: { type: "pay", orderId: order.id, clientSecret: pi.clientSecret, amountDueCents: pi.amountDueCents, currency: "usd", ...payInfo },
       message: "The pay card is showing. Nothing is charged until they tap Pay.",
     };

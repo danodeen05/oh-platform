@@ -2237,8 +2237,9 @@
         "confirmFailed": "付款已完成，但订单还没确认。请再试一次。",
         "refunded": "订单无法成立，款项已全额退回。",
         "processing": "银行还在处理这笔付款，完成后订单会自动更新。",
-        "returnFailed": "这笔付款没有成功，可以在下方再试一次。",
-        "unavailable": "目前无法付款，请稍后再试。"
+        "returnFailed": "这笔付款没有成功。跟我说一声，我再给你新的付款卡。",
+        "unavailable": "目前无法付款，请稍后再试。",
+        "unfinished": "这笔付款没有完成，请再试一次。"
       },
       "confirmZero": {
         "title": "无需付款",
@@ -2297,7 +2298,8 @@
         "podBest": "最佳空座舱",
         "podCheckIn": "签到时安排座舱",
         "party": "{count} 位",
-        "item": "餐品"
+        "item": "餐品",
+        "included": "已含"
       },
       "menuItem": {
         "label": "餐品：{name}",

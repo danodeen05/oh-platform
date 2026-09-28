@@ -758,8 +758,11 @@ async function assertSavingsStillAvailable(prisma, order, now) {
  * A PaymentIntent for the order's amount due, never a client amount.
  * Re-checks the recorded savings first so a card isn't charged for a quote
  * that can no longer be honored. Zero due: no PaymentIntent (clientSecret null).
+ * `noRedirects` (Chappy's pay card, Task E2 fix round 1): only payment methods
+ * that finish in the page (cards, Apple Pay, Google Pay; 3DS still resolves in
+ * Stripe's frame). The web checkout leaves it off and keeps every method.
  */
-export async function createPaymentIntent(prisma, stripe, { orderId, userId = null, savePaymentMethod = false, now = new Date() }) {
+export async function createPaymentIntent(prisma, stripe, { orderId, userId = null, savePaymentMethod = false, noRedirects = false, now = new Date() }) {
   const order = loadPayableOrder(await prisma.order.findUnique({ where: { id: orderId } }));
   const amount = order.amountDueCents;
   if (amount === 0) return { clientSecret: null, paymentIntentId: null, amountDueCents: 0 };
@@ -777,7 +780,7 @@ export async function createPaymentIntent(prisma, stripe, { orderId, userId = nu
     currency: "usd",
     customer,
     setup_future_usage: savePaymentMethod && customer ? "off_session" : undefined,
-    automatic_payment_methods: { enabled: true },
+    automatic_payment_methods: noRedirects ? { enabled: true, allow_redirects: "never" } : { enabled: true },
     metadata: { orderId },
   });
   await prisma.order.update({ where: { id: orderId }, data: { stripePaymentIntentId: paymentIntent.id } });

@@ -42,7 +42,7 @@ export function CartCard({ card }: { card: CartCardData }) {
                   {line.value ? <span className="block break-words text-sm leading-snug text-oh-ink/65">{line.value}</span> : null}
                 </span>
                 {line.quantity > 1 ? <span className="shrink-0 text-sm tabular-nums text-oh-ink/65">{`×${line.quantity}`}</span> : null}
-                <span className="shrink-0 text-[0.95rem] tabular-nums">{line.priceCents > 0 ? m(line.priceCents) : "–"}</span>
+                <span className={`shrink-0 tabular-nums ${line.priceCents > 0 ? "text-[0.95rem]" : "text-sm text-oh-ink/65"}`}>{line.priceCents > 0 ? m(line.priceCents) : t("included")}</span>
               </li>
             );
           })}

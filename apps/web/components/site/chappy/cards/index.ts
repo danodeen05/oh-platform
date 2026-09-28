@@ -2,4 +2,4 @@
 export { renderCard, FallbackCard } from "./ChappyCards";
 export { ChappyCardProvider, useCardContext, money, type ChappyCardContext } from "./CardKit";
 export { parseCard, visibleCards, type NativeCard } from "./types";
-export { chappyReturnUrl, readChappyReturn, CHAPPY_PAY_PARAM, type ChappyPayReturn } from "./pay-return";
+export { chappyReturnUrl, readChappyReturn, resolvePayReturn, CHAPPY_PAY_PARAM, type ChappyPayReturn, type PayReturnOutcome } from "./pay-return";

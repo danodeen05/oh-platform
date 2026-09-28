@@ -47,6 +47,7 @@ import { APIError, AnthropicError } from "@anthropic-ai/sdk";
 import { FROZEN_SYSTEM, CHAPPY_LOCALES, buildContextBlock, neutralizeContextTags, fallbackText } from "./prompts.js";
 import { TOOL_DEFS, executeTool, validateToolInput } from "./tools.js";
 import { normalizeCart } from "./cart.js";
+import { scrubBlock, scrubSecrets } from "./secrets.js";
 
 export const CHAPPY_MODEL = process.env.CHAPPY_MODEL || "claude-opus-5";
 export const MAX_TOKENS = 16000;
@@ -132,7 +133,11 @@ export function repairHistory(messages) {
       if (m.content) out.push({ role: m.role, content: m.content });
       continue;
     }
-    let blocks = blocksOf(m);
+    // Secret hygiene (Task E2 fix round 1): a stored tool result from before
+    // forModel (or from the retired agent's Apple Pay tool) may hold a Stripe
+    // client secret or a full card payload; it is scrubbed here, on every load
+    // and every save, so it never reaches the model or gets saved again.
+    let blocks = blocksOf(m).map(scrubBlock);
     if (m.role === "assistant") {
       const answered = new Set(blocksOf(list[i + 1]).filter((b) => b.type === "tool_result").map((b) => b.tool_use_id));
       blocks = blocks.filter((b) => b.type !== "tool_use" || answered.has(b.id));
@@ -340,8 +345,8 @@ function cardsFrom(result) {
  * (a pay card's client secret), and never needs to be in the prompt.
  */
 export function forModel(result) {
-  if (!result || typeof result !== "object" || !result.card || typeof result.card !== "object") return result ?? null;
-  return { ...result, card: { type: result.card.type } };
+  if (!result || typeof result !== "object") return result ?? null;
+  return scrubSecrets(result);
 }
 
 function addUsage(total, message) {

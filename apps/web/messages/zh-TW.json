@@ -4440,8 +4440,9 @@
         "confirmFailed": "付款已完成，但訂單還沒確認。請再試一次。",
         "refunded": "訂單無法成立，款項已全額退回。",
         "processing": "銀行還在處理這筆付款，完成後訂單會自動更新。",
-        "returnFailed": "這筆付款沒有成功，可以在下方再試一次。",
-        "unavailable": "目前無法付款，請稍後再試。"
+        "returnFailed": "這筆付款沒有成功。跟我說一聲，我再給你新的付款卡。",
+        "unavailable": "目前無法付款，請稍後再試。",
+        "unfinished": "這筆付款沒有完成，請再試一次。"
       },
       "confirmZero": {
         "title": "不需付款",
@@ -4500,7 +4501,8 @@
         "podBest": "最佳空座艙",
         "podCheckIn": "報到時安排座艙",
         "party": "{count} 位",
-        "item": "餐點"
+        "item": "餐點",
+        "included": "已含"
       },
       "menuItem": {
         "label": "餐點：{name}",

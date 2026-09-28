@@ -2237,8 +2237,9 @@
         "confirmFailed": "Tu pago se hizo, pero el pedido aún no está confirmado. Inténtalo de nuevo.",
         "refunded": "No pudimos hacer el pedido, así que te devolvimos el pago completo.",
         "processing": "Tu banco aún está procesando el pago. Tu pedido se actualiza cuando se complete.",
-        "returnFailed": "El pago no se completó. Puedes intentarlo de nuevo abajo.",
-        "unavailable": "El pago no está disponible ahora. Inténtalo en un momento."
+        "returnFailed": "El pago no se completó. Pídeme una nueva tarjeta de pago.",
+        "unavailable": "El pago no está disponible ahora. Inténtalo en un momento.",
+        "unfinished": "El pago no terminó. Inténtalo de nuevo."
       },
       "confirmZero": {
         "title": "Nada que pagar",
@@ -2297,7 +2298,8 @@
         "podBest": "El mejor pod libre",
         "podCheckIn": "Pod al registrarte",
         "party": "{count, plural, one {# persona} other {# personas}}",
-        "item": "Platillo"
+        "item": "Platillo",
+        "included": "Incluido"
       },
       "menuItem": {
         "label": "Platillo: {name}",

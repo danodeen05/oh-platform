@@ -21,20 +21,42 @@
  *    taps in the same frame can't both start), and one confirm per
  *    PaymentIntent. A failed confirm retries the CONFIRM only, never the charge.
  */
-import { ExpressCheckoutElement, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
-import type { StripeExpressCheckoutElementConfirmEvent, StripeExpressCheckoutElementReadyEvent } from "@stripe/stripe-js";
+import { Elements, ExpressCheckoutElement, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
+import type { Stripe, StripeElementLocale, StripeExpressCheckoutElementConfirmEvent, StripeExpressCheckoutElementReadyEvent } from "@stripe/stripe-js";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { StripeProvider, stripeLocale } from "@/components/payments/StripeProvider";
 import { Icon } from "@/components/site/icons/Icon";
 import { confirmPayment } from "@/lib/site/orders";
 import { CardFrame, Eyebrow, PrimaryButton, QuietButton, money, podText, useCardContext } from "./CardKit";
 import { chappyReturnUrl } from "./pay-return";
 import type { PayCardData } from "./types";
 
-export type PayPhase = "ready" | "paying" | "confirming" | "paid" | "failed" | "confirmFailed" | "refunded" | "processing";
+export type PayPhase = "ready" | "paying" | "confirming" | "paid" | "failed" | "unfinished" | "confirmFailed" | "refunded" | "processing";
 
 const FONTS = [{ cssSrc: "https://fonts.googleapis.com/css2?family=Raleway:wght@400;600&display=swap" }];
+
+/**
+ * Stripe.js, loaded only when a pay card mounts (fix round 1). The plain
+ * `@stripe/stripe-js` entry injects js.stripe.com on import, which would
+ * load it on Chappy's first open for every visitor; `/pure` waits for the
+ * first loadStripe call.
+ */
+let stripePromise: Promise<Stripe | null> | null = null;
+function lazyStripe(): Promise<Stripe | null> {
+  if (!stripePromise) {
+    const key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+    stripePromise = key ? import("@stripe/stripe-js/pure").then(({ loadStripe }) => loadStripe(key)) : Promise.resolve(null);
+  }
+  return stripePromise;
+}
+
+/** A site locale (en, es, zh-TW, zh-CN) as a Stripe Elements locale. */
+export function stripeLocale(locale: string | undefined): StripeElementLocale {
+  if (locale === "zh-TW") return "zh-TW";
+  if (locale === "zh-CN") return "zh";
+  if (locale === "es") return "es";
+  return "en";
+}
 
 /** The site's tokens, read at runtime (Stripe's frames can't see CSS variables); the fallbacks are the same values. */
 function token(name: string, fallback: string): string {
@@ -88,6 +110,7 @@ export function PayCard({ card }: { card: PayCardData }) {
   const [amount, setAmount] = useState<number | null>(card.amountDueCents);
   const [phase, setPhase] = useState<PayPhase>("ready");
   const appearance = useMemo(() => stripeAppearance(), []);
+  const stripe = useMemo(() => lazyStripe(), []);
   const paid = phase === "paid";
 
   return (
@@ -110,9 +133,9 @@ export function PayCard({ card }: { card: PayCardData }) {
 
       {paid ? null : (
         <div className="border-0 border-t border-solid border-oh-stone/70 px-4 pb-4 pt-4">
-          <StripeProvider clientSecret={card.clientSecret} appearance={appearance} locale={stripeLocale(locale)} fonts={FONTS}>
+          <Elements stripe={stripe} options={{ clientSecret: card.clientSecret, appearance, locale: stripeLocale(locale), fonts: FONTS, loader: "auto" }}>
             <PayForm card={card} amount={amount} onAmount={setAmount} phase={phase} setPhase={setPhase} />
-          </StripeProvider>
+          </Elements>
         </div>
       )}
     </CardFrame>
@@ -224,9 +247,12 @@ function PayForm({
           setPhase("ready");
           return;
         }
-        // Stripe's message is in the page locale (Elements' locale); a card decline is worth showing.
-        setStripeMessage(error.type === "card_error" && error.message ? error.message : null);
-        setPhase("failed");
+        // A decline is known not to have charged: say so, with Stripe's own
+        // (localized) reason. Anything else: a neutral "didn't finish".
+        if (error.type === "card_error") {
+          setStripeMessage(error.message || null);
+          setPhase("failed");
+        } else setPhase("unfinished");
         return;
       }
       if (paymentIntent?.status === "succeeded") {
@@ -235,10 +261,10 @@ function PayForm({
         // The webhook settles it once the bank clears it.
         setPhase("processing");
       } else {
-        setPhase("failed");
+        setPhase("unfinished");
       }
     } catch {
-      setPhase("failed");
+      setPhase("unfinished");
     } finally {
       charging.current = false;
     }
@@ -246,13 +272,14 @@ function PayForm({
 
   const onExpressConfirm = useCallback(
     (event: StripeExpressCheckoutElementConfirmEvent) => {
-      if (charging.current || confirming.current || done.current) {
+      // The wallet sheet must always hear back: if the charge can't start, say so now.
+      if (!stripe || !elements || charging.current || confirming.current || done.current) {
         event.paymentFailed({ reason: "fail" });
         return;
       }
       void charge();
     },
-    [charge],
+    [charge, stripe, elements],
   );
 
   const onExpressReady = useCallback((event: StripeExpressCheckoutElementReadyEvent) => {
@@ -311,7 +338,7 @@ function PayForm({
         />
       </div>
 
-      {phase === "failed" || phase === "confirmFailed" || phase === "refunded" || phase === "processing" ? (
+      {phase === "failed" || phase === "unfinished" || phase === "confirmFailed" || phase === "refunded" || phase === "processing" ? (
         <div data-pay-status={phase} role={phase === "processing" ? "status" : "alert"} className="mt-4 flex gap-2 text-[0.95rem] leading-snug text-oh-ember-light">
           <Icon name={phase === "processing" ? "clock" : "alert"} size={18} className="mt-0.5 shrink-0" />
           <div className="min-w-0">

@@ -103,6 +103,8 @@ export type ChatMessage = {
   cards: ChappyCard[];
   /** The assistant turn is still streaming. */
   pending?: boolean;
+  /** A note that reports a problem (an alert mark instead of the paid check). */
+  alert?: boolean;
   /** The tool Chappy is running right now (cleared when text arrives). */
   tool?: string;
   error?: ChatError;
