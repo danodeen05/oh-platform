@@ -299,6 +299,48 @@ describe("POST /chappy/sms (Twilio webhook)", () => {
   });
 });
 
+describe("SMS identity (Task B2 fix round 1)", () => {
+  const URL_SMS = `${SMS_ENV.API_PUBLIC_URL}/chappy/sms`;
+  const signedSms = (app, params) =>
+    app.inject({
+      method: "POST",
+      url: "/chappy/sms",
+      headers: { "content-type": "application/x-www-form-urlencoded", "x-twilio-signature": twilio.getExpectedTwilioSignature(SMS_ENV.TWILIO_AUTH_TOKEN, URL_SMS, params) },
+      payload: new URLSearchParams(params).toString(),
+    });
+  const tierSeen = (client) => JSON.parse(client.calls[0].params.messages.at(-1).content[0].text.slice(9, -10)).tier;
+  const withUsers = (users) => fakePrisma({ users });
+
+  test("an exact E.164 match with smsOptIn is the member", async () => {
+    const { app, client } = await build({ prisma: withUsers([{ id: "u1", membershipTier: "BEEF_BOSS", phone: "(801) 555-0100", smsOptIn: true }]) });
+    await signedSms(app, { From: "+18015550100", Body: "hi" });
+    assert.equal(tierSeen(client), "BEEF_BOSS");
+  });
+
+  test("a partial (contains) phone match is not a member", async () => {
+    const { app, client } = await build({ prisma: withUsers([{ id: "u1", membershipTier: "BEEF_BOSS", phone: "+1 385 801 555 0100", smsOptIn: true }]) });
+    await signedSms(app, { From: "+18015550100", Body: "hi" });
+    assert.equal(tierSeen(client), null);
+  });
+
+  test("a member without smsOptIn is a guest on SMS", async () => {
+    const { app, client } = await build({ prisma: withUsers([{ id: "u1", membershipTier: "BEEF_BOSS", phone: "8015550100", smsOptIn: false }]) });
+    await signedSms(app, { From: "+18015550100", Body: "hi" });
+    assert.equal(tierSeen(client), null);
+  });
+
+  test("STOP opts out only the exact number, never a partial match", async () => {
+    const users = [
+      { id: "me", phone: "801-555-0100", smsOptIn: true },
+      { id: "not_me", phone: "+1 385 801 555 0100", smsOptIn: true },
+    ];
+    const { app } = await build({ prisma: withUsers(users) });
+    await signedSms(app, { From: "+18015550100", Body: "STOP" });
+    assert.equal(users[0].smsOptIn, false);
+    assert.equal(users[1].smsOptIn, true);
+  });
+});
+
 describe("payments (Task B2)", () => {
   test("POST /chappy/confirm-payment is gone: payment is confirmed only by the order routes", async () => {
     const { app } = await build();

@@ -83,7 +83,7 @@ const SUPPORT_RULES = `Support:
 
 const CHANNELS = `Channels (see "channel" in the context block):
 - web: the chat widget on ohbeef.com. Short paragraphs are fine. Cards (pay, sign-in, support case, group share) appear under your message; refer to them rather than repeating their contents.
-- sms: plain text messages. Keep each reply under 320 characters when you can, no formatting, and at most three or four menu items at a time.`;
+- sms: plain text messages. Keep each reply under 320 characters when you can, no formatting, and at most three or four menu items at a time. By text you can answer questions, build an order and send its payment link, and open support cases. Store credit is never added automatically by text: the team reviews the case. Profile, reorders, savings and group orders are on ohbeef.com.`;
 
 function buildFrozenSystem() {
   return [

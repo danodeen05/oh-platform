@@ -93,8 +93,15 @@ export function fakePrisma({ users = [], conversations = [], orders = [] } = {})
     },
     user: {
       findUnique: async ({ where }) => users.find((u) => u.id === where.id) || null,
-      findFirst: async ({ where }) => users.find((u) => where.phone?.contains && (u.phone || "").includes(where.phone.contains)) || null,
-      updateMany: async () => ({ count: 1 }),
+      findFirst: async () => {
+        throw new Error("fakes: SMS identity must use an exact E.164 match (findMany + toE164), not findFirst/contains");
+      },
+      findMany: async ({ where }) => users.filter((u) => (where.phone?.endsWith ? (u.phone || "").endsWith(where.phone.endsWith) : true)),
+      updateMany: async ({ where, data }) => {
+        const hit = users.filter((u) => where.id?.in?.includes(u.id));
+        for (const u of hit) Object.assign(u, data);
+        return { count: hit.length };
+      },
     },
     order: { findFirst: async ({ where }) => orders.find((o) => o.userId === where.userId) || null },
     chappyConversation: {

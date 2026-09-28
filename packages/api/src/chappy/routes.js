@@ -38,6 +38,7 @@ import {
 } from "./agent.js";
 import { fallbackText } from "./prompts.js";
 import { checkTwilioSignature } from "./twilio-signature.js";
+import { toE164, usersWithPhone, smsMemberFor } from "./phone.js";
 import { formatForSMS } from "./formatters/rcs.js";
 import { formatForWeb } from "./formatters/web.js";
 
@@ -217,17 +218,21 @@ export async function registerChappyRoutes(app, deps) {
     try {
       const keyword = handleSpecialKeywords(Body);
       if (keyword.handled) {
-        if (keyword.action === "UNSUBSCRIBE") {
-          await prisma.user.updateMany({ where: { phone: { contains: phone } }, data: { smsOptIn: false } });
-        } else if (keyword.action === "RESUBSCRIBE") {
-          await prisma.user.updateMany({ where: { phone: { contains: phone } }, data: { smsOptIn: true, smsOptInDate: now() } });
+        // Exact E.164 match only: a partial number never changes someone else's consent.
+        if (keyword.action === "UNSUBSCRIBE" || keyword.action === "RESUBSCRIBE") {
+          const ids = (await usersWithPhone(prisma, toE164(From))).map((u) => u.id);
+          if (ids.length) {
+            const data = keyword.action === "UNSUBSCRIBE" ? { smsOptIn: false } : { smsOptIn: true, smsOptInDate: now() };
+            await prisma.user.updateMany({ where: { id: { in: ids } }, data });
+          }
         }
         return twiml([keyword.response]);
       }
       if (String(Body).length > MESSAGE_MAX_CHARS) return twiml([fallbackText("tooLong", "en")]);
       if (!client) return twiml([fallbackText("error", "en")]);
 
-      const user = await prisma.user.findFirst({ where: { phone: { contains: phone } } });
+      // A member only on an exact E.164 match with SMS opted in (chappy/phone.js).
+      const user = await smsMemberFor(prisma, From);
       const identity = { kind: "sms", phone, userId: user?.id || null };
       const limit = await checkLimits({ identity, channel: "sms", message: Body, req });
       if (limit) return twiml([limit.message || fallbackText("error", "en")]);

@@ -9,7 +9,7 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { TOOL_DEFS, HANDLERS, MEMBER_TOOLS, executeTool } from "../tools.js";
+import { TOOL_DEFS, HANDLERS, MEMBER_TOOLS, SMS_TOOLS, executeTool } from "../tools.js";
 import { countOptionalParams, STRICT_TOOL_LIMIT } from "../tool-schema.js";
 import { loadCart } from "../cart.js";
 import { seed, fakeStripe, NOW, DAY_MS, HOUR_MS, CLASSIC_BOWL } from "../../orders/__tests__/fixtures.js";
@@ -305,7 +305,37 @@ describe("checkout: a pay card only, never a charge", () => {
     for (const l of CLASSIC_BOWL) await addToCart(w, ctx, l.menuItemId, l.quantity);
     const r = await executeTool("checkout", { confirmed: false }, ctx);
     assert.equal(r.error, "NEEDS_CONFIRMATION");
+    assert.deepEqual(r.visit, { location: "City Creek Mall", arrival: "ASAP", pod: "assigned at check-in", partySize: 1 });
     assert.equal((await w.db.order.findMany({})).length, 0);
+  });
+
+  test("the confirmation shows where and when: location, arrival slot and pod", async () => {
+    const w = world();
+    const ctx = memberCtx(w);
+    await addToCart(w, ctx, "classic");
+    await executeTool("set_arrival_and_pod", { locationId: "", arrival: "13:30", pod: "best", partySize: 1 }, ctx);
+    const best = await executeTool("checkout", { confirmed: false }, ctx);
+    assert.equal(best.visit.location, "City Creek Mall");
+    assert.equal(best.visit.arrival.local, "13:30");
+    assert.equal(best.visit.pod, "best available");
+    await executeTool("set_arrival_and_pod", { locationId: "", arrival: "13:30", pod: "B-07", partySize: 1 }, ctx);
+    assert.equal((await executeTool("checkout", { confirmed: false }, ctx)).visit.pod, "B-07");
+  });
+
+  test("if the PaymentIntent fails unexpectedly after the order exists, the customer still gets the payment link", async () => {
+    const w = world();
+    w.stripe.paymentIntents.create = async () => {
+      throw new Error("stripe network error");
+    };
+    const ctx = memberCtx(w);
+    for (const l of CLASSIC_BOWL) await addToCart(w, ctx, l.menuItemId, l.quantity);
+    const r = await executeTool("checkout", { confirmed: true }, ctx);
+    const [order] = await w.db.order.findMany({});
+    assert.equal(r.error, "PAYMENT_SETUP_FAILED");
+    assert.equal(r.card, undefined);
+    assert.equal(r.orderId, order.id);
+    assert.equal(r.paymentLink, `http://localhost:3100/en/order/payment?orderId=${order.id}&orderNumber=${encodeURIComponent(order.orderNumber)}`);
+    assert.equal(order.paymentStatus, "PENDING");
   });
 
   test("checkout creates the order and a PaymentIntent through the service and returns a pay card; nothing is confirmed or paid", async () => {
@@ -364,16 +394,44 @@ describe("checkout: a pay card only, never a charge", () => {
 });
 
 describe("support: store credit within caps, PodCall in the pod, never a card refund", () => {
-  test("report_issue with an active pod order creates a PodCall and grants no credit", async () => {
-    const w = world({ orders: [paidOrder({ id: "o_live", status: "PREPPING", seatId: "s-a02", createdAt: new Date(NOW.getTime() - 10 * 60 * 1000), completedTime: null })] });
-    const r = await executeTool("report_issue", { category: "cold_food", summary: "My broth is lukewarm", orderId: "", contact: "" }, memberCtx(w));
-    const calls = await w.db.podCall.findMany({});
-    assert.equal(calls.length, 1);
-    assert.equal(calls[0].orderId, "o_live");
-    assert.equal(calls[0].seatId, "s-a02");
-    assert.equal(r.podCall, true);
-    assert.equal((await w.db.creditLot.findMany({})).length, 0, "no credit");
-    assert.equal(w.stripe.refundCalls.length, 0);
+  const liveOrder = (over = {}) =>
+    paidOrder({ id: "o_live", status: "PREPPING", seatId: "s-a02", createdAt: new Date(NOW.getTime() - 10 * 60 * 1000), completedTime: null, ...over });
+
+  for (const [how, arrived] of [
+    ["the pod was confirmed", { podConfirmedAt: new Date(NOW.getTime() - 5 * 60 * 1000) }],
+    ["they checked in at the kiosk", { arrivedAt: new Date(NOW.getTime() - 5 * 60 * 1000) }],
+  ]) {
+    test(`report_issue while seated (${how}) creates a PodCall and grants no credit`, async () => {
+      const w = world({ orders: [liveOrder(arrived)] });
+      const r = await executeTool("report_issue", { category: "cold_food", summary: "My broth is lukewarm", orderId: "", contact: "" }, memberCtx(w));
+      const calls = await w.db.podCall.findMany({});
+      assert.equal(calls.length, 1);
+      assert.equal(calls[0].orderId, "o_live");
+      assert.equal(calls[0].seatId, "s-a02");
+      assert.equal(r.podCall, true);
+      assert.equal((await w.db.creditLot.findMany({})).length, 0, "no credit");
+      assert.equal((await w.db.supportCase.findMany({})).length, 0);
+      assert.equal(w.stripe.refundCalls.length, 0);
+    });
+  }
+
+  test("a paid order with a pod they have not arrived at is not 'in the pod': a case opens (goodwill path), no PodCall", async () => {
+    const w = world({ orders: [liveOrder()] });
+    const r = await executeTool("report_issue", { category: "cold_food", summary: "Worried it will be cold", orderId: "", contact: "" }, memberCtx(w));
+    assert.equal((await w.db.podCall.findMany({})).length, 0);
+    assert.equal(r.podCall, undefined);
+    const [c] = await w.db.supportCase.findMany({});
+    assert.equal(c.orderId, "o_live");
+    assert.equal(r.card.type, "support-case");
+  });
+
+  test("a COMPLETED or CANCELLED order is never 'in the pod', even with an arrival time", async () => {
+    for (const status of ["COMPLETED", "CANCELLED"]) {
+      const w = world({ orders: [liveOrder({ status, podConfirmedAt: new Date(NOW.getTime() - 5 * 60 * 1000) })] });
+      await executeTool("report_issue", { category: "cold_food", summary: "Bowl was cold", orderId: "", contact: "" }, memberCtx(w));
+      assert.equal((await w.db.podCall.findMany({})).length, 0, status);
+      assert.equal((await w.db.supportCase.findMany({})).length, 1, status);
+    }
   });
 
   test("report_issue for a cold bowl within 24 hours grants at most 500 cents as a GOODWILL lot and notifies (log mode)", async () => {
@@ -448,38 +506,170 @@ describe("support: store credit within caps, PodCall in the pod, never a card re
   });
 });
 
-describe("source scan: money only moves through the services", () => {
-  const strip = (src) => src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1");
-  const code = ["../tools.js", "../cart.js"].map((f) => strip(readFileSync(new URL(f, import.meta.url), "utf8"))).join("\n");
+describe("SMS channel (controller ruling, fix round 1)", () => {
+  const smsCtx = (w, over = {}) => memberCtx(w, { channel: "sms", identity: { kind: "sms", phone: "18015550100", userId: "u1" }, ...over });
 
-  // Direct writes to money tables, Stripe calls, credit math.
-  const MONEY_WRITE = /\.\s*(order|orderItem|creditLot|creditEvent|user|giftCard|reward|mealGift|promoCode|promoCodeUsage|supportCase|seat)\s*\.\s*(create|createMany|update|updateMany|upsert|delete|deleteMany)\s*\(/;
-  const STRIPE = /\bstripe\s*\.\s*[a-zA-Z]|new\s+Stripe\b|from\s+["']stripe["']|import\(\s*["']stripe["']\s*\)/;
-  const CREDIT_MATH = /\b(decrement|increment)\s*:/;
-  const CHARGE = /\bmarkPaid\b|\bconfirmOrderPayment\b|paymentIntents\s*\.\s*confirm|refundFullPayment|fullRefundCase|grantCredit\b|grantCreditInTx|spendCredit/;
-
-  test("the patterns catch known-bad code (or the scan proves nothing)", () => {
-    assert.ok(MONEY_WRITE.test("await prisma.creditLot.create({})"));
-    assert.ok(MONEY_WRITE.test("ctx.prisma.order.update({ where })"));
-    assert.ok(STRIPE.test("await stripe.paymentIntents.create({})"));
-    assert.ok(CREDIT_MATH.test("{ creditsCents: { decrement: 5 } }"));
-    assert.ok(CHARGE.test("await markPaid(prisma, stripe, {})"));
-    assert.ok(!STRIPE.test("createPaymentIntent(ctx.prisma, ctx.stripe, { orderId })"), "passing the client to a service is fine");
+  test("an SMS goodwill attempt grants nothing: the case opens and staff are notified", async () => {
+    const w = world({ orders: [paidOrder()] });
+    const r = await executeTool("report_issue", { category: "cold_food", summary: "My bowl was cold", orderId: "", contact: "" }, smsCtx(w));
+    assert.equal(r.goodwillCents, 0);
+    assert.equal((await w.db.creditLot.findMany({})).length, 0, "no automatic credit on SMS");
+    const [c] = await w.db.supportCase.findMany({});
+    assert.equal(c.type, "ORDER_ISSUE");
+    assert.equal(c.status, "OPEN", "staff decide");
+    assert.ok(w.logs.some((l) => /would email/.test(l)), "staff notified");
   });
 
-  test("tools.js and cart.js write no money table, call no Stripe method, and never mark paid", () => {
+  test("on SMS a seated member's report still opens a case (no PodCall, no credit)", async () => {
+    const w = world({ orders: [paidOrder({ id: "o_live", status: "PREPPING", seatId: "s-a02", podConfirmedAt: NOW, createdAt: NOW, completedTime: null })] });
+    await executeTool("report_issue", { category: "cold_food", summary: "Lukewarm", orderId: "", contact: "" }, smsCtx(w));
+    assert.equal((await w.db.podCall.findMany({})).length, 0);
+    assert.equal((await w.db.supportCase.findMany({})).length, 1);
+    assert.equal((await w.db.creditLot.findMany({})).length, 0);
+  });
+
+  test("tools outside the SMS set are refused by channel, before any database access", async () => {
+    const w = world();
+    const trap = new Proxy({}, { get: (_, p) => { throw new Error(`database touched: ${String(p)}`); } });
+    const allowed = new Set(SMS_TOOLS);
+    for (const def of TOOL_DEFS.filter((t) => !allowed.has(t.name))) {
+      const input = Object.fromEntries(Object.entries(def.input_schema.properties).map(([k, s]) => [k, s.type === "integer" ? 0 : s.type === "boolean" ? true : s.enum ? s.enum[0] : ""]));
+      const r = await executeTool(def.name, input, smsCtx(w, { prisma: trap }));
+      assert.equal(r.error, "NOT_AVAILABLE_ON_SMS", def.name);
+    }
+    assert.deepEqual(TOOL_DEFS.map((t) => t.name).filter((n) => !allowed.has(n)).sort(), ["apply_savings", "get_my_profile", "reorder", "start_group_order"]);
+  });
+});
+
+describe("source scan: money only moves through the services", () => {
+  const strip = (src) => src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1");
+  const FILES = { tools: "../tools.js", cart: "../cart.js" };
+  const src = Object.fromEntries(Object.entries(FILES).map(([k, f]) => [k, readFileSync(new URL(f, import.meta.url), "utf8")]));
+  const code = Object.values(src).map(strip).join("\n");
+
+  // `.x`, `?.x`, `["x"]` and `?.["x"]` all reach a member.
+  const member = (names) => `(?:(?:\\?\\.|\\.)\\s*(?:${names})\\b|(?:\\?\\.)?\\s*\\[\\s*["'\`](?:${names})["'\`]\\s*\\])`;
+  const OPS = "create|createMany|update|updateMany|upsert|delete|deleteMany";
+  const MONEY_TABLES = "order|orderItem|creditLot|creditEvent|user|giftCard|reward|mealGift|promoCode|promoCodeUsage|supportCase|seat|podCall|groupOrder";
+  const writeTo = (tables) => new RegExp(`${member(tables)}\\s*${member(OPS)}\\s*(?:\\?\\.)?\\s*\\(`);
+  const MONEY_WRITE = writeTo(MONEY_TABLES);
+  const ANY_WRITE = new RegExp(`(?:(?:\\?\\.|\\.)\\s*([a-zA-Z]+)|\\[\\s*["'\`]([a-zA-Z]+)["'\`]\\s*\\])\\s*${member(OPS)}\\s*(?:\\?\\.)?\\s*\\(`, "g");
+  const RAW = /\$(?:executeRaw|executeRawUnsafe|queryRaw|queryRawUnsafe|transaction)\b|\[\s*["'`]\$(?:executeRaw|executeRawUnsafe|queryRaw|queryRawUnsafe|transaction)/;
+  const STRIPE = new RegExp(`\\bstripe\\b\\s*${member("[a-zA-Z_$]+")}|new\\s+Stripe\\b|from\\s+["']stripe["']|import\\(\\s*["']stripe["']\\s*\\)|require\\(\\s*["']stripe["']\\s*\\)`);
+  // Pulling the client, a delegate or Stripe out into a local name hides later calls from the patterns above.
+  const ALIAS = [
+    /(?:const|let|var)\s*\{[^}]*\}\s*=\s*[\w$.?\s]*\b(?:prisma|stripe)\b/, // const { creditLot } = ctx.prisma / = prisma / = ctx.stripe
+    /(?:const|let|var)\s*\{[^}]*\b(?:prisma|stripe)\b[^}]*\}\s*=/, // const { prisma, stripe } = ctx
+    /=\s*(?:ctx|context)\s*(?:\?\.|\.)\s*(?:prisma|stripe)\b/, // x = ctx.prisma; x = ctx.prisma.creditLot; x = ctx?.stripe
+    /(?:const|let|var)\s+[\w$]+\s*=\s*(?:prisma|stripe|tx)\b\s*(?:[;,\n]|(?:\?\.|\.)\s*\w+\s*[;,\n])/, // const db = prisma; const lots = prisma.creditLot;
+    /\[\s*["'`](?:prisma|stripe)["'`]\s*\]/, // ctx["prisma"]
+  ];
+  const CREDIT_MATH = /\b(decrement|increment)\s*:/;
+  const CHARGE = /\bmarkPaid\b|\bconfirmOrderPayment\b|paymentIntents|refundFullPayment|fullRefundCase|refundUnappliedPayment|\bgrantCredit\b|grantCreditInTx|spendCredit|redeemReward/;
+
+  test("the patterns catch known-bad code (or the scan proves nothing)", () => {
+    for (const bad of [
+      "await prisma.creditLot.create({})",
+      "ctx.prisma.order.update({ where })",
+      "ctx.prisma?.creditLot?.create({})",
+      "ctx.prisma.creditLot?.create?.({})",
+      'ctx.prisma["creditLot"]["create"]({})',
+      'ctx.prisma?.["giftCard"].update({})',
+    ]) assert.ok(MONEY_WRITE.test(bad), bad);
+    for (const bad of ["await prisma.$transaction(async (tx) => {})", "prisma.$executeRaw`x`", "prisma.$executeRawUnsafe('x')", "prisma.$queryRaw`x`", "prisma.$queryRawUnsafe('x')", 'prisma["$transaction"](fn)']) {
+      assert.ok(RAW.test(bad), bad);
+    }
+    for (const bad of ["await stripe.paymentIntents.create({})", "ctx.stripe?.refunds.create({})", 'ctx.stripe["paymentIntents"]', "new Stripe(key)", 'import Stripe from "stripe"']) {
+      assert.ok(STRIPE.test(bad), bad);
+    }
+    for (const bad of [
+      "const { creditLot } = ctx.prisma;",
+      "const { paymentIntents } = ctx.stripe;",
+      "const { prisma, stripe } = ctx;",
+      "const lots = ctx.prisma.creditLot;",
+      "const db = ctx.prisma;",
+      "const s = ctx.stripe;",
+      "const s = ctx?.stripe;",
+      'const db = ctx["prisma"];',
+      "const lots = prisma.creditLot;",
+      "const db = prisma;",
+    ]) assert.ok(ALIAS.some((re) => re.test(bad)), bad);
+    assert.ok(CREDIT_MATH.test("{ creditsCents: { decrement: 5 } }"));
+    assert.ok(CHARGE.test("await markPaid(prisma, stripe, {})"));
+    assert.deepEqual([..."x.supportCase?.[\"create\"]({}); y.chappyConversation.update({})".matchAll(ANY_WRITE)].map((m) => m[1] || m[2]), ["supportCase", "chappyConversation"]);
+    // Things the tools legitimately do must pass.
+    for (const ok of ["createPaymentIntent(ctx.prisma, ctx.stripe, { orderId })", "await ctx.prisma.order.findFirst({ where })", "const rows = await ctx.prisma.menuItem.findMany({})", "stripe: toolDeps.stripe"]) {
+      assert.ok(!MONEY_WRITE.test(ok) && !RAW.test(ok) && !STRIPE.test(ok) && !ALIAS.some((re) => re.test(ok)), ok);
+    }
+  });
+
+  test("tools.js and cart.js: no money writes, no raw SQL or transactions, no Stripe, no aliasing, never mark paid", () => {
     assert.ok(!MONEY_WRITE.test(code), `direct money write: ${code.match(MONEY_WRITE)?.[0]}`);
+    assert.ok(!RAW.test(code), `raw SQL / transaction: ${code.match(RAW)?.[0]}`);
     assert.ok(!STRIPE.test(code), `direct Stripe use: ${code.match(STRIPE)?.[0]}`);
+    for (const re of ALIAS) assert.ok(!re.test(code), `aliased client/delegate/Stripe: ${code.match(re)?.[0]}`);
     assert.ok(!CREDIT_MATH.test(code), "credit arithmetic");
     assert.ok(!CHARGE.test(code), `charge/credit primitive: ${code.match(CHARGE)?.[0]}`);
   });
 
-  test("the only prisma writes are the cart row (cart.js) and the pod-call helper; money goes through the services", () => {
-    const writes = [...code.matchAll(/\.\s*([a-zA-Z]+)\s*\.\s*(create|createMany|update|updateMany|upsert|delete|deleteMany)\s*\(/g)].map((m) => m[1]);
+  test("the only prisma write either file makes is the cart row", () => {
+    const writes = [...code.matchAll(ANY_WRITE)].map((m) => m[1] || m[2]);
     assert.deepEqual([...new Set(writes)], ["chappyConversation"]);
-    const tools = readFileSync(new URL("../tools.js", import.meta.url), "utf8");
-    assert.match(tools, /from "\.\.\/orders\/service\.js"/);
-    assert.match(tools, /from "\.\.\/support\/caps\.js"/);
-    assert.match(tools, /from "\.\.\/support\/routes\.js"/);
+  });
+
+  // Import allowlist: a new money-writing helper can't slip in through an import.
+  const ALLOWED_IMPORTS = {
+    tools: {
+      "../orders/service.js": ["quoteOrder", "createOrder", "createPaymentIntent", "previewPod", "OrderError", "PodUnavailableError"],
+      "../orders/group-routes.js": ["createGroupOrder"],
+      "../orders/pod-calls.js": ["createPodCall", "PodCallError"],
+      "../membership/engine.js": ["earlyAccessVisible", "profileForUser"],
+      "../membership/program.js": ["publicProgram", "PROGRAM"],
+      "../support/caps.js": ["grantGoodwill"],
+      "../support/routes.js": ["createSupportCase", "notifyCase"],
+      "../utils/operating-hours.js": ["slotsFor", "canAcceptOrders"],
+      "./cart.js": ["loadCart", "saveCart", "applyCartOp", "replaceItems", "cartLines", "CartError", "CART_OPS"],
+      "./tool-schema.js": ["toStrictToolDefs", "validateToolInput"],
+    },
+    cart: {
+      "../orders/pricing.js": ["MAX_LINE_QUANTITY"],
+      "../orders/service.js": ["MAX_ORDER_LINES"],
+    },
+  };
+
+  function importsOf(text) {
+    const out = {};
+    const body = strip(text);
+    for (const m of body.matchAll(/\bimport\s+([\s\S]*?)\s+from\s+["']([^"']+)["']/g)) {
+      const names = m[1].trim();
+      const named = names.match(/^\{([\s\S]*)\}$/);
+      assert.ok(named, `only named imports allowed, got: import ${names} from "${m[2]}"`);
+      out[m[2]] = [...(out[m[2]] || []), ...named[1].split(",").map((n) => n.trim()).filter(Boolean)];
+    }
+    for (const m of body.matchAll(/\bexport\s+(?:\{[^}]*\}|\*)\s+from\s+["']([^"']+)["']/g)) out[m[1]] = [...(out[m[1]] || []), "(re-export)"];
+    return out;
+  }
+
+  test("import allowlist: tools.js and cart.js import only the named services and pure helpers", () => {
+    for (const [file, allowed] of Object.entries(ALLOWED_IMPORTS)) {
+      const text = src[file];
+      assert.ok(!/\bimport\s*\(/.test(strip(text)), `${file}: no dynamic import`);
+      assert.ok(!/\brequire\s*\(/.test(strip(text)), `${file}: no require`);
+      assert.ok(!/\bimport\s+["']/.test(strip(text)), `${file}: no side-effect import`);
+      const found = importsOf(text);
+      for (const [mod, names] of Object.entries(found)) {
+        assert.ok(Object.hasOwn(allowed, mod), `${file}: import from ${mod} is not on the allowlist`);
+        for (const n of names) assert.ok(allowed[mod].includes(n), `${file}: ${n} from ${mod} is not on the allowlist`);
+      }
+    }
+  });
+
+  test("the import check itself rejects a new helper, a default import and a namespace import", () => {
+    assert.throws(() => importsOf('import Stripe from "stripe";'));
+    assert.throws(() => importsOf('import * as svc from "../orders/service.js";'));
+    const found = importsOf('import { markPaid } from "../orders/service.js";\nimport { grantCredit } from "../membership/credits.js";');
+    assert.ok(!ALLOWED_IMPORTS.tools["../orders/service.js"].includes("markPaid"));
+    assert.ok(!Object.hasOwn(ALLOWED_IMPORTS.tools, "../membership/credits.js"));
+    assert.deepEqual(Object.keys(found), ["../orders/service.js", "../membership/credits.js"]);
   });
 });

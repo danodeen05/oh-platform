@@ -5,7 +5,7 @@
  * moves through the services, never here:
  *  - orders/service.js: quoteOrder (every price), createOrder (the order and
  *    its pod claim), createPaymentIntent (server amount, metadata.orderId),
- *    pickBestPod (a dry run only, rolled back).
+ *    previewPod (what pickBestPod would pick, rolled back; nothing claimed).
  *  - support/caps.js grantGoodwill: store credit only, inside the owner's caps.
  *  - support/routes.js createSupportCase + notifyCase (honors SUPPORT_NOTIFY).
  *  - orders/pod-calls.js createPodCall, orders/group-routes.js createGroupOrder.
@@ -29,7 +29,7 @@
  * unions ("" and 0 mean "none"), short enums. That keeps the compiled
  * grammar small enough for all seventeen (the API caps strict tools at 20).
  */
-import { quoteOrder, createOrder, createPaymentIntent, pickBestPod, OrderError, PodUnavailableError } from "../orders/service.js";
+import { quoteOrder, createOrder, createPaymentIntent, previewPod, OrderError, PodUnavailableError } from "../orders/service.js";
 import { createGroupOrder } from "../orders/group-routes.js";
 import { createPodCall, PodCallError } from "../orders/pod-calls.js";
 import { earlyAccessVisible, profileForUser } from "../membership/engine.js";
@@ -197,6 +197,29 @@ export const MEMBER_TOOLS = Object.freeze([
 ]);
 const MEMBER_SET = new Set(MEMBER_TOOLS);
 
+/**
+ * SMS (controller ruling, fix round 1): read tools, ordering that ends in a
+ * payment link, refund requests, escalation, and report_issue WITHOUT
+ * automatic goodwill (staff decide). Enforced here by ctx.channel, not only
+ * in the prompt.
+ */
+export const SMS_TOOLS = Object.freeze([
+  "search_menu",
+  "get_menu_item",
+  "get_locations",
+  "get_membership_program",
+  "get_my_orders",
+  "get_order_status",
+  "get_usual_order",
+  "cart",
+  "set_arrival_and_pod",
+  "checkout",
+  "report_issue",
+  "request_refund",
+  "escalate_to_human",
+]);
+const SMS_SET = new Set(SMS_TOOLS);
+
 // ---------------------------------------------------------------------------
 // Helpers
 
@@ -344,22 +367,18 @@ async function findLocation(ctx, locationId) {
   return location;
 }
 
-/** Runs fn inside a transaction that is always rolled back, and returns its value. */
-class DryRunResult {
-  constructor(value) {
-    this.value = value;
-  }
-}
-async function dryRun(prisma, fn) {
-  try {
-    await prisma.$transaction(async (tx) => {
-      throw new DryRunResult(await fn(tx));
-    });
-  } catch (err) {
-    if (err instanceof DryRunResult) return err.value;
-    throw err;
-  }
-  return null;
+/** Where and when the cart's visit is: what the customer confirms along with the total. */
+async function visitView(ctx, cart) {
+  const locationId = cartLocation(ctx, cart);
+  const location = locationId ? await ctx.prisma.location.findUnique({ where: { id: locationId } }) : null;
+  const tz = location?.timezone || PROGRAM.timezone;
+  const arrival = cart.arrival ? new Date(cart.arrival) : null;
+  return {
+    location: location ? location.name : null,
+    arrival: arrival && !Number.isNaN(arrival.getTime()) ? slotView(arrival, tz) : "ASAP",
+    pod: cart.pod ? cart.pod.label || "best available" : "assigned at check-in",
+    partySize: cart.partySize,
+  };
 }
 
 function parseContact(raw) {
@@ -566,9 +585,7 @@ export const HANDLERS = {
       pod = podInput.toLowerCase() === "best" ? { best: true } : { label: podInput.toUpperCase() };
       try {
         // The order service's own pick, rolled back: nothing is claimed until checkout.
-        preview = await dryRun(ctx.prisma, (tx) =>
-          pickBestPod(tx, { locationId: location.id, arrival, partySize, requestedLabel: pod.label || null }),
-        );
+        preview = await previewPod(ctx.prisma, { locationId: location.id, arrival, partySize, requestedLabel: pod.label || null });
       } catch (err) {
         if (!(err instanceof PodUnavailableError)) throw err;
         if (pod.label) return { error: "POD_UNAVAILABLE", message: `Pod ${pod.label} is not free right now.`, label: pod.label };
@@ -611,7 +628,12 @@ export const HANDLERS = {
     if (!cart.items.length) return { error: "CART_EMPTY" };
     const quote = await quoteCart(ctx, cart);
     if (input.confirmed !== true) {
-      return { error: "NEEDS_CONFIRMATION", message: "Show the items and total and get a clear yes first.", quote: await quoteView(ctx, quote) };
+      return {
+        error: "NEEDS_CONFIRMATION",
+        message: "Show the items, total, location, arrival and pod, and get a clear yes first.",
+        quote: await quoteView(ctx, quote),
+        visit: await visitView(ctx, cart),
+      };
     }
     const locationId = cartLocation(ctx, cart);
     const order = await createOrder(ctx.prisma, {
@@ -646,8 +668,10 @@ export const HANDLERS = {
     try {
       pi = await createPaymentIntent(ctx.prisma, ctx.stripe, { orderId: order.id, userId: ctx.userId, now: nowOf(ctx) });
     } catch (err) {
-      if (!(err instanceof OrderError)) throw err;
-      return { ...summary, error: err.code, message: err.message, paymentLink };
+      // The order exists either way: give the customer the payment page so they can still pay.
+      if (err instanceof OrderError) return { ...summary, error: err.code, message: err.message, paymentLink };
+      console.error(`[Chappy] createPaymentIntent failed for order ${order.id}:`, err?.message);
+      return { ...summary, error: "PAYMENT_SETUP_FAILED", message: "The pay card could not be prepared. Send the payment link instead.", paymentLink };
     }
     if (!pi.clientSecret) {
       return { ...summary, card: { type: "confirm-zero", orderId: order.id }, message: "Nothing to pay. They tap Place order to confirm." };
@@ -674,10 +698,18 @@ export const HANDLERS = {
     const now = nowOf(ctx);
     if (!clean(input.summary)) return { error: "SUMMARY_REQUIRED" };
 
-    if (ctx.userId && POD_CALL_CATEGORIES.has(input.category)) {
-      // In the pod right now: staff come to the pod. No credit.
+    const sms = ctx.channel === "sms";
+    if (ctx.userId && !sms && POD_CALL_CATEGORIES.has(input.category)) {
+      // Sitting in the pod right now (arrival confirmed, order still open): staff come to the pod. No credit.
       const live = await ctx.prisma.order.findFirst({
-        where: { userId: ctx.userId, paymentStatus: "PAID", seatId: { not: null }, status: { in: ACTIVE_POD_STATUSES }, createdAt: { gte: new Date(now.getTime() - IN_POD_WINDOW_MS) } },
+        where: {
+          userId: ctx.userId,
+          paymentStatus: "PAID",
+          seatId: { not: null },
+          status: { in: ACTIVE_POD_STATUSES },
+          OR: [{ podConfirmedAt: { not: null } }, { arrivedAt: { not: null } }],
+          createdAt: { gte: new Date(now.getTime() - IN_POD_WINDOW_MS) },
+        },
         orderBy: { createdAt: "desc" },
       });
       if (live && (!clean(input.orderId) || clean(input.orderId) === live.id)) {
@@ -703,7 +735,8 @@ export const HANDLERS = {
     const opened = await openCase(ctx, { type, summary, orderId: order?.id || null, contactInput: input.contact });
 
     let goodwill = { grantedCents: 0, reason: null };
-    if (ctx.userId && order && GOODWILL_CATEGORIES.has(input.category)) {
+    // Never automatic on SMS: staff decide from the case (controller ruling).
+    if (ctx.userId && order && !sms && GOODWILL_CATEGORIES.has(input.category)) {
       // Store credit only; the caps (per order, 30 days, lifetime, order age) decide.
       goodwill = await grantGoodwill(ctx.prisma, {
         userId: ctx.userId,
@@ -768,6 +801,9 @@ export async function executeTool(name, input, ctx) {
   if (!handler || !def) return { error: "UNKNOWN_TOOL" };
   const check = validateToolInput(def.input_schema, input);
   if (!check.ok) return { error: "INVALID_INPUT", errors: check.errors };
+  if (ctx?.channel === "sms" && !SMS_SET.has(name)) {
+    return { error: "NOT_AVAILABLE_ON_SMS", message: "That can be done on ohbeef.com, not by text." };
+  }
   if (MEMBER_SET.has(name) && !ctx?.userId) return signInRequired();
   try {
     return await handler(input, ctx);
