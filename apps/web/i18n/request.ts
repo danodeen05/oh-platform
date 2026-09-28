@@ -1,8 +1,13 @@
 import { getRequestConfig } from 'next-intl/server';
 import { routing } from './routing';
 import en from '../messages/en.json';
+import { createIntlErrorHandlers } from '../lib/site/i18n-errors';
 
 type Messages = Record<string, unknown>;
+
+// One set of handlers per server process, so the production "log once per
+// key" set is shared across requests.
+const intlErrors = createIntlErrorHandlers();
 
 /**
  * The interactive business plan (`plan.*`) ships complete in en and zh-TW.
@@ -46,5 +51,9 @@ export default getRequestConfig(async ({ requestLocale }) => {
   return {
     locale,
     messages: withPlanFallback(messages),
+    // Task C5: throw in tests, log in dev, empty string plus a once-per-key
+    // log in production. Silent for plan.* in production (see withPlanFallback).
+    onError: intlErrors.onError,
+    getMessageFallback: intlErrors.getMessageFallback,
   };
 });
