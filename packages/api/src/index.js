@@ -93,7 +93,7 @@ import { createPodCall, PodCallError } from "./orders/pod-calls.js";
 import { FASTIFY_OPTIONS, rateLimitKey } from "./http-config.js";
 import { createKioskAuth } from "./auth/kiosk.js";
 import { publicReferral, shopCreditSpender, registerAdminOnlyRoutes } from "./auth/hardening.js";
-import { listLocationSeats } from "./seats/service.js";
+import { listLocationSeats, resolveSeatViewer } from "./seats/service.js";
 
 // DEMO- order codes resolve to a synthetic order (see demo/status-demo.js):
 // the plan's live status-page demo reads real routes without touching the DB.
@@ -197,7 +197,7 @@ await app.register(rateLimit, {
 // tokens are verified server-side and set req.adminRole (owner, manager or
 // station); an allowlisted email (ADMIN_EMAILS) is always owner.
 // x-admin-api-key remains for server-to-server callers (owner).
-const { requireAdminAuth, requireRole, forget: forgetAdminRole } = createAdminAuth({ log: (...args) => app.log.warn({ args }, "admin auth") });
+const { requireAdminAuth, requireRole, forget: forgetAdminRole, checkAdminAuth } = createAdminAuth({ log: (...args) => app.log.warn({ args }, "admin auth") });
 
 // All admin auth wiring: /admin/* role checks and the console-only routes
 // outside /admin (see auth/admin-hook.js). Must run before routes are declared.
@@ -837,7 +837,13 @@ app.get("/locations/:id/availability", async (req, reply) => {
   const status = getLocationStatus(location);
   // Task A8: fold the comb-seat layout (retired seats excluded) into the
   // same response the ordering flow already polls for operating hours.
-  const { layoutKey, layoutMirror, seats } = await listLocationSeats(prisma, id, location);
+  // Task A8b: same public/staff viewer split as GET /locations/:id/seats.
+  const viewer = await resolveSeatViewer(req, id, {
+    checkAdminAuth,
+    kioskDeviceFor: kioskAuth.deviceFor,
+    resolveCustomer: customerAuth.resolve,
+  });
+  const { layoutKey, layoutMirror, seats } = await listLocationSeats(prisma, id, location, viewer);
 
   return {
     locationId: location.id,
@@ -1666,9 +1672,17 @@ app.delete("/seats/:id", async (req, reply) => {
 
 // GET /locations/:id/seats - Active comb pods for a location (Task A8: the
 // documented public shape, retired pods excluded - see seats/service.js).
+// Task A8b: this route is PUBLIC and must never require auth (no 401) - but
+// staff (admin, or a kiosk device key scoped to this location) get the
+// per-seat orders, and a signed-in customer sees isMine on their own seat.
 app.get("/locations/:id/seats", async (req, reply) => {
   const { id } = req.params;
-  return listLocationSeats(prisma, id);
+  const viewer = await resolveSeatViewer(req, id, {
+    checkAdminAuth,
+    kioskDeviceFor: kioskAuth.deviceFor,
+    resolveCustomer: customerAuth.resolve,
+  });
+  return listLocationSeats(prisma, id, undefined, viewer);
 });
 
 // POST /orders/check-in - Customer arrives and scans order QR at kiosk

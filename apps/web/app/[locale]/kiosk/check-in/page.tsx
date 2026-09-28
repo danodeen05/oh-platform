@@ -160,7 +160,7 @@ export default function CheckInPage() {
       }
 
       try {
-        const seatsRes = await fetch(`${BASE}/locations/${locationId}/seats`, { headers: { "x-tenant-slug": "oh" } });
+        const seatsRes = await fetch(`${BASE}/locations/${locationId}/seats`, { headers: { "x-tenant-slug": "oh", ...kioskAuthHeaders() } });
         if (seatsRes.ok) setSeats(adaptKioskSeats(await seatsRes.json()));
 
         if (orderId) {
