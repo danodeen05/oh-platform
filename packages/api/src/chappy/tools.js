@@ -1109,6 +1109,15 @@ async function executeToolByName(name, input, context) {
     }
 
     case "apply_credits": {
+      // Security hotfix: Chappy never moves money without a customer tap. Credits are
+      // applied at checkout (the payment page quotes and spends them server-side).
+      return {
+        error: "PAYMENT_NEEDS_CUSTOMER_TAP",
+        message: "Credits are applied on the payment page. Send the customer the payment link for this order; they choose credits there.",
+      };
+    }
+
+    case "apply_credits__disabled": {
       if (!userId) return "Credits can only be applied for logged-in users";
 
       const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -1341,6 +1350,14 @@ async function executeToolByName(name, input, context) {
     }
 
     case "create_and_pay_order": {
+      // Security hotfix: never charge a saved card from chat. The customer pays with a tap.
+      return {
+        error: "PAYMENT_NEEDS_CUSTOMER_TAP",
+        message: "Chappy can't charge a card. Create the order with create_apple_pay_order (the customer taps to pay) or send them the payment link.",
+      };
+    }
+
+    case "create_and_pay_order__disabled": {
       if (!userId) {
         return { error: "You need to be logged in to place an order through Chappy. Would you like to continue on the website?" };
       }
