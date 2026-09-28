@@ -4343,5 +4343,24 @@
         "social": "Social"
       }
     }
+  },
+  "siteImages": {
+    "storefrontDusk": "Oh! Beef Noodle Soup storefront at dusk, with a backlit logo sign, a bamboo-lined walkway, and guests waiting in line.",
+    "storefrontQueue": "Guests lined up outside the entrance in the evening, with the dining room and a self-order kiosk visible through the open door.",
+    "hallRows": "Rows of wooden dining pods inside the restaurant, with guests eating bowls of noodle soup under a backlit Oh! logo.",
+    "hallRowsAlt": "A dim view down the center aisle of wooden dining pods, with the Oh! Beef Noodle Soup logo glowing on the back wall.",
+    "podHatchA": "A guest eating a bowl of beef noodle soup inside a private wood-paneled pod, with a closed kitchen pass-through hatch above the table.",
+    "podHatchB": "A guest seated in a dining pod holding a bowl of beef noodle soup, with the kitchen hatch and a tablet showing the Oh! logo on the counter.",
+    "podHatchC": "A guest eating noodle soup in a dining pod, with a tablet on the counter showing a welcome greeting.",
+    "bowlSlicesTop": "Overhead view of a bowl of beef noodle soup topped with sliced brisket, bok choy, and an orange wedge, with chopsticks resting across the rim.",
+    "bowlSlicesSide": "Close-up side view of peppercorn-crusted sliced brisket in a bowl of noodle soup with bok choy.",
+    "beefMacro": "Macro shot of two slices of peppercorn-crusted beef brisket, showing the seared crust and pink center.",
+    "bowlChunksTop": "Overhead view of a bowl of beef noodle soup topped with seared beef chunks, bok choy, and an orange wedge, with chopsticks resting across the rim.",
+    "bowlChunksSide": "Close-up side view of seared beef chunks in a bowl of noodle soup with bok choy.",
+    "storeInterior": "Retail shelves inside the restaurant with bottled sauces, boxed gift sets, bowls, chopsticks, shirts, and caps, next to a checkout counter with a QR code sign.",
+    "bowlEmpty": "A single empty ceramic noodle bowl stamped with the Oh! logo on the inside, seen from above.",
+    "bowlFlatlay": "An empty ceramic noodle bowl with chopsticks resting on top and a wooden spoon beside it on a linen surface.",
+    "chopsticks": "Close-up of a pair of wooden chopsticks on a linen cloth, with a detail view of their tips.",
+    "signPool": "The illuminated Oh! logo sculpture standing in a reflecting pool at the restaurant entrance at night, lit by paper lanterns along the path."
   }
 }
