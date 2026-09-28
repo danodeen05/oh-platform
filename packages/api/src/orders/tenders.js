@@ -62,6 +62,12 @@ export async function createGiftCard(prisma, stripe, {
 
   if (!trusted) {
     if (!stripePaymentId) throw new OrderError("PAYMENT_REQUIRED", 402, "A gift card must be paid for.");
+    // Already-used check FIRST: verifyFunding refunds a charged PaymentIntent
+    // whose details don't match, so a replay with changed details must never
+    // reach it once the payment has bought a card (that would refund the card).
+    if (await prisma.giftCard.findFirst({ where: { stripePaymentId } })) {
+      throw new OrderError("PAYMENT_ALREADY_USED", 409, "That payment already bought a gift card.");
+    }
     const pi = await verifyFunding(prisma, stripe, {
       paymentIntentId: stripePaymentId,
       amount: amountCents,
@@ -116,6 +122,11 @@ export async function createMealGift(prisma, stripe, { giverId, locationId, amou
     throw new OrderError("AMOUNT_OUT_OF_RANGE", 400, "Amount must be between $15.99 and $35.00");
   }
   if (!paymentIntentId) throw new OrderError("PAYMENT_REQUIRED", 402, "A meal gift must be paid for.");
+  // Already-used check FIRST (see createGiftCard): a replay of a payment that
+  // already funded a gift, with changed details, must not reach the refund.
+  if (await prisma.mealGift.findFirst({ where: { stripePaymentIntentId: paymentIntentId } })) {
+    throw new OrderError("PAYMENT_ALREADY_USED", 409, "That payment already funded a meal gift.");
+  }
 
   const pi = await verifyFunding(prisma, stripe, {
     paymentIntentId,

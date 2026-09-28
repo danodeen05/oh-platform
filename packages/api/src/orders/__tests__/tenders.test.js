@@ -222,3 +222,32 @@ describe("fix round 3: a refunded PaymentIntent funds nothing", () => {
     assert.equal((await prisma.mealGift.findMany()).length, 0);
   });
 });
+
+describe("hotfix: a replay of a used payment with changed details never refunds it", () => {
+  test("gift card: re-sending a used PaymentIntent with another amount is refused and nothing is refunded", async () => {
+    const prisma = seed();
+    const stripe = fakeStripe({ pi_card: { status: "succeeded", amount: 50000, metadata: { type: "gift_card", amountCents: "50000" } } });
+    const card = await createGiftCard(prisma, stripe, { amountCents: 50000, stripePaymentId: "pi_card", purchaserId: "u2", generateCode });
+    await assert.rejects(
+      createGiftCard(prisma, stripe, { amountCents: 1000, stripePaymentId: "pi_card", purchaserId: "u2", generateCode }),
+      (e) => e.code === "PAYMENT_ALREADY_USED",
+    );
+    assert.equal(stripe.refundCalls.length, 0, "the card's payment must not be refunded");
+    assert.equal((await prisma.giftCard.findUnique({ where: { id: card.id } })).status, "ACTIVE");
+  });
+
+  test("meal gift: re-sending a used PaymentIntent with another amount or location is refused and nothing is refunded", async () => {
+    const prisma = seed();
+    const stripe = fakeStripe({ pi_gift: { status: "succeeded", amount: 3500, metadata: { type: "meal_gift", giverId: "u2", locationId: "L1" } } });
+    await createMealGift(prisma, stripe, { giverId: "u2", locationId: "L1", amountCents: 3500, paymentIntentId: "pi_gift", expiresAt: EXPIRES, now: NOW });
+    await assert.rejects(
+      createMealGift(prisma, stripe, { giverId: "u2", locationId: "L1", amountCents: 1599, paymentIntentId: "pi_gift", expiresAt: EXPIRES, now: NOW }),
+      (e) => e.code === "PAYMENT_ALREADY_USED",
+    );
+    await assert.rejects(
+      createMealGift(prisma, stripe, { giverId: "u2", locationId: "L2", amountCents: 3500, paymentIntentId: "pi_gift", expiresAt: EXPIRES, now: NOW }),
+      (e) => e.code === "PAYMENT_ALREADY_USED",
+    );
+    assert.equal(stripe.refundCalls.length, 0, "the gift's payment must not be refunded");
+  });
+});
