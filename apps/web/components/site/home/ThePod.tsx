@@ -3,15 +3,30 @@
 /**
  * Task D1, chapter 3: The pod. Pinned for 3 screens.
  *
- * Three photos crossfade on --progress (pod-hatch-a, then b, then c), each
- * with its own caption. On pod-hatch-b a hatch panel starts closed over the
- * opening and slides up out of the way. Fix round 1: the panel is a crop of
- * the photo's own slatted panel above the hatch (not a drawn SVG), so it
- * matches the room exactly. A
- * three-part progress rule tracks where you are.
+ * Three beats on --progress, each with its own caption:
+ *   a. pod-hatch-a (MaleClosedPod): your pod, the panel closed.
+ *   b. pod-hatch-b (Image 5): the kitchen behind the closed glass hatch.
+ *   c. pod-hatch-open (OpenPod): the hatch open, water coming through.
+ *
+ * b and c share one 1448x1086 frame (the room, pod, tablet and hatch line
+ * up), so c opens inside b:
+ *   1. Reveal (0.40 to 0.58): an OpenPod layer clipped to the measured hatch
+ *      quad (`.hm-pod-hatch` variables, in photo percent) grows from the
+ *      hatch's bottom edge up, like the glass lifting, with Image 5's closed
+ *      glass kept crisp above the edge. A warm light line rides the leading
+ *      edge and the revealed kitchen is lifted slightly.
+ *   2. Handoff (0.42 to 0.60): a full-frame OpenPod crossfade under the hatch
+ *      layers brings in her reaching arm (her pose, the bowl and chopsticks
+ *      differ between the photos, so they cannot be clipped in). Her hand
+ *      sits inside the opening, so a feathered hole keeps it out of the hatch
+ *      layers and it arrives with the arm instead of being cut at the jamb.
+ *   3. Settle (0.62 to 0.68): the lift eases off and the reveal layer fades
+ *      out over the finished handoff, so the last frame is exactly OpenPod.
+ * Every layer sits inside `.hm-cover` (the photo's own 4:3 box), so the clip
+ * stays on the hatch however the cover box crops on a phone (--hm-fx).
  *
  * Reduced motion: PinnedStory's static mode, and here the three photos with
- * their captions as a plain sequence (hatch open, as photographed).
+ * their captions as a plain sequence (the last one open, as photographed).
  */
 import { useLocale, useTranslations } from "next-intl";
 import { PinnedStory } from "@/components/site/motion/PinnedStory";
@@ -25,10 +40,17 @@ const COVER_SIZES = "(max-aspect-ratio: 4/3) 134vh, 100vw";
 const PICTURE = "absolute inset-0 block [&>img]:h-full [&>img]:w-full [&>img]:object-cover";
 
 const STEPS: Array<{ key: "a" | "b" | "c"; image: ImageKey; at: number; until: number }> = [
-  { key: "a", image: "pod-hatch-a", at: -1, until: 0.31 },
-  { key: "b", image: "pod-hatch-b", at: 0.33, until: 0.64 },
-  { key: "c", image: "pod-hatch-c", at: 0.66, until: 2 },
+  { key: "a", image: "pod-hatch-a", at: -1, until: 0.25 },
+  { key: "b", image: "pod-hatch-b", at: 0.26, until: 0.49 },
+  { key: "c", image: "pod-hatch-open", at: 0.5, until: 2 },
 ];
+
+// Timeline (in --progress). --hm-k is 1 / duration for `.hm-ramp`.
+// a holds to 0.18, b holds 0.28 to 0.40, c holds from 0.68.
+const B_IN = { at: 0.18, k: 10 }; // pod-hatch-a to pod-hatch-b crossfade
+const REVEAL = { at: 0.4, k: 1 / 0.18 }; // hatch opens, bottom edge up
+const HANDOFF = { at: 0.42, k: 1 / 0.18 }; // full-frame crossfade to OpenPod (her arm)
+const SETTLE = { at: 0.62, k: 1 / 0.06 }; // after the handoff: the lift eases off, the reveal layer leaves
 
 function vars(v: Record<string, string | number>) {
   return v as React.CSSProperties;
@@ -48,6 +70,8 @@ export function ThePod() {
       </Eyebrow>
     </Title>
   );
+
+  const reveal = vars({ "--at": REVEAL.at, "--hm-k": REVEAL.k, "--settle-at": SETTLE.at, "--settle-k": SETTLE.k });
 
   return (
     <section id="the-pod" data-chapter="the-pod" aria-labelledby="the-pod-title" className="relative">
@@ -72,28 +96,33 @@ export function ThePod() {
             </div>
           ) : (
             <div className="relative h-full w-full overflow-hidden bg-oh-charcoal">
-              <div className="hm-cover [--hm-fx:40%] md:[--hm-fx:50%]">
-                {STEPS.map((s, i) => (
-                  <div
-                    key={s.key}
-                    className={i === 0 ? "absolute inset-0" : "hm-ramp hm-fade absolute inset-0"}
-                    style={i === 0 ? undefined : vars({ "--at": s.at - 0.04, "--hm-k": 7 })}
-                  >
-                    <SitePicture image={s.image} sizes={COVER_SIZES} alt={ti(SITE_IMAGES[s.image].alt)} className={PICTURE} />
-                    {s.key === "b" ? (
-                      <div aria-hidden="true" className="absolute left-[16.9%] top-[31.2%] h-[19.4%] w-[35%] overflow-hidden">
-                        {/* The panel is the photo's own slatted panel directly above the
-                            hatch (photo y 11.8% to 31.2%), shifted down over the opening, so
-                            its wood, pitch and light match exactly. It slides up to open. */}
-                        <div className="hm-ramp hm-hatch-panel absolute inset-0 shadow-[inset_0_-2px_0_color-mix(in_oklab,var(--color-oh-charcoal)_60%,transparent)]" style={vars({ "--at": 0.4, "--hm-k": 6 })}>
-                          <div className="absolute left-[-48.29%] top-[-61.34%] h-[515.46%] w-[285.71%]">
-                            <SitePicture image="pod-hatch-b" sizes={COVER_SIZES} alt="" className={PICTURE} />
-                          </div>
-                        </div>
-                      </div>
-                    ) : null}
+              <div className="hm-cover hm-pod-hatch [--hm-fx:40%] md:[--hm-fx:50%]">
+                <div className="absolute inset-0">
+                  <SitePicture image="pod-hatch-a" sizes={COVER_SIZES} alt={ti(SITE_IMAGES["pod-hatch-a"].alt)} className={PICTURE} />
+                </div>
+                <div className="hm-ramp hm-fade absolute inset-0" style={vars({ "--at": B_IN.at, "--hm-k": B_IN.k })}>
+                  <SitePicture image="pod-hatch-b" sizes={COVER_SIZES} alt={ti(SITE_IMAGES["pod-hatch-b"].alt)} className={PICTURE} />
+                </div>
+                {/* Handoff: the whole OpenPod frame (her arm, the room), under the hatch layers. */}
+                <div className="hm-ramp hm-fade absolute inset-0" style={vars({ "--at": HANDOFF.at, "--hm-k": HANDOFF.k })}>
+                  <SitePicture image="pod-hatch-open" sizes={COVER_SIZES} alt={ti(SITE_IMAGES["pod-hatch-open"].alt)} className={PICTURE} />
+                </div>
+                {/* The glass still closed above the leading edge, crisp while the handoff runs. */}
+                <div aria-hidden="true" className="hm-ramp hm-hatch-pane absolute inset-0" style={reveal}>
+                  <SitePicture image="pod-hatch-b" sizes={COVER_SIZES} alt="" className={PICTURE} />
+                </div>
+                {/* The kitchen below the leading edge: OpenPod clipped to the hatch, opened bottom-up. */}
+                <div aria-hidden="true" className="hm-ramp hm-hatch-reveal absolute inset-0" style={reveal}>
+                  <SitePicture image="pod-hatch-open" sizes={COVER_SIZES} alt="" className={PICTURE} />
+                </div>
+                <div aria-hidden="true" className="hm-ramp hm-hatch-light absolute inset-0" style={reveal}>
+                  <div className="hm-hatch-soft absolute inset-0">
+                    <div className="hm-hatch-band absolute inset-0" />
                   </div>
-                ))}
+                  <div className="hm-hatch-crisp absolute inset-0">
+                    <div className="hm-hatch-band absolute inset-0" />
+                  </div>
+                </div>
               </div>
 
               <div className="absolute inset-x-0 bottom-0 bg-[linear-gradient(to_top,var(--color-oh-charcoal)_0%,color-mix(in_oklab,var(--color-oh-charcoal)_85%,transparent)_50%,transparent_100%)] px-5 pb-[calc(var(--dock-h)+2rem)] pt-36 md:px-8 md:pb-16">

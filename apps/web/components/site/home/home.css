@@ -206,8 +206,104 @@
   transform: translateY(calc((1 - var(--hm-in)) * 12px));
 }
 
-.hm-hatch-panel {
-  translate: 0 calc(var(--hm-ramp) * -101%);
+/* The pod's hatch opening, measured on the 1448x1086 Image 5 / OpenPod pair
+   (registered photos), in percent of the photo frame. Set on `.hm-cover`,
+   which has the photo's aspect, so it holds at any viewport crop.
+   The photo is shot from the right, so the hatch is a slightly skewed quad:
+   - left x 195px, right x 772px: the black jamb lines on both photos.
+   - top: the underside of Image 5's lintel, (195, 346) to (772, 321).
+   - bottom: just under the glass sill (Image 5) and the counter edge
+     (OpenPod), which run together, (195, 573) to (772, 530). */
+.hm-pod-hatch {
+  --hatch-l: 13.47%;
+  --hatch-r: 53.31%;
+  --hatch-tl: 31.84%;
+  --hatch-tr: 29.55%;
+  --hatch-bl: 52.73%;
+  --hatch-br: 48.82%;
+}
+
+/* The leading edge moves from the hatch bottom (--hm-ramp 0) to its top (1). */
+.hm-hatch-pane,
+.hm-hatch-reveal,
+.hm-hatch-light {
+  --hm-edge-l: calc(var(--hatch-bl) + (var(--hatch-tl) - var(--hatch-bl)) * var(--hm-ramp));
+  --hm-edge-r: calc(var(--hatch-br) + (var(--hatch-tr) - var(--hatch-br)) * var(--hm-ramp));
+}
+
+/* Her reaching hand sits inside the opening in OpenPod. A feathered hole
+   (photo pixels, 1448x1086) keeps it out of the two hatch layers, so it comes
+   in with the rest of her arm in the full-frame handoff underneath instead of
+   being cut at the jamb. */
+.hm-hatch-pane,
+.hm-hatch-reveal {
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1448 1086' preserveAspectRatio='none'%3E%3Cfilter id='f'%3E%3CfeGaussianBlur stdDeviation='9'/%3E%3C/filter%3E%3Cpath filter='url(%23f)' fill-rule='evenodd' d='M0 0H1448V1086H0Z M596 462L638 420L680 422L712 446L736 474L826 512L826 606L794 606L756 584L700 556L664 544L632 528L596 512Z'/%3E%3C/svg%3E")
+    0 0 / 100% 100% no-repeat;
+}
+
+/* Image 5's closed glass above the leading edge, so the handoff crossfade
+   underneath never shows through the part of the hatch still closed. */
+.hm-hatch-pane {
+  clip-path: polygon(
+    var(--hatch-l) var(--hatch-tl),
+    var(--hatch-r) var(--hatch-tr),
+    var(--hatch-r) var(--hm-edge-r),
+    var(--hatch-l) var(--hm-edge-l)
+  );
+}
+
+/* OpenPod inside the opening, revealed from the bottom edge up. The kitchen
+   is lifted a touch while it opens. Once the handoff below is complete
+   (--settle-*), the lift eases off and this layer fades out, leaving the
+   plain OpenPod layer, so the last frame is the photo as shot. */
+.hm-hatch-reveal {
+  --hm-settle: clamp(0, calc((var(--progress) - var(--settle-at)) * var(--settle-k)), 1);
+  clip-path: polygon(
+    var(--hatch-l) var(--hm-edge-l),
+    var(--hatch-r) var(--hm-edge-r),
+    var(--hatch-r) var(--hatch-br),
+    var(--hatch-l) var(--hatch-bl)
+  );
+  filter: brightness(calc(1 + 0.14 * min(var(--hm-ramp) * 4, 1) * (1 - var(--hm-settle))));
+  opacity: calc(1 - var(--hm-settle));
+}
+
+/* The warm light line on the leading edge, only while the hatch is moving. */
+.hm-hatch-light {
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: calc(min(var(--hm-ramp) * 14, 1) * min((1 - var(--hm-ramp)) * 14, 1));
+}
+
+.hm-hatch-soft {
+  filter: blur(5px);
+  opacity: 0.7;
+}
+
+.hm-hatch-crisp {
+  filter: blur(0.5px);
+}
+
+.hm-hatch-band {
+  --hm-band: 1px;
+  clip-path: polygon(
+    var(--hatch-l) calc(var(--hm-edge-l) - var(--hm-band)),
+    var(--hatch-r) calc(var(--hm-edge-r) - var(--hm-band)),
+    var(--hatch-r) calc(var(--hm-edge-r) + var(--hm-band)),
+    var(--hatch-l) calc(var(--hm-edge-l) + var(--hm-band))
+  );
+  background: linear-gradient(
+    90deg,
+    transparent var(--hatch-l),
+    var(--color-oh-ember-light) calc(var(--hatch-l) + 5%),
+    var(--color-oh-cream) calc((var(--hatch-l) + var(--hatch-r)) / 2),
+    var(--color-oh-ember-light) calc(var(--hatch-r) - 5%),
+    transparent var(--hatch-r)
+  );
+}
+
+.hm-hatch-soft .hm-hatch-band {
+  --hm-band: 5px;
 }
 
 .hm-seg-fill {
