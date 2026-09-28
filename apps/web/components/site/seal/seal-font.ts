@@ -7,4 +7,4 @@
  * to seals.ts; seal.test.tsx fails until you do.
  */
 export const SEAL_FONT_FAMILY = "Oh Seal Glyphs";
-export const SEAL_FONT_GLYPHS = "初麵迷百友星尊連週傳全辣探宴晨元牛印";
+export const SEAL_FONT_GLYPHS = "初麵迷百友星尊連週傳全辣探宴晨元牛先午夜豪善遊回贈印";
