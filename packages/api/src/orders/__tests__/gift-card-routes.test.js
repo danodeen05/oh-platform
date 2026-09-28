@@ -115,7 +115,7 @@ describe("gift card purchase integrity (Task D10a)", () => {
     assert.equal((await app.inject({ method: "POST", url: "/create-payment-intent", headers: { authorization: "Bearer test:u1" }, payload: { kind: "meal_gift", amountCents: 100, locationId: "L1" } })).statusCode, 400);
     const ok = await app.inject({ method: "POST", url: "/create-payment-intent", headers: { authorization: "Bearer test:u1" }, payload: { amountCents: 1599, metadata: { type: "meal_gift", giverId: "u2", locationId: "L1" } } });
     assert.equal(ok.statusCode, 200, ok.body);
-    assert.deepEqual(stripe.created[0].metadata, { type: "meal_gift", giverId: "u1", locationId: "L1" });
+    assert.deepEqual(stripe.created[0].metadata, { type: "meal_gift", giverId: "u1", locationId: "L1", amountCents: "1599" });
   });
 
   test("the webhook confirm finds the card by its PaymentIntent, or issues it when the buyer's page never came back", async () => {
