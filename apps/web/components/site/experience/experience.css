@@ -6,7 +6,7 @@
  * The visible area between the top bar and the dock on phones.
  */
 [data-experience-page] {
-  --xp-bar: calc(3.5rem + env(safe-area-inset-top, 0px));
+  --xp-bar: calc(4.75rem + env(safe-area-inset-top, 0px));
   --xp-screen: calc(100svh - var(--xp-bar) - var(--dock-h, 0px));
   /* The phone map card: narrower on short screens so the copy under it always has room. */
   --xp-card-w: min(38vw, 10.5rem);
@@ -30,7 +30,7 @@
   /* Step to step, natively: the document snaps, nothing scrolls inside anything. */
   html:has([data-experience-page]) {
     scroll-snap-type: y mandatory;
-    scroll-padding-top: calc(3.5rem + env(safe-area-inset-top, 0px));
+    scroll-padding-top: calc(4.75rem + env(safe-area-inset-top, 0px));
   }
   [data-experience-page] .xp-snap {
     scroll-snap-align: start;

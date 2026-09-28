@@ -97,7 +97,7 @@ export async function Steps({ locale }: { locale: string }) {
   return (
     <div data-steps className="xp-steps relative mx-auto w-full max-w-[90rem] lg:grid lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-14 lg:px-8">
       {/* Phones: a sticky row (the steps list overlaps it, so it takes no net space) holds the card at the top right. Desktop: the right column, sticky. */}
-      <div className="xp-map-pin sticky z-20 lg:top-[calc(3.5rem+2rem)] lg:col-start-2 lg:row-start-1 lg:h-auto lg:self-start lg:py-16">
+      <div className="xp-map-pin sticky z-20 lg:top-[calc(4.75rem+2rem)] lg:col-start-2 lg:row-start-1 lg:h-auto lg:self-start lg:py-16">
         <div className="xp-map-card absolute right-3 top-0 lg:static lg:w-full">
           <JourneyMap
             comb={t.raw("map.comb") as CombMapLabels}
@@ -210,7 +210,7 @@ async function StatusStep({ locale, index, total, titleSize }: { locale: string;
       aria-labelledby={titleId}
       className="xp-snap xp-step xp-step-status relative isolate flex flex-col justify-start bg-oh-charcoal outline-none lg:justify-center lg:py-16"
     >
-      <div id="status" className="flex scroll-mt-[calc(3.5rem+1rem)] flex-col">
+      <div id="status" className="flex scroll-mt-[calc(4.75rem+1rem)] flex-col">
         <Reveal data-step-copy className="relative order-2 w-full px-5 pt-6 sm:px-8 lg:max-w-2xl lg:px-0 lg:pt-8">
           <div className="flex items-baseline gap-3">
             <span aria-hidden="true" className="font-display text-2xl leading-none text-oh-gold">
