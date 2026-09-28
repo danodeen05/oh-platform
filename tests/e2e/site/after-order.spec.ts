@@ -189,7 +189,9 @@ async function checkPage(page: Page, name: string) {
 /** Latin words on a zh page, minus the brand allowlist and proper place names from the database. */
 function englishLeaks(text: string): string[] {
   const allow = new Set(["Oh", "Wagyu", "Chappy", "Stripe", "Apple", "Pay", "Google", "QR", "City", "Creek", "Mall", "University", "Place", "DEMO", "PLAN", "AM", "PM", "Alex"]); // Alex: the demo guest (API demo data, fixed by the plan contract)
-  return (text.match(/[A-Za-z]{2,}/g) || []).filter((w) => !allow.has(w));
+  // The foundation's registered name stays in English in every locale (lib/site/i18n-allowlist.ts);
+  // since 2026-09-28 the footer's One Red Step block shows it on every page.
+  return (text.replace(/ONE RED STEP AT A TIME/g, " ").match(/[A-Za-z]{2,}/g) || []).filter((w) => !allow.has(w));
 }
 
 async function stage(page: Page, s: string) {

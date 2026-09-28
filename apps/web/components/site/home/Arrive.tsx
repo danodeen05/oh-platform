@@ -38,7 +38,7 @@ export async function Arrive({ locale, locations }: { locale: string; locations:
       id="arrive"
       data-chapter="arrive"
       aria-labelledby="arrive-title"
-      className="relative isolate -mt-[calc(3.5rem+env(safe-area-inset-top,0px))] flex min-h-[calc(100svh-var(--dock-h))] flex-col justify-end overflow-hidden"
+      className="relative isolate -mt-[calc(4.75rem+env(safe-area-inset-top,0px))] flex min-h-[calc(100svh-var(--dock-h))] flex-col justify-end overflow-hidden"
     >
       <div className="absolute inset-0 -z-10 bg-oh-charcoal">
         <SitePicture
@@ -46,7 +46,7 @@ export async function Arrive({ locale, locations }: { locale: string; locations:
           sizes="(max-aspect-ratio: 4/3) 134vh, 100vw"
           priority
           alt={ti(SITE_IMAGES["storefront-dusk"].alt)}
-          className="hm-push absolute inset-0 block md:top-14 [&>img]:h-full [&>img]:w-full [&>img]:object-cover [&>img]:object-[46%_50%] max-md:portrait:[&>img]:object-top"
+          className="hm-push absolute inset-0 block md:top-[4.75rem] [&>img]:h-full [&>img]:w-full [&>img]:object-cover [&>img]:object-[46%_50%] max-md:portrait:[&>img]:object-top"
         />
         {/* Legibility: the top bar's strip at the top, the copy's ground at the bottom. */}
         <div className="absolute inset-0 hidden bg-[linear-gradient(to_right,color-mix(in_oklab,var(--color-oh-charcoal)_70%,transparent)_0%,transparent_55%)] md:block" />

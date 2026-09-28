@@ -42,12 +42,78 @@ async function getToken({ env, fetchImpl, now }) {
   return cachedToken.value;
 }
 
+/** RFC 2047 encoded-word for a header value that is not plain ASCII. */
+function headerText(value) {
+  const s = String(value ?? "").replace(/[\r\n]+/g, " ");
+  return /^[\x20-\x7e]*$/.test(s) ? s : `=?UTF-8?B?${Buffer.from(s, "utf8").toString("base64")}?=`;
+}
+
+/** Base64 wrapped at 76 columns, as MIME wants it. */
+function b64Lines(data) {
+  const b64 = Buffer.isBuffer(data) ? data.toString("base64") : String(data);
+  return b64.replace(/.{1,76}/g, "$&\r\n");
+}
+
+const mailbox = (address, name) => (name ? `"${String(name).replace(/["\\\r\n]/g, "")}" <${address}>` : `<${address}>`);
+
+/**
+ * A MIME message with a real text/plain alternative:
+ *   multipart/related [ multipart/alternative [ text/plain, text/html ], inline images... ]
+ * Graph's sendMail takes it base64-encoded with Content-Type: text/plain.
+ * Only used when a message has `text` and no file attachments.
+ */
+export function buildMime(message, from) {
+  const to = (Array.isArray(message.to) ? message.to : [message.to]).filter(Boolean);
+  const rnd = () => Math.random().toString(36).slice(2, 12);
+  const rel = `rel_${rnd()}`;
+  const alt = `alt_${rnd()}`;
+  const lines = [
+    `From: ${mailbox(from, message.fromName)}`,
+    `To: ${to.map((a) => mailbox(a)).join(", ")}`,
+    ...(message.replyTo ? [`Reply-To: ${mailbox(message.replyTo)}`] : []),
+    `Subject: ${headerText(message.subject)}`,
+    "MIME-Version: 1.0",
+    `Content-Type: multipart/related; boundary="${rel}"; type="multipart/alternative"`,
+    "",
+    `--${rel}`,
+    `Content-Type: multipart/alternative; boundary="${alt}"`,
+    "",
+    `--${alt}`,
+    'Content-Type: text/plain; charset="utf-8"',
+    "Content-Transfer-Encoding: base64",
+    "",
+    b64Lines(Buffer.from(message.text, "utf8")),
+    `--${alt}`,
+    'Content-Type: text/html; charset="utf-8"',
+    "Content-Transfer-Encoding: base64",
+    "",
+    b64Lines(Buffer.from(message.html, "utf8")),
+    `--${alt}--`,
+    "",
+  ];
+  for (const img of message.inlineImages || []) {
+    lines.push(
+      `--${rel}`,
+      `Content-Type: ${img.contentType}; name="${img.name}"`,
+      "Content-Transfer-Encoding: base64",
+      `Content-ID: <${img.contentId}>`,
+      `Content-Disposition: inline; filename="${img.name}"`,
+      "",
+      b64Lines(img.contentBytes),
+    );
+  }
+  lines.push(`--${rel}--`, "");
+  return lines.join("\r\n");
+}
+
 /**
  * @param {{
  *   from?: string,
+ *   fromName?: string,
  *   to: string | string[],
  *   subject: string,
  *   html: string,
+ *   text?: string,
  *   replyTo?: string,
  *   inlineImages?: { contentId: string, name: string, contentType: string, contentBytes: string }[],
  *   attachments?: { name: string, contentType: string, contentBytes: string }[],
@@ -68,6 +134,25 @@ export async function sendGraphMail(message, deps = {}) {
 
   try {
     const token = await getToken({ env, fetchImpl, now });
+    const sendUrl = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(from)}/sendMail`;
+    // With a text part (and no files), send MIME so mail clients get a real
+    // text/plain alternative. If Graph refuses the MIME, fall back to the
+    // HTML-only JSON send below rather than not sending at all.
+    if (message.text && !(message.attachments || []).length) {
+      const mime = buildMime({ ...message, to }, from);
+      const res = await fetchImpl(sendUrl, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "text/plain" },
+        body: Buffer.from(mime, "utf8").toString("base64"),
+      });
+      if (res.ok) return { success: true };
+      if (res.status === 401) {
+        cachedToken = null;
+        const text = await res.text().catch(() => "");
+        return { success: false, error: `sendMail 401: ${text.slice(0, 300)}` };
+      }
+      console.warn(`[email] MIME sendMail returned ${res.status}; retrying as HTML only`);
+    }
     const payload = {
       message: {
         subject: message.subject,
@@ -94,7 +179,7 @@ export async function sendGraphMail(message, deps = {}) {
       },
       saveToSentItems: true,
     };
-    const res = await fetchImpl(`https://graph.microsoft.com/v1.0/users/${encodeURIComponent(from)}/sendMail`, {
+    const res = await fetchImpl(sendUrl, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify(payload),

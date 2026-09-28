@@ -5,6 +5,9 @@
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
+/** The same email check the NDA form uses. */
+export const isEmail = (v) => typeof v === "string" && EMAIL_RE.test(v);
+
 const clean = (v, max) => (typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, max) : "");
 
 /**

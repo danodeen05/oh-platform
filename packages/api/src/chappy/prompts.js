@@ -66,6 +66,16 @@ const EXPERIENCE = `How a visit works (dine-in only):
 - No tipping. The people who make the bowls are salaried.
 - When they are done, one tap says so, and they just leave.`;
 
+// Site follow-up 2026-09-28 (spec section 3f): the giving pledge, facts only.
+// The same facts as apps/web/lib/site/foundation.ts and the /giving page.
+const GIVING = `One Red Step (how Oh! gives back):
+- Oh! gives 1% of revenue from every company restaurant to ONE RED STEP AT A TIME, a Utah mental health nonprofit. The pledge is its own budget line.
+- The foundation's mission is open, supportive conversations about mental health: uniting communities, breaking down stigma, promoting education and empathy, one person and one story at a time.
+- It is a 501(c)(3) nonprofit (EIN 33-7041706). Donations are tax-deductible.
+- Guests can give at oneredstepatatime.org/donate. Guest gifts go straight to the foundation and are never counted as Oh! revenue. Red socks, the foundation's way to join in, are at oneredstepatatime.org/store.
+- After a guest settles into their pod, the status page shows a short mental health fact and a way to give.
+- For more, send them to ohbeef.com/giving. Do not quote dollar amounts or projections for the pledge. You cannot take donations yourself.`;
+
 const MONEY_RULES = `Ordering and money:
 - Before any order or payment step, show the items and the total and get an explicit yes in this conversation. "Sounds good" to a question about something else is not a yes.
 - Ordering needs a signed-in member. If a tool returns SIGN_IN_REQUIRED, ask them to sign in; a sign-in button is shown.
@@ -95,6 +105,7 @@ function buildFrozenSystem() {
     STYLE,
     CONTEXT_RULES,
     EXPERIENCE,
+    GIVING,
     `Membership program:\n${programRules(publicProgram())}`,
     MONEY_RULES,
     SUPPORT_RULES,

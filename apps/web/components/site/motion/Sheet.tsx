@@ -34,9 +34,23 @@
  * position on close via `window.scrollTo`. The lock is ref-counted at
  * module scope so a nested sheet opening/closing over an already-open one
  * doesn't unlock the page out from under the outer sheet.
+ *
+ * Portal (follow-up D): the sheet renders into the site shell's root
+ * (`[data-site-shell]`, or <body> outside the shell), never in place. Any
+ * ancestor with a transform, filter, backdrop-filter, will-change, contain
+ * or a running/filled transform animation becomes the containing block of a
+ * `position: fixed` descendant and a stacking context around it. In place,
+ * the order flow's `.oh-step-in` entrance animation (fill-mode both) did
+ * exactly that to the pod map sheet: it was positioned against the step body
+ * instead of the viewport, pushed up past the top of the screen, and its
+ * z-index was trapped under the z-40 top bar. The shell root has none of
+ * those properties and carries the site's font, color and text-rendering,
+ * so a portaled sheet inherits the same look it had in place. React context
+ * and synthetic events still flow through the portal as before.
  */
 import { AnimatePresence, motion, useDragControls, type PanInfo } from "framer-motion";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useSyncExternalStore, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import "./motion.css";
 import { useReducedMotion } from "./useReducedMotion";
 
@@ -71,6 +85,21 @@ function unlockBodyScroll() {
   }
 }
 
+const noopSubscribe = () => () => {};
+/** False on the server and during hydration, true on the client after it: no portal target exists on the server. */
+function useIsClient(): boolean {
+  return useSyncExternalStore(
+    noopSubscribe,
+    () => true,
+    () => false,
+  );
+}
+
+/** Where sheets render: the site shell's root (no transform, carries the site's type), else <body>. */
+function portalTarget(): HTMLElement {
+  return document.querySelector<HTMLElement>("[data-site-shell]") ?? document.body;
+}
+
 export interface SheetProps {
   open: boolean;
   onClose: () => void;
@@ -101,11 +130,16 @@ export function Sheet({ open, onClose, snapPoints = [1], label, children, classN
   const panelRef = useRef<HTMLDivElement | null>(null);
   const openerRef = useRef<Element | null>(null);
   const dragControls = useDragControls();
+  const isClient = useIsClient();
 
   // Capture the opener on open, return focus to it on close.
   useEffect(() => {
     if (open) {
-      openerRef.current = document.activeElement;
+      // Not when focus is already inside the panel: a re-run of this effect
+      // (React StrictMode mounts effects twice in development) would record
+      // the panel's own first button as the opener.
+      const active = document.activeElement;
+      if (!panelRef.current?.contains(active)) openerRef.current = active;
     } else if (openerRef.current instanceof HTMLElement) {
       openerRef.current.focus();
       openerRef.current = null;
@@ -153,7 +187,8 @@ export function Sheet({ open, onClose, snapPoints = [1], label, children, classN
 
     document.addEventListener("keydown", onKeyDown, true);
     return () => document.removeEventListener("keydown", onKeyDown, true);
-  }, [open, onClose]);
+    // isClient: a sheet hydrated already open renders its panel one pass later.
+  }, [open, onClose, isClient]);
 
   function handleDragEnd(_event: unknown, info: PanInfo) {
     const panelHeight = panelRef.current?.offsetHeight ?? 0;
@@ -166,7 +201,9 @@ export function Sheet({ open, onClose, snapPoints = [1], label, children, classN
 
   const maxHeightVh = Math.round(Math.max(...snapPoints, 0.01) * 100);
 
-  return (
+  if (!isClient) return null;
+
+  return createPortal(
     <AnimatePresence>
       {open && (
         <div className={["oh-sheet-root", className].filter(Boolean).join(" ")}>
@@ -216,6 +253,7 @@ export function Sheet({ open, onClose, snapPoints = [1], label, children, classN
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    portalTarget(),
   );
 }

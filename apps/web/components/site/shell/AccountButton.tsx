@@ -2,7 +2,8 @@
 
 /**
  * Account entry in the top bar: the Clerk sign-in modal (through SiteAuth, Task G2a) when signed out, the
- * member page when signed in. Icon-only on phones, labelled from 768px.
+ * member page when signed in. Icon-only below 1024px (the 68px logo left no room
+ * for the label at 768 in Spanish, 2026-09-28), labelled from 1024px.
  */
 import { SignInTrigger, SignedIn, SignedOut } from "@/components/site/auth/AuthTriggers";
 import Link from "next/link";
@@ -23,14 +24,14 @@ export function AccountButton() {
         <SignInTrigger>
           <button type="button" data-site-account="sign-in" className={BUTTON}>
             <Icon name="user" size={22} />
-            <span className="sr-only md:not-sr-only">{t("shell.signIn")}</span>
+            <span className="sr-only lg:not-sr-only">{t("shell.signIn")}</span>
           </button>
         </SignInTrigger>
       </SignedOut>
       <SignedIn>
         <Link data-site-account="member" href={localizedHref(locale, ACCOUNT_ITEM.href)} className={BUTTON}>
           <Icon name={ACCOUNT_ITEM.icon} size={22} />
-          <span className="sr-only md:not-sr-only">{t("nav.account")}</span>
+          <span className="sr-only lg:not-sr-only">{t("nav.account")}</span>
         </Link>
       </SignedIn>
     </>

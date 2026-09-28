@@ -91,6 +91,8 @@ describe("Icon", () => {
       // Task F1: the kiosk's drink rows and card reader (emoji replaced).
       "cup",
       "card",
+      // Site follow-up 2026-09-28: giving (One Red Step), the red thread.
+      "thread",
     ];
     expect([...ICON_NAMES].sort()).toEqual([...expected].sort());
   });

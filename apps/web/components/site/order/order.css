@@ -33,3 +33,30 @@
     animation: oh-step-in 420ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
   }
 }
+
+/*
+ * The pod map in the "Choose my own" sheet (follow-up D) scales to fit, so
+ * the whole map and its zoom controls show above the sticky Confirm bar
+ * without scrolling. The height budget is the sheet panel's own cap (90svh,
+ * less the top safe area; motion.css) minus the sheet's chrome around the
+ * map: grabber, title, pod count, zoom row and the Confirm bar (about
+ * 18rem). Width follows from the map's aspect ratio: portrait (53:73)
+ * below 768px, landscape (73:53) from 768px, the same breakpoint CombMap
+ * uses to pick its orientation. Only the map's frame narrows: the hint and
+ * zoom row below keep the sheet's full width, so they stay on one row
+ * instead of wrapping under the Confirm bar. The legend below may scroll.
+ */
+.oh-pod-map {
+  --oh-pod-map-h: calc(min(90svh, 100svh - env(safe-area-inset-top, 0px) - 12px) - 18rem);
+}
+
+.oh-pod-map [data-comb-frame] {
+  margin-inline: auto;
+  max-width: max(13.5rem, calc(var(--oh-pod-map-h) * 53 / 73));
+}
+
+@media (min-width: 768px) {
+  .oh-pod-map [data-comb-frame] {
+    max-width: max(20rem, calc(var(--oh-pod-map-h) * 73 / 53));
+  }
+}

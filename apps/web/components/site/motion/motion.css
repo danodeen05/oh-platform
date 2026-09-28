@@ -180,7 +180,10 @@
   position: relative;
   width: 100%;
   max-width: 640px;
-  max-height: min(var(--oh-sheet-max-height, 90svh), 90svh);
+  /* Never taller than the small viewport (svh: with the browser's toolbars
+     showing) less the top safe area, so the panel's top is always on screen
+     below a notch or status bar. */
+  max-height: min(var(--oh-sheet-max-height, 90svh), 90svh, calc(100svh - env(safe-area-inset-top, 0px) - 12px));
   overflow-y: auto;
   /* This is the sheet's own scroll area: contain overscroll here so
      scrolling past its top/bottom edge doesn't chain into a rubber-band

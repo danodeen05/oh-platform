@@ -2,7 +2,8 @@
 
 /**
  * Site footer (Task C4): quiet. The dock covers the main routes on phones,
- * so this carries the brand line, the secondary routes and the legal links.
+ * so this carries the brand line, the secondary routes, the legal links and
+ * (since 2026-09-28) the One Red Step block that links to /giving.
  *
  * A client component since G2a fix round 1, for a bundling reason: a
  * server-rendered <Link> here made every (site) page resolve next/link's
@@ -13,6 +14,8 @@
  */
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
+import { Icon } from "@/components/site/icons/Icon";
+import { FOUNDATION_MARK } from "@/lib/site/foundation";
 import { MORE_ITEMS, localizedHref } from "@/lib/site/nav";
 
 const LINK =
@@ -52,6 +55,35 @@ export function Footer({ year }: { year: number }) {
             </li>
           </ul>
         </nav>
+
+        {/* One Red Step on every page (the plan's third touchpoint, 2026-09-28). */}
+        <section
+          data-footer-foundation
+          aria-label={t("shell.footer.foundation.label")}
+          className="flex items-start gap-4 border-t border-oh-stone/60 pt-8 md:col-span-2"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element -- G2a: a pre-sized static file; next/image's client code cost every page 5 KB of JS */}
+          <img
+            src={FOUNDATION_MARK}
+            alt={t("shell.footer.foundation.markAlt")}
+            width={40}
+            height={40}
+            loading="lazy"
+            decoding="async"
+            className="h-10 w-10 shrink-0 object-contain"
+          />
+          <div className="min-w-0 max-w-xl">
+            <p className="m-0 text-sm leading-relaxed text-oh-cream/80">{t("shell.footer.foundation.line")}</p>
+            <Link
+              href={localizedHref(locale, "/giving")}
+              data-footer-giving
+              className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-oh-ember-light no-underline underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oh-cream"
+            >
+              {t("shell.footer.foundation.link")}
+              <Icon name="arrow" size={16} />
+            </Link>
+          </div>
+        </section>
 
         <p className="m-0 text-xs text-oh-mute md:col-span-2">{t("shell.footer.copyright", { year })}</p>
       </div>

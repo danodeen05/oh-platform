@@ -37,7 +37,14 @@ export interface CodeRow {
   ndaRequired: boolean;
   ndaStatus: NdaStatus;
   ndaSignedAt: string | null;
+  inviteSentAt?: string | null;
 }
+
+/** Who a code is for (optional; all three are needed to email the invitation). */
+export interface Recipient { firstName: string; lastName: string; email: string }
+
+/** The invitation email: the exact link it carries, and when and to whom it last went out. */
+export interface InviteInfo { url: string; sentAt: string | null; sentTo: string | null; sendCount: number }
 
 export interface SectionView { id: string; sectionKey: string; seconds: number; interactions: number; enteredAt: string }
 
@@ -59,6 +66,8 @@ export interface Question { id: string; sectionKey: string; body: string; contac
 export interface CodeDetail extends Omit<CodeRow, "sessionCount" | "questionCount" | "totalSeconds" | "ndaStatus" | "ndaSignedAt"> {
   sessions: Session[];
   questions: Question[];
+  recipient: Recipient | null;
+  invite: InviteInfo;
 }
 
 export interface HeatRow { sectionKey: string; seconds: number; interactions: number; sessions: number }
@@ -109,3 +118,38 @@ export function validateMaxSessions(value: string): string | undefined {
   if (!/^\d+$/.test(t) || Number(t) < 1) return "Enter a whole number of at least 1.";
   return undefined;
 }
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+export const EMPTY_RECIPIENT: Recipient = { firstName: "", lastName: "", email: "" };
+
+/** Recipient email: optional, but it has to look like one when given (same check as the API). */
+export function validateRecipientEmail(value: string): string | undefined {
+  const t = value.trim();
+  if (!t || EMAIL_RE.test(t)) return undefined;
+  return "That email doesn't look right.";
+}
+
+/** The fields still needed before the invitation can be emailed, as labels. */
+export function inviteMissing(r: Recipient | null): string[] {
+  const out: string[] = [];
+  if (!r?.firstName.trim()) out.push("first name");
+  if (!r?.lastName.trim()) out.push("last name");
+  if (!r?.email.trim()) out.push("email");
+  return out;
+}
+
+/** "first name, last name and email" */
+export function joinFields(fields: string[]): string {
+  if (fields.length <= 1) return fields.join("");
+  return `${fields.slice(0, -1).join(", ")} and ${fields.at(-1)}`;
+}
+
+/** One line for the invitation's status. */
+export function inviteSummary(invite: Pick<InviteInfo, "sentAt" | "sentTo" | "sendCount">): string {
+  if (!invite.sentAt) return "Not sent yet.";
+  const times = invite.sendCount > 1 ? ` (sent ${invite.sendCount} times)` : "";
+  return `Sent ${formatDate(invite.sentAt)}${invite.sentTo ? ` to ${invite.sentTo}` : ""}${times}.`;
+}
+
+export const sameRecipient = (a: Recipient, b: Recipient) =>
+  a.firstName.trim() === b.firstName.trim() && a.lastName.trim() === b.lastName.trim() && a.email.trim().toLowerCase() === b.email.trim().toLowerCase();

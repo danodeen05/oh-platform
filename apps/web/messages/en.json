@@ -176,16 +176,16 @@
       "eyebrow": "The pod",
       "steps": {
         "a": {
-          "title": "You sit, and the room disappears.",
-          "body": "A hook for your bag, a shelf for your phone, water within reach. One tap tells the kitchen you are in."
+          "title": "Your pod. The panel is closed.",
+          "body": "A hook for your bag, a shelf for your phone. One tap tells the kitchen you are in."
         },
         "b": {
-          "title": "The panel slides open.",
-          "body": "Minutes after you pay, your bowl arrives through the wall. You never see a hand."
+          "title": "The kitchen is right behind the wall.",
+          "body": "Your bowl is made a few steps away, on the other side of the glass. Minutes after you pay, it is ready."
         },
         "c": {
-          "title": "Then it slides shut.",
-          "body": "Extra noodles, a refill or a side are a tap away, and they come through the same panel."
+          "title": "The panel opens.",
+          "body": "Anything you ask for comes through the wall. Your bowl, extra noodles, a glass of water."
         }
       }
     },
@@ -223,7 +223,8 @@
         "tip": "No tip."
       },
       "body": "Tipping isn't part of the meal here. No tip line, no service charge.",
-      "note": "One tap on your phone says you are done. You leave when you are ready."
+      "note": "One tap on your phone says you are done. You leave when you are ready.",
+      "giveBack": "No tip. And 1% of every bowl's revenue gives back."
     },
     "rewards": {
       "eyebrow": "Rewards",
@@ -238,7 +239,8 @@
       "body": "Oh! gives 1% of revenue from every company restaurant to ONE RED STEP AT A TIME, a Utah mental health nonprofit.",
       "vision": "A great bowl, a space of your own, and every visit helping someone take one more step toward better mental health.",
       "link": "Visit the foundation",
-      "newTab": "opens in a new tab"
+      "newTab": "opens in a new tab",
+      "giving": "How we give"
     },
     "locations": {
       "eyebrow": "Two locations",
@@ -1729,7 +1731,8 @@
         "lede": "{name}, there's no tip here because fair wages are built into every bowl. If you'd like to give, this is where we'd send it.",
         "cta": "Support the cause",
         "newTab": "(opens in a new tab)",
-        "foundation": "One Red Step at a Time Foundation, a 501(c)(3)"
+        "foundation": "One Red Step at a Time Foundation, a 501(c)(3)",
+        "howWeGive": "How we give"
       }
     }
   },
@@ -4362,6 +4365,7 @@
       "chappy": "Chappy",
       "locations": "Locations",
       "experience": "Experience",
+      "giving": "Giving",
       "store": "Store",
       "giftCards": "Gift cards",
       "contact": "Contact",
@@ -4394,7 +4398,13 @@
         "copyright": "Oh! Beef Noodle Soup, {year}. All rights reserved.",
         "privacy": "Privacy",
         "accessibility": "Accessibility",
-        "nav": "Footer links"
+        "nav": "Footer links",
+        "foundation": {
+          "label": "Giving back",
+          "line": "1% of revenue from every company restaurant goes to ONE RED STEP AT A TIME, a Utah mental health nonprofit.",
+          "link": "How we give",
+          "markAlt": "A red sock, the mark of ONE RED STEP AT A TIME"
+        }
       }
     }
   },
@@ -5250,6 +5260,71 @@
         "description": "How Oh! Beef Noodle Soup works to be accessible to everyone, online and in the restaurant."
       }
     }
+  },
+  "giving": {
+    "meta": {
+      "title": "Giving back: Oh! and ONE RED STEP AT A TIME",
+      "description": "Oh! gives 1% of revenue from every company restaurant to ONE RED STEP AT A TIME, a Utah mental health nonprofit."
+    },
+    "hero": {
+      "eyebrow": "One Red Step",
+      "title": "Every visit is one more step.",
+      "visionLabel": "Our vision",
+      "vision": "A world where a great bowl of beef noodle soup comes with room to breathe: premium food, a space of your own, and every visit helping someone take one more step toward better mental health."
+    },
+    "pledge": {
+      "eyebrow": "The pledge",
+      "figure": "1%",
+      "lede": "of revenue from every company restaurant, in every scenario.",
+      "body": "It is carried as its own budget line. Never a promise without a budget."
+    },
+    "foundation": {
+      "eyebrow": "The foundation",
+      "kind": "A Utah mental health nonprofit.",
+      "missionSource": "The foundation's mission",
+      "mission": "To foster open, supportive conversations about mental health by uniting communities, breaking down stigma, and promoting education and empathy: one person, one story at a time.",
+      "identity": "A 501(c)(3) nonprofit organization, EIN {ein}. Donations are tax-deductible."
+    },
+    "visit": {
+      "eyebrow": "Your visit",
+      "title": "How your visit helps.",
+      "items": {
+        "noTip": {
+          "title": "No tip. Fair wages built in.",
+          "body": "Tipping isn't part of the meal here. Fair pay is already in the price of every bowl."
+        },
+        "status": {
+          "title": "A fact, and a way to give.",
+          "body": "Once you settle into your pod, your order status screen shows a short mental health fact and a link to support the cause."
+        },
+        "gifts": {
+          "title": "Your gift goes straight to them.",
+          "body": "Guest donations go straight to the foundation and are never counted as Oh! revenue."
+        }
+      }
+    },
+    "socks": {
+      "eyebrow": "Red socks",
+      "title": "An easy way to join in.",
+      "body": "Red socks are the foundation's sign. They give guests and staff an easy, visible way to join in.",
+      "store": "Shop red socks"
+    },
+    "actions": {
+      "eyebrow": "Take a step",
+      "title": "Give, visit, or ask.",
+      "donate": "Donate",
+      "donateNote": "On the foundation's own site. Donations are tax-deductible.",
+      "visit": "Visit the foundation",
+      "chappy": "Ask Chappy",
+      "chappyPrompt": "How does Oh! give back?"
+    },
+    "contact": {
+      "title": "Contact the foundation",
+      "website": "Website",
+      "mail": "Mail",
+      "social": "Social"
+    },
+    "newTab": "opens in a new tab"
   },
   "smsConsent": {
     "meta": {

@@ -57,7 +57,7 @@ export function StepSheet({ step, title, lede, backHref, summary, cta, wide = fa
   usePublishOrderBack(backHref, t("back"));
 
   return (
-    <div data-order-flow data-order-step={step} className="flex min-h-[calc(100svh-3.5rem-env(safe-area-inset-top,0px))] flex-col">
+    <div data-order-flow data-order-step={step} className="flex min-h-[calc(100svh-4.75rem-env(safe-area-inset-top,0px))] flex-col">
       <div className={`mx-auto w-full flex-1 px-4 pb-10 pt-2 md:pt-8 ${wide ? "max-w-5xl" : "max-w-2xl"}`}>
         <nav aria-label={t("progressLabel")} className="mb-5">
           <Eyebrow locale={locale} as="p" className="m-0 mb-2.5 text-oh-mute">

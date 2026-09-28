@@ -37,6 +37,7 @@ import { escalationText, firstChatText, ownerPhone } from "./chappy.js";
 import { startVisitSummaries } from "./summaries.js";
 import { createPii, piiKeyFromEnv } from "./pii.js";
 import { registerPlanNdaRoutes } from "./nda.js";
+import { adminCodeView, greetingName, hasRecipient, registerPlanInviteRoutes, sealRecipient, validateRecipient } from "./invite.js";
 
 const AUDIENCES = ["INVESTOR", "LENDER", "LANDLORD", "PARTNER", "ADVISOR", "INTERNAL"];
 const SCENARIOS = ["CONSERVATIVE", "BASE", "AGGRESSIVE"];
@@ -55,9 +56,14 @@ const INVALID = { error: "invalid" };
 const NDA_REQUIRED = { error: "nda_required" };
 
 // What every session lookup needs to know about the code's NDA: the flag and
-// whether a signed NDA exists (its email is reused so nobody is asked twice).
-const SIGNED_NDA = { where: { status: "SIGNED" }, select: { id: true, emailEnc: true }, take: 1 };
-const CODE_GATE_SELECT = { id: true, label: true, audience: true, revokedAt: true, expiresAt: true, ndaRequired: true, ndas: SIGNED_NDA };
+// whether a signed NDA exists (its email is reused so nobody is asked twice,
+// and its name is the one Chappy greets). The invitation's recipient fills in
+// when there is no signed NDA.
+const SIGNED_NDA = { where: { status: "SIGNED" }, select: { id: true, emailEnc: true, legalNameEnc: true }, take: 1 };
+const CODE_GATE_SELECT = {
+  id: true, label: true, audience: true, revokedAt: true, expiresAt: true, ndaRequired: true, ndas: SIGNED_NDA,
+  recipientFirstNameEnc: true, recipientLastNameEnc: true, recipientEmailEnc: true,
+};
 
 /** "none" (no NDA needed), "pending" (needed, not signed) or "signed". */
 export function ndaState(code) {
@@ -99,7 +105,8 @@ function parseDate(value) {
 
 /**
  * @param {import('fastify').FastifyInstance} app
- * @param {{ prisma?: any, sendSms?: (msg: {to: string, body: string}) => Promise<unknown>, apiKey?: string, now?: () => Date, summaries?: false | object, pii?: object | null, sendMail?: Function, deliverNda?: Function }} [deps]
+ * @param {{ prisma?: any, sendSms?: (msg: {to: string, body: string}) => Promise<unknown>, apiKey?: string, now?: () => Date, summaries?: false | object, pii?: object | null, sendMail?: Function, deliverNda?: Function, env?: Record<string, string|undefined> }} [deps]
+ *   env: read by the invitation routes (SUPPORT_NOTIFY, WEB_BASE_URL, PLAN_NDA_FROM); defaults to process.env.
  *   summaries: false disables the idle-visit sweeper (tests); an object is passed to startVisitSummaries.
  *   pii: the NDA field cipher (createPii); defaults to PLAN_PII_KEY, null when the key is missing.
  */
@@ -111,8 +118,7 @@ export async function registerPlanRoutes(app, deps = {}) {
   const piiKey = piiKeyFromEnv();
   const pii = deps.pii !== undefined ? deps.pii : piiKey ? createPii(piiKey) : null;
   if (!pii) app.log.warn("[plan] PLAN_PII_KEY is missing or not 32 bytes; NDA signing is unavailable");
-  const ndaEmail = (code) => {
-    const enc = code?.ndas?.[0]?.emailEnc;
+  const openOr = (enc) => {
     if (!enc || !pii) return null;
     try {
       return pii.open(enc);
@@ -120,6 +126,11 @@ export async function registerPlanRoutes(app, deps = {}) {
       return null;
     }
   };
+  const ndaEmail = (code) => openOr(code?.ndas?.[0]?.emailEnc);
+  /** Where a reply reaches the viewer: the signed NDA's email, else the invitation's. */
+  const emailOnFile = (code) => ndaEmail(code) || openOr(code?.recipientEmailEnc);
+  /** First name for Chappy's greeting (the signed NDA's name wins), or null. */
+  const viewerFirstName = (code) => greetingName({ signedLegalName: openOr(code?.ndas?.[0]?.legalNameEnc), recipientFirstName: openOr(code?.recipientFirstNameEnc) });
 
   if (!apiKey) {
     app.log.warn("[plan] PLAN_API_KEY is not set; all /plan/* BFF routes will refuse requests");
@@ -278,8 +289,8 @@ export async function registerPlanRoutes(app, deps = {}) {
     });
     if (!session || !isActive(session.accessCode, now())) return reply.code(401).send(INVALID);
     if (ndaState(session.accessCode) === "pending") return reply.code(403).send(NDA_REQUIRED);
-    // The NDA already collected an email; never ask for it twice.
-    if (!contactEmail) contactEmail = ndaEmail(session.accessCode);
+    // The NDA (or the invitation) already has an email; never ask for it twice.
+    if (!contactEmail) contactEmail = emailOnFile(session.accessCode);
 
     // A simple cap so a stuck button or a script cannot page the owner all night:
     // 20 questions per access code in any rolling 24 hours.
@@ -376,7 +387,12 @@ export async function registerPlanRoutes(app, deps = {}) {
         app.log.error({ err }, "[plan] first-chat SMS failed");
       }
     }
-    return reply.send({ ok: true, history: history.map(({ role, content }) => ({ role, content })), contactOnFile: Boolean(ndaEmail(session.accessCode)) });
+    return reply.send({
+      ok: true,
+      history: history.map(({ role, content }) => ({ role, content })),
+      contactOnFile: Boolean(emailOnFile(session.accessCode)),
+      firstName: viewerFirstName(session.accessCode),
+    });
   });
 
   app.post("/plan/sessions/:sid/chat/complete", { onRequest: requirePlanApiKey }, async (req, reply) => {
@@ -416,6 +432,8 @@ export async function registerPlanRoutes(app, deps = {}) {
   });
 
   await registerPlanNdaRoutes(app, { prisma, requirePlanApiKey, isActive, now, sendSms, pii, sendMail: deps.sendMail, deliverNda: deps.deliverNda });
+  await registerPlanInviteRoutes(app, { prisma, pii, now, sendMail: deps.sendMail, env: deps.env, isActive, log: app.log });
+  const env = deps.env || process.env;
 
   if (deps.summaries !== false) {
     startVisitSummaries({ prisma, sendSms, log: app.log, ...(typeof deps.summaries === "object" ? deps.summaries : {}) });
@@ -458,6 +476,7 @@ export async function registerPlanRoutes(app, deps = {}) {
         totalSeconds: secondsByCode.get(c.id) || 0,
         ndaRequired: Boolean(c.ndaRequired),
         ...adminNdaStatus(c),
+        inviteSentAt: c.inviteSentAt || null,
       })),
     });
   });
@@ -478,6 +497,11 @@ export async function registerPlanRoutes(app, deps = {}) {
     if (!label || !audience) return reply.code(400).send({ error: "label and audience are required" });
     if (expiresAt === undefined) return reply.code(400).send({ error: "invalid expiresAt" });
     if (maxSessions !== null && !Number.isFinite(maxSessions)) return reply.code(400).send({ error: "invalid maxSessions" });
+    // Optional recipient (who the code is for); sealed like the NDA details.
+    const recipient = validateRecipient({ firstName: body.recipientFirstName, lastName: body.recipientLastName, email: body.recipientEmail });
+    if (!recipient.ok) return reply.code(400).send({ error: recipient.error, field: recipient.field });
+    if (hasRecipient(recipient.value) && !pii) return reply.code(503).send({ error: "PLAN_PII_KEY is not configured, so recipient details can't be stored." });
+    const sealed = hasRecipient(recipient.value) ? sealRecipient(pii, recipient.value) : {};
 
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const code = generateCode();
@@ -493,9 +517,10 @@ export async function registerPlanRoutes(app, deps = {}) {
             maxSessions,
             createdByUserId: typeof body.createdByUserId === "string" ? body.createdByUserId.slice(0, 64) : null,
             ndaRequired: body.ndaRequired === true,
+            ...sealed,
           },
         });
-        return reply.code(201).send({ code: created });
+        return reply.code(201).send({ code: adminCodeView(pii, created, env) });
       } catch (err) {
         // P2002 = unique constraint on code; try another word/number pair.
         if (err?.code !== "P2002") throw err;
@@ -512,7 +537,7 @@ export async function registerPlanRoutes(app, deps = {}) {
       where: { id },
       data: { revokedAt: existing.revokedAt || now() },
     });
-    return reply.send({ code: updated });
+    return reply.send({ code: adminCodeView(pii, updated, env) });
   });
 
   app.get("/admin/plan/codes/:id", async (req, reply) => {
@@ -544,7 +569,7 @@ export async function registerPlanRoutes(app, deps = {}) {
       }
     }
     return reply.send({
-      code: { ...code, status: codeStatus(code, now()) },
+      code: { ...adminCodeView(pii, code, env), status: codeStatus(code, now()) },
       heat: [...heat.values()].sort((a, b) => b.seconds - a.seconds),
     });
   });
