@@ -58,7 +58,11 @@ export const PUBLIC_ROUTES = Object.freeze([
 
   // Support cases (Task A9): contact form and Chappy. Customer from auth only; validated, honeypot, 5/hour limit.
   p("POST", "/support/cases", "customer"),
-  p("PATCH", "/kitchen/orders/:id/status", "customer"),
+  // Task D5 fix round 2: no longer anonymous. Not console-guarded because kiosk devices use it too;
+  // the handler (orders/kitchen-status.js) requires staff (any console role) or a same-location kiosk.
+  p("PATCH", "/kitchen/orders/:id/status", "kiosk"),
+  // The guest's "I'm done eating": the verified owner only, SERVING -> COMPLETED only.
+  p("POST", "/orders/:id/done", "customer"),
 
   // Cron
   p("GET", "/cny/rsvps", "cron"),
@@ -138,7 +142,7 @@ export const PUBLIC_ROUTES = Object.freeze([
   // Meal gifts
   p("POST", "/meal-gifts", "customer"),
   p("GET", "/meal-gifts/next/:locationId", "customer"),
-  p("POST", "/meal-gifts/:id/pay-forward", "customer"),
+  p("POST", "/meal-gifts/:id/pay-forward", "customer"), // Task D5 fix round 2: signed-in caller only; the recipient is the caller
   p("GET", "/meal-gifts/:id", "customer"),
   p("GET", "/users/:userId/meal-gifts", "customer"),
 

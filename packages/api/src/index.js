@@ -111,6 +111,9 @@ import { listLocationSeats, resolveSeatViewer } from "./seats/service.js";
 import { claimCheckInSeat } from "./seats/kiosk-seat.js";
 import { claimSeat, holdSeatForOrder, holdPodAtPay } from "./orders/service.js";
 import { canSeeFullOrder, safeOrderView, firstNameOnly } from "./orders/order-view.js";
+import { registerKitchenStatusRoutes } from "./orders/kitchen-status.js";
+import { publicMealGift } from "./orders/meal-gift-view.js";
+import { registerMealGiftPayForward } from "./orders/meal-gift-routes.js";
 
 // DEMO- order codes resolve to a synthetic order (see demo/status-demo.js):
 // the plan's live status-page demo reads real routes without touching the DB.
@@ -6106,112 +6109,26 @@ app.get("/kitchen/cny-stats", async (req, reply) => {
   }
 });
 
-// Update order status with timestamps
-app.patch("/kitchen/orders/:id/status", async (req, reply) => {
-  const { id } = req.params;
-  const { status } = req.body || {};
-
-  if (!status) {
-    return reply.code(400).send({ error: "status required" });
-  }
-
-  const data = { status };
-
-  // Set timestamps based on status
-  if (status === "PREPPING") {
-    data.prepStartTime = new Date();
-  }
-  if (status === "READY") {
-    data.readyTime = new Date();
-  }
-  if (status === "SERVING") {
-    data.deliveredAt = new Date();
-  }
-  if (status === "COMPLETED") {
-    data.completedTime = new Date();
-  }
-
-  // Only call the membership engine on an actual transition into COMPLETED,
-  // not on every request that happens to repeat status: "COMPLETED".
-  const wasAlreadyCompleted = status === "COMPLETED"
-    ? (await prisma.order.findUnique({ where: { id }, select: { status: true } }))?.status === "COMPLETED"
-    : true;
-
-  const order = await prisma.order.update({
-    where: { id },
-    data,
-    include: {
-      items: {
-        include: {
-          menuItem: true,
-        },
-      },
-      seat: true,
-      location: true,
-      user: true,
-    },
-  });
-
-  // Ensure pod status is synchronized with order status
-  // Pod should be OCCUPIED for active orders (QUEUED through SERVING)
-  if (order.seatId && ["QUEUED", "PREPPING", "READY", "SERVING"].includes(status)) {
-    const currentSeat = order.seat;
-    if (currentSeat && currentSeat.status !== "OCCUPIED") {
-      console.log(`⚠️ Pod ${currentSeat.number} status was ${currentSeat.status}, correcting to OCCUPIED for order ${order.kitchenOrderNumber}`);
-      await prisma.seat.update({
-        where: { id: order.seatId },
-        data: { status: "OCCUPIED" },
-      });
-    }
-  }
-
-  // When order is completed, release the pod and process queue
-  if (status === "COMPLETED" && order.seatId) {
-    console.log(`Order ${order.kitchenOrderNumber} completed, releasing pod ${order.seat?.number}`);
-
-    // Mark pod as needs cleaning
-    await prisma.seat.update({
-      where: { id: order.seatId },
-      data: { status: "CLEANING" },
-    });
-
-    // Note: Staff will mark pod as AVAILABLE via /seats/:id/clean
-    // which will automatically trigger queue processing
-  }
-
-  // Cashback, referral payouts and tier upgrades all live in the membership
-  // engine now, and all run only once the order is COMPLETED (not just
-  // PAID): this is the actual production call site (kitchen-display.tsx
-  // drives status here), and PATCH /orders/:id calls the same function so
-  // either path completing an order runs it. onOrderCompleted is idempotent
-  // per orderId, so it's safe even if both paths fire for the same order.
-  if (status === "COMPLETED" && !wasAlreadyCompleted) {
-    const result = await onOrderCompleted(prisma, { orderId: order.id, now: new Date() });
-    if (result.cashbackCents > 0 || result.referralPaid || result.upgradedTo) {
+// Order status changes (Task D5 fix round 2): staff or a same-location kiosk
+// for PATCH /kitchen/orders/:id/status, and the verified owner's
+// SERVING -> COMPLETED ("I'm done eating") via POST /orders/:id/done.
+await registerKitchenStatusRoutes(app, {
+  prisma,
+  checkAdminAuth,
+  kioskAuth,
+  customerAuth,
+  onOrderCompleted,
+  onCompleted: (order, result) => {
+    if (result && (result.cashbackCents > 0 || result.referralPaid || result.upgradedTo)) {
       refreshUserWalletPass(order.userId).catch(console.error);
     }
     // Task F2: tier-up SMS after the membership transaction has committed.
-    if (result.upgradedTo) {
+    if (result?.upgradedTo) {
       notifyTierUpIfNeeded(prisma, { userId: order.userId, upgradedTo: result.upgradedTo }).catch((err) =>
         console.error("[orders] tier-up notify failed:", err?.message || err),
       );
     }
-  }
-
-  // Task A8b, fix round 1, final sweep: this route is MUST_STAY_OPEN (the
-  // customer status page's own "I'm done eating" PATCHes it with no
-  // session) and returned the full order, including `user: true`, to any
-  // caller. No known caller reads this response (the status page discards
-  // it and refetches GET /orders/status; kitchen-display.tsx and
-  // pods-manager.tsx discard it and refetch their own staff-gated GETs), so
-  // this only closes the leak - same rule as GET /orders/:id.
-  const canSeeFull = await canSeeFullOrder(req, order, {
-    checkAdminAuth,
-    kioskDeviceFor: kioskAuth.deviceFor,
-    resolveCustomer: customerAuth.resolve,
-    findGuestBySessionToken: (token) => prisma.guest.findUnique({ where: { sessionToken: token } }),
-  });
-  return canSeeFull ? order : safeOrderView(order);
+  },
 });
 
 // Get kitchen stats (orders by status)
@@ -10219,59 +10136,16 @@ app.get("/meal-gifts/next/:locationId", async (req, reply) => {
     return reply.code(404).send({ error: "No meal gifts available" });
   }
 
-  return mealGift;
+  // Task D5 fix round 2: public, so "First L." names only, no user ids (orders/meal-gift-view.js).
+  return publicMealGift(mealGift);
 });
 
 // POST /meal-gifts/:id/accept was removed in Task A7 fix round 1: checkout
 // consumes a meal gift from the order's quote at PAID (orders/service.js).
 
-// POST /meal-gifts/:id/pay-forward - Pay forward a meal gift to next person
-app.post("/meal-gifts/:id/pay-forward", async (req, reply) => {
-  const { id } = req.params;
-  const { recipientId, messageFromRecipient } = req.body || {};
-
-  if (!recipientId) {
-    return reply.code(400).send({ error: "recipientId required" });
-  }
-
-  const mealGift = await prisma.mealGift.findUnique({
-    where: { id },
-  });
-
-  if (!mealGift) {
-    return reply.code(404).send({ error: "Meal gift not found" });
-  }
-
-  if (mealGift.status !== "PENDING") {
-    return reply.code(400).send({ error: "Meal gift is not available" });
-  }
-
-  if (new Date() > mealGift.expiresAt) {
-    return reply.code(400).send({ error: "Meal gift has expired" });
-  }
-
-  // Increment pay forward count
-  const updatedGift = await prisma.mealGift.update({
-    where: { id },
-    data: {
-      payForwardCount: {
-        increment: 1,
-      },
-    },
-  });
-
-  // Add chain entry for PAY_FORWARD action
-  await prisma.mealGiftChain.create({
-    data: {
-      mealGiftId: id,
-      recipientId,
-      action: "PAID_FORWARD",
-      messageFromRecipient: messageFromRecipient || null,
-    },
-  });
-
-  return updatedGift;
-});
+// POST /meal-gifts/:id/pay-forward: signed-in caller only, the recipient is the
+// caller (Task D5 fix round 2, orders/meal-gift-routes.js).
+await registerMealGiftPayForward(app, { prisma, customerAuth });
 
 // POST /meal-gifts/expire - Expire and refund unclaimed gifts (cron job)
 app.post("/meal-gifts/expire", async (req, reply) => {
@@ -10346,7 +10220,8 @@ app.get("/meal-gifts/:id", async (req, reply) => {
     return reply.code(404).send({ error: "Meal gift not found" });
   }
 
-  return mealGift;
+  // Task D5 fix round 2: public, so "First L." names only, no user ids or order (orders/meal-gift-view.js).
+  return publicMealGift(mealGift);
 });
 
 // GET /users/:userId/meal-gifts - Get user's meal gift transactions (given and received)

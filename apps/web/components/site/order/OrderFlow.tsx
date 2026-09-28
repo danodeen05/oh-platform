@@ -22,7 +22,7 @@ import {
   arrivalIso,
   bowlComplete,
   canReuseOrder,
-  clearDraft,
+  emptyDraft,
   buildLines,
   draftFromOrderItems,
   draftSignature,
@@ -227,11 +227,11 @@ export function OrderFlow({ location, dineInEnabled, groupCode = null, reorderId
   function toPaidOrder(qr: string | null | undefined) {
     try {
       if (qr) localStorage.setItem("activeOrderQrCode", qr);
-      clearDraft(window.sessionStorage);
     } catch {
       /* storage blocked */
     }
-    update((d) => ({ ...d, order: null }));
+    // Replace the draft in state (the hook saves state), not just in storage.
+    update(() => emptyDraft());
     setNotice(t("alreadyPaidNotice"));
     setTimeout(() => router.push(qr ? `/${locale}/order/status?orderQrCode=${encodeURIComponent(qr)}` : `/${locale}/member`), 2200);
   }

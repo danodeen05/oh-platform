@@ -161,7 +161,8 @@ export function parseDraft(raw: string | null | undefined): OrderDraft {
     partySize: d.partySize === 2 ? 2 : 1,
     pod: pod && pod.mode === "pick" && isString(pod.label) ? { mode: "pick", label: pod.label } : { mode: "best" },
     savings: {
-      useCredits: savings.useCredits === true,
+      // A draft from before `creditsCents` would silently ask for $0: switch it off so the toggle shows the truth.
+      useCredits: savings.useCredits === true && typeof savings.creditsCents === "number" && savings.creditsCents > 0,
       creditsCents: typeof savings.creditsCents === "number" && Number.isInteger(savings.creditsCents) && savings.creditsCents >= 0 ? savings.creditsCents : 0,
       promoCode: isString(savings.promoCode) ? savings.promoCode : null,
       giftCardCode: isString(savings.giftCardCode) ? savings.giftCardCode : null,

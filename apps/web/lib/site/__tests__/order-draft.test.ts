@@ -173,6 +173,13 @@ describe("order draft", () => {
     expect(canReuseOrder({ ...ref, arrivalIso: null }, "sig", { ...ok, arrival: "asap" })).toBe(true);
   });
 
+  it("switches off a stored 'use credit' that has no requested amount (an older draft)", () => {
+    const old = parseDraft(JSON.stringify({ v: 1, savings: { useCredits: true } }));
+    expect(old.savings.useCredits).toBe(false);
+    const current = parseDraft(JSON.stringify({ v: 1, savings: { useCredits: true, creditsCents: 700 } }));
+    expect(current.savings).toMatchObject({ useCredits: true, creditsCents: 700 });
+  });
+
   it("drops a stored order ref from before this format (no createdAt)", () => {
     const old = parseDraft(JSON.stringify({ v: 1, order: { id: "o1", orderNumber: "N", signature: "s" } }));
     expect(old.order).toBeNull();

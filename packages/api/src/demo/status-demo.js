@@ -201,6 +201,7 @@ const SIMULATED = new Set([
   "POST /orders/:id/addons",
   "PATCH /orders/:id",
   "PATCH /kitchen/orders/:id/status",
+  "POST /orders/:id/done",
   "POST /orders/link-to-account",
 ]);
 const READ_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);

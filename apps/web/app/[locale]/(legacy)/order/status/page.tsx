@@ -4,6 +4,8 @@ import { useEffect, useState, useRef, Suspense } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { useUser, useSignUp, useSignIn } from "@clerk/nextjs";
 import { useSiteApi } from "@/lib/site/api";
+import { groupIdentityHeaders } from "@/lib/site/orders";
+import { useGuest } from "@/contexts/guest-context";
 import { useToast } from "@/components/ui/Toast";
 import { ConfirmDialog } from "@/components/ui/Dialog";
 
@@ -355,6 +357,7 @@ function StatusContent() {
   const toast = useToast();
   const { user, isLoaded: isUserLoaded } = useUser();
   const api = useSiteApi();
+  const { guest } = useGuest();
   // DEMO- codes are the synthetic demo order (packages/api/src/demo/status-demo.js).
   // In demo mode the stage is pinned in the code ("DEMO-PLAN.PREPPING") and
   // either plays by itself or, with ?demoSync=parent, follows postMessages from
@@ -2312,14 +2315,14 @@ function StatusContent() {
               onClose={() => setConfirmDoneOpen(false)}
               onConfirm={async () => {
                 try {
-                  await fetch(`${BASE}/kitchen/orders/${order.id}/status`, {
-                    method: "PATCH",
-                    headers: {
-                      "Content-Type": "application/json",
-                      "x-tenant-slug": "oh",
-                    },
-                    body: JSON.stringify({ status: "COMPLETED" }),
+                  // Task D5 fix round 2: the owner's own call (Clerk session, or the
+                  // guest session for a guest order), SERVING -> COMPLETED only. The
+                  // kitchen status route is staff/kiosk only now.
+                  const res = await api(`${BASE}/orders/${order.id}/done`, {
+                    method: "POST",
+                    headers: { "x-tenant-slug": "oh", ...groupIdentityHeaders(guest) },
                   });
+                  if (!res.ok && res.status !== 409) throw new Error(`done ${res.status}`);
                   setConfirmDoneOpen(false);
                   if (isDemo) setDemoStage("COMPLETED");
                   fetchStatus(); // Refresh status immediately

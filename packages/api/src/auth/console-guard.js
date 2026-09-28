@@ -125,7 +125,9 @@ export const CONSOLE_ROUTES = Object.freeze([
 /** Called by the customer site, kiosks, mobile or the Stripe webhook without admin auth. */
 export const MUST_STAY_OPEN = Object.freeze([
   { method: "PATCH", url: "/orders/:id" },
+  // Kiosk devices call it without admin auth; the handler itself requires staff or a same-location kiosk (Task D5 fix round 2).
   { method: "PATCH", url: "/kitchen/orders/:id/status" },
+  { method: "POST", url: "/orders/:id/done" },
   { method: "GET", url: "/orders/:id" },
   { method: "GET", url: "/orders/status" },
   { method: "POST", url: "/orders" },

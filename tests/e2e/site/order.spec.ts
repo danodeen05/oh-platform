@@ -501,6 +501,44 @@ test("a meal paid forward can be claimed in savings and covers the bowl (fix rou
   await ctx.close();
 });
 
+test("the status page's I'm done eating finishes a served order as its signed-in owner (fix round 2)", async () => {
+  const location = await prisma.location.findUnique({ where: { id: CITY_CREEK } });
+  const stamp = Date.now();
+  const served = await prisma.order.create({
+    data: {
+      orderNumber: `${tag}-served`,
+      orderQrCode: `ORDER-${tag}-served-${stamp}`,
+      kitchenOrderNumber: "0999",
+      tenantId: location!.tenantId,
+      locationId: CITY_CREEK,
+      userId: dbUserId,
+      status: "SERVING",
+      paymentStatus: "PAID",
+      subtotalCents: 1599,
+      taxCents: 151,
+      totalCents: 1750,
+      amountDueCents: 0,
+    },
+  });
+  createdOrders.add(served.id);
+  // (Who may use the kitchen route is pinned in packages/api/src/orders/__tests__/kitchen-status.test.js;
+  // the lane's dev API has no ADMIN_API_KEY, so its dev bypass treats every caller as staff.)
+
+  const ctx = await newContext();
+  const page = await ctx.newPage();
+  await signIn(page, "en");
+  await page.goto(`${BASE}/en/order/status?orderQrCode=${encodeURIComponent(served.orderQrCode!)}`, { waitUntil: "domcontentloaded" });
+  const doneRequest = page.waitForResponse((r) => r.url().endsWith(`/orders/${served.id}/done`) && r.request().method() === "POST", { timeout: 60_000 });
+  await page.getByRole("button", { name: /Done Eating/ }).click();
+  await page.getByRole("dialog").getByRole("button").last().click();
+  const res = await doneRequest;
+  assert.equal(res.status(), 200, "the owner's call succeeds");
+  assert.match(String(res.request().headers()["authorization"] || ""), /^Bearer /, "sent with the member's session");
+  const after = await prisma.order.findUnique({ where: { id: served.id } });
+  assert.equal(after?.status, "COMPLETED");
+  await ctx.close();
+});
+
 test("screenshots: every step at 390 (en, zh-TW), 360 (es) and 1440 (en)", { skip: !SHOTS }, async () => {
   const runs: { locale: string; width: number; opts: Parameters<Browser["newContext"]>[0] }[] = [
     { locale: "en", width: 390, opts: iphone15() },

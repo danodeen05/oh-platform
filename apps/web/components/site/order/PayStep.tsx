@@ -92,7 +92,7 @@ export function PayStep({ orderId, orderNumber }: { orderId: string | null; orde
   const [order, setOrder] = useState<OrderView | null>(null);
   const [loadState, setLoadState] = useState<"loading" | "ready" | "missing">("loading");
   const [pi, setPi] = useState<PaymentIntentResult | null>(null);
-  const [error, setError] = useState<{ text: string; retry?: boolean; restart?: boolean } | null>(null);
+  const [error, setError] = useState<{ text: string; retry?: boolean; restart?: boolean; reload?: boolean } | null>(null);
   const [processing, setProcessing] = useState(false);
   const [saveCard, setSaveCard] = useState(false);
   const [saved, setSaved] = useState<SavedPaymentMethod[]>([]);
@@ -130,6 +130,11 @@ export function PayStep({ orderId, orderNumber }: { orderId: string | null; orde
       const res = await api(`${SITE_API_URL}/orders/${encodeURIComponent(orderId)}?locale=${locale}`, { headers: identity }).catch(() => null);
       const body = res && res.ok ? ((await res.json().catch(() => null)) as OrderView | null) : null;
       if (cancelled) return;
+      if (!body && (!res || res.status >= 500 || res.status === 429)) {
+        // Couldn't reach the API: keep the order (it still holds the pod) and let the guest retry.
+        setError({ text: te(res ? "RATE_LIMITED" : "NETWORK_ERROR"), reload: true });
+        return;
+      }
       if (!body) {
         update((d) => (d.order?.id === orderId ? { ...d, order: null } : d));
         setLoadState("missing");
@@ -299,6 +304,14 @@ export function PayStep({ orderId, orderNumber }: { orderId: string | null; orde
                 >
                   {t("restart")}
                 </a>
+              </>
+            ) : null}
+            {error.reload ? (
+              <>
+                {" "}
+                <button type="button" onClick={() => window.location.reload()} className="min-h-11 cursor-pointer appearance-none border-0 bg-transparent p-0 font-[inherit] text-[15px] font-semibold text-oh-cream underline underline-offset-4">
+                  {t("retry")}
+                </button>
               </>
             ) : null}
             {error.retry ? (
