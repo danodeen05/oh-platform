@@ -75,7 +75,11 @@ export async function registerGiftCardRoutes(app, { prisma, stripe, customerAuth
         // the buyer whose payment it was gets that same card back.
         if (err instanceof OrderError && err.code === "PAYMENT_ALREADY_USED" && !trusted) {
           const existing = await prisma.giftCard.findFirst({ where: { stripePaymentId } });
-          if (existing && (existing.purchaserId || null) === (orderOwnerId(who) || null)) return reply.send(existing);
+          const me = orderOwnerId(who) || null;
+          // An anonymous purchase must also name the same recipient (fix round 1),
+          // so a PaymentIntent id alone never returns a card's code.
+          const sameRecipient = !existing?.recipientEmail || (typeof recipientEmail === "string" && recipientEmail.trim().toLowerCase() === existing.recipientEmail.trim().toLowerCase());
+          if (existing && (existing.purchaserId || null) === me && (me || sameRecipient)) return reply.send(existing);
         }
         if (err instanceof OrderError) return reply.status(err.status).send({ error: err.message, code: err.code, ...err.extra });
         throw err;

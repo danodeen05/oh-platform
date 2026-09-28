@@ -4,21 +4,23 @@
  * server-verified Stripe PaymentIntent or a server-verified zero balance.
  *
  *  - createShopOrder prices each line from its ShopProduct row (never the
- *    client), adds shipping and tax, and takes server-validated savings:
- *    credits from the verified member's unexpired CreditLots (spendCreditInTx)
- *    and a gift card's own balance, both in the same transaction as the order.
+ *    client), adds shipping and tax, and RECORDS server-validated savings
+ *    (credits capped by the member's unexpired CreditLots, a gift card by
+ *    code); the total is net of them, but nothing is spent yet.
  *  - createShopPaymentIntent charges shopAmountDue(order), recomputed from the
  *    stored lines, with metadata { shopOrderId, kind: "shop" }.
  *  - confirmShopPayment retrieves the PaymentIntent and requires succeeded,
- *    the exact amount due and metadata.shopOrderId; idempotent (the Stripe
- *    webhook and the return page may both call it).
- *  - applyShopCredits works only on an unpaid, uncancelled order and spends
- *    in the same transaction as the total update.
+ *    the exact amount due and metadata.shopOrderId, then (fix round 1, the
+ *    food-order pattern) one transaction marks PAID and spends credits
+ *    (spendCreditInTx), the gift card and stock; a shortfall refunds in full.
+ *    Idempotent (the Stripe webhook and the return page may both call it).
+ *  - applyShopCredits works only on an unpaid, uncancelled order and raises
+ *    the recorded credit conditionally; a zero balance spends and pays there.
  *
  * Shipping and tax are what the shop has always charged: $8.99 shipping
  * under $75 (SHIPPING only) and 8% tax on the subtotal after savings.
  */
-import { OrderError, verifiedIntent, refundUnappliedPayment, STRIPE_MIN_CHARGE_CENTS } from "../orders/service.js";
+import { OrderError, verifiedIntent, refundUnappliedPayment, giftCardCodeCandidates, STRIPE_MIN_CHARGE_CENTS } from "../orders/service.js";
 import { spendCreditInTx, availableCredit, CreditShortError } from "../membership/credits.js";
 
 export const SHOP_SHIPPING_CENTS = 899;
@@ -83,11 +85,54 @@ async function findProduct(prisma, ref) {
 }
 
 /**
+ * Spends what an order that is becoming PAID recorded: stock, the member's
+ * credit and the gift card balance, all conditional. Runs inside the
+ * caller's transaction; any shortfall throws (CreditShortError, or an
+ * OrderError OUT_OF_STOCK / GIFT_CARD_CHANGED) so the whole settle rolls back.
+ */
+async function settleSavingsInTx(tx, order, items, now) {
+  for (const item of items) {
+    const product = await tx.shopProduct.findUnique({ where: { id: item.productId } });
+    if (product && product.stockCount !== null && product.stockCount !== undefined) {
+      const res = await tx.shopProduct.updateMany({ where: { id: item.productId, stockCount: { gte: item.quantity } }, data: { stockCount: { decrement: item.quantity } } });
+      if (res.count !== 1) throw new OrderError("OUT_OF_STOCK", 409, "An item sold out before your payment finished.");
+    }
+  }
+  if ((order.creditsApplied || 0) > 0) {
+    // CreditEvent.orderId points at food orders; the shop order rides in metadata.
+    await spendCreditInTx(tx, { userId: order.userId, amountCents: order.creditsApplied, orderId: null, now, description: `Credits applied to shop order ${order.orderNumber}`, metadata: { shopOrderId: order.id } });
+  }
+  if ((order.giftCardApplied || 0) > 0) {
+    const res = await tx.giftCard.updateMany({
+      where: { id: order.giftCardId, status: "ACTIVE", balanceCents: { gte: order.giftCardApplied } },
+      data: { balanceCents: { decrement: order.giftCardApplied } },
+    });
+    if (res.count !== 1) throw new OrderError("GIFT_CARD_CHANGED", 409, "Your gift card balance changed before your payment finished.");
+    const card = await tx.giftCard.findUnique({ where: { id: order.giftCardId } });
+    if (card && card.balanceCents === 0) await tx.giftCard.update({ where: { id: card.id }, data: { status: "EXHAUSTED" } });
+  }
+}
+
+/** Maps a settle shortfall to the 409 the client translates; anything else is returned as is. */
+function asShortfall(err) {
+  if (err instanceof CreditShortError) return new OrderError("CREDIT_SHORT", 409, "Your credit balance changed before your payment finished.", { availableCents: err.availableCents });
+  return err;
+}
+
+const lineKey = (l) => `${l.productId}:${l.quantity}:${l.variant || ""}`;
+const sameLines = (a, b) => a.length === b.length && a.map(lineKey).sort().join("|") === b.map(lineKey).sort().join("|");
+export const SHOP_ORDER_REUSE_MS = 24 * 60 * 60 * 1000;
+
+/**
  * Creates an unpaid shop order priced by the server. `owner` is the verified
  * caller ({ userId } member or { guestId } from a guest session); body ids
- * are never identity. Credits need a member. A zero amount due is PAID here
- * (server-verified zero balance); anything else stays PENDING until
- * confirmShopPayment verifies its PaymentIntent.
+ * are never identity. Credits need a member; a gift card is named by its
+ * code. The intended savings are RECORDED (and the total is net of them) but
+ * nothing is spent and no stock moves until the order becomes PAID
+ * (confirmShopPayment), as for food orders. A zero amount due is PAID here,
+ * spending in the same transaction (server-verified zero balance).
+ * The same owner's unpaid order for the same cart and savings (within a day)
+ * is reused, so reloading checkout doesn't pile up orders.
  */
 export async function createShopOrder(prisma, {
   owner = {},
@@ -96,7 +141,7 @@ export async function createShopOrder(prisma, {
   shipping = null,
   locationId = null,
   creditsToApply = 0,
-  giftCardId = null,
+  giftCardCode = null,
   now = new Date(),
   generateOrderNumber = generateShopOrderNumber,
 }) {
@@ -118,7 +163,7 @@ export async function createShopOrder(prisma, {
     if (product.stockCount !== null && product.stockCount !== undefined && product.stockCount < quantity) {
       throw new OrderError("OUT_OF_STOCK", 400, `Insufficient stock for ${product.name}`);
     }
-    lines.push({ productId: product.id, quantity, priceCents: product.priceCents, variant: typeof item.variant === "string" ? item.variant : null, tracked: product.stockCount !== null && product.stockCount !== undefined });
+    lines.push({ productId: product.id, quantity, priceCents: product.priceCents, variant: typeof item.variant === "string" ? item.variant : null });
   }
 
   const subtotalCents = subtotalOf(lines);
@@ -133,8 +178,8 @@ export async function createShopOrder(prisma, {
 
   let giftCardApplied = 0;
   let card = null;
-  if (giftCardId) {
-    card = await prisma.giftCard.findUnique({ where: { id: String(giftCardId) } });
+  if (typeof giftCardCode === "string" && giftCardCode.trim()) {
+    card = await prisma.giftCard.findFirst({ where: { code: { in: giftCardCodeCandidates(giftCardCode) } } });
     const usable = card && card.status === "ACTIVE" && card.balanceCents > 0 && (!card.expiresAt || new Date(card.expiresAt) > now);
     if (!usable) throw new OrderError("GIFT_CARD_INVALID", 400, "That gift card can't be used.");
     giftCardApplied = Math.min(card.balanceCents, room);
@@ -144,8 +189,44 @@ export async function createShopOrder(prisma, {
   if (totalCents > 0 && totalCents < STRIPE_MIN_CHARGE_CENTS) {
     throw new OrderError("AMOUNT_BELOW_MINIMUM", 400, "Card payments must be at least $0.50.", { amountDueCents: totalCents });
   }
-  const orderNumber = generateOrderNumber();
+  const giftCardId = giftCardApplied > 0 ? card.id : null;
+  const shippingData = {
+    shippingName: shipping?.name || null,
+    shippingAddress1: shipping?.address1 || null,
+    shippingAddress2: shipping?.address2 || null,
+    shippingCity: shipping?.city || null,
+    shippingState: shipping?.state || null,
+    shippingZip: shipping?.zip || null,
+    shippingCountry: shipping?.country || "US",
+    shippingPhone: shipping?.phone || null,
+    shippingEmail: shipping?.email || null,
+  };
 
+  // Reuse: the owner's unpaid order for this exact cart and savings.
+  if (totalCents > 0 && (userId || guestId)) {
+    const candidates = await prisma.shopOrder.findMany({
+      where: {
+        ...(userId ? { userId } : { guestId }),
+        paymentStatus: "PENDING",
+        fulfillmentStatus: { not: "CANCELLED" },
+        fulfillmentType,
+        subtotalCents,
+        creditsApplied,
+        giftCardApplied,
+        giftCardId,
+      },
+    });
+    const cutoff = now.getTime() - SHOP_ORDER_REUSE_MS;
+    for (const existing of candidates) {
+      if (existing.createdAt && new Date(existing.createdAt).getTime() < cutoff) continue;
+      const existingItems = await loadItems(prisma, existing.id);
+      if (!sameLines(existingItems, lines)) continue;
+      const updated = await prisma.shopOrder.update({ where: { id: existing.id }, data: shippingData });
+      return { ...updated, items: existingItems, reused: true };
+    }
+  }
+
+  const orderNumber = generateOrderNumber();
   try {
     return await prisma.$transaction(async (tx) => {
       const order = await tx.shopOrder.create({
@@ -160,17 +241,9 @@ export async function createShopOrder(prisma, {
           totalCents,
           creditsApplied,
           giftCardApplied,
-          giftCardId: giftCardApplied > 0 ? card.id : null,
+          giftCardId,
           fulfillmentType,
-          shippingName: shipping?.name || null,
-          shippingAddress1: shipping?.address1 || null,
-          shippingAddress2: shipping?.address2 || null,
-          shippingCity: shipping?.city || null,
-          shippingState: shipping?.state || null,
-          shippingZip: shipping?.zip || null,
-          shippingCountry: shipping?.country || "US",
-          shippingPhone: shipping?.phone || null,
-          shippingEmail: shipping?.email || null,
+          ...shippingData,
           stripePaymentId: null,
           // Only a server-verified zero balance is paid without a PaymentIntent.
           paymentStatus: totalCents === 0 ? "PAID" : "PENDING",
@@ -180,34 +253,21 @@ export async function createShopOrder(prisma, {
       const created = [];
       for (const line of lines) {
         created.push(await tx.shopOrderItem.create({ data: { orderId: order.id, productId: line.productId, quantity: line.quantity, priceCents: line.priceCents, variant: line.variant } }));
-        if (line.tracked) {
-          const res = await tx.shopProduct.updateMany({ where: { id: line.productId, stockCount: { gte: line.quantity } }, data: { stockCount: { decrement: line.quantity } } });
-          if (res.count !== 1) throw new OrderError("OUT_OF_STOCK", 409, "An item just sold out.");
-        }
       }
-      if (creditsApplied > 0) {
-        // CreditEvent.orderId points at food orders; the shop order rides in metadata.
-        await spendCreditInTx(tx, { userId, amountCents: creditsApplied, orderId: null, now, description: `Credits applied to shop order ${orderNumber}`, metadata: { shopOrderId: order.id } });
-      }
-      if (giftCardApplied > 0) {
-        const res = await tx.giftCard.updateMany({ where: { id: card.id, status: "ACTIVE", balanceCents: { gte: giftCardApplied } }, data: { balanceCents: { decrement: giftCardApplied } } });
-        if (res.count !== 1) throw new OrderError("GIFT_CARD_CHANGED", 409, "That gift card's balance changed. Please try again.");
-        if (card.balanceCents - giftCardApplied === 0) await tx.giftCard.update({ where: { id: card.id }, data: { status: "EXHAUSTED" } });
-      }
+      if (totalCents === 0) await settleSavingsInTx(tx, order, created, now);
       return { ...order, items: created };
     });
   } catch (err) {
-    if (err instanceof CreditShortError) throw new OrderError("CREDIT_SHORT", 409, "Your credit balance changed. Please try again.", { availableCents: err.availableCents });
-    throw err;
+    throw asShortfall(err);
   }
 }
 
 /**
- * Applies more of the member's credit to their unpaid shop order. The spend
- * and the total update share one transaction, and the update is conditional
- * on the order still being PENDING with the credits it had when read, so a
- * repeated or concurrent call can never spend twice. Covering the whole
- * amount makes the order PAID (server-verified zero balance).
+ * Raises the credit recorded on the member's unpaid shop order (nothing is
+ * spent until PAID). The update is conditional on the order still being
+ * PENDING, uncancelled and holding the credit it had when read, so a
+ * repeated or concurrent call can't stack. Covering the whole amount makes
+ * the order PAID and spends in the same transaction (zero balance).
  */
 export async function applyShopCredits(prisma, { orderId, userId, amountCents, now = new Date() }) {
   if (!Number.isInteger(amountCents) || amountCents <= 0) throw new OrderError("AMOUNT_REQUIRED", 400, "amountCents required");
@@ -219,26 +279,27 @@ export async function applyShopCredits(prisma, { orderId, userId, amountCents, n
       if (!isPending(order)) throw notPending();
       const items = await loadItems(tx, orderId);
       const subtotalCents = subtotalOf(items);
-      const room = savingsRoom({ subtotalCents, fulfillmentType: order.fulfillmentType, creditsApplied: order.creditsApplied || 0, giftCardApplied: order.giftCardApplied || 0 });
-      const apply = Math.min(amountCents, room, await availableCredit(tx, userId, now));
+      const already = order.creditsApplied || 0;
+      const room = savingsRoom({ subtotalCents, fulfillmentType: order.fulfillmentType, creditsApplied: already, giftCardApplied: order.giftCardApplied || 0 });
+      const apply = Math.min(amountCents, room, (await availableCredit(tx, userId, now)) - already);
       if (apply <= 0) throw new OrderError("NO_CREDITS_TO_APPLY", 400, "No credits to apply");
 
-      const creditsApplied = (order.creditsApplied || 0) + apply;
+      const creditsApplied = already + apply;
       const totals = shopTotals({ subtotalCents, fulfillmentType: order.fulfillmentType, creditsApplied, giftCardApplied: order.giftCardApplied || 0 });
       if (totals.totalCents > 0 && totals.totalCents < STRIPE_MIN_CHARGE_CENTS) {
         throw new OrderError("AMOUNT_BELOW_MINIMUM", 400, "Card payments must be at least $0.50.", { amountDueCents: totals.totalCents });
       }
+      const paidNow = totals.totalCents === 0;
       const updated = await tx.shopOrder.updateMany({
-        where: { id: orderId, paymentStatus: "PENDING", creditsApplied: order.creditsApplied || 0 },
-        data: { creditsApplied, taxCents: totals.taxCents, totalCents: totals.totalCents, ...(totals.totalCents === 0 ? { paymentStatus: "PAID" } : {}) },
+        where: { id: orderId, paymentStatus: "PENDING", fulfillmentStatus: { not: "CANCELLED" }, creditsApplied: already },
+        data: { creditsApplied, taxCents: totals.taxCents, totalCents: totals.totalCents, ...(paidNow ? { paymentStatus: "PAID" } : {}) },
       });
       if (updated.count !== 1) throw new OrderError("ORDER_CHANGED", 409, "This order just changed. Please try again.");
-      await spendCreditInTx(tx, { userId, amountCents: apply, orderId: null, now, description: `Credits applied to shop order ${order.orderNumber}`, metadata: { shopOrderId: orderId } });
+      if (paidNow) await settleSavingsInTx(tx, { ...order, creditsApplied }, items, now);
       return { creditsApplied: apply, order: await tx.shopOrder.findUnique({ where: { id: orderId } }) };
     });
   } catch (err) {
-    if (err instanceof CreditShortError) throw new OrderError("CREDIT_SHORT", 409, "Your credit balance changed. Please try again.", { availableCents: err.availableCents });
-    throw err;
+    throw asShortfall(err);
   }
 }
 
@@ -267,21 +328,27 @@ export async function createShopPaymentIntent(prisma, stripe, { orderId, custome
   return { clientSecret: pi.client_secret, paymentIntentId: pi.id, amountDueCents: amount };
 }
 
+const LOST_CLAIM = Symbol("lostClaim");
+
 /**
  * Marks the shop order PAID for a verified PaymentIntent: succeeded, exactly
- * the amount due, metadata { shopOrderId: this order, kind: "shop" }.
- * Idempotent: the same PaymentIntent again answers { alreadyPaid: true }.
- * A charge for this order that can't be applied (a stale amount, an order
- * already paid another way) is refunded in full with a support case.
+ * the amount due, metadata { shopOrderId: this order, kind: "shop" }. One
+ * transaction claims PENDING -> PAID and spends the recorded credits, gift
+ * card and stock; any shortfall rolls it all back and the charge is refunded
+ * in FULL with a support case (409 CREDIT_SHORT / GIFT_CARD_CHANGED /
+ * OUT_OF_STOCK, refunded:true). Idempotent: the same PaymentIntent again,
+ * or losing a race to it, answers { alreadyPaid: true } without a refund
+ * (the loser re-reads before refunding, as orders/service.js refundOnFailure).
  */
-export async function confirmShopPayment(prisma, stripe, { orderId, paymentIntentId }) {
+export async function confirmShopPayment(prisma, stripe, { orderId, paymentIntentId, now = new Date() }) {
   const order = await prisma.shopOrder.findUnique({ where: { id: orderId } });
   if (!order) throw new OrderError("NOT_FOUND", 404, "Order not found");
   if (order.paymentStatus === "PAID" && paymentIntentId && order.stripePaymentId === paymentIntentId) {
     return { alreadyPaid: true, order };
   }
   const ours = (md) => md.shopOrderId === order.id && md.kind === SHOP_PAYMENT_KIND;
-  const refund = async (pi, code) => refundUnappliedPayment(prisma, stripe, { pi, orderId: null, userId: order.userId || null, code: `${code} (shop order ${order.orderNumber})` });
+  // orderId here is only the support case's reference: the shop order number.
+  const refund = async (pi, code) => refundUnappliedPayment(prisma, stripe, { pi, orderId: order.orderNumber, userId: order.userId || null, code });
 
   if (!isPending(order)) {
     // Already paid another way, or cancelled: a real charge for this order is returned.
@@ -293,7 +360,8 @@ export async function confirmShopPayment(prisma, stripe, { orderId, paymentInten
     throw new OrderError("ORDER_NOT_PENDING", 409, "This order is already paid or cancelled.", extra);
   }
 
-  const amount = shopAmountDue(order, await loadItems(prisma, orderId));
+  const items = await loadItems(prisma, orderId);
+  const amount = shopAmountDue(order, items);
   let pi;
   try {
     pi = await verifiedIntent(stripe, paymentIntentId, { amount, matchesMetadata: ours });
@@ -305,14 +373,55 @@ export async function confirmShopPayment(prisma, stripe, { orderId, paymentInten
     throw err;
   }
 
-  const settled = await prisma.shopOrder.updateMany({
-    where: { id: orderId, paymentStatus: "PENDING", totalCents: amount },
-    data: { paymentStatus: "PAID", stripePaymentId: pi.id },
-  });
-  const fresh = await prisma.shopOrder.findUnique({ where: { id: orderId } });
-  if (settled.count === 1) return { alreadyPaid: false, order: fresh };
-  // Lost a race: the webhook and the return page both confirmed the same payment.
-  if (fresh.paymentStatus === "PAID" && fresh.stripePaymentId === pi.id) return { alreadyPaid: true, order: fresh };
-  const r = await refund(pi, "ORDER_CHANGED");
-  throw new OrderError("ORDER_CHANGED", 409, "This order changed while it was being paid.", { refunded: r.refunded });
+  try {
+    await prisma.$transaction(async (tx) => {
+      const claimed = await tx.shopOrder.updateMany({
+        where: { id: orderId, paymentStatus: "PENDING", fulfillmentStatus: { not: "CANCELLED" }, totalCents: amount, creditsApplied: order.creditsApplied || 0, giftCardApplied: order.giftCardApplied || 0 },
+        data: { paymentStatus: "PAID", stripePaymentId: pi.id },
+      });
+      if (claimed.count !== 1) throw LOST_CLAIM;
+      await settleSavingsInTx(tx, order, items, now);
+    });
+  } catch (rawErr) {
+    // Re-read first: if this PaymentIntent is already applied (a concurrent
+    // confirm won), keep the money and answer alreadyPaid. If the re-read
+    // fails, refund nothing (refunding an applied charge is the worse error).
+    let fresh;
+    try {
+      fresh = await prisma.shopOrder.findUnique({ where: { id: orderId } });
+    } catch (readErr) {
+      console.error(`[shop] NEEDS_REVIEW: ${pi.id} for ${order.orderNumber} may or may not be applied; not refunded:`, readErr?.message || readErr);
+      throw rawErr === LOST_CLAIM ? new OrderError("ORDER_CHANGED", 409, "This order changed while it was being paid.", { refunded: false }) : rawErr;
+    }
+    if (fresh && fresh.paymentStatus === "PAID" && fresh.stripePaymentId === pi.id) return { alreadyPaid: true, order: fresh };
+    const err = rawErr === LOST_CLAIM ? new OrderError("ORDER_CHANGED", 409, "This order changed while it was being paid.") : asShortfall(rawErr);
+    const code = err instanceof OrderError ? err.code : `SETTLE_FAILED: ${err?.code || err?.name || "Error"}`;
+    const r = await refund(pi, code);
+    if (err instanceof OrderError) {
+      err.extra = { ...err.extra, refunded: r.refunded };
+      throw err;
+    }
+    throw new OrderError("SETTLE_FAILED", 500, "We couldn't finish your order.", { refunded: r.refunded });
+  }
+  return { alreadyPaid: false, order: await prisma.shopOrder.findUnique({ where: { id: orderId } }) };
+}
+
+/**
+ * Staff PATCH /admin/shop/orders/:id may still set paymentStatus or
+ * stripePaymentId (cash and manual corrections, fix round 1 ruling). Each
+ * such change is appended to the order's adminNotes with who made it.
+ * Returns the new adminNotes, or null when nothing payment-related changed.
+ */
+export function paymentAuditNotes(existing, updates, { adminUserId = null, adminRole = null, at = new Date() } = {}) {
+  const changes = [];
+  for (const field of ["paymentStatus", "stripePaymentId"]) {
+    if (updates[field] !== undefined && updates[field] !== existing[field]) {
+      changes.push(`${field} ${existing[field] ?? "none"} -> ${updates[field] ?? "none"}`);
+    }
+  }
+  if (!changes.length) return null;
+  const who = adminUserId ? `admin ${adminUserId}` : "admin (API key or dev)";
+  const line = `[${at.toISOString()}] ${changes.join(", ")} by ${who}${adminRole ? ` (${adminRole})` : ""}`;
+  const base = typeof updates.adminNotes === "string" ? updates.adminNotes : existing.adminNotes;
+  return base ? `${base}\n${line}` : line;
 }

@@ -122,7 +122,7 @@ export default function CheckoutPage() {
               const amountToApply = Math.min(giftCard.balanceCents, orderTotalCents);
               setGiftCardApplied({
                 id: giftCard.id,
-                code: giftCard.code,
+                code: pendingCode.trim(), // the API takes the code, never a bare id
                 balanceCents: giftCard.balanceCents,
                 amountToApply,
               });
@@ -218,7 +218,7 @@ export default function CheckoutPage() {
       const amountToApply = Math.min(giftCard.balanceCents, orderTotalCents - creditsToApply);
       setGiftCardApplied({
         id: giftCard.id,
-        code: giftCard.code,
+        code: giftCardCode.trim(), // the API takes the code, never a bare id
         balanceCents: giftCard.balanceCents,
         amountToApply,
       });
@@ -272,7 +272,7 @@ export default function CheckoutPage() {
             items: items.map((item) => ({ productId: item.id, quantity: item.quantity, variant: item.variant })),
             fulfillmentType: "SHIPPING",
             creditsToApply,
-            giftCardId: giftCardApplied?.id ?? null,
+            giftCardCode: giftCardApplied?.code ?? null,
             shipping: {
               name: shippingName,
               email: shippingEmail,

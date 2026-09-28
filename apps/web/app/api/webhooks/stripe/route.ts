@@ -105,6 +105,7 @@ async function handlePaymentSucceeded(paymentIntent: Stripe.PaymentIntent) {
   const result = await confirmFromWebhook(paymentIntent, { baseUrl: API_BASE_URL, serviceKey: process.env.ADMIN_API_KEY || null });
   if (result.handled) {
     if (result.ok) console.log(`${result.handled} payment ${paymentIntent.id} confirmed via webhook`);
+    else if (result.code === 'ADMIN_API_KEY_MISSING') console.error(`Stripe webhook: ADMIN_API_KEY is not set; cannot confirm ${result.handled} payment ${paymentIntent.id}. Asking Stripe to retry.`);
     else console.error(`Failed to confirm ${result.handled} payment ${paymentIntent.id}:`, result.status, result.code);
     if (result.retry) throw new RetryableWebhookError(`${result.handled} confirm failed with ${result.status}`);
   }

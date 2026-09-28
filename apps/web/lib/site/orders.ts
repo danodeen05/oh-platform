@@ -205,13 +205,16 @@ export type ShopOrderRequest = {
   shipping?: Record<string, string | undefined> | null;
   locationId?: string | null;
   creditsToApply?: number;
-  giftCardId?: string | null;
+  /** The gift card's code (the credential); a bare id is not accepted. */
+  giftCardCode?: string | null;
 };
 
 /**
  * POST /shop/orders (Task D10a): an unpaid shop order priced by the server.
  * The owner is the verified member (Clerk fetch) or the guest session
  * (x-guest-session in opts.headers). A zero amount due comes back PAID.
+ * Savings are recorded here and spent only when the order is paid, and the
+ * same cart for the same owner reuses its unpaid order (fix round 1).
  */
 export function createShopOrder(body: ShopOrderRequest, opts?: CallOptions) {
   return call<ShopOrder>("/shop/orders", "POST", body, opts);
@@ -251,7 +254,8 @@ export function isRetryableFailure(res: { ok: boolean; status: number; error?: O
  * `retry: true` means the webhook must answer 5xx so Stripe delivers again.
  * The group confirm needs no key: it is verified against Stripe; a service
  * key, when configured, is sent anyway. The shop and gift card confirms
- * need it (ADMIN_API_KEY).
+ * need it (ADMIN_API_KEY): a missing key, or a 401/403 from those confirms,
+ * is `retry: true` so a charged payment is never silently dropped.
  */
 export async function confirmFromWebhook(
   paymentIntent: { id: string; metadata?: Record<string, string> | null },
@@ -264,12 +268,16 @@ export async function confirmFromWebhook(
   if (md.kind === "group" && md.groupCode) {
     handled = "group";
     res = await groupConfirmPayment(md.groupCode, paymentIntent.id, call);
-  } else if (md.kind === "shop" && md.shopOrderId) {
-    handled = "shop";
-    res = await shopConfirmPayment(md.shopOrderId, paymentIntent.id, call);
-  } else if (md.type === "gift_card") {
-    handled = "gift_card";
-    res = await giftCardConfirmPayment(paymentIntent.id, call);
+  } else if ((md.kind === "shop" && md.shopOrderId) || md.type === "gift_card") {
+    // Service-only confirms (fix round 1): without ADMIN_API_KEY they can only
+    // fail, so ask Stripe to retry instead of dropping a charged payment.
+    handled = md.kind === "shop" ? "shop" : "gift_card";
+    if (!opts.serviceKey) return { handled, ok: false, retry: true, status: 0, code: "ADMIN_API_KEY_MISSING" };
+    res = handled === "shop" ? await shopConfirmPayment(md.shopOrderId, paymentIntent.id, call) : await giftCardConfirmPayment(paymentIntent.id, call);
+    // 401/403 here means the key doesn't match the API's, not a verified refusal.
+    if (!res.ok && (res.status === 401 || res.status === 403)) {
+      return { handled, ok: false, retry: true, status: res.status, code: res.error?.code ?? "SERVICE_KEY_REJECTED" };
+    }
   } else if (md.orderId && md.source !== "shop" && md.source !== "gift_card") {
     handled = "order";
     res = await confirmPayment(md.orderId, paymentIntent.id, call);

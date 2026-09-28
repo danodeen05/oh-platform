@@ -90,6 +90,7 @@ import { registerGiftCardRoutes } from "./orders/gift-card-routes.js";
 import { registerPurchaseIntentRoute, giftDiscountFields, notAllowedForGiftCards } from "./orders/purchase-intents.js";
 import { registerEventCheckRoute, createIpLimiter, eventRateLimit, eventDuplicateBody } from "./orders/event-routes.js";
 import { registerShopOrderRoutes } from "./shop/routes.js";
+import { paymentAuditNotes } from "./shop/service.js";
 import { challengeCreateData } from "./membership/challenge-input.js";
 import { registerSupportRoutes } from "./support/routes.js";
 import { sendGraphMail } from "./email/graph.js";
@@ -3799,7 +3800,8 @@ app.post("/orders/event", { preHandler: eventRateLimit(cnyEventLimiter) }, async
     data: {
       name: guestName || "CNY Guest",
       phone: normalizePhoneE164(guestPhone) || null,
-      sessionToken: `cny-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      // Proof of this order on the event page (D10a), so unguessable.
+      sessionToken: `cny-${crypto.randomBytes(24).toString("base64url")}`,
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
     },
   });
@@ -4963,7 +4965,7 @@ app.post("/challenges", async (req, reply) => {
   const challenge = await prisma.challenge.create({ data });
   const name = data.name;
 
-  console.log(`🎯 Challenge created: ${name}`);
+  console.log(`Challenge created: ${name}`);
   return challenge;
 });
 
@@ -4987,7 +4989,7 @@ app.patch("/challenges/:id", async (req, reply) => {
     },
   });
 
-  console.log(`🎯 Challenge updated: ${challenge.name}`);
+  console.log(`Challenge updated: ${challenge.name}`);
   return challenge;
 });
 
@@ -12027,6 +12029,14 @@ app.patch("/admin/shop/orders/:id", async (req, reply) => {
           data[field] = updates[field];
         }
       }
+    }
+
+    // Manual payment corrections stay possible here, but are recorded with who made them (D10a fix round 1).
+    if (updates.paymentStatus !== undefined || updates.stripePaymentId !== undefined) {
+      const existing = await prisma.shopOrder.findUnique({ where: { id } });
+      if (!existing) return reply.status(404).send({ error: "Order not found" });
+      const notes = paymentAuditNotes(existing, updates, { adminUserId: req.adminUserId || null, adminRole: req.adminRole || null });
+      if (notes) data.adminNotes = notes;
     }
 
     // Auto-set timestamps based on status changes

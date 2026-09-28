@@ -11,7 +11,7 @@ import { makeMemoryPrisma } from "../../__tests__/helpers/prisma-memory.js";
 import { fakeStripe } from "../../orders/__tests__/fixtures.js";
 import { registerShopOrderRoutes } from "../routes.js";
 import { registerPurchaseIntentRoute } from "../../orders/purchase-intents.js";
-import { shopTotals, shopAmountDue, applyShopCredits } from "../service.js";
+import { shopTotals, shopAmountDue, applyShopCredits, paymentAuditNotes } from "../service.js";
 
 const NOW = new Date("2026-10-01T12:00:00-06:00");
 const DAY = 24 * 60 * 60 * 1000;
@@ -51,7 +51,7 @@ function seedShop(extra = {}) {
   });
 }
 
-async function buildApp(prisma = seedShop(), stripe = fakeStripe()) {
+async function buildApp(prisma = seedShop(), stripe = fakeStripe(), { clock = () => NOW } = {}) {
   const app = Fastify({ logger: false });
   const paidCalls = [];
   const { shopOrderAccess } = await registerShopOrderRoutes(app, {
@@ -59,7 +59,7 @@ async function buildApp(prisma = seedShop(), stripe = fakeStripe()) {
     stripe,
     customerAuth: fakeCustomerAuth,
     onShopOrderPaid: async (order) => paidCalls.push(order.id),
-    now: () => NOW,
+    now: clock,
   });
   registerPurchaseIntentRoute(app, { prisma, stripe, customerAuth: fakeCustomerAuth, shopOrderAccess });
   await app.ready();
@@ -71,6 +71,17 @@ const LINES = [{ productId: "bowl", quantity: 1, priceCents: 1 }, { productId: "
 async function createOrder(app, headers = as("u1"), extra = {}) {
   const res = await app.inject({ method: "POST", url: "/shop/orders", headers, payload: { items: LINES, fulfillmentType: "SHIPPING", subtotalCents: 1, totalCents: 1, ...extra } });
   return res;
+}
+
+async function payIntent(app, stripe, order, headers = as("u1")) {
+  const res = await app.inject({ method: "POST", url: "/create-payment-intent", headers, payload: { kind: "shop_order", shopOrderId: order.id } });
+  const id = res.json().id;
+  stripe.intents[id].status = "succeeded";
+  return id;
+}
+
+async function confirm(app, order, paymentIntentId, headers = as("u1")) {
+  return app.inject({ method: "POST", url: `/shop/orders/${order.id}/confirm-payment`, headers, payload: { paymentIntentId } });
 }
 
 describe("shop totals", () => {
@@ -93,7 +104,7 @@ describe("POST /shop/orders", () => {
     assert.equal(order.totalCents, 4900 + 899 + 392);
     assert.equal(order.paymentStatus, "PENDING");
     assert.equal(order.userId, "u1");
-    assert.equal((await prisma.shopProduct.findUnique({ where: { id: "p_bowl" } })).stockCount, 4);
+    assert.equal((await prisma.shopProduct.findUnique({ where: { id: "p_bowl" } })).stockCount, 5, "no stock moves until PAID");
   });
 
   test("refuses client payment fields (paymentStatus, stripePaymentId) with 400", async () => {
@@ -115,23 +126,55 @@ describe("POST /shop/orders", () => {
     assert.equal(guest.json().creditsApplied, 0, "a guest can't spend a member's credit");
   });
 
-  test("credits come from the member's unexpired lots, in the same transaction", async () => {
+  test("credits are capped by the member's unexpired lots and recorded; the order total is net of them", async () => {
     const { app, prisma } = await buildApp();
     const res = await createOrder(app, as("u1"), { creditsToApply: 1000 });
     const order = res.json();
     assert.equal(order.creditsApplied, 1000);
     assert.equal(order.taxCents, Math.round(3900 * 0.08));
     assert.equal(order.totalCents, 4900 + 899 + 312 - 1000);
-    assert.equal((await prisma.creditLot.findUnique({ where: { id: "lot1" } })).remainingCents, 2000);
-    const events = await prisma.creditEvent.findMany();
-    assert.equal(events.length, 1);
-    assert.deepEqual(events[0].metadata, { shopOrderId: order.id });
+    assert.equal((await prisma.creditLot.findUnique({ where: { id: "lot1" } })).remainingCents, 3000, "recorded, not spent");
+    assert.equal((await createOrder(app, as("u1"), { creditsToApply: 99999, items: [{ productId: "bowl", quantity: 3 }] })).json().creditsApplied, 3000, "capped by the lots");
+  });
+
+  test("an abandoned order spends nothing: no credit, no gift card balance, no stock", async () => {
+    const prisma = seedShop({ giftCards: [{ id: "gc1", code: "AAAA-BBBB-CCCC-DDDD", amountCents: 1000, balanceCents: 1000, status: "ACTIVE" }] });
+    const { app } = await buildApp(prisma);
+    const order = (await createOrder(app, as("u1"), { creditsToApply: 1000, giftCardCode: "aaaabbbbccccdddd" })).json();
+    assert.equal(order.paymentStatus, "PENDING");
+    assert.equal(order.creditsApplied, 1000);
+    assert.equal(order.giftCardApplied, 1000);
+    assert.equal((await prisma.creditLot.findUnique({ where: { id: "lot1" } })).remainingCents, 3000);
+    assert.equal((await prisma.giftCard.findUnique({ where: { id: "gc1" } })).balanceCents, 1000);
+    assert.equal((await prisma.shopProduct.findUnique({ where: { id: "p_bowl" } })).stockCount, 5);
+    assert.equal((await prisma.creditEvent.findMany()).length, 0);
+  });
+
+  test("a bare gift card id is not accepted (the code is the credential)", async () => {
+    const prisma = seedShop({ giftCards: [{ id: "gc1", code: "AAAA-BBBB-CCCC-DDDD", amountCents: 1000, balanceCents: 1000, status: "ACTIVE" }] });
+    const { app } = await buildApp(prisma);
+    assert.equal((await createOrder(app, as("u1"), { giftCardId: "gc1" })).json().giftCardApplied, 0);
+    assert.equal((await createOrder(app, as("u2"), { giftCardCode: "NOPE" })).statusCode, 400);
+  });
+
+  test("reloading checkout reuses the owner's unpaid order for the same cart and savings", async () => {
+    // Real clock: the in-memory store stamps createdAt with the wall clock, and reuse is limited to a day.
+    const { app, prisma } = await buildApp(seedShop({ creditLots: [{ id: "lot1", userId: "u1", source: "CASHBACK", amountCents: 3000, remainingCents: 3000, expiresAt: new Date(Date.now() + 30 * DAY) }] }), fakeStripe(), { clock: () => new Date() });
+    const a = (await createOrder(app, as("u1"), { creditsToApply: 500 })).json();
+    const b = (await createOrder(app, as("u1"), { creditsToApply: 500, shipping: { name: "New Name" } })).json();
+    assert.equal(b.id, a.id);
+    assert.equal(b.shippingName, "New Name");
+    const c = (await createOrder(app, as("u1"), { creditsToApply: 600 })).json();
+    assert.notEqual(c.id, a.id, "different savings: a new order");
+    const d = (await createOrder(app, as("u2"), { creditsToApply: 500 })).json();
+    assert.notEqual(d.id, a.id, "another owner never shares an order");
+    assert.equal((await prisma.shopOrder.findMany()).length, 3);
   });
 
   test("savings that cover everything make the order PAID (server-verified zero balance)", async () => {
     const prisma = seedShop({ giftCards: [{ id: "gc1", code: "AAAA-BBBB-CCCC-DDDD", amountCents: 10000, balanceCents: 10000, status: "ACTIVE" }] });
     const { app, paidCalls } = await buildApp(prisma);
-    const res = await createOrder(app, as("u2"), { giftCardId: "gc1" });
+    const res = await createOrder(app, as("u2"), { giftCardCode: "AAAA-BBBB-CCCC-DDDD" });
     const order = res.json();
     assert.equal(order.totalCents, 0);
     assert.equal(order.giftCardApplied, 4900 + 899);
@@ -222,7 +265,7 @@ describe("POST /shop/orders/:id/confirm-payment", () => {
   test("another order's PaymentIntent, or an unfinished one, doesn't pay", async () => {
     const { app, stripe, prisma } = await buildApp();
     const order = (await createOrder(app)).json();
-    const other = (await createOrder(app)).json();
+    const other = (await createOrder(app, as("u1"), { creditsToApply: 100 })).json();
     const otherPi = await paidIntent(app, stripe, other);
     const pending = (await app.inject({ method: "POST", url: "/create-payment-intent", headers: as("u1"), payload: { kind: "shop_order", shopOrderId: order.id } })).json().id;
     for (const paymentIntentId of [otherPi, pending, "pi_missing"]) {
@@ -292,9 +335,7 @@ describe("POST /shop/orders/:id/apply-credits", () => {
     const row = await prisma.shopOrder.findUnique({ where: { id: order.id } });
     assert.equal(row.creditsApplied, 3000, "the lot only held 3000; the second call found nothing left");
     assert.ok(row.creditsApplied <= room);
-    const lot = await prisma.creditLot.findUnique({ where: { id: "lot1" } });
-    assert.equal(lot.remainingCents, 0);
-    assert.equal(3000 - lot.remainingCents, row.creditsApplied, "spent exactly what the order records");
+    assert.equal((await prisma.creditLot.findUnique({ where: { id: "lot1" } })).remainingCents, 3000, "recorded, spent only at PAID");
     assert.equal(row.totalCents, shopAmountDue(row, await prisma.shopOrderItem.findMany({ where: { orderId: order.id } })));
   });
 
@@ -333,5 +374,114 @@ describe("POST /shop/orders/:id/apply-credits", () => {
     const again = await app.inject({ method: "POST", url: `/shop/orders/${order.id}/apply-credits`, headers: as("u1"), payload: { amountCents: 9000 } });
     assert.equal(again.statusCode, 409);
     assert.equal((await prisma.creditLot.findUnique({ where: { id: "lot1" } })).remainingCents, 9000 - 5799);
+  });
+});
+
+describe("fix round 1: savings and stock are spent only when the order becomes PAID", () => {
+  test("confirm spends the recorded credits, gift card and stock exactly once", async () => {
+    const prisma = seedShop({ giftCards: [{ id: "gc1", code: "AAAA-BBBB-CCCC-DDDD", amountCents: 1000, balanceCents: 1000, status: "ACTIVE" }] });
+    const { app, stripe } = await buildApp(prisma);
+    const order = (await createOrder(app, as("u1"), { creditsToApply: 1000, giftCardCode: "AAAA-BBBB-CCCC-DDDD" })).json();
+    const pi = await payIntent(app, stripe, order);
+    assert.equal(stripe.created[0].amount, order.totalCents);
+    assert.equal((await confirm(app, order, pi)).statusCode, 200);
+    assert.equal((await confirm(app, order, pi, SERVICE)).json().alreadyPaid, true);
+    assert.equal((await prisma.creditLot.findUnique({ where: { id: "lot1" } })).remainingCents, 2000);
+    const card = await prisma.giftCard.findUnique({ where: { id: "gc1" } });
+    assert.deepEqual([card.balanceCents, card.status], [0, "EXHAUSTED"]);
+    assert.equal((await prisma.shopProduct.findUnique({ where: { id: "p_bowl" } })).stockCount, 4);
+    const events = await prisma.creditEvent.findMany();
+    assert.equal(events.length, 1);
+    assert.deepEqual(events[0].metadata, { shopOrderId: order.id });
+    assert.equal(stripe.refundCalls.length, 0);
+  });
+
+  test("credits short at confirm: 409 CREDIT_SHORT, a FULL refund, the order stays PENDING and nothing is spent", async () => {
+    const { app, stripe, prisma, paidCalls } = await buildApp();
+    const order = (await createOrder(app, as("u1"), { creditsToApply: 2000 })).json();
+    const pi = await payIntent(app, stripe, order);
+    await prisma.creditLot.update({ where: { id: "lot1" }, data: { remainingCents: 500 } }); // spent elsewhere meanwhile
+    const res = await confirm(app, order, pi);
+    assert.equal(res.statusCode, 409);
+    assert.equal(res.json().error, "CREDIT_SHORT");
+    assert.equal(res.json().refunded, true);
+    assert.equal(stripe.refundCalls.length, 1);
+    assert.deepEqual(Object.keys(stripe.refundCalls[0][0]), ["payment_intent"], "full refund: no amount");
+    const row = await prisma.shopOrder.findUnique({ where: { id: order.id } });
+    assert.equal(row.paymentStatus, "PENDING");
+    assert.equal((await prisma.creditLot.findUnique({ where: { id: "lot1" } })).remainingCents, 500);
+    assert.equal((await prisma.shopProduct.findUnique({ where: { id: "p_bowl" } })).stockCount, 5, "stock rolled back too");
+    const cases = await prisma.supportCase.findMany();
+    assert.equal(cases.length, 1);
+    assert.match(cases[0].summary, new RegExp(order.orderNumber));
+    await new Promise((r) => setImmediate(r));
+    assert.deepEqual(paidCalls, []);
+  });
+
+  test("stock short at confirm: 409 OUT_OF_STOCK and a full refund", async () => {
+    const { app, stripe, prisma } = await buildApp();
+    const order = (await createOrder(app)).json();
+    const pi = await payIntent(app, stripe, order);
+    await prisma.shopProduct.update({ where: { id: "p_bowl" }, data: { stockCount: 0 } });
+    const res = await confirm(app, order, pi);
+    assert.equal(res.statusCode, 409);
+    assert.equal(res.json().error, "OUT_OF_STOCK");
+    assert.equal(res.json().refunded, true);
+    assert.equal((await prisma.shopOrder.findUnique({ where: { id: order.id } })).paymentStatus, "PENDING");
+  });
+
+  test("gift card spent elsewhere before confirm: 409 GIFT_CARD_CHANGED and a full refund", async () => {
+    const prisma = seedShop({ giftCards: [{ id: "gc1", code: "AAAA-BBBB-CCCC-DDDD", amountCents: 1000, balanceCents: 1000, status: "ACTIVE" }] });
+    const { app, stripe } = await buildApp(prisma);
+    const order = (await createOrder(app, as("u2"), { giftCardCode: "AAAA-BBBB-CCCC-DDDD" })).json();
+    const pi = await payIntent(app, stripe, order, as("u2"));
+    await prisma.giftCard.update({ where: { id: "gc1" }, data: { balanceCents: 200 } });
+    const res = await confirm(app, order, pi, as("u2"));
+    assert.deepEqual([res.statusCode, res.json().error, res.json().refunded], [409, "GIFT_CARD_CHANGED", true]);
+    assert.equal((await prisma.giftCard.findUnique({ where: { id: "gc1" } })).balanceCents, 200);
+  });
+
+  test("two concurrent confirms of the same PaymentIntent: PAID once, spent once, no refund, one paid effect", async () => {
+    const { app, stripe, prisma, paidCalls } = await buildApp();
+    const order = (await createOrder(app, as("u1"), { creditsToApply: 1000 })).json();
+    const pi = await payIntent(app, stripe, order);
+    const [a, b] = await Promise.all([confirm(app, order, pi), confirm(app, order, pi, SERVICE)]);
+    assert.deepEqual([a.statusCode, b.statusCode], [200, 200], a.body + b.body);
+    assert.deepEqual([a.json().alreadyPaid, b.json().alreadyPaid].sort(), [false, true]);
+    assert.equal((await prisma.creditLot.findUnique({ where: { id: "lot1" } })).remainingCents, 2000);
+    assert.equal(stripe.refundCalls.length, 0);
+    await new Promise((r) => setImmediate(r));
+    assert.deepEqual(paidCalls, [order.id]);
+  });
+
+  test("two different succeeded PaymentIntents confirmed at once: spent exactly once, at most one refunded", async () => {
+    const { app, stripe, prisma } = await buildApp();
+    const order = (await createOrder(app, as("u1"), { creditsToApply: 1000 })).json();
+    const pi1 = await payIntent(app, stripe, order);
+    const pi2 = await payIntent(app, stripe, order);
+    const results = await Promise.all([confirm(app, order, pi1), confirm(app, order, pi2)]);
+    assert.deepEqual(results.map((r) => r.statusCode).sort(), [200, 409]);
+    const row = await prisma.shopOrder.findUnique({ where: { id: order.id } });
+    assert.equal(row.paymentStatus, "PAID");
+    assert.equal((await prisma.creditLot.findUnique({ where: { id: "lot1" } })).remainingCents, 2000);
+    assert.equal(stripe.refundCalls.length, 1);
+    assert.notEqual(stripe.refundCalls[0][0].payment_intent, row.stripePaymentId, "the applied charge is never refunded");
+  });
+});
+
+describe("admin payment corrections are recorded (fix round 1)", () => {
+  test("paymentAuditNotes appends who changed paymentStatus / stripePaymentId, and nothing otherwise", () => {
+    const at = new Date("2026-10-01T18:00:00Z");
+    const existing = { paymentStatus: "PENDING", stripePaymentId: null, adminNotes: "called customer" };
+    assert.equal(paymentAuditNotes(existing, { fulfillmentStatus: "SHIPPED" }, { at }), null);
+    assert.equal(paymentAuditNotes(existing, { paymentStatus: "PENDING" }, { at }), null);
+    assert.equal(
+      paymentAuditNotes(existing, { paymentStatus: "PAID" }, { adminUserId: "user_abc", adminRole: "manager", at }),
+      "called customer\n[2026-10-01T18:00:00.000Z] paymentStatus PENDING -> PAID by admin user_abc (manager)",
+    );
+    assert.equal(
+      paymentAuditNotes({ paymentStatus: "PAID", stripePaymentId: "pi_1" }, { paymentStatus: "REFUNDED", stripePaymentId: null, adminNotes: "cash refund" }, { adminRole: "owner", at }),
+      "cash refund\n[2026-10-01T18:00:00.000Z] paymentStatus PAID -> REFUNDED, stripePaymentId pi_1 -> none by admin (API key or dev) (owner)",
+    );
   });
 });

@@ -149,6 +149,20 @@ describe("gift card purchase integrity (Task D10a)", () => {
     assert.equal((await prisma.giftCard.findMany({ where: { stripePaymentId: piId } })).length, 1);
   });
 
+  test("an anonymous purchase's late page gets its card only by naming the same recipient", async () => {
+    const stripe = fakeStripe();
+    const { app } = await buildApp(stripe);
+    const piId = (await app.inject({ method: "POST", url: "/create-payment-intent", payload: { kind: "gift_card", amountCents: 3000, recipientEmail: "Rae@x.com" } })).json().id;
+    stripe.intents[piId].status = "succeeded";
+    const hook = await app.inject({ method: "POST", url: "/gift-cards/confirm-payment", headers: { "x-admin-api-key": "svc" }, payload: { paymentIntentId: piId } });
+    assert.equal(hook.statusCode, 200);
+    const bare = await app.inject({ method: "POST", url: "/gift-cards", payload: { amountCents: 3000, stripePaymentId: piId } });
+    assert.equal(bare.statusCode, 409, "a PaymentIntent id alone never returns the code");
+    const named = await app.inject({ method: "POST", url: "/gift-cards", payload: { amountCents: 3000, stripePaymentId: piId, recipientEmail: "rae@x.com" } });
+    assert.equal(named.statusCode, 200);
+    assert.equal(named.json().id, hook.json().giftCardId);
+  });
+
   test("the webhook confirm issues nothing for an unpaid or non-gift-card PaymentIntent", async () => {
     const stripe = fakeStripe({ pi_open: { status: "requires_payment_method", amount: 2500, metadata: { type: "gift_card", amountCents: "2500" } }, pi_food: { status: "succeeded", amount: 2500, metadata: { orderId: "o1" } } });
     const { app, prisma } = await buildApp(stripe);

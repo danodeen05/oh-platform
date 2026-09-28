@@ -2,6 +2,7 @@
  * Shop order routes (moved out of index.js in Task D10a).
  *
  *   POST  /shop/orders                       unpaid, server-priced order for the verified member or guest session
+ *                                            (savings recorded, spent only when PAID; fix round 1)
  *   PATCH /shop/orders/:id                   staff fulfillment fields only (console-guard STAFF)
  *   POST  /shop/orders/:id/apply-credits     member credit on an UNPAID order (console-guard OWNER)
  *   POST  /shop/orders/:id/confirm-payment   verified PaymentIntent -> PAID (owner, guest session, or the webhook's ADMIN_API_KEY)
@@ -94,7 +95,8 @@ export async function registerShopOrderRoutes(app, { prisma, stripe, customerAut
           shipping: body.shipping || null,
           locationId: typeof body.locationId === "string" ? body.locationId : null,
           creditsToApply: body.creditsToApply,
-          giftCardId: body.giftCardId || null,
+          // A gift card is named by its code (the secret), never a bare id.
+          giftCardCode: typeof body.giftCardCode === "string" ? body.giftCardCode : null,
           now: now(),
         });
       } catch (err) {
@@ -162,7 +164,7 @@ export async function registerShopOrderRoutes(app, { prisma, stripe, customerAut
       if (typeof paymentIntentId !== "string" || !paymentIntentId) return reply.status(400).send({ error: "PAYMENT_INTENT_REQUIRED" });
       let result;
       try {
-        result = await confirmShopPayment(prisma, stripe, { orderId: order.id, paymentIntentId });
+        result = await confirmShopPayment(prisma, stripe, { orderId: order.id, paymentIntentId, now: now() });
       } catch (err) {
         return sendError(reply, err);
       }
