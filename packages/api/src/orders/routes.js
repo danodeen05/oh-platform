@@ -17,6 +17,7 @@
  */
 import { orderOwnerId } from "../auth/customer.js";
 import { onOrderCompleted as engineOnOrderCompleted } from "../membership/engine.js";
+import { canSeeFullOrder, safeOrderView } from "./order-view.js";
 import {
   quoteOrder,
   createOrder,
@@ -92,11 +93,31 @@ export async function registerOrderRoutes(app, {
   stripe,
   customerAuth,
   kioskAuth,
+  checkAdminAuth,
   isDineInOrdersEnabled = () => true,
   effects,
   onOrderCompleted = engineOnOrderCompleted,
   now = () => new Date(),
 }) {
+  /**
+   * Task A8b, fix round 2: `POST /orders/:id/confirm-payment` and
+   * `PATCH /orders/:id` are public (both are hit before/without a session in
+   * some flows - a Stripe redirect return, a guest checkout, the webhook)
+   * and used to return the full order, including `user`/`guest` contact
+   * fields, to anyone who could produce a valid request. Same rule as
+   * `GET /orders/:id` (`orders/order-view.js`): the verified owner, staff,
+   * or a kiosk device for the order's own location see the full order;
+   * everyone else gets `safeOrderView`.
+   */
+  async function viewerCanSeeFull(req, order) {
+    return canSeeFullOrder(req, order, {
+      checkAdminAuth,
+      kioskDeviceFor: kioskAuth ? kioskAuth.deviceFor : undefined,
+      resolveCustomer: (r) => customerAuth.resolve(r),
+      findGuestBySessionToken: (token) => prisma.guest.findUnique({ where: { sessionToken: token } }),
+    });
+  }
+
   /** The kiosk device behind a `Bearer kiosk_...` key; a bad key is a 401 (never falls through to customer). */
   async function kioskDevice(req, reply) {
     const token = bearerOf(req);
@@ -232,7 +253,9 @@ export async function registerOrderRoutes(app, {
       // Safe for any caller: nothing is marked PAID unless Stripe (or a
       // server-verified zero balance) says so. The Stripe webhook uses it too.
       const result = await markPaid(prisma, stripe, { orderId: id, paymentIntentId, now: now() }, effects);
-      return { ...(await fullOrder(id)), alreadyPaid: result.alreadyPaid };
+      const full = await fullOrder(id);
+      const view = (await viewerCanSeeFull(req, full)) ? full : safeOrderView(full);
+      return { ...view, alreadyPaid: result.alreadyPaid };
     } catch (err) {
       return sendOrderError(reply, err);
     }
@@ -311,7 +334,7 @@ export async function registerOrderRoutes(app, {
     if (status === "COMPLETED" && current.status !== "COMPLETED") {
       await onOrderCompleted(prisma, { orderId: id, now: now() });
     }
-    return order;
+    return (await viewerCanSeeFull(req, order)) ? order : safeOrderView(order);
   });
 
   app.post("/kiosk/orders/payment-intent", async (req, reply) => {

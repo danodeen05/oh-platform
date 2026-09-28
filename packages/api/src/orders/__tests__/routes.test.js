@@ -4,6 +4,7 @@ import Fastify from "fastify";
 import { registerOrderRoutes } from "../routes.js";
 import { registerStatusDemoGuard } from "../../demo/status-demo.js";
 import { seed, fakeStripe, fakeEffects, NOW, CLASSIC_BOWL } from "./fixtures.js";
+import { createAdminAuth } from "../../auth/admin.js";
 
 const DINE_IN_MESSAGE = "Online ordering is currently unavailable. Please visit us in person.";
 
@@ -35,7 +36,7 @@ const fakeKioskAuth = {
 const auth = (userId) => ({ authorization: `Bearer test:${userId}` });
 const KIOSK = { authorization: "Bearer kiosk_L1" };
 
-async function buildApp({ stripe = fakeStripe(), dineIn = true, orders } = {}) {
+async function buildApp({ stripe = fakeStripe(), dineIn = true, orders, checkAdminAuth } = {}) {
   const prisma = seed({
     orders: orders ?? [
       { id: "o1", userId: "u1", locationId: "L1", tenantId: "t1", totalCents: 1999, subtotalCents: 1817, taxCents: 182, amountDueCents: 1999, creditsAppliedCents: 0, paymentStatus: "PENDING", status: "PENDING_PAYMENT" },
@@ -51,6 +52,7 @@ async function buildApp({ stripe = fakeStripe(), dineIn = true, orders } = {}) {
     stripe,
     customerAuth: fakeCustomerAuth,
     kioskAuth: fakeKioskAuth,
+    checkAdminAuth,
     isDineInOrdersEnabled: () => dineIn,
     effects,
     now: () => NOW,
@@ -58,6 +60,19 @@ async function buildApp({ stripe = fakeStripe(), dineIn = true, orders } = {}) {
   await app.ready();
   return { app, prisma, calls, stripe };
 }
+
+/**
+ * Task A8b, fix round 2: `POST /orders/:id/confirm-payment` and
+ * `PATCH /orders/:id` are public and used to return the full order,
+ * including `user`/`guest` contact fields, to any caller. A real
+ * `createAdminAuth`, configured production-like (NODE_ENV=production, a
+ * set ADMIN_API_KEY), so "staff" is opt-in via `x-admin-api-key` rather
+ * than this worktree's dev-open bypass (no ADMIN_API_KEY -> everyone is
+ * staff) - that bypass is untouched and stays exactly as it was.
+ */
+const PROD_ADMIN_ENV = { NODE_ENV: "production", ADMIN_API_KEY: "admin-key-123" };
+const prodCheckAdminAuth = createAdminAuth({ env: PROD_ADMIN_ENV }).checkAdminAuth;
+const ADMIN = { "x-admin-api-key": "admin-key-123" };
 
 describe("payment integrity", () => {
   test("client cannot mark an order paid without a verified PaymentIntent", async () => {
@@ -250,5 +265,132 @@ describe("refund outcome reaches the caller", () => {
     assert.equal(res.statusCode, 409);
     assert.equal(res.json().error, "CREDIT_SHORT");
     assert.equal(res.json().refunded, true);
+  });
+});
+
+describe("A8b fix round 2: POST /orders/:id/confirm-payment and PATCH /orders/:id gate the response", () => {
+  // prisma-memory ignores `include`/`select` (ORDER_INCLUDE never resolves the
+  // `user` relation against it - see prisma-memory.js's own doc comment), so a
+  // seeded order embeds `user` directly: `findUnique` returns whatever was
+  // stored, same as a real Prisma `include` would attach it. That's enough to
+  // exercise canSeeFullOrder/safeOrderView, which only look at whatever
+  // `order.user` already is - they don't care how it got there.
+  const EMBEDDED_USER = { id: "u1", name: "Dana Kim", email: "u1@x.com", phone: "555-0100", smsOptIn: true };
+
+  function paidOrder(overrides = {}) {
+    return { id: "o1", userId: "u1", locationId: "L1", tenantId: "t1", totalCents: 1999, subtotalCents: 1817, taxCents: 182, amountDueCents: 1999, creditsAppliedCents: 0, paymentStatus: "PENDING", status: "PENDING_PAYMENT", user: EMBEDDED_USER, ...overrides };
+  }
+
+  function paidStripe() {
+    return fakeStripe({ pi_1: { status: "succeeded", amount: 1999, metadata: { orderId: "o1" } } });
+  }
+
+  describe("POST /orders/:id/confirm-payment", () => {
+    test("anonymous gets no contact fields", async () => {
+      const { app } = await buildApp({ stripe: paidStripe(), orders: [paidOrder()] });
+      const res = await app.inject({ method: "POST", url: "/orders/o1/confirm-payment", payload: { paymentIntentId: "pi_1" } });
+      assert.equal(res.statusCode, 200);
+      const body = res.json();
+      assert.equal("user" in body, false);
+      assert.equal(JSON.stringify(body).includes("u1@x.com"), false);
+      // Still fully functional for a caller that only needs status/totals.
+      assert.equal(body.paymentStatus, "PAID");
+      assert.equal(body.totalCents, 1999);
+    });
+
+    test("the owner gets the full record, including user contact fields", async () => {
+      const { app } = await buildApp({ stripe: paidStripe(), orders: [paidOrder()] });
+      const res = await app.inject({ method: "POST", url: "/orders/o1/confirm-payment", headers: auth("u1"), payload: { paymentIntentId: "pi_1" } });
+      assert.equal(res.statusCode, 200);
+      assert.equal(res.json().user.email, "u1@x.com");
+    });
+
+    test("staff (x-admin-api-key, production-like) gets the full record", async () => {
+      const { app } = await buildApp({ stripe: paidStripe(), orders: [paidOrder()], checkAdminAuth: prodCheckAdminAuth });
+      const res = await app.inject({ method: "POST", url: "/orders/o1/confirm-payment", headers: ADMIN, payload: { paymentIntentId: "pi_1" } });
+      assert.equal(res.statusCode, 200);
+      assert.equal(res.json().user.email, "u1@x.com");
+    });
+
+    test("a kiosk device at the order's own location gets the full record", async () => {
+      const { app } = await buildApp({ stripe: paidStripe(), orders: [paidOrder()] });
+      const res = await app.inject({ method: "POST", url: "/orders/o1/confirm-payment", headers: KIOSK, payload: { paymentIntentId: "pi_1" } });
+      assert.equal(res.statusCode, 200);
+      assert.equal(res.json().user.email, "u1@x.com");
+    });
+
+    test("a kiosk device at a DIFFERENT location gets no contact fields", async () => {
+      const { app } = await buildApp({ stripe: paidStripe(), orders: [paidOrder({ locationId: "L2" })] });
+      const res = await app.inject({ method: "POST", url: "/orders/o1/confirm-payment", headers: KIOSK, payload: { paymentIntentId: "pi_1" } });
+      assert.equal(res.statusCode, 200);
+      assert.equal("user" in res.json(), false);
+    });
+
+    test("a signed-in customer who is not the owner gets no contact fields", async () => {
+      const { app } = await buildApp({ stripe: paidStripe(), orders: [paidOrder()] });
+      const res = await app.inject({ method: "POST", url: "/orders/o1/confirm-payment", headers: auth("u2"), payload: { paymentIntentId: "pi_1" } });
+      assert.equal(res.statusCode, 200);
+      assert.equal("user" in res.json(), false);
+    });
+  });
+
+  describe("PATCH /orders/:id", () => {
+    function queuedOrder(overrides = {}) {
+      return paidOrder({ paymentStatus: "PAID", status: "QUEUED", ...overrides });
+    }
+
+    test("anonymous gets no contact fields", async () => {
+      const { app } = await buildApp({ orders: [queuedOrder()] });
+      const res = await app.inject({ method: "PATCH", url: "/orders/o1", payload: { status: "PREPPING" } });
+      assert.equal(res.statusCode, 200);
+      const body = res.json();
+      assert.equal("user" in body, false);
+      assert.equal(JSON.stringify(body).includes("u1@x.com"), false);
+      assert.equal(body.status, "PREPPING");
+    });
+
+    test("the owner gets the full record", async () => {
+      const { app } = await buildApp({ orders: [queuedOrder()] });
+      const res = await app.inject({ method: "PATCH", url: "/orders/o1", headers: auth("u1"), payload: { status: "PREPPING" } });
+      assert.equal(res.statusCode, 200);
+      assert.equal(res.json().user.email, "u1@x.com");
+    });
+
+    test("staff (x-admin-api-key, production-like) gets the full record", async () => {
+      const { app } = await buildApp({ orders: [queuedOrder()], checkAdminAuth: prodCheckAdminAuth });
+      const res = await app.inject({ method: "PATCH", url: "/orders/o1", headers: ADMIN, payload: { status: "PREPPING" } });
+      assert.equal(res.statusCode, 200);
+      assert.equal(res.json().user.email, "u1@x.com");
+    });
+
+    test("a kiosk device at the order's own location gets the full record", async () => {
+      const { app } = await buildApp({ orders: [queuedOrder()] });
+      const res = await app.inject({ method: "PATCH", url: "/orders/o1", headers: KIOSK, payload: { status: "PREPPING" } });
+      assert.equal(res.statusCode, 200);
+      assert.equal(res.json().user.email, "u1@x.com");
+    });
+
+    test("a kiosk device at a DIFFERENT location gets no contact fields", async () => {
+      // The fixture's kiosk device double is pinned to L1; an order at L2 is a location mismatch.
+      const { app } = await buildApp({ orders: [queuedOrder({ locationId: "L2" })] });
+      const res = await app.inject({ method: "PATCH", url: "/orders/o1", headers: KIOSK, payload: { status: "PREPPING" } });
+      assert.equal(res.statusCode, 200);
+      assert.equal("user" in res.json(), false);
+    });
+  });
+
+  // Confirms the dev-open admin bypass (no ADMIN_API_KEY, non-production) is
+  // untouched by this fix: a real `createAdminAuth()` in that mode treats
+  // everyone as staff, same as every other admin-gated route in local dev.
+  // This test uses a real createAdminAuth with no ADMIN_API_KEY and no
+  // NODE_ENV to prove that specific behavior is unchanged, not to rely on it
+  // elsewhere (every other test above sets up production-like staff auth
+  // explicitly via `prodCheckAdminAuth`).
+  test("dev bypass: createAdminAuth() with no ADMIN_API_KEY and no NODE_ENV=production treats an anonymous caller as staff, unchanged", async () => {
+    const devCheckAdminAuth = createAdminAuth({ env: {} }).checkAdminAuth;
+    const { app } = await buildApp({ stripe: paidStripe(), orders: [paidOrder()], checkAdminAuth: devCheckAdminAuth });
+    const res = await app.inject({ method: "POST", url: "/orders/o1/confirm-payment", payload: { paymentIntentId: "pi_1" } });
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.json().user.email, "u1@x.com");
   });
 });

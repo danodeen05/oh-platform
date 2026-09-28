@@ -44,10 +44,37 @@ function generateGroupCode() {
   return code;
 }
 
-function safeUser(u) {
+/**
+ * Task A8b, fix round 2: a group member's full name (or the old, full
+ * email-derived name) was shown to anyone holding the group code, not just
+ * that member. "First name plus last initial" (e.g. "Dana K.") is the
+ * ceiling for everyone except the member's own record.
+ */
+function firstNameLastInitial(fullName) {
+  if (typeof fullName !== "string" || !fullName.trim()) return null;
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0];
+  const lastInitial = parts[parts.length - 1].charAt(0).toUpperCase();
+  return `${parts[0]} ${lastInitial}.`;
+}
+
+/** The email's local part's first token, capitalized, with no domain (the fallback when there's no name). */
+function emailDerivedFirstName(email) {
+  if (typeof email !== "string" || !email.includes("@")) return null;
+  const token = email.split("@")[0].split(/[._+-]/)[0];
+  return token ? token.charAt(0).toUpperCase() + token.slice(1) : null;
+}
+
+/**
+ * `viewerUserId`: the verified caller's own database user id, or null. The
+ * owner of a user record (the caller themself) still sees their own full
+ * name; everyone else gets at most "First L." (or the email-derived first
+ * name, never the full email-derived name).
+ */
+function safeUser(u, viewerUserId = null) {
   if (!u || typeof u !== "object") return u;
-  const fromEmail = typeof u.email === "string" && u.email.includes("@") ? u.email.split("@")[0].split(/[._+-]/)[0] : "";
-  const name = u.name || (fromEmail ? fromEmail.charAt(0).toUpperCase() + fromEmail.slice(1) : null);
+  if (viewerUserId && u.id === viewerUserId) return { id: u.id, name: u.name ?? null };
+  const name = firstNameLastInitial(u.name) ?? emailDerivedFirstName(u.email);
   return { id: u.id, name };
 }
 
@@ -56,23 +83,23 @@ function safeGuest(g) {
   return { id: g.id, name: g.name };
 }
 
-function publicOrder(o) {
+function publicOrder(o, viewerUserId = null) {
   if (!o || typeof o !== "object") return o;
   const out = { ...o };
-  if ("user" in out) out.user = safeUser(out.user);
+  if ("user" in out) out.user = safeUser(out.user, viewerUserId);
   if ("guest" in out) out.guest = safeGuest(out.guest);
   return out;
 }
 
 /** What any holder of the group code may see: no guest session tokens, no member contact details. */
-export function publicGroup(g) {
+export function publicGroup(g, viewerUserId = null) {
   if (!g) return g;
   const out = { ...g };
-  if ("hostUser" in out) out.hostUser = safeUser(out.hostUser);
+  if ("hostUser" in out) out.hostUser = safeUser(out.hostUser, viewerUserId);
   if ("hostGuest" in out) out.hostGuest = safeGuest(out.hostGuest);
-  if (Array.isArray(out.memberUsers)) out.memberUsers = out.memberUsers.map(safeUser);
+  if (Array.isArray(out.memberUsers)) out.memberUsers = out.memberUsers.map((u) => safeUser(u, viewerUserId));
   if (Array.isArray(out.memberGuests)) out.memberGuests = out.memberGuests.map(safeGuest);
-  if (Array.isArray(out.orders)) out.orders = out.orders.map(publicOrder);
+  if (Array.isArray(out.orders)) out.orders = out.orders.map((o) => publicOrder(o, viewerUserId));
   return out;
 }
 
@@ -144,6 +171,15 @@ export async function registerGroupOrderRoutes(app, {
    * A verified member (Clerk) or a verified guest (session token); otherwise
    * a bare body guestId, unverified.
    */
+  /**
+   * The verified caller's own database user id, or null - never fails.
+   * Used only to let a member see their own full name in `safeUser` above;
+   * an unverified caller (or a guest) never gets more than anyone else.
+   */
+  async function viewerUserId(req) {
+    return orderOwnerId(await customerAuth.resolve(req));
+  }
+
   async function actor(req) {
     const who = await customerAuth.resolve(req);
     const userId = orderOwnerId(who);
@@ -195,7 +231,7 @@ export async function registerGroupOrderRoutes(app, {
     return { group, actor: a };
   }
 
-  const fullGroup = async (id) => publicGroup(await prisma.groupOrder.findUnique({ where: { id }, include: GROUP_INCLUDE }));
+  const fullGroup = async (id, viewerId = null) => publicGroup(await prisma.groupOrder.findUnique({ where: { id }, include: GROUP_INCLUDE }), viewerId);
 
   app.post("/group-orders", async (req, reply) => {
     const a = await verifiedActor(req, reply);
@@ -203,7 +239,7 @@ export async function registerGroupOrderRoutes(app, {
     const { locationId, estimatedArrival } = req.body || {};
     const result = await createGroupOrder(prisma, { hostUserId: a.userId, hostGuestId: a.guestId, locationId, estimatedArrival, now: now() });
     if (result.error) return reply.code(result.status).send({ error: result.error });
-    return fullGroup(result.group.id);
+    return fullGroup(result.group.id, a.userId);
   });
 
   app.get("/group-orders/:code", async (req, reply) => {
@@ -213,7 +249,7 @@ export async function registerGroupOrderRoutes(app, {
       await prisma.groupOrder.update({ where: { id: group.id }, data: { status: "CANCELLED" } });
       return reply.code(410).send({ error: "Group order has expired" });
     }
-    return publicGroup(group);
+    return publicGroup(group, await viewerUserId(req));
   });
 
   app.post("/group-orders/:code/join", async (req, reply) => {
@@ -230,7 +266,7 @@ export async function registerGroupOrderRoutes(app, {
     if (a.userId && !ids(group.memberUsers).includes(a.userId)) data.memberUsers = { connect: { id: a.userId } };
     if (!a.userId && a.guestId && !ids(group.memberGuests).includes(a.guestId)) data.memberGuests = { connect: { id: a.guestId } };
     if (Object.keys(data).length) await prisma.groupOrder.update({ where: { id: group.id }, data });
-    return fullGroup(group.id);
+    return fullGroup(group.id, a.userId);
   });
 
   app.patch("/group-orders/:code", async (req, reply) => {
@@ -265,7 +301,7 @@ export async function registerGroupOrderRoutes(app, {
       data.paymentMethod = paymentMethod;
     }
     if (Object.keys(data).length) await prisma.groupOrder.update({ where: { id: group.id }, data });
-    return fullGroup(group.id);
+    return fullGroup(group.id, found.actor.userId);
   });
 
   app.post("/group-orders/:code/orders", async (req, reply) => {
@@ -295,7 +331,7 @@ export async function registerGroupOrderRoutes(app, {
         now: t,
         isDineInOrdersEnabled,
       });
-      return publicOrder(await prisma.order.findUnique({ where: { id: order.id }, include: ORDER_INCLUDE }));
+      return publicOrder(await prisma.order.findUnique({ where: { id: order.id }, include: ORDER_INCLUDE }), a.userId);
     } catch (err) {
       return sendOrderError(reply, err);
     }
@@ -339,7 +375,7 @@ export async function registerGroupOrderRoutes(app, {
     await prisma.groupOrder.update({ where: { id: group.id }, data: { hostUserId: target.userId || null, hostGuestId: target.userId ? null : target.guestId || null } });
     await prisma.order.updateMany({ where: { groupOrderId: group.id }, data: { isGroupHost: false } });
     await prisma.order.update({ where: { id: target.id }, data: { isGroupHost: true } });
-    return fullGroup(group.id);
+    return fullGroup(group.id, found.actor.userId);
   });
 
   app.post("/group-orders/:code/complete", async (req, reply) => {
@@ -351,7 +387,7 @@ export async function registerGroupOrderRoutes(app, {
     if (orders.length === 0) return reply.code(400).send({ error: "No orders in this group" });
 
     if (group.status === "PAID" && orders.every((o) => o.status === "QUEUED" && o.podSelectionMethod === "GROUP_HOST_SELECTED")) {
-      return fullGroup(group.id);
+      return fullGroup(group.id, found.actor.userId);
     }
     if (!orders.every((o) => o.paymentStatus === "PAID")) return reply.code(400).send({ error: "Not all orders are paid" });
 
@@ -377,7 +413,7 @@ export async function registerGroupOrderRoutes(app, {
       await prisma.order.update({ where: { id: order.id }, data });
     }
     console.log(`[Group Order Completed] Code: ${group.code}, Orders: ${orders.length}, Seating Option: ${seatingOption}`);
-    return fullGroup(group.id);
+    return fullGroup(group.id, found.actor.userId);
   });
 
   app.post("/group-orders/:code/payment-intent", async (req, reply) => {
@@ -411,7 +447,8 @@ export async function registerGroupOrderRoutes(app, {
     }
     try {
       const result = await markGroupPaid(prisma, stripe, { groupOrderId: group.id, paymentIntentId, now: now() }, effects);
-      return { alreadyPaid: result.alreadyPaid, orders: (result.orders || []).map(publicOrder), group: await fullGroup(group.id) };
+      const viewerId = await viewerUserId(req);
+      return { alreadyPaid: result.alreadyPaid, orders: (result.orders || []).map((o) => publicOrder(o, viewerId)), group: await fullGroup(group.id, viewerId) };
     } catch (err) {
       return sendOrderError(reply, err);
     }

@@ -306,6 +306,7 @@ await registerOrderRoutes(app, {
   stripe,
   customerAuth,
   kioskAuth,
+  checkAdminAuth,
   isDineInOrdersEnabled,
   effects: orderEffects,
   onOrderCompleted,

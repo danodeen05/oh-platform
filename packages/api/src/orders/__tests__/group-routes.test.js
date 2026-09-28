@@ -8,7 +8,7 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import Fastify from "fastify";
-import { registerGroupOrderRoutes } from "../group-routes.js";
+import { registerGroupOrderRoutes, publicGroup } from "../group-routes.js";
 import { seed, fakeStripe, fakeEffects, NOW, CLASSIC_BOWL } from "./fixtures.js";
 
 const fakeCustomerAuth = {
@@ -42,7 +42,7 @@ const LATER = new Date(NOW.getTime() + 3600000);
 const GROUP = { id: "g1", code: "ABC234", hostUserId: "u1", hostGuestId: null, locationId: "L1", tenantId: "t1", status: "GATHERING", expiresAt: LATER };
 const GUEST_GROUP = { ...GROUP, id: "g2", code: "GST234", hostUserId: null, hostGuestId: "guest1" };
 
-async function buildApp({ stripe = fakeStripe(), dineIn = true, orders = [], groups = [GROUP, GUEST_GROUP] } = {}) {
+async function buildApp({ stripe = fakeStripe(), dineIn = true, orders = [], groups = [GROUP, GUEST_GROUP], users } = {}) {
   const prisma = seed({
     groupOrders: groups.map((g) => ({ ...g })),
     guests: [
@@ -51,6 +51,7 @@ async function buildApp({ stripe = fakeStripe(), dineIn = true, orders = [], gro
       { id: "guest_old", name: "Old", sessionToken: "gs_old", expiresAt: new Date(NOW.getTime() - 1000) },
     ],
     orders,
+    ...(users ? { users } : {}),
   });
   const { calls, effects } = fakeEffects();
   const app = Fastify({ logger: false });
@@ -98,6 +99,74 @@ describe("GET /group-orders/:code", () => {
     const res = await app.inject({ method: "GET", url: "/group-orders/gst234" });
     assert.equal(res.statusCode, 200);
     assert.doesNotMatch(res.body, /gs_pat|gs_sam|sessionToken/);
+  });
+
+  // prisma-memory ignores include/select, so `hostUser` is embedded directly
+  // on the seeded group row - findUnique returns whatever was stored, same
+  // as a real Prisma `include` would attach it (see the routes.test.js
+  // ORDER_INCLUDE comment for the same limitation).
+  test("A8b fix round 2: an anonymous caller sees the host's first name + last initial, not the full name", async () => {
+    const namedGroup = { ...GROUP, hostUser: { id: "u1", name: "Dana Kim", email: "u1@x.com" } };
+    const { app } = await buildApp({ groups: [namedGroup] });
+    const res = await app.inject({ method: "GET", url: "/group-orders/ABC234" });
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.json().hostUser.name, "Dana K.");
+    assert.equal(res.body.includes("u1@x.com"), false);
+    assert.equal(res.body.includes("Dana Kim"), false);
+  });
+
+  test("A8b fix round 2: the host sees their own full name; a different signed-in caller does not", async () => {
+    const namedGroup = { ...GROUP, hostUser: { id: "u1", name: "Dana Kim", email: "u1@x.com" } };
+    const { app } = await buildApp({ groups: [namedGroup] });
+    const asHost = await app.inject({ method: "GET", url: "/group-orders/ABC234", headers: user("u1") });
+    assert.equal(asHost.json().hostUser.name, "Dana Kim");
+    const asOther = await app.inject({ method: "GET", url: "/group-orders/ABC234", headers: user("u2") });
+    assert.equal(asOther.json().hostUser.name, "Dana K.");
+  });
+});
+
+describe("publicGroup / safeUser (A8b fix round 2): first name + last initial is the ceiling; the record's own owner sees their full name", () => {
+  const NAMED_GROUP = {
+    id: "g1",
+    hostUser: { id: "u1", name: "Dana Kim", email: "u1@x.com" },
+    hostGuest: null,
+    memberUsers: [
+      { id: "u1", name: "Dana Kim", email: "u1@x.com" },
+      { id: "u2", name: "Jordan Smith Rivera", email: "u2@x.com" },
+      { id: "u3", name: null, email: "casey.jones@x.com" },
+      { id: "u4", name: "Madonna", email: "m@x.com" },
+    ],
+    memberGuests: [],
+    orders: [{ id: "o1", user: { id: "u2", name: "Jordan Smith Rivera", email: "u2@x.com" }, guest: null }],
+  };
+
+  test("no viewer: first name + last initial for a multi-word name; the email-derived first name (no domain) when there's no name; a single-word name is left as-is", () => {
+    const out = publicGroup(NAMED_GROUP);
+    assert.equal(out.hostUser.name, "Dana K.");
+    assert.equal(out.memberUsers[0].name, "Dana K.");
+    // Uses the FIRST and LAST tokens only, not a middle name.
+    assert.equal(out.memberUsers[1].name, "Jordan R.");
+    // No name at all: the email local part's first token, capitalized, no domain.
+    assert.equal(out.memberUsers[2].name, "Casey");
+    // A single-word name has no last initial to add.
+    assert.equal(out.memberUsers[3].name, "Madonna");
+    assert.equal(out.orders[0].user.name, "Jordan R.");
+  });
+
+  test("the viewer sees their own full name; everyone else's is still truncated", () => {
+    const out = publicGroup(NAMED_GROUP, "u2");
+    assert.equal(out.hostUser.name, "Dana K.");
+    assert.equal(out.memberUsers[0].name, "Dana K.");
+    assert.equal(out.memberUsers[1].name, "Jordan Smith Rivera");
+    assert.equal(out.orders[0].user.name, "Jordan Smith Rivera");
+  });
+
+  test("never leaks email, even for the viewer's own record", () => {
+    const out = publicGroup(NAMED_GROUP, "u1");
+    const json = JSON.stringify(out);
+    assert.equal(json.includes("u1@x.com"), false);
+    assert.equal(json.includes("u2@x.com"), false);
+    assert.equal(json.includes("m@x.com"), false);
   });
 });
 

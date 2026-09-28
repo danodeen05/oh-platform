@@ -116,7 +116,10 @@ function ConfirmationContent() {
         // The server verifies the PaymentIntent and marks the order PAID once
         // (idempotent with the Stripe webhook). The order's owner was set,
         // from the verified session, when it was created.
-        const confirmed = await confirmPayment(orderId, paymentIntentId, { fetcher: api, baseUrl: BASE });
+        // A8b fix round 2: the response is now gated the same way as the GET
+        // above (canSeeFullOrder) - send the same owner/guest identity so
+        // order.user (phone/smsOptIn) and the QR code keep rendering here.
+        const confirmed = await confirmPayment(orderId, paymentIntentId, { fetcher: api, baseUrl: BASE, headers: groupIdentityHeaders(guest) });
 
         if (confirmed.ok) {
           setOrder(confirmed.data);
