@@ -6,7 +6,8 @@
  * one with a code. A `?ref=` referral code is kept for sign-up, as before.
  * `?group=true` (the old "start a group" link) opens the group row ready.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { SitePicture } from "@/components/site/picture/SitePicture";
@@ -16,6 +17,7 @@ import { ClosedPanel } from "@/components/site/order/ClosedPanel";
 import { SITE_IMAGES, type ImageKey } from "@/lib/site/images";
 import { SITE_API_URL, useMemberId, useSiteApi } from "@/lib/site/api";
 import { loadDraft, saveDraft } from "@/lib/site/order-draft";
+import { PENDING_REFERRAL_KEY } from "@/lib/site/referral";
 
 export type LocationCard = {
   id: string;
@@ -45,15 +47,21 @@ export default function LocationSelector({ locations, dineInEnabled }: { locatio
   const [referral, setReferral] = useState(false);
 
   // A referral link (/order?ref=CODE): kept for the account the guest signs up with.
+  // Saved once per page view: once it has been sent after sign-in (lib/site/referral.ts), a
+  // re-render must not put it back.
+  const refParam = search.get("ref");
+  const refSaved = useRef<string | null>(null);
   useEffect(() => {
-    const ref = search.get("ref");
     try {
-      if (ref) localStorage.setItem("pendingReferralCode", ref);
-      setReferral(Boolean(ref || localStorage.getItem("pendingReferralCode")));
+      if (refParam && refSaved.current !== refParam) {
+        refSaved.current = refParam;
+        localStorage.setItem(PENDING_REFERRAL_KEY, refParam);
+      }
+      setReferral(Boolean(localStorage.getItem(PENDING_REFERRAL_KEY)));
     } catch {
       /* storage blocked */
     }
-  }, [search]);
+  }, [refParam, member.userId]);
 
   async function choose(loc: LocationCard) {
     if (groupMode) {
@@ -108,13 +116,17 @@ export default function LocationSelector({ locations, dineInEnabled }: { locatio
       <ul className="m-0 grid list-none gap-4 p-0 md:grid-cols-2">
         {locations.map((loc) => (
           <li key={loc.id}>
-            <button
-              type="button"
+            {/* A real link, so a tap works before the page hydrates; the group mode takes over on click. */}
+            <Link
+              href={`/${locale}/order/location/${encodeURIComponent(loc.id)}`}
               data-location-card={loc.id}
-              onClick={() => choose(loc)}
-              disabled={busy !== null}
+              onClick={(e) => {
+                e.preventDefault();
+                if (busy === null) choose(loc);
+              }}
               aria-describedby={`loc-${loc.id}-status`}
-              className={`group relative block w-full cursor-pointer appearance-none overflow-hidden rounded-[28px] border-0 bg-oh-ink p-0 text-left font-[inherit] disabled:cursor-wait ${FOCUS}`}
+              aria-busy={busy === loc.id ? "true" : undefined}
+              className={`group relative block w-full cursor-pointer overflow-hidden rounded-[28px] bg-oh-ink p-0 text-left no-underline ${FOCUS}`}
             >
               <span className="relative block aspect-[4/3] w-full overflow-hidden [&_img]:h-full [&_img]:w-full [&_img]:object-cover [&_img]:transition-transform [&_img]:duration-700 group-hover:[&_img]:scale-[1.03] motion-reduce:[&_img]:transition-none">
                 <SitePicture image={loc.image} sizes="(min-width: 768px) 440px, 100vw" priority alt={tRoot(SITE_IMAGES[loc.image].alt)} className="block h-full w-full" />
@@ -133,7 +145,7 @@ export default function LocationSelector({ locations, dineInEnabled }: { locatio
                   {busy === loc.id ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent motion-reduce:animate-none" /> : <Icon name="chevron" size={22} />}
                 </span>
               </span>
-            </button>
+            </Link>
           </li>
         ))}
       </ul>

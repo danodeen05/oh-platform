@@ -27,9 +27,18 @@ export type PodChoice = { mode: "best" } | { mode: "pick"; label: string };
 
 export interface DraftSavings {
   useCredits: boolean;
+  /**
+   * How much credit to ask for when `useCredits` is on: the member's balance
+   * when they switched it on. The server applies at most its own per-order
+   * cap (MAX_CREDITS_PER_ORDER_CENTS, shown from the quote's
+   * `maxCreditsCents`), so the client never hard-codes the cap.
+   */
+  creditsCents: number;
   promoCode: string | null;
   giftCardCode: string | null;
   rewardId: string | null;
+  /** A funded meal gift at this location (GET /meal-gifts/next/:locationId), spent at PAID. */
+  mealGiftId: string | null;
 }
 
 export interface DraftOrderRef {
@@ -37,6 +46,10 @@ export interface DraftOrderRef {
   orderNumber: string;
   /** draftSignature() of what the order was created from. */
   signature: string;
+  /** When the order was created (ms since epoch). */
+  createdAt: number;
+  /** The absolute estimatedArrival the order was created with (ISO). */
+  arrivalIso: string | null;
 }
 
 export interface OrderDraft {
@@ -113,7 +126,7 @@ export function emptyDraft(): OrderDraft {
     arrival: null,
     partySize: 1,
     pod: { mode: "best" },
-    savings: { useCredits: false, promoCode: null, giftCardCode: null, rewardId: null },
+    savings: { useCredits: false, creditsCents: 0, promoCode: null, giftCardCode: null, rewardId: null, mealGiftId: null },
     order: null,
   };
 }
@@ -149,11 +162,16 @@ export function parseDraft(raw: string | null | undefined): OrderDraft {
     pod: pod && pod.mode === "pick" && isString(pod.label) ? { mode: "pick", label: pod.label } : { mode: "best" },
     savings: {
       useCredits: savings.useCredits === true,
+      creditsCents: typeof savings.creditsCents === "number" && Number.isInteger(savings.creditsCents) && savings.creditsCents >= 0 ? savings.creditsCents : 0,
       promoCode: isString(savings.promoCode) ? savings.promoCode : null,
       giftCardCode: isString(savings.giftCardCode) ? savings.giftCardCode : null,
       rewardId: isString(savings.rewardId) ? savings.rewardId : null,
+      mealGiftId: isString(savings.mealGiftId) ? savings.mealGiftId : null,
     },
-    order: order && isString(order.id) && isString(order.orderNumber) && isString(order.signature) ? order : null,
+    order:
+      order && isString(order.id) && isString(order.orderNumber) && isString(order.signature) && typeof order.createdAt === "number"
+        ? { id: order.id, orderNumber: order.orderNumber, signature: order.signature, createdAt: order.createdAt, arrivalIso: isString(order.arrivalIso) ? order.arrivalIso : null }
+        : null,
   };
 }
 
@@ -273,13 +291,14 @@ export function bowlComplete(draft: OrderDraft, steps: MenuStep[]): boolean {
   return steps.every((s) => s.sections.every((sec) => sec.selectionMode !== "SINGLE" || !sec.required || Boolean(draft.singles[sec.id])));
 }
 
-/** The savings the API takes, from the draft (credits: up to the per-order cap; the server clamps). */
-export function savingsBody(savings: DraftSavings, maxCreditsCents: number) {
+/** The savings the API takes. Credits ask for the stored balance; the server caps and clamps it. */
+export function savingsBody(savings: DraftSavings) {
   return {
-    useCreditsCents: savings.useCredits ? maxCreditsCents : 0,
+    useCreditsCents: savings.useCredits ? savings.creditsCents : 0,
     promoCode: savings.promoCode || null,
     giftCardCode: savings.giftCardCode || null,
     rewardId: savings.rewardId || null,
+    mealGiftId: savings.mealGiftId || null,
   };
 }
 
@@ -289,6 +308,27 @@ export function savingsBody(savings: DraftSavings, maxCreditsCents: number) {
  */
 export function draftSignature(draft: OrderDraft, lines: OrderLine[]): string {
   return JSON.stringify([draft.locationId, lines, draft.arrival, draft.partySize, draft.pod, draft.savings]);
+}
+
+/** How long an unpaid order made from this draft may be reused (the pod hold is 15 minutes). */
+export const ORDER_REUSE_MS = 10 * 60 * 1000;
+
+/**
+ * May the unpaid order already made from this draft be reused, instead of
+ * cancelled and made again? Only when nothing changed (same signature), it is
+ * recent, its absolute arrival time hasn't passed ("asap" counts as now), and
+ * the arrival choice is still offered. The caller also re-reads the order
+ * (unpaid, still PENDING_PAYMENT) and re-quotes it (same amount due).
+ */
+export function canReuseOrder(ref: DraftOrderRef | null, signature: string, opts: { now: number; arrival: string | null; offered: string[]; canOrder: boolean }): boolean {
+  if (!ref || ref.signature !== signature) return false;
+  if (opts.now - ref.createdAt > ORDER_REUSE_MS || opts.now < ref.createdAt) return false;
+  if (!opts.canOrder || !opts.arrival || !opts.offered.includes(opts.arrival)) return false;
+  if (opts.arrival !== "asap") {
+    const at = ref.arrivalIso ? Date.parse(ref.arrivalIso) : NaN;
+    if (!Number.isFinite(at) || at <= opts.now) return false;
+  }
+  return true;
 }
 
 /** estimatedArrival for POST /orders: now for "asap", else now plus the minutes. */

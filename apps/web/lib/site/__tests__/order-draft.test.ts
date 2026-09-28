@@ -4,6 +4,7 @@ import {
   arrivalIso,
   bowlComplete,
   buildLines,
+  canReuseOrder,
   draftFromOrderItems,
   draftSignature,
   emptyDraft,
@@ -143,16 +144,38 @@ describe("order draft", () => {
   it("maps the API's request fields", () => {
     expect(seatRequest({ mode: "best" })).toEqual({ best: true });
     expect(seatRequest({ mode: "pick", label: "A-03" })).toEqual({ label: "A-03" });
-    expect(savingsBody({ useCredits: true, promoCode: "", giftCardCode: "GC", rewardId: null }, 500)).toEqual({
-      useCreditsCents: 500,
+    // Credits ask for the stored balance; the server applies its own per-order cap.
+    expect(savingsBody({ useCredits: true, creditsCents: 700, promoCode: "", giftCardCode: "GC", rewardId: null, mealGiftId: "mg1" })).toEqual({
+      useCreditsCents: 700,
       promoCode: null,
       giftCardCode: "GC",
       rewardId: null,
+      mealGiftId: "mg1",
     });
+    expect(savingsBody({ useCredits: false, creditsCents: 700, promoCode: null, giftCardCode: null, rewardId: null, mealGiftId: null }).useCreditsCents).toBe(0);
     const now = new Date("2026-11-01T18:00:00Z");
     expect(arrivalIso("asap", now)).toBe("2026-11-01T18:00:00.000Z");
     expect(arrivalIso("30", now)).toBe("2026-11-01T18:30:00.000Z");
     expect(arrivalIso(null, now)).toBeNull();
+  });
+
+  it("reuses an unpaid order only when unchanged, recent, and its arrival still stands", () => {
+    const t0 = Date.parse("2026-09-28T18:00:00Z");
+    const ref = { id: "o1", orderNumber: "N", signature: "sig", createdAt: t0, arrivalIso: "2026-09-28T18:15:00.000Z" };
+    const ok = { now: t0 + 60_000, arrival: "15", offered: ["asap", "15", "30"], canOrder: true };
+    expect(canReuseOrder(ref, "sig", ok)).toBe(true);
+    expect(canReuseOrder(null, "sig", ok)).toBe(false);
+    expect(canReuseOrder(ref, "other", ok), "the cart changed").toBe(false);
+    expect(canReuseOrder(ref, "sig", { ...ok, now: t0 + 11 * 60_000 }), "older than 10 minutes").toBe(false);
+    expect(canReuseOrder(ref, "sig", { ...ok, now: t0 + 16 * 60_000 }), "the arrival time passed").toBe(false);
+    expect(canReuseOrder(ref, "sig", { ...ok, canOrder: false }), "ordering closed").toBe(false);
+    expect(canReuseOrder(ref, "sig", { ...ok, offered: ["asap", "30"] }), "choice no longer offered").toBe(false);
+    expect(canReuseOrder({ ...ref, arrivalIso: null }, "sig", { ...ok, arrival: "asap" })).toBe(true);
+  });
+
+  it("drops a stored order ref from before this format (no createdAt)", () => {
+    const old = parseDraft(JSON.stringify({ v: 1, order: { id: "o1", orderNumber: "N", signature: "s" } }));
+    expect(old.order).toBeNull();
   });
 
   it("places a past order's items back into the builder (reorder)", () => {

@@ -34,6 +34,8 @@ export interface PaymentFormLabels {
   defaultBadge: string;
   saveCard: string;
   failed: string;
+  /** A saved card with no brand. */
+  card: string;
 }
 
 export interface PaymentFormProps {
@@ -229,7 +231,7 @@ export function PaymentForm({
 
   // Get brand display name
   const getBrandDisplay = (brand: string | null) => {
-    if (!brand) return 'Card';
+    if (!brand) return labels?.card || 'Card';
     const brands: Record<string, string> = {
       visa: 'Visa',
       mastercard: 'Mastercard',

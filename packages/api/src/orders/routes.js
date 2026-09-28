@@ -300,6 +300,27 @@ export async function registerOrderRoutes(app, {
     if (status && status !== "CANCELLED" && current.paymentStatus !== "PAID") {
       return reply.code(409).send({ error: "ORDER_NOT_PAID", message: "This order isn't paid yet." });
     }
+    // Task D5 fix round 1: who may change the status.
+    // - CANCELLED: only while unpaid (a paid order is cancelled only through
+    //   the admin full-refund flow), and only by the verified owner (member
+    //   or matching guest session), staff, or a kiosk at the order's location.
+    // - Any other status (the kitchen flow, including COMPLETED, which pays
+    //   cashback): staff or a same-location kiosk only.
+    if (status) {
+      const [admin, device] = await Promise.all([
+        checkAdminAuth ? checkAdminAuth(req) : null,
+        kioskAuth ? kioskAuth.deviceFor(req) : null,
+      ]);
+      const staff = Boolean(admin) || Boolean(device && device.locationId === current.locationId);
+      if (status === "CANCELLED") {
+        if (current.paymentStatus === "PAID") {
+          return reply.code(409).send({ error: "ORDER_PAID", message: "A paid order can only be cancelled with a refund." });
+        }
+        if (!staff && !(await viewerCanSeeFull(req, current))) return reply.code(403).send({ error: "FORBIDDEN", message: "Only the order's owner can cancel it." });
+      } else if (!staff) {
+        return reply.code(403).send({ error: "FORBIDDEN", message: "Only staff can change an order's status." });
+      }
+    }
     // An order can only be claimed by the verified caller, and only if it has no owner yet.
     if (userId) {
       const me = orderOwnerId(await customerAuth.resolve(req));

@@ -83,14 +83,16 @@ export function PayStep({ orderId, orderNumber }: { orderId: string | null; orde
   const api = useSiteApi();
   const member = useMemberId();
   const { guest } = useGuest();
-  const { draft } = useOrderDraft();
+  const { draft, update } = useOrderDraft();
+  // In-flight guard for confirming a payment (a second tap does nothing).
+  const confirming = useRef(false);
   const money = useCallback((c: number) => formatCents(c, locale), [locale]);
   const identity = useMemo(() => (member.signedIn ? {} : groupIdentityHeaders(guest)), [member.signedIn, guest]);
 
   const [order, setOrder] = useState<OrderView | null>(null);
   const [loadState, setLoadState] = useState<"loading" | "ready" | "missing">("loading");
   const [pi, setPi] = useState<PaymentIntentResult | null>(null);
-  const [error, setError] = useState<{ text: string; retry?: boolean } | null>(null);
+  const [error, setError] = useState<{ text: string; retry?: boolean; restart?: boolean } | null>(null);
   const [processing, setProcessing] = useState(false);
   const [saveCard, setSaveCard] = useState(false);
   const [saved, setSaved] = useState<SavedPaymentMethod[]>([]);
@@ -129,6 +131,7 @@ export function PayStep({ orderId, orderNumber }: { orderId: string | null; orde
       const body = res && res.ok ? ((await res.json().catch(() => null)) as OrderView | null) : null;
       if (cancelled) return;
       if (!body) {
+        update((d) => (d.order?.id === orderId ? { ...d, order: null } : d));
         setLoadState("missing");
         return;
       }
@@ -177,11 +180,17 @@ export function PayStep({ orderId, orderNumber }: { orderId: string | null; orde
         finish(order?.orderQrCode);
         return;
       }
-      setError({ text: te(code), retry: code === "GENERIC" || code === "NETWORK_ERROR" || code === "PAYMENTS_UNAVAILABLE" });
+      if (code === "ORDER_CANCELLED" || code === "ORDER_NOT_FOUND" || code === "LEGACY_ORDER") {
+        // This order can't be paid any more: drop it from the draft so the flow makes a fresh one.
+        update((d) => (d.order?.id === orderId ? { ...d, order: null } : d));
+        setError({ text: te(code), restart: true });
+        return;
+      }
+      setError({ text: te(code), retry: code === "GENERIC" || code === "NETWORK_ERROR" || code === "PAYMENTS_UNAVAILABLE" || code === "RATE_LIMITED" });
       return;
     }
     setPi(res.data);
-  }, [orderId, saveCard, api, identity, finish, order?.orderQrCode, te]);
+  }, [orderId, saveCard, api, identity, finish, order?.orderQrCode, te, update]);
 
   useEffect(() => {
     if (!canAct || !customerReady || loadState !== "ready" || returning || done.current) return;
@@ -207,6 +216,16 @@ export function PayStep({ orderId, orderNumber }: { orderId: string | null; orde
   }, [returning, orderId, canAct]);
 
   async function confirmPaid(paymentIntentId: string | null) {
+    if (!orderId || confirming.current) return;
+    confirming.current = true;
+    try {
+      await confirmPaidOnce(paymentIntentId);
+    } finally {
+      confirming.current = false;
+    }
+  }
+
+  async function confirmPaidOnce(paymentIntentId: string | null) {
     if (!orderId) return;
     setProcessing(true);
     setError(null);
@@ -233,7 +252,7 @@ export function PayStep({ orderId, orderNumber }: { orderId: string | null; orde
       </StepSheet>
     );
   }
-  if (loadState === "missing") return <Missing />;
+  if (loadState === "missing") return <Missing restartHref={draft.locationId ? `/${locale}/order/location/${encodeURIComponent(draft.locationId)}?step=arrival` : null} />;
 
   const totals: ReceiptTotals | null = pi
     ? {
@@ -271,6 +290,17 @@ export function PayStep({ orderId, orderNumber }: { orderId: string | null; orde
         error ? (
           <>
             {error.text}
+            {error.restart ? (
+              <>
+                {" "}
+                <a
+                  href={draft.locationId ? `/${locale}/order/location/${encodeURIComponent(draft.locationId)}?step=arrival` : `/${locale}/order`}
+                  className="font-semibold text-oh-cream underline underline-offset-4"
+                >
+                  {t("restart")}
+                </a>
+              </>
+            ) : null}
             {error.retry ? (
               <>
                 {" "}
@@ -357,7 +387,8 @@ export function PayStep({ orderId, orderNumber }: { orderId: string | null; orde
                   cardEnding: (brand, last4) => t("cardEnding", { brand, last4 }),
                   defaultBadge: t("defaultCard"),
                   saveCard: t("saveCard"),
-                  failed: te("PAYMENT_NOT_VERIFIED"),
+                  failed: t("failed"),
+                  card: t("cardGeneric"),
                 }}
               />
             </StripeProvider>
@@ -372,15 +403,15 @@ export function PayStep({ orderId, orderNumber }: { orderId: string | null; orde
   );
 }
 
-function Missing() {
+function Missing({ restartHref = null }: { restartHref?: string | null }) {
   const t = useTranslations("orderFlow.pay");
   const locale = useLocale();
   return (
     <StepSheet step="pay" title={t("missingTitle")} backHref={`/${locale}/order`}>
       <div className="flex flex-col items-start gap-4 rounded-3xl bg-oh-ink p-5">
         <p className="m-0 text-[15px] text-oh-mute">{t("missingBody")}</p>
-        <a href={`/${locale}/order`} className="inline-flex min-h-11 items-center rounded-full border border-oh-stone px-5 text-[15px] font-semibold text-oh-cream no-underline">
-          {t("startOver")}
+        <a href={restartHref || `/${locale}/order`} className="inline-flex min-h-11 items-center rounded-full border border-oh-stone px-5 text-[15px] font-semibold text-oh-cream no-underline">
+          {restartHref ? t("restart") : t("startOver")}
         </a>
       </div>
     </StepSheet>

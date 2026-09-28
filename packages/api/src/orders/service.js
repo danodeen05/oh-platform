@@ -19,7 +19,7 @@
  *  - Cashback and referral payouts are NOT paid here: they happen when the
  *    order reaches COMPLETED (membership/engine.js onOrderCompleted).
  */
-import { priceLines, computeTotals, rewardDiscountCents, bowlCount, spendBaseCents, PricingError } from "./pricing.js";
+import { priceLines, computeTotals, rewardDiscountCents, bowlCount, spendBaseCents, PricingError, MAX_CREDITS_PER_ORDER_CENTS } from "./pricing.js";
 import { availableCredit, spendCreditInTx, CreditShortError } from "../membership/credits.js";
 import { firstUnreleasedItem, redeemReward, onOrderCompleted as engineOnOrderCompleted } from "../membership/engine.js";
 import { canAcceptOrders, validateArrivalTime } from "../utils/operating-hours.js";
@@ -196,6 +196,8 @@ async function buildQuote(prisma, { location, lines, menuItems, userId, promoCod
     taxCents: totals.taxCents,
     totalCents: totals.totalCents,
     amountDueCents: totals.amountDueCents,
+    // The most member credit this order may use (Task D5 fix round 1: the site shows it, never hard-codes it).
+    maxCreditsCents: MAX_CREDITS_PER_ORDER_CENTS,
     warnings,
     // What the order will record and markPaid will spend. A saving that
     // ended up worth $0 (e.g. credits already covered everything) is dropped

@@ -2176,6 +2176,7 @@
     "due": "A pagar",
     "loading": "Cargando",
     "retry": "Intentar de nuevo",
+    "alreadyPaidNotice": "Este pedido ya está pagado. Te llevamos a él.",
     "location": {
       "title": "¿Dónde vas a comer?",
       "lede": "Elige un local. Tu cabina te estará esperando.",
@@ -2284,7 +2285,11 @@
       "remove": "Quitar",
       "giftCard": "Tarjeta de regalo",
       "giftCardPlaceholder": "Código de la tarjeta",
-      "giftCardApplied": "Tarjeta de regalo aplicada"
+      "giftCardApplied": "Tarjeta de regalo aplicada",
+      "mealGift": "Una comida regalada",
+      "mealGiftFrom": "Una comida de parte de {name}",
+      "mealGiftAnonymous": "Una comida de parte de un desconocido",
+      "mealGiftNote": "Alguien pagó por adelantado para la próxima persona aquí. Cubre hasta {amount}."
     },
     "receipt": {
       "title": "Tu pedido",
@@ -2323,7 +2328,10 @@
       "secure": "Stripe procesa los pagos de forma segura.",
       "missingTitle": "Pedido no encontrado",
       "missingBody": "No encontramos este pedido. Quizás fue cancelado.",
-      "startOver": "Empezar un pedido nuevo"
+      "startOver": "Empezar un pedido nuevo",
+      "restart": "Empezar de nuevo",
+      "failed": "El pago no se completó. Inténtalo de nuevo o usa otra tarjeta.",
+      "cardGeneric": "Tarjeta"
     },
     "errors": {
       "DINE_IN_DISABLED": "Los pedidos en línea están en pausa. Visítanos en persona.",

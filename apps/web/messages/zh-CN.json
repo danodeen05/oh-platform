@@ -2176,6 +2176,7 @@
     "due": "应付金额",
     "loading": "加载中",
     "retry": "再试一次",
+    "alreadyPaidNotice": "这笔订单已付款，正在带您前往。",
     "location": {
       "title": "您要在哪里用餐？",
       "lede": "选择门店，您的座舱将为您准备好。",
@@ -2262,7 +2263,7 @@
     },
     "savings": {
       "title": "优惠",
-      "lede": "奖励、积分与代码。付款前都不会扣用。",
+      "lede": "奖励、储值金与代码。付款前都不会扣用。",
       "cta": "前往付款",
       "rewards": "奖励",
       "noRewards": "目前还没有奖励，每笔订单都让您更接近。",
@@ -2272,11 +2273,11 @@
       "rewardUntil": "请于 {date} 前使用",
       "apply": "使用",
       "applied": "已使用",
-      "credits": "积分",
+      "credits": "储值金",
       "creditsBalance": "可用 {amount}",
-      "creditsNone": "目前没有积分",
+      "creditsNone": "目前没有储值金",
       "creditsCap": "每笔订单最多抵扣 {amount}",
-      "creditsUse": "使用我的积分",
+      "creditsUse": "使用我的储值金",
       "creditsExpiring": "{amount} 将于 {date} 到期，会优先扣用。",
       "promo": "优惠码",
       "promoPlaceholder": "输入优惠码",
@@ -2284,7 +2285,11 @@
       "remove": "移除",
       "giftCard": "礼品卡",
       "giftCardPlaceholder": "礼品卡代码",
-      "giftCardApplied": "已使用礼品卡"
+      "giftCardApplied": "已使用礼品卡",
+      "mealGift": "爱心餐",
+      "mealGiftFrom": "{name} 请您吃一餐",
+      "mealGiftAnonymous": "一位陌生人请您吃一餐",
+      "mealGiftNote": "有位客人先为下一位到店的人付了餐费，最多可抵扣 {amount}。"
     },
     "receipt": {
       "title": "您的订单",
@@ -2293,7 +2298,7 @@
       "promo": "优惠",
       "tax": "税费",
       "total": "总计",
-      "credits": "积分",
+      "credits": "储值金",
       "giftCard": "礼品卡",
       "mealGift": "爱心餐",
       "due": "应付金额"
@@ -2323,7 +2328,10 @@
       "secure": "付款由 Stripe 安全处理。",
       "missingTitle": "找不到订单",
       "missingBody": "我们找不到这笔订单，可能已被取消。",
-      "startOver": "重新点餐"
+      "startOver": "重新点餐",
+      "restart": "重新开始",
+      "failed": "付款未成功，请再试一次或改用其他卡。",
+      "cardGeneric": "银行卡"
     },
     "errors": {
       "DINE_IN_DISABLED": "在线点餐暂停中，欢迎亲自到店。",
@@ -2337,7 +2345,7 @@
       "LOCATION_NOT_FOUND": "找不到这家门店。",
       "REWARD_UNAVAILABLE": "这个奖励已无法使用。",
       "REWARD_NOT_APPLICABLE": "这笔订单没有符合此奖励的品项，请移除后再继续。",
-      "CREDIT_SHORT": "您的积分余额已变动，请确认总金额。",
+      "CREDIT_SHORT": "您的储值金余额已变动，请确认总金额。",
       "GIFT_CARD_SHORT": "礼品卡余额已变动，请确认总金额。",
       "MEAL_GIFT_UNAVAILABLE": "这份爱心餐已无法使用。",
       "QUOTE_CHANGED": "总金额已变动，请确认后再试一次。",
@@ -2347,7 +2355,7 @@
       "LEGACY_ORDER": "这笔订单创建于新结账流程之前，请重新点餐。",
       "ORDER_NOT_FOUND": "找不到这笔订单。",
       "PAYMENTS_UNAVAILABLE": "目前无法使用银行卡付款，请稍后再试。",
-      "AMOUNT_BELOW_MINIMUM": "银行卡付款最低为 $0.50。请减少抵扣积分，其余用卡支付。",
+      "AMOUNT_BELOW_MINIMUM": "银行卡付款最低为 $0.50。请减少抵扣储值金，其余用卡支付。",
       "PAYMENT_REQUIRED": "这笔订单需要付款。",
       "PAYMENT_NOT_VERIFIED": "无法确认付款，您不会被重复扣款。",
       "PAYMENT_REFUNDED": "这笔付款已退款，请重新付款。",
@@ -2360,7 +2368,7 @@
     "warnings": {
       "PROMO_INVALID": "这个代码不适用于此订单。",
       "GIFT_CARD_INVALID": "礼品卡代码无效或已无余额。",
-      "CREDITS_REQUIRE_SIGN_IN": "请登录以使用积分。",
+      "CREDITS_REQUIRE_SIGN_IN": "请登录以使用储值金。",
       "MEAL_GIFT_UNAVAILABLE": "这份爱心餐已无法使用。"
     }
   }

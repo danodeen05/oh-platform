@@ -21,6 +21,8 @@ import {
   SIGNED_IN_STEPS,
   arrivalIso,
   bowlComplete,
+  canReuseOrder,
+  clearDraft,
   buildLines,
   draftFromOrderItems,
   draftSignature,
@@ -38,7 +40,7 @@ import { StepSheet, TotalSummary, Spinner } from "./StepSheet";
 import { BowlBuilder } from "./BowlBuilder";
 import { ArrivalPicker } from "./ArrivalPicker";
 import { PodStep } from "./PodStep";
-import { SavingsStep, MAX_CREDITS_CENTS } from "./SavingsStep";
+import { SavingsStep } from "./SavingsStep";
 import { SignInGate } from "./SignInGate";
 import { ClosedPanel } from "./ClosedPanel";
 import { useOrderDraft } from "./useOrderDraft";
@@ -92,6 +94,9 @@ export function OrderFlow({ location, dineInEnabled, groupCode = null, reorderId
   const [flowError, setFlowError] = useState<{ code: string; refunded?: boolean } | null>(null);
   const [busy, setBusy] = useState(false);
   const [closed, setClosed] = useState(!dineInEnabled);
+  const [notice, setNotice] = useState<string | null>(null);
+  // In-flight guard: a second tap while an order is being made does nothing (state updates are too slow for that).
+  const placing = useRef(false);
 
   const loadMenu = useCallback(async () => {
     setMenuError(false);
@@ -155,9 +160,7 @@ export function OrderFlow({ location, dineInEnabled, groupCode = null, reorderId
       if (!old?.items) return;
       update((d) => draftFromOrderItems({ ...d, locationId: location.id }, menu, old.items));
       // The member orders page creates an unpaid copy first; this flow makes its own, so give that one back.
-      if (old.paymentStatus !== "PAID" && old.status === "PENDING_PAYMENT") {
-        api(`${SITE_API_URL}/orders/${encodeURIComponent(reorderId)}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "CANCELLED" }) }).catch(() => undefined);
-      }
+      if (old.paymentStatus !== "PAID" && old.status === "PENDING_PAYMENT") cancelUnpaid(reorderId);
       router.replace(hrefFor("arrival"));
     })();
   }, [reorderId, ready, menu, member.ready, member.signedIn, api, locale, update, location.id, router, hrefFor]);
@@ -168,7 +171,7 @@ export function OrderFlow({ location, dineInEnabled, groupCode = null, reorderId
   const quoteRequest = useMemo(
     () =>
       lines.length && menu && draft.locationId === location.id
-        ? { locationId: location.id, items: quoteLines(lines, menu), ...(withSavings ? savingsBody(draft.savings, MAX_CREDITS_CENTS) : {}) }
+        ? { locationId: location.id, items: quoteLines(lines, menu), ...(withSavings ? savingsBody(draft.savings) : {}) }
         : null,
     [lines, menu, draft.locationId, draft.savings, location.id, withSavings],
   );
@@ -205,43 +208,90 @@ export function OrderFlow({ location, dineInEnabled, groupCode = null, reorderId
     router.push(`/${locale}/group/${encodeURIComponent(groupCode)}`);
   }
 
+  /** The order as the API has it now (owner view), or null when it can't be read. */
+  async function readOrder(id: string): Promise<{ paymentStatus?: string; status?: string; amountDueCents?: number | null; orderQrCode?: string | null } | null> {
+    const res = await api(`${SITE_API_URL}/orders/${encodeURIComponent(id)}`).catch(() => null);
+    return res && res.ok ? await res.json().catch(() => null) : null;
+  }
+
+  /** Gives an unpaid order's pod back. Never sent for a paid order (the API refuses that too: 409 ORDER_PAID). */
+  async function cancelUnpaid(id: string) {
+    await api(`${SITE_API_URL}/orders/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "CANCELLED" }),
+    }).catch(() => undefined);
+  }
+
+  /** The draft's order was paid after all (a webhook finished it): stop, say so, and go to it. */
+  function toPaidOrder(qr: string | null | undefined) {
+    try {
+      if (qr) localStorage.setItem("activeOrderQrCode", qr);
+      clearDraft(window.sessionStorage);
+    } catch {
+      /* storage blocked */
+    }
+    update((d) => ({ ...d, order: null }));
+    setNotice(t("alreadyPaidNotice"));
+    setTimeout(() => router.push(qr ? `/${locale}/order/status?orderQrCode=${encodeURIComponent(qr)}` : `/${locale}/member`), 2200);
+  }
+
   async function placeOrder() {
-    if (!menu) return;
+    if (!menu || placing.current) return;
+    placing.current = true;
     setBusy(true);
     setFlowError(null);
-    const sig = draftSignature(draft, lines);
-    if (draft.order && draft.order.signature === sig) {
-      router.push(payHref(draft.order.id, draft.order.orderNumber));
-      return;
+    try {
+      const sig = draftSignature(draft, lines);
+      const prev = draft.order;
+      if (prev) {
+        const old = await readOrder(prev.id);
+        if (old?.paymentStatus === "PAID") {
+          toPaidOrder(old.orderQrCode);
+          return;
+        }
+        const reusable =
+          old?.status === "PENDING_PAYMENT" &&
+          canReuseOrder(prev, sig, {
+            now: Date.now(),
+            arrival: draft.arrival,
+            offered: availability?.validArrivalTimes || [],
+            canOrder: Boolean(availability?.canOrder),
+          }) &&
+          // Re-quoted: the server still prices this cart and these savings the same.
+          q.quote !== null &&
+          old.amountDueCents === q.quote.amountDueCents;
+        if (reusable) {
+          router.push(payHref(prev.id, prev.orderNumber));
+          return;
+        }
+        // Changed, stale, or no longer payable: give its pod back (only while unpaid) and start fresh.
+        if (old && old.status !== "CANCELLED") await cancelUnpaid(prev.id);
+        update((d) => ({ ...d, order: null }));
+      }
+      const estimatedArrival = arrivalIso(draft.arrival);
+      const res = await createOrder(
+        {
+          locationId: location.id,
+          tenantId: location.tenantId,
+          items: lines,
+          estimatedArrival,
+          seat: seatRequest(draft.pod),
+          partySize: draft.partySize,
+          ...savingsBody(draft.savings),
+        },
+        { fetcher: api, baseUrl: SITE_API_URL },
+      );
+      if (!res.ok) {
+        handleError(res.error, res.status);
+        setBusy(false);
+        return;
+      }
+      update((d) => ({ ...d, order: { id: res.data.id, orderNumber: res.data.orderNumber, signature: sig, createdAt: Date.now(), arrivalIso: estimatedArrival } }));
+      router.push(payHref(res.data.id, res.data.orderNumber));
+    } finally {
+      placing.current = false;
     }
-    if (draft.order) {
-      // The draft changed after an order was made: give its pod back first.
-      await api(`${SITE_API_URL}/orders/${encodeURIComponent(draft.order.id)}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "CANCELLED" }),
-      }).catch(() => undefined);
-      update((d) => ({ ...d, order: null }));
-    }
-    const res = await createOrder(
-      {
-        locationId: location.id,
-        tenantId: location.tenantId,
-        items: lines,
-        estimatedArrival: arrivalIso(draft.arrival),
-        seat: seatRequest(draft.pod),
-        partySize: draft.partySize,
-        ...savingsBody(draft.savings, MAX_CREDITS_CENTS),
-      },
-      { fetcher: api, baseUrl: SITE_API_URL },
-    );
-    if (!res.ok) {
-      handleError(res.error, res.status);
-      setBusy(false);
-      return;
-    }
-    update((d) => ({ ...d, order: { id: res.data.id, orderNumber: res.data.orderNumber, signature: sig } }));
-    router.push(payHref(res.data.id, res.data.orderNumber));
   }
 
   function payHref(id: string, orderNumber: string) {
@@ -306,7 +356,9 @@ export function OrderFlow({ location, dineInEnabled, groupCode = null, reorderId
   const dueCents = q.quote && !q.loading ? q.quote.amountDueCents : null;
   const quoteProblem = q.error && !(withSavings && ["REWARD_NOT_APPLICABLE", "REWARD_UNAVAILABLE"].includes(q.error.code || "")) ? orderErrorCode(q.error.code, q.status) : null;
   const alertCode = flowError?.code || quoteProblem;
-  const alert = alertCode ? (
+  const alert = notice ? (
+    <>{notice}</>
+  ) : alertCode ? (
     <>
       {te(alertCode)}
       {flowError?.refunded ? <> {t("pay.refunded")}</> : null}
@@ -406,6 +458,7 @@ export function OrderFlow({ location, dineInEnabled, groupCode = null, reorderId
     >
       <div key="savings" className="oh-step-in">
         <SavingsStep
+          locationId={location.id}
           userId={member.userId}
           api={api}
           savings={draft.savings}

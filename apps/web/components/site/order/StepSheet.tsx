@@ -47,7 +47,7 @@ export interface StepSheetProps {
 }
 
 export const CTA_CLASS =
-  "flex h-14 min-w-0 flex-1 cursor-pointer appearance-none items-center justify-center gap-2 rounded-full border-0 bg-oh-ember-deep px-6 font-[inherit] text-base font-semibold text-oh-cream no-underline shadow-[0_12px_30px_-14px] shadow-oh-ember-deep transition-[background-color,transform,opacity] duration-200 hover:bg-oh-ember active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oh-cream disabled:cursor-not-allowed disabled:bg-oh-stone disabled:text-oh-mute disabled:shadow-none motion-reduce:transition-none motion-reduce:active:scale-100";
+  "flex h-14 min-w-0 flex-1 cursor-pointer appearance-none items-center justify-center gap-2 rounded-full border-0 bg-oh-ember-deep px-6 font-[inherit] text-base font-semibold text-oh-cream no-underline shadow-[0_12px_30px_-14px] shadow-oh-ember-deep transition-[background-color,transform,opacity,filter] duration-200 hover:brightness-90 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oh-cream disabled:cursor-not-allowed disabled:bg-oh-stone disabled:text-oh-cream/75 disabled:shadow-none motion-reduce:transition-none motion-reduce:active:scale-100";
 
 export function StepSheet({ step, title, lede, backHref, summary, cta, wide = false, alert, children }: StepSheetProps) {
   const t = useTranslations("orderFlow");

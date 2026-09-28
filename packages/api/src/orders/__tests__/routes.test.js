@@ -189,6 +189,15 @@ describe("POST /orders", () => {
   });
 });
 
+describe("POST /orders/quote", () => {
+  test("tells the site the per-order credit cap (Task D5 fix round 1)", async () => {
+    const { app } = await buildApp();
+    const res = await app.inject({ method: "POST", url: "/orders/quote", headers: auth("u1"), payload: { locationId: "L1", items: CLASSIC_BOWL } });
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.json().maxCreditsCents, 500);
+  });
+});
+
 describe("apply-credits is a quote update", () => {
   test("sets creditsAppliedCents for the owner and spends nothing", async () => {
     const { app, prisma } = await buildApp();
@@ -339,19 +348,22 @@ describe("A8b fix round 2: POST /orders/:id/confirm-payment and PATCH /orders/:i
       return paidOrder({ paymentStatus: "PAID", status: "QUEUED", ...overrides });
     }
 
+    // Task D5 fix round 1: status changes are staff/kiosk only, so the
+    // response-gating checks for non-staff callers use a field they may send.
+    const ARRIVAL = { estimatedArrival: "2026-09-27T19:00:00.000Z" };
+
     test("anonymous gets no contact fields", async () => {
       const { app } = await buildApp({ orders: [queuedOrder()] });
-      const res = await app.inject({ method: "PATCH", url: "/orders/o1", payload: { status: "PREPPING" } });
+      const res = await app.inject({ method: "PATCH", url: "/orders/o1", payload: ARRIVAL });
       assert.equal(res.statusCode, 200);
       const body = res.json();
       assert.equal("user" in body, false);
       assert.equal(JSON.stringify(body).includes("u1@x.com"), false);
-      assert.equal(body.status, "PREPPING");
     });
 
     test("the owner gets the full record", async () => {
       const { app } = await buildApp({ orders: [queuedOrder()] });
-      const res = await app.inject({ method: "PATCH", url: "/orders/o1", headers: auth("u1"), payload: { status: "PREPPING" } });
+      const res = await app.inject({ method: "PATCH", url: "/orders/o1", headers: auth("u1"), payload: ARRIVAL });
       assert.equal(res.statusCode, 200);
       assert.equal(res.json().user.email, "u1@x.com");
     });
@@ -373,9 +385,65 @@ describe("A8b fix round 2: POST /orders/:id/confirm-payment and PATCH /orders/:i
     test("a kiosk device at a DIFFERENT location gets no contact fields", async () => {
       // The fixture's kiosk device double is pinned to L1; an order at L2 is a location mismatch.
       const { app } = await buildApp({ orders: [queuedOrder({ locationId: "L2" })] });
-      const res = await app.inject({ method: "PATCH", url: "/orders/o1", headers: KIOSK, payload: { status: "PREPPING" } });
+      const res = await app.inject({ method: "PATCH", url: "/orders/o1", headers: KIOSK, payload: ARRIVAL });
       assert.equal(res.statusCode, 200);
       assert.equal("user" in res.json(), false);
+    });
+  });
+
+  // Task D5 fix round 1: who may change an order's status.
+  describe("PATCH /orders/:id status authority", () => {
+    const unpaid = (o = {}) => paidOrder({ paymentStatus: "PENDING", status: "PENDING_PAYMENT", ...o });
+    const paid = (o = {}) => paidOrder({ paymentStatus: "PAID", status: "QUEUED", ...o });
+    const cancel = { status: "CANCELLED" };
+
+    test("an anonymous caller can't cancel an order", async () => {
+      const { app, prisma } = await buildApp({ orders: [unpaid()], checkAdminAuth: prodCheckAdminAuth });
+      const res = await app.inject({ method: "PATCH", url: "/orders/o1", payload: cancel });
+      assert.ok([401, 403].includes(res.statusCode), `got ${res.statusCode}`);
+      assert.equal((await prisma.order.findUnique({ where: { id: "o1" } })).status, "PENDING_PAYMENT");
+    });
+
+    test("another member can't cancel someone's order", async () => {
+      const { app } = await buildApp({ orders: [unpaid()], checkAdminAuth: prodCheckAdminAuth });
+      const res = await app.inject({ method: "PATCH", url: "/orders/o1", headers: auth("u2"), payload: cancel });
+      assert.equal(res.statusCode, 403);
+    });
+
+    test("a paid order can't be cancelled here, not even by its owner or staff (409 ORDER_PAID)", async () => {
+      for (const headers of [auth("u1"), ADMIN, KIOSK]) {
+        const { app, prisma } = await buildApp({ orders: [paid()], checkAdminAuth: prodCheckAdminAuth });
+        const res = await app.inject({ method: "PATCH", url: "/orders/o1", headers, payload: cancel });
+        assert.equal(res.statusCode, 409);
+        assert.equal(res.json().error, "ORDER_PAID");
+        assert.equal((await prisma.order.findUnique({ where: { id: "o1" } })).status, "QUEUED");
+      }
+    });
+
+    test("the owner cancels their own unpaid order", async () => {
+      const { app, prisma } = await buildApp({ orders: [unpaid()], checkAdminAuth: prodCheckAdminAuth });
+      const res = await app.inject({ method: "PATCH", url: "/orders/o1", headers: auth("u1"), payload: cancel });
+      assert.equal(res.statusCode, 200);
+      assert.equal((await prisma.order.findUnique({ where: { id: "o1" } })).status, "CANCELLED");
+    });
+
+    test("anonymous COMPLETED is refused (it would pay cashback)", async () => {
+      const { app, prisma } = await buildApp({ orders: [paid()], checkAdminAuth: prodCheckAdminAuth });
+      const res = await app.inject({ method: "PATCH", url: "/orders/o1", payload: { status: "COMPLETED" } });
+      assert.equal(res.statusCode, 403);
+      assert.equal((await prisma.order.findUnique({ where: { id: "o1" } })).status, "QUEUED");
+    });
+
+    test("the owner can't move their own order through the kitchen", async () => {
+      const { app } = await buildApp({ orders: [paid()], checkAdminAuth: prodCheckAdminAuth });
+      const res = await app.inject({ method: "PATCH", url: "/orders/o1", headers: auth("u1"), payload: { status: "COMPLETED" } });
+      assert.equal(res.statusCode, 403);
+    });
+
+    test("a kiosk at another location can't change the status", async () => {
+      const { app } = await buildApp({ orders: [paid({ locationId: "L2" })], checkAdminAuth: prodCheckAdminAuth });
+      const res = await app.inject({ method: "PATCH", url: "/orders/o1", headers: KIOSK, payload: { status: "PREPPING" } });
+      assert.equal(res.statusCode, 403);
     });
   });
 

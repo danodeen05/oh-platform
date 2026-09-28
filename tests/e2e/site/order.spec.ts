@@ -54,6 +54,10 @@ let browser: Browser;
 let clerkUserId = "";
 let dbUserId = "";
 let rewardId = "";
+// Fix round 1: a referrer (whose ?ref= code the test user arrives with) and the meal gift they paid forward.
+let referrerId = "";
+let referralCode = "";
+let mealGiftId = "";
 const createdOrders = new Set<string>();
 
 async function clerk(p: string, init: RequestInit = {}) {
@@ -82,6 +86,24 @@ before(async () => {
       { userId: dbUserId, source: "ADMIN", amountCents: 500, remainingCents: 500, expiresAt: new Date(Date.now() + 60 * 864e5), note: tag },
     ],
   });
+  const referrer = await prisma.user.create({ data: { email: `${tag}-referrer@example.com`, name: "Lin Referrer" } });
+  referrerId = referrer.id;
+  referralCode = referrer.referralCode;
+  // A funded gift, dated first so it is the location's next one (FIFO).
+  const gift = await prisma.mealGift.create({
+    data: {
+      giverId: referrerId,
+      locationId: CITY_CREEK,
+      amountCents: 2000,
+      messageFromGiver: "Enjoy the soup.",
+      status: "PENDING",
+      paidAt: new Date(),
+      stripePaymentIntentId: `pi_${tag.replace(/-/g, "_")}_gift`,
+      createdAt: new Date("2020-01-01T00:00:00Z"),
+      expiresAt: new Date(Date.now() + 864e5),
+    },
+  });
+  mealGiftId = gift.id;
 });
 
 after(async () => {
@@ -97,9 +119,18 @@ after(async () => {
     await tryDel("reward", () => prisma.reward.deleteMany({ where: { userId: dbUserId } }));
     await tryDel("userBadge", () => prisma.userBadge.deleteMany({ where: { userId: dbUserId } }));
   }
+  if (mealGiftId) {
+    await tryDel("mealGiftChain", () => prisma.mealGiftChain.deleteMany({ where: { mealGiftId } }));
+    await tryDel("mealGift", () => prisma.mealGift.delete({ where: { id: mealGiftId } }));
+  }
   await tryDel("orderItem", () => prisma.orderItem.deleteMany({ where: { orderId: { in: ids } } }));
   await tryDel("order", () => prisma.order.deleteMany({ where: { id: { in: ids } } }));
   if (dbUserId) await tryDel("user", () => prisma.user.delete({ where: { id: dbUserId } }));
+  if (referrerId) {
+    await tryDel("referrer lots", () => prisma.creditLot.deleteMany({ where: { userId: referrerId } }));
+    await tryDel("referrer events", () => prisma.creditEvent.deleteMany({ where: { userId: referrerId } }));
+    await tryDel("referrer", () => prisma.user.delete({ where: { id: referrerId } }));
+  }
   if (clerkUserId) await clerk(`/users/${clerkUserId}`, { method: "DELETE" }).catch((e) => console.log(`[cleanup] clerk: ${e.message}`));
   await prisma.$disconnect();
   console.log(`E2E_CLEANED ${ids.length} orders`);
@@ -119,6 +150,11 @@ function iphone15(): Parameters<Browser["newContext"]>[0] {
 
 async function newContext(opts: Parameters<Browser["newContext"]>[0] = iphone15()): Promise<BrowserContext> {
   const ctx = await browser.newContext(opts);
+  if (process.env.E2E_DEBUG) {
+    ctx.on("console", (m) => console.log("[console]", m.type(), m.text().slice(0, 300)));
+    ctx.on("weberror", (e) => console.log("[pageerror]", e.error().message.slice(0, 4000)));
+    ctx.on("framenavigated", (f) => f === f.page().mainFrame() && console.log("[nav]", f.url()));
+  }
   ctx.on("response", async (res) => {
     if (res.request().method() === "POST" && new URL(res.url()).pathname === "/orders" && res.ok()) {
       const body = await res.json().catch(() => null);
@@ -129,9 +165,9 @@ async function newContext(opts: Parameters<Browser["newContext"]>[0] = iphone15(
 }
 
 /** Signs the context in as the test user with a one-time Clerk sign-in token. */
-async function signIn(page: Page, locale = "en") {
+async function signIn(page: Page, locale = "en", path = `/${locale}/order`) {
   const { token } = await clerk("/sign_in_tokens", { method: "POST", body: JSON.stringify({ user_id: clerkUserId, expires_in_seconds: 600 }) });
-  await page.goto(`${BASE}/${locale}/order`, { waitUntil: "domcontentloaded", timeout: 120_000 });
+  await page.goto(`${BASE}${path}`, { waitUntil: "domcontentloaded", timeout: 120_000 });
   await page.waitForFunction(() => (window as unknown as { Clerk?: { loaded?: boolean } }).Clerk?.loaded === true, null, { timeout: 60_000 });
   await page.evaluate(async (ticket) => {
     const Clerk = (window as unknown as { Clerk: any }).Clerk;
@@ -139,15 +175,56 @@ async function signIn(page: Page, locale = "en") {
     await Clerk.setActive({ session: si.createdSessionId });
   }, token);
   await page.waitForFunction(() => Boolean((window as unknown as { Clerk?: { user?: unknown } }).Clerk?.user), null, { timeout: 30_000 });
+  // Clerk refreshes the router when the session becomes active; a tap during that refresh is
+  // superseded by it. Let it settle (a real visitor never taps within milliseconds of signing in).
+  await page.waitForLoadState("networkidle", { timeout: 30_000 }).catch(() => undefined);
+  await page.waitForTimeout(1500);
+}
+
+/** Hide the Next.js dev-mode badge (dev servers only) so screenshots show the CTA bar's total. */
+async function hideDevBadge(page: Page) {
+  await page.addInitScript(() => {
+    const hide = () => {
+      const st = document.createElement("style");
+      st.textContent = "nextjs-portal{display:none!important}";
+      document.head?.appendChild(st);
+    };
+    if (document.head) hide();
+    else document.addEventListener("DOMContentLoaded", hide);
+  });
+}
+
+/**
+ * Taps City Creek on the location step. On this dev setup the server renders the shell signed
+ * out while the browser is signed in (Clerk's dev handshake on localhost), so React re-renders
+ * the page after hydration and a tap in that window is lost. Tap again if the bowl step
+ * hasn't opened. (A production server sees the session, so the markup matches.)
+ */
+async function chooseLocation(page: Page) {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await page.locator(`[data-location-card="${CITY_CREEK}"]`).click();
+    const opened = await page.locator('[data-order-step="bowl"]').waitFor({ state: "visible", timeout: 12_000 }).then(() => true, () => false);
+    if (opened) return;
+  }
 }
 
 async function step(page: Page, name: string) {
-  await page.locator(`[data-order-step="${name}"]`).waitFor({ state: "visible", timeout: 60_000 });
+  await page
+    .locator(`[data-order-step="${name}"]`)
+    .waitFor({ state: "visible", timeout: 60_000 })
+    .catch(async (err) => {
+      const onPage = await page.locator("[data-order-step]").getAttribute("data-order-step").catch(() => null);
+      const heading = await page.locator("h1").first().textContent().catch(() => null);
+      throw new Error(`step "${name}" never showed on ${page.url()} (showing: ${onPage}, h1: ${heading}): ${err.message.split("\n")[0]}`);
+    });
 }
 
 /** The page-level checks every step gets. */
 async function checkStep(page: Page, name: string) {
   await step(page, name);
+  // The pay step's CTA changes from its loading state to Pay / Place order once the
+  // PaymentIntent is back; check the settled page, not the swap.
+  if (name === "pay") await page.locator("[data-pay-free], [data-pay-submit]").first().waitFor({ state: "visible", timeout: 60_000 });
   const width = await page.evaluate(() => window.innerWidth);
   const scrollW = await page.evaluate(() => document.documentElement.scrollWidth);
   assert.ok(scrollW <= width, `${name}: document scrollWidth ${scrollW} > ${width}`);
@@ -169,7 +246,7 @@ async function axe(page: Page, name: string) {
       { exclude: [["iframe"], ["[data-clerk-portal]"], [".cl-rootBox"]] },
       { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] } },
     );
-    return r.violations.map((v: any) => `${v.id}: ${v.nodes.slice(0, 3).map((n: any) => n.target.join(" ")).join(" | ")}`);
+    return r.violations.map((v: any) => `${v.id}: ${v.nodes.slice(0, 3).map((n: any) => `${n.target.join(" ")} [${(n.any?.[0]?.message || "").slice(0, 160)}] ${String(n.html).slice(0, 160)}`).join(" | ")}`);
   });
   assert.deepEqual(violations, [], `${name}: axe violations ${JSON.stringify(violations)}`);
 }
@@ -193,7 +270,7 @@ async function cta(page: Page) {
 async function throughArrival(page: Page, locale: string, opts: { soup?: string; check?: boolean } = {}) {
   await page.goto(`${BASE}/${locale}/order`, { waitUntil: "domcontentloaded" });
   if (opts.check) await checkStep(page, "location");
-  await page.locator(`[data-location-card="${CITY_CREEK}"]`).click();
+  await chooseLocation(page);
   if (opts.check) await checkStep(page, "bowl");
   else await step(page, "bowl");
   if (opts.soup) await page.locator(`[data-soup="${opts.soup}"]`).click();
@@ -301,6 +378,7 @@ test("en: a free-bowl reward makes the bowl line $0 and the total the tax alone;
   const ctx = await newContext();
   const page = await ctx.newPage();
   await page.emulateMedia({ reducedMotion: "reduce" });
+  await hideDevBadge(page);
   await signIn(page, "en");
   await throughArrival(page, "en");
   await step(page, "pod");
@@ -376,6 +454,53 @@ test("signed out: the builder is browsable and the arrival step asks to sign in,
   await ctx.close();
 });
 
+test("a ?ref= link is credited once the visitor signs in, then forgotten (fix round 1)", async () => {
+  const ctx = await newContext();
+  const page = await ctx.newPage();
+  // Arrive signed out through a referral link, then sign in on that page.
+  await signIn(page, "en", `/en/order?ref=${encodeURIComponent(referralCode)}`);
+  const deadline = Date.now() + 30_000;
+  let referred: string | null = null;
+  while (Date.now() < deadline && !referred) {
+    referred = (await prisma.user.findUnique({ where: { id: dbUserId } }))?.referredById ?? null;
+    if (!referred) await page.waitForTimeout(500);
+  }
+  assert.equal(referred, referrerId, "the member is attributed to the referrer");
+  await page.waitForFunction(() => localStorage.getItem("pendingReferralCode") === null, null, { timeout: 15_000 });
+  const welcome = await prisma.creditLot.count({ where: { userId: dbUserId, source: "WELCOME" } });
+  assert.equal(welcome, 1, "one welcome credit");
+  await ctx.close();
+});
+
+test("a meal paid forward can be claimed in savings and covers the bowl (fix round 1)", async () => {
+  const ctx = await newContext();
+  const page = await ctx.newPage();
+  await signIn(page, "en");
+  await throughArrival(page, "en");
+  await step(page, "pod");
+  await cta(page);
+  await checkStep(page, "savings");
+  const gift = page.locator(`[data-meal-gift="${mealGiftId}"]`);
+  await gift.waitFor({ state: "visible", timeout: 30_000 });
+  assert.match((await gift.textContent()) || "", /Lin/, "the giver's first name");
+  assert.doesNotMatch((await gift.textContent()) || "", /Referrer/, "never the giver's full name");
+  const quote = page.waitForResponse((r) => r.url().endsWith("/orders/quote") && r.ok() && r.request().postData()?.includes(mealGiftId) === true, { timeout: 60_000 });
+  await gift.click();
+  const q = await (await quote).json();
+  assert.ok(q.discounts.mealGiftCents > 0, "the server applies the gift");
+  await cta(page);
+  await checkStep(page, "pay");
+  const orderId = orderIdFromUrl(page);
+  const pay = (await page.locator("[data-pay-free]").count()) ? "[data-pay-free]" : null;
+  assert.ok(pay, "a $20 gift covers a Classic bowl: nothing left to pay");
+  await page.locator(pay).click();
+  await page.waitForURL(/\/en\/order\/status\?orderQrCode=/, { timeout: 60_000 });
+  const g = await prisma.mealGift.findUnique({ where: { id: mealGiftId } });
+  assert.equal(g?.status, "ACCEPTED");
+  assert.equal(g?.orderId, orderId);
+  await ctx.close();
+});
+
 test("screenshots: every step at 390 (en, zh-TW), 360 (es) and 1440 (en)", { skip: !SHOTS }, async () => {
   const runs: { locale: string; width: number; opts: Parameters<Browser["newContext"]>[0] }[] = [
     { locale: "en", width: 390, opts: iphone15() },
@@ -383,19 +508,12 @@ test("screenshots: every step at 390 (en, zh-TW), 360 (es) and 1440 (en)", { ski
     { locale: "es", width: 360, opts: { ...iphone15(), viewport: { width: 360, height: 780 }, screen: { width: 360, height: 780 } } },
     { locale: "en", width: 1440, opts: { viewport: { width: 1440, height: 900 } } },
   ];
+  // The free-bowl test redeems the seeded reward; the walk gets its own (never redeemed: its orders stay unpaid).
+  const shotRewardId = (await prisma.reward.create({ data: { userId: dbUserId, type: "FREE_BOWL", issuedFor: `${tag}-shots`, windowEndsAt: new Date(Date.now() + 14 * 864e5) } })).id;
   for (const run of runs) {
     const ctx = await newContext(run.opts);
     const page = await ctx.newPage();
-    // Hide the Next.js dev-mode badge (dev servers only) so it doesn't cover the CTA bar's total.
-    await page.addInitScript(() => {
-      const hide = () => {
-        const st = document.createElement("style");
-        st.textContent = "nextjs-portal{display:none!important}";
-        document.head?.appendChild(st);
-      };
-      if (document.head) hide();
-      else document.addEventListener("DOMContentLoaded", hide);
-    });
+    await hideDevBadge(page);
     const shot = async (name: string) => {
       const [w, sw] = await page.evaluate(() => [window.innerWidth, document.documentElement.scrollWidth]);
       assert.ok(sw <= w, `${name} ${run.width} ${run.locale}: scrollWidth ${sw} > ${w}`);
@@ -407,7 +525,7 @@ test("screenshots: every step at 390 (en, zh-TW), 360 (es) and 1440 (en)", { ski
     await step(page, "location");
     await page.waitForTimeout(800);
     await shot("location");
-    await page.locator(`[data-location-card="${CITY_CREEK}"]`).click();
+    await chooseLocation(page);
     await step(page, "bowl");
     await page.locator('[data-item="Soft-Boild Egg"] [data-inc]').click();
     await page.waitForTimeout(1200);
@@ -432,12 +550,12 @@ test("screenshots: every step at 390 (en, zh-TW), 360 (es) and 1440 (en)", { ski
     await page.getByRole("dialog").waitFor({ state: "hidden" });
     await cta(page);
     await step(page, "savings");
-    await page.locator(`[data-reward="${rewardId}"]`).click();
+    await page.locator(`[data-reward="${shotRewardId}"]`).click();
     await page.locator('[data-savings="credits"] [role="switch"]').click();
     await page.waitForTimeout(1500);
     await shot("savings");
     // Take the reward back off so the pay step has a card amount to show.
-    await page.locator(`[data-reward="${rewardId}"]`).click();
+    await page.locator(`[data-reward="${shotRewardId}"]`).click();
     await page.waitForTimeout(1200);
     await cta(page);
     await step(page, "pay");

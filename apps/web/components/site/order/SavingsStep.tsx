@@ -26,13 +26,12 @@ const INPUT =
   "h-12 min-w-0 flex-1 rounded-2xl border border-oh-stone bg-oh-charcoal px-4 font-[inherit] text-base uppercase tracking-wider text-oh-cream placeholder:normal-case placeholder:tracking-normal placeholder:text-oh-mute focus-visible:border-oh-cream focus-visible:outline-none";
 const SMALL_BTN = `h-12 shrink-0 cursor-pointer appearance-none rounded-2xl border border-oh-stone bg-oh-stone px-4 font-[inherit] text-[15px] font-semibold text-oh-cream hover:bg-oh-stone/70 disabled:cursor-not-allowed disabled:opacity-50 ${FOCUS}`;
 
-/** The most member credit one food order may use (MAX_CREDITS_PER_ORDER_CENTS in the API). */
-export const MAX_CREDITS_CENTS = 500;
-
 type Reward = { id: string; type: "FREE_BOWL" | "PREMIUM_ADDON" | string; windowEndsAt: string; active?: boolean };
 type Lot = { remainingCents: number; expiresAt: string };
+type MealGift = { id: string; amountCents: number; messageFromGiver?: string | null; giver?: { name?: string | null } | null };
 
 export interface SavingsStepProps {
+  locationId: string;
   userId: string | null;
   api: SiteFetch;
   savings: DraftSavings;
@@ -42,7 +41,7 @@ export interface SavingsStepProps {
   lines: ReceiptLine[];
 }
 
-export function SavingsStep({ userId, api, savings, onSavings, quote, quoteError, lines }: SavingsStepProps) {
+export function SavingsStep({ locationId, userId, api, savings, onSavings, quote, quoteError, lines }: SavingsStepProps) {
   const t = useTranslations("orderFlow.savings");
   const tw = useTranslations("orderFlow.warnings");
   const te = useTranslations("orderFlow.errors");
@@ -53,6 +52,22 @@ export function SavingsStep({ userId, api, savings, onSavings, quote, quoteError
   const [wallet, setWallet] = useState<{ credits: number; expiring: Lot[]; rewards: Reward[]; loaded: boolean }>({ credits: 0, expiring: [], rewards: [], loaded: false });
   const [promoInput, setPromoInput] = useState(savings.promoCode || "");
   const [giftInput, setGiftInput] = useState(savings.giftCardCode || "");
+  const [mealGift, setMealGift] = useState<MealGift | null>(null);
+
+  // A meal someone paid forward at this location (oldest first, funded, unexpired). It is a
+  // tender the server quotes and spends at PAID, exactly as the old checkout did.
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`${SITE_API_URL}/meal-gifts/next/${encodeURIComponent(locationId)}`, { headers: { "x-tenant-slug": "oh" }, cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((g) => {
+        if (!cancelled) setMealGift(g && typeof g.id === "string" && typeof g.amountCents === "number" ? g : null);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [locationId]);
 
   useEffect(() => {
     if (!userId) return;
@@ -147,7 +162,7 @@ export function SavingsStep({ userId, api, savings, onSavings, quote, quoteError
           <div className="flex items-center gap-3">
             <div className="flex min-w-0 flex-1 flex-col">
               <span className="text-[15px] font-semibold text-oh-cream">{wallet.credits > 0 ? t("creditsBalance", { amount: money(wallet.credits) }) : t("creditsNone")}</span>
-              <span className="text-sm text-oh-mute">{t("creditsCap", { amount: money(MAX_CREDITS_CENTS) })}</span>
+              {typeof quote?.maxCreditsCents === "number" ? <span className="text-sm text-oh-mute">{t("creditsCap", { amount: money(quote.maxCreditsCents as number) })}</span> : null}
             </div>
             <button
               type="button"
@@ -155,7 +170,7 @@ export function SavingsStep({ userId, api, savings, onSavings, quote, quoteError
               aria-checked={savings.useCredits}
               aria-label={t("creditsUse")}
               disabled={wallet.credits <= 0}
-              onClick={() => onSavings({ ...savings, useCredits: !savings.useCredits })}
+              onClick={() => onSavings({ ...savings, useCredits: !savings.useCredits, creditsCents: wallet.credits })}
               className={`relative h-8 w-14 shrink-0 cursor-pointer appearance-none rounded-full border-0 p-0 transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none ${FOCUS} ${
                 savings.useCredits ? "bg-oh-olive" : "bg-oh-stone"
               }`}
@@ -173,6 +188,45 @@ export function SavingsStep({ userId, api, savings, onSavings, quote, quoteError
             </p>
           ) : null}
         </Block>
+
+        {/* A meal paid forward */}
+        {mealGift || savings.mealGiftId ? (
+          <Block name="mealGift" title={t("mealGift")}>
+            {mealGift ? (
+              <button
+                type="button"
+                aria-pressed={savings.mealGiftId === mealGift.id}
+                data-meal-gift={mealGift.id}
+                onClick={() => onSavings({ ...savings, mealGiftId: savings.mealGiftId === mealGift.id ? null : mealGift.id })}
+                className={`flex min-h-16 w-full cursor-pointer appearance-none items-center gap-3 rounded-2xl border px-3 py-2.5 text-left font-[inherit] transition-colors duration-200 motion-reduce:transition-none ${FOCUS} ${
+                  savings.mealGiftId === mealGift.id ? "border-oh-gold bg-oh-stone/60" : "border-oh-stone bg-oh-charcoal hover:border-oh-mute"
+                }`}
+              >
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-oh-stone text-oh-gold">
+                  <Icon name="gift" size={20} />
+                </span>
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="text-[15px] font-semibold text-oh-cream">
+                    {firstName(mealGift.giver?.name) ? t("mealGiftFrom", { name: firstName(mealGift.giver?.name)! }) : t("mealGiftAnonymous")}
+                  </span>
+                  <span className="text-sm text-oh-mute">{t("mealGiftNote", { amount: money(mealGift.amountCents) })}</span>
+                  {mealGift.messageFromGiver ? <span className="mt-1 text-sm italic text-oh-cream/85 [overflow-wrap:anywhere]">{mealGift.messageFromGiver}</span> : null}
+                </span>
+                <span className={`shrink-0 rounded-full px-3 py-1 text-sm font-semibold ${savings.mealGiftId === mealGift.id ? "bg-oh-gold text-oh-charcoal" : "bg-oh-stone text-oh-cream"}`}>
+                  {savings.mealGiftId === mealGift.id ? t("applied") : t("apply")}
+                </span>
+              </button>
+            ) : null}
+            {savings.mealGiftId && (warnings.has("MEAL_GIFT_UNAVAILABLE") || (mealGift && mealGift.id !== savings.mealGiftId)) ? (
+              <p role="alert" className="m-0 mt-2 text-sm text-oh-ember-light">
+                {tw("MEAL_GIFT_UNAVAILABLE")}{" "}
+                <button type="button" onClick={() => onSavings({ ...savings, mealGiftId: null })} className="min-h-11 cursor-pointer appearance-none border-0 bg-transparent p-0 font-[inherit] text-sm font-semibold text-oh-cream underline underline-offset-4">
+                  {t("remove")}
+                </button>
+              </p>
+            ) : null}
+          </Block>
+        ) : null}
 
         {/* Promo */}
         <Block name="promo" title={t("promo")}>
@@ -216,6 +270,12 @@ export function SavingsStep({ userId, api, savings, onSavings, quote, quoteError
       </div>
     </div>
   );
+}
+
+/** The giver's first name only: the gift's recipient never sees a full name. */
+function firstName(name: string | null | undefined): string | null {
+  const first = (name || "").trim().split(/\s+/)[0];
+  return first ? first : null;
 }
 
 function Block({ name, title, children }: { name: string; title: string; children: React.ReactNode }) {

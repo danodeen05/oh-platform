@@ -4481,6 +4481,7 @@
     "due": "Due now",
     "loading": "Loading",
     "retry": "Try again",
+    "alreadyPaidNotice": "This order is already paid. Taking you to it now.",
     "location": {
       "title": "Where are you eating?",
       "lede": "Pick a location. Your pod will be waiting.",
@@ -4589,7 +4590,11 @@
       "remove": "Remove",
       "giftCard": "Gift card",
       "giftCardPlaceholder": "Gift card code",
-      "giftCardApplied": "Gift card applied"
+      "giftCardApplied": "Gift card applied",
+      "mealGift": "A meal paid forward",
+      "mealGiftFrom": "A meal from {name}",
+      "mealGiftAnonymous": "A meal from a stranger",
+      "mealGiftNote": "A guest paid ahead for the next person here. It covers up to {amount}."
     },
     "receipt": {
       "title": "Your order",
@@ -4628,7 +4633,10 @@
       "secure": "Payments are processed securely by Stripe.",
       "missingTitle": "Order not found",
       "missingBody": "We couldn't find this order. It may have been cancelled.",
-      "startOver": "Start a new order"
+      "startOver": "Start a new order",
+      "restart": "Start again",
+      "failed": "The payment didn't go through. Try again or use another card.",
+      "cardGeneric": "Card"
     },
     "errors": {
       "DINE_IN_DISABLED": "Online ordering is paused right now. Come see us in person.",
