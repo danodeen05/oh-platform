@@ -125,11 +125,8 @@ test("a web order paid with the Stripe test card reaches PAID", async () => {
   page.on("pageerror", (err) => console.log("[page error]", err.message));
   await openPaymentPage(page, order, guest);
 
-  // Guest checkout needs a name before the pay button is enabled.
-  const name = page.locator('input[autocomplete="name"], input[name="name"], input[placeholder*="name" i]').first();
-  await name.waitFor({ timeout: 60_000 });
-  await name.fill("E2E Guest");
-
+  // Guest checkout carries the name from the guest session (created with one
+  // in guestOrder()); the pay step no longer asks for it again.
   const frame = await stripeFrame(page);
   await frame.locator('input[name="number"]').fill("4242424242424242");
   await frame.locator('input[name="expiry"]').fill("12 / 34");
@@ -141,7 +138,7 @@ test("a web order paid with the Stripe test card reaches PAID", async () => {
   await pay.waitFor({ timeout: 30_000 });
   await pay.click();
 
-  await page.waitForURL(/\/order\/confirmation/, { timeout: 90_000 });
+  await page.waitForURL(/\/order\/status\?orderQrCode=/, { timeout: 90_000 });
   assert.equal(await paymentStatusOf(order.id), "PAID");
   await page.close();
 });
