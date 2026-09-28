@@ -177,7 +177,8 @@ export function JourneyMap({ comb, title, note, stepperLabel, steps, progress }:
         <p className="m-0 font-body text-xs font-medium uppercase tracking-[0.2em] text-oh-gold">{title}</p>
       </div>
       {Comb ? (
-        <Comb layoutKey={EXPERIENCE_LAYOUT} mode="journey" labels={comb} journeyProgress={value} bowlFrom={progress.order} legend={false} className="xp-map-in lg:mt-4" />
+        // The bowl dot shows from the status step on: the kitchen fires a bowl once its guest checks in.
+        <Comb layoutKey={EXPERIENCE_LAYOUT} mode="journey" labels={comb} journeyProgress={value} bowlFrom={progress.status} legend={false} className="xp-map-in lg:mt-4" />
       ) : (
         // Same box as the map (portrait under 768px, like CombMap's own switch), so nothing shifts when it arrives.
         <div aria-hidden="true" className="aspect-[53/73] w-full rounded-2xl bg-oh-ink md:aspect-[73/53] lg:mt-4" />
@@ -197,7 +198,7 @@ export function JourneyMap({ comb, title, note, stepperLabel, steps, progress }:
           {step?.caption}
         </p>
         <nav aria-label={stepperLabel} className="mt-5 border-t border-oh-stone/70 pt-4">
-          <ol className="m-0 grid list-none grid-cols-6 gap-2 p-0">
+          <ol className="m-0 grid list-none grid-cols-4 gap-x-2 gap-y-3 p-0">
             {steps.map((s, i) => {
               const on = s.key === active;
               return (

@@ -174,22 +174,29 @@ describe("CombMap markup", () => {
   });
 });
 
-// Task G2b (D2 review): no bowl before the guest has ordered.
-describe("CombMap journey: the bowl appears at the order step", () => {
+// Task G2b (D2 review): no bowl before the guest has ordered. Since the
+// 2026-09-28 follow-up (eight steps) the experience map shows it from the
+// status step: the kitchen fires a bowl once its guest checks in, when the
+// phone goes to PREPPING.
+describe("CombMap journey: the bowl appears from bowlFrom (the status step on the experience page)", () => {
   it("hides the bowl marker before bowlFrom and shows it from there", () => {
     const layout = layoutOf("comb-75");
     const steps = stepProgress(layout);
-    const at = (p: number) =>
-      renderToString(<CombMap layoutKey="comb-75" mode="journey" labels={labels} journeyProgress={p} bowlFrom={steps.order} orientation="landscape" />);
-    expect(at(steps.arrive)).not.toContain('data-marker="bowl"');
-    expect(at(steps.arrive)).toContain('data-marker="guest"');
-    expect(at(steps.order)).toContain('data-marker="bowl"');
-    expect(at(steps.settle)).toContain('data-marker="bowl"');
+    const at = (p: number, from: number) =>
+      renderToString(<CombMap layoutKey="comb-75" mode="journey" labels={labels} journeyProgress={p} bowlFrom={from} orientation="landscape" />);
+    expect(at(steps.arrive, steps.order)).not.toContain('data-marker="bowl"');
+    expect(at(steps.arrive, steps.order)).toContain('data-marker="guest"');
+    expect(at(steps.order, steps.order)).toContain('data-marker="bowl"');
+    // The experience page: nothing before check-in, the bowl from status to taste.
+    expect(at(steps.order, steps.status)).not.toContain('data-marker="bowl"');
+    expect(at(steps.settle, steps.status)).not.toContain('data-marker="bowl"');
+    expect(at(steps.status, steps.status)).toContain('data-marker="bowl"');
+    expect(at(steps.panel, steps.status)).toContain('data-marker="bowl"');
   });
 
-  it("the experience page's map passes the order step as bowlFrom", () => {
+  it("the experience page's map passes the status step as bowlFrom", () => {
     const src = readFileSync(path.resolve(__dirname, "../../experience/JourneyMap.tsx"), "utf8");
-    expect(src).toMatch(/mode="journey"[^>]*bowlFrom=\{progress\.order\}/);
+    expect(src).toMatch(/mode="journey"[^>]*bowlFrom=\{progress\.status\}/);
   });
 });
 

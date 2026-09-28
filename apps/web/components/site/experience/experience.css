@@ -64,6 +64,14 @@
   }
 }
 
+/* The status step on phones: the phone preview fills the space beside the pinned map card (StatusPhone
+   sizes it from --xp-card-w), so this step starts at the card's top instead of below it. */
+@media (max-width: 767px) {
+  [data-experience-page] .xp-step.xp-step-status {
+    padding-top: 0.75rem;
+  }
+}
+
 /* ------------------------------------------------------------- motion */
 @media (prefers-reduced-motion: no-preference) {
   @supports (animation-timeline: view()) {
@@ -80,6 +88,11 @@
   }
   [data-experience-page] .xp-bar {
     transition: width 0.5s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  /* The status phone: the live page fades in over its poster once it has loaded. */
+  [data-experience-page] .xp-status-poster,
+  [data-experience-page] .xp-status-frame {
+    transition: opacity 0.45s ease-out;
   }
   [data-experience-page] .xp-chevron {
     transition: transform 0.25s ease-out;

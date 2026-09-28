@@ -1,13 +1,14 @@
 /**
- * Task D2: the experience page's six steps, and the timing of the journey
- * map's dots between them.
+ * Task D2: the experience page's steps, and the timing of the journey map's
+ * dots between them. Eight since the 2026-09-28 follow-up, matching the
+ * business plan: the status page and the panel sit between settle and taste.
  *
  * Client-safe and tiny on purpose: the map island imports this, so it must
  * not pull `@oh/floor-plan` (and the plan model behind it) into the page's
  * first-load JS. The geometry side, where each step puts the dots, is
  * `experience-progress.ts`, used on the server.
  */
-export const EXPERIENCE_STEPS = ["arrive", "order", "walk", "settle", "taste", "leave"] as const;
+export const EXPERIENCE_STEPS = ["arrive", "order", "walk", "settle", "status", "panel", "taste", "leave"] as const;
 export type ExperienceStep = (typeof EXPERIENCE_STEPS)[number];
 
 /** The map on this page is City Creek's comb (75 pods, not mirrored): `LOCATION_LAYOUTS["comb-75"]`. */

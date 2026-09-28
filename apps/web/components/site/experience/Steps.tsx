@@ -1,6 +1,13 @@
 /**
- * Task D2: the six steps of a visit (arrive, order, walk, settle, taste,
- * leave), each one screen tall, with the journey map pinned beside them.
+ * Task D2: the eight steps of a visit (arrive, order, walk, settle, status,
+ * panel, taste, leave; the status and panel steps came with the 2026-09-28
+ * follow-up), each at least one screen tall, with the journey map pinned
+ * beside them.
+ *
+ * The status step has no photo: it holds the real order status page, live
+ * in a phone (StatusPhone, a lazy iframe of the DEMO-PLAN order), and the
+ * page's six features: a SnapRail of cards under the phone on phones, a
+ * list beside it from 768px. It runs taller than one screen on phones.
  *
  * Phones (below 1024px): every step fills the space between the top bar
  * and the dock, full-bleed photo under the copy, and the page snaps step to
@@ -20,29 +27,49 @@
  * `experience-leave.webp`, copied to public/experience/ as AVIF and WebP at
  * 780 and 1200 so the site never loads from the plan's private /plan/ folder.
  */
+import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { buildLayout, LOCATION_LAYOUTS } from "@oh/floor-plan";
 import type { CombMapLabels } from "@/components/site/floor-plan/CombMap";
+import { Icon, type IconName } from "@/components/site/icons/Icon";
 import { Reveal } from "@/components/site/motion/Reveal";
+import { SnapRail } from "@/components/site/motion/SnapRail";
 import { SitePicture } from "@/components/site/picture/SitePicture";
 import { Body, Eyebrow, Title } from "@/components/site/Text";
+import { statusDemoSrc } from "@/lib/plan/statusDemo";
 import { EXPERIENCE_LAYOUT, EXPERIENCE_STEPS, type ExperienceStep } from "@/lib/site/experience";
 import { stepProgress } from "@/lib/site/experience-progress";
 import { SITE_IMAGES, type ImageKey } from "@/lib/site/images";
 import { JourneyMap } from "./JourneyMap";
+import { StatusPhone } from "./StatusPhone";
 
 /** `position` is a full literal class (Tailwind only sees whole strings): on the <picture> for SITE_IMAGES, on the <img> for a plan file. */
 type Photo = { site: ImageKey; position: string } | { own: string; w: number; h: number; position: string };
 
-const PHOTOS: Record<ExperienceStep, Photo> = {
+/** Every step but status (which shows the live phone) has a photo. */
+type PhotoStep = Exclude<ExperienceStep, "status">;
+
+const PHOTOS: Record<PhotoStep, Photo> = {
   arrive: { site: "sign-pool", position: "[&>img]:object-[45%_50%]" },
   order: { site: "storefront-queue", position: "[&>img]:object-[80%_50%]" },
   walk: { site: "hall-rows-alt", position: "[&>img]:object-[50%_50%]" },
   settle: { site: "pod-hatch-c", position: "[&>img]:object-[58%_50%]" },
+  // OpenPod: the hatch open, a glass of water coming through, the bowl already on the counter.
+  panel: { site: "pod-hatch-open", position: "[&>img]:object-[40%_50%]" },
   taste: { site: "bowl-slices-top", position: "[&>img]:object-[50%_40%]" },
   // public/experience/leave-{780,1200}.{avif,webp}: site copies of the plan's experience-leave.webp (the plan's /plan/ folder is private).
   leave: { own: "/experience/leave", w: 1200, h: 900, position: "object-[72%_50%]" },
 };
+
+/** The status page's six features, in the plan's order, each with an in-house icon. */
+const STATUS_FEATURES = [
+  { key: "feed", icon: "flame" },
+  { key: "fortune", icon: "seal" },
+  { key: "more", icon: "plus" },
+  { key: "staff", icon: "bell" },
+  { key: "roast", icon: "spark" },
+  { key: "redStep", icon: "gift" },
+] as const satisfies readonly { key: string; icon: IconName }[];
 
 /** The food step sits on linen (spec: linen panels for food). */
 const LINEN: ReadonlySet<ExperienceStep> = new Set(["taste"]);
@@ -85,6 +112,7 @@ export async function Steps({ locale }: { locale: string }) {
 
       <ol aria-label={t("stepper.label")} className="xp-step-list m-0 list-none p-0 lg:col-start-1 lg:row-start-1">
         {EXPERIENCE_STEPS.map((key, i) => {
+          if (key === "status") return <StatusStep key={key} locale={locale} index={i} total={total} titleSize={titleSize} />;
           const photo = PHOTOS[key];
           const linen = LINEN.has(key);
           const number = String(i + 1).padStart(2, "0");
@@ -153,5 +181,105 @@ export async function Steps({ locale }: { locale: string }) {
         })}
       </ol>
     </div>
+  );
+}
+
+const QUIET_LINK =
+  "inline-flex min-h-11 items-center gap-2 text-base font-semibold text-oh-cream/90 no-underline underline-offset-4 hover:text-oh-cream hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oh-cream";
+
+/**
+ * Step 05, the order status page. Phones: the phone preview first, in the
+ * space beside the pinned map card, with "Try it live" under the card; then
+ * the copy, the features as a SnapRail, and the link to the full page.
+ * From 768px: the interactive phone with the features listed beside it,
+ * then the copy, like the photo steps. The copy stays first in the DOM
+ * (CSS `order` moves it), so it reads first. `#status` (the FAQ's link)
+ * lands on the whole step.
+ */
+async function StatusStep({ locale, index, total, titleSize }: { locale: string; index: number; total: number; titleSize: string }) {
+  const t = await getTranslations("experience.steps.status");
+  const ts = await getTranslations("experience.stepper");
+  const titleId = "step-status-title";
+  const features = STATUS_FEATURES.map((f) => ({ ...f, title: t(`features.${f.key}.title`), body: t(`features.${f.key}.body`) }));
+
+  return (
+    <li
+      id="step-status"
+      data-step="status"
+      tabIndex={-1}
+      aria-labelledby={titleId}
+      className="xp-snap xp-step xp-step-status relative isolate flex flex-col justify-start bg-oh-charcoal outline-none lg:justify-center lg:py-16"
+    >
+      <div id="status" className="flex scroll-mt-[calc(3.5rem+1rem)] flex-col">
+        <Reveal data-step-copy className="relative order-2 w-full px-5 pt-6 sm:px-8 lg:max-w-2xl lg:px-0 lg:pt-8">
+          <div className="flex items-baseline gap-3">
+            <span aria-hidden="true" className="font-display text-2xl leading-none text-oh-gold">
+              {String(index + 1).padStart(2, "0")}
+            </span>
+            <Eyebrow locale={locale} className="text-oh-ember-light">
+              <span className="sr-only">{ts("of", { n: index + 1, total })}: </span>
+              {t("eyebrow")}
+            </Eyebrow>
+          </div>
+          <Title id={titleId} locale={locale} className={`m-0 mt-3 ${titleSize} leading-[1.08]! text-oh-cream`}>
+            {t("title")}
+          </Title>
+          <Body locale={locale} className="m-0 mt-3 max-w-xl text-oh-cream/85 md:text-lg">
+            {t("body")}
+          </Body>
+        </Reveal>
+
+        <div data-status-media className="order-1 px-5 sm:px-8 md:grid md:grid-cols-[auto_minmax(0,1fr)] md:items-center md:gap-8 lg:px-0">
+          <StatusPhone
+            src={statusDemoSrc(locale)}
+            title={t("frame")}
+            poster={t("poster")}
+            posterIcon={<Icon name="bowl" size={40} />}
+            tryLive={t("tryLive")}
+            sheetLabel={t("sheetLabel")}
+            close={t("close")}
+            closeIcon={<Icon name="close" size={20} />}
+          />
+          {/* From 768px: the features, listed beside the phone. */}
+          <ul aria-label={t("featuresLabel")} className="m-0 hidden list-none flex-col gap-5 p-0 md:flex">
+            {features.map((f) => (
+              <li key={f.key} data-status-feature={f.key} className="flex items-start gap-3.5">
+                <span className="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-oh-ink text-oh-gold ring-1 ring-oh-stone/70">
+                  <Icon name={f.icon} size={22} />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-base font-semibold text-oh-cream">{f.title}</span>
+                  <span className="mt-0.5 block text-[0.95rem] leading-snug text-oh-cream/75">{f.body}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Phones: the features as a rail of cards under the phone. */}
+        <div className="order-3 mt-6 md:hidden">
+          {/* Focusable, so a keyboard can scroll the rail (axe: scrollable-region-focusable). */}
+          <SnapRail label={t("featuresLabel")} data-status-rail tabIndex={0} className="pb-1 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oh-cream">
+            {features.map((f) => (
+              <div key={f.key} data-status-feature={f.key} className="flex w-[15.5rem] flex-col gap-2 rounded-2xl border border-oh-stone/70 bg-oh-ink p-4">
+                <span className="text-oh-gold">
+                  <Icon name={f.icon} size={26} />
+                </span>
+                <span className="text-base font-semibold text-oh-cream">{f.title}</span>
+                <span className="text-[0.95rem] leading-snug text-oh-cream/75">{f.body}</span>
+              </div>
+            ))}
+          </SnapRail>
+        </div>
+
+        <div className="order-4 mt-4 flex flex-col items-start gap-1 px-5 pb-7 sm:px-8 lg:mt-5 lg:px-0 lg:pb-0">
+          <p className="m-0 max-w-xl text-sm leading-snug text-oh-mute">{t("hint")}</p>
+          <Link href={statusDemoSrc(locale, { embed: false })} data-status-open className={QUIET_LINK}>
+            {t("open")}
+            <Icon name="arrow" size={18} />
+          </Link>
+        </div>
+      </div>
+    </li>
   );
 }

@@ -1,7 +1,10 @@
 /**
- * Experience page e2e (Task D2): the six steps of a visit (arrive, order,
- * walk, settle, taste, leave) as full-screen snap steps, the pinned journey
- * map on the real comb layout, the FAQ, and the Order and Ask Chappy CTAs.
+ * Experience page e2e (Task D2, eight steps since the 2026-09-28 follow-up):
+ * the steps of a visit (arrive, order, walk, settle, status, panel, taste,
+ * leave) as full-screen snap steps, the pinned journey map on the real comb
+ * layout, the status step's live phone (lazy iframe of the DEMO-PLAN status
+ * page, a preview on phones with "Try it live" opening a sheet), the FAQ,
+ * and the Order and Ask Chappy CTAs.
  *
  * Runs with node's own test runner and the repo's `playwright` package (the
  * Playwright MCP can't launch here), against the lane's web server:
@@ -19,6 +22,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium, devices, type Browser, type BrowserContext, type Page } from "playwright";
+import { englishLeaks } from "../../../apps/web/lib/site/i18n-allowlist.ts";
 
 const BASE = process.env.E2E_BASE_URL || "http://localhost:3200";
 const SHOTS = process.env.D2_SHOTS_DIR;
@@ -26,7 +30,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const WEB = path.resolve(HERE, "../../../apps/web");
 const requireFromWeb = createRequire(path.join(WEB, "package.json"));
 const AXE_SOURCE = readFileSync(requireFromWeb.resolve("axe-core/axe.min.js"), "utf8");
-const STEPS = ["arrive", "order", "walk", "settle", "taste", "leave"] as const;
+const STEPS = ["arrive", "order", "walk", "settle", "status", "panel", "taste", "leave"] as const;
 
 type Messages = { experience: Record<string, any> };
 function messages(locale: string): Messages {
@@ -93,7 +97,7 @@ async function guestDot(page: Page): Promise<[number, number]> {
   });
 }
 
-test("iPhone 15 (en): six full-screen steps in order, the pinned map, the FAQ, no horizontal overflow", async () => {
+test("iPhone 15 (en): eight full-screen steps in order, the pinned map, the FAQ, no horizontal overflow", async () => {
   await withPage(iphone15(), "/en/experience", async (page) => {
     const keys = await page.locator("[data-step]").evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.step));
     assert.deepEqual(keys, [...STEPS]);
@@ -125,36 +129,112 @@ test("iPhone 15 (en): six full-screen steps in order, the pinned map, the FAQ, n
   });
 });
 
-test("iPhone 15: the journey dot moves between step 2 (order) and step 4 (settle), and the bowl leaves the kitchen", async () => {
+async function bowlDot(page: Page): Promise<[number, number] | null> {
+  return page.evaluate(() => {
+    const map = Array.from(document.querySelectorAll<HTMLElement>("[data-journey-map]")).find((m) => m.offsetParent !== null);
+    const dot = map?.querySelector('[data-marker="bowl"]');
+    return dot ? ([Number(dot.getAttribute("cx")), Number(dot.getAttribute("cy"))] as [number, number]) : null;
+  });
+}
+
+const dist = (a: readonly number[], b: readonly number[]) => Math.hypot(a[0]! - b[0]!, a[1]! - b[1]!);
+
+test("iPhone 15: the dots follow all eight steps; status brings the bowl in the kitchen, panel takes it to the hatch", async () => {
   await withPage(iphone15(), "/en/experience", async (page) => {
     await goToStep(page, "order");
     const atOrder = await guestDot(page);
+    await goToStep(page, "walk");
+    const atWalk = await guestDot(page);
     await goToStep(page, "settle");
     const atSettle = await guestDot(page);
-    assert.notDeepEqual(atOrder, atSettle, "guest dot position should change");
-    const dist = Math.hypot(atOrder[0] - atSettle[0], atOrder[1] - atSettle[1]);
-    assert.ok(dist > 5, `the guest walked ${dist} ft`);
-    // The bowl travels too: from the kitchen (order) down the staff corridor (settle) to the hatch (taste).
-    const bowlAt = () =>
-      page.evaluate(() => {
-        const map = Array.from(document.querySelectorAll<HTMLElement>("[data-journey-map]")).find((m) => m.offsetParent !== null);
-        const dot = map?.querySelector('[data-marker="bowl"]');
-        return dot ? [Number(dot.getAttribute("cx")), Number(dot.getAttribute("cy"))] : null;
-      });
-    const bowlSettle = await bowlAt();
-    await goToStep(page, "order");
-    const bowlOrder = await bowlAt();
+    assert.ok(dist(atOrder, atSettle) > 5, `the guest walked ${dist(atOrder, atSettle)} ft`);
+    assert.notDeepEqual(atWalk, atSettle, "settle: from the pod door into the seat");
+    // Before check-in there is no bowl on the map: the kitchen fires it once the guest is in.
+    assert.equal(await bowlDot(page), null, "no bowl before the status step");
+    // Status: the guest is at the pod, and the bowl appears in the kitchen.
+    await goToStep(page, "status");
+    const bowlStatus = await bowlDot(page);
+    assert.ok(bowlStatus, "status: the bowl is drawn");
+    assert.deepEqual(await guestDot(page), atSettle, "status: the guest is still at the pod");
+    // Panel: the bowl has come down the staff corridor to the hatch.
+    await goToStep(page, "panel");
+    const bowlPanel = await bowlDot(page);
+    assert.ok(bowlPanel && dist(bowlStatus!, bowlPanel) > 5, `panel: the bowl moved ${bowlPanel ? dist(bowlStatus!, bowlPanel) : 0} ft`);
+    assert.deepEqual(await guestDot(page), atSettle, "panel: the guest is still at the pod");
+    // Taste: the bowl stays at the hatch, the guest at the pod.
     await goToStep(page, "taste");
-    const bowlTaste = await bowlAt();
-    assert.ok(bowlOrder && bowlSettle && bowlTaste, "bowl dot drawn at order, settle and taste");
-    assert.notDeepEqual(bowlOrder, bowlSettle, "the bowl leaves the kitchen by settle");
-    assert.notDeepEqual(bowlSettle, bowlTaste, "the bowl reaches the hatch by taste");
-    // Taste: the guest is still at the pod.
+    assert.deepEqual(await bowlDot(page), bowlPanel);
     assert.deepEqual(await guestDot(page), atSettle);
     // Leave: the guest heads out; the dot is somewhere new again.
     await goToStep(page, "leave");
-    const atLeave = await guestDot(page);
-    assert.notDeepEqual(atLeave, atSettle);
+    assert.notDeepEqual(await guestDot(page), atSettle);
+    // And back up: the map follows the steps backwards too.
+    await goToStep(page, "status");
+    assert.deepEqual(await bowlDot(page), bowlStatus);
+  });
+});
+
+test("iPhone 15: the status step's phone is a lazy, non-interactive preview, and Try it live opens the sheet", async () => {
+  await withPage(iphone15(), "/en/experience", async (page) => {
+    const phone = page.locator("[data-status-phone]");
+    // Lazy: no iframe until the step is near.
+    assert.equal(await page.locator("[data-status-iframe]").count(), 0, "no status iframe at the top of the page");
+    await goToStep(page, "status");
+    const frame = page.locator("[data-status-iframe]");
+    await frame.waitFor({ state: "attached", timeout: 30_000 });
+    const src = (await frame.getAttribute("src")) || "";
+    assert.match(src, /^\/en\/order\/status\?orderQrCode=DEMO-PLAN&embed=1$/);
+    // Scaled from a 390 x 844 layout.
+    const css = await frame.evaluate((f) => ({ w: (f as HTMLElement).style.width, h: (f as HTMLElement).style.height }));
+    assert.deepEqual(css, { w: "390px", h: "844px" });
+    // Preview only: no pointer events and inert, so a swipe over it scrolls the page.
+    const frameBox = page.locator("[data-status-phone-frame]");
+    assert.equal(await frameBox.evaluate((e) => getComputedStyle(e).pointerEvents), "none");
+    assert.equal(await frameBox.evaluate((e) => e.hasAttribute("inert")), true);
+    // The phone stays clear of the pinned map card.
+    const map = await page.locator("[data-journey-map]:visible").boundingBox();
+    const pb = await frameBox.boundingBox();
+    assert.ok(map && pb && pb.x + pb.width <= map.x, `phone ${pb?.x}+${pb?.width} vs card at ${map?.x}`);
+    // Try it live: a 44px target that opens the sheet with an interactive embed.
+    const tryIt = page.locator("[data-status-try]");
+    const tb = await tryIt.boundingBox();
+    assert.ok(tb && tb.height >= 44 && tb.width >= 44, `try it live target ${tb?.width}x${tb?.height}`);
+    await tryIt.click();
+    const sheet = page.locator("[role='dialog'] [data-status-sheet]");
+    await sheet.waitFor({ state: "visible", timeout: 30_000 });
+    const sheetFrame = sheet.locator("[data-status-sheet-iframe]");
+    assert.equal(await sheetFrame.getAttribute("src"), src);
+    assert.notEqual(await sheetFrame.evaluate((e) => getComputedStyle(e).pointerEvents), "none");
+    const sf = await sheetFrame.boundingBox();
+    const vh = await page.evaluate(() => window.innerHeight);
+    assert.ok(sf && sf.height > vh * 0.6, `sheet embed ${sf?.height} tall in ${vh}`);
+    // Close returns to the page.
+    await page.locator("[data-status-sheet-close]").click();
+    await sheet.waitFor({ state: "detached", timeout: 10_000 });
+    // The features: a rail of six cards on phones, and the link to the full demo page.
+    assert.equal(await page.locator("[data-status-rail] [data-status-feature]").count(), 6);
+    assert.equal(await page.locator("[data-status-open]").getAttribute("href"), "/en/order/status?orderQrCode=DEMO-PLAN");
+    assert.ok(await phone.isVisible());
+  });
+});
+
+test("desktop: the status phone is interactive inline, with the six features listed beside it", async () => {
+  await withPage({ viewport: { width: 1440, height: 900 } }, "/en/experience", async (page) => {
+    await goToStep(page, "status");
+    const frameBox = page.locator("[data-status-phone-frame]");
+    await page.locator("[data-status-iframe]").waitFor({ state: "attached", timeout: 30_000 });
+    assert.notEqual(await frameBox.evaluate((e) => getComputedStyle(e).pointerEvents), "none");
+    assert.equal(await frameBox.evaluate((e) => e.hasAttribute("inert")), false);
+    assert.equal(await page.locator("[data-status-try]").isVisible(), false);
+    const list = page.locator("ul [data-status-feature]");
+    assert.equal(await list.count(), 6);
+    const pb = await frameBox.boundingBox();
+    const lb = await list.first().boundingBox();
+    assert.ok(pb && lb && lb.x > pb.x + pb.width, "the list sits beside the phone");
+    // The FAQ's phone answer links to the status step.
+    const link = page.locator("[data-faq-status-link]");
+    assert.equal(await link.getAttribute("href"), "#status");
+    assert.equal(await page.locator("#status").count(), 1);
   });
 });
 
@@ -172,7 +252,8 @@ test("iPhone 15: Ask Chappy opens the chat", async () => {
     const ask = page.locator("[data-experience-chappy]");
     await ask.scrollIntoViewIfNeeded();
     await ask.click();
-    await page.locator(".chappy-panel").first().waitFor({ state: "visible", timeout: 60_000 });
+    // The chat surface: a bottom sheet on phones, a side panel on desktop.
+    await page.locator("[data-chappy-surface='sheet'] [role='dialog'], [data-chappy-surface='panel']").first().waitFor({ state: "visible", timeout: 60_000 });
   });
 });
 
@@ -246,7 +327,25 @@ test("zh-TW: translated copy, no English steps, no overflow; es at 360 has no ov
       assert.notEqual(text.trim(), en.steps[step].title);
     }
     const body = await page.locator("[data-experience-page]").innerText();
-    for (const phrase of ["You walk in", "First spoon", "How do I order"]) assert.ok(!body.includes(phrase), `English "${phrase}" on zh-TW`);
+    for (const phrase of ["You walk in", "First spoon", "How do I order", "Your phone runs", "Seven minutes", "Try it live", "Live Kitchen Feed", "One Red Step"]) {
+      assert.ok(!body.includes(phrase), `English "${phrase}" on zh-TW`);
+    }
+    // No English at all outside the allowlist, including the status step's features and the rail (all of the page's text, hidden or not).
+    // Text node by text node (the map's row letters A, B, C are separate labels, not a word).
+    const all = await page.locator("[data-experience-page]").evaluate((e) => {
+      const out: string[] = [];
+      const walker = document.createTreeWalker(e, NodeFilter.SHOW_TEXT);
+      for (let n = walker.nextNode(); n; n = walker.nextNode()) out.push(n.textContent || "");
+      return out.join(" ");
+    });
+    assert.deepEqual([...new Set(englishLeaks(all))], [], "English words on zh-TW");
+    // The status step's new copy, and the iframe's accessible title.
+    assert.equal((await page.locator('[data-step="status"] h2').innerText()).trim(), m.steps.status.title);
+    assert.equal(await page.locator("[data-status-phone] [data-status-poster]").count(), 1);
+    await goToStep(page, "status");
+    await page.locator("[data-status-iframe]").waitFor({ state: "attached", timeout: 30_000 });
+    assert.equal(await page.locator("[data-status-iframe]").getAttribute("title"), m.steps.status.frame);
+    assert.match((await page.locator("[data-status-iframe]").getAttribute("src")) || "", /^\/zh-TW\/order\/status\?/);
     await noHorizontalOverflow(page);
   });
   await withPage({ ...iphone15(), viewport: { width: 360, height: 780 } }, "/es/experience", async (page) => {

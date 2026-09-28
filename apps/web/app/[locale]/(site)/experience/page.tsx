@@ -1,7 +1,8 @@
 /**
- * Task D2: the experience page. The business plan's visit in six steps
- * (arrive, order, walk, settle, taste, leave), each one screen tall, with
- * the journey pinned on City Creek's real comb floor plan, then the FAQ
+ * Task D2: the experience page. The business plan's visit in eight steps
+ * (arrive, order, walk, settle, status, panel, taste, leave), each at least
+ * one screen tall, with the journey pinned on City Creek's real comb floor
+ * plan, then the FAQ
  * that doubles as how it works, and the close (Order, Ask Chappy).
  *
  * Every factual line is adapted from the plan's own copy (`plan.experience.*`,
@@ -43,7 +44,7 @@ export default async function ExperiencePage() {
 
   return (
     <div data-experience-page className="overflow-x-clip bg-oh-charcoal">
-      {/* Intro: what this is, the six steps as an index, and the order CTA. */}
+      {/* Intro: what this is, the eight steps as an index, and the order CTA. */}
       <section aria-labelledby="xp-title" className="xp-snap xp-intro flex flex-col justify-center px-5 py-10 md:px-8 lg:min-h-[70svh] lg:py-24">
         <div className="mx-auto w-full max-w-6xl">
           <Reveal>
@@ -58,14 +59,14 @@ export default async function ExperiencePage() {
             </Body>
           </Reveal>
 
-          <nav aria-label={t("stepper.label")} className="mt-8">
-            <ol className="m-0 grid list-none grid-cols-2 gap-x-4 p-0 sm:grid-cols-3 lg:grid-cols-6">
+          <nav aria-label={t("stepper.label")} className="mt-6 md:mt-8">
+            <ol className="m-0 grid list-none grid-cols-2 gap-x-4 p-0 sm:grid-cols-4 lg:grid-cols-8">
               {EXPERIENCE_STEPS.map((key, i) => (
                 <li key={key} className="border-t border-oh-stone/70">
                   <a
                     href={`#step-${key}`}
                     aria-label={t("stepper.go", { n: i + 1, name: t(`steps.${key}.eyebrow`) })}
-                    className="flex min-h-12 items-baseline gap-2.5 py-2.5 text-oh-cream no-underline hover:text-oh-gold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oh-cream"
+                    className="flex min-h-11 items-baseline gap-2.5 py-2 text-oh-cream no-underline md:min-h-12 md:py-2.5 hover:text-oh-gold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oh-cream"
                   >
                     <span aria-hidden="true" className="font-display text-xl leading-none text-oh-gold">
                       {String(i + 1).padStart(2, "0")}
@@ -77,7 +78,7 @@ export default async function ExperiencePage() {
             </ol>
           </nav>
 
-          <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
+          <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3 md:mt-8">
             <Link href={localizedHref(locale, "/order")} data-experience-order className={PRIMARY}>
               {t("close.order")}
               <Icon name="arrow" size={18} />

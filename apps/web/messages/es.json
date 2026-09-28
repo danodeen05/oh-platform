@@ -4082,16 +4082,16 @@
   "experience": {
     "meta": {
       "title": "La experiencia: una visita a Oh!, paso a paso",
-      "description": "Llegar, pedir, caminar, acomodarte, probar, salir. Una visita a Oh! Beef Noodle Soup en seis pasos, sobre el plano real. Sin anfitrión, sin mesero, sin cuenta, sin propina."
+      "description": "Llegar, pedir, caminar, acomodarte, seguir, recibir, probar, salir. Una visita a Oh! Beef Noodle Soup en ocho pasos, sobre el plano real. Sin anfitrión, sin mesero, sin cuenta, sin propina."
     },
     "intro": {
       "eyebrow": "La experiencia",
-      "title": "Una visita, en seis pasos.",
+      "title": "Una visita, en ocho pasos.",
       "lede": "Cada persona de tu grupo tiene su cabina, y cada cabina recibe su propio tazón. Sin anfitrión, sin mesero, sin cuenta, sin propina. Esta es la visita completa, en orden.",
       "start": "Empieza por el primer paso"
     },
     "stepper": {
-      "label": "Los seis pasos",
+      "label": "Los ocho pasos",
       "of": "Paso {n} de {total}",
       "go": "Ir al paso {n}: {name}"
     },
@@ -4114,12 +4114,56 @@
       "settle": {
         "eyebrow": "Acomodarte",
         "title": "Te sientas y la sala desaparece.",
-        "body": "Un gancho para tu bolsa, una repisa para tu teléfono, agua al alcance. Un toque le dice a la cocina que ya llegaste, y la transmisión en vivo de la cocina narra tu tazón, con tu nombre."
+        "body": "Un gancho para tu bolsa, una repisa para tu teléfono, agua al alcance. El panel frente a ti está cerrado. Un toque en tu teléfono le dice a la cocina que ya llegaste."
+      },
+      "status": {
+        "eyebrow": "Seguir",
+        "title": "Tu teléfono lleva el control.",
+        "body": "El enlace del quiosco abre una página en vivo de tu pedido, escrita para ti. Mientras esperas, la transmisión en vivo de la cocina narra tu tazón, con tu nombre, mientras avanza por la cocina. ¿Necesitas algo? Tócalo, y llega por el mismo panel. Sin mesero.",
+        "frame": "La página de estado del pedido en vivo, con un pedido de demostración",
+        "poster": "Un pedido de demostración, en vivo",
+        "hint": "Es la página de estado real, con un pedido de demostración. Nada llega a una cocina de verdad.",
+        "tryLive": "Pruébalo en vivo",
+        "sheetLabel": "La página de estado del pedido en vivo, con un pedido de demostración",
+        "close": "Cerrar",
+        "open": "Abrir la página de estado completa",
+        "featuresLabel": "Lo que hace la página",
+        "features": {
+          "feed": {
+            "title": "Transmisión en vivo de la cocina",
+            "body": "La IA narra tu pedido en cada etapa, con tu nombre, del caldo a la ventanilla."
+          },
+          "fortune": {
+            "title": "Una galleta de la fortuna digital",
+            "body": "Una fortuna escrita para ti, números de la suerte, un día como hoy en la historia y una palabra en chino."
+          },
+          "more": {
+            "title": "Pide más a tu cabina",
+            "body": "Más bebida, más verduras, un acompañante o un postre, por la ventanilla."
+          },
+          "staff": {
+            "title": "Llama al equipo",
+            "body": "Un toque llega al equipo de sala. Nadie tiene que hacer señas."
+          },
+          "roast": {
+            "title": "Tu pedido, en broma",
+            "body": "Tus elecciones, criticadas con humor. Tus ingredientes, con historias de vida absurdas."
+          },
+          "redStep": {
+            "title": "Un paso rojo",
+            "body": "Un dato sobre salud mental y una forma de donar, justo donde ya te saltaste la propina."
+          }
+        }
+      },
+      "panel": {
+        "eyebrow": "Recibir",
+        "title": "Siete minutos, y llega a través de la pared.",
+        "body": "Tu teléfono lo vio venir. El panel se abre y entra tu tazón: el caldo, los fideos y el pecho o la costilla ahumados que elegiste. Luego el panel se cierra."
       },
       "taste": {
         "eyebrow": "Probar",
         "title": "La primera cucharada.",
-        "body": "Minutos después de pagar, tu tazón llega a través de la pared. Nunca ves una mano. ¿Quieres más? Más fideos, más bebida o un acompañante llegan por el mismo panel."
+        "body": "Un caldo en dos fases: un hervor largo de huesos y luego un final pensado para el sabor. Res americana ahumada, Wagyu americano o USDA Prime. ¿Quieres más? Más fideos, más bebida o un acompañante llegan por el mismo panel."
       },
       "leave": {
         "eyebrow": "Salir",
@@ -4135,8 +4179,10 @@
         "arrive": "Llegas por la entrada al vestíbulo.",
         "order": "Tres kioscos en el vestíbulo. Sin mostrador.",
         "walk": "Cruzas el pasillo transversal y subes por tu pasillo hasta la cabina {label}. Cada puerta en el camino es una cabina.",
-        "settle": "Tu tazón sale de la cocina por un pasillo del personal. Ningún cliente entra en él.",
-        "taste": "Por la ventanilla, hasta la cabina {label}. La misma cabina, por lados opuestos.",
+        "settle": "Entras a la cabina {label}. Un toque confirma tu llegada, y la cocina empieza tu tazón.",
+        "status": "Tu tazón se prepara en la cocina, y tu teléfono lo sigue con tu nombre.",
+        "panel": "Por un pasillo del personal hasta la ventanilla de la cabina {label}. Ningún cliente entra en él.",
+        "taste": "Tú en tu asiento, el pasillo del personal detrás de la ventanilla. La misma cabina, por lados opuestos.",
         "leave": "Por el pasillo, pasando por la tienda, hasta la salida."
       },
       "comb": {
@@ -4210,7 +4256,7 @@
         },
         "phone": {
           "q": "¿Qué hace mi teléfono?",
-          "a": "El enlace de tu pedido abre una página en vivo. La transmisión en vivo de la cocina narra tu tazón mientras avanza por la cocina, y un toque le dice a la cocina que ya llegaste, y luego que terminaste."
+          "a": "El enlace de tu pedido abre una página en vivo. La transmisión en vivo de la cocina narra tu tazón mientras avanza por la cocina, y un toque le dice a la cocina que ya llegaste, y luego que terminaste. <link>Mírala funcionando</link>."
         },
         "tip": {
           "q": "¿Dejo propina?",

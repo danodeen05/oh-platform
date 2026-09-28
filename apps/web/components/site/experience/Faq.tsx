@@ -33,7 +33,16 @@ export async function Faq({ locale }: { locale: string }) {
                 <Icon name="chevron" size={20} className="xp-chevron shrink-0 text-oh-ember-light" />
               </summary>
               <Body locale={locale} className="m-0 pb-5 pr-8 text-oh-cream/80">
-                {t(`items.${key}.a`)}
+                {key === "phone"
+                  ? // The phone answer points at the status step, where the page runs live.
+                    t.rich("items.phone.a", {
+                      link: (chunks) => (
+                        <a href="#status" data-faq-status-link className="font-semibold text-oh-gold underline underline-offset-4 hover:text-oh-cream focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oh-cream">
+                          {chunks}
+                        </a>
+                      ),
+                    })
+                  : t(`items.${key}.a`)}
               </Body>
             </details>
           ))}

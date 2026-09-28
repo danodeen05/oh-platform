@@ -6268,16 +6268,16 @@
   "experience": {
     "meta": {
       "title": "The experience: a visit to Oh!, step by step",
-      "description": "Arrive, order, walk, settle, taste, leave. A visit to Oh! Beef Noodle Soup in six steps, on the real floor plan. No host, no server, no check, no tip."
+      "description": "Arrive, order, walk, settle, follow, receive, taste, leave. A visit to Oh! Beef Noodle Soup in eight steps, on the real floor plan. No host, no server, no check, no tip."
     },
     "intro": {
       "eyebrow": "The experience",
-      "title": "A visit, in six steps.",
+      "title": "A visit, in eight steps.",
       "lede": "Everyone in your party gets a pod, and every pod gets its own bowl. No host, no server, no check, no tip. Here is the whole visit, in order.",
       "start": "Start with step one"
     },
     "stepper": {
-      "label": "The six steps",
+      "label": "The eight steps",
       "of": "Step {n} of {total}",
       "go": "Go to step {n}: {name}"
     },
@@ -6300,12 +6300,56 @@
       "settle": {
         "eyebrow": "Settle",
         "title": "You sit, and the room disappears.",
-        "body": "A hook for your bag, a shelf for your phone, water within reach. One tap tells the kitchen you are in, and the Live Kitchen Feed narrates your bowl by name."
+        "body": "A hook for your bag, a shelf for your phone, water within reach. The panel in front of you is closed. One tap on your phone tells the kitchen you are in."
+      },
+      "status": {
+        "eyebrow": "Follow",
+        "title": "Your phone runs the show.",
+        "body": "The link from the kiosk opens a live page for your order, and it is written for you. While you wait, the Live Kitchen Feed narrates your bowl by name as it moves through the kitchen. Need anything? Tap it, and it comes through the same panel. No server required.",
+        "frame": "The live order status page, running a demo order",
+        "poster": "A demo order, live",
+        "hint": "This is the real status page, running a demo order. Nothing reaches a real kitchen.",
+        "tryLive": "Try it live",
+        "sheetLabel": "The live order status page, with a demo order",
+        "close": "Close",
+        "open": "Open the full status page",
+        "featuresLabel": "What the page does",
+        "features": {
+          "feed": {
+            "title": "Live Kitchen Feed",
+            "body": "AI narrates your order at every stage, by name, from the broth to the hatch."
+          },
+          "fortune": {
+            "title": "A digital fortune cookie",
+            "body": "A fortune written for you, lucky numbers, this day in history and a word of Chinese."
+          },
+          "more": {
+            "title": "Order more to your pod",
+            "body": "Refills, extra vegetables, a side or dessert, delivered through the hatch."
+          },
+          "staff": {
+            "title": "Call staff",
+            "body": "One tap reaches the floor team. Nobody flags anyone down."
+          },
+          "roast": {
+            "title": "Roast My Order",
+            "body": "Your choices, roasted. Your ingredients, given absurd life stories."
+          },
+          "redStep": {
+            "title": "One Red Step",
+            "body": "A mental health fact and a way to give, right where you already skipped the tip."
+          }
+        }
+      },
+      "panel": {
+        "eyebrow": "Receive",
+        "title": "Seven minutes, and it comes through the wall.",
+        "body": "Your phone saw it coming. The panel slides open and your bowl comes through: the broth, the noodles, the smoked brisket or beef rib you chose. Then the panel slides shut."
       },
       "taste": {
         "eyebrow": "Taste",
         "title": "First spoon.",
-        "body": "Minutes after you pay, your bowl arrives through the wall. You never see a hand. Want more? Extra noodles, a refill or a side come through the same panel."
+        "body": "A two-phase broth: a long bone simmer, then a finish built for flavor. Smoked American beef, American Wagyu or USDA Prime. Want more? Extra noodles, a refill or a side come through the same panel."
       },
       "leave": {
         "eyebrow": "Leave",
@@ -6321,8 +6365,10 @@
         "arrive": "You come in through the entry, into the lobby.",
         "order": "Three kiosks in the lobby. No counter.",
         "walk": "Across the cross-aisle and up your aisle to pod {label}. Every door on the way is a pod.",
-        "settle": "Your bowl leaves the kitchen down a staff corridor. No guest enters it.",
-        "taste": "Through the hatch to pod {label}. Same pod, opposite sides.",
+        "settle": "Into pod {label}. One tap checks you in, and the kitchen starts your bowl.",
+        "status": "Your bowl is being made in the kitchen, and your phone follows it by name.",
+        "panel": "Down a staff corridor to the hatch of pod {label}. No guest enters it.",
+        "taste": "You at the seat, the staff corridor behind the hatch. Same pod, opposite sides.",
         "leave": "Out by the aisle, past the store, through the exit."
       },
       "comb": {
@@ -6396,7 +6442,7 @@
         },
         "phone": {
           "q": "What does my phone do?",
-          "a": "The link from your order opens a live page for it. The Live Kitchen Feed narrates your bowl as it moves through the kitchen, and one tap tells the kitchen you are in, and later that you are done."
+          "a": "The link from your order opens a live page for it. The Live Kitchen Feed narrates your bowl as it moves through the kitchen, and one tap tells the kitchen you are in, and later that you are done. <link>See it running</link>."
         },
         "tip": {
           "q": "Do I tip?",
