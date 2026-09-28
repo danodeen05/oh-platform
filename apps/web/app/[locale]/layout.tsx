@@ -97,22 +97,29 @@ export default async function LocaleLayout({ children, params }: Props) {
       <NextIntlClientProvider messages={messages}>
         <Providers>
           {/*
-            legacy-ui (Task C1): Header, ActiveOrderBanner and Footer are
-            shared chrome, not a "route" that moves into `(legacy)`, but they
-            still use bare <Link>/<button> tags styled by the retired global
-            a/button rules (app/globals.css). Every route reaching this
-            branch today lives under `(legacy)`, so scoping here is exactly
-            as broad as it needs to be. When a `(site)` route gets its own
-            SiteShell (C4) instead of Header/Footer, this branch (and this
-            wrapper) should stop applying to it.
+            legacy-ui (Task C1, fix round 1): Header, ActiveOrderBanner and
+            Footer are shared chrome, not a "route" that moves into
+            `(legacy)`, but they still use bare <Link>/<button> tags styled by
+            the retired global a/button rules (app/globals.css). `.legacy-ui`
+            is scoped tightly around just that chrome -- NOT around
+            `<main>{children}</main>` -- so a future `(site)` route rendered
+            through this same branch (before C4 gives it a separate SiteShell
+            branch) does not inherit legacy styling through the DOM tree.
+            Every page that still needs `.legacy-ui` for its own content gets
+            it from its own route -- the `(legacy)` group layout, or (for
+            routes that stay in place) kiosk/cny/agents's own layout.
           */}
-          <div className="legacy-ui" style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+          <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
             <LangSync locale={locale} />
             <LanguageTracker />
-            <Header />
-            <ActiveOrderBanner />
+            <div className="legacy-ui">
+              <Header />
+              <ActiveOrderBanner />
+            </div>
             <main style={{ flex: 1 }}>{children}</main>
-            <Footer />
+            <div className="legacy-ui">
+              <Footer />
+            </div>
           </div>
         </Providers>
       </NextIntlClientProvider>
