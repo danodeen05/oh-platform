@@ -15,7 +15,7 @@ import { useTranslations } from "next-intl";
 import { CHAPPY_AVATAR } from "@/lib/site/nav";
 import { useChappy } from "./ChappyProvider";
 
-export { ChappyProvider, useChappy, type ChappyApi } from "./ChappyProvider";
+export { ChappyProvider, useChappy, useOptionalChappy, type ChappyApi } from "./ChappyProvider";
 
 export function ChappyLauncher() {
   const t = useTranslations("chappyWeb");

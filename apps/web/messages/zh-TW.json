@@ -460,7 +460,7 @@
     },
     "comingSoon": {
       "title": "即將開幕",
-      "description": "我們正在擴展！敬請期待這些城市的新門市。",
+      "description": "更多門市正在路上。",
       "label": "即將開幕",
       "cities": [
         "舊金山",
@@ -473,6 +473,82 @@
       "title": "準備好品嚐最棒的一碗麵了嗎？",
       "description": "提前點餐，跳過等待。完美的一碗麵只需幾次點擊。",
       "button": "開始點餐"
+    },
+    "meta": {
+      "title": "門市據點",
+      "description": "Oh! 在猶他州的兩間門市：鹽湖城的 City Creek 與奧勒姆的 University Place。即時包廂、營業時間與路線。"
+    },
+    "index": {
+      "eyebrow": "找到我們",
+      "title": "猶他州的兩間店。",
+      "lede": "私人包廂、牆後的廚房，麵從小窗送到你面前。選一間店，看看現場。",
+      "cardCta": "看看店內"
+    },
+    "status": {
+      "open": "營業中",
+      "closed": "休息中",
+      "paused": "這間店目前暫停點餐。",
+      "podsFree": "{total} 個包廂中有 {free} 個空位",
+      "pods": "{total} 個包廂"
+    },
+    "detail": {
+      "back": "所有門市",
+      "order": "在這裡點餐",
+      "directions": "路線",
+      "directionsLabel": "前往{name}的路線。會開啟地圖應用程式。",
+      "mapTitle": "店內即時狀況",
+      "mapLede": "每個包廂此刻的狀態。點一排可以放大查看。",
+      "mapLoading": "正在載入包廂",
+      "mapError": "目前無法顯示即時包廂。",
+      "threeD": "以 3D 查看",
+      "threeDHint": "店內的 3D 模型，點了才會載入。",
+      "threeDClose": "回到平面圖",
+      "threeDUnavailable": "這部裝置無法顯示 3D。上方的平面圖列出了所有包廂。",
+      "threeDAria": "{name}用餐區的 3D 模型",
+      "threeDLoading": "正在建構店內模型",
+      "iso": {
+        "corridor": "員工走道",
+        "aisle": "走道"
+      },
+      "hoursTitle": "營業時間",
+      "today": "今天",
+      "closedDay": "公休",
+      "hoursRange": "{open} 至 {close}",
+      "hoursNone": "營業時間尚未公布。",
+      "timezone": "山區時間",
+      "visitTitle": "交通資訊",
+      "address": "地址",
+      "parking": "停車",
+      "nearby": "附近地標",
+      "orderTitle": "你的包廂在等你。",
+      "orderLede": "先點餐、選包廂，到了直接入座。",
+      "loadErrorTitle": "無法載入這間門市。",
+      "loadErrorBody": "請檢查網路連線後再試一次。",
+      "retry": "再試一次"
+    },
+    "places": {
+      "cityCreek": {
+        "tagline": "鹽湖城市中心",
+        "intro": "我們的旗艦店，位於 City Creek Center 內。{pods} 個私人包廂分布在三排走道兩側，廚房就在後方。",
+        "parking": "City Creek 停車場免費停車，需蓋章驗證。",
+        "nearby": [
+          "聖殿廣場",
+          "鹽宮會議中心",
+          "蓋特威購物中心",
+          "猶他州議會大廈"
+        ]
+      },
+      "universityPlace": {
+        "tagline": "猶他谷",
+        "intro": "位於奧勒姆的 University Place 內。{pods} 個私人包廂，同樣的廚房，同樣的湯頭。",
+        "parking": "University Place 各處都有充足的免費停車位。",
+        "nearby": [
+          "猶他谷大學",
+          "楊百翰大學",
+          "普若佛峽谷",
+          "天波諾高斯洞穴"
+        ]
+      }
     }
   },
   "loyalty": {
@@ -1101,6 +1177,23 @@
       "lasts": {
         "title": "餘額保留",
         "body": "餘額會一直留在卡上，直到用完為止。"
+      },
+      "subtitle": "適合任何場合的完美禮物",
+      "instantDelivery": {
+        "title": "即時送達",
+        "description": "透過電子郵件即時發送或預約特定日期"
+      },
+      "beautifulDesign": {
+        "title": "精美設計",
+        "description": "從我們優雅的卡片設計系列中選擇"
+      },
+      "neverExpires": {
+        "title": "永不過期",
+        "description": "我們的禮品卡永不過期，保持其全部價值"
+      },
+      "addMessage": {
+        "title": "附加訊息",
+        "description": "加入個人化留言，讓禮物更加特別"
       }
     },
     "faq": {
@@ -1120,11 +1213,32 @@
       "balance": {
         "q": "如何查詢剩餘金額？",
         "a": "在餘額查詢頁輸入卡片代碼即可。"
+      },
+      "tagline": "有問題嗎？",
+      "questions": {
+        "delivery": {
+          "q": "數位禮品卡如何配送？",
+          "a": "數位禮品卡會透過電子郵件發送給收件人。您可以選擇立即發送或預約特定日期。"
+        },
+        "multiple": {
+          "q": "我可以在一筆訂單中使用多張禮品卡嗎？",
+          "a": "可以！您可以在單筆訂單中合併使用多張禮品卡。剩餘餘額會保留在您的卡片中。"
+        },
+        "expire": {
+          "q": "禮品卡會過期嗎？",
+          "a": "不會，哦！禮品卡永不過期。您的餘額會一直保留，等您準備好享用下一碗麵時隨時可用。"
+        },
+        "balance": {
+          "q": "如何查詢禮品卡餘額？",
+          "a": "您可以在任何哦！門市查詢餘額，或登入線上帳戶查看。"
+        }
       }
     },
     "cta": {
       "title": "隨時為你準備好。",
-      "body": "選個金額，寫幾句話，只要一分鐘。"
+      "body": "選個金額，寫幾句話，只要一分鐘。",
+      "description": "一碗完美的牛肉麵永遠是令人驚喜的禮物。",
+      "button": "開始選購"
     },
     "purchase": {
       "meta": "寄送禮物卡",
@@ -1212,6 +1326,34 @@
       "spendBowl": "點一碗麵",
       "note": "結帳時輸入這組代碼。沒用完的金額會留在卡上。",
       "back": "禮物卡"
+    },
+    "title": "禮品卡",
+    "description": "與親朋好友分享哦!的美味",
+    "buyNow": "立即購買",
+    "checkBalance": "查詢餘額",
+    "tagline": "送出美味的禮物",
+    "digitalCard": "數位禮品卡",
+    "continue": "繼續",
+    "purchaseComingSoon": "線上購買即將推出！",
+    "chooseAmount": {
+      "tagline": "步驟 1",
+      "title": "選擇金額",
+      "customLabel": "或輸入自訂金額（$10-$500）",
+      "customPlaceholder": "輸入金額"
+    },
+    "corporate": {
+      "tagline": "企業專案",
+      "title": "企業禮品卡",
+      "description": "用哦！禮品卡獎勵員工、感謝客戶或慶祝里程碑。完美適合任何企業送禮場合。",
+      "contactSales": "聯繫業務",
+      "bulkDiscounts": "大量折扣",
+      "tenPlus": "10張以上",
+      "customBranding": "客製品牌",
+      "addLogo": "加入您的標誌",
+      "dedicatedSupport": "專屬支援",
+      "priorityService": "優先服務",
+      "flexibleDelivery": "彈性配送",
+      "scheduleSends": "預約發送"
     }
   },
   "store": {
@@ -1237,7 +1379,12 @@
       "CONDIMENTS": "調味料",
       "MERCHANDISE": "餐桌用品",
       "APPAREL": "服飾",
-      "LIMITED_EDITION": "限量"
+      "LIMITED_EDITION": "限量",
+      "food": "食品",
+      "condiments": "調味品",
+      "merchandise": "週邊商品",
+      "apparel": "服飾",
+      "limitedEdition": "限量版"
     },
     "product": {
       "add": "加入",
@@ -1442,6 +1589,85 @@
       "notFoundTitle": "找不到這個標籤。",
       "notFoundBody": "請確認代碼，或詢問櫃檯。",
       "scanAgain": "重新掃描"
+    },
+    "title": "哦！商店",
+    "description": "把哦!帶回家",
+    "merchandise": "週邊商品",
+    "comingSoon": "即將推出",
+    "tagline": "從我們的廚房到您家",
+    "launchingSoon": "線上商店即將推出！訂閱以獲得通知。",
+    "products": {
+      "homeKit": {
+        "name": "哦！家庭套裝",
+        "description": "在家製作正宗哦！牛肉麵所需的一切"
+      },
+      "chiliOil": {
+        "name": "招牌辣椒油",
+        "description": "我們自製的四川花椒辣椒油"
+      },
+      "brothConcentrate": {
+        "name": "牛骨濃湯濃縮液",
+        "description": "富含膠原蛋白的濃郁湯底，適用於湯品和燉菜"
+      },
+      "ceramicBowl": {
+        "name": "陶瓷麵碗",
+        "description": "傳統風格碗，最適合麵條和湯品"
+      },
+      "chopsticks": {
+        "name": "竹筷套組",
+        "description": "高級竹筷，帶有客製哦！雕刻"
+      },
+      "tshirt": {
+        "name": "哦！經典T恤",
+        "description": "柔軟棉質T恤，極簡哦！標誌"
+      },
+      "hoodie": {
+        "name": "舒適連帽衫",
+        "description": "舒適刷毛連帽衫，刺繡標誌"
+      },
+      "apron": {
+        "name": "主廚圍裙",
+        "description": "專業級圍裙，適合家庭主廚"
+      },
+      "woodenBowl": {
+        "name": "手工木製湯碗",
+        "description": "以再生木材手工製作，每件都是獨一無二"
+      }
+    },
+    "badges": {
+      "bestSeller": "暢銷",
+      "new": "新品",
+      "limited": "限量"
+    },
+    "whyShop": {
+      "title": "為什麼在哦！購物",
+      "subtitle": "哦！體驗，送貨到府",
+      "freeShipping": {
+        "title": "免運費",
+        "description": "訂單滿$50享免運"
+      },
+      "useCredit": {
+        "title": "使用您的點數",
+        "description": "將哦！獎勵應用於購物"
+      },
+      "memberRewards": {
+        "title": "會員獎勵",
+        "description": "每次購物都能賺取積分"
+      },
+      "easyReturns": {
+        "title": "輕鬆退貨",
+        "description": "30天無憂退貨"
+      }
+    },
+    "newsletter": {
+      "tagline": "搶先知道",
+      "title": "獲得優先權限",
+      "description": "訂閱獨家發布、會員專屬優惠，以及新產品的優先取得權。",
+      "placeholder": "輸入您的電子郵件"
+    },
+    "cta": {
+      "title": "等不及了？",
+      "description": "親自到訪我們的門市購物，順便享用一碗美味。"
     }
   },
   "referral": {
@@ -1809,6 +2035,47 @@
     },
     "demo": {
       "banner": "即時示範 · 非真實訂單"
+    },
+    "lines": {
+      "feed": {
+        "label": "廚房即時動態",
+        "listening": "正在聆聽廚房",
+        "quiet": "廚房暫時安靜下來。好東西快來了。"
+      },
+      "fortune": {
+        "title": "你的籤詩",
+        "lede": "湯頭熬煮時，來一塊幸運餅乾。",
+        "open": "打開它",
+        "loading": "正在解讀你的籤詩",
+        "lucky": "幸運號碼",
+        "thisDay": "{year} 年的今天",
+        "learn": "學一個詞",
+        "unavailable": "今天沒有籤詩。你的麵仍在路上。"
+      },
+      "roast": {
+        "title": "吐槽我的點餐",
+        "lede": "我們對你這份點餐的真心又溫柔的評論。",
+        "open": "開始吐槽",
+        "loading": "正在研究你的選擇",
+        "highlights": "亮點",
+        "unavailable": "吐槽暫停中。你的點餐看起來很棒。"
+      },
+      "backstory": {
+        "title": "碗裡的故事",
+        "lede": "你的食材今晚之前去過哪裡。",
+        "open": "說給我聽",
+        "loading": "正在詢問食材",
+        "unavailable": "食材今天不願透露祕密。"
+      },
+      "redStep": {
+        "label": "關注心理健康",
+        "loading": "正在載入今日小知識",
+        "source": "資料來源：{source}",
+        "lede": "{name}，這裡不收小費，因為公平薪資已包含在每一碗裡。若你想捐款，這是我們推薦的去處。",
+        "cta": "支持這項公益",
+        "newTab": "（在新分頁開啟）",
+        "foundation": "美國心理健康公益基金會，501(c)(3) 非營利組織"
+      }
     }
   },
   "features": {
@@ -6223,6 +6490,377 @@
         "REFUND_RESTORE": "退款後退回",
         "OTHER": "購物金"
       }
+    }
+  },
+  "phoneCollection": {
+    "title": "掌握訂單最新狀態",
+    "greeting": "嗨，{name}！",
+    "description": "新增手機號碼，即可透過簡訊收到訂單狀態通知，包括餐點完成時。",
+    "phoneLabel": "手機號碼",
+    "phonePlaceholder": "(555) 555-5555",
+    "smsConsent": "我同意接收 Oh Beef Noodle Soup 關於我的訂單的簡訊（訂單確認與餐點完成通知）。發送頻率不一，可能產生簡訊與數據費用。回覆 STOP 即可取消訂閱。",
+    "privacyPolicy": "隱私權政策",
+    "savePhone": "儲存並接收通知",
+    "saving": "儲存中...",
+    "skipForNow": "稍後再說",
+    "skipNote": "你隨時可以在帳戶設定中新增手機號碼。",
+    "phoneRequired": "請輸入你的手機號碼",
+    "invalidPhone": "請輸入有效的手機號碼",
+    "updateFailed": "無法儲存手機號碼，請再試一次。"
+  },
+  "afterOrder": {
+    "common": {
+      "orderNumber": "訂單 {number}",
+      "podNumber": "座艙 {label}",
+      "yourPod": "你的座艙",
+      "loading": "正在載入你的訂單",
+      "notFound": "找不到這筆訂單",
+      "notFoundLede": "請檢查連結，或開始新訂單。",
+      "error": "無法連線到餐廳",
+      "errorLede": "請檢查網路連線後再試一次。",
+      "retry": "再試一次",
+      "newOrder": "開始點餐",
+      "demo": "即時示範，並非真實訂單。",
+      "podMoved": "你的座艙已改為 {to}。",
+      "podMovedLede": "{from} 在你完成付款前已被使用，所以我們為你保留了下一個最佳座艙。",
+      "podNone": "你付款時沒有空座艙。抵達後請報到，我們會為你安排座位。",
+      "qty": "x {count}",
+      "needHelp": "需要協助嗎？",
+      "askChappy": "問問 Chappy",
+      "networkError": "無法連線到餐廳。請檢查網路連線後再試一次。"
+    },
+    "status": {
+      "metaTitle": "你的訂單",
+      "progressLabel": "訂單進度",
+      "progress": "第 {current} 步，共 {total} 步",
+      "autoRefresh": "此頁面會自動更新。",
+      "friend": "朋友",
+      "stages": {
+        "PENDING_PAYMENT": {
+          "title": "等待付款",
+          "lede": "這筆訂單尚未付款。"
+        },
+        "PAID": {
+          "title": "已下單",
+          "lede": "請前往餐廳，抵達後報到。"
+        },
+        "QUEUED": {
+          "title": "排隊中",
+          "lede": "廚房已收到你的訂單，很快就會開始煮你的麵。"
+        },
+        "PREPPING": {
+          "title": "烹調中",
+          "lede": "湯頭正在爐上，麵條也下鍋了。"
+        },
+        "READY": {
+          "title": "快好了",
+          "lede": "你的麵通過最後檢查，正送往你的座艙。"
+        },
+        "SERVING": {
+          "title": "請慢用",
+          "lede": "慢慢享用，有需要隨時找我們。"
+        },
+        "COMPLETED": {
+          "title": "謝謝光臨",
+          "lede": "期待很快再見到你。"
+        },
+        "CANCELLED": {
+          "title": "訂單已取消",
+          "lede": "這筆訂單已取消，無需其他動作。"
+        },
+        "UNKNOWN": {
+          "title": "你的訂單",
+          "lede": "我們正在確認中。"
+        }
+      },
+      "timeline": {
+        "label": "你的用餐流程",
+        "PAID": "已付款",
+        "QUEUED": "已報到",
+        "PREPPING": "烹調中",
+        "READY": "最後檢查",
+        "SERVING": "已送達座艙",
+        "COMPLETED": "已完成",
+        "now": "目前",
+        "totalTime": "從付款到上麵：{minutes} 分鐘"
+      },
+      "pod": {
+        "goTo": "請前往你的座艙，到了再告訴我們。",
+        "confirm": "我已到座艙",
+        "checkedIn": "已報到",
+        "callStaff": "呼叫服務人員",
+        "calling": "呼叫中",
+        "staffCalled": "已呼叫",
+        "staffComing": "服務人員正在過來。",
+        "callFailed": "無法呼叫服務人員。請再試一次，或向我們招手。",
+        "addItems": "加點",
+        "dessert": "可以上甜點了",
+        "dessertSending": "正在通知廚房",
+        "dessertCalled": "甜點準備中",
+        "dessertComing": "甜點馬上來。",
+        "dessertFailed": "沒有送出，請再試一次。"
+      },
+      "queue": {
+        "title": "等待座艙",
+        "position": "第 {position} 位",
+        "wait": "約 {minutes} 分鐘",
+        "note": "有空座艙時我們會通知你。"
+      },
+      "done": {
+        "cta": "我吃完了",
+        "prompt": "吃完了嗎？我們會通知服務人員清理你的座艙。",
+        "confirm": "是的，吃完了",
+        "cancel": "還沒",
+        "failed": "沒有送出，請再試一次。"
+      },
+      "join": {
+        "eyebrow": "Oh! 會員獎勵",
+        "title": "這筆訂單也能累積獎勵",
+        "lede": "免費建立帳戶，訂單 {number} 就會計入你的下一碗免費麵。",
+        "benefits": {
+          "one": "每筆訂單都有回饋",
+          "two": "升級時送一碗免費麵",
+          "three": "訂單與印章集中一處"
+        },
+        "create": "建立帳戶",
+        "signIn": "我已有帳戶",
+        "linked": "這筆訂單已加入你的帳戶。"
+      },
+      "bowl": {
+        "title": "你的麵"
+      },
+      "links": {
+        "label": "接下來",
+        "orderAgain": "再點一次",
+        "account": "我的帳戶"
+      },
+      "noCode": {
+        "title": "沒有可顯示的訂單",
+        "lede": "請從訂單連結或確認頁開啟此頁面。"
+      }
+    },
+    "addOns": {
+      "title": "加點",
+      "close": "關閉",
+      "loading": "正在載入可加點的項目",
+      "loadFailed": "無法載入加點項目。請呼叫服務人員，我們會協助你。",
+      "callInstead": "改為呼叫服務人員",
+      "none": "目前沒有可加點的項目。",
+      "refills": "續杯",
+      "free": "免費",
+      "water": "開水",
+      "refill": "續杯",
+      "refillSent": "續杯馬上來。",
+      "extras": "加量蔬菜",
+      "requestExtras": "{count, plural, other {加點 # 份}}",
+      "extrasSent": "加量蔬菜馬上來。",
+      "paid": "加購",
+      "add": "加入",
+      "addOne": "加入{name}",
+      "less": "減少一份{name}",
+      "more": "增加一份{name}",
+      "total": "合計",
+      "pay": "付款 {amount}",
+      "demoAdded": "已加入。示範中不會收費。",
+      "failed": "沒有送出，請再試一次。"
+    },
+    "confirmation": {
+      "metaTitle": "訂單已確認",
+      "title": "一切就緒",
+      "paid": "已付款 {amount}，謝謝。",
+      "pending": "付款處理中，完成後此頁會自動更新。",
+      "qrTitle": "你的訂單條碼",
+      "qrLede": "抵達後在自助機出示，或直接用手機報到。",
+      "qrAlt": "訂單 {number} 的 QR 碼",
+      "arrival": "預計抵達時間 {time}",
+      "signInForCode": "請登入下單時使用的帳戶，即可查看訂單條碼。",
+      "podNote": "報到前會為你保留。",
+      "checkIn": "立即報到",
+      "track": "追蹤訂單",
+      "group": {
+        "title": "{count, plural, other {你的團體，共 # 筆訂單}}",
+        "host": "主揪",
+        "guest": "來賓 {number}",
+        "noPod": "尚未分配座艙",
+        "checkedIn": "已在座艙",
+        "arrived": "已報到",
+        "waiting": "尚未抵達",
+        "checkIn": "報到",
+        "checkInAll": "全員報到"
+      },
+      "receipt": {
+        "title": "收據",
+        "bowl": "主餐",
+        "extras": "加點",
+        "subtotal": "小計",
+        "savings": "折抵",
+        "tax": "稅金",
+        "total": "總計"
+      },
+      "share": {
+        "title": "邀請朋友",
+        "lede": "朋友首次訂購可折抵 $5，朋友下單後你也能獲得 $5。",
+        "button": "分享",
+        "copied": "已複製連結",
+        "text": "我剛在 Oh! Beef Noodle Soup 點了餐。首碗折抵 $5：{url}"
+      },
+      "home": "回到首頁"
+    },
+    "checkIn": {
+      "metaTitle": "報到",
+      "eyebrow": "在餐廳",
+      "title": "報到",
+      "lede": "到了嗎？報到後我們會引導你到座艙。",
+      "steps": {
+        "one": "在確認頁找到你的訂單代碼。",
+        "two": "在下方輸入，或在自助機掃描。",
+        "three": "前往座艙，你到了廚房就開始烹調。"
+      },
+      "codeLabel": "訂單代碼",
+      "codeHint": "在確認頁的 QR 碼下方。",
+      "submit": "幫我報到",
+      "checking": "報到中",
+      "required": "請輸入你的訂單代碼。",
+      "notFound": "找不到這個代碼，請確認後再試一次。",
+      "notPaid": "這筆訂單尚未付款。",
+      "noPod": "這筆訂單尚未分配座艙。",
+      "failed": "報到沒有成功，請再試一次或詢問服務人員。",
+      "help": "遇到問題？任何一位服務人員都能幫你報到。"
+    },
+    "scan": {
+      "metaTitle": "確認座艙",
+      "eyebrow": "在你的座艙",
+      "title": "確認座艙",
+      "lede": "到座艙了嗎？確認後廚房就開始煮你的麵。",
+      "podNote": "請在這裡坐下，然後在下方確認。",
+      "notFound": "找不到這筆訂單。",
+      "noPod": "這筆訂單尚未分配座艙，請先報到。",
+      "codeLabel": "訂單代碼",
+      "codeHint": "與確認頁上的代碼相同。",
+      "submit": "我已到座艙",
+      "confirming": "確認中",
+      "required": "請輸入你的訂單代碼。",
+      "notPaid": "這筆訂單尚未付款。",
+      "failed": "沒有送出，請再試一次或詢問服務人員。",
+      "checkInFirst": "先報到",
+      "back": "回到我的訂單",
+      "success": "報到完成",
+      "successLede": "廚房正在開始煮你的麵。"
+    },
+    "pod": {
+      "metaTitle": "你的座艙",
+      "title": "座艙 {label}",
+      "error": "無法讀取此座艙的代碼",
+      "errorLede": "請詢問任何一位服務人員，我們會為你安排座位。",
+      "noCode": "掃描座艙上的條碼",
+      "noCodeLede": "每個座艙的桌上都有條碼。",
+      "confirmed": "歡迎來到座艙 {label}",
+      "confirmedLede": "你的麵正要送進廚房。",
+      "waiting": "你的訂單在這裡等你",
+      "waitingLede": "這個座艙保留了一筆訂單。如果是你的，告訴廚房你已抵達。",
+      "confirm": "我到了",
+      "confirming": "正在通知廚房",
+      "failed": "沒有送出，請再試一次或詢問服務人員。",
+      "free": "這個座艙目前空著",
+      "freeSteps": {
+        "one": "線上點餐並選擇這個座艙。",
+        "two": "快到抵達時間時再過來。",
+        "three": "再次掃描這個條碼即可報到。"
+      },
+      "mapTitle": "你的位置",
+      "mapHint": "已標示座艙 {label}",
+      "mapError": "地圖沒有載入，但座艙仍為你保留。",
+      "account": "我的帳戶",
+      "codeTitle": "輸入你的訂單代碼",
+      "codeLede": "代碼在你的確認頁、收據或簡訊上。只需要輸入一次。",
+      "codeLabel": "訂單代碼",
+      "codeSubmit": "幫我報到",
+      "codeRequired": "請輸入你的訂單代碼。",
+      "codeNotFound": "這個代碼與此座艙的訂單不符，請確認後再試一次。",
+      "wrongPod": "這筆訂單保留在其他座艙。",
+      "checkedIn": "這個座艙已報到",
+      "checkedInLede": "如果是你的訂單，請從確認頁開啟。",
+      "openOrder": "開啟我的訂單"
+    },
+    "reorder": {
+      "note": "你上次的點餐已放回碗裡，價格以今天為準。",
+      "unavailable": "已不在菜單上：{items}。",
+      "missing": "你的帳戶中找不到這筆訂單。",
+      "loading": "正在載入你上次的訂單"
+    }
+  },
+  "menuPage": {
+    "meta": {
+      "title": "菜單",
+      "description": "牛肉麵、麵條、加點、小菜與飲料，附當日價格。"
+    },
+    "eyebrow": "菜單",
+    "title": "一碗麵，照您的口味。",
+    "lede": "先選湯頭和麵條，再調成您喜歡的樣子。價格未含稅。",
+    "jump": "菜單分類",
+    "groups": {
+      "soup": {
+        "title": "湯麵",
+        "line": "每一碗都從這裡開始。"
+      },
+      "noodles": {
+        "title": "麵條",
+        "line": "每碗麵都附一種麵條。"
+      },
+      "customize": {
+        "title": "照您的口味",
+        "line": "點餐時設定，不另收費。"
+      },
+      "addons": {
+        "title": "加點",
+        "line": "讓您的麵更豐富。"
+      },
+      "sides": {
+        "title": "小菜",
+        "line": "適合分享的小盤。"
+      },
+      "drinks": {
+        "title": "飲料",
+        "line": "配麵的飲品。"
+      },
+      "desserts": {
+        "title": "甜點",
+        "line": "吃完來點甜的。"
+      }
+    },
+    "included": "已包含",
+    "sliderDefault": "預設",
+    "early": "會員搶先",
+    "earlyNote": "會員可在正式推出前搶先看到。",
+    "marks": {
+      "title": "標示說明",
+      "vegan": "純素",
+      "vegetarian": "素食",
+      "glutenFree": "無麩質",
+      "spice1": "微辣",
+      "spice2": "辣",
+      "spice3": "很辣"
+    },
+    "sheet": {
+      "label": "{name}的詳細資訊",
+      "orderThis": "點這道",
+      "close": "關閉"
+    },
+    "allergens": {
+      "title": "過敏資訊",
+      "body": "我們的廚房會處理小麥、黃豆和蛋。如有過敏，請在點餐前與我們聯絡。",
+      "link": "聯絡我們"
+    },
+    "error": {
+      "title": "菜單沒有載入。",
+      "body": "請檢查網路連線後再試一次。",
+      "retry": "再試一次"
+    },
+    "empty": "菜單正在更新，請稍後再來看看。",
+    "cta": {
+      "title": "餓了嗎？",
+      "body": "先點餐，再選抵達時間和您的座艙。",
+      "button": "開始點餐"
     }
   }
 }

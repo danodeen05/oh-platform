@@ -346,6 +346,38 @@ export function seatRequest(pod: PodChoice): { best: true } | { label: string } 
   return pod.mode === "pick" ? { label: pod.label } : { best: true };
 }
 
+export type PastOrderItem = { menuItemId?: string | null; quantity: number; selectedValue?: string | null; menuItem?: { id?: string; name?: string | null } | null };
+
+/**
+ * "Order again" (Task D6, carried from D8): splits a past order's lines into
+ * the ones today's menu still offers and the names of the ones it doesn't
+ * (gone from the menu, or marked unavailable). Only the available lines go
+ * back into the cart; prices are never carried over (the flow re-quotes).
+ */
+export function splitReorderItems(
+  steps: MenuStep[],
+  items: PastOrderItem[],
+): { available: { menuItemId: string; quantity: number; selectedValue?: string | null }[]; unavailable: string[] } {
+  const offered = new Map<string, boolean>();
+  for (const step of steps) {
+    for (const section of step.sections) {
+      if (section.selectionMode === "SLIDER" && section.item) offered.set(section.item.id, section.item.isAvailable !== false);
+      for (const item of section.items || []) offered.set(item.id, item.isAvailable !== false);
+    }
+  }
+  const available: { menuItemId: string; quantity: number; selectedValue?: string | null }[] = [];
+  const unavailable: string[] = [];
+  for (const it of items) {
+    const id = it.menuItemId || it.menuItem?.id || null;
+    if (id && offered.get(id)) available.push({ menuItemId: id, quantity: it.quantity, selectedValue: it.selectedValue ?? null });
+    else {
+      const name = it.menuItem?.name;
+      if (name && !unavailable.includes(name)) unavailable.push(name);
+    }
+  }
+  return { available, unavailable };
+}
+
 /** A cart line from a past order, placed back into the draft by the menu's structure (reorder). */
 export function draftFromOrderItems(
   base: OrderDraft,
@@ -374,4 +406,31 @@ export function draftFromOrderItems(
     }
   }
   return withMenuDefaults(next, steps);
+}
+
+/**
+ * "Order this" from the menu (Task D3): /{locale}/order?item=<id> carries the
+ * item through the location step, and the bowl step puts it in the draft. A
+ * soup or noodle becomes that section's choice; an add-on, side, drink or
+ * dessert gets a quantity of at least 1 (capped by its section). An id the
+ * menu doesn't offer (gone, unavailable, or not yet released for this
+ * caller) changes nothing. Prices are never set here: the flow's quote
+ * prices the cart.
+ */
+export function withPreselectedItem(draft: OrderDraft, steps: MenuStep[], itemId: string): { draft: OrderDraft; found: boolean } {
+  for (const step of steps) {
+    for (const section of step.sections) {
+      const item = (section.items || []).find((i) => i.id === itemId && i.isAvailable !== false);
+      if (!item) continue;
+      if (section.selectionMode === "SINGLE") {
+        return { draft: { ...draft, singles: { ...draft.singles, [section.id]: item.id } }, found: true };
+      }
+      if (section.selectionMode === "MULTIPLE") {
+        const cap = section.maxQuantity ?? 20;
+        const qty = Math.min(cap, Math.max(1, draft.extras[item.id] || 0));
+        return { draft: { ...draft, extras: { ...draft.extras, [item.id]: qty } }, found: true };
+      }
+    }
+  }
+  return { draft, found: false };
 }

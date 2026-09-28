@@ -459,8 +459,8 @@
       }
     },
     "comingSoon": {
-      "title": "Coming Soon",
-      "description": "We're expanding! Stay tuned for new locations in these cities.",
+      "title": "Coming soon",
+      "description": "More rooms are on the way.",
       "label": "Coming Soon",
       "cities": [
         "San Francisco",
@@ -473,6 +473,82 @@
       "title": "Ready for the Best Bowl?",
       "description": "Order ahead and skip the wait. Your perfect bowl is just a few taps away.",
       "button": "Start Your Order"
+    },
+    "meta": {
+      "title": "Locations",
+      "description": "Two Oh! rooms in Utah: City Creek in Salt Lake City and University Place in Orem. Live pods, hours and directions."
+    },
+    "index": {
+      "eyebrow": "Find us",
+      "title": "Two rooms in Utah.",
+      "lede": "Private pods, a kitchen behind the wall, and your bowl through a hatch. Pick a room to see it live.",
+      "cardCta": "See the room"
+    },
+    "status": {
+      "open": "Open now",
+      "closed": "Closed now",
+      "paused": "Ordering is paused here right now.",
+      "podsFree": "{free} of {total} pods free",
+      "pods": "{total} pods"
+    },
+    "detail": {
+      "back": "All locations",
+      "order": "Order here",
+      "directions": "Directions",
+      "directionsLabel": "Directions to {name}. Opens your maps app.",
+      "mapTitle": "The room, live",
+      "mapLede": "Every pod as it stands right now. Tap a row to look closer.",
+      "mapLoading": "Loading the pods",
+      "mapError": "Live pods are not available right now.",
+      "threeD": "See it in 3D",
+      "threeDHint": "A 3D model of the room. It loads when you tap.",
+      "threeDClose": "Back to the map",
+      "threeDUnavailable": "3D is not available on this device. The map above shows every pod.",
+      "threeDAria": "A 3D model of the {name} dining room",
+      "threeDLoading": "Building the room",
+      "iso": {
+        "corridor": "Staff corridor",
+        "aisle": "Aisle"
+      },
+      "hoursTitle": "Hours",
+      "today": "Today",
+      "closedDay": "Closed",
+      "hoursRange": "{open} to {close}",
+      "hoursNone": "Hours are not posted yet.",
+      "timezone": "Mountain Time",
+      "visitTitle": "Getting here",
+      "address": "Address",
+      "parking": "Parking",
+      "nearby": "Nearby",
+      "orderTitle": "Your pod is waiting.",
+      "orderLede": "Order ahead, pick a pod, and walk straight in.",
+      "loadErrorTitle": "We could not load this location.",
+      "loadErrorBody": "Check your connection and try again.",
+      "retry": "Try again"
+    },
+    "places": {
+      "cityCreek": {
+        "tagline": "Downtown Salt Lake City",
+        "intro": "Our flagship, inside City Creek Center. {pods} private pods on three rows of fingers, with the kitchen right behind them.",
+        "parking": "Free parking in the City Creek parking structure with validation.",
+        "nearby": [
+          "Temple Square",
+          "Salt Palace Convention Center",
+          "The Gateway",
+          "Utah State Capitol"
+        ]
+      },
+      "universityPlace": {
+        "tagline": "Utah Valley",
+        "intro": "Inside University Place in Orem. {pods} private pods, the same kitchen and the same broth.",
+        "parking": "Plenty of free parking throughout University Place.",
+        "nearby": [
+          "Utah Valley University",
+          "BYU campus",
+          "Provo Canyon",
+          "Timpanogos Cave"
+        ]
+      }
     }
   },
   "loyalty": {
@@ -1114,6 +1190,23 @@
       "lasts": {
         "title": "It keeps",
         "body": "The balance stays on the card until it's spent."
+      },
+      "subtitle": "The Perfect Gift for Any Occasion",
+      "instantDelivery": {
+        "title": "Instant Delivery",
+        "description": "Send via email instantly or schedule for a special date"
+      },
+      "beautifulDesign": {
+        "title": "Beautiful Designs",
+        "description": "Choose from our collection of elegant card designs"
+      },
+      "neverExpires": {
+        "title": "Never Expires",
+        "description": "Our gift cards never expire and hold their full value"
+      },
+      "addMessage": {
+        "title": "Add a Message",
+        "description": "Include a personalized note to make it extra special"
       }
     },
     "faq": {
@@ -1133,11 +1226,32 @@
       "balance": {
         "q": "How do I check what's left?",
         "a": "Enter the card code on the balance page."
+      },
+      "tagline": "Questions?",
+      "questions": {
+        "delivery": {
+          "q": "How are digital gift cards delivered?",
+          "a": "Digital gift cards are sent via email to the recipient. You can choose to send immediately or schedule for a specific date."
+        },
+        "multiple": {
+          "q": "Can I use multiple gift cards on one order?",
+          "a": "Yes! You can combine multiple gift cards on a single order. Any remaining balance stays on your cards."
+        },
+        "expire": {
+          "q": "Do gift cards expire?",
+          "a": "No, Oh! gift cards never expire. Your balance will always be available whenever you're ready for your next bowl."
+        },
+        "balance": {
+          "q": "How do I check my gift card balance?",
+          "a": "You can check your balance at any Oh! location or by signing into your account online."
+        }
       }
     },
     "cta": {
       "title": "Ready when you are.",
-      "body": "Pick an amount and write a note. It takes a minute."
+      "body": "Pick an amount and write a note. It takes a minute.",
+      "description": "A perfect bowl of beef noodle soup is always a welcome surprise.",
+      "button": "Get Started"
     },
     "purchase": {
       "meta": "Send a gift card",
@@ -1147,7 +1261,9 @@
       "steps": {
         "amount": "Amount",
         "recipient": "Recipient",
-        "pay": "Pay"
+        "pay": "Pay",
+        "payment": "Payment",
+        "confirmation": "Confirmation"
       },
       "next": "Continue",
       "edit": "Edit",
@@ -1195,6 +1311,41 @@
       "received": {
         "finishing": "We're issuing your gift card. This takes a moment.",
         "stuck": "Your payment went through. If we can't finish here, we'll email the card, so there's no need to pay again."
+      },
+      "backToGiftCards": "Back to Gift Cards",
+      "chooseDesign": "Choose Design",
+      "selectAmount": "Select Amount",
+      "customAmountLabel": "Or enter custom amount ($10-$500)",
+      "minimumAmount": "Minimum amount is $10",
+      "recipient": {
+        "title": "Recipient Information",
+        "email": "Recipient Email",
+        "emailPlaceholder": "email@example.com",
+        "name": "Recipient Name",
+        "namePlaceholder": "John Doe",
+        "message": "Personal Message (optional)",
+        "messagePlaceholder": "Add a personal message to your gift card..."
+      },
+      "delivery": {
+        "title": "Delivery",
+        "sendImmediately": "Send immediately",
+        "sendImmediatelyDesc": "Recipient will receive the gift card via email right after purchase",
+        "scheduleLater": "Schedule for later",
+        "scheduleLaterDesc": "Choose a date for the gift card to be delivered"
+      },
+      "orderSummary": "Order Summary",
+      "applyCredits": "Apply Credits",
+      "availableCredits": "Available: ${amount}",
+      "paymentMethod": "Payment Method",
+      "creditsFullyCover": "Your credits cover the full amount!",
+      "noPaymentNeeded": "No additional payment needed.",
+      "loadingPayment": "Loading payment options...",
+      "completePurchase": "Complete Purchase",
+      "confirmation": {
+        "title": "Gift Card Purchased!",
+        "willBeSent": "A ${amount} gift card will be sent to",
+        "buyAnother": "Buy Another Gift Card",
+        "returnHome": "Return Home"
       }
     },
     "errors": {
@@ -1225,6 +1376,34 @@
       "spendBowl": "Order a bowl",
       "note": "Enter this code at checkout. What isn't spent stays on the card.",
       "back": "Gift cards"
+    },
+    "title": "Gift Cards",
+    "description": "Share the gift of Oh! with friends and family",
+    "buyNow": "Buy Now",
+    "checkBalance": "Check Balance",
+    "tagline": "Give the Gift of Deliciousness",
+    "digitalCard": "DIGITAL GIFT CARD",
+    "continue": "Continue",
+    "purchaseComingSoon": "Online purchase coming soon!",
+    "chooseAmount": {
+      "tagline": "Step 1",
+      "title": "Choose Your Amount",
+      "customLabel": "Or enter a custom amount ($10-$500)",
+      "customPlaceholder": "Enter amount"
+    },
+    "corporate": {
+      "tagline": "For Business",
+      "title": "Corporate Gift Cards",
+      "description": "Reward employees, thank clients, or celebrate milestones with Oh! gift cards. Perfect for any corporate gifting occasion.",
+      "contactSales": "Contact Sales",
+      "bulkDiscounts": "Bulk Discounts",
+      "tenPlus": "10+ cards",
+      "customBranding": "Custom Branding",
+      "addLogo": "Add your logo",
+      "dedicatedSupport": "Dedicated Support",
+      "priorityService": "Priority service",
+      "flexibleDelivery": "Flexible Delivery",
+      "scheduleSends": "Schedule sends"
     }
   },
   "store": {
@@ -1250,7 +1429,12 @@
       "CONDIMENTS": "Condiments",
       "MERCHANDISE": "For the table",
       "APPAREL": "Apparel",
-      "LIMITED_EDITION": "Limited"
+      "LIMITED_EDITION": "Limited",
+      "food": "Food",
+      "condiments": "Condiments",
+      "merchandise": "Merchandise",
+      "apparel": "Apparel",
+      "limitedEdition": "Limited Edition"
     },
     "product": {
       "add": "Add",
@@ -1455,6 +1639,85 @@
       "notFoundTitle": "We couldn't find that tag.",
       "notFoundBody": "Check the code, or ask at the counter.",
       "scanAgain": "Scan again"
+    },
+    "title": "Oh! Store",
+    "description": "Take a piece of Oh! home with you",
+    "merchandise": "Merchandise",
+    "comingSoon": "Coming Soon",
+    "tagline": "From Our Kitchen to Yours",
+    "launchingSoon": "Online store launching soon! Sign up to be notified.",
+    "products": {
+      "homeKit": {
+        "name": "Oh! Home Kit",
+        "description": "Everything you need to make authentic Oh! beef noodle soup at home"
+      },
+      "chiliOil": {
+        "name": "Signature Chili Oil",
+        "description": "Our house-made chili oil with Sichuan peppercorns"
+      },
+      "brothConcentrate": {
+        "name": "Beef Bone Broth Concentrate",
+        "description": "Rich, collagen-packed broth base for soups and stews"
+      },
+      "ceramicBowl": {
+        "name": "Ceramic Noodle Bowl",
+        "description": "Traditional style bowl, perfect for noodles and soups"
+      },
+      "chopsticks": {
+        "name": "Bamboo Chopsticks Set",
+        "description": "Premium bamboo chopsticks with custom Oh! engraving"
+      },
+      "tshirt": {
+        "name": "Oh! Classic T-Shirt",
+        "description": "Soft cotton tee with minimalist Oh! logo"
+      },
+      "hoodie": {
+        "name": "Comfort Hoodie",
+        "description": "Cozy fleece hoodie with embroidered logo"
+      },
+      "apron": {
+        "name": "Chef's Apron",
+        "description": "Professional grade apron for the home chef"
+      },
+      "woodenBowl": {
+        "name": "Artisan Wooden Soup Bowl",
+        "description": "Hand-crafted from reclaimed wood, each piece is unique"
+      }
+    },
+    "badges": {
+      "bestSeller": "Best Seller",
+      "new": "New",
+      "limited": "Limited"
+    },
+    "whyShop": {
+      "title": "Why Shop Oh!",
+      "subtitle": "The Oh! Experience, Delivered",
+      "freeShipping": {
+        "title": "Free Shipping",
+        "description": "On orders over $50"
+      },
+      "useCredit": {
+        "title": "Use Your Credit",
+        "description": "Apply Oh! Rewards to purchases"
+      },
+      "memberRewards": {
+        "title": "Member Rewards",
+        "description": "Earn points on every purchase"
+      },
+      "easyReturns": {
+        "title": "Easy Returns",
+        "description": "30-day hassle-free returns"
+      }
+    },
+    "newsletter": {
+      "tagline": "Be the First to Know",
+      "title": "Get Early Access",
+      "description": "Sign up for exclusive drops, member-only deals, and first access to new products.",
+      "placeholder": "Enter your email"
+    },
+    "cta": {
+      "title": "Can't Wait?",
+      "description": "Visit one of our locations to shop in person and enjoy a bowl while you're at it."
     }
   },
   "referral": {
@@ -1839,6 +2102,47 @@
     },
     "demo": {
       "banner": "Live demo · not a real order"
+    },
+    "lines": {
+      "feed": {
+        "label": "Live from the kitchen",
+        "listening": "Listening to the kitchen",
+        "quiet": "The kitchen is quiet for a moment. Something good is coming."
+      },
+      "fortune": {
+        "title": "Your fortune",
+        "lede": "A fortune cookie while the broth does its work.",
+        "open": "Crack it open",
+        "loading": "Reading your fortune",
+        "lucky": "Lucky numbers",
+        "thisDay": "On this day in {year}",
+        "learn": "Learn a word",
+        "unavailable": "No fortune today. Your bowl is still on its way."
+      },
+      "roast": {
+        "title": "Roast my order",
+        "lede": "Our honest, affectionate take on what you chose.",
+        "open": "Roast it",
+        "loading": "Studying your choices",
+        "highlights": "What stood out",
+        "unavailable": "The roast is off for now. Your order looks great."
+      },
+      "backstory": {
+        "title": "Behind the bowl",
+        "lede": "Where your ingredients have been before tonight.",
+        "open": "Tell me",
+        "loading": "Asking the ingredients",
+        "unavailable": "The ingredients are keeping their secrets today."
+      },
+      "redStep": {
+        "label": "Mental health matters",
+        "loading": "Loading today's fact",
+        "source": "Source: {source}",
+        "lede": "{name}, there's no tip here because fair wages are built into every bowl. If you'd like to give, this is where we'd send it.",
+        "cta": "Support the cause",
+        "newTab": "(opens in a new tab)",
+        "foundation": "One Red Step at a Time Foundation, a 501(c)(3)"
+      }
     }
   },
   "features": {
@@ -6266,6 +6570,361 @@
         "REFUND_RESTORE": "Returned after a refund",
         "OTHER": "Credit"
       }
+    }
+  },
+  "afterOrder": {
+    "common": {
+      "orderNumber": "Order {number}",
+      "podNumber": "Pod {label}",
+      "yourPod": "Your pod",
+      "loading": "Loading your order",
+      "notFound": "We couldn't find that order",
+      "notFoundLede": "Check the link, or start a new order.",
+      "error": "We couldn't reach the restaurant",
+      "errorLede": "Check your connection and try again.",
+      "retry": "Try again",
+      "newOrder": "Start an order",
+      "demo": "Live demo. Not a real order.",
+      "podMoved": "Your pod is now {to}.",
+      "podMovedLede": "{from} was taken before your payment went through, so we held the next best pod for you.",
+      "podNone": "No pod was free when you paid. Check in when you arrive and we'll seat you.",
+      "qty": "x {count}",
+      "needHelp": "Need a hand?",
+      "askChappy": "Ask Chappy",
+      "networkError": "We couldn't reach the restaurant. Check your connection and try again."
+    },
+    "status": {
+      "metaTitle": "Your order",
+      "progressLabel": "Order progress",
+      "progress": "Step {current} of {total}",
+      "autoRefresh": "This page updates on its own.",
+      "friend": "Friend",
+      "stages": {
+        "PENDING_PAYMENT": {
+          "title": "Waiting for payment",
+          "lede": "This order isn't paid yet."
+        },
+        "PAID": {
+          "title": "Order placed",
+          "lede": "Head to the restaurant. Check in when you arrive."
+        },
+        "QUEUED": {
+          "title": "You're in line",
+          "lede": "The kitchen has your order. It starts on your bowl soon."
+        },
+        "PREPPING": {
+          "title": "Cooking now",
+          "lede": "Your broth is on the fire and your noodles are going in."
+        },
+        "READY": {
+          "title": "Almost there",
+          "lede": "Your bowl passed its final check. It's on its way to your pod."
+        },
+        "SERVING": {
+          "title": "Enjoy your bowl",
+          "lede": "Take your time. We're here if you need anything."
+        },
+        "COMPLETED": {
+          "title": "Thanks for coming",
+          "lede": "We hope to see you again soon."
+        },
+        "CANCELLED": {
+          "title": "Order cancelled",
+          "lede": "This order was cancelled. Nothing more to do here."
+        },
+        "UNKNOWN": {
+          "title": "Your order",
+          "lede": "We're checking on it."
+        }
+      },
+      "timeline": {
+        "label": "Your visit",
+        "PAID": "Paid",
+        "QUEUED": "Checked in",
+        "PREPPING": "Cooking",
+        "READY": "Final check",
+        "SERVING": "At your pod",
+        "COMPLETED": "Finished",
+        "now": "now",
+        "totalTime": "Payment to bowl: {minutes} min"
+      },
+      "pod": {
+        "goTo": "Go to your pod, then let us know you're there.",
+        "confirm": "I'm at my pod",
+        "checkedIn": "Checked in",
+        "callStaff": "Call staff",
+        "calling": "Calling",
+        "staffCalled": "Staff called",
+        "staffComing": "Staff are on the way.",
+        "callFailed": "We couldn't reach staff. Try again, or wave us down.",
+        "addItems": "Add to my order",
+        "dessert": "Ready for dessert",
+        "dessertSending": "Letting the kitchen know",
+        "dessertCalled": "Dessert is coming",
+        "dessertComing": "Dessert is on its way.",
+        "dessertFailed": "That didn't go through. Try again."
+      },
+      "queue": {
+        "title": "Waiting for a pod",
+        "position": "Number {position}",
+        "wait": "About {minutes} minutes",
+        "note": "We'll let you know when a pod opens."
+      },
+      "done": {
+        "cta": "I'm done eating",
+        "prompt": "All finished? We'll let staff know your pod is ready to clean.",
+        "confirm": "Yes, I'm done",
+        "cancel": "Not yet",
+        "failed": "That didn't go through. Try again."
+      },
+      "join": {
+        "eyebrow": "Oh! Rewards",
+        "title": "Earn rewards on this order",
+        "lede": "Create a free account and order {number} counts toward your next free bowl.",
+        "benefits": {
+          "one": "Cashback on every order",
+          "two": "A free bowl when you move up a tier",
+          "three": "Your orders and seals in one place"
+        },
+        "create": "Create an account",
+        "signIn": "I have an account",
+        "linked": "This order is now in your account."
+      },
+      "bowl": {
+        "title": "Your bowl"
+      },
+      "links": {
+        "label": "What's next",
+        "orderAgain": "Order again",
+        "account": "My account"
+      },
+      "noCode": {
+        "title": "No order to show",
+        "lede": "Open this page from your order link or your confirmation."
+      }
+    },
+    "addOns": {
+      "title": "Add to my order",
+      "close": "Close",
+      "loading": "Loading what you can add",
+      "loadFailed": "We couldn't load the extras. Call staff and we'll help.",
+      "callInstead": "Call staff instead",
+      "none": "Nothing to add right now.",
+      "refills": "Refills",
+      "free": "Free",
+      "water": "Water",
+      "refill": "Refill",
+      "refillSent": "A refill is on its way.",
+      "extras": "Extra vegetables",
+      "requestExtras": "{count, plural, one {Request # extra} other {Request # extras}}",
+      "extrasSent": "Your extras are on their way.",
+      "paid": "Add-ons",
+      "add": "Add",
+      "addOne": "Add {name}",
+      "less": "One fewer {name}",
+      "more": "One more {name}",
+      "total": "Total",
+      "pay": "Pay {amount}",
+      "demoAdded": "Added. Nothing is charged in the demo.",
+      "failed": "That didn't go through. Try again."
+    },
+    "confirmation": {
+      "metaTitle": "Order confirmed",
+      "title": "You're all set",
+      "paid": "Paid {amount}. Thank you.",
+      "pending": "Your payment is processing. This page updates when it's done.",
+      "qrTitle": "Your order code",
+      "qrLede": "Show it at the kiosk when you arrive, or check in from your phone.",
+      "qrAlt": "QR code for order {number}",
+      "arrival": "Expected at {time}",
+      "signInForCode": "Sign in with the account you ordered with to see your order code.",
+      "podNote": "Held for you until you check in.",
+      "checkIn": "Check in now",
+      "track": "Track my order",
+      "group": {
+        "title": "{count, plural, one {Your group, # order} other {Your group, # orders}}",
+        "host": "Host",
+        "guest": "Guest {number}",
+        "noPod": "No pod yet",
+        "checkedIn": "At their pod",
+        "arrived": "Checked in",
+        "waiting": "Not here yet",
+        "checkIn": "Check in",
+        "checkInAll": "Check everyone in"
+      },
+      "receipt": {
+        "title": "Receipt",
+        "bowl": "The bowl",
+        "extras": "Extras",
+        "subtotal": "Subtotal",
+        "savings": "Savings",
+        "tax": "Tax",
+        "total": "Total"
+      },
+      "share": {
+        "title": "Bring a friend",
+        "lede": "Friends get $5 off their first order. You get $5 when they order.",
+        "button": "Share",
+        "copied": "Link copied",
+        "text": "I just ordered at Oh! Beef Noodle Soup. Get $5 off your first bowl: {url}"
+      },
+      "home": "Back to home"
+    },
+    "checkIn": {
+      "metaTitle": "Check in",
+      "eyebrow": "At the restaurant",
+      "title": "Check in",
+      "lede": "Arrived? Check in and we'll send you to your pod.",
+      "steps": {
+        "one": "Find your order code on your confirmation.",
+        "two": "Enter it below, or scan it at the kiosk.",
+        "three": "Go to your pod. The kitchen starts when you're there."
+      },
+      "codeLabel": "Order code",
+      "codeHint": "It's under the QR code on your confirmation.",
+      "submit": "Check me in",
+      "checking": "Checking in",
+      "required": "Enter your order code.",
+      "notFound": "We couldn't find that code. Check it and try again.",
+      "notPaid": "This order isn't paid yet.",
+      "noPod": "This order doesn't have a pod yet.",
+      "failed": "Check-in didn't go through. Try again, or ask staff.",
+      "help": "Stuck? Any of our staff can check you in."
+    },
+    "scan": {
+      "metaTitle": "Confirm your pod",
+      "eyebrow": "At your pod",
+      "title": "Confirm your pod",
+      "lede": "At your pod? Confirm it and the kitchen starts your bowl.",
+      "podNote": "Sit down here, then confirm below.",
+      "notFound": "We couldn't find that order.",
+      "noPod": "This order doesn't have a pod yet. Check in first.",
+      "codeLabel": "Order code",
+      "codeHint": "The same code from your confirmation.",
+      "submit": "I'm at my pod",
+      "confirming": "Confirming",
+      "required": "Enter your order code.",
+      "notPaid": "This order isn't paid yet.",
+      "failed": "That didn't go through. Try again, or ask staff.",
+      "checkInFirst": "Check in first",
+      "back": "Back to my order",
+      "success": "You're checked in",
+      "successLede": "The kitchen is starting your bowl."
+    },
+    "pod": {
+      "metaTitle": "Your pod",
+      "title": "Pod {label}",
+      "error": "We couldn't read this pod's code",
+      "errorLede": "Ask any of our staff and we'll get you seated.",
+      "noCode": "Scan your pod's code",
+      "noCodeLede": "The code is on the table at every pod.",
+      "confirmed": "Welcome to pod {label}",
+      "confirmedLede": "Your bowl is on its way to the kitchen line.",
+      "waiting": "Your order is waiting here",
+      "waitingLede": "An order is held at this pod. If it's yours, tell the kitchen you've arrived.",
+      "confirm": "I'm here",
+      "confirming": "Letting the kitchen know",
+      "failed": "That didn't go through. Try again, or ask staff.",
+      "free": "This pod is free",
+      "freeSteps": {
+        "one": "Order online and choose this pod.",
+        "two": "Come back when your arrival time is near.",
+        "three": "Scan this code again to check in."
+      },
+      "mapTitle": "Where you are",
+      "mapHint": "Pod {label} is marked",
+      "mapError": "The map didn't load. Your pod is still yours.",
+      "account": "My account",
+      "codeTitle": "Enter your order code",
+      "codeLede": "It's on your confirmation, receipt or text message. We only ask once.",
+      "codeLabel": "Order code",
+      "codeSubmit": "Check me in",
+      "codeRequired": "Enter your order code.",
+      "codeNotFound": "That code doesn't match an order waiting here. Check it and try again.",
+      "wrongPod": "That order is held at a different pod.",
+      "checkedIn": "This pod is checked in",
+      "checkedInLede": "If it's your order, open it from your confirmation.",
+      "openOrder": "Open my order"
+    },
+    "reorder": {
+      "note": "Your last order is back in your bowl. Prices are today's.",
+      "unavailable": "No longer on the menu: {items}.",
+      "missing": "We couldn't find that order in your account.",
+      "loading": "Loading your last order"
+    }
+  },
+  "menuPage": {
+    "meta": {
+      "title": "Menu",
+      "description": "Beef noodle soup, noodles, add-ons, sides and drinks, with today's prices."
+    },
+    "eyebrow": "The menu",
+    "title": "One bowl. Made your way.",
+    "lede": "Pick a soup and a noodle, then make it yours. Prices are before tax.",
+    "jump": "Menu sections",
+    "groups": {
+      "soup": {
+        "title": "Soups",
+        "line": "Every bowl starts here."
+      },
+      "noodles": {
+        "title": "Noodles",
+        "line": "One noodle comes with every bowl."
+      },
+      "customize": {
+        "title": "Make it yours",
+        "line": "Set these when you order. They cost nothing."
+      },
+      "addons": {
+        "title": "Add-ons",
+        "line": "More for your bowl."
+      },
+      "sides": {
+        "title": "Sides",
+        "line": "Small plates to share."
+      },
+      "drinks": {
+        "title": "Drinks",
+        "line": "Something to drink with your bowl."
+      },
+      "desserts": {
+        "title": "Dessert",
+        "line": "Something sweet to finish."
+      }
+    },
+    "included": "Included",
+    "sliderDefault": "usual",
+    "early": "Early for members",
+    "earlyNote": "Members see this before it opens to everyone.",
+    "marks": {
+      "title": "What the marks mean",
+      "vegan": "Vegan",
+      "vegetarian": "Vegetarian",
+      "glutenFree": "Gluten free",
+      "spice1": "Mildly spicy",
+      "spice2": "Spicy",
+      "spice3": "Very spicy"
+    },
+    "sheet": {
+      "label": "{name}, details",
+      "orderThis": "Order this",
+      "close": "Close"
+    },
+    "allergens": {
+      "title": "Allergies",
+      "body": "Our kitchen handles wheat, soy and eggs. If you have an allergy, contact us before you order.",
+      "link": "Contact us"
+    },
+    "error": {
+      "title": "The menu didn't load.",
+      "body": "Check your connection and try again.",
+      "retry": "Try again"
+    },
+    "empty": "The menu is being updated. Check back soon.",
+    "cta": {
+      "title": "Hungry?",
+      "body": "Order ahead, then pick your arrival time and your pod.",
+      "button": "Start an order"
     }
   }
 }

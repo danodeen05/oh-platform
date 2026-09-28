@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, type MutableRefObject } from "react";
 import { useFrame } from "@react-three/fiber";
 import { BufferGeometry, Group, Line, LineDashedMaterial, Vector3 } from "three";
-import { BOWL_PATH, DIRTY_PATH, GUEST_EXIT_PATH, GUEST_PATH, HEIGHTS, type Point } from "../layout";
+import { HEIGHTS, type Point } from "../layout";
+import { useSceneLayout } from "./layout-context";
 import { P } from "./palette";
 import type { IsoFocus, Journey } from "./types";
 
@@ -40,14 +41,15 @@ function Marker({ hex }: { hex: string }) {
 export function Actors({ journey, focus, showPaths }: Props) {
   const guest = useRef<Group>(null);
   const runner = useRef<Group>(null);
+  const layout = useSceneLayout();
   const lines = useMemo(
     () => ({
-      guestIn: dashedLine(GUEST_PATH, P.guest, 0.25),
-      guestOut: dashedLine(GUEST_EXIT_PATH, P.guest, 0.25),
-      bowl: dashedLine(BOWL_PATH, P.runner, 0.25),
-      dirty: dashedLine(DIRTY_PATH, P.runner, 0.25),
+      guestIn: dashedLine(layout.guestPath, P.guest, 0.25),
+      guestOut: dashedLine(layout.guestExitPath, P.guest, 0.25),
+      bowl: dashedLine(layout.bowlPath, P.runner, 0.25),
+      dirty: dashedLine(layout.dirtyPath, P.runner, 0.25),
     }),
-    [],
+    [layout],
   );
   useEffect(
     () => () => {

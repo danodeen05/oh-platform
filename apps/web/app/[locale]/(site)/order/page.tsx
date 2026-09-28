@@ -7,6 +7,7 @@ import { getLocale } from "next-intl/server";
 import { API_URL } from "@/lib/api";
 import LocationSelector, { type LocationCard } from "./location-selector";
 import { serverApiHeaders } from "@/lib/server/api-headers";
+import { ReorderGate } from "@/components/site/order/ReorderGate";
 
 export const dynamic = "force-dynamic";
 
@@ -43,8 +44,11 @@ async function dineInEnabled(): Promise<boolean> {
   }
 }
 
-export default async function OrderPage() {
+export default async function OrderPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const locale = await getLocale();
+  // Task D6: "Order again" (/order?reorder=<orderId>) goes on to that order's location once it's confirmed as the member's own.
+  const q = await searchParams;
+  const reorder = Array.isArray(q.reorder) ? q.reorder[0] : q.reorder;
   const [locations, enabled] = await Promise.all([getLocations(), dineInEnabled()]);
   const cards: LocationCard[] = locations.map((l, i) => {
     const loc = l.i18n?.[locale] || l.i18n?.en || {};
@@ -58,5 +62,10 @@ export default async function OrderPage() {
       image: i % 2 === 0 ? "storefront-dusk" : "storefront-queue",
     };
   });
-  return <LocationSelector locations={cards} dineInEnabled={enabled} />;
+  return (
+    <>
+      {reorder ? <ReorderGate key={reorder} orderId={reorder} /> : null}
+      <LocationSelector locations={cards} dineInEnabled={enabled} />
+    </>
+  );
 }

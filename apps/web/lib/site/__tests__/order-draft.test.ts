@@ -14,6 +14,7 @@ import {
   saveDraft,
   savingsBody,
   seatRequest,
+  splitReorderItems,
   withMenuDefaults,
   type MenuStep,
 } from "../order-draft";
@@ -195,5 +196,32 @@ describe("order draft", () => {
     expect(d.singles).toEqual({ soup: "wagyu", noodles: "ramen" });
     expect(d.sliders).toEqual({ "spice-item": 2 });
     expect(d.extras).toEqual({ egg: 1 });
+  });
+
+  it("Order again keeps only what today's menu still offers, and names the rest (D6)", () => {
+    const menu: MenuStep[] = MENU.map((step) =>
+      step.id === "extras"
+        ? { ...step, sections: step.sections.map((s) => ({ ...s, items: (s.items || []).map((i) => ({ ...i, isAvailable: false })) })) }
+        : step,
+    );
+    const { available, unavailable } = splitReorderItems(menu, [
+      { menuItemId: "classic", quantity: 1, menuItem: { id: "classic", name: "經典牛肉麵" } },
+      { menuItemId: "spice-item", quantity: 0, selectedValue: "Mild", menuItem: { id: "spice-item", name: "辣度" } },
+      { menuItemId: "egg", quantity: 2, menuItem: { id: "egg", name: "滷蛋" } },
+      { menuItemId: "retired-side", quantity: 1, menuItem: { id: "retired-side", name: "涼拌黃瓜" } },
+      // The safe view (someone else's order) has no menuItemId; its lines still resolve by menuItem.id, and ownership is checked before this runs.
+      { quantity: 1, menuItem: { id: "wide", name: "寬麵" } },
+    ]);
+    expect(available).toEqual([
+      { menuItemId: "classic", quantity: 1, selectedValue: null },
+      { menuItemId: "spice-item", quantity: 0, selectedValue: "Mild" },
+      { menuItemId: "wide", quantity: 1, selectedValue: null },
+    ]);
+    expect(unavailable).toEqual(["滷蛋", "涼拌黃瓜"]);
+    const d = draftFromOrderItems(emptyDraft(), menu, available);
+    expect(d.singles).toEqual({ soup: "classic", noodles: "wide" });
+    expect(d.extras).toEqual({});
+    // No prices come from the old order: the draft has none; the flow re-quotes.
+    expect(JSON.stringify(d)).not.toMatch(/priceCents|1599/);
   });
 });

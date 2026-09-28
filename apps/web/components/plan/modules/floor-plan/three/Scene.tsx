@@ -12,6 +12,7 @@ import { Pods } from "./Pods";
 import type { FloorPlan3DProps, Journey } from "./types";
 import { ISO_AZ, ISO_EL, isoOffset, useIsoCamera, type Controls } from "./useIsoCamera";
 import { Walls } from "./Walls";
+import { PLAN_LAYOUT, SceneLayoutContext } from "./layout-context";
 
 type SceneProps = FloorPlan3DProps & { onReady: () => void; coarse: boolean };
 
@@ -62,7 +63,7 @@ function Ready({ onReady }: { onReady: () => void }) {
 }
 
 export default function Scene(props: SceneProps) {
-  const { layers, progress, guest, bowl, activePod, reduce, preset, focus, labels, onPodEnter, onPodLeave, onPodActivate, onUnavailable, onReady, coarse } = props;
+  const { layers, progress, guest, bowl, activePod, reduce, preset, focus, labels, onPodEnter, onPodLeave, onPodActivate, onUnavailable, onReady, coarse, layout } = props;
   const journey = useRef<Journey>({ progress: 0, guest: null, bowl: null });
   const [wide, setWide] = useState(true);
   useEffect(() => {
@@ -96,18 +97,20 @@ export default function Scene(props: SceneProps) {
 
   return (
     <Canvas orthographic frameloop="demand" dpr={dpr} shadows={!coarse} camera={camera} gl={glProps} onCreated={onCreated} style={{ touchAction: "pan-y" }}>
-      <color attach="background" args={[P.bg]} />
-      <ambientLight intensity={1.3} />
-      <hemisphereLight args={["#F2EDE4", "#1C1B19", 0.35]} />
-      <directionalLight position={[40, 80, 60]} intensity={2.2} castShadow={!coarse} shadow-mapSize={[1024, 1024]} shadow-camera-left={-60} shadow-camera-right={60} shadow-camera-top={60} shadow-camera-bottom={-60} />
-      <Rig preset={preset} reduce={reduce} coarse={coarse} />
-      <JourneySync journey={journey} progress={progress} guest={guest} bowl={bowl} />
-      <Floors layers={layers} focus={focus} />
-      <Walls layers={layers} focus={focus} />
-      {layers.pods ? <Pods focus={focus} activePod={activePod} journey={journey} onPodEnter={onPodEnter} onPodLeave={onPodLeave} onPodActivate={onPodActivate} /> : null}
-      <Actors journey={journey} focus={focus} showPaths={progress > 0 || layers.flow} />
-      <Labels labels={labels} show={wide} />
-      <Ready onReady={onReady} />
+      <SceneLayoutContext.Provider value={layout ?? PLAN_LAYOUT}>
+        <color attach="background" args={[P.bg]} />
+        <ambientLight intensity={1.3} />
+        <hemisphereLight args={["#F2EDE4", "#1C1B19", 0.35]} />
+        <directionalLight position={[40, 80, 60]} intensity={2.2} castShadow={!coarse} shadow-mapSize={[1024, 1024]} shadow-camera-left={-60} shadow-camera-right={60} shadow-camera-top={60} shadow-camera-bottom={-60} />
+        <Rig preset={preset} reduce={reduce} coarse={coarse} />
+        <JourneySync journey={journey} progress={progress} guest={guest} bowl={bowl} />
+        <Floors layers={layers} focus={focus} />
+        <Walls layers={layers} focus={focus} />
+        {layers.pods ? <Pods focus={focus} activePod={activePod} journey={journey} onPodEnter={onPodEnter} onPodLeave={onPodLeave} onPodActivate={onPodActivate} /> : null}
+        <Actors journey={journey} focus={focus} showPaths={progress > 0 || layers.flow} />
+        <Labels labels={labels} show={wide} />
+        <Ready onReady={onReady} />
+      </SceneLayoutContext.Provider>
     </Canvas>
   );
 }

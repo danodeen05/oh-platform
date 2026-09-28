@@ -466,4 +466,23 @@ export function slotsFor(location, date, now = new Date()) {
   return slots;
 }
 
+const WEEK_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+
+/**
+ * The week's opening hours for display (Task D4 location pages): the
+ * location's own `operatingHours`, or the defaults when it has none, Monday
+ * first, as 24-hour "HH:MM" strings (null open/close is a closed day). `today`
+ * is the location's local weekday. Real hours only: the testing bypass
+ * (DISABLE_TIME_RESTRICTIONS) never changes what this reports.
+ */
+export function weeklyDisplayHours(location, date = new Date()) {
+  const timezone = location?.timezone || "America/Denver";
+  const { weekday } = getLocationTime(timezone, date);
+  const week = WEEK_ORDER.map((day) => {
+    const h = location?.isClosed ? null : getHoursForDay(location, day);
+    return h?.open && h?.close ? { day, open: h.open, close: h.close } : { day, open: null, close: null };
+  });
+  return { timezone, today: weekday, week };
+}
+
 export { DEFAULT_HOURS };

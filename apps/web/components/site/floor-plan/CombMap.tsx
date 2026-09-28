@@ -67,7 +67,7 @@ export interface CombMapProps {
   mode: CombMapMode;
   labels: CombMapLabels;
   seats?: CombSeat[];
-  /** Selected pod label (pick mode). */
+  /** Selected pod label: the pick in pick mode, "your pod" in live mode (Task D6). */
   selected?: string | null;
   /** Pick mode only. */
   onSelect?: (label: string) => void;
@@ -386,7 +386,8 @@ export function CombMap({
 
   const selectedSet = useMemo(() => {
     const s = new Set<string>();
-    if (mode !== "pick" || !selected) return s;
+    // Pick: the pod being chosen. Live (Task D6): "your pod" on the pod page. Journey draws its own target.
+    if (mode === "journey" || !selected) return s;
     s.add(selected);
     const partner = partySize === 2 ? partnerOf(selected) : undefined;
     if (partner) s.add(partner);
@@ -510,7 +511,7 @@ export function CombMap({
 
   const hint = mode === "pick" ? (zoom.isZoomed || (podPx >= minTargetPx({ coarse }) && zoom.pxPerFt > 0) ? labels.hintTapPod : labels.hintTapRow) : mode === "live" ? labels.hintLive : null;
   const showLegend = legend ?? mode !== "journey";
-  const legendItems = mode === "pick" ? (["available", "reserved", "occupied", "cleaning", "duo", "selected", "hatch"] as const) : (["available", "reserved", "occupied", "cleaning", "duo", "hatch"] as const);
+  const legendItems = mode === "pick" || (mode === "live" && selected) ? (["available", "reserved", "occupied", "cleaning", "duo", "selected", "hatch"] as const) : (["available", "reserved", "occupied", "cleaning", "duo", "hatch"] as const);
   const aspect = resolved === "portrait" ? "aspect-[53/73]" : "aspect-[73/53]";
   // Zone and door labels. `paint-order: stroke` draws a halo in the floor color first, so a wall line or a zone edge never cuts through the letters.
   const label = (x: number, y: number, text: string, opts: { size?: number; strong?: boolean } = {}) => (

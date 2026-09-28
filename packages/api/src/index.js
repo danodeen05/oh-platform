@@ -49,6 +49,7 @@ import {
   getLocationStatus,
   validateArrivalTime,
   DEFAULT_HOURS,
+  weeklyDisplayHours,
 } from "./utils/operating-hours.js";
 import { parseModelJson } from "./utils/model-json.js";
 import {
@@ -113,6 +114,8 @@ import { claimCheckInSeat } from "./seats/kiosk-seat.js";
 import { assignQueue, listFreePods, pickAutoPod, retiredPodInfo, POD_RETIRED } from "./seats/free-pods.js";
 import { claimSeat, holdSeatForOrder, holdPodAtPay } from "./orders/service.js";
 import { canSeeFullOrder, safeOrderView, firstNameOnly, arrivedLookupSummary } from "./orders/order-view.js";
+import { buildStatusView } from "./orders/status-view.js";
+import { registerOrderServiceGuard, registerPodServiceRoutes } from "./orders/pod-service.js";
 import { registerKitchenStatusRoutes } from "./orders/kitchen-status.js";
 import { publicMealGift, nextMealGiftFor } from "./orders/meal-gift-view.js";
 import { registerMealGiftPayForward } from "./orders/meal-gift-routes.js";
@@ -235,6 +238,16 @@ registerStatusDemoGuard(app, { source: statusDemoSource });
 // client-sent userId. Every /users/:id/* route requires the caller to be that
 // user; this must stay above the route declarations (it uses onRoute).
 const customerAuth = createCustomerAuth({ prisma: basePrisma, log: (...args) => app.log.warn({ args }, "customer auth") });
+
+// Task D6 fix round 1: pod services (call staff, refills, extras, dessert, add-ons) need the order's owner,
+// staff, a same-location kiosk, or the order's own QR code (x-order-code). See orders/pod-service.js.
+const podServiceDeps = {
+  checkAdminAuth,
+  kioskDeviceFor: (req) => kioskAuth.deviceFor(req),
+  resolveCustomer: (req) => customerAuth.resolve(req),
+  findGuestBySessionToken: (token) => prisma.guest.findUnique({ where: { sessionToken: token } }),
+};
+registerOrderServiceGuard(app, { prisma, deps: podServiceDeps });
 registerCustomerIdentity(app, customerAuth);
 for (const warning of customerAuth.warnings) console.warn(`WARNING (customer auth): ${warning}`);
 
@@ -691,8 +704,10 @@ app.get("/locations", async (req, reply) => {
   // Calculate real-time pod availability and wait times for each location
   const locationsWithRealTimeStats = await Promise.all(
     locations.map(async (location) => {
-      const totalSeats = location.seats.length;
-      const availableSeats = location.seats.filter(s => s.status === 'AVAILABLE').length;
+      // Task D4: retired pre-comb seats don't count toward the pods shown on the site.
+      const liveSeats = location.seats.filter(s => !s.retiredAt);
+      const totalSeats = liveSeats.length;
+      const availableSeats = liveSeats.filter(s => s.status === 'AVAILABLE').length;
 
       // Calculate average wait time based on current queue
       let queuedOrders = 0;
@@ -729,6 +744,9 @@ app.get("/locations", async (req, reply) => {
           statusMessage: availability.statusMessage,
           closesAt: availability.closesAt,
         },
+
+        // Task D4: the week's real hours for the location pages (read-only).
+        hours: weeklyDisplayHours(location),
       };
     })
   );
@@ -2128,116 +2146,12 @@ app.get("/orders/status", async (req, reply) => {
     resolveCustomer: customerAuth.resolve,
     findGuestBySessionToken: (token) => prisma.guest.findUnique({ where: { sessionToken: token } }),
   });
-  const fullGuestName = order.guestName || order.guest?.name || null;
-  const guestName = canSeeFull ? fullGuestName : firstNameOnly(fullGuestName);
-
-  // Build response with status info
-  const response = {
-    order: {
-      id: order.id,
-      orderNumber: order.orderNumber,
-      kitchenOrderNumber: order.kitchenOrderNumber,
-      orderQrCode: order.orderQrCode,
-      status: order.status,
-      totalCents: order.totalCents,
-      estimatedArrival: order.estimatedArrival,
-
-      // Timestamps
-      paidAt: order.paidAt,
-      arrivedAt: order.arrivedAt,
-      queuedAt: order.queuedAt,
-      prepStartTime: order.prepStartTime,
-      readyTime: order.readyTime,
-      deliveredAt: order.deliveredAt,
-      completedTime: order.completedTime,
-
-      // Pod info
-      podNumber: order.seat?.number,
-      podAssignedAt: order.podAssignedAt,
-      podConfirmedAt: order.podConfirmedAt,
-
-      // Queue info
-      queuePosition: order.queuePosition,
-      estimatedWaitMinutes: order.estimatedWaitMinutes,
-
-      // Location
-      location: {
-        id: order.location.id,
-        name: order.location.name,
-        city: order.location.city,
-      },
-
-      // Guest name (for non-authenticated orders) - fallback to guest record name.
-      // Full name for the verified owner/staff/guest-owner; a first name otherwise.
-      guestName,
-
-      // Items - localized based on user's language preference
-      items: order.items.map((item) => {
-        const localizedMenuItem = localizeMenuItem(item.menuItem, locale);
-        return {
-          id: item.id,
-          name: localizedMenuItem.name,
-          quantity: item.quantity,
-          selectedValue: item.selectedValue,
-          priceCents: item.priceCents,
-          categoryType: item.menuItem.categoryType,
-        };
-      }),
-    },
-  };
-
-  return response;
+  // Task D6: the body is built in orders/status-view.js (same fields, plus
+  // podLabel, location.timezone and items[].selectedLabel in the page's language).
+  return buildStatusView(order, { locale, canSeeFull });
 });
 
-// POST /orders/link-to-account - Link a guest order to the signed-in caller's account.
-// Identity comes from the verified session (auth/customer.js); a body userId is ignored.
-// Before 2026-09-27 this looked users up by a clerkId column the schema does not
-// have and incremented nonexistent loyalty fields, so it always failed.
-app.post("/orders/link-to-account", async (req, reply) => {
-  const { orderQrCode } = req.body || {};
-
-  if (!orderQrCode) {
-    return reply.code(400).send({ error: "orderQrCode required" });
-  }
-
-  const who = await customerAuth.requireUser(req, reply);
-  if (!who) return reply;
-
-  // Find the order
-  const order = await prisma.order.findUnique({
-    where: { orderQrCode },
-    select: { id: true, userId: true, totalCents: true },
-  });
-
-  if (!order) {
-    return reply.code(404).send({ error: "Order not found" });
-  }
-
-  // Check if order is already linked to an account
-  if (order.userId) {
-    // If already linked to this user, that's fine
-    if (order.userId === who.userId) {
-      return { success: true, message: "Order already linked to your account" };
-    }
-    // If linked to a different user, reject
-    return reply.code(400).send({ error: "Order is already linked to another account" });
-  }
-
-  // Link only while still unlinked, so two racing requests cannot both claim it.
-  const linked = await prisma.order.updateMany({
-    where: { id: order.id, userId: null },
-    data: { userId: who.userId },
-  });
-  if (linked.count === 0) {
-    return reply.code(400).send({ error: "Order is already linked to another account" });
-  }
-
-  return {
-    success: true,
-    message: "Order linked successfully",
-    pointsAwarded: Math.floor(order.totalCents / 100),
-  };
-});
+// POST /orders/link-to-account: orders/pod-service.js (Task D6 fix round 1: unlinked orders only, with the order code as proof).
 
 // POST /orders/confirm-pod - Confirm customer arrived at assigned pod
 app.post("/orders/confirm-pod", async (req, reply) => {
@@ -2294,188 +2208,13 @@ app.post("/orders/confirm-pod", async (req, reply) => {
   };
 });
 
-// POST /pods/confirm-arrival - Customer scans pod QR code to confirm arrival
-// This is the endpoint called when a customer scans the QR code on their pod table
-app.post("/pods/confirm-arrival", async (req, reply) => {
-  const { podQrCode } = req.body || {};
-  // Prefer the verified caller's order; a body userId is ignored.
-  const userId = orderOwnerId(await customerAuth.resolve(req));
-
-  if (!podQrCode) {
-    return reply.code(400).send({ error: "podQrCode required" });
-  }
-
-  // Find the pod by QR code
-  const pod = await prisma.seat.findFirst({
-    where: { qrCode: podQrCode },
-    include: { location: true },
-  });
-
-  if (!pod) {
-    return reply.code(404).send({ error: "Pod not found. Please check the QR code." });
-  }
-  if (pod.retiredAt) {
-    // Old sticker: release 2 never assigns a retired pod (Task G3 fix round 1).
-    const live = await prisma.order.findFirst({
-      where: { seatId: pod.id, paymentStatus: "PAID", podConfirmedAt: null, status: { notIn: ["COMPLETED", "CANCELLED"] } },
-      select: { id: true },
-    });
-    if (!live) {
-      return reply.code(410).send({ error: "This pod code is out of date.", code: POD_RETIRED, locationId: pod.locationId });
-    }
-  }
-
-  // Find the order assigned to this pod that hasn't been confirmed yet
-  // Priority: 1) Orders for this specific user, 2) Any order assigned to this pod
-  let order;
-
-  if (userId) {
-    // First try to find an order for this user at this pod
-    order = await prisma.order.findFirst({
-      where: {
-        seatId: pod.id,
-        userId: userId,
-        paymentStatus: "PAID",
-        podConfirmedAt: null,
-        status: { notIn: ["COMPLETED", "CANCELLED"] },
-      },
-      include: { seat: true, location: true, items: { include: { menuItem: true } } },
-    });
-  }
-
-  if (!order) {
-    // Fall back to any order assigned to this pod
-    order = await prisma.order.findFirst({
-      where: {
-        seatId: pod.id,
-        paymentStatus: "PAID",
-        podConfirmedAt: null,
-        status: { notIn: ["COMPLETED", "CANCELLED"] },
-      },
-      include: { seat: true, location: true, items: { include: { menuItem: true } } },
-    });
-  }
-
-  if (!order) {
-    return reply.code(404).send({
-      error: "No pending order found for this pod",
-      podNumber: pod.number,
-      locationName: pod.location.name,
-      hint: "Make sure you've selected this pod during checkout or been assigned to it at the kiosk.",
-    });
-  }
-
-  // Verify pod matches order (security check)
-  if (order.seat.qrCode !== podQrCode) {
-    return reply.code(400).send({ error: "Pod QR code doesn't match your assigned pod" });
-  }
-
-  if (order.podConfirmedAt) {
-    return reply.code(400).send({ error: "You've already confirmed arrival at this pod" });
-  }
-
-  const now = new Date();
-
-  // Confirm arrival and mark seat as occupied
-  // Also set order to QUEUED status so kitchen can start preparing
-  const [updatedOrder, updatedSeat] = await prisma.$transaction([
-    prisma.order.update({
-      where: { id: order.id },
-      data: {
-        podConfirmedAt: now,
-        arrivedAt: order.arrivedAt || now, // Set arrivedAt if not already set
-        queuedAt: order.queuedAt || now, // Set queuedAt if not already set
-        status: order.status === "PAID" ? "QUEUED" : order.status, // Move to QUEUED if still PAID
-        paidAt: order.paidAt || now, // Ensure paidAt is set
-      },
-      include: { seat: true, location: true, items: { include: { menuItem: true } } },
-    }),
-    prisma.seat.update({
-      where: { id: pod.id },
-      data: { status: "OCCUPIED" },
-    }),
-  ]);
-
-  console.log(`Order ${order.kitchenOrderNumber}: Customer confirmed arrival at Pod ${pod.number} via QR scan (bypassed kiosk)`);
-
-  return {
-    success: true,
-    message: `Welcome to Pod ${pod.number}! Your order is being prepared.`,
-    order: {
-      id: updatedOrder.id,
-      orderNumber: updatedOrder.orderNumber,
-      kitchenOrderNumber: updatedOrder.kitchenOrderNumber,
-      orderQrCode: updatedOrder.orderQrCode,
-      podNumber: pod.number,
-      locationName: pod.location.name,
-      status: updatedOrder.status,
-    },
-  };
-});
-
-// GET /pods/info - Get pod info by QR code (for displaying pod details before confirming)
-app.get("/pods/info", async (req, reply) => {
-  const { qrCode } = req.query || {};
-
-  if (!qrCode) {
-    return reply.code(400).send({ error: "qrCode required" });
-  }
-
-  const pod = await prisma.seat.findFirst({
-    where: { qrCode },
-    include: { location: true },
-  });
-
-  if (!pod) {
-    return reply.code(404).send({ error: "Pod not found" });
-  }
-
-  // Check if there's an active order at this pod
-  const activeOrder = await prisma.order.findFirst({
-    where: {
-      seatId: pod.id,
-      paymentStatus: "PAID",
-      status: { notIn: ["COMPLETED", "CANCELLED"] },
-    },
-    select: {
-      id: true,
-      orderNumber: true,
-      kitchenOrderNumber: true,
-      orderQrCode: true,
-      podConfirmedAt: true,
-      userId: true,
-    },
-  });
-
-  // An old sticker (retired pod, nothing live on it) is not an error: the guest
-  // page says the code is out of date and offers the kiosk or choosing a pod.
-  const retired = retiredPodInfo(pod, activeOrder);
-  if (retired) return retired;
-
-  return {
-    pod: {
-      id: pod.id,
-      number: pod.number,
-      qrCode: pod.qrCode,
-      status: pod.status,
-    },
-    location: {
-      id: pod.location.id,
-      name: pod.location.name,
-      city: pod.location.city,
-    },
-    hasActiveOrder: !!activeOrder,
-    activeOrder: activeOrder
-      ? {
-          id: activeOrder.id,
-          orderNumber: activeOrder.orderNumber,
-          kitchenOrderNumber: activeOrder.kitchenOrderNumber,
-          orderQrCode: activeOrder.orderQrCode,
-          alreadyConfirmed: !!activeOrder.podConfirmedAt,
-          userId: activeOrder.userId,
-        }
-      : null,
-  };
+// GET /pods/info and POST /pods/confirm-arrival: orders/pod-service.js (Task D6 fix round 1: a pod scan
+// reveals no order, and arrival confirms only the caller's own order).
+registerPodServiceRoutes(app, {
+  prisma,
+  deps: podServiceDeps,
+  getLocale,
+  requireUser: (req, reply) => customerAuth.requireUser(req, reply),
 });
 
 // POST /orders/:id/assign-pod - Assign available pod to order

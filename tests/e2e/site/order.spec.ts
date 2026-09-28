@@ -529,8 +529,9 @@ test("the status page's I'm done eating finishes a served order as its signed-in
   await signIn(page, "en");
   await page.goto(`${BASE}/en/order/status?orderQrCode=${encodeURIComponent(served.orderQrCode!)}`, { waitUntil: "domcontentloaded" });
   const doneRequest = page.waitForResponse((r) => r.url().endsWith(`/orders/${served.id}/done`) && r.request().method() === "POST", { timeout: 60_000 });
-  await page.getByRole("button", { name: /Done Eating/ }).click();
-  await page.getByRole("dialog").getByRole("button").last().click();
+  // D6 rebuilt the status page: the confirm is inline (no dialog).
+  await page.locator("[data-done-eating]").click();
+  await page.locator("[data-done-confirm]").click();
   const res = await doneRequest;
   assert.equal(res.status(), 200, "the owner's call succeeds");
   assert.match(String(res.request().headers()["authorization"] || ""), /^Bearer /, "sent with the member's session");

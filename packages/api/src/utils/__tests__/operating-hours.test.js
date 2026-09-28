@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { slotsFor, weeklyHours } from "../operating-hours.js";
+import { slotsFor, weeklyHours, weeklyDisplayHours } from "../operating-hours.js";
 
 const DENVER = { id: "L1", timezone: "America/Denver", isClosed: false };
 const QUARTER_MS = 15 * 60 * 1000;
@@ -86,4 +86,28 @@ test("weeklyHours: isClosed closes today and the whole week, whatever the hours 
   assert.equal(r.openNow, false);
   assert.deepEqual(r.today, { day: "thu", closed: true });
   assert.ok(r.week.every((day) => day.closed === true));
+});
+
+// Task D4: the location pages show today's and the week's hours exactly as the API has them.
+test("weeklyDisplayHours: the defaults when a location has none, Monday first, Sunday closed", async () => {
+  const h = weeklyDisplayHours({ timezone: "America/Denver" }, new Date("2026-09-28T18:00:00Z")); // a Monday, noon in Denver
+  assert.equal(h.today, "mon");
+  assert.equal(h.timezone, "America/Denver");
+  assert.deepEqual(h.week.map((d) => d.day), ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]);
+  assert.deepEqual(h.week[0], { day: "mon", open: "11:00", close: "21:00" });
+  assert.deepEqual(h.week[6], { day: "sun", open: null, close: null });
+});
+
+test("weeklyDisplayHours: per-location hours win, and today is the location's local day, not UTC's", async () => {
+  const location = { timezone: "America/Denver", operatingHours: { sun: { open: "12:00", close: "18:00" }, sat: { open: "10:00", close: "22:00" } } };
+  // 2026-09-27 03:00 UTC is still Saturday evening in Denver.
+  const h = weeklyDisplayHours(location, new Date("2026-09-27T03:00:00Z"));
+  assert.equal(h.today, "sat");
+  assert.deepEqual(h.week.find((d) => d.day === "sun"), { day: "sun", open: "12:00", close: "18:00" });
+  assert.deepEqual(h.week.find((d) => d.day === "mon"), { day: "mon", open: null, close: null });
+});
+
+test("weeklyDisplayHours: a temporarily closed location is closed every day", async () => {
+  const h = weeklyDisplayHours({ isClosed: true }, new Date("2026-09-28T18:00:00Z"));
+  assert.ok(h.week.every((d) => d.open === null && d.close === null));
 });

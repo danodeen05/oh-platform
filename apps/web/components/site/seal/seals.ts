@@ -49,6 +49,9 @@ export const SEALS: Record<string, SealDef> = {
   // SPECIAL
   "grand-opening": { glyph: "元", border: "double" }, // "founding"
   vip: { glyph: "牛", border: "double" }, // "beef/VIP"
+
+  // MENU (Task D3): an item a member sees before its release date.
+  "early-access": { glyph: "先", border: "round" }, // "first/ahead"
 };
 
 /** Used for a badge slug not (yet) present in SEALS. */

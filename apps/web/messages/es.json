@@ -460,7 +460,7 @@
     },
     "comingSoon": {
       "title": "Próximamente",
-      "description": "¡Nos estamos expandiendo! Mantente atento a nuevas ubicaciones en estas ciudades.",
+      "description": "Vienen más locales en camino.",
       "label": "Próximamente",
       "cities": [
         "San Francisco",
@@ -473,6 +473,82 @@
       "title": "¿Listo para el mejor tazón?",
       "description": "Ordena con anticipación y salta la espera. Tu tazón perfecto está a solo unos toques.",
       "button": "Comienza tu pedido"
+    },
+    "meta": {
+      "title": "Ubicaciones",
+      "description": "Dos locales de Oh! en Utah: City Creek en Salt Lake City y University Place en Orem. Pods en vivo, horarios y cómo llegar."
+    },
+    "index": {
+      "eyebrow": "Encuéntranos",
+      "title": "Dos locales en Utah.",
+      "lede": "Pods privados, una cocina detrás de la pared y tu tazón por una ventanilla. Elige un local y míralo en vivo.",
+      "cardCta": "Ver el local"
+    },
+    "status": {
+      "open": "Abierto ahora",
+      "closed": "Cerrado ahora",
+      "paused": "Los pedidos están en pausa aquí por ahora.",
+      "podsFree": "{free} de {total} pods libres",
+      "pods": "{total} pods"
+    },
+    "detail": {
+      "back": "Todas las ubicaciones",
+      "order": "Ordena aquí",
+      "directions": "Cómo llegar",
+      "directionsLabel": "Cómo llegar a {name}. Abre tu app de mapas.",
+      "mapTitle": "El local, en vivo",
+      "mapLede": "Cada pod tal como está ahora mismo. Toca una fila para verla de cerca.",
+      "mapLoading": "Cargando los pods",
+      "mapError": "Los pods en vivo no están disponibles ahora.",
+      "threeD": "Verlo en 3D",
+      "threeDHint": "Un modelo 3D del local. Se carga cuando lo tocas.",
+      "threeDClose": "Volver al mapa",
+      "threeDUnavailable": "El 3D no está disponible en este dispositivo. El mapa de arriba muestra todos los pods.",
+      "threeDAria": "Un modelo 3D del comedor de {name}",
+      "threeDLoading": "Construyendo el local",
+      "iso": {
+        "corridor": "Pasillo del personal",
+        "aisle": "Pasillo"
+      },
+      "hoursTitle": "Horario",
+      "today": "Hoy",
+      "closedDay": "Cerrado",
+      "hoursRange": "{open} a {close}",
+      "hoursNone": "El horario aún no está publicado.",
+      "timezone": "Hora de la montaña",
+      "visitTitle": "Cómo llegar",
+      "address": "Dirección",
+      "parking": "Estacionamiento",
+      "nearby": "Cerca",
+      "orderTitle": "Tu pod te espera.",
+      "orderLede": "Ordena con anticipación, elige un pod y entra directo.",
+      "loadErrorTitle": "No pudimos cargar esta ubicación.",
+      "loadErrorBody": "Revisa tu conexión e inténtalo de nuevo.",
+      "retry": "Intentar de nuevo"
+    },
+    "places": {
+      "cityCreek": {
+        "tagline": "Centro de Salt Lake City",
+        "intro": "Nuestro local principal, dentro de City Creek Center. {pods} pods privados en tres filas, con la cocina justo detrás.",
+        "parking": "Estacionamiento gratis en la estructura de City Creek con validación.",
+        "nearby": [
+          "Temple Square",
+          "Salt Palace Convention Center",
+          "The Gateway",
+          "Capitolio de Utah"
+        ]
+      },
+      "universityPlace": {
+        "tagline": "Valle de Utah",
+        "intro": "Dentro de University Place en Orem. {pods} pods privados, la misma cocina y el mismo caldo.",
+        "parking": "Amplio estacionamiento gratis en todo University Place.",
+        "nearby": [
+          "Utah Valley University",
+          "Campus de BYU",
+          "Provo Canyon",
+          "Cueva Timpanogos"
+        ]
+      }
     }
   },
   "loyalty": {
@@ -1101,6 +1177,23 @@
       "lasts": {
         "title": "No se pierde",
         "body": "El saldo se queda en la tarjeta hasta que se gaste."
+      },
+      "subtitle": "El Regalo Perfecto para Cualquier Ocasión",
+      "instantDelivery": {
+        "title": "Entrega Instantánea",
+        "description": "Envía por correo al instante o programa para una fecha especial"
+      },
+      "beautifulDesign": {
+        "title": "Diseños Hermosos",
+        "description": "Elige de nuestra colección de elegantes diseños de tarjetas"
+      },
+      "neverExpires": {
+        "title": "Nunca Expira",
+        "description": "Nuestras tarjetas nunca expiran y mantienen su valor total"
+      },
+      "addMessage": {
+        "title": "Agrega un Mensaje",
+        "description": "Incluye una nota personalizada para hacerlo extra especial"
       }
     },
     "faq": {
@@ -1120,11 +1213,32 @@
       "balance": {
         "q": "¿Cómo veo lo que queda?",
         "a": "Escribe el código de la tarjeta en la página de saldo."
+      },
+      "tagline": "¿Preguntas?",
+      "questions": {
+        "delivery": {
+          "q": "¿Cómo se entregan las tarjetas digitales?",
+          "a": "Las tarjetas digitales se envían por correo al destinatario. Puedes elegir enviar inmediatamente o programar para una fecha específica."
+        },
+        "multiple": {
+          "q": "¿Puedo usar múltiples tarjetas en un pedido?",
+          "a": "¡Sí! Puedes combinar múltiples tarjetas en un solo pedido. El saldo restante se mantiene en tus tarjetas."
+        },
+        "expire": {
+          "q": "¿Las tarjetas expiran?",
+          "a": "No, las tarjetas Oh! nunca expiran. Tu saldo siempre estará disponible cuando estés listo para tu próximo tazón."
+        },
+        "balance": {
+          "q": "¿Cómo verifico el saldo de mi tarjeta?",
+          "a": "Puedes verificar tu saldo en cualquier ubicación Oh! o iniciando sesión en tu cuenta en línea."
+        }
       }
     },
     "cta": {
       "title": "Lista cuando tú lo estés.",
-      "body": "Elige un monto y escribe un mensaje. Toma un minuto."
+      "body": "Elige un monto y escribe un mensaje. Toma un minuto.",
+      "description": "Un tazón perfecto de sopa de fideos con carne siempre es una sorpresa bienvenida.",
+      "button": "Comenzar"
     },
     "purchase": {
       "meta": "Enviar una tarjeta de regalo",
@@ -1212,6 +1326,34 @@
       "spendBowl": "Pedir un tazón",
       "note": "Escribe este código al pagar. Lo que no se gaste se queda en la tarjeta.",
       "back": "Tarjetas de regalo"
+    },
+    "title": "Tarjetas de regalo",
+    "description": "Comparte el regalo de Oh! con amigos y familiares",
+    "buyNow": "Comprar ahora",
+    "checkBalance": "Consultar saldo",
+    "tagline": "Regala el Sabor de lo Delicioso",
+    "digitalCard": "TARJETA DE REGALO DIGITAL",
+    "continue": "Continuar",
+    "purchaseComingSoon": "¡Compra en línea próximamente!",
+    "chooseAmount": {
+      "tagline": "Paso 1",
+      "title": "Elige Tu Monto",
+      "customLabel": "O ingresa un monto personalizado ($10-$500)",
+      "customPlaceholder": "Ingresa el monto"
+    },
+    "corporate": {
+      "tagline": "Para Empresas",
+      "title": "Tarjetas Corporativas",
+      "description": "Recompensa empleados, agradece a clientes o celebra logros con tarjetas Oh!. Perfectas para cualquier ocasión de regalo corporativo.",
+      "contactSales": "Contactar Ventas",
+      "bulkDiscounts": "Descuentos por Volumen",
+      "tenPlus": "10+ tarjetas",
+      "customBranding": "Marca Personalizada",
+      "addLogo": "Agrega tu logo",
+      "dedicatedSupport": "Soporte Dedicado",
+      "priorityService": "Servicio prioritario",
+      "flexibleDelivery": "Entrega Flexible",
+      "scheduleSends": "Programa envíos"
     }
   },
   "store": {
@@ -1237,7 +1379,12 @@
       "CONDIMENTS": "Condimentos",
       "MERCHANDISE": "Para la mesa",
       "APPAREL": "Ropa",
-      "LIMITED_EDITION": "Edición limitada"
+      "LIMITED_EDITION": "Edición limitada",
+      "food": "Comida",
+      "condiments": "Condimentos",
+      "merchandise": "Mercancía",
+      "apparel": "Ropa",
+      "limitedEdition": "Edición limitada"
     },
     "product": {
       "add": "Agregar",
@@ -1442,6 +1589,85 @@
       "notFoundTitle": "No encontramos esa etiqueta.",
       "notFoundBody": "Revisa el código, o pregunta en el mostrador.",
       "scanAgain": "Escanear de nuevo"
+    },
+    "title": "Tienda Oh!",
+    "description": "Llévate un pedacito de Oh! a casa",
+    "merchandise": "Mercancía",
+    "comingSoon": "Próximamente",
+    "tagline": "De nuestra cocina a la tuya",
+    "launchingSoon": "¡Tienda online próximamente! Regístrate para ser notificado.",
+    "products": {
+      "homeKit": {
+        "name": "Kit Oh! para casa",
+        "description": "Todo lo que necesitas para preparar auténtica sopa de fideos Oh! en casa"
+      },
+      "chiliOil": {
+        "name": "Aceite de chile signature",
+        "description": "Nuestro aceite de chile casero con pimienta de Sichuan"
+      },
+      "brothConcentrate": {
+        "name": "Concentrado de caldo de hueso",
+        "description": "Base de caldo rica en colágeno para sopas y guisos"
+      },
+      "ceramicBowl": {
+        "name": "Tazón de cerámica para fideos",
+        "description": "Tazón de estilo tradicional, perfecto para fideos y sopas"
+      },
+      "chopsticks": {
+        "name": "Set de palillos de bambú",
+        "description": "Palillos de bambú premium con grabado Oh! personalizado"
+      },
+      "tshirt": {
+        "name": "Camiseta clásica Oh!",
+        "description": "Camiseta de algodón suave con logo Oh! minimalista"
+      },
+      "hoodie": {
+        "name": "Sudadera comfort",
+        "description": "Sudadera de polar acogedora con logo bordado"
+      },
+      "apron": {
+        "name": "Delantal de chef",
+        "description": "Delantal de grado profesional para el chef casero"
+      },
+      "woodenBowl": {
+        "name": "Tazón de madera artesanal",
+        "description": "Elaborado a mano con madera recuperada, cada pieza es única"
+      }
+    },
+    "badges": {
+      "bestSeller": "Más vendido",
+      "new": "Nuevo",
+      "limited": "Limitado"
+    },
+    "whyShop": {
+      "title": "¿Por qué comprar en Oh!",
+      "subtitle": "La experiencia Oh!, entregada",
+      "freeShipping": {
+        "title": "Envío gratis",
+        "description": "En pedidos mayores a $50"
+      },
+      "useCredit": {
+        "title": "Usa tu crédito",
+        "description": "Aplica Recompensas Oh! a tus compras"
+      },
+      "memberRewards": {
+        "title": "Recompensas de miembro",
+        "description": "Gana puntos en cada compra"
+      },
+      "easyReturns": {
+        "title": "Devoluciones fáciles",
+        "description": "Devoluciones sin complicaciones por 30 días"
+      }
+    },
+    "newsletter": {
+      "tagline": "Sé el primero en saber",
+      "title": "Acceso anticipado",
+      "description": "Regístrate para lanzamientos exclusivos, ofertas solo para miembros y primer acceso a nuevos productos.",
+      "placeholder": "Ingresa tu correo"
+    },
+    "cta": {
+      "title": "¿No puedes esperar?",
+      "description": "Visita una de nuestras ubicaciones para comprar en persona y disfruta un tazón mientras estás ahí."
     }
   },
   "referral": {
@@ -1809,6 +2035,47 @@
     },
     "demo": {
       "banner": "Demo en vivo · no es un pedido real"
+    },
+    "lines": {
+      "feed": {
+        "label": "En vivo desde la cocina",
+        "listening": "Escuchando la cocina",
+        "quiet": "La cocina está en calma un momento. Algo bueno se acerca."
+      },
+      "fortune": {
+        "title": "Tu fortuna",
+        "lede": "Una galleta de la fortuna mientras el caldo hace lo suyo.",
+        "open": "Ábrela",
+        "loading": "Leyendo tu fortuna",
+        "lucky": "Números de la suerte",
+        "thisDay": "Un día como hoy en {year}",
+        "learn": "Aprende una palabra",
+        "unavailable": "Hoy no hay fortuna. Tu tazón sigue en camino."
+      },
+      "roast": {
+        "title": "Critica mi pedido",
+        "lede": "Nuestra opinión sincera y cariñosa sobre lo que elegiste.",
+        "open": "Critícalo",
+        "loading": "Estudiando tus elecciones",
+        "highlights": "Lo que destacó",
+        "unavailable": "La crítica descansa por ahora. Tu pedido se ve muy bien."
+      },
+      "backstory": {
+        "title": "Detrás del tazón",
+        "lede": "Dónde estuvieron tus ingredientes antes de esta noche.",
+        "open": "Cuéntame",
+        "loading": "Preguntando a los ingredientes",
+        "unavailable": "Hoy los ingredientes guardan sus secretos."
+      },
+      "redStep": {
+        "label": "La salud mental importa",
+        "loading": "Cargando el dato de hoy",
+        "source": "Fuente: {source}",
+        "lede": "{name}, aquí no hay propina porque los salarios justos ya están en cada tazón. Si quieres donar, aquí es donde lo enviaríamos.",
+        "cta": "Apoya la causa",
+        "newTab": "(se abre en una pestaña nueva)",
+        "foundation": "Fundación One Red Step at a Time, una 501(c)(3)"
+      }
     }
   },
   "features": {
@@ -4020,6 +4287,377 @@
         "REFUND_RESTORE": "Devuelto tras un reembolso",
         "OTHER": "Crédito"
       }
+    }
+  },
+  "phoneCollection": {
+    "title": "Recibe avisos de tu pedido",
+    "greeting": "¡Hola, {name}!",
+    "description": "Agrega tu número para recibir mensajes de texto sobre tu pedido, incluso cuando esté listo.",
+    "phoneLabel": "Número de teléfono",
+    "phonePlaceholder": "(555) 555-5555",
+    "smsConsent": "Acepto recibir mensajes de texto de Oh Beef Noodle Soup sobre mi pedido (confirmación y aviso de que está listo). La frecuencia varía. Pueden aplicarse tarifas de mensajes y datos. Responde STOP para cancelar.",
+    "privacyPolicy": "Política de privacidad",
+    "savePhone": "Guardar y recibir avisos",
+    "saving": "Guardando...",
+    "skipForNow": "Ahora no",
+    "skipNote": "Puedes agregar tu teléfono después en la configuración de tu cuenta.",
+    "phoneRequired": "Escribe tu número de teléfono",
+    "invalidPhone": "Escribe un número de teléfono válido",
+    "updateFailed": "No pudimos guardar tu número. Inténtalo de nuevo."
+  },
+  "afterOrder": {
+    "common": {
+      "orderNumber": "Pedido {number}",
+      "podNumber": "Cabina {label}",
+      "yourPod": "Tu cabina",
+      "loading": "Cargando tu pedido",
+      "notFound": "No encontramos ese pedido",
+      "notFoundLede": "Revisa el enlace o empieza un pedido nuevo.",
+      "error": "No pudimos conectar con el restaurante",
+      "errorLede": "Revisa tu conexión e inténtalo de nuevo.",
+      "retry": "Intentar de nuevo",
+      "newOrder": "Empezar un pedido",
+      "demo": "Demostración en vivo. No es un pedido real.",
+      "podMoved": "Tu cabina ahora es la {to}.",
+      "podMovedLede": "La {from} se ocupó antes de que se completara tu pago, así que te guardamos la siguiente mejor cabina.",
+      "podNone": "No había cabinas libres cuando pagaste. Regístrate al llegar y te daremos lugar.",
+      "qty": "x {count}",
+      "needHelp": "¿Necesitas ayuda?",
+      "askChappy": "Pregúntale a Chappy",
+      "networkError": "No pudimos conectar con el restaurante. Revisa tu conexión e inténtalo de nuevo."
+    },
+    "status": {
+      "metaTitle": "Tu pedido",
+      "progressLabel": "Avance del pedido",
+      "progress": "Paso {current} de {total}",
+      "autoRefresh": "Esta página se actualiza sola.",
+      "friend": "Amigo",
+      "stages": {
+        "PENDING_PAYMENT": {
+          "title": "Esperando el pago",
+          "lede": "Este pedido aún no está pagado."
+        },
+        "PAID": {
+          "title": "Pedido hecho",
+          "lede": "Ven al restaurante. Regístrate al llegar."
+        },
+        "QUEUED": {
+          "title": "Estás en la fila",
+          "lede": "La cocina tiene tu pedido. Pronto empieza tu tazón."
+        },
+        "PREPPING": {
+          "title": "Cocinando",
+          "lede": "Tu caldo está al fuego y los fideos ya van a la olla."
+        },
+        "READY": {
+          "title": "Casi listo",
+          "lede": "Tu tazón pasó la revisión final. Va camino a tu cabina."
+        },
+        "SERVING": {
+          "title": "Disfruta tu tazón",
+          "lede": "Tómate tu tiempo. Aquí estamos si necesitas algo."
+        },
+        "COMPLETED": {
+          "title": "Gracias por venir",
+          "lede": "Esperamos verte pronto."
+        },
+        "CANCELLED": {
+          "title": "Pedido cancelado",
+          "lede": "Este pedido se canceló. No hay nada más que hacer."
+        },
+        "UNKNOWN": {
+          "title": "Tu pedido",
+          "lede": "Lo estamos revisando."
+        }
+      },
+      "timeline": {
+        "label": "Tu visita",
+        "PAID": "Pagado",
+        "QUEUED": "Registrado",
+        "PREPPING": "Cocinando",
+        "READY": "Revisión final",
+        "SERVING": "En tu cabina",
+        "COMPLETED": "Terminado",
+        "now": "ahora",
+        "totalTime": "Del pago al tazón: {minutes} min"
+      },
+      "pod": {
+        "goTo": "Ve a tu cabina y avísanos que llegaste.",
+        "confirm": "Estoy en mi cabina",
+        "checkedIn": "Registrado",
+        "callStaff": "Llamar al personal",
+        "calling": "Llamando",
+        "staffCalled": "Personal avisado",
+        "staffComing": "El personal va en camino.",
+        "callFailed": "No pudimos avisar al personal. Inténtalo de nuevo o haznos una seña.",
+        "addItems": "Agregar a mi pedido",
+        "dessert": "Listo para el postre",
+        "dessertSending": "Avisando a la cocina",
+        "dessertCalled": "El postre viene",
+        "dessertComing": "Tu postre va en camino.",
+        "dessertFailed": "No se pudo enviar. Inténtalo de nuevo."
+      },
+      "queue": {
+        "title": "Esperando una cabina",
+        "position": "Número {position}",
+        "wait": "Unos {minutes} minutos",
+        "note": "Te avisaremos cuando se libere una cabina."
+      },
+      "done": {
+        "cta": "Ya terminé de comer",
+        "prompt": "¿Terminaste? Avisaremos al personal que tu cabina está lista para limpiar.",
+        "confirm": "Sí, terminé",
+        "cancel": "Todavía no",
+        "failed": "No se pudo enviar. Inténtalo de nuevo."
+      },
+      "join": {
+        "eyebrow": "Oh! Rewards",
+        "title": "Gana recompensas con este pedido",
+        "lede": "Crea una cuenta gratis y el pedido {number} cuenta para tu próximo tazón gratis.",
+        "benefits": {
+          "one": "Reembolso en cada pedido",
+          "two": "Un tazón gratis al subir de nivel",
+          "three": "Tus pedidos y sellos en un solo lugar"
+        },
+        "create": "Crear una cuenta",
+        "signIn": "Ya tengo cuenta",
+        "linked": "Este pedido ya está en tu cuenta."
+      },
+      "bowl": {
+        "title": "Tu tazón"
+      },
+      "links": {
+        "label": "Qué sigue",
+        "orderAgain": "Pedir de nuevo",
+        "account": "Mi cuenta"
+      },
+      "noCode": {
+        "title": "No hay pedido que mostrar",
+        "lede": "Abre esta página desde el enlace de tu pedido o tu confirmación."
+      }
+    },
+    "addOns": {
+      "title": "Agregar a mi pedido",
+      "close": "Cerrar",
+      "loading": "Cargando lo que puedes agregar",
+      "loadFailed": "No pudimos cargar los extras. Llama al personal y te ayudamos.",
+      "callInstead": "Mejor llamar al personal",
+      "none": "Nada que agregar por ahora.",
+      "refills": "Recargas",
+      "free": "Gratis",
+      "water": "Agua",
+      "refill": "Recargar",
+      "refillSent": "Tu recarga va en camino.",
+      "extras": "Verduras extra",
+      "requestExtras": "{count, plural, one {Pedir # extra} other {Pedir # extras}}",
+      "extrasSent": "Tus extras van en camino.",
+      "paid": "Complementos",
+      "add": "Agregar",
+      "addOne": "Agregar {name}",
+      "less": "Uno menos de {name}",
+      "more": "Uno más de {name}",
+      "total": "Total",
+      "pay": "Pagar {amount}",
+      "demoAdded": "Agregado. En la demostración no se cobra nada.",
+      "failed": "No se pudo enviar. Inténtalo de nuevo."
+    },
+    "confirmation": {
+      "metaTitle": "Pedido confirmado",
+      "title": "Todo listo",
+      "paid": "Pagado {amount}. Gracias.",
+      "pending": "Tu pago se está procesando. Esta página se actualiza cuando termine.",
+      "qrTitle": "Tu código de pedido",
+      "qrLede": "Muéstralo en el quiosco al llegar o regístrate desde tu teléfono.",
+      "qrAlt": "Código QR del pedido {number}",
+      "arrival": "Llegada prevista a las {time}",
+      "signInForCode": "Inicia sesión con la cuenta del pedido para ver tu código.",
+      "podNote": "Reservada para ti hasta que te registres.",
+      "checkIn": "Registrarme ahora",
+      "track": "Seguir mi pedido",
+      "group": {
+        "title": "{count, plural, one {Tu grupo, # pedido} other {Tu grupo, # pedidos}}",
+        "host": "Anfitrión",
+        "guest": "Invitado {number}",
+        "noPod": "Sin cabina aún",
+        "checkedIn": "En su cabina",
+        "arrived": "Registrado",
+        "waiting": "Aún no llega",
+        "checkIn": "Registrar",
+        "checkInAll": "Registrar a todos"
+      },
+      "receipt": {
+        "title": "Recibo",
+        "bowl": "El tazón",
+        "extras": "Extras",
+        "subtotal": "Subtotal",
+        "savings": "Ahorros",
+        "tax": "Impuestos",
+        "total": "Total"
+      },
+      "share": {
+        "title": "Trae a un amigo",
+        "lede": "Tus amigos obtienen $5 de descuento en su primer pedido. Tú recibes $5 cuando piden.",
+        "button": "Compartir",
+        "copied": "Enlace copiado",
+        "text": "Acabo de pedir en Oh! Beef Noodle Soup. Obtén $5 de descuento en tu primer tazón: {url}"
+      },
+      "home": "Volver al inicio"
+    },
+    "checkIn": {
+      "metaTitle": "Registrarse",
+      "eyebrow": "En el restaurante",
+      "title": "Registrarse",
+      "lede": "¿Ya llegaste? Regístrate y te enviamos a tu cabina.",
+      "steps": {
+        "one": "Busca el código en tu confirmación.",
+        "two": "Escríbelo abajo o escanéalo en el quiosco.",
+        "three": "Ve a tu cabina. La cocina empieza cuando estés ahí."
+      },
+      "codeLabel": "Código de pedido",
+      "codeHint": "Está debajo del código QR en tu confirmación.",
+      "submit": "Registrarme",
+      "checking": "Registrando",
+      "required": "Escribe tu código de pedido.",
+      "notFound": "No encontramos ese código. Revísalo e inténtalo de nuevo.",
+      "notPaid": "Este pedido aún no está pagado.",
+      "noPod": "Este pedido aún no tiene cabina.",
+      "failed": "No se pudo registrar. Inténtalo de nuevo o pide ayuda al personal.",
+      "help": "¿Algún problema? Cualquier persona del equipo puede registrarte."
+    },
+    "scan": {
+      "metaTitle": "Confirma tu cabina",
+      "eyebrow": "En tu cabina",
+      "title": "Confirma tu cabina",
+      "lede": "¿Estás en tu cabina? Confírmalo y la cocina empieza tu tazón.",
+      "podNote": "Siéntate aquí y confirma abajo.",
+      "notFound": "No encontramos ese pedido.",
+      "noPod": "Este pedido aún no tiene cabina. Regístrate primero.",
+      "codeLabel": "Código de pedido",
+      "codeHint": "El mismo código de tu confirmación.",
+      "submit": "Estoy en mi cabina",
+      "confirming": "Confirmando",
+      "required": "Escribe tu código de pedido.",
+      "notPaid": "Este pedido aún no está pagado.",
+      "failed": "No se pudo enviar. Inténtalo de nuevo o pide ayuda al personal.",
+      "checkInFirst": "Registrarme primero",
+      "back": "Volver a mi pedido",
+      "success": "Ya estás registrado",
+      "successLede": "La cocina está empezando tu tazón."
+    },
+    "pod": {
+      "metaTitle": "Tu cabina",
+      "title": "Cabina {label}",
+      "error": "No pudimos leer el código de esta cabina",
+      "errorLede": "Pide ayuda a cualquier persona del equipo y te daremos lugar.",
+      "noCode": "Escanea el código de tu cabina",
+      "noCodeLede": "El código está en la mesa de cada cabina.",
+      "confirmed": "Bienvenido a la cabina {label}",
+      "confirmedLede": "Tu tazón va camino a la línea de cocina.",
+      "waiting": "Tu pedido te espera aquí",
+      "waitingLede": "Hay un pedido reservado en esta cabina. Si es tuyo, avisa a la cocina que llegaste.",
+      "confirm": "Ya llegué",
+      "confirming": "Avisando a la cocina",
+      "failed": "No se pudo enviar. Inténtalo de nuevo o pide ayuda al personal.",
+      "free": "Esta cabina está libre",
+      "freeSteps": {
+        "one": "Pide en línea y elige esta cabina.",
+        "two": "Vuelve cuando se acerque tu hora de llegada.",
+        "three": "Escanea este código otra vez para registrarte."
+      },
+      "mapTitle": "Dónde estás",
+      "mapHint": "La cabina {label} está marcada",
+      "mapError": "El mapa no cargó. Tu cabina sigue siendo tuya.",
+      "account": "Mi cuenta",
+      "codeTitle": "Escribe tu código de pedido",
+      "codeLede": "Está en tu confirmación, recibo o mensaje de texto. Solo te lo pedimos una vez.",
+      "codeLabel": "Código de pedido",
+      "codeSubmit": "Registrarme",
+      "codeRequired": "Escribe tu código de pedido.",
+      "codeNotFound": "Ese código no coincide con un pedido en esta cabina. Revísalo e inténtalo de nuevo.",
+      "wrongPod": "Ese pedido está reservado en otra cabina.",
+      "checkedIn": "Esta cabina ya está registrada",
+      "checkedInLede": "Si es tu pedido, ábrelo desde tu confirmación.",
+      "openOrder": "Abrir mi pedido"
+    },
+    "reorder": {
+      "note": "Tu último pedido está de vuelta en tu tazón. Los precios son los de hoy.",
+      "unavailable": "Ya no está en el menú: {items}.",
+      "missing": "No encontramos ese pedido en tu cuenta.",
+      "loading": "Cargando tu último pedido"
+    }
+  },
+  "menuPage": {
+    "meta": {
+      "title": "Menú",
+      "description": "Sopa de fideos con res, fideos, extras, acompañamientos y bebidas, con los precios de hoy."
+    },
+    "eyebrow": "El menú",
+    "title": "Un tazón. A tu manera.",
+    "lede": "Elige una sopa y un fideo, y luego ajústalo a tu gusto. Precios antes de impuestos.",
+    "jump": "Secciones del menú",
+    "groups": {
+      "soup": {
+        "title": "Sopas",
+        "line": "Cada tazón empieza aquí."
+      },
+      "noodles": {
+        "title": "Fideos",
+        "line": "Cada tazón incluye un fideo."
+      },
+      "customize": {
+        "title": "A tu gusto",
+        "line": "Lo eliges al pedir. No cuesta nada."
+      },
+      "addons": {
+        "title": "Extras",
+        "line": "Más para tu tazón."
+      },
+      "sides": {
+        "title": "Acompañamientos",
+        "line": "Platos pequeños para compartir."
+      },
+      "drinks": {
+        "title": "Bebidas",
+        "line": "Algo de beber con tu tazón."
+      },
+      "desserts": {
+        "title": "Postre",
+        "line": "Algo dulce para terminar."
+      }
+    },
+    "included": "Incluido",
+    "sliderDefault": "habitual",
+    "early": "Antes para miembros",
+    "earlyNote": "Los miembros lo ven antes de que abra para todos.",
+    "marks": {
+      "title": "Qué significan las marcas",
+      "vegan": "Vegano",
+      "vegetarian": "Vegetariano",
+      "glutenFree": "Sin gluten",
+      "spice1": "Poco picante",
+      "spice2": "Picante",
+      "spice3": "Muy picante"
+    },
+    "sheet": {
+      "label": "{name}, detalles",
+      "orderThis": "Pedir esto",
+      "close": "Cerrar"
+    },
+    "allergens": {
+      "title": "Alergias",
+      "body": "Nuestra cocina maneja trigo, soya y huevo. Si tienes una alergia, contáctanos antes de pedir.",
+      "link": "Contáctanos"
+    },
+    "error": {
+      "title": "El menú no cargó.",
+      "body": "Revisa tu conexión e inténtalo de nuevo.",
+      "retry": "Intentar de nuevo"
+    },
+    "empty": "Estamos actualizando el menú. Vuelve pronto.",
+    "cta": {
+      "title": "¿Con hambre?",
+      "body": "Pide con anticipación y luego elige tu hora de llegada y tu cabina.",
+      "button": "Empezar un pedido"
     }
   }
 }
