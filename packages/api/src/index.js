@@ -3306,6 +3306,8 @@ registerEventCheckRoute(app, {
 
 // POST /orders/event - Create order for private event (no payment required)
 app.post("/orders/event", { preHandler: eventRateLimit(cnyEventLimiter) }, async (req, reply) => {
+  // Final review M9: the CNY 2026 party is over and this creates PAID orders with no payment: off unless re-enabled on purpose.
+  if (process.env.CNY_EVENT_ORDERS_ENABLED !== "true") return reply.code(404).send({ error: "Not found" });
   const { locationId, tenantId, items, guestName, guestPhone, eventCode } = req.body || {};
 
   // Validate required fields

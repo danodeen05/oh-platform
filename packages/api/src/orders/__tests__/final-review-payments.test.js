@@ -5,7 +5,7 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { seed, fakeStripe, fakeEffects, NOW, CLASSIC_BOWL } from "./fixtures.js";
-import { quoteOrder, createOrder, markPaid } from "../service.js";
+import { quoteOrder, createOrder, markPaid, markPaidBatch } from "../service.js";
 
 async function placeOrder(prisma, { userId = "u1", ...savings } = {}) {
   const quote = await quoteOrder(prisma, { locationId: "L1", items: CLASSIC_BOWL, userId, now: NOW, ...savings });
@@ -61,6 +61,24 @@ describe("I4: two card payments for one order race", () => {
     // The winner is never refunded.
     await markPaid(prisma, stripe, { orderId: order.id, paymentIntentId: winner, now: NOW }, fakeEffects().effects);
     assert.equal(stripe.refundCalls.length, 1);
+  });
+});
+
+describe("M2: the kiosk batch is strict", () => {
+  test("one order already paid by another PaymentIntent: nothing settles and the batch charge is refunded in full", async () => {
+    const prisma = seed();
+    const a = (await placeOrder(prisma, { userId: null })).order;
+    const b = (await placeOrder(prisma, { userId: null })).order;
+    const stripe = fakeStripe({
+      pi_web: { status: "succeeded", amount: a.amountDueCents, metadata: { orderId: a.id } },
+      pi_t: { status: "succeeded", amount: a.amountDueCents + b.amountDueCents, metadata: { orderIds: `${a.id},${b.id}` } },
+    });
+    await markPaid(prisma, stripe, { orderId: a.id, paymentIntentId: "pi_web", now: NOW }, fakeEffects().effects);
+    const err = await markPaidBatch(prisma, stripe, { orderIds: [a.id, b.id], paymentIntentId: "pi_t", locationId: "L1", now: NOW }, fakeEffects().effects).catch((e) => e);
+    assert.equal(err.code, "GROUP_CHANGED");
+    assert.deepEqual(stripe.refundCalls.map((c) => c[0]), [{ payment_intent: "pi_t" }]);
+    assert.notEqual((await prisma.order.findUnique({ where: { id: b.id } })).paymentStatus, "PAID");
+    assert.equal((await prisma.order.findUnique({ where: { id: a.id } })).stripePaymentId, "pi_web");
   });
 });
 

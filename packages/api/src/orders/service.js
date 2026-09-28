@@ -1297,7 +1297,9 @@ export async function markPaidBatch(prisma, stripe, { orderIds, paymentIntentId 
       throw err;
     }
   }
-  return settleBatch(prisma, stripe, { ids, orders, pi, now, strict: false }, effects);
+  // Final review M2: strict, so an order already paid by another payment rolls the
+  // batch back and the whole charge is refunded instead of being kept.
+  return settleBatch(prisma, stripe, { ids, orders, pi, now, strict: true }, effects);
 }
 
 /**

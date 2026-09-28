@@ -524,6 +524,10 @@ Vercel or Railway proxy address. The global per-IP limit (`RATE_LIMIT_MAX`, G3b)
 `trustProxy: 1` matching prod's hop count. Also check that no 429s show for Vercel IPs: the
 web's server-side calls must carry `x-oh-server-key`, which needs the same `ADMIN_API_KEY` on
 Railway and Vercel (4b, 4c). Report what you see to the owner.
+**Abort trigger (final review M11):** if `req.ip` is a proxy address (the same few IPs for
+every visitor), every client shares one rate-limit bucket and the site starts answering 429
+under normal traffic. Treat that as a failed smoke: follow 16e, and fix `trustProxy` in
+`packages/api/src/http-config.js` before the next attempt.
 
 **Money paths are not charged in prod.** A $0 check only if a real unredeemed FREE_BOWL reward
 already exists on the owner's own account (never create one for the test).
