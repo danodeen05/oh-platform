@@ -4529,8 +4529,13 @@ app.post("/payments/confirm", async (req, reply) => {
     // Hold the seat if ASAP + pod selected: kept, re-claimed or replaced by the
     // next best pod, never an unconditional reserve (Task D12 fix round 2).
     if (orderStatus === "QUEUED" && hasPodSelected) {
-      const pod = await prisma.$transaction((tx) => holdPodAtPay(tx, { ...order, ...updatedOrder }, new Date()));
-      console.log(`[Payment Confirmed] Pod for order ${orderNumber}: ${pod.noPod ? "none free" : pod.changed ? `moved ${pod.from} -> ${pod.to}` : `kept ${pod.from}`}`);
+      // The order is already PAID here: a seating failure must not turn into an error after payment.
+      try {
+        const pod = await prisma.$transaction((tx) => holdPodAtPay(tx, { ...order, ...updatedOrder }, new Date()));
+        console.log(`[Payment Confirmed] Pod for order ${orderNumber}: ${pod.noPod ? "none free" : pod.changed ? `moved ${pod.from} -> ${pod.to}` : `kept ${pod.from}`}`);
+      } catch (podErr) {
+        console.error(`[Payment Confirmed] Could not hold a pod for order ${orderNumber}:`, podErr?.message || podErr);
+      }
     }
 
     console.log(`[Payment Confirmed] Order ${orderNumber} paid via payment link, status: ${orderStatus}`);

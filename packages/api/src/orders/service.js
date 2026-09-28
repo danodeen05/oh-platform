@@ -362,8 +362,34 @@ const LIVE_ORDER_STATUSES = ["PENDING_PAYMENT", "PAID", "QUEUED", "PREPPING", "R
  * on that half is a conflict, not a share.
  */
 function sharesDuo(a, b) {
-  const sits = (host, guest) => Boolean(host.isDualPod && host.dualPartnerSeatId && guest.seatId === host.dualPartnerSeatId && guest.podSelectionMethod === "DUO_SHARED");
-  return sits(a, b) || sits(b, a);
+  return isPartyDuoShare(a, b) || isPartyDuoShare(b, a);
+}
+
+export const DUO_SHARE_WINDOW_MS = 30 * 60 * 1000;
+
+/**
+ * Task D12 fix round 3: a DUO_SHARED marker alone proves nothing. `guest`
+ * sits legitimately at the other half of `host`'s duo only when they are one
+ * kiosk party: both kiosk orders at one location, created within 30 minutes
+ * of each other (the kiosk creates a party's orders back to back; orders
+ * carry no party or device id), and the host is unpaid (PENDING_PAYMENT) or,
+ * once both are paid, both were paid by the very same payment (one batch).
+ */
+export function isPartyDuoShare(host, guest) {
+  if (!host || !guest || host.id === guest.id) return false;
+  if (!host.isDualPod || !host.dualPartnerSeatId || guest.seatId !== host.dualPartnerSeatId) return false;
+  if (guest.podSelectionMethod !== "DUO_SHARED") return false;
+  if (host.orderSource !== "KIOSK" || guest.orderSource !== "KIOSK" || host.locationId !== guest.locationId) return false;
+  const t = (d) => (d ? new Date(d).getTime() : NaN);
+  const gap = Math.abs(t(host.createdAt) - t(guest.createdAt));
+  if (!(gap <= DUO_SHARE_WINDOW_MS)) return false;
+  if (host.paymentStatus !== "PAID") return host.status === "PENDING_PAYMENT";
+  // Paid host, unpaid guest: the host's own check in a batch that settles the
+  // host first; the guest is re-checked when it pays.
+  if (guest.paymentStatus !== "PAID") return true;
+  // Both paid: only by one payment (the same kiosk batch settle).
+  if (host.stripePaymentId && host.stripePaymentId === guest.stripePaymentId) return true;
+  return !host.stripePaymentId && !guest.stripePaymentId && t(host.paidAt) === t(guest.paidAt);
 }
 
 /**
@@ -399,16 +425,19 @@ export async function holdPodAtPay(tx, order, now = new Date()) {
   const previous = await tx.seat.findUnique({ where: { id: order.seatId } });
   const from = previous ? previous.label || previous.number || null : null;
 
-  const kept = [];
   let ok = true;
   for (const id of seatIds) {
-    if (await holdSeatForOrder(tx, order, id)) kept.push(id);
-    else { ok = false; break; }
+    if (!(await holdSeatForOrder(tx, order, id))) { ok = false; break; }
   }
   if (ok) return { changed: false, from };
 
-  // Lost at least one seat: let go of what this order still held, then pick again.
-  for (const id of kept) await releaseClaim(tx, id);
+  // Lost at least one seat: let go of every seat of this order that no other
+  // live order points at (checked for all of them, so losing the FIRST half of
+  // a duo doesn't strand the second), then pick again.
+  for (const id of seatIds) {
+    const others = await tx.order.count({ where: { id: { not: order.id }, status: { in: LIVE_ORDER_STATUSES }, OR: [{ seatId: id }, { dualPartnerSeatId: id }] } });
+    if (others === 0) await releaseClaim(tx, id);
+  }
   let pod = null;
   try {
     pod = await pickBestPod(tx, { locationId: order.locationId, arrival: order.estimatedArrival || null, partySize: order.isDualPod ? 2 : 1 });

@@ -16,7 +16,7 @@
  *
  * `claimCheckInSeat` is the same rule for POST /orders/check-in's pod pick.
  */
-import { pickBestPod, claimSeat, releaseClaim, PodUnavailableError, POD_HOLD_MS } from "../orders/service.js";
+import { pickBestPod, claimSeat, releaseClaim, PodUnavailableError, POD_HOLD_MS, isPartyDuoShare, DUO_SHARE_WINDOW_MS } from "../orders/service.js";
 
 const ACTIVE = ["PENDING_PAYMENT", "PAID", "QUEUED", "PREPPING", "READY", "SERVING"];
 const LABEL_MAX = 16;
@@ -66,32 +66,47 @@ export async function assignKioskSeat(prisma, { locationId, orderId, request, no
       const order = await tx.order.findUnique({ where: { id: orderId } });
       if (!order || order.locationId !== locationId) throw new Refusal(404, { error: "Order not found", code: "ORDER_NOT_FOUND" });
       if (order.paymentStatus === "PAID") throw new Refusal(409, { error: "This order is already paid; its pod can't change here.", code: "ORDER_PAID" });
+      // Only a live, unpaid order holds a pod here (a cancelled one would strand it: the release job only sweeps PENDING_PAYMENT).
+      if (order.status !== "PENDING_PAYMENT") throw new Refusal(409, { error: "This order can't take a pod.", code: "ORDER_NOT_OPEN" });
       const hold = { podAssignedAt: now, podReservationExpiry: new Date(now.getTime() + POD_HOLD_MS) };
 
-      // Second guest of a party that took a duo: sits at the other half the first guest already holds.
+      // Second guest of a party that took a duo: sits at the other half the
+      // first guest holds, but only as that same kiosk party (fix round 3): the
+      // host is unpaid, a kiosk order from the last 30 minutes, created within
+      // 30 minutes of this one (orders carry no party or device id), and nobody
+      // else already sits on that half. Anything else is treated as a lost pod:
+      // the next best pod, reported as POD_TAKEN.
+      let shareLostLabel = null;
       if (request.shareWithOrderId) {
         const host = await tx.order.findUnique({ where: { id: request.shareWithOrderId } });
-        if (!host || host.locationId !== locationId || host.id === order.id || !host.isDualPod || !host.dualPartnerSeatId) {
-          throw new Refusal(409, { error: "That order holds no duo pod to share.", code: "NO_DUO_TO_SHARE" });
+        const candidate = { ...order, seatId: host?.dualPartnerSeatId ?? null, podSelectionMethod: "DUO_SHARED" };
+        const recent = Boolean(host && host.createdAt && now.getTime() - new Date(host.createdAt).getTime() <= DUO_SHARE_WINDOW_MS);
+        const sitters = host?.dualPartnerSeatId
+          ? (await tx.order.findMany({ where: { status: { in: ACTIVE }, seatId: host.dualPartnerSeatId } })).filter((o) => o.id !== order.id && o.id !== host.id).length
+          : 1;
+        if (host && host.locationId === locationId && recent && host.status === "PENDING_PAYMENT" && sitters === 0 && isPartyDuoShare(host, candidate)) {
+          await releaseOwnHolds(tx, order);
+          await tx.order.update({
+            where: { id: order.id },
+            // DUO_SHARED marks this seat as the other half of the host order's duo (orders/service.js isPartyDuoShare).
+            data: { seatId: host.dualPartnerSeatId, isDualPod: false, dualPartnerSeatId: null, podSelectionMethod: "DUO_SHARED", ...hold },
+          });
+          const seat = await tx.seat.findUnique({ where: { id: host.dualPartnerSeatId } });
+          return { ok: true, seatId: seat?.id ?? host.dualPartnerSeatId, label: seatName(seat), partnerLabel: null, fallback: false };
         }
-        await releaseOwnHolds(tx, order);
-        await tx.order.update({
-          where: { id: order.id },
-          // DUO_SHARED marks this seat as the other half of the host order's duo (orders/service.js sharesDuo).
-          data: { seatId: host.dualPartnerSeatId, isDualPod: false, dualPartnerSeatId: null, podSelectionMethod: "DUO_SHARED", ...hold },
-        });
-        const seat = await tx.seat.findUnique({ where: { id: host.dualPartnerSeatId } });
-        return { ok: true, seatId: seat?.id ?? host.dualPartnerSeatId, label: seatName(seat), partnerLabel: null, fallback: false };
+        const half = host?.dualPartnerSeatId ? await tx.seat.findUnique({ where: { id: host.dualPartnerSeatId } }) : null;
+        shareLostLabel = seatName(half) || "duo";
       }
 
       await releaseOwnHolds(tx, order);
       let pod;
       let fallback = false;
       try {
+        if (shareLostLabel) throw new PodUnavailableError(shareLostLabel);
         pod = await pickBestPod(tx, { locationId, requestedLabel: request.label || null, dual: request.dual });
       } catch (err) {
         if (!(err instanceof PodUnavailableError)) throw err;
-        if (!request.label) throw new Refusal(409, { error: "No pod is free right now.", code: "NO_POD_AVAILABLE" });
+        if (!request.label && !shareLostLabel) throw new Refusal(409, { error: "No pod is free right now.", code: "NO_POD_AVAILABLE" });
         try {
           pod = await pickBestPod(tx, { locationId, partySize: request.dual ? 2 : 1 });
         } catch (err2) {
@@ -116,7 +131,7 @@ export async function assignKioskSeat(prisma, { locationId, orderId, request, no
         label: seatName(pod.seat),
         partnerLabel: seatName(pod.partner),
         fallback,
-        ...(fallback ? { code: "POD_TAKEN", requested: request.label } : {}),
+        ...(fallback ? { code: "POD_TAKEN", requested: request.label || shareLostLabel } : {}),
       };
     });
     return { status: 200, body };

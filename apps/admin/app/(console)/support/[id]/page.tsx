@@ -3,7 +3,7 @@ import Link from "next/link";
 import { use, useRef, useState } from "react";
 import { useRole } from "@/components/providers/RoleProvider";
 import { RefundDialog } from "@/components/support/RefundDialog";
-import { ResolveActions } from "@/components/support/ResolveActions";
+import { ResolveActions, staffName } from "@/components/support/ResolveActions";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -149,7 +149,7 @@ export default function SupportCasePage({ params }: { params: Promise<{ id: stri
                 <Line label="Outcome" value={c.resolution ? RESOLUTION_LABEL[c.resolution] ?? c.resolution : STATUS_LABEL[c.status]} strong />
                 {c.amountCents != null && c.resolution !== "DECLINED" && c.resolution !== "INFO" && <Line label="Amount" value={money(c.amountCents)} />}
                 {c.resolvedAt && <Line label="When" value={denverDateTime(c.resolvedAt)} />}
-                {c.resolvedBy && <Line label="By" value={c.resolvedBy} />}
+                {c.resolvedBy && <Line label="By" value={staffName(c.resolvedBy)} />}
               </div>
               {c.resolutionNote && <p className="mt-3 border-t border-oh-stone/15 pt-3 text-[15px] text-oh-stone">{c.resolutionNote}</p>}
             </Card>

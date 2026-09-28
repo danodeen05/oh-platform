@@ -17,7 +17,7 @@ const VALID = new Date(NOW.getTime() + 10 * MIN);
 /** A zero-balance order (no PaymentIntent needed) holding pod `seatId` until `expiry`. */
 const order = (id, extra = {}) => ({
   id, orderNumber: `N-${id}`, userId: null, locationId: "L1", tenantId: "t1", totalCents: 0, amountDueCents: 0, creditsAppliedCents: 0,
-  paymentStatus: "PENDING", status: "PENDING_PAYMENT", ...extra,
+  paymentStatus: "PENDING", status: "PENDING_PAYMENT", orderSource: "KIOSK", createdAt: new Date(NOW.getTime() - 5 * MIN), ...extra,
 });
 const pay = (prisma, id) => markPaid(prisma, fakeStripe(), { orderId: id, now: NOW }, fakeEffects().effects);
 const seat = (prisma, id) => prisma.seat.findUnique({ where: { id } });
@@ -119,5 +119,36 @@ describe("markPaid: the pod at pay time", () => {
     assert.equal(r.podChanges, undefined);
     assert.equal((await get(prisma, "o1")).seatId, "s-c01");
     assert.equal((await get(prisma, "o2")).seatId, "s-c02");
+  });
+
+  test("fix round 3: a DUO_SHARED marker on a paid stranger's half is not trusted; the guest moves", async () => {
+    const prisma = await withSeats([
+      order("host", { seatId: "s-c01", isDualPod: true, dualPartnerSeatId: "s-c02", paymentStatus: "PAID", status: "QUEUED", stripePaymentId: "pi_other", paidAt: new Date(NOW.getTime() - 10 * MIN) }),
+      order("me", { seatId: "s-c02", podSelectionMethod: "DUO_SHARED", podReservationExpiry: VALID }),
+    ], { "s-c01": "RESERVED", "s-c02": "RESERVED" });
+    const r = await pay(prisma, "me");
+    assert.equal(r.podChange.from, "C-02");
+    assert.equal((await get(prisma, "me")).seatId, "s-a01");
+    assert.equal((await get(prisma, "host")).seatId, "s-c01");
+    assert.equal((await seat(prisma, "s-c02")).status, "RESERVED", "the host keeps its half");
+  });
+
+  test("fix round 3: a web order marked DUO_SHARED is not a party share either", async () => {
+    const prisma = await withSeats([
+      order("host", { seatId: "s-c01", isDualPod: true, dualPartnerSeatId: "s-c02", podReservationExpiry: VALID }),
+      order("me", { seatId: "s-c02", podSelectionMethod: "DUO_SHARED", orderSource: "WEB", podReservationExpiry: VALID }),
+    ], { "s-c01": "RESERVED", "s-c02": "RESERVED" });
+    assert.equal((await pay(prisma, "me")).podChange.to, "A-01");
+  });
+
+  test("fix round 3: losing the FIRST half of a duo releases the second half too", async () => {
+    const prisma = await withSeats([
+      order("o1", { seatId: "s-c01", isDualPod: true, dualPartnerSeatId: "s-c02", podReservationExpiry: LAPSED }),
+      order("o2", { seatId: "s-c01", paymentStatus: "PAID", status: "QUEUED" }),
+    ], { "s-c01": "RESERVED", "s-c02": "RESERVED" });
+    await pay(prisma, "o1");
+    assert.equal((await get(prisma, "o1")).seatId, "s-a01");
+    assert.equal((await seat(prisma, "s-c02")).status, "AVAILABLE", "no orphaned RESERVED half");
+    assert.equal((await seat(prisma, "s-c01")).status, "RESERVED", "o2 keeps its pod");
   });
 });

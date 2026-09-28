@@ -5,6 +5,12 @@ import { denverDateTime } from "../../lib/format";
 import type { AdminRole } from "../../lib/access";
 import { canFullRefund, type CaseOrder, type RefundState } from "../../lib/support";
 
+/** resolvedBy is a Clerk user id, "service" or "admin": never show the raw id. */
+export function staffName(resolvedBy: string): string {
+  if (resolvedBy === "service") return "the system";
+  return "a staff member";
+}
+
 /**
  * The Resolve card on a support case. Pure: the page owns the sheets and the
  * requests. A card refund in progress blocks credit (always) and decline
@@ -31,7 +37,7 @@ export function ResolveActions({ role, order, hasMember, busy, refund, onCredit,
           <span>
             <span className="block font-semibold">{refund.stale ? "Card refund stalled" : "Card refund in progress"}</span>
             <span className="block text-sm text-oh-stone/80">
-              {[refund.startedBy ? `Started by ${refund.startedBy}` : "Started", refund.startedAt ? denverDateTime(refund.startedAt) : null].filter(Boolean).join(", ")}.
+              {[refund.startedBy ? `Started by ${staffName(refund.startedBy)}` : "Started", refund.startedAt ? denverDateTime(refund.startedAt) : null].filter(Boolean).join(", ")}.
               {" "}{refund.stale
                 ? (showRefund ? "Retry the refund, or close the case if it was handled elsewhere." : "The owner can retry it. You can close the case if it was handled elsewhere.")
                 : "Store credit and decline wait until it finishes."}

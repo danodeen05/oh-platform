@@ -11,7 +11,7 @@ import { registerStatusDemoGuard } from "../../demo/status-demo.js";
 import { seed, fakeStripe, fakeEffects, NOW } from "../../orders/__tests__/fixtures.js";
 import { assignKioskSeat, claimCheckInSeat, parseSeatRequest } from "../kiosk-seat.js";
 
-const unpaid = (id, extra = {}) => ({ id, locationId: "L1", tenantId: "t1", totalCents: 1999, amountDueCents: 1999, paymentStatus: "PENDING", status: "PENDING_PAYMENT", ...extra });
+const unpaid = (id, extra = {}) => ({ id, locationId: "L1", tenantId: "t1", totalCents: 1999, amountDueCents: 1999, paymentStatus: "PENDING", status: "PENDING_PAYMENT", orderSource: "KIOSK", createdAt: new Date(NOW.getTime() - 5 * 60 * 1000), ...extra });
 const KIOSK = { authorization: "Bearer kiosk_L1" };
 const fakeKioskAuth = { async deviceFor(req) { return req.headers.authorization === "Bearer kiosk_L1" ? { id: "dev1", locationId: "L1", isActive: true } : null; } };
 const fakeCustomerAuth = { async resolve() { return { kind: "anonymous" }; }, async requireUser(req, reply) { reply.code(401).send({}); return null; } };
@@ -91,6 +91,57 @@ describe("assignKioskSeat", () => {
     assert.equal(none.status, 409);
     assert.equal(none.body.code, "NO_POD_AVAILABLE");
     assert.equal((await orderOf(prisma, "o3")).seatId ?? null, null);
+  });
+
+  describe("fix round 3: a duo share is bound to the same unpaid kiosk party", () => {
+    const share = (prisma, orderId, hostId) => assignKioskSeat(prisma, { locationId: "L1", orderId, request: { shareWithOrderId: hostId }, now: NOW });
+
+    test("sharing a paid stranger's duo is refused: POD_TAKEN with the next best pod", async () => {
+      const prisma = seed({ orders: [
+        unpaid("host", { paymentStatus: "PAID", status: "QUEUED", seatId: "s-c01", isDualPod: true, dualPartnerSeatId: "s-c02" }),
+        unpaid("me"),
+      ] });
+      await prisma.seat.updateMany({ where: { id: { in: ["s-c01", "s-c02"] } }, data: { status: "RESERVED" } });
+      const r = await share(prisma, "me", "host");
+      assert.equal(r.status, 200);
+      assert.equal(r.body.code, "POD_TAKEN");
+      assert.equal(r.body.requested, "C-02");
+      assert.notEqual(r.body.label, "C-02");
+      const me = await orderOf(prisma, "me");
+      assert.notEqual(me.seatId, "s-c02");
+      assert.notEqual(me.podSelectionMethod, "DUO_SHARED");
+    });
+
+    test("a third order onto an already-shared half is refused", async () => {
+      const prisma = seed({ orders: [unpaid("host"), unpaid("g2"), unpaid("g3")] });
+      await assignKioskSeat(prisma, { locationId: "L1", orderId: "host", request: { label: "C-01", dual: true }, now: NOW });
+      assert.equal((await share(prisma, "g2", "host")).body.label, "C-02");
+      const third = await share(prisma, "g3", "host");
+      assert.equal(third.body.code, "POD_TAKEN");
+      assert.notEqual((await orderOf(prisma, "g3")).seatId, "s-c02");
+      assert.equal((await orderOf(prisma, "g2")).seatId, "s-c02");
+    });
+
+    test("a stale host (over 30 minutes), a web order or another location's order can't be shared", async () => {
+      const old = new Date(NOW.getTime() - 45 * 60 * 1000);
+      for (const hostExtra of [{ createdAt: old }, { orderSource: "WEB" }]) {
+        const prisma = seed({ orders: [unpaid("host", { seatId: "s-c01", isDualPod: true, dualPartnerSeatId: "s-c02", ...hostExtra }), unpaid("me")] });
+        await prisma.seat.updateMany({ where: { id: { in: ["s-c01", "s-c02"] } }, data: { status: "RESERVED" } });
+        assert.equal((await share(prisma, "me", "host")).body.code, "POD_TAKEN", JSON.stringify(hostExtra));
+      }
+    });
+
+    test("a valid party share still works, and a cancelled order can't claim a pod", async () => {
+      const prisma = seed({ orders: [unpaid("host"), unpaid("g2"), unpaid("gone", { status: "CANCELLED" })] });
+      await assignKioskSeat(prisma, { locationId: "L1", orderId: "host", request: { label: "C-01", dual: true }, now: NOW });
+      const r = await share(prisma, "g2", "host");
+      assert.equal(r.body.code, undefined);
+      assert.equal(r.body.label, "C-02");
+      assert.equal((await orderOf(prisma, "g2")).podSelectionMethod, "DUO_SHARED");
+      const cancelled = await assignKioskSeat(prisma, { locationId: "L1", orderId: "gone", request: { best: true }, now: NOW });
+      assert.equal(cancelled.status, 409);
+      assert.equal(cancelled.body.code, "ORDER_NOT_OPEN");
+    });
   });
 
   test("parseSeatRequest accepts only label, best or shareWithOrderId", () => {
