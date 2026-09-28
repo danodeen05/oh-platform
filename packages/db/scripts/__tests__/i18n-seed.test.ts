@@ -13,7 +13,7 @@ import { BADGES } from "../../prisma/seed-data/badges.ts";
 import { CHALLENGES } from "../../prisma/seed-data/challenges.ts";
 import { LOCATION_I18N } from "../../prisma/seed-data/locations.ts";
 import { SLIDER_LABELS_I18N } from "../../prisma/seed-data/slider-labels.ts";
-import { DEV_BADGE_DESCRIPTION, DEV_BADGE_I18N_OVERRIDE, DEV_CHALLENGE_DESCRIPTION } from "../../prisma/seed-data/dev-overrides.ts";
+import { DEV_BADGE_DESCRIPTION, DEV_BADGE_I18N_OVERRIDE, DEV_CHALLENGE_DESCRIPTION, DEV_CHALLENGE_I18N_OVERRIDE } from "../../prisma/seed-data/dev-overrides.ts";
 
 const LOCALES = ["en", "zh-TW", "zh-CN", "es"] as const;
 
@@ -184,10 +184,10 @@ describe("dev seed overrides (packages/db/prisma/seed.ts)", () => {
   });
 
   test("every full i18n override has all 4 locales, no emoji, no em dash", () => {
-    for (const [slug, i18n] of Object.entries(DEV_BADGE_I18N_OVERRIDE)) {
+    for (const [slug, i18n] of Object.entries({ ...DEV_BADGE_I18N_OVERRIDE, ...DEV_CHALLENGE_I18N_OVERRIDE })) {
       for (const locale of LOCALES) {
         const copy = (i18n as any)[locale];
-        assert.ok(copy, `missing locale ${locale} for DEV_BADGE_I18N_OVERRIDE.${slug}`);
+        assert.ok(copy, `missing locale ${locale} for override.${slug}`);
         assert.ok(copy.name.trim().length > 0);
         assert.ok(copy.description.trim().length > 0);
         assert.ok(!EMOJI.test(copy.name));
@@ -210,5 +210,17 @@ describe("dev seed overrides (packages/db/prisma/seed.ts)", () => {
     assert.match(vip.es.description, /Jefe de la Carne/);
     assert.doesNotMatch(vip["zh-TW"].description, /牛霸主/);
     assert.doesNotMatch(vip["zh-CN"].description, /牛霸主/);
+  });
+
+  // Fix round 2 (review): regression test -- the dev seed's "early-bird"
+  // challenge counts occurrences ("five times"), so every locale's
+  // translation must carry that count too, not just the English.
+  test('the "early-bird" override matches its own "five times" count in every locale', () => {
+    const earlyBird = DEV_CHALLENGE_I18N_OVERRIDE["early-bird"];
+    assert.ok(earlyBird, 'DEV_CHALLENGE_I18N_OVERRIDE["early-bird"] must exist');
+    assert.match(earlyBird.en.description, /five times/);
+    assert.match(earlyBird["zh-TW"].description, /5 ?次/);
+    assert.match(earlyBird["zh-CN"].description, /5 ?次/);
+    assert.match(earlyBird.es.description, /cinco veces/);
   });
 });

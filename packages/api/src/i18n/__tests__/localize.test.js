@@ -183,10 +183,58 @@ describe("localizeMenuItem slider labels", () => {
     assert.equal(result.sliderConfig.default, 1);
   });
 
-  test("displayLabels falls back to the English labelsI18n when locale is missing", () => {
+  test("displayLabels falls back to sliderConfig.labels when locale is missing", () => {
     const result = localizeMenuItem(sliderItem, undefined);
     assert.deepEqual(result.sliderConfig.displayLabels, ["Light", "Medium", "Rich", "Extra Rich"]);
     assert.deepEqual(result.sliderConfig.labels, ["Light", "Medium", "Rich", "Extra Rich"]);
+  });
+
+  test("Fix round 2: for en, displayLabels is always sliderConfig.labels, even when labelsI18n.en differs from it", () => {
+    const item = {
+      id: "m3",
+      name: "Soup Richness",
+      sliderConfig: {
+        labels: ["Light", "Medium", "Rich", "Extra Rich"],
+        labelsI18n: {
+          // Deliberately different from `labels`, to prove en never reads
+          // labelsI18n.en -- the row's own `labels` is canonical.
+          en: ["STALE", "STALE", "STALE", "STALE"],
+          "zh-TW": ["清淡", "中等", "濃郁", "特濃"],
+        },
+      },
+    };
+    const result = localizeMenuItem(item, "en");
+    assert.deepEqual(result.sliderConfig.displayLabels, ["Light", "Medium", "Rich", "Extra Rich"]);
+  });
+
+  test("Fix round 2: a labelsI18n[locale] array whose length doesn't match labels falls back to labels", () => {
+    const item = {
+      id: "m4",
+      name: "Spice Level",
+      sliderConfig: {
+        labels: ["None", "Mild", "Medium", "Spicy", "Extra Spicy"],
+        labelsI18n: {
+          en: ["None", "Mild", "Medium", "Spicy", "Extra Spicy"],
+          // Re-purposed/stale: only 3 entries for a 5-label slider.
+          "zh-TW": ["無", "微辣", "特辣"],
+        },
+      },
+    };
+    const result = localizeMenuItem(item, "zh-TW");
+    assert.deepEqual(result.sliderConfig.displayLabels, ["None", "Mild", "Medium", "Spicy", "Extra Spicy"]);
+  });
+
+  test("Fix round 2: a non-array labelsI18n[locale] falls back to labels", () => {
+    const item = {
+      id: "m5",
+      name: "Noodle Texture",
+      sliderConfig: {
+        labels: ["Firm", "Medium", "Soft"],
+        labelsI18n: { en: ["Firm", "Medium", "Soft"], "zh-TW": "not an array" },
+      },
+    };
+    const result = localizeMenuItem(item, "zh-TW");
+    assert.deepEqual(result.sliderConfig.displayLabels, ["Firm", "Medium", "Soft"]);
   });
 
   test("displayLabels falls back to labels when there is no labelsI18n (backward compatible)", () => {

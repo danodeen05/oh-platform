@@ -77,11 +77,25 @@ export function localizeLocation(location, locale = "en") {
  * (`t("builder.sliderLabels.${label}")`). Overwriting it with translated
  * text broke all of that. `displayLabels` is a new, additive field; the
  * front ends switch to it in their own D tasks.
+ *
+ * Fix round 2 (review): `displayLabels` uses the row's own `labels` for
+ * `en` and as the fallback -- never `labelsI18n.en`, for the same
+ * "row's own column is the source of English" reason as Important 1. A
+ * non-English `labelsI18n[locale]` is only used when it is an array of the
+ * same length as `labels`; a shorter/longer or non-array value (a
+ * re-purposed slider, stale data) falls back to `labels` instead of
+ * mis-aligning label text with option indexes.
  */
 function localizeSliderConfig(sliderConfig, locale) {
   if (!sliderConfig) return sliderConfig;
-  const labelsI18n = sliderConfig.labelsI18n;
-  const displayLabels = (labelsI18n && (labelsI18n[locale] || labelsI18n.en)) || sliderConfig.labels;
+  const labels = sliderConfig.labels;
+  let displayLabels = labels;
+  if (locale !== "en" && sliderConfig.labelsI18n) {
+    const candidate = sliderConfig.labelsI18n[locale];
+    if (Array.isArray(candidate) && Array.isArray(labels) && candidate.length === labels.length) {
+      displayLabels = candidate;
+    }
+  }
   return { ...sliderConfig, displayLabels };
 }
 

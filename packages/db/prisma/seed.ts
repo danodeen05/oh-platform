@@ -5,6 +5,7 @@ import {
   DEV_BADGE_DESCRIPTION,
   DEV_BADGE_I18N_OVERRIDE,
   DEV_CHALLENGE_DESCRIPTION,
+  DEV_CHALLENGE_I18N_OVERRIDE,
   DEV_CHALLENGE_REQUIREMENTS,
 } from "./seed-data/dev-overrides";
 
@@ -364,11 +365,11 @@ async function main() {
   await prisma.challenge.createMany({
     data: CHALLENGES.map((c) => {
       const description = DEV_CHALLENGE_DESCRIPTION[c.slug] ?? c.i18n.en.description;
-      const i18n = { ...c.i18n, en: { ...c.i18n.en, description } };
+      const i18n = DEV_CHALLENGE_I18N_OVERRIDE[c.slug] ?? { ...c.i18n, en: { ...c.i18n.en, description } };
       return {
         slug: c.slug,
-        name: c.i18n.en.name,
-        description,
+        name: i18n.en.name,
+        description: i18n.en.description,
         rewardCents: c.rewardCents,
         iconEmoji: "",
         iconKey: c.iconKey,

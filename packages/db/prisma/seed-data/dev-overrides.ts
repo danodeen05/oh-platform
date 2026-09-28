@@ -57,11 +57,29 @@ export const DEV_BADGE_I18N_OVERRIDE: Record<string, I18nCopy> = {
   },
 };
 
-/** Same idea as DEV_BADGE_DESCRIPTION, for challenges. */
+/** Same idea as DEV_BADGE_DESCRIPTION, for challenges. "early-bird" is not
+ * here: its dev English adds a count ("five times") that the prod
+ * translations don't mention, so it needs a full override below instead
+ * (same reasoning as "spicy-challenge" above). */
 export const DEV_CHALLENGE_DESCRIPTION: Record<string, string> = {
   "try-all-bases": "Order all 4 base noodle dishes",
   "bring-5-friends": "Refer 5 friends this month",
-  "early-bird": "Order before 11am five times",
+};
+
+/**
+ * Fix round 2 (review): "early-bird"'s dev English says "five times", a
+ * count the prod translations (CHALLENGES, "Order before 11am" with no
+ * count) don't carry. Reusing them would have described a different rule
+ * than the dev fixture's own English, same class of bug as
+ * "spicy-challenge" above.
+ */
+export const DEV_CHALLENGE_I18N_OVERRIDE: Record<string, I18nCopy> = {
+  "early-bird": {
+    en: { name: "Early Bird", description: "Order before 11am five times" },
+    "zh-TW": { name: "早起的鳥兒", description: "上午 11 點前完成點餐 5 次" },
+    "zh-CN": { name: "早起的鸟儿", description: "上午 11 点前完成点餐 5 次" },
+    es: { name: "Madrugador", description: "Pide antes de las 11 a. m. cinco veces" },
+  },
 };
 
 /** Dev-only challenge requirements (this fixture's referenced item slugs
