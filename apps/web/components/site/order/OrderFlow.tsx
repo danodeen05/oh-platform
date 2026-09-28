@@ -25,6 +25,8 @@ import {
   emptyDraft,
   buildLines,
   draftFromOrderItems,
+  splitReorderItems,
+  type PastOrderItem,
   draftSignature,
   quoteLines,
   savingsBody,
@@ -36,6 +38,7 @@ import {
 import { formatCents, orderErrorCode } from "@/lib/site/order-flow";
 import { useGuest } from "@/contexts/guest-context";
 import type { CombLayoutKey } from "@/components/site/floor-plan/useSeats";
+import { Icon } from "@/components/site/icons/Icon";
 import { StepSheet, TotalSummary, Spinner } from "./StepSheet";
 import { BowlBuilder } from "./BowlBuilder";
 import { ArrivalPicker } from "./ArrivalPicker";
@@ -63,6 +66,7 @@ const FLOW_STEPS: OrderStepKey[] = ["bowl", "arrival", "pod", "savings"];
 
 export function OrderFlow({ location, dineInEnabled, groupCode = null, reorderId = null }: { location: FlowLocation; dineInEnabled: boolean; groupCode?: string | null; reorderId?: string | null }) {
   const t = useTranslations("orderFlow");
+  const tr = useTranslations("afterOrder.reorder");
   const te = useTranslations("orderFlow.errors");
   const locale = useLocale();
   const router = useRouter();
@@ -149,21 +153,34 @@ export function OrderFlow({ location, dineInEnabled, groupCode = null, reorderId
     });
   }, [ready, menu, location.id, update]);
 
-  // Reorder (member orders page): put a past order's items back in the builder, then ask for arrival.
+  // Reorder ("Order again", Task D6): put the member's own past order back in the builder, then ask for arrival.
+  // Only lines today's menu still offers come back (the rest are named in a note); prices never come from
+  // the old order, the quote below re-prices the cart.
   const reordered = useRef(false);
+  const [reorderNote, setReorderNote] = useState<{ unavailable: string[] } | null>(null);
   useEffect(() => {
-    if (!reorderId || reordered.current || !ready || !menu || !member.ready || !member.signedIn) return;
+    if (!reorderId || reordered.current || !ready || !menu || !member.ready || !member.signedIn || !member.userId) return;
     reordered.current = true;
     (async () => {
-      const res = await api(`${SITE_API_URL}/orders/${encodeURIComponent(reorderId)}?locale=${locale}`).catch(() => null);
-      const old = res && res.ok ? await res.json().catch(() => null) : null;
-      if (!old?.items) return;
-      update((d) => draftFromOrderItems({ ...d, locationId: location.id }, menu, old.items));
-      // The member orders page creates an unpaid copy first; this flow makes its own, so give that one back.
+      // English values (slider choices are matched on the English labels) and page-language names (for the note).
+      const read = async (lang?: string) => {
+        const res = await api(`${SITE_API_URL}/orders/${encodeURIComponent(reorderId)}${lang ? `?locale=${encodeURIComponent(lang)}` : ""}`).catch(() => null);
+        return res && res.ok ? await res.json().catch(() => null) : null;
+      };
+      const old = await read();
+      // Someone else's order (the safe view has no userId) gives nothing.
+      if (!old?.items || !old.userId || old.userId !== member.userId) return;
+      const named = locale === "en" ? old : (await read(locale)) || old;
+      const names = new Map<string, string>((named.items || []).map((i: { id: string; menuItem?: { name?: string } }) => [i.id, i.menuItem?.name || ""]));
+      const items = old.items.map((i: PastOrderItem & { id: string }) => ({ ...i, menuItem: { id: i.menuItem?.id, name: names.get(i.id) || i.menuItem?.name } }));
+      const { available, unavailable } = splitReorderItems(menu, items);
+      update((d) => draftFromOrderItems({ ...d, locationId: location.id }, menu, available));
+      setReorderNote({ unavailable });
+      // The legacy member orders page created an unpaid copy first; this flow makes its own, so give that one back.
       if (old.paymentStatus !== "PAID" && old.status === "PENDING_PAYMENT") cancelUnpaid(reorderId);
       router.replace(hrefFor("arrival"));
     })();
-  }, [reorderId, ready, menu, member.ready, member.signedIn, api, locale, update, location.id, router, hrefFor]);
+  }, [reorderId, ready, menu, member.ready, member.signedIn, member.userId, api, locale, update, location.id, router, hrefFor]);
 
   // ------------------------------------------------------------ quote
   const lines = useMemo(() => (menu && ready ? buildLines(draft, menu) : []), [draft, menu, ready]);
@@ -411,6 +428,15 @@ export function OrderFlow({ location, dineInEnabled, groupCode = null, reorderId
         cta={noTimes ? null : { label: t("continue"), onClick: () => go("pod"), disabled: !draft.arrival || !availability }}
       >
         <div key="arrival" className="oh-step-in">
+          {reorderNote ? (
+            <div data-reorder-note role="status" className="mb-5 flex items-start gap-3 rounded-2xl bg-oh-ink px-4 py-3 text-[15px] leading-relaxed text-oh-cream ring-1 ring-oh-stone">
+              <Icon name="bowl" size={20} className="mt-0.5 shrink-0 text-oh-ember-light" />
+              <span className="min-w-0">
+                {tr("note")}
+                {reorderNote.unavailable.length ? <span className="mt-1 block text-oh-mute">{tr("unavailable", { items: new Intl.ListFormat(locale, { type: "conjunction" }).format(reorderNote.unavailable) })}</span> : null}
+              </span>
+            </div>
+          ) : null}
           {!availability ? (
             <div role="status" className="flex items-center gap-3 text-oh-mute">
               <Spinner />
