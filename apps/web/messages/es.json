@@ -2672,5 +2672,79 @@
       "missing": "No encontramos ese pedido en tu cuenta.",
       "loading": "Cargando tu último pedido"
     }
+  },
+  "menuPage": {
+    "meta": {
+      "title": "Menú",
+      "description": "Sopa de fideos con res, fideos, extras, acompañamientos y bebidas, con los precios de hoy."
+    },
+    "eyebrow": "El menú",
+    "title": "Un tazón. A tu manera.",
+    "lede": "Elige una sopa y un fideo, y luego ajústalo a tu gusto. Precios antes de impuestos.",
+    "jump": "Secciones del menú",
+    "groups": {
+      "soup": {
+        "title": "Sopas",
+        "line": "Cada tazón empieza aquí."
+      },
+      "noodles": {
+        "title": "Fideos",
+        "line": "Cada tazón incluye un fideo."
+      },
+      "customize": {
+        "title": "A tu gusto",
+        "line": "Lo eliges al pedir. No cuesta nada."
+      },
+      "addons": {
+        "title": "Extras",
+        "line": "Más para tu tazón."
+      },
+      "sides": {
+        "title": "Acompañamientos",
+        "line": "Platos pequeños para compartir."
+      },
+      "drinks": {
+        "title": "Bebidas",
+        "line": "Algo de beber con tu tazón."
+      },
+      "desserts": {
+        "title": "Postre",
+        "line": "Algo dulce para terminar."
+      }
+    },
+    "included": "Incluido",
+    "sliderDefault": "habitual",
+    "early": "Antes para miembros",
+    "earlyNote": "Los miembros lo ven antes de que abra para todos.",
+    "marks": {
+      "title": "Qué significan las marcas",
+      "vegan": "Vegano",
+      "vegetarian": "Vegetariano",
+      "glutenFree": "Sin gluten",
+      "spice1": "Poco picante",
+      "spice2": "Picante",
+      "spice3": "Muy picante"
+    },
+    "sheet": {
+      "label": "{name}, detalles",
+      "orderThis": "Pedir esto",
+      "close": "Cerrar"
+    },
+    "allergens": {
+      "title": "Alergias",
+      "body": "Nuestra cocina maneja trigo, soya y huevo. Si tienes una alergia, contáctanos antes de pedir.",
+      "link": "Contáctanos"
+    },
+    "error": {
+      "title": "El menú no cargó.",
+      "body": "Revisa tu conexión e inténtalo de nuevo.",
+      "retry": "Intentar de nuevo"
+    },
+    "empty": "Estamos actualizando el menú. Vuelve pronto.",
+    "cta": {
+      "title": "¿Con hambre?",
+      "body": "Pide con anticipación y luego elige tu hora de llegada y tu cabina.",
+      "button": "Empezar un pedido"
+    }
   }
 }

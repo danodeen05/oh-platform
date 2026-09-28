@@ -407,3 +407,30 @@ export function draftFromOrderItems(
   }
   return withMenuDefaults(next, steps);
 }
+
+/**
+ * "Order this" from the menu (Task D3): /{locale}/order?item=<id> carries the
+ * item through the location step, and the bowl step puts it in the draft. A
+ * soup or noodle becomes that section's choice; an add-on, side, drink or
+ * dessert gets a quantity of at least 1 (capped by its section). An id the
+ * menu doesn't offer (gone, unavailable, or not yet released for this
+ * caller) changes nothing. Prices are never set here: the flow's quote
+ * prices the cart.
+ */
+export function withPreselectedItem(draft: OrderDraft, steps: MenuStep[], itemId: string): { draft: OrderDraft; found: boolean } {
+  for (const step of steps) {
+    for (const section of step.sections) {
+      const item = (section.items || []).find((i) => i.id === itemId && i.isAvailable !== false);
+      if (!item) continue;
+      if (section.selectionMode === "SINGLE") {
+        return { draft: { ...draft, singles: { ...draft.singles, [section.id]: item.id } }, found: true };
+      }
+      if (section.selectionMode === "MULTIPLE") {
+        const cap = section.maxQuantity ?? 20;
+        const qty = Math.min(cap, Math.max(1, draft.extras[item.id] || 0));
+        return { draft: { ...draft, extras: { ...draft.extras, [item.id]: qty } }, found: true };
+      }
+    }
+  }
+  return { draft, found: false };
+}

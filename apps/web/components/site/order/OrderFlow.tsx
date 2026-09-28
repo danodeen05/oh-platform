@@ -32,6 +32,7 @@ import {
   savingsBody,
   seatRequest,
   withMenuDefaults,
+  withPreselectedItem,
   type MenuStep,
   type OrderStepKey,
 } from "@/lib/site/order-draft";
@@ -105,14 +106,15 @@ export function OrderFlow({ location, dineInEnabled, groupCode = null, reorderId
   const loadMenu = useCallback(async () => {
     setMenuError(false);
     try {
-      const res = await fetch(`${SITE_API_URL}/menu/steps?locale=${encodeURIComponent(locale)}`, { headers: TENANT, cache: "no-store" });
+      // With the member's token (Task D3): the API lists early-access items only for a tier that reaches them.
+      const res = await api(`${SITE_API_URL}/menu/steps?locale=${encodeURIComponent(locale)}`, { headers: TENANT, cache: "no-store" });
       if (!res.ok) throw new Error(String(res.status));
       const data = await res.json();
       setMenu(Array.isArray(data?.steps) ? data.steps : []);
     } catch {
       setMenuError(true);
     }
-  }, [locale]);
+  }, [locale, api]);
   useEffect(() => {
     loadMenu();
   }, [loadMenu]);
@@ -181,6 +183,17 @@ export function OrderFlow({ location, dineInEnabled, groupCode = null, reorderId
       router.replace(hrefFor("arrival"));
     })();
   }, [reorderId, ready, menu, member.ready, member.signedIn, member.userId, api, locale, update, location.id, router, hrefFor]);
+
+  // "Order this" on the menu (Task D3): ?item=<id> puts that item in the draft once, then leaves the URL.
+  // Only an item today's menu offers this caller is added; the quote below prices it.
+  const itemParam = search.get("item");
+  const preselected = useRef(false);
+  useEffect(() => {
+    if (!itemParam || preselected.current || reorderId || !ready || !menu) return;
+    preselected.current = true;
+    update((d) => withPreselectedItem(d, menu, itemParam).draft);
+    router.replace(hrefFor(step));
+  }, [itemParam, reorderId, ready, menu, update, router, hrefFor, step]);
 
   // ------------------------------------------------------------ quote
   const lines = useMemo(() => (menu && ready ? buildLines(draft, menu) : []), [draft, menu, ready]);

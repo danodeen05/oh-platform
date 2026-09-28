@@ -4961,5 +4961,79 @@
       "missing": "We couldn't find that order in your account.",
       "loading": "Loading your last order"
     }
+  },
+  "menuPage": {
+    "meta": {
+      "title": "Menu",
+      "description": "Beef noodle soup, noodles, add-ons, sides and drinks, with today's prices."
+    },
+    "eyebrow": "The menu",
+    "title": "One bowl. Made your way.",
+    "lede": "Pick a soup and a noodle, then make it yours. Prices are before tax.",
+    "jump": "Menu sections",
+    "groups": {
+      "soup": {
+        "title": "Soups",
+        "line": "Every bowl starts here."
+      },
+      "noodles": {
+        "title": "Noodles",
+        "line": "One noodle comes with every bowl."
+      },
+      "customize": {
+        "title": "Make it yours",
+        "line": "Set these when you order. They cost nothing."
+      },
+      "addons": {
+        "title": "Add-ons",
+        "line": "More for your bowl."
+      },
+      "sides": {
+        "title": "Sides",
+        "line": "Small plates to share."
+      },
+      "drinks": {
+        "title": "Drinks",
+        "line": "Something to drink with your bowl."
+      },
+      "desserts": {
+        "title": "Dessert",
+        "line": "Something sweet to finish."
+      }
+    },
+    "included": "Included",
+    "sliderDefault": "usual",
+    "early": "Early for members",
+    "earlyNote": "Members see this before it opens to everyone.",
+    "marks": {
+      "title": "What the marks mean",
+      "vegan": "Vegan",
+      "vegetarian": "Vegetarian",
+      "glutenFree": "Gluten free",
+      "spice1": "Mildly spicy",
+      "spice2": "Spicy",
+      "spice3": "Very spicy"
+    },
+    "sheet": {
+      "label": "{name}, details",
+      "orderThis": "Order this",
+      "close": "Close"
+    },
+    "allergens": {
+      "title": "Allergies",
+      "body": "Our kitchen handles wheat, soy and eggs. If you have an allergy, contact us before you order.",
+      "link": "Contact us"
+    },
+    "error": {
+      "title": "The menu didn't load.",
+      "body": "Check your connection and try again.",
+      "retry": "Try again"
+    },
+    "empty": "The menu is being updated. Check back soon.",
+    "cta": {
+      "title": "Hungry?",
+      "body": "Order ahead, then pick your arrival time and your pod.",
+      "button": "Start an order"
+    }
   }
 }

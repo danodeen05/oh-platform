@@ -2672,5 +2672,79 @@
       "missing": "你的账户中找不到这笔订单。",
       "loading": "正在加载你上次的订单"
     }
+  },
+  "menuPage": {
+    "meta": {
+      "title": "菜单",
+      "description": "牛肉面、面条、加点、小菜与饮料，附当日价格。"
+    },
+    "eyebrow": "菜单",
+    "title": "一碗面，照您的口味。",
+    "lede": "先选汤头和面条，再调成您喜欢的样子。价格未含税。",
+    "jump": "菜单分类",
+    "groups": {
+      "soup": {
+        "title": "汤面",
+        "line": "每一碗都从这里开始。"
+      },
+      "noodles": {
+        "title": "面条",
+        "line": "每碗面都配一种面条。"
+      },
+      "customize": {
+        "title": "照您的口味",
+        "line": "点餐时设定，不另收费。"
+      },
+      "addons": {
+        "title": "加点",
+        "line": "让您的面更丰富。"
+      },
+      "sides": {
+        "title": "小菜",
+        "line": "适合分享的小盘。"
+      },
+      "drinks": {
+        "title": "饮料",
+        "line": "配面的饮品。"
+      },
+      "desserts": {
+        "title": "甜点",
+        "line": "吃完来点甜的。"
+      }
+    },
+    "included": "已包含",
+    "sliderDefault": "默认",
+    "early": "会员抢先",
+    "earlyNote": "会员可在正式推出前抢先看到。",
+    "marks": {
+      "title": "标示说明",
+      "vegan": "纯素",
+      "vegetarian": "素食",
+      "glutenFree": "无麸质",
+      "spice1": "微辣",
+      "spice2": "辣",
+      "spice3": "很辣"
+    },
+    "sheet": {
+      "label": "{name}的详细信息",
+      "orderThis": "点这道",
+      "close": "关闭"
+    },
+    "allergens": {
+      "title": "过敏信息",
+      "body": "我们的厨房会处理小麦、大豆和鸡蛋。如有过敏，请在点餐前与我们联系。",
+      "link": "联系我们"
+    },
+    "error": {
+      "title": "菜单没有加载。",
+      "body": "请检查网络连接后再试一次。",
+      "retry": "再试一次"
+    },
+    "empty": "菜单正在更新，请稍后再来看看。",
+    "cta": {
+      "title": "饿了吗？",
+      "body": "先点餐，再选到达时间和您的座舱。",
+      "button": "开始点餐"
+    }
   }
 }

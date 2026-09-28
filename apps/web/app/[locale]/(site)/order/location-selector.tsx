@@ -45,6 +45,9 @@ export default function LocationSelector({ locations, dineInEnabled }: { locatio
   const [groupError, setGroupError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [referral, setReferral] = useState(false);
+  // "Order this" on the menu (Task D3): /order?item=<id> carries the item on to the bowl step.
+  const itemParam = search.get("item");
+  const itemQs = itemParam ? `?item=${encodeURIComponent(itemParam)}` : "";
 
   // A referral link (/order?ref=CODE): kept for the account the guest signs up with.
   // Saved once per page view: once it has been sent after sign-in (lib/site/referral.ts), a
@@ -93,7 +96,7 @@ export default function LocationSelector({ locations, dineInEnabled }: { locatio
     } catch {
       /* the flow still starts; the draft is created there */
     }
-    router.push(`/${locale}/order/location/${encodeURIComponent(loc.id)}`);
+    router.push(`/${locale}/order/location/${encodeURIComponent(loc.id)}${itemQs}`);
   }
 
   if (!dineInEnabled) {
@@ -118,7 +121,7 @@ export default function LocationSelector({ locations, dineInEnabled }: { locatio
           <li key={loc.id}>
             {/* A real link, so a tap works before the page hydrates; the group mode takes over on click. */}
             <Link
-              href={`/${locale}/order/location/${encodeURIComponent(loc.id)}`}
+              href={`/${locale}/order/location/${encodeURIComponent(loc.id)}${itemQs}`}
               data-location-card={loc.id}
               onClick={(e) => {
                 e.preventDefault();

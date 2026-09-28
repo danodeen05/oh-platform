@@ -4875,5 +4875,79 @@
       "missing": "你的帳戶中找不到這筆訂單。",
       "loading": "正在載入你上次的訂單"
     }
+  },
+  "menuPage": {
+    "meta": {
+      "title": "菜單",
+      "description": "牛肉麵、麵條、加點、小菜與飲料，附當日價格。"
+    },
+    "eyebrow": "菜單",
+    "title": "一碗麵，照您的口味。",
+    "lede": "先選湯頭和麵條，再調成您喜歡的樣子。價格未含稅。",
+    "jump": "菜單分類",
+    "groups": {
+      "soup": {
+        "title": "湯麵",
+        "line": "每一碗都從這裡開始。"
+      },
+      "noodles": {
+        "title": "麵條",
+        "line": "每碗麵都附一種麵條。"
+      },
+      "customize": {
+        "title": "照您的口味",
+        "line": "點餐時設定，不另收費。"
+      },
+      "addons": {
+        "title": "加點",
+        "line": "讓您的麵更豐富。"
+      },
+      "sides": {
+        "title": "小菜",
+        "line": "適合分享的小盤。"
+      },
+      "drinks": {
+        "title": "飲料",
+        "line": "配麵的飲品。"
+      },
+      "desserts": {
+        "title": "甜點",
+        "line": "吃完來點甜的。"
+      }
+    },
+    "included": "已包含",
+    "sliderDefault": "預設",
+    "early": "會員搶先",
+    "earlyNote": "會員可在正式推出前搶先看到。",
+    "marks": {
+      "title": "標示說明",
+      "vegan": "純素",
+      "vegetarian": "素食",
+      "glutenFree": "無麩質",
+      "spice1": "微辣",
+      "spice2": "辣",
+      "spice3": "很辣"
+    },
+    "sheet": {
+      "label": "{name}的詳細資訊",
+      "orderThis": "點這道",
+      "close": "關閉"
+    },
+    "allergens": {
+      "title": "過敏資訊",
+      "body": "我們的廚房會處理小麥、黃豆和蛋。如有過敏，請在點餐前與我們聯絡。",
+      "link": "聯絡我們"
+    },
+    "error": {
+      "title": "菜單沒有載入。",
+      "body": "請檢查網路連線後再試一次。",
+      "retry": "再試一次"
+    },
+    "empty": "菜單正在更新，請稍後再來看看。",
+    "cta": {
+      "title": "餓了嗎？",
+      "body": "先點餐，再選抵達時間和您的座艙。",
+      "button": "開始點餐"
+    }
   }
 }
