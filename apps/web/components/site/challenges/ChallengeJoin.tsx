@@ -40,12 +40,14 @@ export function ChallengeEnrollments({ children }: { children: ReactNode }) {
   const [enrollments, setEnrollments] = useState<Map<string, Enrollment>>(new Map());
   const [loaded, setLoaded] = useState(false);
 
-  const load = useCallback(async () => {
-    if (!member.userId) return;
+  const load = useCallback(async (): Promise<Map<string, Enrollment>> => {
+    if (!member.userId) return new Map();
     const res = await api(`${SITE_API_URL}/users/${encodeURIComponent(member.userId)}/challenges?locale=${encodeURIComponent(locale)}`).catch(() => null);
     const rows = res?.ok ? ((await res.json().catch(() => [])) as Enrollment[]) : [];
-    setEnrollments(new Map((Array.isArray(rows) ? rows : []).map((r) => [r.challengeId, r])));
+    const next = new Map((Array.isArray(rows) ? rows : []).map((r) => [r.challengeId, r]));
+    setEnrollments(next);
     setLoaded(true);
+    return next;
   }, [api, member.userId, locale]);
 
   useEffect(() => {
@@ -66,9 +68,11 @@ export function ChallengeEnrollments({ children }: { children: ReactNode }) {
         headers: { "Content-Type": "application/json" },
         body: "{}",
       }).catch(() => null);
-      // 400 "Already enrolled" (another tab): reload and show the real state.
-      await load();
-      return Boolean(res?.ok || res?.status === 400);
+      // Reload and show the real state. A 400 counts only when it was "Already
+      // enrolled" (another tab), i.e. the enrollment now exists; any other 400
+      // (CHALLENGE_NOT_TRACKED) is a failure, never a false success (Task G1).
+      const next = await load();
+      return Boolean(res?.ok || (res?.status === 400 && next.has(challengeId)));
     },
     [api, member.userId, locale, load],
   );
