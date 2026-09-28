@@ -213,7 +213,8 @@ export function ConfirmationView({ orderId, orderNumber, totalParam, paid, group
     );
   }
 
-  const isPaid = paid || order.paymentStatus === "PAID";
+  // The server's payment state wins once the order is loaded; ?paid=true only covers an order it can't show.
+  const isPaid = order.paymentStatus ? order.paymentStatus === "PAID" : paid;
   const number = order.kitchenOrderNumber || order.orderNumber || orderNumber || "";
   const pod: string | null = order.seat?.label || order.seat?.number || null;
   const moved = podChange?.changed && podChange.to ? { from: podChange.from || "", to: podChange.to } : podMoved(podFrom, pod);

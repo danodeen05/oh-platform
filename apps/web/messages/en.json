@@ -4934,12 +4934,9 @@
       "confirmed": "Welcome to pod {label}",
       "confirmedLede": "Your bowl is on its way to the kitchen line.",
       "waiting": "Your order is waiting here",
-      "waitingLede": "Order {number} is held at this pod. Tell the kitchen you've arrived.",
+      "waitingLede": "An order is held at this pod. If it's yours, tell the kitchen you've arrived.",
       "confirm": "I'm here",
       "confirming": "Letting the kitchen know",
-      "noOrder": "There's no order waiting at this pod right now.",
-      "notYours": "This pod is held for a different order.",
-      "already": "You've already checked in here.",
       "failed": "That didn't go through. Try again, or ask staff.",
       "free": "This pod is free",
       "freeSteps": {
@@ -4950,7 +4947,17 @@
       "mapTitle": "Where you are",
       "mapHint": "Pod {label} is marked",
       "mapError": "The map didn't load. Your pod is still yours.",
-      "account": "My account"
+      "account": "My account",
+      "codeTitle": "Enter your order code",
+      "codeLede": "It's on your confirmation, receipt or text message. We only ask once.",
+      "codeLabel": "Order code",
+      "codeSubmit": "Check me in",
+      "codeRequired": "Enter your order code.",
+      "codeNotFound": "That code doesn't match an order waiting here. Check it and try again.",
+      "wrongPod": "That order is held at a different pod.",
+      "checkedIn": "This pod is checked in",
+      "checkedInLede": "If it's your order, open it from your confirmation.",
+      "openOrder": "Open my order"
     },
     "reorder": {
       "note": "Your last order is back in your bowl. Prices are today's.",

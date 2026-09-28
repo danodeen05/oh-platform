@@ -2645,12 +2645,9 @@
       "confirmed": "欢迎来到座舱 {label}",
       "confirmedLede": "你的面正要送进厨房。",
       "waiting": "你的订单在这里等你",
-      "waitingLede": "订单 {number} 保留在这个座舱。告诉厨房你已到店。",
+      "waitingLede": "这个座舱保留了一笔订单。如果是你的，告诉厨房你已到店。",
       "confirm": "我到了",
       "confirming": "正在通知厨房",
-      "noOrder": "这个座舱目前没有等待中的订单。",
-      "notYours": "这个座舱已保留给其他订单。",
-      "already": "你已在这里报到过了。",
       "failed": "没有发送成功，请再试一次或询问服务人员。",
       "free": "这个座舱目前空着",
       "freeSteps": {
@@ -2661,7 +2658,17 @@
       "mapTitle": "你的位置",
       "mapHint": "已标出座舱 {label}",
       "mapError": "地图没有加载，但座舱仍为你保留。",
-      "account": "我的账户"
+      "account": "我的账户",
+      "codeTitle": "输入你的订单代码",
+      "codeLede": "代码在你的确认页、收据或短信上。只需要输入一次。",
+      "codeLabel": "订单代码",
+      "codeSubmit": "帮我报到",
+      "codeRequired": "请输入你的订单代码。",
+      "codeNotFound": "这个代码与此座舱的订单不符，请确认后再试一次。",
+      "wrongPod": "这笔订单保留在其他座舱。",
+      "checkedIn": "这个座舱已报到",
+      "checkedInLede": "如果是你的订单，请从确认页打开。",
+      "openOrder": "打开我的订单"
     },
     "reorder": {
       "note": "你上次的点餐已放回碗里，价格以今天为准。",

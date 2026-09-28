@@ -23,8 +23,6 @@ import { SITE_IMAGES } from "@/lib/site/images";
 import { SITE_API_URL, useMemberId, useSiteApi } from "@/lib/site/api";
 import { confirmPayment, groupIdentityHeaders, paymentIntent, type PaymentIntentResult } from "@/lib/site/orders";
 import { statusPath } from "@/lib/site/order-status";
-
-type PodChange = { changed?: boolean; from?: string | null; to?: string | null; noPod?: boolean };
 import { clearDraft } from "@/lib/site/order-draft";
 import { formatCents, orderErrorCode, stripeLocale } from "@/lib/site/order-flow";
 import { podWalkSteps } from "@/lib/site/pod-walk";
@@ -34,6 +32,9 @@ import { Receipt, type ReceiptLine, type ReceiptTotals } from "./Receipt";
 import { SignInGate } from "./SignInGate";
 import { useOrderDraft } from "./useOrderDraft";
 import "./order.css";
+
+/** D12: the pod moved at payment (POST /orders/:id/confirm-payment returns it). */
+type PodChange = { changed?: boolean; from?: string | null; to?: string | null; noPod?: boolean };
 
 const FORM_ID = "oh-pay-form";
 

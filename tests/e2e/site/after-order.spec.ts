@@ -38,6 +38,7 @@ import { chromium, devices, type Browser, type BrowserContext, type Page } from 
 import { PrismaClient } from "../../../packages/db/index.js";
 
 const BASE = process.env.E2E_BASE_URL || "http://localhost:3300";
+const API = process.env.E2E_API_URL || "http://localhost:4300";
 const SHOTS = process.env.E2E_SHOT_DIR || "";
 const CLERK_KEY = process.env.CLERK_SECRET_KEY || "";
 const AXE = new URL("../../../apps/web/node_modules/axe-core/axe.min.js", import.meta.url).pathname;
@@ -76,7 +77,7 @@ after(async () => {
   const ids = orders.map((o) => o.id);
   const seats = [...new Set([...seatIds, ...orders.flatMap((o) => [o.seatId, o.dualPartnerSeatId]).filter((s): s is string => Boolean(s))])];
   if (seats.length) await tryDel("seats", () => prisma.seat.updateMany({ where: { id: { in: seats } }, data: { status: "AVAILABLE" } }));
-  await tryDel("staffCall", () => (prisma as any).staffCall?.deleteMany({ where: { orderId: { in: ids } } }) ?? Promise.resolve());
+  await tryDel("podCall", () => prisma.podCall.deleteMany({ where: { orderId: { in: ids } } }));
   await tryDel("orderItem", () => prisma.orderItem.deleteMany({ where: { orderId: { in: ids } } }));
   await tryDel("order", () => prisma.order.deleteMany({ where: { id: { in: ids } } }));
   for (const u of [dbUserId, otherUserId].filter(Boolean)) {
@@ -455,6 +456,59 @@ test("the pod page: the live map highlights your pod, and I'm here confirms it",
   await page.goto(`${BASE}/zh-TW/pod?qr=POD-nope`, { waitUntil: "domcontentloaded" });
   await page.locator("[data-pod-page][data-state='error']").waitFor({ timeout: 60_000 });
   assert.deepEqual(englishLeaks(await page.evaluate(() => document.body.innerText)), []);
+  await ctx.close();
+});
+
+test("fix round 1: an anonymous pod scan leaks no order; a stranger can't confirm; the order-code holder can", async () => {
+  await seedMember();
+  const pod = await freePod();
+  // A kiosk order: no member, no guest session. Its code is on the guest's receipt, never on the pod.
+  const order = await seedOrder({ userId: null as unknown as string, status: "QUEUED", seatId: pod.id, arrived: true });
+  const ctx = await newContext();
+  const page = await ctx.newPage();
+  const podInfo = page.waitForResponse((r) => r.url().includes("/pods/info?"), { timeout: 60_000 });
+  await page.goto(`${BASE}/en/pod?qr=${encodeURIComponent(pod.qrCode)}`, { waitUntil: "domcontentloaded" });
+  const infoBody = await (await podInfo).text();
+  for (const secret of [order.orderQrCode!, order.id, order.orderNumber]) assert.ok(!infoBody.includes(secret), `/pods/info leaks ${secret}`);
+  await page.locator("[data-pod-waiting]").waitFor({ timeout: 60_000 });
+  assert.ok(!(await page.content()).includes(order.orderQrCode!), "the page holds no order code");
+
+  // "I'm here" without proof: nothing is confirmed, and the page asks for the order code.
+  const refused = page.waitForResponse((r) => r.url().endsWith("/pods/confirm-arrival"), { timeout: 60_000 });
+  await page.locator("[data-pod-confirm-arrival]").click();
+  assert.equal((await refused).status(), 403);
+  await page.locator("[data-pod-code-form]").waitFor({ timeout: 30_000 });
+  assert.equal((await prisma.order.findUnique({ where: { id: order.id } }))?.podConfirmedAt ?? null, null);
+  await checkPage(page, "pod-code");
+
+  // A guessed code: still nothing.
+  await page.locator("#pod-order-code").fill("ORDER-guess-123");
+  const guessed = page.waitForResponse((r) => r.url().endsWith("/pods/confirm-arrival"), { timeout: 60_000 });
+  await page.locator("[data-pod-code-submit]").click();
+  assert.equal((await guessed).status(), 404);
+  await page.locator("#pod-error").waitFor({ timeout: 30_000 });
+  assert.equal((await prisma.order.findUnique({ where: { id: order.id } }))?.podConfirmedAt ?? null, null);
+
+  // The real code (from the guest's receipt): confirmed, then the status page, where pod services carry the code as proof.
+  await page.locator("#pod-order-code").fill(order.orderQrCode!);
+  const ok = page.waitForResponse((r) => r.url().endsWith("/pods/confirm-arrival"), { timeout: 60_000 });
+  await page.locator("[data-pod-code-submit]").click();
+  assert.equal((await ok).status(), 200);
+  await page.waitForURL(/\/en\/order\/status\?/, { timeout: 60_000 });
+  assert.ok((await prisma.order.findUnique({ where: { id: order.id } }))?.podConfirmedAt);
+  await page.locator("[data-call-staff]").waitFor({ timeout: 60_000 });
+  const call = page.waitForResponse((r) => r.url().endsWith(`/orders/${order.id}/call-staff`), { timeout: 60_000 });
+  await page.locator("[data-call-staff]").click();
+  const callRes = await call;
+  assert.equal(callRes.status(), 200);
+  assert.equal(callRes.request().headers()["x-order-code"], order.orderQrCode, "the order code is the proof");
+
+  // A stranger's direct call (no session, no code) gets 403 in production; that's pinned in
+  // packages/api/src/orders/__tests__/pod-service.test.js. The lane's dev API has no ADMIN_API_KEY, and its
+  // dev bypass treats every caller as staff, so it can't be asserted here. A wrong code is still no proof:
+  const guessed2 = await fetch(`${API}/pods/confirm-arrival`, { method: "POST", headers: { "Content-Type": "application/json", "x-tenant-slug": "oh" }, body: JSON.stringify({ podQrCode: pod.qrCode }) });
+  assert.equal(guessed2.status, 403, "no session, no code: no confirm");
+  await prisma.podCall.deleteMany({ where: { orderId: order.id } }).catch(() => undefined);
   await ctx.close();
 });
 

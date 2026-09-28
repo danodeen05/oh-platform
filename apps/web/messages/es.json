@@ -2645,12 +2645,9 @@
       "confirmed": "Bienvenido a la cabina {label}",
       "confirmedLede": "Tu tazón va camino a la línea de cocina.",
       "waiting": "Tu pedido te espera aquí",
-      "waitingLede": "El pedido {number} está reservado en esta cabina. Avisa a la cocina que llegaste.",
+      "waitingLede": "Hay un pedido reservado en esta cabina. Si es tuyo, avisa a la cocina que llegaste.",
       "confirm": "Ya llegué",
       "confirming": "Avisando a la cocina",
-      "noOrder": "No hay ningún pedido esperando en esta cabina ahora.",
-      "notYours": "Esta cabina está reservada para otro pedido.",
-      "already": "Ya te registraste aquí.",
       "failed": "No se pudo enviar. Inténtalo de nuevo o pide ayuda al personal.",
       "free": "Esta cabina está libre",
       "freeSteps": {
@@ -2661,7 +2658,17 @@
       "mapTitle": "Dónde estás",
       "mapHint": "La cabina {label} está marcada",
       "mapError": "El mapa no cargó. Tu cabina sigue siendo tuya.",
-      "account": "Mi cuenta"
+      "account": "Mi cuenta",
+      "codeTitle": "Escribe tu código de pedido",
+      "codeLede": "Está en tu confirmación, recibo o mensaje de texto. Solo te lo pedimos una vez.",
+      "codeLabel": "Código de pedido",
+      "codeSubmit": "Registrarme",
+      "codeRequired": "Escribe tu código de pedido.",
+      "codeNotFound": "Ese código no coincide con un pedido en esta cabina. Revísalo e inténtalo de nuevo.",
+      "wrongPod": "Ese pedido está reservado en otra cabina.",
+      "checkedIn": "Esta cabina ya está registrada",
+      "checkedInLede": "Si es tu pedido, ábrelo desde tu confirmación.",
+      "openOrder": "Abrir mi pedido"
     },
     "reorder": {
       "note": "Tu último pedido está de vuelta en tu tazón. Los precios son los de hoy.",

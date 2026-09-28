@@ -4848,12 +4848,9 @@
       "confirmed": "歡迎來到座艙 {label}",
       "confirmedLede": "你的麵正要送進廚房。",
       "waiting": "你的訂單在這裡等你",
-      "waitingLede": "訂單 {number} 保留在這個座艙。告訴廚房你已抵達。",
+      "waitingLede": "這個座艙保留了一筆訂單。如果是你的，告訴廚房你已抵達。",
       "confirm": "我到了",
       "confirming": "正在通知廚房",
-      "noOrder": "這個座艙目前沒有等待中的訂單。",
-      "notYours": "這個座艙已保留給其他訂單。",
-      "already": "你已在這裡報到過了。",
       "failed": "沒有送出，請再試一次或詢問服務人員。",
       "free": "這個座艙目前空著",
       "freeSteps": {
@@ -4864,7 +4861,17 @@
       "mapTitle": "你的位置",
       "mapHint": "已標示座艙 {label}",
       "mapError": "地圖沒有載入，但座艙仍為你保留。",
-      "account": "我的帳戶"
+      "account": "我的帳戶",
+      "codeTitle": "輸入你的訂單代碼",
+      "codeLede": "代碼在你的確認頁、收據或簡訊上。只需要輸入一次。",
+      "codeLabel": "訂單代碼",
+      "codeSubmit": "幫我報到",
+      "codeRequired": "請輸入你的訂單代碼。",
+      "codeNotFound": "這個代碼與此座艙的訂單不符，請確認後再試一次。",
+      "wrongPod": "這筆訂單保留在其他座艙。",
+      "checkedIn": "這個座艙已報到",
+      "checkedInLede": "如果是你的訂單，請從確認頁開啟。",
+      "openOrder": "開啟我的訂單"
     },
     "reorder": {
       "note": "你上次的點餐已放回碗裡，價格以今天為準。",

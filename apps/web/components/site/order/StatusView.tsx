@@ -96,11 +96,13 @@ export function StatusView({ code, embedded, followParent, demoStage: demoStageP
   });
 
   const identity = groupIdentityHeaders(guest);
+  // Fix round 1: pod services need the owner or the order's own code; this page was opened with it (the status link carries it).
+  const proof: Record<string, string> = { ...identity, ...(order?.orderQrCode ? { "x-order-code": order.orderQrCode } : {}) };
   async function post(path: string, body: unknown = {}): Promise<Response | null> {
     if (!order) return null;
     return api(`${SITE_API_URL}/orders/${encodeURIComponent(order.id)}/${path}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...TENANT, ...identity },
+      headers: { "Content-Type": "application/json", ...TENANT, ...proof },
       body: JSON.stringify(body),
     }).catch(() => null);
   }
@@ -448,7 +450,7 @@ export function StatusView({ code, embedded, followParent, demoStage: demoStageP
           onClose={() => setAddOns(false)}
           orderId={order.id}
           api={api}
-          headers={identity}
+          headers={proof}
           onNotice={say}
           onCallStaff={() => {
             setAddOns(false);

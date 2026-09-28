@@ -5,13 +5,15 @@
  * pod's table (/{locale}/pod?qr=POD-...). The live comb map (`CombMap
  * mode="live"`, fed by `useSeats`) shows where the pod is, highlighted; with
  * the guest's paid order waiting there, "I'm here" confirms their arrival
+ * (Fix round 1: the scan itself reveals no order; the signed-in or guest-session
+ * owner is matched by the API, anyone else enters their order code once)
  * (POST /pods/confirm-arrival, matched to the signed-in member) and the page
  * moves on to the order's status. A free pod explains how to get it.
  *
  * Every string is translated (the legacy page was English only), including
  * the failures, which the API reports in English.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -21,9 +23,12 @@ import { Icon } from "@/components/site/icons/Icon";
 import { useSeats } from "@/components/site/floor-plan/useSeats";
 import type { CombMapLabels } from "@/components/site/floor-plan/CombMap";
 import { useSiteApi, SITE_API_URL } from "@/lib/site/api";
+import { groupIdentityHeaders } from "@/lib/site/orders";
+import { useGuest } from "@/contexts/guest-context";
 import { PRIMARY, SECONDARY } from "./PodCard";
 import { Spinner } from "./StepSheet";
 import { TENANT } from "./useOrderStatus";
+import { INPUT_CLASS } from "./CheckInView";
 import "./after-order.css";
 
 // The map is the page's centerpiece but not its first paint: load it on the client, after the words.
@@ -33,10 +38,34 @@ const CombMap = dynamic(() => import("@/components/site/floor-plan/CombMap").the
 });
 
 interface PodInfo {
-  pod: { id: string; number: string; label?: string | null; qrCode: string; status: string };
-  location: { id: string; name: string; city?: string | null };
+  pod: { label: string; status: string };
+  location: { id: string; name: string; city?: string | null } | null;
   hasActiveOrder: boolean;
-  activeOrder: { id: string; orderNumber: string; kitchenOrderNumber: string | null; orderQrCode: string; alreadyConfirmed: boolean } | null;
+  alreadyConfirmed: boolean;
+}
+
+/** The order code this visitor already proved on this device (their confirmation set it), kept for the session. */
+const CODE_KEY = "oh-order-code";
+function knownCode(): string | null {
+  try {
+    return sessionStorage.getItem(CODE_KEY) || localStorage.getItem("activeOrderQrCode") || null;
+  } catch {
+    return null;
+  }
+}
+function rememberCode(code: string) {
+  try {
+    sessionStorage.setItem(CODE_KEY, code);
+  } catch {
+    /* storage blocked */
+  }
+}
+function forgetCode() {
+  try {
+    sessionStorage.removeItem(CODE_KEY);
+  } catch {
+    /* storage blocked */
+  }
 }
 
 export function PodView({ qr }: { qr: string | null }) {
@@ -46,13 +75,20 @@ export function PodView({ qr }: { qr: string | null }) {
   const locale = useLocale();
   const router = useRouter();
   const api = useSiteApi();
+  const { guest } = useGuest();
   const [info, setInfo] = useState<PodInfo | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "error" | "none">(qr ? "loading" : "none");
   const [busy, setBusy] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const seats = useSeats(info?.location.id ?? null, { apiBase: SITE_API_URL, refreshMs: 15_000 });
-  const statusHref = (code: string) => `/${locale}/order/status?orderQrCode=${encodeURIComponent(code)}`;
+  // Fix round 1: a pod scan reveals no order. A guest proves theirs with its order code (asked once, kept for the session).
+  const [askCode, setAskCode] = useState(false);
+  const [code, setCode] = useState("");
+  const [saved, setSaved] = useState<string | null>(null);
+  const seats = useSeats(info?.location?.id ?? null, { apiBase: SITE_API_URL, refreshMs: 15_000 });
+  const statusHref = (c: string) => `/${locale}/order/status?orderQrCode=${encodeURIComponent(c)}`;
+
+  useEffect(() => setSaved(knownCode()), []);
 
   useEffect(() => {
     if (!qr) return;
@@ -68,8 +104,6 @@ export function PodView({ qr }: { qr: string | null }) {
         const data: PodInfo = await res.json();
         setInfo(data);
         setState("ready");
-        // Already confirmed here: the order's own page is the place to be.
-        if (data.activeOrder?.alreadyConfirmed && data.activeOrder.orderQrCode) router.replace(statusHref(data.activeOrder.orderQrCode));
       } catch {
         if (live) setState("error");
       }
@@ -77,35 +111,59 @@ export function PodView({ qr }: { qr: string | null }) {
     return () => {
       live = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qr, locale]);
 
-  async function imHere() {
+  /** POST /pods/confirm-arrival: the signed-in or guest-session owner, or whoever holds the order's code. */
+  async function confirmArrival(orderCode: string | null) {
     if (!qr || busy) return;
     setBusy(true);
     setError(null);
     try {
-      // The API matches the signed-in member's order at this pod from the verified session.
       const res = await api(`${SITE_API_URL}/pods/confirm-arrival`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...TENANT },
-        body: JSON.stringify({ podQrCode: qr }),
+        headers: { "Content-Type": "application/json", ...TENANT, ...groupIdentityHeaders(guest) },
+        body: JSON.stringify(orderCode ? { podQrCode: qr, orderQrCode: orderCode } : { podQrCode: qr }),
       });
       const data = await res.json().catch(() => ({}));
-      if (res.ok) {
-        setConfirmed(true);
-        const code = data?.order?.orderQrCode || info?.activeOrder?.orderQrCode;
-        setTimeout(() => (code ? router.push(statusHref(code)) : undefined), 1500);
+      const own = (data?.order?.orderQrCode as string | undefined) || orderCode;
+      if (res.ok || data?.code === "ALREADY_CONFIRMED") {
+        if (own) rememberCode(own);
+        if (res.ok) setConfirmed(true);
+        setTimeout(() => (own ? router.push(statusHref(own)) : undefined), res.ok ? 1500 : 0);
         return;
       }
-      setError(res.status === 404 ? t("noOrder") : /match/i.test(data?.error || "") ? t("notYours") : /already/i.test(data?.error || "") ? t("already") : t("failed"));
+      if (data?.code === "ORDER_CODE_REQUIRED") {
+        // Not matched to this visitor's session: ask for the order code (the saved one wasn't it, or there was none).
+        setAskCode(true);
+        if (orderCode) setError(t("codeNotFound"));
+      } else if (data?.code === "WRONG_POD") {
+        if (orderCode === saved) forgetCode();
+        setAskCode(true);
+        setError(t("wrongPod"));
+      } else if (res.status === 404 && orderCode) {
+        if (orderCode === saved) forgetCode();
+        setAskCode(true);
+        setError(t("codeNotFound"));
+      } else {
+        setError(t("failed"));
+      }
     } catch {
       setError(tc("networkError"));
     }
     setBusy(false);
   }
 
-  const label = info?.pod.label || info?.pod.number || "";
+  function submitCode(e: FormEvent) {
+    e.preventDefault();
+    const c = code.trim();
+    if (!c) {
+      setError(t("codeRequired"));
+      return;
+    }
+    void confirmArrival(c);
+  }
+
+  const label = info?.pod.label || "";
   const mapKey = seats.layoutKey;
   const combLabels = tRoot.raw("combMap") as CombMapLabels;
 
@@ -149,7 +207,12 @@ export function PodView({ qr }: { qr: string | null }) {
     );
   }
 
-  const order = info.activeOrder;
+  const alert = error ? (
+    <p id="pod-error" role="alert" className="m-0 mt-3 flex items-start gap-2 text-[15px] text-oh-cream">
+      <Icon name="alert" size={18} className="mt-0.5 shrink-0 text-oh-ember-light" />
+      {error}
+    </p>
+  ) : null;
   return (
     <div data-pod-page data-state="ready" className="mx-auto w-full max-w-xl px-4 pb-[calc(var(--dock-h,0px)+2.5rem)] pt-4 md:max-w-6xl md:px-8 md:pt-10">
       <div className="md:grid md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] md:items-start md:gap-10">
@@ -159,33 +222,70 @@ export function PodView({ qr }: { qr: string | null }) {
               <Icon name="pod" size={32} />
             </span>
             <div className="min-w-0 flex-1">
-              <Eyebrow locale={locale} as="p" className="m-0 !normal-case !tracking-normal text-oh-mute">
-                {info.location.name}
-              </Eyebrow>
+              {info.location?.name ? (
+                <Eyebrow locale={locale} as="p" className="m-0 !normal-case !tracking-normal text-oh-mute">
+                  {info.location.name}
+                </Eyebrow>
+              ) : null}
               <Display locale={locale} className="m-0 mt-1.5 !text-[clamp(2.1rem,8vw,3.25rem)] text-oh-cream">
                 {t("title", { label })}
               </Display>
             </div>
           </div>
 
-          {info.hasActiveOrder && order && !order.alreadyConfirmed ? (
-            <section aria-labelledby="pod-order" className="rounded-[1.75rem] bg-oh-ink px-5 py-5 ring-1 ring-oh-stone">
+          {info.hasActiveOrder && !info.alreadyConfirmed ? (
+            <section data-pod-waiting aria-labelledby="pod-order" className="rounded-[1.75rem] bg-oh-ink px-5 py-5 ring-1 ring-oh-stone">
               <h2 id="pod-order" className="m-0 text-lg font-semibold text-oh-cream">
-                {t("waiting")}
+                {askCode ? t("codeTitle") : t("waiting")}
               </h2>
-              <p className="m-0 mt-1 text-[15px] leading-relaxed text-oh-mute">{t("waitingLede", { number: order.kitchenOrderNumber || order.orderNumber.slice(-6) })}</p>
-              {error ? (
-                <p role="alert" className="m-0 mt-3 flex items-start gap-2 text-[15px] text-oh-cream">
-                  <Icon name="alert" size={18} className="mt-0.5 shrink-0 text-oh-ember-light" />
-                  {error}
-                </p>
-              ) : null}
-              <button type="button" data-pod-confirm-arrival onClick={imHere} disabled={busy} aria-busy={busy ? "true" : "false"} className={`${PRIMARY} mt-4 h-14`}>
-                {busy ? <Spinner /> : <Icon name="check" size={20} />}
-                {busy ? t("confirming") : t("confirm")}
-              </button>
+              <p className="m-0 mt-1 text-[15px] leading-relaxed text-oh-mute">{askCode ? t("codeLede") : t("waitingLede")}</p>
+              {askCode ? (
+                <form onSubmit={submitCode} noValidate data-pod-code-form className="mt-4">
+                  <label htmlFor="pod-order-code" className="block text-[15px] font-semibold text-oh-cream">
+                    {t("codeLabel")}
+                  </label>
+                  <input
+                    id="pod-order-code"
+                    name="orderQrCode"
+                    value={code}
+                    onChange={(e) => setCode(e.target.value)}
+                    autoComplete="off"
+                    autoCapitalize="characters"
+                    spellCheck={false}
+                    aria-invalid={error ? "true" : "false"}
+                    aria-describedby={error ? "pod-error" : undefined}
+                    className={`${INPUT_CLASS} mt-2`}
+                  />
+                  {alert}
+                  <button type="submit" data-pod-code-submit disabled={busy} aria-busy={busy ? "true" : "false"} className={`${PRIMARY} mt-4 h-14`}>
+                    {busy ? <Spinner /> : <Icon name="check" size={20} />}
+                    {busy ? t("confirming") : t("codeSubmit")}
+                  </button>
+                </form>
+              ) : (
+                <>
+                  {alert}
+                  <button type="button" data-pod-confirm-arrival onClick={() => confirmArrival(saved)} disabled={busy} aria-busy={busy ? "true" : "false"} className={`${PRIMARY} mt-4 h-14`}>
+                    {busy ? <Spinner /> : <Icon name="check" size={20} />}
+                    {busy ? t("confirming") : t("confirm")}
+                  </button>
+                </>
+              )}
             </section>
-          ) : !info.hasActiveOrder ? (
+          ) : info.hasActiveOrder ? (
+            <section data-pod-checked-in aria-labelledby="pod-taken" className="rounded-[1.75rem] bg-oh-ink px-5 py-5 ring-1 ring-oh-stone">
+              <h2 id="pod-taken" className="m-0 text-lg font-semibold text-oh-cream">
+                {t("checkedIn")}
+              </h2>
+              <p className="m-0 mt-1 text-[15px] leading-relaxed text-oh-mute">{t("checkedInLede")}</p>
+              {saved ? (
+                <Link href={statusHref(saved)} className={`${SECONDARY} mt-4`}>
+                  <Icon name="clock" size={20} />
+                  {t("openOrder")}
+                </Link>
+              ) : null}
+            </section>
+          ) : (
             <section aria-labelledby="pod-free" className="rounded-[1.75rem] bg-oh-linen px-5 py-5 text-oh-charcoal">
               <h2 id="pod-free" className="m-0 text-lg font-semibold">
                 {t("free")}
@@ -205,7 +305,7 @@ export function PodView({ qr }: { qr: string | null }) {
                 {tc("newOrder")}
               </Link>
             </section>
-          ) : null}
+          )}
         </div>
 
         <section aria-labelledby="pod-map-title" className="mt-6 md:mt-0">
@@ -224,7 +324,7 @@ export function PodView({ qr }: { qr: string | null }) {
           )}
         </section>
 
-        {!info.hasActiveOrder || !order ? null : (
+        {!info.hasActiveOrder ? null : (
           <Link href={`/${locale}/member`} className={`${SECONDARY} mt-6 md:hidden`}>
             <Icon name="user" size={20} />
             {t("account")}
