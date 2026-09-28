@@ -374,83 +374,6 @@
           "Cueva Timpanogos"
         ]
       }
-    },
-    "hours": "Horario",
-    "weekday": "Entre semana",
-    "weekend": "Fin de semana",
-    "openNow": "Abierto ahora",
-    "upcomingCities": "Llegando a tu ciudad",
-    "loading": "Cargando ubicaciones...",
-    "hero": {
-      "findUs": "Encuéntranos",
-      "title": "Nuestras ubicaciones",
-      "description": "Experimenta Oh! Beef Noodle Soup en una de nuestras ubicaciones únicas"
-    },
-    "cityCreek": {
-      "tagline": "Centro de Salt Lake City",
-      "description": "Nuestra ubicación principal en el corazón del centro de Salt Lake City, ofreciendo una experiencia gastronómica única con cabinas privadas y pedidos tecnológicos.",
-      "mallDescription": "City Creek Center es el principal destino de compras de Utah, con más de 100 tiendas y restaurantes en un impresionante entorno al aire libre con techo de vidrio retráctil.",
-      "nearbyLandmarks": [
-        "Temple Square",
-        "Salt Palace Convention Center",
-        "Capitolio de Utah",
-        "Gateway Mall"
-      ],
-      "parking": "Estacionamiento gratis en la estructura de City Creek con validación"
-    },
-    "universityPlace": {
-      "tagline": "Valle de Utah",
-      "description": "Sirviendo a la comunidad del Valle de Utah con la misma calidad excepcional y experiencia gastronómica innovadora.",
-      "mallDescription": "University Place es el vibrante centro de compras y entretenimiento de Orem, con una mezcla de tiendas nacionales y favoritos locales cerca de Utah Valley University.",
-      "nearbyLandmarks": [
-        "Utah Valley University",
-        "Provo Canyon",
-        "Cueva Timpanogos",
-        "Campus de BYU"
-      ],
-      "parking": "Amplio estacionamiento gratuito disponible en todo University Place"
-    },
-    "details": {
-      "address": "Dirección",
-      "hours": "Horario",
-      "hoursWeekday": "Lun-Sáb: 11am - 9pm",
-      "hoursSunday": "Domingo: Cerrado",
-      "parking": "Estacionamiento"
-    },
-    "about": {
-      "title": "Acerca de",
-      "nearby": "Puntos de interés cercanos"
-    },
-    "buttons": {
-      "orderAhead": "Ordenar con anticipación",
-      "getDirections": "Obtener direcciones"
-    },
-    "features": {
-      "privatePods": "Cabinas privadas",
-      "orderAhead": "Ordenar anticipado",
-      "noTipping": "Sin propinas",
-      "accessible": "Accesible"
-    },
-    "ohWay": {
-      "label": "El estilo Oh!",
-      "title": "Una experiencia gastronómica diferente",
-      "kiosk": {
-        "title": "Ordena a tu manera",
-        "description": "Salta la fila con nuestra app móvil o usa nuestros quioscos en la tienda. Tu comida está lista cuando tú lo estés."
-      },
-      "pod": {
-        "title": "Cabinas de comedor privadas",
-        "description": "Disfruta tu comida en tu propio espacio privado. Sin mesas abarrotadas, sin ruido — solo tú y tu tazón perfecto."
-      },
-      "noTips": {
-        "title": "Sin propinas necesarias",
-        "description": "El precio que ves es el precio que pagas. Pagamos a nuestro equipo salarios competitivos para que nunca tengas que preocuparte por las propinas."
-      }
-    },
-    "cta": {
-      "title": "¿Listo para el mejor tazón?",
-      "description": "Ordena con anticipación y salta la espera. Tu tazón perfecto está a solo unos toques.",
-      "button": "Comienza tu pedido"
     }
   },
   "loyalty": {
@@ -1570,54 +1493,6 @@
       "description": "Visita una de nuestras ubicaciones para comprar en persona y disfruta un tazón mientras estás ahí."
     }
   },
-  "referral": {
-    "title": "Refiere amigos, gana recompensas",
-    "subtitle": "Comparte el amor y gana $5 por cada amigo que haga su primer pedido.",
-    "howItWorks": "Cómo funciona",
-    "step1": {
-      "title": "Comparte tu enlace",
-      "description": "Envía tu enlace de referido único a amigos y familiares."
-    },
-    "step2": {
-      "title": "Amigo ordena",
-      "description": "Cuando tu amigo completa su primer pedido de $20 o más, ambos ganan créditos."
-    },
-    "step3": {
-      "title": "Gana al instante",
-      "description": "Recibes $5 de crédito en cuanto se completa su primer pedido; ellos obtienen $5 de descuento en ese pedido. Los créditos vencen a los 90 días."
-    },
-    "goodToKnow": "Bueno saber",
-    "rules": {
-      "minimumOrder": "El bono de referido aplica a primeros pedidos de $20 o más",
-      "disbursement": "Los créditos se agregan a tu cuenta al instante cuando tu amigo completa su primer pedido y vencen 90 días después",
-      "maxPerOrder": "Máximo de $5 de crédito puede aplicarse por pedido"
-    },
-    "dashboard": {
-      "getStarted": "Comenzar",
-      "enterEmailPrompt": "Ingresa tu correo para obtener tu enlace de referido",
-      "getMyReferralLink": "Obtener Mi Enlace de Referido",
-      "creating": "Creando...",
-      "availableCredits": "Créditos Disponibles",
-      "useCreditsNote": "Usa hasta $5 por pedido al pagar",
-      "pendingCredits": "Créditos Pendientes",
-      "scheduledForDisbursement": "Programado para desembolso",
-      "nextDisbursement": "Próximo desembolso:",
-      "yourReferralLink": "Tu Enlace de Referido",
-      "copy": "Copiar",
-      "showQRCode": "Mostrar Código QR",
-      "showMyOhQRCode": "Mostrar Mi Código QR Oh!",
-      "scanToJoin": "Escanea para unirte a Oh!",
-      "scanDescription": "Tu amigo puede escanear este código QR para registrarse con tu referido",
-      "close": "Cerrar",
-      "shareToEarn": "Comparte este enlace para ganar $5 por cada amigo que complete un pedido de $20+",
-      "recentActivity": "Actividad Reciente",
-      "creditEvents": {
-        "cashback": "{percent}% de reembolso en pedido",
-        "appliedToOrder": "Aplicado al pedido {orderId}"
-      },
-      "emailPlaceholder": "tu@correo.com"
-    }
-  },
   "contact": {
     "title": "Contáctanos",
     "description": "Nos encantaría saber de ti",
@@ -1856,110 +1731,6 @@
         "newTab": "(se abre en una pestaña nueva)",
         "foundation": "Fundación One Red Step at a Time, una 501(c)(3)"
       }
-    },
-    "pageTitle": "Estado del pedido",
-    "loading": "Cargando estado del pedido...",
-    "noOrderCode": "No se proporcionó código de pedido",
-    "orderNotFound": "Pedido no encontrado",
-    "placeNewOrder": "Hacer nuevo pedido",
-    "statusUpdates": "El estado se actualiza automáticamente cada 5 segundos",
-    "orderNumber": "Pedido #{number}",
-    "status": {
-      "pending": "Pago pendiente",
-      "paid": "Pagado",
-      "queued": "En cola",
-      "prepping": "Preparando",
-      "ready": "Listo para entregar",
-      "serving": "¡Disfruta tu comida!",
-      "completed": "Completado",
-      "doneEating": "¿Terminaste de comer?"
-    },
-    "pod": {
-      "yourPod": "Tu Pod",
-      "podNumber": "POD {number}",
-      "confirmArrival": "Ve a tu pod y confirma tu llegada",
-      "checkedIn": "¡Ya estás registrado!",
-      "staffNotified": "Personal notificado",
-      "calling": "Llamando..."
-    },
-    "queue": {
-      "position": "Posición en cola",
-      "estimatedWait": "Tiempo estimado: {minutes} minutos",
-      "notifyWhenReady": "¡Te notificaremos cuando tu pod esté listo!"
-    },
-    "timeline": {
-      "title": "Línea de tiempo del pedido",
-      "paid": "Pagado",
-      "checkedIn": "Registrado",
-      "orderStarted": "Pedido iniciado",
-      "qualityCheck": "Control de calidad",
-      "delivered": "Entregado",
-      "totalTime": "Tiempo total"
-    },
-    "sections": {
-      "theBowl": "El tazón",
-      "addOnsExtras": "Extras y adicionales",
-      "location": "Ubicación"
-    },
-    "buttons": {
-      "viewProfile": "Ver mi perfil",
-      "orderAgain": "Ordenar de nuevo",
-      "doneEating": "Terminé de comer",
-      "addToOrder": "Agregar al pedido",
-      "callStaff": "Llamar personal",
-      "addItems": "Agregar artículos",
-      "confirmAtPod": "Confirmar que estoy en mi cabina"
-    },
-    "location": "Ubicación",
-    "confirmations": {
-      "finishedEating": "¿Terminaste de comer? Esto notificará al personal para limpiar tu pod."
-    },
-    "errors": {
-      "markDone": "Error al marcar como terminado. Por favor intenta de nuevo."
-    },
-    "doneEating": {
-      "confirmPrompt": "¿Terminaste de comer? Esto notificará al personal para limpiar tu pod.",
-      "failedToUpdate": "Error al actualizar. Por favor intenta de nuevo."
-    },
-    "dessert": {
-      "readyForDessert": "Listo para el postre",
-      "onItsWay": "¡El postre viene en camino!",
-      "notifying": "Notificando..."
-    },
-    "addItems": {
-      "title": "Agregar a tu pedido",
-      "loading": "Cargando artículos disponibles...",
-      "drinkRefills": "Refill de bebidas",
-      "requestRefill": "Solicitar refill →",
-      "request": "Solicitar →",
-      "requesting": "Solicitando...",
-      "waterRefill": "Refill de agua",
-      "extrasAndAddons": "Extras y adicionales",
-      "requestExtras": "Solicitar {count} extra(s)",
-      "paidAddons": "Extras y adicionales",
-      "orderTotal": "Total del pedido",
-      "checkout": "Pagar →",
-      "demoMode": "Modo demo: No se realizará cargo real",
-      "cancel": "Cancelar",
-      "pay": "Pagar {amount}",
-      "processing": "Procesando...",
-      "free": "Gratis",
-      "paid": "De pago",
-      "add": "Agregar",
-      "noAddons": "No hay artículos adicionales disponibles para este pedido.",
-      "callStaffInstead": "Llamar al personal",
-      "failedToLoad": "Error al cargar artículos. Por favor intenta de nuevo o llama al personal."
-    },
-    "autoRefresh": "El estado se actualiza automáticamente cada 10 segundos",
-    "mentalHealth": {
-      "label": "La salud mental importa",
-      "loading": "Cargando información de salud mental...",
-      "skipTip": "Sin propinas. Haz la diferencia.",
-      "supportCause": "Apoyar la causa",
-      "foundation": "One Red Step at a Time Foundation • 501(c)(3)"
-    },
-    "demo": {
-      "banner": "Demo en vivo · no es un pedido real"
     }
   },
   "groupOrder": {
@@ -1991,100 +1762,6 @@
       "refunded": "No pudimos aplicar tu pago, así que te reembolsamos el total a tu tarjeta. Inténtalo de nuevo.",
       "failed": "No pudimos completar el pago del grupo. Inténtalo de nuevo."
     }
-  },
-  "mealGift": {
-    "title": "Comida para un Desconocido",
-    "description": "Regala una comida al próximo comensal solitario en tu ubicación elegida. ¡Si la pagan hacia adelante, mira crecer la cadena de bondad!",
-    "howItWorks": "Cómo Funciona",
-    "steps": {
-      "chooseLocation": "Elige una ubicación y monto del regalo ($15.99 - $35.00)",
-      "nextDiner": "El próximo comensal solitario en esa ubicación será notificado de tu regalo",
-      "acceptOrForward": "Pueden aceptarlo o pagarlo hacia adelante a la siguiente persona",
-      "earnReward": "¡Cuando alguien lo acepte, ganas una recompensa de $5!",
-      "seeMessage": "Cuando alguien lo acepte, verás su mensaje de agradecimiento",
-      "refund": "Si no se reclama al final del día, recibes un reembolso completo como créditos"
-    },
-    "form": {
-      "location": "Ubicación",
-      "giftAmount": "Monto del Regalo: ${amount}",
-      "giftAmountLabel": "Monto del Regalo",
-      "minAmount": "$15.99",
-      "maxAmount": "$35.00",
-      "message": "Mensaje (Opcional)",
-      "messagePlaceholder": "Agrega un mensaje de bondad...",
-      "availableCredits": "Créditos Disponibles",
-      "useCredits": "Usar créditos para este regalo",
-      "paymentCard": "Tarjeta de Pago"
-    },
-    "summary": {
-      "giftAmount": "Monto del Regalo:",
-      "creditsApplied": "Créditos Aplicados:",
-      "cardPayment": "Pago con Tarjeta:",
-      "potentialReward": "Recompensa Potencial:",
-      "rewardAmount": "+$5.00",
-      "alreadyCompleted": "Ya has ganado tu recompensa de $5 por este desafío. ¡Gracias por seguir difundiendo bondad!"
-    },
-    "button": {
-      "giftMeal": "Regalar Comida de ${amount}",
-      "processing": "Procesando..."
-    },
-    "signInPrompt": "Por favor inicia sesión para regalar una comida",
-    "errors": {
-      "signIn": "Por favor inicia sesión para regalar una comida",
-      "selectLocation": "Por favor selecciona una ubicación",
-      "paymentNotReady": "Sistema de pago no está listo. Por favor espera...",
-      "createUser": "Error al crear usuario",
-      "createPaymentIntent": "Error al crear intención de pago",
-      "cardNotFound": "Elemento de tarjeta no encontrado",
-      "paymentFailed": "El pago no fue exitoso",
-      "createGift": "Error al crear regalo de comida",
-      "createGiftRetry": "Error al crear regalo de comida. Por favor intenta de nuevo.",
-      "loadLocations": "Error al cargar ubicaciones"
-    },
-    "success": {
-      "created": "¡Regalo de comida creado! Tu bondad alegrará el día de alguien."
-    },
-    "modal": {
-      "title": "¡Alguien te Regaló una Comida!",
-      "chainOfKindness": "Cadena de Bondad: ¡{count} pagos hacia adelante!",
-      "description": "Un desconocido amable te ha regalado esta comida en {location}. Puedes:",
-      "acceptOption": "Aceptarlo",
-      "acceptDescription": "Aplicar a tu pedido actual",
-      "forwardOption": "Pagarlo hacia adelante",
-      "forwardDescription": "Pasarlo a la siguiente persona",
-      "acceptButton": "Aceptar Regalo",
-      "forwardButton": "Pagar Hacia Adelante",
-      "backButton": "Atrás",
-      "acceptTitle": "Aceptar Este Regalo",
-      "acceptSubtitle": "Los ${amount} se aplicarán a tu pedido",
-      "thankYouLabel": "Mensaje de Agradecimiento (Opcional)",
-      "thankYouPlaceholder": "Agradece al donante...",
-      "forwardTitle": "Pagar Hacia Adelante",
-      "forwardSubtitle": "Pasa este regalo de ${amount} al siguiente comensal",
-      "forwardMessageLabel": "Mensaje para la Siguiente Persona (Opcional)",
-      "forwardMessagePlaceholder": "Agrega tu mensaje de bondad..."
-    },
-    "toast": {
-      "reserved": "¡Has reservado un regalo de comida de ${amount}! Se aplicará al pagar.",
-      "paidForward": "¡Lo has pagado hacia adelante! La siguiente persona recibirá este regalo.",
-      "payForwardFailed": "Error al pagar hacia adelante el regalo de comida",
-      "giftReserved": "¡Regalo de comida reservado! Se aplicará al pagar.",
-      "payForwardSuccess": "¡Lo pagaste hacia adelante! La siguiente persona recibirá este regalo.",
-      "payForwardError": "Error al pagar hacia adelante. Por favor intenta de nuevo."
-    },
-    "dashboard": {
-      "giveAMeal": "Regalar una Comida",
-      "giftAnotherMeal": "Regalar Otra Comida",
-      "yourGiftHistory": "Tu Historial de Regalos:",
-      "acceptedBy": "Aceptado por {name}",
-      "expired": "Expirado",
-      "pending": "Pendiente"
-    },
-    "payment": {
-      "giftApplied": "Regalo de Comida Aplicado",
-      "giftExcess": "Excedente del Regalo → Tus Créditos"
-    },
-    "quotedMessage": "“{message}”"
   },
   "challenges": {
     "mealForStranger": {
@@ -3820,13 +3497,15 @@
       "FORBIDDEN": "Inicia sesión con la cuenta que hizo este pedido.",
       "NETWORK_ERROR": "No pudimos conectar con Oh!. Revisa tu conexión e inténtalo de nuevo.",
       "RATE_LIMITED": "Fueron muchos intentos seguidos. Espera un momento e inténtalo de nuevo.",
-      "GENERIC": "Algo salió mal. Inténtalo de nuevo."
+      "GENERIC": "Algo salió mal. Inténtalo de nuevo.",
+      "PROMO_EXHAUSTED": "Ese código promocional ya se agotó. Revisa tu total e inténtalo de nuevo."
     },
     "warnings": {
       "PROMO_INVALID": "Ese código no es válido para este pedido.",
       "GIFT_CARD_INVALID": "Ese código de tarjeta no es válido o no tiene saldo.",
       "CREDITS_REQUIRE_SIGN_IN": "Inicia sesión para usar tu crédito.",
-      "MEAL_GIFT_UNAVAILABLE": "Esa comida regalada ya no está disponible."
+      "MEAL_GIFT_UNAVAILABLE": "Esa comida regalada ya no está disponible.",
+      "PROMO_REQUIRES_SIGN_IN": "Inicia sesión para usar ese código promocional."
     }
   },
   "passport": {
@@ -4399,317 +4078,6 @@
       "button": "Empezar un pedido"
     }
   },
-  "toast": {
-    "success": "Éxito",
-    "error": "Error",
-    "warning": "Advertencia",
-    "info": "Información"
-  },
-  "menu": {
-    "title": "Nuestro menú",
-    "description": "Explora nuestra selección de sopas de fideos con carne premium y acompañamientos",
-    "loading": "Cargando menú...",
-    "error": {
-      "title": "No se pudo cargar el menú",
-      "tryAgain": "Intentar de nuevo"
-    },
-    "categories": {
-      "soups": "Sopas",
-      "noodles": "Fideos",
-      "addons": "Extras",
-      "sides": "Acompañamientos",
-      "drinks": "Bebidas",
-      "desserts": "Postres"
-    },
-    "tags": {
-      "premium": "Premium",
-      "included": "Incluido",
-      "signature": "Especial",
-      "complimentary": "Cortesía",
-      "unlimitedRefills": "Refills Ilimitados"
-    },
-    "sections": {
-      "soup": {
-        "subtitle": "Comienza con nuestro caldo especial",
-        "description": "Rico caldo de hueso de res en dos fases: una cocción larga y luego un acabado pensado para el sabor"
-      },
-      "noodles": {
-        "subtitle": "Elige tus fideos",
-        "description": "Fideos hechos a mano frescos cada día"
-      },
-      "premiumAddons": {
-        "subtitle": "Mejora tu tazón",
-        "description": "Proteínas y toppings premium"
-      },
-      "sideDishes": {
-        "subtitle": "Completa tu comida",
-        "description": "Acompañamientos tradicionales"
-      },
-      "dessert": {
-        "subtitle": "Finales dulces",
-        "description": "Postres tradicionales para terminar tu comida"
-      }
-    },
-    "hero": {
-      "title": "Nuestro Menú",
-      "description": "Crea tu tazón perfecto con res americana premium y nuestro caldo en dos fases",
-      "orderNow": "Ordenar Ahora"
-    },
-    "difference": {
-      "title": "La Diferencia Oh!",
-      "description": "No somos solo otra tienda de fideos. Estamos reimaginando lo que puede ser comer.",
-      "techFirst": {
-        "title": "Experiencia Tech-First",
-        "description": "Ordena con anticipación, salta la fila y disfruta una experiencia sin problemas"
-      },
-      "privatePods": {
-        "title": "Pods de Comedor Privado",
-        "description": "Disfruta tu comida en tu propio espacio privado, libre de distracciones"
-      },
-      "seamlessService": {
-        "title": "Servicio Sin Interrupciones",
-        "description": "Desde ordenar hasta pagar, todo está diseñado para tu conveniencia"
-      },
-      "loyalty": {
-        "title": "Lealtad Recompensada",
-        "description": "Gana puntos, desbloquea recompensas y sube de nivel con cada visita"
-      }
-    },
-    "cta": {
-      "title": "¿Listo para el Mejor Tazón?",
-      "description": "Ordena con anticipación y salta la espera. Tu tazón perfecto está a solo unos toques.",
-      "button": "Comienza Tu Orden"
-    },
-    "dietary": {
-      "vegetarian": "Vegetariano",
-      "vegan": "Vegano",
-      "glutenFree": "Sin Gluten",
-      "spice": {
-        "level1": "Suave",
-        "level2": "Medio",
-        "level3": "Picante"
-      }
-    },
-    "allergen": {
-      "title": "Información de Alérgenos",
-      "description": "Nuestros platos se preparan en una cocina que maneja alérgenos comunes como trigo, soya y huevos. Por favor informe a nuestro personal sobre cualquier alergia o restricción dietética al ordenar.",
-      "spicyIndicator": "Picante",
-      "contactUs": "Para información detallada sobre alérgenos, contáctenos antes de ordenar."
-    }
-  },
-  "auth": {
-    "loading": "Cargando...",
-    "readyToOrder": "¿Listo para ordenar?",
-    "createAccount": "Crea una cuenta gratis y empieza a ganar recompensas de inmediato.",
-    "signInButton": "INICIAR SESIÓN / REGISTRARSE",
-    "or": "o",
-    "continueAsGuest": "Continuar como invitado",
-    "guestWarning": "El pago como invitado es rápido, pero no podrás ganar puntos de lealtad ni guardar favoritos.",
-    "benefits": {
-      "cashback": "1% Cashback",
-      "cashbackSubtitle": "¡incluyendo este pedido!",
-      "referral": "$5 por referir",
-      "referralSubtitle": "para ti y tus amigos",
-      "earlyAccess": "Acceso anticipado",
-      "earlyAccessSubtitle": "nuevos platillos"
-    }
-  },
-  "features": {
-    "fortuneCookie": {
-      "title": "Tu galleta de la fortuna digital",
-      "subtitle": "Mientras esperas, abre tu fortuna personalizada",
-      "crackOpen": "Ábrela",
-      "loading": "Leyendo tu fortuna...",
-      "luckyNumbers": "Números de la suerte",
-      "thisDay": "Este día en la historia ({year})",
-      "learnChinese": "Aprende chino",
-      "unavailable": "Fortuna no disponible - ¡pero tu comida será increíble!"
-    },
-    "roast": {
-      "title": "La zona de críticas",
-      "subtitle": "¿Quieres nuestra opinión (hilarante) sobre tus elecciones?",
-      "button": "Critica mi pedido",
-      "loading": "Analizando tus decisiones de vida...",
-      "highlights": "Lo que notamos:",
-      "unavailable": "Nuestro chef de críticas está en descanso. Tu pedido probablemente está bien. Probablemente."
-    },
-    "backstory": {
-      "title": "Detrás de escenas",
-      "subtitle": "¿Te has preguntado sobre la vida secreta de tus ingredientes?",
-      "button": "Cuéntame todo",
-      "loading": "Investigando...",
-      "heading": "Las historias no contadas",
-      "unavailable": "Los ingredientes prefieren permanecer anónimos. Grupo misterioso."
-    },
-    "kitchen": {
-      "label": "Cocina en vivo",
-      "listening": "Escuchando la cocina...",
-      "quiet": "La cocina está sospechosamente silenciosa. Están tramando algo."
-    }
-  },
-  "payment": {
-    "pageTitle": "Completa tu pedido",
-    "orderNumber": "Pedido #{number}",
-    "invalidOrder": "Pedido inválido",
-    "missingInformation": "Falta información del pedido",
-    "orderNotFound": "Pedido no encontrado",
-    "couldNotFind": "No pudimos encontrar este pedido",
-    "startNewOrder": "Iniciar nuevo pedido",
-    "readyBy": "Listo para",
-    "total": "Total",
-    "processing": "Procesando...",
-    "payNow": "Pagar ahora",
-    "testMode": "Modo de prueba - sin cargo real",
-    "theBowl": "El Tazón",
-    "addOnsExtras": "Extras y Acompañamientos",
-    "qty": "Cant: {count}",
-    "loading": "Cargando...",
-    "subtotal": "Subtotal",
-    "tax": "Impuesto",
-    "creditsApplied": "Créditos Aplicados",
-    "payAmount": "Pagar ${amount}",
-    "processingPayment": "Procesando pago...",
-    "secureCheckout": "Pago seguro con Stripe",
-    "paymentMethod": "Método de pago",
-    "testPayment": "Pago de prueba",
-    "demoMode": "Modo demo - sin cargo real",
-    "demoWarning": "Este es un pago de demostración. ¡La integración real de Stripe viene pronto!",
-    "availableCredits": "Créditos Disponibles",
-    "youHaveCredits": "Tienes <bold>${amount}</bold> en créditos",
-    "maxCreditsNote": "Puedes aplicar hasta $5 en crédito por pedido",
-    "applyToOrder": "Aplicar ${amount} a este pedido",
-    "welcomeReferred": "¡Bienvenido! Has sido referido",
-    "referralCreditsNote": "Tienes ${amount} en créditos para usar en este pedido",
-    "referralAlreadyUsed": "Crédito de referido ya usado",
-    "referralAlreadyUsedNote": "¡Gracias por visitarnos de nuevo! Los créditos de referido solo se aplican a tu primer pedido. Aún puedes ganar créditos refiriendo amigos con tu enlace personal.",
-    "loadingAccount": "Cargando tu cuenta y recompensas...",
-    "signInToComplete": "Inicia sesión para completar tu pedido",
-    "signInDescription": "Necesitas iniciar sesión para rastrear tu pedido, ganar recompensas y usar créditos de referido.",
-    "referralDiscountWaiting": "¡Tienes un descuento de referido esperando!",
-    "signInSignUp": "Iniciar sesión / Registrarse",
-    "guestCheckout": "Pago como invitado",
-    "guestCheckoutDescription": "Por favor ingresa tu nombre para que podamos preparar tu pedido.",
-    "name": "Nombre",
-    "phone": "Teléfono",
-    "email": "Correo electrónico",
-    "optional": "opcional",
-    "yourName": "Tu nombre",
-    "forOrderUpdates": "Para actualizaciones del pedido",
-    "forReceipt": "Para el recibo",
-    "enterYourName": "Por favor ingresa tu nombre",
-    "wantToEarnRewards": "¿Quieres ganar recompensas y rastrear tus pedidos?",
-    "signInInstead": "Iniciar sesión en su lugar",
-    "waitLoadingAccount": "Por favor espera mientras cargamos tu cuenta...",
-    "errorCodes": {
-      "CREDIT_SHORT": "Tu saldo de créditos cambió. Revisa tu total e inténtalo de nuevo.",
-      "GIFT_CARD_SHORT": "El saldo de tu tarjeta de regalo cambió. Revisa tu total e inténtalo de nuevo.",
-      "MEAL_GIFT_UNAVAILABLE": "Ese regalo de comida ya no está disponible.",
-      "REWARD_UNAVAILABLE": "Esa recompensa ya no se puede usar.",
-      "PAYMENT_NOT_VERIFIED": "Aún no pudimos confirmar tu pago. Si se te cobró, muestra esta pantalla a nuestro personal.",
-      "ORDER_FAILED": "No pudimos completar tu pedido. Inténtalo de nuevo.",
-      "QUOTE_CHANGED": "El total de tu pedido cambió. Revísalo e inténtalo de nuevo.",
-      "REFUNDED": "No pudimos aplicar tu pago, así que te reembolsamos el total en tu tarjeta. Inténtalo de nuevo.",
-      "GROUP_CHANGED": "Parte de este grupo ya se pagó o cambió. Revisa el grupo e inténtalo de nuevo."
-    },
-    "invalidPhone": "Ingresa un número de teléfono válido, o déjalo en blanco"
-  },
-  "social": {
-    "instagram": "Instagram",
-    "twitter": "X (Twitter)",
-    "facebook": "Facebook",
-    "tiktok": "TikTok",
-    "yelp": "Yelp",
-    "tripadvisor": "TripAdvisor",
-    "youtube": "YouTube",
-    "linkedin": "LinkedIn",
-    "email": "Correo electrónico"
-  },
-  "checkIn": {
-    "title": "Quiosco de Registro",
-    "subtitle": "Escanea o ingresa el código QR de tu pedido para obtener tu asignación de cabina",
-    "howToTitle": "Cómo registrarte:",
-    "step1": "Encuentra el código QR de tu pedido (en la página de confirmación)",
-    "step2": "Escanéalo con el escáner del quiosco o ingresa el código abajo",
-    "step3": "Obtén tu asignación de cabina o posición en la fila",
-    "qrCodeLabel": "Código QR del pedido:",
-    "qrCodePlaceholder": "ORDER-xxpmm5hf-1234567890-ABC123",
-    "checkInButton": "Registrarse",
-    "checkingIn": "Registrando...",
-    "needHelp": "¿Necesitas ayuda?",
-    "helpTip1": "Tu código QR está en la página de confirmación de tu pedido",
-    "helpTip2": "Comienza con \"ORDER-\" seguido de números y letras",
-    "helpTip3": "Pregunta al personal si necesitas asistencia",
-    "loading": "Cargando..."
-  },
-  "scan": {
-    "title": "Confirmar Llegada a la Cabina",
-    "subtitle": "Escanea o ingresa el código QR de tu pedido en tu cabina asignada",
-    "assignedPod": "Tu Cabina Asignada",
-    "podNumber": "CABINA {number}",
-    "qrCodeLabel": "Tu Código QR del Pedido:",
-    "qrCodeHint": "El mismo código QR de la confirmación de tu pedido",
-    "qrCodePlaceholder": "ORDER-xxpmm5hf-1234567890-ABC123",
-    "enterQrCodeError": "Por favor escanea o ingresa el código QR de tu pedido",
-    "confirmFailed": "Error al confirmar llegada a la cabina",
-    "networkError": "Error de red. Por favor intenta de nuevo.",
-    "confirming": "Confirmando...",
-    "confirmButton": "Confirmar que Estoy en Mi Cabina",
-    "whatThisDoes": "Qué Hace Esto",
-    "helpList": {
-      "confirms": "Confirma que has llegado a tu cabina asignada",
-      "notifies": "Notifica a la cocina para empezar a preparar tu pedido",
-      "realtime": "Verás actualizaciones de estado en tiempo real en tu pantalla"
-    },
-    "backToStatus": "Volver al Estado del Pedido",
-    "success": {
-      "title": "¡Cabina Confirmada!",
-      "message": "Tu pedido se está preparando"
-    },
-    "loading": "Cargando..."
-  },
-  "confirmation": {
-    "title": "¡Pedido confirmado!",
-    "orderNumber": "Pedido #{number}",
-    "thankYou": "Gracias por tu pedido",
-    "whatNext": "¿Qué sigue?",
-    "checkInInstructions": "Ve al restaurante y regístrate en el kiosco o escanea el código QR en tu pod asignado.",
-    "viewStatus": "Ver estado del pedido",
-    "simulateCheckIn": "Simular registro (Demo)",
-    "checkingIn": "Registrando...",
-    "groupOrderNote": "Este es un pedido grupal con {count} pedidos.",
-    "paidStatus": "Pago completado",
-    "paymentSuccessful": "Pago Exitoso",
-    "paymentConfirmed": "Tu pago de {amount} ha sido confirmado",
-    "paymentPending": "Pago Pendiente",
-    "paymentProcessing": "Tu pago está siendo procesado",
-    "yourOrderQrCode": "Tu código QR de pedido",
-    "scanAtKiosk": "Escanea esto en el kiosco cuando llegues para obtener tu asignación de pod",
-    "expectedArrival": "Hora de llegada esperada: {time}",
-    "host": "Anfitrión",
-    "guest": "Invitado {number}",
-    "podNumber": "Pod {number}",
-    "noPodYet": "Sin pod asignado",
-    "checkInThisOrder": "Registrar este pedido",
-    "assignedToPod": "Asignado al Pod {number} - esperando llegada",
-    "checkedInAtPod": "Registrado en Pod {number}",
-    "orderLabel": "Pedido",
-    "subtotal": "Subtotal",
-    "tax": "Impuesto",
-    "total": "Total",
-    "qty": "Cant: {count}",
-    "trackOrderStatus": "Rastrear estado del pedido",
-    "shareYourOrder": "¡Comparte tu pedido!",
-    "spreadTheWord": "Comparte y gana recompensas",
-    "copied": "¡Copiado!",
-    "copy": "Copiar",
-    "shareVia": "Compartir vía...",
-    "twitter": "Twitter",
-    "facebook": "Facebook",
-    "linkedin": "LinkedIn",
-    "referralNote": "¡Tu enlace de referido está incluido! Tus amigos obtienen $5 de descuento en su primer pedido. Ganas $5 instantáneamente cuando completen un pedido de $20+.",
-    "backToHome": "Volver al inicio",
-    "loadingOrder": "Cargando pedido..."
-  },
   "experience": {
     "meta": {
       "title": "La experiencia: una visita a Oh!, paso a paso",
@@ -4718,7 +4086,7 @@
     "intro": {
       "eyebrow": "La experiencia",
       "title": "Una visita, en seis pasos.",
-      "lede": "Cada persona de tu grupo tiene su pod, y cada pod recibe su propio tazón. Sin anfitrión, sin mesero, sin cuenta, sin propina. Esta es la visita completa, en orden.",
+      "lede": "Cada persona de tu grupo tiene su cabina, y cada cabina recibe su propio tazón. Sin anfitrión, sin mesero, sin cuenta, sin propina. Esta es la visita completa, en orden.",
       "start": "Empieza por el primer paso"
     },
     "stepper": {
@@ -4730,16 +4098,16 @@
       "arrive": {
         "eyebrow": "Llegar",
         "title": "Entras y nadie te recibe.",
-        "body": "Es a propósito. La sala está en silencio, la luz es tenue y tres kioscos están entre tú y los pods."
+        "body": "Es a propósito. La sala está en silencio, la luz es tenue y tres quioscos están entre tú y las cabinas."
       },
       "order": {
         "eyebrow": "Pedir",
         "title": "Pides en unos cuarenta segundos.",
-        "body": "Elige la intensidad del caldo, el fideo, los extras y la res: pecho o costilla ahumados, Wagyu americano o USDA Prime. Pagas, y el kiosco te da un número de pod y te envía un enlace en vivo a tu pedido."
+        "body": "Elige la intensidad del caldo, el fideo, los extras y la res: pecho o costilla ahumados, Wagyu americano o USDA Prime. Pagas, y el quiosco te da un número de cabina y te envía un enlace en vivo a tu pedido."
       },
       "walk": {
         "eyebrow": "Caminar",
-        "title": "Un número de pod, y vas a buscarlo.",
+        "title": "Un número de cabina, y vas a buscarla.",
         "body": "Caminas por el pasillo junto a una fila de paneles cerrados y el murmullo de una sala llena. Nadie lleva una bandeja. Nadie espera a que lo sienten."
       },
       "settle": {
@@ -4755,30 +4123,30 @@
       "leave": {
         "eyebrow": "Salir",
         "title": "Terminas y te vas.",
-        "body": "Un toque en tu teléfono dice que terminaste. Sin cuenta, sin línea de propina. Sales pasando por la tienda, y el pod se prepara de nuevo detrás de ti.",
+        "body": "Un toque en tu teléfono dice que terminaste. Sin cuenta, sin línea de propina. Sales pasando por la tienda, y la cabina se prepara de nuevo detrás de ti.",
         "alt": "La tienda de camino a la salida: repisas con salsas, cajas de regalo, tazones, camisetas y gorras, y un letrero que dice gracias."
       }
     },
     "map": {
       "title": "Tu visita en el plano",
-      "note": "City Creek, 75 pods. University Place es el mismo plano, en espejo, con 70.",
+      "note": "City Creek, 75 cabinas. University Place es el mismo plano, en espejo, con 70.",
       "captions": {
         "arrive": "Llegas por la entrada al vestíbulo.",
         "order": "Tres kioscos en el vestíbulo. Sin mostrador.",
-        "walk": "Cruzas el pasillo transversal y subes por tu pasillo hasta el pod {label}. Cada puerta en el camino es un pod.",
+        "walk": "Cruzas el pasillo transversal y subes por tu pasillo hasta la cabina {label}. Cada puerta en el camino es una cabina.",
         "settle": "Tu tazón sale de la cocina por un pasillo del personal. Ningún cliente entra en él.",
-        "taste": "Por la ventanilla, hasta el pod {label}. El mismo pod, por lados opuestos.",
+        "taste": "Por la ventanilla, hasta la cabina {label}. La misma cabina, por lados opuestos.",
         "leave": "Por el pasillo, pasando por la tienda, hasta la salida."
       },
       "comb": {
-        "title": "Mapa de pods",
-        "summary": "La cocina ocupa la pared del fondo. Los pods bordean los dos lados de tres pasillos del personal, y los clientes caminan por los pasillos entre ellos. La entrada está al frente.",
-        "hintTapRow": "Toca una fila para acercarte y luego toca un pod. Pellizca para hacer zoom.",
-        "hintTapPod": "Toca un pod para elegirlo.",
+        "title": "Mapa de cabinas",
+        "summary": "La cocina ocupa la pared del fondo. Las cabinas bordean los dos lados de tres pasillos del personal, y los clientes caminan por los pasillos entre ellas. La entrada está al frente.",
+        "hintTapRow": "Toca una fila para acercarte y luego toca una cabina. Pellizca para hacer zoom.",
+        "hintTapPod": "Toca una cabina para elegirla.",
         "hintLive": "Toca una fila para acercarte. Pellizca para hacer zoom.",
-        "podName": "Pod {label}: {status}",
-        "podNameDuo": "Pod {label}, dúo con {partner}: {status}",
-        "journeySummary": "Una visita en el plano. Caminas desde la entrada hasta el pod {label}, y tu tazón llega por el pasillo del personal hasta tu ventanilla.",
+        "podName": "Cabina {label}: {status}",
+        "podNameDuo": "Cabina {label}, doble con {partner}: {status}",
+        "journeySummary": "Una visita en el plano. Caminas desde la entrada hasta la cabina {label}, y tu tazón llega por el pasillo del personal hasta tu ventanilla.",
         "status": {
           "available": "disponible",
           "reserved": "reservado",
@@ -4792,8 +4160,8 @@
           "reserved": "Reservado",
           "occupied": "Ocupado",
           "cleaning": "En limpieza",
-          "duo": "Pod dúo para dos",
-          "selected": "Tu pod",
+          "duo": "Cabina doble para dos",
+          "selected": "Tu cabina",
           "hatch": "Ventanilla de comida"
         },
         "zones": {
@@ -4810,8 +4178,8 @@
           "wholeFloor": "Todo el local"
         },
         "pan": {
-          "earlier": "Pods anteriores",
-          "later": "Pods siguientes"
+          "earlier": "Cabinas anteriores",
+          "later": "Cabinas siguientes"
         },
         "marker": {
           "guest": "Tú",
@@ -4825,15 +4193,15 @@
       "items": {
         "order": {
           "q": "¿Cómo pido?",
-          "a": "En uno de los kioscos del vestíbulo, en unos cuarenta segundos, o con anticipación desde tu teléfono. De cualquier forma, recibes un número de pod y un enlace en vivo a tu pedido."
+          "a": "En uno de los quioscos del vestíbulo, en unos cuarenta segundos, o con anticipación desde tu teléfono. De cualquier forma, recibes un número de cabina y un enlace en vivo a tu pedido."
         },
         "together": {
           "q": "¿Podemos sentarnos juntos?",
-          "a": "Cada persona de tu grupo tiene su pod, y cada pod recibe su propio tazón. Los pods dúo son para dos: se quita la división entre un par y dos pods se vuelven uno."
+          "a": "Cada persona de tu grupo tiene su cabina, y cada cabina recibe su propio tazón. Las cabinas dobles son para dos: se quita la división entre un par y dos cabinas se vuelven una."
         },
         "server": {
           "q": "¿Hay mesero?",
-          "a": "Sin anfitrión y sin mesero. Tu tazón llega a la ventanilla de tu pod desde un pasillo del personal. Los clientes caminan por sus pasillos, el personal por los suyos, y solo se encuentran en la ventanilla."
+          "a": "Sin anfitrión y sin mesero. Tu tazón llega a la ventanilla de tu cabina desde un pasillo del personal. Los clientes caminan por sus pasillos, el personal por los suyos, y solo se encuentran en la ventanilla."
         },
         "more": {
           "q": "¿Y si quiero más o necesito ayuda?",
@@ -4858,8 +4226,8 @@
       }
     },
     "close": {
-      "title": "Tu pod te espera.",
-      "body": "Pide con anticipación, entra y ve directo a tu pod.",
+      "title": "Tu cabina te espera.",
+      "body": "Pide con anticipación, entra y ve directo a tu cabina.",
       "order": "Pide un tazón",
       "locations": "Ver ubicaciones",
       "chappyTitle": "¿Te queda alguna duda?",

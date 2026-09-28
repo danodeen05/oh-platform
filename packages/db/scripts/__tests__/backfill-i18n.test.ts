@@ -387,3 +387,40 @@ describe("backfillI18n (F1): menu names and descriptions", () => {
     }
   });
 });
+
+describe("backfillI18n (F1 Phase B): a slider in another slider's category", () => {
+  test("Baby Bok Choy in slider01 with the topping-amount labels gets the topping-amount translations", async () => {
+    const updateCalls: { model: string; args: any }[] = [];
+    const bokChoy = { id: "bok", name: "Baby Bok Choy", category: "slider01", categoryType: "SLIDER", sliderConfig: { min: 0, max: 3, labels: ["None", "Light", "Normal", "Extra"], default: 2 } };
+    const prisma = {
+      badge: { findUnique: async () => null },
+      challenge: { findUnique: async () => null },
+      location: { findUnique: async () => null },
+      menuItem: {
+        findMany: async ({ where }: any) => (where.category === "slider01" ? [bokChoy] : []),
+        update: async (args: any) => {
+          updateCalls.push({ model: "menuItem", args });
+          return args;
+        },
+      },
+    } as any;
+    const result = await backfillI18n(prisma);
+    assert.deepEqual(result.menuItems.mismatched, []);
+    assert.equal(updateCalls.length, 1);
+    const cfg = updateCalls[0].args.data.sliderConfig;
+    assert.deepEqual(cfg.labels, ["None", "Light", "Normal", "Extra"], "English untouched");
+    assert.deepEqual(cfg.labelsI18n, SLIDER_LABELS_I18N.slider04);
+    assert.equal(cfg.default, 2);
+  });
+});
+
+describe("backfillI18n (F1 Phase B): the API-created meal challenge", () => {
+  test("a row with the API's own English gets that copy's translations", async () => {
+    const alt = LEGACY_CHALLENGES[0].alternates![0];
+    const row = { id: "c2", slug: "meal-for-stranger", name: alt.en.name, description: alt.en.description, iconKey: "meal-for-stranger", iconEmoji: "", i18n: null };
+    const { prisma, updateCalls } = f1Prisma({ challenges: [row] });
+    const result = await backfillI18n(prisma);
+    assert.deepEqual(result.legacy.updated, ["meal-for-stranger"]);
+    assert.deepEqual(updateCalls[0].args.data.i18n, alt);
+  });
+});

@@ -374,83 +374,6 @@
           "天波諾高斯洞穴"
         ]
       }
-    },
-    "hours": "營業時間",
-    "weekday": "平日",
-    "weekend": "週末",
-    "openNow": "營業中",
-    "upcomingCities": "即將進駐您的城市",
-    "loading": "載入門市中...",
-    "hero": {
-      "findUs": "找到我們",
-      "title": "門市地點",
-      "description": "在我們獨特的門市體驗哦！牛肉麵"
-    },
-    "cityCreek": {
-      "tagline": "鹽湖城市中心",
-      "description": "我們位於鹽湖城市中心的旗艦店，提供獨特的用餐體驗，配備私人包廂和科技化點餐。",
-      "mallDescription": "City Creek Center是猶他州首屈一指的購物目的地，擁有超過100家商店和餐廳，在令人驚嘆的露天環境中配備可伸縮的玻璃屋頂。",
-      "nearbyLandmarks": [
-        "聖殿廣場",
-        "鹽宮會議中心",
-        "猶他州議會大廈",
-        "Gateway購物中心"
-      ],
-      "parking": "在City Creek停車場免費停車，需驗證"
-    },
-    "universityPlace": {
-      "tagline": "猶他谷",
-      "description": "為猶他谷社區提供同樣卓越的品質和創新的用餐體驗。",
-      "mallDescription": "University Place是奧勒姆充滿活力的購物和娛樂中心，匯集全國連鎖店和當地最愛，靠近猶他谷大學。",
-      "nearbyLandmarks": [
-        "猶他谷大學",
-        "普若佛峽谷",
-        "天波諾高斯洞穴",
-        "楊百翰大學"
-      ],
-      "parking": "University Place全區提供充足免費停車位"
-    },
-    "details": {
-      "address": "地址",
-      "hours": "營業時間",
-      "hoursWeekday": "週一至週六：上午11點 - 晚上9點",
-      "hoursSunday": "週日：休息",
-      "parking": "停車資訊"
-    },
-    "about": {
-      "title": "關於",
-      "nearby": "附近景點"
-    },
-    "buttons": {
-      "orderAhead": "提前點餐",
-      "getDirections": "取得路線"
-    },
-    "features": {
-      "privatePods": "私人包廂",
-      "orderAhead": "提前點餐",
-      "noTipping": "免小費",
-      "accessible": "無障礙設施"
-    },
-    "ohWay": {
-      "label": "哦！風格",
-      "title": "不一樣的用餐體驗",
-      "kiosk": {
-        "title": "隨心點餐",
-        "description": "使用我們的手機應用程式或店內自助點餐機跳過排隊。您準備好時，餐點就準備好了。"
-      },
-      "pod": {
-        "title": "私人用餐包廂",
-        "description": "在您專屬的私人空間享用美食。沒有擁擠的餐桌，沒有噪音——只有您和完美的一碗麵。"
-      },
-      "noTips": {
-        "title": "無需小費",
-        "description": "您看到的價格就是您支付的價格。我們為團隊支付具競爭力的薪資，讓您無需擔心小費。"
-      }
-    },
-    "cta": {
-      "title": "準備好品嚐最棒的一碗麵了嗎？",
-      "description": "提前點餐，跳過等待。完美的一碗麵只需幾次點擊。",
-      "button": "開始點餐"
     }
   },
   "loyalty": {
@@ -1570,54 +1493,6 @@
       "description": "親自到訪我們的門市購物，順便享用一碗美味。"
     }
   },
-  "referral": {
-    "title": "推薦好友，賺取獎勵",
-    "subtitle": "分享愛，每推薦一位完成首單的好友即可獲得$5。",
-    "howItWorks": "如何運作",
-    "step1": {
-      "title": "分享您的連結",
-      "description": "將您的專屬推薦連結發送給親朋好友。"
-    },
-    "step2": {
-      "title": "好友下單",
-      "description": "當您的好友完成首筆$20或以上的訂單時，雙方都能獲得點數。"
-    },
-    "step3": {
-      "title": "即刻賺取",
-      "description": "對方首筆訂單完成的當下，您獲得 5 美元點數；對方該筆訂單折抵 5 美元。點數 90 天後到期。"
-    },
-    "goodToKnow": "須知事項",
-    "rules": {
-      "minimumOrder": "推薦獎勵適用於首筆$20或以上的訂單",
-      "disbursement": "朋友完成首筆訂單時，點數立即加入您的帳戶，入帳後 90 天到期",
-      "maxPerOrder": "每筆訂單最多可使用$5點數"
-    },
-    "dashboard": {
-      "getStarted": "開始使用",
-      "enterEmailPrompt": "輸入您的電子郵件以獲取推薦連結",
-      "getMyReferralLink": "取得我的推薦連結",
-      "creating": "建立中...",
-      "availableCredits": "可用點數",
-      "useCreditsNote": "結帳時每筆訂單最多可使用$5",
-      "pendingCredits": "待發放點數",
-      "scheduledForDisbursement": "計劃發放",
-      "nextDisbursement": "下次發放：",
-      "yourReferralLink": "您的推薦連結",
-      "copy": "複製",
-      "showQRCode": "顯示二維碼",
-      "showMyOhQRCode": "顯示我的Oh!二維碼",
-      "scanToJoin": "掃碼加入Oh!",
-      "scanDescription": "您的好友可以掃描此二維碼通過您的推薦註冊",
-      "close": "關閉",
-      "shareToEarn": "分享此連結，每位完成$20以上訂單的好友可為您賺取$5",
-      "recentActivity": "近期活動",
-      "creditEvents": {
-        "cashback": "訂單 {percent}% 回饋",
-        "appliedToOrder": "已用於訂單 {orderId}"
-      },
-      "emailPlaceholder": "電子郵件地址"
-    }
-  },
   "contact": {
     "title": "聯絡我們",
     "description": "我們很樂意聽取您的意見",
@@ -1856,110 +1731,6 @@
         "newTab": "（在新分頁開啟）",
         "foundation": "美國心理健康公益基金會，501(c)(3) 非營利組織"
       }
-    },
-    "pageTitle": "訂單狀態",
-    "loading": "載入訂單狀態中...",
-    "noOrderCode": "未提供訂單代碼",
-    "orderNotFound": "找不到訂單",
-    "placeNewOrder": "新增訂單",
-    "statusUpdates": "狀態每5秒自動更新",
-    "orderNumber": "訂單 #{number}",
-    "status": {
-      "pending": "待付款",
-      "paid": "已付款",
-      "queued": "排隊中",
-      "prepping": "準備中",
-      "ready": "準備送餐",
-      "serving": "請享用！",
-      "completed": "已完成",
-      "doneEating": "用餐完畢？"
-    },
-    "pod": {
-      "yourPod": "您的包廂",
-      "podNumber": "包廂 {number}",
-      "confirmArrival": "前往您的包廂並確認到達",
-      "checkedIn": "您已報到！",
-      "staffNotified": "已通知服務人員",
-      "calling": "呼叫中..."
-    },
-    "queue": {
-      "position": "排隊位置",
-      "estimatedWait": "預計等待：{minutes} 分鐘",
-      "notifyWhenReady": "包廂準備好時我們會通知您！"
-    },
-    "timeline": {
-      "title": "訂單時間軸",
-      "paid": "已付款",
-      "checkedIn": "已報到",
-      "orderStarted": "開始製作",
-      "qualityCheck": "品質檢查",
-      "delivered": "已送達",
-      "totalTime": "總時間"
-    },
-    "sections": {
-      "theBowl": "湯麵",
-      "addOnsExtras": "加料與配菜",
-      "location": "地點"
-    },
-    "buttons": {
-      "viewProfile": "查看我的檔案",
-      "orderAgain": "再次訂購",
-      "doneEating": "我吃完了",
-      "addToOrder": "加點",
-      "callStaff": "呼叫服務員",
-      "addItems": "加點",
-      "confirmAtPod": "確認我已到包廂"
-    },
-    "location": "地點",
-    "confirmations": {
-      "finishedEating": "您用餐完畢了嗎？這將通知服務人員清理您的包廂。"
-    },
-    "errors": {
-      "markDone": "無法標記完成，請重試。"
-    },
-    "doneEating": {
-      "confirmPrompt": "您用餐完畢了嗎？這將通知服務人員清理您的包廂。",
-      "failedToUpdate": "更新失敗，請重試。"
-    },
-    "dessert": {
-      "readyForDessert": "準備享用甜點",
-      "onItsWay": "甜點已在路上！",
-      "notifying": "通知中..."
-    },
-    "addItems": {
-      "title": "加點",
-      "loading": "載入可選項目中...",
-      "drinkRefills": "飲料續杯",
-      "requestRefill": "要求續杯 →",
-      "request": "要求 →",
-      "requesting": "要求中...",
-      "waterRefill": "水續杯",
-      "extrasAndAddons": "加料與配菜",
-      "requestExtras": "要求 {count} 份加料",
-      "paidAddons": "加料與配菜",
-      "orderTotal": "訂單總計",
-      "checkout": "結帳 →",
-      "demoMode": "示範模式：不會實際收費",
-      "cancel": "取消",
-      "pay": "支付 {amount}",
-      "processing": "處理中...",
-      "free": "免費",
-      "paid": "付費",
-      "add": "添加",
-      "noAddons": "此訂單無可加點項目。",
-      "callStaffInstead": "改為呼叫服務員",
-      "failedToLoad": "載入加點項目失敗，請重試或呼叫服務員。"
-    },
-    "autoRefresh": "狀態每 10 秒自動更新",
-    "mentalHealth": {
-      "label": "心理健康很重要",
-      "loading": "載入心理健康資訊中...",
-      "skipTip": "不用給小費，改為做點好事。",
-      "supportCause": "支持公益",
-      "foundation": "One Red Step at a Time 基金會 • 501(c)(3)"
-    },
-    "demo": {
-      "banner": "即時示範 · 非真實訂單"
     }
   },
   "groupOrder": {
@@ -1991,100 +1762,6 @@
       "refunded": "我們無法使用這筆付款，已全額退回您的信用卡。請重試。",
       "failed": "無法完成團體付款。請重試。"
     }
-  },
-  "mealGift": {
-    "title": "請陌生人吃飯",
-    "description": "在您選擇的地點為下一位獨自用餐的人贈送一份餐食。如果他們選擇轉贈，看著善意鏈條不斷增長！",
-    "howItWorks": "如何運作",
-    "steps": {
-      "chooseLocation": "選擇地點和禮物金額（$15.99 - $35.00）",
-      "nextDiner": "該地點的下一位獨自用餐者將收到您的禮物通知",
-      "acceptOrForward": "他們可以接受或轉贈給下一個人",
-      "earnReward": "當有人接受時，您將獲得 $5 獎勵！",
-      "seeMessage": "當有人接受時，您將看到他們的感謝訊息",
-      "refund": "如果當天結束前未被領取，您將獲得全額積分退款"
-    },
-    "form": {
-      "location": "地點",
-      "giftAmount": "禮物金額：${amount}",
-      "giftAmountLabel": "禮物金額",
-      "minAmount": "$15.99",
-      "maxAmount": "$35.00",
-      "message": "留言（選填）",
-      "messagePlaceholder": "添加一條善意的留言...",
-      "availableCredits": "可用積分",
-      "useCredits": "使用積分支付此禮物",
-      "paymentCard": "支付卡"
-    },
-    "summary": {
-      "giftAmount": "禮物金額：",
-      "creditsApplied": "已使用積分：",
-      "cardPayment": "卡片支付：",
-      "potentialReward": "潛在獎勵：",
-      "rewardAmount": "+$5.00",
-      "alreadyCompleted": "您已獲得此挑戰的 $5 獎勵。感謝您繼續傳遞善意！"
-    },
-    "button": {
-      "giftMeal": "贈送 ${amount} 餐食",
-      "processing": "處理中..."
-    },
-    "signInPrompt": "請登入以贈送餐食",
-    "errors": {
-      "signIn": "請登入以贈送餐食",
-      "selectLocation": "請選擇一個地點",
-      "paymentNotReady": "支付系統尚未準備好，請稍候...",
-      "createUser": "建立使用者失敗",
-      "createPaymentIntent": "建立支付意向失敗",
-      "cardNotFound": "未找到卡片元素",
-      "paymentFailed": "支付未成功",
-      "createGift": "建立餐食禮物失敗",
-      "createGiftRetry": "建立餐食禮物失敗，請重試。",
-      "loadLocations": "載入地點失敗"
-    },
-    "success": {
-      "created": "餐食禮物已建立！您的善意將點亮某人的一天。"
-    },
-    "modal": {
-      "title": "有人請您吃飯！",
-      "chainOfKindness": "善意鏈條：{count} 次轉贈！",
-      "description": "一位善良的陌生人在 {location} 為您贈送了這份餐食。您可以：",
-      "acceptOption": "接受",
-      "acceptDescription": "應用到您目前的訂單",
-      "forwardOption": "轉贈",
-      "forwardDescription": "傳遞給下一個人",
-      "acceptButton": "接受禮物",
-      "forwardButton": "轉贈",
-      "backButton": "返回",
-      "acceptTitle": "接受此禮物",
-      "acceptSubtitle": "${amount} 將應用到您的訂單",
-      "thankYouLabel": "感謝訊息（選填）",
-      "thankYouPlaceholder": "感謝送禮者...",
-      "forwardTitle": "轉贈",
-      "forwardSubtitle": "將這份 ${amount} 的禮物傳遞給下一位用餐者",
-      "forwardMessageLabel": "給下一位的留言（選填）",
-      "forwardMessagePlaceholder": "添加您的善意留言..."
-    },
-    "toast": {
-      "reserved": "您已預訂 ${amount} 的餐食禮物！將在結帳時應用。",
-      "paidForward": "您已轉贈！下一個人將收到此禮物。",
-      "payForwardFailed": "轉贈餐食禮物失敗",
-      "giftReserved": "餐食禮物已預訂！將在結帳時應用。",
-      "payForwardSuccess": "您已轉贈！下一個人將收到此禮物。",
-      "payForwardError": "轉贈失敗，請重試。"
-    },
-    "dashboard": {
-      "giveAMeal": "贈送餐食",
-      "giftAnotherMeal": "再贈送一份餐食",
-      "yourGiftHistory": "您的贈送歷史：",
-      "acceptedBy": "被 {name} 接受",
-      "expired": "已過期",
-      "pending": "待處理"
-    },
-    "payment": {
-      "giftApplied": "餐食禮物已應用",
-      "giftExcess": "禮物餘額 → 您的積分"
-    },
-    "quotedMessage": "「{message}」"
   },
   "challenges": {
     "mealForStranger": {
@@ -6023,13 +5700,15 @@
       "FORBIDDEN": "請使用下單的帳戶登入。",
       "NETWORK_ERROR": "無法連線到 Oh!，請檢查網路後再試一次。",
       "RATE_LIMITED": "短時間內嘗試次數過多，請稍候再試。",
-      "GENERIC": "發生錯誤，請再試一次。"
+      "GENERIC": "發生錯誤，請再試一次。",
+      "PROMO_EXHAUSTED": "這組優惠碼已經用完了。請確認總金額後再試一次。"
     },
     "warnings": {
       "PROMO_INVALID": "這個代碼不適用於此訂單。",
       "GIFT_CARD_INVALID": "禮物卡代碼無效或已無餘額。",
       "CREDITS_REQUIRE_SIGN_IN": "請登入以使用儲值金。",
-      "MEAL_GIFT_UNAVAILABLE": "這份愛心餐已無法使用。"
+      "MEAL_GIFT_UNAVAILABLE": "這份愛心餐已無法使用。",
+      "PROMO_REQUIRES_SIGN_IN": "登入後才能使用這組優惠碼。"
     }
   },
   "passport": {
@@ -6602,317 +6281,6 @@
       "button": "開始點餐"
     }
   },
-  "toast": {
-    "success": "成功",
-    "error": "錯誤",
-    "warning": "警告",
-    "info": "資訊"
-  },
-  "menu": {
-    "title": "我們的菜單",
-    "description": "探索我們精選的頂級牛肉麵和配菜",
-    "loading": "載入菜單中...",
-    "error": {
-      "title": "無法載入菜單",
-      "tryAgain": "重試"
-    },
-    "categories": {
-      "soups": "湯品",
-      "noodles": "麵條",
-      "addons": "加購",
-      "sides": "配菜",
-      "drinks": "飲品",
-      "desserts": "甜點"
-    },
-    "tags": {
-      "premium": "頂級",
-      "included": "已包含",
-      "signature": "招牌",
-      "complimentary": "免費",
-      "unlimitedRefills": "無限續杯"
-    },
-    "sections": {
-      "soup": {
-        "subtitle": "從我們的招牌湯底開始",
-        "description": "濃郁的兩段式牛骨高湯：先長時間熬煮，再為風味收尾"
-      },
-      "noodles": {
-        "subtitle": "選擇您的麵條",
-        "description": "每日新鮮手工製作的麵條"
-      },
-      "premiumAddons": {
-        "subtitle": "升級您的麵碗",
-        "description": "頂級蛋白質和配料"
-      },
-      "sideDishes": {
-        "subtitle": "完善您的餐點",
-        "description": "傳統配菜"
-      },
-      "dessert": {
-        "subtitle": "甜蜜結尾",
-        "description": "傳統甜點為您的餐點畫上句點"
-      }
-    },
-    "hero": {
-      "title": "我們的菜單",
-      "description": "用頂級美國牛肉與我們的兩段式高湯，打造您完美的一碗",
-      "orderNow": "立即訂購"
-    },
-    "difference": {
-      "title": "哦！的獨特之處",
-      "description": "我們不只是另一家麵店。我們正在重新定義用餐體驗。",
-      "techFirst": {
-        "title": "科技優先體驗",
-        "description": "提前點餐、跳過排隊，享受無縫用餐體驗"
-      },
-      "privatePods": {
-        "title": "私人用餐包廂",
-        "description": "在您專屬的私人空間享用美食，遠離干擾"
-      },
-      "seamlessService": {
-        "title": "無縫服務",
-        "description": "從點餐到付款，一切設計都為了方便"
-      },
-      "loyalty": {
-        "title": "回饋忠誠會員",
-        "description": "賺取積分、解鎖獎勵，每次光臨都能升級"
-      }
-    },
-    "cta": {
-      "title": "準備好品嚐最棒的一碗麵了嗎？",
-      "description": "提前點餐，跳過等待。完美的一碗麵只需輕輕幾點。",
-      "button": "開始點餐"
-    },
-    "dietary": {
-      "vegetarian": "素食",
-      "vegan": "純素",
-      "glutenFree": "無麩質",
-      "spice": {
-        "level1": "微辣",
-        "level2": "中辣",
-        "level3": "特辣"
-      }
-    },
-    "allergen": {
-      "title": "過敏原資訊",
-      "description": "我們的菜品在處理常見過敏原（包括小麥、大豆和雞蛋）的廚房中製作。點餐時請告知我們的員工您的任何過敏或飲食限制。",
-      "spicyIndicator": "辣",
-      "contactUs": "如需詳細的過敏原資訊，請在點餐前聯繫我們。"
-    }
-  },
-  "auth": {
-    "loading": "載入中...",
-    "readyToOrder": "準備好點餐了嗎？",
-    "createAccount": "建立免費帳戶，立即開始賺取獎勵。",
-    "signInButton": "登入 / 註冊",
-    "or": "或",
-    "continueAsGuest": "以訪客身份繼續",
-    "guestWarning": "訪客結帳快速，但您無法賺取忠誠點數或儲存最愛。",
-    "benefits": {
-      "cashback": "1% 現金回饋",
-      "cashbackSubtitle": "包含此訂單！",
-      "referral": "$5 推薦獎勵",
-      "referralSubtitle": "您和朋友都能獲得",
-      "earlyAccess": "搶先體驗",
-      "earlyAccessSubtitle": "新菜品"
-    }
-  },
-  "features": {
-    "fortuneCookie": {
-      "title": "您的數位幸運餅乾",
-      "subtitle": "等待時，打開您的個人化運勢",
-      "crackOpen": "打開它",
-      "loading": "解讀您的運勢中...",
-      "luckyNumbers": "幸運數字",
-      "thisDay": "歷史上的今天 ({year})",
-      "learnChinese": "學中文",
-      "unavailable": "運勢暫時無法顯示 - 但您的餐點一定很棒！"
-    },
-    "roast": {
-      "title": "吐槽區",
-      "subtitle": "想聽聽我們對您點餐選擇的（搞笑）真實評論嗎？",
-      "button": "吐槽我的訂單",
-      "loading": "分析您的人生選擇中...",
-      "highlights": "我們注意到的：",
-      "unavailable": "吐槽師傅休息中。您的訂單應該沒問題。應該吧。"
-    },
-    "backstory": {
-      "title": "幕後故事",
-      "subtitle": "想知道您食材的秘密生活嗎？",
-      "button": "告訴我一切",
-      "loading": "挖掘八卦中...",
-      "heading": "不為人知的故事",
-      "unavailable": "食材們選擇保持匿名。神秘的一群。"
-    },
-    "kitchen": {
-      "label": "廚房直播",
-      "listening": "聆聽廚房中...",
-      "quiet": "廚房異常安靜。他們在策劃什麼。"
-    }
-  },
-  "payment": {
-    "pageTitle": "完成您的訂單",
-    "orderNumber": "訂單 #{number}",
-    "invalidOrder": "無效訂單",
-    "missingInformation": "缺少訂單資訊",
-    "orderNotFound": "找不到訂單",
-    "couldNotFind": "我們找不到此訂單",
-    "startNewOrder": "開始新訂單",
-    "readyBy": "預計完成時間",
-    "total": "總計",
-    "processing": "處理中...",
-    "payNow": "立即付款",
-    "testMode": "測試模式 - 不會實際收費",
-    "theBowl": "麵碗",
-    "addOnsExtras": "加購與配菜",
-    "qty": "數量：{count}",
-    "loading": "載入中...",
-    "subtotal": "小計",
-    "tax": "稅金",
-    "creditsApplied": "已使用點數",
-    "payAmount": "支付 ${amount}",
-    "processingPayment": "付款處理中...",
-    "secureCheckout": "安全結帳由 Stripe 提供",
-    "paymentMethod": "付款方式",
-    "testPayment": "測試付款",
-    "demoMode": "示範模式 - 不會實際收費",
-    "demoWarning": "這是示範付款。真正的 Stripe 整合即將推出！",
-    "availableCredits": "可用點數",
-    "youHaveCredits": "您有 <bold>${amount}</bold> 點數",
-    "maxCreditsNote": "每筆訂單最多可使用 $5 點數",
-    "applyToOrder": "使用 ${amount} 於此訂單",
-    "welcomeReferred": "歡迎！您已被推薦",
-    "referralCreditsNote": "您獲得 ${amount} 點數可用於此訂單",
-    "referralAlreadyUsed": "推薦點數已使用",
-    "referralAlreadyUsedNote": "感謝您再次光臨！推薦點數僅適用於您的首次訂單。您仍可透過您的個人推薦連結推薦朋友來賺取點數。",
-    "loadingAccount": "正在載入您的帳戶和獎勵...",
-    "signInToComplete": "登入以完成訂單",
-    "signInDescription": "您需要登入以追蹤訂單、賺取獎勵和使用推薦點數。",
-    "referralDiscountWaiting": "您有推薦折扣等待使用！",
-    "signInSignUp": "登入 / 註冊",
-    "guestCheckout": "訪客結帳",
-    "guestCheckoutDescription": "請輸入您的姓名以便我們準備您的訂單。",
-    "name": "姓名",
-    "phone": "電話",
-    "email": "電子郵件",
-    "optional": "選填",
-    "yourName": "您的姓名",
-    "forOrderUpdates": "用於訂單更新",
-    "forReceipt": "用於收據",
-    "enterYourName": "請輸入您的姓名",
-    "wantToEarnRewards": "想要賺取獎勵並追蹤訂單嗎？",
-    "signInInstead": "改為登入",
-    "waitLoadingAccount": "請稍候，正在載入您的帳戶...",
-    "errorCodes": {
-      "CREDIT_SHORT": "你的點數餘額已變更，請確認總額後再試一次。",
-      "GIFT_CARD_SHORT": "你的禮物卡餘額已變更，請確認總額後再試一次。",
-      "MEAL_GIFT_UNAVAILABLE": "這份愛心餐已無法使用。",
-      "REWARD_UNAVAILABLE": "這項獎勵已無法使用。",
-      "PAYMENT_NOT_VERIFIED": "我們尚未確認你的付款。若已扣款，請向店員出示此畫面。",
-      "ORDER_FAILED": "無法完成訂單，請再試一次。",
-      "QUOTE_CHANGED": "你的訂單總額已變更，請確認後再試一次。",
-      "REFUNDED": "我們無法套用你的付款，款項已全額退回你的卡片。請再試一次。",
-      "GROUP_CHANGED": "本組部分訂單已付款或有變動。請查看小組後重試。"
-    },
-    "invalidPhone": "請輸入有效的電話號碼，或留空"
-  },
-  "social": {
-    "instagram": "Instagram",
-    "twitter": "X (Twitter)",
-    "facebook": "Facebook",
-    "tiktok": "TikTok",
-    "yelp": "Yelp",
-    "tripadvisor": "TripAdvisor",
-    "youtube": "YouTube",
-    "linkedin": "LinkedIn",
-    "email": "電子郵件"
-  },
-  "checkIn": {
-    "title": "自助報到機",
-    "subtitle": "掃描或輸入您的訂單 QR 碼以獲取座位分配",
-    "howToTitle": "如何報到：",
-    "step1": "找到您的訂單 QR 碼（在訂單確認頁面上）",
-    "step2": "使用報到機掃描或在下方輸入代碼",
-    "step3": "獲取座位分配或排隊位置",
-    "qrCodeLabel": "訂單 QR 碼：",
-    "qrCodePlaceholder": "ORDER-xxpmm5hf-1234567890-ABC123",
-    "checkInButton": "報到",
-    "checkingIn": "報到中...",
-    "needHelp": "需要幫助？",
-    "helpTip1": "您的 QR 碼在訂單確認頁面上",
-    "helpTip2": "它以「ORDER-」開頭，後面是數字和字母",
-    "helpTip3": "如需協助，請詢問工作人員",
-    "loading": "載入中..."
-  },
-  "scan": {
-    "title": "確認抵達包廂",
-    "subtitle": "在您的指定包廂掃描或輸入訂單 QR 碼",
-    "assignedPod": "您的指定包廂",
-    "podNumber": "包廂 {number}",
-    "qrCodeLabel": "您的訂單 QR 碼：",
-    "qrCodeHint": "與訂單確認頁上的 QR 碼相同",
-    "qrCodePlaceholder": "ORDER-xxpmm5hf-1234567890-ABC123",
-    "enterQrCodeError": "請掃描或輸入您的訂單 QR 碼",
-    "confirmFailed": "確認包廂抵達失敗",
-    "networkError": "網路錯誤，請重試。",
-    "confirming": "確認中...",
-    "confirmButton": "確認我已到達包廂",
-    "whatThisDoes": "這會做什麼",
-    "helpList": {
-      "confirms": "確認您已抵達指定包廂",
-      "notifies": "通知廚房開始準備您的餐點",
-      "realtime": "您將在螢幕上看到即時狀態更新"
-    },
-    "backToStatus": "返回訂單狀態",
-    "success": {
-      "title": "包廂已確認！",
-      "message": "您的餐點正在準備中"
-    },
-    "loading": "載入中..."
-  },
-  "confirmation": {
-    "title": "訂單已確認！",
-    "orderNumber": "訂單 #{number}",
-    "thankYou": "感謝您的訂購",
-    "whatNext": "接下來呢？",
-    "checkInInstructions": "前往餐廳，在自助機報到或掃描指定包廂的 QR 碼。",
-    "viewStatus": "查看訂單狀態",
-    "simulateCheckIn": "模擬報到（示範）",
-    "checkingIn": "報到中...",
-    "groupOrderNote": "這是包含 {count} 份訂單的群組訂單。",
-    "paidStatus": "付款完成",
-    "paymentSuccessful": "付款成功",
-    "paymentConfirmed": "您的 {amount} 付款已確認",
-    "paymentPending": "付款處理中",
-    "paymentProcessing": "您的付款正在處理中",
-    "yourOrderQrCode": "您的訂單 QR 碼",
-    "scanAtKiosk": "到達時請在自助機掃描此碼以獲取包廂分配",
-    "expectedArrival": "預計到達時間：{time}",
-    "host": "主揪",
-    "guest": "賓客 {number}",
-    "podNumber": "包廂 {number}",
-    "noPodYet": "尚未分配包廂",
-    "checkInThisOrder": "此訂單報到",
-    "assignedToPod": "已分配至包廂 {number} - 等待到達",
-    "checkedInAtPod": "已在包廂 {number} 報到",
-    "orderLabel": "訂單",
-    "subtotal": "小計",
-    "tax": "稅金",
-    "total": "總計",
-    "qty": "數量：{count}",
-    "trackOrderStatus": "追蹤訂單狀態",
-    "shareYourOrder": "分享您的訂單！",
-    "spreadTheWord": "分享給朋友並賺取獎勵",
-    "copied": "已複製！",
-    "copy": "複製",
-    "shareVia": "分享至...",
-    "twitter": "推特",
-    "facebook": "臉書",
-    "linkedin": "領英",
-    "referralNote": "已包含您的推薦連結！朋友首次訂購可享 $5 折扣。當他們完成 $20 以上訂單時，您即刻獲得 $5。",
-    "backToHome": "返回首頁",
-    "loadingOrder": "載入訂單中..."
-  },
   "experience": {
     "meta": {
       "title": "用餐體驗：Oh! 的一次到訪，一步一步",
@@ -6921,7 +6289,7 @@
     "intro": {
       "eyebrow": "用餐體驗",
       "title": "一次到訪，六個步驟。",
-      "lede": "一行人每人一個座艙，每個座艙一碗麵。無帶位、無服務生、沒有帳單、不給小費。以下是完整的一次到訪，依序呈現。",
+      "lede": "一行人每人一個包廂，每個包廂一碗麵。無帶位、無服務生、沒有帳單、不給小費。以下是完整的一次到訪，依序呈現。",
       "start": "從第一步開始"
     },
     "stepper": {
@@ -6933,16 +6301,16 @@
       "arrive": {
         "eyebrow": "抵達",
         "title": "您走進來，沒有人招呼您。",
-        "body": "這是刻意的設計。空間安靜，光線昏暗，三台點餐機隔在您與座艙之間。"
+        "body": "這是刻意的設計。空間安靜，光線昏暗，三台點餐機隔在您與包廂之間。"
       },
       "order": {
         "eyebrow": "點餐",
         "title": "大約四十秒完成點餐。",
-        "body": "選擇湯頭濃度、麵條、加料和牛肉：煙燻牛胸肉或牛肋肉，美國和牛或美國農業部特選級牛肉。付款後，點餐機給您一個座艙號碼，並把訂單的即時連結傳簡訊給您。"
+        "body": "選擇湯頭濃度、麵條、加料和牛肉：煙燻牛胸肉或牛肋肉，美國和牛或美國農業部特選級牛肉。付款後，點餐機給您一個包廂號碼，並把訂單的即時連結傳簡訊給您。"
       },
       "walk": {
         "eyebrow": "走進",
-        "title": "一個座艙號碼，您自己走過去。",
+        "title": "一個包廂號碼，您自己走過去。",
         "body": "您沿著通道走過一排關上的推拉門，聽見滿室低語。沒有人端著托盤，沒有人等著帶位。"
       },
       "settle": {
@@ -6958,30 +6326,30 @@
       "leave": {
         "eyebrow": "離開",
         "title": "吃完，您就離開。",
-        "body": "在手機上輕點一下，表示您用餐完畢。沒有帳單，也沒有小費欄。經過商品店離開，座艙在您身後開始重設。",
+        "body": "在手機上輕點一下，表示您用餐完畢。沒有帳單，也沒有小費欄。經過商品店離開，包廂在您身後開始重設。",
         "alt": "出口前的商品店：架上有醬料、禮盒、碗、上衣和帽子，還有一塊寫著謝謝的招牌。"
       }
     },
     "map": {
       "title": "您在平面圖上的一次到訪",
-      "note": "城溪中心，75 個座艙。大學廣場是同一張平面圖的鏡像，共 70 個座艙。",
+      "note": "城溪中心，75 個包廂。大學廣場是同一張平面圖的鏡像，共 70 個包廂。",
       "captions": {
         "arrive": "您從入口進來，走進大廳。",
         "order": "大廳裡有三台點餐機，沒有櫃台。",
-        "walk": "穿過橫向通道，走上您的通道，到 {label} 號座艙。沿途每一扇門都是座艙。",
+        "walk": "穿過橫向通道，走上您的通道，到 {label} 號包廂。沿途每一扇門都是包廂。",
         "settle": "您的麵離開廚房，沿員工走道送來。沒有顧客會進入這條走道。",
-        "taste": "穿過送餐口，送到 {label} 號座艙。同一個座艙，相對的兩側。",
+        "taste": "穿過送餐口，送到 {label} 號包廂。同一個包廂，相對的兩側。",
         "leave": "沿通道出去，經過商品店，走出出口。"
       },
       "comb": {
-        "title": "座艙平面圖",
-        "summary": "廚房沿後牆配置。座艙排列在三條員工走道的兩側，顧客走在座艙之間的通道上。入口在正面。",
-        "hintTapRow": "輕點一排放大，再輕點一個座艙。雙指縮放可調整大小。",
-        "hintTapPod": "輕點座艙即可選擇。",
+        "title": "包廂平面圖",
+        "summary": "廚房沿後牆配置。包廂排列在三條員工走道的兩側，顧客走在包廂之間的通道上。入口在正面。",
+        "hintTapRow": "輕點一排放大，再輕點一個包廂。雙指縮放可調整大小。",
+        "hintTapPod": "輕點包廂即可選擇。",
         "hintLive": "輕點一排放大。雙指縮放可調整大小。",
-        "podName": "座艙 {label}，{status}",
-        "podNameDuo": "座艙 {label}，與 {partner} 組成雙人座艙，{status}",
-        "journeySummary": "在平面圖上走一遍用餐流程。您從入口走到 {label} 號座艙，您的麵沿員工走道送到您的送餐口。",
+        "podName": "包廂 {label}，{status}",
+        "podNameDuo": "包廂 {label}，與 {partner} 組成雙人包廂，{status}",
+        "journeySummary": "在平面圖上走一遍用餐流程。您從入口走到 {label} 號包廂，您的麵沿員工走道送到您的送餐口。",
         "status": {
           "available": "可預訂",
           "reserved": "已預訂",
@@ -6995,8 +6363,8 @@
           "reserved": "已預訂",
           "occupied": "使用中",
           "cleaning": "清潔中",
-          "duo": "雙人座艙",
-          "selected": "您的座艙",
+          "duo": "雙人包廂",
+          "selected": "您的包廂",
           "hatch": "送餐口"
         },
         "zones": {
@@ -7013,8 +6381,8 @@
           "wholeFloor": "查看全場"
         },
         "pan": {
-          "earlier": "前面的座艙",
-          "later": "後面的座艙"
+          "earlier": "前面的包廂",
+          "later": "後面的包廂"
         },
         "marker": {
           "guest": "您",
@@ -7028,15 +6396,15 @@
       "items": {
         "order": {
           "q": "怎麼點餐？",
-          "a": "在大廳的點餐機上，大約四十秒；或用手機預先點餐。無論哪一種，您都會拿到座艙號碼和訂單的即時連結。"
+          "a": "在大廳的點餐機上，大約四十秒；或用手機預先點餐。無論哪一種，您都會拿到包廂號碼和訂單的即時連結。"
         },
         "together": {
           "q": "我們可以坐在一起嗎？",
-          "a": "一行人每人一個座艙，每個座艙一碗麵。雙人座艙專為兩人設計：拆下一對座艙之間的隔板，兩個座艙就合而為一。"
+          "a": "一行人每人一個包廂，每個包廂一碗麵。雙人包廂專為兩人設計：拆下一對包廂之間的隔板，兩個包廂就合而為一。"
         },
         "server": {
           "q": "有服務生嗎？",
-          "a": "沒有帶位，也沒有服務生。您的麵從員工走道送到座艙的送餐口。顧客走通道，員工走走道，兩者只在送餐口相遇。"
+          "a": "沒有帶位，也沒有服務生。您的麵從員工走道送到包廂的送餐口。顧客走通道，員工走走道，兩者只在送餐口相遇。"
         },
         "more": {
           "q": "想加點或需要幫忙怎麼辦？",
@@ -7061,8 +6429,8 @@
       }
     },
     "close": {
-      "title": "您的座艙在等您。",
-      "body": "預先點餐，走進來，直接前往您的座艙。",
+      "title": "您的包廂在等您。",
+      "body": "預先點餐，走進來，直接前往您的包廂。",
       "order": "點一碗",
       "locations": "查看門市",
       "chappyTitle": "還有疑問？",

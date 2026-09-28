@@ -31,11 +31,11 @@ const RELATED: { slug: LegalSlug; key: "privacy" | "accessibility" | "smsConsent
   { slug: "sms-consent", key: "smsConsent" },
 ];
 
-/** A value that reads the same in every language (an address, a URL, a keyword). */
+/** A value that reads the same in every language (an address, a URL, a keyword). translate="no" keeps browser translators and the English-leak crawl (Task F1) off it. */
 export function Literal({ children, as = "span", className }: { children: ReactNode; as?: "span" | "code" | "strong"; className?: string }) {
   const Tag = as;
   return (
-    <Tag data-literal className={className}>
+    <Tag data-literal translate="no" className={className}>
       {children}
     </Tag>
   );

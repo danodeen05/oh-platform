@@ -33,6 +33,8 @@ export const ORDER_ERROR_CODES = [
   "PAYMENT_NOT_VERIFIED",
   "PAYMENT_REFUNDED",
   "PAYMENT_NOT_APPLIED",
+  // Final backend review (I5): the promo's use limit ran out between quote and pay.
+  "PROMO_EXHAUSTED",
   "FORBIDDEN",
   "NETWORK_ERROR",
   "RATE_LIMITED",
@@ -41,7 +43,7 @@ export const ORDER_ERROR_CODES = [
 export type OrderErrorCode = (typeof ORDER_ERROR_CODES)[number];
 
 /** Quote warnings the savings step explains (orderFlow.warnings.<CODE>). */
-export const QUOTE_WARNINGS = ["PROMO_INVALID", "GIFT_CARD_INVALID", "CREDITS_REQUIRE_SIGN_IN", "MEAL_GIFT_UNAVAILABLE"] as const;
+export const QUOTE_WARNINGS = ["PROMO_INVALID", "PROMO_REQUIRES_SIGN_IN", "GIFT_CARD_INVALID", "CREDITS_REQUIRE_SIGN_IN", "MEAL_GIFT_UNAVAILABLE"] as const;
 
 export function orderErrorCode(code: string | null | undefined, status?: number): OrderErrorCode {
   if (code && (ORDER_ERROR_CODES as readonly string[]).includes(code)) return code as OrderErrorCode;

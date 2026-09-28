@@ -18,6 +18,11 @@ export interface LegacyCopySeed {
   slug: string;
   iconKey: string;
   i18n: I18nCopy;
+  /**
+   * Other English texts the same row may carry, each with its own
+   * translations. The backfill writes whichever copy's `en` matches the row.
+   */
+  alternates?: I18nCopy[];
 }
 
 export const LEGACY_BADGES: LegacyCopySeed[] = [
@@ -93,5 +98,15 @@ export const LEGACY_CHALLENGES: LegacyCopySeed[] = [
       "zh-CN": { name: "请陌生人吃一碗", description: "为同一家门店的下一位独自用餐者送上一餐" },
       es: { name: "Comida para un desconocido", description: "Regala una comida al próximo comensal que venga solo a tu local" },
     },
+    // The API creates this row itself when it is missing (packages/api/src/orders/tenders.js,
+    // mealGiftChallenge), with the site's own line; the translations match challengesPage.giveTitle.
+    alternates: [
+      {
+        en: { name: "Meal for a Stranger", description: "Buy the next guest a bowl." },
+        "zh-TW": { name: "請陌生人吃一碗", description: "為下一位客人買一碗。" },
+        "zh-CN": { name: "请陌生人吃一碗", description: "为下一位客人买一碗。" },
+        es: { name: "Comida para un desconocido", description: "Invita un tazón al próximo cliente." },
+      },
+    ],
   },
 ];

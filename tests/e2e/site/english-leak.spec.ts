@@ -8,10 +8,9 @@
  *   E2E_BASE_URL=http://localhost:3200 E2E_API_URL=http://localhost:4200 \
  *     node --test tests/e2e/site/english-leak.spec.ts
  *
- * NOT BLOCKING UNTIL F1 (the LEAK_STRICT gate): by default every route test
- * is a node:test `todo`, so leaks are reported (route, locale, words and
- * the lines they came from) but the run exits 0. With LEAK_STRICT=1 they
- * are ordinary tests and any leak fails the run. F1 turns strict on.
+ * STRICT since Task F1: every route test is an ordinary test and any leak
+ * (route, locale, words and the lines they came from) fails the run.
+ * LEAK_STRICT=0 turns them back into node:test `todo`s for a report-only run.
  *
  * Skipped: routes that need a signed-in member (a signed-out crawl lands on
  * Clerk's hosted page) and internal pages; both are listed in the summary.
@@ -25,7 +24,7 @@ import { englishLeaks } from "../../../apps/web/lib/site/i18n-allowlist.ts";
 
 const BASE = process.env.E2E_BASE_URL || "http://localhost:3200";
 const API = process.env.E2E_API_URL || "http://localhost:4200";
-const STRICT = process.env.LEAK_STRICT === "1";
+const STRICT = process.env.LEAK_STRICT !== "0";
 const LOCALES = ["zh-TW", "zh-CN"] as const;
 
 let browser: Browser | null = null;
@@ -34,7 +33,7 @@ const summary: string[] = [];
 
 after(async () => {
   await browser?.close();
-  console.log(`\nENGLISH_LEAK_SUMMARY (${STRICT ? "strict" : "todo until F1"})\n${summary.join("\n")}`);
+  console.log(`\nENGLISH_LEAK_SUMMARY (${STRICT ? "strict" : "report only, LEAK_STRICT=0"})\n${summary.join("\n")}`);
 });
 
 async function getBrowser(): Promise<Browser> {
@@ -67,7 +66,7 @@ for (const route of SITE_ROUTES) {
       summary.push(`SKIP  ${name} (${route.auth ? "auth" : "internal"})`);
       continue;
     }
-    test(name, { todo: STRICT ? false : "until F1 (LEAK_STRICT=1 to enforce)" }, async () => {
+    test(name, { todo: STRICT ? false : "report only (LEAK_STRICT=0)" }, async () => {
       const params: Record<string, string> = {};
       for (const [k, v] of Object.entries(route.params ?? {})) params[k] = await resolveParam(v);
       const url = `${BASE}/${locale}${routeUrl(route, (v) => (v === SAMPLE_LOCATION_ID ? params.locationId ?? v : v))}`;
@@ -85,6 +84,9 @@ for (const route of SITE_ROUTES) {
         }
         await page.waitForTimeout(2_500);
         const chunks = await page.evaluate(() => {
+          // Task F1: text marked translate="no" (a street address, a URL, a legal
+          // entity name, an SMS keyword) reads the same in every language on purpose.
+          for (const el of Array.from(document.querySelectorAll<HTMLElement>('[translate="no"]'))) el.style.display = "none";
           const out: string[] = [document.body.innerText];
           for (const el of Array.from(document.querySelectorAll("[alt], [aria-label], [placeholder]"))) {
             for (const attr of ["alt", "aria-label", "placeholder"]) {

@@ -128,7 +128,7 @@ export default async function LocationPage({ params }: Params) {
               {loc.address ? (
                 <div className="flex flex-col gap-1">
                   <dt className="text-xs font-medium uppercase tracking-[0.2em] text-oh-gold">{t("detail.address")}</dt>
-                  <dd className="m-0 text-base text-oh-cream">{loc.address}</dd>
+                  <dd translate="no" className="m-0 text-base text-oh-cream">{loc.address}</dd>
                   <dd className="m-0 mt-2">
                     <a href={mapsHref(loc.name, loc.address)} target="_blank" rel="noopener noreferrer" aria-label={t("detail.directionsLabel", { name: loc.name })} className={SECONDARY}>
                       <Icon name="pin" size={18} />

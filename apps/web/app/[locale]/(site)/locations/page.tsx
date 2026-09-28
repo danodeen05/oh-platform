@@ -105,7 +105,7 @@ function LocationCard({ loc, locale, priority, alt, t }: { loc: SiteLocation; lo
       <span className="flex flex-1 flex-col gap-2 p-5 pt-3 md:p-6 md:pt-4">
         <span className={`text-xs font-medium uppercase tracking-[0.2em] text-oh-gold ${locale.startsWith("zh") ? "font-cjk" : "font-body"}`}>{t(`places.${place}.tagline`)}</span>
         <span className={`text-[1.75rem] leading-tight [overflow-wrap:anywhere] ${locale.startsWith("zh") ? "font-display-cjk" : "font-display"}`}>{loc.name}</span>
-        {loc.address ? <span className="text-[15px] text-oh-cream/80">{loc.address}</span> : null}
+        {loc.address ? <span translate="no" className="text-[15px] text-oh-cream/80">{loc.address}</span> : null}
         <span className="mt-auto flex flex-wrap items-center justify-between gap-3 pt-3">
           <span className="flex items-center gap-2 text-[15px] text-oh-cream">
             <Icon name="pod" size={18} className="shrink-0 text-oh-gold" />

@@ -208,11 +208,12 @@ test("?embed=1 on a site route: no chrome, but the site fonts and palette stay",
   });
 });
 
-test("the legacy /en/menu still shows the legacy header and no site dock", async () => {
+// D3 moved /menu into (site); no customer page is legacy any more.
+test("/en/menu is a site page: the site top bar and dock, no legacy header", async () => {
   await withPage(iphone15(), "/en/menu", async (page) => {
-    await page.locator(".legacy-ui header").first().waitFor({ state: "visible" });
-    assert.equal(await page.locator("[data-site-dock]").count(), 0);
-    assert.equal(await page.locator("[data-site-topbar]").count(), 0);
+    await page.locator("[data-site-topbar]").first().waitFor({ state: "visible" });
+    assert.ok((await page.locator("[data-site-dock]").count()) > 0);
+    assert.equal(await page.locator(".legacy-ui header").count(), 0);
   });
 });
 

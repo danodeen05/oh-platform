@@ -218,9 +218,17 @@ export async function backfillI18n(prisma: PrismaClient, opts: BackfillOptions =
       result.menuItems.missing.push(category);
       continue;
     }
-    const labelsI18n = SLIDER_LABELS_I18N[category];
+    const categoryLabels = SLIDER_LABELS_I18N[category];
     for (const item of items) {
       const sliderConfig = (item.sliderConfig as Record<string, unknown> | null) ?? {};
+      // Task F1: the catering seed moved Baby Bok Choy and Sprouts into slider01
+      // (Soup Richness's category) while they kept the topping-amount labels.
+      // When a row's English labels don't match its category's list, use the
+      // seed list whose English matches them exactly, if there is one. The
+      // English is still never written; only a list with identical English is used.
+      const labelsI18n = sameJson(sliderConfig.labels, categoryLabels.en)
+        ? categoryLabels
+        : (Object.values(SLIDER_LABELS_I18N).find((s) => sameJson(sliderConfig.labels, s.en)) ?? categoryLabels);
       if (!sameJson(sliderConfig.labels, labelsI18n.en)) {
         console.log(`SKIP menuItem ${category} (${item.id}): prod text differs (labels: ${JSON.stringify(sliderConfig.labels)})`);
         result.menuItems.mismatched.push(`${category}:${item.id}`);
@@ -254,18 +262,22 @@ export async function backfillI18n(prisma: PrismaClient, opts: BackfillOptions =
       result.legacy.missing.push(seed.slug);
       continue;
     }
-    if (!sameText(existing.name, seed.i18n.en.name) || !sameText(existing.description, seed.i18n.en.description)) {
+    // The copy whose English matches the row (the seed's own, or an alternate).
+    const copy = [seed.i18n, ...(seed.alternates ?? [])].find(
+      (c) => sameText(existing.name, c.en.name) && sameText(existing.description, c.en.description),
+    );
+    if (!copy) {
       console.log(`SKIP ${model} ${seed.slug}: prod text differs (name: "${existing.name}")`);
       result.legacy.mismatched.push(seed.slug);
       continue;
     }
     const clearedEmoji = model === "badge" ? null : "";
     const emojiUpToDate = !clearEmoji || existing.iconEmoji === clearedEmoji;
-    if (existing.iconKey === seed.iconKey && sameJson(existing.i18n, seed.i18n) && emojiUpToDate) {
+    if (existing.iconKey === seed.iconKey && sameJson(existing.i18n, copy) && emojiUpToDate) {
       result.legacy.skipped.push(seed.slug);
       continue;
     }
-    const data: Record<string, unknown> = { iconKey: seed.iconKey, i18n: seed.i18n as any };
+    const data: Record<string, unknown> = { iconKey: seed.iconKey, i18n: copy as any };
     if (clearEmoji) data.iconEmoji = clearedEmoji;
     console.log(`${prefix}${model} "${seed.slug}": set iconKey="${seed.iconKey}", i18n${clearEmoji ? ", iconEmoji cleared" : ""}`);
     if (!dryRun) {

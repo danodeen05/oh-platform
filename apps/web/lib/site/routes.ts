@@ -1,5 +1,7 @@
 /**
- * Every customer route, with sample params (Task C5). The English-leak crawl
+ * Every customer route, with sample params (Task C5; F1 made the group code
+ * and store order number look like real ones, since the pages echo them and
+ * the crawl would otherwise flag its own "SAMPLE"). The English-leak crawl
  * (tests/e2e/site/english-leak.spec.ts) walks this list; the locale-parity
  * test checks it against the files under app/[locale]. Phase D tasks keep it
  * current: when a route moves from `(legacy)` to `(site)`, flip its `group`.
@@ -51,14 +53,14 @@ export const SITE_ROUTES: readonly SiteRoute[] = [
     params: { locationId: SAMPLE_LOCATION_ID },
   },
   { path: "/order/payment", group: "site", file: "(site)/order/payment/page.tsx" },
-  { path: "/order/group-payment", group: "site", file: "(site)/order/group-payment/page.tsx", query: "groupCode=SAMPLE" },
+  { path: "/order/group-payment", group: "site", file: "(site)/order/group-payment/page.tsx", query: "groupCode=7K2M9Q" },
   { path: "/order/confirmation", group: "site", file: "(site)/order/confirmation/page.tsx" },
   { path: "/order/scan", group: "site", file: "(site)/order/scan/page.tsx" },
   { path: "/order/check-in", group: "site", file: "(site)/order/check-in/page.tsx" },
   // A DEMO- code: synthetic status (packages/api/src/demo/status-demo.js), no DB rows.
   { path: "/order/status", group: "site", file: "(site)/order/status/page.tsx", query: "orderQrCode=DEMO-PLAN.PREPPING" },
   { path: "/pod", group: "site", file: "(site)/pod/page.tsx" },
-  { path: "/group/:code", group: "site", file: "(site)/group/[code]/page.tsx", params: { code: "SAMPLE" } },
+  { path: "/group/:code", group: "site", file: "(site)/group/[code]/page.tsx", params: { code: "7K2M9Q" } },
   { path: "/gift-cards", group: "site", file: "(site)/gift-cards/page.tsx" },
   { path: "/gift-cards/purchase", group: "site", file: "(site)/gift-cards/purchase/page.tsx" },
   { path: "/gift-cards/balance", group: "site", file: "(site)/gift-cards/balance/page.tsx" },
@@ -71,7 +73,7 @@ export const SITE_ROUTES: readonly SiteRoute[] = [
     path: "/store/confirmation/:orderNumber",
     group: "site",
     file: "(site)/store/confirmation/[orderNumber]/page.tsx",
-    params: { orderNumber: "SAMPLE" },
+    params: { orderNumber: "100200" },
   },
   { path: "/challenges", group: "site", file: "(site)/challenges/page.tsx" },
   { path: "/challenges/meal-for-stranger", group: "site", file: "(site)/challenges/meal-for-stranger/page.tsx" },

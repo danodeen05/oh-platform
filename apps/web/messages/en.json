@@ -374,83 +374,6 @@
           "Timpanogos Cave"
         ]
       }
-    },
-    "hours": "Hours",
-    "weekday": "Weekday",
-    "weekend": "Weekend",
-    "openNow": "Open Now",
-    "upcomingCities": "Coming to Your City",
-    "loading": "Loading locations...",
-    "hero": {
-      "findUs": "Find Us",
-      "title": "Our Locations",
-      "description": "Experience Oh! Beef Noodle Soup at one of our unique locations"
-    },
-    "cityCreek": {
-      "tagline": "Downtown Salt Lake City",
-      "description": "Our flagship location in the heart of downtown Salt Lake City, offering a unique dining experience with private pods and tech-forward ordering.",
-      "mallDescription": "City Creek Center is Utah's premier shopping destination, featuring over 100 stores and restaurants in a stunning open-air setting with a retractable glass roof.",
-      "nearbyLandmarks": [
-        "Temple Square",
-        "Salt Palace Convention Center",
-        "Utah State Capitol",
-        "Gateway Mall"
-      ],
-      "parking": "Free parking in City Creek parking structure with validation"
-    },
-    "universityPlace": {
-      "tagline": "Utah Valley",
-      "description": "Serving the Utah Valley community with the same exceptional quality and innovative dining experience.",
-      "mallDescription": "University Place is Orem's vibrant shopping and entertainment hub, featuring a mix of national retailers and local favorites near Utah Valley University.",
-      "nearbyLandmarks": [
-        "Utah Valley University",
-        "Provo Canyon",
-        "Timpanogos Cave",
-        "BYU Campus"
-      ],
-      "parking": "Ample free parking available throughout University Place"
-    },
-    "details": {
-      "address": "Address",
-      "hours": "Hours",
-      "hoursWeekday": "Mon-Sat: 11am - 9pm",
-      "hoursSunday": "Sunday: Closed",
-      "parking": "Parking"
-    },
-    "about": {
-      "title": "About",
-      "nearby": "Nearby Landmarks"
-    },
-    "buttons": {
-      "orderAhead": "Order Ahead",
-      "getDirections": "Get Directions"
-    },
-    "features": {
-      "privatePods": "Private Pods",
-      "orderAhead": "Order Ahead",
-      "noTipping": "No Tipping",
-      "accessible": "Accessible"
-    },
-    "ohWay": {
-      "label": "The Oh! Way",
-      "title": "A Different Kind of Dining Experience",
-      "kiosk": {
-        "title": "Order Your Way",
-        "description": "Skip the line with our mobile app or use our in-store kiosks. Your food is ready when you are."
-      },
-      "pod": {
-        "title": "Private Dining Pods",
-        "description": "Enjoy your meal in your own private space. No crowded tables, no noise — just you and your perfect bowl."
-      },
-      "noTips": {
-        "title": "No Tipping Required",
-        "description": "The price you see is the price you pay. We pay our team competitive wages so you never have to worry about tips."
-      }
-    },
-    "cta": {
-      "title": "Ready for the Best Bowl?",
-      "description": "Order ahead and skip the wait. Your perfect bowl is just a few taps away.",
-      "button": "Start Your Order"
     }
   },
   "loyalty": {
@@ -561,13 +484,6 @@
       "legend": {
         "name": "Legend",
         "description": "Reach Beef Boss tier"
-      },
-      "categories": {
-        "milestone": "Milestones",
-        "streak": "Streaks",
-        "referral": "Referrals",
-        "challenge": "Challenges",
-        "special": "Special"
       }
     },
     "referral": {
@@ -583,13 +499,7 @@
       "description": "Sign up now and start earning with your first order."
     },
     "benefits": "Benefits",
-    "requirements": "Requirements",
-    "challenges": {
-      "title": "Active Challenges",
-      "description": "Complete challenges to earn bonus credits. Track your progress in your member dashboard.",
-      "reward": "Reward",
-      "viewProgress": "View My Progress"
-    }
+    "requirements": "Requirements"
   },
   "order": {
     "chooseLocation": "Choose Your Location",
@@ -1163,9 +1073,7 @@
       "steps": {
         "amount": "Amount",
         "recipient": "Recipient",
-        "pay": "Pay",
-        "payment": "Payment",
-        "confirmation": "Confirmation"
+        "pay": "Pay"
       },
       "next": "Continue",
       "edit": "Edit",
@@ -1211,41 +1119,6 @@
       "received": {
         "finishing": "We're issuing your gift card. This takes a moment.",
         "stuck": "Your payment went through. If we can't finish here, we'll email the card, so there's no need to pay again."
-      },
-      "backToGiftCards": "Back to Gift Cards",
-      "chooseDesign": "Choose Design",
-      "selectAmount": "Select Amount",
-      "customAmountLabel": "Or enter custom amount ($10-$500)",
-      "minimumAmount": "Minimum amount is $10",
-      "recipient": {
-        "title": "Recipient Information",
-        "email": "Recipient Email",
-        "emailPlaceholder": "email@example.com",
-        "name": "Recipient Name",
-        "namePlaceholder": "John Doe",
-        "message": "Personal Message (optional)",
-        "messagePlaceholder": "Add a personal message to your gift card..."
-      },
-      "delivery": {
-        "title": "Delivery",
-        "sendImmediately": "Send immediately",
-        "sendImmediatelyDesc": "Recipient will receive the gift card via email right after purchase",
-        "scheduleLater": "Schedule for later",
-        "scheduleLaterDesc": "Choose a date for the gift card to be delivered"
-      },
-      "orderSummary": "Order Summary",
-      "applyCredits": "Apply Credits",
-      "availableCredits": "Available: ${amount}",
-      "paymentMethod": "Payment Method",
-      "creditsFullyCover": "Your credits cover the full amount!",
-      "noPaymentNeeded": "No additional payment needed.",
-      "loadingPayment": "Loading payment options...",
-      "completePurchase": "Complete Purchase",
-      "confirmation": {
-        "title": "Gift Card Purchased!",
-        "willBeSent": "A ${amount} gift card will be sent to",
-        "buyAnother": "Buy Another Gift Card",
-        "returnHome": "Return Home"
       }
     },
     "errors": {
@@ -1620,54 +1493,6 @@
       "description": "Visit one of our locations to shop in person and enjoy a bowl while you're at it."
     }
   },
-  "referral": {
-    "title": "Refer Friends, Earn Rewards",
-    "subtitle": "Share the love and earn $5 for every friend who places their first order.",
-    "howItWorks": "How It Works",
-    "step1": {
-      "title": "Share Your Link",
-      "description": "Send your unique referral link to friends and family."
-    },
-    "step2": {
-      "title": "Friend Orders",
-      "description": "When your friend completes their first order of $20 or more, you both earn credits."
-    },
-    "step3": {
-      "title": "Earn Instantly",
-      "description": "You get $5 credit the moment their first order completes; they get $5 off that order. Credits expire after 90 days."
-    },
-    "goodToKnow": "Good to Know",
-    "rules": {
-      "minimumOrder": "Referral bonus applies to first orders of $20 or more",
-      "disbursement": "Credits are added to your account instantly when your friend completes their first order, and expire 90 days after they land",
-      "maxPerOrder": "Maximum of $5 credit can be applied per order"
-    },
-    "dashboard": {
-      "getStarted": "Get Started",
-      "enterEmailPrompt": "Enter your email to get your referral link",
-      "getMyReferralLink": "Get My Referral Link",
-      "creating": "Creating...",
-      "availableCredits": "Available Credits",
-      "useCreditsNote": "Use up to $5 per order at checkout",
-      "pendingCredits": "Pending Credits",
-      "scheduledForDisbursement": "Scheduled for disbursement",
-      "nextDisbursement": "Next disbursement:",
-      "yourReferralLink": "Your Referral Link",
-      "copy": "Copy",
-      "showQRCode": "Show QR Code",
-      "showMyOhQRCode": "Show My Oh! QR Code",
-      "scanToJoin": "Scan to Join Oh!",
-      "scanDescription": "Your friend can scan this QR code to sign up with your referral",
-      "close": "Close",
-      "shareToEarn": "Share this link to earn $5 for every friend who completes an order of $20+",
-      "recentActivity": "Recent Activity",
-      "creditEvents": {
-        "cashback": "{percent}% cashback on order",
-        "appliedToOrder": "Applied to order {orderId}"
-      },
-      "emailPlaceholder": "you@example.com"
-    }
-  },
   "contact": {
     "title": "Contact Us",
     "description": "We'd love to hear from you",
@@ -1906,127 +1731,6 @@
         "newTab": "(opens in a new tab)",
         "foundation": "One Red Step at a Time Foundation, a 501(c)(3)"
       }
-    },
-    "pageTitle": "Order Status",
-    "loading": "Loading order status...",
-    "noOrderCode": "No order code provided",
-    "orderNotFound": "Order not found",
-    "placeNewOrder": "Place New Order",
-    "statusUpdates": "Status updates automatically every 5 seconds",
-    "orderNumber": "Order #{number}",
-    "status": {
-      "pending": "Pending Payment",
-      "paid": "Paid",
-      "queued": "In Queue",
-      "prepping": "Preparing",
-      "ready": "Ready for Delivery",
-      "serving": "Enjoy Your Meal!",
-      "completed": "Completed",
-      "doneEating": "Done Eating?"
-    },
-    "pod": {
-      "yourPod": "Your Pod",
-      "podNumber": "POD {number}",
-      "confirmArrival": "Go to your pod and confirm arrival",
-      "checkedIn": "You're checked in!",
-      "staffNotified": "Staff Notified",
-      "calling": "Calling..."
-    },
-    "queue": {
-      "position": "Queue Position",
-      "estimatedWait": "Estimated wait: {minutes} minutes",
-      "notifyWhenReady": "We'll notify you when a pod is ready!"
-    },
-    "timeline": {
-      "title": "Order Timeline",
-      "paid": "Paid",
-      "checkedIn": "Checked In",
-      "orderStarted": "Order Started",
-      "qualityCheck": "Order Quality Check",
-      "delivered": "Delivered",
-      "totalTime": "Total Time"
-    },
-    "sections": {
-      "theBowl": "The Bowl",
-      "addOnsExtras": "Add-ons & Extras",
-      "location": "Location"
-    },
-    "buttons": {
-      "viewProfile": "View My Profile",
-      "orderAgain": "Order Again",
-      "doneEating": "I'm Done Eating",
-      "addToOrder": "Add to Your Order",
-      "callStaff": "Call Staff",
-      "addItems": "Add Items",
-      "confirmAtPod": "Confirm I'm At My Pod"
-    },
-    "location": "Location",
-    "confirmations": {
-      "finishedEating": "Are you finished eating? This will notify staff to clean your pod."
-    },
-    "errors": {
-      "markDone": "Failed to mark as done. Please try again."
-    },
-    "doneEating": {
-      "confirmPrompt": "Are you finished eating? This will notify staff to clean your pod.",
-      "failedToUpdate": "Failed to update status. Please try again."
-    },
-    "dessert": {
-      "readyForDessert": "Ready for Dessert",
-      "onItsWay": "Dessert On Its Way!",
-      "notifying": "Notifying..."
-    },
-    "addItems": {
-      "title": "Add to Your Order",
-      "loading": "Loading available items...",
-      "drinkRefills": "Drink Refills",
-      "requestRefill": "Request Refill →",
-      "request": "Request →",
-      "requesting": "Requesting...",
-      "waterRefill": "Water Refill",
-      "extrasAndAddons": "Extras & Add-Ons",
-      "requestExtras": "Request {count} Extra(s)",
-      "paidAddons": "Add-Ons & Extras",
-      "orderTotal": "Order Total",
-      "checkout": "Checkout →",
-      "demoMode": "Demo mode: No real charge will be made",
-      "cancel": "Cancel",
-      "pay": "Pay {amount}",
-      "processing": "Processing...",
-      "free": "Free",
-      "paid": "Paid",
-      "add": "Add",
-      "noAddons": "No add-ons available for this order.",
-      "callStaffInstead": "Call Staff Instead",
-      "failedToLoad": "Failed to load add-ons. Please try again or call staff."
-    },
-    "autoRefresh": "Status updates automatically every 10 seconds",
-    "mentalHealth": {
-      "label": "Mental Health Matters",
-      "loading": "Loading mental health awareness...",
-      "skipTip": "{name}, you already skipped the tip today because Oh! believes in fair wages for all. Want to make a real difference instead?",
-      "supportCause": "Support the Cause",
-      "foundation": "One Red Step at a Time Foundation • 501(c)(3)"
-    },
-    "signUp": {
-      "title": "Earn Rewards on This Order!",
-      "subtitle": "Create a free account to unlock exclusive benefits",
-      "benefit1": "Earn points on this order",
-      "benefit2": "Track your order history & stats",
-      "benefit3": "Unlock badges & complete challenges",
-      "benefit4": "Get member-only rewards & perks",
-      "button": "Sign Up & Earn Rewards",
-      "modalTitle": "Join Oh! Rewards",
-      "modalSubtitle": "Link this order to your new account",
-      "thisOrder": "This Order",
-      "willBeLinked": "will be linked to your account",
-      "createAccount": "Create Free Account",
-      "alreadyHaveAccount": "I Already Have an Account",
-      "privacyNote": "By creating an account, you agree to our Privacy Policy & Terms",
-      "orderLinked": "Order linked! You earned {points} points!"
-    },
-    "demo": {
-      "banner": "Live demo · not a real order"
     }
   },
   "groupOrder": {
@@ -2074,100 +1778,6 @@
     "phoneRequired": "Please enter your phone number",
     "invalidPhone": "Please enter a valid phone number",
     "updateFailed": "Failed to save phone number. Please try again."
-  },
-  "mealGift": {
-    "title": "Meal for a Stranger",
-    "description": "Gift a meal to the next solo diner at your chosen location. If they pay it forward, watch the kindness chain grow!",
-    "howItWorks": "How it Works",
-    "steps": {
-      "chooseLocation": "Choose a location and gift amount ($15.99 - $35.00)",
-      "nextDiner": "The next solo diner at that location gets notified of your gift",
-      "acceptOrForward": "They can accept it or pay it forward to the next person",
-      "earnReward": "When someone accepts, you earn a $5 reward!",
-      "seeMessage": "When someone accepts, you'll see their thank-you message",
-      "refund": "If unclaimed by end of day, you get a full refund as credits"
-    },
-    "form": {
-      "location": "Location",
-      "giftAmount": "Gift Amount: ${amount}",
-      "giftAmountLabel": "Gift Amount",
-      "minAmount": "$15.99",
-      "maxAmount": "$35.00",
-      "message": "Message (Optional)",
-      "messagePlaceholder": "Add a message of kindness...",
-      "availableCredits": "Available Credits",
-      "useCredits": "Use credits for this gift",
-      "paymentCard": "Payment Card"
-    },
-    "summary": {
-      "giftAmount": "Gift Amount:",
-      "creditsApplied": "Credits Applied:",
-      "cardPayment": "Card Payment:",
-      "potentialReward": "Potential Reward:",
-      "rewardAmount": "+$5.00",
-      "alreadyCompleted": "You've already earned your $5 reward for this challenge. Thank you for continuing to spread kindness!"
-    },
-    "button": {
-      "giftMeal": "Gift ${amount} Meal",
-      "processing": "Processing..."
-    },
-    "signInPrompt": "Please sign in to gift a meal",
-    "errors": {
-      "signIn": "Please sign in to gift a meal",
-      "selectLocation": "Please select a location",
-      "paymentNotReady": "Payment system not ready. Please wait...",
-      "createUser": "Failed to create user",
-      "createPaymentIntent": "Failed to create payment intent",
-      "cardNotFound": "Card element not found",
-      "paymentFailed": "Payment was not successful",
-      "createGift": "Failed to create meal gift",
-      "createGiftRetry": "Failed to create meal gift. Please try again.",
-      "loadLocations": "Failed to load locations"
-    },
-    "success": {
-      "created": "Meal gift created! Your kindness will brighten someone's day."
-    },
-    "modal": {
-      "title": "Someone Gifted You a Meal!",
-      "chainOfKindness": "Chain of Kindness: {count} pay-it-forwards!",
-      "description": "A kind stranger has gifted you this meal at {location}. You can:",
-      "acceptOption": "Accept it",
-      "acceptDescription": "Apply to your current order",
-      "forwardOption": "Pay it forward",
-      "forwardDescription": "Pass to the next person",
-      "acceptButton": "Accept Gift",
-      "forwardButton": "Pay It Forward",
-      "backButton": "Back",
-      "acceptTitle": "Accept This Gift",
-      "acceptSubtitle": "The ${amount} will be applied to your order",
-      "thankYouLabel": "Thank You Message (Optional)",
-      "thankYouPlaceholder": "Thank the giver...",
-      "forwardTitle": "Pay It Forward",
-      "forwardSubtitle": "Pass this ${amount} gift to the next diner",
-      "forwardMessageLabel": "Message to Next Person (Optional)",
-      "forwardMessagePlaceholder": "Add your message of kindness..."
-    },
-    "toast": {
-      "reserved": "You've reserved a ${amount} meal gift! It will be applied at checkout.",
-      "paidForward": "You've paid it forward! The next person will get this gift.",
-      "payForwardFailed": "Failed to pay forward meal gift",
-      "giftReserved": "Meal gift reserved! It will be applied at checkout.",
-      "payForwardSuccess": "You paid it forward! The next person will receive this gift.",
-      "payForwardError": "Failed to pay forward. Please try again."
-    },
-    "dashboard": {
-      "giveAMeal": "Give a Meal",
-      "giftAnotherMeal": "Gift Another Meal",
-      "yourGiftHistory": "Your Gift History:",
-      "acceptedBy": "Accepted by {name}",
-      "expired": "Expired",
-      "pending": "Pending"
-    },
-    "payment": {
-      "giftApplied": "Meal Gift Applied",
-      "giftExcess": "Gift Excess → Your Credits"
-    },
-    "quotedMessage": "“{message}”"
   },
   "challenges": {
     "mealForStranger": {
@@ -6089,13 +5699,15 @@
       "FORBIDDEN": "Please sign in with the account that placed this order.",
       "NETWORK_ERROR": "We couldn't reach Oh!. Check your connection and try again.",
       "RATE_LIMITED": "That was a lot of tries at once. Please wait a moment and try again.",
-      "GENERIC": "Something went wrong. Please try again."
+      "GENERIC": "Something went wrong. Please try again.",
+      "PROMO_EXHAUSTED": "That promo code has been used up. Review your total and try again."
     },
     "warnings": {
       "PROMO_INVALID": "That code isn't valid for this order.",
       "GIFT_CARD_INVALID": "That gift card code isn't valid or has no balance.",
       "CREDITS_REQUIRE_SIGN_IN": "Sign in to use your credit.",
-      "MEAL_GIFT_UNAVAILABLE": "That meal gift is no longer available."
+      "MEAL_GIFT_UNAVAILABLE": "That meal gift is no longer available.",
+      "PROMO_REQUIRES_SIGN_IN": "Sign in to use that promo code."
     }
   },
   "passport": {
@@ -6651,319 +6263,6 @@
       "body": "Order ahead, then pick your arrival time and your pod.",
       "button": "Start an order"
     }
-  },
-  "toast": {
-    "success": "Success",
-    "error": "Error",
-    "warning": "Warning",
-    "info": "Info"
-  },
-  "menu": {
-    "title": "Our Menu",
-    "description": "Explore our selection of premium beef noodle soups and accompaniments",
-    "loading": "Loading menu...",
-    "error": {
-      "title": "Unable to load menu",
-      "tryAgain": "Try Again"
-    },
-    "categories": {
-      "soups": "Soups",
-      "noodles": "Noodles",
-      "addons": "Add-ons",
-      "sides": "Sides",
-      "drinks": "Drinks",
-      "desserts": "Desserts"
-    },
-    "tags": {
-      "premium": "Premium",
-      "included": "Included",
-      "signature": "Signature",
-      "complimentary": "Complimentary",
-      "unlimitedRefills": "Unlimited Refills"
-    },
-    "sections": {
-      "soup": {
-        "subtitle": "Start with our signature broth",
-        "description": "Rich, two-phase beef bone broth: a long simmer, then a finish built for flavor"
-      },
-      "noodles": {
-        "subtitle": "Choose your noodles",
-        "description": "Hand-pulled noodles made fresh daily"
-      },
-      "premiumAddons": {
-        "subtitle": "Enhance your bowl",
-        "description": "Premium proteins and toppings"
-      },
-      "sideDishes": {
-        "subtitle": "Complete your meal",
-        "description": "Traditional sides and accompaniments"
-      },
-      "dessert": {
-        "subtitle": "Sweet endings",
-        "description": "Traditional desserts to finish your meal"
-      }
-    },
-    "hero": {
-      "title": "Our Menu",
-      "description": "Build your perfect bowl with premium American beef and our two-phase broth",
-      "orderNow": "Order Now"
-    },
-    "difference": {
-      "title": "The Oh! Difference",
-      "description": "We're not just another noodle shop. We're reimagining what dining can be.",
-      "techFirst": {
-        "title": "Tech-First Experience",
-        "description": "Order ahead, skip the line, and enjoy a seamless dining experience"
-      },
-      "privatePods": {
-        "title": "Private Dining Pods",
-        "description": "Enjoy your meal in your own private space, free from distractions"
-      },
-      "seamlessService": {
-        "title": "Seamless Service",
-        "description": "From ordering to payment, everything is designed for convenience"
-      },
-      "loyalty": {
-        "title": "Rewarding Loyalty",
-        "description": "Earn points, unlock rewards, and level up with every visit"
-      }
-    },
-    "cta": {
-      "title": "Ready for the Best Bowl?",
-      "description": "Order ahead and skip the wait. Your perfect bowl is just a few taps away.",
-      "button": "Start Your Order"
-    },
-    "dietary": {
-      "vegetarian": "Vegetarian",
-      "vegan": "Vegan",
-      "glutenFree": "Gluten-Free",
-      "spice": {
-        "level1": "Mild",
-        "level2": "Medium",
-        "level3": "Hot"
-      }
-    },
-    "allergen": {
-      "title": "Allergen Information",
-      "description": "Our dishes are prepared in a kitchen that handles common allergens including wheat, soy, and eggs. Please inform our staff of any allergies or dietary restrictions when ordering.",
-      "spicyIndicator": "Spicy",
-      "contactUs": "For detailed allergen information, please contact us before ordering."
-    }
-  },
-  "auth": {
-    "loading": "Loading...",
-    "readyToOrder": "Ready to Order?",
-    "createAccount": "Create a free account and start earning immediately.",
-    "signInButton": "SIGN IN / SIGN UP",
-    "or": "or",
-    "continueAsGuest": "Continue as Guest",
-    "guestWarning": "Guest checkout is quick, but you won't earn loyalty points or save your favorites.",
-    "benefits": {
-      "cashback": "1% Cashback",
-      "cashbackSubtitle": "including this order!",
-      "referral": "$5 Referral",
-      "referralSubtitle": "for you & friends",
-      "earlyAccess": "Early Access",
-      "earlyAccessSubtitle": "new menu items"
-    }
-  },
-  "features": {
-    "fortuneCookie": {
-      "title": "Your Digital Fortune Cookie",
-      "subtitle": "While you wait, crack open your personalized fortune",
-      "crackOpen": "Crack It Open",
-      "loading": "Reading your fortune...",
-      "luckyNumbers": "Lucky Numbers",
-      "thisDay": "This Day in History ({year})",
-      "learnChinese": "Learn Chinese",
-      "unavailable": "Fortune unavailable - but your meal is still going to be amazing!"
-    },
-    "roast": {
-      "title": "The Roast Zone",
-      "subtitle": "Want our brutally honest (and hilarious) take on your order choices?",
-      "button": "Roast My Order",
-      "loading": "Analyzing your life choices...",
-      "highlights": "What caught our attention:",
-      "unavailable": "Our roast chef is on break. Your order is probably fine. Probably."
-    },
-    "backstory": {
-      "title": "Behind the Scenes",
-      "subtitle": "Ever wonder about the secret lives of your ingredients?",
-      "button": "Tell Me Everything",
-      "loading": "Digging up the dirt...",
-      "heading": "The Untold Stories",
-      "unavailable": "The ingredients prefer to remain anonymous. Mysterious bunch."
-    },
-    "kitchen": {
-      "label": "Live Kitchen Feed",
-      "listening": "Listening to the kitchen...",
-      "quiet": "The kitchen is suspiciously quiet. They're up to something."
-    }
-  },
-  "payment": {
-    "pageTitle": "Complete Your Order",
-    "orderNumber": "Order #{number}",
-    "invalidOrder": "Invalid Order",
-    "missingInformation": "Missing order information",
-    "orderNotFound": "Order Not Found",
-    "couldNotFind": "We couldn't find this order",
-    "startNewOrder": "Start a new order",
-    "readyBy": "Ready by",
-    "total": "Total",
-    "processing": "Processing...",
-    "payNow": "Pay Now",
-    "testMode": "Test mode - no real charge",
-    "theBowl": "The Bowl",
-    "addOnsExtras": "Add-ons & Extras",
-    "qty": "Qty: {count}",
-    "loading": "Loading...",
-    "subtotal": "Subtotal",
-    "tax": "Tax",
-    "creditsApplied": "Credits Applied",
-    "payAmount": "Pay ${amount}",
-    "processingPayment": "Processing Payment...",
-    "secureCheckout": "Secure checkout powered by Stripe",
-    "paymentMethod": "Payment Method",
-    "testPayment": "Test Payment",
-    "demoMode": "Demo mode - no real charge",
-    "demoWarning": "This is a demo payment. Real Stripe integration coming soon!",
-    "availableCredits": "Available Credits",
-    "youHaveCredits": "You have <bold>${amount}</bold> in credits",
-    "maxCreditsNote": "You can apply up to $5 in credit to a single order",
-    "applyToOrder": "Apply ${amount} to this order",
-    "welcomeReferred": "Welcome! You've been referred",
-    "referralCreditsNote": "You got ${amount} in credits to use on this order",
-    "referralAlreadyUsed": "Referral credit already used",
-    "referralAlreadyUsedNote": "Thanks for checking us out again! Referral credits are only applied to your first order. You can still earn credits by referring friends using your personal referral link.",
-    "loadingAccount": "Loading your account and rewards...",
-    "signInToComplete": "Sign in to complete your order",
-    "signInDescription": "You'll need to sign in to track your order, earn rewards, and use referral credits.",
-    "referralDiscountWaiting": "You have a referral discount waiting!",
-    "signInSignUp": "Sign In / Sign Up",
-    "guestCheckout": "Guest Checkout",
-    "guestCheckoutDescription": "Please enter your name so we can prepare your order.",
-    "name": "Name",
-    "phone": "Phone",
-    "email": "Email",
-    "optional": "optional",
-    "yourName": "Your name",
-    "forOrderUpdates": "For order updates",
-    "forReceipt": "For receipt",
-    "smsConsent": "I agree to receive SMS text messages from Oh Beef Noodle Soup regarding my order (confirmation & ready-for-pickup alerts). Message frequency varies. Msg & data rates may apply. Reply STOP to unsubscribe.",
-    "privacyPolicy": "Privacy Policy",
-    "enterYourName": "Please enter your name",
-    "wantToEarnRewards": "Want to earn rewards and track your orders?",
-    "signInInstead": "Sign In Instead",
-    "waitLoadingAccount": "Please wait while we load your account...",
-    "errorCodes": {
-      "CREDIT_SHORT": "Your credit balance changed. Check your total and try again.",
-      "GIFT_CARD_SHORT": "Your gift card balance changed. Check your total and try again.",
-      "MEAL_GIFT_UNAVAILABLE": "That meal gift is no longer available.",
-      "REWARD_UNAVAILABLE": "That reward can no longer be used.",
-      "PAYMENT_NOT_VERIFIED": "We couldn't confirm your payment yet. If you were charged, show this screen to our staff.",
-      "ORDER_FAILED": "We couldn't complete your order. Please try again.",
-      "QUOTE_CHANGED": "Your order total changed. Check it and try again.",
-      "REFUNDED": "We couldn't apply your payment, so your card was refunded in full. Please try again.",
-      "GROUP_CHANGED": "Part of this group was already paid or changed. Check the group and try again."
-    },
-    "invalidPhone": "Please enter a valid phone number, or leave it blank"
-  },
-  "social": {
-    "instagram": "Instagram",
-    "twitter": "X (Twitter)",
-    "facebook": "Facebook",
-    "tiktok": "TikTok",
-    "yelp": "Yelp",
-    "tripadvisor": "TripAdvisor",
-    "youtube": "YouTube",
-    "linkedin": "LinkedIn",
-    "email": "Email"
-  },
-  "checkIn": {
-    "title": "Check-In Kiosk",
-    "subtitle": "Scan or enter your order QR code to get your pod assignment",
-    "howToTitle": "How to check in:",
-    "step1": "Find your order QR code (on your order confirmation page)",
-    "step2": "Scan it with the kiosk scanner or enter the code below",
-    "step3": "Get your pod assignment or queue position",
-    "qrCodeLabel": "Order QR Code:",
-    "qrCodePlaceholder": "ORDER-xxpmm5hf-1234567890-ABC123",
-    "checkInButton": "Check In",
-    "checkingIn": "Checking in...",
-    "needHelp": "Need Help?",
-    "helpTip1": "Your QR code is on your order confirmation page",
-    "helpTip2": "It starts with \"ORDER-\" followed by numbers and letters",
-    "helpTip3": "Ask staff if you need assistance",
-    "loading": "Loading..."
-  },
-  "scan": {
-    "title": "Confirm Pod Arrival",
-    "subtitle": "Scan or enter your order QR code at your assigned pod",
-    "assignedPod": "Your Assigned Pod",
-    "podNumber": "POD {number}",
-    "qrCodeLabel": "Your Order QR Code:",
-    "qrCodeHint": "Same QR code from your order confirmation",
-    "qrCodePlaceholder": "ORDER-xxpmm5hf-1234567890-ABC123",
-    "enterQrCodeError": "Please scan or enter your order QR code",
-    "confirmFailed": "Failed to confirm pod arrival",
-    "networkError": "Network error. Please try again.",
-    "confirming": "Confirming...",
-    "confirmButton": "Confirm I'm At My Pod",
-    "whatThisDoes": "What This Does",
-    "helpList": {
-      "confirms": "Confirms you've arrived at your assigned pod",
-      "notifies": "Notifies the kitchen to start preparing your order",
-      "realtime": "You'll see real-time status updates on your screen"
-    },
-    "backToStatus": "Back to Order Status",
-    "success": {
-      "title": "Pod Confirmed!",
-      "message": "Your order is now being prepared"
-    },
-    "loading": "Loading..."
-  },
-  "confirmation": {
-    "title": "Order Confirmed!",
-    "orderNumber": "Order #{number}",
-    "thankYou": "Thank you for your order",
-    "whatNext": "What's Next?",
-    "checkInInstructions": "Head to the restaurant and check in at the kiosk or scan the QR code at your assigned pod.",
-    "viewStatus": "View Order Status",
-    "simulateCheckIn": "Simulate Check-in (Demo)",
-    "checkingIn": "Checking in...",
-    "groupOrderNote": "This is a group order with {count} orders.",
-    "paidStatus": "Payment Complete",
-    "paymentSuccessful": "Payment Successful",
-    "paymentConfirmed": "Your payment of {amount} has been confirmed",
-    "paymentPending": "Payment Pending",
-    "paymentProcessing": "Your payment is being processed",
-    "yourOrderQrCode": "Your Order QR Code",
-    "scanAtKiosk": "Scan this at the kiosk when you arrive to get your pod assignment",
-    "expectedArrival": "Expected arrival: {time}",
-    "host": "Host",
-    "guest": "Guest {number}",
-    "podNumber": "Pod {number}",
-    "noPodYet": "No pod yet",
-    "checkInThisOrder": "Check In This Order",
-    "assignedToPod": "Assigned to Pod {number} - awaiting arrival",
-    "checkedInAtPod": "Checked in at Pod {number}",
-    "orderLabel": "Order",
-    "subtotal": "Subtotal",
-    "tax": "Tax",
-    "total": "Total",
-    "qty": "Qty: {count}",
-    "trackOrderStatus": "Track Order Status",
-    "shareYourOrder": "Share Your Order!",
-    "spreadTheWord": "Spread the word and earn rewards",
-    "copied": "Copied!",
-    "copy": "Copy",
-    "shareVia": "Share via...",
-    "twitter": "Twitter",
-    "facebook": "Facebook",
-    "linkedin": "LinkedIn",
-    "referralNote": "Your referral link is included! Friends get $5 off their first order. You earn $5 instantly when they complete a $20+ order.",
-    "backToHome": "Back to Home",
-    "loadingOrder": "Loading order..."
   },
   "experience": {
     "meta": {
