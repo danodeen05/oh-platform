@@ -334,6 +334,24 @@ automatically). Run the same block without `--dry-run`, then dry-run again: expe
 and `applied 0`. Put `returned` and `returnedCents` in the owner notes.
 **Abort:** leave what is written. Every write is a proven payment.
 
+### 6c. Dietary safety: `fix-no-beef-vegan-flag.ts` (F1 SAFETY RULING, final review I3)
+
+"Classic Beef Noodle Soup (no beef)" (`cmip6jbzc000a2nnnewnr00lb`) is made with beef-bone
+broth but is flagged vegan in prod. The new menu's dietary marks and Chappy (its menu tool's
+`dietary` field and dietary filter) both read `MenuItem.isVegan`/`isVegetarian` from that row,
+so this must land before the web deploy (step 10). The script sets both flags to false on that
+one row, matched by id AND name: it refuses (non-zero, nothing written) if the id is missing or
+the name differs.
+```bash
+ALLOW_NON_LOCAL=1 DATABASE_URL="$PROD_DATABASE_URL" pnpm --filter @oh/db exec tsx scripts/fix-no-beef-vegan-flag.ts --dry-run
+```
+Expect `"action":"would-fix"` with `before` showing `isVegan: true` (or `already-correct`, then
+skip). Run it without `--dry-run` (expect `fixed`), then dry-run again: expect `already-correct`.
+Put "the no-beef soup is no longer marked vegan or vegetarian (beef-bone broth)" in the owner notes.
+**Abort:** a refusal means the row changed since the review. Stop and ask the owner which row
+it is now; do not deploy the web until the flag is right. Undo, only if the owner says so: the
+owner re-flags it in admin.
+
 ## 7. Deploy the API (Railway) with Vercel held
 
 A push to `main` makes Railway **and** Vercel build. Hold Vercel so the API goes first.
@@ -535,6 +553,8 @@ Text: "Oh! site release is live in prod and ready for your review." Do not re-ru
 Include in the owner notes:
 - the SKIP list (9);
 - the meal-gift `returned` count and `returnedCents`, plus the unverified counts (6b);
+- the no-beef soup is no longer marked vegan or vegetarian: it uses beef-bone broth (6c);
+- lapsed meal gifts now go back to givers as store credit every night at 03:10 (4d);
 - the credit drift and non-positive PendingCredit counts (6a);
 - the phone conflicts (11b);
 - that the new pod stickers were mailed (12a);
@@ -621,6 +641,7 @@ Every DB script prints `target LOCAL|REMOTE host/db` first, refuses a non-local 
 | `packages/db/scripts/cutover-migrate.sh` | `BEGIN; file; ROLLBACK` per pending migration | column probes; partial aborts | `cutover-migrate.test.ts` (scratch schema) |
 | `packages/db/scripts/cutover-credit-lots.ts` | counts only | conditional `disbursedAt` claim in the grant transaction | `cutover-credit-lots.test.ts` |
 | `packages/db/scripts/backfill-mealgift-paidat.ts` | Stripe reads only | conditional `paidAt IS NULL` claim; the return's credit grant commits with it | `backfill-mealgift-paidat.test.ts` |
+| `packages/db/scripts/fix-no-beef-vegan-flag.ts` | reports would-fix / already-correct | conditional update on id + name; a re-run is already-correct | `fix-no-beef-vegan-flag.test.ts` |
 | `packages/db/scripts/seed-comb-seats.ts --all` | counts creates/updates/retires/links | upsert by label; only changed rows written | `seed-comb-seats.test.ts` |
 | `packages/db/scripts/seat-rollback-release1.ts` | plan only | a second run finds nothing to change | `seat-rollback-release1.test.ts` |
 | `packages/db/scripts/backfill-i18n.ts` (+ `--clear-emoji --emoji-backup`) | logs planned updates | writes only differing values; backup never overwritten | `backfill-i18n.test.ts`, `emoji-backup.test.ts` |
