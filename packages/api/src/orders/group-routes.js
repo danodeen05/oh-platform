@@ -45,20 +45,21 @@ function generateGroupCode() {
 }
 
 /**
- * Task A8b, fix round 2: a group member's full name (or the old, full
- * email-derived name) was shown to anyone holding the group code, not just
- * that member. "First name plus last initial" (e.g. "Dana K.") is the
- * ceiling for everyone except the member's own record.
+ * Task A8b, fix round 2 (+ addendum): a group member's or guest's full name
+ * (or the old, full email-derived name for a member) was shown to anyone
+ * holding the group code, not just that person. "First name plus last
+ * initial" (e.g. "Dana K.") is the shared display-name ceiling for both a
+ * member and a guest, everyone but that person's own record.
  */
-function firstNameLastInitial(fullName) {
-  if (typeof fullName !== "string" || !fullName.trim()) return null;
+function displayName(fullName, emptyFallback = null) {
+  if (typeof fullName !== "string" || !fullName.trim()) return emptyFallback;
   const parts = fullName.trim().split(/\s+/);
   if (parts.length === 1) return parts[0];
   const lastInitial = parts[parts.length - 1].charAt(0).toUpperCase();
   return `${parts[0]} ${lastInitial}.`;
 }
 
-/** The email's local part's first token, capitalized, with no domain (the fallback when there's no name). */
+/** The email's local part's first token, capitalized, with no domain (a member's fallback when there's no name). */
 function emailDerivedFirstName(email) {
   if (typeof email !== "string" || !email.includes("@")) return null;
   const token = email.split("@")[0].split(/[._+-]/)[0];
@@ -66,40 +67,44 @@ function emailDerivedFirstName(email) {
 }
 
 /**
- * `viewerUserId`: the verified caller's own database user id, or null. The
- * owner of a user record (the caller themself) still sees their own full
- * name; everyone else gets at most "First L." (or the email-derived first
- * name, never the full email-derived name).
+ * `viewer`: `{ userId, guestId }`, the verified caller's own identity (at
+ * most one is set), resolved without ever failing the request. The owner of
+ * a record (the caller themself, by user id or by a matching guest session)
+ * still sees their own full name; everyone else gets at most "First L." (or,
+ * for a member with no name, the email-derived first name - never the full
+ * email-derived name).
  */
-function safeUser(u, viewerUserId = null) {
+function safeUser(u, viewer = null) {
   if (!u || typeof u !== "object") return u;
-  if (viewerUserId && u.id === viewerUserId) return { id: u.id, name: u.name ?? null };
-  const name = firstNameLastInitial(u.name) ?? emailDerivedFirstName(u.email);
+  if (viewer?.userId && u.id === viewer.userId) return { id: u.id, name: u.name ?? null };
+  const name = displayName(u.name) ?? emailDerivedFirstName(u.email);
   return { id: u.id, name };
 }
 
-function safeGuest(g) {
+/** Same display rule as `safeUser`: "First L.", or "Guest" when there's no name at all. */
+function safeGuest(g, viewer = null) {
   if (!g || typeof g !== "object") return g;
-  return { id: g.id, name: g.name };
+  if (viewer?.guestId && g.id === viewer.guestId) return { id: g.id, name: g.name ?? null };
+  return { id: g.id, name: displayName(g.name, "Guest") };
 }
 
-function publicOrder(o, viewerUserId = null) {
+function publicOrder(o, viewer = null) {
   if (!o || typeof o !== "object") return o;
   const out = { ...o };
-  if ("user" in out) out.user = safeUser(out.user, viewerUserId);
-  if ("guest" in out) out.guest = safeGuest(out.guest);
+  if ("user" in out) out.user = safeUser(out.user, viewer);
+  if ("guest" in out) out.guest = safeGuest(out.guest, viewer);
   return out;
 }
 
 /** What any holder of the group code may see: no guest session tokens, no member contact details. */
-export function publicGroup(g, viewerUserId = null) {
+export function publicGroup(g, viewer = null) {
   if (!g) return g;
   const out = { ...g };
-  if ("hostUser" in out) out.hostUser = safeUser(out.hostUser, viewerUserId);
-  if ("hostGuest" in out) out.hostGuest = safeGuest(out.hostGuest);
-  if (Array.isArray(out.memberUsers)) out.memberUsers = out.memberUsers.map((u) => safeUser(u, viewerUserId));
-  if (Array.isArray(out.memberGuests)) out.memberGuests = out.memberGuests.map(safeGuest);
-  if (Array.isArray(out.orders)) out.orders = out.orders.map((o) => publicOrder(o, viewerUserId));
+  if ("hostUser" in out) out.hostUser = safeUser(out.hostUser, viewer);
+  if ("hostGuest" in out) out.hostGuest = safeGuest(out.hostGuest, viewer);
+  if (Array.isArray(out.memberUsers)) out.memberUsers = out.memberUsers.map((u) => safeUser(u, viewer));
+  if (Array.isArray(out.memberGuests)) out.memberGuests = out.memberGuests.map((gt) => safeGuest(gt, viewer));
+  if (Array.isArray(out.orders)) out.orders = out.orders.map((o) => publicOrder(o, viewer));
   return out;
 }
 
@@ -167,19 +172,30 @@ export async function registerGroupOrderRoutes(app, {
   now = () => new Date(),
 }) {
   /**
+   * `{ userId, guestId }` (at most one set), the verified caller's own
+   * identity - never fails. Used only to let a member or guest see their
+   * own full name in `safeUser`/`safeGuest` above; an unverified caller
+   * never gets more than anyone else. A guest is proven the same way
+   * `actor()` below proves one: a server-issued `Guest.sessionToken` sent
+   * as `x-guest-session` - never a client-sent guestId.
+   */
+  async function resolveViewer(req) {
+    const who = await customerAuth.resolve(req);
+    const userId = orderOwnerId(who);
+    if (userId) return { userId, guestId: null };
+    const token = req.headers?.[GUEST_SESSION_HEADER];
+    if (typeof token === "string" && token) {
+      const guest = await prisma.guest.findUnique({ where: { sessionToken: token } });
+      if (guest && new Date(guest.expiresAt) > now()) return { userId: null, guestId: guest.id };
+    }
+    return { userId: null, guestId: null };
+  }
+
+  /**
    * Who is acting: { userId, guestId, verified } or { status, error }.
    * A verified member (Clerk) or a verified guest (session token); otherwise
    * a bare body guestId, unverified.
    */
-  /**
-   * The verified caller's own database user id, or null - never fails.
-   * Used only to let a member see their own full name in `safeUser` above;
-   * an unverified caller (or a guest) never gets more than anyone else.
-   */
-  async function viewerUserId(req) {
-    return orderOwnerId(await customerAuth.resolve(req));
-  }
-
   async function actor(req) {
     const who = await customerAuth.resolve(req);
     const userId = orderOwnerId(who);
@@ -239,7 +255,7 @@ export async function registerGroupOrderRoutes(app, {
     const { locationId, estimatedArrival } = req.body || {};
     const result = await createGroupOrder(prisma, { hostUserId: a.userId, hostGuestId: a.guestId, locationId, estimatedArrival, now: now() });
     if (result.error) return reply.code(result.status).send({ error: result.error });
-    return fullGroup(result.group.id, a.userId);
+    return fullGroup(result.group.id, { userId: a.userId, guestId: a.guestId });
   });
 
   app.get("/group-orders/:code", async (req, reply) => {
@@ -249,7 +265,7 @@ export async function registerGroupOrderRoutes(app, {
       await prisma.groupOrder.update({ where: { id: group.id }, data: { status: "CANCELLED" } });
       return reply.code(410).send({ error: "Group order has expired" });
     }
-    return publicGroup(group, await viewerUserId(req));
+    return publicGroup(group, await resolveViewer(req));
   });
 
   app.post("/group-orders/:code/join", async (req, reply) => {
@@ -266,7 +282,7 @@ export async function registerGroupOrderRoutes(app, {
     if (a.userId && !ids(group.memberUsers).includes(a.userId)) data.memberUsers = { connect: { id: a.userId } };
     if (!a.userId && a.guestId && !ids(group.memberGuests).includes(a.guestId)) data.memberGuests = { connect: { id: a.guestId } };
     if (Object.keys(data).length) await prisma.groupOrder.update({ where: { id: group.id }, data });
-    return fullGroup(group.id, a.userId);
+    return fullGroup(group.id, { userId: a.userId, guestId: a.guestId });
   });
 
   app.patch("/group-orders/:code", async (req, reply) => {
@@ -301,7 +317,7 @@ export async function registerGroupOrderRoutes(app, {
       data.paymentMethod = paymentMethod;
     }
     if (Object.keys(data).length) await prisma.groupOrder.update({ where: { id: group.id }, data });
-    return fullGroup(group.id, found.actor.userId);
+    return fullGroup(group.id, { userId: found.actor.userId, guestId: found.actor.guestId });
   });
 
   app.post("/group-orders/:code/orders", async (req, reply) => {
@@ -331,7 +347,7 @@ export async function registerGroupOrderRoutes(app, {
         now: t,
         isDineInOrdersEnabled,
       });
-      return publicOrder(await prisma.order.findUnique({ where: { id: order.id }, include: ORDER_INCLUDE }), a.userId);
+      return publicOrder(await prisma.order.findUnique({ where: { id: order.id }, include: ORDER_INCLUDE }), { userId: a.userId, guestId: a.guestId });
     } catch (err) {
       return sendOrderError(reply, err);
     }
@@ -375,7 +391,7 @@ export async function registerGroupOrderRoutes(app, {
     await prisma.groupOrder.update({ where: { id: group.id }, data: { hostUserId: target.userId || null, hostGuestId: target.userId ? null : target.guestId || null } });
     await prisma.order.updateMany({ where: { groupOrderId: group.id }, data: { isGroupHost: false } });
     await prisma.order.update({ where: { id: target.id }, data: { isGroupHost: true } });
-    return fullGroup(group.id, found.actor.userId);
+    return fullGroup(group.id, { userId: found.actor.userId, guestId: found.actor.guestId });
   });
 
   app.post("/group-orders/:code/complete", async (req, reply) => {
@@ -387,7 +403,7 @@ export async function registerGroupOrderRoutes(app, {
     if (orders.length === 0) return reply.code(400).send({ error: "No orders in this group" });
 
     if (group.status === "PAID" && orders.every((o) => o.status === "QUEUED" && o.podSelectionMethod === "GROUP_HOST_SELECTED")) {
-      return fullGroup(group.id, found.actor.userId);
+      return fullGroup(group.id, { userId: found.actor.userId, guestId: found.actor.guestId });
     }
     if (!orders.every((o) => o.paymentStatus === "PAID")) return reply.code(400).send({ error: "Not all orders are paid" });
 
@@ -413,7 +429,7 @@ export async function registerGroupOrderRoutes(app, {
       await prisma.order.update({ where: { id: order.id }, data });
     }
     console.log(`[Group Order Completed] Code: ${group.code}, Orders: ${orders.length}, Seating Option: ${seatingOption}`);
-    return fullGroup(group.id, found.actor.userId);
+    return fullGroup(group.id, { userId: found.actor.userId, guestId: found.actor.guestId });
   });
 
   app.post("/group-orders/:code/payment-intent", async (req, reply) => {
@@ -447,8 +463,8 @@ export async function registerGroupOrderRoutes(app, {
     }
     try {
       const result = await markGroupPaid(prisma, stripe, { groupOrderId: group.id, paymentIntentId, now: now() }, effects);
-      const viewerId = await viewerUserId(req);
-      return { alreadyPaid: result.alreadyPaid, orders: (result.orders || []).map((o) => publicOrder(o, viewerId)), group: await fullGroup(group.id, viewerId) };
+      const viewer = await resolveViewer(req);
+      return { alreadyPaid: result.alreadyPaid, orders: (result.orders || []).map((o) => publicOrder(o, viewer)), group: await fullGroup(group.id, viewer) };
     } catch (err) {
       return sendOrderError(reply, err);
     }
