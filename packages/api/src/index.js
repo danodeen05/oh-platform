@@ -104,7 +104,7 @@ import { createCustomerAuth, registerCustomerIdentity, orderOwnerId } from "./au
 import { registerChappyRoutes } from "./chappy/routes.js";
 import { createChappyLimits } from "./chappy/limits.js";
 import { createPodCall, PodCallError } from "./orders/pod-calls.js";
-import { FASTIFY_OPTIONS, rateLimitKey } from "./http-config.js";
+import { FASTIFY_OPTIONS, globalRateLimitOptions } from "./http-config.js";
 import { createKioskAuth } from "./auth/kiosk.js";
 import { publicReferral, registerAdminOnlyRoutes } from "./auth/hardening.js";
 import { listLocationSeats, resolveSeatViewer } from "./seats/service.js";
@@ -195,23 +195,11 @@ await app.register(cors, {
 });
 await app.register(formbody);
 
-// Register rate limiting
-await app.register(rateLimit, {
-  max: 100, // 100 requests per window
-  timeWindow: '1 minute',
-  // Higher limits for certain routes
-  keyGenerator: (req) => {
-    // The real client IP (trustProxy: 1), never a client-supplied header
-    return rateLimitKey(req);
-  },
-  errorResponseBuilder: (req, context) => ({
-    error: 'Too Many Requests',
-    message: `Rate limit exceeded. Try again in ${context.after}`,
-    statusCode: 429
-  }),
-  // Skip rate limiting for health checks
-  allowList: (req) => req.url === '/health'
-});
+// Register rate limiting: RATE_LIMIT_MAX per RATE_LIMIT_WINDOW per client IP
+// (defaults 600 per minute), keyed on the real client IP (trustProxy: 1).
+// /health and trusted server-to-server calls (x-oh-server-key = ADMIN_API_KEY)
+// skip it. See http-config.js (Task G3b).
+await app.register(rateLimit, globalRateLimitOptions());
 
 // Admin authentication middleware: see src/auth/admin.js. Clerk session
 // tokens are verified server-side and set req.adminRole (owner, manager or

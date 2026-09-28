@@ -5,11 +5,12 @@ import ReferralHandler from "./referral-handler";
 import AuthGate from "./auth-gate";
 import GroupJoinBanner from "./group-join-banner";
 import { API_URL } from "@/lib/api";
+import { serverApiHeaders } from "@/lib/server/api-headers";
 
 async function getLocations() {
   const res = await fetch(`${API_URL}/locations`, {
     cache: "no-store",
-    headers: { "x-tenant-slug": "oh" },
+    headers: serverApiHeaders({ "x-tenant-slug": "oh" }), // G3b: server-side call skips the per-IP limit
   });
 
   if (!res.ok) return [];

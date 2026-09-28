@@ -26,6 +26,10 @@ test("validateEnvValue refuses empty, whitespace and wrong formats", () => {
   assert.throws(() => validateEnvValue("CHAPPY_LIMITS_JSON", "[1]"), /object/);
   assert.ok(validateEnvValue("CHAPPY_LIMITS_JSON", '{"messages":{"max":30}}'));
   assert.ok(validateEnvValue("SOME_OTHER_VAR", "x"));
+  assert.ok(validateEnvValue("RATE_LIMIT_MAX", "1500"));
+  assert.throws(() => validateEnvValue("RATE_LIMIT_MAX", "0"), /positive integer/);
+  assert.throws(() => validateEnvValue("RATE_LIMIT_MAX", "lots"), /positive integer/);
+  assert.ok(validateEnvValue("RATE_LIMIT_WINDOW", "1 minute"));
   assert.equal(describeValue(WHSEC), `whsec_... (${WHSEC.length} chars)`);
   assert.ok(!describeValue("a".repeat(64)).includes("aaaa"));
 });

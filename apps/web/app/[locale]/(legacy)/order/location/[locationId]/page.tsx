@@ -1,11 +1,12 @@
 import { getTranslations } from "next-intl/server";
 import EnhancedMenuBuilder from "./_components/enhanced-menu-builder";
 import { API_URL } from "@/lib/api";
+import { serverApiHeaders } from "@/lib/server/api-headers";
 
 async function getLocation(locationId: string) {
   const locRes = await fetch(`${API_URL}/locations`, {
     cache: "no-store",
-    headers: { "x-tenant-slug": "oh" },
+    headers: serverApiHeaders({ "x-tenant-slug": "oh" }), // G3b: server-side call skips the per-IP limit
   });
 
   const locations = await locRes.json();

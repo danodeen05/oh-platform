@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { confirmFromWebhook } from '@/lib/site/orders';
+import { serverApiHeaders } from "@/lib/server/api-headers";
 
 /** A confirm call that failed in a way a redelivery can fix (network, API 5xx). */
 class RetryableWebhookError extends Error {}
@@ -102,7 +103,7 @@ async function handlePaymentSucceeded(paymentIntent: Stripe.PaymentIntent) {
   // which finds the card by its PaymentIntent or issues it from the server-built
   // metadata. A retryable failure (network, API 5xx) throws so Stripe delivers
   // the event again; a verified refusal or "already paid" is final.
-  const result = await confirmFromWebhook(paymentIntent, { baseUrl: API_BASE_URL, serviceKey: process.env.ADMIN_API_KEY || null });
+  const result = await confirmFromWebhook(paymentIntent, { baseUrl: API_BASE_URL, headers: serverApiHeaders(), serviceKey: process.env.ADMIN_API_KEY || null });
   if (result.handled) {
     if (result.ok) console.log(`${result.handled} payment ${paymentIntent.id} confirmed via webhook`);
     else if (result.code === 'ADMIN_API_KEY_MISSING') console.error(`Stripe webhook: ADMIN_API_KEY is not set; cannot confirm ${result.handled} payment ${paymentIntent.id}. Asking Stripe to retry.`);

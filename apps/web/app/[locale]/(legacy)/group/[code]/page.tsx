@@ -1,11 +1,12 @@
 import { API_URL } from "@/lib/api";
 import GroupLobby from "./group-lobby";
+import { serverApiHeaders } from "@/lib/server/api-headers";
 
 async function getGroupOrder(code: string) {
   try {
     const res = await fetch(`${API_URL}/group-orders/${code}`, {
       cache: "no-store",
-      headers: { "x-tenant-slug": "oh" },
+      headers: serverApiHeaders({ "x-tenant-slug": "oh" }), // G3b: server-side call skips the per-IP limit
     });
 
     if (!res.ok) {

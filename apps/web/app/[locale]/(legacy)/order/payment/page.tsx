@@ -2,11 +2,12 @@ import PaymentForm from "./payment-form";
 import { API_URL } from "@/lib/api";
 import { getTranslations, getLocale } from "next-intl/server";
 import Image from "next/image";
+import { serverApiHeaders } from "@/lib/server/api-headers";
 
 async function getOrder(orderId: string, locale: string) {
   const res = await fetch(`${API_URL}/orders/${orderId}?locale=${locale}`, {
     cache: "no-store",
-    headers: { "x-tenant-slug": "oh" },
+    headers: serverApiHeaders({ "x-tenant-slug": "oh" }), // G3b: server-side call skips the per-IP limit
   });
 
   if (!res.ok) return null;

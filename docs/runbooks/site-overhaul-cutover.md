@@ -141,7 +141,7 @@ Values never appear in argv or output.
 
 ```bash
 railway variable list --service "@oh/api" --json | jq -r 'keys[]' | sort > "$CUT/railway-vars.txt"
-( for v in TWILIO_AUTH_TOKEN API_PUBLIC_URL SUPPORT_NOTIFY ADMIN_API_KEY STRIPE_SECRET_KEY CHAPPY_GUEST_SECRET CHAPPY_LIMITS_JSON CHAPPY_MODEL \
+( for v in TWILIO_AUTH_TOKEN API_PUBLIC_URL SUPPORT_NOTIFY RATE_LIMIT_MAX RATE_LIMIT_WINDOW ADMIN_API_KEY STRIPE_SECRET_KEY CHAPPY_GUEST_SECRET CHAPPY_LIMITS_JSON CHAPPY_MODEL \
            ADMIN_PHONE_NUMBER TWILIO_ACCOUNT_SID TWILIO_PHONE_NUMBER ANTHROPIC_API_KEY CRON_SECRET WEB_APP_URL PLAN_VISIT_SUMMARIES \
            CHAPPY_SMS_SKIP_SIGNATURE MS_TENANT_ID MS_CLIENT_ID MS_CLIENT_SECRET MS_SENDER_EMAIL OWNER_EMAIL PLAN_NOTIFY_EMAIL; do
     grep -qx "$v" "$CUT/railway-vars.txt" && echo "set      $v" || echo "MISSING  $v"; done )
@@ -158,18 +158,22 @@ Each write: dry run first (validates only), then the same command without `--dry
 | `API_PUBLIC_URL` | `https://api.ohbeef.com` | Twilio signs the exact URL it called. In the Twilio console, the Oh! number's Messaging webhook must be `https://api.ohbeef.com/chappy/sms`; fix the webhook if it is anything else. |
 | `TWILIO_AUTH_TOKEN` | Twilio **account** auth token | Without it every inbound text gets 403. |
 | `SUPPORT_NOTIFY` | `live` | Support cases and escalations text/email the owner. |
-| `ADMIN_API_KEY` | keep if set; if MISSING use `--generate` | Server-to-server key; the web uses the same value (4c). |
+| `ADMIN_API_KEY` | keep if set; if MISSING use `--generate` | Server-to-server key; the web uses the same value (4c). G3b: the web's server-side calls also send it as `x-oh-server-key`, which skips the global per-IP limit (Vercel's egress IPs are shared), so it must be identical on both. |
 | `CHAPPY_LIMITS_JSON`, `CHAPPY_MODEL` | only if the owner wants non-defaults | Defaults: 20 msgs/10 min, 200/day, 300k output tokens/day, 300 guest chats/IP/day; model `claude-opus-5`. |
 | `CHAPPY_SMS_SKIP_SIGNATURE` | must be MISSING | (Ignored in production anyway.) |
 | `PLAN_VISIT_SUMMARIES` | leave as prod has it | |
+| `RATE_LIMIT_MAX` | `1500` (recommended; code default 600) | G3b: global limit per client IP per window. In-store guests share the store's public IP. Worst case at one store is about 450/min from 75 status pages polling every 10 s, plus kiosks (seats every 5 s), the kitchen and cleaning displays (about 55/min), menus and Chappy. 1500 leaves headroom and still stops a single abusive client. |
+| `RATE_LIMIT_WINDOW` | leave unset (1 minute) | Milliseconds or a duration like `1 minute`. |
 
 ```bash
 ( set -euo pipefail
   printf %s "https://api.ohbeef.com" | pnpm --filter @oh/api exec node scripts/cutover-env.mjs --target=railway --key=API_PUBLIC_URL --dry-run
-  printf %s "live" | pnpm --filter @oh/api exec node scripts/cutover-env.mjs --target=railway --key=SUPPORT_NOTIFY --dry-run )
+  printf %s "live" | pnpm --filter @oh/api exec node scripts/cutover-env.mjs --target=railway --key=SUPPORT_NOTIFY --dry-run
+  printf %s "1500" | pnpm --filter @oh/api exec node scripts/cutover-env.mjs --target=railway --key=RATE_LIMIT_MAX --dry-run )
 ( set -euo pipefail
   printf %s "https://api.ohbeef.com" | pnpm --filter @oh/api exec node scripts/cutover-env.mjs --target=railway --key=API_PUBLIC_URL
-  printf %s "live" | pnpm --filter @oh/api exec node scripts/cutover-env.mjs --target=railway --key=SUPPORT_NOTIFY )
+  printf %s "live" | pnpm --filter @oh/api exec node scripts/cutover-env.mjs --target=railway --key=SUPPORT_NOTIFY
+  printf %s "1500" | pnpm --filter @oh/api exec node scripts/cutover-env.mjs --target=railway --key=RATE_LIMIT_MAX )
 # Twilio account auth token: paste at the prompt (not echoed), validated before any write.
 ( set -euo pipefail
   read -rs -p "Twilio account auth token: " V; echo
@@ -481,8 +485,10 @@ Expect `18 passed, 0 failed` (exit 0). Then check by hand on a phone: the shell 
 Chappy answers, the floor plan loads (plan code), the admin console and its Support tab open,
 and an old sticker's `/pod?qr=` shows the out-of-date notice.
 Also check once in the Railway logs that `req.ip` on API requests is the visitor's IP, not a
-Vercel or Railway proxy address. The 100/min per-IP limit (D5) depends on `trustProxy: 1`
-matching prod's hop count; report what you see to the owner.
+Vercel or Railway proxy address. The global per-IP limit (`RATE_LIMIT_MAX`, G3b) depends on
+`trustProxy: 1` matching prod's hop count. Also check that no 429s show for Vercel IPs: the
+web's server-side calls must carry `x-oh-server-key`, which needs the same `ADMIN_API_KEY` on
+Railway and Vercel (4b, 4c). Report what you see to the owner.
 
 **Money paths are not charged in prod.** A $0 check only if a real unredeemed FREE_BOWL reward
 already exists on the owner's own account (never create one for the test).

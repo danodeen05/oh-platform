@@ -3,6 +3,7 @@ import { currentUser } from "@clerk/nextjs/server";
 import { getTranslations } from "next-intl/server";
 import KioskWelcome from "./kiosk-welcome";
 import KioskLocationSelector from "./kiosk-location-selector";
+import { serverApiHeaders } from "@/lib/server/api-headers";
 
 type Location = {
   id: string;
@@ -14,7 +15,7 @@ type Location = {
 async function getLocations(): Promise<Location[]> {
   const res = await fetch(`${API_URL}/locations`, {
     cache: "no-store",
-    headers: { "x-tenant-slug": "oh" },
+    headers: serverApiHeaders({ "x-tenant-slug": "oh" }), // G3b: server-side call skips the per-IP limit
   });
 
   if (!res.ok) return [];

@@ -2,6 +2,7 @@
  * Server-side client for the Fastify /plan/* routes. Adds the shared
  * PLAN_API_KEY header. Never import this from a client component.
  */
+import { serverApiHeaders } from "@/lib/server/api-headers";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -19,7 +20,7 @@ export interface PlanApiOptions {
 export async function planApi<T>(path: string, body: unknown, options: PlanApiOptions = {}): Promise<PlanApiResult<T>> {
   const key = process.env.PLAN_API_KEY;
   if (!key) throw new Error("PLAN_API_KEY is not set");
-  const headers: Record<string, string> = { "Content-Type": "application/json", "x-plan-api-key": key };
+  const headers: Record<string, string> = serverApiHeaders({ "Content-Type": "application/json", "x-plan-api-key": key });
   if (options.ipHash) headers["x-plan-ip-hash"] = options.ipHash;
   const res = await fetch(`${API_URL}${path}`, {
     method: "POST",

@@ -16,6 +16,8 @@ const RULES = {
   CHAPPY_MODEL: { re: /^claude-[a-z0-9.-]+$/, hint: "a claude-* model id" },
   CHAPPY_GUEST_SECRET: { re: /^\S{32,}$/, hint: "32+ characters" },
   ADMIN_PHONE_NUMBER: { re: /^\+[1-9][0-9]{7,14}$/, hint: "E.164 (+1...)" },
+  RATE_LIMIT_MAX: { re: /^[1-9][0-9]{0,6}$/, hint: "a positive integer (requests per window per IP)" },
+  RATE_LIMIT_WINDOW: { re: /^([1-9][0-9]*|[1-9][0-9]*\s*(ms|s|seconds?|m|minutes?|h|hours?))$/, hint: "milliseconds or a duration like 1 minute" },
 };
 
 /** Throws with a clear reason when the value is not acceptable for this key. */
