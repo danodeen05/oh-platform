@@ -4,7 +4,9 @@
  *   POST /gift-cards                        buy a card (verified funding, orders/tenders.js createGiftCard)
  *   GET  /gift-cards/:id                    staff (console-guard STAFF)
  *   GET  /gift-cards/code/:code             balance lookup for checkout
- *   POST /gift-cards/:id/confirm-payment    Stripe webhook: records the verified purchase PaymentIntent
+ *   POST /gift-cards/confirm-payment        Stripe webhook (ADMIN_API_KEY): finds the card by its purchase
+ *                                           PaymentIntent, or issues it from the PaymentIntent's server-built
+ *                                           metadata when the buyer's page never came back (Task D10a)
  *
  * Deliberately absent (404):
  *   POST /gift-cards/:id/apply   removed in fix round 1: it drained a card
@@ -12,6 +14,11 @@
  *   POST /gift-cards/:id/redeem  removed in fix round 2: it turned card value
  *                                into 90-day credit, but gift card value may not
  *                                expire within 5 years of issue (CARD Act).
+ *   POST /gift-cards/:id/confirm-payment  replaced in D10a: it matched metadata.giftCardId,
+ *                                that no PaymentIntent ever carried (a card exists
+ *                                only after its payment), so it never ran.
+ * No promo codes and no store credit on a gift card purchase, ever (D10a
+ * ruling): 400 NOT_ALLOWED_FOR_GIFT_CARDS.
  * A gift card is spent only as checkout tender from its own, non-expiring
  * balance: giftCardCode in quoteOrder, debited in markPaid (service.js).
  *
@@ -20,6 +27,7 @@
 import { orderOwnerId } from "../auth/customer.js";
 import { OrderError } from "./service.js";
 import { createGiftCard } from "./tenders.js";
+import { giftDiscountFields, notAllowedForGiftCards } from "./purchase-intents.js";
 
 /** Secure gift card code (XXXX-XXXX-XXXX-XXXX), no I, O, 0 or 1. */
 export function generateGiftCardCode() {
@@ -37,6 +45,11 @@ export async function registerGiftCardRoutes(app, { prisma, stripe, customerAuth
   app.post("/gift-cards", async (req, reply) => {
     try {
       const { amountCents, designId, recipientEmail, recipientName, personalMessage, stripePaymentId } = req.body || {};
+      const discounts = giftDiscountFields(req.body || {});
+      if (discounts.length) {
+        const err = notAllowedForGiftCards(discounts);
+        return reply.status(err.status).send({ error: err.code, code: err.code, message: err.message, ...err.extra });
+      }
 
       // Task A6: a gift card is a tender, so it must be funded. A customer card
       // needs its purchase PaymentIntent verified here (succeeded, exactly
@@ -58,6 +71,12 @@ export async function registerGiftCardRoutes(app, { prisma, stripe, customerAuth
           generateCode: generateGiftCardCode,
         });
       } catch (err) {
+        // The webhook may have issued this card first (POST /gift-cards/confirm-payment):
+        // the buyer whose payment it was gets that same card back.
+        if (err instanceof OrderError && err.code === "PAYMENT_ALREADY_USED" && !trusted) {
+          const existing = await prisma.giftCard.findFirst({ where: { stripePaymentId } });
+          if (existing && (existing.purchaserId || null) === (orderOwnerId(who) || null)) return reply.send(existing);
+        }
         if (err instanceof OrderError) return reply.status(err.status).send({ error: err.message, code: err.code, ...err.extra });
         throw err;
       }
@@ -125,22 +144,54 @@ export async function registerGiftCardRoutes(app, { prisma, stripe, customerAuth
     }
   });
 
-  // Confirm gift card payment (called by webhook)
-  app.post("/gift-cards/:id/confirm-payment", async (req, reply) => {
+  // Stripe webhook (server-to-server, ADMIN_API_KEY): make sure a succeeded
+  // gift card PaymentIntent has its card. The card is found by its purchase
+  // PaymentIntent; when the buyer's page never came back, it is issued here
+  // from the PaymentIntent's metadata (built by POST /create-payment-intent),
+  // after the same verification as a purchase. Idempotent.
+  app.post("/gift-cards/confirm-payment", async (req, reply) => {
     try {
-      const { id } = req.params;
-      const { stripePaymentId } = req.body || {};
+      if (!customerAuth.isServiceCall(req)) return reply.status(401).send({ error: "UNAUTHORIZED" });
+      const paymentIntentId = req.body?.paymentIntentId;
+      if (typeof paymentIntentId !== "string" || !paymentIntentId) return reply.status(400).send({ error: "PAYMENT_INTENT_REQUIRED" });
 
-      const card = await prisma.giftCard.findUnique({ where: { id } });
-      if (!card) return reply.status(404).send({ error: "Gift card not found" });
-      // Task A6: record only a succeeded PaymentIntent for this card's amount that names this card.
-      const pi = stripe && stripePaymentId ? await stripe.paymentIntents.retrieve(stripePaymentId).catch(() => null) : null;
-      if (!pi || pi.status !== "succeeded" || pi.amount !== card.amountCents || pi.metadata?.giftCardId !== id) {
-        return reply.status(402).send({ error: "PAYMENT_NOT_VERIFIED" });
+      const existing = await prisma.giftCard.findFirst({ where: { stripePaymentId: paymentIntentId } });
+      if (existing) return reply.send({ success: true, giftCardId: existing.id, created: false });
+
+      const pi = stripe ? await stripe.paymentIntents.retrieve(paymentIntentId).catch(() => null) : null;
+      const md = pi?.metadata || {};
+      if (!pi || md.type !== "gift_card") return reply.status(402).send({ error: "PAYMENT_NOT_VERIFIED" });
+
+      let card;
+      try {
+        card = await createGiftCard(prisma, stripe, {
+          amountCents: Number(md.amountCents),
+          designId: md.designId || "classic",
+          recipientEmail: md.recipientEmail || null,
+          recipientName: md.recipientName || null,
+          personalMessage: md.personalMessage || null,
+          purchaserId: md.purchaserId || null,
+          stripePaymentId: paymentIntentId,
+          trusted: false, // always verified against Stripe, even for the webhook
+          generateCode: generateGiftCardCode,
+        });
+      } catch (err) {
+        if (err instanceof OrderError && err.code === "PAYMENT_ALREADY_USED") {
+          const raced = await prisma.giftCard.findFirst({ where: { stripePaymentId: paymentIntentId } });
+          if (raced) return reply.send({ success: true, giftCardId: raced.id, created: false });
+        }
+        if (err instanceof OrderError) return reply.status(err.status).send({ error: err.code, message: err.message, ...err.extra });
+        throw err;
       }
-
-      await prisma.giftCard.update({ where: { id }, data: { stripePaymentId } });
-      return reply.send({ success: true });
+      if (card.recipientEmail) {
+        try {
+          await sendGiftCardEmail(card);
+          await prisma.giftCard.update({ where: { id: card.id }, data: { deliveredAt: new Date() } });
+        } catch (emailErr) {
+          console.error("Failed to send gift card email:", emailErr);
+        }
+      }
+      return reply.send({ success: true, giftCardId: card.id, created: true });
     } catch (error) {
       console.error("Error confirming gift card payment:", error);
       return reply.status(500).send({ error: error.message });

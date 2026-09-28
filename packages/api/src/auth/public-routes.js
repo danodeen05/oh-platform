@@ -147,12 +147,14 @@ export const PUBLIC_ROUTES = Object.freeze([
   // Gift cards and shop
   p("POST", "/gift-cards", "customer"),
   p("GET", "/gift-cards/code/:code", "customer"),
-  p("POST", "/gift-cards/:id/confirm-payment", "webhook"),
+  // Stripe webhook only: requires x-admin-api-key (orders/gift-card-routes.js).
+  p("POST", "/gift-cards/confirm-payment", "webhook"),
   p("GET", "/shop/products", "customer"),
   p("GET", "/shop/products/:slug", "public-read"),
   p("GET", "/shop/products/qr/:qrCode", "customer"),
   p("POST", "/shop/orders", "customer"),
-  p("PATCH", "/shop/orders/:id", "webhook"),
+  // Owner, guest session or the Stripe webhook (x-admin-api-key); verified against Stripe (Task D10a).
+  p("POST", "/shop/orders/:id/confirm-payment", "customer"),
   p("POST", "/promo-codes/validate", "customer"),
   p("GET", "/gift-card-config", "customer"),
 

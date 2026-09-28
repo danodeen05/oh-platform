@@ -110,6 +110,8 @@ export const CONSOLE_ROUTES = Object.freeze([
   r("PATCH", "/shop/products/:id/inventory", STAFF),
   r("GET", "/shop/products/inventory/low-stock", STAFF),
   r("GET", "/shop/orders/:id", STAFF),
+  // Fulfillment fields only (D10a); no caller since the webhook stopped using it.
+  r("PATCH", "/shop/orders/:id", STAFF),
   r("POST", "/shop/orders/:id/apply-credits", OWNER),
   r("GET", "/users/:id/shop-orders", OWNER),
   r("POST", "/payments/confirm", OWNER),
@@ -140,8 +142,8 @@ export const MUST_STAY_OPEN = Object.freeze([
   { method: "GET", url: "/locations/:id/availability" },
   { method: "POST", url: "/kiosk/auth" },
   { method: "POST", url: "/kiosk/heartbeat" },
-  { method: "PATCH", url: "/shop/orders/:id" },
-  { method: "POST", url: "/gift-cards/:id/confirm-payment" },
+  { method: "POST", url: "/shop/orders/:id/confirm-payment" },
+  { method: "POST", url: "/gift-cards/confirm-payment" },
   { method: "GET", url: "/catering/site-config/order-now" },
   { method: "GET", url: "/catering/kitchen-locations" },
 ]);

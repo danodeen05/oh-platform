@@ -113,7 +113,7 @@ export async function spendCredit(prisma, { userId, amountCents, orderId, now = 
  * has no `$transaction`). Throws CreditShortError before writing anything when
  * the unexpired balance is short, so the caller's whole transaction rolls back.
  */
-export async function spendCreditInTx(tx, { userId, amountCents, orderId, now = new Date() }) {
+export async function spendCreditInTx(tx, { userId, amountCents, orderId, now = new Date(), description = undefined, metadata = undefined }) {
   assertPositiveAmount(amountCents);
   const lots = await tx.creditLot.findMany({
     where: { userId, remainingCents: { gt: 0 }, expiresAt: { gt: now } },
@@ -139,7 +139,8 @@ export async function spendCreditInTx(tx, { userId, amountCents, orderId, now = 
 
   await tx.user.update({ where: { id: userId }, data: { creditsCents: { decrement: amountCents } } });
   await tx.creditEvent.create({
-    data: { userId, type: "CREDIT_APPLIED", amountCents: -amountCents, orderId },
+    // description/metadata: optional context, e.g. a shop order (CreditEvent.orderId is a food Order).
+    data: { userId, type: "CREDIT_APPLIED", amountCents: -amountCents, orderId, ...(description ? { description } : {}), ...(metadata ? { metadata } : {}) },
   });
 }
 
