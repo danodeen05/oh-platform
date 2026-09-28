@@ -11,7 +11,7 @@ import { makeMemoryPrisma } from "../../__tests__/helpers/prisma-memory.js";
 import { fakeStripe } from "../../orders/__tests__/fixtures.js";
 import { registerShopOrderRoutes } from "../routes.js";
 import { registerPurchaseIntentRoute } from "../../orders/purchase-intents.js";
-import { shopTotals, shopAmountDue, applyShopCredits, paymentAuditNotes } from "../service.js";
+import { shopTotals, shopAmountDue, applyShopCredits, paymentAuditNotes, markShopOrderPaidByStaff, confirmShopPayment } from "../service.js";
 
 const NOW = new Date("2026-10-01T12:00:00-06:00");
 const DAY = 24 * 60 * 60 * 1000;
@@ -483,5 +483,159 @@ describe("admin payment corrections are recorded (fix round 1)", () => {
       paymentAuditNotes({ paymentStatus: "PAID", stripePaymentId: "pi_1" }, { paymentStatus: "REFUNDED", stripePaymentId: null, adminNotes: "cash refund" }, { adminRole: "owner", at }),
       "cash refund\n[2026-10-01T18:00:00.000Z] paymentStatus PAID -> REFUNDED, stripePaymentId pi_1 -> none by admin (API key or dev) (owner)",
     );
+  });
+});
+
+describe("fix round 2", () => {
+  const LEGACY = {
+    id: "so_legacy",
+    orderNumber: "SHOP-MK1ABC-XY12", // pre-D10a: savings and stock were spent at creation
+    userId: "u1",
+    subtotalCents: 4900,
+    shippingCents: 899,
+    taxCents: Math.round((4900 - 1000 - 500) * 0.08),
+    totalCents: 4900 + 899 + Math.round((4900 - 1000 - 500) * 0.08) - 1500,
+    creditsApplied: 1000,
+    giftCardApplied: 500,
+    giftCardId: "gc1",
+    fulfillmentType: "SHIPPING",
+    paymentStatus: "PENDING",
+    fulfillmentStatus: "PENDING",
+  };
+  const legacyPrisma = () => seedShop({
+    giftCards: [{ id: "gc1", code: "AAAA-BBBB-CCCC-DDDD", amountCents: 1000, balanceCents: 500, status: "ACTIVE" }],
+    shopOrders: [{ ...LEGACY }],
+    shopOrderItems: [
+      { id: "li1", orderId: "so_legacy", productId: "p_bowl", quantity: 1, priceCents: 2500 },
+      { id: "li2", orderId: "so_legacy", productId: "p_sticks", quantity: 2, priceCents: 1200 },
+    ],
+  });
+  const untouched = async (prisma) => {
+    assert.equal((await prisma.creditLot.findUnique({ where: { id: "lot1" } })).remainingCents, 3000, "credits not spent again");
+    assert.equal((await prisma.giftCard.findUnique({ where: { id: "gc1" } })).balanceCents, 500, "gift card not debited again");
+    assert.equal((await prisma.shopProduct.findUnique({ where: { id: "p_bowl" } })).stockCount, 5, "stock not decremented again");
+  };
+
+  test("new orders carry the SO- prefix that marks spend-at-PAID", async () => {
+    const { app } = await buildApp();
+    assert.match((await createOrder(app)).json().orderNumber, /^SO-/);
+  });
+
+  test("a legacy (SHOP-) order confirmed by card is PAID without spending its savings a second time", async () => {
+    const stripe = fakeStripe({ pi_legacy: { status: "succeeded", amount: LEGACY.totalCents, metadata: { shopOrderId: "so_legacy", kind: "shop" } } });
+    const prisma = legacyPrisma();
+    const res = await confirmShopPayment(prisma, stripe, { orderId: "so_legacy", paymentIntentId: "pi_legacy", now: NOW });
+    assert.equal(res.order.paymentStatus, "PAID");
+    await untouched(prisma);
+    assert.equal(stripe.refundCalls.length, 0);
+  });
+
+  test("a legacy order marked PAID by staff spends nothing; apply-credits refuses it", async () => {
+    const prisma = legacyPrisma();
+    const res = await markShopOrderPaidByStaff(prisma, { orderId: "so_legacy", now: NOW });
+    assert.equal(res.order.paymentStatus, "PAID");
+    await untouched(prisma);
+    const other = legacyPrisma();
+    await assert.rejects(applyShopCredits(other, { orderId: "so_legacy", userId: "u1", amountCents: 100, now: NOW }), (e) => e.code === "LEGACY_ORDER" && e.status === 409);
+  });
+
+  test("staff manual PAID runs the same settle: credits, gift card and stock are spent once", async () => {
+    const prisma = seedShop({ giftCards: [{ id: "gc1", code: "AAAA-BBBB-CCCC-DDDD", amountCents: 1000, balanceCents: 1000, status: "ACTIVE" }] });
+    const { app } = await buildApp(prisma);
+    const order = (await createOrder(app, as("u1"), { creditsToApply: 1000, giftCardCode: "AAAA-BBBB-CCCC-DDDD" })).json();
+    const res = await markShopOrderPaidByStaff(prisma, { orderId: order.id, stripePaymentId: "pi_manual", now: NOW });
+    assert.equal(res.order.paymentStatus, "PAID");
+    assert.equal(res.order.stripePaymentId, "pi_manual");
+    assert.equal((await prisma.creditLot.findUnique({ where: { id: "lot1" } })).remainingCents, 2000);
+    assert.equal((await prisma.giftCard.findUnique({ where: { id: "gc1" } })).balanceCents, 0);
+    assert.equal((await prisma.shopProduct.findUnique({ where: { id: "p_bowl" } })).stockCount, 4);
+    assert.equal((await markShopOrderPaidByStaff(prisma, { orderId: order.id, now: NOW })).alreadyPaid, true);
+    assert.equal((await prisma.creditLot.findUnique({ where: { id: "lot1" } })).remainingCents, 2000, "not spent twice");
+  });
+
+  test("staff manual PAID with a shortfall: 409 with a message for the admin, nothing changes", async () => {
+    const { app, prisma } = await buildApp();
+    const order = (await createOrder(app, as("u1"), { creditsToApply: 2000 })).json();
+    await prisma.creditLot.update({ where: { id: "lot1" }, data: { remainingCents: 100 } });
+    await assert.rejects(markShopOrderPaidByStaff(prisma, { orderId: order.id, now: NOW }), (e) => e.status === 409 && e.code === "CREDIT_SHORT" && /remove savings first/.test(e.message));
+    const row = await prisma.shopOrder.findUnique({ where: { id: order.id } });
+    assert.equal(row.paymentStatus, "PENDING");
+    assert.equal((await prisma.shopProduct.findUnique({ where: { id: "p_bowl" } })).stockCount, 5);
+    await prisma.shopProduct.update({ where: { id: "p_bowl" }, data: { stockCount: 0 } });
+    await prisma.creditLot.update({ where: { id: "lot1" }, data: { remainingCents: 3000 } });
+    await assert.rejects(markShopOrderPaidByStaff(prisma, { orderId: order.id, now: NOW }), (e) => e.code === "OUT_OF_STOCK" && /restock/.test(e.message));
+    assert.equal((await prisma.creditLot.findUnique({ where: { id: "lot1" } })).remainingCents, 3000);
+  });
+
+  test("a refunded PaymentIntent can't confirm the order again, even once the shortfall is gone", async () => {
+    const { app, stripe, prisma, paidCalls } = await buildApp();
+    const order = (await createOrder(app, as("u1"), { creditsToApply: 2000 })).json();
+    const pi = await payIntent(app, stripe, order);
+    await prisma.creditLot.update({ where: { id: "lot1" }, data: { remainingCents: 500 } });
+    assert.equal((await confirm(app, order, pi)).statusCode, 409);
+    await prisma.creditLot.update({ where: { id: "lot1" }, data: { remainingCents: 3000 } });
+    for (const headers of [as("u1"), SERVICE]) {
+      const again = await confirm(app, order, pi, headers);
+      assert.equal(again.statusCode, 409);
+      assert.equal(again.json().error, "PAYMENT_REFUNDED");
+    }
+    assert.equal((await prisma.shopOrder.findUnique({ where: { id: order.id } })).paymentStatus, "PENDING");
+    assert.equal((await prisma.creditLot.findUnique({ where: { id: "lot1" } })).remainingCents, 3000);
+    assert.equal(stripe.refundCalls.length, 1);
+    await new Promise((r) => setImmediate(r));
+    assert.deepEqual(paidCalls, []);
+  });
+
+  test("a gift card that expired after checkout doesn't pay: 409 GIFT_CARD_CHANGED and a full refund", async () => {
+    const prisma = seedShop({ giftCards: [{ id: "gc1", code: "AAAA-BBBB-CCCC-DDDD", amountCents: 1000, balanceCents: 1000, status: "ACTIVE", expiresAt: new Date(NOW.getTime() + DAY) }] });
+    const later = new Date(NOW.getTime() + 2 * DAY);
+    let clock = NOW;
+    const { app, stripe } = await buildApp(prisma, fakeStripe(), { clock: () => clock });
+    const order = (await createOrder(app, as("u2"), { giftCardCode: "AAAA-BBBB-CCCC-DDDD" })).json();
+    const pi = await payIntent(app, stripe, order, as("u2"));
+    clock = later;
+    const res = await confirm(app, order, pi, as("u2"));
+    assert.deepEqual([res.statusCode, res.json().error, res.json().refunded], [409, "GIFT_CARD_CHANGED", true]);
+    assert.equal((await prisma.giftCard.findUnique({ where: { id: "gc1" } })).balanceCents, 1000);
+  });
+
+  test("when the re-read after a failed settle fails, nothing is refunded and a NEEDS_REVIEW case names the SHOP order", async () => {
+    const { app, stripe, prisma } = await buildApp();
+    const order = (await createOrder(app, as("u1"), { creditsToApply: 2000 })).json();
+    const pi = await payIntent(app, stripe, order);
+    await prisma.creditLot.update({ where: { id: "lot1" }, data: { remainingCents: 100 } });
+    let reads = 0;
+    const flaky = new Proxy(prisma, {
+      get(target, prop) {
+        if (prop !== "shopOrder") return target[prop];
+        return new Proxy(target.shopOrder, {
+          get(t, p2) {
+            if (p2 !== "findUnique") return t[p2];
+            return async (args) => {
+              reads += 1;
+              if (reads === 2) throw new Error("db down");
+              return t.findUnique(args);
+            };
+          },
+        });
+      },
+    });
+    await assert.rejects(confirmShopPayment(flaky, stripe, { orderId: order.id, paymentIntentId: pi, now: NOW }), (e) => e.code === "CREDIT_SHORT");
+    assert.equal(stripe.refundCalls.length, 0);
+    const cases = await prisma.supportCase.findMany();
+    assert.equal(cases.length, 1);
+    assert.match(cases[0].summary, /^NEEDS_REVIEW/);
+    assert.match(cases[0].summary, new RegExp(`SHOP order ${order.orderNumber}.*not a food order`));
+  });
+
+  test("reuse matches the pickup location and never rewrites a paid order", async () => {
+    const { app, prisma } = await buildApp(seedShop({ creditLots: [] }), fakeStripe(), { clock: () => new Date() });
+    const pickup = (loc) => createOrder(app, as("u2"), { fulfillmentType: "IN_STORE_PICKUP", locationId: loc });
+    const a = (await pickup("L1")).json();
+    assert.equal((await pickup("L1")).json().id, a.id);
+    assert.notEqual((await pickup("L2")).json().id, a.id, "another location: a new order");
+    await prisma.shopOrder.update({ where: { id: a.id }, data: { paymentStatus: "PAID" } });
+    const c = (await pickup("L1")).json();
+    assert.notEqual(c.id, a.id);
   });
 });

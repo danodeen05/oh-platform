@@ -90,7 +90,7 @@ import { registerGiftCardRoutes } from "./orders/gift-card-routes.js";
 import { registerPurchaseIntentRoute, giftDiscountFields, notAllowedForGiftCards } from "./orders/purchase-intents.js";
 import { registerEventCheckRoute, createIpLimiter, eventRateLimit, eventDuplicateBody } from "./orders/event-routes.js";
 import { registerShopOrderRoutes } from "./shop/routes.js";
-import { paymentAuditNotes } from "./shop/service.js";
+import { paymentAuditNotes, markShopOrderPaidByStaff } from "./shop/service.js";
 import { challengeCreateData } from "./membership/challenge-input.js";
 import { registerSupportRoutes } from "./support/routes.js";
 import { sendGraphMail } from "./email/graph.js";
@@ -12037,6 +12037,18 @@ app.patch("/admin/shop/orders/:id", async (req, reply) => {
       if (!existing) return reply.status(404).send({ error: "Order not found" });
       const notes = paymentAuditNotes(existing, updates, { adminUserId: req.adminUserId || null, adminRole: req.adminRole || null });
       if (notes) data.adminNotes = notes;
+      // A manual PENDING -> PAID runs the same settle as a card payment (fix round 2):
+      // recorded credits, gift card and stock are spent, or 409 for the admin.
+      if (updates.paymentStatus === "PAID" && existing.paymentStatus !== "PAID") {
+        try {
+          await markShopOrderPaidByStaff(prisma, { orderId: id, stripePaymentId: typeof updates.stripePaymentId === "string" ? updates.stripePaymentId : null });
+        } catch (err) {
+          if (err instanceof OrderError) return reply.status(err.status).send({ error: err.code, message: err.message });
+          throw err;
+        }
+        delete data.paymentStatus;
+        delete data.stripePaymentId;
+      }
     }
 
     // Auto-set timestamps based on status changes

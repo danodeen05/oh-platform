@@ -69,10 +69,24 @@ function notPending() {
   return new OrderError("ORDER_NOT_PENDING", 409, "This order is already paid or cancelled.");
 }
 
+/**
+ * Order number prefix for shop orders that RECORD their savings and spend
+ * them at PAID (D10a fix round 1+). Orders from before the change
+ * ("SHOP-...") spent their credits, gift card and stock at creation, and
+ * their creditsApplied/giftCardApplied columns (non-null, default 0) look the
+ * same, so the prefix is what tells them apart without a migration.
+ */
+export const SHOP_ORDER_PREFIX = "SO-";
+
+/** True when this order's savings and stock are still to be spent at PAID (not a legacy "SHOP-" order). */
+export function spendsAtPaid(order) {
+  return typeof order?.orderNumber === "string" && order.orderNumber.startsWith(SHOP_ORDER_PREFIX);
+}
+
 function generateShopOrderNumber() {
   const timestamp = Date.now().toString(36).toUpperCase();
   const random = Math.random().toString(36).substring(2, 6).toUpperCase();
-  return `SHOP-${timestamp}-${random}`;
+  return `${SHOP_ORDER_PREFIX}${timestamp}-${random}`;
 }
 
 async function loadItems(db, orderId) {
@@ -91,6 +105,8 @@ async function findProduct(prisma, ref) {
  * OrderError OUT_OF_STOCK / GIFT_CARD_CHANGED) so the whole settle rolls back.
  */
 async function settleSavingsInTx(tx, order, items, now) {
+  // Legacy orders already spent everything at creation: never a second time.
+  if (!spendsAtPaid(order)) return;
   for (const item of items) {
     const product = await tx.shopProduct.findUnique({ where: { id: item.productId } });
     if (product && product.stockCount !== null && product.stockCount !== undefined) {
@@ -104,7 +120,12 @@ async function settleSavingsInTx(tx, order, items, now) {
   }
   if ((order.giftCardApplied || 0) > 0) {
     const res = await tx.giftCard.updateMany({
-      where: { id: order.giftCardId, status: "ACTIVE", balanceCents: { gte: order.giftCardApplied } },
+      where: {
+        id: order.giftCardId,
+        status: "ACTIVE",
+        balanceCents: { gte: order.giftCardApplied },
+        OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+      },
       data: { balanceCents: { decrement: order.giftCardApplied } },
     });
     if (res.count !== 1) throw new OrderError("GIFT_CARD_CHANGED", 409, "Your gift card balance changed before your payment finished.");
@@ -214,14 +235,19 @@ export async function createShopOrder(prisma, {
         creditsApplied,
         giftCardApplied,
         giftCardId,
+        locationId: locationId || null,
       },
     });
     const cutoff = now.getTime() - SHOP_ORDER_REUSE_MS;
     for (const existing of candidates) {
+      if (!spendsAtPaid(existing)) continue;
       if (existing.createdAt && new Date(existing.createdAt).getTime() < cutoff) continue;
       const existingItems = await loadItems(prisma, existing.id);
       if (!sameLines(existingItems, lines)) continue;
-      const updated = await prisma.shopOrder.update({ where: { id: existing.id }, data: shippingData });
+      // Conditional: an order paid meanwhile is never rewritten.
+      const res = await prisma.shopOrder.updateMany({ where: { id: existing.id, paymentStatus: "PENDING" }, data: shippingData });
+      if (res.count !== 1) continue;
+      const updated = await prisma.shopOrder.findUnique({ where: { id: existing.id } });
       return { ...updated, items: existingItems, reused: true };
     }
   }
@@ -277,6 +303,7 @@ export async function applyShopCredits(prisma, { orderId, userId, amountCents, n
       if (!order) throw new OrderError("NOT_FOUND", 404, "Order not found");
       if (order.userId !== userId) throw new OrderError("FORBIDDEN", 403, "Forbidden");
       if (!isPending(order)) throw notPending();
+      if (!spendsAtPaid(order)) throw new OrderError("LEGACY_ORDER", 409, "This order predates the current checkout; please place a new order.");
       const items = await loadItems(tx, orderId);
       const subtotalCents = subtotalOf(items);
       const already = order.creditsApplied || 0;
@@ -347,8 +374,9 @@ export async function confirmShopPayment(prisma, stripe, { orderId, paymentInten
     return { alreadyPaid: true, order };
   }
   const ours = (md) => md.shopOrderId === order.id && md.kind === SHOP_PAYMENT_KIND;
-  // orderId here is only the support case's reference: the shop order number.
-  const refund = async (pi, code) => refundUnappliedPayment(prisma, stripe, { pi, orderId: order.orderNumber, userId: order.userId || null, code });
+  // orderId here is only the support case's reference: the SHOP order number
+  // (not a food order, so staff look it up under Shop orders).
+  const refund = async (pi, code) => refundUnappliedPayment(prisma, stripe, { pi, orderId: order.orderNumber, userId: order.userId || null, code: `${code}; shop order ${order.orderNumber}, not a food order` });
 
   if (!isPending(order)) {
     // Already paid another way, or cancelled: a real charge for this order is returned.
@@ -390,8 +418,16 @@ export async function confirmShopPayment(prisma, stripe, { orderId, paymentInten
     try {
       fresh = await prisma.shopOrder.findUnique({ where: { id: orderId } });
     } catch (readErr) {
-      console.error(`[shop] NEEDS_REVIEW: ${pi.id} for ${order.orderNumber} may or may not be applied; not refunded:`, readErr?.message || readErr);
-      throw rawErr === LOST_CLAIM ? new OrderError("ORDER_CHANGED", 409, "This order changed while it was being paid.", { refunded: false }) : rawErr;
+      const summary = `NEEDS_REVIEW: payment ${pi.id} for SHOP order ${order.orderNumber} (a shop order number, not a food order) may or may not be applied; the order could not be re-read (${readErr?.message || readErr}). Not refunded. Check the shop order and refund in Stripe if it is unpaid.`;
+      try {
+        await prisma.supportCase.create({ data: { type: "ORDER_ISSUE", orderId: order.orderNumber, userId: order.userId || null, summary, amountCents: pi.amount ?? null } });
+      } catch (caseErr) {
+        console.error(`[shop] could not file NEEDS_REVIEW case for ${pi.id}:`, caseErr?.message || caseErr);
+      }
+      console.error(`[shop] ${summary}`);
+      const err = rawErr === LOST_CLAIM ? new OrderError("ORDER_CHANGED", 409, "This order changed while it was being paid.") : asShortfall(rawErr);
+      if (err instanceof OrderError) err.extra = { ...err.extra, refunded: false, needsReview: true };
+      throw err;
     }
     if (fresh && fresh.paymentStatus === "PAID" && fresh.stripePaymentId === pi.id) return { alreadyPaid: true, order: fresh };
     const err = rawErr === LOST_CLAIM ? new OrderError("ORDER_CHANGED", 409, "This order changed while it was being paid.") : asShortfall(rawErr);
@@ -424,4 +460,40 @@ export function paymentAuditNotes(existing, updates, { adminUserId = null, admin
   const line = `[${at.toISOString()}] ${changes.join(", ")} by ${who}${adminRole ? ` (${adminRole})` : ""}`;
   const base = typeof updates.adminNotes === "string" ? updates.adminNotes : existing.adminNotes;
   return base ? `${base}\n${line}` : line;
+}
+
+const STAFF_SHORTFALL = {
+  CREDIT_SHORT: "Customer credits are no longer available; edit the order or remove savings first.",
+  GIFT_CARD_CHANGED: "The gift card no longer covers its recorded amount (spent or expired); edit the order or remove savings first.",
+  OUT_OF_STOCK: "An item is out of stock; restock or edit the order first.",
+};
+
+/**
+ * Staff manual PAID (PATCH /admin/shop/orders/:id, fix round 2): the same
+ * settle as a verified card payment. One transaction claims PENDING -> PAID
+ * (optionally recording a stripePaymentId) and spends the recorded stock,
+ * credits and gift card. There is no PaymentIntent to refund, so a shortfall
+ * rolls back and answers 409 with a message for the admin.
+ */
+export async function markShopOrderPaidByStaff(prisma, { orderId, stripePaymentId = null, now = new Date() }) {
+  const order = await prisma.shopOrder.findUnique({ where: { id: orderId } });
+  if (!order) throw new OrderError("NOT_FOUND", 404, "Order not found");
+  if (order.paymentStatus === "PAID") return { alreadyPaid: true, order };
+  if (!isPending(order)) throw new OrderError("ORDER_NOT_PENDING", 409, "Only an unpaid, uncancelled order can be marked paid.");
+  const items = await loadItems(prisma, orderId);
+  try {
+    await prisma.$transaction(async (tx) => {
+      const claimed = await tx.shopOrder.updateMany({
+        where: { id: orderId, paymentStatus: "PENDING", fulfillmentStatus: { not: "CANCELLED" }, creditsApplied: order.creditsApplied || 0, giftCardApplied: order.giftCardApplied || 0 },
+        data: { paymentStatus: "PAID", ...(stripePaymentId ? { stripePaymentId } : {}) },
+      });
+      if (claimed.count !== 1) throw new OrderError("ORDER_CHANGED", 409, "This order just changed; reload it and try again.");
+      await settleSavingsInTx(tx, order, items, now);
+    });
+  } catch (rawErr) {
+    const err = asShortfall(rawErr);
+    if (err instanceof OrderError && STAFF_SHORTFALL[err.code]) throw new OrderError(err.code, 409, STAFF_SHORTFALL[err.code], err.extra);
+    throw err;
+  }
+  return { alreadyPaid: false, order: await prisma.shopOrder.findUnique({ where: { id: orderId } }) };
 }
