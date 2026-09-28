@@ -37,8 +37,8 @@ describe("DOCK_ITEMS", () => {
     expect("href" in chappy).toBe(false);
   });
 
-  test("rewards points at the legacy loyalty page until D7 builds /rewards, with the chop seal icon", () => {
-    expect(DOCK_ITEMS[2]).toMatchObject({ key: "rewards", href: "/loyalty", icon: "seal" });
+  test("rewards points at /rewards (D7), with the chop seal icon", () => {
+    expect(DOCK_ITEMS[2]).toMatchObject({ key: "rewards", href: "/rewards", icon: "seal" });
   });
 
   test("chappy shows Chappy's own face, not a generic chat icon", () => {
@@ -95,7 +95,7 @@ describe("isNavActive", () => {
 
   test("does not match a sibling that only shares a prefix", () => {
     expect(isNavActive("/en/ordering", "/order")).toBe(false);
-    expect(isNavActive("/en/locations", "/loyalty")).toBe(false);
+    expect(isNavActive("/en/locations", "/rewards")).toBe(false);
     expect(isNavActive("/en", "/menu")).toBe(false);
     expect(isNavActive(null, "/menu")).toBe(false);
   });

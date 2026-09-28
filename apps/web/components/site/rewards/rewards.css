@@ -1,0 +1,272 @@
+/*
+ * Task D7: the rewards page's scroll-driven pieces.
+ *
+ * Native-first, like components/site/motion/motion.css: where
+ * `animation-timeline: view()` exists, CSS alone drives the climb's gold
+ * fill (--climb), each stop lighting up (--lit) and the Beef Boss foil
+ * (--progress). Elsewhere, useScrollVars (./useScrollVars.ts) writes the
+ * same custom properties from an IntersectionObserver-gated, rAF-throttled
+ * scroll listener. Reduced motion pins everything at its final state.
+ */
+
+@property --climb {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --lit {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+/* --progress is registered by the motion kit (motion.css). */
+
+/* ---------------------------------------------------------------------- */
+/* The climb                                                               */
+/* ---------------------------------------------------------------------- */
+
+.rw-climb-fill {
+  transform-origin: top center;
+  transform: scaleY(var(--climb));
+}
+
+.rw-stop {
+  --rw-stop-color: color-mix(in oklab, var(--color-oh-gold) calc(var(--lit) * 100%), var(--color-oh-ash));
+}
+
+.rw-stop-mark {
+  color: var(--rw-stop-color);
+  border-color: color-mix(in oklab, var(--color-oh-gold) calc(var(--lit) * 70%), var(--color-oh-stone));
+  box-shadow: 0 0 calc(var(--lit) * 32px) calc(var(--lit) * -6px) color-mix(in oklab, var(--color-oh-gold) 60%, transparent);
+  transform: scale(calc(0.92 + var(--lit) * 0.08));
+}
+
+@supports (animation-timeline: view()) {
+  .rw-climb:not([data-static="true"]) {
+    animation: rw-climb-fill linear both;
+    animation-timeline: view();
+    animation-range: cover 20% cover 70%;
+  }
+  .rw-climb:not([data-static="true"]) .rw-stop {
+    animation: rw-stop-lit linear both;
+    animation-timeline: view();
+    animation-range: cover 30% cover 48%;
+  }
+}
+
+@keyframes rw-climb-fill {
+  from {
+    --climb: 0;
+  }
+  to {
+    --climb: 1;
+  }
+}
+
+@keyframes rw-stop-lit {
+  from {
+    --lit: 0;
+  }
+  to {
+    --lit: 1;
+  }
+}
+
+.rw-climb[data-static="true"],
+.rw-climb[data-static="true"] .rw-stop {
+  --climb: 1;
+  --lit: 1;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Tier cards: the flip and the Beef Boss foil                             */
+/* ---------------------------------------------------------------------- */
+
+.rw-card {
+  perspective: 1400px;
+}
+
+.rw-card-inner {
+  transform-style: preserve-3d;
+  transition: transform 0.7s cubic-bezier(0.2, 0.75, 0.2, 1);
+}
+
+.rw-card[data-flipped="true"] .rw-card-inner {
+  transform: rotateY(180deg);
+}
+
+.rw-face {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.rw-face-back {
+  transform: rotateY(180deg);
+}
+
+/* The foil: a thin, slow sheen whose angle follows --progress (the card's
+   own trip through the viewport). Soft-light keeps it a glint on the ink,
+   not a rainbow. */
+.rw-foil {
+  --progress: 0.5;
+}
+
+.rw-foil::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: conic-gradient(
+    from calc(var(--progress) * 300deg + 200deg) at 30% 20%,
+    transparent 0deg,
+    color-mix(in oklab, var(--color-oh-gold) 0%, transparent) 20deg,
+    color-mix(in oklab, var(--color-oh-gold) 55%, transparent) 48deg,
+    color-mix(in oklab, var(--color-oh-cream) 40%, transparent) 58deg,
+    color-mix(in oklab, var(--color-oh-gold) 30%, transparent) 72deg,
+    transparent 110deg,
+    transparent 360deg
+  );
+  mix-blend-mode: soft-light;
+  opacity: 0.9;
+}
+
+@supports (animation-timeline: view()) {
+  .rw-foil:not([data-static="true"]) {
+    animation: rw-foil-turn linear both;
+    animation-timeline: view();
+    animation-range: cover 0% cover 100%;
+  }
+}
+
+@keyframes rw-foil-turn {
+  from {
+    --progress: 0;
+  }
+  to {
+    --progress: 1;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+/* Simulator sliders: 44px thumbs (touch target), a gold fill to the thumb */
+/* ---------------------------------------------------------------------- */
+
+.rw-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 44px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+  touch-action: pan-y;
+}
+
+.rw-range:focus {
+  outline: none;
+}
+
+.rw-range::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--color-oh-gold) 0 var(--fill, 0%),
+    var(--color-oh-stone) var(--fill, 0%) 100%
+  );
+}
+
+.rw-range::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-oh-stone);
+}
+
+.rw-range::-moz-range-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-oh-gold);
+}
+
+.rw-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 44px;
+  height: 44px;
+  margin-top: -19px;
+  border: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--color-oh-cream) 0 11px, var(--color-oh-gold) 11.5px 13.5px, transparent 14px);
+  transition: transform 0.15s ease-out;
+}
+
+.rw-range::-moz-range-thumb {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--color-oh-cream) 0 11px, var(--color-oh-gold) 11.5px 13.5px, transparent 14px);
+}
+
+.rw-range:active::-webkit-slider-thumb {
+  transform: scale(1.12);
+}
+
+.rw-range:focus-visible::-webkit-slider-thumb {
+  background: radial-gradient(
+    circle,
+    var(--color-oh-cream) 0 11px,
+    var(--color-oh-gold) 11.5px 13.5px,
+    transparent 14px 16px,
+    var(--color-oh-cream) 16px 18px,
+    transparent 18.5px
+  );
+}
+
+.rw-range:focus-visible::-moz-range-thumb {
+  outline: 2px solid var(--color-oh-cream);
+  outline-offset: 2px;
+}
+
+/* Timeline bars grow into place when the numbers change. */
+.rw-bar {
+  transition: height 0.45s cubic-bezier(0.2, 0.75, 0.2, 1), background-color 0.3s ease-out;
+}
+
+/* ---------------------------------------------------------------------- */
+/* FAQ                                                                    */
+/* ---------------------------------------------------------------------- */
+
+.rw-faq summary::-webkit-details-marker {
+  display: none;
+}
+
+.rw-faq[open] .rw-faq-chevron {
+  transform: rotate(90deg);
+}
+
+.rw-faq-chevron {
+  transition: transform 0.2s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rw-card-inner,
+  .rw-bar,
+  .rw-faq-chevron,
+  .rw-range::-webkit-slider-thumb {
+    transition: none !important;
+  }
+  .rw-climb,
+  .rw-climb .rw-stop,
+  .rw-foil {
+    animation: none !important;
+  }
+  .rw-climb,
+  .rw-climb .rw-stop {
+    --climb: 1;
+    --lit: 1;
+  }
+}

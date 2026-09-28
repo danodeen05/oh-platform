@@ -36,7 +36,7 @@ export const SITE_ROUTES: readonly SiteRoute[] = [
   { path: "/", group: "legacy", file: `${L}/page.tsx` },
   { path: "/menu", group: "legacy", file: `${L}/menu/page.tsx` },
   { path: "/locations", group: "legacy", file: `${L}/locations/page.tsx` },
-  { path: "/loyalty", group: "legacy", file: `${L}/loyalty/page.tsx` },
+  { path: "/rewards", group: "site", file: "(site)/rewards/page.tsx" },
   { path: "/referral", group: "legacy", file: `${L}/referral/page.tsx`, auth: true },
   { path: "/member", group: "legacy", file: `${L}/member/page.tsx`, auth: true },
   { path: "/member/orders", group: "legacy", file: `${L}/member/orders/page.tsx`, auth: true },

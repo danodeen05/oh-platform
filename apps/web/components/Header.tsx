@@ -153,7 +153,7 @@ export default function Header() {
 
   // Member Benefits items - conditionally include "My Account" only for signed-in users
   const memberBenefitsItems = [
-    { href: `/${locale}/loyalty`, label: t("loyalty") },
+    { href: `/${locale}/rewards`, label: t("loyalty") },
     { href: `/${locale}/referral`, label: t("referral") },
     ...(isSignedIn ? [{ href: `/${locale}/member`, label: t("myAccount") }] : []),
   ];

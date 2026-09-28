@@ -2101,5 +2101,207 @@
         "nav": "Enlaces del pie de página"
       }
     }
+  },
+  "rewards": {
+    "meta": {
+      "title": "Recompensas",
+      "description": "Cada tazón y cada amigo te hacen subir. Mira exactamente cómo llegar a Jefe de la carne."
+    },
+    "unavailable": "Los detalles de recompensas no están disponibles ahora. Inténtalo pronto.",
+    "hero": {
+      "eyebrow": "Recompensas Oh!",
+      "title": "Tres marcas. Un solo ascenso.",
+      "lede": "Cada tazón y cada amigo te hacen subir. Así se llega a {tier}.",
+      "cta": "Planea tu ascenso",
+      "order": "Pide un tazón"
+    },
+    "member": {
+      "signedOut": "Inicia sesión para ver dónde estás.",
+      "signIn": "Iniciar sesión",
+      "loading": "Revisando tu ascenso",
+      "youAre": "Eres {tier}.",
+      "toNext": "{orders} de {ordersNeed} tazones y {referrals} de {referralsNeed} amigos para {next}.",
+      "top": "Estás en la cima. Cada tazón te devuelve {pct}%.",
+      "ordersLabel": "Tazones hacia {next}",
+      "referralsLabel": "Amigos hacia {next}"
+    },
+    "climb": {
+      "eyebrow": "El ascenso",
+      "title": "Empieza como {first}. Termina como {last}.",
+      "start": "Donde todos empiezan. Regístrate y pide un tazón.",
+      "need": "{orders} tazones y {referrals} amigos",
+      "after": "Se cuenta desde {tier}. El progreso empieza de nuevo en cada nivel.",
+      "cashback": "{pct}% de vuelta en cada tazón",
+      "here": "Estás aquí",
+      "step": "Nivel {step} de {total}"
+    },
+    "tiers": {
+      "eyebrow": "Los niveles",
+      "title": "Toca una tarjeta para ver sus beneficios.",
+      "rail": "Tarjetas de nivel",
+      "headline": "{pct}% de vuelta",
+      "flip": "Ver beneficios de {tier}",
+      "unflip": "Ver la tarjeta de {tier}",
+      "tapHint": "Toca para ver beneficios",
+      "backHint": "Toca para volver",
+      "perksTitle": "Beneficios de {tier}",
+      "perks": {
+        "cashback": "{pct}% de vuelta en cada tazón, como crédito",
+        "earlyAccess": "Tazones nuevos {days, plural, one {# día} other {# días}} antes del lanzamiento",
+        "queue": "Prioridad en la cocina +{boost}",
+        "queueNone": "Turno normal en la cocina",
+        "freeBowl": "Un tazón gratis al llegar, válido {days} días",
+        "quarterly": "Un extra premium por nuestra cuenta cada trimestre"
+      }
+    },
+    "simulator": {
+      "eyebrow": "Camino a Jefe de la carne",
+      "title": "¿Qué tan rápido podrías subir?",
+      "lede": "Mueve los controles. Los números siguen las reglas reales.",
+      "controls": "Tu ritmo",
+      "bowls": {
+        "label": "Tazones al mes",
+        "value": "{count, plural, one {# tazón} other {# tazones}} al mes"
+      },
+      "friends": {
+        "label": "Amigos al mes",
+        "value": "{count, plural, one {# amigo} other {# amigos}} al mes",
+        "cap": "Cuentan hasta {cap} amigos al mes."
+      },
+      "ticket": {
+        "label": "Pedido promedio antes de impuestos",
+        "value": "{amount} por pedido"
+      },
+      "results": "Tu ascenso",
+      "reach": "Mes {month}",
+      "beyond": "Más de {months} meses",
+      "startTier": "Desde el primer día",
+      "never": {
+        "title": "Sin amigos, no hay ascenso.",
+        "body": "Cada nivel pide amigos además de tazones. Invita a un amigo al mes y {tier} queda a tu alcance."
+      },
+      "summary": "A este ritmo: {first} en el mes {firstMonth}, {last} en el mes {lastMonth}.",
+      "summaryPartial": "A este ritmo: {first} en el mes {firstMonth}. {last} toma más de {months} meses.",
+      "summaryNone": "A este ritmo sigues como {tier} durante {months} meses.",
+      "timeline": "Tus primeros {months} meses",
+      "month": "Mes",
+      "totals": {
+        "freeBowls": "Tazones gratis",
+        "cashback": "Reembolso",
+        "friendCredit": "Crédito por amigos",
+        "note": "En {months} meses. Los créditos vencen {days} días después de ganarlos."
+      }
+    },
+    "credits": {
+      "eyebrow": "Cómo funcionan los créditos",
+      "title": "Gánalo. Úsalo. En {days} días.",
+      "lede": "El reembolso y los créditos por amigos llegan a tu cuenta como crédito de la tienda.",
+      "track": "La vida de un crédito",
+      "day": "Día {day}",
+      "earn": {
+        "title": "Ganar",
+        "body": "De {low}% a {high}% de vuelta en cada tazón, más {referrer} cuando un amigo termina su primer tazón."
+      },
+      "spend": {
+        "title": "Usar",
+        "body": "Los créditos se aplican al pagar. Primero se usa el que vence antes."
+      },
+      "remind": {
+        "title": "Aviso",
+        "body": "Te avisamos {days} días antes de que venza un crédito."
+      },
+      "expire": {
+        "title": "Vencer",
+        "body": "Cada crédito dura {days} días desde el día en que lo ganas."
+      },
+      "wallet": "Tres créditos en tu cartera",
+      "daysLeft": "{days, plural, one {queda # día} other {quedan # días}}",
+      "spentFirst": "Se usa primero"
+    },
+    "referrals": {
+      "eyebrow": "Amigos",
+      "title": "{referrer} para ti. {referee} para ellos.",
+      "body": "Tu amigo recibe {referee} al registrarse con tu enlace. Tú recibes {referrer} cuando termina su primer tazón.",
+      "cap": "Hasta {max} referidos pagados cada 30 días. Cada uno también cuenta para tu siguiente nivel.",
+      "yourLink": "Tu enlace",
+      "share": "Comparte tu enlace",
+      "copy": "Copiar enlace",
+      "copied": "Enlace copiado",
+      "copyFailed": "No se pudo copiar. Selecciona el enlace y cópialo.",
+      "shareTitle": "Oh! Beef Noodle Soup",
+      "shareText": "Aquí tienes {amount} para tu primer tazón en Oh!",
+      "signedOut": "Inicia sesión para obtener tu enlace.",
+      "signIn": "Iniciar sesión",
+      "loading": "Obteniendo tu enlace",
+      "unavailable": "Tu enlace no está disponible ahora."
+    },
+    "seals": {
+      "eyebrow": "Sellos",
+      "title": "Sellos que puedes ganar.",
+      "lede": "Cada uno es un sello estampado cuando lo ganas. Toca un sello para ver cómo.",
+      "earned": "Ganado",
+      "notEarned": "Aún no ganado",
+      "howTo": "Cómo ganarlo",
+      "close": "Cerrar",
+      "empty": "Los sellos llegan pronto.",
+      "count": "{earned} de {total} ganados",
+      "categories": {
+        "MILESTONE": "Hito",
+        "CHALLENGE": "Reto",
+        "REFERRAL": "Amigos",
+        "SPECIAL": "Especial",
+        "STREAK": "Racha"
+      }
+    },
+    "challenges": {
+      "eyebrow": "Retos",
+      "title": "Retos extra, con crédito.",
+      "reward": "{amount} de crédito",
+      "empty": "Pronto habrá retos nuevos."
+    },
+    "faq": {
+      "eyebrow": "Preguntas",
+      "title": "Bueno saberlo.",
+      "items": {
+        "climb": {
+          "q": "¿Cómo subo de nivel?",
+          "a": "Pide tazones y trae amigos. De {first} a {second} se necesitan {firstOrders} tazones y {firstReferrals} amigos. De {second} a {third}, {secondOrders} tazones y {secondReferrals} amigos más."
+        },
+        "reset": {
+          "q": "¿El progreso extra se conserva?",
+          "a": "No. Al subir de nivel, ambos conteos vuelven a cero."
+        },
+        "referral": {
+          "q": "¿Qué cuenta como amigo?",
+          "a": "Un amigo que se registra con tu enlace y termina su primer tazón. Cuentan hasta {max} en cualquier periodo de 30 días."
+        },
+        "expiry": {
+          "q": "¿Cuándo vencen los créditos?",
+          "a": "{days} días después de ganarlos. Te avisamos {warn} días antes, y al pagar siempre se usa primero el más antiguo."
+        },
+        "freeBowl": {
+          "q": "¿Cómo funciona el tazón gratis?",
+          "a": "Cada vez que subes de nivel, recibes un tazón gratis en tu cuenta. Úsalo dentro de {days} días."
+        },
+        "quarterly": {
+          "q": "¿Qué es el extra trimestral?",
+          "a": "Como {tier}, un extra premium va por nuestra cuenta cada trimestre. Los trimestres siguen la hora de la montaña."
+        },
+        "earlyAccess": {
+          "q": "¿Qué es el acceso anticipado?",
+          "a": "Los tazones nuevos se abren a los miembros antes que a todos: {third} {thirdDays, plural, one {# día} other {# días}} antes, {second} {secondDays, plural, one {# día} other {# días}}, {first} {firstDays, plural, one {# día} other {# días}}."
+        },
+        "queue": {
+          "q": "¿Qué significa la prioridad en la cocina?",
+          "a": "En horas de mucha demanda, los pedidos de niveles más altos avanzan en la fila de la cocina: +{second} para {secondName}, +{third} para {thirdName}."
+        }
+      }
+    },
+    "chappy": {
+      "title": "¿Aún tienes dudas?",
+      "body": "Chappy conoce las reglas y puede revisar tu ascenso contigo.",
+      "cta": "Pregúntale a Chappy",
+      "prompt": "¿Cómo llego a Jefe de la carne lo más rápido posible?"
+    }
   }
 }

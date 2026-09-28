@@ -2101,5 +2101,207 @@
         "nav": "页脚链接"
       }
     }
+  },
+  "rewards": {
+    "meta": {
+      "title": "会员奖励",
+      "description": "每一碗、每一位朋友，都让你更上一层。看清楚如何成为牛肉达人。"
+    },
+    "unavailable": "暂时无法获取会员奖励信息，请稍后再试。",
+    "hero": {
+      "eyebrow": "Oh! 会员奖励",
+      "title": "三个等级，一条晋升之路。",
+      "lede": "每一碗、每一位朋友，都让你更上一层。下面告诉你如何成为{tier}。",
+      "cta": "规划你的晋升",
+      "order": "点一碗"
+    },
+    "member": {
+      "signedOut": "登录即可查看你目前的位置。",
+      "signIn": "登录",
+      "loading": "正在查看你的进度",
+      "youAre": "你目前是{tier}。",
+      "toNext": "距离{next}：{orders}/{ordersNeed} 碗，{referrals}/{referralsNeed} 位朋友。",
+      "top": "你已在最高等级。每一碗都享 {pct}% 返现。",
+      "ordersLabel": "晋升{next}的碗数",
+      "referralsLabel": "晋升{next}的朋友数"
+    },
+    "climb": {
+      "eyebrow": "晋升之路",
+      "title": "从{first}开始，成为{last}。",
+      "start": "每个人的起点。注册并点一碗即可。",
+      "need": "{orders} 碗加 {referrals} 位朋友",
+      "after": "从成为{tier}起计算。每升一级，进度重新开始。",
+      "cashback": "每碗 {pct}% 返现",
+      "here": "你在这里",
+      "step": "第 {step} 级，共 {total} 级"
+    },
+    "tiers": {
+      "eyebrow": "会员等级",
+      "title": "点一下卡片，看看福利。",
+      "rail": "等级卡片",
+      "headline": "{pct}% 返现",
+      "flip": "查看{tier}福利",
+      "unflip": "返回{tier}卡片",
+      "tapHint": "点一下看福利",
+      "backHint": "点一下翻回",
+      "perksTitle": "{tier}福利",
+      "perks": {
+        "cashback": "每碗 {pct}% 返现，以购物金发放",
+        "earlyAccess": "新品提前 {days} 天抢先享用",
+        "queue": "厨房出餐优先 +{boost}",
+        "queueNone": "普通出餐顺序",
+        "freeBowl": "升级即送一碗，{days} 天内有效",
+        "quarterly": "每季度赠送一份高级加料"
+      }
+    },
+    "simulator": {
+      "eyebrow": "牛肉达人之路",
+      "title": "你能多快晋升？",
+      "lede": "拖动滑块，数字按真实规则计算。",
+      "controls": "你的节奏",
+      "bowls": {
+        "label": "每月碗数",
+        "value": "每月 {count} 碗"
+      },
+      "friends": {
+        "label": "每月推荐朋友",
+        "value": "每月 {count} 位朋友",
+        "cap": "每月最多计入 {cap} 位朋友。"
+      },
+      "ticket": {
+        "label": "平均每单金额（税前）",
+        "value": "每单 {amount}"
+      },
+      "results": "你的晋升",
+      "reach": "第 {month} 个月",
+      "beyond": "超过 {months} 个月",
+      "startTier": "第一天起",
+      "never": {
+        "title": "没有朋友，就无法晋升。",
+        "body": "每个等级都需要碗数，也需要朋友。每月邀请一位朋友，{tier}就在眼前。"
+      },
+      "summary": "按这个节奏：第 {firstMonth} 个月成为{first}，第 {lastMonth} 个月成为{last}。",
+      "summaryPartial": "按这个节奏：第 {firstMonth} 个月成为{first}。成为{last}需要超过 {months} 个月。",
+      "summaryNone": "按这个节奏，你在 {months} 个月内都会是{tier}。",
+      "timeline": "你的前 {months} 个月",
+      "month": "月",
+      "totals": {
+        "freeBowls": "免费面",
+        "cashback": "返现",
+        "friendCredit": "推荐购物金",
+        "note": "按 {months} 个月计算。购物金自获得起 {days} 天后过期。"
+      }
+    },
+    "credits": {
+      "eyebrow": "购物金怎么用",
+      "title": "赚到、用掉，{days} 天内。",
+      "lede": "返现和推荐奖励都会以购物金存入你的账户。",
+      "track": "一笔购物金的一生",
+      "day": "第 {day} 天",
+      "earn": {
+        "title": "获得",
+        "body": "每碗享 {low}% 至 {high}% 返现；朋友吃完第一碗，你再得 {referrer}。"
+      },
+      "spend": {
+        "title": "使用",
+        "body": "结账时自动抵扣，最快过期的先用。"
+      },
+      "remind": {
+        "title": "提醒",
+        "body": "购物金过期前 {days} 天，我们会通知你。"
+      },
+      "expire": {
+        "title": "过期",
+        "body": "每笔购物金自获得当天起有效 {days} 天。"
+      },
+      "wallet": "钱包里的三笔购物金",
+      "daysLeft": "剩 {days} 天",
+      "spentFirst": "优先使用"
+    },
+    "referrals": {
+      "eyebrow": "朋友",
+      "title": "你得 {referrer}，朋友得 {referee}。",
+      "body": "朋友用你的链接注册即得 {referee}。朋友吃完第一碗后，你得 {referrer}。",
+      "cap": "每 30 天最多 {max} 笔推荐奖励。每一位也会计入你的下一个等级。",
+      "yourLink": "你的链接",
+      "share": "分享你的链接",
+      "copy": "复制链接",
+      "copied": "已复制链接",
+      "copyFailed": "无法复制，请选中链接后手动复制。",
+      "shareTitle": "Oh! 牛肉面",
+      "shareText": "送你 {amount}，用在你在 Oh! 的第一碗。",
+      "signedOut": "登录即可获取你的链接。",
+      "signIn": "登录",
+      "loading": "正在获取你的链接",
+      "unavailable": "暂时无法获取你的链接。"
+    },
+    "seals": {
+      "eyebrow": "印章",
+      "title": "你可以收集的印章。",
+      "lede": "每一枚都是一方印，达成时为你盖上。点一下印章，看看如何获得。",
+      "earned": "已获得",
+      "notEarned": "尚未获得",
+      "howTo": "获得方式",
+      "close": "关闭",
+      "empty": "印章即将推出。",
+      "count": "已获得 {earned}/{total}",
+      "categories": {
+        "MILESTONE": "里程碑",
+        "CHALLENGE": "挑战",
+        "REFERRAL": "朋友",
+        "SPECIAL": "特别",
+        "STREAK": "连续"
+      }
+    },
+    "challenges": {
+      "eyebrow": "挑战",
+      "title": "完成挑战，赚取购物金。",
+      "reward": "{amount} 购物金",
+      "empty": "新挑战即将推出。"
+    },
+    "faq": {
+      "eyebrow": "常见问题",
+      "title": "你可能想知道。",
+      "items": {
+        "climb": {
+          "q": "如何晋升等级？",
+          "a": "点面，并邀请朋友。从{first}到{second}需要 {firstOrders} 碗和 {firstReferrals} 位朋友。从{second}到{third}需要再 {secondOrders} 碗和 {secondReferrals} 位朋友。"
+        },
+        "reset": {
+          "q": "多出来的进度会保留吗？",
+          "a": "不会。每次晋升后，两项进度都从零开始。"
+        },
+        "referral": {
+          "q": "怎样才算一位朋友？",
+          "a": "用你的链接注册并吃完第一碗的朋友。任意 30 天内最多计入 {max} 位。"
+        },
+        "expiry": {
+          "q": "购物金什么时候过期？",
+          "a": "获得后 {days} 天。过期前 {warn} 天会提醒你，结账时也总是先用最早的。"
+        },
+        "freeBowl": {
+          "q": "免费面怎么用？",
+          "a": "每次晋升，账户会收到一碗免费面，请在 {days} 天内使用。"
+        },
+        "quarterly": {
+          "q": "每季度加料是什么？",
+          "a": "成为{tier}后，每季度赠送一份高级加料。季度按山地时间计算。"
+        },
+        "earlyAccess": {
+          "q": "什么是抢先享用？",
+          "a": "新品会先开放给会员：{third}提前 {thirdDays} 天，{second}提前 {secondDays} 天，{first}提前 {firstDays} 天。"
+        },
+        "queue": {
+          "q": "出餐优先是什么意思？",
+          "a": "高峰时段，较高等级的订单在厨房排序中领先：{secondName} +{second}，{thirdName} +{third}。"
+        }
+      }
+    },
+    "chappy": {
+      "title": "还有疑问？",
+      "body": "Chappy 熟悉所有规则，也能陪你一起看你的进度。",
+      "cta": "问问 Chappy",
+      "prompt": "怎样最快成为牛肉达人？"
+    }
   }
 }

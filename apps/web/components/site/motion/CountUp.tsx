@@ -9,6 +9,10 @@
  * element becomes visible.
  *
  * Reduced motion renders the final `to` value immediately, no counting.
+ *
+ * Once it has counted, a new `to` (a live total, e.g. the rewards
+ * simulator) counts from the value on screen to the new one, straight away:
+ * the element is already in view, so there's nothing to wait for.
  */
 import { createElement, useEffect, useRef, useState, type ElementType } from "react";
 import "./motion.css";
@@ -45,16 +49,42 @@ export function CountUp({
   const startedRef = useRef(false);
   const rafRef = useRef<number | null>(null);
   const [value, setValue] = useState(from);
+  const valueRef = useRef(from);
 
   useEffect(() => {
     if (reducedMotion) {
+      valueRef.current = to;
       setValue(to);
       return;
     }
     const node = ref.current;
     if (!node || typeof IntersectionObserver === "undefined") {
+      valueRef.current = to;
       setValue(to);
       return;
+    }
+
+    const run = (startValue: number) => {
+      const start = performance.now();
+      const tick = (now: number) => {
+        const elapsed = now - start;
+        const t = duration > 0 ? Math.min(1, elapsed / duration) : 1;
+        const next = startValue + (to - startValue) * easeOutCubic(t);
+        valueRef.current = next;
+        setValue(next);
+        if (t < 1) {
+          rafRef.current = requestAnimationFrame(tick);
+        }
+      };
+      rafRef.current = requestAnimationFrame(tick);
+    };
+
+    if (startedRef.current) {
+      // Already counted once: go from what's on screen to the new target.
+      run(valueRef.current);
+      return () => {
+        if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+      };
     }
 
     const observer = new IntersectionObserver(
@@ -63,16 +93,7 @@ export function CountUp({
           if (!entry.isIntersecting || startedRef.current) continue;
           startedRef.current = true;
           observer.disconnect();
-          const start = performance.now();
-          const tick = (now: number) => {
-            const elapsed = now - start;
-            const t = duration > 0 ? Math.min(1, elapsed / duration) : 1;
-            setValue(from + (to - from) * easeOutCubic(t));
-            if (t < 1) {
-              rafRef.current = requestAnimationFrame(tick);
-            }
-          };
-          rafRef.current = requestAnimationFrame(tick);
+          run(from);
         }
       },
       { threshold: 0.4 }

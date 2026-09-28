@@ -4406,5 +4406,207 @@
         "nav": "Footer links"
       }
     }
+  },
+  "rewards": {
+    "meta": {
+      "title": "Rewards",
+      "description": "Every bowl and every friend moves you up. See exactly how to reach Beef Boss."
+    },
+    "unavailable": "Rewards details are not available right now. Try again soon.",
+    "hero": {
+      "eyebrow": "Oh! Rewards",
+      "title": "Three marks. One climb.",
+      "lede": "Every bowl and every friend moves you up. Here is exactly how to reach {tier}.",
+      "cta": "Plan your climb",
+      "order": "Order a bowl"
+    },
+    "member": {
+      "signedOut": "Sign in to see where you stand.",
+      "signIn": "Sign in",
+      "loading": "Checking your climb",
+      "youAre": "You are a {tier}.",
+      "toNext": "{orders} of {ordersNeed} bowls and {referrals} of {referralsNeed} friends to {next}.",
+      "top": "You are at the top. Every bowl earns {pct}% back.",
+      "ordersLabel": "Bowls toward {next}",
+      "referralsLabel": "Friends toward {next}"
+    },
+    "climb": {
+      "eyebrow": "The climb",
+      "title": "Start as a {first}. Finish as a {last}.",
+      "start": "Where everyone starts. Sign up and order a bowl.",
+      "need": "{orders} bowls and {referrals} friends",
+      "after": "Counted from {tier}. Progress starts fresh at each step.",
+      "cashback": "{pct}% back on every bowl",
+      "here": "You are here",
+      "step": "Step {step} of {total}"
+    },
+    "tiers": {
+      "eyebrow": "The tiers",
+      "title": "Tap a card for its perks.",
+      "rail": "Tier cards",
+      "headline": "{pct}% back",
+      "flip": "Show {tier} perks",
+      "unflip": "Show the {tier} card",
+      "tapHint": "Tap for perks",
+      "backHint": "Tap to flip back",
+      "perksTitle": "{tier} perks",
+      "perks": {
+        "cashback": "{pct}% back on every bowl, as store credit",
+        "earlyAccess": "New bowls {days, plural, one {# day} other {# days}} before release",
+        "queue": "Kitchen queue priority +{boost}",
+        "queueNone": "Standard kitchen queue",
+        "freeBowl": "A free bowl when you arrive, good for {days} days",
+        "quarterly": "One premium add-on on us, every quarter"
+      }
+    },
+    "simulator": {
+      "eyebrow": "Path to Beef Boss",
+      "title": "How fast could you climb?",
+      "lede": "Move the sliders. The numbers follow the real rules.",
+      "controls": "Your pace",
+      "bowls": {
+        "label": "Bowls a month",
+        "value": "{count, plural, one {# bowl} other {# bowls}} a month"
+      },
+      "friends": {
+        "label": "Friends a month",
+        "value": "{count, plural, one {# friend} other {# friends}} a month",
+        "cap": "Up to {cap} friends a month count."
+      },
+      "ticket": {
+        "label": "Average order before tax",
+        "value": "{amount} per order"
+      },
+      "results": "Your climb",
+      "reach": "Month {month}",
+      "beyond": "Past {months} months",
+      "startTier": "From day one",
+      "never": {
+        "title": "No friends, no climb.",
+        "body": "Every tier asks for friends as well as bowls. Invite one friend a month and {tier} is within reach."
+      },
+      "summary": "At this pace: {first} in month {firstMonth}, {last} in month {lastMonth}.",
+      "summaryPartial": "At this pace: {first} in month {firstMonth}. {last} takes longer than {months} months.",
+      "summaryNone": "At this pace you stay a {tier} for {months} months.",
+      "timeline": "Your first {months} months",
+      "month": "Month",
+      "totals": {
+        "freeBowls": "Free bowls",
+        "cashback": "Cashback",
+        "friendCredit": "Friend credits",
+        "note": "Over {months} months. Credits expire {days} days after you earn them."
+      }
+    },
+    "credits": {
+      "eyebrow": "How credits work",
+      "title": "Earn it. Spend it. Within {days} days.",
+      "lede": "Cashback and friend credits land in your account as store credit.",
+      "track": "The life of one credit",
+      "day": "Day {day}",
+      "earn": {
+        "title": "Earn",
+        "body": "{low}% to {high}% back on every bowl, plus {referrer} when a friend finishes a first bowl."
+      },
+      "spend": {
+        "title": "Spend",
+        "body": "Credits apply at checkout. The one closest to expiring goes first."
+      },
+      "remind": {
+        "title": "Reminder",
+        "body": "We let you know {days} days before a credit expires."
+      },
+      "expire": {
+        "title": "Expire",
+        "body": "Each credit lasts {days} days from the day you earn it."
+      },
+      "wallet": "Three credits in your wallet",
+      "daysLeft": "{days, plural, one {# day left} other {# days left}}",
+      "spentFirst": "Spent first"
+    },
+    "referrals": {
+      "eyebrow": "Friends",
+      "title": "{referrer} for you. {referee} for them.",
+      "body": "Your friend gets {referee} when they sign up with your link. You get {referrer} when their first bowl is done.",
+      "cap": "Up to {max} paid referrals every 30 days. Each one also counts toward your next tier.",
+      "yourLink": "Your link",
+      "share": "Share your link",
+      "copy": "Copy link",
+      "copied": "Link copied",
+      "copyFailed": "Could not copy. Select the link and copy it.",
+      "shareTitle": "Oh! Beef Noodle Soup",
+      "shareText": "Here is {amount} toward your first bowl at Oh!",
+      "signedOut": "Sign in to get your link.",
+      "signIn": "Sign in",
+      "loading": "Getting your link",
+      "unavailable": "Your link is not available right now."
+    },
+    "seals": {
+      "eyebrow": "Seals",
+      "title": "Seals you can earn.",
+      "lede": "Each one is a chop, stamped when you earn it. Tap a seal to see how.",
+      "earned": "Earned",
+      "notEarned": "Not yet earned",
+      "howTo": "How to earn it",
+      "close": "Close",
+      "empty": "Seals are on their way.",
+      "count": "{earned} of {total} earned",
+      "categories": {
+        "MILESTONE": "Milestone",
+        "CHALLENGE": "Challenge",
+        "REFERRAL": "Friends",
+        "SPECIAL": "Special",
+        "STREAK": "Streak"
+      }
+    },
+    "challenges": {
+      "eyebrow": "Challenges",
+      "title": "Side quests, with credit.",
+      "reward": "{amount} credit",
+      "empty": "New challenges are coming."
+    },
+    "faq": {
+      "eyebrow": "Questions",
+      "title": "Good to know.",
+      "items": {
+        "climb": {
+          "q": "How do I move up a tier?",
+          "a": "Order bowls and bring friends. {first} to {second} takes {firstOrders} bowls and {firstReferrals} friends. {second} to {third} takes {secondOrders} more bowls and {secondReferrals} more friends."
+        },
+        "reset": {
+          "q": "Does extra progress carry over?",
+          "a": "No. When you move up, both counts start again from zero."
+        },
+        "referral": {
+          "q": "What counts as a friend?",
+          "a": "A friend who signs up with your link and finishes a first bowl. Up to {max} count in any 30 days."
+        },
+        "expiry": {
+          "q": "When do credits expire?",
+          "a": "{days} days after you earn them. We remind you {warn} days before, and checkout always spends the oldest first."
+        },
+        "freeBowl": {
+          "q": "How does the free bowl work?",
+          "a": "Each time you move up a tier, a free bowl lands in your account. Use it within {days} days."
+        },
+        "quarterly": {
+          "q": "What is the quarterly add-on?",
+          "a": "As a {tier}, one premium add-on is on us each quarter. Quarters follow Mountain Time."
+        },
+        "earlyAccess": {
+          "q": "What is early access?",
+          "a": "New bowls open to members before everyone else: {third} {thirdDays, plural, one {# day} other {# days}} early, {second} {secondDays, plural, one {# day} other {# days}}, {first} {firstDays, plural, one {# day} other {# days}}."
+        },
+        "queue": {
+          "q": "What does queue priority mean?",
+          "a": "At busy times, orders from higher tiers get a head start in the kitchen queue: +{second} for {secondName}, +{third} for {thirdName}."
+        }
+      }
+    },
+    "chappy": {
+      "title": "Still wondering?",
+      "body": "Chappy knows the rules, and can look at your climb with you.",
+      "cta": "Ask Chappy",
+      "prompt": "How do I reach Beef Boss fastest?"
+    }
   }
 }

@@ -52,6 +52,9 @@ const nextConfig = {
       { source: '/:locale(en|zh-TW|zh-CN|es)/careers', destination: '/:locale', permanent: true },
       { source: '/press', destination: '/', permanent: true },
       { source: '/careers', destination: '/', permanent: true },
+      // Task D7: the loyalty page is now /rewards (permanent: true is a 308).
+      { source: '/:locale(en|zh-TW|zh-CN|es)/loyalty', destination: '/:locale/rewards', permanent: true },
+      { source: '/loyalty', destination: '/rewards', permanent: true },
     ];
   },
   images: {
