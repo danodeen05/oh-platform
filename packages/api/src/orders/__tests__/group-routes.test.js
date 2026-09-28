@@ -346,6 +346,85 @@ describe("POST /group-orders/:code/complete", () => {
     assert.equal((await prisma.seat.findUnique({ where: { id: "s-a01" } })).status, "OCCUPIED");
     assert.equal((await prisma.order.findUnique({ where: { id: "o-u2" } })).seatId ?? null, null);
   });
+
+  // Task D11: the lobby's CombMap pick, by order and pod label.
+  const paidPair = () => [
+    { id: "o-host", groupOrderId: "g1", userId: "u1", paymentStatus: "PAID", status: "QUEUED", amountDueCents: 100, createdAt: new Date(NOW.getTime() - 2000) },
+    { id: "o-u2", groupOrderId: "g1", userId: "u2", paymentStatus: "PAID", status: "QUEUED", amountDueCents: 100, createdAt: new Date(NOW.getTime() - 1000) },
+  ];
+
+  test("D11: picked pods go to the order they were picked for, both halves of a duo included", async () => {
+    const { app, prisma } = await buildApp({ orders: paidPair() });
+    const res = await app.inject({
+      method: "POST",
+      url: "/group-orders/ABC234/complete",
+      headers: user("u1"),
+      payload: { pods: [{ orderId: "o-u2", label: "C-01" }, { orderId: "o-host", label: "C-02" }] },
+    });
+    assert.equal(res.statusCode, 200);
+    const host = await prisma.order.findUnique({ where: { id: "o-host" } });
+    const u2 = await prisma.order.findUnique({ where: { id: "o-u2" } });
+    assert.equal(host.seatId, "s-c02");
+    assert.equal(u2.seatId, "s-c01");
+    assert.equal(host.podSelectionMethod, "GROUP_HOST_SELECTED");
+    assert.equal((await prisma.seat.findUnique({ where: { id: "s-c01" } })).status, "RESERVED");
+    assert.equal((await prisma.seat.findUnique({ where: { id: "s-c02" } })).status, "RESERVED");
+    assert.equal((await prisma.groupOrder.findUnique({ where: { id: "g1" } })).status, "PAID");
+  });
+
+  test("D11: a picked pod taken meanwhile falls back to the next best free pod, never a double booking", async () => {
+    const { app, prisma } = await buildApp({ orders: paidPair() });
+    await prisma.seat.update({ where: { id: "s-b07" }, data: { status: "RESERVED" } }); // someone else's hold
+    const res = await app.inject({ method: "POST", url: "/group-orders/ABC234/complete", headers: user("u1"), payload: { pods: [{ orderId: "o-u2", label: "B-07" }] } });
+    assert.equal(res.statusCode, 200);
+    const u2 = await prisma.order.findUnique({ where: { id: "o-u2" } });
+    assert.ok(u2.seatId && u2.seatId !== "s-b07", `seated elsewhere, got ${u2.seatId}`);
+    assert.notEqual(u2.seatId, "s-old", "never a retired pod");
+    assert.equal(u2.podSelectionMethod, "AUTO");
+    // Without fill, the unpicked host is seated on arrival.
+    assert.equal((await prisma.order.findUnique({ where: { id: "o-host" } })).seatId ?? null, null);
+  });
+
+  test("D11: fill seats the unpicked members at distinct free pods; a bad label is ignored", async () => {
+    const { app, prisma } = await buildApp({ orders: paidPair() });
+    const res = await app.inject({ method: "POST", url: "/group-orders/ABC234/complete", headers: user("u1"), payload: { pods: [{ orderId: "o-u2", label: "not a pod" }], fill: true } });
+    assert.equal(res.statusCode, 200);
+    const a = (await prisma.order.findUnique({ where: { id: "o-host" } })).seatId;
+    const b = (await prisma.order.findUnique({ where: { id: "o-u2" } })).seatId;
+    assert.ok(a && b && a !== b, `two distinct pods, got ${a} and ${b}`);
+  });
+
+  test("D11: only the host may complete, even with a pick", async () => {
+    const { app, prisma } = await buildApp({ orders: paidPair() });
+    const res = await app.inject({ method: "POST", url: "/group-orders/ABC234/complete", headers: user("u2"), payload: { pods: [{ orderId: "o-u2", label: "B-07" }] } });
+    assert.equal(res.statusCode, 403);
+    assert.equal((await prisma.seat.findUnique({ where: { id: "s-b07" } })).status, "AVAILABLE");
+  });
+});
+
+describe("GET /group-orders/:code?locale= (Task D11)", () => {
+  test("the location and each line's menu item come back in the reader's locale; en and no locale are unchanged", async () => {
+    const group = {
+      ...GROUP,
+      location: { id: "L1", name: "City Creek Mall", address: "50 S Main St", i18n: { "zh-TW": { name: "城市溪購物中心", address: "主街50號" } } },
+      orders: [
+        {
+          id: "o1",
+          items: [{ id: "i1", quantity: 1, selectedValue: "Medium", menuItem: { name: "Classic Beef Noodle Soup", nameZhTW: "經典牛肉麵", sliderConfig: { labels: ["Light", "Medium"], labelsI18n: { "zh-TW": ["淡", "中"] } } } }],
+        },
+      ],
+    };
+    const { app } = await buildApp({ groups: [group] });
+    const zh = (await app.inject({ method: "GET", url: "/group-orders/ABC234?locale=zh-TW" })).json();
+    assert.equal(zh.location.name, "城市溪購物中心");
+    assert.equal(zh.location.address, "主街50號");
+    assert.equal(zh.orders[0].items[0].menuItem.name, "經典牛肉麵");
+    assert.deepEqual(zh.orders[0].items[0].menuItem.sliderConfig.displayLabels, ["淡", "中"]);
+    assert.equal(zh.orders[0].items[0].selectedValue, "Medium", "the stored value stays the canonical English label");
+    const en = (await app.inject({ method: "GET", url: "/group-orders/ABC234" })).json();
+    assert.equal(en.location.name, "City Creek Mall");
+    assert.equal(en.orders[0].items[0].menuItem.name, "Classic Beef Noodle Soup");
+  });
 });
 
 describe("host pays for the group", () => {

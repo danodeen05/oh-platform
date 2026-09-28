@@ -9,6 +9,8 @@
  *   DELETE /group-orders/:code/orders/:orderId     the order's member or the host
  *   POST   /group-orders/:code/transfer-host       host: hand the host role to a member
  *   POST   /group-orders/:code/complete            host: every order paid -> pods + kitchen
+ *                                                  ({pods: [{orderId, label}], fill}: the
+ *                                                  lobby's CombMap pick, Task D11)
  *   POST   /group-orders/:code/payment-intent      host (signed in): ONE PaymentIntent for the group
  *   POST   /group-orders/:code/confirm-payment     verified group settle: any caller with a
  *                                                  PaymentIntent (Stripe verifies it); the
@@ -29,7 +31,9 @@
  * markGroupPaid (host pays), both server-verified.
  */
 import { orderOwnerId } from "../auth/customer.js";
-import { quoteOrder, createOrder, createGroupPaymentIntent, markGroupPaid, OrderError, DINE_IN_DISABLED_MESSAGE } from "./service.js";
+import { quoteOrder, createOrder, createGroupPaymentIntent, markGroupPaid, pickBestPod, OrderError, PodUnavailableError, DINE_IN_DISABLED_MESSAGE } from "./service.js";
+import { localizeLocation, localizeMenuItem } from "../i18n/localize.js";
+import { normalizeLocale } from "../locale.js";
 
 export const GUEST_SESSION_HEADER = "x-guest-session";
 export const MAX_GROUP_MEMBERS = 8;
@@ -93,6 +97,24 @@ function publicOrder(o, viewer = null) {
   const out = { ...o };
   if ("user" in out) out.user = safeUser(out.user, viewer);
   if ("guest" in out) out.guest = safeGuest(out.guest, viewer);
+  return out;
+}
+
+/**
+ * Task D11: the lobby's copy in the reader's locale (`?locale=`): the
+ * location's name and address (Location.i18n) and each line's menu item
+ * name plus `sliderConfig.displayLabels` (the F1a localizers). English is
+ * the rows' own columns, so "en" (or no locale) returns the group as is.
+ */
+export function localizeGroup(group, locale = "en") {
+  if (!group || locale === "en") return group;
+  const out = { ...group };
+  if (out.location) out.location = localizeLocation(out.location, locale);
+  if (Array.isArray(out.orders)) {
+    out.orders = out.orders.map((o) =>
+      Array.isArray(o?.items) ? { ...o, items: o.items.map((it) => (it?.menuItem ? { ...it, menuItem: localizeMenuItem(it.menuItem, locale) } : it)) } : o,
+    );
+  }
   return out;
 }
 
@@ -265,7 +287,7 @@ export async function registerGroupOrderRoutes(app, {
       await prisma.groupOrder.update({ where: { id: group.id }, data: { status: "CANCELLED" } });
       return reply.code(410).send({ error: "Group order has expired" });
     }
-    return publicGroup(group, await resolveViewer(req));
+    return localizeGroup(publicGroup(group, await resolveViewer(req)), normalizeLocale(req.query?.locale));
   });
 
   app.post("/group-orders/:code/join", async (req, reply) => {
@@ -394,41 +416,82 @@ export async function registerGroupOrderRoutes(app, {
     return fullGroup(group.id, { userId: found.actor.userId, guestId: found.actor.guestId });
   });
 
+  /**
+   * Every order paid: pods, then the kitchen. The lobby's CombMap pick comes
+   * as `pods: [{orderId, label}]` (Task D11). Each pod is claimed race-safe
+   * (pickBestPod: a conditional AVAILABLE -> RESERVED claim); a picked pod
+   * someone else took meanwhile falls back to the next best free pod, never
+   * a double booking. `fill: true` also seats the members the host left
+   * unpicked at the next best pod. The legacy `seatIds` (by position) still
+   * works for older clients. No pod free: the order stays seatless and is
+   * seated on arrival.
+   */
   app.post("/group-orders/:code/complete", async (req, reply) => {
     const found = await hostGroup(req, reply);
     if (!found) return reply;
     const { group } = found;
-    const { seatIds, seatingOption } = req.body || {};
-    const orders = (await prisma.order.findMany({ where: { groupOrderId: group.id } })).filter((o) => o.status !== "CANCELLED");
+    const { seatIds, seatingOption, pods, fill } = req.body || {};
+    const orders = (await prisma.order.findMany({ where: { groupOrderId: group.id } }))
+      .filter((o) => o.status !== "CANCELLED")
+      .sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
     if (orders.length === 0) return reply.code(400).send({ error: "No orders in this group" });
 
-    if (group.status === "PAID" && orders.every((o) => o.status === "QUEUED" && o.podSelectionMethod === "GROUP_HOST_SELECTED")) {
+    if (group.status === "PAID" && orders.every((o) => o.status === "QUEUED" && (o.seatId || o.podSelectionMethod === "GROUP_HOST_SELECTED"))) {
       return fullGroup(group.id, { userId: found.actor.userId, guestId: found.actor.guestId });
     }
     if (!orders.every((o) => o.paymentStatus === "PAID")) return reply.code(400).send({ error: "Not all orders are paid" });
 
     const t = now();
+    const holdUntil = new Date(t.getTime() + 30 * 60 * 1000);
     await prisma.groupOrder.updateMany({ where: { id: group.id, status: { not: "PAID" } }, data: { status: "PAID", finalizedAt: t } });
     const wanted = Array.isArray(seatIds) ? seatIds.filter((s) => typeof s === "string" && s) : [];
+    const picked = new Map();
+    if (Array.isArray(pods)) {
+      for (const p of pods) {
+        if (p && typeof p.orderId === "string" && typeof p.label === "string" && /^[A-Z]-\d{2}$/.test(p.label)) picked.set(p.orderId, p.label);
+      }
+    }
+    const takePod = async (args) => {
+      try {
+        return await pickBestPod(prisma, { locationId: group.locationId, ...args });
+      } catch (err) {
+        if (err instanceof PodUnavailableError) return null;
+        throw err;
+      }
+    };
     for (let i = 0; i < orders.length; i++) {
       const order = orders[i];
       const data = { queuedAt: order.queuedAt || t, paidAt: order.paidAt || t };
       if (order.status === "PENDING_PAYMENT" || order.status === "PAID") data.status = "QUEUED";
-      const seatId = wanted[i];
-      if (seatId && !order.seatId) {
-        // Race-safe: only a free pod at this location is taken.
-        const claim = await prisma.seat.updateMany({
-          where: { id: seatId, locationId: group.locationId, status: "AVAILABLE", retiredAt: null },
-          data: { status: "RESERVED", reservedUntil: new Date(t.getTime() + 30 * 60 * 1000) },
-        });
-        if (claim.count === 1) {
-          data.seatId = seatId;
+      if (!order.seatId) {
+        const label = picked.get(order.id);
+        let pod = label ? await takePod({ requestedLabel: label }) : null;
+        if (pod) {
           data.podSelectionMethod = "GROUP_HOST_SELECTED";
+        } else if (label || fill === true) {
+          // The picked pod was taken meanwhile, or the host left this member unpicked: the next best free pod.
+          pod = await takePod({ partySize: 1 });
+          if (pod) data.podSelectionMethod = "AUTO";
+        } else if (wanted[i]) {
+          // Legacy clients: seat ids by position. Race-safe: only a free pod at this location is taken.
+          const claim = await prisma.seat.updateMany({
+            where: { id: wanted[i], locationId: group.locationId, status: "AVAILABLE", retiredAt: null },
+            data: { status: "RESERVED", reservedUntil: holdUntil },
+          });
+          if (claim.count === 1) {
+            data.seatId = wanted[i];
+            data.podSelectionMethod = "GROUP_HOST_SELECTED";
+          }
+        }
+        if (pod) {
+          await prisma.seat.update({ where: { id: pod.seat.id }, data: { reservedUntil: holdUntil } });
+          data.seatId = pod.seat.id;
+          data.podAssignedAt = t;
         }
       }
       await prisma.order.update({ where: { id: order.id }, data });
     }
-    console.log(`[Group Order Completed] Code: ${group.code}, Orders: ${orders.length}, Seating Option: ${seatingOption}`);
+    console.log(`[Group Order Completed] Code: ${group.code}, Orders: ${orders.length}, Picked: ${picked.size}, Seating Option: ${seatingOption ?? "-"}`);
     return fullGroup(group.id, { userId: found.actor.userId, guestId: found.actor.guestId });
   });
 
