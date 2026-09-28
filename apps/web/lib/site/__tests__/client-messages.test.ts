@@ -29,6 +29,11 @@ const ROOT_TRANSLATORS: Record<string, string[]> = {
   "components/site/home/ThePod.tsx": ["siteImages"],
 };
 
+/** Block comments, and line comments that start a line or follow whitespace (so "https://" in a string survives). */
+function stripComments(src: string): string {
+  return src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|\s)\/\/.*$/gm, "$1");
+}
+
 function clientFilesOfSite(): Set<string> {
   // Lazy chunks included: a sheet or widget loaded on demand still renders
   // inside the (site) provider.
@@ -43,7 +48,8 @@ describe("client message namespaces (Task G2a)", () => {
     expect(files.size).toBeGreaterThan(20); // the walk really found the shell and pages
     for (const file of files) {
       const rel = path.relative(WEB, file);
-      const src = readFileSync(file, "utf8");
+      // Comments don't call anything (CombMap's header shows a usage example in one).
+      const src = stripComments(readFileSync(file, "utf8"));
       for (const m of src.matchAll(/useTranslations\(\s*([^)]*)\)/g)) {
         const arg = m[1].trim();
         if (!arg) {

@@ -4847,5 +4847,163 @@
         "OTHER": "Credit"
       }
     }
+  },
+  "experience": {
+    "meta": {
+      "title": "The experience: a visit to Oh!, step by step",
+      "description": "Arrive, order, walk, settle, taste, leave. A visit to Oh! Beef Noodle Soup in six steps, on the real floor plan. No host, no server, no check, no tip."
+    },
+    "intro": {
+      "eyebrow": "The experience",
+      "title": "A visit, in six steps.",
+      "lede": "Everyone in your party gets a pod, and every pod gets its own bowl. No host, no server, no check, no tip. Here is the whole visit, in order.",
+      "start": "Start with step one"
+    },
+    "stepper": {
+      "label": "The six steps",
+      "of": "Step {n} of {total}",
+      "go": "Go to step {n}: {name}"
+    },
+    "steps": {
+      "arrive": {
+        "eyebrow": "Arrive",
+        "title": "You walk in and nobody greets you.",
+        "body": "That is the design. The room is quiet, the light is low, and three kiosks stand between you and the pods."
+      },
+      "order": {
+        "eyebrow": "Order",
+        "title": "You order in about forty seconds.",
+        "body": "Choose your broth depth, noodle, add-ons and beef: smoked brisket or beef rib, American Wagyu or USDA Prime. Pay, and the kiosk gives you a pod number and texts you a live link to your order."
+      },
+      "walk": {
+        "eyebrow": "Walk",
+        "title": "A pod number, and you go find it.",
+        "body": "You walk the aisle past a row of closed panels and the low murmur of a full room. Nobody is carrying a tray. Nobody is waiting to be seated."
+      },
+      "settle": {
+        "eyebrow": "Settle",
+        "title": "You sit, and the room disappears.",
+        "body": "A hook for your bag, a shelf for your phone, water within reach. One tap tells the kitchen you are in, and the Live Kitchen Feed narrates your bowl by name."
+      },
+      "taste": {
+        "eyebrow": "Taste",
+        "title": "First spoon.",
+        "body": "Minutes after you pay, your bowl arrives through the wall. You never see a hand. Want more? Extra noodles, a refill or a side come through the same panel."
+      },
+      "leave": {
+        "eyebrow": "Leave",
+        "title": "You finish, and you leave.",
+        "body": "One tap on your phone says you are done. No check, no tip line. Out past the store, and the pod resets behind you.",
+        "alt": "The store on the way out: shelves of sauces, gift boxes, bowls, shirts and caps, and a sign that says thank you."
+      }
+    },
+    "map": {
+      "title": "Your visit on the floor plan",
+      "note": "City Creek, 75 pods. University Place is the same plan, mirrored, with 70.",
+      "captions": {
+        "arrive": "You come in through the entry, into the lobby.",
+        "order": "Three kiosks in the lobby. No counter.",
+        "walk": "Across the cross-aisle and up your aisle to pod {label}. Every door on the way is a pod.",
+        "settle": "Your bowl leaves the kitchen down a staff corridor. No guest enters it.",
+        "taste": "Through the hatch to pod {label}. Same pod, opposite sides.",
+        "leave": "Out by the aisle, past the store, through the exit."
+      },
+      "comb": {
+        "title": "Pod map",
+        "summary": "The kitchen runs along the back wall. Pods line both sides of three staff corridors, and guests walk the aisles between them. The entry is at the front.",
+        "hintTapRow": "Tap a row to zoom in, then tap a pod. Pinch to zoom.",
+        "hintTapPod": "Tap a pod to choose it.",
+        "hintLive": "Tap a row to zoom in. Pinch to zoom.",
+        "podName": "Pod {label}, {status}",
+        "podNameDuo": "Pod {label}, duo with {partner}, {status}",
+        "journeySummary": "A visit on the floor plan. You walk from the entry to pod {label}, and your bowl comes down the staff corridor to your hatch.",
+        "status": {
+          "available": "available",
+          "reserved": "reserved",
+          "occupied": "occupied",
+          "cleaning": "being cleaned",
+          "unknown": "not bookable"
+        },
+        "legend": {
+          "title": "Key",
+          "available": "Available",
+          "reserved": "Reserved",
+          "occupied": "Occupied",
+          "cleaning": "Being cleaned",
+          "duo": "Duo pod for two",
+          "selected": "Your pod",
+          "hatch": "Food hatch"
+        },
+        "zones": {
+          "kitchen": "Kitchen",
+          "restrooms": "Restrooms",
+          "store": "Store",
+          "lobby": "Lobby",
+          "entry": "Entry",
+          "exit": "Exit"
+        },
+        "zoom": {
+          "zoomIn": "Zoom in",
+          "zoomOut": "Zoom out",
+          "wholeFloor": "Whole floor"
+        },
+        "pan": {
+          "earlier": "Earlier pods",
+          "later": "Later pods"
+        },
+        "marker": {
+          "guest": "You",
+          "bowl": "Your bowl"
+        }
+      }
+    },
+    "faq": {
+      "eyebrow": "How it works",
+      "title": "Questions, answered.",
+      "items": {
+        "order": {
+          "q": "How do I order?",
+          "a": "At one of the kiosks in the lobby, in about forty seconds, or ahead on your phone. Either way, you get a pod number and a live link to your order."
+        },
+        "together": {
+          "q": "Can we sit together?",
+          "a": "Everyone in your party gets a pod, and every pod gets its own bowl. Duo pods are made for two: the partition between a pair comes out, and two pods become one."
+        },
+        "server": {
+          "q": "Is there a server?",
+          "a": "No host and no server. Your bowl comes to the hatch of your pod from a staff corridor. Guests walk the aisles, staff walk the corridors, and the two meet only at the hatch."
+        },
+        "more": {
+          "q": "What if I want more, or need help?",
+          "a": "Tap it on your phone. Extra noodles, a refill, a side or dessert come through the same hatch, and one tap reaches the floor team."
+        },
+        "phone": {
+          "q": "What does my phone do?",
+          "a": "The link from your order opens a live page for it. The Live Kitchen Feed narrates your bowl as it moves through the kitchen, and one tap tells the kitchen you are in, and later that you are done."
+        },
+        "tip": {
+          "q": "Do I tip?",
+          "a": "No. There is no check and no tip line. When you are done, one tap on your phone says so, and you leave when you are ready."
+        },
+        "bowl": {
+          "q": "What is in the bowl?",
+          "a": "A two-phase broth, noodles and smoked American beef: brisket slices or beef rib chunks, in American Wagyu or USDA Prime. You choose the broth depth, the noodle and the add-ons."
+        },
+        "members": {
+          "q": "Do members earn anything?",
+          "a": "Yes. Members earn 1% to 3% of every order back as credit toward their next orders, by tier, and a free bowl each time they move up a tier."
+        }
+      }
+    },
+    "close": {
+      "title": "Your pod is waiting.",
+      "body": "Order ahead, walk in, and go straight to your pod.",
+      "order": "Order a bowl",
+      "locations": "Find a location",
+      "chappyTitle": "Still have a question?",
+      "chappyBody": "Chappy knows how a visit works, and can help you plan yours.",
+      "chappyCta": "Ask Chappy",
+      "chappyPrompt": "How does a visit to Oh! work?"
+    }
   }
 }

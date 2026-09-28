@@ -2542,5 +2542,163 @@
         "OTHER": "Crédito"
       }
     }
+  },
+  "experience": {
+    "meta": {
+      "title": "La experiencia: una visita a Oh!, paso a paso",
+      "description": "Llegar, pedir, caminar, acomodarte, probar, salir. Una visita a Oh! Beef Noodle Soup en seis pasos, sobre el plano real. Sin anfitrión, sin mesero, sin cuenta, sin propina."
+    },
+    "intro": {
+      "eyebrow": "La experiencia",
+      "title": "Una visita, en seis pasos.",
+      "lede": "Cada persona de tu grupo tiene su pod, y cada pod recibe su propio tazón. Sin anfitrión, sin mesero, sin cuenta, sin propina. Esta es la visita completa, en orden.",
+      "start": "Empieza por el primer paso"
+    },
+    "stepper": {
+      "label": "Los seis pasos",
+      "of": "Paso {n} de {total}",
+      "go": "Ir al paso {n}: {name}"
+    },
+    "steps": {
+      "arrive": {
+        "eyebrow": "Llegar",
+        "title": "Entras y nadie te recibe.",
+        "body": "Es a propósito. La sala está en silencio, la luz es tenue y tres kioscos están entre tú y los pods."
+      },
+      "order": {
+        "eyebrow": "Pedir",
+        "title": "Pides en unos cuarenta segundos.",
+        "body": "Elige la intensidad del caldo, el fideo, los extras y la res: pecho o costilla ahumados, Wagyu americano o USDA Prime. Pagas, y el kiosco te da un número de pod y te envía un enlace en vivo a tu pedido."
+      },
+      "walk": {
+        "eyebrow": "Caminar",
+        "title": "Un número de pod, y vas a buscarlo.",
+        "body": "Caminas por el pasillo junto a una fila de paneles cerrados y el murmullo de una sala llena. Nadie lleva una bandeja. Nadie espera a que lo sienten."
+      },
+      "settle": {
+        "eyebrow": "Acomodarte",
+        "title": "Te sientas y la sala desaparece.",
+        "body": "Un gancho para tu bolsa, una repisa para tu teléfono, agua al alcance. Un toque le dice a la cocina que ya llegaste, y la transmisión en vivo de la cocina narra tu tazón, con tu nombre."
+      },
+      "taste": {
+        "eyebrow": "Probar",
+        "title": "La primera cucharada.",
+        "body": "Minutos después de pagar, tu tazón llega a través de la pared. Nunca ves una mano. ¿Quieres más? Más fideos, más bebida o un acompañante llegan por el mismo panel."
+      },
+      "leave": {
+        "eyebrow": "Salir",
+        "title": "Terminas y te vas.",
+        "body": "Un toque en tu teléfono dice que terminaste. Sin cuenta, sin línea de propina. Sales pasando por la tienda, y el pod se prepara de nuevo detrás de ti.",
+        "alt": "La tienda de camino a la salida: repisas con salsas, cajas de regalo, tazones, camisetas y gorras, y un letrero que dice gracias."
+      }
+    },
+    "map": {
+      "title": "Tu visita en el plano",
+      "note": "City Creek, 75 pods. University Place es el mismo plano, en espejo, con 70.",
+      "captions": {
+        "arrive": "Llegas por la entrada al vestíbulo.",
+        "order": "Tres kioscos en el vestíbulo. Sin mostrador.",
+        "walk": "Cruzas el pasillo transversal y subes por tu pasillo hasta el pod {label}. Cada puerta en el camino es un pod.",
+        "settle": "Tu tazón sale de la cocina por un pasillo del personal. Ningún cliente entra en él.",
+        "taste": "Por la ventanilla, hasta el pod {label}. El mismo pod, por lados opuestos.",
+        "leave": "Por el pasillo, pasando por la tienda, hasta la salida."
+      },
+      "comb": {
+        "title": "Mapa de pods",
+        "summary": "La cocina ocupa la pared del fondo. Los pods bordean los dos lados de tres pasillos del personal, y los clientes caminan por los pasillos entre ellos. La entrada está al frente.",
+        "hintTapRow": "Toca una fila para acercarte y luego toca un pod. Pellizca para hacer zoom.",
+        "hintTapPod": "Toca un pod para elegirlo.",
+        "hintLive": "Toca una fila para acercarte. Pellizca para hacer zoom.",
+        "podName": "Pod {label}: {status}",
+        "podNameDuo": "Pod {label}, dúo con {partner}: {status}",
+        "journeySummary": "Una visita en el plano. Caminas desde la entrada hasta el pod {label}, y tu tazón llega por el pasillo del personal hasta tu ventanilla.",
+        "status": {
+          "available": "disponible",
+          "reserved": "reservado",
+          "occupied": "ocupado",
+          "cleaning": "en limpieza",
+          "unknown": "no reservable"
+        },
+        "legend": {
+          "title": "Leyenda",
+          "available": "Disponible",
+          "reserved": "Reservado",
+          "occupied": "Ocupado",
+          "cleaning": "En limpieza",
+          "duo": "Pod dúo para dos",
+          "selected": "Tu pod",
+          "hatch": "Ventanilla de comida"
+        },
+        "zones": {
+          "kitchen": "Cocina",
+          "restrooms": "Baños",
+          "store": "Tienda",
+          "lobby": "Vestíbulo",
+          "entry": "Entrada",
+          "exit": "Salida"
+        },
+        "zoom": {
+          "zoomIn": "Acercar",
+          "zoomOut": "Alejar",
+          "wholeFloor": "Todo el local"
+        },
+        "pan": {
+          "earlier": "Pods anteriores",
+          "later": "Pods siguientes"
+        },
+        "marker": {
+          "guest": "Tú",
+          "bowl": "Tu tazón"
+        }
+      }
+    },
+    "faq": {
+      "eyebrow": "Cómo funciona",
+      "title": "Preguntas, respondidas.",
+      "items": {
+        "order": {
+          "q": "¿Cómo pido?",
+          "a": "En uno de los kioscos del vestíbulo, en unos cuarenta segundos, o con anticipación desde tu teléfono. De cualquier forma, recibes un número de pod y un enlace en vivo a tu pedido."
+        },
+        "together": {
+          "q": "¿Podemos sentarnos juntos?",
+          "a": "Cada persona de tu grupo tiene su pod, y cada pod recibe su propio tazón. Los pods dúo son para dos: se quita la división entre un par y dos pods se vuelven uno."
+        },
+        "server": {
+          "q": "¿Hay mesero?",
+          "a": "Sin anfitrión y sin mesero. Tu tazón llega a la ventanilla de tu pod desde un pasillo del personal. Los clientes caminan por sus pasillos, el personal por los suyos, y solo se encuentran en la ventanilla."
+        },
+        "more": {
+          "q": "¿Y si quiero más o necesito ayuda?",
+          "a": "Pídelo desde tu teléfono. Más fideos, más bebida, un acompañante o un postre llegan por la misma ventanilla, y un toque llama al equipo de sala."
+        },
+        "phone": {
+          "q": "¿Qué hace mi teléfono?",
+          "a": "El enlace de tu pedido abre una página en vivo. La transmisión en vivo de la cocina narra tu tazón mientras avanza por la cocina, y un toque le dice a la cocina que ya llegaste, y luego que terminaste."
+        },
+        "tip": {
+          "q": "¿Dejo propina?",
+          "a": "No. No hay cuenta ni línea de propina. Cuando terminas, un toque en tu teléfono lo dice, y te vas cuando quieras."
+        },
+        "bowl": {
+          "q": "¿Qué lleva el tazón?",
+          "a": "Un caldo en dos fases, fideos y res americana ahumada: pecho en rebanadas o costilla en trozos, en Wagyu americano o USDA Prime. Tú eliges la intensidad del caldo, el fideo y los extras."
+        },
+        "members": {
+          "q": "¿Los miembros ganan algo?",
+          "a": "Sí. Los miembros recuperan del 1% al 3% de cada pedido como crédito para sus próximos pedidos, según su nivel, y un tazón gratis cada vez que suben de nivel."
+        }
+      }
+    },
+    "close": {
+      "title": "Tu pod te espera.",
+      "body": "Pide con anticipación, entra y ve directo a tu pod.",
+      "order": "Pide un tazón",
+      "locations": "Ver ubicaciones",
+      "chappyTitle": "¿Te queda alguna duda?",
+      "chappyBody": "Chappy sabe cómo funciona una visita y puede ayudarte a planear la tuya.",
+      "chappyCta": "Pregúntale a Chappy",
+      "chappyPrompt": "¿Cómo funciona una visita a Oh!?"
+    }
   }
 }

@@ -68,7 +68,6 @@ export const DOCK_ITEMS: readonly NavItem[] = [
 /** Everything else: the More sheet on phones, inline in the desktop nav. */
 export const MORE_ITEMS: readonly NavIconLink[] = [
   { key: "locations", href: "/locations", icon: "pin" },
-  // TODO(D2): /experience is built in D2; until then this link 404s.
   { key: "experience", href: "/experience", icon: "pod" },
   { key: "store", href: "/store", icon: "store" },
   { key: "giftCards", href: "/gift-cards", icon: "gift" },
