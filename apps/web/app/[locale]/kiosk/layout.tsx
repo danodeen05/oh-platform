@@ -181,7 +181,8 @@ export default function KioskLayout({ children }: { children: ReactNode }) {
       <DeviceAuthRedirect>
         <div style={fit ? { position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", background: "#FAF9F6" } : undefined}>
         <div style={fit ? { width: 1366, height: 1024, flex: "none", transform: `scale(${fitScale})`, transformOrigin: "center center" } : undefined}>
-        <div className="kiosk-container kiosk-no-select" style={{ position: "relative" }}>
+        {/* legacy-ui: kiosk keeps the retired global button/input/a/h1-h6/p rules (Task C1). */}
+        <div className="kiosk-container kiosk-no-select legacy-ui" style={{ position: "relative" }}>
           {/* Idle Timer - auto-return to attract screen after 45s inactivity, reset to English */}
           <IdleTimer timeout={45000} redirectPath="/en/kiosk" showWarning />
 

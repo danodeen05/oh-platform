@@ -6,7 +6,7 @@ import { getPlanAccess } from "@/lib/plan/session.server";
 import { isSectionKey, sectionHref, visibleSections } from "@/lib/plan/sections";
 import { PLAN_VERSION_LABEL } from "@/lib/plan/version";
 import { PLAN_BUILD } from "@/lib/plan/build";
-import { planFontVariables } from "@/lib/plan/fonts";
+import { planFontVariables } from "@/components/site/fonts";
 import { PlanNav, type NavSection } from "@/components/plan/shell/PlanNav";
 import { ProgressRail } from "@/components/plan/shell/ProgressRail";
 import { AudienceBadge } from "@/components/plan/shell/AudienceBadge";
