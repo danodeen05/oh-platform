@@ -780,7 +780,7 @@ app.get("/locations", async (req, reply) => {
     },
     include: {
       stats: true,
-      seats: true, // Include all pods
+      seats: { where: { retiredAt: null } }, // Active pods only; retired 12-pod seats stay for order history
     },
   });
 
