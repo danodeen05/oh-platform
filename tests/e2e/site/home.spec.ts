@@ -232,6 +232,20 @@ test("iPhone 15: with no live data, the pill is hidden, never a made-up number",
 
 test("iPhone 15: axe finds no violations", async () => {
   await withPage(iphone15(), "/en", async (page) => {
+    // G2b: the hero copy and CTA rise in (hm-rise, opacity from 0); axe
+    // sampled the Order CTA mid-fade and read its half-transparent text as low
+    // contrast. Wait for the finite entrance animations to end first.
+    await page.evaluate(() =>
+      Promise.race([
+        Promise.all(
+          document
+            .getAnimations()
+            .filter((a) => a.effect?.getComputedTiming().endTime !== Infinity)
+            .map((a) => a.finished.catch(() => null)),
+        ),
+        new Promise((r) => setTimeout(r, 5_000)),
+      ]),
+    );
     await page.addScriptTag({ content: AXE_SOURCE });
     const violations = await page.evaluate(async () => {
       // @ts-expect-error -- axe is injected above
