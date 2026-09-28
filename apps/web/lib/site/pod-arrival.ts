@@ -8,7 +8,8 @@
  * doesn't recognize any more (the order is finished or unknown) is dropped.
  */
 
-export type ArrivalOutcome = "ok" | "already" | "needCode" | "stale" | "wrongPod" | "failed";
+/** "retired": 410 POD_RETIRED, an old sticker retired at the comb cutover (shown as the retired-pod notice, Task G1). */
+export type ArrivalOutcome = "ok" | "already" | "needCode" | "stale" | "wrongPod" | "retired" | "failed";
 
 /** The codes to try, in order: `null` means "match my session, send no code". */
 export function arrivalAttempts({ hasSession, saved }: { hasSession: boolean; saved: string | null }): (string | null)[] {
@@ -25,6 +26,7 @@ export function classifyArrival(status: number, body: { code?: string } | null, 
   if (c === "ALREADY_CONFIRMED") return "already";
   if (c === "ORDER_CODE_REQUIRED") return "needCode";
   if (c === "WRONG_POD") return "wrongPod";
+  if (status === 410 || c === "POD_RETIRED") return "retired";
   // A code the API no longer knows as an open, paid order: finished, cancelled or never real.
   if (code && (status === 404 || c === "ORDER_NOT_FOUND")) return "stale";
   return "failed";
