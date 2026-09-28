@@ -538,6 +538,32 @@ This task keeps the current UI working on the new API. Phase D replaces the UI i
 - [ ] **Step 4:** Run the tests. Then run the script against local dev with `pnpm --filter @oh/db exec tsx scripts/seed-comb-seats.ts --all` and check the counts with `psql`.
 - [ ] **Step 5:** Commit with `feat(seats): comb seats for City Creek (75) and University Place (70, mirrored)`.
 
+### Task A8b: No customer PII on the public seat endpoints (added during execution)
+
+A8 restored per-seat active `orders` on `GET /locations/:id/seats` (and `/availability` reuses it). Those endpoints are PUBLIC and return the seated customer's name, membership tier and order items. The same leak exists in prod today. Public callers must get seat status only.
+
+**Files:**
+- Modify: `packages/api/src/seats/service.js` and the seat routes in `index.js`
+- Modify, the staff callers: `apps/admin/app/(display)/cleaning/pods-manager.tsx` (the admin Bearer token is already attached by `ApiAuthInit`), and the kiosk callers in `apps/web/app/[locale]/kiosk/**` (they send `kioskAuthHeaders()`)
+- Test: `packages/api/src/seats/__tests__/seats.test.js`
+
+**Behavior:**
+- **Anonymous or customer callers** get `{layoutKey, layoutMirror, seats:[{id, label, finger, rowSide, position, status, podType, dualPartnerId, bestRank}]}`, with NO `orders`, no names, no tier and no items.
+- **Staff callers** get the per-seat `orders` exactly as A8 restored them. Staff means `requireAdminAuth` passes (the admin session, or `x-admin-api-key`), or a valid kiosk device key for THAT location (`createKioskAuth` in `auth/kiosk.js`). Decide this with a non-failing check: optional auth that never returns 401 on these public routes, just the public shape.
+- **A signed-in customer** who owns an active order in a seat may see `isMine: true` on that seat, and nothing else.
+- Keep `route-classification.test.js` green. The routes stay public, with the staff view as an optional upgrade.
+
+- [ ] **Step 1:** Write the failing tests:
+  - anonymous: no `orders` key, and no "name" substring anywhere in the JSON;
+  - admin: gets `orders`;
+  - a kiosk key for another location: public shape;
+  - a kiosk key for this location: gets `orders`;
+  - the owner sees `isMine`.
+- [ ] **Step 2:** Run them. Expected: FAIL.
+- [ ] **Step 3:** Implement, and update the admin and kiosk callers.
+- [ ] **Step 4:** Run `pnpm --filter @oh/api test`, `pnpm --filter @oh/web test` and `pnpm --filter @oh/admin test`. Expected: PASS.
+- [ ] **Step 5:** Commit with `fix(seats): public seat endpoints return status only; orders for staff and kiosk`.
+
 ### Task A9: Support cases, goodwill caps, and full-refund-only staff actions
 
 **Files:**
