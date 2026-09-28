@@ -97,10 +97,12 @@ async function resolvePromo(prisma, { promoCode, promoCodeId, userId, locationId
     !(promo.minimumOrderCents && subtotalCents < promo.minimumOrderCents) &&
     !((promo.locationIds || []).length > 0 && !promo.locationIds.includes(locationId));
   if (!valid) return { ok: false, promo: null, invalid: true };
-  if (userId) {
-    const used = await prisma.promoCodeUsage.count({ where: { promoCodeId: promo.id, userId } });
-    if (used >= (promo.perUserLimit ?? 1)) return { ok: false, promo: null, invalid: true };
-  }
+  // Final review I5: every promo has a per-user limit (perUserLimit is
+  // non-null, default 1), and a guest can't be counted, so a promo needs a
+  // signed-in member. settleInTx re-checks both limits at PAID.
+  if (!userId) return { ok: false, promo: null, invalid: true, signInRequired: true };
+  const used = await prisma.promoCodeUsage.count({ where: { promoCodeId: promo.id, userId } });
+  if (used >= (promo.perUserLimit ?? 1)) return { ok: false, promo: null, invalid: true };
   return { ok: true, promo };
 }
 
@@ -170,6 +172,7 @@ async function buildQuote(prisma, { location, lines, menuItems, userId, promoCod
 
   const promoResult = await resolvePromo(prisma, { promoCode, promoCodeId, userId, locationId: location.id, subtotalCents, now });
   if (promoResult.invalid) warnings.push("PROMO_INVALID");
+  if (promoResult.signInRequired) warnings.push("PROMO_REQUIRES_SIGN_IN");
 
   const creditsRequestedCents = nonNegativeInt(useCreditsCents);
   let creditsAvailableCents = 0;
@@ -1094,10 +1097,27 @@ async function settleInTx(tx, orderId, { expectedAmountDueCents, paymentIntentId
   }
 
   if (order.promoCodeId && order.promoDiscountCents > 0) {
-    await tx.promoCodeUsage.create({
-      data: { promoCodeId: order.promoCodeId, userId: order.userId || null, guestId: order.guestId || null, orderId, discountCents: order.promoDiscountCents },
+    // Final review I5: the limits are enforced HERE, at the moment the promo
+    // is spent, not only at quote time. The conditional increment comes first:
+    // its row lock on PromoCode serializes concurrent payments using this
+    // promo, so the per-user count below (a fresh statement under READ
+    // COMMITTED) sees every usage committed before it. Any miss throws
+    // PROMO_EXHAUSTED, which rolls the whole settle back; markPaid then
+    // refunds the card in full (refundOnFailure) and the order stays unpaid.
+    const exhausted = () => new OrderError("PROMO_EXHAUSTED", 409, "That promo code has been used up. Review your order total.");
+    if (!order.userId) throw exhausted();
+    const promo = await tx.promoCode.findUnique({ where: { id: order.promoCodeId } });
+    if (!promo) throw exhausted();
+    const bumped = await tx.promoCode.updateMany({
+      where: { id: promo.id, ...(promo.totalUsageLimit !== null && promo.totalUsageLimit !== undefined ? { currentUsageCount: { lt: promo.totalUsageLimit } } : {}) },
+      data: { currentUsageCount: { increment: 1 } },
     });
-    await tx.promoCode.update({ where: { id: order.promoCodeId }, data: { currentUsageCount: { increment: 1 } } });
+    if (bumped.count !== 1) throw exhausted();
+    const usedByMember = await tx.promoCodeUsage.count({ where: { promoCodeId: promo.id, userId: order.userId } });
+    if (usedByMember >= (promo.perUserLimit ?? 1)) throw exhausted();
+    await tx.promoCodeUsage.create({
+      data: { promoCodeId: promo.id, userId: order.userId, guestId: order.guestId || null, orderId, discountCents: order.promoDiscountCents },
+    });
   }
 
   // Hold the pod for 15 minutes from payment. Never an unconditional reserve
@@ -1225,7 +1245,18 @@ export async function markPaid(prisma, stripe, { orderId, paymentIntentId = null
     if (failed.appliedElsewhere) return { alreadyPaid: true, order: await prisma.order.findUnique({ where: { id: orderId } }) };
     throw failed;
   }
-  if (result.alreadyPaid) return { alreadyPaid: true, order: await prisma.order.findUnique({ where: { id: orderId } }) };
+  if (result.alreadyPaid) {
+    const current = await prisma.order.findUnique({ where: { id: orderId } });
+    // Final review I4: the order was paid by a DIFFERENT PaymentIntent that won
+    // a concurrent confirm (two tabs, a Chappy pay card plus the web checkout).
+    // This verified charge was never applied: refund it in FULL as a duplicate,
+    // with a SupportCase (refundUnappliedPayment; idempotent per PaymentIntent).
+    if (pi && current?.stripePaymentId !== pi.id) {
+      const r = await refundUnappliedPayment(prisma, stripe, { pi, orderId, userId: order.userId, code: "DUPLICATE_PAYMENT" });
+      return { alreadyPaid: true, order: current, refunded: r.refunded };
+    }
+    return { alreadyPaid: true, order: current };
+  }
 
   await runPaidEffects(prisma, result.order, effects, now);
   return { alreadyPaid: false, order: result.order, ...(result.podChange ? { podChange: result.podChange } : {}) };
