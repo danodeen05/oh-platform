@@ -18,6 +18,7 @@ import { safeEqual } from "./codes.js";
 import { validateDetails, maskPhone, ndaFilename, openDetails } from "./nda-fields.js";
 import { deliverNda as defaultDeliverNda } from "./nda-delivery.js";
 import { registerPlanNdaAdminRoutes } from "./nda-admin.js";
+import { openRecipient } from "./invite.js";
 
 const OTP_TTL_MS = 10 * 60 * 1000;
 const OTP_COOLDOWN_MS = 60 * 1000;
@@ -63,13 +64,33 @@ export async function registerPlanNdaRoutes(app, ctx) {
     }
     const session = await prisma.planViewSession.findUnique({
       where: { id: sid },
-      include: { accessCode: { select: { id: true, label: true, audience: true, revokedAt: true, expiresAt: true, ndaRequired: true } } },
+      include: {
+        accessCode: {
+          select: {
+            id: true, label: true, audience: true, revokedAt: true, expiresAt: true, ndaRequired: true,
+            recipientFirstNameEnc: true, recipientLastNameEnc: true, recipientEmailEnc: true,
+          },
+        },
+      },
     });
     if (!session || !isActive(session.accessCode, now())) {
       reply.code(401).send({ error: "invalid" });
       return null;
     }
     return { session, code: session.accessCode, nda: await currentNda(prisma, session.accessCode.id) };
+  };
+
+  /**
+   * Starting values for the details form, from the invitation's recipient on
+   * THIS code (the session's own code, never another). Only until they save
+   * their own details; everything stays editable.
+   */
+  const prefillFor = (code, details) => {
+    if (details) return null;
+    const r = openRecipient(pii, code);
+    if (!r) return null;
+    const legalName = [r.firstName, r.lastName].filter(Boolean).join(" ");
+    return legalName || r.email ? { legalName, email: r.email } : null;
   };
 
   const view = async ({ session, code, nda }) => {
@@ -80,6 +101,7 @@ export async function registerPlanNdaRoutes(app, ctx) {
       step: stepOf(nda, details),
       ndaId: nda?.id || null,
       details,
+      prefill: prefillFor(code, details),
       phoneMasked: details ? maskPhone(details.phone) : null,
       otpSentAt: nda?.otpSentAt || null,
       countersigner: cs ? { name: cs.name, title: cs.title, signature: cs.signature } : null,

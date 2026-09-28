@@ -187,7 +187,10 @@ const allowedOrigins = [
     'http://localhost:3300',
     'http://localhost:3301',
     // follow-up lanes: web 3400
-    'http://localhost:3400'
+    'http://localhost:3400',
+    // plan-invite lane: web 3600, admin 3601
+    'http://localhost:3600',
+    'http://localhost:3601'
   ] : [])
 ];
 

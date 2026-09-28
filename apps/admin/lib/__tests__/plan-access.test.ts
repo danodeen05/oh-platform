@@ -1,5 +1,8 @@
 import { describe, expect, test } from "vitest";
-import { canCopyLink, formatDate, formatMinutes, ndaBadge, scenarioForAudience, sessionsSummary, shortDate, statusTone, validateMaxSessions } from "../plan-access";
+import {
+  EMPTY_RECIPIENT, canCopyLink, formatDate, formatMinutes, inviteMissing, inviteSummary, joinFields, ndaBadge, sameRecipient,
+  scenarioForAudience, sessionsSummary, shortDate, statusTone, validateMaxSessions, validateRecipientEmail,
+} from "../plan-access";
 
 describe("formatMinutes", () => {
   test("seconds under a minute", () => expect(formatMinutes(45)).toBe("45s"));
@@ -62,4 +65,29 @@ describe("validateMaxSessions", () => {
   test("a negative number is rejected", () => expect(validateMaxSessions("-1")).toBeTruthy());
   test("a decimal is rejected", () => expect(validateMaxSessions("1.5")).toBeTruthy());
   test("non-numeric text is rejected", () => expect(validateMaxSessions("abc")).toBeTruthy());
+});
+
+describe("plan invitation helpers", () => {
+  test("recipient email is optional but must look like one", () => {
+    expect(validateRecipientEmail("")).toBeUndefined();
+    expect(validateRecipientEmail("  pat@lease.com ")).toBeUndefined();
+    expect(validateRecipientEmail("pat@")).toBe("That email doesn't look right.");
+  });
+  test("inviteMissing names what is still needed, in form order", () => {
+    expect(inviteMissing(null)).toEqual(["first name", "last name", "email"]);
+    expect(inviteMissing({ firstName: "Pat", lastName: " ", email: "pat@lease.com" })).toEqual(["last name"]);
+    expect(inviteMissing({ firstName: "Pat", lastName: "Lee", email: "pat@lease.com" })).toEqual([]);
+    expect(joinFields(["first name", "last name", "email"])).toBe("first name, last name and email");
+    expect(joinFields(["email"])).toBe("email");
+  });
+  test("inviteSummary says when and to whom", () => {
+    expect(inviteSummary({ sentAt: null, sentTo: null, sendCount: 0 })).toBe("Not sent yet.");
+    const once = inviteSummary({ sentAt: "2026-09-28T16:00:00Z", sentTo: "pat@lease.com", sendCount: 1 });
+    expect(once).toBe(`Sent ${formatDate("2026-09-28T16:00:00Z")} to pat@lease.com.`);
+    expect(inviteSummary({ sentAt: "2026-09-28T16:00:00Z", sentTo: "pat@lease.com", sendCount: 3 })).toMatch(/\(sent 3 times\)\.$/);
+  });
+  test("sameRecipient ignores surrounding space and email case", () => {
+    expect(sameRecipient({ firstName: "Pat ", lastName: "Lee", email: "PAT@lease.com" }, { firstName: "Pat", lastName: "Lee", email: "pat@lease.com" })).toBe(true);
+    expect(sameRecipient(EMPTY_RECIPIENT, { ...EMPTY_RECIPIENT, firstName: "P" })).toBe(false);
+  });
 });

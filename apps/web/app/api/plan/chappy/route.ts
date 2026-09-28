@@ -79,7 +79,7 @@ export async function POST(req: NextRequest): Promise<Response> {
   const api = anthropic();
   if (!api) return NextResponse.json({ error: "unavailable" }, { status: 503 });
 
-  const begin = await planApi<{ history: Turn[]; contactOnFile?: boolean }>(`/plan/sessions/${encodeURIComponent(claims.sid)}/chat/begin`, { message, sectionKey });
+  const begin = await planApi<{ history: Turn[]; contactOnFile?: boolean; firstName?: string | null }>(`/plan/sessions/${encodeURIComponent(claims.sid)}/chat/begin`, { message, sectionKey });
   if (begin.status === 429) return NextResponse.json({ error: "too_many_messages" }, { status: 429 });
   if (begin.status === 403) return NextResponse.json({ error: "nda_required" }, { status: 403 });
   if (!begin.ok) return NextResponse.json({ error: begin.status === 401 ? "unauthorized" : "unavailable" }, { status: begin.status === 401 ? 401 : 502 });
@@ -97,7 +97,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     return NextResponse.json({ error: "unavailable" }, { status: 502 });
   }
 
-  const system = systemBlocks(knowledge, viewerBlock(claims, locale, sectionKey, scenario, Boolean(begin.data?.contactOnFile)));
+  const system = systemBlocks(knowledge, viewerBlock(claims, locale, sectionKey, scenario, Boolean(begin.data?.contactOnFile), begin.data?.firstName ?? null));
   const tools = toolsFor(claims);
   const messages = toMessages(begin.data?.history ?? [], message);
   const encoder = new TextEncoder();
