@@ -128,7 +128,15 @@ const browser = await chromium.launch({ args: ["--no-sandbox"] });
 const out = [];
 try {
   // Warm the server (first render compiles nothing in prod, but fills caches).
-  for (const l of LOCALES) for (const r of ROUTES) await (await browser.newPage()).goto(`${BASE}/${l}${r === "/" ? "" : r}`).catch(() => {});
+  // Each warm-up page is closed at once: a page left open keeps polling and
+  // animating, and steals CPU from every timed load after it.
+  for (const l of LOCALES) {
+    for (const r of ROUTES) {
+      const warm = await browser.newPage();
+      await warm.goto(`${BASE}/${l}${r === "/" ? "" : r}`).catch(() => {});
+      await warm.close();
+    }
+  }
   for (const locale of LOCALES) {
     for (const route of ROUTES) {
       const url = `${BASE}/${locale}${route === "/" ? "" : route}`;

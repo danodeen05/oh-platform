@@ -41,6 +41,19 @@ async function open(ctx: BrowserContext, path: string): Promise<Page> {
   return page;
 }
 
+// Task G2a: the More sheet is a lazy chunk now (loaded on first open), and a
+// tap that lands before hydration does nothing, so keep tapping until the
+// dialog is up (the dev server also compiles the chunk on first request).
+async function openMore(page: Page): Promise<void> {
+  const trigger = page.locator("[data-site-more-trigger]");
+  const sheet = page.getByRole("dialog");
+  for (let i = 0; i < 20; i++) {
+    await trigger.click();
+    if (await sheet.waitFor({ state: "visible", timeout: 3_000 }).then(() => true, () => false)) return;
+  }
+  await sheet.waitFor({ state: "visible", timeout: 30_000 });
+}
+
 async function withPage<T>(opts: Parameters<Browser["newContext"]>[0], path: string, fn: (page: Page) => Promise<T>): Promise<T> {
   const ctx = await browser.newContext(opts);
   try {
@@ -101,8 +114,7 @@ test("iPhone 15: the More sheet opens, closes with Esc, and closes with a drag",
     const trigger = page.locator("[data-site-more-trigger]");
     const sheet = page.getByRole("dialog");
 
-    await trigger.click();
-    await sheet.waitFor({ state: "visible" });
+    await openMore(page);
     assert.equal(await trigger.getAttribute("aria-expanded"), "true");
     await page.keyboard.press("Escape");
     await sheet.waitFor({ state: "detached" });
@@ -128,8 +140,7 @@ test("iPhone 15: the More sheet opens, closes with Esc, and closes with a drag",
 
 test("iPhone 15: the locale switch goes from /en/lab/shell to /zh-TW/lab/shell, keeping the query", async () => {
   await withPage(iphone15(), `${LAB}?from=test`, async (page) => {
-    await page.locator("[data-site-more-trigger]").click();
-    await page.getByRole("dialog").waitFor({ state: "visible" });
+    await openMore(page);
     await page.locator('[data-locale-option="zh-TW"]').click();
     await page.waitForURL(/\/zh-TW\/lab\/shell\?from=test$/);
     await page.locator("[data-site-dock]").waitFor({ state: "visible" });
