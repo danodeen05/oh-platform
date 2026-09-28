@@ -84,4 +84,16 @@ describe("POST /meal-gifts/confirm-payment (the webhook)", () => {
     assert.equal((await confirm(app, "")).statusCode, 400);
     assert.equal((await prisma.mealGift.findMany()).length, 0);
   });
+
+  test("a paid gift whose location no longer exists is refunded in full, never left charged and unrecorded", async () => {
+    const intent = paid({ metadata: mealGiftMetadata({ giverId: "u2", locationId: "L-gone" }) });
+    const { app, prisma, stripe } = await build({ pi_gone: intent });
+    const res = await confirm(app, "pi_gone");
+    assert.equal(res.statusCode, 409);
+    assert.equal(res.json().error, "LOCATION_NOT_FOUND");
+    assert.equal(res.json().refunded, true);
+    assert.equal(stripe.refundCalls.length, 1);
+    assert.equal(stripe.refundCalls[0][0].amount, undefined, "a full refund, never partial");
+    assert.equal((await prisma.mealGift.findMany()).length, 0);
+  });
 });

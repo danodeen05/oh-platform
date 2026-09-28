@@ -10,7 +10,7 @@
  */
 import { publicMealGift } from "./meal-gift-view.js";
 import { createMealGift } from "./tenders.js";
-import { OrderError } from "./service.js";
+import { OrderError, refundUnappliedPayment } from "./service.js";
 
 /**
  * POST /meal-gifts/confirm-payment (Task D9 fix round 1): the Stripe webhook
@@ -37,7 +37,12 @@ export function registerMealGiftConfirm(app, { prisma, stripe, customerAuth, now
     const md = pi?.metadata || {};
     if (!pi || md.type !== "meal_gift" || !md.giverId || !md.locationId) return reply.code(402).send({ error: "PAYMENT_NOT_VERIFIED" });
     const location = await prisma.location.findUnique({ where: { id: md.locationId } });
-    if (!location) return reply.code(404).send({ error: "LOCATION_NOT_FOUND" });
+    if (!location) {
+      // The gift can't be recorded (no such location), so the payment goes back in full: never
+      // charged and unrecorded. Only a succeeded payment has anything to refund.
+      const r = pi.status === "succeeded" ? await refundUnappliedPayment(prisma, stripe, { pi, orderId: null, userId: md.giverId, code: "TENDER_NOT_FUNDED" }) : { refunded: false };
+      return reply.code(409).send({ error: "LOCATION_NOT_FOUND", refunded: r.refunded });
+    }
 
     const at = now();
     try {
