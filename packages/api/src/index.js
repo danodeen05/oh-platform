@@ -85,6 +85,7 @@ import { createAdminAuth, parseAdminEmails } from "./auth/admin.js";
 import { registerAdminAuthHooks } from "./auth/admin-hook.js";
 import { registerTeamRoutes } from "./admin/team-routes.js";
 import { registerMembershipRoutes } from "./membership/routes.js";
+import { referralSummary } from "./membership/referral-summary.js";
 import { registerOrderRoutes } from "./orders/routes.js";
 import { registerGroupOrderRoutes } from "./orders/group-routes.js";
 import { registerGiftCardRoutes } from "./orders/gift-card-routes.js";
@@ -116,7 +117,7 @@ import { buildStatusView } from "./orders/status-view.js";
 import { registerOrderServiceGuard, registerPodServiceRoutes } from "./orders/pod-service.js";
 import { registerKitchenStatusRoutes } from "./orders/kitchen-status.js";
 import { publicMealGift, nextMealGiftFor } from "./orders/meal-gift-view.js";
-import { registerMealGiftPayForward } from "./orders/meal-gift-routes.js";
+import { registerMealGiftPayForward, mealGiftExpiresAt } from "./orders/meal-gift-routes.js";
 
 // DEMO- order codes resolve to a synthetic order (see demo/status-demo.js):
 // the plan's live status-page demo reads real routes without touching the DB.
@@ -4466,6 +4467,8 @@ app.get("/users/:id/credits", async (req, reply) => {
     lifetimeEarningsCents,
     rank: userRank > 0 ? userRank : totalUsersWithEarnings + 1,
     totalUsers: totalUsersWithEarnings || 1,
+    // Task D9: the referral page's earnings (REFERRAL CreditLots) and the cap count.
+    referral: await referralSummary(prisma, id),
   };
 });
 
@@ -9836,15 +9839,11 @@ app.post("/meal-gifts", async (req, reply) => {
     return reply.code(404).send({ error: "Location not found" });
   }
 
-  // Calculate expiration: end of business day (9pm in location timezone)
+  // Expires at the end of the business day: 9pm on the location's clock
+  // (tomorrow when it's already past 9pm there). Task D9: this used the
+  // server's clock before (orders/meal-gift-routes.js mealGiftExpiresAt).
   const now = new Date();
-  const expiresAt = new Date();
-  expiresAt.setHours(21, 0, 0, 0); // 9pm
-
-  // If it's already past 9pm, expire tomorrow at 9pm
-  if (now.getHours() >= 21) {
-    expiresAt.setDate(expiresAt.getDate() + 1);
-  }
+  const expiresAt = mealGiftExpiresAt(now, location.timezone);
 
   let created;
   try {

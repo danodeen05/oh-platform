@@ -15,7 +15,7 @@
  */
 import type { SiteFetch } from "./api";
 
-export type MealGift = { id: string; amountCents: number; messageFromGiver?: string | null; giver?: { name?: string | null } | null };
+export type MealGift = { id: string; amountCents: number; messageFromGiver?: string | null; payForwardCount?: number; giver?: { name?: string | null } | null };
 
 export async function fetchNextMealGift(api: SiteFetch, apiBase: string, locationId: string): Promise<MealGift | null> {
   try {

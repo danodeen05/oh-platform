@@ -37,3 +37,38 @@ export function registerMealGiftPayForward(app, { prisma, customerAuth, now = ()
     return publicMealGift(updatedGift);
   });
 }
+
+/**
+ * When a new meal gift lapses (Task D9): 9pm on the location's own clock
+ * that day, or 9pm the next day when it's already past 9pm there. The old
+ * code used the server's clock (`setHours(21)`), which on a UTC host is
+ * 3pm in Denver in summer, so a gift given in the afternoon lapsed hours
+ * before closing.
+ */
+export function mealGiftExpiresAt(now = new Date(), timeZone = "America/Denver", hour = 21) {
+  const tz = timeZone || "America/Denver";
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+  const parts = (d) => {
+    const o = Object.fromEntries(fmt.formatToParts(d).map((p) => [p.type, p.value]));
+    return { y: +o.year, m: +o.month, d: +o.day, h: +o.hour, min: +o.minute, s: +o.second };
+  };
+  // Local wall time minus UTC (ms) for `tz` at instant `d`.
+  const offset = (d) => {
+    const p = parts(d);
+    return Date.UTC(p.y, p.m - 1, p.d, p.h, p.min, p.s) - Math.floor(d.getTime() / 1000) * 1000;
+  };
+  const local = parts(now);
+  const wall = Date.UTC(local.y, local.m - 1, local.d + (local.h >= hour ? 1 : 0), hour, 0, 0);
+  let at = wall - offset(new Date(wall));
+  at = wall - offset(new Date(at)); // settle across a DST change
+  return new Date(at);
+}

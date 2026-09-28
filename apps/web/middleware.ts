@@ -14,7 +14,6 @@ const CNY_HOSTNAMES = ["cny.ohbeef.com", "cny.localhost"];
 // Protected routes that require authentication (with locale prefix)
 const isProtectedRoute = createRouteMatcher([
   "/:locale/member(.*)",
-  "/:locale/referral(.*)",
   "/:locale/agents(.*)",
   "/api/agents(.*)",
 ]);
@@ -28,6 +27,10 @@ const isPublicRoute = createRouteMatcher([
   "/:locale/menu(.*)",
   "/:locale/locations(.*)",
   "/:locale/loyalty(.*)",
+  // Task D9: signed-out visitors see the referral pitch with a sign-in panel,
+  // and anyone can read the challenges (giving a meal asks for sign-in).
+  "/:locale/referral(.*)",
+  "/:locale/challenges(.*)",
   "/:locale/gift-cards(.*)",
   "/:locale/store(.*)",
   "/:locale/contact(.*)",
