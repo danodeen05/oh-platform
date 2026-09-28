@@ -111,25 +111,32 @@ export function PodStep({ locationId, layoutKey, pod, partySize, onPod, onPartyS
           </span>
         </button>
 
-        <button
-          type="button"
-          role="radio"
-          aria-checked={pod.mode === "pick"}
-          data-pod-mode="pick"
-          onClick={() => setOpen(true)}
-          className={`flex min-h-16 w-full cursor-pointer appearance-none items-center gap-4 rounded-3xl border px-4 py-4 text-left font-[inherit] transition-[border-color] duration-200 motion-reduce:transition-none ${FOCUS} ${
-            pod.mode === "pick" ? "border-oh-ember-light bg-oh-stone/60" : "border-oh-stone bg-oh-ink hover:border-oh-mute"
-          }`}
-        >
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-oh-stone text-oh-cream">
-            <Icon name="pod" size={22} />
-          </span>
-          <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <span className="text-base font-semibold text-oh-cream">{pod.mode === "pick" ? t("picked", { label: pod.label }) : t("pick")}</span>
-            <span className="text-sm text-oh-mute">{pod.mode === "pick" ? t("change") : t("pickNote")}</span>
-          </span>
-          <Check on={pod.mode === "pick"} />
-        </button>
+        {!layoutKey ? (
+          // A location without a comb layout (legacy seats, no map): best pod only (Task G1).
+          <p data-pod-no-map className="m-0 px-1 text-sm leading-relaxed text-oh-mute">
+            {t("noMap")}
+          </p>
+        ) : (
+          <button
+            type="button"
+            role="radio"
+            aria-checked={pod.mode === "pick"}
+            data-pod-mode="pick"
+            onClick={() => setOpen(true)}
+            className={`flex min-h-16 w-full cursor-pointer appearance-none items-center gap-4 rounded-3xl border px-4 py-4 text-left font-[inherit] transition-[border-color] duration-200 motion-reduce:transition-none ${FOCUS} ${
+              pod.mode === "pick" ? "border-oh-ember-light bg-oh-stone/60" : "border-oh-stone bg-oh-ink hover:border-oh-mute"
+            }`}
+          >
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-oh-stone text-oh-cream">
+              <Icon name="pod" size={22} />
+            </span>
+            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span className="text-base font-semibold text-oh-cream">{pod.mode === "pick" ? t("picked", { label: pod.label }) : t("pick")}</span>
+              <span className="text-sm text-oh-mute">{pod.mode === "pick" ? t("change") : t("pickNote")}</span>
+            </span>
+            <Check on={pod.mode === "pick"} />
+          </button>
+        )}
       </div>
 
       <Sheet open={open} onClose={() => setOpen(false)} label={t("sheetTitle")} snapPoints={[0.94]} className={NIGHT_SHEET}>

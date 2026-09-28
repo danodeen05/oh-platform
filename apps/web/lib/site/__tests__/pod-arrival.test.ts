@@ -23,6 +23,10 @@ describe("classifying POST /pods/confirm-arrival", () => {
     expect(classifyArrival(500, null, null)).toBe("failed");
     // A 404 with no code sent (the pod itself is unknown) is not a stale code.
     expect(classifyArrival(404, { code: "POD_NOT_FOUND" }, null)).toBe("failed");
+    // An old sticker retired at the comb cutover: the retired-pod notice, never "failed" (G1).
+    expect(classifyArrival(410, { code: "POD_RETIRED" }, null)).toBe("retired");
+    expect(classifyArrival(410, { code: "POD_RETIRED" }, "ORDER-1")).toBe("retired");
+    expect(tryNext("retired")).toBe(false);
   });
 
   it("a stale saved code from a finished order is dropped and never blocks one-tap check-in", () => {

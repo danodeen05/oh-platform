@@ -139,6 +139,12 @@ export function PodView({ qr }: { qr: string | null }) {
     setTimeout(() => (own ? router.push(statusHref(own)) : undefined), outcome === "ok" ? 1500 : 0);
   }
 
+  /** The pod was retired while the page was open (410 POD_RETIRED): show the old-sticker notice, not an error. */
+  function retiredNow() {
+    setInfo((prev) => (prev ? { ...prev, retired: true } : prev));
+    setBusy(false);
+  }
+
   /**
    * "I'm here" (fix round 2): the session match first (a member or guest session sends no code), then a saved
    * code; a saved code from a finished order is dropped and never blocks. Nothing matched: ask for the code.
@@ -151,6 +157,7 @@ export function PodView({ qr }: { qr: string | null }) {
       for (const c of arrivalAttempts({ hasSession: Boolean(isSignedIn || guest?.sessionToken), saved })) {
         const { outcome, own } = await attempt(c);
         if (outcome === "ok" || outcome === "already") return arrived(outcome, own);
+        if (outcome === "retired") return retiredNow();
         if (c && shouldForgetSaved(outcome)) {
           forgetCode(c);
           setSaved(null);
@@ -182,6 +189,7 @@ export function PodView({ qr }: { qr: string | null }) {
     try {
       const { outcome, own } = await attempt(c);
       if (outcome === "ok" || outcome === "already") return arrived(outcome, own);
+      if (outcome === "retired") return retiredNow();
       setError(outcome === "wrongPod" ? t("wrongPod") : outcome === "stale" || outcome === "needCode" ? t("codeNotFound") : t("failed"));
     } catch {
       setError(tc("networkError"));
