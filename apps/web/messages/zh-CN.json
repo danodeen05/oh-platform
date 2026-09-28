@@ -2106,5 +2106,49 @@
       "guest": "您",
       "bowl": "您的面"
     }
+  },
+  "site": {
+    "nav": {
+      "order": "点餐",
+      "menu": "菜单",
+      "rewards": "会员礼遇",
+      "chappy": "Chappy",
+      "locations": "门店",
+      "experience": "用餐体验",
+      "store": "商店",
+      "giftCards": "礼品卡",
+      "contact": "联系我们",
+      "account": "我的账户"
+    },
+    "shell": {
+      "home": "哦！牛肉面首页",
+      "mainNav": "主菜单",
+      "dock": "快捷选项",
+      "more": "更多",
+      "close": "关闭",
+      "language": "语言",
+      "account": "账户",
+      "signIn": "登录",
+      "skipToContent": "跳至主要内容",
+      "activeOrder": "订单 {number}",
+      "activeOrderNoNumber": "您的订单",
+      "viewOrder": "查看订单状态",
+      "orderStatus": {
+        "placed": "已下单",
+        "inQueue": "排队中",
+        "checkedIn": "已报到",
+        "preparing": "烹煮中",
+        "ready": "即将完成",
+        "serving": "请慢用",
+        "active": "处理中"
+      },
+      "footer": {
+        "tagline": "用心熬煮的牛肉面。",
+        "copyright": "哦！牛肉面 {year}。保留所有权利。",
+        "privacy": "隐私政策",
+        "accessibility": "无障碍服务",
+        "nav": "页脚链接"
+      }
+    }
   }
 }

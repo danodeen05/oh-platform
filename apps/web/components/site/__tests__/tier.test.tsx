@@ -35,6 +35,11 @@ describe("TierMark", () => {
     expect(cream).not.toEqual(ink);
   });
 
+  it("the current tone fills with currentColor so it follows the surrounding text color (Task C4)", () => {
+    const html = renderToString(<TierMark tier="chopstick" tone="current" size={24} />);
+    expect(html).toContain('fill="currentColor"');
+  });
+
   it("is aria-hidden with no title, and exposes role=img + <title> when given one", () => {
     const hidden = renderToString(<TierMark tier="noodle-master" />);
     expect(hidden).toContain('aria-hidden="true"');

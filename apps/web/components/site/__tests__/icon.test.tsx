@@ -82,6 +82,9 @@ describe("Icon", () => {
       "share",
       "wallet",
       "arrow",
+      // Task C4 (shell): the language switch and contact.
+      "globe",
+      "mail",
     ];
     expect([...ICON_NAMES].sort()).toEqual([...expected].sort());
   });

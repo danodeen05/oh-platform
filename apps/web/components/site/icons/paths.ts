@@ -34,7 +34,9 @@ export type IconName =
   | "alert"
   | "share"
   | "wallet"
-  | "arrow";
+  | "arrow"
+  | "globe"
+  | "mail";
 
 export interface IconDef {
   /** One or more filled outline paths (fill-rule evenodd), no stroke. */
@@ -225,11 +227,25 @@ export const ICON_PATHS: Record<IconName, IconDef> = {
     ],
   },
 
+  // A chop seal impression (C4 fix round 1 redraw; the first pass was a
+  // crossed square that read as "add"). A heavy rounded-square border, like
+  // the rim of a carved stone seal, around a simple stamped glyph: a
+  // tapered top bar, a descending stroke that hooks left at its foot, and a
+  // short falling dot on the right, all in the set's brush-tapered style.
   seal: {
     paths: [
-      ringRect(5.5, 5.5, 13, 13, 1, 1.4),
-      taperLine({ x: 9, y: 12 }, { x: 15, y: 12 }, 1.3, 0.4, { capStart: true }),
-      taperLine({ x: 12, y: 9 }, { x: 12, y: 15 }, 1.3, 0.4, { capStart: true }),
+      ringRect(4.2, 4.2, 15.6, 15.6, 2.4, 1.7),
+      taperLine({ x: 8, y: 9 }, { x: 16.1, y: 8.5 }, 1.9, 0.6, { capStart: true }),
+      taperChain(
+        [
+          { kind: "line", a: { x: 12, y: 8.8 }, b: { x: 12, y: 15.6 } },
+          { kind: "line", a: { x: 12, y: 15.6 }, b: { x: 9.3, y: 14.2 } },
+        ],
+        1.9,
+        0.45,
+        { capStart: true },
+      ),
+      taperLine({ x: 14.5, y: 11.4 }, { x: 16, y: 14.3 }, 1.8, 0.5, { capStart: true }),
     ],
   },
 
@@ -287,6 +303,40 @@ export const ICON_PATHS: Record<IconName, IconDef> = {
       taperLine({ x: 4, y: 12 }, { x: 16.5, y: 12 }, 1.6, 0.5, { capStart: true }),
       taperLine({ x: 12.5, y: 6.5 }, { x: 18.5, y: 12 }, 0.3, 1.3),
       taperLine({ x: 12.5, y: 17.5 }, { x: 18.5, y: 12 }, 0.3, 1.3),
+    ],
+  },
+
+  // Task C4 (shell): the language switch. A ring with a lens-shaped pair of
+  // meridians (each a mid-peak brush stroke) and a tapered equator.
+  globe: {
+    paths: [
+      ring(12, 12, 8.4, 1.4),
+      midPeakChain(
+        [{ kind: "cubic", p0: { x: 12, y: 4.2 }, p1: { x: 7.6, y: 7.6 }, p2: { x: 7.6, y: 16.4 }, p3: { x: 12, y: 19.8 } }],
+        1.2,
+        0.3,
+      ),
+      midPeakChain(
+        [{ kind: "cubic", p0: { x: 12, y: 4.2 }, p1: { x: 16.4, y: 7.6 }, p2: { x: 16.4, y: 16.4 }, p3: { x: 12, y: 19.8 } }],
+        1.2,
+        0.3,
+      ),
+      taperLine({ x: 4.2, y: 12 }, { x: 19.8, y: 12 }, 1.2, 0.35, { capStart: true }),
+    ],
+  },
+
+  // Task C4 (shell): contact. An envelope ring with a brush-stroke flap.
+  mail: {
+    paths: [
+      ringRect(3.4, 5.4, 17.2, 13.2, 1.6, 1.3),
+      midPeakChain(
+        [
+          { kind: "line", a: { x: 4.8, y: 7.2 }, b: { x: 12, y: 13 } },
+          { kind: "line", a: { x: 12, y: 13 }, b: { x: 19.2, y: 7.2 } },
+        ],
+        1.5,
+        0.35,
+      ),
     ],
   },
 };
