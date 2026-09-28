@@ -1,0 +1,273 @@
+/*
+ * Task C3: native-first motion kit.
+ *
+ * Native-first: where the platform can drive an animation off scroll
+ * position directly (`animation-timeline: view()`/`scroll()`), that's the
+ * only thing moving pixels. The rAF/IntersectionObserver fallbacks in the
+ * .tsx files only ever set the same custom properties or `data-in`
+ * attributes these rules already know how to read, so there is one visual
+ * result regardless of which path ran.
+ *
+ * Every animated rule here is skipped under `prefers-reduced-motion:
+ * reduce`, and the JS side (useReducedMotion) additionally renders each
+ * primitive's final static state instead of ever attaching a listener.
+ */
+
+@property --progress {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --oh-parallax-shift {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Reveal                                                                  */
+/* ---------------------------------------------------------------------- */
+
+.oh-reveal {
+  --oh-reveal-distance: 24px;
+}
+
+.oh-reveal--up {
+  --oh-reveal-transform: translateY(var(--oh-reveal-distance));
+}
+.oh-reveal--scale {
+  --oh-reveal-transform: scale(0.94);
+}
+.oh-reveal--fade {
+  --oh-reveal-transform: none;
+}
+
+@supports (animation-timeline: view()) {
+  .oh-reveal {
+    animation-name: oh-reveal-in;
+    animation-timeline: view();
+    animation-range: entry 0% cover 30%;
+    animation-fill-mode: both;
+    animation-timing-function: ease-out;
+  }
+}
+
+@keyframes oh-reveal-in {
+  from {
+    opacity: 0;
+    transform: var(--oh-reveal-transform, none);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* IntersectionObserver fallback: only wired up where native support (or
+   reduced motion) isn't already handling it, see Reveal.tsx. */
+@supports not (animation-timeline: view()) {
+  .oh-reveal {
+    opacity: 0;
+    transform: var(--oh-reveal-transform, none);
+    transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+    transition-delay: var(--oh-reveal-delay, 0ms);
+  }
+  .oh-reveal[data-in="true"] {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+/* PinnedStory                                                            */
+/* ---------------------------------------------------------------------- */
+
+.oh-pinned-story {
+  position: relative;
+}
+
+.oh-pinned-story__sticky {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.oh-pinned-story--static {
+  /* Reduced-motion final state: no pin, no scroll-length spacer, just the
+     content in normal flow at progress 1. */
+  height: auto;
+}
+.oh-pinned-story--static .oh-pinned-story__sticky {
+  position: static;
+  height: auto;
+}
+
+@supports (animation-timeline: view()) {
+  .oh-pinned-story:not(.oh-pinned-story--static) {
+    view-timeline-name: --oh-pinned-story;
+    view-timeline-axis: block;
+    animation-name: oh-pinned-progress;
+    animation-timeline: --oh-pinned-story;
+    animation-range: cover 0% cover 100%;
+    animation-fill-mode: both;
+    animation-timing-function: linear;
+  }
+}
+
+@keyframes oh-pinned-progress {
+  from {
+    --progress: 0;
+  }
+  to {
+    --progress: 1;
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+/* FrameSequence                                                          */
+/* ---------------------------------------------------------------------- */
+
+.oh-frame-sequence {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Sheet                                                                   */
+/* ---------------------------------------------------------------------- */
+
+.oh-sheet-root {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.oh-sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--color-oh-charcoal) 55%, transparent);
+}
+
+.oh-sheet-panel {
+  position: relative;
+  width: 100%;
+  max-width: 640px;
+  max-height: min(var(--oh-sheet-max-height, 90svh), 90svh);
+  overflow-y: auto;
+  background: var(--color-oh-paper);
+  color: var(--color-oh-ink);
+  border-radius: 20px 20px 0 0;
+  padding: 0 20px calc(20px + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.24);
+  /* No touch-action: none here -- the panel body keeps native touch
+     scrolling for its content. Only .oh-sheet-grab-zone starts a drag. */
+}
+
+/* 44px touch target (spec: minimum tap target size) even though the
+   visible grabber bar is thin. Only this strip disables native
+   touch-action, so the rest of the panel scrolls normally. */
+.oh-sheet-grab-zone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  touch-action: none;
+  cursor: grab;
+}
+
+.oh-sheet-grabber {
+  width: 40px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--color-oh-ash);
+}
+
+/* ---------------------------------------------------------------------- */
+/* SnapRail                                                               */
+/* ---------------------------------------------------------------------- */
+
+.oh-snap-rail {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  gap: 16px;
+  padding-inline: 16px;
+  scrollbar-width: none;
+}
+.oh-snap-rail::-webkit-scrollbar {
+  display: none;
+}
+.oh-snap-rail > * {
+  scroll-snap-align: start;
+  flex: 0 0 auto;
+}
+
+/* ---------------------------------------------------------------------- */
+/* ParallaxLayer                                                          */
+/* ---------------------------------------------------------------------- */
+
+.oh-parallax {
+  transform: translateY(var(--oh-parallax-shift, 0px));
+  will-change: transform;
+}
+
+@supports (animation-timeline: scroll()) {
+  .oh-parallax {
+    animation-name: oh-parallax-shift;
+    animation-timeline: scroll(nearest block);
+    animation-range: cover 0% cover 100%;
+    animation-fill-mode: both;
+    animation-timing-function: linear;
+  }
+}
+
+@keyframes oh-parallax-shift {
+  from {
+    --oh-parallax-shift: calc(var(--oh-parallax-offset, 40px) * -1);
+  }
+  to {
+    --oh-parallax-shift: var(--oh-parallax-offset, 40px);
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+/* CountUp                                                                */
+/* ---------------------------------------------------------------------- */
+
+.oh-count-up {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------------- */
+/* Reduced motion: belt-and-braces CSS guard on top of the JS static paths */
+/* ---------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .oh-reveal,
+  .oh-pinned-story,
+  .oh-parallax {
+    animation: none !important;
+    transition: none !important;
+  }
+  .oh-reveal {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .oh-parallax {
+    transform: none !important;
+  }
+  .oh-snap-rail {
+    scroll-behavior: auto;
+  }
+}
