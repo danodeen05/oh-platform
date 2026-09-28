@@ -63,6 +63,8 @@ export async function SiteShell({ children }: { children: ReactNode }) {
           rootClass(cjk),
           // The dock is h-16 plus its 1px top border plus the bottom inset.
           "[--dock-h:calc(4rem+1px+env(safe-area-inset-bottom,0px))] md:[--dock-h:0px]",
+          // Task D5: the order flow hides the dock (Dock.tsx) and pins its own CTA bar.
+          "has-[[data-order-flow]]:[--dock-h:0px]",
           "pb-[var(--dock-h)]",
         ].join(" ")}
       >

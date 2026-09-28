@@ -16,8 +16,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useAuth, useUser } from "@clerk/nextjs";
+import { claimPendingReferral } from "./referral";
 
 export const SITE_API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+
+/** One referral claim per page load, across every useMemberId() on the page. */
+let referralClaimStarted = false;
 
 export type TokenGetter = () => Promise<string | null | undefined>;
 export type SiteFetch = (input: string, init?: RequestInit) => Promise<Response>;
@@ -79,6 +83,18 @@ export function useMemberId(): { userId: string | null; ready: boolean; signedIn
         }
       } catch {
         id = null;
+      }
+      // Task D5 fix round 1: a saved `?ref=` code is sent once the member is known (lib/site/referral.ts).
+      if (id && email && !referralClaimStarted) {
+        referralClaimStarted = true;
+        let storage: Storage | null = null;
+        try {
+          storage = localStorage;
+        } catch {
+          storage = null;
+        }
+        const claim = await claimPendingReferral(api, SITE_API_URL, { email, name }, storage);
+        if (claim === "failed") referralClaimStarted = false;
       }
       if (cancelled) return;
       try {

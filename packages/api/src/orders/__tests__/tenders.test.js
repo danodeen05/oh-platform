@@ -124,6 +124,51 @@ describe("fix round 2: races", () => {
   });
 });
 
+describe("D5 fix round 3: a giver can't redeem their own gift", () => {
+  test("quoteOrder refuses 400 OWN_GIFT for the giver", async () => {
+    const prisma = seed();
+    const stripe = fakeStripe({ pi_gift: { status: "succeeded", amount: 2000, metadata: { type: "meal_gift", giverId: "u1", locationId: "L1" } } });
+    const gift = await createMealGift(prisma, stripe, { giverId: "u1", locationId: "L1", amountCents: 2000, paymentIntentId: "pi_gift", expiresAt: EXPIRES, now: NOW });
+    await assert.rejects(
+      quoteOrder(prisma, { locationId: "L1", items: CLASSIC_BOWL, userId: "u1", mealGiftId: gift.id, now: NOW }),
+      (e) => e.code === "OWN_GIFT" && e.status === 400,
+    );
+    assert.equal((await prisma.mealGift.findUnique({ where: { id: gift.id } })).status, "PENDING");
+  });
+
+  test("a different member can still redeem it", async () => {
+    const prisma = seed();
+    const stripe = fakeStripe({ pi_gift: { status: "succeeded", amount: 2000, metadata: { type: "meal_gift", giverId: "u1", locationId: "L1" } } });
+    const gift = await createMealGift(prisma, stripe, { giverId: "u1", locationId: "L1", amountCents: 2000, paymentIntentId: "pi_gift", expiresAt: EXPIRES, now: NOW });
+    const quote = await quoteOrder(prisma, { locationId: "L1", items: CLASSIC_BOWL, userId: "u2", mealGiftId: gift.id, now: NOW });
+    assert.ok(quote.discounts.mealGiftCents > 0);
+  });
+
+  test("requoteOrder (savings step, D5) also refuses OWN_GIFT", async () => {
+    const prisma = seed();
+    const stripe = fakeStripe({ pi_gift: { status: "succeeded", amount: 2000, metadata: { type: "meal_gift", giverId: "u1", locationId: "L1" } } });
+    const gift = await createMealGift(prisma, stripe, { giverId: "u1", locationId: "L1", amountCents: 2000, paymentIntentId: "pi_gift", expiresAt: EXPIRES, now: NOW });
+    const { order } = await payWith(prisma, {});
+    const { requoteOrder } = await import("../service.js");
+    await assert.rejects(
+      requoteOrder(prisma, { orderId: order.id, userId: "u1", changes: { mealGiftId: gift.id }, now: NOW }),
+      (e) => e.code === "OWN_GIFT" && e.status === 400,
+    );
+  });
+
+  test("markPaid still refuses even if a self-gift somehow lands on the order (defense in depth)", async () => {
+    const prisma = seed({
+      mealGifts: [{ id: "mg1", giverId: "u1", locationId: "L1", amountCents: 2000, status: "PENDING", expiresAt: EXPIRES, createdAt: NOW, paidAt: NOW, stripePaymentIntentId: "pi_gift" }],
+    });
+    const quote = await quoteOrder(prisma, { locationId: "L1", items: CLASSIC_BOWL, userId: "u1", now: NOW }); // no gift on the quote
+    const order = await createOrder(prisma, { quote, locationId: "L1", tenantId: "t1", userId: "u1", now: NOW, isDineInOrdersEnabled: () => true });
+    // Force the self-gift onto the order directly, bypassing resolveMealGift's check.
+    await prisma.order.update({ where: { id: order.id }, data: { mealGiftId: "mg1", mealGiftAppliedCents: 1924, amountDueCents: 0 } });
+    await assert.rejects(markPaid(prisma, fakeStripe(), { orderId: order.id, now: NOW }, fakeEffects().effects), (e) => e.code === "MEAL_GIFT_UNAVAILABLE");
+    assert.equal((await prisma.mealGift.findUnique({ where: { id: "mg1" } })).status, "PENDING");
+  });
+});
+
 describe("fix round 3: a refunded PaymentIntent funds nothing", () => {
   test("gift card purchase with a refunded (still 'succeeded') PaymentIntent: 409 PAYMENT_REFUNDED, no card, no second refund", async () => {
     const prisma = seed();

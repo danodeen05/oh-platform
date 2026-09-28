@@ -113,6 +113,9 @@ import { claimCheckInSeat } from "./seats/kiosk-seat.js";
 import { assignQueue, listFreePods, pickAutoPod, retiredPodInfo, POD_RETIRED } from "./seats/free-pods.js";
 import { claimSeat, holdSeatForOrder, holdPodAtPay } from "./orders/service.js";
 import { canSeeFullOrder, safeOrderView, firstNameOnly } from "./orders/order-view.js";
+import { registerKitchenStatusRoutes } from "./orders/kitchen-status.js";
+import { publicMealGift, nextMealGiftFor } from "./orders/meal-gift-view.js";
+import { registerMealGiftPayForward } from "./orders/meal-gift-routes.js";
 
 // DEMO- order codes resolve to a synthetic order (see demo/status-demo.js):
 // the plan's live status-page demo reads real routes without touching the DB.
@@ -4137,15 +4140,26 @@ app.post("/users", async (req, reply) => {
     console.log("  - existing.referredById:", existing.referredById);
     console.log("  - NEW referredByCode param:", referredByCode);
 
-    // If existing user has NO referrer but a referral code is provided, apply it
-    // (membership/engine.js: sets referredById and grants a WELCOME credit lot).
-    if (!existing.referredById && referredByCode) {
+    // A referral code is only ever applied to a genuinely new member - no
+    // referrer on file yet AND no completed order (membership/engine.js
+    // applyReferralSignup, Task D5 fix round 3). Always go through the
+    // engine rather than pre-filtering on `existing.referredById` here, so
+    // every ineligible case (already referred, already ordered, unknown
+    // code, self-referral) gets the same clear, non-error response.
+    if (referredByCode) {
       const result = await applyReferralSignup(prisma, { userId: existing.id, referralCode: referredByCode, now: new Date() });
       if (result.applied) {
         const updatedUser = await prisma.user.findUnique({ where: { id: existing.id } });
         return { ...updatedUser, referralJustApplied: true };
       }
-      console.log("❌ Referral code not applied for existing user:", referredByCode);
+      console.log("❌ Referral code not applied for existing user:", referredByCode, result.reason);
+      // Nothing was applied; still a 200 with the reason so the client can
+      // show it without treating this as an error.
+      if (name && name !== existing.name) {
+        const updatedUser = await prisma.user.update({ where: { id: existing.id }, data: { name } });
+        return { ...updatedUser, referralJustApplied: false, referralReason: result.reason, referralMessage: result.message };
+      }
+      return { ...existing, referralJustApplied: false, referralReason: result.reason, referralMessage: result.message };
     }
 
     // Update name if it changed in Clerk
@@ -4178,7 +4192,8 @@ app.post("/users", async (req, reply) => {
       const updatedUser = await prisma.user.findUnique({ where: { id: user.id } });
       return { ...updatedUser, referralJustApplied: true };
     }
-    console.log("❌ Referral code not applied for new user:", referredByCode);
+    console.log("❌ Referral code not applied for new user:", referredByCode, result.reason);
+    return { ...user, referralJustApplied: false, referralReason: result.reason, referralMessage: result.message };
   }
 
   return user;
@@ -5988,112 +6003,26 @@ app.get("/kitchen/cny-stats", async (req, reply) => {
   }
 });
 
-// Update order status with timestamps
-app.patch("/kitchen/orders/:id/status", async (req, reply) => {
-  const { id } = req.params;
-  const { status } = req.body || {};
-
-  if (!status) {
-    return reply.code(400).send({ error: "status required" });
-  }
-
-  const data = { status };
-
-  // Set timestamps based on status
-  if (status === "PREPPING") {
-    data.prepStartTime = new Date();
-  }
-  if (status === "READY") {
-    data.readyTime = new Date();
-  }
-  if (status === "SERVING") {
-    data.deliveredAt = new Date();
-  }
-  if (status === "COMPLETED") {
-    data.completedTime = new Date();
-  }
-
-  // Only call the membership engine on an actual transition into COMPLETED,
-  // not on every request that happens to repeat status: "COMPLETED".
-  const wasAlreadyCompleted = status === "COMPLETED"
-    ? (await prisma.order.findUnique({ where: { id }, select: { status: true } }))?.status === "COMPLETED"
-    : true;
-
-  const order = await prisma.order.update({
-    where: { id },
-    data,
-    include: {
-      items: {
-        include: {
-          menuItem: true,
-        },
-      },
-      seat: true,
-      location: true,
-      user: true,
-    },
-  });
-
-  // Ensure pod status is synchronized with order status
-  // Pod should be OCCUPIED for active orders (QUEUED through SERVING)
-  if (order.seatId && ["QUEUED", "PREPPING", "READY", "SERVING"].includes(status)) {
-    const currentSeat = order.seat;
-    if (currentSeat && currentSeat.status !== "OCCUPIED") {
-      console.log(`⚠️ Pod ${currentSeat.number} status was ${currentSeat.status}, correcting to OCCUPIED for order ${order.kitchenOrderNumber}`);
-      await prisma.seat.update({
-        where: { id: order.seatId },
-        data: { status: "OCCUPIED" },
-      });
-    }
-  }
-
-  // When order is completed, release the pod and process queue
-  if (status === "COMPLETED" && order.seatId) {
-    console.log(`Order ${order.kitchenOrderNumber} completed, releasing pod ${order.seat?.number}`);
-
-    // Mark pod as needs cleaning
-    await prisma.seat.update({
-      where: { id: order.seatId },
-      data: { status: "CLEANING" },
-    });
-
-    // Note: Staff will mark pod as AVAILABLE via /seats/:id/clean
-    // which will automatically trigger queue processing
-  }
-
-  // Cashback, referral payouts and tier upgrades all live in the membership
-  // engine now, and all run only once the order is COMPLETED (not just
-  // PAID): this is the actual production call site (kitchen-display.tsx
-  // drives status here), and PATCH /orders/:id calls the same function so
-  // either path completing an order runs it. onOrderCompleted is idempotent
-  // per orderId, so it's safe even if both paths fire for the same order.
-  if (status === "COMPLETED" && !wasAlreadyCompleted) {
-    const result = await onOrderCompleted(prisma, { orderId: order.id, now: new Date() });
-    if (result.cashbackCents > 0 || result.referralPaid || result.upgradedTo) {
+// Order status changes (Task D5 fix round 2): staff or a same-location kiosk
+// for PATCH /kitchen/orders/:id/status, and the verified owner's
+// SERVING -> COMPLETED ("I'm done eating") via POST /orders/:id/done.
+await registerKitchenStatusRoutes(app, {
+  prisma,
+  checkAdminAuth,
+  kioskAuth,
+  customerAuth,
+  onOrderCompleted,
+  onCompleted: (order, result) => {
+    if (result && (result.cashbackCents > 0 || result.referralPaid || result.upgradedTo)) {
       refreshUserWalletPass(order.userId).catch(console.error);
     }
     // Task F2: tier-up SMS after the membership transaction has committed.
-    if (result.upgradedTo) {
+    if (result?.upgradedTo) {
       notifyTierUpIfNeeded(prisma, { userId: order.userId, upgradedTo: result.upgradedTo }).catch((err) =>
         console.error("[orders] tier-up notify failed:", err?.message || err),
       );
     }
-  }
-
-  // Task A8b, fix round 1, final sweep: this route is MUST_STAY_OPEN (the
-  // customer status page's own "I'm done eating" PATCHes it with no
-  // session) and returned the full order, including `user: true`, to any
-  // caller. No known caller reads this response (the status page discards
-  // it and refetches GET /orders/status; kitchen-display.tsx and
-  // pods-manager.tsx discard it and refetch their own staff-gated GETs), so
-  // this only closes the leak - same rule as GET /orders/:id.
-  const canSeeFull = await canSeeFullOrder(req, order, {
-    checkAdminAuth,
-    kioskDeviceFor: kioskAuth.deviceFor,
-    resolveCustomer: customerAuth.resolve,
-    findGuestBySessionToken: (token) => prisma.guest.findUnique({ where: { sessionToken: token } }),
-  });
-  return canSeeFull ? order : safeOrderView(order);
+  },
 });
 
 // Get kitchen stats (orders by status)
@@ -10074,86 +10003,33 @@ app.post("/meal-gifts", async (req, reply) => {
 app.get("/meal-gifts/next/:locationId", async (req, reply) => {
   const { locationId } = req.params;
 
-  // Find the oldest pending gift at this location that hasn't expired
-  const mealGift = await prisma.mealGift.findFirst({
-    where: {
-      locationId,
-      status: "PENDING",
-      paidAt: { not: null }, // Funded gifts only (Task A6)
-      expiresAt: { gt: new Date() }, // Not expired
-    },
-    orderBy: {
-      createdAt: "asc", // FIFO order
-    },
-    include: {
-      giver: { select: { id: true, name: true } },
-      location: { select: { id: true, name: true, city: true } },
-      chain: {
-        include: {
-          recipient: { select: { id: true, name: true } },
-        },
-        orderBy: { createdAt: "asc" },
-      },
-    },
-  });
+  // Task D5 fix round 3 (follow-up): a verified caller is never offered
+  // their own gift back - resolveMealGift already refuses to let a giver
+  // redeem their own gift (400 OWN_GIFT), but leaving this FIFO suggestion
+  // pointed at it meant a giver's own checkout would fail until they
+  // noticed and cleared it. nextMealGiftFor (orders/meal-gift-view.js) skips
+  // straight to the next PENDING gift instead. Anonymous callers (no
+  // verified session) still see the plain FIFO gift - there's no identity
+  // to exclude.
+  const who = await customerAuth.resolve(req);
+  const excludeGiverId = who && who.kind === "user" && who.userId ? who.userId : null;
+
+  const mealGift = await nextMealGiftFor(prisma, { locationId, excludeGiverId });
 
   if (!mealGift) {
     return reply.code(404).send({ error: "No meal gifts available" });
   }
 
-  return mealGift;
+  // Task D5 fix round 2: public, so "First L." names only, no user ids (orders/meal-gift-view.js).
+  return publicMealGift(mealGift);
 });
 
 // POST /meal-gifts/:id/accept was removed in Task A7 fix round 1: checkout
 // consumes a meal gift from the order's quote at PAID (orders/service.js).
 
-// POST /meal-gifts/:id/pay-forward - Pay forward a meal gift to next person
-app.post("/meal-gifts/:id/pay-forward", async (req, reply) => {
-  const { id } = req.params;
-  const { recipientId, messageFromRecipient } = req.body || {};
-
-  if (!recipientId) {
-    return reply.code(400).send({ error: "recipientId required" });
-  }
-
-  const mealGift = await prisma.mealGift.findUnique({
-    where: { id },
-  });
-
-  if (!mealGift) {
-    return reply.code(404).send({ error: "Meal gift not found" });
-  }
-
-  if (mealGift.status !== "PENDING") {
-    return reply.code(400).send({ error: "Meal gift is not available" });
-  }
-
-  if (new Date() > mealGift.expiresAt) {
-    return reply.code(400).send({ error: "Meal gift has expired" });
-  }
-
-  // Increment pay forward count
-  const updatedGift = await prisma.mealGift.update({
-    where: { id },
-    data: {
-      payForwardCount: {
-        increment: 1,
-      },
-    },
-  });
-
-  // Add chain entry for PAY_FORWARD action
-  await prisma.mealGiftChain.create({
-    data: {
-      mealGiftId: id,
-      recipientId,
-      action: "PAID_FORWARD",
-      messageFromRecipient: messageFromRecipient || null,
-    },
-  });
-
-  return updatedGift;
-});
+// POST /meal-gifts/:id/pay-forward: signed-in caller only, the recipient is the
+// caller (Task D5 fix round 2, orders/meal-gift-routes.js).
+await registerMealGiftPayForward(app, { prisma, customerAuth });
 
 // POST /meal-gifts/expire - Expire and refund unclaimed gifts (cron job)
 app.post("/meal-gifts/expire", async (req, reply) => {
@@ -10228,12 +10104,19 @@ app.get("/meal-gifts/:id", async (req, reply) => {
     return reply.code(404).send({ error: "Meal gift not found" });
   }
 
-  return mealGift;
+  // Task D5 fix round 2: public, so "First L." names only, no user ids or order (orders/meal-gift-view.js).
+  return publicMealGift(mealGift);
 });
 
 // GET /users/:userId/meal-gifts - Get user's meal gift transactions (given and received)
 app.get("/users/:userId/meal-gifts", async (req, reply) => {
   const { userId } = req.params;
+  // Task D5 fix round 3: this returned any member's full given/received gift
+  // history (a giver's messages, a recipient's name) to anonymous callers.
+  // registerCustomerIdentity's onRoute hook already guards every
+  // /users/:userId/* route with requireSelf; this explicit call is
+  // defense in depth and documents the rule right where the data leaves.
+  if (!(await customerAuth.requireSelf(req, reply, userId))) return reply;
 
   // Get gifts given by user (with recipient messages from chain)
   const giftsGiven = await prisma.mealGift.findMany({

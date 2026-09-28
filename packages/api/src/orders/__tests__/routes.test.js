@@ -101,10 +101,10 @@ describe("payment integrity", () => {
     assert.equal(res.json().error, "ORDER_NOT_PAID");
   });
 
-  test("PATCH /orders/:id still takes the fields its callers use", async () => {
+  test("PATCH /orders/:id still takes the fields its callers use (for the verified owner)", async () => {
     const { app, prisma } = await buildApp();
     const arrival = new Date(NOW.getTime() + 15 * 60 * 1000).toISOString();
-    const res = await app.inject({ method: "PATCH", url: "/orders/o1", payload: { estimatedArrival: arrival } });
+    const res = await app.inject({ method: "PATCH", url: "/orders/o1", headers: auth("u1"), payload: { estimatedArrival: arrival } });
     assert.equal(res.statusCode, 200);
     assert.equal((await prisma.order.findUnique({ where: { id: "o1" } })).estimatedArrival.toISOString(), arrival);
   });
@@ -186,6 +186,15 @@ describe("POST /orders", () => {
     const ok = await app.inject({ method: "POST", url: "/orders", headers: KIOSK, payload: { locationId: "L1", items: CLASSIC_BOWL, guestName: "Sam" } });
     assert.equal(ok.statusCode, 200, ok.body);
     assert.equal(ok.json().orderSource, "KIOSK");
+  });
+});
+
+describe("POST /orders/quote", () => {
+  test("tells the site the per-order credit cap (Task D5 fix round 1)", async () => {
+    const { app } = await buildApp();
+    const res = await app.inject({ method: "POST", url: "/orders/quote", headers: auth("u1"), payload: { locationId: "L1", items: CLASSIC_BOWL } });
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.json().maxCreditsCents, 500);
   });
 });
 
@@ -339,19 +348,24 @@ describe("A8b fix round 2: POST /orders/:id/confirm-payment and PATCH /orders/:i
       return paidOrder({ paymentStatus: "PAID", status: "QUEUED", ...overrides });
     }
 
-    test("anonymous gets no contact fields", async () => {
-      const { app } = await buildApp({ orders: [queuedOrder()] });
-      const res = await app.inject({ method: "PATCH", url: "/orders/o1", payload: { status: "PREPPING" } });
-      assert.equal(res.statusCode, 200);
-      const body = res.json();
-      assert.equal("user" in body, false);
-      assert.equal(JSON.stringify(body).includes("u1@x.com"), false);
-      assert.equal(body.status, "PREPPING");
+    // Task D5 fix round 1: status changes are staff/kiosk only, so the
+    // response-gating checks for non-staff callers use a field they may send.
+    const ARRIVAL = { estimatedArrival: "2026-09-27T19:00:00.000Z" };
+
+    // Task D5 fix round 3: writing estimatedArrival/podConfirmedAt/guestId/
+    // orderSource now needs the same permission as seeing the full record
+    // (viewerCanSeeFull), so an unauthorized write is refused before there's
+    // any response to gate.
+    test("anonymous can't write a non-status field at all (401)", async () => {
+      const { app, prisma } = await buildApp({ orders: [queuedOrder()] });
+      const res = await app.inject({ method: "PATCH", url: "/orders/o1", payload: ARRIVAL });
+      assert.equal(res.statusCode, 401);
+      assert.ok(!(await prisma.order.findUnique({ where: { id: "o1" } })).estimatedArrival);
     });
 
     test("the owner gets the full record", async () => {
       const { app } = await buildApp({ orders: [queuedOrder()] });
-      const res = await app.inject({ method: "PATCH", url: "/orders/o1", headers: auth("u1"), payload: { status: "PREPPING" } });
+      const res = await app.inject({ method: "PATCH", url: "/orders/o1", headers: auth("u1"), payload: ARRIVAL });
       assert.equal(res.statusCode, 200);
       assert.equal(res.json().user.email, "u1@x.com");
     });
@@ -370,12 +384,121 @@ describe("A8b fix round 2: POST /orders/:id/confirm-payment and PATCH /orders/:i
       assert.equal(res.json().user.email, "u1@x.com");
     });
 
-    test("a kiosk device at a DIFFERENT location gets no contact fields", async () => {
+    test("a kiosk device at a DIFFERENT location can't write a non-status field (403)", async () => {
       // The fixture's kiosk device double is pinned to L1; an order at L2 is a location mismatch.
-      const { app } = await buildApp({ orders: [queuedOrder({ locationId: "L2" })] });
-      const res = await app.inject({ method: "PATCH", url: "/orders/o1", headers: KIOSK, payload: { status: "PREPPING" } });
+      const { app, prisma } = await buildApp({ orders: [queuedOrder({ locationId: "L2" })] });
+      const res = await app.inject({ method: "PATCH", url: "/orders/o1", headers: KIOSK, payload: ARRIVAL });
+      assert.equal(res.statusCode, 403);
+      assert.ok(!(await prisma.order.findUnique({ where: { id: "o1" } })).estimatedArrival);
+    });
+  });
+
+  // Task D5 fix round 3: podConfirmedAt (and the other non-status PATCHABLE
+  // fields) were previously writable by anyone with an order id.
+  describe("PATCH /orders/:id non-status field authority", () => {
+    function queuedOrder(overrides = {}) {
+      return paidOrder({ paymentStatus: "PAID", status: "QUEUED", ...overrides });
+    }
+    const confirm = { podConfirmedAt: "2026-09-27T19:05:00.000Z" };
+
+    test("anonymous gets 401 and nothing is written", async () => {
+      const { app, prisma } = await buildApp({ orders: [queuedOrder()] });
+      const res = await app.inject({ method: "PATCH", url: "/orders/o1", payload: confirm });
+      assert.equal(res.statusCode, 401);
+      assert.equal(res.json().error, "UNAUTHORIZED");
+      assert.ok(!(await prisma.order.findUnique({ where: { id: "o1" } })).podConfirmedAt);
+    });
+
+    test("a signed-in member who isn't the owner gets 403", async () => {
+      const { app, prisma } = await buildApp({ orders: [queuedOrder()] });
+      const res = await app.inject({ method: "PATCH", url: "/orders/o1", headers: auth("u2"), payload: confirm });
+      assert.equal(res.statusCode, 403);
+      assert.equal(res.json().error, "FORBIDDEN");
+      assert.ok(!(await prisma.order.findUnique({ where: { id: "o1" } })).podConfirmedAt);
+    });
+
+    test("the verified owner can write it", async () => {
+      const { app, prisma } = await buildApp({ orders: [queuedOrder()] });
+      const res = await app.inject({ method: "PATCH", url: "/orders/o1", headers: auth("u1"), payload: confirm });
       assert.equal(res.statusCode, 200);
-      assert.equal("user" in res.json(), false);
+      assert.ok((await prisma.order.findUnique({ where: { id: "o1" } })).podConfirmedAt);
+    });
+
+    test("staff can write it (x-admin-api-key, production-like)", async () => {
+      const { app, prisma } = await buildApp({ orders: [queuedOrder()], checkAdminAuth: prodCheckAdminAuth });
+      const res = await app.inject({ method: "PATCH", url: "/orders/o1", headers: ADMIN, payload: confirm });
+      assert.equal(res.statusCode, 200);
+      assert.ok((await prisma.order.findUnique({ where: { id: "o1" } })).podConfirmedAt);
+    });
+
+    test("a kiosk device at the order's own location can write it", async () => {
+      const { app, prisma } = await buildApp({ orders: [queuedOrder()] });
+      const res = await app.inject({ method: "PATCH", url: "/orders/o1", headers: KIOSK, payload: confirm });
+      assert.equal(res.statusCode, 200);
+      assert.ok((await prisma.order.findUnique({ where: { id: "o1" } })).podConfirmedAt);
+    });
+
+    test("a kiosk device at a DIFFERENT location gets 403", async () => {
+      const { app, prisma } = await buildApp({ orders: [queuedOrder({ locationId: "L2" })] });
+      const res = await app.inject({ method: "PATCH", url: "/orders/o1", headers: KIOSK, payload: confirm });
+      assert.equal(res.statusCode, 403);
+      assert.ok(!(await prisma.order.findUnique({ where: { id: "o1" } })).podConfirmedAt);
+    });
+  });
+
+  // Task D5 fix round 1: who may change an order's status.
+  describe("PATCH /orders/:id status authority", () => {
+    const unpaid = (o = {}) => paidOrder({ paymentStatus: "PENDING", status: "PENDING_PAYMENT", ...o });
+    const paid = (o = {}) => paidOrder({ paymentStatus: "PAID", status: "QUEUED", ...o });
+    const cancel = { status: "CANCELLED" };
+
+    test("an anonymous caller can't cancel an order", async () => {
+      const { app, prisma } = await buildApp({ orders: [unpaid()], checkAdminAuth: prodCheckAdminAuth });
+      const res = await app.inject({ method: "PATCH", url: "/orders/o1", payload: cancel });
+      assert.ok([401, 403].includes(res.statusCode), `got ${res.statusCode}`);
+      assert.equal((await prisma.order.findUnique({ where: { id: "o1" } })).status, "PENDING_PAYMENT");
+    });
+
+    test("another member can't cancel someone's order", async () => {
+      const { app } = await buildApp({ orders: [unpaid()], checkAdminAuth: prodCheckAdminAuth });
+      const res = await app.inject({ method: "PATCH", url: "/orders/o1", headers: auth("u2"), payload: cancel });
+      assert.equal(res.statusCode, 403);
+    });
+
+    test("a paid order can't be cancelled here, not even by its owner or staff (409 ORDER_PAID)", async () => {
+      for (const headers of [auth("u1"), ADMIN, KIOSK]) {
+        const { app, prisma } = await buildApp({ orders: [paid()], checkAdminAuth: prodCheckAdminAuth });
+        const res = await app.inject({ method: "PATCH", url: "/orders/o1", headers, payload: cancel });
+        assert.equal(res.statusCode, 409);
+        assert.equal(res.json().error, "ORDER_PAID");
+        assert.equal((await prisma.order.findUnique({ where: { id: "o1" } })).status, "QUEUED");
+      }
+    });
+
+    test("the owner cancels their own unpaid order", async () => {
+      const { app, prisma } = await buildApp({ orders: [unpaid()], checkAdminAuth: prodCheckAdminAuth });
+      const res = await app.inject({ method: "PATCH", url: "/orders/o1", headers: auth("u1"), payload: cancel });
+      assert.equal(res.statusCode, 200);
+      assert.equal((await prisma.order.findUnique({ where: { id: "o1" } })).status, "CANCELLED");
+    });
+
+    test("anonymous COMPLETED is refused (it would pay cashback)", async () => {
+      const { app, prisma } = await buildApp({ orders: [paid()], checkAdminAuth: prodCheckAdminAuth });
+      const res = await app.inject({ method: "PATCH", url: "/orders/o1", payload: { status: "COMPLETED" } });
+      assert.equal(res.statusCode, 403);
+      assert.equal((await prisma.order.findUnique({ where: { id: "o1" } })).status, "QUEUED");
+    });
+
+    test("the owner can't move their own order through the kitchen", async () => {
+      const { app } = await buildApp({ orders: [paid()], checkAdminAuth: prodCheckAdminAuth });
+      const res = await app.inject({ method: "PATCH", url: "/orders/o1", headers: auth("u1"), payload: { status: "COMPLETED" } });
+      assert.equal(res.statusCode, 403);
+    });
+
+    test("a kiosk at another location can't change the status", async () => {
+      const { app } = await buildApp({ orders: [paid({ locationId: "L2" })], checkAdminAuth: prodCheckAdminAuth });
+      const res = await app.inject({ method: "PATCH", url: "/orders/o1", headers: KIOSK, payload: { status: "PREPPING" } });
+      assert.equal(res.statusCode, 403);
     });
   });
 

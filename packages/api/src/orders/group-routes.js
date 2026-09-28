@@ -55,7 +55,7 @@ function generateGroupCode() {
  * initial" (e.g. "Dana K.") is the shared display-name ceiling for both a
  * member and a guest, everyone but that person's own record.
  */
-function displayName(fullName, emptyFallback = null) {
+export function displayName(fullName, emptyFallback = null) {
   if (typeof fullName !== "string" || !fullName.trim()) return emptyFallback;
   const parts = fullName.trim().split(/\s+/);
   if (parts.length === 1) return parts[0];

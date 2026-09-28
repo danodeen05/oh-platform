@@ -226,6 +226,9 @@ describe("registerCustomerIdentity on a Fastify app", () => {
       return { email: req.params.email };
     });
     app.get("/users/referral/:code", async () => ({ public: true }));
+    // Shape of the real GET /users/:userId/meal-gifts (Task D5 fix round 3):
+    // a plain two-segment GET under a `:userId` param, no other path pieces.
+    app.get("/users/:userId/meal-gifts", async (req) => ({ userId: req.params.userId, given: [], received: [] }));
     await app.ready();
     return { app, auth };
   }
@@ -276,6 +279,21 @@ describe("registerCustomerIdentity on a Fastify app", () => {
     const { app } = await appWith();
     const res = await app.inject({ method: "GET", url: "/users/referral/abc" });
     assert.equal(res.statusCode, 200);
+  });
+
+  // Task D5 fix round 3: GET /users/:userId/meal-gifts returned any member's
+  // full given/received gift history (names, messages) to anyone who knew
+  // their id. Same onRoute guard as every other /users/:userId/* route.
+  test("GET /users/:userId/meal-gifts: anonymous 401, another member 403, self 200, service key 200", async () => {
+    const { app } = await appWith();
+    const anon = await app.inject({ method: "GET", url: "/users/db_me/meal-gifts" });
+    assert.equal(anon.statusCode, 401);
+    const other = await app.inject({ method: "GET", url: "/users/db_me/meal-gifts", headers: { authorization: "Bearer clerk:user_other" } });
+    assert.equal(other.statusCode, 403);
+    const self = await app.inject({ method: "GET", url: "/users/db_me/meal-gifts", headers: { authorization: "Bearer clerk:user_me" } });
+    assert.equal(self.statusCode, 200);
+    const service = await app.inject({ method: "GET", url: "/users/db_me/meal-gifts", headers: { "x-admin-api-key": "key-123" } });
+    assert.equal(service.statusCode, 200);
   });
 });
 

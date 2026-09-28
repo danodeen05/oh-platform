@@ -1,6 +1,6 @@
 'use client';
 
-import { loadStripe, Stripe } from '@stripe/stripe-js';
+import { loadStripe, Stripe, type StripeElementLocale, type CssFontSource } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
 import { ReactNode, useMemo } from 'react';
 
@@ -27,6 +27,14 @@ export interface StripeProviderProps {
     variables?: Record<string, string>;
     rules?: Record<string, Record<string, string>>;
   };
+  /**
+   * Stripe Elements' language (Task D5): the site's locale, mapped with
+   * `stripeLocale()` (zh-CN is Stripe's "zh"). Omitted: Stripe follows the
+   * browser, as before.
+   */
+  locale?: StripeElementLocale;
+  /** Web fonts for the Payment Element (e.g. the site's Raleway). */
+  fonts?: CssFontSource[];
 }
 
 /**
@@ -43,7 +51,7 @@ export interface StripeProviderProps {
  *   <PaymentElement />
  * </StripeProvider>
  */
-export function StripeProvider({ children, clientSecret, appearance }: StripeProviderProps) {
+export function StripeProvider({ children, clientSecret, appearance, locale, fonts }: StripeProviderProps) {
   const stripePromiseValue = useMemo(() => getStripe(), []);
 
   // Default appearance matching the site's aesthetic
@@ -91,6 +99,8 @@ export function StripeProvider({ children, clientSecret, appearance }: StripePro
           clientSecret,
           appearance: finalAppearance,
           loader: 'auto',
+          ...(locale ? { locale } : {}),
+          ...(fonts ? { fonts } : {}),
         }}
       >
         {children}
@@ -103,6 +113,8 @@ export function StripeProvider({ children, clientSecret, appearance }: StripePro
       stripe={stripePromiseValue}
       options={{
         appearance: finalAppearance,
+        ...(locale ? { locale } : {}),
+        ...(fonts ? { fonts } : {}),
       }}
     >
       {children}

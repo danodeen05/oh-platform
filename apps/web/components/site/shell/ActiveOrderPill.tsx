@@ -10,6 +10,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { activeOrderStatusKey, isOrderFlowPath, useActiveOrder } from "@/lib/site/active-order";
+import { isOrderBuildPath } from "@/lib/site/order-routes";
 
 export function ActiveOrderPill() {
   const t = useTranslations("site.shell");
@@ -17,7 +18,8 @@ export function ActiveOrderPill() {
   const pathname = usePathname();
   const order = useActiveOrder();
 
-  if (!order || isOrderFlowPath(pathname)) return null;
+  // Task D5: also off the building and paying steps, where the CTA bar owns the bottom edge.
+  if (!order || isOrderFlowPath(pathname) || (isOrderBuildPath(pathname) && !/\/order\/?$/.test(pathname || ""))) return null;
 
   const title = order.kitchenOrderNumber ? t("activeOrder", { number: order.kitchenOrderNumber }) : t("activeOrderNoNumber");
   const status = t(`orderStatus.${activeOrderStatusKey(order)}`);

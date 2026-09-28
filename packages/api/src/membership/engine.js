@@ -352,20 +352,43 @@ export async function sweepUnprocessedCompletedOrders(prisma, now = new Date()) 
   return processed;
 }
 
+/** The one wording used for every "you're not eligible" referral response (Task D5 fix round 3). */
+const REFERRAL_NOT_FOR_YOU_MESSAGE = "Referral codes are for new members.";
+
 /**
  * Applies a referral code at signup: sets `referredById` (only if the user
  * doesn't already have a referrer) and grants the referee a WELCOME credit
  * lot. Does not pay the referrer; that happens in `onOrderCompleted` on the
  * referee's first completed order.
+ *
+ * Task D5 fix round 3: a referral code is only ever applied to a genuinely
+ * new member - no `referredById` on file AND no completed order yet. Before
+ * this, any existing member with no referrer recorded (including a
+ * long-time member who signed up before referrals existed) could still
+ * backdate a friend's link and claim the welcome credit lot. Every refusal
+ * is a normal, non-error `{ applied: false, reason, message }` - never a
+ * thrown error - so the caller (`POST /users`) can surface a clear message
+ * with no error handling. Self-referral is refused the same way.
  */
 export async function applyReferralSignup(prisma, { userId, referralCode, now = new Date() }) {
   if (!referralCode) return { applied: false };
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user || user.referredById) return { applied: false };
+  if (!user) return { applied: false };
+  if (user.referredById) {
+    return { applied: false, reason: "ALREADY_REFERRED", message: REFERRAL_NOT_FOR_YOU_MESSAGE };
+  }
+
+  const completedOrders = await prisma.order.count({ where: { userId, status: "COMPLETED" } });
+  if (completedOrders > 0) {
+    return { applied: false, reason: "NOT_NEW_MEMBER", message: REFERRAL_NOT_FOR_YOU_MESSAGE };
+  }
 
   const referrer = await prisma.user.findUnique({ where: { referralCode } });
-  if (!referrer || referrer.id === userId) return { applied: false };
+  if (!referrer) return { applied: false, reason: "INVALID_CODE", message: "That referral code isn't recognized." };
+  if (referrer.id === userId) {
+    return { applied: false, reason: "SELF_REFERRAL", message: "You can't refer yourself." };
+  }
 
   await prisma.user.update({ where: { id: userId }, data: { referredById: referrer.id } });
   await grantCredit(prisma, {
