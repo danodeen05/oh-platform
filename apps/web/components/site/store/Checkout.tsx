@@ -39,8 +39,10 @@ import { usePublishOrderBack } from "@/lib/site/order-back";
 import { formatCents, stripeLocale } from "@/lib/site/order-flow";
 import { createShopOrder, shopConfirmPayment, shopPaymentIntent, type ShopOrder } from "@/lib/site/orders";
 import { NIGHT_APPEARANCE, STRIPE_FONTS } from "@/lib/site/stripe-night";
-import { FREE_SHIPPING_MIN_CENTS, formatGiftCode, giftCodeComplete, localizeProduct, productImage, RECREATE_CODES, storeErrorCode, type StoreErrorCode } from "@/lib/site/store";
+import { clearPending, finishWithRetry, isPendingShop, loadPending, PENDING_SHOP_KEY, savePending, shopFinishOutcome, type PendingShop } from "@/lib/site/paid-recovery";
+import { FREE_SHIPPING_MIN_CENTS, formatGiftCode, giftCodeComplete, localizeProduct, productImage, RECREATE_CODES, storeErrorCode } from "@/lib/site/store";
 import { useShopCatalog } from "./CartView";
+import { PaymentReceived, type ReceivedState } from "./PaymentReceived";
 import { FIELD, LABEL, MoneyRow, PANEL, PANEL_TITLE, PRIMARY, ProductPhoto, TEXT_LINK } from "./ui";
 
 const FORM_ID = "oh-store-pay-form";
@@ -62,7 +64,7 @@ export function Checkout({ initialFulfillment = "SHIPPING" }: { initialFulfillme
   const api = useSiteApi();
   const member = useMemberId();
   const { user } = useUser();
-  const { guest, startGuestSession } = useGuest();
+  const { guest, startGuestSession, isLoading: guestLoading } = useGuest();
   const { items, subtotalCents, clearCart } = useCart();
   const catalog = useShopCatalog();
   const ids = useId();
@@ -93,6 +95,10 @@ export function Checkout({ initialFulfillment = "SHIPPING" }: { initialFulfillme
   const [saved, setSaved] = useState<SavedPaymentMethod[]>([]);
   const finishing = useRef(false);
   const confirming = useRef(false);
+  // Fix round 1: once Stripe says the payment succeeded, the page only finishes it (never Pay again).
+  const [paid, setPaid] = useState<PendingShop | null>(null);
+  const [paidState, setPaidState] = useState<ReceivedState>("finishing");
+  const resumed = useRef(false);
 
   // Prefill from the member's account.
   useEffect(() => {
@@ -203,7 +209,7 @@ export function Checkout({ initialFulfillment = "SHIPPING" }: { initialFulfillme
     (orderNumber: string) => {
       finishing.current = true;
       clearCart();
-      router.replace(`/${locale}/store/confirmation/${encodeURIComponent(orderNumber)}`);
+      router.replace(`/${locale}/store/confirmation/${encodeURIComponent(orderNumber)}?placed=1`);
     },
     [clearCart, router, locale],
   );
@@ -277,43 +283,72 @@ export function Checkout({ initialFulfillment = "SHIPPING" }: { initialFulfillme
     }
   }
 
-  async function confirmPaid(paymentIntentId: string) {
-    if (!order || confirming.current) return;
+  /** Stripe succeeded: remember the PaymentIntent (a reload resumes) and finish with it. */
+  function paymentSucceeded(paymentIntentId: string) {
+    if (!order) return;
+    const p: PendingShop = { orderId: order.id, orderNumber: order.orderNumber, paymentIntentId };
+    savePending(sessionStorageOrNull(), PENDING_SHOP_KEY, p);
+    finishPaid(p);
+  }
+
+  /**
+   * POST /shop/orders/:id/confirm-payment with the succeeded PaymentIntent,
+   * retried with the same id (idempotent on the server). Only a refunded
+   * charge or a changed order goes back to review; anything else stays on
+   * "Payment received" with Retry and support, never on Pay.
+   */
+  async function finishPaid(p: PendingShop) {
+    if (confirming.current) return;
     confirming.current = true;
-    setProcessing(true);
+    setPaid(p);
+    setPaidState("finishing");
     showAlert(null);
     try {
-      const res = await shopConfirmPayment(order.id, paymentIntentId, shopCall(guest?.sessionToken));
-      if (res.ok) {
-        finish(res.data.orderNumber || order.orderNumber);
+      const res = await finishWithRetry(() => shopConfirmPayment(p.orderId, p.paymentIntentId, shopCall(guest?.sessionToken)));
+      const outcome = shopFinishOutcome(res, RECREATE_CODES);
+      if (outcome === "done") {
+        clearPending(sessionStorageOrNull(), PENDING_SHOP_KEY);
+        finish(res.data?.orderNumber || p.orderNumber);
         return;
       }
-      setProcessing(false);
+      if (outcome === "stuck") {
+        setPaidState("stuck");
+        return;
+      }
+      if (outcome === "review") {
+        // A person is checking this payment: keep the page here (and on reload) so nobody pays twice.
+        setPaidState("review");
+        return;
+      }
+      // reprice: the server returned the charge (or the order changed); review again.
+      clearPending(sessionStorageOrNull(), PENDING_SHOP_KEY);
+      setPaid(null);
+      editOrder();
       const code = storeErrorCode(res.error.code, res.status);
-      if (res.error.needsReview) {
-        showAlert({ text: te("NEEDS_REVIEW"), tone: "calm" });
-        return;
-      }
       if (res.error.refunded === true) {
-        // The charge was returned in full; drop the order so the next review re-prices it.
-        editOrder();
         const which: "CREDIT_SHORT" | "GIFT_CARD_CHANGED" | "OUT_OF_STOCK" | "GENERIC" = code === "CREDIT_SHORT" || code === "GIFT_CARD_CHANGED" || code === "OUT_OF_STOCK" ? code : "GENERIC";
-        if (code === "CREDIT_SHORT") setCredits(null);
+        if (code === "CREDIT_SHORT") {
+          setCredits(null);
+          refreshCredits();
+        }
         if (code === "GIFT_CARD_CHANGED" && card) checkCard(card.code);
         showAlert({ text: tn(which), tone: "calm" });
-        if (code === "CREDIT_SHORT" && member.userId) refreshCredits();
-        return;
+      } else {
+        showAlert({ text: te(code), tone: "calm" });
       }
-      if ((RECREATE_CODES as readonly StoreErrorCode[]).includes(code)) {
-        editOrder();
-        showAlert({ text: code === "CREDIT_SHORT" || code === "GIFT_CARD_CHANGED" || code === "OUT_OF_STOCK" ? te("HELD") : te(code), tone: "calm" });
-        return;
-      }
-      showAlert({ text: te(code), tone: "error" });
     } finally {
       confirming.current = false;
     }
   }
+
+  // A reload after Stripe succeeded resumes the finish (same PaymentIntent) instead of a new payment.
+  useEffect(() => {
+    if (!hydrated || !member.ready || guestLoading || resumed.current) return;
+    resumed.current = true;
+    const p = loadPending(sessionStorageOrNull(), PENDING_SHOP_KEY, isPendingShop);
+    if (p) finishPaid(p);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, member.ready, guestLoading]);
 
   async function refreshCredits() {
     if (!member.userId) return;
@@ -325,8 +360,21 @@ export function Checkout({ initialFulfillment = "SHIPPING" }: { initialFulfillme
 
   // An emptied bag (another tab) sends the visitor back to the shelf, unless this page just finished.
   useEffect(() => {
-    if (hydrated && items.length === 0 && !finishing.current) router.replace(`/${locale}/store/cart`);
-  }, [hydrated, items.length, router, locale]);
+    if (hydrated && items.length === 0 && !finishing.current && !paid && !loadPending(sessionStorageOrNull(), PENDING_SHOP_KEY, isPendingShop)) router.replace(`/${locale}/store/cart`);
+  }, [hydrated, items.length, router, locale, paid]);
+
+  if (paid) {
+    return (
+      <PaymentReceived
+        state={paidState}
+        finishingText={t("received.finishing")}
+        stuckText={t("received.stuck")}
+        reviewText={te("NEEDS_REVIEW")}
+        reference={{ label: t("received.number"), value: paid.orderNumber }}
+        onRetry={() => finishPaid(paid)}
+      />
+    );
+  }
 
   if (!hydrated || items.length === 0) {
     return <div className="mx-auto mt-10 h-64 max-w-5xl animate-pulse rounded-3xl bg-oh-ink px-4 motion-reduce:animate-none" />;
@@ -596,7 +644,7 @@ export function Checkout({ initialFulfillment = "SHIPPING" }: { initialFulfillme
                     showExpressCheckout
                     savedPaymentMethods={order.userId && member.userId === order.userId ? saved : []}
                     returnUrl={`${typeof window !== "undefined" ? window.location.origin : ""}/${locale}/store/confirmation/${encodeURIComponent(order.orderNumber)}?shopOrderId=${encodeURIComponent(order.id)}`}
-                    onSuccess={(id) => confirmPaid(id)}
+                    onSuccess={(id) => paymentSucceeded(id)}
                     onError={(message) => showAlert({ text: message || te("GENERIC"), tone: "error" })}
                     onProcessingChange={setProcessing}
                     labels={{
@@ -662,3 +710,12 @@ export function Checkout({ initialFulfillment = "SHIPPING" }: { initialFulfillme
     </div>
   );
 }
+
+function sessionStorageOrNull(): Storage | null {
+  try {
+    return typeof window === "undefined" ? null : window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
+

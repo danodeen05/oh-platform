@@ -30,6 +30,8 @@ import { toOrderApiError } from "@/lib/site/orders";
 import { NIGHT_APPEARANCE, STRIPE_FONTS } from "@/lib/site/stripe-night";
 import { GIFT_DESIGNS, GIFT_MAX_DOLLARS, GIFT_MIN_DOLLARS, GIFT_PRESETS, giftAmountValid, giftDesign, giftErrorCode, parseGiftDollars, type GiftDesign } from "@/lib/site/store";
 import { GiftCardFace } from "./GiftCardFace";
+import { PaymentReceived, type ReceivedState } from "@/components/site/store/PaymentReceived";
+import { clearPending, finishWithRetry, isPendingGift, loadPending, PENDING_GIFT_KEY, retryable, savePending, type FinishResult, type PendingGift } from "@/lib/site/paid-recovery";
 
 const FORM_ID = "oh-gift-pay-form";
 const DRAFT_KEY = "oh-gift-draft";
@@ -69,7 +71,14 @@ export function GiftPurchase() {
   const [alert, setAlert] = useState<string | null>(null);
   const [issued, setIssued] = useState<Issued | null>(null);
   const returning = search.get("payment_intent");
+  const redirectStatus = search.get("redirect_status");
   const issuing = useRef(false);
+  // Fix round 1: after Stripe succeeds the page only issues the card (never Pay again).
+  const [paid, setPaid] = useState<PendingGift<Draft | null> | null>(null);
+  const [paidState, setPaidState] = useState<ReceivedState>("finishing");
+  // Bumped to load a fresh PaymentIntent (after a failed redirect return, or a payment that never succeeded).
+  const [piNonce, setPiNonce] = useState(0);
+  const resumed = useRef(false);
   // The gift the current PaymentIntent was made for: one PaymentIntent per gift, not per render.
   const piFor = useRef<string | null>(null);
 
@@ -83,43 +92,82 @@ export function GiftPurchase() {
   const nameOk = name.trim().length > 0;
   const emailOk = EMAIL.test(email.trim());
 
-  const issue = useCallback(
-    async (paymentIntentId: string, d: Draft) => {
+  /** One POST /gift-cards for a succeeded PaymentIntent (the server verifies it; idempotent for the same buyer). */
+  const issueOnce = useCallback(
+    async (paymentIntentId: string, d: Draft): Promise<FinishResult & { body: { code?: string; amountCents?: number; recipientEmail?: string | null } | null }> => {
+      const res = await api(`${SITE_API_URL}/gift-cards`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amountCents: d.dollars * 100, designId: d.design, recipientName: d.name, recipientEmail: d.email, personalMessage: d.message || undefined, stripePaymentId: paymentIntentId }),
+      }).catch(() => null);
+      const body = res ? await res.json().catch(() => null) : null;
+      const ok = Boolean(res?.ok && body?.code);
+      return { ok, status: res ? res.status : 0, error: ok ? null : toOrderApiError(body), body };
+    },
+    [api],
+  );
+
+  /**
+   * Issues the card for a succeeded PaymentIntent, retried with the same id.
+   * A payment that never succeeded (402) goes back to a fresh PaymentIntent;
+   * anything else stays on "Payment received" with Retry and support.
+   */
+  const finishIssue = useCallback(
+    async (p: PendingGift<Draft | null>) => {
       if (issuing.current) return;
       issuing.current = true;
-      setProcessing(true);
+      setPaid(p);
+      setPaidState("finishing");
       showAlert(null);
       try {
-        const res = await api(`${SITE_API_URL}/gift-cards`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ amountCents: d.dollars * 100, designId: d.design, recipientName: d.name, recipientEmail: d.email, personalMessage: d.message || undefined, stripePaymentId: paymentIntentId }),
-        }).catch(() => null);
-        const body = res ? await res.json().catch(() => null) : null;
-        if (res?.ok && body?.code) {
-          try {
-            sessionStorage.removeItem(DRAFT_KEY);
-          } catch {
-            /* storage blocked */
-          }
-          setIssued({ code: body.code, amountCents: body.amountCents, recipientEmail: body.recipientEmail ?? d.email });
+        const d = p.draft;
+        if (!d) {
+          // No draft to send (another device, cleared storage): the webhook issues the card from the payment.
+          setPaidState("stuck");
+          return;
+        }
+        const res = await finishWithRetry(() => issueOnce(p.paymentIntentId, d));
+        if (res.ok && res.body?.code) {
+          clearPending(sessionStorageOrNull(), PENDING_GIFT_KEY);
+          clearPending(sessionStorageOrNull(), DRAFT_KEY);
+          setIssued({ code: res.body.code, amountCents: res.body.amountCents ?? d.dollars * 100, recipientEmail: res.body.recipientEmail ?? d.email });
+          setPaid(null);
           setStep("done");
           window.scrollTo({ top: 0 });
           return;
         }
-        const err = toOrderApiError(body);
-        showAlert(te(giftErrorCode(err.code, res ? res.status : 0)));
+        const code = giftErrorCode(res.error?.code, res.status);
+        if (!retryable(res) && (res.status === 402 || code === "PAYMENT_REQUIRED")) {
+          // The payment itself didn't succeed: nothing was charged, pay again with a fresh PaymentIntent.
+          clearPending(sessionStorageOrNull(), PENDING_GIFT_KEY);
+          setPaid(null);
+          piFor.current = null;
+          setPi(null);
+          setStep("pay");
+          setPiNonce((n) => n + 1);
+          showAlert(te("PAYMENT_REQUIRED"));
+          return;
+        }
+        setPaidState("stuck");
       } finally {
-        setProcessing(false);
         issuing.current = false;
       }
     },
-    [api, showAlert, te],
+    [issueOnce, showAlert, te],
   );
 
-  // Back from a 3DS or wallet redirect: finish from the saved draft.
+  /** Stripe succeeded in this page: remember the PaymentIntent (a reload resumes) and issue the card. */
+  function paymentSucceeded(paymentIntentId: string) {
+    const d: Draft = { dollars: dollars!, design, name: name.trim(), email: email.trim(), message: message.trim() };
+    const p = { paymentIntentId, draft: d };
+    savePending(sessionStorageOrNull(), PENDING_GIFT_KEY, p);
+    finishIssue(p);
+  }
+
+  // Back from a 3DS or wallet redirect: finish from the saved draft, or (payment failed) pay again.
   useEffect(() => {
     if (!returning) return;
+    resumed.current = true;
     let d: Draft | null = null;
     try {
       d = JSON.parse(sessionStorage.getItem(DRAFT_KEY) || "null");
@@ -132,19 +180,41 @@ export function GiftPurchase() {
       setName(d.name);
       setEmail(d.email);
       setMessage(d.message);
-      setStep("pay");
-      issue(returning, d);
-    } else {
-      setStep("pay");
-      showAlert(te("PAYMENT_NOT_VERIFIED"));
     }
     router.replace(`/${locale}/gift-cards/purchase`);
+    if (redirectStatus && redirectStatus !== "succeeded" && redirectStatus !== "processing") {
+      setStep(d ? "pay" : "amount");
+      showAlert(te("PAYMENT_REQUIRED"));
+      setPiNonce((n) => n + 1);
+      return;
+    }
+    const p = { paymentIntentId: returning, draft: d && giftAmountValid(d.dollars) ? d : null };
+    savePending(sessionStorageOrNull(), PENDING_GIFT_KEY, p);
+    finishIssue(p);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [returning]);
 
+  // A reload after Stripe succeeded resumes issuing the card instead of a new payment.
+  useEffect(() => {
+    if (resumed.current || returning) return;
+    resumed.current = true;
+    const p = loadPending(sessionStorageOrNull(), PENDING_GIFT_KEY, isPendingGift<Draft | null>);
+    if (p) {
+      if (p.draft) {
+        setDollars(p.draft.dollars);
+        setDesign(giftDesign(p.draft.design));
+        setName(p.draft.name);
+        setEmail(p.draft.email);
+        setMessage(p.draft.message);
+      }
+      finishIssue(p);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // The PaymentIntent, once the pay step opens (again only if the gift it carries changed).
   useEffect(() => {
-    if (step !== "pay" || returning || !amountOk) return;
+    if (step !== "pay" || returning || paid || !amountOk) return;
     const sig = JSON.stringify([dollars, design, name.trim(), email.trim(), message.trim()]);
     if (pi && piFor.current === sig) return;
     let cancelled = false;
@@ -167,7 +237,7 @@ export function GiftPurchase() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step]);
+  }, [step, returning, paid, piNonce]);
 
   function next() {
     setTouched(true);
@@ -192,8 +262,20 @@ export function GiftPurchase() {
 
   function back(to: Step) {
     showAlert(null);
-    setPi(null);
+    // The PaymentIntent is kept: coming back to pay with the same gift reuses it (see piFor).
     setStep(to);
+  }
+
+  // ------------------------------------------------------------ paid, finishing
+  if (paid) {
+    return (
+      <PaymentReceived
+        state={paidState}
+        finishingText={tp("received.finishing")}
+        stuckText={tp("received.stuck")}
+        onRetry={paid.draft ? () => finishIssue(paid) : null}
+      />
+    );
   }
 
   // ------------------------------------------------------------ done
@@ -425,7 +507,7 @@ export function GiftPurchase() {
                       tone="night"
                       showExpressCheckout
                       returnUrl={`${typeof window !== "undefined" ? window.location.origin : ""}/${locale}/gift-cards/purchase`}
-                      onSuccess={(id) => issue(id, { dollars: dollars!, design, name: name.trim(), email: email.trim(), message: message.trim() })}
+                      onSuccess={(id) => paymentSucceeded(id)}
                       onError={(m) => showAlert(m || te("GENERIC"))}
                       onProcessingChange={setProcessing}
                       labels={{
@@ -442,10 +524,26 @@ export function GiftPurchase() {
                       }}
                     />
                   </StripeProvider>
+                ) : alert ? (
+                  // The PaymentIntent couldn't be made: never spin forever, offer a fresh try.
+                  <div className="flex min-h-32 items-center justify-center">
+                    <button
+                      type="button"
+                      className={SECONDARY}
+                      data-gift-pi-retry
+                      onClick={() => {
+                        showAlert(null);
+                        piFor.current = null;
+                        setPiNonce((n) => n + 1);
+                      }}
+                    >
+                      {tp("retry")}
+                    </button>
+                  </div>
                 ) : (
                   <div role="status" className="flex min-h-32 items-center justify-center gap-3 text-oh-mute">
                     <span aria-hidden="true" className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent motion-reduce:animate-none" />
-                    {returning || processing ? tp("finishing") : tp("loading")}
+                    {tp("loading")}
                   </div>
                 )}
                 <p className="m-0 mt-4 flex items-center gap-2 text-sm text-oh-mute">
@@ -490,4 +588,12 @@ export function GiftPurchase() {
       </div>
     </div>
   );
+}
+
+function sessionStorageOrNull(): Storage | null {
+  try {
+    return typeof window === "undefined" ? null : window.sessionStorage;
+  } catch {
+    return null;
+  }
 }

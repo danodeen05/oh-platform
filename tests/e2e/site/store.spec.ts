@@ -348,9 +348,20 @@ test("zh-CN: a store cart checks out as a guest with the server's totals and the
   await noOverflow(page, "zh-CN checkout priced");
   await axe(page, "zh-CN checkout priced");
 
+  // Fix round 1: the first confirm after Stripe succeeds is lost on the network; the page
+  // shows "Payment received" and retries with the same PaymentIntent (never Pay again).
+  let dropped = 0;
+  const confirmIds: string[] = [];
+  await page.route(/\/shop\/orders\/[^/]+\/confirm-payment$/, async (route) => {
+    confirmIds.push(JSON.parse(route.request().postData() || "{}").paymentIntentId);
+    if (dropped++ === 0) return route.abort("connectionreset");
+    return route.continue();
+  });
   await waitReady(page, "[data-pay-submit]");
   await payWithTestCard(page, "[data-pay-submit]");
+  await page.locator('[data-payment-received="finishing"]').waitFor({ state: "attached", timeout: 60_000 });
   await page.waitForURL(/\/zh-CN\/store\/confirmation\/SO-/, { timeout: 90_000 });
+  assert.ok(confirmIds.length >= 2 && confirmIds.every((id) => id === confirmIds[0] && id?.startsWith("pi_")), `retried with one PaymentIntent: ${confirmIds}`);
   await check(page, "zh-CN confirmation", "[data-store-confirmation]");
   assert.equal(await page.locator("[data-order-number]").textContent(), created!.orderNumber);
   const paid = await prisma.shopOrder.findUnique({ where: { id: orderId } });
@@ -517,7 +528,7 @@ test("screenshots: store and gift-card pages at 390 (en, zh-TW), 360 (es) and 14
     await shot("scan");
     await go("/store/item/OH-CHILI-OIL", '[data-store-item="chili-oil"]');
     await shot("item");
-    await go("/store/confirmation/SO-SAMPLE01", "[data-store-confirmation]");
+    await go("/store/confirmation/SO-SAMPLE01?placed=1", "[data-store-confirmation]");
     await shot("confirmation");
     await go("/gift-cards", "[data-gift-cards-page]");
     await shot("gift-cards");

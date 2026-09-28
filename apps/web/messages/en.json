@@ -1191,6 +1191,10 @@
         "codeNote": "Keep this code in case the email goes astray.",
         "another": "Send another",
         "home": "Back to home"
+      },
+      "received": {
+        "finishing": "We're issuing your gift card. This takes a moment.",
+        "stuck": "Your payment went through. If we can't finish here, we'll email the card, so there's no need to pay again."
       }
     },
     "errors": {
@@ -1368,7 +1372,16 @@
       "invalidEmail": "Enter a full email address.",
       "invalidZip": "Enter a 5 digit ZIP code.",
       "guestNote": "No account needed.",
-      "retry": "Try again"
+      "retry": "Try again",
+      "received": {
+        "title": "Payment received",
+        "number": "Order number",
+        "finishing": "We're finishing your order. This takes a moment.",
+        "stuck": "Your payment went through, but we couldn't finish the order just yet. Try again, or reach us and we'll sort it out. There's no need to pay again.",
+        "retry": "Try again",
+        "askChappy": "Ask Chappy",
+        "contact": "Contact us"
+      }
     },
     "notCharged": {
       "CREDIT_SHORT": "You were not charged. Your credit changed, please review and pay again.",
@@ -1415,7 +1428,9 @@
       "order": "Order a bowl",
       "confirming": "Confirming your payment",
       "failedTitle": "We couldn't finish this order.",
-      "backToCheckout": "Back to checkout"
+      "backToCheckout": "Back to checkout",
+      "lookupTitle": "Looking for an order?",
+      "lookupBody": "Order {number} and its updates are in your email receipt. Questions? We're happy to help."
     },
     "scan": {
       "meta": "Scan a tag",
@@ -1430,7 +1445,8 @@
       "unsupported": "This browser can't read QR codes. Type the code instead.",
       "codeLabel": "Tag code",
       "find": "Find it",
-      "back": "Store"
+      "back": "Store",
+      "cameraApp": "Your phone's Camera app can scan the tag too."
     },
     "item": {
       "eyebrow": "On the shelf here",
@@ -4647,7 +4663,7 @@
     "bowlChunksSide": "Close-up side view of seared beef chunks in a bowl of noodle soup with bok choy.",
     "storeInterior": "Retail shelves inside the restaurant with bottled sauces, boxed gift sets, bowls, chopsticks, shirts, and caps, next to a checkout counter with a QR code sign.",
     "bowlEmpty": "A single empty ceramic noodle bowl stamped with the Oh! logo on the inside, seen from above.",
-    "bowlFlatlay": "An empty ceramic noodle bowl with chopsticks resting on top and a wooden spoon beside it on a linen surface.",
+    "bowlFlatlay": "An empty ceramic noodle bowl with chopsticks resting on top and a wooden spoon beside it on a wooden table.",
     "chopsticks": "Close-up of a pair of wooden chopsticks on a linen cloth, with a detail view of their tips.",
     "signPool": "The illuminated Oh! logo sculpture standing in a reflecting pool at the restaurant entrance at night, lit by paper lanterns along the path."
   },

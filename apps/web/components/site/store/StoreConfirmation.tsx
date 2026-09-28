@@ -21,10 +21,12 @@ import { Reveal } from "@/components/site/motion/Reveal";
 import { Display, Eyebrow } from "@/components/site/Text";
 import { SITE_API_URL, useMemberId, useSiteApi } from "@/lib/site/api";
 import { shopConfirmPayment } from "@/lib/site/orders";
-import { storeErrorCode } from "@/lib/site/store";
+import { RECREATE_CODES, storeErrorCode } from "@/lib/site/store";
+import { clearPending, finishWithRetry, PENDING_SHOP_KEY, shopFinishOutcome } from "@/lib/site/paid-recovery";
+import { useChappy } from "@/components/site/chappy/ChappyLauncher";
 import { PANEL, PRIMARY, SECONDARY } from "./ui";
 
-type State = { kind: "done" } | { kind: "confirming" } | { kind: "failed"; text: string };
+type State = { kind: "done" } | { kind: "lookup" } | { kind: "confirming" } | { kind: "failed"; text: string; retry?: boolean };
 
 export function StoreConfirmation({ orderNumber }: { orderNumber: string }) {
   const t = useTranslations("store.confirmation");
@@ -38,28 +40,46 @@ export function StoreConfirmation({ orderNumber }: { orderNumber: string }) {
   const { clearCart } = useCart();
   const shopOrderId = search.get("shopOrderId");
   const paymentIntentId = search.get("payment_intent");
-  const [state, setState] = useState<State>(shopOrderId && paymentIntentId ? { kind: "confirming" } : { kind: "done" });
+  const redirectStatus = search.get("redirect_status");
+  const placed = search.get("placed") === "1";
+  const tc = useTranslations("store.checkout");
+  const tr = useTranslations("store.checkout.received");
+  const chappy = useChappy();
+  // A typed URL with no payment to confirm and no "just placed" marker shows a neutral lookup, not a success.
+  const [state, setState] = useState<State>(shopOrderId && paymentIntentId ? { kind: "confirming" } : placed ? { kind: "done" } : { kind: "lookup" });
   const started = useRef(false);
+
+  const confirm = async () => {
+    if (!shopOrderId || !paymentIntentId) return;
+    setState({ kind: "confirming" });
+    // Stripe's redirect says the payment itself failed: nothing to finish.
+    if (redirectStatus && redirectStatus !== "succeeded" && redirectStatus !== "processing") {
+      setState({ kind: "failed", text: tc("failed") });
+      return;
+    }
+    const opts = { fetcher: api, baseUrl: SITE_API_URL, headers: !member.signedIn && guest?.sessionToken ? { "x-guest-session": guest.sessionToken } : undefined };
+    // Same PaymentIntent every time: the confirm is idempotent on the server.
+    const res = await finishWithRetry(() => shopConfirmPayment(shopOrderId, paymentIntentId, opts));
+    const outcome = shopFinishOutcome(res, RECREATE_CODES);
+    if (outcome === "done") {
+      clearPending(window.sessionStorage, PENDING_SHOP_KEY);
+      clearCart();
+      setState({ kind: "done" });
+      return;
+    }
+    const code = storeErrorCode(res.error.code, res.status);
+    if (outcome === "review") setState({ kind: "failed", text: te("NEEDS_REVIEW") });
+    else if (outcome === "stuck") setState({ kind: "failed", text: tr("stuck"), retry: true });
+    else if (res.error.refunded === true) setState({ kind: "failed", text: tn(code === "CREDIT_SHORT" || code === "GIFT_CARD_CHANGED" || code === "OUT_OF_STOCK" ? code : "GENERIC") });
+    else setState({ kind: "failed", text: te(code) });
+  };
 
   useEffect(() => {
     if (!shopOrderId || !paymentIntentId || guestLoading || !member.ready || started.current) return;
     started.current = true;
-    shopConfirmPayment(shopOrderId, paymentIntentId, {
-      fetcher: api,
-      baseUrl: SITE_API_URL,
-      headers: !member.signedIn && guest?.sessionToken ? { "x-guest-session": guest.sessionToken } : undefined,
-    }).then((res) => {
-      if (res.ok) {
-        clearCart();
-        setState({ kind: "done" });
-        return;
-      }
-      const code = storeErrorCode(res.error.code, res.status);
-      if (res.error.needsReview) setState({ kind: "failed", text: te("NEEDS_REVIEW") });
-      else if (res.error.refunded === true) setState({ kind: "failed", text: tn(code === "CREDIT_SHORT" || code === "GIFT_CARD_CHANGED" || code === "OUT_OF_STOCK" ? code : "GENERIC") });
-      else setState({ kind: "failed", text: te(code === "CREDIT_SHORT" || code === "GIFT_CARD_CHANGED" || code === "OUT_OF_STOCK" ? "HELD" : code) });
-    });
-  }, [shopOrderId, paymentIntentId, guestLoading, member.ready, member.signedIn, guest?.sessionToken, api, clearCart, te, tn]);
+    confirm();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shopOrderId, paymentIntentId, guestLoading, member.ready]);
 
   if (state.kind === "confirming") {
     return (
@@ -78,9 +98,44 @@ export function StoreConfirmation({ orderNumber }: { orderNumber: string }) {
           <p role="alert" className="m-0 mt-3 text-base leading-relaxed text-oh-cream/85">
             {state.text}
           </p>
-          <Link href={`/${locale}/store/checkout`} className={`${PRIMARY} mt-6`}>
-            {t("backToCheckout")}
-          </Link>
+          <div className="mt-6 flex flex-wrap gap-3">
+            {state.retry ? (
+              <>
+                <button type="button" onClick={confirm} className={PRIMARY} data-finish-retry>
+                  {tr("retry")}
+                </button>
+                <button type="button" onClick={() => chappy.openChappy()} className={SECONDARY}>
+                  {tr("askChappy")}
+                </button>
+                <a href={`/${locale}/contact`} className={SECONDARY}>
+                  {tr("contact")}
+                </a>
+              </>
+            ) : (
+              <Link href={`/${locale}/store/checkout`} className={PRIMARY}>
+                {t("backToCheckout")}
+              </Link>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (state.kind === "lookup") {
+    return (
+      <div className="mx-auto max-w-2xl px-4 pb-16 pt-10" data-store-lookup>
+        <div className={PANEL}>
+          <p className="m-0 text-xl font-semibold text-oh-cream">{t("lookupTitle")}</p>
+          <p className="m-0 mt-3 text-base leading-relaxed text-oh-cream/85">{t("lookupBody", { number: orderNumber })}</p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link href={`/${locale}/store`} className={PRIMARY}>
+              {t("keepShopping")}
+            </Link>
+            <a href={`/${locale}/contact`} className={SECONDARY}>
+              {tr("contact")}
+            </a>
+          </div>
         </div>
       </div>
     );

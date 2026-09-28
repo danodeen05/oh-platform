@@ -34,6 +34,11 @@ export function ScanView() {
   const stream = useRef<MediaStream | null>(null);
   const [code, setCode] = useState("");
   const [camera, setCamera] = useState<"off" | "on" | "denied" | "none" | "unsupported">("off");
+  // Fix round 1: browsers without BarcodeDetector (iPhone Safari) never see the camera button; the code field leads.
+  const [canScan, setCanScan] = useState<boolean | null>(null);
+  useEffect(() => {
+    setCanScan(typeof (globalThis as unknown as { BarcodeDetector?: unknown }).BarcodeDetector === "function");
+  }, []);
   usePublishOrderBack(`/${locale}/store`, t("back"));
 
   const go = (value: string) => {
@@ -96,39 +101,43 @@ export function ScanView() {
         </Body>
       </Reveal>
 
-      <div className="relative mt-7 aspect-square w-full overflow-hidden rounded-3xl border border-oh-stone/70 bg-oh-ink">
-        <video ref={video} playsInline muted aria-hidden="true" className={`h-full w-full object-cover ${camera === "on" ? "block" : "hidden"}`} />
-        {camera === "on" ? (
-          <>
-            <div aria-hidden="true" className="pointer-events-none absolute inset-[18%] rounded-2xl border-2 border-oh-cream/80 shadow-[0_0_0_999px_rgba(28,27,25,0.45)]" />
-            <p role="status" className="absolute inset-x-0 bottom-4 m-0 text-center text-[15px] text-oh-cream">
-              {t("scanning")}
-            </p>
-          </>
-        ) : (
-          <div className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center">
-            <span aria-hidden="true" className="flex h-16 w-16 items-center justify-center rounded-full bg-oh-ember-deep/25 text-oh-ember-light">
-              <Icon name="store" size={30} />
-            </span>
-            {note ? (
-              <p role="alert" className="m-0 max-w-xs text-[15px] text-oh-cream/85">
-                {note}
-              </p>
-            ) : null}
-            <button type="button" onClick={start} className={PRIMARY} data-scan-start>
-              {t("start")}
-            </button>
+      {canScan === false ? null : (
+        <>
+          <div className="relative mt-7 aspect-square w-full overflow-hidden rounded-3xl border border-oh-stone/70 bg-oh-ink">
+            <video ref={video} playsInline muted aria-hidden="true" className={`h-full w-full object-cover ${camera === "on" ? "block" : "hidden"}`} />
+            {camera === "on" ? (
+              <>
+                <div aria-hidden="true" className="pointer-events-none absolute inset-[18%] rounded-2xl border-2 border-oh-cream/80 shadow-[0_0_0_999px_rgba(28,27,25,0.45)]" />
+                <p role="status" className="absolute inset-x-0 bottom-4 m-0 text-center text-[15px] text-oh-cream">
+                  {t("scanning")}
+                </p>
+              </>
+            ) : (
+              <div className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center">
+                <span aria-hidden="true" className="flex h-16 w-16 items-center justify-center rounded-full bg-oh-ember-deep/25 text-oh-ember-light">
+                  <Icon name="store" size={30} />
+                </span>
+                {note ? (
+                  <p role="alert" className="m-0 max-w-xs text-[15px] text-oh-cream/85">
+                    {note}
+                  </p>
+                ) : null}
+                <button type="button" onClick={start} className={PRIMARY} data-scan-start>
+                  {t("start")}
+                </button>
+              </div>
+            )}
           </div>
-        )}
-      </div>
-      {camera === "on" ? (
-        <button type="button" onClick={stop} className={`${SECONDARY} mt-4 w-full`}>
-          {t("stop")}
-        </button>
-      ) : null}
+          {camera === "on" ? (
+            <button type="button" onClick={stop} className={`${SECONDARY} mt-4 w-full`}>
+              {t("stop")}
+            </button>
+          ) : null}
+        </>
+      )}
 
       <form
-        className="mt-8"
+        className={canScan === false ? "mt-7" : "mt-8"}
         onSubmit={(e) => {
           e.preventDefault();
           go(code);
@@ -143,6 +152,12 @@ export function ScanView() {
             {t("find")}
           </button>
         </div>
+        {canScan === false ? (
+          <p className="m-0 mt-3 flex items-start gap-2 text-[15px] text-oh-cream/80" data-scan-camera-app>
+            <Icon name="store" size={18} className="mt-0.5 shrink-0 text-oh-ember-light" />
+            {t("cameraApp")}
+          </p>
+        ) : null}
       </form>
     </div>
   );

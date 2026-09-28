@@ -1178,6 +1178,10 @@
         "codeNote": "Guarda este código por si el correo se pierde.",
         "another": "Enviar otra",
         "home": "Volver al inicio"
+      },
+      "received": {
+        "finishing": "Estamos emitiendo tu tarjeta de regalo. Toma un momento.",
+        "stuck": "Tu pago se realizó. Si no podemos terminar aquí, te enviaremos la tarjeta por correo, así que no hace falta pagar otra vez."
       }
     },
     "errors": {
@@ -1355,7 +1359,16 @@
       "invalidEmail": "Escribe un correo electrónico completo.",
       "invalidZip": "Escribe un código postal de 5 dígitos.",
       "guestNote": "No necesitas cuenta.",
-      "retry": "Intentar de nuevo"
+      "retry": "Intentar de nuevo",
+      "received": {
+        "title": "Pago recibido",
+        "number": "Número de pedido",
+        "finishing": "Estamos terminando tu pedido. Toma un momento.",
+        "stuck": "Tu pago se realizó, pero aún no pudimos terminar el pedido. Inténtalo de nuevo, o escríbenos y lo resolvemos. No hace falta pagar otra vez.",
+        "retry": "Intentar de nuevo",
+        "askChappy": "Pregúntale a Chappy",
+        "contact": "Contáctanos"
+      }
     },
     "notCharged": {
       "CREDIT_SHORT": "No se te cobró. Tu crédito cambió, revisa el pedido y paga de nuevo.",
@@ -1402,7 +1415,9 @@
       "order": "Pedir un tazón",
       "confirming": "Confirmando tu pago",
       "failedTitle": "No pudimos completar este pedido.",
-      "backToCheckout": "Volver al pago"
+      "backToCheckout": "Volver al pago",
+      "lookupTitle": "¿Buscas un pedido?",
+      "lookupBody": "El pedido {number} y sus avisos están en tu recibo por correo. ¿Preguntas? Con gusto te ayudamos."
     },
     "scan": {
       "meta": "Escanear una etiqueta",
@@ -1417,7 +1432,8 @@
       "unsupported": "Este navegador no puede leer códigos QR. Escribe el código.",
       "codeLabel": "Código de la etiqueta",
       "find": "Buscar",
-      "back": "Tienda"
+      "back": "Tienda",
+      "cameraApp": "La app de Cámara de tu teléfono también puede escanear la etiqueta."
     },
     "item": {
       "eyebrow": "En el estante de aquí",
@@ -2401,7 +2417,7 @@
     "bowlChunksSide": "Primer plano de trozos de res sellados en un tazon de sopa de fideos con bok choy.",
     "storeInterior": "Estantes de la tienda dentro del restaurante con salsas embotelladas, cajas de regalo, tazones, palillos, camisetas y gorras, junto a un mostrador de pago con un aviso de codigo QR.",
     "bowlEmpty": "Un tazon de ceramica vacio con el logo de Oh! grabado en el interior, visto desde arriba.",
-    "bowlFlatlay": "Un tazon de ceramica vacio con palillos apoyados encima y una cuchara de madera al lado, sobre una superficie de lino.",
+    "bowlFlatlay": "Un tazon de ceramica vacio con palillos apoyados encima y una cuchara de madera al lado, sobre una mesa de madera.",
     "chopsticks": "Primer plano de un par de palillos de madera sobre un mantel de lino, con un detalle de sus puntas.",
     "signPool": "La escultura iluminada del logo de Oh! en un estanque reflectante frente al restaurante por la noche, iluminada por farolillos de papel a lo largo del camino."
   },

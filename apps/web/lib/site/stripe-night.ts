@@ -1,8 +1,7 @@
 /**
- * Stripe's Payment Element in the night palette, for the store and gift-card
- * checkouts (Task D10). Same values as the order flow's pay step
- * (components/site/order/PayStep.tsx); Stripe needs literal colors, not CSS
- * variables.
+ * Stripe's Payment Element in the night palette: the order flow's pay step
+ * (D5), the store checkout and the gift-card purchase (D10) all use this one
+ * definition. Stripe needs literal colors, not CSS variables.
  */
 export const NIGHT_APPEARANCE = {
   theme: "night" as const,
