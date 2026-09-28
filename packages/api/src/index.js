@@ -48,6 +48,12 @@ import {
 } from "./utils/operating-hours.js";
 import { parseModelJson } from "./utils/model-json.js";
 import {
+  localizeBadge,
+  localizeChallenge,
+  localizeLocation,
+  localizeMenuItem,
+} from "./i18n/localize.js";
+import {
   updateUserCredits,
   refreshUserWalletPass,
 } from "./services/credit-service.js";
@@ -375,33 +381,9 @@ function getLanguageInstruction(locale) {
   return instructions[locale] || "";
 }
 
-// Helper to localize menu item based on locale
-function localizeMenuItem(item, locale) {
-  if (!item) return item;
-
-  const localizedItem = { ...item };
-
-  // Always preserve the original English name for image lookups
-  localizedItem.nameEn = item.name;
-
-  switch (locale) {
-    case "zh-TW":
-      localizedItem.name = item.nameZhTW || item.name;
-      localizedItem.description = item.descriptionZhTW || item.description;
-      break;
-    case "zh-CN":
-      localizedItem.name = item.nameZhCN || item.name;
-      localizedItem.description = item.descriptionZhCN || item.description;
-      break;
-    case "es":
-      localizedItem.name = item.nameEs || item.name;
-      localizedItem.description = item.descriptionEs || item.description;
-      break;
-    // English is default, use original name
-  }
-
-  return localizedItem;
-}
+// localizeMenuItem is now defined in ./i18n/localize.js (Task F1a), which
+// also localizes sliderConfig.labels from labelsI18n; behavior for
+// name/description is unchanged.
 
 // Slider value translations for order display
 const sliderValueTranslations = {
@@ -762,6 +744,8 @@ app.get("/locations", async (req, reply) => {
     },
   });
 
+  const locale = getLocale(req);
+
   // Calculate real-time pod availability and wait times for each location
   const locationsWithRealTimeStats = await Promise.all(
     locations.map(async (location) => {
@@ -789,7 +773,7 @@ app.get("/locations", async (req, reply) => {
       const availability = getLocationStatus(location);
 
       return {
-        ...location,
+        ...localizeLocation(location, locale),
         stats: {
           availableSeats,
           totalSeats,
@@ -817,6 +801,7 @@ app.get("/locations/:id/availability", async (req, reply) => {
     select: {
       id: true,
       name: true,
+      i18n: true,
       operatingHours: true,
       timezone: true,
       isClosed: true,
@@ -833,10 +818,11 @@ app.get("/locations/:id/availability", async (req, reply) => {
   // Task A8: fold the comb-seat layout (retired seats excluded) into the
   // same response the ordering flow already polls for operating hours.
   const { layoutKey, layoutMirror, seats } = await listLocationSeats(prisma, id, location);
+  const localizedLocation = localizeLocation(location, getLocale(req));
 
   return {
     locationId: location.id,
-    locationName: location.name,
+    locationName: localizedLocation.name,
     ...status,
     layoutKey,
     layoutMirror,
@@ -4813,6 +4799,9 @@ app.get("/users/:id/profile", async (req, reply) => {
   // the engine's shape onto the old response keys so the pre-Phase-D UI
   // keeps working; the new UI should read `membership` directly.
   const membership = await profileForUser(prisma, id, new Date());
+  const locale = getLocale(req);
+  user.badges = user.badges.map((ub) => ({ ...ub, badge: localizeBadge(ub.badge, locale) }));
+  user.challenges = user.challenges.map((uc) => ({ ...uc, challenge: localizeChallenge(uc.challenge, locale) }));
 
   return {
     ...user,
@@ -4889,31 +4878,37 @@ app.patch("/users/:id/phone", async (req, reply) => {
 
 // Get all available badges
 app.get("/badges", async (req, reply) => {
+  const locale = getLocale(req);
   const badges = await prisma.badge.findMany({
     where: { isActive: true },
     orderBy: { createdAt: "asc" },
   });
-  return badges;
+  return badges.map((badge) => localizeBadge(badge, locale));
 });
 
 // Get all active challenges
 app.get("/challenges", async (req, reply) => {
+  const locale = getLocale(req);
   const challenges = await prisma.challenge.findMany({
     where: { isActive: true },
     orderBy: { createdAt: "desc" },
   });
-  return challenges;
+  return challenges.map((challenge) => localizeChallenge(challenge, locale));
 });
 
 // Get user's challenge progress
 app.get("/users/:id/challenges", async (req, reply) => {
   const { id } = req.params;
+  const locale = getLocale(req);
 
   const userChallenges = await prisma.userChallenge.findMany({
     where: { userId: id },
     include: {
       challenge: true,
     },
+  });
+  userChallenges.forEach((uc) => {
+    if (uc.challenge) uc.challenge = localizeChallenge(uc.challenge, locale);
   });
 
   return userChallenges;
@@ -5009,7 +5004,7 @@ app.get("/challenges/:idOrSlug", async (req, reply) => {
     return reply.code(404).send({ error: "Challenge not found" });
   }
 
-  return challenge;
+  return localizeChallenge(challenge, getLocale(req));
 });
 
 // Enroll a user in a challenge
