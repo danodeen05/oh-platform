@@ -23,6 +23,12 @@ async function sumGoodwill(prisma, where) {
   return _sum.amountCents || 0;
 }
 
+/** Total GOODWILL credit ever granted to a member (the admin Support tab shows it beside the lifetime cap). */
+export async function lifetimeGoodwillCents(prisma, userId) {
+  if (!userId) return 0;
+  return sumGoodwill(prisma, { userId });
+}
+
 /**
  * How much goodwill `userId` may still get for `orderId` as of `now`.
  * Returns { allowedCents, reason }. `reason` names the cap that holds the

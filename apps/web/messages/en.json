@@ -1952,7 +1952,11 @@
       "dualPodRulesMessage": "Dual pods are designed for two guests dining together. To select a dual pod:",
       "dualPodRule1": "Your party must have 2 or more guests",
       "dualPodRule2": "You must be paying on a single check (not separate)",
-      "gotIt": "Got It"
+      "gotIt": "Got It",
+      "podTaken": "Pod {requested} was just taken. We saved Pod {label} for you.",
+      "noPodsLeft": "Every pod is taken right now. Please see a team member.",
+      "claimFailed": "We couldn't save your pod. Please try again.",
+      "savingPod": "Saving your pod..."
     },
     "status": {
       "available": "Available",
@@ -2079,7 +2083,8 @@
       "noPreferenceTitle": "No preference? We'll pick for you!",
       "autoAssignPod": "Auto-Assign My Pod",
       "restrooms": "Restrooms",
-      "store": "Store"
+      "store": "Store",
+      "tapRowThenPod": "Tap a row, then your pod."
     }
   },
   "plan": {

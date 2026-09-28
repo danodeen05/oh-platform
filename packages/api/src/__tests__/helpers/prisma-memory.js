@@ -110,6 +110,17 @@ function matchWhere(rec, where) {
 
 function applyOrder(rows, orderBy) {
   if (!orderBy) return rows;
+  if (Array.isArray(orderBy)) {
+    // Prisma's multi-key form: [{ createdAt: "desc" }, { id: "desc" }].
+    const keys = orderBy.map((o) => Object.entries(o)[0]);
+    return [...rows].sort((a, b) => {
+      for (const [f, d] of keys) {
+        const c = compare(a[f], b[f]);
+        if (c) return d === "desc" ? -c : c;
+      }
+      return 0;
+    });
+  }
   const [field, dir] = Object.entries(orderBy)[0];
   const sorted = [...rows].sort((a, b) => compare(a[field], b[field]));
   return dir === "desc" ? sorted.reverse() : sorted;

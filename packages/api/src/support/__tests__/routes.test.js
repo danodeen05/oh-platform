@@ -306,6 +306,150 @@ describe("GET /admin/support/cases", () => {
   });
 });
 
+describe("Task D12: admin Support tab reads", () => {
+  function listFixture() {
+    return seedDb({
+      supportCases: [
+        { id: "c1", type: "POD_ISSUE", status: "OPEN", summary: "a", userId: "u1", orderId: "o1", createdAt: new Date(NOW.getTime() - 3 * HOUR) },
+        { id: "c2", type: "CONTACT", status: "OPEN", summary: "b", contact: { email: "g@x.co" }, createdAt: new Date(NOW.getTime() - 2 * HOUR) },
+        { id: "c3", type: "POD_ISSUE", status: "RESOLVED", summary: "c", userId: "u2", createdAt: new Date(NOW.getTime() - HOUR) },
+        { id: "c4", type: "POD_ISSUE", status: "OPEN", summary: "d", userId: "u1", createdAt: new Date(NOW.getTime() - HOUR) },
+      ],
+    });
+  }
+
+  test("?type= filters, combines with ?status=, and a bad type is 400", async () => {
+    const { app } = await buildApp({ prisma: listFixture() });
+    const pods = (await app.inject({ url: "/admin/support/cases?type=POD_ISSUE&status=OPEN" })).json();
+    assert.deepEqual(pods.cases.map((c) => c.id), ["c4", "c1"]);
+    const contact = (await app.inject({ url: "/admin/support/cases?type=CONTACT" })).json();
+    assert.deepEqual(contact.cases.map((c) => c.id), ["c2"]);
+    const bad = await app.inject({ url: "/admin/support/cases?type=REFUND" });
+    assert.equal(bad.statusCode, 400);
+    assert.equal(bad.json().code, "INVALID_TYPE");
+  });
+
+  test("cursor paging walks every case once, ties on createdAt included; nextCursor is null on the last page; a bad cursor is 400", async () => {
+    const { app } = await buildApp({ prisma: listFixture() });
+    const seen = [];
+    let cursor = null;
+    for (let page = 0; page < 5; page += 1) {
+      const res = (await app.inject({ url: `/admin/support/cases?limit=1${cursor ? `&cursor=${cursor}` : ""}` })).json();
+      seen.push(...res.cases.map((c) => c.id));
+      cursor = res.nextCursor;
+      if (!cursor) break;
+    }
+    // c3 and c4 share a createdAt: the id breaks the tie (desc).
+    assert.deepEqual(seen, ["c4", "c3", "c2", "c1"]);
+    const all = (await app.inject({ url: "/admin/support/cases" })).json();
+    assert.equal(all.nextCursor, null);
+    assert.equal((await app.inject({ url: "/admin/support/cases?cursor=nope" })).statusCode, 400);
+  });
+
+  test("the list keeps the 200 cap and carries a small customer and order summary", async () => {
+    const prisma = listFixture();
+    const calls = [];
+    const findMany = prisma.supportCase.findMany.bind(prisma.supportCase);
+    prisma.supportCase.findMany = async (args) => { calls.push(args); return findMany(args); };
+    const { app } = await buildApp({ prisma });
+    const body = (await app.inject({ url: "/admin/support/cases?limit=5000" })).json();
+    assert.equal(calls[0].take, 201, "the 200 cap plus one row to know whether another page exists");
+    const c1 = body.cases.find((c) => c.id === "c1");
+    assert.deepEqual(c1.customer, { name: null, email: "u1@x.com" });
+    assert.equal(c1.order.totalCents, 1924);
+    assert.equal(body.cases.find((c) => c.id === "c2").customer, null);
+  });
+
+  test("fix round 1: list rows leave out the transcript and resolution detail, flag a refund in progress, and an exact page has no next cursor", async () => {
+    const prisma = seedDb({
+      supportCases: [
+        { id: "c1", type: "REFUND_REQUEST", status: "OPEN", summary: "a", transcript: [{ role: "user", content: "x".repeat(1000) }], resolution: "FULL_REFUND", resolutionDetail: { refundPending: true }, createdAt: new Date(NOW.getTime() - HOUR) },
+        { id: "c2", type: "GENERAL", status: "OPEN", summary: "b", createdAt: new Date(NOW.getTime() - 2 * HOUR) },
+      ],
+    });
+    const { app } = await buildApp({ prisma });
+    const body = (await app.inject({ url: "/admin/support/cases?limit=2" })).json();
+    assert.equal(body.nextCursor, null, "two cases, limit 2: no empty extra page");
+    const c1 = body.cases.find((c) => c.id === "c1");
+    assert.equal("transcript" in c1, false);
+    assert.equal("resolutionDetail" in c1, false);
+    assert.equal(c1.refundInProgress, true);
+    assert.equal(body.cases.find((c) => c.id === "c2").refundInProgress, false);
+    assert.equal((await app.inject({ url: "/admin/support/cases?limit=1" })).json().nextCursor, "c1");
+  });
+
+  function detailFixture() {
+    return seedDb({
+      users: [{ id: "u1", email: "u1@x.com", name: "Mei", phone: "+18015550142", membershipTier: "NOODLE_MASTER", creditsCents: 0 }],
+      orders: [
+        { id: "o1", userId: "u1", orderNumber: "A100", paymentStatus: "PAID", status: "COMPLETED", totalCents: 1924, amountDueCents: 1924, stripePaymentId: "pi_1", seatId: "s1", createdAt: new Date(NOW.getTime() - HOUR) },
+        { id: "o2", userId: "u1", orderNumber: "A101", paymentStatus: "PAID", status: "COMPLETED", totalCents: 0, amountDueCents: 0, stripePaymentId: null, createdAt: new Date(NOW.getTime() - HOUR) },
+      ],
+      seats: [{ id: "s1", number: "31", label: "B-07" }],
+      orderItems: [{ id: "i1", orderId: "o1", menuItemId: "m1", quantity: 1, priceCents: 1799, selectedValue: "Rich" }],
+      menuItems: [{ id: "m1", name: "Beef Noodle Soup" }],
+      creditLots: [
+        { id: "l1", userId: "u1", source: "GOODWILL", amountCents: 500, remainingCents: 500, expiresAt: new Date(NOW.getTime() + 30 * DAY), createdAt: new Date(NOW.getTime() - 40 * DAY) },
+        { id: "l2", userId: "u1", source: "ADMIN", amountCents: 300, remainingCents: 0, expiresAt: new Date(NOW.getTime() + 30 * DAY), createdAt: new Date(NOW.getTime() - 5 * DAY) },
+      ],
+      supportCases: [
+        { id: "c1", type: "ORDER_ISSUE", status: "OPEN", summary: "Cold soup", userId: "u1", orderId: "o1", transcript: [{ role: "user", content: "My soup is cold" }], createdAt: NOW },
+        { id: "c2", type: "ORDER_ISSUE", status: "RESOLVED", summary: "x", userId: "u1", orderId: "o2", resolution: "STAFF_CREDIT", resolutionDetail: { lotId: "l2" }, createdAt: NOW },
+      ],
+    });
+  }
+
+  test("detail: case, order (pod label, items, PaymentIntent flag), member (tier, balance, lifetime goodwill), limits", async () => {
+    const { app } = await buildApp({ prisma: detailFixture() });
+    const res = await app.inject({ url: "/admin/support/cases/c1" });
+    assert.equal(res.statusCode, 200, res.body);
+    const body = res.json();
+    assert.equal(body.case.id, "c1");
+    assert.deepEqual(body.case.transcript, [{ role: "user", content: "My soup is cold" }]);
+    assert.equal(body.order.orderNumber, "A100");
+    assert.equal(body.order.seatLabel, "B-07");
+    assert.equal(body.order.hasPaymentIntent, true);
+    assert.equal(body.order.totalCents, 1924);
+    assert.equal(body.order.paymentStatus, "PAID");
+    assert.deepEqual(body.order.items, [{ name: "Beef Noodle Soup", quantity: 1, priceCents: 1799, selectedValue: "Rich" }]);
+    assert.equal(body.customer.name, "Mei");
+    assert.equal(body.customer.tier, "NOODLE_MASTER");
+    assert.equal(body.customer.creditBalanceCents, 500);
+    assert.equal(body.customer.goodwillLifetimeCents, 500);
+    assert.deepEqual(body.limits, { staffCreditMaxCents: 50000, goodwillLifetimeCapCents: 4500, refundLeaseMs: 5 * 60 * 1000 });
+  });
+
+  test("detail: an order with no card payment says so; the prior resolution detail comes back", async () => {
+    const { app } = await buildApp({ prisma: detailFixture() });
+    const body = (await app.inject({ url: "/admin/support/cases/c2" })).json();
+    assert.equal(body.order.hasPaymentIntent, false);
+    assert.equal(body.order.seatLabel, null);
+    assert.deepEqual(body.case.resolutionDetail, { lotId: "l2" });
+  });
+
+  test("detail: an unknown id is 404; a contact-form case has no member or order", async () => {
+    const { app } = await buildApp({ prisma: listFixture() });
+    const missing = await app.inject({ url: "/admin/support/cases/nope" });
+    assert.equal(missing.statusCode, 404);
+    assert.equal(missing.json().code, "NOT_FOUND");
+    const guest = (await app.inject({ url: "/admin/support/cases/c2" })).json();
+    assert.equal(guest.customer, null);
+    assert.equal(guest.order, null);
+    assert.deepEqual(guest.case.contact, { email: "g@x.co" });
+  });
+
+  test("detail and list require admin auth in production (the real createAdminAuth guard, ADMIN_API_KEY set)", async () => {
+    const { requireAdminAuth } = createAdminAuth({ env: { NODE_ENV: "production", ADMIN_API_KEY: "test-key" } });
+    const { app } = await buildApp({ prisma: detailFixture(), requireAdminAuth });
+    assert.equal((await app.inject({ url: "/admin/support/cases/c1" })).statusCode, 401);
+    assert.equal((await app.inject({ url: "/admin/support/cases" })).statusCode, 401);
+    assert.equal((await app.inject({ url: "/admin/support/cases/c1", headers: { authorization: "Bearer not-a-clerk-jwt" } })).statusCode, 401);
+    const ok = await app.inject({ url: "/admin/support/cases/c1", headers: { "x-admin-api-key": "test-key" } });
+    assert.equal(ok.statusCode, 200);
+    assert.equal((await app.inject({ url: "/admin/support/cases/nope", headers: { "x-admin-api-key": "test-key" } })).statusCode, 404);
+  });
+});
+
 describe("POST /admin/support/cases/:id/resolve", () => {
   const resolve = (app, id, payload) => app.inject({ method: "POST", url: `/admin/support/cases/${id}/resolve`, payload });
 

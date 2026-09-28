@@ -1840,7 +1840,11 @@
       "dualPodRulesMessage": "Las cabinas dobles están diseñadas para dos comensales que cenan juntos. Para seleccionar una cabina doble:",
       "dualPodRule1": "Tu grupo debe tener 2 o más comensales",
       "dualPodRule2": "Deben pagar en una sola cuenta (no separada)",
-      "gotIt": "Entendido"
+      "gotIt": "Entendido",
+      "podTaken": "Alguien acaba de tomar el Pod {requested}. Te guardamos el Pod {label}.",
+      "noPodsLeft": "Todos los pods están ocupados ahora. Habla con alguien del equipo.",
+      "claimFailed": "No pudimos guardar tu pod. Inténtalo de nuevo.",
+      "savingPod": "Guardando tu pod..."
     },
     "status": {
       "available": "Disponible",
@@ -1960,7 +1964,8 @@
       "noPreferenceTitle": "¿Sin preferencia? ¡Nosotros elegimos por ti!",
       "autoAssignPod": "Asignar cabina automáticamente",
       "restrooms": "Baños",
-      "store": "Tienda"
+      "store": "Tienda",
+      "tapRowThenPod": "Toca una fila y luego tu pod."
     },
     "signUp": {
       "title": "¡Gana recompensas en este pedido!",

@@ -12,6 +12,8 @@ function summary(o) {
     status: o.status, paymentStatus: o.paymentStatus, totalCents: o.totalCents,
     createdAt: o.createdAt.toISOString(), orderSource: o.orderSource,
     locationName: o.location?.name ?? null, seatNumber: o.seat?.number ?? null,
+    // Comb pods show their label ("B-07"); retired legacy seats fall back to the number.
+    seatLabel: o.seat ? o.seat.label || o.seat.number || null : null,
     customerName: o.user?.name || o.guestName || "Guest",
     phoneLast4: last4(o.user?.phone || o.guestPhone),
   };
@@ -89,7 +91,7 @@ export async function registerAdminConsoleRoutes(app, { prisma, resolveTenant, n
     }
     const rows = await prisma.order.findMany({
       where, take, orderBy: { createdAt: "desc" },
-      include: { location: { select: { name: true } }, seat: { select: { number: true } }, user: { select: { name: true, phone: true } } },
+      include: { location: { select: { name: true } }, seat: { select: { number: true, label: true } }, user: { select: { name: true, phone: true } } },
     });
     return { orders: rows.map(summary) };
   });
@@ -100,7 +102,7 @@ export async function registerAdminConsoleRoutes(app, { prisma, resolveTenant, n
     const o = await prisma.order.findFirst({
       where: { id: req.params.id, tenantId: tenant.id },
       include: {
-        location: { select: { name: true } }, seat: { select: { number: true } },
+        location: { select: { name: true } }, seat: { select: { number: true, label: true } },
         user: { select: { name: true, email: true, phone: true } },
         items: { include: { menuItem: { select: { name: true } } } },
         podCalls: { orderBy: { createdAt: "asc" } },

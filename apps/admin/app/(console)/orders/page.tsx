@@ -13,7 +13,7 @@ import { SearchField } from "@/components/ui/SearchField";
 import { SkeletonList } from "@/components/ui/Skeleton";
 import { api } from "@/lib/api";
 import { money, relativeTime } from "@/lib/format";
-import { orderMeta, orderTitle, paymentLabel, paymentTone, type OrderSummary } from "@/lib/orders";
+import { orderMeta, orderTitle, paymentLabel, paymentTone, podLabel, type OrderSummary } from "@/lib/orders";
 import { useResource } from "@/lib/use-resource";
 import Link from "next/link";
 
@@ -25,7 +25,7 @@ const COLUMNS: Column<OrderSummary>[] = [
     <span>{o.customerName}{o.phoneLast4 && <span className="ml-1.5 text-oh-stone/60 tabular-nums">…{o.phoneLast4}</span>}</span>
   ) },
   { key: "location", label: "Location", render: (o) => o.locationName ?? <span className="text-oh-ash">None</span> },
-  { key: "pod", label: "Pod", render: (o) => (o.seatNumber != null ? <span className="tabular-nums">{o.seatNumber}</span> : <span className="text-oh-ash">None</span>) },
+  { key: "pod", label: "Pod", render: (o) => (podLabel(o) ? <span className="whitespace-nowrap tabular-nums">{podLabel(o)}</span> : <span className="text-oh-ash">None</span>) },
   { key: "status", label: "Status", render: (o) => <OrderStatusBadge status={o.status} /> },
   { key: "payment", label: "Payment", render: (o) => <Badge tone={paymentTone(o.paymentStatus)}>{paymentLabel(o.paymentStatus)}</Badge> },
   { key: "total", label: "Total", align: "right", render: (o) => money(o.totalCents) },

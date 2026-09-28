@@ -104,7 +104,7 @@ export class KioskPrinterService {
       script.src = '/epos-2.23.0.js';
       script.onload = () => resolve(true);
       script.onerror = () => {
-        console.error('[Printer] Failed to load Epson ePOS SDK');
+        console.warn('[Printer] Failed to load Epson ePOS SDK');
         resolve(false);
       };
       document.head.appendChild(script);
@@ -120,7 +120,7 @@ export class KioskPrinterService {
 
     // Load SDK if needed
     if (!await this.loadSDK()) {
-      console.error('[Printer] SDK not available');
+      console.warn('[Printer] SDK not available');
       return false;
     }
 
@@ -145,20 +145,22 @@ export class KioskPrinterService {
                   console.log('[Printer] Printer device created');
                   resolve(true);
                 } else {
-                  console.error('[Printer] Failed to create device:', code);
+                  console.warn('[Printer] Failed to create device:', code);
                   resolve(false);
                 }
               }
             );
           } else {
-            console.error('[Printer] Connection failed:', result);
+            // warn, not error: no reachable printer is an expected, handled state (lastError
+            // shows it); console.error would raise the Next dev overlay on every kiosk page.
+            console.warn('[Printer] Connection failed:', result);
             // Store the error for display
             (this as any).lastError = `Connection failed: ${result}`;
             resolve(false);
           }
         });
       } catch (err) {
-        console.error('[Printer] Connection error:', err);
+        console.warn('[Printer] Connection error:', err);
         resolve(false);
       }
     });
