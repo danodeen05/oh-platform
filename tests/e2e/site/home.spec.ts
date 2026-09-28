@@ -282,15 +282,25 @@ test("desktop 1440: no horizontal overflow", async () => {
   });
 });
 
-// KNOWN FAILURE, the G2a target (controller ruling, D1 fix round 1). Measured
-// at about 10.5 s on a production build. The storefront image itself finishes
-// by about 6 s; paint is held back by shell-wide blockers that G2a owns:
-// four render-blocking CJK next/font stylesheets on every locale, gtag and
-// Clerk, and the legacy Google Fonts CSS. Left strict on purpose: don't
-// loosen it, fix the shell and it goes green.
+// The G2a target. D1 measured about 10.5 s on a production build (four
+// render-blocking CJK stylesheets, gtag, Clerk and the legacy Google Fonts
+// CSS on every page); G2a fixed the shell. Measure it on a production build
+// (next build --webpack, next start): the dev server compiles on demand and
+// is never under 2.5 s. On a shared machine the 4x CPU slowdown compounds
+// with other load, so run it on a quiet host.
+//
+// The context first loads the page once, unthrottled, so it holds Clerk's
+// development-instance cookie: a dev instance (the pk_test_ keys every dev
+// server uses) bounces a cookieless first request through
+// clerk.accounts.dev and back, about 1.5 s on this profile, which a
+// production (pk_live_) instance never does. The timed load itself is cold:
+// cache disabled.
 test("[G2a target] LCP is under 2.5 s on throttled 4G (1.6 Mbps, 150 ms RTT, CPU 4x), and it is the storefront photo", async () => {
   const ctx = await browser.newContext(iphone15());
   try {
+    const seed = await ctx.newPage();
+    await seed.goto(`${BASE}/en`, { waitUntil: "load", timeout: 180_000 });
+    await seed.close();
     const page = await ctx.newPage();
     await page.addInitScript(() => {
       (window as any).__lcp = null;

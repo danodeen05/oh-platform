@@ -11,6 +11,14 @@
 // apps/web/lib/site/images.ts from the same data so the two never drift.
 //
 // Usage: node scripts/site-images.mjs
+//        PORTRAIT_ONLY=1 node scripts/site-images.mjs   (only the portrait crops,
+//        reading the landscape dimensions from the files already on disk)
+//
+// Task G2a fix round 1: PORTRAIT adds art-directed portrait crops for phones
+// (a full-height slice of the landscape photo), served by SitePicture under
+// "(max-width: 767px) and (orientation: portrait)" with sizes="100vw", so a
+// phone downloads only pixels it shows instead of a landscape frame it crops
+// to a third of its width.
 //
 // This module's config (MAPPING, DENY_LIST, WIDTHS, ALT_KEYS) is also
 // imported directly by apps/web/lib/site/__tests__/images.test.ts, so the
@@ -54,6 +62,17 @@ export const MAPPING = {
   chopsticks: "Image 6 (1).jpeg",
   "sign-pool": "Image 1.jpg",
 };
+
+// Portrait crops: `aspect` is width / height of the crop (full source
+// height), `focusX` where it sits across the frame (0 left, 1 right; match the
+// landscape art's object-position on phones), `widths` the files generated.
+export const PORTRAIT = {
+  "storefront-dusk": { aspect: 0.5, focusX: 0.46, widths: [780, 1170] },
+};
+
+export function buildPortraitSrcSet(key, ext) {
+  return PORTRAIT[key].widths.map((width) => `/site/${key}-portrait-${width}.${ext} ${width}w`).join(", ");
+}
 
 // Hard deny list. The script refuses to run (exit 1) if any MAPPING value
 // is one of these. IMG_5749.jpeg is a vendor proof with contact details;
@@ -132,13 +151,35 @@ async function processOne(key, sourceFile) {
   return dims;
 }
 
+async function processPortrait(key, sourceFile) {
+  const { aspect, focusX, widths } = PORTRAIT[key];
+  const sourcePath = path.join(SOURCE_DIR, sourceFile);
+  const meta = await sharp(sourcePath).rotate().metadata();
+  const cropW = Math.round(meta.height * aspect);
+  const left = Math.round((meta.width - cropW) * focusX);
+  const dims = {};
+  for (const width of widths) {
+    // The crop is narrower than the widest file (the source is 1448x1086, so
+    // a full-height 1:2 slice is 543 px wide): enlarging here is deliberate,
+    // so 3x phones get a file matched to their pixels (lanczos) rather than
+    // the browser's cheaper upscale of a smaller one.
+    const base = () =>
+      sharp(sourcePath).rotate().extract({ left, top: 0, width: cropW, height: meta.height }).resize({ width });
+    const info = await base().avif({ quality: AVIF_QUALITY }).toFile(path.join(OUTPUT_DIR, `${key}-portrait-${width}.avif`));
+    await base().webp({ quality: WEBP_QUALITY }).toFile(path.join(OUTPUT_DIR, `${key}-portrait-${width}.webp`));
+    dims[width] = { w: info.width, h: info.height };
+  }
+  const widest = widths[widths.length - 1];
+  return dims[widest];
+}
+
 // Builds a standard `srcset` attribute string ("/site/key-390.avif 390w, ...")
 // from WIDTHS, the single source of truth for which widths were generated.
 export function buildSrcSet(key, ext) {
   return WIDTHS.map((width) => `/site/${key}-${width}.${ext} ${width}w`).join(", ");
 }
 
-function generateImagesTs(dimsByKey) {
+function generateImagesTs(dimsByKey, portraitDims) {
   const keys = Object.keys(MAPPING);
   const typeUnion = keys.map((k) => `  | "${k}"`).join("\n");
   const entries = keys
@@ -149,7 +190,16 @@ function generateImagesTs(dimsByKey) {
     srcSet: { avif: "${buildSrcSet(k, "avif")}", webp: "${buildSrcSet(k, "webp")}" },
     w: ${w},
     h: ${h},
-    alt: "${ALT_KEYS[k]}",
+    alt: "${ALT_KEYS[k]}",${
+      PORTRAIT[k]
+        ? `
+    portrait: {
+      srcSet: { avif: "${buildPortraitSrcSet(k, "avif")}", webp: "${buildPortraitSrcSet(k, "webp")}" },
+      w: ${portraitDims[k].w},
+      h: ${portraitDims[k].h},
+    },`
+        : ""
+    }
   },`;
     })
     .join("\n");
@@ -175,6 +225,9 @@ export interface SiteImage {
   w: number;
   h: number;
   alt: MessageKey;
+  // Art-directed crop for phones held upright (scripts/site-images.mjs
+  // PORTRAIT); SitePicture serves it with sizes="100vw". w/h: the widest file.
+  portrait?: { srcSet: { avif: string; webp: string }; w: number; h: number };
 }
 
 export const SITE_IMAGES: Record<ImageKey, SiteImage> = {
@@ -189,11 +242,21 @@ async function main() {
 
   const dimsByKey = {};
   for (const [key, sourceFile] of Object.entries(MAPPING)) {
+    if (process.env.PORTRAIT_ONLY === "1") {
+      const m = await sharp(path.join(OUTPUT_DIR, `${key}-1200.avif`)).metadata();
+      dimsByKey[key] = { 1200: { w: m.width, h: m.height } };
+      continue;
+    }
     process.stdout.write(`[site-images] ${key} <- ${sourceFile}\n`);
     dimsByKey[key] = await processOne(key, sourceFile);
   }
+  const portraitDims = {};
+  for (const key of Object.keys(PORTRAIT)) {
+    process.stdout.write(`[site-images] ${key} portrait crop\n`);
+    portraitDims[key] = await processPortrait(key, MAPPING[key]);
+  }
 
-  fs.writeFileSync(IMAGES_TS_PATH, generateImagesTs(dimsByKey), "utf8");
+  fs.writeFileSync(IMAGES_TS_PATH, generateImagesTs(dimsByKey, portraitDims), "utf8");
   process.stdout.write(`[site-images] wrote ${IMAGES_TS_PATH}\n`);
   process.stdout.write(`[site-images] done: ${Object.keys(MAPPING).length} images x ${WIDTHS.length} widths x 2 formats\n`);
 }

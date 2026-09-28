@@ -7,7 +7,8 @@ describe("TierMark", () => {
     for (const tier of TIERS) {
       const html = renderToString(<TierMark tier={tier} />);
       expect(html, `${tier} did not render an <svg>`).toContain("<svg");
-      expect(html).toContain("<path");
+      // Task G2a: inline for the dock's small chopstick mark, from the sprite for the rest.
+      expect(html).toMatch(tier === "chopstick" ? /<path/ : /<use href="\/tiers\/marks\.svg\?v=[0-9a-f]+#/);
     }
   });
 
@@ -51,10 +52,9 @@ describe("TierMark", () => {
   });
 
   it("renders the traced compound path with an evenodd fill rule (holes from the source PNG)", () => {
-    for (const tier of TIERS) {
-      const html = renderToString(<TierMark tier={tier} />);
-      expect(html, `${tier} missing fill-rule="evenodd"`).toContain('fill-rule="evenodd"');
-    }
+    // Inline marks carry it on the path; sprite marks on the symbol's path (tier-sprite.test.ts).
+    const html = renderToString(<TierMark tier="chopstick" />);
+    expect(html).toContain('fill-rule="evenodd"');
   });
 
   it("uses a non-default viewBox taken from the trace, not a fixed grid", () => {

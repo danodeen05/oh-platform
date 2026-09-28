@@ -5,8 +5,8 @@
  *
  * Display and Title use the serif family: Instrument Serif for Latin
  * locales, Noto Serif TC/SC for Chinese ones. Body and Eyebrow use the sans
- * family: Raleway (loaded as a <link>, see components/site/fonts.ts) or
- * Noto Sans TC/SC. The TC/SC choice always follows the `locale` prop, not
+ * family: Raleway (self-hosted, components/site/site-fonts.ts) or
+ * Noto Sans TC/SC (zh pages only, components/site/shell/CjkFonts.tsx). The TC/SC choice always follows the `locale` prop, not
  * the visitor's script preference.
  *
  * These are plain server-safe components (no "use client"): pass the

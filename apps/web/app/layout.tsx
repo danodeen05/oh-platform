@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
+import { LEGACY_FONTS_HREF } from "@/components/legacy/LegacyFonts";
 import { GuestProvider } from "@/contexts/guest-context";
 import "./globals.css";
 
@@ -26,51 +27,41 @@ export default async function RootLayout({
   // Set by middleware; the [locale] layout below already makes every page dynamic via headers().
   const h = await headers();
   const lang = h.get("x-locale") ?? "en";
+  // x-pathname is set by middleware for the plan, kiosk and CNY only.
+  const pathname = h.get("x-pathname") ?? "";
   // The business plan is private and loads its own display and CJK fonts
   // (components/site/fonts.ts, via next/font), so it skips Google Analytics
-  // and the site's large multi-family stylesheet; it only needs the Raleway
-  // body face.
-  const isPlan = /\/plan(\/|$)/.test(h.get("x-pathname") ?? "");
+  // and needs only the Raleway body face from Google Fonts.
+  const isPlan = /\/plan(\/|$)/.test(pathname);
+  // Kiosk and CNY keep the full legacy Google Fonts set from here, as before.
+  // Chosen on the first request only (this layout never re-renders), so a
+  // client navigation from a site page into /kiosk or /cny would arrive
+  // without it. Rare: both are opened directly (kiosk device, CNY subdomain).
+  const isKioskOrCny = pathname.includes("/kiosk") || pathname.includes("/cny");
+  // Task G2a: nothing else gets a font stylesheet from the root any more.
+  // This layout is never re-rendered on a client navigation, so a per-route
+  // choice here would stick to whatever page was opened first. Instead:
+  // legacy pages (LegacyChrome) load components/legacy/LegacyFonts.tsx,
+  // and rebuilt (site) pages self-host Raleway and Instrument Serif
+  // (components/site/site-fonts.ts) and load CJK faces only on zh pages
+  // (components/site/shell/CjkFonts.tsx). They used to get the full legacy
+  // set, a 275 KB render-blocking third-party stylesheet, on every page.
+  const googleFontsHref = isPlan
+    ? "https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500;600;700&display=swap"
+    : isKioskOrCny
+      ? LEGACY_FONTS_HREF
+      : null;
   return (
     <html lang={lang}>
       <head>
         {isPlan ? null : <GoogleAnalytics />}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin="anonymous"
-        />
-        {/*
-          Task C1 asked to drop Bebas Neue, Ma Shan Zheng and LXGW WenKai TC
-          here unless CNY needs them ("keep those only for /cny"). Checked:
-          CNY (cny.css, slides.css) only uses Raleway and Noto Serif TC, so it
-          doesn't need them -- but kiosk (kiosk-welcome.tsx, check-in,
-          kiosk-order-flow.tsx) and the legacy home/referral/order-location
-          pages under `(legacy)` still set inline `fontFamily: '"Bebas Neue"'`
-          and `'"Ma Shan Zheng"'`, and LXGW WenKai TC is still the live
-          zh-TW/zh-CN body face for those same not-yet-rebuilt pages
-          (globals.css `html[lang="zh-TW"]` sets --font-primary to it). So the
-          set is left as-is here, unchanged from before Task C1, until the
-          Phase D tasks that rebuild those specific pages away from them; only
-          /plan (which loads Instrument Serif and Noto Serif/Sans TC-SC via
-          next/font, see components/site/fonts.ts) is excluded.
-
-          Task C4 fix round 1 checked whether the `Noto Serif TC` family here
-          duplicates next/font's copy and can go. It can't yet: CNY (cny.css,
-          slides/slides.css), the legacy `--font-heading` (globals.css, used
-          by every (legacy) h1-h3) and the chop Seal's GLYPH_FONT all name
-          'Noto Serif TC' directly. Drop it when those move to
-          var(--font-noto-serif-tc) (G-phase cleanup).
-        */}
-        <link
-          href={
-            isPlan
-              ? "https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;500;600;700&display=swap"
-              : "https://fonts.googleapis.com/css2?family=Bebas+Neue&family=LXGW+WenKai+TC:wght@300;400;700&family=Ma+Shan+Zheng&family=Raleway:wght@300;400;500;600;700&family=Noto+Serif+TC:wght@400;500;600;700&display=swap"
-          }
-          rel="stylesheet"
-        />
+        {googleFontsHref ? (
+          <>
+            <link rel="preconnect" href="https://fonts.googleapis.com" />
+            <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+            <link href={googleFontsHref} rel="stylesheet" />
+          </>
+        ) : null}
       </head>
       <body>
         <GuestProvider>{children}</GuestProvider>

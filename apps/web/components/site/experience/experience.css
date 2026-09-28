@@ -1,0 +1,140 @@
+/*
+ * Task D2: the experience page. Everything is scoped to the page, through
+ * `[data-experience-page]` or `html:has([data-experience-page])`, so nothing
+ * leaks when a client navigation keeps this stylesheet loaded.
+ *
+ * The visible area between the top bar and the dock on phones.
+ */
+[data-experience-page] {
+  --xp-bar: calc(3.5rem + env(safe-area-inset-top, 0px));
+  --xp-screen: calc(100svh - var(--xp-bar) - var(--dock-h, 0px));
+  /* The phone map card: narrower on short screens so the copy under it always has room. */
+  --xp-card-w: min(38vw, 10.5rem);
+  --xp-card-h: calc(var(--xp-card-w) * 73 / 53 + 1.9rem);
+}
+@media (max-height: 720px) {
+  [data-experience-page] {
+    --xp-card-w: min(32vw, 8.75rem);
+  }
+}
+@media (min-width: 768px) {
+  /* 768 to 1023: still the phone layout, but the map turns landscape (CombMap's own breakpoint). */
+  [data-experience-page] {
+    --xp-card-w: min(34vw, 15rem);
+    --xp-card-h: calc(var(--xp-card-w) * 53 / 73 + 1.9rem);
+  }
+}
+
+/* ---------------------------------------------------------------- phones */
+@media (max-width: 1023px) {
+  /* Step to step, natively: the document snaps, nothing scrolls inside anything. */
+  html:has([data-experience-page]) {
+    scroll-snap-type: y mandatory;
+    scroll-padding-top: calc(3.5rem + env(safe-area-inset-top, 0px));
+  }
+  [data-experience-page] .xp-snap {
+    scroll-snap-align: start;
+  }
+  /* The last snap point: the bottom of the page, so the footer is always reachable. */
+  html:has([data-experience-page]) [data-site-footer] {
+    scroll-snap-align: end;
+  }
+  [data-experience-page] .xp-step,
+  [data-experience-page] .xp-intro {
+    min-height: var(--xp-screen);
+  }
+  /* The copy never sits under the pinned card. */
+  [data-experience-page] .xp-step {
+    padding-top: calc(var(--xp-card-h) + 1.5rem);
+  }
+  /* The card's sticky row takes no net space: the steps list pulls itself up over it. The row keeps
+     its full height as a margin box, so it releases exactly when the last step's bottom reaches the
+     card's bottom and never rides over the FAQ. */
+  [data-experience-page] .xp-map-pin {
+    top: calc(var(--xp-bar) + 0.75rem);
+    height: var(--xp-card-h);
+    pointer-events: none;
+  }
+  [data-experience-page] .xp-step-list {
+    margin-top: calc(var(--xp-card-h) * -1);
+  }
+  [data-experience-page] .xp-map-card {
+    width: var(--xp-card-w);
+    pointer-events: auto;
+  }
+}
+
+/* ------------------------------------------------------------- motion */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    /* The photo settles as its step arrives: a slow push from 1.1x to 1x, tied to scroll, not time. */
+    [data-experience-page] .xp-photo img {
+      animation: xp-settle linear both;
+      animation-timeline: view();
+      animation-range: entry 0% cover 50%;
+    }
+  }
+  /* The lazily loaded map fades in over its placeholder's exact box. */
+  [data-experience-page] .xp-map-in {
+    animation: xp-fade-in 0.5s ease-out both;
+  }
+  [data-experience-page] .xp-bar {
+    transition: width 0.5s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  [data-experience-page] .xp-chevron {
+    transition: transform 0.25s ease-out;
+  }
+  /* The FAQ opens with a height transition where the browser can animate to auto. */
+  [data-experience-page] .xp-faq {
+    interpolate-size: allow-keywords;
+  }
+  [data-experience-page] .xp-faq::details-content {
+    block-size: 0;
+    overflow: clip;
+    transition:
+      block-size 0.3s cubic-bezier(0.2, 0.7, 0.2, 1),
+      content-visibility 0.3s allow-discrete;
+  }
+  [data-experience-page] .xp-faq[open]::details-content {
+    block-size: auto;
+  }
+}
+@keyframes xp-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes xp-settle {
+  from {
+    transform: scale(1.1);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+/* The journey dots, larger than CombMap's defaults so they read on a 10rem phone card. */
+[data-experience-page] [data-journey-map] circle[data-marker="guest"] {
+  r: 1.6px;
+}
+[data-experience-page] [data-journey-map] circle[data-marker="bowl"] {
+  r: 1.3px;
+}
+@media (min-width: 1024px) {
+  [data-experience-page] [data-journey-map] circle[data-marker="guest"] {
+    r: 1.2px;
+  }
+  [data-experience-page] [data-journey-map] circle[data-marker="bowl"] {
+    r: 1px;
+  }
+}
+
+[data-experience-page] .xp-faq summary::-webkit-details-marker {
+  display: none;
+}
+[data-experience-page] .xp-faq[open] .xp-chevron {
+  transform: rotate(90deg);
+}

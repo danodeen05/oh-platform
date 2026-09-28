@@ -117,7 +117,8 @@ describe("the (legacy) group scopes its pages; the (site) group never does", () 
 
 describe("routes that stay in place (not moved to (legacy)) scope .legacy-ui in their own layout", () => {
   test.each([
-    ["kiosk", "app/[locale]/kiosk/layout.tsx"],
+    // Task G2a: the kiosk's client layout moved to KioskLayoutClient.tsx (layout.tsx now only adds Clerk).
+    ["kiosk", "app/[locale]/kiosk/KioskLayoutClient.tsx"],
     ["cny", "app/[locale]/cny/layout.tsx"],
     ["agents", "app/[locale]/agents/layout.tsx"],
   ])("%s layout applies legacy-ui somewhere", (_name, relPath) => {

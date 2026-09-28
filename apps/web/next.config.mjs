@@ -21,6 +21,9 @@ const planCommit =
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Perf measurement builds (Task G2a) go to their own dist dir so they never
+  // clash with a running dev server's `.next`: NEXT_DIST_DIR=.next-perf.
+  distDir: process.env.NEXT_DIST_DIR || '.next',
   env: {
     NEXT_PUBLIC_PLAN_BUILT_AT: new Date().toISOString(),
     NEXT_PUBLIC_PLAN_COMMIT: planCommit,

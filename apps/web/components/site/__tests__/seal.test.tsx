@@ -2,8 +2,20 @@ import { describe, expect, it } from "vitest";
 import { renderToString } from "react-dom/server";
 import { Seal } from "../seal/Seal";
 import { SEALS, DEFAULT_SEAL } from "../seal/seals";
+import { SEAL_FONT_FAMILY, SEAL_FONT_GLYPHS } from "../seal/seal-font";
 
 describe("Seal", () => {
+  // Task G2a: seals draw from their own tiny subset font, never a full CJK
+  // web font, and every glyph must be in that subset (re-run
+  // scripts/subset-seal-font.mjs after adding one).
+  it("draws its glyph from the seal subset font, which holds every seal glyph", () => {
+    const html = renderToString(<Seal iconKey="vip" name="VIP" />);
+    expect(html).toContain(`font-family="&#x27;${SEAL_FONT_FAMILY}&#x27;`);
+    for (const def of [...Object.values(SEALS), DEFAULT_SEAL]) {
+      expect(SEAL_FONT_GLYPHS, `glyph ${def.glyph} is missing from public/fonts/seal-glyphs.woff2`).toContain(def.glyph);
+    }
+  });
+
   it("renders an <svg> chop seal", () => {
     const html = renderToString(<Seal iconKey="first-order" name="First Bowl" />);
     expect(html).toContain("<svg");

@@ -1,13 +1,10 @@
 // Google Analytics 4 integration and event tracking utilities
 
-declare global {
-  interface Window {
-    gtag: (...args: unknown[]) => void;
-    dataLayer: unknown[];
-  }
-}
+// GA_MEASUREMENT_ID, pageview and the gtag queue live in ./analytics-core
+// (Task G2a fix round 1), so the root GoogleAnalytics component stays small.
+import { GA_MEASUREMENT_ID, pageview, whenGtag } from "./analytics-core";
 
-export const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+export { GA_MEASUREMENT_ID, pageview };
 
 // Queue for events that fire before gtag is ready
 let eventQueue: Array<{ eventName: string; params: Record<string, unknown> }> = [];
@@ -54,15 +51,6 @@ const sendEvent = (eventName: string, params: Record<string, unknown>) => {
   // Only start checking if this is the first queued event
   if (eventQueue.length === 1) {
     setTimeout(checkGtag, 100);
-  }
-};
-
-// Initialize Google Analytics
-export const pageview = (url: string) => {
-  if (typeof window !== "undefined" && window.gtag && GA_MEASUREMENT_ID) {
-    window.gtag("config", GA_MEASUREMENT_ID, {
-      page_path: url,
-    });
   }
 };
 
@@ -294,9 +282,6 @@ export const setUserProperties = (properties: {
   lifetimeOrderCount?: number;
   lifetimeSpent?: number;
 }) => {
-  if (typeof window === "undefined") return;
-
-  if (window.gtag) {
-    window.gtag("set", "user_properties", properties);
-  }
+  // Queued until gtag loads (it loads after the page's load event).
+  whenGtag(() => window.gtag("set", "user_properties", properties));
 };

@@ -374,6 +374,83 @@
           "Cueva Timpanogos"
         ]
       }
+    },
+    "hours": "Horario",
+    "weekday": "Entre semana",
+    "weekend": "Fin de semana",
+    "openNow": "Abierto ahora",
+    "upcomingCities": "Llegando a tu ciudad",
+    "loading": "Cargando ubicaciones...",
+    "hero": {
+      "findUs": "Encuéntranos",
+      "title": "Nuestras ubicaciones",
+      "description": "Experimenta Oh! Beef Noodle Soup en una de nuestras ubicaciones únicas"
+    },
+    "cityCreek": {
+      "tagline": "Centro de Salt Lake City",
+      "description": "Nuestra ubicación principal en el corazón del centro de Salt Lake City, ofreciendo una experiencia gastronómica única con cabinas privadas y pedidos tecnológicos.",
+      "mallDescription": "City Creek Center es el principal destino de compras de Utah, con más de 100 tiendas y restaurantes en un impresionante entorno al aire libre con techo de vidrio retráctil.",
+      "nearbyLandmarks": [
+        "Temple Square",
+        "Salt Palace Convention Center",
+        "Capitolio de Utah",
+        "Gateway Mall"
+      ],
+      "parking": "Estacionamiento gratis en la estructura de City Creek con validación"
+    },
+    "universityPlace": {
+      "tagline": "Valle de Utah",
+      "description": "Sirviendo a la comunidad del Valle de Utah con la misma calidad excepcional y experiencia gastronómica innovadora.",
+      "mallDescription": "University Place es el vibrante centro de compras y entretenimiento de Orem, con una mezcla de tiendas nacionales y favoritos locales cerca de Utah Valley University.",
+      "nearbyLandmarks": [
+        "Utah Valley University",
+        "Provo Canyon",
+        "Cueva Timpanogos",
+        "Campus de BYU"
+      ],
+      "parking": "Amplio estacionamiento gratuito disponible en todo University Place"
+    },
+    "details": {
+      "address": "Dirección",
+      "hours": "Horario",
+      "hoursWeekday": "Lun-Sáb: 11am - 9pm",
+      "hoursSunday": "Domingo: Cerrado",
+      "parking": "Estacionamiento"
+    },
+    "about": {
+      "title": "Acerca de",
+      "nearby": "Puntos de interés cercanos"
+    },
+    "buttons": {
+      "orderAhead": "Ordenar con anticipación",
+      "getDirections": "Obtener direcciones"
+    },
+    "features": {
+      "privatePods": "Cabinas privadas",
+      "orderAhead": "Ordenar anticipado",
+      "noTipping": "Sin propinas",
+      "accessible": "Accesible"
+    },
+    "ohWay": {
+      "label": "El estilo Oh!",
+      "title": "Una experiencia gastronómica diferente",
+      "kiosk": {
+        "title": "Ordena a tu manera",
+        "description": "Salta la fila con nuestra app móvil o usa nuestros quioscos en la tienda. Tu comida está lista cuando tú lo estés."
+      },
+      "pod": {
+        "title": "Cabinas de comedor privadas",
+        "description": "Disfruta tu comida en tu propio espacio privado. Sin mesas abarrotadas, sin ruido — solo tú y tu tazón perfecto."
+      },
+      "noTips": {
+        "title": "Sin propinas necesarias",
+        "description": "El precio que ves es el precio que pagas. Pagamos a nuestro equipo salarios competitivos para que nunca tengas que preocuparte por las propinas."
+      }
+    },
+    "cta": {
+      "title": "¿Listo para el mejor tazón?",
+      "description": "Ordena con anticipación y salta la espera. Tu tazón perfecto está a solo unos toques.",
+      "button": "Comienza tu pedido"
     }
   },
   "loyalty": {
@@ -1779,6 +1856,110 @@
         "newTab": "(se abre en una pestaña nueva)",
         "foundation": "Fundación One Red Step at a Time, una 501(c)(3)"
       }
+    },
+    "pageTitle": "Estado del pedido",
+    "loading": "Cargando estado del pedido...",
+    "noOrderCode": "No se proporcionó código de pedido",
+    "orderNotFound": "Pedido no encontrado",
+    "placeNewOrder": "Hacer nuevo pedido",
+    "statusUpdates": "El estado se actualiza automáticamente cada 5 segundos",
+    "orderNumber": "Pedido #{number}",
+    "status": {
+      "pending": "Pago pendiente",
+      "paid": "Pagado",
+      "queued": "En cola",
+      "prepping": "Preparando",
+      "ready": "Listo para entregar",
+      "serving": "¡Disfruta tu comida!",
+      "completed": "Completado",
+      "doneEating": "¿Terminaste de comer?"
+    },
+    "pod": {
+      "yourPod": "Tu Pod",
+      "podNumber": "POD {number}",
+      "confirmArrival": "Ve a tu pod y confirma tu llegada",
+      "checkedIn": "¡Ya estás registrado!",
+      "staffNotified": "Personal notificado",
+      "calling": "Llamando..."
+    },
+    "queue": {
+      "position": "Posición en cola",
+      "estimatedWait": "Tiempo estimado: {minutes} minutos",
+      "notifyWhenReady": "¡Te notificaremos cuando tu pod esté listo!"
+    },
+    "timeline": {
+      "title": "Línea de tiempo del pedido",
+      "paid": "Pagado",
+      "checkedIn": "Registrado",
+      "orderStarted": "Pedido iniciado",
+      "qualityCheck": "Control de calidad",
+      "delivered": "Entregado",
+      "totalTime": "Tiempo total"
+    },
+    "sections": {
+      "theBowl": "El tazón",
+      "addOnsExtras": "Extras y adicionales",
+      "location": "Ubicación"
+    },
+    "buttons": {
+      "viewProfile": "Ver mi perfil",
+      "orderAgain": "Ordenar de nuevo",
+      "doneEating": "Terminé de comer",
+      "addToOrder": "Agregar al pedido",
+      "callStaff": "Llamar personal",
+      "addItems": "Agregar artículos",
+      "confirmAtPod": "Confirmar que estoy en mi cabina"
+    },
+    "location": "Ubicación",
+    "confirmations": {
+      "finishedEating": "¿Terminaste de comer? Esto notificará al personal para limpiar tu pod."
+    },
+    "errors": {
+      "markDone": "Error al marcar como terminado. Por favor intenta de nuevo."
+    },
+    "doneEating": {
+      "confirmPrompt": "¿Terminaste de comer? Esto notificará al personal para limpiar tu pod.",
+      "failedToUpdate": "Error al actualizar. Por favor intenta de nuevo."
+    },
+    "dessert": {
+      "readyForDessert": "Listo para el postre",
+      "onItsWay": "¡El postre viene en camino!",
+      "notifying": "Notificando..."
+    },
+    "addItems": {
+      "title": "Agregar a tu pedido",
+      "loading": "Cargando artículos disponibles...",
+      "drinkRefills": "Refill de bebidas",
+      "requestRefill": "Solicitar refill →",
+      "request": "Solicitar →",
+      "requesting": "Solicitando...",
+      "waterRefill": "Refill de agua",
+      "extrasAndAddons": "Extras y adicionales",
+      "requestExtras": "Solicitar {count} extra(s)",
+      "paidAddons": "Extras y adicionales",
+      "orderTotal": "Total del pedido",
+      "checkout": "Pagar →",
+      "demoMode": "Modo demo: No se realizará cargo real",
+      "cancel": "Cancelar",
+      "pay": "Pagar {amount}",
+      "processing": "Procesando...",
+      "free": "Gratis",
+      "paid": "De pago",
+      "add": "Agregar",
+      "noAddons": "No hay artículos adicionales disponibles para este pedido.",
+      "callStaffInstead": "Llamar al personal",
+      "failedToLoad": "Error al cargar artículos. Por favor intenta de nuevo o llama al personal."
+    },
+    "autoRefresh": "El estado se actualiza automáticamente cada 10 segundos",
+    "mentalHealth": {
+      "label": "La salud mental importa",
+      "loading": "Cargando información de salud mental...",
+      "skipTip": "Sin propinas. Haz la diferencia.",
+      "supportCause": "Apoyar la causa",
+      "foundation": "One Red Step at a Time Foundation • 501(c)(3)"
+    },
+    "demo": {
+      "banner": "Demo en vivo · no es un pedido real"
     }
   },
   "groupOrder": {
@@ -4215,6 +4396,474 @@
       "title": "¿Con hambre?",
       "body": "Pide con anticipación y luego elige tu hora de llegada y tu cabina.",
       "button": "Empezar un pedido"
+    }
+  },
+  "toast": {
+    "success": "Éxito",
+    "error": "Error",
+    "warning": "Advertencia",
+    "info": "Información"
+  },
+  "menu": {
+    "title": "Nuestro menú",
+    "description": "Explora nuestra selección de sopas de fideos con carne premium y acompañamientos",
+    "loading": "Cargando menú...",
+    "error": {
+      "title": "No se pudo cargar el menú",
+      "tryAgain": "Intentar de nuevo"
+    },
+    "categories": {
+      "soups": "Sopas",
+      "noodles": "Fideos",
+      "addons": "Extras",
+      "sides": "Acompañamientos",
+      "drinks": "Bebidas",
+      "desserts": "Postres"
+    },
+    "tags": {
+      "premium": "Premium",
+      "included": "Incluido",
+      "signature": "Especial",
+      "complimentary": "Cortesía",
+      "unlimitedRefills": "Refills Ilimitados"
+    },
+    "sections": {
+      "soup": {
+        "subtitle": "Comienza con nuestro caldo especial",
+        "description": "Rico caldo de hueso de res en dos fases: una cocción larga y luego un acabado pensado para el sabor"
+      },
+      "noodles": {
+        "subtitle": "Elige tus fideos",
+        "description": "Fideos hechos a mano frescos cada día"
+      },
+      "premiumAddons": {
+        "subtitle": "Mejora tu tazón",
+        "description": "Proteínas y toppings premium"
+      },
+      "sideDishes": {
+        "subtitle": "Completa tu comida",
+        "description": "Acompañamientos tradicionales"
+      },
+      "dessert": {
+        "subtitle": "Finales dulces",
+        "description": "Postres tradicionales para terminar tu comida"
+      }
+    },
+    "hero": {
+      "title": "Nuestro Menú",
+      "description": "Crea tu tazón perfecto con res americana premium y nuestro caldo en dos fases",
+      "orderNow": "Ordenar Ahora"
+    },
+    "difference": {
+      "title": "La Diferencia Oh!",
+      "description": "No somos solo otra tienda de fideos. Estamos reimaginando lo que puede ser comer.",
+      "techFirst": {
+        "title": "Experiencia Tech-First",
+        "description": "Ordena con anticipación, salta la fila y disfruta una experiencia sin problemas"
+      },
+      "privatePods": {
+        "title": "Pods de Comedor Privado",
+        "description": "Disfruta tu comida en tu propio espacio privado, libre de distracciones"
+      },
+      "seamlessService": {
+        "title": "Servicio Sin Interrupciones",
+        "description": "Desde ordenar hasta pagar, todo está diseñado para tu conveniencia"
+      },
+      "loyalty": {
+        "title": "Lealtad Recompensada",
+        "description": "Gana puntos, desbloquea recompensas y sube de nivel con cada visita"
+      }
+    },
+    "cta": {
+      "title": "¿Listo para el Mejor Tazón?",
+      "description": "Ordena con anticipación y salta la espera. Tu tazón perfecto está a solo unos toques.",
+      "button": "Comienza Tu Orden"
+    },
+    "dietary": {
+      "vegetarian": "Vegetariano",
+      "vegan": "Vegano",
+      "glutenFree": "Sin Gluten",
+      "spice": {
+        "level1": "Suave",
+        "level2": "Medio",
+        "level3": "Picante"
+      }
+    },
+    "allergen": {
+      "title": "Información de Alérgenos",
+      "description": "Nuestros platos se preparan en una cocina que maneja alérgenos comunes como trigo, soya y huevos. Por favor informe a nuestro personal sobre cualquier alergia o restricción dietética al ordenar.",
+      "spicyIndicator": "Picante",
+      "contactUs": "Para información detallada sobre alérgenos, contáctenos antes de ordenar."
+    }
+  },
+  "auth": {
+    "loading": "Cargando...",
+    "readyToOrder": "¿Listo para ordenar?",
+    "createAccount": "Crea una cuenta gratis y empieza a ganar recompensas de inmediato.",
+    "signInButton": "INICIAR SESIÓN / REGISTRARSE",
+    "or": "o",
+    "continueAsGuest": "Continuar como invitado",
+    "guestWarning": "El pago como invitado es rápido, pero no podrás ganar puntos de lealtad ni guardar favoritos.",
+    "benefits": {
+      "cashback": "1% Cashback",
+      "cashbackSubtitle": "¡incluyendo este pedido!",
+      "referral": "$5 por referir",
+      "referralSubtitle": "para ti y tus amigos",
+      "earlyAccess": "Acceso anticipado",
+      "earlyAccessSubtitle": "nuevos platillos"
+    }
+  },
+  "features": {
+    "fortuneCookie": {
+      "title": "Tu galleta de la fortuna digital",
+      "subtitle": "Mientras esperas, abre tu fortuna personalizada",
+      "crackOpen": "Ábrela",
+      "loading": "Leyendo tu fortuna...",
+      "luckyNumbers": "Números de la suerte",
+      "thisDay": "Este día en la historia ({year})",
+      "learnChinese": "Aprende chino",
+      "unavailable": "Fortuna no disponible - ¡pero tu comida será increíble!"
+    },
+    "roast": {
+      "title": "La zona de críticas",
+      "subtitle": "¿Quieres nuestra opinión (hilarante) sobre tus elecciones?",
+      "button": "Critica mi pedido",
+      "loading": "Analizando tus decisiones de vida...",
+      "highlights": "Lo que notamos:",
+      "unavailable": "Nuestro chef de críticas está en descanso. Tu pedido probablemente está bien. Probablemente."
+    },
+    "backstory": {
+      "title": "Detrás de escenas",
+      "subtitle": "¿Te has preguntado sobre la vida secreta de tus ingredientes?",
+      "button": "Cuéntame todo",
+      "loading": "Investigando...",
+      "heading": "Las historias no contadas",
+      "unavailable": "Los ingredientes prefieren permanecer anónimos. Grupo misterioso."
+    },
+    "kitchen": {
+      "label": "Cocina en vivo",
+      "listening": "Escuchando la cocina...",
+      "quiet": "La cocina está sospechosamente silenciosa. Están tramando algo."
+    }
+  },
+  "payment": {
+    "pageTitle": "Completa tu pedido",
+    "orderNumber": "Pedido #{number}",
+    "invalidOrder": "Pedido inválido",
+    "missingInformation": "Falta información del pedido",
+    "orderNotFound": "Pedido no encontrado",
+    "couldNotFind": "No pudimos encontrar este pedido",
+    "startNewOrder": "Iniciar nuevo pedido",
+    "readyBy": "Listo para",
+    "total": "Total",
+    "processing": "Procesando...",
+    "payNow": "Pagar ahora",
+    "testMode": "Modo de prueba - sin cargo real",
+    "theBowl": "El Tazón",
+    "addOnsExtras": "Extras y Acompañamientos",
+    "qty": "Cant: {count}",
+    "loading": "Cargando...",
+    "subtotal": "Subtotal",
+    "tax": "Impuesto",
+    "creditsApplied": "Créditos Aplicados",
+    "payAmount": "Pagar ${amount}",
+    "processingPayment": "Procesando pago...",
+    "secureCheckout": "Pago seguro con Stripe",
+    "paymentMethod": "Método de pago",
+    "testPayment": "Pago de prueba",
+    "demoMode": "Modo demo - sin cargo real",
+    "demoWarning": "Este es un pago de demostración. ¡La integración real de Stripe viene pronto!",
+    "availableCredits": "Créditos Disponibles",
+    "youHaveCredits": "Tienes <bold>${amount}</bold> en créditos",
+    "maxCreditsNote": "Puedes aplicar hasta $5 en crédito por pedido",
+    "applyToOrder": "Aplicar ${amount} a este pedido",
+    "welcomeReferred": "¡Bienvenido! Has sido referido",
+    "referralCreditsNote": "Tienes ${amount} en créditos para usar en este pedido",
+    "referralAlreadyUsed": "Crédito de referido ya usado",
+    "referralAlreadyUsedNote": "¡Gracias por visitarnos de nuevo! Los créditos de referido solo se aplican a tu primer pedido. Aún puedes ganar créditos refiriendo amigos con tu enlace personal.",
+    "loadingAccount": "Cargando tu cuenta y recompensas...",
+    "signInToComplete": "Inicia sesión para completar tu pedido",
+    "signInDescription": "Necesitas iniciar sesión para rastrear tu pedido, ganar recompensas y usar créditos de referido.",
+    "referralDiscountWaiting": "¡Tienes un descuento de referido esperando!",
+    "signInSignUp": "Iniciar sesión / Registrarse",
+    "guestCheckout": "Pago como invitado",
+    "guestCheckoutDescription": "Por favor ingresa tu nombre para que podamos preparar tu pedido.",
+    "name": "Nombre",
+    "phone": "Teléfono",
+    "email": "Correo electrónico",
+    "optional": "opcional",
+    "yourName": "Tu nombre",
+    "forOrderUpdates": "Para actualizaciones del pedido",
+    "forReceipt": "Para el recibo",
+    "enterYourName": "Por favor ingresa tu nombre",
+    "wantToEarnRewards": "¿Quieres ganar recompensas y rastrear tus pedidos?",
+    "signInInstead": "Iniciar sesión en su lugar",
+    "waitLoadingAccount": "Por favor espera mientras cargamos tu cuenta...",
+    "errorCodes": {
+      "CREDIT_SHORT": "Tu saldo de créditos cambió. Revisa tu total e inténtalo de nuevo.",
+      "GIFT_CARD_SHORT": "El saldo de tu tarjeta de regalo cambió. Revisa tu total e inténtalo de nuevo.",
+      "MEAL_GIFT_UNAVAILABLE": "Ese regalo de comida ya no está disponible.",
+      "REWARD_UNAVAILABLE": "Esa recompensa ya no se puede usar.",
+      "PAYMENT_NOT_VERIFIED": "Aún no pudimos confirmar tu pago. Si se te cobró, muestra esta pantalla a nuestro personal.",
+      "ORDER_FAILED": "No pudimos completar tu pedido. Inténtalo de nuevo.",
+      "QUOTE_CHANGED": "El total de tu pedido cambió. Revísalo e inténtalo de nuevo.",
+      "REFUNDED": "No pudimos aplicar tu pago, así que te reembolsamos el total en tu tarjeta. Inténtalo de nuevo.",
+      "GROUP_CHANGED": "Parte de este grupo ya se pagó o cambió. Revisa el grupo e inténtalo de nuevo."
+    }
+  },
+  "social": {
+    "instagram": "Instagram",
+    "twitter": "X (Twitter)",
+    "facebook": "Facebook",
+    "tiktok": "TikTok",
+    "yelp": "Yelp",
+    "tripadvisor": "TripAdvisor",
+    "youtube": "YouTube",
+    "linkedin": "LinkedIn",
+    "email": "Correo electrónico"
+  },
+  "checkIn": {
+    "title": "Quiosco de Registro",
+    "subtitle": "Escanea o ingresa el código QR de tu pedido para obtener tu asignación de cabina",
+    "howToTitle": "Cómo registrarte:",
+    "step1": "Encuentra el código QR de tu pedido (en la página de confirmación)",
+    "step2": "Escanéalo con el escáner del quiosco o ingresa el código abajo",
+    "step3": "Obtén tu asignación de cabina o posición en la fila",
+    "qrCodeLabel": "Código QR del pedido:",
+    "qrCodePlaceholder": "ORDER-xxpmm5hf-1234567890-ABC123",
+    "checkInButton": "Registrarse",
+    "checkingIn": "Registrando...",
+    "needHelp": "¿Necesitas ayuda?",
+    "helpTip1": "Tu código QR está en la página de confirmación de tu pedido",
+    "helpTip2": "Comienza con \"ORDER-\" seguido de números y letras",
+    "helpTip3": "Pregunta al personal si necesitas asistencia",
+    "loading": "Cargando..."
+  },
+  "scan": {
+    "title": "Confirmar Llegada a la Cabina",
+    "subtitle": "Escanea o ingresa el código QR de tu pedido en tu cabina asignada",
+    "assignedPod": "Tu Cabina Asignada",
+    "podNumber": "CABINA {number}",
+    "qrCodeLabel": "Tu Código QR del Pedido:",
+    "qrCodeHint": "El mismo código QR de la confirmación de tu pedido",
+    "qrCodePlaceholder": "ORDER-xxpmm5hf-1234567890-ABC123",
+    "enterQrCodeError": "Por favor escanea o ingresa el código QR de tu pedido",
+    "confirmFailed": "Error al confirmar llegada a la cabina",
+    "networkError": "Error de red. Por favor intenta de nuevo.",
+    "confirming": "Confirmando...",
+    "confirmButton": "Confirmar que Estoy en Mi Cabina",
+    "whatThisDoes": "Qué Hace Esto",
+    "helpList": {
+      "confirms": "Confirma que has llegado a tu cabina asignada",
+      "notifies": "Notifica a la cocina para empezar a preparar tu pedido",
+      "realtime": "Verás actualizaciones de estado en tiempo real en tu pantalla"
+    },
+    "backToStatus": "Volver al Estado del Pedido",
+    "success": {
+      "title": "¡Cabina Confirmada!",
+      "message": "Tu pedido se está preparando"
+    },
+    "loading": "Cargando..."
+  },
+  "confirmation": {
+    "title": "¡Pedido confirmado!",
+    "orderNumber": "Pedido #{number}",
+    "thankYou": "Gracias por tu pedido",
+    "whatNext": "¿Qué sigue?",
+    "checkInInstructions": "Ve al restaurante y regístrate en el kiosco o escanea el código QR en tu pod asignado.",
+    "viewStatus": "Ver estado del pedido",
+    "simulateCheckIn": "Simular registro (Demo)",
+    "checkingIn": "Registrando...",
+    "groupOrderNote": "Este es un pedido grupal con {count} pedidos.",
+    "paidStatus": "Pago completado",
+    "paymentSuccessful": "Pago Exitoso",
+    "paymentConfirmed": "Tu pago de {amount} ha sido confirmado",
+    "paymentPending": "Pago Pendiente",
+    "paymentProcessing": "Tu pago está siendo procesado",
+    "yourOrderQrCode": "Tu código QR de pedido",
+    "scanAtKiosk": "Escanea esto en el kiosco cuando llegues para obtener tu asignación de pod",
+    "expectedArrival": "Hora de llegada esperada: {time}",
+    "host": "Anfitrión",
+    "guest": "Invitado {number}",
+    "podNumber": "Pod {number}",
+    "noPodYet": "Sin pod asignado",
+    "checkInThisOrder": "Registrar este pedido",
+    "assignedToPod": "Asignado al Pod {number} - esperando llegada",
+    "checkedInAtPod": "Registrado en Pod {number}",
+    "orderLabel": "Pedido",
+    "subtotal": "Subtotal",
+    "tax": "Impuesto",
+    "total": "Total",
+    "qty": "Cant: {count}",
+    "trackOrderStatus": "Rastrear estado del pedido",
+    "shareYourOrder": "¡Comparte tu pedido!",
+    "spreadTheWord": "Comparte y gana recompensas",
+    "copied": "¡Copiado!",
+    "copy": "Copiar",
+    "shareVia": "Compartir vía...",
+    "twitter": "Twitter",
+    "facebook": "Facebook",
+    "linkedin": "LinkedIn",
+    "referralNote": "¡Tu enlace de referido está incluido! Tus amigos obtienen $5 de descuento en su primer pedido. Ganas $5 instantáneamente cuando completen un pedido de $20+.",
+    "backToHome": "Volver al inicio",
+    "loadingOrder": "Cargando pedido..."
+  },
+  "experience": {
+    "meta": {
+      "title": "La experiencia: una visita a Oh!, paso a paso",
+      "description": "Llegar, pedir, caminar, acomodarte, probar, salir. Una visita a Oh! Beef Noodle Soup en seis pasos, sobre el plano real. Sin anfitrión, sin mesero, sin cuenta, sin propina."
+    },
+    "intro": {
+      "eyebrow": "La experiencia",
+      "title": "Una visita, en seis pasos.",
+      "lede": "Cada persona de tu grupo tiene su pod, y cada pod recibe su propio tazón. Sin anfitrión, sin mesero, sin cuenta, sin propina. Esta es la visita completa, en orden.",
+      "start": "Empieza por el primer paso"
+    },
+    "stepper": {
+      "label": "Los seis pasos",
+      "of": "Paso {n} de {total}",
+      "go": "Ir al paso {n}: {name}"
+    },
+    "steps": {
+      "arrive": {
+        "eyebrow": "Llegar",
+        "title": "Entras y nadie te recibe.",
+        "body": "Es a propósito. La sala está en silencio, la luz es tenue y tres kioscos están entre tú y los pods."
+      },
+      "order": {
+        "eyebrow": "Pedir",
+        "title": "Pides en unos cuarenta segundos.",
+        "body": "Elige la intensidad del caldo, el fideo, los extras y la res: pecho o costilla ahumados, Wagyu americano o USDA Prime. Pagas, y el kiosco te da un número de pod y te envía un enlace en vivo a tu pedido."
+      },
+      "walk": {
+        "eyebrow": "Caminar",
+        "title": "Un número de pod, y vas a buscarlo.",
+        "body": "Caminas por el pasillo junto a una fila de paneles cerrados y el murmullo de una sala llena. Nadie lleva una bandeja. Nadie espera a que lo sienten."
+      },
+      "settle": {
+        "eyebrow": "Acomodarte",
+        "title": "Te sientas y la sala desaparece.",
+        "body": "Un gancho para tu bolsa, una repisa para tu teléfono, agua al alcance. Un toque le dice a la cocina que ya llegaste, y la transmisión en vivo de la cocina narra tu tazón, con tu nombre."
+      },
+      "taste": {
+        "eyebrow": "Probar",
+        "title": "La primera cucharada.",
+        "body": "Minutos después de pagar, tu tazón llega a través de la pared. Nunca ves una mano. ¿Quieres más? Más fideos, más bebida o un acompañante llegan por el mismo panel."
+      },
+      "leave": {
+        "eyebrow": "Salir",
+        "title": "Terminas y te vas.",
+        "body": "Un toque en tu teléfono dice que terminaste. Sin cuenta, sin línea de propina. Sales pasando por la tienda, y el pod se prepara de nuevo detrás de ti.",
+        "alt": "La tienda de camino a la salida: repisas con salsas, cajas de regalo, tazones, camisetas y gorras, y un letrero que dice gracias."
+      }
+    },
+    "map": {
+      "title": "Tu visita en el plano",
+      "note": "City Creek, 75 pods. University Place es el mismo plano, en espejo, con 70.",
+      "captions": {
+        "arrive": "Llegas por la entrada al vestíbulo.",
+        "order": "Tres kioscos en el vestíbulo. Sin mostrador.",
+        "walk": "Cruzas el pasillo transversal y subes por tu pasillo hasta el pod {label}. Cada puerta en el camino es un pod.",
+        "settle": "Tu tazón sale de la cocina por un pasillo del personal. Ningún cliente entra en él.",
+        "taste": "Por la ventanilla, hasta el pod {label}. El mismo pod, por lados opuestos.",
+        "leave": "Por el pasillo, pasando por la tienda, hasta la salida."
+      },
+      "comb": {
+        "title": "Mapa de pods",
+        "summary": "La cocina ocupa la pared del fondo. Los pods bordean los dos lados de tres pasillos del personal, y los clientes caminan por los pasillos entre ellos. La entrada está al frente.",
+        "hintTapRow": "Toca una fila para acercarte y luego toca un pod. Pellizca para hacer zoom.",
+        "hintTapPod": "Toca un pod para elegirlo.",
+        "hintLive": "Toca una fila para acercarte. Pellizca para hacer zoom.",
+        "podName": "Pod {label}: {status}",
+        "podNameDuo": "Pod {label}, dúo con {partner}: {status}",
+        "journeySummary": "Una visita en el plano. Caminas desde la entrada hasta el pod {label}, y tu tazón llega por el pasillo del personal hasta tu ventanilla.",
+        "status": {
+          "available": "disponible",
+          "reserved": "reservado",
+          "occupied": "ocupado",
+          "cleaning": "en limpieza",
+          "unknown": "no reservable"
+        },
+        "legend": {
+          "title": "Leyenda",
+          "available": "Disponible",
+          "reserved": "Reservado",
+          "occupied": "Ocupado",
+          "cleaning": "En limpieza",
+          "duo": "Pod dúo para dos",
+          "selected": "Tu pod",
+          "hatch": "Ventanilla de comida"
+        },
+        "zones": {
+          "kitchen": "Cocina",
+          "restrooms": "Baños",
+          "store": "Tienda",
+          "lobby": "Vestíbulo",
+          "entry": "Entrada",
+          "exit": "Salida"
+        },
+        "zoom": {
+          "zoomIn": "Acercar",
+          "zoomOut": "Alejar",
+          "wholeFloor": "Todo el local"
+        },
+        "pan": {
+          "earlier": "Pods anteriores",
+          "later": "Pods siguientes"
+        },
+        "marker": {
+          "guest": "Tú",
+          "bowl": "Tu tazón"
+        }
+      }
+    },
+    "faq": {
+      "eyebrow": "Cómo funciona",
+      "title": "Preguntas, respondidas.",
+      "items": {
+        "order": {
+          "q": "¿Cómo pido?",
+          "a": "En uno de los kioscos del vestíbulo, en unos cuarenta segundos, o con anticipación desde tu teléfono. De cualquier forma, recibes un número de pod y un enlace en vivo a tu pedido."
+        },
+        "together": {
+          "q": "¿Podemos sentarnos juntos?",
+          "a": "Cada persona de tu grupo tiene su pod, y cada pod recibe su propio tazón. Los pods dúo son para dos: se quita la división entre un par y dos pods se vuelven uno."
+        },
+        "server": {
+          "q": "¿Hay mesero?",
+          "a": "Sin anfitrión y sin mesero. Tu tazón llega a la ventanilla de tu pod desde un pasillo del personal. Los clientes caminan por sus pasillos, el personal por los suyos, y solo se encuentran en la ventanilla."
+        },
+        "more": {
+          "q": "¿Y si quiero más o necesito ayuda?",
+          "a": "Pídelo desde tu teléfono. Más fideos, más bebida, un acompañante o un postre llegan por la misma ventanilla, y un toque llama al equipo de sala."
+        },
+        "phone": {
+          "q": "¿Qué hace mi teléfono?",
+          "a": "El enlace de tu pedido abre una página en vivo. La transmisión en vivo de la cocina narra tu tazón mientras avanza por la cocina, y un toque le dice a la cocina que ya llegaste, y luego que terminaste."
+        },
+        "tip": {
+          "q": "¿Dejo propina?",
+          "a": "No. No hay cuenta ni línea de propina. Cuando terminas, un toque en tu teléfono lo dice, y te vas cuando quieras."
+        },
+        "bowl": {
+          "q": "¿Qué lleva el tazón?",
+          "a": "Un caldo en dos fases, fideos y res americana ahumada: pecho en rebanadas o costilla en trozos, en Wagyu americano o USDA Prime. Tú eliges la intensidad del caldo, el fideo y los extras."
+        },
+        "members": {
+          "q": "¿Los miembros ganan algo?",
+          "a": "Sí. Los miembros recuperan del 1% al 3% de cada pedido como crédito para sus próximos pedidos, según su nivel, y un tazón gratis cada vez que suben de nivel."
+        }
+      }
+    },
+    "close": {
+      "title": "Tu pod te espera.",
+      "body": "Pide con anticipación, entra y ve directo a tu pod.",
+      "order": "Pide un tazón",
+      "locations": "Ver ubicaciones",
+      "chappyTitle": "¿Te queda alguna duda?",
+      "chappyBody": "Chappy sabe cómo funciona una visita y puede ayudarte a planear la tuya.",
+      "chappyCta": "Pregúntale a Chappy",
+      "chappyPrompt": "¿Cómo funciona una visita a Oh!?"
     }
   }
 }

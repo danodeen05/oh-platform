@@ -10,13 +10,15 @@
  * Same idea as the admin app's ApiAuthInit, but explicit rather than a global
  * window.fetch patch: only call sites that need identity use it.
  *
- * useAuth().getToken waits for Clerk to finish loading, so this is safe to call
- * from a mount effect.
+ * getToken waits for Clerk to finish loading, so this is safe to call from a
+ * mount effect. Identity comes from useSiteAuth() (lib/site/auth.tsx), not
+ * Clerk's hooks directly, so (site) pages can load Clerk after first paint
+ * (Task G2a).
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { useAuth, useUser } from "@clerk/nextjs";
 import { claimPendingReferral } from "./referral";
+import { useSiteAuth } from "./auth";
 
 export const SITE_API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -43,7 +45,7 @@ export async function authedFetch(getToken: TokenGetter, input: string, init: Re
 
 /** Hook form: `const api = useSiteApi(); await api(`${SITE_API_URL}/users/${id}/profile`)`. */
 export function useSiteApi(): SiteFetch {
-  const { getToken } = useAuth();
+  const { getToken } = useSiteAuth();
   return useCallback((input: string, init?: RequestInit) => authedFetch(() => getToken(), input, init), [getToken]);
 }
 
@@ -54,11 +56,9 @@ export function useSiteApi(): SiteFetch {
  * The id is still mirrored to localStorage for older pages that read it.
  */
 export function useMemberId(): { userId: string | null; ready: boolean; signedIn: boolean } {
-  const { isLoaded, isSignedIn, user } = useUser();
+  const { isLoaded, isSignedIn, userId: clerkUserId, email, name } = useSiteAuth();
   const api = useSiteApi();
   const [state, setState] = useState<{ userId: string | null; ready: boolean }>({ userId: null, ready: false });
-  const email = user?.primaryEmailAddress?.emailAddress;
-  const name = user?.fullName || user?.firstName || undefined;
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -110,7 +110,7 @@ export function useMemberId(): { userId: string | null; ready: boolean; signedIn
     };
     // api changes identity with getToken; the session (user id) is what matters here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoaded, isSignedIn, user?.id, email]);
+  }, [isLoaded, isSignedIn, clerkUserId, email]);
 
   return { ...state, signedIn: Boolean(isSignedIn) };
 }

@@ -6,7 +6,7 @@
  * Phones open it from the top bar; 768 to 1279px from the desktop nav's
  * More button.
  */
-import { SignInButton, SignedIn, SignedOut } from "@clerk/nextjs";
+import { SignInTrigger, SignedIn, SignedOut } from "@/components/site/auth/AuthTriggers";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
@@ -60,13 +60,13 @@ export function MoreSheet({ open, onClose }: { open: boolean; onClose: () => voi
             ))}
             <li className="mt-1 border-t border-oh-stone/70 pt-1">
               <SignedOut>
-                <SignInButton mode="modal">
+                <SignInTrigger>
                   <button type="button" onClick={onClose} className={ROW}>
                     <Icon name="user" size={22} className="shrink-0 text-oh-ember-light" />
                     <span className="min-w-0 flex-1 truncate">{t("shell.signIn")}</span>
                     <Icon name="chevron" size={18} className="shrink-0 text-oh-ash" />
                   </button>
-                </SignInButton>
+                </SignInTrigger>
               </SignedOut>
               <SignedIn>
                 <Link

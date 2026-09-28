@@ -35,6 +35,9 @@ export interface SiteImage {
   w: number;
   h: number;
   alt: MessageKey;
+  // Art-directed crop for phones held upright (scripts/site-images.mjs
+  // PORTRAIT); SitePicture serves it with sizes="100vw". w/h: the widest file.
+  portrait?: { srcSet: { avif: string; webp: string }; w: number; h: number };
 }
 
 export const SITE_IMAGES: Record<ImageKey, SiteImage> = {
@@ -44,6 +47,11 @@ export const SITE_IMAGES: Record<ImageKey, SiteImage> = {
     w: 1200,
     h: 900,
     alt: "siteImages.storefrontDusk",
+    portrait: {
+      srcSet: { avif: "/site/storefront-dusk-portrait-780.avif 780w, /site/storefront-dusk-portrait-1170.avif 1170w", webp: "/site/storefront-dusk-portrait-780.webp 780w, /site/storefront-dusk-portrait-1170.webp 1170w" },
+      w: 1170,
+      h: 2340,
+    },
   },
   "storefront-queue": {
     src: { avif: "/site/storefront-queue-1200.avif", webp: "/site/storefront-queue-1200.webp" },

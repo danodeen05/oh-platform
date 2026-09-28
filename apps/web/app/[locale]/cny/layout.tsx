@@ -1,6 +1,7 @@
 import "./cny.css";
 import { Metadata, Viewport } from "next";
 import { getTranslations } from "next-intl/server";
+import { WithClerk } from "@/components/legacy/WithClerk";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -31,18 +32,21 @@ export default function CNYLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // Task G2a: Clerk's provider now comes from here (WithClerk), not the shared [locale] layout.
   return (
-    // legacy-ui: CNY keeps the retired global button/input/a/h1-h6/p rules (Task C1).
-    <div
-      className="legacy-ui"
-      style={{
-        minHeight: "100dvh",
-        width: "100%",
-        overflow: "hidden",
-        background: "#910C1E",
-      }}
-    >
-      {children}
-    </div>
+    <WithClerk>
+      {/* legacy-ui: CNY keeps the retired global button/input/a/h1-h6/p rules (Task C1). */}
+      <div
+        className="legacy-ui"
+        style={{
+          minHeight: "100dvh",
+          width: "100%",
+          overflow: "hidden",
+          background: "#910C1E",
+        }}
+      >
+        {children}
+      </div>
+    </WithClerk>
   );
 }

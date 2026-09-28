@@ -230,7 +230,6 @@ function KeyButton({
         width: buttonWidth,
         height: buttonHeight,
         borderRadius: s(12),
-        border: 'none',
         background: disabled
           ? '#ccc'
           : primary

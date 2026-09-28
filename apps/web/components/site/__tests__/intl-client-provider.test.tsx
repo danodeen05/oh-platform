@@ -67,10 +67,16 @@ describe("IntlClientProvider", () => {
 
   it("wraps every NextIntlClientProvider branch in app/[locale]/layout.tsx, including the plan's", () => {
     const src = readFileSync(path.resolve(__dirname, "../../../app/[locale]/layout.tsx"), "utf8");
-    const providers = src.match(/<NextIntlClientProvider messages=\{messages\}>\s*<IntlClientProvider>/g) ?? [];
+    // Task G2a: the non-plan branches pass a scoped message set, not `messages`.
+    const providers = src.match(/<NextIntlClientProvider messages=\{[^\n]*?\}>\s*<IntlClientProvider>/g) ?? [];
     const all = src.match(/<NextIntlClientProvider\b/g) ?? [];
     expect(all.length).toBe(4);
     expect(providers.length).toBe(all.length);
     expect(src).toMatch(/if \(isPlanRoute\) \{\s*return \(\s*<NextIntlClientProvider messages=\{messages\}>\s*<IntlClientProvider>/);
+  });
+
+  it("wraps the group-scoped provider (components/site/ScopedIntl.tsx) the same way", () => {
+    const src = readFileSync(path.resolve(__dirname, "../ScopedIntl.tsx"), "utf8");
+    expect(src).toMatch(/<NextIntlClientProvider messages=\{[^\n]*?\}>\s*<IntlClientProvider>\{children\}<\/IntlClientProvider>/);
   });
 });

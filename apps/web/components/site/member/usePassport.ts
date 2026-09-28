@@ -14,6 +14,7 @@
  */
 import { useCallback, useEffect, useState } from "react";
 import { SITE_API_URL, useMemberId, useSiteApi, type SiteFetch } from "@/lib/site/api";
+import { useSiteAuth } from "@/lib/site/auth";
 
 export interface ProgressCount {
   have: number;
@@ -117,7 +118,13 @@ export function toProfile(userId: string, body: any): PassportProfile {
 export function usePassport() {
   const { userId, ready, signedIn } = useMemberId();
   const api = useSiteApi();
-  const [state, setState] = useState<PassportState>({ status: "loading" });
+  // Task G2a: when the visitor is already known to be signed out (the server's
+  // answer, see DeferredClerk), start there, so the server renders the
+  // sign-in state and it paints at once instead of after hydration.
+  const auth = useSiteAuth();
+  const [state, setState] = useState<PassportState>(() =>
+    auth.isLoaded && !auth.isSignedIn ? { status: "signedOut" } : { status: "loading" },
+  );
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {

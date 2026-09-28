@@ -6,7 +6,7 @@
  * native share sheet where there is one, and a copy button either way.
  * Signed out, Clerk's sign-in modal.
  */
-import { SignInButton } from "@clerk/nextjs";
+import { SignInTrigger } from "@/components/site/auth/AuthTriggers";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { Icon } from "@/components/site/icons/Icon";
@@ -67,11 +67,11 @@ export function ReferralPanel({ program }: { program: PublicProgram }) {
     action = (
       <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
         <p className="m-0 text-base text-oh-cream/80">{t("signedOut")}</p>
-        <SignInButton mode="modal">
+        <SignInTrigger>
           <button type="button" data-referral-signin className={PRIMARY}>
             {t("signIn")}
           </button>
-        </SignInButton>
+        </SignInTrigger>
       </div>
     );
   } else if (!link) {
