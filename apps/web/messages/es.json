@@ -3706,6 +3706,7 @@
       "freeCount": "{count, plural, one {# cabina libre} other {# cabinas libres}}",
       "noPods": "No hay cabinas libres ahora. Con la mejor cabina te asignamos una desde la fila.",
       "mapError": "No pudimos cargar las cabinas. Inténtalo de nuevo.",
+      "noMap": "Esta sucursal aún no tiene mapa de cabinas. Te asignamos la mejor cabina libre.",
       "loadingMap": "Cargando las cabinas",
       "taken": "Alguien acaba de tomar la cabina {label}. Elige otra.",
       "confirm": "Usar la cabina {label}",

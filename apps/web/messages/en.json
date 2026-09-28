@@ -5975,6 +5975,7 @@
       "freeCount": "{count, plural, one {# pod is free} other {# pods are free}}",
       "noPods": "No pods are free right now. Best pod for you will seat you from the queue.",
       "mapError": "We couldn't load the pods. Please try again.",
+      "noMap": "This location has no pod map yet. We seat you at the best free pod.",
       "loadingMap": "Loading the pods",
       "taken": "Pod {label} was just taken. Please pick another.",
       "confirm": "Use pod {label}",
