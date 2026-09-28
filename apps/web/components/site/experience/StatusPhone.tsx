@@ -145,7 +145,6 @@ export function StatusPhone({ src, title, poster, posterIcon, tryLive, sheetLabe
                 style={{ width: SCREEN_W, height: SCREEN_H, transform: `scale(${scale})`, transformOrigin: "0 0" }}
               />
             ) : null}
-            <span aria-hidden="true" className="pointer-events-none absolute left-1/2 top-[8px] h-[18px] w-[30%] -translate-x-1/2 rounded-full bg-oh-charcoal" />
           </div>
         </div>
       </div>
