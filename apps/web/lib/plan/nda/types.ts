@@ -15,6 +15,8 @@ export interface NdaState {
   step: NdaStep;
   ndaId: string | null;
   details: NdaRecipient | null;
+  /** Starting values from this code's invitation, until they save their own details. */
+  prefill?: { legalName: string; email: string } | null;
   phoneMasked: string | null;
   otpSentAt: string | null;
   countersigner: NdaCountersigner | null;

@@ -11,6 +11,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { buildNdaDocument, type NdaRecipient } from "@/lib/plan/nda/document";
 import { ATTORNEY_NOTE, CONSENT_ELECTRONIC, CONSENT_TERMS } from "@/lib/plan/nda/content";
 import type { NdaState, NdaStep } from "@/lib/plan/nda/types";
+import { startingIdentity } from "@/lib/plan/nda/prefill";
 import { NdaDocument } from "./NdaDocument";
 import { SignaturePad, type SignatureValue } from "./SignaturePad";
 
@@ -104,7 +105,8 @@ const STEPS: { key: Exclude<NdaStep, "done">; label: string }[] = [
 export function NdaFlow({ locale, initial, signatureFontFamily }: Props) {
   const [state, setState] = useState<NdaState>(initial);
   const [step, setStep] = useState<NdaStep>(initial.step);
-  const [form, setForm] = useState<Form>(() => formFrom(initial.details));
+  // Prefilled from the invitation when they haven't saved details yet; all editable.
+  const [form, setForm] = useState<Form>(() => ({ ...formFrom(initial.details), ...startingIdentity(initial) }));
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);

@@ -559,7 +559,7 @@ export function CombMap({
 
   return (
     <div className={`relative w-full ${className ?? ""}`}>
-      <div className={`relative overflow-hidden rounded-2xl ${t.bg}`}>
+      <div data-comb-frame className={`relative overflow-hidden rounded-2xl ${t.bg}`}>
         <svg
           ref={svgRef}
           viewBox={boxString(zoom.viewBox)}
@@ -695,7 +695,7 @@ export function CombMap({
       </div>
 
       {interactive ? (
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <div data-comb-controls className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
           <p id={hintId} className={`m-0 min-w-0 flex-1 basis-48 text-base ${tone === "night" ? "text-oh-mute" : "text-oh-stone"}`} aria-live="polite">
             {hint}
           </p>

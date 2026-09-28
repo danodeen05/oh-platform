@@ -176,16 +176,16 @@
       "eyebrow": "The pod",
       "steps": {
         "a": {
-          "title": "You sit, and the room disappears.",
-          "body": "A hook for your bag, a shelf for your phone, water within reach. One tap tells the kitchen you are in."
+          "title": "Your pod. The panel is closed.",
+          "body": "A hook for your bag, a shelf for your phone. One tap tells the kitchen you are in."
         },
         "b": {
-          "title": "The panel slides open.",
-          "body": "Minutes after you pay, your bowl arrives through the wall. You never see a hand."
+          "title": "The kitchen is right behind the wall.",
+          "body": "Your bowl is made a few steps away, on the other side of the glass. Minutes after you pay, it is ready."
         },
         "c": {
-          "title": "Then it slides shut.",
-          "body": "Extra noodles, a refill or a side are a tap away, and they come through the same panel."
+          "title": "The panel opens.",
+          "body": "Anything you ask for comes through the wall. Your bowl, extra noodles, a glass of water."
         }
       }
     },

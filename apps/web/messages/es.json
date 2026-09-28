@@ -176,16 +176,16 @@
       "eyebrow": "La cabina",
       "steps": {
         "a": {
-          "title": "Te sientas y la sala desaparece.",
-          "body": "Un gancho para tu bolsa, una repisa para tu teléfono, agua al alcance. Un toque le dice a la cocina que ya llegaste."
+          "title": "Tu cabina, con el panel cerrado.",
+          "body": "Un gancho para tu bolsa, una repisa para tu teléfono. Un toque le dice a la cocina que ya llegaste."
         },
         "b": {
-          "title": "El panel se abre.",
-          "body": "Minutos después de pagar, tu tazón llega a través de la pared. Nunca ves una mano."
+          "title": "La cocina está justo detrás de la pared.",
+          "body": "Tu tazón se prepara a unos pasos, al otro lado del vidrio. Minutos después de pagar, está listo."
         },
         "c": {
-          "title": "Luego se cierra.",
-          "body": "Más fideos, más bebida o un acompañante están a un toque, y llegan por el mismo panel."
+          "title": "El panel se abre.",
+          "body": "Todo lo que pidas llega a través de la pared. Tu tazón, más fideos, un vaso de agua."
         }
       }
     },
