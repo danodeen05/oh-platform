@@ -29,8 +29,15 @@ async function verifyFunding(prisma, stripe, { paymentIntentId, amount, matchesM
   try {
     return await verifiedIntent(stripe, paymentIntentId, { amount, matchesMetadata });
   } catch (err) {
-    if (err?.chargedIntent) {
-      const r = await refundUnappliedPayment(prisma, stripe, { pi: err.chargedIntent, orderId: null, userId, code: "TENDER_NOT_FUNDED" });
+    // Refund only a payment that is itself inconsistent: charged for a different amount than
+    // the amount it was created for (metadata.amountCents). A request whose details differ
+    // from the payment is the caller's error and is refused WITHOUT a refund: refunding it
+    // would let a caller (a replay, or a race with the correct call or the webhook) refund a
+    // payment that funds a card or a gift.
+    const charged = err?.chargedIntent;
+    const declared = charged?.metadata?.amountCents;
+    if (charged && declared != null && String(charged.amount) !== String(declared)) {
+      const r = await refundUnappliedPayment(prisma, stripe, { pi: charged, orderId: null, userId, code: "TENDER_NOT_FUNDED" });
       err.extra = { ...err.extra, refunded: r.refunded };
     }
     throw err;

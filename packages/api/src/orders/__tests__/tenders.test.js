@@ -72,8 +72,30 @@ describe("meal gifts need verified funding from the verified giver", () => {
       await assert.rejects(createMealGift(prisma, stripe, { giverId: "u2", locationId: "L1", amountCents: 2000, paymentIntentId, expiresAt: EXPIRES, now: NOW }), (e) => e.status === 402, paymentIntentId);
     }
     assert.equal((await prisma.mealGift.findMany()).length, 0);
-    // The underpaid charge was ours and succeeded: refunded in full.
-    assert.deepEqual(stripe.refundCalls.map((c) => c[0]), [{ payment_intent: "pi_low" }]);
+    // A request that disagrees with the payment is refused WITHOUT a refund (it may be a replay
+    // or a race against the correct call): the payment stays unused, so a call with its real
+    // amount can still fund the gift. Only a payment inconsistent with its own declared amount
+    // is refunded.
+    assert.equal(stripe.refundCalls.length, 0);
+  });
+
+  test("race: a correct call and a wrong-amount call on one payment make one gift and refund nothing", async () => {
+    const prisma = seed();
+    const stripe = fakeStripe({ pi_race: { status: "succeeded", amount: 3500, metadata: META } });
+    const results = await Promise.allSettled([
+      createMealGift(prisma, stripe, { giverId: "u2", locationId: "L1", amountCents: 1599, paymentIntentId: "pi_race", expiresAt: EXPIRES, now: NOW }),
+      createMealGift(prisma, stripe, { giverId: "u2", locationId: "L1", amountCents: 3500, paymentIntentId: "pi_race", expiresAt: EXPIRES, now: NOW }),
+    ]);
+    assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
+    assert.equal((await prisma.mealGift.findMany()).length, 1);
+    assert.equal(stripe.refundCalls.length, 0, "the funding payment is never refunded");
+  });
+
+  test("a payment inconsistent with its own declared amount is still refunded in full", async () => {
+    const prisma = seed();
+    const stripe = fakeStripe({ pi_bad: { status: "succeeded", amount: 1000, metadata: { ...META, amountCents: "2000" } } });
+    await assert.rejects(createMealGift(prisma, stripe, { giverId: "u2", locationId: "L1", amountCents: 2000, paymentIntentId: "pi_bad", expiresAt: EXPIRES, now: NOW }), (e) => e.status === 402);
+    assert.deepEqual(stripe.refundCalls.map((c) => c[0]), [{ payment_intent: "pi_bad" }]);
   });
 
   test("a funded gift records paidAt, reduces the amount due, and is consumed at PAID", async () => {
