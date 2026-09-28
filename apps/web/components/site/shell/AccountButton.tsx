@@ -1,10 +1,10 @@
 "use client";
 
 /**
- * Account entry in the top bar: the Clerk sign-in modal when signed out, the
+ * Account entry in the top bar: the Clerk sign-in modal (through SiteAuth, Task G2a) when signed out, the
  * member page when signed in. Icon-only on phones, labelled from 768px.
  */
-import { SignInButton, SignedIn, SignedOut } from "@clerk/nextjs";
+import { SignInTrigger, SignedIn, SignedOut } from "@/components/site/auth/AuthTriggers";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { Icon } from "@/components/site/icons/Icon";
@@ -20,12 +20,12 @@ export function AccountButton() {
   return (
     <>
       <SignedOut>
-        <SignInButton mode="modal">
+        <SignInTrigger>
           <button type="button" data-site-account="sign-in" className={BUTTON}>
             <Icon name="user" size={22} />
             <span className="sr-only md:not-sr-only">{t("shell.signIn")}</span>
           </button>
-        </SignInButton>
+        </SignInTrigger>
       </SignedOut>
       <SignedIn>
         <Link data-site-account="member" href={localizedHref(locale, ACCOUNT_ITEM.href)} className={BUTTON}>

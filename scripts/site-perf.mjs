@@ -5,8 +5,9 @@
  * cache disabled), the same profile as the home e2e LCP test, and reports:
  *
  *   - LCP (median of RUNS), and the LCP element
- *   - gzipped (transferred) first-party JS: every /_next/static/**.js fetched
- *     by the load event plus 2 s of idle
+ *   - gzipped (transferred) first-party JS, as "before load / total": the
+ *     /_next/static/**.js requested before the load event (the budget
+ *     number), and everything fetched by the load event plus 2 s of idle
  *   - first-party CSS, fonts, the HTML document, the RSC payload inlined in it
  *     (self.__next_f), and third-party bytes
  *
@@ -15,9 +16,18 @@
  *   PERF_BASE=http://localhost:3202 RUNS=3 node scripts/site-perf.mjs [--json out.json]
  *
  * ROUTES and LOCALES override the defaults (comma separated).
+ *
+ * CLERK_SEED=1 visits the page once, unthrottled, before the timed load, so
+ * the context already holds Clerk's development-instance cookie. A dev
+ * instance (pk_test_ keys, as here) bounces every cookieless first request
+ * through a "dev browser" redirect to clerk.accounts.dev and back, which
+ * costs about 1.5 s on this profile; production (pk_live_) instances never
+ * do. The seeded number is the production-equivalent one. Nothing else is
+ * warmed: the cache stays disabled for the timed load.
  */
 import { chromium, devices } from "playwright";
 import { writeFileSync } from "node:fs";
+import os from "node:os";
 
 const BASE = process.env.PERF_BASE || "http://localhost:3202";
 const RUNS = Number(process.env.RUNS || 3);
@@ -39,9 +49,27 @@ function kind(url, type) {
   return "other";
 }
 
+const SEED = process.env.CLERK_SEED === "1";
+// MAX_LOAD=3 waits (up to 10 minutes) for the 1-minute load average to drop
+// under 3 before each timed load. The 4x CPU slowdown is relative to the
+// host, so on a shared, busy machine other processes inflate every number.
+const MAX_LOAD = Number(process.env.MAX_LOAD || 0);
+
+async function quietHost() {
+  if (!MAX_LOAD) return;
+  const until = Date.now() + 10 * 60_000;
+  while (os.loadavg()[0] >= MAX_LOAD && Date.now() < until) await new Promise((r) => setTimeout(r, 5_000));
+}
+
 async function probe(browser, url) {
+  await quietHost();
   const ctx = await browser.newContext(iphone15);
   try {
+    if (SEED) {
+      const seed = await ctx.newPage();
+      await seed.goto(url, { waitUntil: "load", timeout: 120_000 });
+      await seed.close();
+    }
     const page = await ctx.newPage();
     await page.addInitScript(() => {
       window.__lcp = null;
@@ -52,16 +80,25 @@ async function probe(browser, url) {
     });
     const cdp = await ctx.newCDPSession(page);
     const reqs = new Map();
-    const totals = { html: 0, js: 0, css: 0, font: 0, image: 0, other: 0, thirdParty: 0 };
+    const totals = { html: 0, js: 0, jsBeforeLoad: 0, css: 0, font: 0, image: 0, other: 0, thirdParty: 0 };
     const files = [];
+    const started = new Map();
+    let loadAt = Infinity;
+    cdp.on("Page.loadEventFired", (e) => (loadAt = e.timestamp));
+    cdp.on("Network.requestWillBeSent", (e) => started.set(e.requestId, e.timestamp));
     cdp.on("Network.responseReceived", (e) => reqs.set(e.requestId, { url: e.response.url, type: e.type }));
     cdp.on("Network.loadingFinished", (e) => {
       const r = reqs.get(e.requestId);
       if (!r || r.url.startsWith("data:")) return;
       const k = kind(r.url, r.type);
       totals[k] += e.encodedDataLength;
-      files.push({ k, url: r.url, bytes: e.encodedDataLength });
+      // JS requested before the load event: what the page needs to render and
+      // hydrate. Chunks deliberately deferred past load (lazyOnload-style)
+      // show up in "js" only.
+      if (k === "js" && (started.get(e.requestId) ?? 0) < loadAt) totals.jsBeforeLoad += e.encodedDataLength;
+      files.push({ k, url: r.url, bytes: e.encodedDataLength, beforeLoad: (started.get(e.requestId) ?? 0) < loadAt });
     });
+    await cdp.send("Page.enable");
     await cdp.send("Network.enable");
     await cdp.send("Network.setCacheDisabled", { cacheDisabled: true });
     await cdp.send("Network.emulateNetworkConditions", {
@@ -74,8 +111,9 @@ async function probe(browser, url) {
     await page.goto(url, { waitUntil: "load", timeout: 180_000 });
     await page.waitForTimeout(2_000);
     const lcp = await page.evaluate(() => window.__lcp);
+    // The RSC payload inlined in the HTML (self.__next_f.push scripts).
     const rsc = await page.evaluate(() =>
-      (self.__next_f || []).reduce((n, p) => n + (typeof p[1] === "string" ? p[1].length : 0), 0),
+      [...document.scripts].reduce((n, s) => n + (s.textContent?.startsWith("self.__next_f.push") ? s.textContent.length : 0), 0),
     );
     return { lcp, totals, rsc, files };
   } finally {
@@ -104,6 +142,7 @@ try {
         lcpRuns: lcps.map(Math.round),
         lcpEl: last.lcp ? `${last.lcp.tag} ${last.lcp.url.replace(origin, "").slice(0, 60) || last.lcp.text}` : "none",
         jsKB: kb(last.totals.js),
+        jsBeforeLoadKB: kb(last.totals.jsBeforeLoad),
         cssKB: kb(last.totals.css),
         fontKB: kb(last.totals.font),
         htmlKB: kb(last.totals.html),
@@ -113,7 +152,7 @@ try {
       };
       out.push(row);
       console.log(
-        `${row.route.padEnd(18)} LCP ${String(row.lcpMs).padStart(6)} ms [${row.lcpRuns.join(", ")}]  JS ${row.jsKB} KB  CSS ${row.cssKB} KB  font ${row.fontKB} KB  HTML ${row.htmlKB} KB  RSC ${row.rscChars} ch  3p ${row.thirdPartyKB} KB  (${row.lcpEl})`,
+        `${row.route.padEnd(18)} LCP ${String(row.lcpMs).padStart(6)} ms [${row.lcpRuns.join(", ")}]  JS ${row.jsBeforeLoadKB}/${row.jsKB} KB  CSS ${row.cssKB} KB  font ${row.fontKB} KB  HTML ${row.htmlKB} KB  RSC ${row.rscChars} ch  3p ${row.thirdPartyKB} KB  (${row.lcpEl})`,
       );
     }
   }

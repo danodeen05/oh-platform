@@ -9,6 +9,9 @@
  * copy rises after it, and the Order CTA sits above the dock. Under it, the
  * live line for the nearer location (LivePill).
  *
+ * Task G2a: phones get at most the 780w AVIF (about 33 KB against 69 KB for
+ * the 1200w), and a preload link starts it with the document.
+ *
  * The hero fills the first screen above the dock (100svh minus --dock-h),
  * so the CTA is always above the fold at 390 x 844.
  */
@@ -40,6 +43,7 @@ export async function Arrive({ locale, locations }: { locale: string; locations:
           image="storefront-dusk"
           sizes="(max-aspect-ratio: 4/3) 134vh, 100vw"
           priority
+          phoneMaxWidth={780}
           alt={ti(SITE_IMAGES["storefront-dusk"].alt)}
           className="hm-push absolute inset-0 block md:top-14 [&>img]:h-full [&>img]:w-full [&>img]:object-cover [&>img]:object-[46%_50%]"
         />

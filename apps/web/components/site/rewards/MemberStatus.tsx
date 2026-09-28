@@ -5,7 +5,7 @@
  * the next one, as two gold meters. Signed out: a sign-in prompt (Clerk's
  * modal). The page below is fully useful either way.
  */
-import { SignInButton } from "@clerk/nextjs";
+import { SignInTrigger } from "@/components/site/auth/AuthTriggers";
 import { useTranslations } from "next-intl";
 import { TierMark } from "@/components/site/tiers/TierMark";
 import { tierMeta } from "@/lib/site/tier-meta";
@@ -56,14 +56,14 @@ export function MemberStatus() {
     return (
       <div data-member-status="signedOut" className="flex min-h-11 flex-wrap items-center gap-x-4 gap-y-2">
         <p className="m-0 text-base text-oh-cream/80">{t("signedOut")}</p>
-        <SignInButton mode="modal">
+        <SignInTrigger>
           <button
             type="button"
             className="inline-flex min-h-11 cursor-pointer appearance-none items-center rounded-full border border-oh-cream/40 bg-transparent px-5 font-[inherit] text-base font-semibold text-oh-cream transition-colors hover:border-oh-cream hover:bg-oh-cream/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oh-cream"
           >
             {t("signIn")}
           </button>
-        </SignInButton>
+        </SignInTrigger>
       </div>
     );
   }

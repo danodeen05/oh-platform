@@ -7,7 +7,7 @@
  * missing from the list would render as "" in production, so this is the
  * guard that keeps the trimmed payload safe.
  */
-import { readdirSync, readFileSync, statSync, existsSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import en from "../../../messages/en.json";
@@ -16,8 +16,7 @@ import zhCN from "../../../messages/zh-CN.json";
 import zhTW from "../../../messages/zh-TW.json";
 import { SITE_IMAGES } from "../images";
 import { SERVER_ONLY_NAMESPACES, SITE_CLIENT_NAMESPACES, omitNamespaces, pickNamespaces } from "../client-messages";
-
-const WEB = path.resolve(__dirname, "../../..");
+import { WEB, siteGraph } from "./import-graph";
 
 /**
  * Client files that call `useTranslations()` with no namespace, and the
@@ -30,49 +29,10 @@ const ROOT_TRANSLATORS: Record<string, string[]> = {
   "components/site/home/ThePod.tsx": ["siteImages"],
 };
 
-function walk(dir: string): string[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
-    e.isDirectory() ? walk(path.join(dir, e.name)) : [path.join(dir, e.name)],
-  );
-}
-
-function resolveImport(from: string, spec: string): string | null {
-  let base: string;
-  if (spec.startsWith("@/")) base = path.join(WEB, spec.slice(2));
-  else if (spec.startsWith(".")) base = path.resolve(path.dirname(from), spec);
-  else return null;
-  for (const suffix of ["", ".tsx", ".ts", ".jsx", ".js", "/index.tsx", "/index.ts"]) {
-    const p = base + suffix;
-    if (existsSync(p) && statSync(p).isFile()) return p;
-  }
-  return null;
-}
-
-const USE_CLIENT = /^\s*(?:(?:\/\/[^\n]*\n|\/\*[\s\S]*?\*\/)\s*)*["']use client["']/;
-const IMPORTS = /(?:from\s+|import\s*\(\s*|import\s+)["']([^"']+)["']/g;
-
 function clientFilesOfSite(): Set<string> {
-  const starts = [
-    ...walk(path.join(WEB, "app/[locale]/(site)")).filter((f) => /\.(tsx?|jsx?)$/.test(f) && !f.includes("__tests__")),
-    path.join(WEB, "app/[locale]/layout.tsx"),
-    path.join(WEB, "app/layout.tsx"),
-  ];
-  const seen = new Set<string>();
-  const client = new Set<string>();
-  const visit = (file: string, inClient: boolean) => {
-    const key = `${file}|${inClient}`;
-    if (seen.has(key)) return;
-    seen.add(key);
-    const src = readFileSync(file, "utf8");
-    const isClient = inClient || USE_CLIENT.test(src);
-    if (isClient) client.add(file);
-    for (const m of src.matchAll(IMPORTS)) {
-      const next = resolveImport(file, m[1]);
-      if (next) visit(next, isClient);
-    }
-  };
-  for (const s of starts) visit(s, false);
-  return client;
+  // Lazy chunks included: a sheet or widget loaded on demand still renders
+  // inside the (site) provider.
+  return new Set([...siteGraph({ followDynamic: true }).values()].filter((n) => n.client).map((n) => n.file));
 }
 
 describe("client message namespaces (Task G2a)", () => {

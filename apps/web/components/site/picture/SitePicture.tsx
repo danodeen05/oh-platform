@@ -27,7 +27,16 @@ export interface SitePictureProps {
    * no-untranslated-text rule, so omitting `alt` is a type error instead.
    */
   alt: string;
+  /**
+   * Task G2a: the widest file a phone (below 768px) may pick. A 390px phone
+   * at 3x DPR would otherwise always take the 1200w file; for the heroes the
+   * 780w AVIF is about half the bytes on the connection that matters most.
+   */
+  phoneMaxWidth?: 390 | 780;
 }
+
+const PHONE = "(max-width: 767px)";
+const NOT_PHONE = "(min-width: 768px)";
 
 /**
  * Server-safe `<picture>` for `SITE_IMAGES`. Serves the precomputed AVIF and
@@ -36,25 +45,31 @@ export interface SitePictureProps {
  * mobile, and it avoids re-encoding AVIF output that's already compressed
  * (controller ruling, Task C6 fix round 1).
  */
-export function SitePicture({ image, sizes, priority = false, className, alt }: SitePictureProps) {
+export function SitePicture({ image, sizes, priority = false, className, alt, phoneMaxWidth }: SitePictureProps) {
   const entry = SITE_IMAGES[image];
   const fallbackSrc = pickWidth(entry.srcSet.webp, 780);
+  const phone = phoneMaxWidth
+    ? { avif: capSrcSet(entry.srcSet.avif, phoneMaxWidth), webp: capSrcSet(entry.srcSet.webp, phoneMaxWidth) }
+    : null;
   if (priority) {
     // Task G2a: a <link rel=preload> in <head> for the LCP image, so its
     // request starts with the first bytes of the document instead of when
-    // the parser reaches the <picture>. Same AVIF candidates and sizes as
-    // the <source>, so the browser picks the file the picture will use.
-    preload(pickWidth(entry.srcSet.avif, 1200), {
-      as: "image",
-      type: "image/avif",
-      imageSrcSet: entry.srcSet.avif,
-      imageSizes: sizes,
-      fetchPriority: "high",
-    });
+    // the parser reaches the <picture>. Same AVIF candidates, sizes and
+    // media as the <source>s, so the browser preloads the file the picture
+    // will use.
+    const base = { as: "image" as const, type: "image/avif", imageSizes: sizes, fetchPriority: "high" as const };
+    if (phone && phoneMaxWidth) {
+      preload(pickWidth(entry.srcSet.avif, phoneMaxWidth), { ...base, imageSrcSet: phone.avif, media: PHONE });
+      preload(pickWidth(entry.srcSet.avif, 1200), { ...base, imageSrcSet: entry.srcSet.avif, media: NOT_PHONE });
+    } else {
+      preload(pickWidth(entry.srcSet.avif, 1200), { ...base, imageSrcSet: entry.srcSet.avif });
+    }
   }
 
   return (
     <picture className={className}>
+      {phone ? <source media={PHONE} type="image/avif" srcSet={phone.avif} sizes={sizes} /> : null}
+      {phone ? <source media={PHONE} type="image/webp" srcSet={phone.webp} sizes={sizes} /> : null}
       <source type="image/avif" srcSet={entry.srcSet.avif} sizes={sizes} />
       <source type="image/webp" srcSet={entry.srcSet.webp} sizes={sizes} />
       {/* eslint-disable-next-line @next/next/no-img-element -- precomputed static asset, not routed through next/image's optimizer on purpose */}
@@ -69,6 +84,15 @@ export function SitePicture({ image, sizes, priority = false, className, alt }: 
       />
     </picture>
   );
+}
+
+// The candidates in a `srcset` string no wider than `max`.
+function capSrcSet(srcSet: string, max: number): string {
+  return srcSet
+    .split(",")
+    .map((part) => part.trim())
+    .filter((part) => Number(part.slice(part.lastIndexOf(" ") + 1, -1)) <= max)
+    .join(", ");
 }
 
 // Pulls the URL for a given width out of a `srcset` string ("url 390w, url

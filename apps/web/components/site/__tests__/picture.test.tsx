@@ -66,6 +66,22 @@ describe("SitePicture", () => {
     expect(html.toLowerCase()).toContain('fetchpriority="high"');
   });
 
+  // Task G2a: phones can be capped to a smaller file (the heroes use 780w).
+  it("with phoneMaxWidth, offers phones only the candidates up to that width, before the full set", () => {
+    const html = renderToString(<SitePicture image="storefront-dusk" sizes="100vw" alt="x" phoneMaxWidth={780} />);
+    const phoneAvif = html.match(/<source media="\(max-width: 767px\)" type="image\/avif" srcSet="([^"]+)"/)?.[1];
+    expect(phoneAvif).toBeDefined();
+    expect(phoneAvif).toContain("storefront-dusk-780.avif 780w");
+    expect(phoneAvif).not.toContain("1200");
+    expect(html.indexOf('media="(max-width: 767px)"')).toBeLessThan(html.indexOf('<source type="image/avif"'));
+    expect(html).toContain("storefront-dusk-1200.avif 1200w");
+  });
+
+  it("without phoneMaxWidth, renders no media-scoped sources", () => {
+    const html = renderToString(<SitePicture image="storefront-dusk" sizes="100vw" alt="x" />);
+    expect(html).not.toContain("media=");
+  });
+
   it("renders the provided alt text on the <img>", () => {
     const html = renderToString(<SitePicture image="sign-pool" sizes="100vw" alt="Custom alt text" />);
     expect(html).toContain('alt="Custom alt text"');

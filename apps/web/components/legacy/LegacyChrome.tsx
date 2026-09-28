@@ -15,7 +15,9 @@
  *
  * Task G2a: it also brings what the shared layers used to give every page
  * and now give only legacy ones: the legacy Google Fonts set (LegacyFonts)
- * and every message namespace but the plan's (ScopedIntl).
+ * and every message namespace but the plan's (ScopedIntl). And Clerk: its
+ * <ClerkProvider> (WithClerk), with ClerkSiteAuth publishing it to shared code
+ * that reads identity through lib/site/auth.tsx.
  */
 import { headers } from "next/headers";
 import type { ReactNode } from "react";
@@ -23,23 +25,31 @@ import ActiveOrderBanner from "@/components/ActiveOrderBanner";
 import Footer from "@/components/Footer";
 import Header from "@/components/Header";
 import { ScopedIntl } from "@/components/site/ScopedIntl";
+import { ClerkSiteAuth } from "./ClerkSiteAuth";
 import { LegacyChappy } from "./LegacyChappy";
 import { LegacyFonts } from "./LegacyFonts";
+import { WithClerk } from "./WithClerk";
+
+/** What every legacy page gets around it (Task G2a). */
+function LegacyScope({ children }: { children: ReactNode }) {
+  return (
+    <WithClerk>
+      <ClerkSiteAuth>
+        <ScopedIntl scope="legacy">
+          <LegacyFonts />
+          {children}
+        </ScopedIntl>
+      </ClerkSiteAuth>
+    </WithClerk>
+  );
+}
 
 export async function LegacyChrome({ children }: { children: ReactNode }) {
   const h = await headers();
-  if (h.get("x-embed") === "1") {
-    return (
-      <ScopedIntl scope="legacy">
-        <LegacyFonts />
-        {children}
-      </ScopedIntl>
-    );
-  }
+  if (h.get("x-embed") === "1") return <LegacyScope>{children}</LegacyScope>;
 
   return (
-    <ScopedIntl scope="legacy">
-      <LegacyFonts />
+    <LegacyScope>
       <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
         <div className="legacy-ui">
           <Header />
@@ -55,6 +65,6 @@ export async function LegacyChrome({ children }: { children: ReactNode }) {
       <div className="legacy-ui">
         <LegacyChappy />
       </div>
-    </ScopedIntl>
+    </LegacyScope>
   );
 }

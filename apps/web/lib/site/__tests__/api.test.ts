@@ -1,7 +1,5 @@
 import { describe, expect, test, vi, afterEach } from "vitest";
 
-vi.mock("@clerk/nextjs", () => ({ useAuth: () => ({ getToken: async () => null }), useUser: () => ({}) }));
-
 import { authedFetch } from "../api";
 
 function captureFetch() {

@@ -5,7 +5,6 @@
  * active and inactive text colors; the avatar can't, so it shows its state
  * with a cream ring when active and slightly lower opacity when not.
  */
-import Image from "next/image";
 import { Icon } from "@/components/site/icons/Icon";
 import { TierMark } from "@/components/site/tiers/TierMark";
 import type { NavGlyph as Glyph } from "@/lib/site/nav";
@@ -20,7 +19,8 @@ export function NavGlyph({ glyph, active = false }: { glyph: Glyph; active?: boo
       data-active={active ? "true" : "false"}
       className="block h-6 w-6 shrink-0 overflow-hidden rounded-full opacity-85 ring-offset-1 ring-offset-oh-ink transition-[opacity,box-shadow] data-[active=true]:opacity-100 data-[active=true]:ring-[1.5px] data-[active=true]:ring-oh-cream"
     >
-      <Image src={glyph.avatar} alt="" width={24} height={24} className="h-full w-full object-cover" />
+      {/* eslint-disable-next-line @next/next/no-img-element -- G2a: a pre-sized static file; next/image's client code cost every page 5 KB of JS */}
+      <img src={glyph.avatar} alt="" width={24} height={24} decoding="async" className="h-full w-full object-cover" />
     </span>
   );
 }

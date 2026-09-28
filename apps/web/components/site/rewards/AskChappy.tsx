@@ -5,17 +5,18 @@
  * shell) with a translated question already typed; Chappy never moves
  * money without a human tap, so this only starts a conversation.
  */
-import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { useChappy } from "@/components/site/chappy/ChappyLauncher";
-import { CHAPPY_AVATAR } from "@/lib/site/nav";
+// 64px at up to 3x: the 192px copy of the avatar (Task G2a dropped next/image here).
+const CHAPPY_AVATAR_LARGE = "/plan/chappy-192.webp";
 
 export function AskChappy() {
   const t = useTranslations("rewards.chappy");
   const chappy = useChappy();
   return (
     <div className="flex flex-col items-start gap-5 rounded-[2rem] border border-oh-stone/70 bg-oh-ink p-6 sm:flex-row sm:items-center md:p-8">
-      <Image src={CHAPPY_AVATAR} alt="" width={64} height={64} className="h-16 w-16 shrink-0 rounded-full" />
+      {/* eslint-disable-next-line @next/next/no-img-element -- G2a: a pre-sized static file; next/image's client code cost every page 5 KB of JS */}
+      <img src={CHAPPY_AVATAR_LARGE} alt="" width={64} height={64} loading="lazy" decoding="async" className="h-16 w-16 shrink-0 rounded-full" />
       <div className="min-w-0 flex-1">
         <h2 className="m-0 text-2xl font-semibold leading-tight text-oh-cream">{t("title")}</h2>
         <p className="m-0 mt-1 text-base text-oh-cream/75">{t("body")}</p>

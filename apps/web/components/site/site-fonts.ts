@@ -25,10 +25,14 @@ export const siteDisplayFont = Instrument_Serif({
   display: "swap",
 });
 
-// One variable file covers every weight the site uses (300 to 700).
+// One variable file (about 42 KB) covers every weight the site uses (300 to
+// 700). Not preloaded: on a phone connection a preload competes with the
+// LCP photo for the first second, while `swap` shows text at once in the
+// metric-matched fallback anyway.
 export const siteBodyFont = Raleway({
   subsets: ["latin"],
   display: "swap",
+  preload: false,
 });
 
 const SYSTEM_SANS = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";

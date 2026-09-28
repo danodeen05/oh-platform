@@ -5,7 +5,7 @@
  * tier marks, what's inside, Clerk's sign-in and sign-up (modal), and a
  * link to /rewards for how the program works.
  */
-import { SignInButton, SignUpButton } from "@clerk/nextjs";
+import { SignInTrigger, SignUpTrigger } from "@/components/site/auth/AuthTriggers";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { Icon } from "@/components/site/icons/Icon";
@@ -44,7 +44,7 @@ export function SignedOutPassport({ program }: { program: PublicProgram | null }
               {t("body")}
             </Body>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <SignInButton mode="modal">
+              <SignInTrigger>
                 <button
                   type="button"
                   data-passport-signin
@@ -52,15 +52,15 @@ export function SignedOutPassport({ program }: { program: PublicProgram | null }
                 >
                   {t("signIn")}
                 </button>
-              </SignInButton>
-              <SignUpButton mode="modal">
+              </SignInTrigger>
+              <SignUpTrigger>
                 <button
                   type="button"
                   className="inline-flex min-h-12 flex-1 cursor-pointer appearance-none items-center justify-center rounded-full border border-oh-cream/40 bg-transparent px-6 font-[inherit] text-base font-semibold text-oh-cream hover:border-oh-cream hover:bg-oh-cream/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oh-cream"
                 >
                   {t("join")}
                 </button>
-              </SignUpButton>
+              </SignUpTrigger>
             </div>
           </div>
         </div>

@@ -3,7 +3,6 @@
  * covers the main routes on phones, so this carries the brand line, the
  * secondary routes and the legal links.
  */
-import Image from "next/image";
 import Link from "next/link";
 import { getLocale, getTranslations } from "next-intl/server";
 import { MORE_ITEMS, localizedHref } from "@/lib/site/nav";
@@ -20,7 +19,8 @@ export async function Footer() {
     <footer data-site-footer className="border-t border-oh-stone/60 bg-oh-charcoal">
       <div className="mx-auto grid max-w-6xl gap-8 px-[max(1.25rem,env(safe-area-inset-left,0px))] py-10 md:grid-cols-[1fr_auto] md:items-start md:py-14">
         <div className="flex items-center gap-4">
-          <Image src="/Oh_Logo_Mark_Light.png" alt="" width={44} height={44} className="h-11 w-11 object-contain opacity-90" />
+          {/* eslint-disable-next-line @next/next/no-img-element -- G2a: a pre-sized static file; next/image's client code cost every page 5 KB of JS */}
+          <img src="/brand/oh-mark-light-132.webp" alt="" width={44} height={44} loading="lazy" decoding="async" className="h-11 w-11 object-contain opacity-90" />
           <p className="m-0 max-w-xs text-sm leading-relaxed text-oh-cream/70">{t("shell.footer.tagline")}</p>
         </div>
 

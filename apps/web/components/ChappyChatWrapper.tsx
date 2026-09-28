@@ -1,9 +1,9 @@
 "use client";
 
-import { useUser } from "@clerk/nextjs";
 import { useLocale } from "next-intl";
 import { ChappyChat, type ChappyChatProps } from "./ChappyChat";
 import { useSiteApi } from "@/lib/site/api";
+import { useSiteAuth } from "@/lib/site/auth";
 import { useCallback, useEffect, useState } from "react";
 
 // Guests chat with a SIGNED token from POST /chappy/guest-token (the API no
@@ -14,7 +14,8 @@ const GUEST_TOKEN_KEY = "oh-chappy-guest-token";
 export type ChappyChatControlProps = Pick<ChappyChatProps, "hideLauncher" | "open" | "onOpenChange" | "prefill">;
 
 export function ChappyChatWrapper(control: ChappyChatControlProps = {}) {
-  const { user, isLoaded, isSignedIn } = useUser();
+  // Task G2a: identity through SiteAuth (works on legacy and (site) pages).
+  const { email: userEmail, isLoaded, isSignedIn } = useSiteAuth();
   const locale = useLocale();
   const api = useSiteApi();
   const [guestToken, setGuestToken] = useState<string | null>(null);
@@ -67,8 +68,8 @@ export function ChappyChatWrapper(control: ChappyChatControlProps = {}) {
 
   // Fetch database user ID when logged in (maps Clerk ID to DB ID)
   useEffect(() => {
-    if (isLoaded && isSignedIn && user?.primaryEmailAddress?.emailAddress) {
-      const email = user.primaryEmailAddress.emailAddress;
+    if (isLoaded && isSignedIn && userEmail) {
+      const email = userEmail;
       const apiUrl = getApiUrl();
 
       // Fetch user by email to get database ID
@@ -85,7 +86,7 @@ export function ChappyChatWrapper(control: ChappyChatControlProps = {}) {
           setDbUserId(null);
         });
     }
-  }, [isLoaded, isSignedIn, user?.primaryEmailAddress?.emailAddress]);
+  }, [isLoaded, isSignedIn, userEmail]);
 
   // Get API URL - must use HTTPS API for HTTPS sites (mixed content blocking)
   const getApiUrl = () => {

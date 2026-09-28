@@ -9,7 +9,6 @@
  * 768px and up: logo, the desktop nav, the language menu and account.
  */
 import dynamic from "next/dynamic";
-import Image from "next/image";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
@@ -64,7 +63,8 @@ export function TopBar() {
             aria-label={t("home")}
             className="-ml-1 flex h-11 w-11 shrink-0 no-underline items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oh-cream"
           >
-            <Image src="/Oh_Logo_Mark_Light.png" alt="" width={34} height={34} priority className="h-[34px] w-[34px] object-contain" />
+            {/* eslint-disable-next-line @next/next/no-img-element -- G2a: a pre-sized static file; next/image's client code cost every page 5 KB of JS */}
+            <img src="/brand/oh-mark-light-104.webp" alt="" width={34} height={34} decoding="async" className="h-[34px] w-[34px] object-contain" />
           </Link>
 
           <DesktopNav onOpenMore={openMore} onPreloadMore={preloadMore} moreOpen={moreOpen} />

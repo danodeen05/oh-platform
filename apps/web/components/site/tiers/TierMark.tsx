@@ -5,13 +5,20 @@
  * ./tier-paths.ts, generated, do not hand-edit). This replaced an earlier,
  * hand-redrawn line-art approximation: the owner's binding rule is that the
  * marks must be the owner's actual art, traced, not a reinterpretation.
+ *
+ * Task G2a: the path data no longer ships in the page. The large marks are
+ * <symbol>s in public/tiers/marks.svg (scripts/build-tier-sprite.mjs, from
+ * the same tier-paths.ts) drawn with <use href>, so they cost one cached
+ * file instead of 27 KB in the shared JS and twice that in each page's HTML.
+ * The small chopstick mark (the dock's) stays inline so the dock never waits.
  */
-import { TIER_PATHS, type Tier } from "./tier-paths";
+import type { Tier } from "./tier-paths";
+import { TIER_INLINE_PATHS, TIER_SPRITE_URL, TIER_VIEWBOX } from "./tier-sprite";
 
 export type { Tier };
 export type Tone = "cream" | "gold" | "ink" | "current";
 
-export const TIERS = Object.keys(TIER_PATHS) as Tier[];
+export const TIERS = Object.keys(TIER_VIEWBOX) as Tier[];
 
 export interface TierMarkProps {
   tier: Tier;
@@ -38,13 +45,13 @@ const TONE_VALUES: Record<Tone, string> = {
  * pattern as SitePicture and Icon.
  */
 export function TierMark({ tier, tone = "ink", size = 48, className, title }: TierMarkProps) {
-  const def = TIER_PATHS[tier];
+  const inline = TIER_INLINE_PATHS[tier];
   const color = TONE_VALUES[tone];
   const labelled = Boolean(title);
 
   return (
     <svg
-      viewBox={def.viewBox}
+      viewBox={TIER_VIEWBOX[tier]}
       width={size}
       height={size}
       className={className}
@@ -52,7 +59,12 @@ export function TierMark({ tier, tone = "ink", size = 48, className, title }: Ti
       aria-hidden={labelled ? undefined : true}
     >
       {title ? <title>{title}</title> : null}
-      <path d={def.d} fill={color} fillRule="evenodd" stroke="none" />
+      {inline ? (
+        <path d={inline} fill={color} fillRule="evenodd" stroke="none" />
+      ) : (
+        // The symbol's path carries fill-rule="evenodd" and no fill, so it takes this one.
+        <use href={`${TIER_SPRITE_URL}#${tier}`} fill={color} />
+      )}
     </svg>
   );
 }
