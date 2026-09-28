@@ -24,10 +24,11 @@
  *   pnpm exec tsx scripts/scrub-chappy-secrets.ts --dry-run
  *   pnpm exec tsx scripts/scrub-chappy-secrets.ts [--cutover=2026-10-01T00:00:00Z]
  * The cutover defaults to now. Refuses a non-local DATABASE_URL unless
- * ALLOW_NON_LOCAL_SCRUB=1 (the controller sets it for prod at G3).
+ * ALLOW_NON_LOCAL=1 or ALLOW_NON_LOCAL_SCRUB=1 (the controller sets one for prod at G3).
  */
 import { PrismaClient } from "@prisma/client";
 import { hasSecrets, scrubMessages, scrubSecrets } from "../../api/src/chappy/secrets.js";
+import { requireSafeTarget, targetBanner } from "./lib/db-guard.ts";
 
 export interface ScrubCounts {
   scanned: number;
@@ -75,18 +76,14 @@ export async function scrub(prisma: PrismaClient, { cutover, dryRun }: { cutover
   return counts;
 }
 
-function isLocal(url: string | undefined): boolean {
-  return !!url && /@(127\.0\.0\.1|localhost)(:\d+)?\//.test(url);
-}
-
 async function main() {
   const dryRun = process.argv.includes("--dry-run");
   const arg = process.argv.find((a) => a.startsWith("--cutover="));
   const cutover = arg ? new Date(arg.slice("--cutover=".length)) : new Date();
   if (Number.isNaN(cutover.getTime())) throw new Error("--cutover must be an ISO date");
-  if (!isLocal(process.env.DATABASE_URL) && process.env.ALLOW_NON_LOCAL_SCRUB !== "1") {
-    throw new Error("DATABASE_URL is not local; set ALLOW_NON_LOCAL_SCRUB=1 to scrub a remote database on purpose.");
-  }
+  // Task G3: the shared guard (ALLOW_NON_LOCAL=1, or the older ALLOW_NON_LOCAL_SCRUB=1).
+  const target = requireSafeTarget("scrub-chappy-secrets", process.env, ["ALLOW_NON_LOCAL_SCRUB"]);
+  console.log(targetBanner("scrub-chappy-secrets", target, dryRun));
   const prisma = new PrismaClient();
   try {
     const counts = await scrub(prisma, { cutover, dryRun });

@@ -17,7 +17,8 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { buildLayout, LOCATION_LAYOUTS, podLabel, rankPodsByEntry } from "@oh/floor-plan";
-import { seedCombSeats } from "../seed-comb-seats.ts";
+import { seedCombSeats, resolveLocation, parseLocationOverrides, LOCATIONS } from "../seed-comb-seats.ts";
+import { noWrites } from "./helpers/no-writes.ts";
 
 const UNIQUE_INDEXES: readonly (readonly string[])[] = [["locationId", "number"], ["qrCode"], ["dualPartnerId"]];
 
@@ -78,6 +79,15 @@ function makeFakeSeatPrisma(initialSeats: any[] = []) {
           }
         }
         return { count };
+      },
+      async count({ where }: any) {
+        let count = 0;
+        for (const s of seats.values()) {
+          if (where.locationId !== undefined && s.locationId !== where.locationId) continue;
+          if ("retiredAt" in where && where.retiredAt === null && s.retiredAt != null) continue;
+          if (where.number?.notIn && !where.number.notIn.includes(s.number)) count += 1;
+        }
+        return count;
       },
       async findMany({ where }: any = {}) {
         return [...seats.values()].filter((s) => where?.locationId === undefined || s.locationId === where.locationId);
@@ -202,3 +212,88 @@ describe("seedCombSeats", () => {
 function allSeatsActive(seats: any[]) {
   return seats.filter((s) => !s.retiredAt);
 }
+
+describe("Task G3: dry run, idempotent re-run, live-row resolution", () => {
+  function legacySeats(locationId: string) {
+    return Array.from({ length: 12 }, (_, i) => ({
+      id: `legacy-${i + 1}`,
+      locationId,
+      number: String(i + 1).padStart(2, "0"),
+      qrCode: `POD-legacy-${i + 1}`,
+      status: "AVAILABLE",
+      podType: "SINGLE",
+    }));
+  }
+
+  test("a dry run reports the same counts a real run then produces, and writes nothing", async () => {
+    const prisma = makeFakeSeatPrisma(legacySeats("univ-id"));
+    const log: string[] = [];
+    const dry = await seedCombSeats(noWrites(prisma, log), { locationId: "univ-id", layoutKey: "comb-70-mirrored", dryRun: true });
+    assert.deepEqual(log, []);
+    assert.equal(prisma._seats.size, 12, "no seat created");
+    assert.ok([...prisma._seats.values()].every((s: any) => !s.retiredAt), "no seat retired");
+    assert.deepEqual(dry, { created: 70, updated: 0, retired: 12, duoLinks: 10 });
+
+    const real = await seedCombSeats(prisma, { locationId: "univ-id", layoutKey: "comb-70-mirrored" });
+    assert.deepEqual(real, dry);
+  });
+
+  test("a re-run (real or dry) changes nothing: 0 created, 0 updated, 0 retired, 0 links", async () => {
+    const prisma = makeFakeSeatPrisma(legacySeats("univ-id"));
+    await seedCombSeats(prisma, { locationId: "univ-id", layoutKey: "comb-70-mirrored" });
+    const zero = { created: 0, updated: 0, retired: 0, duoLinks: 0 };
+    assert.deepEqual(await seedCombSeats(noWrites(prisma), { locationId: "univ-id", layoutKey: "comb-70-mirrored", dryRun: true }), zero);
+    assert.deepEqual(await seedCombSeats(noWrites(prisma), { locationId: "univ-id", layoutKey: "comb-70-mirrored" }), zero, "a real re-run makes no write call at all");
+  });
+
+  test("a retired pod that is back in the layout is revived and counted as updated", async () => {
+    const prisma = makeFakeSeatPrisma();
+    await seedCombSeats(prisma, { locationId: "cc", layoutKey: "comb-75" });
+    const one = [...prisma._seats.values()][0];
+    one.retiredAt = new Date("2026-10-01T00:00:00Z");
+    const again = await seedCombSeats(prisma, { locationId: "cc", layoutKey: "comb-75" });
+    assert.equal(again.updated, 1);
+    assert.equal(prisma._seats.get(one.id).retiredAt, null);
+  });
+
+  function fakeLocations(rows: any[]) {
+    return {
+      location: {
+        async findUnique({ where }: any) {
+          const row = rows.find((r) => (where.id !== undefined ? r.id === where.id : r.slug === where.slug));
+          return row ? { ...row } : null;
+        },
+      },
+    } as any;
+  }
+  const cc = LOCATIONS.find((l) => l.slug === "city-creek")!;
+
+  test("resolveLocation prefers the row holding the slug", async () => {
+    const got = await resolveLocation(fakeLocations([{ id: "live", slug: "city-creek", isClosed: false }, { id: cc.id, slug: null, isClosed: false }]), cc);
+    assert.equal(got.location.id, "live");
+    assert.equal(got.via, "slug");
+  });
+
+  test("resolveLocation falls back to the known id, or an override, when no row has the slug", async () => {
+    const rows = [{ id: cc.id, slug: null, isClosed: false }, { id: "prod-live", slug: null, isClosed: false }];
+    assert.equal((await resolveLocation(fakeLocations(rows), cc)).via, "known-id");
+    const over = await resolveLocation(fakeLocations(rows), cc, "prod-live");
+    assert.equal(over.location.id, "prod-live");
+    assert.equal(over.via, "override");
+  });
+
+  test("resolveLocation refuses closed duplicates, missing rows, and an override that fights the slug", async () => {
+    await assert.rejects(resolveLocation(fakeLocations([{ id: cc.id, slug: null, isClosed: true }]), cc), /closed/);
+    await assert.rejects(resolveLocation(fakeLocations([{ id: "x", slug: "city-creek", isClosed: true }]), cc), /closed/);
+    await assert.rejects(resolveLocation(fakeLocations([]), cc), /--location-id=city-creek=/);
+    await assert.rejects(resolveLocation(fakeLocations([{ id: "a", slug: "city-creek", isClosed: false }]), cc, "b"), /already has this slug/);
+  });
+
+  test("parseLocationOverrides reads --location-id=<slug>=<id> and rejects unknown slugs", () => {
+    const m = parseLocationOverrides(["--all", "--location-id=city-creek=abc", "--location-id=university-place=def"]);
+    assert.equal(m.get("city-creek"), "abc");
+    assert.equal(m.get("university-place"), "def");
+    assert.throws(() => parseLocationOverrides(["--location-id=soho=abc"]), /unknown slug/);
+    assert.throws(() => parseLocationOverrides(["--location-id=city-creek"]), /bad flag/);
+  });
+});

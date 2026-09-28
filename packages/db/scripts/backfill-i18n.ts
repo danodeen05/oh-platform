@@ -42,9 +42,11 @@
  *
  * Run against DATABASE_URL from the environment (e.g. via
  * `node --env-file=../../.env` or `dotenv`), same as every other script in
- * this package.
+ * this package. Refuses a non-local DATABASE_URL unless ALLOW_NON_LOCAL=1
+ * (Task G3), and prints the target host/database first.
  */
 import { PrismaClient } from "@prisma/client";
+import { requireSafeTarget, targetBanner } from "./lib/db-guard.ts";
 import { BADGES } from "../prisma/seed-data/badges";
 import { CHALLENGES } from "../prisma/seed-data/challenges";
 import { LOCATION_I18N } from "../prisma/seed-data/locations";
@@ -242,6 +244,8 @@ function summarize(result: BackfillResult, dryRun: boolean): void {
 async function main() {
   const dryRun = process.argv.includes("--dry-run");
   const clearEmoji = process.argv.includes("--clear-emoji");
+  const target = requireSafeTarget("backfill-i18n");
+  console.log(`${targetBanner("backfill-i18n", target, dryRun)}${clearEmoji ? " --clear-emoji" : ""}`);
   const prisma = new PrismaClient();
   try {
     const result = await backfillI18n(prisma, { dryRun, clearEmoji });

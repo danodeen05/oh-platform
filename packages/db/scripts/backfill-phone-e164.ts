@@ -21,13 +21,13 @@
  *   pnpm exec tsx scripts/backfill-phone-e164.ts --dry-run
  *   pnpm exec tsx scripts/backfill-phone-e164.ts
  *
- * Dev-only guard: the worktree's DATABASE_URL must point at 127.0.0.1 (the
- * private oh_overhaul clone, never `ohdev` or prod - see packages/db's own
- * README and R2 in the controller rulings). This script refuses to run
- * against anything else unless ALLOW_NON_LOCAL_BACKFILL=1 is set.
+ * Guard: DATABASE_URL must point at 127.0.0.1/localhost unless
+ * ALLOW_NON_LOCAL=1 (or the older ALLOW_NON_LOCAL_BACKFILL=1) is set. The
+ * only remote run is the controller's prod cutover (Task G3 runbook).
  */
 import { PrismaClient } from "@prisma/client";
 import { normalizePhoneE164 } from "../../api/src/utils/phone.js";
+import { isEntryPoint, requireSafeTarget, targetBanner } from "./lib/db-guard.ts";
 
 function last4(phone: string | null | undefined): string {
   if (!phone) return "----";
@@ -35,7 +35,7 @@ function last4(phone: string | null | undefined): string {
   return digits.slice(-4) || "----";
 }
 
-interface Counts {
+export interface Counts {
   total: number;
   alreadyOk: number;
   updated: number;
@@ -47,7 +47,7 @@ function emptyCounts(): Counts {
   return { total: 0, alreadyOk: 0, updated: 0, unparseable: 0, conflicts: 0 };
 }
 
-async function backfillTable(
+export async function backfillTable(
   prisma: PrismaClient,
   label: "User" | "Guest",
   findMany: () => Promise<{ id: string; phone: string | null }[]>,
@@ -100,13 +100,9 @@ async function backfillTable(
 
 async function main() {
   const dryRun = process.argv.includes("--dry-run");
-  const databaseUrl = process.env.DATABASE_URL || "";
-  const isLocal = /(^|@)(127\.0\.0\.1|localhost)([:/]|$)/.test(databaseUrl);
-  if (!isLocal && process.env.ALLOW_NON_LOCAL_BACKFILL !== "1") {
-    console.error("[backfill-phone] DATABASE_URL doesn't look like the local oh_overhaul clone (127.0.0.1). Refusing to run.");
-    console.error("[backfill-phone] Set ALLOW_NON_LOCAL_BACKFILL=1 to override (never against ohdev or prod).");
-    process.exit(1);
-  }
+  // Task G3: the shared guard (ALLOW_NON_LOCAL=1, or the older ALLOW_NON_LOCAL_BACKFILL=1).
+  const target = requireSafeTarget("backfill-phone", process.env, ["ALLOW_NON_LOCAL_BACKFILL"]);
+  console.log(targetBanner("backfill-phone", target, dryRun));
 
   const prisma = new PrismaClient();
   try {
@@ -141,7 +137,9 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  console.error("[backfill-phone] Failed:", err);
-  process.exitCode = 1;
-});
+if (isEntryPoint(import.meta.url)) {
+  main().catch((err) => {
+    console.error("[backfill-phone] Failed:", err?.message ?? err);
+    process.exitCode = 1;
+  });
+}

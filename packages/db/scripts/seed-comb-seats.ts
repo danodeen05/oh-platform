@@ -14,15 +14,29 @@
  * `(locationId, number = label)`), links duo partners bidirectionally, and
  * retires (`retiredAt`) any seat at that location whose number isn't one of
  * the layout's labels (e.g. the old 12-pod `"01".."12"` numbering). A second
- * run against the same location creates nothing new.
+ * run against the same location creates, updates and links nothing.
  *
  * Run directly (`pnpm --filter @oh/db exec tsx scripts/seed-comb-seats.ts
  * --all`, or `pnpm --filter @oh/db run seed:comb-seats`) to seed both real
- * locations by their known ids. `seed-prod.ts` imports `seedCombSeats` and
- * `LOCATIONS` directly instead of shelling out.
+ * locations. `seed-prod.ts` imports `seedLocation` and `LOCATIONS` directly
+ * instead of shelling out.
+ *
+ * Task G3 (cutover) additions:
+ *  - `--dry-run`: reports what a real run would create, update, retire and
+ *    link, and writes nothing.
+ *  - Locations resolve by SLUG first (`city-creek`, `university-place`).
+ *    Only when no row carries the slug yet does it fall back to the known
+ *    id, or to `--location-id=<slug>=<id>` when prod's live row has another
+ *    id. A closed row (`isClosed`) is refused either way: prod keeps closed
+ *    duplicates of both locations, and seats must land on the LIVE rows.
+ *    Every location resolves before anything is written.
+ *  - Seats retired by a run get that run's exact `retiredAt` (printed), so a
+ *    rollback can clear just those.
+ *  - Refuses a non-local DATABASE_URL unless ALLOW_NON_LOCAL=1.
  */
 import { PrismaClient } from "@prisma/client";
 import { buildLayout, LOCATION_LAYOUTS, podLabel, rankPodsByEntry, type Pod } from "@oh/floor-plan";
+import { isEntryPoint, requireSafeTarget, targetBanner } from "./lib/db-guard.ts";
 
 export type LayoutKey = keyof typeof LOCATION_LAYOUTS;
 
@@ -30,11 +44,17 @@ export interface SeedCombSeatsArgs {
   locationId: string;
   layoutKey: LayoutKey;
   now?: Date;
+  /** Count only; write nothing (Task G3). */
+  dryRun?: boolean;
 }
 
 export interface SeedCombSeatsResult {
   created: number;
+  /** Existing seats whose layout fields changed (0 on a re-run). */
+  updated: number;
   retired: number;
+  /** Duo partner links written (or, in a dry run, that would be). */
+  duoLinks: number;
 }
 
 /** The two real comb locations (site overhaul spec 6.2 / A8 controller note 4). */
@@ -43,6 +63,16 @@ export const LOCATIONS: readonly { id: string; slug: string; layoutKey: LayoutKe
   { id: "cmip6jbza00042nnnf4nc0dvh", slug: "university-place", layoutKey: "comb-70-mirrored" },
 ];
 
+export type LocationEntry = (typeof LOCATIONS)[number];
+
+const SEAT_FIELDS = ["finger", "rowSide", "position", "label", "podType", "bestRank", "qrCode", "retiredAt"] as const;
+
+function sameValue(a: unknown, b: unknown): boolean {
+  const av = a instanceof Date ? a.getTime() : (a ?? null);
+  const bv = b instanceof Date ? b.getTime() : (b ?? null);
+  return av === bv;
+}
+
 function podType(pod: Pod): "SINGLE" | "DUAL" {
   return pod.type === "duo" ? "DUAL" : "SINGLE";
 }
@@ -50,17 +80,20 @@ function podType(pod: Pod): "SINGLE" | "DUAL" {
 /**
  * Seeds (or re-seeds) the comb seats for one location. Idempotent: safe to
  * run repeatedly, including after a pod count/layout change (it retires
- * whatever no longer belongs and never touches other locations).
+ * whatever no longer belongs and never touches other locations). Only rows
+ * whose fields actually differ are written.
  */
-export async function seedCombSeats(prisma: Pick<PrismaClient, "seat">, { locationId, layoutKey, now = new Date() }: SeedCombSeatsArgs): Promise<SeedCombSeatsResult> {
+export async function seedCombSeats(prisma: Pick<PrismaClient, "seat">, { locationId, layoutKey, now = new Date(), dryRun = false }: SeedCombSeatsArgs): Promise<SeedCombSeatsResult> {
   const options = LOCATION_LAYOUTS[layoutKey];
   if (!options) throw new Error(`seedCombSeats: unknown layoutKey "${String(layoutKey)}"`);
   const layout = buildLayout(options);
   const ranks = rankPodsByEntry(layout);
 
   const idByLabel = new Map<string, string>();
+  const partnerByLabel = new Map<string, string | null>();
   const labels = new Set<string>();
   let created = 0;
+  let updated = 0;
 
   for (const pod of layout.pods) {
     const label = podLabel(pod);
@@ -79,84 +112,158 @@ export async function seedCombSeats(prisma: Pick<PrismaClient, "seat">, { locati
     };
 
     // eslint-disable-next-line no-await-in-loop -- pods must be upserted one at a time (each needs its own id for the duo-linking pass below)
-    const existing = await prisma.seat.findFirst({ where: { locationId, number: label } });
+    const existing: any = await prisma.seat.findFirst({ where: { locationId, number: label } });
     if (existing) {
-      // eslint-disable-next-line no-await-in-loop
-      await prisma.seat.update({ where: { id: existing.id }, data: fields });
       idByLabel.set(label, existing.id);
+      partnerByLabel.set(label, existing.dualPartnerId ?? null);
+      if (SEAT_FIELDS.some((f) => !sameValue(existing[f], fields[f]))) {
+        updated += 1;
+        // eslint-disable-next-line no-await-in-loop
+        if (!dryRun) await prisma.seat.update({ where: { id: existing.id }, data: fields });
+      }
     } else {
-      // eslint-disable-next-line no-await-in-loop
-      const seat = await prisma.seat.create({
-        data: { locationId, number: label, status: "AVAILABLE", ...fields },
-      });
-      idByLabel.set(label, seat.id);
       created += 1;
+      partnerByLabel.set(label, null);
+      if (dryRun) {
+        idByLabel.set(label, `(new:${label})`);
+      } else {
+        // eslint-disable-next-line no-await-in-loop
+        const seat = await prisma.seat.create({
+          data: { locationId, number: label, status: "AVAILABLE", ...fields },
+        });
+        idByLabel.set(label, seat.id);
+      }
     }
   }
 
+  let duoLinks = 0;
   for (const [numA, numB] of layout.duoPairs) {
     const podA = layout.pods.find((p) => p.number === numA);
     const podB = layout.pods.find((p) => p.number === numB);
     if (!podA || !podB) continue; // trimmed out of this pod count
-    const idA = idByLabel.get(podLabel(podA));
-    const idB = idByLabel.get(podLabel(podB));
+    const labelA = podLabel(podA);
+    const labelB = podLabel(podB);
+    const idA = idByLabel.get(labelA);
+    const idB = idByLabel.get(labelB);
     if (!idA || !idB) continue;
-    // eslint-disable-next-line no-await-in-loop
-    await prisma.seat.update({ where: { id: idA }, data: { dualPartnerId: idB } });
-    // eslint-disable-next-line no-await-in-loop
-    await prisma.seat.update({ where: { id: idB }, data: { dualPartnerId: idA } });
+    if (partnerByLabel.get(labelA) !== idB) {
+      duoLinks += 1;
+      // eslint-disable-next-line no-await-in-loop
+      if (!dryRun) await prisma.seat.update({ where: { id: idA }, data: { dualPartnerId: idB } });
+    }
+    if (partnerByLabel.get(labelB) !== idA) {
+      duoLinks += 1;
+      // eslint-disable-next-line no-await-in-loop
+      if (!dryRun) await prisma.seat.update({ where: { id: idB }, data: { dualPartnerId: idA } });
+    }
   }
 
-  const retireResult = await prisma.seat.updateMany({
-    where: { locationId, retiredAt: null, number: { notIn: [...labels] } },
-    data: { retiredAt: now },
-  });
+  const retireWhere = { locationId, retiredAt: null, number: { notIn: [...labels] } };
+  const toRetire = await prisma.seat.count({ where: retireWhere });
+  const retired = dryRun || toRetire === 0 ? toRetire : (await prisma.seat.updateMany({ where: retireWhere, data: { retiredAt: now } })).count;
 
-  return { created, retired: retireResult.count };
+  return { created, updated, retired, duoLinks };
+}
+
+/**
+ * Finds the LIVE location row for an entry (Task G3): by slug first; if no
+ * row has the slug yet, by `overrideId` or the entry's known id. Throws on a
+ * closed row, a missing row, or an override that disagrees with the row
+ * already holding the slug. Never matches by name.
+ */
+export async function resolveLocation(prisma: Pick<PrismaClient, "location">, entry: LocationEntry, overrideId?: string) {
+  const bySlug: any = await prisma.location.findUnique({ where: { slug: entry.slug } });
+  if (bySlug) {
+    if (overrideId && overrideId !== bySlug.id) {
+      throw new Error(`${entry.slug}: --location-id says ${overrideId}, but row ${bySlug.id} already has this slug. Fix the slug by hand first.`);
+    }
+    if (bySlug.isClosed) throw new Error(`${entry.slug}: the row holding this slug (${bySlug.id}) is closed. Move the slug to the live row first.`);
+    return { location: bySlug, via: "slug" as const };
+  }
+  const id = overrideId ?? entry.id;
+  const byId: any = await prisma.location.findUnique({ where: { id } });
+  if (!byId) throw new Error(`${entry.slug}: no row has this slug and no location has id ${id}. Pass --location-id=${entry.slug}=<live row id>.`);
+  if (byId.isClosed) throw new Error(`${entry.slug}: location ${id} is closed. Pass --location-id=${entry.slug}=<live row id>.`);
+  return { location: byId, via: overrideId ? ("override" as const) : ("known-id" as const) };
 }
 
 /**
  * Sets the location's layout fields (slug/layoutKey/layoutMirror/podCount),
  * seeds its comb seats, and keeps `LocationStats.totalSeats` in sync with
  * `podCount`. Exported so `seed-prod.ts` can call it directly instead of
- * shelling out to this script.
+ * shelling out to this script. With `dryRun`, it only reports.
  */
-export async function seedLocation(prisma: PrismaClient, entry: (typeof LOCATIONS)[number]) {
+export async function seedLocation(
+  prisma: PrismaClient,
+  entry: LocationEntry,
+  { dryRun = false, overrideId, now = new Date() }: { dryRun?: boolean; overrideId?: string; now?: Date } = {},
+) {
   const options = LOCATION_LAYOUTS[entry.layoutKey];
-  await prisma.location.update({
-    where: { id: entry.id },
-    data: { slug: entry.slug, layoutKey: entry.layoutKey, layoutMirror: options.mirror, podCount: options.pods },
-  });
-  const result = await seedCombSeats(prisma, { locationId: entry.id, layoutKey: entry.layoutKey });
-  await prisma.locationStats.upsert({
-    where: { locationId: entry.id },
-    update: { totalSeats: options.pods },
-    create: { locationId: entry.id, totalSeats: options.pods, availableSeats: options.pods, occupiedSeats: 0, avgWaitMinutes: 0 },
-  });
-  console.log(`[seed-comb-seats] ${entry.slug} (${entry.layoutKey}): created ${result.created}, retired ${result.retired}`);
+  const { location, via } = await resolveLocation(prisma, entry, overrideId);
+  const locationData = { slug: entry.slug, layoutKey: entry.layoutKey, layoutMirror: options.mirror, podCount: options.pods };
+  const locationChanges = (Object.keys(locationData) as (keyof typeof locationData)[]).filter((k) => !sameValue(location[k], locationData[k]));
+  if (!dryRun && locationChanges.length) {
+    await prisma.location.update({ where: { id: location.id }, data: locationData });
+  }
+  const result = await seedCombSeats(prisma, { locationId: location.id, layoutKey: entry.layoutKey, dryRun, now });
+  if (!dryRun) {
+    await prisma.locationStats.upsert({
+      where: { locationId: location.id },
+      update: { totalSeats: options.pods },
+      create: { locationId: location.id, totalSeats: options.pods, availableSeats: options.pods, occupiedSeats: 0, avgWaitMinutes: 0 },
+    });
+  }
+  console.log(
+    `[seed-comb-seats]${dryRun ? " [dry run]" : ""} ${entry.slug} (${entry.layoutKey}) location ${location.id} via ${via}: ` +
+      `location fields ${locationChanges.length ? `${dryRun ? "to change" : "changed"} [${locationChanges.join(", ")}]` : "unchanged"}, ` +
+      `created ${result.created}, updated ${result.updated}, retired ${result.retired}` +
+      `${result.retired && !dryRun ? ` (retiredAt ${now.toISOString()})` : ""}, duo links ${result.duoLinks}`,
+  );
   return result;
+}
+
+/** Parses repeatable `--location-id=<slug>=<id>` flags. */
+export function parseLocationOverrides(argv: string[]): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const arg of argv) {
+    if (!arg.startsWith("--location-id=")) continue;
+    const [slug, id, extra] = arg.slice("--location-id=".length).split("=");
+    if (!slug || !id || extra !== undefined) throw new Error(`bad flag ${arg}; expected --location-id=<slug>=<id>`);
+    if (!LOCATIONS.some((l) => l.slug === slug)) throw new Error(`unknown slug in ${arg}`);
+    out.set(slug, id);
+  }
+  return out;
 }
 
 async function main() {
   if (!process.argv.includes("--all")) {
-    console.log("Usage: tsx scripts/seed-comb-seats.ts --all");
+    console.log("Usage: tsx scripts/seed-comb-seats.ts --all [--dry-run] [--location-id=<slug>=<id>]");
     return;
   }
+  const dryRun = process.argv.includes("--dry-run");
+  const overrides = parseLocationOverrides(process.argv);
+  const target = requireSafeTarget("seed-comb-seats");
+  console.log(targetBanner("seed-comb-seats", target, dryRun));
   const prisma = new PrismaClient();
+  const now = new Date();
   try {
+    // Resolve every location before writing anything, so a bad mapping fails with no partial run.
+    for (const entry of LOCATIONS) {
+      // eslint-disable-next-line no-await-in-loop
+      await resolveLocation(prisma, entry, overrides.get(entry.slug));
+    }
     for (const entry of LOCATIONS) {
       // eslint-disable-next-line no-await-in-loop -- locations seed sequentially for clear, ordered log output
-      await seedLocation(prisma, entry);
+      await seedLocation(prisma, entry, { dryRun, overrideId: overrides.get(entry.slug), now });
     }
   } finally {
     await prisma.$disconnect();
   }
 }
 
-const isMain = typeof process.argv[1] === "string" && import.meta.url === `file://${process.argv[1]}`;
-if (isMain) {
+if (isEntryPoint(import.meta.url)) {
   main().catch((err) => {
-    console.error(err);
+    console.error(`[seed-comb-seats] failed: ${err?.message ?? err}`);
     process.exitCode = 1;
   });
 }
