@@ -4362,5 +4362,49 @@
     "bowlFlatlay": "An empty ceramic noodle bowl with chopsticks resting on top and a wooden spoon beside it on a linen surface.",
     "chopsticks": "Close-up of a pair of wooden chopsticks on a linen cloth, with a detail view of their tips.",
     "signPool": "The illuminated Oh! logo sculpture standing in a reflecting pool at the restaurant entrance at night, lit by paper lanterns along the path."
+  },
+  "combMap": {
+    "title": "Pod map",
+    "summary": "The kitchen runs along the back wall. Pods line both sides of three staff corridors, and guests walk the aisles between them. The entry is at the front.",
+    "hintTapRow": "Tap a row to zoom in, then tap a pod. Pinch to zoom.",
+    "hintTapPod": "Tap a pod to choose it.",
+    "hintLive": "Tap a row to zoom in. Pinch to zoom.",
+    "podName": "Pod {label}, {status}",
+    "podNameDuo": "Pod {label}, duo with {partner}, {status}",
+    "journeySummary": "A visit on the floor plan. You walk from the entry to pod {label}, and your bowl comes down the staff corridor to your hatch.",
+    "status": {
+      "available": "available",
+      "reserved": "reserved",
+      "occupied": "occupied",
+      "cleaning": "being cleaned",
+      "unknown": "not bookable"
+    },
+    "legend": {
+      "title": "Key",
+      "available": "Available",
+      "reserved": "Reserved",
+      "occupied": "Occupied",
+      "cleaning": "Being cleaned",
+      "duo": "Duo pod for two",
+      "selected": "Your pod",
+      "hatch": "Food hatch"
+    },
+    "zones": {
+      "kitchen": "Kitchen",
+      "restrooms": "Restrooms",
+      "store": "Store",
+      "lobby": "Lobby",
+      "entry": "Entry",
+      "exit": "Exit"
+    },
+    "zoom": {
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "wholeFloor": "Whole floor"
+    },
+    "marker": {
+      "guest": "You",
+      "bowl": "Your bowl"
+    }
   }
 }

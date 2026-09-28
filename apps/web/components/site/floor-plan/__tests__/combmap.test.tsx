@@ -1,0 +1,329 @@
+// @vitest-environment jsdom
+/**
+ * Task D4a: the CombMap floor-plan component (component half of Task D4).
+ *
+ * Markup assertions use `renderToString`; interaction (onSelect, keyboard)
+ * uses a real React root on jsdom. jsdom has no layout, so the map never
+ * learns its on-screen size here: a tap on a pod selects it directly (the
+ * "too small, zoom first" rule needs a measured size, and is covered by the
+ * pure `podTapAction` and `rowZoomBox` tests below).
+ */
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { renderToString } from "react-dom/server";
+import { createRoot, type Root } from "react-dom/client";
+import { act } from "react";
+import { buildLayout, LOCATION_LAYOUTS } from "@oh/floor-plan";
+import en from "../../../../messages/en.json";
+import es from "../../../../messages/es.json";
+import zhCN from "../../../../messages/zh-CN.json";
+import zhTW from "../../../../messages/zh-TW.json";
+import { CombMap, orientLayout, podTapAction, type CombSeat, type CombMapLabels } from "../CombMap";
+import { rowZoomBox, zoomDuration, fitBox, ZOOM_MS, MIN_TOUCH_PX } from "../RowZoom";
+import { toCombSeats, layoutKeyOf } from "../useSeats";
+
+// React 19 act() environment flag for a hand-rolled root.
+(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+const labels = (en as unknown as { combMap: CombMapLabels }).combMap;
+
+type LayoutKey = "comb-75" | "comb-70-mirrored";
+const layoutOf = (key: LayoutKey) => buildLayout(LOCATION_LAYOUTS[key]);
+
+/** Every pod available, except a few with each other status. */
+function seatsFor(key: LayoutKey, overrides: Record<string, CombSeat["status"]> = {}): CombSeat[] {
+  const layout = layoutOf(key);
+  return layout.pods.map((p) => ({
+    label: p.label,
+    status: overrides[p.label] ?? "AVAILABLE",
+    podType: p.type === "duo" ? "DUAL" : "SINGLE",
+    dualPartnerLabel: p.duoWith ? layout.pods.find((q) => q.number === p.duoWith)?.label : undefined,
+  }));
+}
+
+const count = (html: string, needle: RegExp) => (html.match(needle) ?? []).length;
+
+function attrOf(html: string, tagMatcher: RegExp, attr: string): number {
+  const tag = html.match(tagMatcher)?.[0];
+  if (!tag) throw new Error(`no tag matching ${tagMatcher}`);
+  const v = tag.match(new RegExp(`\\s${attr}="([^"]+)"`))?.[1];
+  if (v === undefined) throw new Error(`no ${attr} on ${tag}`);
+  return Number(v);
+}
+
+describe("CombMap markup", () => {
+  it("renders 70 pods for comb-70-mirrored and 75 for comb-75, in both orientations", () => {
+    for (const orientation of ["portrait", "landscape"] as const) {
+      const seventy = renderToString(<CombMap layoutKey="comb-70-mirrored" mode="live" labels={labels} orientation={orientation} />);
+      const seventyFive = renderToString(<CombMap layoutKey="comb-75" mode="live" labels={labels} orientation={orientation} />);
+      expect(count(seventy, /data-pod="/g)).toBe(70);
+      expect(count(seventyFive, /data-pod="/g)).toBe(75);
+    }
+  });
+
+  it("puts the lobby left of x=35 when mirrored and at 35 or more when not (landscape, feet)", () => {
+    const mirrored = renderToString(<CombMap layoutKey="comb-70-mirrored" mode="live" labels={labels} orientation="landscape" />);
+    const plain = renderToString(<CombMap layoutKey="comb-75" mode="live" labels={labels} orientation="landscape" />);
+    const lobby = /<rect[^>]*data-zone="lobby"[^>]*>/;
+    expect(attrOf(mirrored, lobby, "x")).toBeLessThan(35);
+    expect(attrOf(plain, lobby, "x")).toBeGreaterThanOrEqual(35);
+  });
+
+  it("portrait swaps the axes in data: the long side runs vertically and the lobby lands at the bottom for both locations", () => {
+    for (const key of ["comb-75", "comb-70-mirrored"] as const) {
+      const html = renderToString(<CombMap layoutKey={key} mode="live" labels={labels} orientation="portrait" />);
+      const vb = html.match(/<svg[^>]*viewBox="([^"]+)"/)?.[1]?.split(/\s+/).map(Number);
+      expect(vb).toBeDefined();
+      const [, , w, h] = vb as number[];
+      expect(h as number).toBeGreaterThan(w as number);
+      const lobby = /<rect[^>]*data-zone="lobby"[^>]*>/;
+      expect(attrOf(html, lobby, "y")).toBeGreaterThanOrEqual(50);
+    }
+  });
+
+  it("never flips or rotates anything with a transform, so labels always read left to right", () => {
+    for (const key of ["comb-75", "comb-70-mirrored"] as const) {
+      for (const orientation of ["portrait", "landscape"] as const) {
+        const html = renderToString(<CombMap layoutKey={key} mode="pick" labels={labels} orientation={orientation} seats={seatsFor(key)} />);
+        expect(html).not.toContain("scale(-1");
+        expect(html).not.toMatch(/rotate\(/);
+      }
+    }
+  });
+
+  it("orientLayout keeps pod geometry consistent: portrait pods are the landscape pods with width and height swapped", () => {
+    const layout = layoutOf("comb-75");
+    const land = orientLayout(layout, "landscape");
+    const port = orientLayout(layout, "portrait");
+    expect(port.pods).toHaveLength(land.pods.length);
+    for (let i = 0; i < land.pods.length; i += 1) {
+      expect(port.pods[i]!.rect.w).toBeCloseTo(land.pods[i]!.rect.h);
+      expect(port.pods[i]!.rect.h).toBeCloseTo(land.pods[i]!.rect.w);
+    }
+    expect(port.box.w).toBeCloseTo(land.box.h);
+  });
+
+  it("shows status by fill plus pattern: a diagonal hatch for reserved, dots for cleaning", () => {
+    const seats = seatsFor("comb-75", { "A-01": "RESERVED", "A-04": "OCCUPIED", "B-07": "CLEANING" });
+    const html = renderToString(<CombMap layoutKey="comb-75" mode="pick" labels={labels} seats={seats} orientation="landscape" />);
+    expect(html).toContain("<pattern");
+    const reservedId = html.match(/<pattern[^>]*id="([^"]*reserved[^"]*)"/)?.[1];
+    const cleaningId = html.match(/<pattern[^>]*id="([^"]*cleaning[^"]*)"/)?.[1];
+    expect(reservedId).toBeTruthy();
+    expect(cleaningId).toBeTruthy();
+    const pod = (label: string) => html.match(new RegExp(`<g[^>]*data-label="${label}"[^>]*>[\\s\\S]*?</g>`))?.[0] ?? "";
+    expect(pod("A-01")).toContain(`url(#${reservedId})`);
+    expect(pod("B-07")).toContain(`url(#${cleaningId})`);
+    expect(pod("A-04")).not.toContain("url(#");
+    expect(pod("A-02")).not.toContain("url(#");
+    expect(pod("A-01")).toContain('data-status="RESERVED"');
+    expect(pod("A-04")).toContain('data-status="OCCUPIED"');
+  });
+
+  it("makes every pod a named button in pick mode, with one roving tab stop", () => {
+    const seats = seatsFor("comb-75", { "C-03": "OCCUPIED" });
+    const html = renderToString(<CombMap layoutKey="comb-75" mode="pick" labels={labels} seats={seats} />);
+    expect(count(html, /role="button"[^>]*data-pod=|data-pod="[^"]*"[^>]*role="button"/g)).toBe(75);
+    expect(html).toContain('aria-label="Pod B-07, available"');
+    expect(html).toContain('aria-label="Pod C-03, occupied"');
+    expect(count(html, /data-pod="[^"]*"[^>]*tabindex="0"|tabindex="0"[^>]*data-pod="/g)).toBe(1);
+  });
+
+  it("marks the selected pod pressed", () => {
+    const html = renderToString(<CombMap layoutKey="comb-75" mode="pick" labels={labels} seats={seatsFor("comb-75")} selected="B-07" />);
+    const tag = html.match(/<g[^>]*data-label="B-07"[^>]*>/)?.[0] ?? "";
+    expect(tag).toContain('aria-pressed="true"');
+    expect(tag).toContain('tabindex="0"');
+  });
+
+  it("highlights available duo pairs when the party is 2, and not for a party of 1", () => {
+    const layout = layoutOf("comb-75");
+    const duoLabels = layout.pods.filter((p) => p.type === "duo").map((p) => p.label);
+    expect(duoLabels.length).toBe(10);
+    // Reserve one half of the first pair: that pair is no longer a free duo.
+    const [firstA] = duoLabels;
+    const seats = seatsFor("comb-75", { [firstA as string]: "RESERVED" });
+    const party2 = renderToString(<CombMap layoutKey="comb-75" mode="pick" labels={labels} seats={seats} partySize={2} />);
+    const party1 = renderToString(<CombMap layoutKey="comb-75" mode="pick" labels={labels} seats={seats} partySize={1} />);
+    expect(count(party2, /data-duo-highlight="true"/g)).toBe(8);
+    expect(count(party1, /data-duo-highlight="true"/g)).toBe(0);
+    expect(party2).toContain("data-duo-pair=");
+  });
+
+  it("journey mode plots the guest and the bowl along the layout's paths and moves them with journeyProgress", () => {
+    const at = (p: number) => renderToString(<CombMap layoutKey="comb-70-mirrored" mode="journey" labels={labels} journeyProgress={p} orientation="landscape" />);
+    const start = at(0.1);
+    const mid = at(0.7);
+    const pos = (html: string, who: string) => {
+      const tag = html.match(new RegExp(`<circle[^>]*data-marker="${who}"[^>]*>`))?.[0] ?? "";
+      return [Number(tag.match(/\scx="([^"]+)"/)?.[1]), Number(tag.match(/\scy="([^"]+)"/)?.[1])];
+    };
+    const layout = layoutOf("comb-70-mirrored");
+    const g = layout.journeyMarkers(0.7).guest!;
+    const [gx, gy] = pos(mid, "guest");
+    expect(gx).toBeCloseTo(g[0], 3);
+    expect(gy).toBeCloseTo(g[1], 3);
+    expect(pos(start, "guest")).not.toEqual(pos(mid, "guest"));
+    expect(pos(mid, "bowl")[0]).not.toBeNaN();
+    // Decorative animation: no pod buttons, one labelled image.
+    expect(mid).not.toMatch(/data-pod="[^"]*"[^>]*role="button"/);
+    expect(mid).toMatch(/<svg[^>]*role="img"/);
+    expect(mid).toContain(`data-journey-target="${layout.journeyTarget.label}"`);
+  });
+});
+
+describe("CombMap interaction (jsdom)", () => {
+  let root: Root | null = null;
+  let host: HTMLDivElement | null = null;
+  afterEach(() => {
+    act(() => root?.unmount());
+    host?.remove();
+    root = null;
+    host = null;
+  });
+  function mount(ui: React.ReactElement) {
+    host = document.createElement("div");
+    document.body.appendChild(host);
+    root = createRoot(host);
+    act(() => root!.render(ui));
+    return host;
+  }
+  const podEl = (h: HTMLElement, label: string) => h.querySelector(`[data-label="${label}"]`) as SVGGElement;
+
+  it("fires onSelect with the pod label when an available pod is tapped", () => {
+    const onSelect = vi.fn();
+    const h = mount(<CombMap layoutKey="comb-75" mode="pick" labels={labels} seats={seatsFor("comb-75")} onSelect={onSelect} />);
+    act(() => podEl(h, "B-07").dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    expect(onSelect).toHaveBeenCalledWith("B-07");
+  });
+
+  it("fires onSelect from the keyboard (Enter and Space)", () => {
+    const onSelect = vi.fn();
+    const h = mount(<CombMap layoutKey="comb-70-mirrored" mode="pick" labels={labels} seats={seatsFor("comb-70-mirrored")} onSelect={onSelect} />);
+    act(() => podEl(h, "C-05").dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })));
+    act(() => podEl(h, "A-02").dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true })));
+    expect(onSelect.mock.calls).toEqual([["C-05"], ["A-02"]]);
+  });
+
+  it("does not select an unavailable pod, and marks it aria-disabled", () => {
+    const onSelect = vi.fn();
+    const h = mount(<CombMap layoutKey="comb-75" mode="pick" labels={labels} seats={seatsFor("comb-75", { "B-07": "OCCUPIED" })} onSelect={onSelect} />);
+    const el = podEl(h, "B-07");
+    expect(el.getAttribute("aria-disabled")).toBe("true");
+    act(() => el.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it("moves focus between pods with the arrow keys (roving tab stop)", () => {
+    const h = mount(<CombMap layoutKey="comb-75" mode="pick" labels={labels} seats={seatsFor("comb-75")} orientation="landscape" selected="B-07" />);
+    const start = podEl(h, "B-07");
+    act(() => start.focus());
+    // Landscape: rows run down the page from the kitchen, so ArrowDown is the next position.
+    act(() => start.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })));
+    expect((document.activeElement as Element | null)?.getAttribute("data-label")).toBe("B-08");
+    expect(podEl(h, "B-08").getAttribute("tabindex")).toBe("0");
+    expect(podEl(h, "B-07").getAttribute("tabindex")).toBe("-1");
+    act(() => podEl(h, "B-08").dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true })));
+    expect((document.activeElement as Element | null)?.getAttribute("data-label")).toBe("B-07");
+  });
+});
+
+describe("RowZoom", () => {
+  it("animates over 350 ms, or instantly with reduced motion", () => {
+    expect(ZOOM_MS).toBe(350);
+    expect(zoomDuration(false)).toBe(350);
+    expect(zoomDuration(true)).toBe(0);
+  });
+
+  it("fitBox keeps the container aspect and contains the target", () => {
+    const box = fitBox({ x: 10, y: 10, w: 4, h: 30 }, 50 / 70);
+    expect(box.w / box.h).toBeCloseTo(50 / 70);
+    expect(box.x).toBeLessThanOrEqual(10);
+    expect(box.x + box.w).toBeGreaterThanOrEqual(14);
+    expect(box.y).toBeLessThanOrEqual(10);
+    expect(box.y + box.h).toBeGreaterThanOrEqual(40);
+  });
+
+  it("zooms every row of both layouts so a pod is at least 44px tall on a 390px phone (portrait) and at 1440 (landscape)", () => {
+    expect(MIN_TOUCH_PX).toBe(44);
+    for (const key of ["comb-75", "comb-70-mirrored"] as const) {
+      for (const [orientation, elementPx] of [["portrait", 390 - 32], ["landscape", 1440 - 64]] as const) {
+        const o = orientLayout(layoutOf(key), orientation);
+        for (const row of o.rows) {
+          const vb = rowZoomBox(row.rect, o.box, elementPx);
+          const pxPerFt = elementPx / vb.w;
+          const podDepthFt = 4.5;
+          expect(podDepthFt * pxPerFt, `${key} ${orientation} row ${row.key}`).toBeGreaterThanOrEqual(44);
+          expect(vb.w / vb.h).toBeCloseTo(o.box.w / o.box.h);
+        }
+      }
+    }
+  });
+
+  it("a tap on a pod too small to hit zooms to its row first; a big enough pod selects; keyboard always selects", () => {
+    expect(podTapAction({ mode: "pick", via: "pointer", podPx: 20, selectable: true })).toBe("zoom");
+    expect(podTapAction({ mode: "pick", via: "pointer", podPx: 50, selectable: true })).toBe("select");
+    expect(podTapAction({ mode: "pick", via: "pointer", podPx: 0, selectable: true })).toBe("select"); // size unknown
+    expect(podTapAction({ mode: "pick", via: "keyboard", podPx: 20, selectable: true })).toBe("select");
+    expect(podTapAction({ mode: "pick", via: "pointer", podPx: 50, selectable: false })).toBe("none");
+    expect(podTapAction({ mode: "live", via: "pointer", podPx: 50, selectable: true })).toBe("zoom");
+    expect(podTapAction({ mode: "journey", via: "pointer", podPx: 50, selectable: true })).toBe("none");
+  });
+});
+
+describe("useSeats adapters", () => {
+  it("maps the API shape to CombMap seats, resolving the duo partner id to a label and dropping order data", () => {
+    const seats = toCombSeats({
+      layoutKey: "comb-75",
+      layoutMirror: false,
+      seats: [
+        { id: "s1", label: "A-02", finger: 1, rowSide: "west", position: 2, status: "AVAILABLE", podType: "DUAL", dualPartnerId: "s2", bestRank: 9, orders: [{ id: "o1" }] },
+        { id: "s2", label: "A-03", finger: 1, rowSide: "west", position: 3, status: "RESERVED", podType: "DUAL", dualPartnerId: "s1", bestRank: 10 },
+        { id: "s3", label: "B-07", finger: 2, rowSide: "west", position: 7, status: "WEIRD", podType: "SINGLE", dualPartnerId: null, bestRank: 1 },
+      ],
+    });
+    expect(seats).toEqual([
+      { id: "s1", label: "A-02", status: "AVAILABLE", podType: "DUAL", dualPartnerLabel: "A-03", bestRank: 9 },
+      { id: "s2", label: "A-03", status: "RESERVED", podType: "DUAL", dualPartnerLabel: "A-02", bestRank: 10 },
+      { id: "s3", label: "B-07", status: "OCCUPIED", podType: "SINGLE", dualPartnerLabel: undefined, bestRank: 1 },
+    ]);
+  });
+
+  it("accepts only the two known layout keys", () => {
+    expect(layoutKeyOf({ layoutKey: "comb-75" })).toBe("comb-75");
+    expect(layoutKeyOf({ layoutKey: "comb-70-mirrored" })).toBe("comb-70-mirrored");
+    expect(layoutKeyOf({ layoutKey: "u-shape" })).toBeNull();
+    expect(layoutKeyOf(null)).toBeNull();
+  });
+});
+
+describe("combMap translations", () => {
+  const all = { en, es, "zh-CN": zhCN, "zh-TW": zhTW } as Record<string, Record<string, unknown>>;
+  const flat = (o: unknown, prefix = ""): Record<string, string> =>
+    Object.entries(o as Record<string, unknown>).reduce<Record<string, string>>((acc, [k, v]) => {
+      if (v && typeof v === "object") Object.assign(acc, flat(v, `${prefix}${k}.`));
+      else acc[`${prefix}${k}`] = String(v);
+      return acc;
+    }, {});
+
+  it("has identical combMap key sets in all 4 locales, with no em dashes", () => {
+    const enKeys = Object.keys(flat(all.en!.combMap)).sort();
+    expect(enKeys.length).toBeGreaterThan(10);
+    for (const [loc, msgs] of Object.entries(all)) {
+      const f = flat(msgs.combMap);
+      expect(Object.keys(f).sort(), loc).toEqual(enKeys);
+      for (const [k, v] of Object.entries(f)) expect(v.includes("\u2014"), `${loc} combMap.${k}`).toBe(false);
+    }
+  });
+
+  it("is really translated (not English copies) and keeps the {label}/{status} placeholders", () => {
+    const enFlat = flat(all.en!.combMap);
+    for (const loc of ["es", "zh-CN", "zh-TW"]) {
+      const f = flat(all[loc]!.combMap);
+      const same = Object.keys(enFlat).filter((k) => f[k] === enFlat[k]);
+      expect(same, `${loc} untranslated`).toEqual([]);
+      for (const [k, v] of Object.entries(enFlat)) {
+        for (const ph of v.match(/\{\w+\}/g) ?? []) expect(f[k], `${loc} combMap.${k} lost ${ph}`).toContain(ph);
+      }
+    }
+  });
+});
