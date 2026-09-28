@@ -237,8 +237,13 @@ export function GroupLobby({ initialGroup }: { initialGroup: Group }) {
         </div>
       </section>
 
-      <div className="mx-auto grid max-w-6xl gap-8 px-5 pt-10 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] md:gap-10 md:px-8">
-        {/* Left column: what you can do now, then the table. */}
+      {/*
+        Fix round 1: at desktop width the actions and the table sit side by
+        side, and the pods get the full content width below them (the same
+        sizing as the order flow's pod step), so picking works on a wide screen.
+      */}
+      <div className="mx-auto grid max-w-6xl gap-8 px-5 pt-10 md:grid-cols-2 md:gap-10 md:px-8">
+        {/* What you can do now. */}
         <div className="grid min-w-0 content-start gap-6">
           {error ? (
             <p role="alert" className="m-0 flex items-start gap-2 rounded-2xl border border-oh-ember-light/40 bg-oh-ember-deep/15 px-4 py-3 text-base text-oh-cream">
@@ -369,7 +374,10 @@ export function GroupLobby({ initialGroup }: { initialGroup: Group }) {
             </section>
           ) : null}
 
-          {/* The table: every order, its person and its state. */}
+        </div>
+
+        {/* The table: every order, its person and its state. */}
+        <div className="grid min-w-0 content-start gap-6">
           <section aria-labelledby="group-members" className={panel}>
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <h2 id="group-members" className="m-0 text-xl font-semibold text-oh-cream">
@@ -396,12 +404,12 @@ export function GroupLobby({ initialGroup }: { initialGroup: Group }) {
           </section>
         </div>
 
-        {/* Right column: the pods. */}
-        <div className="min-w-0">
+        {/* The pods, full width. */}
+        <div className="min-w-0 md:col-span-2">
           {allPaid ? (
             <DonePanel group={group} podLabels={podLabels} soon={soon} myOrder={myOrder} />
           ) : group.status !== "CANCELLED" ? (
-            <section aria-labelledby="group-pods" data-group-map className={`${panel} md:sticky md:top-24`}>
+            <section aria-labelledby="group-pods" data-group-map className={panel}>
               <Eyebrow locale={locale} className="text-oh-ember-light">
                 {t("pods.eyebrow")}
               </Eyebrow>
@@ -430,7 +438,7 @@ export function GroupLobby({ initialGroup }: { initialGroup: Group }) {
                   />
                 ) : (
                   <>
-                    <CombMap layoutKey={seatsApi.layoutKey} mode="live" tone="night" labels={tAll.raw("combMap") as CombMapLabels} seats={seatsApi.seats} />
+                    <CombMap layoutKey={seatsApi.layoutKey} mode="live" tone="night" labels={tAll.raw("combMap") as CombMapLabels} seats={seatsApi.seats} className="mx-auto max-w-3xl" />
                     <p className="m-0 mt-3 text-sm text-oh-mute">
                       {t("pods.free", { free: seatsApi.seats.filter((s) => s.status === "AVAILABLE").length, total: seatsApi.seats.length })}
                     </p>
@@ -439,11 +447,11 @@ export function GroupLobby({ initialGroup }: { initialGroup: Group }) {
               </div>
               {isHost && group.paymentMethod === "HOST_PAYS_ALL" && (group.status === "CLOSED" || group.status === "PAYING") && orders.length > 0 ? (
                 <div className="mt-6 border-t border-oh-stone/70 pt-5">
-                  <Link href={payHref} className={`${primary} w-full`} data-group-pay>
+                  <Link href={payHref} className={`${primary} w-full md:ml-auto md:flex md:w-fit md:min-w-80`} data-group-pay>
                     {t("pay.cta", { amount: money(due) })}
                     <Icon name="arrow" size={18} />
                   </Link>
-                  <p className="m-0 mt-2 text-center text-sm text-oh-mute">{t("pay.note")}</p>
+                  <p className="m-0 mt-2 text-center text-sm text-oh-mute md:text-right">{t("pay.note")}</p>
                 </div>
               ) : null}
             </section>

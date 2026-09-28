@@ -289,6 +289,18 @@ test("privacy: the SMS notifications section is there in every locale (hotfix 64
   }
 });
 
+test("sms-consent: the opt-out address is the privacy policy's SMS address, in every locale (fix round 1)", async () => {
+  for (const locale of ["en", "zh-TW", "zh-CN", "es"]) {
+    const privacyEmail = (messages(locale).privacy.sections.smsNotifications.help as string).match(/[\w.+-]+@[\w-]+(\.[\w-]+)+/)?.[0];
+    assert.equal(privacyEmail, "orders@ohbeefnoodlesoup.com", `${locale} privacy SMS address`);
+    const html = await (await fetch(`${BASE}/${locale}/sms-consent`)).text();
+    const optOut = html.slice(html.indexOf('id="opt-out"'));
+    const mail = optOut.match(/href="mailto:([^"]+)"/)?.[1];
+    assert.equal(mail, privacyEmail, `${locale} opt-out address`);
+    assert.ok(!html.includes("eatoh.com"), `${locale}: the old address is gone`);
+  }
+});
+
 /* ------------------------------------------------------------ cleanup */
 
 test("/en/tenants is gone (404)", async () => {
@@ -347,8 +359,11 @@ test("group lobby (iPhone 15, en, host): pick a pod per member on the map, then 
 
 test("group lobby: reduced motion shows everything; 1440 fits", async () => {
   await withPage(iphone15({ reducedMotion: "reduce" }), `/en/group/${groupCode}`, "[data-group-lobby]", async (page) => allContentVisible(page, "[data-group-lobby]"));
-  await withPage(desktop(), `/en/group/${groupCode}`, "[data-group-map] svg[data-layout]", async (page) => {
+  await withPage(desktop(), `/en/group/${groupCode}`, "[data-group-picker] svg[data-layout]", async (page) => {
     await noHorizontalOverflow(page);
+    // Fix round 1: the pick map gets real width on a desktop (it was about 165px).
+    const width = await page.locator("[data-group-picker] svg[data-layout]").evaluate((el) => el.getBoundingClientRect().width);
+    assert.ok(width >= 560, `pick map is ${Math.round(width)}px wide at 1440`);
     await shot(page, "d11-group-1440-en");
   }, asHost);
   await withPage({ ...iphone15(), viewport: { width: 360, height: 780 } }, `/es/group/${groupCode}`, "[data-group-lobby]", async (page) => {

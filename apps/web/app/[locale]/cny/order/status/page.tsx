@@ -189,7 +189,7 @@ function StatusContent() {
     setZodiacLoading(true);
     try {
       const response = await fetch(
-        `${API_URL}/orders/zodiac-insights?guestName=${encodeURIComponent(guestName)}`,
+        `${API_URL}/orders/zodiac-insights?guestName=${encodeURIComponent(guestName)}&locale=${encodeURIComponent(locale)}`,
         { headers: { "x-tenant-slug": "oh" } }
       );
 
@@ -642,8 +642,8 @@ function StatusContent() {
                   <p style={{ margin: 0, fontSize: "0.8rem", color: "#D7B66E", fontFamily: "'Raleway', sans-serif" }}>
                     <span style={{ fontSize: "1.2rem", marginRight: "6px" }}>{fortune.learnChinese.traditional}</span>
                     <span style={{ fontWeight: 600 }}>{fortune.learnChinese.pinyin}</span>
-                    {" = "}
-                    {fortune.learnChinese.english}
+                    {/* The API glosses the word in English only; the gloss is shown to English readers (D11 fix round 1). */}
+                    {locale === "en" ? ` = ${fortune.learnChinese.english}` : null}
                   </p>
                 </div>
               )}

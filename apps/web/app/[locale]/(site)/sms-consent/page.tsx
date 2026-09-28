@@ -24,8 +24,8 @@ const BUSINESS = {
   website: "https://ohbeef.com",
   email: "hello@ohbeef.com",
   phone: "+1 (866) 359-4863",
-  // As published before D11; see the D11 report (the other addresses are ohbeef.com).
-  optOutEmail: "hello@eatoh.com",
+  // The same address as the privacy policy's SMS section (controller ruling, D11 fix round 1).
+  optOutEmail: "orders@ohbeefnoodlesoup.com",
 };
 
 function Term({ label, children }: { label: ReactNode; children: ReactNode }) {

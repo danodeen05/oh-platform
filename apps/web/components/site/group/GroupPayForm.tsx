@@ -154,7 +154,7 @@ export function GroupPayForm({ groupCode, hostOrderId, hostOrderNumber }: { grou
 
   if (!isSignedIn) {
     return (
-      <div data-group-signin className="rounded-2xl border border-oh-stone bg-oh-charcoal p-5">
+      <div data-group-signin>
         <p className="m-0 text-lg font-semibold text-oh-cream">{th("signInTitle")}</p>
         <p className="m-0 mt-1 text-base text-oh-cream/75">{th("signInBody")}</p>
         <SignInButton mode="modal">

@@ -394,6 +394,18 @@ describe("POST /group-orders/:code/complete", () => {
     assert.ok(a && b && a !== b, `two distinct pods, got ${a} and ${b}`);
   });
 
+  test("D11 fix round 1: two /complete calls at once (two tabs) never strand a claimed pod", async () => {
+    const { app, prisma } = await buildApp({ orders: paidPair() });
+    const call = () => app.inject({ method: "POST", url: "/group-orders/ABC234/complete", headers: user("u1"), payload: { fill: true } });
+    const [a, b] = await Promise.all([call(), call()]);
+    assert.equal(a.statusCode, 200);
+    assert.equal(b.statusCode, 200);
+    const seated = [(await prisma.order.findUnique({ where: { id: "o-host" } })).seatId, (await prisma.order.findUnique({ where: { id: "o-u2" } })).seatId];
+    assert.ok(seated[0] && seated[1] && seated[0] !== seated[1], `distinct pods, got ${seated}`);
+    const reserved = (await prisma.seat.findMany({ where: { status: "RESERVED" } })).map((x) => x.id).sort();
+    assert.deepEqual(reserved, [...seated].sort(), "only the seated pods stay reserved");
+  });
+
   test("D11: only the host may complete, even with a pick", async () => {
     const { app, prisma } = await buildApp({ orders: paidPair() });
     const res = await app.inject({ method: "POST", url: "/group-orders/ABC234/complete", headers: user("u2"), payload: { pods: [{ orderId: "o-u2", label: "B-07" }] } });

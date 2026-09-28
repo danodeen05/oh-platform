@@ -46,7 +46,7 @@ export function GroupPodPicker({
   const free = seats.filter((s) => s.status === "AVAILABLE").length;
 
   return (
-    <div data-group-picker data-ready={seats.length > 0 ? "true" : "false"} className="grid gap-6 md:grid-cols-[minmax(0,1fr)_18rem] md:gap-8">
+    <div data-group-picker data-ready={seats.length > 0 ? "true" : "false"} className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:gap-10">
       <div className="min-w-0">
         <CombMap
           layoutKey={layoutKey}

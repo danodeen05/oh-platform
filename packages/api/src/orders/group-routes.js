@@ -31,7 +31,7 @@
  * markGroupPaid (host pays), both server-verified.
  */
 import { orderOwnerId } from "../auth/customer.js";
-import { quoteOrder, createOrder, createGroupPaymentIntent, markGroupPaid, pickBestPod, OrderError, PodUnavailableError, DINE_IN_DISABLED_MESSAGE } from "./service.js";
+import { quoteOrder, createOrder, createGroupPaymentIntent, markGroupPaid, pickBestPod, releaseClaim, OrderError, PodUnavailableError, DINE_IN_DISABLED_MESSAGE } from "./service.js";
 import { localizeLocation, localizeMenuItem } from "../i18n/localize.js";
 import { normalizeLocale } from "../locale.js";
 
@@ -489,7 +489,16 @@ export async function registerGroupOrderRoutes(app, {
           data.podAssignedAt = t;
         }
       }
-      await prisma.order.update({ where: { id: order.id }, data });
+      if (data.seatId) {
+        // Seat only an order that is still seatless: a second /complete (another tab) racing
+        // this one must not overwrite it and strand the pod it claimed (fix round 1).
+        const { seatId, podSelectionMethod, podAssignedAt, ...rest } = data;
+        const seated = await prisma.order.updateMany({ where: { id: order.id, seatId: null }, data: { seatId, podSelectionMethod, ...(podAssignedAt ? { podAssignedAt } : {}) } });
+        if (seated.count !== 1) await releaseClaim(prisma, seatId);
+        await prisma.order.update({ where: { id: order.id }, data: rest });
+      } else {
+        await prisma.order.update({ where: { id: order.id }, data });
+      }
     }
     console.log(`[Group Order Completed] Code: ${group.code}, Orders: ${orders.length}, Picked: ${picked.size}, Seating Option: ${seatingOption ?? "-"}`);
     return fullGroup(group.id, { userId: found.actor.userId, guestId: found.actor.guestId });

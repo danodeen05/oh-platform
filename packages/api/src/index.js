@@ -1,4 +1,5 @@
 import Fastify from "fastify";
+import { zodiacFallbacks, zodiacInsightsPrompt } from "./cny/zodiac-insights.js";
 import cors from "@fastify/cors";
 import formbody from "@fastify/formbody";
 import rateLimit from "@fastify/rate-limit";
@@ -18,7 +19,7 @@ import {
   notifyTierUpIfNeeded,
 } from "./notifications.js";
 import { normalizePhoneE164 } from "./utils/phone.js";
-import { applyUserLocaleUpdate } from "./locale.js";
+import { applyUserLocaleUpdate, normalizeLocale } from "./locale.js";
 import { BetaAnalyticsDataClient } from "@google-analytics/data";
 import { readFileSync } from "fs";
 import crypto from "crypto";
@@ -3969,6 +3970,8 @@ const ZODIAC_COMPATIBILITY = {
 // GET /orders/zodiac-insights - Get personalized zodiac insights for CNY party
 app.get("/orders/zodiac-insights", async (req, reply) => {
   const { guestName, guestPhone } = req.query;
+  // Task D11 fix round 1: the insights are written in the reader's language.
+  const insightLocale = normalizeLocale(req.query?.locale);
 
   if (!guestName && !guestPhone) {
     return reply.code(400).send({ error: "guestName or guestPhone required" });
@@ -4038,25 +4041,7 @@ app.get("/orders/zodiac-insights", async (req, reply) => {
     if (anthropic) {
       try {
         const firstName = currentGuest.name?.split(" ")[0] || "friend";
-        const prompt = `You are a fun, mystical Chinese zodiac expert at a Chinese New Year 2026 party (Year of the Horse).
-
-Guest: ${firstName}
-Their Zodiac: ${guestZodiac}
-Their Birthday: ${currentGuest.birthday}
-
-Compatible guests at the party (${compatibility.best.join(", ")} signs): ${compatibleGuests.map(g => `${g.name} (${g.zodiac})`).join(", ") || "None tonight"}
-
-Challenging matches (${compatibility.avoid.join(", ")} signs): ${avoidGuests.map(g => `${g.name} (${g.zodiac})`).join(", ") || "None tonight"}
-
-Generate a fun, personalized zodiac insight in this exact JSON format:
-{
-  "zodiacEmoji": "emoji for their animal",
-  "horseYearAdvice": "One playful sentence about what ${guestZodiac}s should remember during the Year of the Horse (2026). Make it specific and fun.",
-  "hangOutWith": "One fun sentence suggesting who they should seek out tonight and why, based on zodiac compatibility. Be specific with names if available.",
-  "avoidTonight": "One playful, lighthearted sentence about who to 'watch out for' tonight. Keep it fun and obviously joking - this is for entertainment!"
-}
-
-Be playful, mystical, and entertaining. Keep each response to ONE short sentence. Return ONLY valid JSON.`;
+        const prompt = zodiacInsightsPrompt({ locale: insightLocale, firstName, zodiac: guestZodiac, birthday: currentGuest.birthday, compatibility, compatibleGuests, avoidGuests });
 
         const message = await anthropic.messages.create({
           model: "claude-sonnet-4-6",
@@ -4074,21 +4059,19 @@ Be playful, mystical, and entertaining. Keep each response to ONE short sentence
       }
     }
 
+    const fallback = zodiacFallbacks({ locale: insightLocale, zodiac: guestZodiac, compatibleGuests, avoidGuests });
     return {
       guestName: currentGuest.name,
       firstName: currentGuest.name?.split(" ")[0],
       birthday: currentGuest.birthday,
       zodiac: guestZodiac,
       zodiacEmoji: insights?.zodiacEmoji || getZodiacEmoji(guestZodiac),
-      horseYearAdvice: insights?.horseYearAdvice || `${guestZodiac}s should embrace new adventures this Year of the Horse!`,
+      horseYearAdvice: insights?.horseYearAdvice || fallback.horseYearAdvice,
       compatibleGuests,
       avoidGuests,
-      hangOutWith: insights?.hangOutWith || (compatibleGuests.length > 0
-        ? `Seek out ${compatibleGuests[0].name} - fellow ${compatibleGuests[0].zodiac}s make great companions!`
-        : "Mingle with everyone - your charm knows no bounds!"),
-      avoidTonight: insights?.avoidTonight || (avoidGuests.length > 0
-        ? `Watch out for ${avoidGuests[0].name} - just kidding, say hi anyway!`
-        : "No cosmic conflicts tonight - you're in the clear!"),
+      hangOutWith: insights?.hangOutWith || fallback.hangOutWith,
+      avoidTonight: insights?.avoidTonight || fallback.avoidTonight,
+      locale: insightLocale,
       source: insights ? "ai" : "fallback"
     };
   } catch (error) {
