@@ -5,7 +5,9 @@
  *   POST /chappy/chat              text/event-stream. Body {message (<=1500 chars), locale, channel:"web"}.
  *   GET  /chappy/history           The caller's active web conversation, for display.
  *   POST /chappy/reset             Start over (a trusted service may reset any {identifier, channel}).
- *   POST /chappy/sms               Twilio webhook (X-Twilio-Signature verified, else 403), same agent, TwiML reply.
+ *   POST /chappy/sms               Twilio webhook (X-Twilio-Signature verified, else 403), same agent. A reply
+ *                                  ready within SMS_INLINE_MS goes back as TwiML; a slower turn (Twilio stops
+ *                                  waiting at 15 s) is acknowledged with an empty TwiML and texted by sendSMS.
  *
  * Identity for chat/history/reset comes from ONE preHandler
  * (requireChappyIdentity): a verified member session, or a signed guest token
@@ -49,6 +51,11 @@ import { fallbackText } from "./prompts.js";
 import { checkTwilioSignature } from "./twilio-signature.js";
 import { toE164, usersWithPhone, smsMemberFor } from "./phone.js";
 import { formatForSMS } from "./formatters/rcs.js";
+
+// Twilio abandons a webhook after 15 s (error 11200, logged as a 502), and a
+// multi-tool SMS turn ("the usual": history, cart, quote) can take 30 s. A turn
+// that runs past this answers by text instead of TwiML.
+export const SMS_INLINE_MS = 10_000;
 
 export const GUEST_TOKEN_RATE_LIMIT = Object.freeze({ max: 10, timeWindow: "1 hour" });
 export const CHAPPY_UNIDENTIFIED = Object.freeze({ error: "Sign in, or start a guest chat session, to talk to Chappy" });
@@ -123,6 +130,7 @@ export async function registerChappyRoutes(app, deps) {
     sendSMS = null,
     sendGraphMail = null,
     env = process.env,
+    smsInlineMs = SMS_INLINE_MS,
   } = deps;
 
   // What the tools need beyond prisma. Support notifications honor SUPPORT_NOTIFY (env).
@@ -243,6 +251,44 @@ export async function registerChappyRoutes(app, deps) {
     },
   );
 
+  /** One SMS turn, start to finish: the messages to send. Never throws. */
+  async function smsTurn(identity, phone, Body) {
+    try {
+      const at = now();
+      const conversation = await loadOrCreateConversation(prisma, phone, "sms", at);
+      let text = "";
+      let error = null;
+      for await (const event of runTurn({ client, prisma, identity, channel: "sms", locale: "en", message: Body, conversation, tools, toolDeps, now: at })) {
+        if (event.type === "done") {
+          text = event.text;
+          await noteUsage(identity, event.usage);
+        } else if (event.type === "error") {
+          error = event.code;
+          // Fix round 1: a refusal or a failed model request still spent
+          // tokens on whatever rounds completed; count them too.
+          await noteUsage(identity, event.usage);
+        }
+      }
+      if (error) text = fallbackText(error === "REFUSAL" ? "refusal" : "error", "en");
+      return formatForSMS(text || fallbackText("empty", "en")).messages;
+    } catch (err) {
+      console.error("[Chappy SMS Error]", err);
+      return [fallbackText("error", "en")];
+    }
+  }
+
+  // One turn at a time per phone: a follow-up text waits for the turn before
+  // it, so two turns never load and save the same conversation at once.
+  const smsQueues = new Map();
+  function enqueueSms(phone, run) {
+    const turn = (smsQueues.get(phone) || Promise.resolve()).then(run);
+    smsQueues.set(phone, turn);
+    turn.finally(() => {
+      if (smsQueues.get(phone) === turn) smsQueues.delete(phone);
+    });
+    return turn;
+  }
+
   // Twilio SMS webhook: same agent, plain text, TwiML reply. The Twilio
   // signature is checked first; nothing else runs for an unsigned request.
   app.post("/chappy/sms", async (req, reply) => {
@@ -277,25 +323,31 @@ export async function registerChappyRoutes(app, deps) {
       const limit = await checkLimits({ identity, channel: "sms", message: Body, req, now: now() });
       if (limit) return twiml([limit.message || fallbackText("error", "en")]);
 
-      const at = now();
-      const conversation = await loadOrCreateConversation(prisma, phone, "sms", at);
-      let text = "";
-      let error = null;
-      for await (const event of runTurn({ client, prisma, identity, channel: "sms", locale: "en", message: Body, conversation, tools, toolDeps, now: at })) {
-        if (event.type === "done") {
-          text = event.text;
-          await noteUsage(identity, event.usage);
-        } else if (event.type === "error") {
-          error = event.code;
-          // Fix round 1: a refusal or a failed model request still spent
-          // tokens on whatever rounds completed; count them too.
-          await noteUsage(identity, event.usage);
-        }
+      const turn = enqueueSms(phone, () => smsTurn(identity, phone, Body));
+      let timer;
+      const inline = await Promise.race([
+        turn,
+        new Promise((resolve) => {
+          timer = setTimeout(() => resolve(null), smsInlineMs);
+          timer.unref?.();
+        }),
+      ]);
+      clearTimeout(timer);
+      if (inline) {
+        console.log(`[Chappy SMS] ...${phone.slice(-4)}: ${inline.length} message(s)`);
+        return twiml(inline);
       }
-      if (error) text = fallbackText(error === "REFUSAL" ? "refusal" : "error", "en");
-      const { messages } = formatForSMS(text || fallbackText("empty", "en"));
-      console.log(`[Chappy SMS] ${phone}: ${messages.length} message(s)`);
-      return twiml(messages);
+      // Too slow for Twilio's 15 s window: acknowledge now, text the reply when it is ready.
+      if (!sendSMS) return twiml(await turn);
+      console.log(`[Chappy SMS] ...${phone.slice(-4)}: still working after ${smsInlineMs} ms, will reply by text`);
+      turn.then(async (messages) => {
+        for (const body of messages) {
+          const sent = await sendSMS({ to: From, body });
+          if (!sent?.success) console.error(`[Chappy SMS] ...${phone.slice(-4)}: late reply not sent (${sent?.reason || sent?.error || "unknown"})`);
+        }
+        console.log(`[Chappy SMS] ...${phone.slice(-4)}: ${messages.length} message(s) sent by text`);
+      }).catch((err) => console.error("[Chappy SMS] late reply failed:", err?.message));
+      return twiml([]);
     } catch (err) {
       console.error("[Chappy SMS Error]", err);
       return twiml([fallbackText("error", "en")]);

@@ -44,6 +44,8 @@ async function build({
   env = SMS_ENV,
   fastifyOptions = {},
   now = () => new Date("2026-10-01T18:00:00Z"),
+  sendSMS,
+  smsInlineMs,
 } = {}) {
   const app = Fastify(fastifyOptions);
   await app.register(cors, { origin: (origin, cb) => cb(null, !origin || origin === ALLOWED), credentials: true });
@@ -65,6 +67,8 @@ async function build({
     recordCase,
     now,
     env,
+    sendSMS,
+    smsInlineMs,
   });
   await app.ready();
   return { app, client, db, auth };
@@ -425,6 +429,72 @@ describe("POST /chappy/sms (Twilio webhook)", () => {
     assert.equal(res.statusCode, 200);
     assert.equal(client.calls.length, 0);
     assert.match(res.body, /<Message>/);
+  });
+
+  // 2026-09-29: Twilio stops waiting at 15 s (error 11200, a 502), and "the
+  // usual" ran about 30 s on prod, so those replies were built and dropped.
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const until = async (check, ms = 2000) => {
+    const end = Date.now() + ms;
+    while (!check()) {
+      if (Date.now() > end) throw new Error("timed out waiting");
+      await sleep(5);
+    }
+  };
+  const slowTool = (ms, log = []) => ({
+    defs: [{ name: "lookup", description: "d", input_schema: { type: "object", properties: {}, required: [], additionalProperties: false } }],
+    execute: async () => {
+      log.push("start");
+      await sleep(ms);
+      log.push("end");
+      return { ok: true };
+    },
+  });
+  const toolThenText = (reply) => [step({ content: [{ type: "tool_use", id: "t1", name: "lookup", input: {} }], stop_reason: "tool_use" }), step({ content: [text(reply)] })];
+
+  test("a turn slower than the inline window is acknowledged with empty TwiML, then texted", async () => {
+    const sent = [];
+    const { app } = await build({
+      script: toolThenText("Your usual: brisket, Wagyu, extra noodles."),
+      tools: slowTool(80),
+      smsInlineMs: 20,
+      sendSMS: async (m) => (sent.push(m), { success: true }),
+    });
+    const res = await signed(app, HUNGRY);
+    assert.equal(res.statusCode, 200);
+    assert.match(res.headers["content-type"], /text\/xml/);
+    assert.match(res.body, /<Response><\/Response>$/, "Twilio gets an empty TwiML in time");
+    assert.equal(sent.length, 0, "nothing texted before the turn ends");
+    await until(() => sent.length === 1);
+    assert.deepEqual(sent[0], { to: HUNGRY.From, body: "Your usual: brisket, Wagyu, extra noodles." });
+  });
+
+  test("a turn inside the window still replies as TwiML, and nothing is texted", async () => {
+    const sent = [];
+    const { app } = await build({
+      script: [step({ content: [text("Bowl time. Come in.")] })],
+      smsInlineMs: 1000,
+      sendSMS: async (m) => (sent.push(m), { success: true }),
+    });
+    const res = await signed(app, HUNGRY);
+    assert.match(res.body, /<Message>Bowl time\. Come in\.<\/Message>/);
+    await sleep(20);
+    assert.equal(sent.length, 0);
+  });
+
+  test("two texts from one phone run one turn at a time, and both replies arrive", async () => {
+    const sent = [];
+    const log = [];
+    const { app } = await build({
+      script: (n) => (n % 2 === 1 ? toolThenText("x")[0] : step({ content: [text(`reply ${n / 2}`)] })),
+      tools: slowTool(40, log),
+      smsInlineMs: 5,
+      sendSMS: async (m) => (sent.push(m.body), { success: true }),
+    });
+    await Promise.all([signed(app, HUNGRY), signed(app, { ...HUNGRY, Body: "the usual", MessageSid: "SM2" })]);
+    await until(() => sent.length === 2);
+    assert.deepEqual(log, ["start", "end", "start", "end"], "the second turn waited for the first");
+    assert.deepEqual(sent, ["reply 1", "reply 2"]);
   });
 });
 
