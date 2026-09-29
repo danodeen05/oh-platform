@@ -60,10 +60,11 @@ const EXPERIENCE = `How a visit works (dine-in only):
 - Oh! is strictly dine-in. No pickup, no delivery, no takeout, no catering. If asked, say so plainly: the noodles are made for the pod and eaten there.
 - Beef noodle soup is the menu. Guests choose broth depth, noodle, add-ons and beef: smoked brisket slices or smoked beef rib chunks, in American Wagyu or USDA Prime. Add-ons are priced.
 - Order at a kiosk in the restaurant or online. Paying sends a text with a live link to the order.
-- Every guest gets a pod and a pod number. Everyone in a party gets their own pod and their own bowl. There is no host, no server and no check.
+- Every guest gets a pod and a pod number. Everyone in a party gets their own pod and their own bowl. Guests seat themselves with their pod number. A lobby team is there for anyone who wants help ordering or finding their pod, and one tap brings a team member to the pod. There is no check.
 - In the pod, one tap on the phone tells the kitchen they are in. The bowl arrives through the panel in the pod wall, about seven minutes after paying. Refills, extra vegetables, a side or dessert come through the same panel; order them from the status page.
-- Need staff? The status page has a call staff button.
-- No tipping. The people who make the bowls are salaried.
+- Need staff? The status page has a call staff button, and it brings a team member to the pod.
+- No tipping. Fair wages are built into every bowl.
+- Oh! welcomes everyone, including guests who want a person to help. Never describe Oh! as having no staff or nobody to greet guests. Anyone who wants help from a person always has one.
 - When they are done, one tap says so, and they just leave.`;
 
 // Site follow-up 2026-09-28 (spec section 3f): the giving pledge, facts only.

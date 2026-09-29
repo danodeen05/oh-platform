@@ -5,7 +5,7 @@
  *   2. Walk in         pinned: the hall, rows lighting in sequence
  *   3. The pod         pinned: three photos and the hatch panel opening
  *   4. The bowl        linen: the bowl turning, the callouts, the beef macro
- *   5. No check, no tip  typographic
+ *   5. Your visit, your way  typographic: order, seat, help, no tipping
  *   6. One Red Step    the giving pledge and its red thread, beside the
  *                      no-tip promise (moved up 2026-09-28; links to /giving)
  *   7. Rewards         the tier marks rising, cashback counting up

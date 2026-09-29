@@ -146,13 +146,13 @@
     },
     "meta": {
       "title": "Oh! Beef Noodle Soup: el único restaurante construido a tu alrededor",
-      "description": "Sopa de fideos con res americana premium, servida en una cabina privada. Sin anfitrión, sin mesero, sin cuenta, sin propina. City Creek y University Place, Utah."
+      "description": "Sopa de fideos con res americana premium, servida en una cabina privada. Pide a tu manera, acomódate tú mismo y nuestro equipo siempre está cerca. City Creek y University Place, Utah."
     },
     "chapters": "La historia, en ocho capítulos",
     "arrive": {
       "eyebrow": "Sopa de fideos con res, en una cabina solo para ti",
       "title": "El único restaurante construido a tu alrededor.",
-      "lede": "Res americana premium sobre un caldo en dos fases, servida a través de la pared de una cabina tranquila. Sin anfitrión, sin mesero, sin cuenta, sin propina.",
+      "lede": "Res americana premium sobre un caldo en dos fases, servida a través de la pared de tu propia cabina tranquila. Pide a tu manera, y nuestro equipo siempre está cerca.",
       "order": "Pide un tazón",
       "story": "Mira cómo es una visita"
     },
@@ -166,8 +166,8 @@
     "walkIn": {
       "eyebrow": "Entra",
       "lines": {
-        "one": "Entras y nadie te recibe.",
-        "two": "Así está diseñado.",
+        "one": "Entra y siéntete como en casa.",
+        "two": "Nuestro equipo del vestíbulo está aquí si quieres una mano.",
         "three": "La sala es tranquila y la luz es baja. Fila tras fila, aparecen las cabinas.",
         "four": "Pides en un quiosco en unos cuarenta segundos, y la pantalla te da un número de cabina."
       }
@@ -215,16 +215,16 @@
       "menu": "Ver el menú"
     },
     "noTip": {
-      "eyebrow": "Sin cuenta, sin propina",
+      "eyebrow": "Tu visita, a tu manera",
       "words": {
-        "host": "Sin anfitrión.",
-        "server": "Sin mesero.",
-        "check": "Sin cuenta.",
-        "tip": "Sin propina."
+        "order": "Pide a tu manera.",
+        "seat": "Acomódate tú mismo.",
+        "help": "Ayuda a un toque.",
+        "tip": "Sin propinas. Nunca."
       },
-      "body": "Aquí la propina no es parte de la comida. Sin línea de propina, sin cargo por servicio.",
+      "body": "El salario justo va incluido en cada tazón, así que la propina nunca es parte de la comida. Sin línea de propina, sin cargo por servicio.",
       "note": "Un toque en tu teléfono dice que terminaste. Te vas cuando quieras.",
-      "giveBack": "Sin propina. Y el 1% de los ingresos de cada tazón se dona."
+      "giveBack": "Sin propinas, nunca. Y el 1% de los ingresos de cada tazón se dona."
     },
     "rewards": {
       "eyebrow": "Recompensas",
@@ -4157,12 +4157,12 @@
   "experience": {
     "meta": {
       "title": "La experiencia: una visita a Oh!, paso a paso",
-      "description": "Llegar, pedir, caminar, acomodarte, seguir, recibir, probar, salir. Una visita a Oh! Beef Noodle Soup en ocho pasos, sobre el plano real. Sin anfitrión, sin mesero, sin cuenta, sin propina."
+      "description": "Llegar, pedir, caminar, acomodarte, seguir, recibir, probar, salir. Una visita a Oh! Beef Noodle Soup en ocho pasos, sobre el plano real. Pide a tu manera, acomódate tú mismo y nuestro equipo siempre está cerca."
     },
     "intro": {
       "eyebrow": "La experiencia",
       "title": "Una visita, en ocho pasos.",
-      "lede": "Cada persona de tu grupo tiene su cabina, y cada cabina recibe su propio tazón. Sin anfitrión, sin mesero, sin cuenta, sin propina. Esta es la visita completa, en orden.",
+      "lede": "Cada persona de tu grupo tiene su cabina, y cada cabina recibe su propio tazón. Pide a tu manera, acomódate tú mismo y nuestro equipo siempre está cerca. Esta es la visita completa, en orden.",
       "start": "Empieza por el primer paso"
     },
     "stepper": {
@@ -4173,8 +4173,8 @@
     "steps": {
       "arrive": {
         "eyebrow": "Llegar",
-        "title": "Entras y nadie te recibe.",
-        "body": "Es a propósito. La sala está en silencio, la luz es tenue y tres quioscos están entre tú y las cabinas."
+        "title": "Entra y siéntete como en casa.",
+        "body": "La sala está en silencio, la luz es tenue y nuestro equipo del vestíbulo está ahí si quieres una mano. Tres quioscos están entre tú y las cabinas."
       },
       "order": {
         "eyebrow": "Pedir",
@@ -4184,7 +4184,7 @@
       "walk": {
         "eyebrow": "Caminar",
         "title": "Un número de cabina, y vas a buscarla.",
-        "body": "Caminas por el pasillo junto a una fila de paneles cerrados y el murmullo de una sala llena. Nadie lleva una bandeja. Nadie espera a que lo sienten."
+        "body": "Caminas por el pasillo junto a una fila de paneles cerrados y el murmullo de una sala llena. Tu número de cabina es tu lugar, así que vas directo a él."
       },
       "settle": {
         "eyebrow": "Acomodarte",
@@ -4194,7 +4194,7 @@
       "status": {
         "eyebrow": "Seguir",
         "title": "Tu teléfono lleva el control.",
-        "body": "El enlace del quiosco abre una página en vivo de tu pedido, escrita para ti. Mientras esperas, la transmisión en vivo de la cocina narra tu tazón, con tu nombre, mientras avanza por la cocina. ¿Necesitas algo? Tócalo, y llega por el mismo panel. Sin mesero.",
+        "body": "El enlace del quiosco abre una página en vivo de tu pedido, escrita para ti. Mientras esperas, la transmisión en vivo de la cocina narra tu tazón, con tu nombre, mientras avanza por la cocina. ¿Necesitas algo? Tócalo, y llega por el mismo panel. O con un toque, alguien del equipo viene a ti.",
         "frame": "La página de estado del pedido en vivo, con un pedido de demostración",
         "poster": "Un pedido de demostración, en vivo",
         "hint": "Es la página de estado real, con un pedido de demostración. Nada llega a una cocina de verdad.",
@@ -4218,7 +4218,7 @@
           },
           "staff": {
             "title": "Llama al equipo",
-            "body": "Un toque llega al equipo de sala. Nadie tiene que hacer señas."
+            "body": "Un toque trae a alguien del equipo a tu cabina."
           },
           "roast": {
             "title": "Tu pedido, en broma",
@@ -4243,7 +4243,7 @@
       "leave": {
         "eyebrow": "Salir",
         "title": "Terminas y te vas.",
-        "body": "Un toque en tu teléfono dice que terminaste. Sin cuenta, sin línea de propina. Sales pasando por la tienda, y la cabina se prepara de nuevo detrás de ti.",
+        "body": "Un toque en tu teléfono dice que terminaste. Sin cuenta que esperar, sin línea de propina. Sales pasando por la tienda, y la cabina se prepara de nuevo detrás de ti.",
         "alt": "La tienda de camino a la salida: repisas con salsas, cajas de regalo, tazones, camisetas y gorras, y un letrero que dice gracias."
       }
     },
@@ -4252,7 +4252,7 @@
       "note": "City Creek, 75 cabinas. University Place es el mismo plano, en espejo, con 70.",
       "captions": {
         "arrive": "Llegas por la entrada al vestíbulo.",
-        "order": "Tres kioscos en el vestíbulo. Sin mostrador.",
+        "order": "Tres kioscos en el vestíbulo, y un equipo para ayudarte.",
         "walk": "Cruzas el pasillo transversal y subes por tu pasillo hasta la cabina {label}. Cada puerta en el camino es una cabina.",
         "settle": "Entras a la cabina {label}. Un toque confirma tu llegada, y la cocina empieza tu tazón.",
         "status": "Tu tazón se prepara en la cocina, y tu teléfono lo sigue con tu nombre.",
@@ -4322,8 +4322,8 @@
           "a": "Cada persona de tu grupo tiene su cabina, y cada cabina recibe su propio tazón. Las cabinas dobles son para dos: se quita la división entre un par y dos cabinas se vuelven una."
         },
         "server": {
-          "q": "¿Hay mesero?",
-          "a": "Sin anfitrión y sin mesero. Tu tazón llega a la ventanilla de tu cabina desde un pasillo del personal. Los clientes caminan por sus pasillos, el personal por los suyos, y solo se encuentran en la ventanilla."
+          "q": "¿Alguien me puede ayudar?",
+          "a": "Cuando quieras. Nuestro equipo del vestíbulo te ayuda a pedir y a encontrar tu cabina, y un toque en tu teléfono trae a alguien del equipo. Tu tazón llega desde la cocina por la ventanilla de tu cabina."
         },
         "more": {
           "q": "¿Y si quiero más o necesito ayuda?",
@@ -4335,7 +4335,7 @@
         },
         "tip": {
           "q": "¿Dejo propina?",
-          "a": "No. No hay cuenta ni línea de propina. Cuando terminas, un toque en tu teléfono lo dice, y te vas cuando quieras."
+          "a": "No. El salario justo va incluido en cada tazón, así que no hay línea de propina ni cuenta que esperar. Cuando terminas, un toque en tu teléfono lo dice, y te vas cuando quieras."
         },
         "bowl": {
           "q": "¿Qué lleva el tazón?",

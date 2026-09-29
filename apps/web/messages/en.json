@@ -146,13 +146,13 @@
     },
     "meta": {
       "title": "Oh! Beef Noodle Soup: the only restaurant built around you",
-      "description": "Premium American beef noodle soup, served in a private pod. No host, no server, no check, no tip. City Creek and University Place, Utah."
+      "description": "Premium American beef noodle soup, served in a private pod. Order your way, seat yourself, and our team is always close by. City Creek and University Place, Utah."
     },
     "chapters": "The story, in eight chapters",
     "arrive": {
       "eyebrow": "Beef noodle soup, in a pod of your own",
       "title": "The only restaurant built around you.",
-      "lede": "Premium American beef over a two-phase broth, served through the wall of a quiet pod. No host, no server, no check, no tip.",
+      "lede": "Premium American beef over a two-phase broth, served through the wall of your own quiet pod. Order your way, and our team is always close by.",
       "order": "Order a bowl",
       "story": "See how a visit works"
     },
@@ -166,8 +166,8 @@
     "walkIn": {
       "eyebrow": "Walk in",
       "lines": {
-        "one": "You walk in and nobody greets you.",
-        "two": "That is the design.",
+        "one": "Come in and make yourself at home.",
+        "two": "Our lobby team is right here if you'd like a hand.",
         "three": "The room is quiet and the light is low. Row by row, the pods come into view.",
         "four": "You order at a kiosk in about forty seconds, and the screen gives you a pod number."
       }
@@ -215,16 +215,16 @@
       "menu": "See the menu"
     },
     "noTip": {
-      "eyebrow": "No check, no tip",
+      "eyebrow": "Your visit, your way",
       "words": {
-        "host": "No host.",
-        "server": "No server.",
-        "check": "No check.",
-        "tip": "No tip."
+        "order": "Order your way.",
+        "seat": "Seat yourself.",
+        "help": "Help, one tap away.",
+        "tip": "No tipping. Ever."
       },
-      "body": "Tipping isn't part of the meal here. No tip line, no service charge.",
+      "body": "Fair wages are built into every bowl, so tipping is never part of the meal. No tip line, no service charge.",
       "note": "One tap on your phone says you are done. You leave when you are ready.",
-      "giveBack": "No tip. And 1% of every bowl's revenue gives back."
+      "giveBack": "No tipping, ever. And 1% of every bowl's revenue gives back."
     },
     "rewards": {
       "eyebrow": "Rewards",
@@ -2110,7 +2110,7 @@
       "experience": {
         "short": "Experience",
         "title": "The Experience",
-        "subtitle": "{pods} pods, no front of house, and a bowl built around the cut."
+        "subtitle": "{pods} pods, no tableside service, and a bowl built around the cut."
       },
       "market": {
         "short": "Market",
@@ -2120,7 +2120,7 @@
       "floor-plan": {
         "short": "Floor Plan",
         "title": "The Floor Plan",
-        "subtitle": "{sqft} square feet, {pods} pods, and two territories that meet only at the hatch."
+        "subtitle": "{sqft} square feet, {pods} pods, and two territories joined at the hatch."
       },
       "operations": {
         "short": "Operations",
@@ -2188,7 +2188,7 @@
       "heroCaption": "Everything in this plan is in service of this bowl.",
       "narrative": {
         "eyebrow": "Executive summary, {scenario} case",
-        "title": "A fast-casual unit with no front of house, priced and costed for diligence",
+        "title": "A fast-casual unit with no tableside service, priced and costed for diligence",
         "scenario": {
           "conservative": "conservative",
           "base": "base",
@@ -2203,7 +2203,7 @@
           "purpose": "Why it matters."
         },
         "body": {
-          "thesis": "Oh! serves premium American beef noodle soup in {pods} private dining pods inside {sqft} square feet. Guests order at a kiosk, the kitchen delivers through a hatch in each pod, and no host, server, or tip ever enters the room. That one design choice moves labor and seating economics away from casual dining and toward the best of fast casual.",
+          "thesis": "Oh! serves premium American beef noodle soup in {pods} private dining pods inside {sqft} square feet. Guests order at a kiosk or on their phone, the kitchen delivers through a hatch in each pod, and a lobby and floor team is there for anyone who wants help. With no tableside service and no tipping, that one design choice moves labor and seating economics away from casual dining and toward the best of fast casual.",
           "unit": "Open {days} days a year and serving about {covers} guests a day at a {check} average check, the unit produces {revenue} in revenue. Food runs {food} with American Wagyu and USDA Prime costed bowl by bowl, labor {labor}, and four-wall EBITDA {ebitda}. We ask investors to hold us to {target}, with {stretch} as the stretch at maturity. Break-even is about {breakEven} guests a day, and a {capex} build pays back in {payback} from opening.",
           "growth": "By year five the plan runs {corporate} company restaurants and {franchise} franchised ones, on a phased franchise schedule that respects the time a franchise disclosure document takes to become effective. Company revenue reaches {y5Revenue}. Corporate overhead of {overhead} sits inside that figure, leaving consolidated EBITDA of {consolidated}.",
           "ask": "The plan raises {capital} in two rounds with no debt. {cashLine} A financial partner takes preferred equity with a {pref} preferred return and a {liq} liquidation preference, and the common stake is derived from the return math and capped at {partner}. At that cap the partner's multiple is {multiple5} at a year-five exit and {multiple7} at a year-seven exit on the hybrid multiple. We state this plainly instead of asserting a split.",
@@ -2262,7 +2262,7 @@
       "printButton": "Print or save as PDF",
       "cover": {
         "title": "Business Plan",
-        "subtitle": "Zero front-of-house dining, built as an operating system. The restaurants are the proof and the first customer.",
+        "subtitle": "Self-serve dining with a team a tap away, built as an operating system. The restaurants are the proof and the first customer.",
         "preparedFor": "Prepared for",
         "generated": "Generated",
         "confidential": "Distribution",
@@ -2421,12 +2421,12 @@
         "podType": "{type}, {w} by {d} ft.",
         "podDuo": "Pairs with pod {number} when the partition comes out.",
         "corridor": "Staff corridor {n}. {pods} hatches, {w} ft wide, kitchen at the far end. No guest enters.",
-        "aisle": "Guest aisle {n}. {pods} pods, {w} ft wide. No staff enters.",
+        "aisle": "Guest aisle {n}. {pods} pods, {w} ft wide. Staff come out when a guest taps.",
         "crossAisle": "Guest cross-aisle, {w} ft wide. It joins every aisle to the lobby and the store.",
         "kitchen": "Kitchen, {value} sf across the rear wall. Broth, noodles, plating, and the pass feeding three corridors.",
         "dish": "Dish return, {value} sf. Bowls come back the way they went out, by corridor.",
         "boh": "Storage and office, {value} sf. Receiving door on the rear wall.",
-        "lobby": "Entry lobby, {value} sf. Three kiosks, no counter.",
+        "lobby": "Entry lobby, {value} sf. Three kiosks and a lobby team, no counter.",
         "restrooms": "Restrooms, off the last guest aisle. Men and women.",
         "store": "Product store, {value} sf. On the exit path, self-checkout.",
         "pinned": "Pinned. Press Escape or click again to release.",
@@ -2481,7 +2481,7 @@
       },
       "explainer": {
         "title": "How service works",
-        "lede": "No host, no server, no counter. Three moves, all of them behind the wall.",
+        "lede": "Order your way and seat yourself. The kitchen's three moves all happen behind the wall.",
         "kitchen": {
           "title": "The kitchen fires",
           "body": "Every order lands on the kitchen display with a pod number. Broth, noodles, plating, in that order, on one wall."
@@ -2508,7 +2508,7 @@
           "both": "Both"
         },
         "steps": {
-          "paid": "Paid at a lobby kiosk. About forty seconds on the screen, so the line keeps moving. No host.",
+          "paid": "Paid at a lobby kiosk, with the lobby team nearby to help. About forty seconds on the screen, so the line keeps moving.",
           "ticket": "Ticket on the kitchen display: pod {pod}, corridor 2, west side.",
           "assigned": "Pod {pod} assigned. The screen shows the way.",
           "broth": "Broth station. A portion comes to temperature.",
@@ -2519,7 +2519,7 @@
           "corridor": "A runner lifts the bowl and turns into staff corridor 2. Nobody in this corridor is a guest.",
           "hatch": "Hatch {pod}. Open, bowl in, shut.",
           "delivered": "Same pod, opposite sides. The guest never saw the corridor. The runner never stepped into an aisle. They did not share a square foot.",
-          "finish": "Finished. Out by the aisle, past the store, through the exit. No check, no tip.",
+          "finish": "Finished. Out by the aisle, past the store, through the exit. No check to wait for, no tip.",
           "cleared": "The runner clears by the corridor to the dish return. Same minute, different territory.",
           "exit": "Out the exit. The two paths never crossed.",
           "reset": "Pod {pod} wiped and reset. Six minutes, and the next number is on a screen.",
@@ -2527,7 +2527,7 @@
           "checkin": "One tap on the phone: I'm at my pod. The kitchen knows the guest is seated.",
           "feed": "The Live Kitchen Feed narrates the broth and noodles on the guest's phone, by name.",
           "fortune": "A fortune cookie cracked while the noodles cook. The wait is shorter because it is full.",
-          "addon": "Extra noodles ordered from the phone. The kitchen sends them through the same hatch; nobody flags down a server.",
+          "addon": "Extra noodles ordered from the phone. The kitchen sends them through the same hatch, with no waiting to catch someone's eye.",
           "done": "I'm done eating, tapped on the phone. The pod starts its reset before the guest reaches the aisle."
         },
         "phone": {
@@ -2587,7 +2587,7 @@
       "honesty": {
         "eyebrow": "Saying it out loud",
         "claim": "{pods} pods in {sqft} square feet is tight: about {perPod} square feet per pod once you count the corridor behind it and the aisle in front.",
-        "text": "Each pod is {w} by {d} feet, the size of a first-class airline seat. Behind it, a {corridor} foot staff corridor shared with the row across. In front, a {aisle} foot guest aisle shared the same way. Nobody pulls out a chair, no server threads a tray between tables, and the only thing that crosses from one side to the other is a bowl through a wall. The tightest number in the plan is the clearest proof of the format."
+        "text": "Each pod is {w} by {d} feet, the size of a first-class airline seat. Behind it, a {corridor} foot staff corridor shared with the row across. In front, a {aisle} foot guest aisle shared the same way. No server threads a tray between tables: bowls cross from one side to the other through a wall, and the floor team uses the aisle only when a guest asks. The tightest number in the plan is the clearest proof of the format."
       }
     },
     "expansion": {
@@ -3051,7 +3051,7 @@
           },
           "laborShock": {
             "title": "Utah labor or permitting shock",
-            "mitigation": "Wages up $3 and one extra FTE modeled. No front of house means the exposure is {people} people on a {hours}-hour day, not a dining room of servers. Permitting runs through the Utah County Health Department pathway already mapped in the roadmap."
+            "mitigation": "Wages up $3 and one extra FTE modeled. With no tableside service, the exposure is {people} people on a {hours}-hour day, not a dining room of servers. Permitting runs through the Utah County Health Department pathway already mapped in the roadmap."
           },
           "capexOverrun": {
             "title": "Build runs 15% over on pods, buildout and kitchen",
@@ -3076,8 +3076,8 @@
             "body": "Seventy-five enclosed seats, egress through a corridor, and four accessible pods are drawn in; the fire marshal and the plan review decide the final count. The accessibility downside above prices three lost seats."
           },
           "foodCode": {
-            "title": "Utah food code with no floor staff",
-            "body": "Service through a hatch with no server is reviewed under the Utah County Health Department pathway in the roadmap; a certified manager is on every shift and every runner holds a food handler permit."
+            "title": "Utah food code for hatch service",
+            "body": "Service through a hatch rather than tableside is reviewed under the Utah County Health Department pathway in the roadmap; a certified manager is on every shift and every runner holds a food handler permit."
           },
           "techOutage": {
             "title": "Kiosk, pod and kitchen-display outage",
@@ -3212,12 +3212,12 @@
       }
     },
     "experience": {
-      "intro": "Everyone in your party gets a pod, and every pod gets its own bowl. No host, no server, no check, no tip. Here is the whole visit, in order.",
+      "intro": "Everyone in your party gets a pod, and every pod gets its own bowl. Order your way, seat yourself, and our team is always close by. Here is the whole visit, in order.",
       "photoLabel": "Photo to come",
       "steps": {
         "arrive": {
-          "title": "You walk in and nobody greets you.",
-          "body": "That is the design. The room is quiet, the light is low, and the calligraphic mark on the far wall is the only thing asking for your attention. Three kiosks stand between you and seventy-five pods.",
+          "title": "Walk in and make yourself at home.",
+          "body": "The room is quiet, the light is low, and the calligraphic mark on the far wall draws the eye. Our lobby team is there if you'd like a hand, and three kiosks stand between you and seventy-five pods.",
           "photo": "The Oh! mark lit outside at dusk, reflected in the pool at the entrance"
         },
         "order": {
@@ -3227,7 +3227,7 @@
         },
         "walk": {
           "title": "A pod number, and you go find it.",
-          "body": "Pod 32. You walk the aisle past a row of closed panels and the low murmur of a full room, every party in its own pods, side by side. Nobody is carrying a tray. Nobody is waiting to be seated.",
+          "body": "Pod 32. You walk the aisle past a row of closed panels and the low murmur of a full room, every party in its own pods, side by side. Your pod number is your seat, so you go straight to it.",
           "photo": "The guest aisle looking down a row of numbered pods"
         },
         "settle": {
@@ -3237,7 +3237,7 @@
         },
         "status": {
           "title": "Your phone runs the show.",
-          "body": "The link opens a live page for your order, and it is written for you. While you wait, the Live Kitchen Feed narrates your bowl by name as it moves through the kitchen. Need anything? Tap it, and it comes through the same panel. No server required.",
+          "body": "The link opens a live page for your order, and it is written for you. While you wait, the Live Kitchen Feed narrates your bowl by name as it moves through the kitchen. Need anything? Tap it, and it comes through the same panel, or a team member comes to you.",
           "photo": "The live order status page on a phone: Pod 32, the Live Kitchen Feed narrating the order, and the digital fortune cookie.",
           "hint": "This is the real status page, running a demo order. Tap anything; nothing reaches a real kitchen.",
           "open": "Open the status page in a new tab",
@@ -3256,7 +3256,7 @@
             },
             {
               "title": "Call staff",
-              "body": "One tap reaches the floor team. Nobody flags anyone down."
+              "body": "One tap brings a team member to your pod."
             },
             {
               "title": "Roast My Order",
@@ -3270,7 +3270,7 @@
         },
         "panel": {
           "title": "The panel slides open.",
-          "body": "Seven minutes from the moment you paid, a bowl arrives through the wall. Your phone saw it coming. Broth first, then the smoked brisket or beef rib you chose, then the panel slides shut. You never see a hand.",
+          "body": "Seven minutes from the moment you paid, a bowl arrives through the wall. Your phone saw it coming. Broth first, then the smoked brisket or beef rib you chose. The runner who carried it passes it through, and the panel slides shut.",
           "photo": "The sliding panel mid-open, steam, the bowl arriving"
         },
         "taste": {
@@ -3280,7 +3280,7 @@
         },
         "leave": {
           "title": "You finish, and you leave.",
-          "body": "One tap on your phone says you are done. No check. No tipping, because the people who made your bowl are salaried. If you are not a member yet, the page banks this order's points the moment you sign up, and if you brought someone, the referral credit lands when their first order completes. The pod resets behind you in under six minutes.",
+          "body": "One tap on your phone says you are done. No check to wait for. No tipping, because fair wages are built into every bowl. If you are not a member yet, the page banks this order's points the moment you sign up, and if you brought someone, the referral credit lands when their first order completes. The pod resets behind you in under six minutes.",
           "photo": "Guest leaving through the entry, pod panel closing behind"
         }
       },
@@ -3412,7 +3412,7 @@
           }
         },
         "guestPhone": {
-          "title": "The guest's phone does a server's job",
+          "title": "The guest's phone puts the kitchen a tap away",
           "body": "The kiosk texts every guest a live link to their order. From the pod, one tap confirms they are seated, calls the floor team, or orders a refill, extra vegetables, a side or dessert, and each request lands on the kitchen display as its own ticket and comes back through the same hatch. Tapping \"I'm done eating\" starts the pod reset. The page also keeps the wait short and memorable: an AI kitchen feed that narrates the guest's own bowl by name, a digital fortune cookie, a roast of their order, and the One Red Step giving link. Nobody has to walk the aisles taking requests."
         }
       },
@@ -3447,7 +3447,7 @@
       },
       "labor": {
         "title": "Exactly who works here",
-        "subtitle": "{heads} people on the daily schedule, {hours} paid hours a day over {days} operating days and a {coverage}% coverage uplift for time off and training: {kitchen} kitchen FTE plus {mgmt} salaried managers, no front of house. Hourly at {wage}, management at {salary}, {burden}% burden. Kitchen payroll {kitchenAnnual}, management {mgmtAnnual}, before burden.",
+        "subtitle": "{heads} people on the daily schedule, {hours} paid hours a day over {days} operating days and a {coverage}% coverage uplift for time off and training: {kitchen} kitchen FTE plus {mgmt} salaried managers, no tableside service staff. Hourly at {wage}, management at {salary}, {burden}% burden. Kitchen payroll {kitchenAnnual}, management {mgmtAnnual}, before burden.",
         "role": "Role",
         "count": "FTE",
         "salaried": "salaried",
@@ -4010,7 +4010,7 @@
       "summary": {
         "points": {
           "0": {
-            "text": "No host, no servers, no tipping. Labor runs at {figure} of sales where a full-service room runs {band}."
+            "text": "Guests order and seat themselves, a lobby team is on hand, and no one is asked to tip. Labor runs at {figure} of sales where a full-service room runs {band}."
           },
           "1": {
             "text": "An occupancy load of {figure}: a compact footprint in second-generation space, with no square footage given over to a waiter's path."
@@ -4039,7 +4039,7 @@
       "experience": {
         "points": {
           "0": {
-            "text": "No host, no server, no check, no tip. That is a {figure} labor line, where full service runs {band}."
+            "text": "Self-seating, a team on call, no check and no tip. That is a {figure} labor line, where full service runs {band}."
           },
           "1": {
             "text": "From the kiosk to the bowl at the hatch in about {figure}, timed on the floor plan's own journey."
@@ -4071,7 +4071,7 @@
             "text": "{pods} pods in {sqft} square feet, a footprint a second-generation space or a mall in-line can hold."
           },
           "1": {
-            "text": "Two territories that never touch: guests move through aisles, staff move through corridors, and the two meet only at the hatch."
+            "text": "Two territories: guests move through aisles, staff move through corridors, bowls cross at the hatch, and the floor team steps into the aisle whenever a guest asks."
           },
           "2": {
             "text": "One kitchen serves every seat, and each pod earns about {figure} a year against a counter-service seat at {band}."
@@ -4090,7 +4090,7 @@
             "text": "Broth comes from a commissary kettle, so consistency is a recipe, not a shift. Food cost holds at {figure}, inside the premium-protein band of {band}."
           },
           "3": {
-            "text": "Color-coded add-on tickets: the kitchen builds the bowl the guest designed, with no server relaying it."
+            "text": "Color-coded add-on tickets: the kitchen builds the bowl the guest designed, straight from the guest's own order."
           }
         }
       },
@@ -4275,7 +4275,7 @@
       },
       "fit": {
         "title": "Why it fits",
-        "body": "Oh! is built around room to breathe: a pod of your own, nobody hovering, no pressure to rush. A foundation that opens honest conversations about mental health is a natural partner for that promise, and its red socks give guests and staff an easy, visible way to join in."
+        "body": "Oh! is built around room to breathe: a pod of your own, help whenever you want it, no pressure to rush. A foundation that opens honest conversations about mental health is a natural partner for that promise, and its red socks give guests and staff an easy, visible way to join in."
       },
       "contact": {
         "title": "Contact the foundation",
@@ -6343,12 +6343,12 @@
   "experience": {
     "meta": {
       "title": "The experience: a visit to Oh!, step by step",
-      "description": "Arrive, order, walk, settle, follow, receive, taste, leave. A visit to Oh! Beef Noodle Soup in eight steps, on the real floor plan. No host, no server, no check, no tip."
+      "description": "Arrive, order, walk, settle, follow, receive, taste, leave. A visit to Oh! Beef Noodle Soup in eight steps, on the real floor plan. Order your way, seat yourself, and our team is always close by."
     },
     "intro": {
       "eyebrow": "The experience",
       "title": "A visit, in eight steps.",
-      "lede": "Everyone in your party gets a pod, and every pod gets its own bowl. No host, no server, no check, no tip. Here is the whole visit, in order.",
+      "lede": "Everyone in your party gets a pod, and every pod gets its own bowl. Order your way, seat yourself, and our team is always close by. Here is the whole visit, in order.",
       "start": "Start with step one"
     },
     "stepper": {
@@ -6359,8 +6359,8 @@
     "steps": {
       "arrive": {
         "eyebrow": "Arrive",
-        "title": "You walk in and nobody greets you.",
-        "body": "That is the design. The room is quiet, the light is low, and three kiosks stand between you and the pods."
+        "title": "Walk in and make yourself at home.",
+        "body": "The room is quiet, the light is low, and our lobby team is there if you'd like a hand. Three kiosks stand between you and the pods."
       },
       "order": {
         "eyebrow": "Order",
@@ -6370,7 +6370,7 @@
       "walk": {
         "eyebrow": "Walk",
         "title": "A pod number, and you go find it.",
-        "body": "You walk the aisle past a row of closed panels and the low murmur of a full room. Nobody is carrying a tray. Nobody is waiting to be seated."
+        "body": "You walk the aisle past a row of closed panels and the low murmur of a full room. Your pod number is your seat, so you go straight to it."
       },
       "settle": {
         "eyebrow": "Settle",
@@ -6380,7 +6380,7 @@
       "status": {
         "eyebrow": "Follow",
         "title": "Your phone runs the show.",
-        "body": "The link from the kiosk opens a live page for your order, and it is written for you. While you wait, the Live Kitchen Feed narrates your bowl by name as it moves through the kitchen. Need anything? Tap it, and it comes through the same panel. No server required.",
+        "body": "The link from the kiosk opens a live page for your order, and it is written for you. While you wait, the Live Kitchen Feed narrates your bowl by name as it moves through the kitchen. Need anything? Tap it, and it comes through the same panel. Or tap once and a team member comes to you.",
         "frame": "The live order status page, running a demo order",
         "poster": "A demo order, live",
         "hint": "This is the real status page, running a demo order. Nothing reaches a real kitchen.",
@@ -6404,7 +6404,7 @@
           },
           "staff": {
             "title": "Call staff",
-            "body": "One tap reaches the floor team. Nobody flags anyone down."
+            "body": "One tap brings a team member to your pod."
           },
           "roast": {
             "title": "Roast My Order",
@@ -6429,7 +6429,7 @@
       "leave": {
         "eyebrow": "Leave",
         "title": "You finish, and you leave.",
-        "body": "One tap on your phone says you are done. No check, no tip line. Out past the store, and the pod resets behind you.",
+        "body": "One tap on your phone says you are done. No check to wait for, no tip line. Out past the store, and the pod resets behind you.",
         "alt": "The store on the way out: shelves of sauces, gift boxes, bowls, shirts and caps, and a sign that says thank you."
       }
     },
@@ -6438,7 +6438,7 @@
       "note": "City Creek, 75 pods. University Place is the same plan, mirrored, with 70.",
       "captions": {
         "arrive": "You come in through the entry, into the lobby.",
-        "order": "Three kiosks in the lobby. No counter.",
+        "order": "Three kiosks in the lobby, and a team to help.",
         "walk": "Across the cross-aisle and up your aisle to pod {label}. Every door on the way is a pod.",
         "settle": "Into pod {label}. One tap checks you in, and the kitchen starts your bowl.",
         "status": "Your bowl is being made in the kitchen, and your phone follows it by name.",
@@ -6508,8 +6508,8 @@
           "a": "Everyone in your party gets a pod, and every pod gets its own bowl. Duo pods are made for two: the partition between a pair comes out, and two pods become one."
         },
         "server": {
-          "q": "Is there a server?",
-          "a": "No host and no server. Your bowl comes to the hatch of your pod from a staff corridor. Guests walk the aisles, staff walk the corridors, and the two meet only at the hatch."
+          "q": "Will someone help me?",
+          "a": "Anytime. Our lobby team can help you order and find your pod, and one tap on your phone brings a team member to you. Your bowl comes from the kitchen through your pod's hatch."
         },
         "more": {
           "q": "What if I want more, or need help?",
@@ -6521,7 +6521,7 @@
         },
         "tip": {
           "q": "Do I tip?",
-          "a": "No. There is no check and no tip line. When you are done, one tap on your phone says so, and you leave when you are ready."
+          "a": "No. Fair wages are built into every bowl, so there's no tip line and no check to wait for. When you are done, one tap on your phone says so, and you leave when you are ready."
         },
         "bowl": {
           "q": "What is in the bowl?",

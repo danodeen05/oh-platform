@@ -7,7 +7,8 @@
  * come on in sequence, near to far, left and right (each overlay's opacity
  * follows --progress past its own threshold), the view eases forward, and
  * the lit hall (hall-rows) settles in. The plan's lines arrive one by one:
- * "You walk in and nobody greets you. That is the design."
+ * "Come in and make yourself at home. Our lobby team is right here if you'd
+ * like a hand."
  *
  * The overlays live in a 4:3 box that covers the stage exactly like the
  * photo does (.hm-cover), so they stay on the pod rows at any viewport.

@@ -1,5 +1,8 @@
 /**
- * Task D1, chapter 5: No check, no tip. Typographic, no photo.
+ * Task D1, chapter 5: Your visit, your way. Typographic, no photo.
+ *
+ * Order your way, seat yourself, help one tap away, no tipping (the welcoming
+ * voice of 2026-09-29, which replaced "No host. No server. No check. No tip.").
  *
  * Four short lines at display size. Each one lights from ash to cream as
  * it crosses the viewport (a view timeline per line drives --hm-lit, see
@@ -12,7 +15,7 @@ import { Reveal } from "@/components/site/motion/Reveal";
 import { Body, Eyebrow } from "@/components/site/Text";
 import "./home.css";
 
-const WORDS = ["host", "server", "check", "tip"] as const;
+const WORDS = ["order", "seat", "help", "tip"] as const;
 
 export async function NoTip({ locale }: { locale: string }) {
   const t = await getTranslations("home.noTip");
