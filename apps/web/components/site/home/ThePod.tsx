@@ -4,24 +4,24 @@
  * Task D1, chapter 3: The pod. Pinned for 3 screens.
  *
  * Three beats on --progress, each with its own caption:
- *   a. pod-hatch-a (MaleClosedPod): your pod, the panel closed.
- *   b. pod-hatch-b (Image 5): the kitchen behind the closed glass hatch.
- *   c. pod-hatch-open (OpenPod): the hatch open, water coming through.
+ *   a. pod-hatch-a (ManClosedPod2): your pod, the panel closed.
+ *   b. pod-hatch-b (WomanClosedPod1): the kitchen behind the closed panel.
+ *   c. pod-hatch-open (WomanOpenPod1): the panel open, water coming through.
  *
  * b and c share one 1448x1086 frame (the room, pod, tablet and hatch line
  * up), so c opens inside b:
- *   1. Reveal (0.40 to 0.58): an OpenPod layer clipped to the measured hatch
+ *   1. Reveal (0.40 to 0.58): a WomanOpenPod1 layer clipped to the measured hatch
  *      quad (`.hm-pod-hatch` variables, in photo percent) grows from the
- *      hatch's bottom edge up, like the glass lifting, with Image 5's closed
- *      glass kept crisp above the edge. A warm light line rides the leading
+ *      hatch's bottom edge up, like the panel lifting, with WomanClosedPod1's
+ *      closed panel kept crisp above the edge. A warm light line rides the leading
  *      edge and the revealed kitchen is lifted slightly.
- *   2. Handoff (0.42 to 0.60): a full-frame OpenPod crossfade under the hatch
+ *   2. Handoff (0.42 to 0.60): a full-frame WomanOpenPod1 crossfade under the hatch
  *      layers brings in her reaching arm (her pose, the bowl and chopsticks
  *      differ between the photos, so they cannot be clipped in). Her hand
  *      sits inside the opening, so a feathered hole keeps it out of the hatch
  *      layers and it arrives with the arm instead of being cut at the jamb.
  *   3. Settle (0.62 to 0.68): the lift eases off and the reveal layer fades
- *      out over the finished handoff, so the last frame is exactly OpenPod.
+ *      out over the finished handoff, so the last frame is exactly WomanOpenPod1.
  * Every layer sits inside `.hm-cover` (the photo's own 4:3 box), so the clip
  * stays on the hatch however the cover box crops on a phone (--hm-fx).
  *
@@ -49,7 +49,7 @@ const STEPS: Array<{ key: "a" | "b" | "c"; image: ImageKey; at: number; until: n
 // a holds to 0.18, b holds 0.28 to 0.40, c holds from 0.68.
 const B_IN = { at: 0.18, k: 10 }; // pod-hatch-a to pod-hatch-b crossfade
 const REVEAL = { at: 0.4, k: 1 / 0.18 }; // hatch opens, bottom edge up
-const HANDOFF = { at: 0.42, k: 1 / 0.18 }; // full-frame crossfade to OpenPod (her arm)
+const HANDOFF = { at: 0.42, k: 1 / 0.18 }; // full-frame crossfade to WomanOpenPod1 (her arm)
 const SETTLE = { at: 0.62, k: 1 / 0.06 }; // after the handoff: the lift eases off, the reveal layer leaves
 
 function vars(v: Record<string, string | number>) {
@@ -103,15 +103,15 @@ export function ThePod() {
                 <div className="hm-ramp hm-fade absolute inset-0" style={vars({ "--at": B_IN.at, "--hm-k": B_IN.k })}>
                   <SitePicture image="pod-hatch-b" sizes={COVER_SIZES} alt={ti(SITE_IMAGES["pod-hatch-b"].alt)} className={PICTURE} />
                 </div>
-                {/* Handoff: the whole OpenPod frame (her arm, the room), under the hatch layers. */}
+                {/* Handoff: the whole WomanOpenPod1 frame (her arm, the room), under the hatch layers. */}
                 <div className="hm-ramp hm-fade absolute inset-0" style={vars({ "--at": HANDOFF.at, "--hm-k": HANDOFF.k })}>
                   <SitePicture image="pod-hatch-open" sizes={COVER_SIZES} alt={ti(SITE_IMAGES["pod-hatch-open"].alt)} className={PICTURE} />
                 </div>
-                {/* The glass still closed above the leading edge, crisp while the handoff runs. */}
+                {/* The panel still closed above the leading edge, crisp while the handoff runs. */}
                 <div aria-hidden="true" className="hm-ramp hm-hatch-pane absolute inset-0" style={reveal}>
                   <SitePicture image="pod-hatch-b" sizes={COVER_SIZES} alt="" className={PICTURE} />
                 </div>
-                {/* The kitchen below the leading edge: OpenPod clipped to the hatch, opened bottom-up. */}
+                {/* The kitchen below the leading edge: WomanOpenPod1 clipped to the hatch, opened bottom-up. */}
                 <div aria-hidden="true" className="hm-ramp hm-hatch-reveal absolute inset-0" style={reveal}>
                   <SitePicture image="pod-hatch-open" sizes={COVER_SIZES} alt="" className={PICTURE} />
                 </div>

@@ -206,21 +206,23 @@
   transform: translateY(calc((1 - var(--hm-in)) * 12px));
 }
 
-/* The pod's hatch opening, measured on the 1448x1086 Image 5 / OpenPod pair
-   (registered photos), in percent of the photo frame. Set on `.hm-cover`,
-   which has the photo's aspect, so it holds at any viewport crop.
+/* The pod's hatch opening, measured on the 1448x1086 WomanClosedPod1 /
+   WomanOpenPod1 pair (registered photos), in percent of the photo frame. Set
+   on `.hm-cover`, which has the photo's aspect, so it holds at any viewport crop.
    The photo is shot from the right, so the hatch is a slightly skewed quad:
-   - left x 195px, right x 772px: the black jamb lines on both photos.
-   - top: the underside of Image 5's lintel, (195, 346) to (772, 321).
-   - bottom: just under the glass sill (Image 5) and the counter edge
-     (OpenPod), which run together, (195, 573) to (772, 530). */
+   - left x 194px, right x 780px: the dark jamb lines on both photos.
+   - top: the underside of WomanOpenPod1's rail, (194, 346) to (780, 333).
+     The closed photo's rail is deeper; above this line the full-frame
+     handoff blends the two rails.
+   - bottom: the steel counter edge (WomanOpenPod1), just under the closed
+     panel's sill, and clear of the bowl rim, (194, 564) to (780, 540). */
 .hm-pod-hatch {
-  --hatch-l: 13.47%;
-  --hatch-r: 53.31%;
-  --hatch-tl: 31.84%;
-  --hatch-tr: 29.55%;
-  --hatch-bl: 52.73%;
-  --hatch-br: 48.82%;
+  --hatch-l: 13.4%;
+  --hatch-r: 53.87%;
+  --hatch-tl: 31.86%;
+  --hatch-tr: 30.66%;
+  --hatch-bl: 51.93%;
+  --hatch-br: 49.72%;
 }
 
 /* The leading edge moves from the hatch bottom (--hm-ramp 0) to its top (1). */
@@ -231,17 +233,17 @@
   --hm-edge-r: calc(var(--hatch-br) + (var(--hatch-tr) - var(--hatch-br)) * var(--hm-ramp));
 }
 
-/* Her reaching hand sits inside the opening in OpenPod. A feathered hole
+/* Her reaching hand sits inside the opening in WomanOpenPod1. A feathered hole
    (photo pixels, 1448x1086) keeps it out of the two hatch layers, so it comes
    in with the rest of her arm in the full-frame handoff underneath instead of
    being cut at the jamb. */
 .hm-hatch-pane,
 .hm-hatch-reveal {
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1448 1086' preserveAspectRatio='none'%3E%3Cfilter id='f'%3E%3CfeGaussianBlur stdDeviation='9'/%3E%3C/filter%3E%3Cpath filter='url(%23f)' fill-rule='evenodd' d='M0 0H1448V1086H0Z M596 462L638 420L680 422L712 446L736 474L826 512L826 606L794 606L756 584L700 556L664 544L632 528L596 512Z'/%3E%3C/svg%3E")
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1448 1086' preserveAspectRatio='none'%3E%3Cfilter id='f'%3E%3CfeGaussianBlur stdDeviation='9'/%3E%3C/filter%3E%3Cpath filter='url(%23f)' fill-rule='evenodd' d='M0 0H1448V1086H0Z M600 470L612 452L640 432L672 430L700 446L740 468L790 492L840 510L840 600L790 600L740 570L700 552L664 532L636 516L604 498Z'/%3E%3C/svg%3E")
     0 0 / 100% 100% no-repeat;
 }
 
-/* Image 5's closed glass above the leading edge, so the handoff crossfade
+/* WomanClosedPod1's closed panel above the leading edge, so the handoff crossfade
    underneath never shows through the part of the hatch still closed. */
 .hm-hatch-pane {
   clip-path: polygon(
@@ -252,10 +254,10 @@
   );
 }
 
-/* OpenPod inside the opening, revealed from the bottom edge up. The kitchen
+/* WomanOpenPod1 inside the opening, revealed from the bottom edge up. The kitchen
    is lifted a touch while it opens. Once the handoff below is complete
    (--settle-*), the lift eases off and this layer fades out, leaving the
-   plain OpenPod layer, so the last frame is the photo as shot. */
+   plain WomanOpenPod1 layer, so the last frame is the photo as shot. */
 .hm-hatch-reveal {
   --hm-settle: clamp(0, calc((var(--progress) - var(--settle-at)) * var(--settle-k)), 1);
   clip-path: polygon(
