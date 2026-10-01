@@ -16,9 +16,9 @@ import { BowlBuilder } from "@/components/site/order/BowlBuilder";
 import { Spinner, StepSheet } from "@/components/site/order/StepSheet";
 import { PANEL, SECONDARY } from "@/components/site/store/ui";
 import { Body } from "@/components/site/Text";
-import { clearEventDraft, defaultEventDraft, readEventDraft, writeEventDraft } from "@/lib/site/event-draft";
+import { clearEventDraft, defaultEventDraft, eventOrderLines, readEventDraft, writeEventDraft } from "@/lib/site/event-draft";
 import { checkEventOrder, eventPath, fetchEventMenuSteps, placeEventOrder } from "@/lib/site/events";
-import { bowlComplete, buildLines, withMenuDefaults, type MenuStep, type OrderDraft } from "@/lib/site/order-draft";
+import { bowlComplete, withMenuDefaults, type MenuStep, type OrderDraft } from "@/lib/site/order-draft";
 
 type Phase = "loading" | "ready" | "closed" | "failed";
 
@@ -44,17 +44,24 @@ export function EventBowlStep() {
       return;
     }
     setWho(guest);
-    if (new Date(event.startsAt) <= new Date()) {
-      setPhase("closed");
-      return;
-    }
+    // The order check runs even after the start (it is a read), so a guest who
+    // ordered in another browser still gets the status link on the closed panel.
+    const started = new Date(event.startsAt) <= new Date();
     let live = true;
     (async () => {
-      const [existing, menu] = await Promise.all([checkEventOrder(slug, guest.phone), fetchEventMenuSteps(slug, locale)]);
+      const [existing, menu] = await Promise.all([checkEventOrder(slug, guest.phone), started ? Promise.resolve(null) : fetchEventMenuSteps(slug, locale)]);
       if (!live) return;
       if (existing) {
-        writeRemembered(slug, { ...guest, orderQrCode: existing.orderQrCode });
-        router.replace(eventPath(locale, slug, "done"));
+        const known = { ...guest, orderQrCode: existing.orderQrCode };
+        writeRemembered(slug, known);
+        if (started) {
+          setWho(known);
+          setPhase("closed");
+        } else router.replace(eventPath(locale, slug, "done"));
+        return;
+      }
+      if (started) {
+        setPhase("closed");
         return;
       }
       if (!menu || !menu.length) {
@@ -96,7 +103,7 @@ export function EventBowlStep() {
     if (!who || !draft || busy) return;
     setBusy(true);
     setError(null);
-    const r = await placeEventOrder(slug, { items: buildLines(draft, steps), guestName: who.name, guestPhone: who.phone, dob: who.dob ?? null });
+    const r = await placeEventOrder(slug, { items: eventOrderLines(draft, steps), guestName: who.name, guestPhone: who.phone, dob: who.dob ?? null });
     if (r.ok && r.data?.orderQrCode) return reserved(r.data.orderQrCode);
     const existing = r.body?.existingOrderQrCode;
     if (typeof existing === "string" && existing) return reserved(existing);
@@ -106,7 +113,9 @@ export function EventBowlStep() {
     else setError(tFlow("GENERIC"));
   }
 
-  const backHref = eventPath(locale, slug, "rsvp");
+  // With the invite token the RSVP page prefills from the server (notes and birthday included).
+  const rsvpPath = eventPath(locale, slug, "rsvp");
+  const backHref = who?.token ? `${rsvpPath}?rsvp=${encodeURIComponent(who.token)}` : rsvpPath;
 
   if (phase === "closed" || phase === "failed") {
     return (

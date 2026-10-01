@@ -14,5 +14,6 @@ export default async function EventInvitePage({ params, searchParams }: { params
   const [{ slug }, q] = await Promise.all([params, searchParams]);
   const token = one(q.rsvp)?.trim() || null;
   const guest = token ? await fetchRsvpByToken(slug, token) : null;
-  return <EventInvite guest={guest} token={guest ? token : null} />;
+  // Only the name reaches the client: phone, birthday and notes stay on the server.
+  return <EventInvite guest={guest ? { name: guest.name } : null} token={guest ? token : null} />;
 }

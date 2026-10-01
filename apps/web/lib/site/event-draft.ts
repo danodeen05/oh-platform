@@ -5,7 +5,7 @@
  * draft (`oh-order-draft`): an event bowl never touches the dine-in cart.
  * Storage can be missing or throw, which reads as "no draft yet".
  */
-import { emptyDraft, parseDraft, withMenuDefaults, type MenuStep, type OrderDraft } from "./order-draft";
+import { buildLines, emptyDraft, parseDraft, withMenuDefaults, type MenuStep, type OrderDraft, type OrderLine } from "./order-draft";
 
 export const EVENT_DRAFT_PREFIX = "oh-event-draft:";
 
@@ -48,4 +48,13 @@ export function clearEventDraft(slug: string): void {
   } catch {
     // Nothing to clear.
   }
+}
+
+/**
+ * The event order's lines. A slider line keeps its choice in `selectedValue` and
+ * counts as one (the shared `buildLines` keeps the slider's position in
+ * `quantity`), so the host's shopping list and cook cards get real counts.
+ */
+export function eventOrderLines(draft: OrderDraft, steps: MenuStep[]): OrderLine[] {
+  return buildLines(draft, steps).map((l) => (l.selectedValue ? { ...l, quantity: 1 } : l));
 }

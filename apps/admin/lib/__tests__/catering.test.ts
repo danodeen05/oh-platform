@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import {
-  areaTone, combineDateTime, emptyEventForm, dobToInput, formatBirthday, formatPhone, formFromEvent, inputToDob, splitDateTime, eventBody, isSpecialDiet, SLOT_PRICE, statusLabel, statusTone, surveyTone, validateEvent,
+  areaTone, combineDateTime, emptyEventForm, dobToInput, formatBirthday, formatPhone, formFromEvent, inputToDob, splitDateTime, eventBody, isSpecialDiet, orderLineLabel, SLOT_PRICE, statusLabel, statusTone, surveyTone, validateEvent,
   type EventForm,
 } from "../catering";
 
@@ -80,6 +80,17 @@ test("isSpecialDiet matches the unchanged regex against item name or selected va
   expect(isSpecialDiet({ items: [item("Classic Bowl", "No beef")] } as never)).toBe(true);
   expect(isSpecialDiet({ items: [item("Vegetarian Bowl")] } as never)).toBe(true);
   expect(isSpecialDiet({ items: [item("Classic Bowl")] } as never)).toBe(false);
+});
+
+test("isSpecialDiet also flags gluten free (the Cook tab's old check)", () => {
+  expect(isSpecialDiet({ items: [{ menuItem: { name: "Gluten Free Noodles" }, quantity: 1 }] })).toBe(true);
+});
+
+test("orderLineLabel never counts slider lines", () => {
+  expect(orderLineLabel({ menuItem: { name: "Sprouts" }, quantity: 3, selectedValue: "Normal" })).toBe("Sprouts: Normal");
+  expect(orderLineLabel({ menuItem: { name: "Sprouts" }, quantity: 1, selectedValue: "Extra" })).toBe("Sprouts: Extra");
+  expect(orderLineLabel({ menuItem: { name: "Egg" }, quantity: 2 })).toBe("2 x Egg");
+  expect(orderLineLabel({ menuItem: { name: "Classic Bowl" }, quantity: 1, selectedValue: null })).toBe("Classic Bowl");
 });
 
 test("surveyTone and areaTone follow the scoring thresholds", () => {

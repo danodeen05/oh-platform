@@ -67,3 +67,32 @@ test("guest zodiac: the order's own, else the RSVP with the same phone, else nul
   assert.equal(resolveGuestZodiac({ guestZodiac: null, guestPhone: "8015550155" }, [{ phone: "8015550155", zodiac: null }]), null);
   assert.equal(resolveGuestZodiac(null), null);
 });
+
+test("guestPhoneOrNull accepts only phones that normalize to 10 digits", async () => {
+  const { guestPhoneOrNull } = await import("../attendee.js");
+  assert.equal(guestPhoneOrNull("-"), null);
+  assert.equal(guestPhoneOrNull("0"), null);
+  assert.equal(guestPhoneOrNull(""), null);
+  assert.equal(guestPhoneOrNull(undefined), null);
+  assert.equal(guestPhoneOrNull("801555010"), null);
+  assert.equal(guestPhoneOrNull("(801) 555-0100"), "8015550100");
+  assert.equal(guestPhoneOrNull("+18015550100"), "8015550100");
+});
+
+test("withGuestNotes attaches the RSVP's notes by normalized phone", async () => {
+  const { withGuestNotes } = await import("../attendee.js");
+  const orders = [
+    { id: "a", guestPhone: "8015550100" },
+    { id: "b", guestPhone: "+1 (801) 555-0101" },
+    { id: "c", guestPhone: null },
+    { id: "d", guestPhone: "8015550102" },
+  ];
+  const rsvps = [
+    { phone: "18015550100", notes: " peanut allergy " },
+    { phone: "8015550101", notes: "no cilantro" },
+    { phone: "8015550102", notes: "   " },
+    { phone: "", notes: "orphan" },
+  ];
+  assert.deepEqual(withGuestNotes(orders, rsvps).map((o) => [o.id, o.guestNotes]), [["a", "peanut allergy"], ["b", "no cilantro"], ["c", null], ["d", null]]);
+  assert.equal(withGuestNotes(orders, rsvps)[0].guestPhone, "8015550100");
+});

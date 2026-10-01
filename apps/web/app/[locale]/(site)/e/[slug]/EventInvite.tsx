@@ -21,7 +21,7 @@ import { CTA_CLASS } from "@/components/site/order/StepSheet";
 import { Body, Eyebrow, Title } from "@/components/site/Text";
 import { eventPath, firstName, type GuestRsvp } from "@/lib/site/events";
 
-export function EventInvite({ guest, token }: { guest: GuestRsvp | null; token: string | null }) {
+export function EventInvite({ guest, token }: { guest: Pick<GuestRsvp, "name"> | null; token: string | null }) {
   const event = useEvent();
   const locale = useLocale();
   const t = useTranslations("events");

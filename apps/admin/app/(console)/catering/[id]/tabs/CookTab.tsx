@@ -9,7 +9,7 @@ import { SkeletonList } from "@/components/ui/Skeleton";
 import { StatTile } from "@/components/ui/StatTile";
 import { useToast } from "@/components/ui/Toast";
 import { api, ApiError } from "@/lib/api";
-import type { CookOrder } from "@/lib/catering";
+import { isSpecialDiet, orderLineLabel, type CookOrder } from "@/lib/catering";
 import { useResource } from "@/lib/use-resource";
 
 const errorText = (e: unknown) => (e instanceof ApiError || e instanceof Error ? e.message : "Something went wrong.");
@@ -25,14 +25,8 @@ const STAGES: readonly Stage[] = [
   { status: "COMPLETED", label: "Done" },
 ];
 
-const DIET_RE = /no beef|gluten free/i;
-
 function bowlLines(o: CookOrder) {
-  return o.items.map((i) => {
-    const name = i.menuItem?.name || "Item";
-    const label = i.selectedValue ? `${name}: ${i.selectedValue}` : name;
-    return { label: i.quantity > 1 ? `${i.quantity} x ${label}` : label, diet: DIET_RE.test(name) };
-  });
+  return o.items.map((i) => ({ label: orderLineLabel(i), diet: isSpecialDiet({ items: [i] }) }));
 }
 
 function CookCard({ order, stage, busy, onAdvance }: { order: CookOrder; stage: Stage; busy: boolean; onAdvance: () => void }) {
@@ -48,6 +42,9 @@ function CookCard({ order, stage, busy, onAdvance }: { order: CookOrder; stage: 
       <ul className="space-y-0.5 text-sm text-oh-stone">
         {lines.map((l, i) => <li key={i} className={l.diet ? "font-semibold text-oh-ember-deep" : ""}>{l.label}</li>)}
       </ul>
+      {order.guestNotes ? (
+        <p className="break-words text-sm text-oh-stone/70" data-cook-note><span className="font-semibold">Note:</span> {order.guestNotes}</p>
+      ) : null}
       {stage.action && (
         <Button variant="primary" className="w-full" loading={busy} onClick={onAdvance}>{stage.action.label}</Button>
       )}

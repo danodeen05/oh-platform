@@ -435,12 +435,22 @@ export function eventDateLong(iso: string): string {
 
 // --- Orders tab ---
 
-const SPECIAL_DIET = ["no beef", "no meat", "no noodles", "soup only", "vegetarian"];
+const SPECIAL_DIET = ["no beef", "no meat", "no noodles", "soup only", "vegetarian", "gluten free"];
 export function isSpecialDiet(o: Pick<CateringOrder, "items">): boolean {
   return o.items.some((i) => {
     const hay = `${i.menuItem?.name || ""} ${i.selectedValue || ""}`.toLowerCase();
     return SPECIAL_DIET.some((t) => hay.includes(t));
   });
+}
+
+/**
+ * One order line as the host reads it. A slider line ("Sprouts: Normal") never
+ * gets a count: older attendee orders stored the slider's position as quantity.
+ */
+export function orderLineLabel(i: CateringOrderItem): string {
+  const name = i.menuItem?.name || "Item";
+  if (i.selectedValue) return `${name}: ${i.selectedValue}`;
+  return i.quantity > 1 ? `${i.quantity} x ${name}` : name;
 }
 
 // --- Survey tab ---
@@ -483,5 +493,7 @@ export interface CookOrder {
   guestName?: string | null;
   guest?: { name?: string | null } | null;
   orderSource?: string | null;
+  /** The matching RSVP's notes (allergies and the like), or null. */
+  guestNotes: string | null;
   items: CateringOrderItem[];
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { joinDob, phoneDigits, splitDob, validateGuest } from "../event-guest";
+import { guestPayload, joinDob, phoneDigits, splitDob, validateGuest } from "../event-guest";
 
 const ok = { name: "Kristy Lee", phone: "(801) 555-0155", month: "", day: "", year: "" };
 const NOW = new Date("2026-10-01T12:00:00Z");
@@ -45,5 +45,22 @@ describe("joinDob / splitDob", () => {
     expect(splitDob("1990-02-03T00:00:00.000Z")).toEqual({ month: "02", day: "03", year: "1990" });
     expect(splitDob(null)).toEqual({ month: "", day: "", year: "" });
     expect(splitDob("soon")).toEqual({ month: "", day: "", year: "" });
+  });
+});
+
+describe("guestPayload", () => {
+  const empty = { month: "", day: "", year: "", notes: "" };
+  const none = { dob: false, notes: false };
+  it("omits empty fields that were never prefilled, so host-entered values survive", () => {
+    expect(guestPayload(empty, none)).toEqual({});
+    expect(guestPayload({ ...empty, notes: "   " }, none)).toEqual({});
+  });
+  it("sends filled fields", () => {
+    expect(guestPayload({ month: "3", day: "9", year: "1990", notes: " no peanuts " }, none)).toEqual({ dob: "03/09/1990", notes: "no peanuts" });
+    expect(guestPayload({ month: "03", day: "09", year: "1990", notes: "vegan" }, { dob: true, notes: true })).toEqual({ dob: "03/09/1990", notes: "vegan" });
+  });
+  it("sends an empty string when the guest clears a prefilled value", () => {
+    expect(guestPayload(empty, { dob: true, notes: true })).toEqual({ dob: "", notes: "" });
+    expect(guestPayload({ ...empty, notes: "x" }, { dob: true, notes: false })).toEqual({ dob: "", notes: "x" });
   });
 });

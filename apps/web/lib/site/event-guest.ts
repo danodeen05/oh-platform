@@ -53,3 +53,29 @@ export function splitDob(dob: string | null | undefined): { month: string; day: 
   if (m) return { month: m[2], day: m[3], year: m[1] };
   return { month: "", day: "", year: "" };
 }
+
+/** The RSVP body's optional fields. Absent keeps the stored value; "" clears it. */
+export interface GuestOptionalFields {
+  dob?: string;
+  notes?: string;
+}
+
+/**
+ * Birthday and notes for the RSVP POST. A filled field is sent as is. An empty
+ * field is omitted (the server keeps what the host entered) unless the form was
+ * prefilled with a value for it, in which case the guest cleared it on purpose
+ * and "" is sent, which clears it.
+ */
+export function guestPayload(
+  form: Pick<GuestForm, "month" | "day" | "year"> & { notes: string },
+  prefilled: { dob: boolean; notes: boolean },
+): GuestOptionalFields {
+  const out: GuestOptionalFields = {};
+  const dob = joinDob(form.month, form.day, form.year);
+  if (dob) out.dob = dob;
+  else if (prefilled.dob) out.dob = "";
+  const notes = form.notes.trim();
+  if (notes) out.notes = notes;
+  else if (prefilled.notes) out.notes = "";
+  return out;
+}

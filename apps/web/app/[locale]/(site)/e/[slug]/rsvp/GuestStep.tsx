@@ -13,7 +13,7 @@ import { useEvent } from "@/components/site/events/EventProvider";
 import { readRemembered, writeRemembered } from "@/components/site/events/remember";
 import { StepSheet } from "@/components/site/order/StepSheet";
 import { FIELD, LABEL } from "@/components/site/store/ui";
-import { joinDob, phoneDigits, splitDob, validateGuest, type GuestErrors } from "@/lib/site/event-guest";
+import { guestPayload, phoneDigits, splitDob, validateGuest, type GuestErrors } from "@/lib/site/event-guest";
 import { eventPath, submitRsvp, type GuestRsvp } from "@/lib/site/events";
 
 const HELP = "m-0 mt-1.5 text-sm text-oh-mute";
@@ -35,6 +35,8 @@ export function GuestStep({ guest, token }: { guest: GuestRsvp | null; token: st
   const [year, setYear] = useState(born.year);
   const [notes, setNotes] = useState(guest?.notes ?? "");
   const [rsvpToken, setRsvpToken] = useState(token);
+  // Which optional fields were prefilled with a value: only those are cleared ("") when left empty.
+  const [prefilled, setPrefilled] = useState({ dob: Boolean(guest?.dob), notes: Boolean(guest?.notes) });
   const [errors, setErrors] = useState<GuestErrors>({});
   const [alert, setAlert] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -50,6 +52,7 @@ export function GuestStep({ guest, token }: { guest: GuestRsvp | null; token: st
     setMonth(d.month);
     setDay(d.day);
     setYear(d.year);
+    if (d.year) setPrefilled((p) => ({ ...p, dob: true }));
     if (who.token) setRsvpToken(who.token);
   }, [guest, slug]);
 
@@ -62,8 +65,9 @@ export function GuestStep({ guest, token }: { guest: GuestRsvp | null; token: st
     if (Object.keys(found).length) return;
     setBusy(true);
     const digits = phoneDigits(phone);
-    const dob = joinDob(month, day, year);
-    const r = await submitRsvp(slug, { name: name.trim(), phone: digits, dob, notes: notes.trim() || null, ...(rsvpToken ? { rsvpToken } : {}) });
+    const optional = guestPayload({ month, day, year, notes }, prefilled);
+    const dob = optional.dob || null;
+    const r = await submitRsvp(slug, { name: name.trim(), phone: digits, ...optional, ...(rsvpToken ? { rsvpToken } : {}) });
     if (r.ok) {
       // Merge: keep what this browser already knows (the reserved order's code, for the status link once orders close).
       const { dob: _oldDob, ...known } = readRemembered(slug) ?? { name: "", phone: "" };

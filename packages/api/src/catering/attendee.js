@@ -12,6 +12,13 @@ export function normalizeGuestPhone(input) {
   return d.length === 11 && d.startsWith("1") ? d.slice(1) : d;
 }
 
+// The guest's phone as exactly 10 digits, or null. Order lookups match on this, so an
+// input that normalizes to anything shorter (e.g. "-" -> "") must never reach a query.
+export function guestPhoneOrNull(input) {
+  const d = normalizeGuestPhone(input);
+  return d.length === 10 ? d : null;
+}
+
 const denverFmt = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Denver", year: "numeric", month: "2-digit", day: "2-digit" });
 export function denverDateKey(date) { return denverFmt.format(date); } // en-CA gives YYYY-MM-DD
 export function isEventDay(eventDate, now = new Date()) { return denverDateKey(new Date(eventDate)) === denverDateKey(now); }
@@ -50,4 +57,19 @@ export function resolveGuestZodiac(order, rsvps = []) {
   if (!phone) return null;
   const match = (rsvps || []).find((r) => normalizeGuestPhone(r?.phone) === phone);
   return match?.zodiac || null;
+}
+
+// The host's Cook tab: each order with its guest's RSVP notes (allergies live there),
+// matched on the normalized phone. `rsvps` are that event's { phone, notes }.
+export function withGuestNotes(orders = [], rsvps = []) {
+  const notesByPhone = new Map();
+  for (const r of rsvps || []) {
+    const phone = normalizeGuestPhone(r?.phone);
+    const notes = typeof r?.notes === "string" ? r.notes.trim() : "";
+    if (phone && notes) notesByPhone.set(phone, notes);
+  }
+  return (orders || []).map((o) => {
+    const phone = normalizeGuestPhone(o?.guestPhone);
+    return { ...o, guestNotes: (phone && notesByPhone.get(phone)) || null };
+  });
 }

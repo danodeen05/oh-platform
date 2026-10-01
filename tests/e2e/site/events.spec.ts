@@ -116,6 +116,9 @@ test("private event: invite to kitchen status, zh-TW, admin host tabs", { timeou
   const slug = ev.slug as string;
   const first = GUEST.name.split(" ")[0];
   assert.match(inviteUrl, /\?rsvp=/);
+  // A phone that normalizes to fewer than 10 digits never reaches the order lookup.
+  const badCheck = await fetch(`${API}/catering/events/${encodeURIComponent(slug)}/order/check?phone=-`);
+  assert.equal(badCheck.status, 400, "order/check?phone=- is rejected");
 
   await waitForMemory();
   browser = await chromium.launch({ args: ["--no-sandbox"] });

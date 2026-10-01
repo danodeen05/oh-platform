@@ -29,7 +29,7 @@ import { getBrandOverride } from "./brand-overrides.js";
 import { requestPath } from "../auth/console-guard.js";
 import { composeGuestMessage, MESSAGE_KINDS, inviteUrl } from "./messages.js";
 import { arriveOrder } from "./arrive.js";
-import { isAttendeePath, rsvpUpdateData, slugDateKey, normalizeGuestPhone, isEventDay, denverDateKey, filterMenuSteps, resolveGuestZodiac } from "./attendee.js";
+import { isAttendeePath, rsvpUpdateData, slugDateKey, normalizeGuestPhone, guestPhoneOrNull, isEventDay, denverDateKey, filterMenuSteps, resolveGuestZodiac, withGuestNotes } from "./attendee.js";
 
 const prisma = new PrismaClient();
 const stripe = process.env.STRIPE_SECRET_KEY
@@ -1307,15 +1307,18 @@ export async function registerCateringRoutes(app) {
 
   app.get("/admin/catering/events/:id/orders", async (req, reply) => {
     try {
-      const orders = await prisma.order.findMany({
-        where: { cateringEventId: req.params.id },
-        include: {
-          items: { include: { menuItem: { select: { name: true } } } },
-          guest: { select: { name: true, phone: true } },
-        },
-        orderBy: { createdAt: "asc" },
-      });
-      return orders;
+      const [orders, rsvps] = await Promise.all([
+        prisma.order.findMany({
+          where: { cateringEventId: req.params.id },
+          include: {
+            items: { include: { menuItem: { select: { name: true } } } },
+            guest: { select: { name: true, phone: true } },
+          },
+          orderBy: { createdAt: "asc" },
+        }),
+        prisma.cateringRSVP.findMany({ where: { eventId: req.params.id }, select: { phone: true, notes: true } }),
+      ]);
+      return withGuestNotes(orders, rsvps);
     } catch (err) {
       return reply.code(500).send({ error: err.message });
     }
@@ -2125,6 +2128,8 @@ export async function registerCateringRoutes(app) {
     try {
       const { phone } = req.query;
       if (!phone) return reply.code(400).send({ error: "phone required" });
+      const normalizedPhone = guestPhoneOrNull(phone);
+      if (!normalizedPhone) return reply.code(400).send({ error: "phone must have 10 digits" });
 
       const event = await prisma.cateringEvent.findUnique({
         where: { slug: req.params.slug },
@@ -2132,13 +2137,13 @@ export async function registerCateringRoutes(app) {
       });
       if (!event) return reply.code(404).send({ error: "Event not found" });
 
-      const normalizedPhone = normalizeGuestPhone(phone);
       const existingOrder = await prisma.order.findFirst({
         where: {
           cateringEventId: event.id,
           orderSource: "CATERING",
           status: { not: "CANCELLED" },
-          guestPhone: { contains: normalizedPhone.slice(-10) },
+          // Attendee orders store guestPhone as the normalized 10 digits (see POST below).
+          guestPhone: normalizedPhone,
         },
         include: {
           items: { include: { menuItem: { select: { name: true } } } },
@@ -2173,6 +2178,9 @@ export async function registerCateringRoutes(app) {
       if (!items || !items.length) {
         return reply.code(400).send({ error: "items required" });
       }
+      if (!guestPhone) return reply.code(400).send({ error: "guestPhone required" });
+      const normalizedPhone = guestPhoneOrNull(guestPhone);
+      if (!normalizedPhone) return reply.code(400).send({ error: "phone must have 10 digits" });
 
       const event = await prisma.cateringEvent.findUnique({
         where: { slug: req.params.slug },
@@ -2191,25 +2199,21 @@ export async function registerCateringRoutes(app) {
         return reply.code(400).send({ error: "Orders closed. The event has started.", code: "EVENT_STARTED" });
       }
 
-      const normalizedPhone = guestPhone ? normalizeGuestPhone(guestPhone) : null;
-
-      // One order per phone per event
-      if (normalizedPhone) {
-        const existingOrder = await prisma.order.findFirst({
-          where: {
-            cateringEventId: event.id,
-            orderSource: "CATERING",
-            status: { not: "CANCELLED" },
-            guestPhone: { contains: normalizedPhone.slice(-10) },
-          },
+      // One order per phone per event (exact match on the stored 10 digits)
+      const existingOrder = await prisma.order.findFirst({
+        where: {
+          cateringEventId: event.id,
+          orderSource: "CATERING",
+          status: { not: "CANCELLED" },
+          guestPhone: normalizedPhone,
+        },
+      });
+      if (existingOrder) {
+        return reply.code(400).send({
+          error: "One order per guest per event",
+          existingOrderId: existingOrder.id,
+          existingOrderQrCode: existingOrder.orderQrCode,
         });
-        if (existingOrder) {
-          return reply.code(400).send({
-            error: "One order per guest per event",
-            existingOrderId: existingOrder.id,
-            existingOrderQrCode: existingOrder.orderQrCode,
-          });
-        }
       }
 
       // Validate menu items
@@ -2249,8 +2253,8 @@ export async function registerCateringRoutes(app) {
       } catch {}
       const kitchenOrderNumber = String(count + 1).padStart(4, "0");
 
-      // Create guest record. `normalizedPhone` (digits only) stays as-is for
-      // the "one order per phone" contains-matching above; Guest.phone itself
+      // Create guest record. `normalizedPhone` (10 digits) is what Order.guestPhone
+      // stores for the exact "one order per phone" match above; Guest.phone itself
       // is stored E.164 (Task F2) so Chappy SMS can match identity exactly.
       const guest = await prisma.guest.create({
         data: {

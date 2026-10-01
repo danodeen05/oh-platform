@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { defaultEventDraft } from "../event-draft";
+import { defaultEventDraft, eventOrderLines } from "../event-draft";
 const steps = [
   { id: "bowl", title: "", sections: [
     { id: "soup", name: "", selectionMode: "SINGLE", required: true, items: [{ id: "s1", name: "Classic", basePriceCents: 0 }] },
@@ -40,5 +40,16 @@ describe("event draft storage", () => {
     const { readEventDraft, writeEventDraft } = await import("../event-draft");
     expect(readEventDraft("a")).toBeNull();
     expect(() => writeEventDraft("a", defaultEventDraft(steps))).not.toThrow();
+  });
+});
+
+describe("eventOrderLines", () => {
+  it("sends each slider as one, keeping its choice", () => {
+    const draft = { ...defaultEventDraft(steps), singles: { soup: "s1", noodles: "n2" }, sliders: { sp: 2 } };
+    expect(eventOrderLines(draft, steps)).toEqual([
+      { menuItemId: "s1", quantity: 1 },
+      { menuItemId: "n2", quantity: 1 },
+      { menuItemId: "sp", quantity: 1, selectedValue: "Medium" },
+    ]);
   });
 });
