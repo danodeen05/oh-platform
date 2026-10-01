@@ -28,7 +28,7 @@ import { computeDiscountCents } from "../promos/discount.js";
 import { getBrandOverride } from "./brand-overrides.js";
 import { requestPath } from "../auth/console-guard.js";
 import { composeGuestMessage, MESSAGE_KINDS, inviteUrl } from "./messages.js";
-import { isAttendeePath, rsvpUpdateData, normalizeGuestPhone, isEventDay, denverDateKey, filterMenuSteps } from "./attendee.js";
+import { isAttendeePath, rsvpUpdateData, slugDateKey, normalizeGuestPhone, isEventDay, denverDateKey, filterMenuSteps } from "./attendee.js";
 
 const prisma = new PrismaClient();
 const stripe = process.env.STRIPE_SECRET_KEY
@@ -138,7 +138,7 @@ function makeSlug(company, dateStr) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
   // dateStr: "2026-06-05" → "jun5"
-  const [, m, dd] = denverDateKey(new Date(dateStr)).split("-").map(Number);
+  const [, m, dd] = slugDateKey(dateStr).split("-").map(Number);
   const monthNames = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
   const month = monthNames[m - 1];
   const day = dd;
@@ -1015,7 +1015,7 @@ export async function registerCateringRoutes(app) {
     for (const { rsvp, order } of targets) {
       const k = auto ? (order ? "status" : "invite") : kind;
       const body = composeGuestMessage({ kind: k, event: data.event, rsvp, webBaseUrl: WEB_BASE_URL, order });
-      if (!body) { results.push({ rsvpId: rsvp.id, ok: false, error: "No order yet" }); continue; }
+      if (!body) { results.push({ rsvpId: rsvp.id, ok: false, skipped: true, error: "No order yet" }); continue; }
       try {
         const r = await sendSMS({ to: rsvp.phone, body });
         results.push({ rsvpId: rsvp.id, ok: !!r?.success, error: r?.success ? undefined : (r?.reason || r?.error || "send failed") });
@@ -1023,7 +1023,7 @@ export async function registerCateringRoutes(app) {
         results.push({ rsvpId: rsvp.id, ok: false, error: e.message || "send failed" });
       }
     }
-    return { sent: results.filter((r) => r.ok).length, failed: results.filter((r) => !r.ok).length, total: results.length, results };
+    return { sent: results.filter((r) => r.ok).length, failed: results.filter((r) => !r.ok && !r.skipped).length, skipped: results.filter((r) => r.skipped).length, total: results.length, results };
   }
 
   app.post("/admin/catering/events/:id/messages/send", async (req, reply) => {
@@ -1344,7 +1344,8 @@ export async function registerCateringRoutes(app) {
       if (dob && !DOB_RE.test(dob)) return reply.code(400).send({ error: "dob must be MM/DD/YYYY" });
       const normalized = normalizeGuestPhone(phone);
       if (normalized.length !== 10) return reply.code(400).send({ error: "phone must have 10 digits" });
-      const rsvp = await prisma.cateringRSVP.create({ data: { eventId: req.params.id, name: name.trim(), phone: normalized, dob: dob || null, zodiac: dob ? getChineseZodiac(dob) : null, notes: notes || null } });
+      const f = rsvpUpdateData({ name: name.trim(), phone: normalized, dob, notes }, getChineseZodiac);
+      const rsvp = await prisma.cateringRSVP.create({ data: { eventId: req.params.id, name: f.name, phone: f.phone, dob: f.dob ?? null, zodiac: f.zodiac ?? null, notes: f.notes ?? null } });
       return reply.code(201).send(rsvp);
     } catch (err) {
       if (err.code === "P2002") return reply.code(409).send({ error: "That phone is already on the guest list" });
@@ -1356,22 +1357,15 @@ export async function registerCateringRoutes(app) {
   app.patch("/admin/catering/events/:id/rsvps/:rsvpId", async (req, reply) => {
     try {
       const { name, phone, dob, notes } = req.body || {};
-      const data = {};
-      if (name !== undefined) {
-        if (!String(name).trim()) return reply.code(400).send({ error: "name cannot be empty" });
-        data.name = String(name).trim();
-      }
+      if (name !== undefined && !String(name).trim()) return reply.code(400).send({ error: "name cannot be empty" });
+      if (dob && !DOB_RE.test(dob)) return reply.code(400).send({ error: "dob must be MM/DD/YYYY" });
+      let normalized;
       if (phone !== undefined) {
-        const normalized = normalizeGuestPhone(phone || "");
+        normalized = normalizeGuestPhone(phone || "");
         if (normalized.length !== 10) return reply.code(400).send({ error: "phone must have 10 digits" });
-        data.phone = normalized;
       }
-      if (dob !== undefined) {
-        if (dob && !DOB_RE.test(dob)) return reply.code(400).send({ error: "dob must be MM/DD/YYYY" });
-        data.dob = dob || null;
-        data.zodiac = dob ? getChineseZodiac(dob) : null;
-      }
-      if (notes !== undefined) data.notes = notes || null;
+      const data = rsvpUpdateData({ name: name === undefined ? undefined : String(name).trim(), phone: normalized, dob, notes }, getChineseZodiac);
+      for (const k of ["name", "phone"]) if (data[k] === undefined) delete data[k];
       const existing = await prisma.cateringRSVP.findFirst({ where: { id: req.params.rsvpId, eventId: req.params.id }, select: { id: true } });
       if (!existing) return reply.code(404).send({ error: "Guest not found" });
       return await prisma.cateringRSVP.update({ where: { id: existing.id }, data });

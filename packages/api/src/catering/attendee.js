@@ -35,3 +35,9 @@ export function rsvpUpdateData({ name, phone, dob, notes }, zodiacFn = () => nul
   }
   return data;
 }
+
+// Date part for an event slug: date-only strings are used as written; timestamps use the Denver calendar day.
+export function slugDateKey(eventDate) {
+  if (typeof eventDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(eventDate)) return eventDate;
+  return denverDateKey(new Date(eventDate));
+}
