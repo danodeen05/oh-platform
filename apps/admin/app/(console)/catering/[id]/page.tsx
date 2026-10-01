@@ -31,6 +31,7 @@ const TABS: SegmentOption<TabId>[] = [
   { value: "cook", label: "Cook" },
   { value: "orders", label: "Orders" },
   { value: "shopping", label: "Shopping" },
+  { value: "overage", label: "Overage" },
   { value: "survey", label: "Survey" },
 ];
 
@@ -44,6 +45,9 @@ export default function CateringEventDetailPage({ params }: { params: Promise<{ 
   const [editOpen, setEditOpen] = useState(false);
   const [enriching, setEnriching] = useState(false);
   const [logoError, setLogoError] = useState(false);
+
+  const activeHidden = !tabs.some((t) => t.value === tab);
+  if (activeHidden && event) setTab("overview");
 
   if (!event) {
     const missing = res.error === "Event not found";

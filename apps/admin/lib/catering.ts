@@ -280,7 +280,8 @@ export function formatBirthday(dob: string | null | undefined): string {
   if (!dob) return "";
   const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(dob);
   if (!m) return dob;
-  return `${MONTHS[Number(m[1]) - 1]} ${Number(m[2])}, ${m[3]}`;
+  const month = MONTHS[Number(m[1]) - 1];
+  return month ? `${month} ${Number(m[2])}, ${m[3]}` : dob;
 }
 
 /** "(801) 555-0100" from 10 digits; other input comes back as is. */
@@ -319,6 +320,12 @@ export function defaultPriceForSlot(slot: CateringSlot): string {
   return priceDollars(slot);
 }
 
+/** The stored Denver start time if the Select offers it, else the slot default (legacy events were saved at midnight UTC). */
+function startTimeOrDefault(event: CateringEvent): string {
+  const t = splitDateTime(event.eventDate).time;
+  return START_TIMES.some((o) => o.value === t) ? t : defaultStartTime(event.slot);
+}
+
 export function formFromEvent(event: CateringEvent | null, prefillDate?: string, prefillSlot?: CateringSlot): EventForm {
   if (!event) return emptyEventForm(prefillDate, prefillSlot);
   return {
@@ -332,7 +339,7 @@ export function formFromEvent(event: CateringEvent | null, prefillDate?: string,
     eventType: event.eventType || "", expectedGuests: event.expectedGuests != null ? String(event.expectedGuests) : "",
     dietaryNotes: event.dietaryNotes || "", setupNotes: event.setupNotes || "",
     onsiteContactName: event.onsiteContactName || "", onsiteContactPhone: event.onsiteContactPhone || "",
-    startTime: splitDateTime(event.eventDate).time, hostName: event.hostName || "", welcomeNote: event.welcomeNote || "",
+    startTime: startTimeOrDefault(event), hostName: event.hostName || "", welcomeNote: event.welcomeNote || "",
     complimentary: event.pricePerBowlCents === 0,
   };
 }
@@ -365,7 +372,7 @@ export type EventBody = {
   companyDescription?: string; notes?: string; eventType?: string; expectedGuests: number | null;
   dietaryNotes?: string; setupNotes?: string; onsiteContactName?: string; onsiteContactPhone?: string;
   status?: CateringEventStatus; bookedBowls?: number;
-  hostName?: string; welcomeNote?: string;
+  hostName?: string | null; welcomeNote?: string | null;
 };
 
 const trimOrUndefined = (s: string) => s.trim() || undefined;
@@ -400,6 +407,11 @@ export function eventBody(f: EventForm, editing: boolean): EventBody {
     hostName: trimOrUndefined(f.hostName),
     welcomeNote: trimOrUndefined(f.welcomeNote),
   };
+  // An emptied field has to be sent as null on edit, or the API keeps the old value.
+  if (editing) {
+    body.hostName = f.hostName.trim() || null;
+    body.welcomeNote = f.welcomeNote.trim() || null;
+  }
   if (editing) {
     body.status = f.status;
     const booked = wholeNumber(f.bookedBowls);
