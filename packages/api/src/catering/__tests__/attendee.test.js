@@ -21,11 +21,10 @@ test("event day follows the Denver calendar, not UTC", () => {
   assert.equal(isEventDay(eventDate, new Date("2026-10-05T07:00:00.000Z")), false); // 1am MDT next day
 });
 
-test("menu steps keep every soup, noodle and slider; no extras or drinks", () => {
+test("menu steps keep every soup and slider; no extras or drinks", () => {
   const steps = [
     { id: "bowl", title: "Bowl", sections: [
       { id: "soup", selectionMode: "SINGLE", items: [{ id: "s1", name: "Classic Beef Noodle Soup" }, { id: "s2", name: "American Wagyu Beef Noodle Soup" }] },
-      { id: "noodles", selectionMode: "SINGLE", items: [{ id: "n1", name: "Ramen Noodles" }, { id: "n2", name: "Shaved Noodles" }] },
     ] },
     { id: "customize", title: "Customize", sections: [{ id: "sl1", selectionMode: "SLIDER", item: { id: "sl1", name: "Spice Level" } }] },
     { id: "extras", title: "Extras", sections: [] },
@@ -34,7 +33,7 @@ test("menu steps keep every soup, noodle and slider; no extras or drinks", () =>
   const out = filterMenuSteps(steps);
   assert.deepEqual(out.map((s) => s.id), ["bowl", "customize"]);
   assert.deepEqual(out[0].sections[0].items.map((i) => i.id), ["s1", "s2"]);
-  assert.deepEqual(out[0].sections[1].items.map((i) => i.id), ["n1", "n2"]);
+  assert.equal(out[0].sections.length, 1);
   assert.equal(out[1].sections.length, 1);
 });
 

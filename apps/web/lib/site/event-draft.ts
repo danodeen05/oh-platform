@@ -19,7 +19,7 @@ function storage(): Storage | null {
   }
 }
 
-/** A fresh bowl: the house soup and noodles (else the first of each) and every slider's default. */
+/** A fresh bowl: the house soup (else the first) and every slider's default. */
 export function defaultEventDraft(steps: MenuStep[]): OrderDraft {
   return withMenuDefaults(emptyDraft(), steps);
 }

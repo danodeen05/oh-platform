@@ -43,7 +43,6 @@ const ORDER_LINES = [
   { name: "Soup Richness", selectedValue: "Rich" },
   { name: "Noodle Texture", selectedValue: "Firm" },
   { name: "Spice Level", selectedValue: "Medium" },
-  { name: "Wide Noodles" },
   { name: "Soft-Boild Egg" },
   { name: "Spicy Cucumbers" },
   { name: "Pepsi" },

@@ -6271,20 +6271,16 @@
   "menuPage": {
     "meta": {
       "title": "Menu",
-      "description": "Beef noodle soup, noodles, add-ons, sides and drinks, with today's prices."
+      "description": "Beef noodle soup, add-ons, sides and drinks, with today's prices."
     },
     "eyebrow": "The menu",
     "title": "One bowl. Made your way.",
-    "lede": "Pick a soup and a noodle, then make it yours. Prices are before tax.",
+    "lede": "Pick a soup, then make it yours: broth, noodle firmness, spice and toppings. Prices are before tax.",
     "jump": "Menu sections",
     "groups": {
       "soup": {
         "title": "Soups",
         "line": "Every bowl starts here."
-      },
-      "noodles": {
-        "title": "Noodles",
-        "line": "One noodle comes with every bowl."
       },
       "customize": {
         "title": "Make it yours",

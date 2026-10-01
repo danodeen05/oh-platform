@@ -65,11 +65,12 @@ export function MenuList({ initialSteps }: { initialSteps: ApiMenuStep[] }) {
   };
 
   const sections: { key: MenuGroupKey; count: number }[] = [];
+  // Soups first, then "make it yours" (the sliders), then the rest.
   for (const g of view.groups) {
     sections.push({ key: g.key, count: g.items.length });
-    if (g.key === "noodles" && view.sliders.length) sections.push({ key: "customize", count: view.sliders.length });
+    if (g.key === "soup" && view.sliders.length) sections.push({ key: "customize", count: view.sliders.length });
   }
-  if (!view.groups.some((g) => g.key === "noodles") && view.sliders.length) sections.push({ key: "customize", count: view.sliders.length });
+  if (!view.groups.some((g) => g.key === "soup") && view.sliders.length) sections.push({ key: "customize", count: view.sliders.length });
 
   if (!view.groups.length) {
     return (

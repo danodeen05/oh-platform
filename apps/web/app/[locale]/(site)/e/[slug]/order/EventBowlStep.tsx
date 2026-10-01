@@ -2,7 +2,7 @@
 
 /**
  * Private events: the bowl step. The dine-in bowl builder with the event's
- * menu (soup, noodles and the sliders; no extras, no prices: bowls are on
+ * menu (soup and the sliders; no extras, no prices: bowls are on
  * the house). A guest who already has a bowl goes straight to it; once the
  * event has started, orders are closed.
  */

@@ -2,14 +2,13 @@ import { describe, expect, it } from "vitest";
 import { defaultEventDraft, eventOrderLines } from "../event-draft";
 const steps = [
   { id: "bowl", title: "", sections: [
-    { id: "soup", name: "", selectionMode: "SINGLE", required: true, items: [{ id: "s1", name: "Classic", basePriceCents: 0 }] },
-    { id: "noodles", name: "", selectionMode: "SINGLE", required: true, items: [{ id: "n1", name: "Wide", basePriceCents: 0 }, { id: "n2", name: "Thin", basePriceCents: 0 }] } ] },
+    { id: "soup", name: "", selectionMode: "SINGLE", required: true, items: [{ id: "s1", name: "Classic", basePriceCents: 0 }, { id: "s2", name: "Wagyu", basePriceCents: 0 }] } ] },
   { id: "customize", title: "", sections: [{ id: "sp", name: "", selectionMode: "SLIDER", item: { id: "sp", name: "Spice", basePriceCents: 0 }, sliderConfig: { labels: ["None", "Mild", "Medium"], default: 1 } }] },
 ] as any;
 describe("defaultEventDraft", () => {
-  it("picks the first soup and noodles and each slider default", () => {
+  it("picks the first soup and each slider default", () => {
     const d = defaultEventDraft(steps);
-    expect(d.singles).toEqual({ soup: "s1", noodles: "n1" });
+    expect(d.singles).toEqual({ soup: "s1" });
     expect(d.sliders).toEqual({ sp: 1 });
     expect(d.locationId).toBeNull();
   });
@@ -27,7 +26,7 @@ describe("event draft storage", () => {
       const d = defaultEventDraft(steps);
       writeEventDraft("a", d);
       expect([...store.keys()]).toEqual([`${EVENT_DRAFT_PREFIX}a`]);
-      expect(readEventDraft("a")?.singles).toEqual({ soup: "s1", noodles: "n1" });
+      expect(readEventDraft("a")?.singles).toEqual({ soup: "s1" });
       expect(readEventDraft("b")).toBeNull();
       clearEventDraft("a");
       expect(readEventDraft("a")).toBeNull();
@@ -45,10 +44,9 @@ describe("event draft storage", () => {
 
 describe("eventOrderLines", () => {
   it("sends each slider as one, keeping its choice", () => {
-    const draft = { ...defaultEventDraft(steps), singles: { soup: "s1", noodles: "n2" }, sliders: { sp: 2 } };
+    const draft = { ...defaultEventDraft(steps), singles: { soup: "s2" }, sliders: { sp: 2 } };
     expect(eventOrderLines(draft, steps)).toEqual([
-      { menuItemId: "s1", quantity: 1 },
-      { menuItemId: "n2", quantity: 1 },
+      { menuItemId: "s2", quantity: 1 },
       { menuItemId: "sp", quantity: 1, selectedValue: "Medium" },
     ]);
   });

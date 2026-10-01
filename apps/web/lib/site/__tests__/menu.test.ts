@@ -33,16 +33,6 @@ const STEPS: ApiMenuStep[] = [
           item({ id: "wagyu", nameEn: "American Wagyu Beef Noodle Soup", basePriceCents: 2399, releaseAt: "2026-10-01T06:00:00Z" }),
         ],
       },
-      {
-        id: "noodles",
-        name: "選擇麵條",
-        selectionMode: "SINGLE",
-        items: [
-          item({ id: "wide", nameEn: "Wide Noodles", isVegan: true, isVegetarian: true }),
-          item({ id: "gf", nameEn: "Wide Noodles (Gluten Free)", isVegan: true, isGlutenFree: true }),
-          item({ id: "none", nameEn: "No Noodles" }),
-        ],
-      },
     ],
   },
   {
@@ -89,7 +79,7 @@ const STEPS: ApiMenuStep[] = [
 describe("menu view (Task D3)", () => {
   it("groups the items by the API's sections, in menu order, dropping empty groups", () => {
     const view = menuView(STEPS, "zh-TW", NOW);
-    expect(view.groups.map((g) => g.key)).toEqual(["soup", "noodles", "addons", "sides", "drinks"]);
+    expect(view.groups.map((g) => g.key)).toEqual(["soup", "addons", "sides", "drinks"]);
     expect(view.groups[0].items.map((i) => i.id)).toEqual(["classic", "wagyu"]);
   });
 
@@ -108,9 +98,8 @@ describe("menu view (Task D3)", () => {
     expect(menuView(STEPS, "zh-TW", NOW).groups[0].items[0].description).toBeNull();
   });
 
-  it("hides No Noodles and unavailable items", () => {
+  it("hides unavailable items", () => {
     const ids = menuView(STEPS, "en", NOW).groups.flatMap((g) => g.items.map((i) => i.id));
-    expect(ids).not.toContain("none");
     expect(ids).not.toContain("off");
   });
 
@@ -186,7 +175,7 @@ describe("translatedSteps (Task F1: the bowl builder's copy of the rule)", () =>
 describe("withPreselectedItem (Order this)", () => {
   const MENU = STEPS as unknown as MenuStep[];
 
-  it("a soup or noodle becomes that section's choice", () => {
+  it("a soup becomes that section's choice", () => {
     const { draft, found } = withPreselectedItem({ ...emptyDraft(), singles: { soup: "classic" } }, MENU, "wagyu");
     expect(found).toBe(true);
     expect(draft.singles.soup).toBe("wagyu");

@@ -510,7 +510,6 @@ const localizedLabels = {
   en: {
     buildFoundation: "Build the Foundation",
     chooseYourSoup: "Choose Your Soup",
-    chooseYourNoodles: "Choose Your Noodles",
     customizeYourBowl: "Customize Your Bowl",
     addOnsSides: "Add-Ons & Sides",
     premiumAddons: "Premium Add-ons",
@@ -523,7 +522,6 @@ const localizedLabels = {
   "zh-TW": {
     buildFoundation: "建立基底",
     chooseYourSoup: "選擇湯品",
-    chooseYourNoodles: "選擇麵條",
     customizeYourBowl: "客製您的麵碗",
     addOnsSides: "加購與配菜",
     premiumAddons: "精選加購",
@@ -536,7 +534,6 @@ const localizedLabels = {
   "zh-CN": {
     buildFoundation: "建立基底",
     chooseYourSoup: "选择汤品",
-    chooseYourNoodles: "选择面条",
     customizeYourBowl: "定制您的面碗",
     addOnsSides: "加购与配菜",
     premiumAddons: "精选加购",
@@ -549,7 +546,6 @@ const localizedLabels = {
   es: {
     buildFoundation: "Construye la Base",
     chooseYourSoup: "Elige Tu Sopa",
-    chooseYourNoodles: "Elige Tus Fideos",
     customizeYourBowl: "Personaliza Tu Tazón",
     addOnsSides: "Extras y Acompañamientos",
     premiumAddons: "Extras Premium",
@@ -1352,7 +1348,6 @@ app.get("/menu/steps", async (req, reply) => {
 
   // Group items by category for easier frontend rendering
   const main01 = localizedItems.filter(i => i.category === 'main01');
-  const main02 = localizedItems.filter(i => i.category === 'main02');
   const sliders = localizedItems.filter(i => i.categoryType === 'SLIDER');
   const addons = localizedItems.filter(i => i.categoryType === 'ADDON');
   const sides = localizedItems.filter(i => i.categoryType === 'SIDE');
@@ -1372,14 +1367,9 @@ app.get("/menu/steps", async (req, reply) => {
             selectionMode: 'SINGLE',
             required: true,
             items: main01
-          },
-          {
-            id: 'noodles',
-            name: labels.chooseYourNoodles,
-            selectionMode: 'SINGLE',
-            required: true,
-            items: main02
           }
+          // Noodle types (main02) left the menu 2026-10-01: one house noodle,
+          // with firmness chosen on the "Noodle Texture" slider (Firm/Medium/Soft).
         ]
       },
       {

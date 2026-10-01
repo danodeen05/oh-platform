@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * The bowl step (Task D5): soup, noodles, the slider choices, add-ons, sides,
+ * The bowl step (Task D5): soup, the slider choices, add-ons, sides,
  * drinks and dessert, from GET /menu/steps?locale=. Food sits on linen
  * panels; the selected soup's photo leads (Classic shows the slices, Wagyu
  * the chunks, from the C6 pipeline).

@@ -35,16 +35,6 @@ const MENU: MenuStep[] = [
           { id: "classic", name: "經典牛肉麵", nameEn: "Classic Beef Noodle Soup", basePriceCents: 1599 },
         ],
       },
-      {
-        id: "noodles",
-        name: "選擇麵條",
-        selectionMode: "SINGLE",
-        required: true,
-        items: [
-          { id: "ramen", name: "拉麵", nameEn: "Ramen Noodles", basePriceCents: 0 },
-          { id: "wide", name: "寬麵", nameEn: "Wide Noodles", basePriceCents: 0 },
-        ],
-      },
     ],
   },
   {
@@ -103,9 +93,9 @@ describe("order draft", () => {
     expect(bad.partySize).toBe(1);
   });
 
-  it("defaults: Classic soup, wide noodles, slider defaults; keeps a valid stored choice", () => {
+  it("defaults: Classic soup, slider defaults; keeps a valid stored choice", () => {
     const d = withMenuDefaults(emptyDraft(), MENU);
-    expect(d.singles).toEqual({ soup: "classic", noodles: "wide" });
+    expect(d.singles).toEqual({ soup: "classic" });
     expect(d.sliders).toEqual({ "spice-item": 1 });
     const kept = withMenuDefaults({ ...emptyDraft(), singles: { soup: "wagyu" }, sliders: { "spice-item": 2 }, extras: { egg: 9, gone: 1 } }, MENU);
     expect(kept.singles.soup).toBe("wagyu");
@@ -117,7 +107,6 @@ describe("order draft", () => {
     const d = withMenuDefaults({ ...emptyDraft(), extras: { egg: 2 } }, MENU);
     expect(buildLines(d, MENU)).toEqual([
       { menuItemId: "classic", quantity: 1 },
-      { menuItemId: "wide", quantity: 1 },
       { menuItemId: "spice-item", quantity: 1, selectedValue: "Mild" },
       { menuItemId: "egg", quantity: 2 },
     ]);
@@ -125,7 +114,7 @@ describe("order draft", () => {
 
   it("previews prices without the free slider lines (no re-quote per slider tap)", () => {
     const d = withMenuDefaults({ ...emptyDraft(), extras: { egg: 1 } }, MENU);
-    expect(quoteLines(buildLines(d, MENU), MENU).map((l) => l.menuItemId)).toEqual(["classic", "wide", "egg"]);
+    expect(quoteLines(buildLines(d, MENU), MENU).map((l) => l.menuItemId)).toEqual(["classic", "egg"]);
   });
 
   it("needs every required choice before the bowl can continue", () => {
@@ -189,11 +178,10 @@ describe("order draft", () => {
   it("places a past order's items back into the builder (reorder)", () => {
     const d = draftFromOrderItems(emptyDraft(), MENU, [
       { menuItemId: "wagyu", quantity: 1 },
-      { menuItemId: "ramen", quantity: 1 },
       { menuItemId: "spice-item", quantity: 0, selectedValue: "Medium" },
       { menuItemId: "egg", quantity: 1 },
     ]);
-    expect(d.singles).toEqual({ soup: "wagyu", noodles: "ramen" });
+    expect(d.singles).toEqual({ soup: "wagyu" });
     expect(d.sliders).toEqual({ "spice-item": 2 });
     expect(d.extras).toEqual({ egg: 1 });
   });
@@ -210,16 +198,17 @@ describe("order draft", () => {
       { menuItemId: "egg", quantity: 2, menuItem: { id: "egg", name: "滷蛋" } },
       { menuItemId: "retired-side", quantity: 1, menuItem: { id: "retired-side", name: "涼拌黃瓜" } },
       // The safe view (someone else's order) has no menuItemId; its lines still resolve by menuItem.id, and ownership is checked before this runs.
-      { quantity: 1, menuItem: { id: "wide", name: "寬麵" } },
+      { quantity: 1, menuItem: { id: "egg", name: "滷蛋" } },
+      // A retired noodle type (the menu has one house noodle since 2026-10-01) is named, not kept.
+      { menuItemId: "wide", quantity: 1, menuItem: { id: "wide", name: "寬麵" } },
     ]);
     expect(available).toEqual([
       { menuItemId: "classic", quantity: 1, selectedValue: null },
       { menuItemId: "spice-item", quantity: 0, selectedValue: "Mild" },
-      { menuItemId: "wide", quantity: 1, selectedValue: null },
     ]);
-    expect(unavailable).toEqual(["滷蛋", "涼拌黃瓜"]);
+    expect(unavailable).toEqual(["滷蛋", "涼拌黃瓜", "寬麵"]);
     const d = draftFromOrderItems(emptyDraft(), menu, available);
-    expect(d.singles).toEqual({ soup: "classic", noodles: "wide" });
+    expect(d.singles).toEqual({ soup: "classic" });
     expect(d.extras).toEqual({});
     // No prices come from the old order: the draft has none; the flow re-quotes.
     expect(JSON.stringify(d)).not.toMatch(/priceCents|1599/);

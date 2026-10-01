@@ -179,10 +179,6 @@ async function getCateringMenuItems(tenantId) {
         in: [
           "Classic Beef Noodle Soup",
           "Classic Beef Noodle Soup (no beef)",
-          "Wide Noodles",
-          "Wide Noodles (Gluten Free)",
-          "Thin/Flat Noodles",
-          "No Noodles",
           "Baby Bok Choy",
           "Sprouts",
         ],
@@ -196,12 +192,10 @@ async function getCateringMenuItems(tenantId) {
   const soups = items.filter((i) =>
     ["Classic Beef Noodle Soup", "Classic Beef Noodle Soup (no beef)"].includes(i.name)
   );
-  const noodles = items.filter((i) =>
-    ["Wide Noodles", "Wide Noodles (Gluten Free)", "Thin/Flat Noodles", "No Noodles"].includes(i.name)
-  );
+  // One house noodle since 2026-10-01; firmness is the "Noodle Texture" slider.
   const sliders = items.filter((i) => ["Baby Bok Choy", "Sprouts"].includes(i.name));
 
-  return { soups, noodles, sliders };
+  return { soups, sliders };
 }
 
 // ---------------------------------------------------------------------------
@@ -263,13 +257,13 @@ async function resolveCateringTenantId(explicitId) {
 // ===========================================================================
 
 /**
- * Return the catering menu grouped (soups/noodles/sliders) for the default
+ * Return the catering menu grouped (soups/sliders) for the default
  * tenant, including descriptions. Used by the public /catering/menu route and
  * by Chappy's catering_get_menu tool.
  */
 export async function getCateringMenuGrouped(explicitTenantId) {
   const tenantId = await resolveCateringTenantId(explicitTenantId);
-  if (!tenantId) return { soups: [], noodles: [], sliders: [] };
+  if (!tenantId) return { soups: [], sliders: [] };
   return getCateringMenuItems(tenantId);
 }
 
@@ -2105,7 +2099,7 @@ export async function registerCateringRoutes(app) {
     return rsvp;
   });
 
-  // The attendee menu: soups, noodles and every slider only (no extras or drinks).
+  // The attendee menu: soups and every slider only (no extras or drinks).
   app.get("/catering/events/:slug/menu-steps", async (req, reply) => {
     const event = await prisma.cateringEvent.findUnique({ where: { slug: req.params.slug }, select: { status: true } });
     if (!event || !["LIVE", "PLANNING"].includes(event.status)) return reply.code(404).send({ error: "Event not found" });

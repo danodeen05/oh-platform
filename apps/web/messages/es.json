@@ -4085,20 +4085,16 @@
   "menuPage": {
     "meta": {
       "title": "Menú",
-      "description": "Sopa de fideos con res, fideos, extras, acompañamientos y bebidas, con los precios de hoy."
+      "description": "Sopa de fideos con res, extras, acompañamientos y bebidas, con los precios de hoy."
     },
     "eyebrow": "El menú",
     "title": "Un tazón. A tu manera.",
-    "lede": "Elige una sopa y un fideo, y luego ajústalo a tu gusto. Precios antes de impuestos.",
+    "lede": "Elige una sopa y luego ajústala a tu gusto: caldo, firmeza del fideo, picante y toppings. Precios antes de impuestos.",
     "jump": "Secciones del menú",
     "groups": {
       "soup": {
         "title": "Sopas",
         "line": "Cada tazón empieza aquí."
-      },
-      "noodles": {
-        "title": "Fideos",
-        "line": "Cada tazón incluye un fideo."
       },
       "customize": {
         "title": "A tu gusto",

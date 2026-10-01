@@ -209,7 +209,6 @@ export function englishName(item: Pick<MenuItem, "name" | "nameEn">): string {
 
 const DEFAULT_SINGLE: Record<string, string> = {
   soup: "Classic Beef Noodle Soup",
-  noodles: "Wide Noodles",
 };
 
 /**
@@ -411,7 +410,7 @@ export function draftFromOrderItems(
 /**
  * "Order this" from the menu (Task D3): /{locale}/order?item=<id> carries the
  * item through the location step, and the bowl step puts it in the draft. A
- * soup or noodle becomes that section's choice; an add-on, side, drink or
+ * soup becomes that section's choice; an add-on, side, drink or
  * dessert gets a quantity of at least 1 (capped by its section). An id the
  * menu doesn't offer (gone, unavailable, or not yet released for this
  * caller) changes nothing. Prices are never set here: the flow's quote

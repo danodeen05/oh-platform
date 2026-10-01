@@ -3,7 +3,7 @@
  * panels the page draws. Pure functions, unit-tested in
  * __tests__/menu.test.ts.
  *
- *  - Groups follow the API's section ids: soup, noodles, the slider items
+ *  - Groups follow the API's section ids: soup, the slider items
  *    ("make it yours"), add-ons, sides, drinks, desserts.
  *  - Names and descriptions come from the per-locale columns
  *    (nameZhTW/descriptionZhTW, ...). The API's `description` falls back to
@@ -23,7 +23,8 @@
 import { SITE_IMAGES, type ImageKey } from "./images";
 import { getMenuItemImage } from "../menu-images";
 
-export const MENU_GROUPS = ["soup", "noodles", "customize", "addons", "sides", "drinks", "desserts"] as const;
+/** One house noodle since 2026-10-01: firmness is the "Noodle Texture" slider under customize, so there is no noodles group. */
+export const MENU_GROUPS = ["soup", "customize", "addons", "sides", "drinks", "desserts"] as const;
 export type MenuGroupKey = (typeof MENU_GROUPS)[number];
 
 /** The raw item as GET /menu/steps sends it (every column, plus the localized `name` and `nameEn`). */
@@ -113,11 +114,8 @@ const SITE_PHOTO: Record<string, ImageKey> = {
   "American Wagyu Beef Noodle Soup": "bowl-chunks-top",
 };
 
-const HIDDEN = new Set(["No Noodles"]);
-
 const SECTION_GROUP: Record<string, MenuGroupKey> = {
   soup: "soup",
-  noodles: "noodles",
   addons: "addons",
   sides: "sides",
   drinks: "drinks",
@@ -229,7 +227,7 @@ function card(item: ApiMenuItem, group: MenuGroupKey, locale: string, now: Date)
   if (item.isAvailable === false) return null;
   const nameEn = englishOf(item);
   const name = displayName(item, locale);
-  if (HIDDEN.has(nameEn) || !name) return null;
+  if (!name) return null;
   return {
     id: item.id,
     group,

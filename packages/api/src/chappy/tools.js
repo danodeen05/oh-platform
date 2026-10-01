@@ -67,7 +67,7 @@ export const CHAPPY_TOOLS = [
     description: "Search the menu. Returns item ids, names, prices and dietary flags for what this customer can order now. Use the ids with get_menu_item and cart.",
     input_schema: obj({
       query: S('Words to match in the item name or description, or "" for everything.'),
-      category: E(MENU_CATEGORIES, "ALL, or one category. A bowl is one MAIN soup plus one noodle; SLIDER items are free per-bowl choices."),
+      category: E(MENU_CATEGORIES, "ALL, or one category. A bowl is one MAIN soup; SLIDER items are free per-bowl choices (noodle firmness is the Noodle Texture slider)."),
       dietary: E(DIETARY, "any, or a dietary filter."),
     }),
   },
@@ -116,7 +116,7 @@ export const CHAPPY_TOOLS = [
   {
     name: "cart",
     description:
-      "Change or view the member's cart. One order is one person's bowl (one MAIN soup, one noodle, options, add-ons, sides, drinks); quantity is servings of that item in it. Every result includes the server's price for the cart; quote prices only from here.",
+      "Change or view the member's cart. One order is one person's bowl (one MAIN soup, options, add-ons, sides, drinks); quantity is servings of that item in it. Every result includes the server's price for the cart; quote prices only from here.",
     input_schema: obj({
       op: E([...CART_OPS], "add, remove, set_quantity (0 removes), clear, or view."),
       menuItemId: S('The menu item id, or "" for clear and view.'),
