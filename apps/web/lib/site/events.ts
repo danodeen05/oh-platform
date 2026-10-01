@@ -167,6 +167,18 @@ export async function cancelEventOrder(slug: string, orderId: string): Promise<b
   return r.ok;
 }
 
+/** GET /catering/events/:slug/rsvp/:token from the browser (the status page's personal line). Null when unknown. */
+export async function fetchEventRsvp(slug: string, token: string): Promise<GuestRsvp | null> {
+  if (!token) return null;
+  const r = await send<GuestRsvp>(eventApi(slug, `/rsvp/${encodeURIComponent(token)}`));
+  return r.ok ? r.data : null;
+}
+
+/** POST /catering/orders/:qrCode/arrive: "I'm here" releases a held bowl to the kitchen. 400 off the event day. */
+export function arriveEventOrder(orderQrCode: string): Promise<ApiResult<{ success: boolean; status: string }>> {
+  return send(`${API_URL}/catering/orders/${encodeURIComponent(orderQrCode)}/arrive`, { method: "POST" });
+}
+
 export interface EventOrderItem {
   name: string | null;
   quantity: number;
@@ -181,4 +193,23 @@ export async function fetchEventOrder(orderQrCode: string, locale: string): Prom
   const order = r.data?.order; // the view comes wrapped: { order: {...} }
   if (!r.ok || typeof order?.id !== "string") return null;
   return { id: order.id, status: order.status ?? "", items: Array.isArray(order.items) ? order.items : [] };
+}
+
+/** The calendar day (YYYY-MM-DD) an instant falls on in `timeZone`. */
+function dayIn(at: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(at);
+}
+
+/**
+ * True when `now` falls on the event's calendar day in the event's zone (the
+ * day check-in opens; the API applies the same rule). False on a bad date or zone.
+ */
+export function isEventDayClient(startsAt: string, timezone: string, now: Date = new Date()): boolean {
+  const start = new Date(startsAt);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(now.getTime())) return false;
+  try {
+    return dayIn(start, timezone) === dayIn(now, timezone);
+  } catch {
+    return false;
+  }
 }

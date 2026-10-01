@@ -88,6 +88,8 @@ export const SITE_ROUTES: readonly SiteRoute[] = [
   // The bowl and done steps read the guest from this browser; without one they send the visitor back (rsvp, invite).
   { path: "/e/:slug/order", group: "site", file: "(site)/e/[slug]/order/page.tsx", params: { slug: "plan-test-oct5" } },
   { path: "/e/:slug/done", group: "site", file: "(site)/e/[slug]/done/page.tsx", params: { slug: "plan-test-oct5" } },
+  // Without ?qrCode= or a remembered order the status page says it found no bowl.
+  { path: "/e/:slug/status", group: "site", file: "(site)/e/[slug]/status/page.tsx", params: { slug: "plan-test-oct5" } },
 ];
 
 /** The locale-free URL for a route, with params and query filled in. */
