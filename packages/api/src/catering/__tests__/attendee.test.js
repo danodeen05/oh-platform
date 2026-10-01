@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { isAttendeePath, normalizeGuestPhone, denverDateKey, isEventDay, filterMenuSteps } from "../attendee.js";
+import { isAttendeePath, normalizeGuestPhone, denverDateKey, isEventDay, filterMenuSteps, rsvpUpdateData } from "../attendee.js";
 
 test("attendee paths pass the gate; booking paths do not", () => {
   for (const p of ["/catering/events/x", "/catering/events/x/rsvp", "/catering/events/x/menu-steps", "/catering/orders/CAT-1/arrive", "/catering/menu", "/catering/site-config/order-now", "/catering/kitchen-locations"]) assert.equal(isAttendeePath(p), true, p);
@@ -36,4 +36,18 @@ test("menu steps keep every soup, noodle and slider; no extras or drinks", () =>
   assert.deepEqual(out[0].sections[0].items.map((i) => i.id), ["s1", "s2"]);
   assert.deepEqual(out[0].sections[1].items.map((i) => i.id), ["n1", "n2"]);
   assert.equal(out[1].sections.length, 1);
+});
+
+test("menu prefix is exact; other catering paths stay closed", () => {
+  assert.equal(isAttendeePath("/catering/menu-x"), false);
+  assert.equal(isAttendeePath("/catering/bookings"), false);
+  assert.equal(isAttendeePath("/catering/menu/x"), true);
+  assert.equal(isAttendeePath("/catering/events/x/menu-steps"), true);
+});
+
+test("rsvpUpdateData keeps omitted dob and notes, clears only on empty string", () => {
+  const z = () => "Horse";
+  assert.deepEqual(rsvpUpdateData({ name: "A", phone: "1" }, z), { name: "A", phone: "1" });
+  assert.deepEqual(rsvpUpdateData({ name: "A", phone: "1", dob: "03/14/1990", notes: " hi " }, z), { name: "A", phone: "1", dob: "03/14/1990", zodiac: "Horse", notes: "hi" });
+  assert.deepEqual(rsvpUpdateData({ name: "A", phone: "1", dob: "", notes: "" }, z), { name: "A", phone: "1", dob: null, zodiac: null, notes: null });
 });

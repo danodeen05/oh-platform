@@ -1,10 +1,10 @@
 // Pure helpers for the attendee (private event) flow. No Prisma here.
 const OPEN_PATHS = new Set(["/catering/site-config/order-now", "/catering/kitchen-locations"]);
-const ATTENDEE_PREFIXES = ["/catering/events/", "/catering/orders/", "/catering/menu"];
+const ATTENDEE_PREFIXES = ["/catering/events/", "/catering/orders/", "/catering/menu/"];
 
 export function isAttendeePath(path) {
   if (OPEN_PATHS.has(path)) return true;
-  return ATTENDEE_PREFIXES.some((p) => path === p || path.startsWith(p));
+  return path === "/catering/menu" || ATTENDEE_PREFIXES.some((p) => path.startsWith(p));
 }
 
 export function normalizeGuestPhone(input) {
@@ -19,4 +19,19 @@ export function isEventDay(eventDate, now = new Date()) { return denverDateKey(n
 // Attendees get the bowl (every soup and noodle) and the customize sliders only; no extras or drinks.
 export function filterMenuSteps(steps) {
   return (steps || []).filter((s) => s.id === "bowl" || s.id === "customize");
+}
+
+// Field mapping for an RSVP update. Omitted (undefined) dob/notes keep the stored value;
+// an explicit empty string clears it. zodiacFn maps a dob string to a zodiac (or null).
+export function rsvpUpdateData({ name, phone, dob, notes }, zodiacFn = () => null) {
+  const data = { name, phone };
+  if (dob !== undefined) {
+    data.dob = dob || null;
+    data.zodiac = dob ? zodiacFn(dob) : null;
+  }
+  if (notes !== undefined) {
+    const clean = typeof notes === "string" && notes.trim() ? notes.trim().slice(0, 500) : null;
+    data.notes = clean;
+  }
+  return data;
 }

@@ -28,7 +28,7 @@ import { computeDiscountCents } from "../promos/discount.js";
 import { getBrandOverride } from "./brand-overrides.js";
 import { requestPath } from "../auth/console-guard.js";
 import { composeGuestMessage, MESSAGE_KINDS, inviteUrl } from "./messages.js";
-import { isAttendeePath, normalizeGuestPhone, isEventDay, denverDateKey, filterMenuSteps } from "./attendee.js";
+import { isAttendeePath, rsvpUpdateData, normalizeGuestPhone, isEventDay, denverDateKey, filterMenuSteps } from "./attendee.js";
 
 const prisma = new PrismaClient();
 const stripe = process.env.STRIPE_SECRET_KEY
@@ -138,10 +138,10 @@ function makeSlug(company, dateStr) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
   // dateStr: "2026-06-05" → "jun5"
-  const d = new Date(dateStr);
+  const [, m, dd] = denverDateKey(new Date(dateStr)).split("-").map(Number);
   const monthNames = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
-  const month = monthNames[d.getUTCMonth()];
-  const day = d.getUTCDate();
+  const month = monthNames[m - 1];
+  const day = dd;
   return `${base}-${month}${day}`;
 }
 
@@ -2062,8 +2062,7 @@ export async function registerCateringRoutes(app) {
       }
 
       const normalizedPhone = normalizeGuestPhone(phone);
-      const zodiac = dob ? getChineseZodiac(dob) : null;
-      const cleanNotes = typeof notes === "string" && notes.trim() ? notes.trim().slice(0, 500) : null;
+      const fields = rsvpUpdateData({ name, phone: normalizedPhone, dob, notes }, getChineseZodiac);
 
       const existingByToken = rsvpToken
         ? await prisma.cateringRSVP.findFirst({
@@ -2077,18 +2076,18 @@ export async function registerCateringRoutes(app) {
         // Returning guest editing their own RSVP: update by id (may change phone).
         rsvp = await prisma.cateringRSVP.update({
           where: { id: existingByToken.id },
-          data: { name, phone: normalizedPhone, dob: dob || null, zodiac, notes: cleanNotes },
+          data: fields,
         });
       } else {
         // Upsert RSVP (unique on eventId + phone)
         rsvp = await prisma.cateringRSVP.upsert({
           where: { eventId_phone: { eventId: event.id, phone: normalizedPhone } },
-          update: { name, dob: dob || undefined, zodiac, notes: cleanNotes ?? undefined },
-          create: { eventId: event.id, name, phone: normalizedPhone, dob: dob || null, zodiac, notes: cleanNotes },
+          update: { name: fields.name, dob: fields.dob, zodiac: fields.zodiac, notes: fields.notes },
+          create: { eventId: event.id, name, phone: normalizedPhone, dob: fields.dob ?? null, zodiac: fields.zodiac ?? null, notes: fields.notes ?? null },
         });
       }
 
-      return { success: true, rememberToken: rsvp.rememberToken, zodiac };
+      return { success: true, rememberToken: rsvp.rememberToken, zodiac: rsvp.zodiac };
     } catch (err) {
       if (err?.code === "P2002") {
         return reply.code(409).send({ error: "That phone is already on the guest list" });
@@ -2380,11 +2379,10 @@ export async function registerCateringRoutes(app) {
       });
       if (!order) return reply.code(404).send({ error: "Order not found" });
 
-      if (order.cateringEvent?.eventDate && !isEventDay(order.cateringEvent.eventDate)) {
-        return reply.code(400).send({ error: "Check in opens on the event day" });
-      }
-
       if (order.status === "PAID") {
+        if (order.cateringEvent?.eventDate && !isEventDay(order.cateringEvent.eventDate)) {
+          return reply.code(400).send({ error: "Check in opens on the event day" });
+        }
         await prisma.order.update({
           where: { id: order.id },
           data: { status: "QUEUED", queuedAt: new Date() },
@@ -2591,7 +2589,7 @@ export async function registerCateringRoutes(app) {
             const r = await sendSMS({
               to: rsvp.phone,
               body:
-                `Hi ${rsvp.name.split(" ")[0]}! Today's the day — ${event.eventName || event.clientCompany} x Oh! Beef Noodle Soup.\n\n` +
+                `Hi ${rsvp.name.split(" ")[0]}! Today's the day. ${event.eventName || event.clientCompany} x Oh! Beef Noodle Soup.\n\n` +
                 `Make sure your order is in:\n${orderUrl}\n\nSee you soon!`,
             });
             results.push({ name: rsvp.name, phone: rsvp.phone, ...r });
