@@ -443,3 +443,33 @@ export function surveyTone(score: number): "good" | "pending" | "alert" {
 export function areaTone(value: number, isLowest: boolean): "alert" | "neutral" {
   return isLowest && value < 4 ? "alert" : "neutral";
 }
+
+/** Message kinds the host can text, in display order. */
+export const MESSAGE_KINDS = ["invite", "reminder", "status"] as const;
+export type MessageKind = (typeof MESSAGE_KINDS)[number];
+
+/** GET .../events/:id/messages: the composed text per guest. `status` is null until the guest has an order. */
+export interface GuestMessages {
+  kinds: MessageKind[];
+  guests: { rsvpId: string; name: string; phone: string; ordered: boolean; messages: { invite: string; reminder: string; status: string | null } }[];
+}
+
+/** POST .../events/:id/messages/send */
+export interface SendResult {
+  sent: number;
+  failed: number;
+  skipped: number;
+  total: number;
+  results: { rsvpId: string; ok: boolean; skipped?: boolean; error?: string }[];
+}
+
+/** One order on the host's Cook tab (GET .../events/:id/orders). */
+export interface CookOrder {
+  id: string;
+  orderQrCode: string | null;
+  status: string;
+  guestName?: string | null;
+  guest?: { name?: string | null } | null;
+  orderSource?: string | null;
+  items: CateringOrderItem[];
+}

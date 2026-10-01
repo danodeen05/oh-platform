@@ -2391,6 +2391,26 @@ export async function registerCateringRoutes(app) {
     }
   });
 
+  // Host override: same PAID → QUEUED flip as the public arrive route, with no
+  // event-day check. Used by the admin Cook tab. Idempotent.
+  app.post("/admin/catering/orders/:qrCode/arrive", async (req, reply) => {
+    try {
+      const order = await prisma.order.findFirst({
+        where: { orderQrCode: req.params.qrCode, orderSource: "CATERING" },
+        select: { id: true, status: true },
+      });
+      if (!order) return reply.code(404).send({ error: "Order not found" });
+      if (order.status === "PAID") {
+        await prisma.order.update({ where: { id: order.id }, data: { status: "QUEUED", queuedAt: new Date() } });
+        return { success: true, status: "QUEUED" };
+      }
+      return { success: true, status: order.status };
+    } catch (err) {
+      console.error("[catering admin arrive]", err.message);
+      return reply.code(500).send({ error: err.message });
+    }
+  });
+
   // Delete/cancel an attendee order (before event date)
   app.delete("/catering/events/:slug/order/:orderId", async (req, reply) => {
     try {
