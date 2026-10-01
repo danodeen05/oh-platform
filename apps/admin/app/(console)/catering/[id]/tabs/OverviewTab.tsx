@@ -20,7 +20,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 
 export default function OverviewTab({ event, onRefresh }: { event: CateringEvent; onRefresh: () => void }) {
   const origin = webUrl();
-  const attendeeUrl = `${origin}/en/catering/e/${event.slug}`;
+  const attendeeUrl = `${origin}/en/e/${event.slug}`;
   const dashboardUrl = event.booking?.bookingToken ? `${origin}/en/catering/dashboard/${event.booking.bookingToken}` : null;
   const showEnrichment = event.status === "NEEDS_REVIEW" || event.status === "ENRICHING";
 
@@ -49,6 +49,8 @@ export default function OverviewTab({ event, onRefresh }: { event: CateringEvent
                 className="inline-flex items-center gap-1.5 text-oh-ember-deep hover:underline"><Icon name="pin" size={16} />{event.eventAddress}</a>
             </Row>
           )}
+          {event.hostName && <Row label="Host">{event.hostName}</Row>}
+          {event.welcomeNote && <div className="sm:col-span-2"><Row label="Welcome note"><p className="whitespace-pre-wrap">{event.welcomeNote}</p></Row></div>}
           <Row label="Event code"><code className="rounded bg-oh-stone/10 px-2 py-0.5 font-mono text-sm">{event.eventCode}</code></Row>
           {event.eventType && <Row label="Event type">{event.eventType}</Row>}
           {event.expectedGuests != null && <Row label="Expected guests">{event.expectedGuests}</Row>}

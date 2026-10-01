@@ -2,6 +2,7 @@
 import { use, useState } from "react";
 import { EventSheet } from "../_components/EventSheet";
 import StatusBadge from "../_components/StatusBadge";
+import GuestsTab from "./tabs/GuestsTab";
 import OverageTab from "./tabs/OverageTab";
 import OrdersTab from "./tabs/OrdersTab";
 import OverviewTab from "./tabs/OverviewTab";
@@ -21,12 +22,13 @@ import { useResource } from "@/lib/use-resource";
 const BACK = { href: "/catering", label: "Catering" };
 const errorText = (e: unknown) => (e instanceof ApiError || e instanceof Error ? e.message : "Something went wrong.");
 
-type TabId = "overview" | "orders" | "shopping" | "overage" | "survey";
+type TabId = "overview" | "guests" | "orders" | "shopping" | "overage" | "survey";
 const TABS: SegmentOption<TabId>[] = [
   { value: "overview", label: "Overview" },
+  { value: "guests", label: "Guests" },
+  // Task 8: Messages and Cook go here, before Orders.
   { value: "orders", label: "Orders" },
   { value: "shopping", label: "Shopping" },
-  { value: "overage", label: "Overage" },
   { value: "survey", label: "Survey" },
 ];
 
@@ -37,6 +39,7 @@ export default function CateringEventDetailPage({ params }: { params: Promise<{ 
   const res = useResource(`catering-event:${id}`, (signal) => api<CateringEvent>(`/admin/catering/events/${encodeURIComponent(id)}`, { signal }));
   const event = res.data;
   const [tab, setTab] = useState<TabId>("overview");
+  const tabs = TABS.filter((t) => t.value !== "overage" || (event?.pricePerBowlCents ?? 0) > 0);
   const [editOpen, setEditOpen] = useState(false);
   const [enriching, setEnriching] = useState(false);
   const [sending, setSending] = useState(false);
@@ -111,10 +114,11 @@ export default function CateringEventDetailPage({ params }: { params: Promise<{ 
         } />
 
       <div className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-20 -mx-4 mb-4 bg-oh-paper/95 px-4 py-2 backdrop-blur-sm lg:-mx-8 lg:px-8">
-        <SegmentedControl<TabId> label="Section" value={tab} onChange={setTab} options={TABS} scroll className="lg:max-w-xl" />
+        <SegmentedControl<TabId> label="Section" value={tab} onChange={setTab} options={tabs} scroll className="lg:max-w-xl" />
       </div>
 
       {tab === "overview" && <OverviewTab event={event} onRefresh={res.reload} />}
+      {tab === "guests" && <GuestsTab eventId={event.id} />}
       {tab === "orders" && <OrdersTab eventId={event.id} minimumBowls={event.minimumBowls} />}
       {tab === "shopping" && <ShoppingTab eventId={event.id} />}
       {tab === "overage" && <OverageTab eventId={event.id} pricePerBowlCents={event.pricePerBowlCents} />}

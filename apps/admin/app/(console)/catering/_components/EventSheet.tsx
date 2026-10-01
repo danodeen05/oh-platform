@@ -1,13 +1,13 @@
 "use client";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
-import { dollarsToCents, Field, MoneyInput, NumberInput, Select, TextArea, TextInput } from "@/components/ui/Field";
+import { dollarsToCents, Field, MoneyInput, NumberInput, Select, TextArea, TextInput, Toggle } from "@/components/ui/Field";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Sheet } from "@/components/ui/Sheet";
 import { useToast } from "@/components/ui/Toast";
 import { api, ApiError } from "@/lib/api";
 import {
-  defaultPriceForSlot, emptyEventForm, EVENT_TYPES, eventBody, formFromEvent, minimumCommitment,
+  defaultPriceForSlot, defaultStartTime, emptyEventForm, START_TIMES, EVENT_TYPES, eventBody, formFromEvent, minimumCommitment,
   STATUSES, statusLabel, validateEvent, type CateringEvent, type CateringSlot, type EventForm,
 } from "@/lib/catering";
 
@@ -50,7 +50,19 @@ export function EventSheet({ open, event, prefillDate, prefillSlot, onClose, onS
   };
 
   function setSlot(slot: CateringSlot) {
-    setForm((f) => ({ ...f, slot, pricePerBowlCents: defaultPriceForSlot(slot) }));
+    setForm((f) => ({
+      ...f, slot, pricePerBowlCents: defaultPriceForSlot(slot),
+      // Follow the slot only while the time is still the other slot's default.
+      startTime: f.startTime === defaultStartTime(f.slot) ? defaultStartTime(slot) : f.startTime,
+    }));
+  }
+
+  function setComplimentary(on: boolean) {
+    setForm((f) => ({
+      ...f, complimentary: on,
+      pricePerBowlCents: !on && (dollarsToCents(f.pricePerBowlCents) ?? 0) <= 0 ? defaultPriceForSlot(f.slot) : f.pricePerBowlCents,
+    }));
+    setErrors((e) => ({ ...e, pricePerBowlCents: undefined }));
   }
 
   function jumpTo(id: string) {
@@ -125,6 +137,19 @@ export function EventSheet({ open, event, prefillDate, prefillSlot, onClose, onS
                   options={[{ value: "LUNCH" as CateringSlot, label: "Lunch" }, { value: "DINNER" as CateringSlot, label: "Dinner" }]} />
               </Field>
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Start time" hint="Denver time">
+                <Select value={form.startTime} onChange={(e) => set("startTime", e.target.value)}>
+                  {START_TIMES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                </Select>
+              </Field>
+              <Field label="Host name" hint="Who guests will thank">
+                <TextInput value={form.hostName} onChange={(e) => set("hostName", e.target.value)} placeholder="Jane" />
+              </Field>
+            </div>
+            <Field label="Welcome note" hint={`Shown on the guest page. ${form.welcomeNote.length}/240`}>
+              <TextArea rows={3} maxLength={240} value={form.welcomeNote} onChange={(e) => set("welcomeNote", e.target.value)} placeholder="A short hello for your guests" />
+            </Field>
             {event && (
               <Field label="Status" hint="Override only. Booking and payment flows also change this automatically.">
                 <Select value={form.status} onChange={(e) => set("status", e.target.value as EventForm["status"])}>
@@ -185,8 +210,9 @@ export function EventSheet({ open, event, prefillDate, prefillSlot, onClose, onS
 
           <section id="event-pricing" className="scroll-mt-2 space-y-5 border-t border-oh-stone/15 pt-6">
             <h3 className="font-display text-[1.25rem] leading-tight text-oh-charcoal">Pricing</h3>
+            <Toggle checked={form.complimentary} onChange={setComplimentary} label="Complimentary (no charge for bowls)" />
             <Field label="Price per bowl" error={errors.pricePerBowlCents}>
-              <MoneyInput cents={dollarsToCents(form.pricePerBowlCents)} onCents={() => {}} aria-invalid={Boolean(errors.pricePerBowlCents)}
+              <MoneyInput key={form.complimentary ? "free" : "paid"} disabled={form.complimentary} cents={form.complimentary ? 0 : dollarsToCents(form.pricePerBowlCents)} onCents={() => {}} aria-invalid={Boolean(errors.pricePerBowlCents)}
                 onInput={(e) => set("pricePerBowlCents", e.currentTarget.value)} placeholder="0.00" />
             </Field>
             <div className={`grid gap-3 ${event ? "grid-cols-2" : "grid-cols-1"}`}>

@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import {
-  areaTone, emptyEventForm, eventBody, isSpecialDiet, SLOT_PRICE, statusLabel, statusTone, surveyTone, validateEvent,
+  areaTone, combineDateTime, emptyEventForm, formatBirthday, splitDateTime, eventBody, isSpecialDiet, SLOT_PRICE, statusLabel, statusTone, surveyTone, validateEvent,
   type EventForm,
 } from "../catering";
 
@@ -89,4 +89,21 @@ test("surveyTone and areaTone follow the scoring thresholds", () => {
   expect(areaTone(3.5, true)).toBe("alert");
   expect(areaTone(4.5, true)).toBe("neutral");
   expect(areaTone(3.5, false)).toBe("neutral");
+});
+
+test("combineDateTime builds the Denver wall clock", () => {
+  expect(combineDateTime("2026-10-04", "18:00")).toBe("2026-10-05T00:00:00.000Z"); // MDT
+  expect(combineDateTime("2026-12-20", "18:00")).toBe("2026-12-21T01:00:00.000Z"); // MST
+});
+test("combineDateTime handles the DST change days", () => {
+  expect(combineDateTime("2026-03-08", "12:00")).toBe("2026-03-08T18:00:00.000Z"); // MDT after spring forward
+  expect(combineDateTime("2026-11-01", "12:00")).toBe("2026-11-01T19:00:00.000Z"); // MST after fall back
+});
+test("splitDateTime inverts it", () => {
+  expect(splitDateTime("2026-10-05T00:00:00.000Z")).toEqual({ date: "2026-10-04", time: "18:00" });
+  expect(splitDateTime("2026-12-21T01:00:00.000Z")).toEqual({ date: "2026-12-20", time: "18:00" });
+});
+test("formatBirthday", () => {
+  expect(formatBirthday("03/14/1990")).toBe("Mar 14, 1990");
+  expect(formatBirthday(null)).toBe("");
 });
