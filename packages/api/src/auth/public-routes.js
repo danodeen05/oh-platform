@@ -177,7 +177,7 @@ export const PUBLIC_ROUTES = Object.freeze([
   p("GET", "/chappy/history", "customer"),
   p("POST", "/chappy/reset", "customer"),
 
-  // Catering: public catering/* (404s unless CATERING_PUBLIC_ENABLED, except the two admin-console reads)
+  // Catering: public catering/* (booking paths 404 unless CATERING_PUBLIC_ENABLED; attendee paths and the two admin-console reads stay open)
   p("GET", "/catering/site-config/order-now", "catering-public"),
   p("GET", "/catering/availability", "catering-public"),
   p("GET", "/catering/events/:slug", "catering-public"),
@@ -188,6 +188,8 @@ export const PUBLIC_ROUTES = Object.freeze([
   p("POST", "/catering/bookings/:id/confirm", "catering-public"),
   p("GET", "/catering/dashboard/:bookingToken", "catering-public"),
   p("POST", "/catering/events/:slug/rsvp", "catering-public"),
+  p("GET", "/catering/events/:slug/rsvp/:token", "catering-public"),
+  p("GET", "/catering/events/:slug/menu-steps", "catering-public"),
   p("GET", "/catering/events/:slug/order/check", "catering-public"),
   p("POST", "/catering/events/:slug/order", "catering-public"),
   p("GET", "/catering/kitchen-locations", "catering-public"),
