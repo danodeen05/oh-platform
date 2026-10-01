@@ -1,8 +1,4 @@
 // Pure helpers for the attendee (private event) flow. No Prisma here.
-export const CATERING_SOUP_NOODLE_NAMES = [
-  "Classic Beef Noodle Soup", "Classic Beef Noodle Soup (no beef)",
-  "Wide Noodles", "Wide Noodles (Gluten Free)", "Thin/Flat Noodles", "No Noodles",
-];
 const OPEN_PATHS = new Set(["/catering/site-config/order-now", "/catering/kitchen-locations"]);
 const ATTENDEE_PREFIXES = ["/catering/events/", "/catering/orders/", "/catering/menu"];
 
@@ -20,10 +16,7 @@ const denverFmt = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Denver",
 export function denverDateKey(date) { return denverFmt.format(date); } // en-CA gives YYYY-MM-DD
 export function isEventDay(eventDate, now = new Date()) { return denverDateKey(new Date(eventDate)) === denverDateKey(now); }
 
-export function filterMenuSteps(steps, allowedNames) {
-  const allowed = new Set(allowedNames);
-  return (steps || []).filter((s) => s.id === "bowl" || s.id === "customize").map((s) => {
-    if (s.id !== "bowl") return s;
-    return { ...s, sections: s.sections.map((sec) => ({ ...sec, items: (sec.items || []).filter((i) => allowed.has(i.nameEn || i.name)) })) };
-  });
+// Attendees get the bowl (every soup and noodle) and the customize sliders only; no extras or drinks.
+export function filterMenuSteps(steps) {
+  return (steps || []).filter((s) => s.id === "bowl" || s.id === "customize");
 }

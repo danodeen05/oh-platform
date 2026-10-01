@@ -27,7 +27,7 @@ import {
 import { computeDiscountCents } from "../promos/discount.js";
 import { getBrandOverride } from "./brand-overrides.js";
 import { requestPath } from "../auth/console-guard.js";
-import { isAttendeePath, normalizeGuestPhone, isEventDay, denverDateKey, filterMenuSteps, CATERING_SOUP_NOODLE_NAMES } from "./attendee.js";
+import { isAttendeePath, normalizeGuestPhone, isEventDay, denverDateKey, filterMenuSteps } from "./attendee.js";
 
 const prisma = new PrismaClient();
 const stripe = process.env.STRIPE_SECRET_KEY
@@ -2039,7 +2039,7 @@ export async function registerCateringRoutes(app) {
     if (res.statusCode !== 200) return reply.code(502).send({ error: "Menu unavailable" });
     const body = res.json();
     const steps = Array.isArray(body) ? body : body.steps;
-    return { steps: filterMenuSteps(steps, CATERING_SOUP_NOODLE_NAMES) };
+    return { steps: filterMenuSteps(steps) };
   });
 
   // =========================================================================

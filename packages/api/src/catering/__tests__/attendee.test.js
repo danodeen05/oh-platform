@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { isAttendeePath, normalizeGuestPhone, denverDateKey, isEventDay, filterMenuSteps, CATERING_SOUP_NOODLE_NAMES } from "../attendee.js";
+import { isAttendeePath, normalizeGuestPhone, denverDateKey, isEventDay, filterMenuSteps } from "../attendee.js";
 
 test("attendee paths pass the gate; booking paths do not", () => {
   for (const p of ["/catering/events/x", "/catering/events/x/rsvp", "/catering/events/x/menu-steps", "/catering/orders/CAT-1/arrive", "/catering/menu", "/catering/site-config/order-now", "/catering/kitchen-locations"]) assert.equal(isAttendeePath(p), true, p);
@@ -21,19 +21,19 @@ test("event day follows the Denver calendar, not UTC", () => {
   assert.equal(isEventDay(eventDate, new Date("2026-10-05T07:00:00.000Z")), false); // 1am MDT next day
 });
 
-test("menu steps keep bowl soups/noodles on the allowlist and every slider; no extras or drinks", () => {
+test("menu steps keep every soup, noodle and slider; no extras or drinks", () => {
   const steps = [
     { id: "bowl", title: "Bowl", sections: [
       { id: "soup", selectionMode: "SINGLE", items: [{ id: "s1", name: "Classic Beef Noodle Soup" }, { id: "s2", name: "American Wagyu Beef Noodle Soup" }] },
-      { id: "noodles", selectionMode: "SINGLE", items: [{ id: "n1", name: "Wide Noodles" }, { id: "n2", name: "Egg Noodles" }] },
+      { id: "noodles", selectionMode: "SINGLE", items: [{ id: "n1", name: "Ramen Noodles" }, { id: "n2", name: "Shaved Noodles" }] },
     ] },
     { id: "customize", title: "Customize", sections: [{ id: "sl1", selectionMode: "SLIDER", item: { id: "sl1", name: "Spice Level" } }] },
     { id: "extras", title: "Extras", sections: [] },
     { id: "drinks-desserts", title: "Drinks", sections: [] },
   ];
-  const out = filterMenuSteps(steps, CATERING_SOUP_NOODLE_NAMES);
+  const out = filterMenuSteps(steps);
   assert.deepEqual(out.map((s) => s.id), ["bowl", "customize"]);
-  assert.deepEqual(out[0].sections[0].items.map((i) => i.id), ["s1"]);
-  assert.deepEqual(out[0].sections[1].items.map((i) => i.id), ["n1"]);
+  assert.deepEqual(out[0].sections[0].items.map((i) => i.id), ["s1", "s2"]);
+  assert.deepEqual(out[0].sections[1].items.map((i) => i.id), ["n1", "n2"]);
   assert.equal(out[1].sections.length, 1);
 });
