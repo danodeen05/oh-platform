@@ -49,6 +49,8 @@ export interface CateringEvent {
   brandColors: string[];
   companyDescription?: string;
   notes?: string;
+  hostName?: string | null;
+  welcomeNote?: string | null;
   eventAddress?: string | null;
   eventLat?: number | null;
   eventLng?: number | null;
@@ -97,9 +99,13 @@ export interface Rsvp {
   id: string;
   name: string;
   phone: string;
-  dob?: string;
-  zodiac?: string;
+  dob?: string | null;
+  zodiac?: string | null;
+  notes?: string | null;
   createdAt: string;
+  inviteUrl?: string;
+  ordered?: boolean;
+  orderQrCode?: string | null;
 }
 
 export interface CateringOrderItem {
@@ -220,6 +226,79 @@ export type EventForm = {
   eventName: string; logoUrl: string; brandColors: string[]; companyDescription: string; notes: string;
   eventType: string; expectedGuests: string; dietaryNotes: string; setupNotes: string;
   onsiteContactName: string; onsiteContactPhone: string;
+  startTime: string; hostName: string; welcomeNote: string; complimentary: boolean;
+};
+
+/** Default start time ("HH:mm", Denver) for a slot. */
+export const defaultStartTime = (slot: CateringSlot): string => (slot === "DINNER" ? "18:00" : "12:00");
+
+/** 30-minute start options from 10:00 to 21:00. */
+export const START_TIMES: { value: string; label: string }[] = Array.from({ length: 23 }, (_, i) => {
+  const mins = 10 * 60 + i * 30;
+  const h = Math.floor(mins / 60), m = mins % 60;
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return { value: `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`, label: `${h12}:${String(m).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}` };
+});
+
+const DENVER = "America/Denver";
+
+function denverParts(d: Date): { y: number; mo: number; d: number; h: number; mi: number } {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: DENVER, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
+  }).formatToParts(d);
+  const get = (t: string) => Number(parts.find((p) => p.type === t)?.value);
+  return { y: get("year"), mo: get("month"), d: get("day"), h: get("hour"), mi: get("minute") };
+}
+
+/** UTC ISO for a Denver wall-clock date ("YYYY-MM-DD") and time ("HH:mm"). */
+export function combineDateTime(dateISO: string, time: string, tz = DENVER): string {
+  const [y, mo, d] = dateISO.slice(0, 10).split("-").map(Number);
+  const [h, mi] = time.split(":").map(Number);
+  const wall = Date.UTC(y, mo - 1, d, h, mi);
+  const offsetAt = (utcMs: number): number => {
+    const p = new Intl.DateTimeFormat("en-US", {
+      timeZone: tz, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
+    }).formatToParts(new Date(utcMs));
+    const g = (t: string) => Number(p.find((x) => x.type === t)?.value);
+    return Date.UTC(g("year"), g("month") - 1, g("day"), g("hour"), g("minute")) - utcMs;
+  };
+  let utc = wall - offsetAt(wall);
+  utc = wall - offsetAt(utc);
+  return new Date(utc).toISOString();
+}
+
+/** Denver date and time of a UTC ISO string. */
+export function splitDateTime(iso: string): { date: string; time: string } {
+  const p = denverParts(new Date(iso));
+  const two = (n: number) => String(n).padStart(2, "0");
+  return { date: `${p.y}-${two(p.mo)}-${two(p.d)}`, time: `${two(p.h)}:${two(p.mi)}` };
+}
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+/** "03/14/1990" to "Mar 14, 1990". Anything unparseable comes back as is. */
+export function formatBirthday(dob: string | null | undefined): string {
+  if (!dob) return "";
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(dob);
+  if (!m) return dob;
+  const month = MONTHS[Number(m[1]) - 1];
+  return month ? `${month} ${Number(m[2])}, ${m[3]}` : dob;
+}
+
+/** "(801) 555-0100" from 10 digits; other input comes back as is. */
+export function formatPhone(phone: string | null | undefined): string {
+  const d = (phone || "").replace(/\D/g, "");
+  const ten = d.length === 11 && d.startsWith("1") ? d.slice(1) : d;
+  return ten.length === 10 ? `(${ten.slice(0, 3)}) ${ten.slice(3, 6)}-${ten.slice(6)}` : phone || "";
+}
+
+/** "MM/DD/YYYY" to the "YYYY-MM-DD" a date input wants, and back. */
+export const dobToInput = (dob: string | null | undefined): string => {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(dob || "");
+  return m ? `${m[3]}-${m[1]}-${m[2]}` : "";
+};
+export const inputToDob = (v: string): string => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
+  return m ? `${m[2]}/${m[3]}/${m[1]}` : "";
 };
 
 const priceDollars = (slot: CateringSlot) => (SLOT_PRICE[slot] / 100).toFixed(2);
@@ -232,6 +311,7 @@ export function emptyEventForm(prefillDate?: string, prefillSlot?: CateringSlot)
     status: "PLANNING", pricePerBowlCents: priceDollars(slot), minimumBowls: "10", bookedBowls: "0",
     eventName: "", logoUrl: "", brandColors: [], companyDescription: "", notes: "",
     eventType: "", expectedGuests: "", dietaryNotes: "", setupNotes: "", onsiteContactName: "", onsiteContactPhone: "",
+    startTime: defaultStartTime(slot), hostName: "", welcomeNote: "", complimentary: false,
   };
 }
 
@@ -240,19 +320,27 @@ export function defaultPriceForSlot(slot: CateringSlot): string {
   return priceDollars(slot);
 }
 
+/** The stored Denver start time if the Select offers it, else the slot default (legacy events were saved at midnight UTC). */
+function startTimeOrDefault(event: CateringEvent): string {
+  const t = splitDateTime(event.eventDate).time;
+  return START_TIMES.some((o) => o.value === t) ? t : defaultStartTime(event.slot);
+}
+
 export function formFromEvent(event: CateringEvent | null, prefillDate?: string, prefillSlot?: CateringSlot): EventForm {
   if (!event) return emptyEventForm(prefillDate, prefillSlot);
   return {
     clientCompany: event.clientCompany, clientWebsite: event.clientWebsite || "", contactName: event.contactName || "",
     contactEmail: event.contactEmail || "", contactPhone: event.contactPhone || "", eventAddress: event.eventAddress || "",
     eventLat: event.eventLat != null ? String(event.eventLat) : "", eventLng: event.eventLng != null ? String(event.eventLng) : "",
-    eventDate: event.eventDate ? event.eventDate.slice(0, 10) : "", slot: event.slot, status: event.status,
+    eventDate: event.eventDate ? splitDateTime(event.eventDate).date : "", slot: event.slot, status: event.status,
     pricePerBowlCents: (event.pricePerBowlCents / 100).toFixed(2), minimumBowls: String(event.minimumBowls),
     bookedBowls: String(event.bookedBowls ?? 0), eventName: event.eventName || "", logoUrl: event.logoUrl || "",
     brandColors: event.brandColors || [], companyDescription: event.companyDescription || "", notes: event.notes || "",
     eventType: event.eventType || "", expectedGuests: event.expectedGuests != null ? String(event.expectedGuests) : "",
     dietaryNotes: event.dietaryNotes || "", setupNotes: event.setupNotes || "",
     onsiteContactName: event.onsiteContactName || "", onsiteContactPhone: event.onsiteContactPhone || "",
+    startTime: startTimeOrDefault(event), hostName: event.hostName || "", welcomeNote: event.welcomeNote || "",
+    complimentary: event.pricePerBowlCents === 0,
   };
 }
 
@@ -266,7 +354,7 @@ export function validateEvent(f: EventForm): Partial<Record<keyof EventForm, str
   if (!f.eventDate.trim()) errors.eventDate = "Pick a date.";
 
   const price = dollarsToCents(f.pricePerBowlCents);
-  if (price === null || price <= 0) errors.pricePerBowlCents = "Enter a price greater than 0.";
+  if (!f.complimentary && (price === null || price <= 0)) errors.pricePerBowlCents = "Enter a price greater than 0.";
 
   const min = wholeNumber(f.minimumBowls);
   if (min === null || min <= 0) errors.minimumBowls = "Enter a whole number greater than 0.";
@@ -284,6 +372,7 @@ export type EventBody = {
   companyDescription?: string; notes?: string; eventType?: string; expectedGuests: number | null;
   dietaryNotes?: string; setupNotes?: string; onsiteContactName?: string; onsiteContactPhone?: string;
   status?: CateringEventStatus; bookedBowls?: number;
+  hostName?: string | null; welcomeNote?: string | null;
 };
 
 const trimOrUndefined = (s: string) => s.trim() || undefined;
@@ -300,9 +389,9 @@ export function eventBody(f: EventForm, editing: boolean): EventBody {
     eventAddress: trimOrUndefined(f.eventAddress),
     eventLat: f.eventLat.trim() ? Number(f.eventLat) : undefined,
     eventLng: f.eventLng.trim() ? Number(f.eventLng) : undefined,
-    eventDate: f.eventDate,
+    eventDate: combineDateTime(f.eventDate, f.startTime || defaultStartTime(f.slot)),
     slot: f.slot,
-    pricePerBowlCents: dollarsToCents(f.pricePerBowlCents) ?? 0,
+    pricePerBowlCents: f.complimentary ? 0 : dollarsToCents(f.pricePerBowlCents) ?? 0,
     minimumBowls: wholeNumber(f.minimumBowls) ?? 0,
     eventName: trimOrUndefined(f.eventName),
     logoUrl: trimOrUndefined(f.logoUrl),
@@ -315,7 +404,14 @@ export function eventBody(f: EventForm, editing: boolean): EventBody {
     setupNotes: trimOrUndefined(f.setupNotes),
     onsiteContactName: trimOrUndefined(f.onsiteContactName),
     onsiteContactPhone: trimOrUndefined(f.onsiteContactPhone),
+    hostName: trimOrUndefined(f.hostName),
+    welcomeNote: trimOrUndefined(f.welcomeNote),
   };
+  // An emptied field has to be sent as null on edit, or the API keeps the old value.
+  if (editing) {
+    body.hostName = f.hostName.trim() || null;
+    body.welcomeNote = f.welcomeNote.trim() || null;
+  }
   if (editing) {
     body.status = f.status;
     const booked = wholeNumber(f.bookedBowls);
@@ -325,7 +421,8 @@ export function eventBody(f: EventForm, editing: boolean): EventBody {
 }
 
 /** "$249.90 (10 bowls x $24.99)" for the Pricing section. */
-export function minimumCommitment(f: Pick<EventForm, "pricePerBowlCents" | "minimumBowls">): string | null {
+export function minimumCommitment(f: Pick<EventForm, "pricePerBowlCents" | "minimumBowls"> & { complimentary?: boolean }): string | null {
+  if (f.complimentary) return null;
   const price = dollarsToCents(f.pricePerBowlCents);
   const bowls = wholeNumber(f.minimumBowls);
   if (price === null || bowls === null) return null;
@@ -338,12 +435,22 @@ export function eventDateLong(iso: string): string {
 
 // --- Orders tab ---
 
-const SPECIAL_DIET = ["no beef", "no meat", "no noodles", "soup only", "vegetarian"];
+const SPECIAL_DIET = ["no beef", "no meat", "no noodles", "soup only", "vegetarian", "gluten free"];
 export function isSpecialDiet(o: Pick<CateringOrder, "items">): boolean {
   return o.items.some((i) => {
     const hay = `${i.menuItem?.name || ""} ${i.selectedValue || ""}`.toLowerCase();
     return SPECIAL_DIET.some((t) => hay.includes(t));
   });
+}
+
+/**
+ * One order line as the host reads it. A slider line ("Sprouts: Normal") never
+ * gets a count: older attendee orders stored the slider's position as quantity.
+ */
+export function orderLineLabel(i: CateringOrderItem): string {
+  const name = i.menuItem?.name || "Item";
+  if (i.selectedValue) return `${name}: ${i.selectedValue}`;
+  return i.quantity > 1 ? `${i.quantity} x ${name}` : name;
 }
 
 // --- Survey tab ---
@@ -357,4 +464,36 @@ export function surveyTone(score: number): "good" | "pending" | "alert" {
 /** The lowest area is alert if it's below 4; every other area is neutral. */
 export function areaTone(value: number, isLowest: boolean): "alert" | "neutral" {
   return isLowest && value < 4 ? "alert" : "neutral";
+}
+
+/** Message kinds the host can text, in display order. */
+export const MESSAGE_KINDS = ["invite", "reminder", "status"] as const;
+export type MessageKind = (typeof MESSAGE_KINDS)[number];
+
+/** GET .../events/:id/messages: the composed text per guest. `status` is null until the guest has an order. */
+export interface GuestMessages {
+  kinds: MessageKind[];
+  guests: { rsvpId: string; name: string; phone: string; ordered: boolean; messages: { invite: string; reminder: string; status: string | null } }[];
+}
+
+/** POST .../events/:id/messages/send */
+export interface SendResult {
+  sent: number;
+  failed: number;
+  skipped: number;
+  total: number;
+  results: { rsvpId: string; ok: boolean; skipped?: boolean; error?: string }[];
+}
+
+/** One order on the host's Cook tab (GET .../events/:id/orders). */
+export interface CookOrder {
+  id: string;
+  orderQrCode: string | null;
+  status: string;
+  guestName?: string | null;
+  guest?: { name?: string | null } | null;
+  orderSource?: string | null;
+  /** The matching RSVP's notes (allergies and the like), or null. */
+  guestNotes: string | null;
+  items: CateringOrderItem[];
 }

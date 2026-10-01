@@ -11,11 +11,15 @@ import { useLocale, useTranslations } from "next-intl";
 import { Icon } from "@/components/site/icons/Icon";
 import { formatClock, timeline, visitMinutes, type OrderTimes } from "@/lib/site/order-status";
 
-export function StatusTimeline({ status, times, timeZone }: { status: string; times: OrderTimes; timeZone: string }) {
+/**
+ * `labels` renames stages for another kind of visit (a private event: Reserved, At the table);
+ * `showTotal={false}` drops the payment-to-bowl line. Both optional; defaults unchanged.
+ */
+export function StatusTimeline({ status, times, timeZone, labels, showTotal = true }: { status: string; times: OrderTimes; timeZone: string; labels?: Partial<Record<string, string>>; showTotal?: boolean }) {
   const t = useTranslations("afterOrder.status.timeline");
   const locale = useLocale();
   const steps = timeline(status, times);
-  const minutes = visitMinutes(times);
+  const minutes = showTotal ? visitMinutes(times) : null;
 
   return (
     <div>
@@ -47,7 +51,7 @@ export function StatusTimeline({ status, times, timeZone }: { status: string; ti
               </span>
               <span className="flex min-w-0 flex-1 items-baseline justify-between gap-3 pb-4 pt-1">
                 <span className={`min-w-0 text-[15px] leading-snug ${s.state === "upcoming" ? "text-oh-mute" : "font-semibold text-oh-cream"}`}>
-                  {t(s.stage)}
+                  {labels?.[s.stage] ?? t(s.stage)}
                   {s.state === "current" ? <span className="sr-only">{`, ${t("now")}`}</span> : null}
                 </span>
                 {clock ? <span className="shrink-0 text-sm tabular-nums text-oh-mute">{clock}</span> : null}

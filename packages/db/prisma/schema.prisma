@@ -1793,6 +1793,8 @@ model CateringEvent {
   logoUrl            String?
   brandColors        String[] @default([])
   companyDescription String?
+  hostName        String?   // e.g. "Dano and Kristy"; shown on the invite and in texts
+  welcomeNote     String?   // host's short note on the invite page
   enrichmentRaw      Json?
 
   // AI shopping list (cached)
@@ -1893,6 +1895,7 @@ model CateringRSVP {
   phone  String
   dob    String? // MM/DD/YYYY, optional (for digital fortune cookie / zodiac)
   zodiac String?
+  notes       String?   // dietary or anything the host should know
 
   // Token stored in the browser remember-me cookie
   rememberToken String @unique @default(cuid())

@@ -7,7 +7,7 @@ import { ErrorCard } from "@/components/ui/ErrorCard";
 import { SkeletonList } from "@/components/ui/Skeleton";
 import { StatTile } from "@/components/ui/StatTile";
 import { api } from "@/lib/api";
-import { isSpecialDiet, type CateringOrder, type Rsvp } from "@/lib/catering";
+import { isSpecialDiet, orderLineLabel, type CateringOrder, type Rsvp } from "@/lib/catering";
 import { denverDateTime } from "@/lib/format";
 import { useResource } from "@/lib/use-resource";
 
@@ -81,7 +81,7 @@ export default function OrdersTab({ eventId, minimumBowls }: { eventId: string; 
                 </span>
               </div>
               <p className="text-sm text-oh-stone/70">
-                {o.items.map((i) => `${i.quantity > 1 ? `${i.quantity}x ` : ""}${i.menuItem?.name || ""}${i.selectedValue ? ` (${i.selectedValue})` : ""}`).join(", ")}
+                {o.items.map(orderLineLabel).join(", ")}
               </p>
             </div>
           )} />

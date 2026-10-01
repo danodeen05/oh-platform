@@ -3427,6 +3427,8 @@
       "addToGroup": "加入团体",
       "loadError": "无法加载菜单。",
       "max": "每项最多 {count} 份",
+      "defaultLegend": "有外框的是我们的推荐",
+      "defaultAria": "我们的推荐",
       "included": "已包含",
       "add": "加一份{name}",
       "remove": "减一份{name}"
@@ -4529,5 +4531,102 @@
     "passFailed": "无法传下去，请再试一次。",
     "signIn": "请登录后再传下去。",
     "close": "关闭"
+  },
+  "events": {
+    "eyebrow": "私人餐桌",
+    "hostedBy": "由 {host} 诚挚邀请",
+    "onTheHouse": "今天的每一碗都由我们请客。",
+    "reserve": "预留我的一碗",
+    "reserved": "已为你预留一碗",
+    "seeStatus": "查看我的这碗",
+    "greeting": "{name}，你的座位已经留好了。",
+    "countdown": {
+      "label": "距离第一碗上桌",
+      "days": "天",
+      "hours": "小时",
+      "minutes": "分钟",
+      "started": "已经开始啦。"
+    },
+    "meta": {
+      "when": "时间",
+      "where": "地点",
+      "directions": "路线"
+    },
+    "guest": {
+      "title": "谁要来呢？",
+      "lede": "让我们把你的这碗做对，也帮你抽一支签。",
+      "name": "你的名字",
+      "phone": "手机号码",
+      "phoneHelp": "活动当天会发短信提醒你。",
+      "birthday": "生日",
+      "birthdayHelp": "可不填。用来决定你的签语。",
+      "month": "月",
+      "day": "日",
+      "year": "年",
+      "notes": "有什么需要我们知道的吗？",
+      "notesHelp": "过敏、不吃牛肉、加辣，都可以告诉我们。",
+      "continue": "开始配我的一碗",
+      "errorName": "请填写你的名字。",
+      "errorPhone": "请填写 10 位数的手机号码。",
+      "errorBirthday": "这个生日看起来不太对。",
+      "phoneTaken": "这个号码已登记在另一位宾客名下。请填写你自己的手机号码。",
+      "saving": "保存中"
+    },
+    "bowl": {
+      "title": "配一碗你的面",
+      "lede": "选好汤底和面条，其他的我们都帮你调好了。",
+      "cta": "预留这一碗",
+      "closed": "点餐已截止，餐会已经开始了。",
+      "alreadyOrdered": "你已经预留了一碗。",
+      "loading": "菜单加载中"
+    },
+    "done": {
+      "eyebrow": "已预留",
+      "title": "{name}，你的这碗已经排好了。",
+      "lede": "活动当天我们会给你发短信。到达时点一下“我到了”，厨房就会开始煮你的面。",
+      "yourBowl": "你的这碗",
+      "change": "更换我的一碗",
+      "changeConfirm": "要重新配一碗吗？",
+      "status": "查看我的这碗",
+      "backToInvite": "回到邀请函"
+    },
+    "status": {
+      "held": "已为餐桌预留",
+      "heldLede": "你的这碗正等着你。活动当天到达时，点一下下方按钮。",
+      "arrive": "我到了",
+      "arriving": "正在为你签到",
+      "notYet": "活动当天才开放签到。",
+      "checkedIn": "你已完成签到，厨房正在准备你的面。",
+      "personal": "{name}，你属{zodiac}。",
+      "personalNoZodiac": "很高兴你来了，{name}。",
+      "yourBowl": "你的这碗",
+      "notFound": "我们找不到这碗面。",
+      "survey": "今天吃得还好吗？",
+      "timeline": {
+        "PAID": "已预订",
+        "SERVING": "上桌"
+      }
+    },
+    "zodiac": {
+      "Rat": "鼠",
+      "Ox": "牛",
+      "Tiger": "虎",
+      "Rabbit": "兔",
+      "Dragon": "龙",
+      "Snake": "蛇",
+      "Horse": "马",
+      "Goat": "羊",
+      "Monkey": "猴",
+      "Rooster": "鸡",
+      "Dog": "狗",
+      "Pig": "猪"
+    },
+    "notFound": {
+      "title": "这张餐桌还没摆好。",
+      "lede": "链接可能已经过期，或活动还没开放。"
+    },
+    "images": {
+      "hero": "俯瞰一碗牛肉面"
+    }
   }
 }

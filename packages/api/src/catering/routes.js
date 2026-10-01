@@ -27,6 +27,9 @@ import {
 import { computeDiscountCents } from "../promos/discount.js";
 import { getBrandOverride } from "./brand-overrides.js";
 import { requestPath } from "../auth/console-guard.js";
+import { composeGuestMessage, MESSAGE_KINDS, inviteUrl } from "./messages.js";
+import { arriveOrder } from "./arrive.js";
+import { isAttendeePath, rsvpUpdateData, slugDateKey, normalizeGuestPhone, guestPhoneOrNull, isEventDay, denverDateKey, filterMenuSteps, resolveGuestZodiac, withGuestNotes } from "./attendee.js";
 
 const prisma = new PrismaClient();
 const stripe = process.env.STRIPE_SECRET_KEY
@@ -136,10 +139,10 @@ function makeSlug(company, dateStr) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
   // dateStr: "2026-06-05" → "jun5"
-  const d = new Date(dateStr);
+  const [, m, dd] = slugDateKey(dateStr).split("-").map(Number);
   const monthNames = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
-  const month = monthNames[d.getUTCMonth()];
-  const day = d.getUTCDate();
+  const month = monthNames[m - 1];
+  const day = dd;
   return `${base}-${month}${day}`;
 }
 
@@ -639,14 +642,10 @@ export async function updateCateringEventByPhone({ phone, eventId, updates = {} 
 // ===========================================================================
 // REGISTER ALL CATERING ROUTES
 // ===========================================================================
-// Public (customer-facing) catering endpoints are switched off unless
-// CATERING_PUBLIC_ENABLED=true. Catering is admin-only for now: the admin console
-// still needs the two paths below, and everything under /admin/* is unaffected.
+// The booking-side public catering endpoints are switched off unless
+// CATERING_PUBLIC_ENABLED=true. The attendee (private event) paths and the two
+// admin-console reads stay open (see isAttendeePath); /admin/* is unaffected.
 const CATERING_PUBLIC_ENABLED = process.env.CATERING_PUBLIC_ENABLED === "true";
-const CATERING_PUBLIC_ALLOWLIST = new Set([
-  "/catering/site-config/order-now",
-  "/catering/kitchen-locations",
-]);
 
 export async function registerCateringRoutes(app) {
   // Seed the in-memory flag from the DB on boot (default dine-in ON).
@@ -655,7 +654,7 @@ export async function registerCateringRoutes(app) {
   if (!CATERING_PUBLIC_ENABLED) {
     app.addHook("onRequest", async (req, reply) => {
       const path = requestPath(req);
-      if (path.startsWith("/catering/") && !CATERING_PUBLIC_ALLOWLIST.has(path)) {
+      if (path.startsWith("/catering/") && !isAttendeePath(path)) {
         return reply.code(404).send({ error: "Not found" });
       }
     });
@@ -778,6 +777,8 @@ export async function registerCateringRoutes(app) {
         setupNotes,
         onsiteContactName,
         onsiteContactPhone,
+        hostName,
+        welcomeNote,
       } = req.body || {};
 
       if (!clientCompany || !eventDate || !slot) {
@@ -848,6 +849,8 @@ export async function registerCateringRoutes(app) {
           setupNotes: setupNotes || null,
           onsiteContactName: onsiteContactName || null,
           onsiteContactPhone: onsiteContactPhone || null,
+          hostName: hostName || null,
+          welcomeNote: welcomeNote || null,
           status: "PLANNING",
         },
       });
@@ -886,13 +889,17 @@ export async function registerCateringRoutes(app) {
         "eventDate","slot","pricePerBowlCents","minimumBowls","bookedBowls",
         "status","eventName","logoUrl","brandColors","companyDescription","notes",
         "eventType","expectedGuests","dietaryNotes","setupNotes",
-        "onsiteContactName","onsiteContactPhone",
+        "onsiteContactName","onsiteContactPhone","hostName","welcomeNote","slug",
       ];
       const data = {};
       for (const key of allowed) {
         if (req.body?.[key] !== undefined) data[key] = req.body[key];
       }
       if (data.eventDate) data.eventDate = new Date(data.eventDate);
+      if (data.slug !== undefined) {
+        const okSlug = typeof data.slug === "string" && data.slug.length >= 3 && data.slug.length <= 60 && /^[a-z0-9]+(-[a-z0-9]+)*$/.test(data.slug);
+        if (!okSlug) return reply.code(400).send({ error: "slug must be 3-60 chars of lowercase letters, numbers and single hyphens" });
+      }
 
       const event = await prisma.cateringEvent.update({
         where: { id: req.params.id },
@@ -901,6 +908,7 @@ export async function registerCateringRoutes(app) {
       return event;
     } catch (err) {
       if (err.code === "P2025") return reply.code(404).send({ error: "Event not found" });
+      if (err.code === "P2002") return reply.code(409).send({ error: "That slug is already used by another event" });
       return reply.code(500).send({ error: err.message });
     }
   });
@@ -967,58 +975,67 @@ export async function registerCateringRoutes(app) {
   // =========================================================================
   app.post("/admin/catering/events/:id/send-invites", async (req, reply) => {
     try {
-      const event = await prisma.cateringEvent.findUnique({
-        where: { id: req.params.id },
-        include: {
-          rsvps: true,
-          orders: { select: { guestPhone: true, orderQrCode: true } },
-        },
-      });
-      if (!event) return reply.code(404).send({ error: "Event not found" });
-
-      const company = event.clientCompany;
-      const eventUrl = `${WEB_BASE_URL}/catering/e/${event.slug}`;
-
-      // Map each attendee's order to their phone so we can link them straight to
-      // their personal order status page (where they confirm arrival + see live
-      // updates), not the RSVP/order page they've already used.
-      const orderByPhone = new Map();
-      for (const o of event.orders) {
-        const p = (o.guestPhone || "").replace(/\D/g, "").slice(-10);
-        if (p && o.orderQrCode) orderByPhone.set(p, o.orderQrCode);
-      }
-
-      let sent = 0;
-      let failed = 0;
-      for (const rsvp of event.rsvps) {
-        const first = (rsvp.name || "").split(" ")[0];
-        const greeting = first ? ` ${first}` : "";
-        const qr = orderByPhone.get((rsvp.phone || "").replace(/\D/g, "").slice(-10));
-
-        let body;
-        if (qr) {
-          const statusUrl = `${WEB_BASE_URL}/en/catering/e/${event.slug}/status?qrCode=${encodeURIComponent(qr)}`;
-          body =
-            `Hi${greeting}! Your Oh! Beef Noodle Soup order for ${company} is confirmed.\n\n` +
-            `When you're at the event and ready for your bowl, open your order page and tap "I've arrived" to start it cooking:\n${statusUrl}`;
-        } else {
-          // RSVP'd but hasn't ordered yet — point them to order first.
-          body =
-            `Hi${greeting}! Don't forget to order your bowl for ${company} with Oh! Beef Noodle Soup:\n${eventUrl}`;
-        }
-
-        try {
-          await sendSMS({ to: rsvp.phone, body });
-          sent++;
-        } catch (e) {
-          failed++;
-          console.warn("[send-invites]", rsvp.phone, e.message);
-        }
-      }
-
-      return { sent, failed, total: event.rsvps.length };
+      const out = await sendGuestMessages(req.params.id, { auto: true });
+      if (!out) return reply.code(404).send({ error: "Event not found" });
+      return out;
     } catch (err) {
       console.error("[send-invites]", err.message);
+      return reply.code(500).send({ error: err.message });
+    }
+  });
+
+  // =========================================================================
+  // ADMIN: Host tools, guest messages (preview + send per guest)
+  // GET  /admin/catering/events/:id/messages
+  // POST /admin/catering/events/:id/messages/send
+  // =========================================================================
+  async function loadGuestsForMessages(eventId) {
+    const event = await prisma.cateringEvent.findUnique({ where: { id: eventId }, include: { rsvps: { orderBy: { createdAt: "asc" } } } });
+    if (!event) return null;
+    const orders = await prisma.order.findMany({ where: { cateringEventId: eventId, orderSource: "CATERING", status: { not: "CANCELLED" } }, select: { guestPhone: true, orderQrCode: true } });
+    const byPhone = new Map(orders.map((o) => [normalizeGuestPhone(o.guestPhone || ""), o]));
+    return { event, guests: event.rsvps.map((r) => ({ rsvp: r, order: byPhone.get(r.phone) || null })) };
+  }
+
+  app.get("/admin/catering/events/:id/messages", async (req, reply) => {
+    try {
+      const data = await loadGuestsForMessages(req.params.id);
+      if (!data) return reply.code(404).send({ error: "Event not found" });
+      return { kinds: MESSAGE_KINDS, guests: data.guests.map(({ rsvp, order }) => ({ rsvpId: rsvp.id, name: rsvp.name, phone: rsvp.phone, ordered: !!order,
+        messages: Object.fromEntries(MESSAGE_KINDS.map((k) => [k, composeGuestMessage({ kind: k, event: data.event, rsvp, webBaseUrl: WEB_BASE_URL, order })])) })) };
+    } catch (err) {
+      return reply.code(500).send({ error: err.message });
+    }
+  });
+
+  async function sendGuestMessages(eventId, { kind, rsvpIds, auto = false }) {
+    const data = await loadGuestsForMessages(eventId);
+    if (!data) return null;
+    const targets = data.guests.filter((g) => !rsvpIds || rsvpIds.includes(g.rsvp.id));
+    const results = [];
+    for (const { rsvp, order } of targets) {
+      const k = auto ? (order ? "status" : "invite") : kind;
+      const body = composeGuestMessage({ kind: k, event: data.event, rsvp, webBaseUrl: WEB_BASE_URL, order });
+      if (!body) { results.push({ rsvpId: rsvp.id, ok: false, skipped: true, error: "No order yet" }); continue; }
+      try {
+        const r = await sendSMS({ to: rsvp.phone, body });
+        results.push({ rsvpId: rsvp.id, ok: !!r?.success, error: r?.success ? undefined : (r?.reason || r?.error || "send failed") });
+      } catch (e) {
+        results.push({ rsvpId: rsvp.id, ok: false, error: e.message || "send failed" });
+      }
+    }
+    return { sent: results.filter((r) => r.ok).length, failed: results.filter((r) => !r.ok && !r.skipped).length, skipped: results.filter((r) => r.skipped).length, total: results.length, results };
+  }
+
+  app.post("/admin/catering/events/:id/messages/send", async (req, reply) => {
+    try {
+      const { kind, rsvpIds } = req.body || {};
+      if (!MESSAGE_KINDS.includes(kind)) return reply.code(400).send({ error: `kind must be one of ${MESSAGE_KINDS.join(", ")}` });
+      const out = await sendGuestMessages(req.params.id, { kind, rsvpIds: Array.isArray(rsvpIds) ? rsvpIds : null });
+      if (!out) return reply.code(404).send({ error: "Event not found" });
+      return out;
+    } catch (err) {
+      console.error("[messages/send]", err.message);
       return reply.code(500).send({ error: err.message });
     }
   });
@@ -1290,15 +1307,18 @@ export async function registerCateringRoutes(app) {
 
   app.get("/admin/catering/events/:id/orders", async (req, reply) => {
     try {
-      const orders = await prisma.order.findMany({
-        where: { cateringEventId: req.params.id },
-        include: {
-          items: { include: { menuItem: { select: { name: true } } } },
-          guest: { select: { name: true, phone: true } },
-        },
-        orderBy: { createdAt: "asc" },
-      });
-      return orders;
+      const [orders, rsvps] = await Promise.all([
+        prisma.order.findMany({
+          where: { cateringEventId: req.params.id },
+          include: {
+            items: { include: { menuItem: { select: { name: true } } } },
+            guest: { select: { name: true, phone: true } },
+          },
+          orderBy: { createdAt: "asc" },
+        }),
+        prisma.cateringRSVP.findMany({ where: { eventId: req.params.id }, select: { phone: true, notes: true } }),
+      ]);
+      return withGuestNotes(orders, rsvps);
     } catch (err) {
       return reply.code(500).send({ error: err.message });
     }
@@ -1306,11 +1326,64 @@ export async function registerCateringRoutes(app) {
 
   app.get("/admin/catering/events/:id/rsvps", async (req, reply) => {
     try {
-      const rsvps = await prisma.cateringRSVP.findMany({
-        where: { eventId: req.params.id },
-        orderBy: { createdAt: "asc" },
-      });
-      return rsvps;
+      const [rsvps, orders, event] = await Promise.all([
+        prisma.cateringRSVP.findMany({ where: { eventId: req.params.id }, orderBy: { createdAt: "asc" } }),
+        prisma.order.findMany({ where: { cateringEventId: req.params.id, orderSource: "CATERING", status: { not: "CANCELLED" } }, select: { guestPhone: true, orderQrCode: true } }),
+        prisma.cateringEvent.findUnique({ where: { id: req.params.id }, select: { slug: true } }),
+      ]);
+      if (!event) return reply.code(404).send({ error: "Event not found" });
+      const byPhone = new Map(orders.map((o) => [normalizeGuestPhone(o.guestPhone || ""), o.orderQrCode]));
+      return rsvps.map((r) => ({ ...r, inviteUrl: inviteUrl(WEB_BASE_URL, event.slug, r.rememberToken), ordered: byPhone.has(r.phone), orderQrCode: byPhone.get(r.phone) || null }));
+    } catch (err) {
+      return reply.code(500).send({ error: err.message });
+    }
+  });
+
+  const DOB_RE = /^\d{2}\/\d{2}\/\d{4}$/;
+
+  app.post("/admin/catering/events/:id/rsvps", async (req, reply) => {
+    try {
+      const { name, phone, dob, notes } = req.body || {};
+      if (!name?.trim() || !phone) return reply.code(400).send({ error: "name and phone required" });
+      if (dob && !DOB_RE.test(dob)) return reply.code(400).send({ error: "dob must be MM/DD/YYYY" });
+      const normalized = normalizeGuestPhone(phone);
+      if (normalized.length !== 10) return reply.code(400).send({ error: "phone must have 10 digits" });
+      const f = rsvpUpdateData({ name: name.trim(), phone: normalized, dob, notes }, getChineseZodiac);
+      const rsvp = await prisma.cateringRSVP.create({ data: { eventId: req.params.id, name: f.name, phone: f.phone, dob: f.dob ?? null, zodiac: f.zodiac ?? null, notes: f.notes ?? null } });
+      return reply.code(201).send(rsvp);
+    } catch (err) {
+      if (err.code === "P2002") return reply.code(409).send({ error: "That phone is already on the guest list" });
+      if (err.code === "P2003") return reply.code(404).send({ error: "Event not found" });
+      return reply.code(500).send({ error: err.message });
+    }
+  });
+
+  app.patch("/admin/catering/events/:id/rsvps/:rsvpId", async (req, reply) => {
+    try {
+      const { name, phone, dob, notes } = req.body || {};
+      if (name !== undefined && !String(name).trim()) return reply.code(400).send({ error: "name cannot be empty" });
+      if (dob && !DOB_RE.test(dob)) return reply.code(400).send({ error: "dob must be MM/DD/YYYY" });
+      let normalized;
+      if (phone !== undefined) {
+        normalized = normalizeGuestPhone(phone || "");
+        if (normalized.length !== 10) return reply.code(400).send({ error: "phone must have 10 digits" });
+      }
+      const data = rsvpUpdateData({ name: name === undefined ? undefined : String(name).trim(), phone: normalized, dob, notes }, getChineseZodiac);
+      for (const k of ["name", "phone"]) if (data[k] === undefined) delete data[k];
+      const existing = await prisma.cateringRSVP.findFirst({ where: { id: req.params.rsvpId, eventId: req.params.id }, select: { id: true } });
+      if (!existing) return reply.code(404).send({ error: "Guest not found" });
+      return await prisma.cateringRSVP.update({ where: { id: existing.id }, data });
+    } catch (err) {
+      if (err.code === "P2002") return reply.code(409).send({ error: "That phone is already on the guest list" });
+      return reply.code(500).send({ error: err.message });
+    }
+  });
+
+  app.delete("/admin/catering/events/:id/rsvps/:rsvpId", async (req, reply) => {
+    try {
+      const { count } = await prisma.cateringRSVP.deleteMany({ where: { id: req.params.rsvpId, eventId: req.params.id } });
+      if (!count) return reply.code(404).send({ error: "Guest not found" });
+      return { ok: true };
     } catch (err) {
       return reply.code(500).send({ error: err.message });
     }
@@ -1596,6 +1669,9 @@ export async function registerCateringRoutes(app) {
           brandColors: true,
           companyDescription: true,
           eventAddress: true,
+          hostName: true,
+          welcomeNote: true,
+          pricePerBowlCents: true,
           eventDate: true,
           slot: true,
           status: true,
@@ -1608,7 +1684,14 @@ export async function registerCateringRoutes(app) {
 
       const menu = await getCateringMenuItems(event.tenantId);
 
-      return { ...event, menu };
+      const { pricePerBowlCents, ...rest } = event;
+      return {
+        ...rest,
+        menu,
+        isComplimentary: pricePerBowlCents === 0,
+        startsAt: event.eventDate.toISOString(),
+        timezone: "America/Denver",
+      };
     } catch (err) {
       return reply.code(500).send({ error: err.message });
     }
@@ -1926,7 +2009,7 @@ export async function registerCateringRoutes(app) {
         ordered: orderedPhones.has((r.phone || "").replace(/\D/g, "").slice(-10)),
       }));
 
-      const shareUrl = `${WEB_BASE_URL}/catering/e/${booking.event.slug}`;
+      const shareUrl = `${WEB_BASE_URL}/en/e/${booking.event.slug}`;
       let qrCode = null;
       try {
         qrCode = await QRCode.toDataURL(shareUrl, {
@@ -1960,7 +2043,7 @@ export async function registerCateringRoutes(app) {
 
   app.post("/catering/events/:slug/rsvp", async (req, reply) => {
     try {
-      const { name, phone, dob } = req.body || {};
+      const { name, phone, dob, notes, rsvpToken } = req.body || {};
       if (!name || !phone) {
         return reply.code(400).send({ error: "name and phone required" });
       }
@@ -1976,36 +2059,62 @@ export async function registerCateringRoutes(app) {
         }
       }
 
-      const normalizedPhone = phone.replace(/\D/g, "");
-      const zodiac = dob ? getChineseZodiac(dob) : null;
+      const normalizedPhone = normalizeGuestPhone(phone);
+      const fields = rsvpUpdateData({ name, phone: normalizedPhone, dob, notes }, getChineseZodiac);
 
-      // Upsert RSVP (unique on eventId + phone)
-      const rsvp = await prisma.cateringRSVP.upsert({
-        where: {
-          eventId_phone: {
-            eventId: event.id,
-            phone: normalizedPhone,
-          },
-        },
-        update: {
-          name,
-          dob: dob || undefined,
-          zodiac,
-        },
-        create: {
-          eventId: event.id,
-          name,
-          phone: normalizedPhone,
-          dob: dob || null,
-          zodiac,
-        },
-      });
+      const existingByToken = rsvpToken
+        ? await prisma.cateringRSVP.findFirst({
+            where: { rememberToken: String(rsvpToken), eventId: event.id },
+            select: { id: true },
+          })
+        : null;
 
-      return { success: true, rememberToken: rsvp.rememberToken, zodiac };
+      let rsvp;
+      if (existingByToken) {
+        // Returning guest editing their own RSVP: update by id (may change phone).
+        rsvp = await prisma.cateringRSVP.update({
+          where: { id: existingByToken.id },
+          data: fields,
+        });
+      } else {
+        // Upsert RSVP (unique on eventId + phone)
+        rsvp = await prisma.cateringRSVP.upsert({
+          where: { eventId_phone: { eventId: event.id, phone: normalizedPhone } },
+          update: { name: fields.name, dob: fields.dob, zodiac: fields.zodiac, notes: fields.notes },
+          create: { eventId: event.id, name, phone: normalizedPhone, dob: fields.dob ?? null, zodiac: fields.zodiac ?? null, notes: fields.notes ?? null },
+        });
+      }
+
+      return { success: true, rememberToken: rsvp.rememberToken, zodiac: rsvp.zodiac };
     } catch (err) {
+      if (err?.code === "P2002") {
+        return reply.code(409).send({ error: "That phone is already on the guest list" });
+      }
       console.error("[catering rsvp]", err.message);
       return reply.code(500).send({ error: err.message });
     }
+  });
+
+  // Returning guest: prefill the RSVP form from the remember token.
+  app.get("/catering/events/:slug/rsvp/:token", async (req, reply) => {
+    const rsvp = await prisma.cateringRSVP.findFirst({
+      where: { rememberToken: req.params.token, event: { slug: req.params.slug } },
+      select: { name: true, phone: true, dob: true, notes: true, zodiac: true },
+    });
+    if (!rsvp) return reply.code(404).send({ error: "Guest not found" });
+    return rsvp;
+  });
+
+  // The attendee menu: soups, noodles and every slider only (no extras or drinks).
+  app.get("/catering/events/:slug/menu-steps", async (req, reply) => {
+    const event = await prisma.cateringEvent.findUnique({ where: { slug: req.params.slug }, select: { status: true } });
+    if (!event || !["LIVE", "PLANNING"].includes(event.status)) return reply.code(404).send({ error: "Event not found" });
+    const locale = req.query.locale || "en";
+    const res = await app.inject({ method: "GET", url: `/menu/steps?locale=${encodeURIComponent(locale)}`, headers: { "x-tenant-slug": "oh" } });
+    if (res.statusCode !== 200) return reply.code(502).send({ error: "Menu unavailable" });
+    const body = res.json();
+    const steps = Array.isArray(body) ? body : body.steps;
+    return { steps: filterMenuSteps(steps) };
   });
 
   // =========================================================================
@@ -2019,6 +2128,8 @@ export async function registerCateringRoutes(app) {
     try {
       const { phone } = req.query;
       if (!phone) return reply.code(400).send({ error: "phone required" });
+      const normalizedPhone = guestPhoneOrNull(phone);
+      if (!normalizedPhone) return reply.code(400).send({ error: "phone must have 10 digits" });
 
       const event = await prisma.cateringEvent.findUnique({
         where: { slug: req.params.slug },
@@ -2026,13 +2137,13 @@ export async function registerCateringRoutes(app) {
       });
       if (!event) return reply.code(404).send({ error: "Event not found" });
 
-      const normalizedPhone = phone.replace(/\D/g, "");
       const existingOrder = await prisma.order.findFirst({
         where: {
           cateringEventId: event.id,
           orderSource: "CATERING",
           status: { not: "CANCELLED" },
-          guestPhone: { contains: normalizedPhone.slice(-10) },
+          // Attendee orders store guestPhone as the normalized 10 digits (see POST below).
+          guestPhone: normalizedPhone,
         },
         include: {
           items: { include: { menuItem: { select: { name: true } } } },
@@ -2067,6 +2178,9 @@ export async function registerCateringRoutes(app) {
       if (!items || !items.length) {
         return reply.code(400).send({ error: "items required" });
       }
+      if (!guestPhone) return reply.code(400).send({ error: "guestPhone required" });
+      const normalizedPhone = guestPhoneOrNull(guestPhone);
+      if (!normalizedPhone) return reply.code(400).send({ error: "phone must have 10 digits" });
 
       const event = await prisma.cateringEvent.findUnique({
         where: { slug: req.params.slug },
@@ -2082,28 +2196,24 @@ export async function registerCateringRoutes(app) {
 
       // Block orders after event date
       if (new Date() > new Date(event.eventDate)) {
-        return reply.code(400).send({ error: "Event has already started — orders are closed" });
+        return reply.code(400).send({ error: "Orders closed. The event has started.", code: "EVENT_STARTED" });
       }
 
-      const normalizedPhone = guestPhone ? guestPhone.replace(/\D/g, "") : null;
-
-      // One order per phone per event
-      if (normalizedPhone) {
-        const existingOrder = await prisma.order.findFirst({
-          where: {
-            cateringEventId: event.id,
-            orderSource: "CATERING",
-            status: { not: "CANCELLED" },
-            guestPhone: { contains: normalizedPhone.slice(-10) },
-          },
+      // One order per phone per event (exact match on the stored 10 digits)
+      const existingOrder = await prisma.order.findFirst({
+        where: {
+          cateringEventId: event.id,
+          orderSource: "CATERING",
+          status: { not: "CANCELLED" },
+          guestPhone: normalizedPhone,
+        },
+      });
+      if (existingOrder) {
+        return reply.code(400).send({
+          error: "One order per guest per event",
+          existingOrderId: existingOrder.id,
+          existingOrderQrCode: existingOrder.orderQrCode,
         });
-        if (existingOrder) {
-          return reply.code(400).send({
-            error: "One order per guest per event",
-            existingOrderId: existingOrder.id,
-            existingOrderQrCode: existingOrder.orderQrCode,
-          });
-        }
       }
 
       // Validate menu items
@@ -2143,8 +2253,8 @@ export async function registerCateringRoutes(app) {
       } catch {}
       const kitchenOrderNumber = String(count + 1).padStart(4, "0");
 
-      // Create guest record. `normalizedPhone` (digits only) stays as-is for
-      // the "one order per phone" contains-matching above; Guest.phone itself
+      // Create guest record. `normalizedPhone` (10 digits) is what Order.guestPhone
+      // stores for the exact "one order per phone" match above; Guest.phone itself
       // is stored E.164 (Task F2) so Chappy SMS can match identity exactly.
       const guest = await prisma.guest.create({
         data: {
@@ -2189,6 +2299,7 @@ export async function registerCateringRoutes(app) {
       return reply.code(201).send({
         orderId: order.id,
         orderQrCode: order.orderQrCode,
+        statusPath: `/en/e/${req.params.slug}/status?qrCode=${order.orderQrCode}`,
         kitchenOrderNumber: order.kitchenOrderNumber,
         items: order.items.map((i) => ({
           name: i.menuItem.name,
@@ -2230,6 +2341,28 @@ export async function registerCateringRoutes(app) {
 
   // Proactive, status-aware Chappy line for the attendee order status page.
   // GET /catering/orders/:qrCode/chappy-quip
+  // The status page's personal line: the guest's name and zodiac for an attendee order,
+  // so a texted status link opened in a fresh browser still greets them. Public, like the
+  // other /catering/orders/:qrCode routes (the code is the credential); no phone or dob out.
+  app.get("/catering/orders/:qrCode/guest", async (req, reply) => {
+    try {
+      const order = await prisma.order.findFirst({
+        where: { orderQrCode: req.params.qrCode, orderSource: "CATERING" },
+        select: { guestName: true, guestZodiac: true, guestPhone: true, cateringEventId: true },
+      });
+      if (!order) return reply.code(404).send({ error: "Order not found" });
+      const phone = normalizeGuestPhone(order.guestPhone);
+      const rsvps =
+        !order.guestZodiac && phone && order.cateringEventId
+          ? await prisma.cateringRSVP.findMany({ where: { eventId: order.cateringEventId }, select: { phone: true, zodiac: true } })
+          : [];
+      return { name: order.guestName || null, zodiac: resolveGuestZodiac(order, rsvps) };
+    } catch (err) {
+      console.error("[catering order guest]", err.message);
+      return reply.code(500).send({ error: err.message });
+    }
+  });
+
   app.get("/catering/orders/:qrCode/chappy-quip", async (req, reply) => {
     try {
       const order = await prisma.order.findFirst({
@@ -2261,23 +2394,21 @@ export async function registerCateringRoutes(app) {
   // kitchen queue (PAID → QUEUED). Idempotent: safe to call more than once.
   app.post("/catering/orders/:qrCode/arrive", async (req, reply) => {
     try {
-      const order = await prisma.order.findFirst({
-        where: { orderQrCode: req.params.qrCode, orderSource: "CATERING" },
-        select: { id: true, status: true },
-      });
-      if (!order) return reply.code(404).send({ error: "Order not found" });
-
-      if (order.status === "PAID") {
-        await prisma.order.update({
-          where: { id: order.id },
-          data: { status: "QUEUED", queuedAt: new Date() },
-        });
-        return { success: true, status: "QUEUED" };
-      }
-      // Already arrived (or further along) — report current status.
-      return { success: true, status: order.status };
+      const r = await arriveOrder(prisma, req.params.qrCode);
+      return reply.code(r.status).send(r.body);
     } catch (err) {
       console.error("[catering arrive]", err.message);
+      return reply.code(500).send({ error: err.message });
+    }
+  });
+
+  // Host override: same flip with no event-day check. Used by the admin Cook tab.
+  app.post("/admin/catering/orders/:qrCode/arrive", async (req, reply) => {
+    try {
+      const r = await arriveOrder(prisma, req.params.qrCode, { checkDay: false });
+      return reply.code(r.status).send(r.body);
+    } catch (err) {
+      console.error("[catering admin arrive]", err.message);
       return reply.code(500).send({ error: err.message });
     }
   });
@@ -2449,31 +2580,32 @@ export async function registerCateringRoutes(app) {
 
     try {
       const now = new Date();
-      const todayStart = new Date(now);
-      todayStart.setUTCHours(0, 0, 0, 0);
-      const todayEnd = new Date(todayStart);
-      todayEnd.setUTCDate(todayEnd.getUTCDate() + 1);
+      const todayKey = denverDateKey(now);
+      const windowStart = new Date(now.getTime() - 24 * 3600 * 1000);
+      const windowEnd = new Date(now.getTime() + 36 * 3600 * 1000);
 
-      const events = await prisma.cateringEvent.findMany({
+      // Query a wide window, then keep events whose Denver calendar date is today.
+      const candidates = await prisma.cateringEvent.findMany({
         where: {
-          eventDate: { gte: todayStart, lt: todayEnd },
+          eventDate: { gte: windowStart, lt: windowEnd },
           status: "LIVE",
         },
         include: {
           rsvps: true,
         },
       });
+      const events = candidates.filter((e) => denverDateKey(e.eventDate) === todayKey);
 
       const results = [];
       for (const event of events) {
-        const orderUrl = `${WEB_BASE_URL}/catering/e/${event.slug}`;
+        const orderUrl = `${WEB_BASE_URL}/en/e/${event.slug}`;
         for (const rsvp of event.rsvps) {
           if (!rsvp.phone) continue;
           try {
             const r = await sendSMS({
               to: rsvp.phone,
               body:
-                `Hi ${rsvp.name.split(" ")[0]}! Today's the day — ${event.eventName || event.clientCompany} x Oh! Beef Noodle Soup.\n\n` +
+                `Hi ${rsvp.name.split(" ")[0]}! Today's the day. ${event.eventName || event.clientCompany} x Oh! Beef Noodle Soup.\n\n` +
                 `Make sure your order is in:\n${orderUrl}\n\nSee you soon!`,
             });
             results.push({ name: rsvp.name, phone: rsvp.phone, ...r });
@@ -2519,7 +2651,7 @@ export async function registerCateringRoutes(app) {
 
       const results = [];
       for (const event of events) {
-        const surveyUrl = `${WEB_BASE_URL}/catering/e/${event.slug}/survey`;
+        const surveyUrl = `${WEB_BASE_URL}/en/e/${event.slug}/survey`;
 
         // Get all attendees who placed an order
         const orders = await prisma.order.findMany({

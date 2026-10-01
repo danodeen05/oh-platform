@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import {
-  areaTone, emptyEventForm, eventBody, isSpecialDiet, SLOT_PRICE, statusLabel, statusTone, surveyTone, validateEvent,
+  areaTone, combineDateTime, emptyEventForm, dobToInput, formatBirthday, formatPhone, formFromEvent, inputToDob, splitDateTime, eventBody, isSpecialDiet, orderLineLabel, SLOT_PRICE, statusLabel, statusTone, surveyTone, validateEvent,
   type EventForm,
 } from "../catering";
 
@@ -82,6 +82,17 @@ test("isSpecialDiet matches the unchanged regex against item name or selected va
   expect(isSpecialDiet({ items: [item("Classic Bowl")] } as never)).toBe(false);
 });
 
+test("isSpecialDiet also flags gluten free (the Cook tab's old check)", () => {
+  expect(isSpecialDiet({ items: [{ menuItem: { name: "Gluten Free Noodles" }, quantity: 1 }] })).toBe(true);
+});
+
+test("orderLineLabel never counts slider lines", () => {
+  expect(orderLineLabel({ menuItem: { name: "Sprouts" }, quantity: 3, selectedValue: "Normal" })).toBe("Sprouts: Normal");
+  expect(orderLineLabel({ menuItem: { name: "Sprouts" }, quantity: 1, selectedValue: "Extra" })).toBe("Sprouts: Extra");
+  expect(orderLineLabel({ menuItem: { name: "Egg" }, quantity: 2 })).toBe("2 x Egg");
+  expect(orderLineLabel({ menuItem: { name: "Classic Bowl" }, quantity: 1, selectedValue: null })).toBe("Classic Bowl");
+});
+
 test("surveyTone and areaTone follow the scoring thresholds", () => {
   expect(surveyTone(4.2)).toBe("good");
   expect(surveyTone(3.1)).toBe("pending");
@@ -89,4 +100,61 @@ test("surveyTone and areaTone follow the scoring thresholds", () => {
   expect(areaTone(3.5, true)).toBe("alert");
   expect(areaTone(4.5, true)).toBe("neutral");
   expect(areaTone(3.5, false)).toBe("neutral");
+});
+
+test("combineDateTime builds the Denver wall clock", () => {
+  expect(combineDateTime("2026-10-04", "18:00")).toBe("2026-10-05T00:00:00.000Z"); // MDT
+  expect(combineDateTime("2026-12-20", "18:00")).toBe("2026-12-21T01:00:00.000Z"); // MST
+});
+test("combineDateTime handles the DST change days", () => {
+  expect(combineDateTime("2026-03-08", "12:00")).toBe("2026-03-08T18:00:00.000Z"); // MDT after spring forward
+  expect(combineDateTime("2026-11-01", "12:00")).toBe("2026-11-01T19:00:00.000Z"); // MST after fall back
+});
+test("splitDateTime inverts it", () => {
+  expect(splitDateTime("2026-10-05T00:00:00.000Z")).toEqual({ date: "2026-10-04", time: "18:00" });
+  expect(splitDateTime("2026-12-21T01:00:00.000Z")).toEqual({ date: "2026-12-20", time: "18:00" });
+});
+test("formatBirthday", () => {
+  expect(formatBirthday("03/14/1990")).toBe("Mar 14, 1990");
+  expect(formatBirthday(null)).toBe("");
+});
+
+test("formatBirthday returns the raw string for an impossible month", () => {
+  expect(formatBirthday("13/01/1990")).toBe("13/01/1990");
+});
+test("formatPhone formats 10 digits and leaves anything else alone", () => {
+  expect(formatPhone("8015550100")).toBe("(801) 555-0100");
+  expect(formatPhone("(801) 555-0100")).toBe("(801) 555-0100");
+  expect(formatPhone("18015550100")).toBe("(801) 555-0100");
+  expect(formatPhone("555-0100")).toBe("555-0100");
+  expect(formatPhone("")).toBe("");
+  expect(formatPhone(null)).toBe("");
+});
+test("dobToInput and inputToDob convert and reject bad input", () => {
+  expect(dobToInput("03/14/1990")).toBe("1990-03-14");
+  expect(dobToInput("")).toBe("");
+  expect(dobToInput(null)).toBe("");
+  expect(dobToInput("1990-03-14")).toBe("");
+  expect(inputToDob("1990-03-14")).toBe("03/14/1990");
+  expect(inputToDob("")).toBe("");
+  expect(inputToDob("03/14/1990")).toBe("");
+});
+test("formFromEvent keeps a listed start time and the Denver date", () => {
+  const f = formFromEvent({ eventDate: "2026-10-05T00:00:00.000Z", slot: "DINNER", pricePerBowlCents: 0 } as never);
+  expect(f).toMatchObject({ eventDate: "2026-10-04", startTime: "18:00", complimentary: true });
+});
+test("formFromEvent snaps an unlisted stored time to the slot default, keeping the Denver date", () => {
+  const f = formFromEvent({ eventDate: "2026-12-20T07:00:00.000Z", slot: "LUNCH", pricePerBowlCents: 2499 } as never);
+  expect(f.eventDate).toBe("2026-12-20"); // 00:00 MST, not a Select option
+  expect(f.startTime).toBe("12:00");
+});
+test("formFromEvent: a legacy midnight-UTC date shows the previous Denver day at 17:00 MST (listed, kept)", () => {
+  const f = formFromEvent({ eventDate: "2026-12-20T00:00:00.000Z", slot: "LUNCH", pricePerBowlCents: 2499 } as never);
+  expect(f.eventDate).toBe("2026-12-19");
+  expect(f.startTime).toBe("17:00");
+});
+test("eventBody sends null for an emptied host and welcome note on edit only", () => {
+  const f = validForm({ hostName: " ", welcomeNote: "" });
+  expect(eventBody(f, true)).toMatchObject({ hostName: null, welcomeNote: null });
+  expect(eventBody(f, false).hostName).toBeUndefined();
 });

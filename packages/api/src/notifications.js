@@ -89,7 +89,7 @@ function canSendSMS(user, guest) {
  * before it ever reaches Twilio; an unparseable number is refused rather than
  * sent to a garbled destination.
  */
-export async function sendSMS({ to, body }) {
+export async function sendSMS({ to, body, mediaUrl }) {
   if (!twilioClient || !TWILIO_PHONE) {
     console.log("[SMS] Twilio not configured, skipping SMS");
     return { success: false, reason: "not_configured" };
@@ -102,11 +102,9 @@ export async function sendSMS({ to, body }) {
   }
 
   try {
-    const message = await twilioClient.messages.create({
-      body,
-      from: TWILIO_PHONE,
-      to: normalizedPhone,
-    });
+    const params = { body, from: TWILIO_PHONE, to: normalizedPhone };
+    if (mediaUrl) params.mediaUrl = Array.isArray(mediaUrl) ? mediaUrl : [mediaUrl];
+    const message = await twilioClient.messages.create(params);
 
     // Task F2 fix round 1: logs show only the last 4 digits of any phone, never the full number.
     console.log(`[SMS] Sent to ...${normalizedPhone.slice(-4)}: ${message.sid}`);
