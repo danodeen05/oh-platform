@@ -5629,6 +5629,8 @@
       "addToGroup": "Add to group",
       "loadError": "We couldn't load the menu.",
       "max": "Up to {count} each",
+      "defaultLegend": "Outlined is our usual",
+      "defaultAria": "Our usual",
       "included": "Included",
       "add": "Add {name}",
       "remove": "Remove one {name}"
@@ -6785,7 +6787,11 @@
       "personalNoZodiac": "Good to have you, {name}.",
       "yourBowl": "Your bowl",
       "notFound": "We could not find that bowl.",
-      "survey": "How was it?"
+      "survey": "How was it?",
+      "timeline": {
+        "PAID": "Reserved",
+        "SERVING": "At the table"
+      }
     },
     "zodiac": {
       "Rat": "Rat",

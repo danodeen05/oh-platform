@@ -3427,6 +3427,8 @@
       "addToGroup": "加入团体",
       "loadError": "无法加载菜单。",
       "max": "每项最多 {count} 份",
+      "defaultLegend": "有外框的是我们的推荐",
+      "defaultAria": "我们的推荐",
       "included": "已包含",
       "add": "加一份{name}",
       "remove": "减一份{name}"
@@ -4599,7 +4601,11 @@
       "personalNoZodiac": "很高兴你来了，{name}。",
       "yourBowl": "你的这碗",
       "notFound": "我们找不到这碗面。",
-      "survey": "今天吃得还好吗？"
+      "survey": "今天吃得还好吗？",
+      "timeline": {
+        "PAID": "已预订",
+        "SERVING": "上桌"
+      }
     },
     "zodiac": {
       "Rat": "鼠",

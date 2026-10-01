@@ -5630,6 +5630,8 @@
       "addToGroup": "加入團體",
       "loadError": "無法載入菜單。",
       "max": "每項最多 {count} 份",
+      "defaultLegend": "有外框的是我們的推薦",
+      "defaultAria": "我們的推薦",
       "included": "已包含",
       "add": "加一份{name}",
       "remove": "減一份{name}"
@@ -6802,7 +6804,11 @@
       "personalNoZodiac": "很高興你來了，{name}。",
       "yourBowl": "你的這碗",
       "notFound": "我們找不到這碗麵。",
-      "survey": "今天吃得還好嗎？"
+      "survey": "今天吃得還好嗎？",
+      "timeline": {
+        "PAID": "已預訂",
+        "SERVING": "上桌"
+      }
     },
     "zodiac": {
       "Rat": "鼠",

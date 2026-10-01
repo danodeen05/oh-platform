@@ -3427,6 +3427,8 @@
       "addToGroup": "Agregar al grupo",
       "loadError": "No pudimos cargar el menú.",
       "max": "Hasta {count} de cada uno",
+      "defaultLegend": "El contorno marca nuestra opción habitual",
+      "defaultAria": "Nuestra opción habitual",
       "included": "Incluido",
       "add": "Agregar {name}",
       "remove": "Quitar un {name}"
@@ -4599,7 +4601,11 @@
       "personalNoZodiac": "Qué gusto tenerte aquí, {name}.",
       "yourBowl": "Tu tazón",
       "notFound": "No encontramos ese tazón.",
-      "survey": "¿Qué tal estuvo?"
+      "survey": "¿Qué tal estuvo?",
+      "timeline": {
+        "PAID": "Reservado",
+        "SERVING": "En la mesa"
+      }
     },
     "zodiac": {
       "Rat": "Rata",

@@ -27,6 +27,8 @@ const SOUP_PHOTO: Record<string, ImageKey> = {
   "American Wagyu Beef Noodle Soup": "bowl-chunks-top",
 };
 
+/** The quiet outline on a slider's usual choice (and its legend swatch): cream at 25% so it never leads. */
+const DEFAULT_RING = "ring-1 ring-inset ring-oh-cream/25";
 const FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oh-cream";
 
 export interface BowlBuilderProps {
@@ -73,9 +75,17 @@ export function BowlBuilder({ steps, draft, update, hidePrices = false }: BowlBu
         {steps.map((step) => (
           <section key={step.id} aria-labelledby={`bowl-step-${step.id}`} className="flex flex-col gap-7">
             {step.id !== "bowl" ? (
-              <Title locale={locale} id={`bowl-step-${step.id}`} className="m-0 border-t border-oh-stone pt-6 text-oh-cream">
-                {step.title}
-              </Title>
+              <div className="flex flex-col gap-2 border-t border-oh-stone pt-6">
+                <Title locale={locale} id={`bowl-step-${step.id}`} className="m-0 text-oh-cream">
+                  {step.title}
+                </Title>
+                {step.id === "customize" && step.sections.some((s) => typeof s.sliderConfig?.default === "number") ? (
+                  <p className="m-0 flex items-center justify-end gap-2 text-xs text-oh-mute">
+                    <span aria-hidden="true" className={`h-3.5 w-3.5 rounded-sm bg-oh-ink ${DEFAULT_RING}`} />
+                    {t("defaultLegend")}
+                  </p>
+                ) : null}
+              </div>
             ) : (
               <h2 id={`bowl-step-${step.id}`} className="sr-only">
                 {step.title}
@@ -133,6 +143,8 @@ function Section({ section, draft, update, locale, t, hidePrices }: { section: M
     const values = section.sliderConfig?.labels || [];
     const shown = section.sliderConfig?.displayLabels || values;
     const current = draft.sliders[item.id] ?? section.sliderConfig?.default ?? 0;
+    const def = section.sliderConfig?.default;
+    const isDefault = (i: number) => typeof def === "number" && i === def;
     return (
       <div>
         <SectionLabel id={labelId}>{section.name}</SectionLabel>
@@ -145,10 +157,13 @@ function Section({ section, draft, update, locale, t, hidePrices }: { section: M
                 type="button"
                 role="radio"
                 aria-checked={checked}
+                data-default={isDefault(i) ? "true" : undefined}
+                data-selected={checked ? "true" : undefined}
+                aria-description={isDefault(i) ? t("defaultAria") : undefined}
                 onClick={() => update((d) => ({ ...d, sliders: { ...d.sliders, [item.id]: i } }))}
                 className={`min-h-11 min-w-0 cursor-pointer appearance-none rounded-xl border-0 px-1 py-1.5 font-[inherit] text-sm leading-tight [overflow-wrap:anywhere] transition-colors duration-200 motion-reduce:transition-none ${FOCUS} ${
                   checked ? "bg-oh-cream font-semibold text-oh-charcoal" : "bg-transparent text-oh-mute hover:text-oh-cream"
-                }`}
+                } ${isDefault(i) && !checked ? DEFAULT_RING : ""}`}
               >
                 {shown[i] ?? values[i]}
               </button>
