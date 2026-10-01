@@ -194,6 +194,7 @@ export const PUBLIC_ROUTES = Object.freeze([
   p("POST", "/catering/events/:slug/order", "catering-public"),
   p("GET", "/catering/kitchen-locations", "catering-public"),
   p("GET", "/catering/orders/:qrCode/chappy-quip", "catering-public"),
+  p("GET", "/catering/orders/:qrCode/guest", "catering-public"),
   p("POST", "/catering/orders/:qrCode/arrive", "catering-public"),
   p("DELETE", "/catering/events/:slug/order/:orderId", "catering-public"),
   p("GET", "/catering/events/:slug/survey/identity", "catering-public"),

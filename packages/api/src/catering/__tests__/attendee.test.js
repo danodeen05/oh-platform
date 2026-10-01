@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { isAttendeePath, normalizeGuestPhone, denverDateKey, isEventDay, filterMenuSteps, rsvpUpdateData, slugDateKey } from "../attendee.js";
+import { isAttendeePath, normalizeGuestPhone, denverDateKey, isEventDay, filterMenuSteps, rsvpUpdateData, slugDateKey, resolveGuestZodiac } from "../attendee.js";
 
 test("attendee paths pass the gate; booking paths do not", () => {
   for (const p of ["/catering/events/x", "/catering/events/x/rsvp", "/catering/events/x/menu-steps", "/catering/orders/CAT-1/arrive", "/catering/menu", "/catering/site-config/order-now", "/catering/kitchen-locations"]) assert.equal(isAttendeePath(p), true, p);
@@ -56,4 +56,14 @@ test("slugDateKey keeps date-only strings and converts timestamps to Denver", ()
   assert.equal(slugDateKey("2026-06-05"), "2026-06-05");
   assert.equal(slugDateKey("2026-10-05T00:00:00.000Z"), "2026-10-04");
   assert.equal(slugDateKey(new Date("2026-10-05T00:00:00.000Z")), "2026-10-04");
+});
+
+test("guest zodiac: the order's own, else the RSVP with the same phone, else null", () => {
+  const rsvps = [{ phone: "8015550199", zodiac: "Ox" }, { phone: "8015550155", zodiac: "Horse" }];
+  assert.equal(resolveGuestZodiac({ guestZodiac: "Dragon", guestPhone: "8015550155" }, rsvps), "Dragon");
+  assert.equal(resolveGuestZodiac({ guestZodiac: null, guestPhone: "+1 (801) 555-0155" }, rsvps), "Horse");
+  assert.equal(resolveGuestZodiac({ guestZodiac: null, guestPhone: "8015550100" }, rsvps), null);
+  assert.equal(resolveGuestZodiac({ guestZodiac: null, guestPhone: null }, rsvps), null);
+  assert.equal(resolveGuestZodiac({ guestZodiac: null, guestPhone: "8015550155" }, [{ phone: "8015550155", zodiac: null }]), null);
+  assert.equal(resolveGuestZodiac(null), null);
 });

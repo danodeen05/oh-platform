@@ -174,6 +174,13 @@ export async function fetchEventRsvp(slug: string, token: string): Promise<Guest
   return r.ok ? r.data : null;
 }
 
+/** GET /catering/orders/:qrCode/guest: the order's guest name and zodiac (for the status page's personal line). Null on any failure. */
+export async function fetchOrderGuest(orderQrCode: string): Promise<{ name: string | null; zodiac: string | null } | null> {
+  const r = await send<{ name?: string | null; zodiac?: string | null }>(`${API_URL}/catering/orders/${encodeURIComponent(orderQrCode)}/guest`);
+  if (!r.ok || !r.data) return null;
+  return { name: typeof r.data.name === "string" ? r.data.name : null, zodiac: typeof r.data.zodiac === "string" ? r.data.zodiac : null };
+}
+
 /** POST /catering/orders/:qrCode/arrive: "I'm here" releases a held bowl to the kitchen. 400 off the event day. */
 export function arriveEventOrder(orderQrCode: string): Promise<ApiResult<{ success: boolean; status: string }>> {
   return send(`${API_URL}/catering/orders/${encodeURIComponent(orderQrCode)}/arrive`, { method: "POST" });

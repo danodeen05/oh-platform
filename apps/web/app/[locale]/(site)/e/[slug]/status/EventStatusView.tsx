@@ -24,7 +24,7 @@ import { CTA_CLASS, Spinner } from "@/components/site/order/StepSheet";
 import { useOrderStatus, type StatusOrder } from "@/components/site/order/useOrderStatus";
 import { TEXT_LINK } from "@/components/site/store/ui";
 import { Body, Display, Eyebrow } from "@/components/site/Text";
-import { arriveEventOrder, eventPath, eventTitle, fetchEventRsvp, firstName, isEventDayClient, type GuestRsvp } from "@/lib/site/events";
+import { arriveEventOrder, eventPath, eventTitle, fetchEventRsvp, fetchOrderGuest, firstName, isEventDayClient } from "@/lib/site/events";
 import { BACKSTORY_STAGES, FEED_STAGES } from "@/lib/site/order-status";
 import { usePublishOrderBack } from "@/lib/site/order-back";
 import "@/components/site/order/after-order.css";
@@ -49,28 +49,45 @@ export function EventStatusView({ code: codeParam }: { code: string | null }) {
 
   // The code: ?qrCode=, else the order this browser reserved. Resolved after mount (storage is client-only).
   const [code, setCode] = useState<string | null | undefined>(codeParam ?? undefined);
-  const [who, setWho] = useState<{ name: string | null; rsvp: GuestRsvp | null }>({ name: null, rsvp: null });
   useEffect(() => {
-    const guest = readRemembered(event.slug);
-    if (!codeParam) setCode(guest?.orderQrCode ?? null);
-    setWho({ name: guest?.name ?? null, rsvp: null });
-    if (!guest?.token) return;
-    let live = true;
-    fetchEventRsvp(event.slug, guest.token).then((rsvp) => {
-      if (live && rsvp) setWho({ name: guest.name, rsvp });
-    });
-    return () => {
-      live = false;
-    };
+    if (!codeParam) setCode(readRemembered(event.slug)?.orderQrCode ?? null);
   }, [event.slug, codeParam]);
 
   if (code === undefined) return <Loading />;
   if (!code) return <NotFound invite={invite} />;
-  return <Tracked key={code} code={code} who={who} invite={invite} />;
+  return <Tracked key={code} code={code} invite={invite} />;
 }
 
-function Tracked({ code, who, invite }: { code: string; who: { name: string | null; rsvp: GuestRsvp | null }; invite: string }) {
+const ZODIAC = new Set(["Rat", "Ox", "Tiger", "Rabbit", "Dragon", "Snake", "Horse", "Goat", "Monkey", "Rooster", "Dog", "Pig"]);
+
+/**
+ * Who the bowl is for: asked of the order itself (works for a texted link in a fresh browser);
+ * only when that call fails, the RSVP behind this browser's remembered invite token.
+ */
+function useGuestLine(slug: string, code: string): { name: string | null; zodiac: string | null } {
+  const [who, setWho] = useState<{ name: string | null; zodiac: string | null }>({ name: null, zodiac: null });
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      const fromOrder = await fetchOrderGuest(code);
+      if (fromOrder) {
+        if (live) setWho(fromOrder);
+        return;
+      }
+      const remembered = readRemembered(slug);
+      const rsvp = remembered?.token ? await fetchEventRsvp(slug, remembered.token) : null;
+      if (live) setWho({ name: rsvp?.name ?? remembered?.name ?? null, zodiac: rsvp?.zodiac ?? null });
+    })();
+    return () => {
+      live = false;
+    };
+  }, [slug, code]);
+  return who;
+}
+
+function Tracked({ code, invite }: { code: string; invite: string }) {
   const event = useEvent();
+  const who = useGuestLine(event.slug, code);
   const locale = useLocale();
   const t = useTranslations("events");
   const s = useOrderStatus({ code, demoStageParam: null, followParent: false, locale });
@@ -79,7 +96,7 @@ function Tracked({ code, who, invite }: { code: string; who: { name: string | nu
   if (!order) return s.state === "loading" ? <Loading /> : <NotFound invite={invite} />;
 
   const name = order.guestName || who.name;
-  const zodiac = who.rsvp?.zodiac;
+  const zodiac = who.zodiac && ZODIAC.has(who.zodiac) ? who.zodiac : null;
   const personal = name ? (
     <Body locale={locale} className="m-0 text-oh-cream/85" data-event-personal>
       {zodiac ? t("status.personal", { name: firstName(name), zodiac: t(`zodiac.${zodiac}`) }) : t("status.personalNoZodiac", { name: firstName(name) })}

@@ -41,3 +41,13 @@ export function slugDateKey(eventDate) {
   if (typeof eventDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(eventDate)) return eventDate;
   return denverDateKey(new Date(eventDate));
 }
+
+// The guest's zodiac for the status page: the order's own, else the event RSVP with the
+// same phone (both sides normalized), else null. `rsvps` are that event's { phone, zodiac }.
+export function resolveGuestZodiac(order, rsvps = []) {
+  if (order?.guestZodiac) return order.guestZodiac;
+  const phone = normalizeGuestPhone(order?.guestPhone);
+  if (!phone) return null;
+  const match = (rsvps || []).find((r) => normalizeGuestPhone(r?.phone) === phone);
+  return match?.zodiac || null;
+}

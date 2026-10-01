@@ -29,7 +29,7 @@ import { getBrandOverride } from "./brand-overrides.js";
 import { requestPath } from "../auth/console-guard.js";
 import { composeGuestMessage, MESSAGE_KINDS, inviteUrl } from "./messages.js";
 import { arriveOrder } from "./arrive.js";
-import { isAttendeePath, rsvpUpdateData, slugDateKey, normalizeGuestPhone, isEventDay, denverDateKey, filterMenuSteps } from "./attendee.js";
+import { isAttendeePath, rsvpUpdateData, slugDateKey, normalizeGuestPhone, isEventDay, denverDateKey, filterMenuSteps, resolveGuestZodiac } from "./attendee.js";
 
 const prisma = new PrismaClient();
 const stripe = process.env.STRIPE_SECRET_KEY
@@ -2337,6 +2337,28 @@ export async function registerCateringRoutes(app) {
 
   // Proactive, status-aware Chappy line for the attendee order status page.
   // GET /catering/orders/:qrCode/chappy-quip
+  // The status page's personal line: the guest's name and zodiac for an attendee order,
+  // so a texted status link opened in a fresh browser still greets them. Public, like the
+  // other /catering/orders/:qrCode routes (the code is the credential); no phone or dob out.
+  app.get("/catering/orders/:qrCode/guest", async (req, reply) => {
+    try {
+      const order = await prisma.order.findFirst({
+        where: { orderQrCode: req.params.qrCode, orderSource: "CATERING" },
+        select: { guestName: true, guestZodiac: true, guestPhone: true, cateringEventId: true },
+      });
+      if (!order) return reply.code(404).send({ error: "Order not found" });
+      const phone = normalizeGuestPhone(order.guestPhone);
+      const rsvps =
+        !order.guestZodiac && phone && order.cateringEventId
+          ? await prisma.cateringRSVP.findMany({ where: { eventId: order.cateringEventId }, select: { phone: true, zodiac: true } })
+          : [];
+      return { name: order.guestName || null, zodiac: resolveGuestZodiac(order, rsvps) };
+    } catch (err) {
+      console.error("[catering order guest]", err.message);
+      return reply.code(500).send({ error: err.message });
+    }
+  });
+
   app.get("/catering/orders/:qrCode/chappy-quip", async (req, reply) => {
     try {
       const order = await prisma.order.findFirst({
