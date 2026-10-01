@@ -114,9 +114,13 @@ npx clerk api ls          # List available API endpoints
 - Public read: `GET /catering/site-config/order-now`. When false, `POST /orders` returns 403.
 - Dev uses the local Postgres in `.env` (127.0.0.1); the prod URL is in `.env.prod-bak`. Flip prod via the prod admin console.
 
-**Catering:** admin-only since 2026-09-24. Customer pages, nav, and Chappy's catering tools were removed;
-`/catering/*` on the web app redirects home. Public `/catering/*` API routes return 404 unless
-`CATERING_PUBLIC_ENABLED=true` (the two endpoints the admin console needs stay open).
+**Catering / private events (since 2026-10-01):** admin creates events; guests use the public attendee flow at
+`/{locale}/e/{slug}` (invite, rsvp with birthday, bowl pre-order on the shared BowlBuilder, done, status with
+day-of "I'm here" check-in). Attendee API routes (`/catering/events/*`, `/catering/orders/*`, `/catering/menu`)
+are always open; the booking/availability/dashboard routes still 404 unless `CATERING_PUBLIC_ENABLED=true`.
+Admin event detail has Guests (name/phone/birthday/notes, personal invite link), Messages (Chappy-voice texts per
+guest: invite / day-of reminder / status link; Copy or Send) and Cook (host kitchen: check in, start, ready, served,
+done) tabs. Guest texts only go out from Messages; no cron is scheduled. Spec: `docs/superpowers/specs/2026-10-01-private-events-design.md`.
 
 ### To Go Live
 
