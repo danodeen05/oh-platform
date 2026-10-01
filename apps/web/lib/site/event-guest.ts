@@ -29,7 +29,10 @@ export function validateGuest(f: GuestForm, now: Date = new Date()): GuestErrors
   const parts = [f.month, f.day, f.year].map((s) => s.trim());
   if (parts.some(Boolean)) {
     const [m, d, y] = parts.map(int);
-    const fine = m >= 1 && m <= 12 && d >= 1 && d <= 31 && y >= 1900 && y <= now.getFullYear();
+    const inRange = m >= 1 && m <= 12 && d >= 1 && d <= 31 && y >= 1900 && y <= now.getFullYear();
+    // A real calendar day: 02/31 rolls over to March, so it does not come back the same.
+    const date = new Date(y, m - 1, d);
+    const fine = inRange && date.getFullYear() === y && date.getMonth() === m - 1 && date.getDate() === d;
     if (!fine) errors.birthday = "errorBirthday";
   }
   return errors;

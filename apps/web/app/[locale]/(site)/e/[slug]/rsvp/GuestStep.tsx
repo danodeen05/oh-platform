@@ -65,7 +65,9 @@ export function GuestStep({ guest, token }: { guest: GuestRsvp | null; token: st
     const dob = joinDob(month, day, year);
     const r = await submitRsvp(slug, { name: name.trim(), phone: digits, dob, notes: notes.trim() || null, ...(rsvpToken ? { rsvpToken } : {}) });
     if (r.ok) {
-      writeRemembered(slug, { name: name.trim(), phone: digits, token: r.data?.rememberToken, ...(dob ? { dob } : {}) });
+      // Merge: keep what this browser already knows (the reserved order's code, for the status link once orders close).
+      const { dob: _oldDob, ...known } = readRemembered(slug) ?? { name: "", phone: "" };
+      writeRemembered(slug, { ...known, name: name.trim(), phone: digits, token: r.data?.rememberToken, ...(dob ? { dob } : {}) });
       router.push(eventPath(locale, slug, "order"));
       return;
     }

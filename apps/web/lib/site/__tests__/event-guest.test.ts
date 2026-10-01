@@ -27,6 +27,11 @@ describe("validateGuest", () => {
     expect(validateGuest({ ...ok, month: "2", day: "3", year: "2027" }, NOW)).toEqual({ birthday: "errorBirthday" });
     expect(validateGuest({ ...ok, month: "2", day: "3", year: "1990" }, NOW)).toEqual({});
   });
+  it("rejects days the calendar does not have", () => {
+    expect(validateGuest({ ...ok, month: "02", day: "31", year: "1990" }, NOW)).toEqual({ birthday: "errorBirthday" });
+    expect(validateGuest({ ...ok, month: "02", day: "29", year: "1990" }, NOW)).toEqual({ birthday: "errorBirthday" });
+    expect(validateGuest({ ...ok, month: "02", day: "29", year: "2000" }, NOW)).toEqual({});
+  });
 });
 
 describe("joinDob / splitDob", () => {

@@ -2188,7 +2188,7 @@ export async function registerCateringRoutes(app) {
 
       // Block orders after event date
       if (new Date() > new Date(event.eventDate)) {
-        return reply.code(400).send({ error: "Orders closed. The event has started." });
+        return reply.code(400).send({ error: "Orders closed. The event has started.", code: "EVENT_STARTED" });
       }
 
       const normalizedPhone = guestPhone ? normalizeGuestPhone(guestPhone) : null;

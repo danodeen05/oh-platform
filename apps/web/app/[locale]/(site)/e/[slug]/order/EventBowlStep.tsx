@@ -102,7 +102,7 @@ export function EventBowlStep() {
     if (typeof existing === "string" && existing) return reserved(existing);
     setBusy(false);
     if (r.status === 0) setError(tFlow("NETWORK_ERROR"));
-    else if (r.status === 400 && /closed/i.test(r.error ?? "")) setPhase("closed");
+    else if (r.status === 400 && (r.body?.code === "EVENT_STARTED" || /closed/i.test(r.error ?? ""))) setPhase("closed");
     else setError(tFlow("GENERIC"));
   }
 
