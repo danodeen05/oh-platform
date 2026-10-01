@@ -28,6 +28,7 @@ import { computeDiscountCents } from "../promos/discount.js";
 import { getBrandOverride } from "./brand-overrides.js";
 import { requestPath } from "../auth/console-guard.js";
 import { composeGuestMessage, MESSAGE_KINDS, inviteUrl } from "./messages.js";
+import { arriveOrder } from "./arrive.js";
 import { isAttendeePath, rsvpUpdateData, slugDateKey, normalizeGuestPhone, isEventDay, denverDateKey, filterMenuSteps } from "./attendee.js";
 
 const prisma = new PrismaClient();
@@ -2367,44 +2368,19 @@ export async function registerCateringRoutes(app) {
   // kitchen queue (PAID → QUEUED). Idempotent: safe to call more than once.
   app.post("/catering/orders/:qrCode/arrive", async (req, reply) => {
     try {
-      const order = await prisma.order.findFirst({
-        where: { orderQrCode: req.params.qrCode, orderSource: "CATERING" },
-        select: { id: true, status: true, cateringEvent: { select: { eventDate: true } } },
-      });
-      if (!order) return reply.code(404).send({ error: "Order not found" });
-
-      if (order.status === "PAID") {
-        if (order.cateringEvent?.eventDate && !isEventDay(order.cateringEvent.eventDate)) {
-          return reply.code(400).send({ error: "Check in opens on the event day" });
-        }
-        await prisma.order.update({
-          where: { id: order.id },
-          data: { status: "QUEUED", queuedAt: new Date() },
-        });
-        return { success: true, status: "QUEUED" };
-      }
-      // Already arrived (or further along) — report current status.
-      return { success: true, status: order.status };
+      const r = await arriveOrder(prisma, req.params.qrCode);
+      return reply.code(r.status).send(r.body);
     } catch (err) {
       console.error("[catering arrive]", err.message);
       return reply.code(500).send({ error: err.message });
     }
   });
 
-  // Host override: same PAID → QUEUED flip as the public arrive route, with no
-  // event-day check. Used by the admin Cook tab. Idempotent.
+  // Host override: same flip with no event-day check. Used by the admin Cook tab.
   app.post("/admin/catering/orders/:qrCode/arrive", async (req, reply) => {
     try {
-      const order = await prisma.order.findFirst({
-        where: { orderQrCode: req.params.qrCode, orderSource: "CATERING" },
-        select: { id: true, status: true },
-      });
-      if (!order) return reply.code(404).send({ error: "Order not found" });
-      if (order.status === "PAID") {
-        await prisma.order.update({ where: { id: order.id }, data: { status: "QUEUED", queuedAt: new Date() } });
-        return { success: true, status: "QUEUED" };
-      }
-      return { success: true, status: order.status };
+      const r = await arriveOrder(prisma, req.params.qrCode, { checkDay: false });
+      return reply.code(r.status).send(r.body);
     } catch (err) {
       console.error("[catering admin arrive]", err.message);
       return reply.code(500).send({ error: err.message });

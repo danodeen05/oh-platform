@@ -29,6 +29,7 @@ export default function MessagesTab({ eventId }: { eventId: string }) {
   const [kind, setKind] = useState<MessageKind>("invite");
   const [busy, setBusy] = useState<string | null>(null);
   const [failures, setFailures] = useState<string[]>([]);
+  const [skipped, setSkipped] = useState<string[]>([]);
 
   if (res.error && !res.data) return <ErrorCard message="Couldn't load the messages." onRetry={res.reload} />;
   if (!res.data) return <SkeletonList rows={3} />;
@@ -55,8 +56,10 @@ export default function MessagesTab({ eventId }: { eventId: string }) {
       const data = await api<SendResult>(`/admin/catering/events/${eventId}/messages/send`, { method: "POST", body: rsvpIds ? { kind, rsvpIds } : { kind } });
       const names = new Map(guests.map((g) => [g.rsvpId, g.name]));
       const failed = data.results.filter((r) => !r.ok && !r.skipped).map((r) => names.get(r.rsvpId) || "Guest");
+      const skippedNames = data.results.filter((r) => r.skipped).map((r) => names.get(r.rsvpId) || "Guest");
       setFailures(failed);
-      show({ message: `Sent ${data.sent} of ${data.total}. ${data.failed} failed.`, tone: data.failed ? "alert" : "good" });
+      setSkipped(skippedNames);
+      show({ message: `Sent ${data.sent} of ${data.total}. ${data.failed} failed.${data.skipped > 0 ? ` ${data.skipped} skipped (no order yet).` : ""}`, tone: data.failed ? "alert" : "good" });
     } catch (e) {
       show({ message: `Couldn't send. ${errorText(e)}`, tone: "alert" });
     } finally {
@@ -68,7 +71,7 @@ export default function MessagesTab({ eventId }: { eventId: string }) {
 
   return (
     <div className="space-y-4">
-      <SegmentedControl<MessageKind> label="Message type" value={kind} onChange={(k) => { setKind(k); setFailures([]); }} options={OPTIONS} />
+      <SegmentedControl<MessageKind> label="Message type" value={kind} onChange={(k) => { setKind(k); setFailures([]); setSkipped([]); }} options={OPTIONS} />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="min-w-0 flex-1 basis-56 text-[15px] text-oh-stone/70">{KIND_INFO[kind].help}</p>
         <Button variant="primary" icon="phone" disabled={sendable === 0} loading={busy === "all"}
@@ -76,6 +79,10 @@ export default function MessagesTab({ eventId }: { eventId: string }) {
       </div>
       {failures.length > 0 && (
         <p role="alert" className="rounded-xl bg-oh-ember/10 px-4 py-3 text-sm text-oh-ember-deep">Didn&apos;t reach: {failures.join(", ")}</p>
+      )}
+
+      {skipped.length > 0 && (
+        <p className="rounded-xl bg-oh-linen px-4 py-3 text-sm text-oh-stone">Skipped (no order yet): {skipped.join(", ")}</p>
       )}
 
       <div className="grid gap-3 lg:grid-cols-2">

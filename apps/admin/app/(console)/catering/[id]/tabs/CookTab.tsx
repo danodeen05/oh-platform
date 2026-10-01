@@ -82,7 +82,7 @@ export default function CookTab({ eventId }: { eventId: string }) {
       }
       res.reload();
     } catch (e) {
-      show({ message: `Couldn't update ${order.guestName || "the order"}. ${errorText(e)}`, tone: "alert" });
+      show({ message: `Couldn't update ${order.guestName || order.guest?.name || "the order"}. ${errorText(e)}`, tone: "alert" });
     } finally {
       setBusyId(null);
     }
