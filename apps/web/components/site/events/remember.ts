@@ -1,6 +1,6 @@
 /**
  * Private events: what this browser remembers about its guest for one event
- * (name, phone, invite token, the reserved order), so a return visit skips
+ * (name, phone, birthday, invite token, the reserved order), so a return visit skips
  * the form and shows the reservation. localStorage key `oh-event:{slug}`.
  * Storage can be missing or throw (private mode, blocked site data), so
  * every access is wrapped and a failure reads as "nothing remembered".
@@ -10,6 +10,8 @@ export interface RememberedGuest {
   phone: string;
   token?: string;
   orderQrCode?: string;
+  /** MM/DD/YYYY from the guest form, sent with the order for the guest's zodiac. */
+  dob?: string;
 }
 
 const key = (slug: string) => `oh-event:${slug}`;
@@ -25,6 +27,7 @@ export function readRemembered(slug: string): RememberedGuest | null {
       phone: v.phone,
       ...(typeof v.token === "string" && v.token ? { token: v.token } : {}),
       ...(typeof v.orderQrCode === "string" && v.orderQrCode ? { orderQrCode: v.orderQrCode } : {}),
+      ...(typeof v.dob === "string" && v.dob ? { dob: v.dob } : {}),
     };
   } catch {
     return null;

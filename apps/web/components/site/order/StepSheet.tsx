@@ -43,13 +43,15 @@ export interface StepSheetProps {
   wide?: boolean;
   /** A problem to show right above the CTA, in the thumb zone (role="alert"). */
   alert?: ReactNode;
+  /** false omits the dine-in progress row (steps outside the order flow, e.g. a private event). */
+  progress?: false;
   children: ReactNode;
 }
 
 export const CTA_CLASS =
   "flex h-14 min-w-0 flex-1 cursor-pointer appearance-none items-center justify-center gap-2 rounded-full border-0 bg-oh-ember-deep px-6 font-[inherit] text-base font-semibold text-oh-cream no-underline shadow-[0_12px_30px_-14px] shadow-oh-ember-deep transition-[background-color,transform,opacity,filter] duration-200 hover:brightness-90 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-oh-cream disabled:cursor-not-allowed disabled:bg-oh-stone disabled:text-oh-cream/75 disabled:shadow-none motion-reduce:transition-none motion-reduce:active:scale-100";
 
-export function StepSheet({ step, title, lede, backHref, summary, cta, wide = false, alert, children }: StepSheetProps) {
+export function StepSheet({ step, title, lede, backHref, summary, cta, wide = false, alert, progress, children }: StepSheetProps) {
   const t = useTranslations("orderFlow");
   const locale = useLocale();
   const chappy = useChappy();
@@ -59,25 +61,27 @@ export function StepSheet({ step, title, lede, backHref, summary, cta, wide = fa
   return (
     <div data-order-flow data-order-step={step} className="flex min-h-[calc(100svh-4.75rem-env(safe-area-inset-top,0px))] flex-col">
       <div className={`mx-auto w-full flex-1 px-4 pb-10 pt-2 md:pt-8 ${wide ? "max-w-5xl" : "max-w-2xl"}`}>
-        <nav aria-label={t("progressLabel")} className="mb-5">
-          <Eyebrow locale={locale} as="p" className="m-0 mb-2.5 text-oh-mute">
-            {t("stepOf", { current: index + 1, total: ORDER_STEPS.length })}
-            <span aria-hidden="true" className="px-2 text-oh-stone">
-              /
-            </span>
-            <span className="text-oh-cream">{t(`steps.${step}`)}</span>
-          </Eyebrow>
-          <ol className="m-0 flex list-none gap-1.5 p-0" aria-hidden="true">
-            {ORDER_STEPS.map((s, i) => (
-              <li
-                key={s}
-                className={`h-1 flex-1 rounded-full transition-colors duration-500 motion-reduce:transition-none ${
-                  i < index ? "bg-oh-ember-light/70" : i === index ? "bg-oh-ember-light" : "bg-oh-stone"
-                }`}
-              />
-            ))}
-          </ol>
-        </nav>
+        {progress === false ? null : (
+          <nav aria-label={t("progressLabel")} className="mb-5">
+            <Eyebrow locale={locale} as="p" className="m-0 mb-2.5 text-oh-mute">
+              {t("stepOf", { current: index + 1, total: ORDER_STEPS.length })}
+              <span aria-hidden="true" className="px-2 text-oh-stone">
+                /
+              </span>
+              <span className="text-oh-cream">{t(`steps.${step}`)}</span>
+            </Eyebrow>
+            <ol className="m-0 flex list-none gap-1.5 p-0" aria-hidden="true">
+              {ORDER_STEPS.map((s, i) => (
+                <li
+                  key={s}
+                  className={`h-1 flex-1 rounded-full transition-colors duration-500 motion-reduce:transition-none ${
+                    i < index ? "bg-oh-ember-light/70" : i === index ? "bg-oh-ember-light" : "bg-oh-stone"
+                  }`}
+                />
+              ))}
+            </ol>
+          </nav>
+        )}
 
         <Reveal from="fade">
           <Title locale={locale} as="h1" className="m-0 text-oh-cream">

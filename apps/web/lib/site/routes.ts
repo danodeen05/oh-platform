@@ -84,6 +84,10 @@ export const SITE_ROUTES: readonly SiteRoute[] = [
   { path: "/sms-consent", group: "site", file: "(site)/sms-consent/page.tsx" },
   // Private events: a slug the crawl's API may not have renders the (translated) event not-found page.
   { path: "/e/:slug", group: "site", file: "(site)/e/[slug]/page.tsx", params: { slug: "plan-test-oct5" } },
+  { path: "/e/:slug/rsvp", group: "site", file: "(site)/e/[slug]/rsvp/page.tsx", params: { slug: "plan-test-oct5" } },
+  // The bowl and done steps read the guest from this browser; without one they send the visitor back (rsvp, invite).
+  { path: "/e/:slug/order", group: "site", file: "(site)/e/[slug]/order/page.tsx", params: { slug: "plan-test-oct5" } },
+  { path: "/e/:slug/done", group: "site", file: "(site)/e/[slug]/done/page.tsx", params: { slug: "plan-test-oct5" } },
 ];
 
 /** The locale-free URL for a route, with params and query filled in. */

@@ -33,9 +33,11 @@ export interface BowlBuilderProps {
   steps: MenuStep[];
   draft: OrderDraft;
   update: (fn: (d: OrderDraft) => OrderDraft) => void;
+  /** Omit every price (soup caption, soup rows, extras), e.g. for a complimentary private event. */
+  hidePrices?: boolean;
 }
 
-export function BowlBuilder({ steps, draft, update }: BowlBuilderProps) {
+export function BowlBuilder({ steps, draft, update, hidePrices = false }: BowlBuilderProps) {
   const locale = useLocale();
   const t = useTranslations("orderFlow.bowl");
   const tRoot = useTranslations();
@@ -61,7 +63,7 @@ export function BowlBuilder({ steps, draft, update }: BowlBuilderProps) {
           {soup ? (
             <figcaption className="absolute inset-x-3 bottom-3 flex items-center justify-between gap-3 rounded-2xl bg-oh-charcoal/80 px-4 py-2.5 text-oh-cream backdrop-blur-sm">
               <span className="min-w-0 truncate text-sm font-semibold">{soup.name}</span>
-              <span className="shrink-0 text-sm tabular-nums text-oh-cream/80">{formatCents(soup.basePriceCents, locale)}</span>
+              {hidePrices ? null : <span className="shrink-0 text-sm tabular-nums text-oh-cream/80">{formatCents(soup.basePriceCents, locale)}</span>}
             </figcaption>
           ) : null}
         </figure>
@@ -80,7 +82,7 @@ export function BowlBuilder({ steps, draft, update }: BowlBuilderProps) {
               </h2>
             )}
             {step.sections.map((section) => (
-              <Section key={section.id} section={section} draft={draft} update={update} locale={locale} t={t} />
+              <Section key={section.id} section={section} draft={draft} update={update} locale={locale} t={t} hidePrices={hidePrices} />
             ))}
           </section>
         ))}
@@ -91,7 +93,7 @@ export function BowlBuilder({ steps, draft, update }: BowlBuilderProps) {
 
 type T = (key: string, values?: Record<string, string | number>) => string;
 
-function Section({ section, draft, update, locale, t }: { section: MenuSection; draft: OrderDraft; update: BowlBuilderProps["update"]; locale: string; t: T }) {
+function Section({ section, draft, update, locale, t, hidePrices }: { section: MenuSection; draft: OrderDraft; update: BowlBuilderProps["update"]; locale: string; t: T; hidePrices: boolean }) {
   const labelId = `sec-${section.id}`;
   if (section.selectionMode === "SINGLE") {
     const items = (section.items || []).filter((i) => i.isAvailable !== false);
@@ -104,7 +106,7 @@ function Section({ section, draft, update, locale, t }: { section: MenuSection; 
             const checked = draft.singles[section.id] === item.id;
             const select = () => update((d) => ({ ...d, singles: { ...d.singles, [section.id]: item.id } }));
             return isSoup ? (
-              <SoupOption key={item.id} item={item} checked={checked} onSelect={select} locale={locale} />
+              <SoupOption key={item.id} item={item} checked={checked} onSelect={select} locale={locale} hidePrices={hidePrices} />
             ) : (
               <button
                 key={item.id}
@@ -168,7 +170,7 @@ function Section({ section, draft, update, locale, t }: { section: MenuSection; 
         </SectionLabel>
         <ul aria-labelledby={labelId} className="m-0 flex list-none flex-col divide-y divide-oh-stone/70 overflow-hidden rounded-3xl bg-oh-ink p-0">
           {items.map((item) => (
-            <ExtraRow key={item.id} item={item} qty={draft.extras[item.id] || 0} cap={cap} update={update} locale={locale} t={t} />
+            <ExtraRow key={item.id} item={item} qty={draft.extras[item.id] || 0} cap={cap} update={update} locale={locale} t={t} hidePrices={hidePrices} />
           ))}
         </ul>
       </div>
@@ -185,7 +187,7 @@ function SectionLabel({ id, children }: { id: string; children: React.ReactNode 
   );
 }
 
-function SoupOption({ item, checked, onSelect, locale }: { item: MenuItem; checked: boolean; onSelect: () => void; locale: string }) {
+function SoupOption({ item, checked, onSelect, locale, hidePrices }: { item: MenuItem; checked: boolean; onSelect: () => void; locale: string; hidePrices: boolean }) {
   const photo = SOUP_PHOTO[englishName(item)];
   const png = photo ? null : getMenuItemImage(englishName(item));
   const thumb = photo ? SITE_IMAGES[photo].src.webp : png;
@@ -204,7 +206,7 @@ function SoupOption({ item, checked, onSelect, locale }: { item: MenuItem; check
         {thumb ? <Image src={thumb} alt="" fill sizes="56px" className={photo ? "object-cover" : "object-contain p-1"} /> : null}
       </span>
       <span className="min-w-0 flex-1 text-[15px] font-semibold leading-snug text-oh-cream">{item.name}</span>
-      <span className="shrink-0 text-sm tabular-nums text-oh-mute">{formatCents(item.basePriceCents, locale)}</span>
+      {hidePrices ? null : <span className="shrink-0 text-sm tabular-nums text-oh-mute">{formatCents(item.basePriceCents, locale)}</span>}
       <span
         aria-hidden="true"
         className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors duration-200 ${checked ? "border-oh-ember-light bg-oh-ember-light text-oh-charcoal" : "border-oh-mute"}`}
@@ -215,7 +217,7 @@ function SoupOption({ item, checked, onSelect, locale }: { item: MenuItem; check
   );
 }
 
-function ExtraRow({ item, qty, cap, update, locale, t }: { item: MenuItem; qty: number; cap: number; update: BowlBuilderProps["update"]; locale: string; t: T }) {
+function ExtraRow({ item, qty, cap, update, locale, t, hidePrices }: { item: MenuItem; qty: number; cap: number; update: BowlBuilderProps["update"]; locale: string; t: T; hidePrices: boolean }) {
   const img = getMenuItemImage(englishName(item));
   const set = (n: number) =>
     update((d) => {
@@ -232,7 +234,7 @@ function ExtraRow({ item, qty, cap, update, locale, t }: { item: MenuItem; qty: 
       </span>
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="text-[15px] font-semibold leading-snug text-oh-cream [overflow-wrap:anywhere]">{item.name}</span>
-        <span className="text-sm tabular-nums text-oh-mute">{price}</span>
+        {hidePrices ? null : <span className="text-sm tabular-nums text-oh-mute">{price}</span>}
       </span>
       <span className="flex shrink-0 items-center gap-1">
         {qty > 0 ? (

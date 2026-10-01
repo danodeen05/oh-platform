@@ -4567,6 +4567,7 @@
       "errorName": "Por favor agrega tu nombre.",
       "errorPhone": "Por favor agrega un celular de 10 dígitos.",
       "errorBirthday": "Esa fecha de cumpleaños no parece correcta.",
+      "phoneTaken": "Ese número ya está en la lista a nombre de otra persona. Usa tu propio número de celular.",
       "saving": "Guardando"
     },
     "bowl": {

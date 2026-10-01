@@ -6753,6 +6753,7 @@
       "errorName": "Please add your name.",
       "errorPhone": "Please add a 10 digit mobile number.",
       "errorBirthday": "That birthday does not look right.",
+      "phoneTaken": "That number is already on the guest list for someone else. Please use your own mobile number.",
       "saving": "Saving"
     },
     "bowl": {

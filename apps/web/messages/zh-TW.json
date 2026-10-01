@@ -6770,6 +6770,7 @@
       "errorName": "請填寫你的名字。",
       "errorPhone": "請填寫 10 位數的手機號碼。",
       "errorBirthday": "這個生日看起來不太對。",
+      "phoneTaken": "這個號碼已登記在另一位賓客名下。請填寫你自己的手機號碼。",
       "saving": "儲存中"
     },
     "bowl": {

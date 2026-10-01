@@ -4567,6 +4567,7 @@
       "errorName": "请填写你的名字。",
       "errorPhone": "请填写 10 位数的手机号码。",
       "errorBirthday": "这个生日看起来不太对。",
+      "phoneTaken": "这个号码已登记在另一位宾客名下。请填写你自己的手机号码。",
       "saving": "保存中"
     },
     "bowl": {
