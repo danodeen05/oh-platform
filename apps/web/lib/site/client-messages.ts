@@ -32,6 +32,8 @@ export const ROUTE_NAMESPACES = {
   "accessibility": [],
   "challenges": ["challengesPage", "giveMeal", "orderFlow"],
   "contact": ["contactPage"],
+  // Private events (/e/[slug]): the invite, RSVP, bowl builder, done and status pages.
+  "e": ["events", "orderFlow", "afterOrder", "orderStatus"],
   "experience": [],
   "giving": [],
   "gift-cards": ["giftCards", "store"],

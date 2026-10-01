@@ -82,6 +82,8 @@ export const SITE_ROUTES: readonly SiteRoute[] = [
   { path: "/privacy", group: "site", file: "(site)/privacy/page.tsx" },
   { path: "/accessibility", group: "site", file: "(site)/accessibility/page.tsx" },
   { path: "/sms-consent", group: "site", file: "(site)/sms-consent/page.tsx" },
+  // Private events: a slug the crawl's API may not have renders the (translated) event not-found page.
+  { path: "/e/:slug", group: "site", file: "(site)/e/[slug]/page.tsx", params: { slug: "plan-test-oct5" } },
 ];
 
 /** The locale-free URL for a route, with params and query filled in. */

@@ -4529,5 +4529,97 @@
     "passFailed": "No pudimos pasarla. Intenta de nuevo.",
     "signIn": "Inicia sesión para pasarla.",
     "close": "Cerrar"
+  },
+  "events": {
+    "eyebrow": "Una mesa privada",
+    "hostedBy": "Te invita {host}",
+    "onTheHouse": "Los tazones corren por cuenta de la casa.",
+    "reserve": "Reservar mi tazón",
+    "reserved": "Tu tazón está reservado",
+    "seeStatus": "Seguir mi tazón",
+    "greeting": "{name}, tu lugar está apartado.",
+    "countdown": {
+      "label": "Para el primer tazón",
+      "days": "días",
+      "hours": "horas",
+      "minutes": "minutos",
+      "started": "Ya comenzó."
+    },
+    "meta": {
+      "when": "Cuándo",
+      "where": "Dónde",
+      "directions": "Cómo llegar"
+    },
+    "guest": {
+      "title": "¿Quién viene?",
+      "lede": "Para preparar bien tu tazón, y tu fortuna.",
+      "name": "Tu nombre",
+      "phone": "Número de celular",
+      "phoneHelp": "Para tu recordatorio el día del evento.",
+      "birthday": "Cumpleaños",
+      "birthdayHelp": "Opcional. Con él elegimos tu fortuna.",
+      "month": "Mes",
+      "day": "Día",
+      "year": "Año",
+      "notes": "¿Algo que debamos saber?",
+      "notesHelp": "Alergias, sin res, extra picante. Tú decides.",
+      "continue": "Armar mi tazón",
+      "errorName": "Por favor agrega tu nombre.",
+      "errorPhone": "Por favor agrega un celular de 10 dígitos.",
+      "errorBirthday": "Esa fecha de cumpleaños no parece correcta.",
+      "saving": "Guardando"
+    },
+    "bowl": {
+      "title": "Arma tu tazón",
+      "lede": "Elige un caldo y fideos. Todo lo demás va a punto.",
+      "cta": "Reservar este tazón",
+      "closed": "Los pedidos están cerrados. La mesa ya comenzó.",
+      "alreadyOrdered": "Ya tienes un tazón reservado.",
+      "loading": "Cargando el menú"
+    },
+    "done": {
+      "eyebrow": "Reservado",
+      "title": "{name}, tu tazón está apartado.",
+      "lede": "Te enviaremos un mensaje ese día. Al llegar, toca Ya llegué y la cocina empieza tu tazón.",
+      "yourBowl": "Tu tazón",
+      "change": "Cambiar mi tazón",
+      "changeConfirm": "¿Empezar de nuevo con otro tazón?",
+      "status": "Seguir mi tazón",
+      "backToInvite": "Volver a la invitación"
+    },
+    "status": {
+      "held": "Reservado para la mesa",
+      "heldLede": "Tu tazón te espera. Ese día, toca abajo cuando llegues.",
+      "arrive": "Ya llegué",
+      "arriving": "Registrando tu llegada",
+      "notYet": "El registro abre el día del evento.",
+      "checkedIn": "Ya registramos tu llegada. La cocina tiene tu tazón.",
+      "personal": "{name}, año del {zodiac}.",
+      "personalNoZodiac": "Qué gusto tenerte aquí, {name}.",
+      "yourBowl": "Tu tazón",
+      "notFound": "No encontramos ese tazón.",
+      "survey": "¿Qué tal estuvo?"
+    },
+    "zodiac": {
+      "Rat": "Rata",
+      "Ox": "Buey",
+      "Tiger": "Tigre",
+      "Rabbit": "Conejo",
+      "Dragon": "Dragón",
+      "Snake": "Serpiente",
+      "Horse": "Caballo",
+      "Goat": "Cabra",
+      "Monkey": "Mono",
+      "Rooster": "Gallo",
+      "Dog": "Perro",
+      "Pig": "Cerdo"
+    },
+    "notFound": {
+      "title": "Esta mesa aún no está puesta.",
+      "lede": "El enlace puede ser antiguo, o el evento todavía no está activo."
+    },
+    "images": {
+      "hero": "Un tazón de sopa de fideos con res visto desde arriba"
+    }
   }
 }
