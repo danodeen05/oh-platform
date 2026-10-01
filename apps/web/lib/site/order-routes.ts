@@ -17,3 +17,15 @@ export function isOrderBuildPath(pathname: string | null | undefined): boolean {
   if (parts[0] !== "order") return false;
   return parts.length === 1 || parts[1] === "location" || parts[1] === "payment";
 }
+
+/**
+ * /{locale}/e/{slug}/...: a private event's pages. A guest there is not a
+ * dine-in customer, so the dock (whose Order leads to dine-in ordering) and
+ * the active-order pill stay out of the way; the event pins its own CTA bar.
+ */
+export function isEventPath(pathname: string | null | undefined): boolean {
+  if (!pathname) return false;
+  const parts = pathname.split("/").filter(Boolean);
+  if (parts.length && (locales as readonly string[]).includes(parts[0])) parts.shift();
+  return parts[0] === "e" && parts.length >= 2;
+}

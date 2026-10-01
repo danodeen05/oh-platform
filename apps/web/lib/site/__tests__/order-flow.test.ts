@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { arrivalClock, formatCents, ORDER_ERROR_CODES, orderErrorCode, QUOTE_WARNINGS, stripeLocale } from "../order-flow";
-import { isOrderBuildPath } from "../order-routes";
+import { isEventPath, isOrderBuildPath } from "../order-routes";
 import { podWalkSteps } from "../pod-walk";
 
 describe("isOrderBuildPath (the dock hides, Back shows)", () => {
@@ -11,6 +11,15 @@ describe("isOrderBuildPath (the dock hides, Back shows)", () => {
   });
   it.each(["/en", "/en/menu", "/en/order/status", "/en/order/confirmation", "/en/order/check-in", "/en/orders", null])("%s is not", (p) => {
     expect(isOrderBuildPath(p)).toBe(false);
+  });
+});
+
+describe("isEventPath (private events: no dock, no active-order pill)", () => {
+  it.each(["/en/e/acme-oct5", "/zh-TW/e/acme-oct5/rsvp", "/es/e/acme-oct5/status?qrCode=X", "/e/acme-oct5"])("%s is an event page", (p) => {
+    expect(isEventPath(p)).toBe(true);
+  });
+  it.each(["/en", "/en/e", "/en/experience", "/en/order", "/en/events/x", null])("%s is not", (p) => {
+    expect(isEventPath(p)).toBe(false);
   });
 });
 
