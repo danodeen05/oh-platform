@@ -139,8 +139,7 @@ export interface UserChallenge {
 // Referral user (simplified)
 export interface ReferralUser {
   id: string;
-  email?: string;
-  name?: string;
+  displayName: string; // first name + last initial; the API never returns a referred member's email
   createdAt: string;
   lifetimeOrderCount: number;
 }

@@ -87,6 +87,7 @@ import { registerAdminAuthHooks } from "./auth/admin-hook.js";
 import { registerTeamRoutes } from "./admin/team-routes.js";
 import { registerMembershipRoutes } from "./membership/routes.js";
 import { referralSummary } from "./membership/referral-summary.js";
+import { registerProfileRoute } from "./membership/profile-route.js";
 import { isTrackableChallenge, earlyOrderMet } from "./membership/challenge-rules.js";
 import { completeUserChallenge, claimChallengeReward } from "./membership/challenge-rewards.js";
 import { registerOrderRoutes } from "./orders/routes.js";
@@ -4334,67 +4335,8 @@ app.get("/users/:id/credits", async (req, reply) => {
 // MEMBERSHIP & GAMIFICATION
 // ====================
 
-// Get user profile with tier info
-app.get("/users/:id/profile", async (req, reply) => {
-  const { id } = req.params;
-
-  const user = await prisma.user.findUnique({
-    where: { id },
-    include: {
-      badges: {
-        include: {
-          badge: true,
-        },
-        orderBy: {
-          earnedAt: "desc",
-        },
-      },
-      challenges: {
-        include: {
-          challenge: true,
-        },
-        where: {
-          completedAt: null, // Only active challenges
-        },
-      },
-      referrals: {
-        select: {
-          id: true,
-          email: true,
-          createdAt: true,
-          lifetimeOrderCount: true,
-        },
-      },
-    },
-  });
-
-  if (!user) return reply.code(404).send({ error: "User not found" });
-
-  // Tier, progress, credits, expiring lots, rewards and badges all come from
-  // the membership engine now (packages/api/src/membership/engine.js).
-  // tierBenefits/nextTier/tierProgress below are a back-compat shim mapping
-  // the engine's shape onto the old response keys so the pre-Phase-D UI
-  // keeps working; the new UI should read `membership` directly.
-  const membership = await profileForUser(prisma, id, new Date());
-  const locale = getLocale(req);
-  user.badges = user.badges.map((ub) => ({ ...ub, badge: localizeBadge(ub.badge, locale) }));
-  // Task D9 fix round 1: only challenges the engine can complete (membership/challenge-rules.js).
-  user.challenges = user.challenges.filter((uc) => isTrackableChallenge(uc.challenge)).map((uc) => ({ ...uc, challenge: localizeChallenge(uc.challenge, locale) }));
-  // Fix round 1 (review, Important 2): the new UI reads `membership.badges`
-  // directly (see the comment above), so it needs localizing too, not just
-  // the back-compat `user.badges` shim.
-  if (membership) {
-    membership.badges = membership.badges.map((ub) => ({ ...ub, badge: localizeBadge(ub.badge, locale) }));
-  }
-
-  return {
-    ...user,
-    tierBenefits: legacyTierBenefits(membership.tier),
-    nextTier: legacyNextTier(membership.tier),
-    tierProgress: legacyTierProgress(membership.progress),
-    membership,
-  };
-});
+// Get user profile with tier info (membership/profile-route.js)
+registerProfileRoute(app, { prisma, profileForUser, getLocale, localizeBadge, localizeChallenge, isTrackableChallenge, legacyTierBenefits, legacyNextTier, legacyTierProgress });
 
 /** @deprecated back-compat shim for the pre-Phase-D UI; use PROGRAM/profileForUser directly instead. */
 function legacyTierBenefits(tier) {
