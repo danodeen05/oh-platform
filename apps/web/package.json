@@ -13,7 +13,7 @@
     "@anthropic-ai/sdk": "^0.71.2",
     "@asialoop/epson-epos": "^2.0.0",
     "@clerk/localizations": "^3.32.1",
-    "@clerk/nextjs": "^6.36.5",
+    "@clerk/nextjs": "^6.39.7",
     "@oh/floor-plan": "workspace:*",
     "@oh/plan-model": "workspace:*",
     "@react-pdf/renderer": "^4.3.2",
