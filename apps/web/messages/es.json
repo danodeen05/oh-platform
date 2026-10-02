@@ -3422,7 +3422,7 @@
     },
     "bowl": {
       "title": "Arma tu tazón",
-      "lede": "Elige una sopa y fideos, y hazlo a tu gusto.",
+      "lede": "Elige una sopa y luego ajústala a tu gusto.",
       "groupLede": "Agregando al grupo {code}.",
       "addToGroup": "Agregar al grupo",
       "loadError": "No pudimos cargar el menú.",
@@ -4570,7 +4570,7 @@
     },
     "bowl": {
       "title": "Arma tu tazón",
-      "lede": "Elige un caldo y fideos. Todo lo demás va a punto.",
+      "lede": "Elige una sopa y luego ajusta tus fideos, caldo y toppings.",
       "cta": "Reservar este tazón",
       "closed": "Los pedidos están cerrados. La mesa ya comenzó.",
       "alreadyOrdered": "Ya tienes un tazón reservado.",

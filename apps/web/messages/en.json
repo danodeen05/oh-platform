@@ -5624,7 +5624,7 @@
     },
     "bowl": {
       "title": "Build your bowl",
-      "lede": "Choose a soup and noodles, then make it yours.",
+      "lede": "Choose a soup, then make it yours.",
       "groupLede": "Adding to group {code}.",
       "addToGroup": "Add to group",
       "loadError": "We couldn't load the menu.",
@@ -6756,7 +6756,7 @@
     },
     "bowl": {
       "title": "Build your bowl",
-      "lede": "Pick a broth and noodles. Everything else is dialed to taste.",
+      "lede": "Pick a soup, then dial in your noodles, broth and toppings.",
       "cta": "Reserve this bowl",
       "closed": "Orders are closed. The table has started.",
       "alreadyOrdered": "You already have a bowl reserved.",
