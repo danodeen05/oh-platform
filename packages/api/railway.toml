@@ -2,7 +2,7 @@
 builder = "NIXPACKS"
 
 [build.nixpacksPlan]
-phases.setup.nixPkgs = ["nodejs_20", "pnpm-9_x"]
+phases.setup.nixPkgs = ["nodejs_22", "pnpm-9_x"]
 
 phases.install.cmds = [
   "cd /app",

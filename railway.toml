@@ -2,7 +2,7 @@
 builder = "NIXPACKS"
 
 [build.nixpacksPlan]
-phases.setup.nixPkgs = ["nodejs_20", "pnpm-9_x"]
+phases.setup.nixPkgs = ["nodejs_22", "pnpm-9_x"]
 phases.setup.cmds = ["echo 'Build cache invalidation: 2026-06-02-prisma-eacces-fix'"]
 
 phases.install.cmds = [
