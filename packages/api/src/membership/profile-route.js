@@ -10,11 +10,14 @@
 
 export const REFERRAL_SELECT = { id: true, name: true, createdAt: true, lifetimeOrderCount: true };
 
-/** "Dana Smith" -> "Dana S."; a single name stays as is; no name -> "A friend". */
+/**
+ * "Dana Smith" -> "Dana S."; a single token (no spaces, common for Chinese names)
+ * is never returned in full, only its first character: "王小明" -> "王."; no name -> "A friend".
+ */
 export function referralDisplayName(name) {
   const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return "A friend";
-  if (parts.length === 1) return parts[0];
+  if (parts.length === 1) return `${Array.from(parts[0])[0]}.`;
   return `${parts[0]} ${Array.from(parts[parts.length - 1])[0].toUpperCase()}.`;
 }
 
